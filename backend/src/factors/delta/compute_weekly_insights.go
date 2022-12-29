@@ -851,6 +851,8 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 		err = json.Unmarshal(data, &insightsKpiList)
 		if len(insightsKpiList) >= kpiIndex {
 			insightsKpi = insightsKpiList[kpiIndex-1]
+		} else {
+			insightsKpi = insightsKpiList[len(insightsKpiList)-1]
 		}
 	} else {
 		err = json.Unmarshal(data, &insights)

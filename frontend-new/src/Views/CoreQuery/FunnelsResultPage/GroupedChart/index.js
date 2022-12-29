@@ -11,7 +11,15 @@ import FunnelsResultTable from '../FunnelsResultTable';
 import NoDataChart from '../../../../components/NoDataChart';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import FunnelsScatterPlot from './FunnelsScatterPlot';
-import { CHART_TYPE_BARCHART } from '../../../../utils/constants';
+import {
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_METRIC_CHART,
+  MAX_ALLOWED_VISIBLE_PROPERTIES
+} from '../../../../utils/constants';
+import MetricChart from 'Components/MetricChart/MetricChart';
+import { generateColors } from 'Utils/dataFormatter';
+
+const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 
 const GroupedChart = forwardRef(
   (
@@ -79,6 +87,22 @@ const GroupedChart = forwardRef(
           section={section}
           durations={resultState.data.meta}
         />
+      );
+    } else if (chartType === CHART_TYPE_METRIC_CHART) {
+      chart = (
+        <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12'>
+          {visibleProperties.map((elem, index) => {
+            return (
+              <MetricChart
+                key={colors[index]}
+                value={elem.value}
+                iconColor={colors[index]}
+                headerTitle={elem.name}
+                valueType='percentage'
+              />
+            );
+          })}
+        </div>
       );
     } else {
       chart = (

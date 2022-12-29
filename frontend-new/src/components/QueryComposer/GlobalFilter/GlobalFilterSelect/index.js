@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
-import { SVG, Text } from 'factorsComponents';
-import { Button, InputNumber, Tooltip, Select, DatePicker, Input } from 'antd';
+import { SVG } from 'Components/factorsComponents';
+import { Button, InputNumber, Tooltip, Select, DatePicker,Input } from 'antd';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from 'Components/FaSelect';
@@ -10,8 +10,8 @@ import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import moment from 'moment';
 import { DEFAULT_OPERATOR_PROPS,dateTimeSelect } from 'Components/FaFilterSelect/utils';
-import { DISPLAY_PROP } from '../../../../utils/constants';
-import { toCapitalCase } from '../../../../utils/global';
+import { DISPLAY_PROP } from 'Utils/constants';
+import { toCapitalCase } from 'Utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../../constants/tooltips.constans';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
@@ -51,7 +51,7 @@ const GlobalFilterSelect = ({
 
   const [updateState, updateStateApply] = useState(false);
 
-  const { userPropNames, eventPropNames } = useSelector(
+  const { userPropNames, groupPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
   );
   const [dateOptionSelectOpen,setDateOptionSelectOpen]=useState(false);
@@ -147,8 +147,12 @@ const GlobalFilterSelect = ({
   };
 
   const renderDisplayName = (propState) => {
-    // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
     let propertyName = '';
+    if (propState.name && propState.icon === 'group') {
+      propertyName = groupPropNames[propState.name]
+        ? groupPropNames[propState.name]
+        : propState.name;
+    }
     if (
       propState.name &&
       (propState.icon === 'user' || propState.icon === 'user_g')
@@ -251,8 +255,9 @@ const GlobalFilterSelect = ({
     return (
       <div className={styles.filter__propContainer}>
         <Tooltip 
-          title={renderDisplayName(propState)}
-          color={TOOLTIP_CONSTANTS.DARK}>
+          title={renderGroupDisplayName(propState)}
+          color={TOOLTIP_CONSTANTS.DARK}
+          >
           <Button
             icon={
               propState && propState.icon ? (

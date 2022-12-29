@@ -372,7 +372,7 @@ const ClickTrackConfiguration = ({
   agents,
   currentAgent,
   clickableElements,
-  toggleClickableElement,
+  toggleClickableElement
 }) => {
   const [enableEdit, setEnableEdit] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -390,7 +390,7 @@ const ClickTrackConfiguration = ({
   }, [activeProject, agents, currentAgent]);
 
   const headerClassStr =
-  'fai-text fai-text__color--grey-2 fai-text__size--h8 fai-text__weight--bold';
+    'fai-text fai-text__color--grey-2 fai-text__size--h8 fai-text__weight--bold';
 
   var columns = [
     {
@@ -398,18 +398,20 @@ const ClickTrackConfiguration = ({
       dataIndex: 'displayName',
       key: 'displayName',
       width: 300,
-      ellipsis: true,
+      ellipsis: true
     },
     {
       title: <span className={headerClassStr}>Type</span>,
       dataIndex: 'type',
       key: 'type',
+      sorter: (a, b) =>
+        a.type > b.type ? 1 : b.type > a.type ? -1 : 0
     },
     {
       title: <span className={headerClassStr}>Clicks</span>,
       dataIndex: 'clickCount',
       key: 'clickCount',
-      sorter: (a, b) => a.clickCount - b.clickCount,
+      sorter: (a, b) => a.clickCount - b.clickCount
     },
     {
       title: <span className={headerClassStr}>Received At</span>,
@@ -425,14 +427,13 @@ const ClickTrackConfiguration = ({
           const bMillisecs = bNew.getTime();
           return aMillisecs - bMillisecs;
         },
-        multiple: 1,
-      },
+        multiple: 1
+      }
     },
     {
       title: <span className={headerClassStr}>Tracking</span>,
       dataIndex: 'tracking',
       key: 'tracking',
-      defaultSortOrder: 'descend',
       render: (e) => (
         <Switch
           value
@@ -448,10 +449,10 @@ const ClickTrackConfiguration = ({
       defaultSortOrder: 'descend',
       sorter: {
         compare: (a, b) => a.tracking.enabled - b.tracking.enabled,
-        multiple: 2,
+        multiple: 2
       },
-      align: 'right',
-    },
+      align: 'right'
+    }
   ];
 
   const dataSource = useMemo(() => {
@@ -462,7 +463,7 @@ const ClickTrackConfiguration = ({
         type: element.element_type,
         clickCount: element.click_count,
         createdAt: element.created_at,
-        tracking: { id: element.id, enabled: element.enabled },
+        tracking: { id: element.id, enabled: element.enabled }
       };
     });
     return data;
@@ -520,11 +521,7 @@ const ClickTrackConfiguration = ({
         </div>
       </Col>
       <Col span={24}>
-        <Table
-          columns={columns}
-          dataSource={listData}
-          pagination={false}
-        />
+        <Table columns={columns} dataSource={listData} pagination={false} />
       </Col>
     </Row>
   );

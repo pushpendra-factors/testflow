@@ -81,6 +81,7 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		storeSelected.GetKPIConfigsForSalesforceOpportunities,
 		storeSelected.GetKPIConfigsForAdwords, storeSelected.GetKPIConfigsForGoogleOrganic,
 		storeSelected.GetKPIConfigsForFacebook, storeSelected.GetKPIConfigsForLinkedin,
+		storeSelected.GetKPIConfigsForLinkedinCompanyEngagements,
 		storeSelected.GetKPIConfigsForAllChannels, storeSelected.GetKPIConfigsForBingAds, storeSelected.GetKPIConfigsForMarketoLeads,
 		storeSelected.GetKPIConfigsForLeadSquaredLeads,
 	}
@@ -122,7 +123,7 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 	if currentConfig != nil {
 		resultantConfigs = append(resultantConfigs, currentConfig)
 	}
-	
+
 	if includeDerivedKPIs {
 		currentConfig, errCode := storeSelected.GetKPIConfigsForOthers(projectID, model.OthersDisplayCategory, includeDerivedKPIs)
 		if errCode != http.StatusOK {

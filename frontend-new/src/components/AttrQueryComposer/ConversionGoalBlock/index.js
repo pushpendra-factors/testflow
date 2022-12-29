@@ -4,7 +4,8 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
-import EventFilterWrapper from '../../QueryComposer/EventFilterWrapper';
+import EventFilterWrapper from '../EventFilterWrapper';
+import { default as EventFilter } from 'Components/QueryComposer/EventFilterWrapper';
 
 import { Button, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
@@ -13,105 +14,101 @@ import FaSelect from 'Components/FaSelect';
 import ORButton from '../../ORButton';
 import { getNormalizedKpi } from '../../../utils/kpiQueryComposer.helpers';
 import { compareFilters, groupFilters } from '../../../utils/global';
-import {
-  fetchKPIConfigWithoutDerivedKPI
-} from 'Reducers/kpi';
+import { fetchKPIConfigWithoutDerivedKPI } from 'Reducers/kpi';
 
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
 const ConversionGoalBlock = ({
-    eventGoal, 
-    eventGoalChange, 
-    delEvent, 
-    eventNameOptions, 
-    eventNames,
-    activeProject, 
-    eventProperties,
-    userProperties,
-    group_analysis = 'users',
-    KPI_config,
-    KPI_config_without_derived_kpi,
-    showDerivedKPI = false,
-    fetchKPIConfigWithoutDerivedKPI
+  eventGoal,
+  eventGoalChange,
+  delEvent,
+  eventNameOptions,
+  eventNames,
+  activeProject,
+  eventProperties,
+  userProperties,
+  group_analysis = 'users',
+  KPI_config,
+  KPI_config_without_derived_kpi,
+  showDerivedKPI = false,
+  fetchKPIConfigWithoutDerivedKPI
 }) => {
+  const [selectVisible, setSelectVisible] = useState(false);
+  const [filterBlockVisible, setFilterBlockVisible] = useState(false);
 
-    const [selectVisible, setSelectVisible] = useState(false);
-    const [filterBlockVisible, setFilterBlockVisible] = useState(false);
+  const [moreOptions, setMoreOptions] = useState(false);
+  const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
-    const [moreOptions, setMoreOptions] = useState(false);
-    const [orFilterIndex, setOrFilterIndex] = useState(-1);
+  const [filterProps, setFilterProperties] = useState({
+    event: [],
+    user: []
+  });
 
-    const [filterProps, setFilterProperties] = useState({
-        event: [],
-        user: []
+  useEffect(() => {
+    if (!group_analysis || group_analysis === 'users') {
+      setEventPropsForUserGroup();
+    } else {
+      setFilterPropsforKpiGroups();
+    }
+  }, [userProperties, eventProperties, group_analysis]);
+
+  useEffect(() => {
+    if (!showDerivedKPI && !KPI_config_without_derived_kpi)
+      fetchKPIConfigWithoutDerivedKPI(activeProject.id);
+  }, [activeProject, showDerivedKPI, KPI_config_without_derived_kpi]);
+
+  const setEventPropsForUserGroup = () => {
+    if (!eventGoal || !eventGoal?.label?.length) {
+      return;
+    }
+    const assignFilterProps = Object.assign({}, filterProps);
+
+    if (eventProperties[eventGoal.label]) {
+      assignFilterProps.event = eventProperties[eventGoal.label];
+    }
+    assignFilterProps.user = userProperties;
+    setFilterProperties(assignFilterProps);
+  };
+
+  const setFilterPropsforKpiGroups = () => {
+    const assignFilterProps = Object.assign({}, filterProps);
+    assignFilterProps.event = getKPIProps(group_analysis);
+    setFilterProperties(assignFilterProps);
+  };
+
+  const getKPIProps = (groupName) => {
+    let KPIlist = KPI_config || [];
+    let selGroup = KPIlist.find((item) => {
+      return item?.display_category == groupName;
     });
-    
-    useEffect(() => {
-        if(!group_analysis || group_analysis === 'users') {
-            setEventPropsForUserGroup();
-        } else {
-            setFilterPropsforKpiGroups();
-        }
-        
-    }, [userProperties, eventProperties, group_analysis]);
 
-    useEffect(() => {
-      if(!showDerivedKPI && !KPI_config_without_derived_kpi) fetchKPIConfigWithoutDerivedKPI(activeProject.id)
+    let DDvalues = selGroup?.properties?.map((item) => {
+      if (item == null) return;
+      let ddName = item.display_name ? item.display_name : item.name;
+      let ddtype =
+        selGroup?.category == 'channels'
+          ? item.object_type
+          : item.entity
+          ? item.entity
+          : item.object_type;
+      return [ddName, item.name, item.data_type, ddtype];
+    });
+    return DDvalues;
+  };
 
-    },[activeProject,showDerivedKPI,KPI_config_without_derived_kpi ])
+  const getKpiGroupList = (groupName) => {
+    let KPIlist = showDerivedKPI
+      ? KPI_config
+      : KPI_config_without_derived_kpi || [];
+    let selGroup = KPIlist.find((item) => {
+      return item?.display_category == groupName;
+    });
 
-
-    const setEventPropsForUserGroup = () => {
-        if(!eventGoal || !eventGoal?.label?.length) {return};
-        const assignFilterProps = Object.assign({}, filterProps);
-    
-        if (eventProperties[eventGoal.label]) {
-          assignFilterProps.event = eventProperties[eventGoal.label];
-        }
-        assignFilterProps.user = userProperties;
-        setFilterProperties(assignFilterProps);
-    }
-
-    const setFilterPropsforKpiGroups = () => {
-        const assignFilterProps = Object.assign({}, filterProps);
-        assignFilterProps.event = getKPIProps(group_analysis);
-        setFilterProperties(assignFilterProps);
-    }
-
-    const getKPIProps = (groupName) => {
-        let KPIlist = KPI_config || [];
-        let selGroup = KPIlist.find((item) => {
-          return item?.display_category == groupName;
-        });
-    
-        let DDvalues = selGroup?.properties?.map((item) => {
-          if (item == null) return;
-          let ddName = item.display_name ? item.display_name : item.name;
-          let ddtype =
-            selGroup?.category == 'channels'
-              ? item.object_type
-              : item.entity
-              ? item.entity
-              : item.object_type;
-          return [ddName, item.name, item.data_type, ddtype];
-        });
-        return DDvalues;
-
-    }
-
-    const getKpiGroupList = (groupName) => {
-        let KPIlist = showDerivedKPI ? KPI_config : KPI_config_without_derived_kpi || []
-        let selGroup = KPIlist.find((item) => {
-          return item?.display_category == groupName;
-        });
-
-       
-        const group = ((selGroup) => {
-          return getNormalizedKpi({ kpi: selGroup });
-          })(selGroup);
-        return [group];
-    }
-
+    const group = ((selGroup) => {
+      return getNormalizedKpi({ kpi: selGroup });
+    })(selGroup);
+    return [group];
+  };
 
   const toggleEventSelect = () => {
     setSelectVisible(!selectVisible);
@@ -126,7 +123,7 @@ const ConversionGoalBlock = ({
       (fil) => JSON.stringify(fil) === JSON.stringify(val)
     );
     if (filt && filt.length) return;
-    
+
     updatedEvent.filters.push(val);
     eventGoalChange(updatedEvent);
   };
@@ -166,116 +163,114 @@ const ConversionGoalBlock = ({
   };
 
   const selectEventFilter = (index) => {
-    return (
+    if (group_analysis !== 'users') {
+      return (
+        <EventFilterWrapper
+          filterProps={filterProps}
+          activeProject={activeProject}
+          event={eventGoal}
+          deleteFilter={() => closeFilter()}
+          insertFilter={addFilter}
+          closeFilter={closeFilter}
+          refValue={index}
+        ></EventFilterWrapper>
+      );
+    } else {
+      return (
+        <EventFilter
+          filterProps={filterProps}
+          activeProject={activeProject}
+          event={eventGoal}
+          deleteFilter={() => closeFilter()}
+          insertFilter={addFilter}
+          closeFilter={closeFilter}
+          refValue={index}
+        ></EventFilter>
+      );
+    }
+  };
+
+  const renderFilterWrapper = (index, refValue, filter, showOr = false) =>
+    group_analysis !== 'users' ? (
       <EventFilterWrapper
+        index={index}
+        filter={filter}
+        event={eventGoal}
         filterProps={filterProps}
         activeProject={activeProject}
-        event={eventGoal}
-        deleteFilter={() => closeFilter()}
+        deleteFilter={delFilter}
         insertFilter={addFilter}
         closeFilter={closeFilter}
-        refValue={index}
+        selectedMainCategory={eventGoal}
+        showOr={showOr}
+        refValue={refValue}
       ></EventFilterWrapper>
+    ) : (
+      <EventFilter
+        index={index}
+        filter={filter}
+        event={eventGoal}
+        filterProps={filterProps}
+        activeProject={activeProject}
+        deleteFilter={delFilter}
+        insertFilter={addFilter}
+        closeFilter={closeFilter}
+        selectedMainCategory={eventGoal}
+        showOr={showOr}
+        refValue={refValue}
+      ></EventFilter>
     );
-  };
 
   const eventFilters = () => {
     const filters = [];
     let index = 0;
     let lastRef = 0;
     if (eventGoal && eventGoal?.filters?.length) {
-  
       const group = groupFilters(eventGoal.filters, 'ref');
       const filtersGroupedByRef = Object.values(group);
       const refValues = Object.keys(group);
-      lastRef = parseInt(refValues[refValues.length-1]);
-  
+      lastRef = parseInt(refValues[refValues.length - 1]);
 
-      filtersGroupedByRef.forEach((filtersGr)=>{
+      filtersGroupedByRef.forEach((filtersGr) => {
         const refValue = filtersGr[0].ref;
-        if(filtersGr.length == 1){
-            const filter = filtersGr[0];
-            let filterContent = filter;
-            filterContent.values =
-              filter.props[1] === 'datetime' && isArray(filter.values)
-                ? filter.values[0]
-                : filter.values;
-            filters.push(
-              <div className={'fa--query_block--filters flex flex-row'}>
-              <div key={index} >
-                <EventFilterWrapper
-                  index={index}
-                  filter={filter}
-                  filterProps={filterProps}
-                  activeProject={activeProject}
-                  deleteFilter={delFilter}
-                  insertFilter={(val,index) => editFiler(index, val)}
-                  closeFilter={closeFilter}
-                  event={eventGoal}
-                  refValue={refValue}
-                ></EventFilterWrapper>
-              </div>
-               {index !== orFilterIndex && (
-                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>
-                )}
-               {index === orFilterIndex && (
-                  <div key={'init'}>
-                    <EventFilterWrapper
-                      filterProps={filterProps}
-                      activeProject={activeProject}
-                      event={eventGoal}
-                      deleteFilter={() => closeFilter()}
-                      insertFilter={addFilter}
-                      closeFilter={closeFilter}
-                      refValue={refValue}
-                      showOr = {true}
-                    ></EventFilterWrapper>
-                  </div>                
-                )}  
-              </div>       
-            );
-            index+=1;
-        }else{
+        if (filtersGr.length == 1) {
+          const filter = filtersGr[0];
           filters.push(
-            <div  className={'fa--query_block--filters flex flex-row'}>
-            <div key={index}>
-              <EventFilterWrapper
-                index={index}
-                filter={filtersGr[0]}
-                filterProps={filterProps}
-                activeProject={activeProject}
-                deleteFilter={delFilter}
-                insertFilter={(val,index) => editFiler(index,val)}
-                closeFilter={closeFilter}
-                event={eventGoal}
-                refValue={refValue}
-                ></EventFilterWrapper>
+            <div className={'fa--query_block--filters flex flex-row'}>
+              <div key={index}>
+                {renderFilterWrapper(index, refValue, filter)}
+              </div>
+              {index !== orFilterIndex && (
+                <ORButton index={index} setOrFilterIndex={setOrFilterIndex} />
+              )}
+              {index === orFilterIndex && (
+                <div key={'init'}>
+                  {renderFilterWrapper(index, refValue, filter, true)}
+                </div>
+              )}
             </div>
-            <div key={index+1}>
-              <EventFilterWrapper
-                index={index+1}
-                filter={filtersGr[1]}
-                filterProps={filterProps}
-                activeProject={activeProject}
-                deleteFilter={delFilter}
-                insertFilter={(val,index) => editFiler(index, val)}
-                closeFilter={closeFilter}
-                event={eventGoal}
-                refValue={refValue}
-                showOr = {true}
-                ></EventFilterWrapper>
-            </div>
-          </div>
           );
-          index+=2;
+          index += 1;
+        } else {
+          filters.push(
+            <div className={'fa--query_block--filters flex flex-row'}>
+              <div key={index}>
+                {renderFilterWrapper(index, refValue, filtersGr[0])}
+              </div>
+              <div key={index + 1}>
+                {renderFilterWrapper(index + 1, refValue, filtersGr[1], true)}
+              </div>
+            </div>
+          );
+          index += 2;
         }
-      })
+      });
     }
 
     if (filterBlockVisible) {
       filters.push(
         <div key={'init'} className={'fa--query_block--filters'}>
-          {selectEventFilter(lastRef+1)}
+          {selectEventFilter(lastRef + 1)}
         </div>
       );
     }
@@ -283,31 +278,29 @@ const ConversionGoalBlock = ({
     return filters;
   };
 
-  const onEventSelect = (val,group,category) => {
+  const onEventSelect = (val, group, category) => {
     const currentEventGoal = Object.assign({}, eventGoal);
-    currentEventGoal.label = val[1]? val[1]: val[0];
+    currentEventGoal.label = val[1] ? val[1] : val[0];
+    currentEventGoal.group = group;
     currentEventGoal.filters = [];
-    if(group_analysis !== 'users') {
-        currentEventGoal.label = val[0];
-        currentEventGoal.metric = val[1]? val[1]: val[0];
-        currentEventGoal.group = group;
-        if(category){
-            currentEventGoal.category = category;
-        } 
+    if (group_analysis !== 'users') {
+      currentEventGoal.label = val[0];
+      currentEventGoal.metric = val[1] ? val[1] : val[0];
+      currentEventGoal.group = group;
+      if (category) {
+        currentEventGoal.category = category;
+      }
     }
     eventGoalChange(currentEventGoal);
     setSelectVisible(false);
     closeFilter();
-};
+  };
 
   const additionalActions = () => {
     return (
       <div className={'fa--query_block--actions-cols flex relative ml-2'}>
         <div className={`relative flex`}>
-          <Tooltip 
-            title='Filter this Attribute'
-            color={TOOLTIP_CONSTANTS.DARK}
-            >
+          <Tooltip title='Filter this Attribute' color={TOOLTIP_CONSTANTS.DARK}>
             <Button
               type='text'
               onClick={() => setMoreOptions(true)}
@@ -331,7 +324,11 @@ const ConversionGoalBlock = ({
           )}
         </div>
         <Tooltip title='Delete this Attribute'>
-          <Button type='text' onClick={deleteItem} className={`fa-btn--custom btn-total-round`}>
+          <Button
+            type='text'
+            onClick={deleteItem}
+            className={`fa-btn--custom btn-total-round`}
+          >
             <SVG name='trash'></SVG>
           </Button>
         </Tooltip>
@@ -339,13 +336,25 @@ const ConversionGoalBlock = ({
     );
   };
 
-    const renderCountLabel = () => {
-        return (<Text type={'title'} level={7} weight={'regular'} color={'grey'} extraClass={'m-0 ml-2'}>as count of unique users</Text>)
-    }
+  const renderCountLabel = () => {
+    return (
+      <Text
+        type={'title'}
+        level={7}
+        weight={'regular'}
+        color={'grey'}
+        extraClass={'m-0 ml-2'}
+      >
+        as count of unique users
+      </Text>
+    );
+  };
 
   const selectEvents = () => {
-
-    const groupedProps = (!group_analysis || group_analysis === 'users') ? eventNameOptions : getKpiGroupList(group_analysis);
+    const groupedProps =
+      !group_analysis || group_analysis === 'users'
+        ? eventNameOptions
+        : getKpiGroupList(group_analysis);
     return (
       <div className={styles.block__event_selector}>
         {selectVisible ? (
@@ -425,16 +434,17 @@ const ConversionGoalBlock = ({
 };
 
 const mapStateToProps = (state) => ({
-    activeProject: state.global.active_project,
-    eventProperties: state.coreQuery.eventProperties,
-    userProperties: state.coreQuery.userProperties,
-    eventNameOptions: state.coreQuery.eventOptions,
-    eventNames: state.coreQuery.eventNames,
-    KPI_config: state.kpi?.config,
-    KPI_config_without_derived_kpi: state.kpi?.config_without_derived_kpi
+  activeProject: state.global.active_project,
+  eventProperties: state.coreQuery.eventProperties,
+  userProperties: state.coreQuery.userProperties,
+  eventNameOptions: state.coreQuery.eventOptions,
+  eventNames: state.coreQuery.eventNames,
+  KPI_config: state.kpi?.config,
+  KPI_config_without_derived_kpi: state.kpi?.config_without_derived_kpi
 });
 
-const mapDispatchToProps = (dispatch) => bindActionCreators({fetchKPIConfigWithoutDerivedKPI}, dispatch);
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators({ fetchKPIConfigWithoutDerivedKPI }, dispatch);
 
 export default connect(
   mapStateToProps,

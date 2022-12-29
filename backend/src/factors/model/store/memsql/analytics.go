@@ -1064,14 +1064,22 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	userGroupColumn := ""
 	eventsWrapSelect = joinWithComma(eventsWrapSelect, "events.properties as event_properties, events.user_properties as event_user_properties")
 	if addJoinStmnt != "" {
-		eventsWrapSelect = joinWithComma(eventsWrapSelect, "users.customer_user_id, users.properties as global_user_properties")
-		// For the special case of groups join, where events.user_id
-		// cannot be used as replacement of users.id.
-		if strings.Contains(addSelecStmnt, "users.users_user_id") {
-			eventsWrapSelect = joinWithComma(eventsWrapSelect, "users.id as users_user_id")
-		} else if strings.Contains(addSelecStmnt, "group_user_id") {
-			userGroupColumn = model.GetQueryGroupUserID(addSelecStmnt)
-			eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("%s as group_user_id", userGroupColumn))
+		if !strings.Contains(addJoinStmnt, "user_groups") && !strings.Contains(addJoinStmnt, "group_users") {
+			eventsWrapSelect = joinWithComma(eventsWrapSelect, "users.customer_user_id, users.properties as global_user_properties")
+			// For the special case of groups join, where events.user_id
+			// cannot be used as replacement of users.id.
+			if strings.Contains(addSelecStmnt, "users.users_user_id") {
+				eventsWrapSelect = joinWithComma(eventsWrapSelect, "users.id as users_user_id")
+			}
+		} else {
+			if strings.Contains(addJoinStmnt, "user_groups") {
+				userGroupColumn = model.GetQueryGroupUserID(addSelecStmnt)
+				eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("%s as group_user_id", userGroupColumn))
+			}
+
+			if strings.Contains(addJoinStmnt, "group_users") {
+				eventsWrapSelect = joinWithComma(eventsWrapSelect, "group_users.properties as group_properties")
+			}
 		}
 	}
 
@@ -1126,6 +1134,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "users.properties", eventsWrapViewName+".global_user_properties")
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "events.properties", eventsWrapViewName+".event_properties")
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "events.user_properties", eventsWrapViewName+".event_user_properties")
+	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "group_users.properties", eventsWrapViewName+".group_properties")
 	// Use view instead of events and users table.
 	addSelecStmnt = replaceTableWithViewForEventsAndUsers(addSelecStmnt, eventsWrapViewName)
 
@@ -1153,17 +1162,30 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	var err error
 
 	isWhereAdded := false
-	hasGlobalUserProperties := globalUserFilter != nil && len(globalUserFilter) != 0
-	if hasGlobalUserProperties {
-		// add user filter
-		latestUserPropFilterStmnt, latestUserPropFilterParam, err = getFilterSQLStmtForLatestUserProperties(
-			projectId, globalUserFilter, from)
-		if err != nil {
-			return errors.New("invalid user properties for global filter")
-		}
+	hasGlobalPropertiesFilter := globalUserFilter != nil && len(globalUserFilter) != 0
+	hasGlobalGroupProperties := hasGlobalPropertiesFilter && strings.Contains(addJoinStmnt, "group_users")
+	if hasGlobalPropertiesFilter {
 
-		latestUserPropFilterStmnt = strings.ReplaceAll(latestUserPropFilterStmnt,
-			"users.properties", eventsWrapViewName+".global_user_properties")
+		if !hasGlobalGroupProperties {
+			// add user filter
+			latestUserPropFilterStmnt, latestUserPropFilterParam, err = getFilterSQLStmtForLatestUserProperties(
+				projectId, globalUserFilter, from)
+			if err != nil {
+				return errors.New("invalid user properties for global filter")
+			}
+			latestUserPropFilterStmnt = strings.ReplaceAll(latestUserPropFilterStmnt,
+				"users.properties", eventsWrapViewName+".global_user_properties")
+
+		} else {
+			// add group properties filter
+			latestUserPropFilterStmnt, latestUserPropFilterParam, err = getFilterSQLStmtForLatestUserProperties(
+				projectId, globalUserFilter, from)
+			if err != nil {
+				return errors.New("invalid group properties for global filter")
+			}
+			latestUserPropFilterStmnt = strings.ReplaceAll(latestUserPropFilterStmnt,
+				"users.properties", eventsWrapViewName+".group_properties")
+		}
 
 		rStmnt = rStmnt + " WHERE " + latestUserPropFilterStmnt
 		isWhereAdded = true
@@ -1961,7 +1983,7 @@ func isValidFunnelQuery(query *model.Query) bool {
 
 func (store *MemSQL) IsValidFunnelGroupQueryIfExists(projectID int64, query *model.Query, groupIds []int) (int, bool) {
 
-	if query.GroupAnalysis == "" {
+	if query.GroupAnalysis == "" || model.IsFunnelQueryGroupNameUser(query.GroupAnalysis) {
 		return 0, true
 	}
 
@@ -2285,7 +2307,7 @@ func getChannelGroupKeyIndexesForSlicing(cols []string) (int, int, error) {
 
 	index := 0
 	for _, col := range cols {
-		if strings.HasPrefix(col, "campaign_") || strings.HasPrefix(col, "ad_group_") || strings.HasPrefix(col, "keyword_") || strings.HasPrefix(col, "channel_") {
+		if strings.HasPrefix(col, "campaign_") || strings.HasPrefix(col, "ad_group_") || strings.HasPrefix(col, "keyword_") || col == "channel_" || strings.HasPrefix(col, "company_") {
 			if start == -1 {
 				start = index
 			} else {

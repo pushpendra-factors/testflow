@@ -638,6 +638,8 @@ export const PropTextFormat = (prop = 'users') => {
     formatText[i] = word.charAt(0).toUpperCase() + word.substring(1);
   });
   return formatText.join(' ');
+
+  return prop;
 };
 
 export function HighlightSearchText({ text = '', highlight = '' }) {

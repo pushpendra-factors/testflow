@@ -698,12 +698,12 @@ func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID int64, limit in
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	mostFrequentEventNames := make([]string, 0)
-	var eventNameType string
+	var eventNameTypes []string
 	var exists bool
 	var finalEventNames []model.EventName
 	var result []string
 	db := C.GetServices().Db
-	if eventNameType, exists = model.EventTypeToEnameType[typeOfEvent]; !exists {
+	if eventNameTypes, exists = model.EventTypeToEnameType[typeOfEvent]; !exists {
 		return nil, errors.New("invalid type is provided.")
 	}
 	eventsSorted, err := getEventNamesAggregatedAndSortedAcrossDate(projectID, limit, lastNDays)
@@ -728,7 +728,7 @@ func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID int64, limit in
 		}
 	}
 
-	if dbResult := db.Where("type = ? AND name IN (?)", eventNameType, mostFrequentEventNames).Select("name").Limit(limit).Find(&finalEventNames); dbResult.Error != nil {
+	if dbResult := db.Where("type IN (?) AND name IN (?)", eventNameTypes, mostFrequentEventNames).Select("name").Limit(limit).Find(&finalEventNames); dbResult.Error != nil {
 		return nil, dbResult.Error
 	}
 

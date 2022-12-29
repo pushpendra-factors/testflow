@@ -270,10 +270,12 @@ type Configuration struct {
 	NewCloudManager                                    filestore.FileManager
 	ProjectIdsV2                                       []int64
 	IngestionTimezoneEnabledProjectIDs                 []string
+	LinkedinMemberCompanyConfigProjectIDs              []string
 	AllowedSalesforceActivityTasksByProjectIDs         string
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
+	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
 }
@@ -2052,6 +2054,16 @@ func IsIngestionTimezoneEnabled(projectId int64) bool {
 	return false
 }
 
+func IsLinkedinMemberCompanyConfigEnabled(projectId int64) bool {
+	for _, id := range configuration.LinkedinMemberCompanyConfigProjectIDs {
+		projectIdString := fmt.Sprintf("%v", projectId)
+		if id == projectIdString {
+			return true
+		}
+	}
+	return false
+}
+
 func EnableMQLAPI() bool {
 	return configuration.EnableMQLAPI
 }
@@ -2386,6 +2398,26 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	}
 
 	return true
+}
+
+func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
+	if configuration.SkipEventNameStepByProjectID == "" {
+		return false
+	}
+
+	if configuration.SkipEventNameStepByProjectID == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	configProjectIDs := strings.Split(configuration.IncreaseKPILimitForProjectIDs, ",")
+	for i := range configProjectIDs {
+		if configProjectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
 }
 
 func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {

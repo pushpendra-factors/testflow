@@ -114,6 +114,7 @@ function ReportsLayout({
       return (
         <QueryComposer
           queries={queriesA}
+          setQueries={setQueries}
           runQuery={runQuery}
           eventChange={queryChange}
           queryType={queryType}

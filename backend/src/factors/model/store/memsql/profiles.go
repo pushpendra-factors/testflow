@@ -206,7 +206,12 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 
 	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s", stepSqlStmnt, groupByStmnt, model.AliasAggr)
 	if !query.LimitNotApplicable {
-		stepSqlStmnt += " LIMIT 10000"
+		if C.IsKPILimitIncreaseAllowedForProject(projectID) {
+			stepSqlStmnt = fmt.Sprintf("%s LIMIT %d", stepSqlStmnt, model.MaxResultsLimit)
+		} else {
+			stepSqlStmnt += fmt.Sprintf("%s LIMIT %d", stepSqlStmnt, model.ResultsLimit)
+
+		}
 	}
 
 	finalSQLStmnt := ""
@@ -222,9 +227,15 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 		finalGroupBy := model.AliasAggr + ", " + strings.Join(aggregateGroupBys, ",")
 		finalOrderBy := model.AliasAggr + ", " + strings.Join(aggregateOrderBys, ",")
 		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)
+
 		if !query.LimitNotApplicable {
-			finalSQLStmnt += " LIMIT 10000"
+			if C.IsKPILimitIncreaseAllowedForProject(projectID) {
+				finalSQLStmnt = fmt.Sprintf("%s LIMIT %d", finalSQLStmnt, model.MaxResultsLimit)
+			} else {
+				finalSQLStmnt = fmt.Sprintf("%s LIMIT %d", finalSQLStmnt, model.ResultsLimit)
+			}
 		}
+
 	} else {
 		finalSQLStmnt = stepSqlStmnt
 	}

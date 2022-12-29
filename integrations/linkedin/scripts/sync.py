@@ -16,7 +16,6 @@ parser = OptionParser()
 parser.add_option('--env', dest='env', default='development')
 parser.add_option('--dry', dest='dry', help='', default='False')
 parser.add_option('--skip_today', dest='skip_today', help='', default='False') 
-parser.add_option('--project_id', dest='project_id', help='', default=None, type=int)
 parser.add_option('--project_ids', dest='project_ids', help='', default=None, type=str)
 parser.add_option('--client_id', dest='client_id', help='',default=None, type=str)
 parser.add_option('--client_secret', dest='client_secret', help='',default=None, type=str)
@@ -26,6 +25,9 @@ parser.add_option('--insert_metadata', dest='insert_metadata', help='', default=
 parser.add_option('--insert_report', dest='insert_report', help='', default='True')
 parser.add_option('--data_service_host', dest='data_service_host',
     help='Data service host', default='http://localhost:8089')
+parser.add_option('--run_member_insights_only', dest='run_member_insights_only', help='', default='False')
+# remove the following flag after testing, remove follwing flag from yaml if removing from here
+parser.add_option('--member_company_project_ids', dest='member_company_project_ids', help='', default=None, type=str)
 
 (options, args) = parser.parse_args()
 
@@ -33,6 +35,7 @@ APP_NAME = 'linkedin_sync'
 CAMPAIGN_GROUP_INSIGHTS = 'campaign_group_insights'
 CAMPAIGN_INSIGHTS = 'campaign_insights'
 CREATIVE_INSIGHTS = 'creative_insights'
+MEMBER_COMPANY_INSIGHTS = 'member_company_insights'
 CAMPAIGN = 'campaign'
 CAMPAIGNS = 'campaign'
 CREATIVES = 'creative'
@@ -140,7 +143,7 @@ def get_timestamp(date):
     return int(datetime(date['year'],date['month'],date['day']).strftime('%Y%m%d'))
 
 # can't keep very long range, we might hit rate limit
-def get_insights_and_insert(linkedin_int_setting, sync_info_with_type, doc_type, pivot, campaign_group_meta, campaign_meta, creative_meta, meta_request_count):
+def get_insights(linkedin_int_setting, sync_info_with_type, doc_type, pivot, meta_request_count):
     log.warning("Fetching insights for %s started for project %s", doc_type, linkedin_int_setting[PROJECT_ID])
     date_start = ''
     date_end = ''
@@ -162,6 +165,7 @@ def get_insights_and_insert(linkedin_int_setting, sync_info_with_type, doc_type,
 
     request_counter = meta_request_count
     records = 0
+    results =[]
 
     if date_start > date_end:
         errString = 'Skipped getting {} insights from linkedin. Already synced. Project_id: {}. Date start: {}, Date end: {}'.format(pivot, linkedin_int_setting[PROJECT_ID], date_start, date_end)
@@ -178,7 +182,7 @@ def get_insights_and_insert(linkedin_int_setting, sync_info_with_type, doc_type,
         return {'status': 'failed', 'errMsg': errString, API_REQUESTS: request_counter}
     if ELEMENTS in response.json():
         records += len(response.json()[ELEMENTS])
-        insert_insights(doc_type,linkedin_int_setting[PROJECT_ID],linkedin_int_setting[LINKEDIN_AD_ACCOUNT], response.json()[ELEMENTS], campaign_group_meta, campaign_meta, creative_meta)
+        results.extend(response.json()[ELEMENTS])
 
     start = 0
     # paging
@@ -195,11 +199,10 @@ def get_insights_and_insert(linkedin_int_setting, sync_info_with_type, doc_type,
             return {'status': 'failed', 'errMsg': errString, API_REQUESTS: request_counter}
         if ELEMENTS in response.json():
             records += len(response.json()[ELEMENTS])
-            insert_insights(doc_type,linkedin_int_setting[PROJECT_ID],linkedin_int_setting[LINKEDIN_AD_ACCOUNT], response.json()[ELEMENTS], campaign_group_meta, campaign_meta, creative_meta)
+            results.extend(response.json()[ELEMENTS])
 
     log.warning("No of %s insights records to be inserted for project %s : %d", doc_type, linkedin_int_setting[PROJECT_ID], records)
-    log.warning("Insertion of insights of %s ended for project %s", doc_type, linkedin_int_setting[PROJECT_ID])
-    return {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}
+    return results, {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}
 
 def insert_insights(doc_type, project_id, ad_account, response, campaign_group_meta, campaign_meta, creative_meta):
     for data in response:
@@ -213,7 +216,7 @@ def insert_insights(doc_type, project_id, ad_account, response, campaign_group_m
                 data.update(campaign_meta[id])
                 if campaign_meta[id][CAMPAIGN_GROUP_ID] in campaign_group_meta:
                     data.update(campaign_group_meta[campaign_meta[id][CAMPAIGN_GROUP_ID]])
-        else:
+        elif doc_type == CREATIVE_INSIGHTS:
             if id in creative_meta:
                 data.update(creative_meta[id])
                 if creative_meta[id][CAMPAIGN_GROUP_ID] in campaign_group_meta:
@@ -221,9 +224,74 @@ def insert_insights(doc_type, project_id, ad_account, response, campaign_group_m
                 if creative_meta[id][CAMPAIGN_ID] in campaign_meta:
                     data.update(campaign_meta[creative_meta[id][CAMPAIGN_ID]])
 
-        add_documents_response = add_linkedin_documents(linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], doc_type, id, data, timestamp)
+        add_documents_response = add_linkedin_documents(project_id, ad_account, doc_type, id, data, timestamp)
         if not add_documents_response.ok:
             return
+    log.warning("Insertion of insights of %s ended for project %s", doc_type, project_id)
+
+# it take organization id for report rows and fetches org details like name location domain and append it to the member company report rows
+def update_org_data(records, access_token):
+    mapIDs = {}
+    for data in records:
+        id = data['pivotValue'].split(':')[3]
+        mapIDs[id]= True
+    idStr = ''
+    for key in mapIDs:
+        if idStr == '':
+            idStr += key
+        else:
+            idStr += (',' + key)
+    
+    url = 'https://api.linkedin.com/v2/organizationsLookup?ids=List({})'.format(idStr)
+    headers = {'Authorization': 'Bearer ' + access_token, 'X-Restli-Protocol-Version': '2.0.0'}
+    response = requests.get(url, headers=headers)
+    if not response.ok or 'results' not in response.json():
+        return [], 1,  "Failed getting organisation data"
+    map_id_to_org_data = response.json()['results']
+    for data in records:
+        id = data['pivotValue'].split(':')[3]
+        if id not in map_id_to_org_data:
+            return "Failed getting organisation data for id {}".format(id)
+        if 'vanityName' in map_id_to_org_data[id]:
+            data['vanityName'] = map_id_to_org_data[id]['vanityName']
+        else:
+            data['vanityName'] = '$none'
+
+        if 'localizedName' in map_id_to_org_data[id]:
+            data['localizedName'] = map_id_to_org_data[id]['localizedName']
+        else:
+            data['localizedName'] = '$none'
+
+        if 'localizedWebsite' in map_id_to_org_data[id]:
+            data['localizedWebsite'] = map_id_to_org_data[id]['localizedWebsite']
+        else:
+            data['localizedWebsite'] = '$none'
+        
+        if 'name' in map_id_to_org_data[id] and 'preferredLocale' in map_id_to_org_data[id]['name'] and 'country' in map_id_to_org_data[id]['name']['preferredLocale']:
+            data['preferredCountry'] = map_id_to_org_data[id]['name']['preferredLocale']['country']
+        else:
+            data['preferredCountry'] = '$none'
+        
+        if 'locations' in map_id_to_org_data[id]:
+            for location in map_id_to_org_data[id]['locations']:
+                if 'locationType' in location and location['locationType'] == 'HEADQUARTERS' and 'address' in location and 'country' in location['address']:
+                    data['companyHeadquarters'] = location['address']['country']
+                    break
+                else:
+                    data['companyHeadquarters'] = '$none'
+
+    return records, 1, ''
+
+def get_company_name_and_insert(doc_type, project_id, ad_account, access_token, response, request_counter):
+    if len(response) !=0:
+        records, requests, errString = update_org_data(response, access_token)
+        if errString != '':
+            return {'status': 'failed', 'errMsg': errString, API_REQUESTS: request_counter + requests}
+    else:
+        log.warning('No data found for member company insights for project {} and Ad account {}'.format(project_id, ad_account))
+    
+    insert_insights(MEMBER_COMPANY_INSIGHTS,linkedin_int_setting[PROJECT_ID],linkedin_int_setting[LINKEDIN_AD_ACCOUNT], records, {}, {}, {})
+    return {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter + requests}
 
 def get_metadata(ad_account, access_token, url_endpoint, doc_type, project_id):
     metadata = []
@@ -297,7 +365,12 @@ def get_campaign_group_data(linkedin_int_setting, sync_info_with_type, meta):
             enrich_metadata_previous_dates(CAMPAIGN_GROUPS, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, meta)
             log.warning("Backfilling campaign group metadata ended for project %s", linkedin_int_setting[PROJECT_ID])
     
-    return get_insights_and_insert(linkedin_int_setting, sync_info_with_type, CAMPAIGN_GROUP_INSIGHTS, 'CAMPAIGN_GROUP', meta, {}, {}, request_counter)
+    results, resp = get_insights(linkedin_int_setting, sync_info_with_type, CAMPAIGN_GROUP_INSIGHTS, 'CAMPAIGN_GROUP', request_counter)
+    if resp['status'] == 'failed' or resp['errMsg'] != '':
+        return resp
+        
+    insert_insights(CAMPAIGN_GROUP_INSIGHTS,linkedin_int_setting[PROJECT_ID],linkedin_int_setting[LINKEDIN_AD_ACCOUNT], results, meta, {}, {})
+    return resp
 
 def get_campaign_data(linkedin_int_setting, sync_info_with_type , campaign_group_meta, meta):
     log.warning("Fetching metadata for campaign started for project %s", linkedin_int_setting[PROJECT_ID])
@@ -323,7 +396,12 @@ def get_campaign_data(linkedin_int_setting, sync_info_with_type , campaign_group
             enrich_metadata_previous_dates(CAMPAIGNS, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, meta)
             log.warning("Backfilling campaign metadata ended for project %s", linkedin_int_setting[PROJECT_ID])
 
-    return get_insights_and_insert(linkedin_int_setting, sync_info_with_type, CAMPAIGN_INSIGHTS, 'CAMPAIGN', campaign_group_meta, meta, {}, request_counter)
+    results, resp =  get_insights(linkedin_int_setting, sync_info_with_type, CAMPAIGN_INSIGHTS, 'CAMPAIGN', request_counter)
+    if resp['status'] == 'failed' or resp['errMsg'] != '':
+        return resp
+    
+    insert_insights(CAMPAIGN_INSIGHTS,linkedin_int_setting[PROJECT_ID],linkedin_int_setting[LINKEDIN_AD_ACCOUNT], results, campaign_group_meta, meta, {})
+    return resp
 
 def get_creative_data(linkedin_int_setting, sync_info_with_type, campaign_group_meta, campaign_meta, meta):
     log.warning("Fetching metadata for creative started for project %s", linkedin_int_setting[PROJECT_ID])
@@ -349,7 +427,12 @@ def get_creative_data(linkedin_int_setting, sync_info_with_type, campaign_group_
             enrich_metadata_previous_dates(CREATIVES, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, meta)
             log.warning("Backfilling creative metadata ended for project %s", linkedin_int_setting[PROJECT_ID])
     
-    return get_insights_and_insert(linkedin_int_setting, sync_info_with_type, CREATIVE_INSIGHTS, 'CREATIVE', campaign_group_meta, campaign_meta, meta, request_counter)
+    results, resp = get_insights(linkedin_int_setting, sync_info_with_type, CREATIVE_INSIGHTS, 'CREATIVE', request_counter)
+    if resp['status'] == 'failed' or resp['errMsg'] != '':
+        return resp
+    
+    insert_insights(CREATIVE_INSIGHTS,linkedin_int_setting[PROJECT_ID],linkedin_int_setting[LINKEDIN_AD_ACCOUNT], results, campaign_group_meta, campaign_meta, meta)
+    return resp
 
 def get_ad_account_data(linkedin_int_setting):
     url = 'https://api.linkedin.com/v2/adAccountsV2/{}'.format(linkedin_int_setting[LINKEDIN_AD_ACCOUNT])
@@ -365,6 +448,14 @@ def get_ad_account_data(linkedin_int_setting):
     add_linkedin_documents(linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], AD_ACCOUNT, str(metadata['id']),metadata, timestamp)
     return {'status': 'success', 'errMsg': '', API_REQUESTS: 1}
 
+def get_member_company_data(linkedin_int_setting, sync_info_with_type):
+    log.warning("Fetching insights for member company started for project %s", linkedin_int_setting[PROJECT_ID])
+    results, resp = get_insights(linkedin_int_setting, sync_info_with_type, MEMBER_COMPANY_INSIGHTS, 'MEMBER_COMPANY', 0)
+    if resp['status'] == 'failed' or resp['errMsg'] != '':
+        return resp
+    
+    return get_company_name_and_insert(MEMBER_COMPANY_INSIGHTS,linkedin_int_setting[PROJECT_ID],linkedin_int_setting[LINKEDIN_AD_ACCOUNT],linkedin_int_setting[ACCESS_TOKEN], results, resp[API_REQUESTS])
+
 def get_collections(linkedin_int_setting, sync_info_with_type):
     response = {'status': 'success'}
     status = ''
@@ -374,37 +465,50 @@ def get_collections(linkedin_int_setting, sync_info_with_type):
     campaign_meta = {}
     creative_meta = {}
     requests_counter = 0
+
     try:
-        if options.insert_metadata != 'False':
-            res = get_ad_account_data(linkedin_int_setting)
+        if options.run_member_insights_only != 'True' and options.run_member_insights_only != True:
+            # above if condition is for running member company insights for older date ranges, since we don't have doc_type segregation here
+            if options.insert_metadata != 'False':
+                res = get_ad_account_data(linkedin_int_setting)
+                requests_counter += res[API_REQUESTS]
+                if res['status'] == 'failed':
+                    status = 'failed'
+                    errMsgs.append(res['errMsg'])
+            # don't mutate meta object, return it as a new object from get_campaign_group_function
+            res = get_campaign_group_data(linkedin_int_setting, sync_info_with_type, campaign_group_meta)
             requests_counter += res[API_REQUESTS]
             if res['status'] == 'failed':
                 status = 'failed'
                 errMsgs.append(res['errMsg'])
-        # don't mutate meta object, return it as a new object from get_campaign_group_function
-        res = get_campaign_group_data(linkedin_int_setting, sync_info_with_type, campaign_group_meta)
-        requests_counter += res[API_REQUESTS]
-        if res['status'] == 'failed':
-            status = 'failed'
-            errMsgs.append(res['errMsg'])
-        if res['status'] == 'skipped':
-            skipMsgs.append(res['errMsg'])
+            if res['status'] == 'skipped':
+                skipMsgs.append(res['errMsg'])
+            
+            res = get_campaign_data(linkedin_int_setting, sync_info_with_type, campaign_group_meta, campaign_meta)
+            requests_counter += res[API_REQUESTS]
+            if res['status'] == 'failed':
+                status = 'failed'
+                errMsgs.append(res['errMsg'])
+            if res['status'] == 'skipped':
+                skipMsgs.append(res['errMsg'])
+            
+            res = get_creative_data(linkedin_int_setting, sync_info_with_type, campaign_group_meta, campaign_meta, creative_meta)
+            requests_counter += res[API_REQUESTS]
+            if res['status'] == 'failed':
+                status = 'failed'
+                errMsgs.append(res['errMsg'])
+            if res['status'] == 'skipped':
+                skipMsgs.append(res['errMsg'])
         
-        res = get_campaign_data(linkedin_int_setting, sync_info_with_type, campaign_group_meta, campaign_meta)
-        requests_counter += res[API_REQUESTS]
-        if res['status'] == 'failed':
-            status = 'failed'
-            errMsgs.append(res['errMsg'])
-        if res['status'] == 'skipped':
-            skipMsgs.append(res['errMsg'])
+        if linkedin_int_setting[PROJECT_ID] in options.member_company_project_ids or options.member_company_project_ids == '*':
+            res = get_member_company_data(linkedin_int_setting, sync_info_with_type)
+            requests_counter += res[API_REQUESTS]
+            if res['status'] == 'failed':
+                status = 'failed'
+                errMsgs.append(res['errMsg'])
+            if res['status'] == 'skipped':
+                skipMsgs.append(res['errMsg'])
         
-        res = get_creative_data(linkedin_int_setting, sync_info_with_type, campaign_group_meta, campaign_meta, creative_meta)
-        requests_counter += res[API_REQUESTS]
-        if res['status'] == 'failed':
-            status = 'failed'
-            errMsgs.append(res['errMsg'])
-        if res['status'] == 'skipped':
-            skipMsgs.append(res['errMsg'])
     except Exception as e:
         traceback.print_tb(e.__traceback__)
         response['status'] = 'failed'
@@ -500,7 +604,6 @@ if __name__ == '__main__':
         successes = []
         final_linkedin_settings, failures_sanitization = split_settings_for_multiple_ad_accounts(linkedin_int_settings)
         failures.extend(failures_sanitization)
-
         for linkedin_int_setting in final_linkedin_settings:
             if start_timestamp == None:
                 sync_info_with_type, err = get_last_sync_info(linkedin_int_setting)

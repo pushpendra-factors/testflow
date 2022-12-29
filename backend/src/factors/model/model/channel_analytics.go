@@ -491,11 +491,12 @@ func transformChannelsV1QueryToKPIQuery(channelsV1Query ChannelQueryV1) []KPIQue
 
 func getDisplayCategory(channel string) string {
 	var MapOfCategoryToChannel = map[string]string{
-		"all_ads":        AllChannelsDisplayCategory,
-		"google_ads":     GoogleAdsDisplayCategory,
-		"facebook_ads":   FacebookDisplayCategory,
-		"linkedin_ads":   LinkedinDisplayCategory,
-		"search_console": GoogleOrganicDisplayCategory,
+		"all_ads":                      AllChannelsDisplayCategory,
+		"google_ads":                   GoogleAdsDisplayCategory,
+		"facebook_ads":                 FacebookDisplayCategory,
+		"linkedin_ads":                 LinkedinDisplayCategory,
+		"linkedin_company_engagements": LinkedinCompanyEngagementsDisplayCategory,
+		"search_console":               GoogleOrganicDisplayCategory,
 	}
 	return MapOfCategoryToChannel[channel]
 }

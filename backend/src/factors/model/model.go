@@ -55,8 +55,6 @@ type Model interface {
 	GetNextArchivalBatches(projectID int64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error)
 
 	// attribution
-	ExecuteAttributionQuery(projectID int64, query *model.AttributionQuery, debugQueryKey string,
-		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	ExecuteAttributionQueryV0(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	ExecuteAttributionQueryV1(projectID int64, query *model.AttributionQueryV1, debugQueryKey string,
@@ -86,10 +84,6 @@ type Model interface {
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
 		userIDInfo map[string]model.UserInfo, logCtx log.Entry) (error, []model.UserEventInfo)
 	GetAdwordsCurrency(projectId int64, customerAccountId string, from, to int64, logCtx log.Entry) (string, error)
-	GetConvertedUsersWithFilter(projectID int64, goalEventName string,
-		goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
-		eventNameToIdList map[string][]interface{}, logCtx log.Entry) (map[string]model.UserInfo,
-		map[string][]model.UserIDPropID, map[string]int64, error)
 
 	// bigquery_setting
 	CreateBigquerySetting(setting *model.BigquerySetting) (*model.BigquerySetting, int)
@@ -128,6 +122,7 @@ type Model interface {
 	GetKPIConfigsForGoogleOrganic(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForFacebook(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForLinkedin(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForLinkedinCompanyEngagements(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForAllChannels(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForMarketoLeads(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForMarketo(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) (map[string]interface{}, int)
@@ -295,6 +290,7 @@ type Model interface {
 	GetClickableElement(projectID int64, displayName string, elementType string) (*model.ClickableElements, int)
 	ToggleEnabledClickableElement(projectId int64, id string) int
 	GetAllClickableElements(projectId int64) ([]model.ClickableElements, int)
+	DeleteClickableElementsOlderThanGivenDays(expiry int, projectID int64, allProjects bool) (int, error)
 
 	// facebook_document
 	CreateFacebookDocument(projectID int64, document *model.FacebookDocument) int
@@ -456,6 +452,7 @@ type Model interface {
 	// offline touchpoints
 	CreateOTPRule(projectId int64, rule *model.OTPRule) (*model.OTPRule, int, string)
 	GetALLOTPRuleWithProjectId(projectID int64) ([]model.OTPRule, int)
+	GetUniqueKeyPropertyForOTPEventForLast3Months(projectID int64) ([]string, int)
 	GetAllRulesDeletedNotDeleted(projectID int64) ([]model.OTPRule, int)
 	GetOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)
 	GetAnyOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)
@@ -770,6 +767,7 @@ type Model interface {
 	GetSegmentById(projectId int64, segmentId string) (*model.Segment, int)
 	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
 	IsDuplicateSegmentNameCheck(projectID int64, name string) bool
+	DeleteSegmentById(projectId int64, segmentId string) (int, error)
 
 	// Ads import
 	GetAllAdsImportEnabledProjects() (map[int64]map[string]model.LastProcessedAdsImport, error)
@@ -809,7 +807,7 @@ type Model interface {
 
 	// leadsquaredmarker
 	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
-	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int)
+	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int, bool)
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)

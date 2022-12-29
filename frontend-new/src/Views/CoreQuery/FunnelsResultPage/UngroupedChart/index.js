@@ -15,7 +15,8 @@ function UngroupedChartComponent({
   comparison_data,
   comparison_duration,
   tableConfig,
-  tableConfigPopoverContent
+  tableConfigPopoverContent,
+  chartType
 }) {
   const chartData = useMemo(() => {
     return generateUngroupedChartsData(resultState.data, arrayMapper);
@@ -44,6 +45,7 @@ function UngroupedChartComponent({
         }
         durationObj={durationObj}
         comparison_duration={comparison_duration}
+        chartType={chartType}
       />
 
       <div className='mt-12 w-full'>

@@ -310,6 +310,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/segments", responseWrapper(GetSegmentsHandler))
 	authRouteGroup.GET("/:project_id/segments/:id", responseWrapper(GetSegmentByIdHandler))
 	authRouteGroup.PUT("/:project_id/segments/:id", UpdateSegmentHandler)
+	authRouteGroup.DELETE("/:project_id/segments/:id", DeleteSegmentByIdHandler)
 
 	// weekly insights, explain
 	authRouteGroup.PUT("/:project_id/v1/weeklyinsights", mid.SetLoggedInAgentInternalOnly(), UpdateWeeklyInsightsHandler)

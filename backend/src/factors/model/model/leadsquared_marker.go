@@ -9,6 +9,7 @@ type LeadsquaredMarker struct {
 	IndexNumber int       `json:"index_number"`
 	NoOfRetries int       `json:"no_of_retries"`
 	Tag         string    `json:"tag"`
+	IsDone		bool	  `json:"is_done"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

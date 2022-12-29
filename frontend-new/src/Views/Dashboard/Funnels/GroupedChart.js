@@ -1,19 +1,29 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import cx from 'classnames';
 import { formatData } from '../../CoreQuery/FunnelsResultPage/utils';
 import Chart from '../../CoreQuery/FunnelsResultPage/GroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
-import { DashboardContext } from '../../../contexts/DashboardContext';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   CHART_TYPE_BARCHART,
   CHART_TYPE_SCATTER_PLOT,
   DASHBOARD_WIDGET_SECTION,
   DASHBOARD_WIDGET_SCATTERPLOT_CHART_HEIGHT,
-  CHART_TYPE_TABLE
+  CHART_TYPE_TABLE,
+  CHART_TYPE_METRIC_CHART
 } from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
 import FunnelsScatterPlot from '../../CoreQuery/FunnelsResultPage/GroupedChart/FunnelsScatterPlot';
+import MetricChart from 'Components/MetricChart/MetricChart';
+import { generateColors } from 'Utils/dataFormatter';
+
+const cardSizeToMetricCount = {
+  0: 2,
+  1: 3,
+  2: 1
+};
+
+const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 
 function GroupedChart({
   resultState,
@@ -27,7 +37,7 @@ function GroupedChart({
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [eventsData, setEventsData] = useState([]);
   const [groups, setGroups] = useState([]);
-  const { handleEditQuery } = useContext(DashboardContext);
+  // const { handleEditQuery } = useContext(DashboardContext);
   const [sorter, setSorter] = useState([]);
 
   useEffect(() => {
@@ -47,7 +57,7 @@ function GroupedChart({
 
   if (!groups.length) {
     return (
-      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
         <NoDataChart />
       </div>
     );
@@ -70,7 +80,7 @@ function GroupedChart({
     );
   } else if (chartType === CHART_TYPE_SCATTER_PLOT) {
     chartContent = (
-      <div className="mt-2">
+      <div className='mt-2'>
         <FunnelsScatterPlot
           visibleProperties={visibleProperties}
           arrayMapper={arrayMapper}
@@ -79,6 +89,24 @@ function GroupedChart({
           cardSize={unit.cardSize}
           chartId={`funnels-scatterPlot-${unit.id}`}
         />
+      </div>
+    );
+  } else if (chartType === CHART_TYPE_METRIC_CHART) {
+    chartContent = (
+      <div className='flex justify-between w-full col-gap-2'>
+        {visibleProperties
+          .slice(0, cardSizeToMetricCount[unit.cardSize])
+          .map((elem, index) => {
+            return (
+              <MetricChart
+                key={colors[index]}
+                value={elem.value}
+                iconColor={colors[index]}
+                headerTitle={elem.name}
+                valueType='percentage'
+              />
+            );
+          })}
       </div>
     );
   } else {

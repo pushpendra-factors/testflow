@@ -537,9 +537,15 @@ func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID int64, query *model
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	var fetchSource = false
 	logCtx := log.WithFields(logFields)
+	limitString := ""
+	if C.IsKPILimitIncreaseAllowedForProject(projectID) {
+		limitString = fmt.Sprintf(" LIMIT %d", model.MaxResultsLimit)
+	} else {
+		limitString = fmt.Sprintf(" LIMIT %d", model.ResultsLimit)
+	}
 	if query.GroupByTimestamp == "" {
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForFacebookQueryV1(projectID,
-			query, reqID, fetchSource, " LIMIT 10000", false, nil)
+			query, reqID, fetchSource, limitString, false, nil)
 		if errCode == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -574,7 +580,7 @@ func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID int64, query *model
 		}
 		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
 		sql, params, selectKeys, selectMetrics, errCode = store.GetSQLQueryAndParametersForFacebookQueryV1(
-			projectID, query, reqID, fetchSource, " LIMIT 10000", true, groupByCombinations)
+			projectID, query, reqID, fetchSource, limitString, true, groupByCombinations)
 		if errCode != http.StatusOK {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), errCode
@@ -780,6 +786,8 @@ func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 	return sql, params, selectKeys, selectMetrics, nil
 }
 
+// Added case when statement for NULL value and empty value for group bys
+// Added case when statement for NULL value for smart properties. Didn't add for empty values as such case will not be present
 func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQueryV1, projectID int64, from, to int64, facebookAccountIDs string,
 	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
@@ -812,13 +820,13 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 		if isSmartProperty {
 			if groupBy.Object == model.AdwordsCampaign {
 
-				value := fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s') as campaign_%s", groupBy.Property, groupBy.Property)
+				value := fmt.Sprintf("Case when JSON_EXTRACT_STRING(campaign.properties, '%s') is null then '$none' else JSON_EXTRACT_STRING(campaign.properties, '%s') END as campaign_%s", groupBy.Property, groupBy.Property, groupBy.Property)
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("campaign_%s", groupBy.Property))
 
 				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("campaign_%s", groupBy.Property))
 			} else {
-				value := fmt.Sprintf("JSON_EXTRACT_STRING(ad_group.properties,'%s') as ad_group_%s", groupBy.Property, groupBy.Property)
+				value := fmt.Sprintf("Case when JSON_EXTRACT_STRING(ad_group.properties,'%s') is null then '$none' else JSON_EXTRACT_STRING(ad_group.properties,'%s') END as ad_group_%s", groupBy.Property, groupBy.Property, groupBy.Property)
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("ad_group_%s", groupBy.Property))
 
@@ -831,7 +839,7 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
 			} else {
-				value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
+				value := fmt.Sprintf("CASE WHEN %s IS NULL THEN '$none' WHEN %s = '' THEN '$none' ELSE %s END as %s", objectAndPropertyToValueInFacebookReportsMapping[key], objectAndPropertyToValueInFacebookReportsMapping[key], objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
 			}
@@ -863,12 +871,16 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
-	whereConditionForFilters := getFacebookFiltersWhereStatementWithSmartProperty(query.Filters)
+	whereConditionForFilters, filterParams, err := getFilterPropertiesForFacebookReportsNew(query.Filters)
+	if err != nil {
+		return "", nil, nil, nil
+	}
 	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(query.GroupBy)
 	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForFacebookWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
 	finalParams := make([]interface{}, 0)
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
+	finalParams = append(finalParams, filterParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForFacebook(groupByCombinationsForGBT)
 		finalFilterStatement += " AND (" + whereConditionForGBT + ") "
@@ -894,13 +906,15 @@ func getFacebookFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertyWithTypeAndSource(filters, groupBys, "facebook")
 	fromStatement := fromFacebookDocuments
 	if isPresentAdGroupSmartProperty {
-		fromStatement += "inner join smart_properties ad_group on ad_group.project_id = facebook_documents.project_id and ad_group.object_id = ad_set_id "
+		fromStatement += "left join smart_properties ad_group on ad_group.project_id = facebook_documents.project_id and ad_group.object_id = ad_set_id "
 	}
 	if isPresentCampaignSmartProperty {
-		fromStatement += "inner join smart_properties campaign on campaign.project_id = facebook_documents.project_id and campaign.object_id = campaign_id "
+		fromStatement += "left join smart_properties campaign on campaign.project_id = facebook_documents.project_id and campaign.object_id = campaign_id "
 	}
 	return fromStatement
 }
+
+// Added case when statement for NULL value and empty value for group bys
 func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID int64, from, to int64, facebookAccountIDs string,
 	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
@@ -946,7 +960,7 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID i
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
 		} else {
-			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
+			value := fmt.Sprintf("CASE WHEN %s IS NULL THEN '$none' WHEN %s = '' THEN '$none' ELSE %s END as %s", objectAndPropertyToValueInFacebookReportsMapping[key], objectAndPropertyToValueInFacebookReportsMapping[key], objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
 		}
@@ -969,10 +983,14 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID i
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
-	whereConditionForFilters := getFacebookFiltersWhereStatement(query.Filters)
+	whereConditionForFilters, filterParams, err := getFilterPropertiesForFacebookReportsNew(query.Filters)
+	if err != nil {
+		return "", nil, nil, nil
+	}
 	finalParams := make([]interface{}, 0)
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
+	finalParams = append(finalParams, filterParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForFacebook(groupByCombinationsForGBT)
 		whereConditionForFilters += " AND (" + whereConditionForGBT + ") "
@@ -985,33 +1003,6 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID i
 	}
 	resultSQLStatement += " " + orderByQuery + limitString + ";"
 	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
-}
-func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
-	logFields := log.Fields{
-		"filters": filters,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	resultStatement := ""
-	var filterValue string
-	for index, filter := range filters {
-		currentFilterStatement := ""
-		if filter.LogicalOp == "" {
-			filter.LogicalOp = "AND"
-		}
-		filterOperator := getOp(filter.Condition, "categorical")
-		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%s", filter.Value)
-		} else {
-			filterValue = filter.Value
-		}
-		currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectToValueInFacebookFiltersMapping[filter.Object+":"+filter.Property], filterOperator, filterValue)
-		if index == 0 {
-			resultStatement = " AND " + currentFilterStatement
-		} else {
-			resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
-		}
-	}
-	return resultStatement
 }
 
 func buildWhereConditionForGBTForFacebook(groupByCombinations map[string][]interface{}) (string, []interface{}) {
@@ -1073,59 +1064,98 @@ func GetFilterExpressionIfPresentForFacebook(objectType, dimension, prefix strin
 	return reportProperty, isPresent
 }
 
-func getFacebookFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1) string {
+func getFilterPropertiesForFacebookReportsNew(filters []model.ChannelFilterV1) (rStmnt string, rParams []interface{}, err error) {
 	logFields := log.Fields{
 		"filters": filters,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	resultStatement := ""
-	var filterValue string
+
 	campaignFilter := ""
 	adGroupFilter := ""
-	for index, filter := range filters {
-		currentFilterStatement := ""
-		if filter.LogicalOp == "" {
-			filter.LogicalOp = "AND"
-		}
-		filterOperator := getOp(filter.Condition, "categorical")
-		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%s", filter.Value)
-		} else {
-			filterValue = filter.Value
-		}
-		_, isPresent := model.SmartPropertyReservedNames[filter.Property]
-		if isPresent {
-			currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectToValueInFacebookFiltersMapping[filter.Object+":"+filter.Property], filterOperator, filterValue)
-			if index == 0 {
-				resultStatement = " AND " + currentFilterStatement
-			} else {
-				resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
-			}
-		} else {
-			currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(%s.properties, '%s') %s '%s'", model.FacebookObjectMapForSmartProperty[filter.Object], filter.Property, filterOperator, filterValue)
-			if index == 0 {
-				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
-			} else {
-				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
-			}
-			if filter.Object == "campaign" {
-				campaignFilter = smartPropertyCampaignStaticFilter
-			} else {
-				adGroupFilter = smartPropertyAdGroupStaticFilter
-			}
-		}
+	filtersLen := len(filters)
+	if filtersLen == 0 {
+		return rStmnt, rParams, nil
 	}
 
+	rParams = make([]interface{}, 0)
+	groupedProperties := model.GetChannelFiltersGrouped(filters)
+
+	for indexOfGroup, currentGroupedProperties := range groupedProperties {
+		var currentGroupStmnt, pStmnt string
+		for indexOfProperty, p := range currentGroupedProperties {
+
+			if p.LogicalOp == "" {
+				p.LogicalOp = "AND"
+			}
+
+			if !isValidLogicalOp(p.LogicalOp) {
+				return rStmnt, rParams, errors.New("invalid logical op on where condition")
+			}
+			pStmnt = ""
+			propertyOp := getOp(p.Condition, "categorical")
+			// categorical property type.
+			pValue := ""
+			if p.Condition == model.ContainsOpStr || p.Condition == model.NotContainsOpStr {
+				pValue = fmt.Sprintf("%s", p.Value)
+			} else {
+				pValue = p.Value
+			}
+			_, isPresent := model.SmartPropertyReservedNames[p.Property]
+			if isPresent {
+				key := fmt.Sprintf("%s:%s", p.Object, p.Property)
+				pFilter := objectToValueInFacebookFiltersMapping[key]
+
+				if p.Value != model.PropertyValueNone {
+					pStmnt = fmt.Sprintf("%s %s '%s' ", pFilter, propertyOp, pValue)
+				} else {
+					// where condition for $none value.
+					if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
+						pStmnt = fmt.Sprintf("(%s IS NULL OR %s = '')", pFilter, pFilter)
+					} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
+						pStmnt = fmt.Sprintf("(%s IS NOT NULL OR %s != '')", pFilter, pFilter)
+					} else {
+						return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+					}
+				}
+			} else {
+				if p.Value != model.PropertyValueNone {
+					pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s.properties, '%s') %s ?", model.FacebookObjectMapForSmartProperty[p.Object], p.Property, propertyOp)
+					rParams = append(rParams, pValue)
+				} else {
+					if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL OR JSON_EXTRACT_STRING(%s.properties, '%s') = '')", model.FacebookObjectMapForSmartProperty[p.Object], p.Property, model.FacebookObjectMapForSmartProperty[p.Object], p.Property)
+					} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s.properties, '%s') IS NOT NULL OR JSON_EXTRACT_STRING(%s.properties, '%s') != '')", model.FacebookObjectMapForSmartProperty[p.Object], p.Property, model.FacebookObjectMapForSmartProperty[p.Object], p.Property)
+					} else {
+						return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+					}
+				}
+				if p.Object == "campaign" {
+					campaignFilter = smartPropertyCampaignStaticFilter
+				} else {
+					adGroupFilter = smartPropertyAdGroupStaticFilter
+				}
+			}
+			if indexOfProperty == 0 {
+				currentGroupStmnt = pStmnt
+			} else {
+				currentGroupStmnt = fmt.Sprintf("%s %s %s", currentGroupStmnt, p.LogicalOp, pStmnt)
+			}
+		}
+		if indexOfGroup == 0 {
+			rStmnt = fmt.Sprintf("(%s)", currentGroupStmnt)
+		} else {
+			rStmnt = fmt.Sprintf("%s AND (%s)", rStmnt, currentGroupStmnt)
+		}
+
+	}
 	if campaignFilter != "" {
-		resultStatement += (" AND " + campaignFilter)
+		rStmnt += (" AND " + campaignFilter)
 	}
 	if adGroupFilter != "" {
-		resultStatement += (" AND " + adGroupFilter)
+		rStmnt += (" AND " + adGroupFilter)
 	}
-	if resultStatement == "" {
-		return resultStatement
-	}
-	return resultStatement + ")"
+	return rStmnt, rParams, nil
 }
 
 // @TODO Kark v1

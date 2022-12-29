@@ -82,6 +82,8 @@ spec:
                 - "1"
                 - --debug_enabled
                 - "false"
+                - --increase_kpi_limit_for_projectids
+                - ""                
               envFrom:
                 - configMapRef:
                     name: config-env

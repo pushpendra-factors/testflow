@@ -25,14 +25,20 @@ var LinkedinDocumentTypeAlias = map[string]int{
 	"campaign_group_insights": 5,
 	"campaign_insights":       6,
 	"ad_account":              7,
+	"member_company_insights": 8,
 }
 
 var objectAndPropertyToValueInLinkedinReportsMapping = map[string]string{
-	"campaign_group:id":   "campaign_group_id",
-	"creative:id":         "creative_id",
-	"campaign:id":         "campaign_id",
-	"campaign_group:name": "JSON_EXTRACT_STRING(value, 'campaign_group_name')",
-	"campaign:name":       "JSON_EXTRACT_STRING(value, 'campaign_name')",
+	"campaign_group:id":                         "campaign_group_id",
+	"creative:id":                               "creative_id",
+	"campaign:id":                               "campaign_id",
+	"campaign_group:name":                       "JSON_EXTRACT_STRING(value, 'campaign_group_name')",
+	"campaign:name":                             "JSON_EXTRACT_STRING(value, 'campaign_name')",
+	"member_company_insights:vanity_name":       "JSON_EXTRACT_STRING(value, 'vanityName')",
+	"member_company_insights:localized_name":    "JSON_EXTRACT_STRING(value, 'localizedName')",
+	"member_company_insights:headquarters":      "JSON_EXTRACT_STRING(value, 'companyHeadquarters')",
+	"member_company_insights:domain":            "JSON_EXTRACT_STRING(value, 'localizedWebsite')",
+	"member_company_insights:preferred_country": "JSON_EXTRACT_STRING(value, 'preferredCountry')",
 }
 
 // TODO check
@@ -46,11 +52,16 @@ var linkedinMetricsToAggregatesInReportsMapping = map[string]string{
 }
 
 var objectToValueInLinkedinFiltersMapping = map[string]string{
-	"campaign:name":       "JSON_EXTRACT_STRING(value, 'campaign_name')",
-	"campaign_group:name": "JSON_EXTRACT_STRING(value, 'campaign_group_name')",
-	"campaign:id":         "campaign_id",
-	"campaign_group:id":   "campaign_group_id",
-	"creative:id":         "creative_id",
+	"campaign:name":                             "JSON_EXTRACT_STRING(value, 'campaign_name')",
+	"campaign_group:name":                       "JSON_EXTRACT_STRING(value, 'campaign_group_name')",
+	"campaign:id":                               "campaign_id",
+	"campaign_group:id":                         "campaign_group_id",
+	"creative:id":                               "creative_id",
+	"member_company_insights:vanity_name":       "JSON_EXTRACT_STRING(value, 'vanityName')",
+	"member_company_insights:localized_name":    "JSON_EXTRACT_STRING(value, 'localizedName')",
+	"member_company_insights:headquarters":      "JSON_EXTRACT_STRING(value, 'companyHeadquarters')",
+	"member_company_insights:domain":            "JSON_EXTRACT_STRING(value, 'localizedWebsite')",
+	"member_company_insights:preferred_country": "JSON_EXTRACT_STRING(value, 'preferredCountry')",
 }
 var objectToValueInLinkedinFiltersMappingWithLinkedinDocuments = map[string]string{
 	"campaign:name":       "JSON_EXTRACT_STRING(linkedin_documents.value, 'campaign_name')",
@@ -386,6 +397,7 @@ func (store *MemSQL) GetLinkedinFilterValues(projectID int64, requestFilterObjec
 	if err != http.StatusOK {
 		return make([]interface{}, 0, 0), http.StatusBadRequest
 	}
+
 	filterValues, errCode := store.getLinkedinFilterValuesByType(projectID, docType, linkedinInternalFilterProperty, reqID)
 	if errCode != http.StatusFound {
 		return []interface{}{}, http.StatusInternalServerError
@@ -485,9 +497,15 @@ func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID int64, query *model
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	fetchSource := false
 	logCtx := log.WithFields(logFields)
+	limitString := ""
+	if C.IsKPILimitIncreaseAllowedForProject(projectID) {
+		limitString = fmt.Sprintf(" LIMIT %d", model.MaxResultsLimit)
+	} else {
+		limitString = fmt.Sprintf(" LIMIT %d", model.ResultsLimit)
+	}
 	if query.GroupByTimestamp == "" {
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForLinkedinQueryV1(projectID,
-			query, reqID, fetchSource, " LIMIT 10000", false, nil)
+			query, reqID, fetchSource, limitString, false, nil)
 		if errCode == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -522,7 +540,7 @@ func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID int64, query *model
 		}
 		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
 		sql, params, selectKeys, selectMetrics, errCode = store.GetSQLQueryAndParametersForLinkedinQueryV1(
-			projectID, query, reqID, fetchSource, " LIMIT 10000", true, groupByCombinations)
+			projectID, query, reqID, fetchSource, limitString, true, groupByCombinations)
 		if errCode != http.StatusOK {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), errCode
@@ -719,6 +737,9 @@ func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID int64, customer
 		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
+
+// Added case when statement for NULL value and empty value for group bys
+// Added case when statement for NULL value for smart properties. Didn't add for empty values as such case will not be present
 func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQueryV1, projectID int64, from, to int64, linkedinAccountIDs string, docType int,
 	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
@@ -750,13 +771,13 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 		isSmartProperty := !isPresent
 		if isSmartProperty {
 			if groupBy.Object == "campaign_group" {
-				value := fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s') as campaign_%s", groupBy.Property, groupBy.Property)
+				value := fmt.Sprintf("Case when JSON_EXTRACT_STRING(campaign.properties, '%s') is null then '$none' else JSON_EXTRACT_STRING(campaign.properties, '%s') END as campaign_%s", groupBy.Property, groupBy.Property, groupBy.Property)
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("campaign_%s", groupBy.Property))
 
 				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("campaign_%s", groupBy.Property))
 			} else {
-				value := fmt.Sprintf("JSON_EXTRACT_STRING(ad_group.properties,'%s') as ad_group_%s", groupBy.Property, groupBy.Property)
+				value := fmt.Sprintf("Case when JSON_EXTRACT_STRING(ad_group.properties,'%s') is null then '$none' else JSON_EXTRACT_STRING(ad_group.properties,'%s') END as ad_group_%s", groupBy.Property, groupBy.Property, groupBy.Property)
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("ad_group_%s", groupBy.Property))
 
@@ -769,7 +790,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
 			} else {
-				value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
+				value := fmt.Sprintf("CASE WHEN %s IS NULL THEN '$none' WHEN %s = '' THEN '$none' ELSE %s END as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], objectAndPropertyToValueInLinkedinReportsMapping[key], objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
 			}
@@ -800,7 +821,10 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
-	whereConditionForFilters := getLinkedinFiltersWhereStatementWithSmartProperty(query.Filters)
+	whereConditionForFilters, filterParams, err := getFilterPropertiesForLinkedinReportsNew(query.Filters)
+	if err != nil {
+		return "", nil, nil, nil
+	}
 	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyLinkedinGroupBys(query.GroupBy)
 	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForLinkedinWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
 
@@ -808,6 +832,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 	finalParams := make([]interface{}, 0)
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
+	finalParams = append(finalParams, filterParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForLinkedin(groupByCombinationsForGBT)
 		finalFilterStatement += " AND (" + whereConditionForGBT + ") "
@@ -831,14 +856,15 @@ func getLinkedinFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertyWithTypeAndSource(filters, groupBys, "linkedin")
 	fromStatement := fromLinkedinDocuments
 	if isPresentAdGroupSmartProperty {
-		fromStatement += "inner join smart_properties ad_group on ad_group.project_id = linkedin_documents.project_id and ad_group.object_id = campaign_id "
+		fromStatement += "left join smart_properties ad_group on ad_group.project_id = linkedin_documents.project_id and ad_group.object_id = campaign_id "
 	}
 	if isPresentCampaignSmartProperty {
-		fromStatement += "inner join smart_properties campaign on campaign.project_id = linkedin_documents.project_id and campaign.object_id = campaign_group_id "
+		fromStatement += "left join smart_properties campaign on campaign.project_id = linkedin_documents.project_id and campaign.object_id = campaign_group_id "
 	}
 	return fromStatement
 }
 
+// Added case when statement for NULL value and empty value for group bys
 func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID int64, from, to int64, linkedinAccountIDs string, docType int,
 	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
@@ -883,7 +909,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID i
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
 		} else {
-			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			value := fmt.Sprintf("CASE WHEN %s IS NULL THEN '$none' WHEN %s = '' THEN '$none' ELSE %s END as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], objectAndPropertyToValueInLinkedinReportsMapping[key], objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
 		}
@@ -906,11 +932,15 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID i
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
-	whereConditionForFilters := getLinkedinFiltersWhereStatement(query.Filters)
+	whereConditionForFilters, filterParams, err := getFilterPropertiesForLinkedinReportsNew(query.Filters)
+	if err != nil {
+		return "", nil, nil, nil
+	}
 	finalFilterStatement := whereConditionForFilters
 	finalParams := make([]interface{}, 0)
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
+	finalParams = append(finalParams, filterParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForLinkedin(groupByCombinationsForGBT)
 		finalFilterStatement += " AND (" + whereConditionForGBT + ") "
@@ -981,87 +1011,98 @@ func GetReportExpressionIfPresentForLinkedin(objectType, dimension, prefix strin
 	return reportProperty, isPresent
 }
 
-func getLinkedinFiltersWhereStatement(filters []model.ChannelFilterV1) string {
+func getFilterPropertiesForLinkedinReportsNew(filters []model.ChannelFilterV1) (rStmnt string, rParams []interface{}, err error) {
 	logFields := log.Fields{
 		"filters": filters,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	resultStatement := ""
-	var filterValue string
-	for index, filter := range filters {
-		currentFilterStatement := ""
-		if filter.LogicalOp == "" {
-			filter.LogicalOp = "AND"
-		}
-		filterOperator := getOp(filter.Condition, "categorical")
-		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%s", filter.Value)
-		} else {
-			filterValue = filter.Value
-		}
-		currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectToValueInLinkedinFiltersMapping[filter.Object+":"+filter.Property], filterOperator, filterValue)
-		if index == 0 {
-			resultStatement = " AND " + currentFilterStatement
-		} else {
-			resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
-		}
-	}
 
-	return resultStatement
-}
-func getLinkedinFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1) string {
-	logFields := log.Fields{
-		"filters": filters,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	resultStatement := ""
-	var filterValue string
 	campaignFilter := ""
 	adGroupFilter := ""
-	for index, filter := range filters {
-		currentFilterStatement := ""
-		if filter.LogicalOp == "" {
-			filter.LogicalOp = "AND"
-		}
-		filterOperator := getOp(filter.Condition, "categorical")
-		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%s", filter.Value)
-		} else {
-			filterValue = filter.Value
-		}
-		_, isPresent := model.SmartPropertyReservedNames[filter.Property]
-		if isPresent {
-			currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectToValueInLinkedinFiltersMapping[filter.Object+":"+filter.Property], filterOperator, filterValue)
-			if index == 0 {
-				resultStatement = " AND " + currentFilterStatement
-			} else {
-				resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
-			}
-		} else {
-			currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(%s.properties, '%s') %s '%s'", model.LinkedinObjectMapForSmartProperty[filter.Object], filter.Property, filterOperator, filterValue)
-			if index == 0 {
-				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
-			} else {
-				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
-			}
-			if filter.Object == "campaign_group" {
-				campaignFilter = smartPropertyCampaignStaticFilter
-			} else {
-				adGroupFilter = smartPropertyAdGroupStaticFilter
-			}
-		}
+	filtersLen := len(filters)
+	if filtersLen == 0 {
+		return rStmnt, rParams, nil
 	}
 
+	rParams = make([]interface{}, 0)
+	groupedProperties := model.GetChannelFiltersGrouped(filters)
+
+	for indexOfGroup, currentGroupedProperties := range groupedProperties {
+		var currentGroupStmnt, pStmnt string
+		for indexOfProperty, p := range currentGroupedProperties {
+
+			if p.LogicalOp == "" {
+				p.LogicalOp = "AND"
+			}
+
+			if !isValidLogicalOp(p.LogicalOp) {
+				return rStmnt, rParams, errors.New("invalid logical op on where condition")
+			}
+			pStmnt = ""
+			propertyOp := getOp(p.Condition, "categorical")
+			// categorical property type.
+			pValue := ""
+			if p.Condition == model.ContainsOpStr || p.Condition == model.NotContainsOpStr {
+				pValue = fmt.Sprintf("%s", p.Value)
+			} else {
+				pValue = p.Value
+			}
+			_, isPresent := model.SmartPropertyReservedNames[p.Property]
+			if isPresent {
+				key := fmt.Sprintf("%s:%s", p.Object, p.Property)
+				pFilter := objectToValueInLinkedinFiltersMapping[key]
+
+				if p.Value != model.PropertyValueNone {
+					pStmnt = fmt.Sprintf("%s %s '%s' ", pFilter, propertyOp, pValue)
+				} else {
+					// where condition for $none value.
+					if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
+						pStmnt = fmt.Sprintf("(%s IS NULL OR %s = '')", pFilter, pFilter)
+					} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
+						pStmnt = fmt.Sprintf("(%s IS NOT NULL OR %s != '')", pFilter, pFilter)
+					} else {
+						return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+					}
+				}
+			} else {
+				if p.Value != model.PropertyValueNone {
+					pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s.properties, '%s') %s ?", model.LinkedinObjectMapForSmartProperty[p.Object], p.Property, propertyOp)
+					rParams = append(rParams, pValue)
+				} else {
+					if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL OR JSON_EXTRACT_STRING(%s.properties, '%s') = '')", model.LinkedinObjectMapForSmartProperty[p.Object], p.Property, model.LinkedinObjectMapForSmartProperty[p.Object], p.Property)
+					} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s.properties, '%s') IS NOT NULL OR JSON_EXTRACT_STRING(%s.properties, '%s') != '')", model.LinkedinObjectMapForSmartProperty[p.Object], p.Property, model.LinkedinObjectMapForSmartProperty[p.Object], p.Property)
+					} else {
+						return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+					}
+				}
+				if p.Object == "campaign_group" {
+					campaignFilter = smartPropertyCampaignStaticFilter
+				} else {
+					adGroupFilter = smartPropertyAdGroupStaticFilter
+				}
+			}
+			if indexOfProperty == 0 {
+				currentGroupStmnt = pStmnt
+			} else {
+				currentGroupStmnt = fmt.Sprintf("%s %s %s", currentGroupStmnt, p.LogicalOp, pStmnt)
+			}
+		}
+		if indexOfGroup == 0 {
+			rStmnt = fmt.Sprintf("(%s)", currentGroupStmnt)
+		} else {
+			rStmnt = fmt.Sprintf("%s AND (%s)", rStmnt, currentGroupStmnt)
+		}
+
+	}
 	if campaignFilter != "" {
-		resultStatement += (" AND " + campaignFilter)
+		rStmnt += (" AND " + campaignFilter)
 	}
 	if adGroupFilter != "" {
-		resultStatement += (" AND " + adGroupFilter)
+		rStmnt += (" AND " + adGroupFilter)
 	}
-	if resultStatement == "" {
-		return resultStatement
-	}
-	return resultStatement + ")"
+	return rStmnt, rParams, nil
 }
 
 func getNotNullFilterStatementForSmartPropertyLinkedinGroupBys(groupBys []model.ChannelGroupBy) string {
@@ -1128,6 +1169,12 @@ func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 	for _, objectName := range objectNames {
 		if objectName == model.LinkedinCampaignGroup {
 			return model.LinkedinCampaignGroup
+		}
+	}
+
+	for _, objectName := range objectNames {
+		if objectName == model.LinkedInMemberCompanyInsights {
+			return model.LinkedInMemberCompany
 		}
 	}
 

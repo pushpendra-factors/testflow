@@ -44,8 +44,8 @@ func LeadSquaredIntegration(projectId int64, configs map[string]interface{}) (ma
 	}
 
 	PAGE_SIZE := 1000
-	for docType, _ := range model.LeadSquaredDocumentEndpoint {
-		if docType == model.LEADSQUARED_EMAIL_SENT || docType == model.LEADSQUARED_EMAIL_INFO || docType == model.LEADSQUARED_HAD_A_CALL {
+	for docType, _ := range model.LeadSquaredTableName {
+		if docType != model.LEADSQUARED_LEAD && docType != model.LEADSQUARED_SALES_ACTIVITY {
 			if projectId == 2251799831000006 {
 				continue
 			}
@@ -58,7 +58,7 @@ func LeadSquaredIntegration(projectId int64, configs map[string]interface{}) (ma
 			docType,
 			configs["BigqueryProjectId"].(string),
 			leadSquaredConfig.BigqueryDataset,
-			model.LeadSquaredDataObjectColumnsQuery[docType])
+			model.LeadSquaredDataObjectColumnsQuery(docType))
 		var metadataQueryResult [][]string
 		columnNamesFromMetadata := make([]string, 0)
 		columnNamesFromMetadataDateTime := make(map[string]bool)
@@ -78,7 +78,7 @@ func LeadSquaredIntegration(projectId int64, configs map[string]interface{}) (ma
 			"accessKey": leadSquaredConfig.AccessKey,
 			"secretKey": leadSquaredConfig.SecretKey,
 		}
-		if docType == model.LEADSQUARED_SALES_ACTIVITY || docType == model.LEADSQUARED_EMAIL_SENT || docType == model.LEADSQUARED_EMAIL_INFO || docType == model.LEADSQUARED_HAD_A_CALL {
+		if model.ActivityEvents[docType] == true {
 			leadSquaredUrlParams["code"] = fmt.Sprintf("%v", LEADSQUARED_ACTIVITYCODE[docType])
 		}
 		propertyMetadataList, errorStatus, msg := getMetadataDetails(docType, leadSquaredConfig.Host, leadSquaredUrlParams)
@@ -93,7 +93,7 @@ func LeadSquaredIntegration(projectId int64, configs map[string]interface{}) (ma
 		LatestProspectAutoId := 0
 		for {
 			var query string
-			query = model.GetLeadSquaredDocumentQuery(configs["BigqueryProjectId"].(string), leadSquaredConfig.BigqueryDataset, model.LeadSquaredDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, LatestProspectAutoId)
+			query = model.GetLeadSquaredDocumentQuery(configs["BigqueryProjectId"].(string), leadSquaredConfig.BigqueryDataset, model.LeadSquaredDocumentToQuery(docType), executionDateString, docType, PAGE_SIZE, LatestProspectAutoId)
 			var queryResult [][]string
 			err = BQ.ExecuteQuery(&ctx, client, query, &queryResult)
 			if err != nil {
@@ -212,10 +212,10 @@ func InsertIntegrationDocumentLeadSquared(projectId int64, docType string, query
 		insertionStatus := int(0)
 		var errCRMStatus error
 		var logIndex string
-		if model.LeadSquaredDocTypeIntegrationObjectMap[docType] == "user" {
+		if model.LeadSquaredDocTypeIntegrationObjectMap(docType) == "user" {
 			insertionStatus, errCRMStatus, logIndex = insertCRMUserLeadSquared(projectId, line, docType, columnNamesFromMetadata, valuesBlob)
 		}
-		if model.LeadSquaredDocTypeIntegrationObjectMap[docType] == "activity" {
+		if model.LeadSquaredDocTypeIntegrationObjectMap(docType) == "activity" {
 			insertionStatus, errCRMStatus, logIndex = insertCRMActivityLeadSquared(projectId, line, docType, columnNamesFromMetadata, valuesBlob)
 		}
 		if errCRMStatus != nil || insertionStatus != http.StatusCreated {
@@ -282,7 +282,7 @@ func insertCRMActivityLeadSquared(projectId int64, line []string, docType string
 		ProjectID:          projectId,
 		ExternalActivityID: model.GetLeadSquaredDocumentProgramId(docType, line, columnNamesFromMetadata),
 		Source:             U.CRM_SOURCE_LEADSQUARED,
-		Name:               model.LeadSquaredDocumentCreatedEventName[docType],
+		Name:               model.LeadSquaredDocumentCreatedEventName(docType),
 		Type:               model.GetLeadSquaredDocumentDocumentType(docType),
 		ActorType:          model.GetLeadSquaredActorType(docType),
 		ActorID:            model.GetLeadSquaredDocumentActorId(docType, line, columnNamesFromMetadata),
@@ -292,7 +292,7 @@ func insertCRMActivityLeadSquared(projectId int64, line []string, docType string
 
 	insertionStatus, errCRMStatus = store.GetStore().CreateCRMActivity(&intDocument)
 	if insertionStatus == http.StatusConflict {
-		intDocument.Name =  model.LeadSquaredDocumentUpdatedEventName[docType]
+		intDocument.Name =  model.LeadSquaredDocumentUpdatedEventName(docType)
 		intDocument.Timestamp = timestamps[1]
 		insertionStatus, errCRMStatus = store.GetStore().CreateCRMActivity(&intDocument)
 	}

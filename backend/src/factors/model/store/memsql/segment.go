@@ -216,3 +216,33 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 
 	return nil, http.StatusOK
 }
+
+func (store *MemSQL) DeleteSegmentById(projectId int64, segmentId string) (int, error) {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"id":         segmentId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectId == 0 || segmentId == "" {
+		logCtx.Error("Failed to delete segment by ID. Invalid parameters.")
+		return http.StatusBadRequest, nil
+	}
+
+	db := C.GetServices().Db
+	dbx := db.Table("segments").Limit(1).Where("project_id = ? AND id = ? ",
+		projectId, segmentId).Delete(&model.Segment{})
+
+	if err := dbx.Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound, err
+		}
+		logCtx.WithError(err).Error(
+			"Failed to delete segment by ID.")
+		return http.StatusInternalServerError, err
+	}
+
+	return http.StatusOK, nil
+}

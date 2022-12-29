@@ -90,8 +90,8 @@ var AllowedEventNamesForSalesforce = []string{
 	U.EVENT_NAME_SALESFORCE_EVENT_UPDATED,
 }
 
-var EventTypeToEnameType = map[string]string{
-	PageViewsDisplayCategory: "AT",
+var EventTypeToEnameType = map[string][]string{
+	PageViewsDisplayCategory: {"AT", "FE"},
 }
 
 const URI_PROPERTY_PREFIX = ":"

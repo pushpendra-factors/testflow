@@ -11,14 +11,14 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
+
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
-
-	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 )
 
 type AttributionRequestPayloadV1 struct {
@@ -67,12 +67,6 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
-
-	/*isQuery := false
-	isQueryParam := c.Query("is_query")
-	if isQueryParam != "" {
-		isQuery, _ = strconv.ParseBool(isQueryParam)
-	}*/
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
@@ -185,10 +179,6 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 			return nil, resCode, PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
 		}
 	}
-	/*if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
-		logCtx.WithField("request_payload", requestPayload).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
-		return nil, resCode, PROCESSING_FAILED, "Not found in cache. Execution suspended temporarily.", true
-	}*/
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
 	model.SetQueryCachePlaceholder(projectId, &attributionQueryUnitPayload)

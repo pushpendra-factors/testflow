@@ -2,17 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { Spin } from 'antd';
 import _ from 'lodash';
 import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
-import styles from './index.module.scss';
 import { SVG } from '../factorsComponents';
 import InfoCard from './InfoCard';
-import { groups, hoverEvents } from '../Profile/utils';
+import {
+  getEventCategory,
+  getIconForCategory,
+  groups,
+  hoverEvents
+} from '../Profile/utils';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function FaTimeline({
   activities = [],
   granularity,
   collapse,
   setCollapse,
-  loading
+  loading,
+  eventNamesMap
 }) {
   const [showAll, setShowAll] = useState([]);
 
@@ -34,113 +40,116 @@ function FaTimeline({
     setShowAll(showAllState);
   };
 
-  const renderTimeline = (data) => {
-    if (!Object.entries(data).length)
-      return (
-        <div className="ant-empty ant-empty-normal">
-          <div className="ant-empty-image">
-            <SVG name="nodata" />
+  const renderInfoCard = (event) => {
+    const eventName =
+      event.display_name === 'Page View'
+        ? event.event_name
+        : event?.alias_name || PropTextFormat(event.display_name);
+    const hoverConditionals =
+      hoverEvents.includes(event.event_name) ||
+      event.display_name === 'Page View' ||
+      event.event_type === 'CH' ||
+      event.event_type === 'CS';
+    const category = getEventCategory(event, eventNamesMap);
+    const icon = getIconForCategory(category);
+
+    return (
+      <InfoCard
+        title={event?.alias_name || event.display_name}
+        eventName={event?.event_name}
+        properties={event?.properties || {}}
+        trigger={hoverConditionals ? 'hover' : []}
+        icon={
+          <SVG
+            name={icon}
+            size={24}
+            color={icon === 'events_cq' ? 'blue' : null}
+          />
+        }
+      >
+        <div className='inline-flex-gap--6 items-center'>
+          <div>
+            <SVG
+              name={icon}
+              size={16}
+              color={icon === 'events_cq' ? 'blue' : null}
+            />
           </div>
-          <div className="ant-empty-description">No Activity</div>
+          <div className='event-name--sm'>{eventName}</div>
+          {hoverConditionals ? <CaretRightOutlined /> : null}
         </div>
-      );
-    const timeline = [];
-    Object.entries(data).forEach(([key, values], index) => {
-      const arrayOpts = [];
-      const groupEvents = (
-        <div className={styles.timeline}>
-          <div className={styles.timeline_timestamp}>
-            <div className={styles.timeline_timestamp_text}>{key}</div>
-          </div>
-          <div className={styles.timeline_events}>
-            {(() => {
-              values.forEach((event) => {
-                arrayOpts.push(
-                  <div className={styles.timeline_events_event}>
-                    {event ? (
-                      <div className="flex">
-                        <InfoCard
-                          title={event?.alias_name || event.display_name}
-                          eventName={event?.event_name}
-                          properties={event?.properties || {}}
-                          trigger={
-                            hoverEvents.includes(event.event_name) ||
-                            event.display_name === 'Page View' ||
-                            event.event_type === 'CH' ||
-                            event.event_type === 'CS'
-                              ? 'hover'
-                              : []
-                          }
-                        >
-                          <div className={`${styles.tag}`}>
-                            <span className="truncate">
-                              {event.display_name === 'Page View'
-                                ? event.event_name
-                                : event?.alias_name || event.display_name}
-                            </span>
-                            {hoverEvents.includes(event.event_name) ||
-                            event.display_name === 'Page View' ||
-                            event.event_type === 'CH' ||
-                            event.event_type === 'CS' ? (
-                              <CaretRightOutlined />
-                            ) : null}
-                          </div>
-                        </InfoCard>
-                        {!showAll[index] && values.length > 1 ? (
-                          <div
-                            className={`${styles.num}`}
-                            onClick={() => {
-                              setShowAllIndex(index, true);
-                            }}
-                          >
-                            {`+${Number(values.length - 1)}`}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
-                    {index === Object.entries(data).length - 1 &&
-                    (!showAll[index] || values.length === 1) ? null : (
-                      <div className={styles.timeline_events_event_tail} />
-                    )}
-                  </div>
-                );
-              });
-              arrayOpts.push(
-                showAll[index] && arrayOpts.length > 1 ? (
-                  <div className={styles.timeline_events_event}>
-                    <div
-                      className={`${styles.num}`}
-                      onClick={() => {
-                        setShowAllIndex(index, false);
-                      }}
-                    >
-                      <CaretUpOutlined /> Show Less
-                    </div>
-                    {index === Object.entries(data).length - 1 ? null : (
-                      <div className={styles.timeline_events_event_tail} />
-                    )}
-                  </div>
-                ) : null
-              );
-              return showAll[index] ? arrayOpts : arrayOpts[0];
-            })()}
-          </div>
-        </div>
-      );
-      timeline.push(groupEvents);
-    });
-    return timeline;
+      </InfoCard>
+    );
   };
 
-  return (
-    <>
-      <div className={styles.header}>Date and Time</div>
-      {loading ? (
-        <Spin size="large" className="fa-page-loader" />
+  const renderAdditionalDiv = (eventsCount, collapseState, onClick) =>
+    eventsCount > 1 ? (
+      collapseState ? (
+        <div className='timeline-events__num' onClick={onClick}>
+          {`+${Number(eventsCount - 1)}`}
+        </div>
       ) : (
-        renderTimeline(groupedActivities)
-      )}
-    </>
+        <div className='timeline-events__num' onClick={onClick}>
+          <CaretUpOutlined /> Show Less
+        </div>
+      )
+    ) : null;
+
+  const renderTimeline = (data) =>
+    !Object.entries(data).length ? (
+      <div className='ant-empty ant-empty-normal'>
+        <div className='ant-empty-image'>
+          <SVG name='nodata' />
+        </div>
+        <div className='ant-empty-description'>No Activity</div>
+      </div>
+    ) : (
+      <div className='table-scroll'>
+        <table>
+          <thead>
+            <tr>
+              <th scope='col'>Date and Time</th>
+              <th scope='col'></th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(data).map(([timestamp, events], index) => {
+              const eventsList = showAll[index] ? events : events.slice(0, 1);
+              return (
+                <tr>
+                  <td>
+                    <div className='top-40'>{timestamp}</div>
+                  </td>
+                  <td className='bg-gradient--120px'>
+                    <div
+                      className={`timeline-events single-user--padding ${
+                        !showAll[index]
+                          ? 'timeline-events--collapsed'
+                          : 'timeline-events--expanded'
+                      }`}
+                    >
+                      {eventsList?.map((event) => (
+                        <div className='timeline-events__event'>
+                          {renderInfoCard(event)}
+                        </div>
+                      ))}
+                      {renderAdditionalDiv(events.length, !showAll[index], () =>
+                        setShowAllIndex(index, !showAll[index])
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+
+  return loading ? (
+    <Spin size='large' className='fa-page-loader' />
+  ) : (
+    renderTimeline(groupedActivities)
   );
 }
 export default FaTimeline;

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { connect } from 'react-redux';
+import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Button, Popover, Tooltip } from 'antd';
 import {
   fetchEventNames,
   getUserProperties,
+  getGroupProperties,
   getEventProperties
 } from '../../reducers/coreQuery/middleware';
 import MomentTz from '../MomentTz';
@@ -17,24 +18,28 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
   FunnelEventsConditionMap,
-  RevFunnelEventsConditionMap
-} from '../../utils/constants';
+  RevFunnelEventsConditionMap,
+  RevAvailableGroups
+} from 'Utils/constants';
 import FaDatepicker from '../FaDatepicker';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
 import CriteriaSection from './CriteriaSection';
 import { DEFAULT_DATE_RANGE, displayRange } from './DateRangeSelector/utils';
 import GLobalFilter from './GlobalFilter';
-import { getValidGranularityOptions } from '../../utils/dataFormatter';
+import { getValidGranularityOptions } from 'Utils/dataFormatter';
 import FaSelect from '../FaSelect';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
+import { INITIALIZE_GROUPBY } from 'Reducers/coreQuery/actions';
 
 function QueryComposer({
   queries = [],
+  setQueries,
   runQuery,
   eventChange,
   queryType,
   fetchEventNames,
   getUserProperties,
+  getGroupProperties,
   getEventProperties,
   activeProject,
   eventProperties,
@@ -44,11 +49,28 @@ function QueryComposer({
   collapse = false,
   setCollapse
 }) {
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
+  const whiteListedAccounts = [
+    'vikas@factors.ai',
+    'solutions@factors.ai',
+    'sonali@factors.ai',
+    'praveenr@factors.ai'
+  ];
+
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
   const [criteriaTabOpen, setCriteriaTabOpen] = useState(false);
+  const [filterBlockOpen, setFilterBlockOpen] = useState(true);
+  const [groupBlockOpen, setGroupBlockOpen] = useState(true);
+  const [criterieaBlockOpen, setCriterieaBlockOpen] = useState(true);
   const [eventBlockOpen, setEventBlockOpen] = useState(true);
-  const [isDDVisible, setDDVisible] = useState(false);
+  const [isOrderDDVisible, setOrderDDVisible] = useState(false);
+  const [isGroupDDVisible, setGroupDDVisible] = useState(false);
+
+  const dispatch = useDispatch();
+  const groupState = useSelector((state) => state.groups);
+  const groupOpts = groupState?.data;
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -99,9 +121,9 @@ function QueryComposer({
     setQueryOptions(opts);
   };
 
-  const onChange = (value) => {
+  const onOrderChange = (value) => {
     setEventsCondition(value);
-    setDDVisible(false);
+    setOrderDDVisible(false);
   };
 
   const showConditions = () => {
@@ -114,12 +136,11 @@ function QueryComposer({
 
   const selectEventsCondition = () => (
     <div className={`${styles.toplevel_select_dropdown}`}>
-      {isDDVisible ? (
+      {isOrderDDVisible ? (
         <FaSelect
-          extraClass={`${styles.toplevel_select_menu}`}
           options={showConditions()}
-          onClickOutside={() => setDDVisible(false)}
-          optionClick={(val) => onChange(val[1])}
+          onClickOutside={() => setOrderDDVisible(false)}
+          optionClick={(val) => onOrderChange(val[1])}
         />
       ) : null}
     </div>
@@ -135,7 +156,7 @@ function QueryComposer({
           <Button
             className={`${styles.toplevel_select_button}`}
             type='text'
-            onClick={() => setDDVisible(true)}
+            onClick={() => setOrderDDVisible(true)}
           >
             <div className='flex items-center'>
               <Text
@@ -156,6 +177,96 @@ function QueryComposer({
     </div>
   );
 
+  const setGroupAnalysis = (group) => {
+    getGroupProperties(activeProject.id, group);
+    const opts = Object.assign({}, queryOptions);
+    opts.group_analysis = group;
+    opts.globalFilters = [];
+    dispatch({
+      type: INITIALIZE_GROUPBY,
+      payload: {
+        global: [],
+        event: []
+      }
+    });
+    setQueries([]);
+    setQueryOptions(opts);
+  };
+
+  const onGroupChange = (value) => {
+    setGroupAnalysis(value);
+    setGroupDDVisible(false);
+  };
+
+  const enabledGroups = () => {
+    let groups = [['Users', 'users']];
+    groupOpts?.forEach((elem) => {
+      const formatName = RevAvailableGroups[elem.name];
+      groups.push([formatName, elem.name]);
+    });
+    return groups;
+  };
+
+  const selectGroup = () => {
+    return (
+      <div className={`${styles.toplevel_select_dropdown}`}>
+        {isGroupDDVisible ? (
+          <FaSelect
+            options={enabledGroups()}
+            onClickOutside={() => setGroupDDVisible(false)}
+            optionClick={(val) => onGroupChange(val[1])}
+          />
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderGroupSection = () => {
+    try {
+      return (
+        <div className={`flex items-center pt-4`}>
+          <Text
+            type={'title'}
+            level={6}
+            weight={'normal'}
+            extraClass={`m-0 mr-3`}
+          >
+            Analyse
+          </Text>
+          <div className={`${styles.toplevel_select}`}>
+            <Tooltip
+              title='Select profile type to analyse'
+              color={TOOLTIP_CONSTANTS.DARK}
+            >
+              <Button
+                className={`${styles.groupsection_button}`}
+                type='text'
+                onClick={() => setGroupDDVisible(true)}
+              >
+                <div className={`flex items-center`}>
+                  <Text
+                    type={'title'}
+                    level={6}
+                    weight={'bold'}
+                    extraClass={`m-0 mr-1`}
+                  >
+                    {queryOptions.group_analysis === 'users'
+                      ? 'Users'
+                      : RevAvailableGroups[queryOptions.group_analysis]}
+                  </Text>
+                  <SVG name='caretDown' />
+                </div>
+              </Button>
+            </Tooltip>
+            {selectGroup()}
+          </div>
+        </div>
+      );
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   const queryList = () => {
     const blockList = [];
     queries.forEach((event, index) => {
@@ -167,6 +278,7 @@ function QueryComposer({
             event={event}
             queries={queries}
             eventChange={eventChange}
+            groupAnalysis={queryOptions.group_analysis}
           />
         </div>
       );
@@ -184,6 +296,7 @@ function QueryComposer({
             queries={queries}
             eventChange={eventChange}
             groupBy={queryOptions.groupBy}
+            groupAnalysis={queryOptions.group_analysis}
           />
         </div>
       );
@@ -199,7 +312,6 @@ function QueryComposer({
   };
 
   const renderGlobalFilterBlock = () => {
-    const [filterBlockOpen, setFilterBlockOpen] = useState(true);
     try {
       if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
         return null;
@@ -220,11 +332,7 @@ function QueryComposer({
             <GLobalFilter
               filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
-              onFiltersLoad={[
-                () => {
-                  getUserProperties(activeProject.id, queryType);
-                }
-              ]}
+              groupName={queryOptions.group_analysis}
             />
           </div>
         </ComposerBlock>
@@ -235,8 +343,6 @@ function QueryComposer({
   };
 
   const groupByBlock = () => {
-    const [groupBlockOpen, setGroupBlockOpen] = useState(true);
-
     try {
       if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
         return null;
@@ -254,7 +360,7 @@ function QueryComposer({
           extraClass='no-padding-l no-padding-r'
         >
           <div key={0} className='fa--query_block borderless no-padding '>
-            <GroupBlock queryType={queryType} events={queries} />
+            <GroupBlock groupName={queryOptions.group_analysis} />
           </div>
         </ComposerBlock>
       );
@@ -449,7 +555,6 @@ function QueryComposer({
   );
 
   const renderCriteria = () => {
-    const [criterieaBlockOpen, setCriterieaBlockOpen] = useState(true);
     try {
       if (queryType === QUERY_TYPE_EVENT) {
         if (queries.length <= 0) return null;
@@ -507,6 +612,12 @@ function QueryComposer({
   return (
     <div className={styles.composer_body}>
       {queryType === QUERY_TYPE_FUNNEL && renderEventsConditionSection()}
+      {queryType === QUERY_TYPE_FUNNEL &&
+        ((window.document.domain === 'app.factors.ai' &&
+          whiteListedAccounts.includes(activeAgent)) ||
+          window.document.domain === 'staging-app.factors.ai' ||
+          window.document.domain === 'factors-dev.com') &&
+        renderGroupSection()}
       {renderQueryList()}
       {renderGlobalFilterBlock()}
       {groupByBlock()}
@@ -526,7 +637,8 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchEventNames,
       getEventProperties,
-      getUserProperties
+      getUserProperties,
+      getGroupProperties
     },
     dispatch
   );
