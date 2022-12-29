@@ -1537,7 +1537,8 @@ func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) 
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
 		if IsValidTokenString(token) {
-			logCtx.Error("Failed to get project from sdk project token.")
+			// This is tracked with a metric on the dashboard as it could cause error spikes.
+			logCtx.WithField("tag", "invalid_sdk_token").Info("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")
 		}
@@ -1601,7 +1602,8 @@ func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyR
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
 		if IsValidTokenString(token) {
-			logCtx.Error("Failed to get project from sdk project token.")
+			// This is tracked with a metric on the dashboard as it could cause error spikes.
+			logCtx.WithField("tag", "invalid_sdk_token").Info("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")
 		}
@@ -1716,7 +1718,8 @@ func AddUserPropertiesByToken(token string,
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
 		if IsValidTokenString(token) {
-			logCtx.Error("Failed to get project from sdk project token.")
+			// This is tracked with a metric on the dashboard as it could cause error spikes.
+			logCtx.WithField("tag", "invalid_sdk_token").Info("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")
 		}
@@ -1771,7 +1774,8 @@ func UpdateEventPropertiesByToken(token string,
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
 		if IsValidTokenString(token) {
-			logCtx.Error("Failed to get project from sdk project token.")
+			// This is tracked with a metric on the dashboard as it could cause error spikes.
+			logCtx.WithField("tag", "invalid_sdk_token").Info("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")
 		}
