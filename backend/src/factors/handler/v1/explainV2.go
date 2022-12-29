@@ -15,6 +15,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type ExplainV2QueryReq struct {
+	Title          string                `json:"name"`
+	Query          CreateGoalInputParams `json:"rule"`
+	StartTimestamp int64                 `json:"sts"`
+	EndTimestamp   int64                 `json:"ets"`
+}
+
 func GetExplainV2EntityHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
@@ -338,7 +345,7 @@ func CreateExplainV2EntityHandler(c *gin.Context) (interface{}, int, string, str
 	}
 	log.Info("Create function handler triggered.")
 
-	var entity model.ExplainV2Query
+	var entity ExplainV2QueryReq
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&entity); err != nil {
@@ -347,16 +354,15 @@ func CreateExplainV2EntityHandler(c *gin.Context) (interface{}, int, string, str
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 
-	// if len(entity.IncludeEvents) != 0 && len(entity.ExcludeEvents) != 0 {
-	// 	return nil, http.StatusBadRequest, PROCESSING_FAILED, "Provide either IncludeEvents or ExcludeEvents", true
-	// }
+	rule, _, _, _ := MapRule(entity.Query)
 
-	// err := BeforeCreate(projectID)
-	// if err != http.StatusOK {
-	// 	return nil, http.StatusBadRequest, PROCESSING_FAILED, "Build limit reached for creating pathanalysis", true
-	// }
+	var explainV2Entity model.ExplainV2Query
+	explainV2Entity.Title = entity.Title
+	explainV2Entity.Query = rule
+	explainV2Entity.StartTimestamp = entity.StartTimestamp
+	explainV2Entity.EndTimestamp = entity.EndTimestamp
 
-	_, errCode, errMsg := store.GetStore().CreateExplainV2Entity(userID, projectID, &entity)
+	_, errCode, errMsg := store.GetStore().CreateExplainV2Entity(userID, projectID, &explainV2Entity)
 	if errCode != http.StatusCreated {
 		log.WithFields(log.Fields{"document": entity, "err-message": errMsg}).Error("Failed to Explain v2 query in handler.")
 		return nil, errCode, PROCESSING_FAILED, errMsg, true

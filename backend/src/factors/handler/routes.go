@@ -324,6 +324,7 @@ func InitAppRoutes(r *gin.Engine) {
 
 	//explainV2
 	authRouteGroup.GET("/:project_id/v1/explainV2", V1.GetFactorsHandlerV2)
+	authRouteGroup.GET("/:project_id/v1/explainV2/goals", responseWrapper(V1.GetExplainV2EntityHandler))
 	authRouteGroup.POST("/:project_id/v1/explainV2", V1.PostFactorsHandlerV2)
 	authRouteGroup.POST("/:project_id/v1/explainV2/job", responseWrapper(V1.CreateExplainV2EntityHandler))
 	authRouteGroup.DELETE("/:project_id/v1/explainV2/:id", V1.DeleteSavedExplainV2EntityHandler)

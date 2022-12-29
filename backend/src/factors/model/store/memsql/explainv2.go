@@ -107,6 +107,10 @@ func (store *MemSQL) CreateExplainV2Entity(userID string, projectId int64, entit
 		return nil, http.StatusConflict, "Please provide a different title"
 	}
 
+	if status, errMsg := store.isRuleValid(entity.Query, projectId); status == false {
+		return nil, http.StatusBadRequest, errMsg
+	}
+
 	if isDulplicateExplainV2Query(projectId, entity) {
 		return nil, http.StatusConflict, "Query already exists"
 	}

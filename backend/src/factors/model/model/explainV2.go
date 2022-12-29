@@ -49,8 +49,8 @@ type ExplainV2 struct {
 }
 
 type ExplainV2Query struct {
-	Title          string          `json:"ti"`
-	Query          FactorsGoalRule `json:"fr"`
+	Title          string          `json:"name"`
+	Query          FactorsGoalRule `json:"rule"`
 	StartTimestamp int64           `json:"sts"`
 	EndTimestamp   int64           `json:"ets"`
 }
