@@ -1357,6 +1357,11 @@ func GetBrowser(p *user_agent.UserAgent) (string, string) {
 	if IsPingdomBot(p.UA()) {
 		return "PingdomBot", ""
 	}
+
+	if IsLighthouse(p.UA()) {
+		return "LightHouse", ""
+	}
+
 	return p.Browser()
 }
 

@@ -536,8 +536,8 @@ func Track(projectId int64, request *TrackPayload,
 		return http.StatusInternalServerError, &TrackResponse{Error: "Tracking failed. Invalid project."}
 	}
 
-	// Terminate track calls from bot user_agent.
-	if *projectSettings.ExcludeBot && U.IsBotUserAgent(request.UserAgent) {
+	// Terminate track calls from bot user_agent and event_name prefix.
+	if *projectSettings.ExcludeBot && (U.IsBotUserAgent(request.UserAgent) || U.IsBotEventByPrefix(request.Name)) {
 		return http.StatusNotModified, &TrackResponse{Message: "Tracking skipped. Bot request."}
 	}
 
