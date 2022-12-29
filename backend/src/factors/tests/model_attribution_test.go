@@ -1659,8 +1659,8 @@ func TestGetUserGroupWise(t *testing.T) {
 
 		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
-		assert.Equal(t, float64(2), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"+model.KeyDelimiter+"$none"))
-		assert.Equal(t, float64(2), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"+model.KeyDelimiter+"$none"))
+		assert.Equal(t, float64(1), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"+model.KeyDelimiter+"$none"))
+		assert.Equal(t, float64(1), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"+model.KeyDelimiter+"$none"))
 
 	})
 

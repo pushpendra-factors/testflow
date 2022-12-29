@@ -947,7 +947,25 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 
 	result := &model.QueryResult{}
 
-	if query.AttributionKey == model.AttributionKeyLandingPage {
+	if query.AttributionKey == model.AttributionKeyAllPageView {
+
+		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+
+			result = model.ProcessQueryKPIPageUrl(query, attributionData, *logCtx, kpiData, isCompare)
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+			}
+			queryStartTime = time.Now().UTC().Unix()
+
+		} else {
+			result = model.ProcessQueryPageUrl(query, attributionData, *logCtx, isCompare)
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+			}
+			queryStartTime = time.Now().UTC().Unix()
+		}
+
+	} else if query.AttributionKey == model.AttributionKeyLandingPage {
 
 		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities || query.AnalyzeType == model.AnalyzeTypeUserKPI {
 
@@ -999,7 +1017,15 @@ func ProcessAttributionDataToResultV1(projectID int64, query *model.AttributionQ
 
 	result := &model.QueryResult{}
 
-	if query.AttributionKey == model.AttributionKeyLandingPage {
+	if query.AttributionKey == model.AttributionKeyAllPageView {
+
+		result = model.ProcessQueryKPIPageUrlV1(query, attributionData, *logCtx, kpiData, isCompare)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+		}
+		queryStartTime = time.Now().UTC().Unix()
+
+	} else if query.AttributionKey == model.AttributionKeyLandingPage {
 
 		result = model.ProcessQueryKPILandingPageUrlV1(query, attributionData, *logCtx, kpiData, isCompare)
 		if C.GetAttributionDebug() == 1 {
