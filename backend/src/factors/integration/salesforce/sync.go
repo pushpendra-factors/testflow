@@ -834,55 +834,54 @@ func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []st
 		return []string{"Invalid docType for salesforce activities in syncMissingObjectsForSalesforceActivities."}, 0, true
 	}
 
-	var failures []string
-	done := false
-	activityIDs := 0
-
-	if len(documentIDs) == 0 {
+	distinctDocumentIDs := U.RemoveDuplicateStringInArray(documentIDs)
+	if len(distinctDocumentIDs) == 0 {
 		logCtx.Info("No documentIDs to process in syncMissingObjectsForSalesforceActivities.")
 		return nil, 0, false
 	}
 
-	docs, errCode := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, documentIDs, model.GetSalesforceDocTypeByAlias(objectName), true)
+	docIDs, errCode := store.GetStore().IsExistSalesforceDocumentByIds(projectID, distinctDocumentIDs, model.GetSalesforceDocTypeByAlias(objectName))
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		logCtx.Error(fmt.Sprintf("Failed to get salesforce %s documents in syncMissingObjectsForSalesforceActivities.", objectName))
 		return []string{fmt.Sprintf("Failed to get salesforce %s documents in syncMissingObjectsForSalesforceActivities.", objectName)}, 0, true
 	}
 
-	docIDs := make([]string, 0)
-	for i := range docs {
-		docIDs = append(docIDs, docs[i].ID)
-	}
-
-	missingDocIDs := U.StringSliceDiff(documentIDs, docIDs)
-	if len(missingDocIDs) < 1 {
-		return nil, 0, false
-	}
-
-	paginatedObjects, err := salesforceDataClient.GetObjectRecordsByIDs(projectID, objectName, missingDocIDs)
-	if err != nil {
-		logCtx.WithError(err).Error(fmt.Sprintf("Failed to initialize salesforce data client for sync activities %s.", objectName))
-		return []string{fmt.Sprintf("Failed to initialize salesforce data client for sync activities %s.", objectName)}, 0, true
-	}
-
-	var records []model.SalesforceRecord
-	for !done {
-		records, done, err = paginatedObjects.getNextBatch()
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to getNextBatch on syncMissingObjectsForSalesforceActivities.")
-			return []string{err.Error()}, 0, true
-		}
-
-		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, objectName, records)
-		if err != nil {
-			log.WithFields(log.Fields{"project_id": projectID}).Error(fmt.Sprintf("Failed to BuildAndUpsertDocument activities %s sync.", objectName))
-			failures = append(failures, err.Error())
+	missingDocIDs := make([]string, 0)
+	for i := range distinctDocumentIDs {
+		if _, exists := docIDs[distinctDocumentIDs[i]]; !exists {
+			missingDocIDs = append(missingDocIDs, documentIDs[i])
 		}
 	}
 
-	activityIDs = paginatedObjects.APICall
+	var failures []string
+	activitiesAPICalls := 0
+	batchedDocIDs := U.GetStringListAsBatch(missingDocIDs, 50)
+	for i := range batchedDocIDs {
+		paginatedObjects, err := salesforceDataClient.GetObjectRecordsByIDs(projectID, objectName, batchedDocIDs[i])
+		if err != nil {
+			logCtx.WithError(err).Error(fmt.Sprintf("Failed to initialize salesforce data client for sync activities %s.", objectName))
+			return []string{fmt.Sprintf("Failed to initialize salesforce data client for sync activities %s.", objectName)}, 0, true
+		}
 
-	return failures, activityIDs, len(failures) > 0
+		var records []model.SalesforceRecord
+		done := false
+		for !done {
+			records, done, err = paginatedObjects.getNextBatch()
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to getNextBatch on syncMissingObjectsForSalesforceActivities.")
+				return []string{err.Error()}, 0, true
+			}
+
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, objectName, records)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectID}).Error(fmt.Sprintf("Failed to BuildAndUpsertDocument activities %s sync.", objectName))
+				failures = append(failures, err.Error())
+			}
+		}
+		activitiesAPICalls += paginatedObjects.APICall
+	}
+
+	return failures, activitiesAPICalls, len(failures) > 0
 }
 
 func syncTasks(projectID int64, accessToken, instanceURL string, timestamp int64) ([]string, []string, []string, int, error) {
@@ -1012,13 +1011,11 @@ func syncActivities(ps *model.SalesforceProjectSettings, accessToken, objectName
 	leadAllowed := false
 	if _, exist := allowedObject[model.SalesforceDocumentTypeNameLead]; exist {
 		leadAllowed = true
-
 	}
 
 	contactAllowed := false
 	if _, exist := allowedObject[model.SalesforceDocumentTypeNameContact]; exist {
 		contactAllowed = true
-
 	}
 
 	if objectName == model.SalesforceDocumentTypeNameTask {
