@@ -35,7 +35,7 @@ function AddDashboard({
   const [activeKey, setActiveKey] = useState('1');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [dashboardType, setDashboardType] = useState('pr');
+  const [dashboardType, setDashboardType] = useState('pv');
   const [apisCalled, setApisCalled] = useState(false);
   const [selectedQueries, setSelectedQueries] = useState([]);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);

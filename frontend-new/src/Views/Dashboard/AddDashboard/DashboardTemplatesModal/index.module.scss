@@ -47,9 +47,9 @@
   .templateSectionCopyButton {
     margin: 10px 0 10px 0;
   }
-  .templateSectionCopyButtonCopied{
-    background: #5ACA89 !important;
-    border-color: #5ACA89 !important;
+  .templateSectionCopyButtonCopied {
+    background: #5aca89 !important;
+    border-color: #5aca89 !important;
   }
   .templatesSectionAlert {
     background: #dea0691a;
@@ -91,9 +91,28 @@
   padding: 20px 5px 20px 48px;
 }
 .modalContainerBody {
-  padding: 0 48px 0 48px;
+  padding: 0 48px 10px 48px;
 }
 
 .categorySelected {
   background-color: #dedede;
+}
+
+.showMoreBtn {
+  .ant-btn.ant-btn.ant-btn-link {
+    background: white !important;
+  }
+  margin-bottom: 10px;
+  background: white;
+  border-color: transparent !important;
+  padding: 0;
+  color: #1e89ff;
+  & > *,
+  &:hover,
+  &:focus,
+  &:active {
+    color: #1e89ff;
+    border-color: transparent !important;
+    background-color: #fff !important;
+  }
 }

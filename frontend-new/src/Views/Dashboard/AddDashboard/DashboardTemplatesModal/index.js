@@ -3,6 +3,8 @@ import {
   CopyOutlined,
   ExclamationCircleOutlined,
   LoadingOutlined,
+  MinusOutlined,
+  PlusOutlined,
   SearchOutlined
 } from '@ant-design/icons';
 import {
@@ -201,7 +203,7 @@ let Step1DashboardTemplateModal = ({
                       key={eachIndex}
                       span={12}
                       style={{
-                        padding: '20px',
+                        padding: '0 20px 0 20px',
                         width: '300px',
                         cursor: 'pointer',
                         borderRadius: '2.6792px',
@@ -271,6 +273,7 @@ let Step2DashboardTemplateModal = ({
   setSelectedTemplate,
   allTemplates
 }) => {
+  const [showMore, setShowMore] = useState(true);
   const [copiedState, setCopiedState] = useState(1);
   const history = useHistory();
   const dispatch = useDispatch();
@@ -553,16 +556,50 @@ let Step2DashboardTemplateModal = ({
                 >
                   Included Reports
                 </Text>
-                {template?.units?.map((eachReport, eachIndex) => {
-                  return (
-                    <Text
-                      type={'title'}
-                      level={7}
-                      weight={'normal'}
-                      extraClass={`m-0 mr-3 `}
-                    >{`${eachIndex + 1}. ${eachReport.description}`}</Text>
-                  );
-                })}
+                {showMore
+                  ? template.units.length > 4 &&
+                    template?.units
+                      ?.slice(0, 4)
+                      .map((eachReport, eachIndex) => {
+                        return (
+                          <Text
+                            type={'title'}
+                            level={7}
+                            weight={'normal'}
+                            extraClass={`m-0 mr-3 `}
+                          >{`${eachIndex + 1}. ${eachReport.title}`}</Text>
+                        );
+                      })
+                  : template?.units?.map((eachReport, eachIndex) => {
+                      return (
+                        <Text
+                          type={'title'}
+                          level={7}
+                          weight={'normal'}
+                          extraClass={`m-0 mr-3 `}
+                        >{`${eachIndex + 1}. ${eachReport.title}`}</Text>
+                      );
+                    })}
+
+                {showMore ? (
+                  <Button
+                    className={styles.showMoreBtn}
+                    type='text'
+                    onClick={() => setShowMore(false)}
+                    icon={<PlusOutlined />}
+                  >
+                    Show more
+                  </Button>
+                ) : (
+                  <Button
+                    className={styles.showMoreBtn}
+                    type='text'
+                    onClick={() => setShowMore(true)}
+                    icon={<MinusOutlined />}
+                  >
+                    Show less
+                  </Button>
+                )}
               </div>
             </Col>
             <Col

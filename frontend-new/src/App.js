@@ -18,24 +18,6 @@ import { notification } from 'antd';
 import AdBlockerDetector from './components/AdBlockerDetector';
 import { AppRoutes } from 'Routes';
 
-/*
-  AdDetector Notification
-  Show notification if Adblocker detected
-  Don't show if there is not any adblocker detected
-
-  we can check if AdBlocker is There or not, by check (window.isAdblocker)
-  if(window.isAdblocker) adBlocker is there in browser, ask it to remove
-
-*/
-const AdBlockerNotification = () => {
-  notification.info({
-    message: `Notification TopRight`,
-    description:
-      'This is the content of the notification. This is the content of the notification. This is the content of the notification.',
-    placement: 'topRight'
-  });
-};
-
 function App({
   agent_details,
   active_project,

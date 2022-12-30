@@ -47,7 +47,7 @@ function AddDashboardTab({
       <Row className={'pt-2'} gutter={[24, 4]}>
         <Col span={24}>
           <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>
-            Who can access this dashboard?
+            Who can access this dashboard ?
           </Text>
         </Col>
         <Col span={24}>
