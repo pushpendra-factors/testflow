@@ -110,7 +110,8 @@ function AppLayout({
     'solutions@factors.ai',
     'sonali@factors.ai',
     'praveenr@factors.ai',
-    'janani@factors.ai'
+    'janani@factors.ai',
+    'akhil@factors.ai'
   ];
 
   const asyncCallOnLoad = useCallback(async () => {
@@ -255,7 +256,7 @@ function AppLayout({
                     {(window.document.domain === 'app.factors.ai' &&
                       whiteListedAccounts.includes(activeAgent)) ||
                     window.document.domain === 'staging-app.factors.ai' ||
-                    window.document.domain === 'factors-dev.com' ? (
+                    window.document.domain === 'factors-dev.com' || window.document.domain === 'localhost' ? (
                       <Route
                         // exact
                         path={ATTRIBUTION_ROUTES.base}

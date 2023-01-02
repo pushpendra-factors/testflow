@@ -937,8 +937,7 @@ function CoreQuery({
               }
             ];
           }
-          query.query.analyze_type = queryOptions.group_analysis;
-          query.query.kpi_query_group = kpiQuery;
+          query.query.kpi_queries = [{analyze_type: queryOptions.group_analysis, kpi_query_group: kpiQuery}]
         }
 
         if (!isQuerySaved) {
