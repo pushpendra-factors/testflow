@@ -283,7 +283,7 @@ function AddDashboard({
         title={null}
         visible={isAddNewDashboardModal}
         centered={true}
-        zIndex={1005}
+        zIndex={1010}
         width={700}
         className={'fa-modal--regular p-4 fa-modal--slideInDown'}
         confirmLoading={apisCalled}

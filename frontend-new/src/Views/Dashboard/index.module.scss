@@ -70,6 +70,10 @@ $dropdownbtn-mono-1: #f5f6f8;
   font-weight: bolder !important;
   font-size: 16px !important;
   padding: 0 0px 0 20px;
+  min-width: 400px;
+  min-height: 40px;
+  display: flex;
+  justify-content: space-between;
   background-color: $dropdownbtn-mono-1 !important;
   & .dropdownbtntext {
     height: 100%;
@@ -107,7 +111,7 @@ $dropdownbtn-mono-1: #f5f6f8;
 }
 
 .divider_newdashboard_btn {
-  margin: 0px 0px 5px 0px;
+  margin: 0px 0px 0px 0px;
 }
 
 .additionalops {

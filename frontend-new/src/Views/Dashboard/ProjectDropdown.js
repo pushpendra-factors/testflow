@@ -33,7 +33,8 @@ import {
   ACTIVE_DASHBOARD_CHANGE,
   WIDGET_DELETED,
   DASHBOARD_DELETED,
-  NEW_DASHBOARD_TEMPLATES_MODAL_OPEN
+  NEW_DASHBOARD_TEMPLATES_MODAL_OPEN,
+  ADD_DASHBOARD_MODAL_OPEN
 } from '../../reducers/types';
 import SortableCards from './SortableCards';
 import DashboardSubMenu from './DashboardSubMenu';
@@ -253,8 +254,9 @@ function ProjectDropdown({
                 className='w-full'
                 icon={<SVG name='plus' />}
                 onClick={() => {
-                  setaddDashboardModal(true);
-                  setSelectVisible(false);
+                  dispatch({ type: ADD_DASHBOARD_MODAL_OPEN });
+                  // setaddDashboardModal(true);
+                  // setSelectVisible(false);
                 }}
               >
                 New Dashboard
