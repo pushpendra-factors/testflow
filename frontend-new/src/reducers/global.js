@@ -191,6 +191,9 @@ export default function (state = defaultState, action) {
     case 'FETCH_ALERTS': {
       return { ...state, Alerts: action.payload };
     }
+    case 'FETCH_EVENT_ALERTS': {
+      return { ...state, eventAlerts: action.payload };
+    }
     case 'FETCH_SHARED_ALERTS': {
       return { ...state, sharedAlerts: action.payload };
     }
@@ -1170,6 +1173,59 @@ export function disableLeadSquaredIntegration(projectId) {
           } else {
             reject(res);
           }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+
+export function createEventAlert(projectId, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert',
+        payload
+      )
+        .then((r) => {
+          dispatch({ type: 'CREATE_EVENT_ALERT', payload: r.data });
+          resolve(r);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function fetchEventAlerts(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/' + projectId + '/v1/eventtriggeralert', {})
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_EVENT_ALERTS', payload: r.data });
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function deleteEventAlert(projectId, id) {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/' + projectId + '/v1/eventtriggeralert/' + id)
+        .then((res) => {
+          resolve(res);
         })
         .catch((err) => {
           reject(err);
