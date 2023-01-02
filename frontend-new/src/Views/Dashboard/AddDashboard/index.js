@@ -67,7 +67,7 @@ function AddDashboard({
     setActiveKey('1');
     setTitle('');
     setDescription('');
-    setDashboardType('pr');
+    setDashboardType('pv');
     setApisCalled(false);
     setSelectedQueries([]);
     setEditDashboard(null);

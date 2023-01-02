@@ -20,6 +20,11 @@
   min-height: calc(100vh - 200px);
   padding: 4px;
   overflow-y: scroll;
+
+  .ant-skeleton,
+  .ant-skeleton-element {
+    width: 100% !important;
+  }
 }
 .categoryLeftItem {
   border-radius: 4px;

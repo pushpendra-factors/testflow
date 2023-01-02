@@ -18,6 +18,7 @@ import {
   Menu,
   Modal,
   Row,
+  Skeleton,
   Tag
 } from 'antd';
 import { Content, Footer, Header } from 'antd/lib/layout/layout';
@@ -63,6 +64,7 @@ import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import { useHistory } from 'react-router-dom';
 import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
 import { DASHBOARD_KEYS } from './../../../../constants/localStorage.constants';
+import TemplateThumbnailImage from './TemplateThumbnailImage';
 
 let Step1DashboardTemplateModal = ({
   templates,
@@ -162,14 +164,7 @@ let Step1DashboardTemplateModal = ({
             onClick={() => dispatch({ type: ADD_DASHBOARD_MODAL_OPEN })}
           >
             <Col style={{ width: '50%' }}>
-              <img
-                style={{
-                  padding: '5px 0px',
-                  margin: '0 auto',
-                  borderRadius: '5px'
-                }}
-                src={StartFreshImage}
-              />
+              <TemplateThumbnailImage isStartFresh={true} />
             </Col>
             <Col
               style={{ width: '50%', display: 'grid', placeContent: 'center' }}
@@ -188,8 +183,8 @@ let Step1DashboardTemplateModal = ({
                 weight={'normal'}
                 extraClass={`m-0 mr-3`}
               >
-                Live track your key website metrics and activity using our SDK
-                or tools like Segment.{' '}
+                Create an empty dashboard, run queries and add widgets to start
+                monitoring.{' '}
               </Text>
             </Col>
           </Row>
@@ -200,7 +195,7 @@ let Step1DashboardTemplateModal = ({
                 {templates?.map((eachState, eachIndex) => {
                   return (
                     <Col
-                      key={eachIndex}
+                      key={eachIndex + '-' + eachState.title}
                       span={12}
                       style={{
                         padding: '0 20px 0 20px',
@@ -211,23 +206,11 @@ let Step1DashboardTemplateModal = ({
                       }}
                       onClick={() => handleTemplate(eachIndex)}
                     >
-                      <img
-                        style={{
-                          padding: '5px 0px',
-                          margin: '0 auto',
-                          borderRadius: '5px',
-                          width: '100%'
-                        }}
-                        src={
-                          TemplatesThumbnail.has(
-                            eachState.title.toLowerCase().replace(/\s/g, '')
-                          )
-                            ? TemplatesThumbnail.get(
-                                eachState.title.toLowerCase().replace(/\s/g, '')
-                              ).image
-                            : FallBackImage
-                        }
+                      <TemplateThumbnailImage
+                        TemplatesThumbnail={TemplatesThumbnail}
+                        eachState={eachState}
                       />
+
                       <Text
                         type={'title'}
                         level={6}
