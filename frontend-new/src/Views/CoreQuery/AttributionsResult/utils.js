@@ -519,7 +519,11 @@ export const getTableColumns = (
     dimensionColumns = [
       {
         title: getClickableTitleSorter(
-          touchpoint === 'ChannelGroup' ? 'Channel' : touchpoint,
+          touchpoint === 'ChannelGroup'
+            ? 'Channel'
+            : touchpoint === 'AllPageView'
+            ? 'All Page Views'
+            : touchpoint,
           { key: touchpoint, type: 'categorical', subtype: null },
           currentSorter,
           handleSorting,
