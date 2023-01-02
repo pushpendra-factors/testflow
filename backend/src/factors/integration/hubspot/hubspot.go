@@ -1301,7 +1301,7 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPR
 			continue
 		}
 
-		_, err1 := CreateTouchPointEvent(project, trackPayload, document, rule, lastModifiedTimeStamp, otpUniqueKey)
+		_, err1 := CreateTouchPointEventForFormsAndContacts(project, trackPayload, document, rule, lastModifiedTimeStamp, otpUniqueKey)
 		if err1 != nil {
 			logCtx.WithError(err1).Error("failed to create touch point for hubspot contact updated document.")
 			continue
@@ -1311,6 +1311,7 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPR
 	return nil
 }
 
+//Check if the condition are satisfied for creating OTP events for each rule for HS Forms Submission
 func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, formTimestamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRuleForForms",
@@ -1344,7 +1345,7 @@ func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]mo
 		}
 
 		logCtx.WithFields(log.Fields{"ProjectID": project.ID, "OTPrules": rule}).Info("Invoking method CreateTouchPointEvent")
-		_, err1 := CreateTouchPointEvent(project, trackPayload, document, rule, formTimestamp, otpUniqueKey)
+		_, err1 := CreateTouchPointEventForFormsAndContacts(project, trackPayload, document, rule, formTimestamp, otpUniqueKey)
 		if err1 != nil {
 			logCtx.WithError(err1).Error("failed to create touch point for hubspot contact updated document.")
 			continue
@@ -1354,6 +1355,7 @@ func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]mo
 	return nil
 }
 
+//Check if the condition are satisfied for creating OTP events for each rule for HS Engagements - Meetings/Calls/Emails
 func ApplyHSOfflineTouchPointRuleForEngagement(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload,
 	document *model.HubspotDocument, engagement Engagements, engagementType string) error {
 
@@ -1393,8 +1395,47 @@ func ApplyHSOfflineTouchPointRuleForEngagement(project *model.Project, otpRules 
 	return nil
 }
 
-// CreateTouchPointEvent - Creates offline touchpoint for HS create/update events with given rule
-func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument,
+//Check if the condition are satisfied for creating OTP events for each rule for HS Contact list
+func ApplyHSOfflineTouchPointRuleForContactList(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload, document *model.HubspotDocument) error {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRuleForContactList",
+		"document_id": document.ID, "document_action": document.Action, "document": document})
+
+	if otpRules == nil || project == nil || trackPayload == nil || document == nil {
+		logCtx.Error("something is empty")
+		return nil
+	}
+	for _, rule := range *otpRules {
+
+		otpUniqueKey, err := createOTPUniqueKeyForContactList(rule, trackPayload, logCtx)
+		if err != http.StatusCreated {
+			logCtx.Error("Failed to create otp_unique_key")
+			continue
+		}
+
+		// Check if rule is applicable & the record has changed property w.r.t filters
+		if rule.RuleType != model.TouchPointRuleTypeContactList {
+			continue
+		}
+		if !filterCheckGeneral(rule, trackPayload, logCtx) {
+			continue
+		}
+		//Checks if the otpUniqueKey is already present in other OTP Event Properties
+		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys) {
+			continue
+		}
+		_, err1 := CreateTouchPointEventForLists(project, trackPayload, document, rule, otpUniqueKey)
+		if err1 != nil {
+			logCtx.WithError(err1).Error("failed to create touch point for hubspot lists.")
+			continue
+		}
+
+	}
+	return nil
+}
+
+// CreateTouchPointEventForFormsAndContacts - Creates offline touchpoint for HS create/update events with given rule for HS Contacts and Forms
+func CreateTouchPointEventForFormsAndContacts(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument,
 	rule model.OTPRule, lastModifiedTimeStamp int64, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent",
@@ -1469,6 +1510,83 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 			"track failed for doc type %d, message %s", document.Type, trackResponse.Error))
 	}
 	logCtx.WithField("statusCode", status).WithField("trackResponsePayload", trackResponse).Info("Successfully: created hubspot offline touch point")
+	return trackResponse, nil
+}
+
+// CreateTouchPointEventForLists - Creates OTP for HS lists
+func CreateTouchPointEventForLists(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument,
+	rule model.OTPRule, otpUniqueKey string) (*SDK.TrackResponse, error) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForLists",
+		"document_id": document.ID, "document_action": document.Action})
+
+	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).
+		Info("CreateTouchPointEventForLists: creating hubspot offline touch point document")
+
+	var trackResponse *SDK.TrackResponse
+	var err error
+	eventProperties := make(U.PropertiesMap, 0)
+	payload := &SDK.TrackPayload{
+		ProjectId:       project.ID,
+		EventProperties: eventProperties,
+		UserId:          trackPayload.UserId,
+		Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+		RequestSource:   trackPayload.RequestSource,
+	}
+
+	var timestamp int64
+	timeValue, exists := (trackPayload.EventProperties)[rule.TouchPointTimeRef]
+	if !exists {
+		logCtx.WithField("TouchPointTimeRef", rule.TouchPointTimeRef).
+			Error("couldn't get the timestamp on hubspot contact properties using given rule.TouchPointTimeRef")
+		return nil, errors.New(fmt.Sprintf("couldn't get the timestamp on hubspot contact properties "+
+			"using given rule.TouchPointTimeRef - %s", rule.TouchPointTimeRef))
+	}
+	val, ok := timeValue.(int64)
+	if !ok {
+		logCtx.WithField("TouchPointTimeRef", rule.TouchPointTimeRef).WithField("TimeValue", timeValue).
+			Error("couldn't convert the timestamp on hubspot contact properties. using trackPayload timestamp instead, val")
+		timestamp = trackPayload.Timestamp
+	} else {
+		timestamp = val
+	}
+
+	// Adding mandatory properties
+	payload.EventProperties[U.EP_OTP_RULE_ID] = rule.ID
+	payload.EventProperties[U.EP_OTP_UNIQUE_KEY] = otpUniqueKey
+	payload.Timestamp = timestamp
+
+	// Mapping touch point properties:
+	var rulePropertiesMap map[string]model.TouchPointPropertyValue
+	err = U.DecodePostgresJsonbToStructType(&rule.PropertiesMap, &rulePropertiesMap)
+	if err != nil {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rule PROPERTIES for hubspot document.")
+		return trackResponse, errors.New(fmt.Sprintf("create hubspot list touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+	}
+
+	for key, value := range rulePropertiesMap {
+
+		if value.Type == model.TouchPointPropertyValueAsConstant {
+			payload.EventProperties[key] = value.Value
+		} else {
+			if _, exists := trackPayload.EventProperties[value.Value]; exists {
+				payload.EventProperties[key] = trackPayload.EventProperties[value.Value]
+			} else {
+				// Property value is not found, hence keeping it as $none
+				payload.EventProperties[key] = model.PropertyValueNone
+			}
+		}
+	}
+
+	status, trackResponse := SDK.Track(project.ID, payload, true, sdk.SourceHubspot, "")
+	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error(fmt.Errorf("create "+
+			"hubspot list touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+		return trackResponse, errors.New(fmt.Sprintf("create hubspot touchpoint event "+
+			"track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+	}
+
+	logCtx.WithField("statusCode", status).WithField("trackResponsePayload", trackResponse).Info("Successfully: created hubspot lists offline touch point")
 	return trackResponse, nil
 }
 
@@ -1650,6 +1768,24 @@ func createOTPUniqueKeyForFormsAndContacts(rule model.OTPRule, trackPayload *SDK
 
 }
 
+//Creates a unique key using ruleID, userID and contact lists list ID  as keyID for Contact Lists
+func createOTPUniqueKeyForContactList(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) (string, int) {
+	ruleID := rule.ID
+	userID := trackPayload.UserId
+	var keyID string
+	var uniqueKey string
+
+	if _, exists := trackPayload.EventProperties[U.EP_HUBSPOT_CONTACT_LIST_LIST_ID]; exists {
+		keyID = fmt.Sprintf("%v", trackPayload.EventProperties[U.EP_HUBSPOT_CONTACT_LIST_LIST_ID])
+	} else {
+		logCtx.Error("Event Property $hubspot_contact_list_list_id does not exist.")
+		return uniqueKey, http.StatusNotFound
+	}
+
+	uniqueKey = userID + ruleID + keyID
+	return uniqueKey, http.StatusCreated
+
+}
 func canCreateHSEngagementTouchPoint(engagementType string, ruleType string) bool {
 
 	switch engagementType {
@@ -2977,8 +3113,8 @@ func GetBatchedOrderedDocumentsByID(documents []model.HubspotDocument, batchSize
 	return batchedDocumentsByID
 }
 
-func syncContactListV2(projectID int64, document *model.HubspotDocument, minTimestamp int64) int {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID,
+func syncContactListV2(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.HubspotDocument, minTimestamp int64) int {
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID,
 		"doc_timestamp": document.Timestamp, "min_timestamp": minTimestamp})
 
 	if document.Type != model.HubspotDocumentTypeContactList {
@@ -2987,18 +3123,18 @@ func syncContactListV2(projectID int64, document *model.HubspotDocument, minTime
 	}
 
 	pastEnrichmentEnabled := false
-	if C.PastEventEnrichmentEnabled(projectID) {
+	if C.PastEventEnrichmentEnabled(project.ID) {
 		pastEnrichmentEnabled = true
 	}
 
-	if !C.ContactListInsertEnabled(projectID) {
+	if !C.ContactListInsertEnabled(project.ID) {
 		logCtx.Warning("Skipped hubspot contact_list sync. contact_list sync not enabled.")
 		return http.StatusOK
 	}
 
 	if document.Action == model.HubspotDocumentActionUpdated {
 		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
-			projectID, document.ID, model.HubspotDocumentTypeContactList, "", document.Timestamp, document.Action, document.UserId, "")
+			project.ID, document.ID, model.HubspotDocumentTypeContactList, "", document.Timestamp, document.Action, document.UserId, "")
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to update hubspot contact_list document as synced.")
 			return http.StatusInternalServerError
@@ -3019,7 +3155,7 @@ func syncContactListV2(projectID int64, document *model.HubspotDocument, minTime
 	}
 
 	contactID := U.GetPropertyValueAsString((*propertiesMap)["contact_id"])
-	contact_document, errCode := store.GetStore().GetSyncedHubspotDocumentByFilter(projectID, contactID, model.HubspotDocumentTypeContact, model.HubspotDocumentActionCreated)
+	contact_document, errCode := store.GetStore().GetSyncedHubspotDocumentByFilter(project.ID, contactID, model.HubspotDocumentTypeContact, model.HubspotDocumentActionCreated)
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get contact document in syncContactListV2")
 		if errCode == http.StatusNotFound {
@@ -3028,7 +3164,7 @@ func syncContactListV2(projectID int64, document *model.HubspotDocument, minTime
 		return errCode
 	}
 
-	_, properties, _, _, _ := GetContactProperties(projectID, contact_document)
+	_, properties, _, _, _ := GetContactProperties(project.ID, contact_document)
 	var emailId string
 	if (*properties)["EMAIL"] != nil {
 		emailId, err = U.GetValueAsString((*properties)["EMAIL"])
@@ -3057,7 +3193,7 @@ func syncContactListV2(projectID int64, document *model.HubspotDocument, minTime
 	}
 
 	request := &SDK.TrackPayload{
-		ProjectId:       projectID,
+		ProjectId:       project.ID,
 		Timestamp:       getEventTimestamp(document.Timestamp),
 		EventProperties: eventProperties,
 		RequestSource:   model.UserSourceHubspot,
@@ -3066,14 +3202,20 @@ func syncContactListV2(projectID int64, document *model.HubspotDocument, minTime
 		IsPast:          isPast,
 	}
 
-	status, response := SDK.Track(projectID, request, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameContactList)
+	status, response := SDK.Track(project.ID, request, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameContactList)
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 		logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot added to a list event.")
 		return http.StatusInternalServerError
 	}
 
+	err = ApplyHSOfflineTouchPointRuleForContactList(project, otpRules, uniqueOTPEventKeys, request, document)
+	if err != nil {
+		// log and continue
+		logCtx.WithField("EventID", response.EventId).WithField("userID", response.UserId).Info("failed creating hubspot offline touch point for contact list")
+	}
+
 	errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
-		projectID, document.ID, model.HubspotDocumentTypeContactList, "", document.Timestamp, document.Action, contact_document.UserId, "")
+		project.ID, document.ID, model.HubspotDocumentTypeContactList, "", document.Timestamp, document.Action, contact_document.UserId, "")
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot contact_list document as synced.")
 		return http.StatusInternalServerError
@@ -3112,7 +3254,7 @@ func syncAll(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKe
 				seenFailures = true
 			}
 		case model.HubspotDocumentTypeContactList:
-			errCode := syncContactListV2(project.ID, &documents[i], minTimestamp)
+			errCode := syncContactListV2(project, otpRules, uniqueOTPEventKeys, &documents[i], minTimestamp)
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
