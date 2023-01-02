@@ -23,7 +23,8 @@ import {
 } from '../../reducers/coreQuery/services';
 import {
   fetchAttrContentGroups,
-  fetchSmartPropertyRules
+  fetchSmartPropertyRules,
+  fetchAttributionQueries
 } from 'Attribution/state/services';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import {
@@ -166,6 +167,7 @@ function AppLayout({
       dispatch(fetchTemplates());
       fetchProjectSettings(active_project?.id);
       dispatch(fetchEventDisplayNames({ projectId: active_project?.id }));
+      dispatch(fetchAttributionQueries(active_project?.id));
     }
   }, [dispatch, active_project]);
 
