@@ -1,4 +1,4 @@
-name: Deploy FE to staging env
+name: Deploy FE to Production env
 
 on:
   workflow_dispatch:
@@ -8,7 +8,8 @@ on:
         default: ""
 
 jobs:
-  deploy_fe_staging_website:
+  deploy_fe_production_website:
+    if: github.ref == 'refs/heads/release'
     runs-on: macos-11
     steps:
       - name: Checkout Branch
@@ -31,45 +32,48 @@ jobs:
         run: cd $GITHUB_WORKSPACE/frontend-new && npm install
 
       - name: Creating Frontend Build
-        run: cd $GITHUB_WORKSPACE/frontend-new && npm run build-staging-no-deployment
+        run: cd $GITHUB_WORKSPACE/frontend-new && npm run build-prod-no-deployment
 
       - name: Creating Old SDK Build
         run: cd $GITHUB_WORKSPACE/sdk/javascript && npm run build-prod-v0
 
       - name: Copying Old Sdk Build to Frontend Build
-        run: cp $GITHUB_WORKSPACE/sdk/javascript/dist/factors.v0.js $GITHUB_WORKSPACE/frontend-new/dist/staging/assets/factors.js
+        run: cp $GITHUB_WORKSPACE/sdk/javascript/dist/factors.v0.js $GITHUB_WORKSPACE/frontend-new/dist/production/assets/factors.js
 
       - name: Creating New SDK Build
         run: cd $GITHUB_WORKSPACE/sdk/javascript && npm run build-prod
 
       - name: Copying Sdk Build to Frontend Build
-        run: cp $GITHUB_WORKSPACE/sdk/javascript/dist/factors.v1.js $GITHUB_WORKSPACE/frontend-new/dist/staging/assets/v1/factors.js
+        run: cp $GITHUB_WORKSPACE/sdk/javascript/dist/factors.v1.js $GITHUB_WORKSPACE/frontend-new/dist/production/assets/v1/factors.js
 
       - name: Build File Check
-        run: cd $GITHUB_WORKSPACE/frontend-new/dist/staging && ls -R
+        run: cd $GITHUB_WORKSPACE/frontend-new/dist/production && ls -R
 
       - name: Firebase Deployement SDK
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.GKE_STAGING_SA_KEY }}"
-          projectId: factors-staging
+          firebaseServiceAccount: "${{ secrets.GKE_PRODUCTION_SA_KEY }}"
+          projectId: factors-production
           channelId: live
-          target: staging
+          target: production
           entrypoint: ./sdk/javascript
 
       - name: Firebase Deployement APP
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.GKE_STAGING_SA_KEY }}"
-          projectId: factors-staging
+          firebaseServiceAccount: "${{ secrets.GKE_PRODUCTION_SA_KEY }}"
+          projectId: factors-production
           channelId: live
-          target: staging
+          target: production
           entrypoint: ./frontend-new
 
       - name: Build Size Validation 1
-        run: cd $GITHUB_WORKSPACE/frontend-new && node sdk-monitor.js stage 2;
+        run: cd $GITHUB_WORKSPACE/frontend-new && node sdk-monitor.js prod 4;
 
       - name: Build Size Validation 2
-        run: cd $GITHUB_WORKSPACE/frontend-new && node sdk-monitor.js staging 2 https://b2mxnuvcer.firebaseapp.com/factors.v1.js
+        run: cd $GITHUB_WORKSPACE/frontend-new && node sdk-monitor.js prod 4; node sdk-monitor.js prod 4 https://b3mxnuvcer.firebaseapp.com/factors.v1.js
+
+      - name: Slack Notification
+        run: $GITHUB_WORKSPACE/frontend-new/notify_deployment.sh
