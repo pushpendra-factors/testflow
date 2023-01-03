@@ -87,6 +87,9 @@
   }
 }
 
-.dropdown__filter_select__content::-webkit-scrollbar{
+.dropdown__filter_select__content::-webkit-scrollbar {
   display: none;
+}
+.dropdown__filter_select__additionalAction {
+  padding: 9px 0px 0px 0px;
 }

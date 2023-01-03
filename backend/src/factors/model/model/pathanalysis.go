@@ -15,6 +15,7 @@ const (
 	// Event type
 	STARTSWITH = "startswith"
 	ENDSWITH   = "endswith"
+	BuildLimit = 10
 )
 
 type PathAnalysis struct {

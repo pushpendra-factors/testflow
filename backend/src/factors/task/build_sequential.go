@@ -116,7 +116,6 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 	createMetadata := configs["create_metadata"].(bool)
 	status := make(map[string]interface{})
 	defer util.NotifyOnPanic(taskID, env)
-
 	if _, ok := projectIdsToSkip[projectId]; ok {
 		bsLog.WithField("ProjectId", projectId).Info("Skipping build for the project.")
 		status["error"] = "Skipping build for the project."
@@ -141,25 +140,23 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 		var actualQuery model.ExplainV2Query
 		U.DecodePostgresJsonbToStructType(query.ExplainV2Query, &actualQuery)
 		mineLog.Infof("Actual query :%v", actualQuery)
-		time.Sleep(5 * time.Second)
 
 		var count_algo_props P.CountAlgoProperties
 		count_algo_props.Counting_version = 4
 		count_algo_props.Hmine_persist = hmine_persist
 		count_algo_props.Hmine_support = hmineSupport
 
-		var jp P.ExplainQueryV2
-		jp.Start_event = actualQuery.StartEvent
-		jp.End_event = actualQuery.EndEvent
-		jp.Events_included = actualQuery.IncludeEvents
-		if jp.Start_event == "" && jp.End_event == "" {
+		var jb model.ExplainV2Query
+
+		jb.Query = actualQuery.Query
+		if jb.Query.StartEvent == "" && jb.Query.EndEvent == "" {
 			status["error"] = "unable to run explain v2 as both start and events are empty"
 			log.Panic("unable to run explain v2 as both start and end events are empty")
 			return status, false
 		}
-		count_algo_props.Job = jp
+		count_algo_props.Job = jb
 		count_algo_props.JobId = query.ID
-		mineLog.Info("Job to execute:%v", jp)
+		mineLog.Info("Job to execute:%v", jb)
 
 		numChunks, err := PatternMine(db, etcdClient, cloudManager, diskManger,
 			bucketName, noOfPatternWorkers, projectId, modelId, modelType,

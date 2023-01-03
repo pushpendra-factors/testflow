@@ -226,6 +226,10 @@ function AnalysisHeader({
             onClick={() => {
               userflow.start(flowID);
             }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center'
+            }}
           >
             Walk me through
           </Button>
@@ -262,11 +266,22 @@ function AnalysisHeader({
       </div>
     );
   };
+
+  let handleIntercomHelp = () => {
+    const w = window;
+    const ic = w.Intercom;
+    if (typeof ic === 'function') {
+      setHideIntercomState(!hideIntercomState);
+      ic('update', { hide_default_launcher: !hideIntercomState });
+      ic(!hideIntercomState === true ? 'hide' : 'show');
+    }
+  };
   const setActions = (opt) => {
     if (opt[1] === 'help_doc') {
       window.open('https://help.factors.ai/', '_blank');
+    } else if (opt[1] === 'intercom_help') {
+      handleIntercomHelp();
     }
-    setOptions(false);
   };
   const getHelpMenu = () => {
     return helpMenu === false ? (

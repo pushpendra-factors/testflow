@@ -33,7 +33,7 @@ import { DashboardContext } from '../../../contexts/DashboardContext';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from '../../CoreQuery/AttributionsResult/attributionsResult.constants';
 
 const nodata = (
-  <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+  <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
     <NoDataChart />
   </div>
 );
@@ -56,7 +56,7 @@ const AttributionsChart = ({
   attrQueries,
   queryOptions
 }) => {
-  const { attributionMetrics, handleEditQuery } = useContext(DashboardContext);
+  const { attributionMetrics } = useContext(DashboardContext);
 
   const { eventNames } = useSelector((state) => state.coreQuery);
 
@@ -68,7 +68,9 @@ const AttributionsChart = ({
   const [searchText, setSearchText] = useState('');
   const [columns, setColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
-  const [sorter, setSorter] = useState(defaultSortProp());
+  const [sorter, setSorter] = useState(
+    defaultSortProp(queryOptions, attrQueries, data)
+  );
   const [visibleIndices, setVisibleIndices] = useState([]);
 
   const handleSorting = useCallback((prop) => {
@@ -285,7 +287,7 @@ const AttributionsChart = ({
           chartType={chartType}
           height={DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT}
           cardSize={cardSize}
-          legendsPosition="top"
+          legendsPosition='top'
           chartId={`barLineChart-${unitId}`}
         />
       );

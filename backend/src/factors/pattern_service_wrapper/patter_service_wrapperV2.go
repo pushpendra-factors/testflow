@@ -1,6 +1,7 @@
 package pattern_service_wrapper
 
 import (
+	"factors/model/model"
 	P "factors/pattern"
 	PC "factors/pattern_client"
 	U "factors/util"
@@ -15,6 +16,18 @@ type PatternServiceWrapperV2 struct {
 	pMap              map[string]*P.Pattern
 	totalEventCount   uint
 	userAndEventsInfo *P.UserAndEventsInfo
+}
+
+type ExplainV2Goals struct {
+	GoalRule          model.FactorsGoalRule `json:"goal"`
+	Insights          []*FactorsInsights    `json:"insights"`
+	GoalUserCount     float64               `json:"goal_user_count"`
+	TotalUsersCount   float64               `json:"total_users_count"`
+	OverallPercentage float64               `json:"overall_percentage"`
+	OverallMultiplier float64               `json:"overall_multiplier"`
+	Type              string                `json:"type"`
+	StartTimestamp    int64                 `json:"sts"`
+	EndTimestamp      int64                 `json:"ets"`
 }
 
 func (pw *PatternServiceWrapperV2) GetUserAndEventsInfo() *P.UserAndEventsInfo {

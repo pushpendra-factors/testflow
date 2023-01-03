@@ -8,6 +8,7 @@ import (
 	"errors"
 	C "factors/config"
 	"factors/filestore"
+	M "factors/model/model"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
@@ -1472,13 +1473,13 @@ func ReadPatternsGCP(ctx context.Context, project_id int64, model_id uint64, sco
 
 }
 
-func GenLenOneV2(jb P.ExplainQueryV2, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+func GenLenOneV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
 	job_events_map := make(map[string]bool, 0)
 	patterns := make([]*P.Pattern, 0)
 
-	job_events_map[jb.Start_event] = true
-	job_events_map[jb.End_event] = true
-	for _, e := range jb.Events_included {
+	job_events_map[jb.Query.StartEvent] = true
+	job_events_map[jb.Query.EndEvent] = true
+	for _, e := range jb.Query.Rule.IncludedEvents {
 		job_events_map[e] = true
 	}
 	for k, _ := range job_events_map {
@@ -1495,11 +1496,11 @@ func GenLenOneV2(jb P.ExplainQueryV2, us *P.UserAndEventsInfo) ([]*P.Pattern, er
 	return patterns, nil
 }
 
-func CreateCombinationEventsV2(jb P.ExplainQueryV2, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+func CreateCombinationEventsV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
 	patterns := make([]*P.Pattern, 0)
 	events_to_count := make([]string, 2)
-	events_to_count[0] = jb.Start_event
-	events_to_count[1] = jb.End_event
+	events_to_count[0] = jb.Query.StartEvent
+	events_to_count[1] = jb.Query.EndEvent
 	p, err := P.NewPattern(events_to_count, us)
 	if err != nil {
 		return nil, err
@@ -1509,13 +1510,13 @@ func CreateCombinationEventsV2(jb P.ExplainQueryV2, us *P.UserAndEventsInfo) ([]
 	return patterns, nil
 }
 
-func GenThreeLenEventsV2(jb P.ExplainQueryV2, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+func GenThreeLenEventsV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
 	patterns := make([]*P.Pattern, 0)
-	for _, e := range jb.Events_included {
+	for _, e := range jb.Query.Rule.IncludedEvents {
 		events_to_count := make([]string, 3)
-		events_to_count[0] = jb.Start_event
+		events_to_count[0] = jb.Query.StartEvent
 		events_to_count[1] = e
-		events_to_count[2] = jb.End_event
+		events_to_count[2] = jb.Query.EndEvent
 		p, err := P.NewPattern(events_to_count, us)
 		if err != nil {
 			return nil, err
@@ -1526,17 +1527,17 @@ func GenThreeLenEventsV2(jb P.ExplainQueryV2, us *P.UserAndEventsInfo) ([]*P.Pat
 	return patterns, nil
 }
 
-func CreateFourLenEventsV2(jb P.ExplainQueryV2, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+func CreateFourLenEventsV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
 	patterns := make([]*P.Pattern, 0)
 
-	for _, e1 := range jb.Events_included {
-		for _, e2 := range jb.Events_included {
+	for _, e1 := range jb.Query.Rule.IncludedEvents {
+		for _, e2 := range jb.Query.Rule.IncludedEvents {
 			if e1 != e2 {
 				events_to_count := make([]string, 4)
-				events_to_count[0] = jb.Start_event
+				events_to_count[0] = jb.Query.StartEvent
 				events_to_count[1] = e1
 				events_to_count[2] = e2
-				events_to_count[3] = jb.End_event
+				events_to_count[3] = jb.Query.EndEvent
 				p1, err := P.NewPattern(events_to_count, us)
 				if err != nil {
 					return nil, err

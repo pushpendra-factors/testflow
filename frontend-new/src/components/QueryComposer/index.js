@@ -30,6 +30,7 @@ import { getValidGranularityOptions } from 'Utils/dataFormatter';
 import FaSelect from '../FaSelect';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import { INITIALIZE_GROUPBY } from 'Reducers/coreQuery/actions';
+import { ReactSortable } from 'react-sortablejs';
 
 function QueryComposer({
   queries = [],
@@ -74,7 +75,6 @@ function QueryComposer({
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
-      fetchEventNames(activeProject.id);
       getUserProperties(activeProject.id, queryType);
     }
   }, [activeProject, fetchEventNames]);
@@ -601,7 +601,14 @@ function QueryComposer({
             queryType === QUERY_TYPE_FUNNEL ? 'no-padding-t' : ''
           }`}
         >
-          {queryList()}
+          <ReactSortable
+            list={queries}
+            setList={(newState) => {
+              setQueries(newState);
+            }}
+          >
+            {queryList()}
+          </ReactSortable>
         </ComposerBlock>
       );
     } catch (err) {

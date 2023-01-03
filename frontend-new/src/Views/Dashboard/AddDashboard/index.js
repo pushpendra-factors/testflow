@@ -16,13 +16,15 @@ import {
   DASHBOARD_CREATED,
   DASHBOARD_DELETED,
   WIDGET_DELETED,
-  DASHBOARD_UPDATED
+  DASHBOARD_UPDATED,
+  ADD_DASHBOARD_MODAL_CLOSE
 } from '../../../reducers/types';
 import styles from './index.module.scss';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 import factorsai from 'factorsai';
 import { Link, useHistory, useLocation } from 'react-router-dom';
 import useAutoFocus from 'hooks/useAutoFocus';
+import DashboardTemplatesModal from './DashboardTemplatesModal';
 
 function AddDashboard({
   addDashboardModal,
@@ -33,7 +35,7 @@ function AddDashboard({
   const [activeKey, setActiveKey] = useState('1');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [dashboardType, setDashboardType] = useState('pr');
+  const [dashboardType, setDashboardType] = useState('pv');
   const [apisCalled, setApisCalled] = useState(false);
   const [selectedQueries, setSelectedQueries] = useState([]);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
@@ -46,6 +48,9 @@ function AddDashboard({
   const { pathname } = useLocation();
   const inputComponentRef = useAutoFocus(addDashboardModal);
 
+  let { isAddNewDashboardModal } = useSelector(
+    (state) => state.dashboard_templates_Reducer
+  );
   const { TabPane } = Tabs;
 
   useEffect(() => {
@@ -62,7 +67,7 @@ function AddDashboard({
     setActiveKey('1');
     setTitle('');
     setDescription('');
-    setDashboardType('pr');
+    setDashboardType('pv');
     setApisCalled(false);
     setSelectedQueries([]);
     setEditDashboard(null);
@@ -276,9 +281,9 @@ function AddDashboard({
     <>
       <Modal
         title={null}
-        visible={addDashboardModal}
+        visible={isAddNewDashboardModal}
         centered={true}
-        zIndex={1005}
+        zIndex={1010}
         width={700}
         className={'fa-modal--regular p-4 fa-modal--slideInDown'}
         confirmLoading={apisCalled}
@@ -332,8 +337,8 @@ function AddDashboard({
               </Tabs>
             </Col>
           </Row>
-          <div className='flex justify-between mt-6 items-center'>
-            <Link
+          <div className='flex mt-6 items-center justify-end'>
+            {/* <Link
               to={{
                 pathname: '/template',
                 state: { fromSelectTemplateBtn: true }
@@ -343,12 +348,15 @@ function AddDashboard({
             >
               Select from Templates{' '}
               <SVG size={20} name='Arrowright' color={`#1d89ff`} />
-            </Link>
+            </Link> */}
             <div className='flex gap-3'>
               <Button
                 type='default'
                 size='large'
-                onClick={() => handleCancel()}
+                onClick={() => {
+                  dispatch({ type: ADD_DASHBOARD_MODAL_CLOSE });
+                  handleCancel();
+                }}
               >
                 Cancel
               </Button>
@@ -359,6 +367,12 @@ function AddDashboard({
           </div>
         </div>
       </Modal>
+      <DashboardTemplatesModal
+        addDashboardModal={addDashboardModal}
+        apisCalled={apisCalled}
+        setaddDashboardModal={setaddDashboardModal}
+        getOkText={getOkText}
+      />
       <ConfirmationModal
         visible={deleteModal}
         confirmationText='Are you sure you want to delete this Dashboard?'

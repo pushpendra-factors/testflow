@@ -64,4 +64,10 @@
       text-transform: uppercase;
     }
   }
+
+  .drag-icon {
+    &:hover {
+      cursor: grab;
+    }
+  }
 }

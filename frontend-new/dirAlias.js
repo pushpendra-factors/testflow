@@ -15,7 +15,8 @@ module.exports = {
     Views: path.resolve(__dirname, './src/Views'),
     Attribution: path.resolve(__dirname, './src/features/attribution'),
     Context: path.resolve(__dirname, './src/contexts'),
-    Constants: path.resolve(__dirname, './src/constants')
+    Constants: path.resolve(__dirname, './src/constants'),
+    Routes: path.resolve(__dirname, './src/routes')
   },
   eslintDirAlias: {
     map: [

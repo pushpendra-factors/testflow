@@ -272,6 +272,7 @@ type KPIQuery struct {
 	Operator           string       `json:"op"`
 	QueryType          string       `json:"qt"`
 	Name               string       `json:"na"`
+	AliasName          string       `json:"an"`
 	LimitNotApplicable bool         `json:"lmt_na"`
 }
 
@@ -973,22 +974,29 @@ func MergeQueryResults(queryResults []QueryResult, queries []KPIQuery, timezoneS
 	return queryResult
 }
 
+// Renaming of headers only here. Many tranformations are required if done at other places.
 // NOTE: Basing on single metric being sent per query.
 func TransformColumnResultGroup(queryResults []QueryResult, queries []KPIQuery, timezoneString string) []string {
 	finalResultantColumns := make([]string, 0)
 	for index, queryResult := range queryResults {
-		resultantMetrics := make([]string, 0)
+		resultantMetric := ""
 		if queries[index].Category == ChannelCategory {
-			for _, metric := range queries[index].Metrics {
-				resultantMetrics = append(resultantMetrics, queries[index].DisplayCategory+"_"+metric)
+			if queries[index].AliasName == "" {
+				resultantMetric = queries[index].DisplayCategory + "_" + queries[index].Metrics[0]
+			} else {
+				resultantMetric = queries[index].DisplayCategory + "_" + queries[index].AliasName
 			}
 		} else {
-			resultantMetrics = queries[index].Metrics
+			if queries[index].AliasName == "" {
+				resultantMetric = queries[index].Metrics[0]
+			} else {
+				resultantMetric = queries[index].AliasName
+			}
 		}
 		if index == 0 {
-			finalResultantColumns = append(queryResult.Headers[:len(queryResult.Headers)-1], resultantMetrics...)
+			finalResultantColumns = append(queryResult.Headers[:len(queryResult.Headers)-1], resultantMetric)
 		} else {
-			finalResultantColumns = append(finalResultantColumns, resultantMetrics...)
+			finalResultantColumns = append(finalResultantColumns, resultantMetric)
 		}
 	}
 	return finalResultantColumns

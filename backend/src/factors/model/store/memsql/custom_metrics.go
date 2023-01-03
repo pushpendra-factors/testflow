@@ -16,6 +16,10 @@ func (store *MemSQL) CreateCustomMetric(customMetric model.CustomMetric) (*model
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
+
+	// objectType used as sectionDisplayCategory in db
+	customMetric.ObjectType = customMetric.SectionDisplayCategory
+
 	db := C.GetServices().Db
 	errMsg, isValidCustomMetric := model.ValidateCustomMetric(customMetric)
 	if !isValidCustomMetric {
@@ -51,20 +55,24 @@ func (store *MemSQL) GetCustomMetricsByProjectId(projectID int64) ([]model.Custo
 		logCtx.WithError(err).WithField("projectID", projectID).Warn("Failed while retrieving custom metrics.")
 		return make([]model.CustomMetric, 0), err.Error(), http.StatusInternalServerError
 	}
+	// setting sectionDisplayCategory as objectType, as object type in db is used for sectionDisplayCategory
+	for i := range customMetrics {
+		customMetrics[i].SectionDisplayCategory = customMetrics[i].ObjectType
+	}
 	return customMetrics, "", http.StatusFound
 }
 
 func (store *MemSQL) GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string {
-	return append(store.GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory), store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)...)
+	return append(store.getCustomKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory), store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)...)
 }
 
 func (store *MemSQL) GetCustomEventAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string {
-	return append(store.GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory), store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)...)
+	return append(store.getCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory), store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)...)
 }
 
-func (store *MemSQL) GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string {
+func (store *MemSQL) getCustomKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string {
 	logCtx := log.WithField("project_id", projectID)
-	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID, model.ProfileQueryType, displayCategory)
+	customMetrics, err, statusCode := store.getCustomMetricByProjectIdQueryTypeAndObjectType(projectID, model.ProfileQueryType, displayCategory)
 	if statusCode != http.StatusFound {
 		logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
 	}
@@ -76,7 +84,7 @@ func (store *MemSQL) GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID
 	if !includeDerivedKPIs {
 		return make([]map[string]string, 0)
 	} else {
-		customMetrics, err, statusCode := store.GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID, model.DerivedQueryType, displayCategory)
+		customMetrics, err, statusCode := store.getCustomMetricByProjectIdQueryTypeAndObjectType(projectID, model.DerivedQueryType, displayCategory)
 		if statusCode != http.StatusFound {
 			logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
 		}
@@ -84,16 +92,16 @@ func (store *MemSQL) GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID
 	}
 }
 
-func (store *MemSQL) GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string {
+func (store *MemSQL) getCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string {
 	logCtx := log.WithField("project_id", projectID)
-	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID, model.EventBasedQueryType, displayCategory)
+	customMetrics, err, statusCode := store.getCustomMetricByProjectIdQueryTypeAndObjectType(projectID, model.EventBasedQueryType, displayCategory)
 	if statusCode != http.StatusFound {
 		logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
 	}
 	return store.getKPIMetricsFromCustomMetric(customMetrics, model.KpiCustomQueryType)
 }
 
-func (store *MemSQL) GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID int64, queryType int, objectType string) ([]model.CustomMetric, string, int) {
+func (store *MemSQL) getCustomMetricByProjectIdQueryTypeAndObjectType(projectID int64, queryType int, objectType string) ([]model.CustomMetric, string, int) {
 	logCtx := log.WithField("projectID", projectID)
 	db := C.GetServices().Db
 	customMetrics := make([]model.CustomMetric, 0, 0)
@@ -104,6 +112,10 @@ func (store *MemSQL) GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID 
 	if err != nil {
 		logCtx.WithError(err).WithField("projectID", projectID).Warn("Failed while retrieving custom metrics.")
 		return make([]model.CustomMetric, 0), err.Error(), http.StatusInternalServerError
+	}
+	// setting sectionDisplayCategory as objectType, as object type in db is used for sectionDisplayCategory
+	for i := range customMetrics {
+		customMetrics[i].SectionDisplayCategory = customMetrics[i].ObjectType
 	}
 	return customMetrics, "", http.StatusFound
 }
@@ -116,9 +128,9 @@ func (store *MemSQL) getKPIMetricsFromCustomMetric(customMetrics []model.CustomM
 	return rCustomMetrics
 }
 
-func (store *MemSQL) GetDerivedKPIMetricsByProjectId(projectID int64) []model.CustomMetric {
+func (store *MemSQL) getDerivedKPIMetricsByProjectId(projectID int64) []model.CustomMetric {
 	logCtx := log.WithField("project_id", projectID)
-	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdAndQueryType(projectID, model.DerivedQueryType)
+	customMetrics, err, statusCode := store.getCustomMetricByProjectIdAndQueryType(projectID, model.DerivedQueryType)
 	if statusCode != http.StatusFound {
 		logCtx.WithField("err", err).Warn("Failed to get the custom Metric by object type")
 	}
@@ -157,10 +169,13 @@ func (store *MemSQL) getCustomMetricByProjectIdNameAndQueryType(projectID int64,
 		logCtx.WithError(err).Warn("Failed while retrieving custom metrics.")
 		return customMetric, err.Error(), http.StatusInternalServerError
 	}
+	// setting sectionDisplayCategory as objectType, as object type in db is used for sectionDisplayCategory
+	customMetric.SectionDisplayCategory = customMetric.ObjectType
+
 	return customMetric, "", http.StatusFound
 }
 
-func (store *MemSQL) GetCustomMetricByProjectIdAndQueryType(projectID int64, queryType int) ([]model.CustomMetric, string, int) {
+func (store *MemSQL) getCustomMetricByProjectIdAndQueryType(projectID int64, queryType int) ([]model.CustomMetric, string, int) {
 	logCtx := log.WithField("projectID", projectID)
 	db := C.GetServices().Db
 	customMetrics := make([]model.CustomMetric, 0, 0)
@@ -172,9 +187,14 @@ func (store *MemSQL) GetCustomMetricByProjectIdAndQueryType(projectID int64, que
 		logCtx.WithError(err).WithField("projectID", projectID).Warn("Failed while retrieving custom metrics.")
 		return make([]model.CustomMetric, 0), err.Error(), http.StatusInternalServerError
 	}
+	// setting sectionDisplayCategory as objectType, as object type in db is used for sectionDisplayCategory
+	for i := range customMetrics {
+		customMetrics[i].SectionDisplayCategory = customMetrics[i].ObjectType
+	}
 	return customMetrics, "", http.StatusFound
 }
 
+// TODO: need to check here if need to be updated for custom events
 // Note: Relying on fact that there is a unique name exists for kpi.
 func (store *MemSQL) GetKpiRelatedCustomMetricsByName(projectID int64, name string) (model.CustomMetric, string, int) {
 	logCtx := log.WithField("projectID", projectID)
@@ -188,6 +208,9 @@ func (store *MemSQL) GetKpiRelatedCustomMetricsByName(projectID int64, name stri
 		logCtx.WithError(err).Warn("Failed while retrieving custom metrics.")
 		return customMetric, err.Error(), http.StatusInternalServerError
 	}
+	// setting sectionDisplayCategory as objectType, as object type in db is used for sectionDisplayCategory
+	customMetric.SectionDisplayCategory = customMetric.ObjectType
+
 	return customMetric, "", http.StatusFound
 }
 
@@ -204,6 +227,9 @@ func (store *MemSQL) GetCustomMetricsByID(projectID int64, id string) (model.Cus
 		logCtx.WithError(err).Warn("Failed while retrieving custom metrics.")
 		return customMetric, err.Error(), http.StatusInternalServerError
 	}
+	// setting sectionDisplayCategory as objectType, as object type in db is used for sectionDisplayCategory
+	customMetric.SectionDisplayCategory = customMetric.ObjectType
+
 	return customMetric, "", http.StatusFound
 }
 
@@ -220,7 +246,7 @@ func (store *MemSQL) DeleteCustomMetricByID(projectID int64, id string) int {
 }
 
 func (store *MemSQL) GetDerivedKPIsHavingNameInInternalQueries(projectID int64, customMetricName string) []string {
-	customMetrics := store.GetDerivedKPIMetricsByProjectId(projectID)
+	customMetrics := store.getDerivedKPIMetricsByProjectId(projectID)
 	rCustomMetrics := make([]string, 0)
 
 	for _, customMetric := range customMetrics {

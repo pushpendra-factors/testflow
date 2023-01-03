@@ -1,4 +1,5 @@
 $fa-color--mono-2: #e7e9ed;
+$dropdownbtn-mono-1: #f5f6f8;
 .fullModal {
   border: 1px solid black;
   width: 100% !important;
@@ -67,14 +68,19 @@ $fa-color--mono-2: #e7e9ed;
 .dropdownbtn {
   display: flex;
   font-weight: bolder !important;
-  font-size: 20px !important;
+  font-size: 16px !important;
   padding: 0 0px 0 20px;
-  background-color: #f5f6f8 !important;
+  min-width: 400px;
+  min-height: 40px;
+  display: flex;
+  justify-content: space-between;
+  background-color: $dropdownbtn-mono-1 !important;
   & .dropdownbtntext {
     height: 100%;
     display: grid;
     place-content: center;
     padding-right: 10px;
+    font-size: 18px;
   }
   & .dropdownbtnicon {
     padding: 0 10px 0 10px;
@@ -105,7 +111,7 @@ $fa-color--mono-2: #e7e9ed;
 }
 
 .divider_newdashboard_btn {
-  margin: 0px 0px 5px 0px;
+  margin: 0px 0px 0px 0px;
 }
 
 .additionalops {
@@ -122,7 +128,7 @@ $fa-color--mono-2: #e7e9ed;
   background-color: transparent;
   color: #1890ff;
   border-color: #1890ff;
-  border-width: 2px;
+  border-width: 1px;
   font-size: 2px;
   &:hover,
   &:active,

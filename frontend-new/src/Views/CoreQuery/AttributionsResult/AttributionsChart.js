@@ -17,7 +17,8 @@ import {
   getDualTouchPointChartData,
   getResultantMetrics,
   getTableFilterOptions,
-  shouldFiltersUpdate
+  shouldFiltersUpdate,
+  isLandingPageOrAllPageViewSelected
 } from './utils';
 
 import AttributionTable from './AttributionTable';
@@ -37,7 +38,7 @@ import NoDataChart from '../../../components/NoDataChart';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from './attributionsResult.constants';
 
 const nodata = (
-  <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+  <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
     <NoDataChart />
   </div>
 );
@@ -88,15 +89,18 @@ const AttributionsChart = forwardRef(
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
-        : defaultSortProp()
+        : defaultSortProp(queryOptions, attrQueries, data)
     );
     const [visibleIndices, setVisibleIndices] = useState([]);
 
-    const displayedAttributionMetrics = useMemo(() => getResultantMetrics(touchpoint, attributionMetrics), [touchpoint, attributionMetrics]);
+    const displayedAttributionMetrics = useMemo(
+      () => getResultantMetrics(touchpoint, attributionMetrics),
+      [touchpoint, attributionMetrics]
+    );
 
     useImperativeHandle(ref, () => ({
-        currentSorter: { sorter }
-      }));
+      currentSorter: { sorter }
+    }));
 
     const handleSorting = useCallback((prop) => {
       setSorter((currentSorter) => getNewSorterState(currentSorter, prop));
@@ -119,28 +123,32 @@ const AttributionsChart = forwardRef(
           );
           if (!enabledOptions.length) {
             return curMetrics;
-          } 
-            return newState;
-          
+          }
+          return newState;
         });
         if (option.enabled) {
           const isSortedByThisOption = sorter.find(
             (elem) => elem.key === option.title
           );
           if (isSortedByThisOption) {
-            setSorter((currentSorter) => currentSorter.filter((elem) => elem.key !== option.title));
+            setSorter((currentSorter) =>
+              currentSorter.filter((elem) => elem.key !== option.title)
+            );
           }
         }
       },
       [setAttributionMetrics, sorter]
     );
 
-    const metricsOptionsPopover = useMemo(() => (
+    const metricsOptionsPopover = useMemo(
+      () => (
         <OptionsPopover
           options={displayedAttributionMetrics}
           onChange={handleMetricsVisibilityChange}
         />
-      ), [displayedAttributionMetrics, handleMetricsVisibilityChange]);
+      ),
+      [displayedAttributionMetrics, handleMetricsVisibilityChange]
+    );
 
     const handleApplyFilters = useCallback((filters) => {
       setAppliedFilters(filters);
@@ -289,7 +297,8 @@ const AttributionsChart = forwardRef(
       attribution_method_compare,
       currMetricsValue,
       attrQueries,
-      queryOptions
+      queryOptions,
+      appliedFilters
     ]);
 
     useEffect(() => {
@@ -318,7 +327,7 @@ const AttributionsChart = forwardRef(
       touchpoint,
       tableData,
       attributionMetrics,
-      filters,
+      filters
     ]);
 
     let chart = null;
@@ -348,46 +357,46 @@ const AttributionsChart = forwardRef(
           return nodata;
         }
       } else if (chartType === CHART_TYPE_BARCHART) {
-          chart = (
-            <DualTouchPointChart
-              attribution_method={attribution_method}
-              attribution_method_compare={attribution_method_compare}
-              currMetricsValue={currMetricsValue}
-              chartsData={dualTouchpointChartData}
-              visibleIndices={visibleIndices}
-              event={event}
-              data={tableData}
-              chartType={chartType}
-            />
-          );
-        } else {
-          chart = scatterPlotChart;
-        }
+        chart = (
+          <DualTouchPointChart
+            attribution_method={attribution_method}
+            attribution_method_compare={attribution_method_compare}
+            currMetricsValue={currMetricsValue}
+            chartsData={dualTouchpointChartData}
+            visibleIndices={visibleIndices}
+            event={event}
+            data={tableData}
+            chartType={chartType}
+          />
+        );
+      } else {
+        chart = scatterPlotChart;
+      }
     } else if (!aggregateData.categories.length) {
-        if (get(appliedFilters, 'categories', []).length > 0) {
-          chart = null;
-        } else {
-          return nodata;
-        }
-      } else if (chartType === CHART_TYPE_BARCHART) {
-          chart = (
-            <SingleTouchPointChart
-              aggregateData={aggregateData}
-              durationObj={durationObj}
-              comparison_duration={comparison_duration}
-              comparison_data={comparison_data}
-              attribution_method={attribution_method}
-              chartType={chartType}
-            />
-          );
-        } else {
-          chart = scatterPlotChart;
-        }
+      if (get(appliedFilters, 'categories', []).length > 0) {
+        chart = null;
+      } else {
+        return nodata;
+      }
+    } else if (chartType === CHART_TYPE_BARCHART) {
+      chart = (
+        <SingleTouchPointChart
+          aggregateData={aggregateData}
+          durationObj={durationObj}
+          comparison_duration={comparison_duration}
+          comparison_data={comparison_data}
+          attribution_method={attribution_method}
+          chartType={chartType}
+        />
+      );
+    } else {
+      chart = scatterPlotChart;
+    }
 
     return (
-      <div className="flex items-center justify-center flex-col">
-        <div className="w-full">{chart}</div>
-        <div className="mt-12 w-full">
+      <div className='flex items-center justify-center flex-col'>
+        <div className='w-full'>{chart}</div>
+        <div className='mt-12 w-full'>
           <AttributionTable
             comparison_data={comparison_data.data}
             durationObj={durationObj}
@@ -406,7 +415,9 @@ const AttributionsChart = forwardRef(
             tableData={tableData}
             searchText={searchText}
             setSearchText={setSearchText}
-            metricsOptionsPopover={metricsOptionsPopover}
+            metricsOptionsPopover={
+              isLandingPageOrAllPageViewSelected(touchpoint) ? null : metricsOptionsPopover
+            }
             filters={filters}
             filtersVisible={filtersVisible}
             appliedFilters={appliedFilters}

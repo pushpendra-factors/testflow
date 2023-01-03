@@ -12,7 +12,7 @@
     padding-top: 0 !important;
 
     .ant-popover-inner {
-        width: 320px;
+        width: 324px;
         max-height: 500px;
         border: 1px solid #f7f5f8;
         border-radius: 12px;
@@ -48,8 +48,14 @@
                             }
 
                             .fa-custom--popover-content {
-                                max-height: 392px;
-                                overflow-y: scroll;
+                                div {
+                                    max-height: 392px;
+                                    overflow-y: scroll;
+
+                                    &.apply_active {
+                                        max-height: 348px;
+                                    }
+                                }
                             }
                         }
 

@@ -8,10 +8,11 @@ type CaptureFormFillResponse struct {
 }
 
 type SDKFormFillPayload struct {
-	UserId  string `json:"user_id"`
-	FieldId string `json:"field_id"`
-	FormId  string `json:"form_id"`
-	Value   string `json:"value"`
+	UserId    string     `json:"user_id"`
+	FieldId   string     `json:"field_id"`
+	FormId    string     `json:"form_id"`
+	Value     string     `json:"value"`
+	UpdatedAt *time.Time `json:"-"`
 }
 
 type FormFill struct {

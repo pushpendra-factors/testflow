@@ -3,6 +3,7 @@ package pattern
 import (
 	Fp "factors/fptree"
 	Hist "factors/histogram"
+	M "factors/model/model"
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
@@ -98,25 +99,19 @@ type CategoricalConstraint struct {
 	Operator      string
 }
 type EventConstraints struct {
-	EPNumericConstraints     []NumericConstraint
-	EPCategoricalConstraints []CategoricalConstraint
-	UPNumericConstraints     []NumericConstraint
-	UPCategoricalConstraints []CategoricalConstraint
+	EPNumericConstraints     []NumericConstraint     `json:"enc"`
+	EPCategoricalConstraints []CategoricalConstraint `json:"ecc"`
+	UPNumericConstraints     []NumericConstraint     `json:"unc"`
+	UPCategoricalConstraints []CategoricalConstraint `json:"ucc"`
 }
 
 type CountAlgoProperties struct {
 	// properties related to hmine and other counting algo
-	Counting_version int            `json:"cv"`
-	Hmine_support    float32        `json:"hs"`
-	Hmine_persist    int            `json:"hp"`
-	Job              ExplainQueryV2 `json:"jb"`
-	JobId            string         `json:"mid"`
-}
-
-type ExplainQueryV2 struct {
-	Start_event     string   `json:"sev"`
-	End_event       string   `json:"eev"`
-	Events_included []string `json:"ein"`
+	Counting_version int              `json:"cv"`
+	Hmine_support    float32          `json:"hs"`
+	Hmine_persist    int              `json:"hp"`
+	Job              M.ExplainV2Query `json:"jb"`
+	JobId            string           `json:"mid"`
 }
 
 func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern, error) {
