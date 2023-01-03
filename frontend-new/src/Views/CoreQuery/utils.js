@@ -6,6 +6,8 @@ import { EMPTY_ARRAY, groupFilters } from 'Utils/global';
 import { formatFilterDate, isDateInMilliSeconds } from 'Utils/dataFormatter';
 import MomentTz from 'Components/MomentTz';
 
+import { AttributionQueryV1 } from 'Attribution/state/classes';
+
 import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
@@ -1453,6 +1455,8 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
   return result;
 };
 
+
+
 export const getAttributionQuery = (
   eventGoal = { filters: [] },
   touchpoint,
@@ -1475,24 +1479,24 @@ export const getAttributionQuery = (
     );
   }
 
+  const attrQueryV1 = new AttributionQueryV1();
+  attrQueryV1.cm = ['Impressions', 'Clicks', 'Spend']
+  attrQueryV1.ce = {
+    na: eventGoal.label,
+    pr: eventFilters
+  }
+  attrQueryV1.attribution_key = touchPointFiltersQuery;
+  attrQueryV1.query_type = queryType;
+  attrQueryV1.attribution_methodology = models[0];
+  attrQueryV1.lbw = window;
+  attrQueryV1.tactic_offer_type = tacticOfferType;
+
   const query = {
     cl: QUERY_TYPE_ATTRIBUTION,
     meta: {
       metrics_breakdown: true
     },
-    query: {
-      cm: ['Impressions', 'Clicks', 'Spend'],
-      ce: {
-        na: eventGoal.label,
-        pr: eventFilters
-      },
-      attribution_key: touchpoint,
-      attribution_key_f: touchPointFiltersQuery,
-      query_type: queryType,
-      attribution_methodology: models[0],
-      lbw: window,
-      tactic_offer_type: tacticOfferType
-    }
+    query: attrQueryV1
   };
   if (!eventGoal || !eventGoal.label) {
     query.query.ce = {};

@@ -732,7 +732,8 @@ func SDKCaptureClickHandler(c *gin.Context) {
 	projectID, errCode := store.GetStore().GetProjectIDByToken(projectToken)
 	if errCode == http.StatusNotFound {
 		if SDK.IsValidTokenString(projectToken) {
-			logCtx.Error("Failed to get project from sdk project token.")
+			// This is tracked with a metric on the dashboard as it could cause error spikes.
+			logCtx.WithField("tag", "invalid_sdk_token").Info("Failed to get project from sdk project token.")
 		} else {
 			logCtx.WithField("token", projectToken).Warn("Invalid token on sdk payload.")
 		}

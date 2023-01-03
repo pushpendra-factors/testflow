@@ -415,7 +415,7 @@ function ConversionGoalBlock({
             onClick={toggleEventSelect}
             icon={<SVG name={'plus'} color={'grey'} />}
           >
-            Add a goal event
+            Add KPI
           </Button>
         }
         {selectEvents()}

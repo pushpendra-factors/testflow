@@ -1612,80 +1612,43 @@ func enrichCampaignMember(project *model.Project, otpRules *[]model.OTPRule, doc
 	return http.StatusOK
 }
 
-var activtiesErrInvalidDocType = errors.New("Invalid docType associated with activities document.")
+var activtiesErrNoWhoIdAssociated = errors.New("No WhoId associated with activities document.")
 
-func GetActivitiesUserIDs(document *model.SalesforceDocument) ([]string, error) {
+func GetActivitiesUserID(document *model.SalesforceDocument) (string, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": document.ProjectID, "doc_id": document.ID})
 
 	if document.Type != model.SalesforceDocumentTypeTask && document.Type != model.SalesforceDocumentTypeEvent {
-		return nil, errors.New("Invalid docType for salesforce activities.")
+		return "", errors.New("Invalid docType for salesforce activities.")
 	}
 	logCtx.WithField("doc_type", document.Type)
-
-	leadIDs := make([]string, 0)
-	contactIDs := make([]string, 0)
 
 	var relationshipActivityRecord RelationshipActivityRecord
 	err := json.Unmarshal(document.Value.RawMessage, &relationshipActivityRecord)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
+	if relationshipActivityRecord.Who.ID == "" {
+		logCtx.Warning("No WhoId associated with activities document.")
+		return "", activtiesErrNoWhoIdAssociated
+	}
+
+	var relationshipActivityType int
 	if relationshipActivityRecord.Who.Type == U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameLead) {
-		leadIDs = append(leadIDs, relationshipActivityRecord.Who.ID)
+		relationshipActivityType = model.SalesforceDocumentTypeLead
 	} else if relationshipActivityRecord.Who.Type == U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact) {
-		contactIDs = append(contactIDs, relationshipActivityRecord.Who.ID)
+		relationshipActivityType = model.SalesforceDocumentTypeContact
 	} else {
-		logCtx.WithField("associated_doc_type", relationshipActivityRecord.Who.Type).Warning("Invalid docType associated with activities document.")
-		return nil, activtiesErrInvalidDocType
+		logCtx.WithFields(log.Fields{"associated_doc_id": relationshipActivityRecord.Who.ID, "associated_doc_type": relationshipActivityRecord.Who.Type}).Warning("Invalid docType associated with activities document.")
+		return "", errors.New("Invalid docType associated with activities document.")
 	}
 
-	expectedDocumentIDs := append(leadIDs, contactIDs...)
-	actualDocumentIDs := make([]string, 0)
-
-	userIds := make([]string, 0)
-
-	if len(leadIDs) > 0 {
-		leadDocuments, status := store.GetStore().GetSyncedSalesforceDocumentByType(document.ProjectID, leadIDs, model.SalesforceDocumentTypeLead, true)
-		if status != http.StatusFound {
-			return nil, errors.New("Failed to get salesforce lead documents on GetActivitiesLeadOrContactId.")
-		}
-
-		for i := range leadDocuments {
-			if leadDocuments[i].Action != model.SalesforceDocumentCreated {
-				continue
-			}
-
-			actualDocumentIDs = append(actualDocumentIDs, leadDocuments[i].ID)
-			if !U.ContainsStringInArray(userIds, leadDocuments[i].UserID) {
-				userIds = append(userIds, leadDocuments[i].UserID)
-			}
-		}
+	doc, status := store.GetStore().GetSalesforceDocumentByTypeAndAction(document.ProjectID, relationshipActivityRecord.Who.ID, relationshipActivityType, model.SalesforceDocumentCreated)
+	if status != http.StatusFound {
+		return "", errors.New("Failed to get salesforce lead documents on GetActivitiesLeadOrContactId.")
 	}
 
-	if len(contactIDs) > 0 {
-		contactDocuments, status := store.GetStore().GetSyncedSalesforceDocumentByType(document.ProjectID, contactIDs, model.SalesforceDocumentTypeContact, true)
-		if status != http.StatusFound {
-			return nil, errors.New("Failed to get salesforce contact documents on GetActivitiesLeadOrContactId.")
-		}
-
-		for i := range contactDocuments {
-			if contactDocuments[i].Action != model.SalesforceDocumentCreated {
-				continue
-			}
-
-			actualDocumentIDs = append(actualDocumentIDs, contactDocuments[i].ID)
-			if !U.ContainsStringInArray(userIds, contactDocuments[i].UserID) {
-				userIds = append(userIds, contactDocuments[i].UserID)
-			}
-		}
-	}
-
-	if len(U.StringSliceDiff(expectedDocumentIDs, actualDocumentIDs)) != 0 {
-		return nil, errors.New("Salesforce lead or contact documents missing on GetActivitiesLeadOrContactId.")
-	}
-
-	return userIds, nil
+	return doc.UserID, nil
 }
 
 func canProcessSalesforceActivity(document *model.SalesforceDocument) (bool, error) {
@@ -1767,51 +1730,38 @@ func enrichTask(projectID int64, document *model.SalesforceDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	activityUserIDs, err := GetActivitiesUserIDs(document)
+	activityUserID, err := GetActivitiesUserID(document)
 	if err != nil {
-		if err == activtiesErrInvalidDocType {
-			logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich task")
+		if err == activtiesErrNoWhoIdAssociated {
+			logCtx.WithError(err).Info("Skipping processing for task record.")
 			return http.StatusOK
 		}
-		logCtx.WithError(err).Error("Failed to GetActivitiesUserIDs on enrich task")
+		logCtx.WithError(err).Error("Failed to GetActivitiesUserID on enrich task")
 		return http.StatusInternalServerError
 	}
 
-	if U.ContainsStringInArray(activityUserIDs, "") {
-		logCtx.WithError(err).Warning("Unsynced contacts or leads present. Skipping enrich task.")
+	if activityUserID == "" {
+		logCtx.Error("Lead or contact associated is not synced for processing task document.")
 		return http.StatusOK
 	}
 
-	if len(activityUserIDs) == 0 {
-		logCtx.Error("No lead or contact associated with task document.")
+	trackPayload := &SDK.TrackPayload{
+		ProjectId:       projectID,
+		UserId:          activityUserID,
+		EventProperties: *enProperties,
+		RequestSource:   model.UserSourceSalesforce,
+	}
+
+	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "", model.SalesforceDocumentTypeNameTask)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to track salesforce task event.")
 		return http.StatusInternalServerError
 	}
 
-	eventIdToUserIdMap := make(map[string]string)
-
-	for i := range activityUserIDs {
-		trackPayload := &SDK.TrackPayload{
-			ProjectId:       projectID,
-			UserId:          activityUserIDs[i],
-			EventProperties: *enProperties,
-			RequestSource:   model.UserSourceSalesforce,
-		}
-
-		eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, activityUserIDs[i], model.SalesforceDocumentTypeNameTask)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to track salesforce lead for task event.")
-			return http.StatusInternalServerError
-		}
-
-		eventIdToUserIdMap[eventID] = userID
-	}
-
-	for eventID, userID := range eventIdToUserIdMap {
-		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
-		if errCode != http.StatusAccepted {
-			logCtx.Error("Failed to update salesforce task document as synced.")
-			return http.StatusInternalServerError
-		}
+	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update salesforce task document as synced.")
+		return http.StatusInternalServerError
 	}
 
 	return http.StatusOK
@@ -1848,52 +1798,38 @@ func enrichEvent(projectID int64, document *model.SalesforceDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	activityUserIDs, err := GetActivitiesUserIDs(document)
+	activityUserID, err := GetActivitiesUserID(document)
 	if err != nil {
-		if err == activtiesErrInvalidDocType {
-			logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich event")
+		if err == activtiesErrNoWhoIdAssociated {
+			logCtx.WithError(err).Warning("Skipping processing for event record.")
 			return http.StatusOK
 		}
-
-		logCtx.WithError(err).Error("Failed to GetActivitiesUserIDs on enrich event")
+		logCtx.WithError(err).Error("Failed to GetActivitiesUserID on enrich event")
 		return http.StatusInternalServerError
 	}
 
-	if U.ContainsStringInArray(activityUserIDs, "") {
-		logCtx.WithError(err).Warning("Unsynced contacts or leads present. Skipping enrich event.")
+	if activityUserID == "" {
+		logCtx.Error("Lead or contact associated is not synced for processing event document.")
 		return http.StatusOK
 	}
 
-	if len(activityUserIDs) == 0 {
-		logCtx.Error("No lead or contact associated with event document.")
+	trackPayload := &SDK.TrackPayload{
+		ProjectId:       projectID,
+		UserId:          activityUserID,
+		EventProperties: *enProperties,
+		RequestSource:   model.UserSourceSalesforce,
+	}
+
+	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "", model.SalesforceDocumentTypeNameEvent)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to track salesforce event event.")
 		return http.StatusInternalServerError
 	}
 
-	eventIdToUserIdMap := make(map[string]string)
-
-	for i := range activityUserIDs {
-		trackPayload := &SDK.TrackPayload{
-			ProjectId:       projectID,
-			UserId:          activityUserIDs[i],
-			EventProperties: *enProperties,
-			RequestSource:   model.UserSourceSalesforce,
-		}
-
-		eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, activityUserIDs[i], model.SalesforceDocumentTypeNameEvent)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to track salesforce lead for event event.")
-			return http.StatusInternalServerError
-		}
-
-		eventIdToUserIdMap[eventID] = userID
-	}
-
-	for eventID, userID := range eventIdToUserIdMap {
-		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
-		if errCode != http.StatusAccepted {
-			logCtx.Error("Failed to update salesforce event document as synced.")
-			return http.StatusInternalServerError
-		}
+	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update salesforce event document as synced.")
+		return http.StatusInternalServerError
 	}
 
 	return http.StatusOK

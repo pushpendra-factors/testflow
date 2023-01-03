@@ -13,7 +13,13 @@ import {
   SET_TACTIC_OFFER_TYPE,
   INITIALIZE_CONTENT_GROUPS,
   INITIALIZE_TOUCHPOINT_DIMENSIONS,
-  INITIALIZE_ATTRIBUTION_STATE
+  INITIALIZE_ATTRIBUTION_STATE,
+  ATTRIBUTION_DASHBOARD_LOADING,
+  ATTRIBUTION_DASHBOARD_LOADED,
+  ATTRIBUTION_DASHBOARD_FAILED,
+  ATTRIBUTION_QUERIES_LOADING,
+  ATTRIBUTION_QUERIES_LOADED,
+  ATTRIBUTION_QUERIES_FAILED
 } from './action.constants';
 
 export const setAttributionDashboardUnitsLoading = () => ({
@@ -27,6 +33,32 @@ export const setAttributionDashboardUnitsLoaded = (payload) => ({
 
 export const setAttributionDashboardUnitsFailed = () => ({
   type: ATTRIBUTION_DASHBOARD_UNITS_FAILED
+});
+
+export const setAttributionDashboardLoading = () => ({
+  type: ATTRIBUTION_DASHBOARD_LOADING
+});
+
+export const setAttributionDashboardLoaded = (payload) => ({
+  type: ATTRIBUTION_DASHBOARD_LOADED,
+  payload
+});
+
+export const setAttributionDashboardFailed = () => ({
+  type: ATTRIBUTION_DASHBOARD_FAILED
+});
+
+export const setAttributionQueriesLoading = () => ({
+  type: ATTRIBUTION_QUERIES_LOADING
+});
+
+export const setAttributionQueriesLoaded = (payload) => ({
+  type: ATTRIBUTION_QUERIES_LOADED,
+  payload
+});
+
+export const setAttributionQueriesFailed = () => ({
+  type: ATTRIBUTION_QUERIES_FAILED
 });
 
 export const setGoalEvent = (goal) => ({

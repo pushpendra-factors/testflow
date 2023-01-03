@@ -21,7 +21,8 @@ import {
 } from '../../reducers/coreQuery/services';
 import {
   fetchAttrContentGroups,
-  fetchSmartPropertyRules
+  fetchSmartPropertyRules,
+  fetchAttributionQueries
 } from 'Attribution/state/services';
 import {
   getUserProperties,
@@ -71,6 +72,15 @@ function AppLayout({
   const [sidebarCollapse, setSidebarCollapse] = useState(true);
 
   const activeAgent = agentState?.agent_details?.email;
+
+  const whiteListedAccounts = [
+    'baliga@factors.ai',
+    'solutions@factors.ai',
+    'sonali@factors.ai',
+    'praveenr@factors.ai',
+    'janani@factors.ai',
+    'akhil@factors.ai'
+  ];
 
   const asyncCallOnLoad = useCallback(async () => {
     try {
@@ -126,6 +136,7 @@ function AppLayout({
       dispatch(fetchTemplates());
       fetchProjectSettings(active_project?.id);
       dispatch(fetchEventDisplayNames({ projectId: active_project?.id }));
+      dispatch(fetchAttributionQueries(active_project?.id));
     }
   }, [dispatch, active_project]);
 

@@ -5325,6 +5325,7 @@ func TestSalesforceTaskDocument(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	contactID1 := U.RandomLowerAphaNumString(5)
+	leadID1 := U.RandomLowerAphaNumString(5)
 	contactID2 := U.RandomLowerAphaNumString(5)
 
 	contact1 := map[string]interface{}{
@@ -5336,23 +5337,22 @@ func TestSalesforceTaskDocument(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, contact1, model.SalesforceDocumentTypeNameContact)
 	assert.Nil(t, err)
 
-	contact2 := map[string]interface{}{
-		"Id":               contactID2,
+	lead1 := map[string]interface{}{
+		"Id":               leadID1,
 		"Name":             U.RandomString(10),
 		"CreatedDate":      time.Now().Format(model.SalesforceDocumentDateTimeLayout),
 		"LastModifiedDate": time.Now().Format(model.SalesforceDocumentDateTimeLayout),
 	}
-	err = createDummySalesforceDocument(project.ID, contact2, model.SalesforceDocumentTypeNameContact)
+	err = createDummySalesforceDocument(project.ID, lead1, model.SalesforceDocumentTypeNameLead)
 	assert.Nil(t, err)
 
-	taskID := U.RandomLowerAphaNumString(5)
-	taskName := U.RandomString(10)
-	taskCreatedAt := time.Now().Format(model.SalesforceDocumentDateTimeLayout)
-
-	task := map[string]interface{}{
-		"Id":               taskID,
-		"Name":             taskName,
-		"CreatedDate":      taskCreatedAt,
+	taskID1 := U.RandomLowerAphaNumString(5)
+	taskName1 := U.RandomString(10)
+	taskCreatedAt1 := time.Now().Format(model.SalesforceDocumentDateTimeLayout)
+	task1 := map[string]interface{}{
+		"Id":               taskID1,
+		"Name":             taskName1,
+		"CreatedDate":      taskCreatedAt1,
 		"LastModifiedDate": time.Now().Format(model.SalesforceDocumentDateTimeLayout),
 		"Who": IntSalesforce.RelationshipActivityWho{
 			ID:   contactID1,
@@ -5362,44 +5362,102 @@ func TestSalesforceTaskDocument(t *testing.T) {
 				"url":  fmt.Sprintf("/services/data/v49.0/sobjects/%s/%s", U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact), contactID1),
 			},
 		},
+		"WhoId": contactID1,
 	}
-	err = createDummySalesforceDocument(project.ID, task, model.SalesforceDocumentTypeNameTask)
+	err = createDummySalesforceDocument(project.ID, task1, model.SalesforceDocumentTypeNameTask)
 	assert.Nil(t, err)
 
 	enrichStatus, anyFailure := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, false, anyFailure)
-	assert.Len(t, enrichStatus, 2) // contact1, task
+	assert.Len(t, enrichStatus, 3) // contact1, lead1, task1
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[2].Status)
 
-	// Add contact2 to task
-	task = map[string]interface{}{
-		"Id":               taskID,
-		"Name":             taskName,
-		"CreatedDate":      taskCreatedAt,
+	// Task record with no WhoId
+	taskID2 := U.RandomLowerAphaNumString(5)
+	taskName2 := U.RandomString(10)
+	taskCreatedAt2 := time.Now().Format(model.SalesforceDocumentDateTimeLayout)
+	task2 := map[string]interface{}{
+		"Id":               taskID2,
+		"Name":             taskName2,
+		"CreatedDate":      taskCreatedAt2,
+		"LastModifiedDate": time.Now().Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, task2, model.SalesforceDocumentTypeNameTask)
+	assert.Nil(t, err)
+
+	enrichStatus, anyFailure = IntSalesforce.Enrich(project.ID, 1, nil)
+	assert.Equal(t, false, anyFailure)
+	assert.Len(t, enrichStatus, 1) // task2
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{taskID2}, model.SalesforceDocumentTypeTask, false)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{taskID2}, model.SalesforceDocumentTypeTask, true)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	task2 = map[string]interface{}{
+		"Id":               taskID2,
+		"Name":             taskName2,
+		"CreatedDate":      taskCreatedAt2,
 		"LastModifiedDate": time.Now().Format(model.SalesforceDocumentDateTimeLayout),
 		"Who": IntSalesforce.RelationshipActivityWho{
-			ID:   contactID1,
+			ID:   leadID1,
+			Type: U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameLead),
+			Attributes: map[string]interface{}{
+				"type": "Name",
+				"url":  fmt.Sprintf("/services/data/v49.0/sobjects/%s/%s", U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameLead), leadID1),
+			},
+		},
+		"WhoId": leadID1,
+	}
+	err = createDummySalesforceDocument(project.ID, task2, model.SalesforceDocumentTypeNameTask)
+	assert.Nil(t, err)
+
+	enrichStatus, anyFailure = IntSalesforce.Enrich(project.ID, 1, nil)
+	assert.Equal(t, false, anyFailure)
+	assert.Len(t, enrichStatus, 1) // task2
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{taskID2}, model.SalesforceDocumentTypeTask, false)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{taskID2}, model.SalesforceDocumentTypeTask, true)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	taskID3 := U.RandomLowerAphaNumString(5)
+	taskName3 := U.RandomString(10)
+	taskCreatedAt3 := time.Now().Format(model.SalesforceDocumentDateTimeLayout)
+	task3 := map[string]interface{}{
+		"Id":               taskID3,
+		"Name":             taskName3,
+		"CreatedDate":      taskCreatedAt3,
+		"LastModifiedDate": time.Now().Format(model.SalesforceDocumentDateTimeLayout),
+		"Who": IntSalesforce.RelationshipActivityWho{
+			ID:   contactID2,
 			Type: U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact),
 			Attributes: map[string]interface{}{
 				"type": "Name",
-				"url":  fmt.Sprintf("/services/data/v49.0/sobjects/%s/%s", U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact), contactID1),
+				"url":  fmt.Sprintf("/services/data/v49.0/sobjects/%s/%s", U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact), contactID2),
 			},
 		},
 		"WhoId": contactID2,
 	}
-	err = createDummySalesforceDocument(project.ID, task, model.SalesforceDocumentTypeNameTask)
-	assert.Nil(t, err)
-
-	contact1["LastModifiedDate"] = time.Now().Format(model.SalesforceDocumentDateTimeLayout)
-	err = createDummySalesforceDocument(project.ID, contact1, model.SalesforceDocumentTypeNameContact)
+	err = createDummySalesforceDocument(project.ID, task3, model.SalesforceDocumentTypeNameTask)
 	assert.Nil(t, err)
 
 	enrichStatus, anyFailure = IntSalesforce.Enrich(project.ID, 2, nil)
-	assert.Equal(t, false, anyFailure)
-	assert.Len(t, enrichStatus, 2) // contact2, task
-	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
-	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
+	assert.Equal(t, true, anyFailure)
+	assert.Len(t, enrichStatus, 1) // task3
+	assert.Equal(t, util.CRM_SYNC_STATUS_FAILURES, enrichStatus[0].Status)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{taskID3}, model.SalesforceDocumentTypeTask, false)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{taskID3}, model.SalesforceDocumentTypeTask, true)
+	assert.Equal(t, http.StatusFound, errCode)
 }
 
 func TestSalesforceEventDocument(t *testing.T) {
@@ -5419,6 +5477,7 @@ func TestSalesforceEventDocument(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	contactID1 := U.RandomLowerAphaNumString(5)
+	leadID1 := U.RandomLowerAphaNumString(5)
 	contactID2 := U.RandomLowerAphaNumString(5)
 
 	contact1 := map[string]interface{}{
@@ -5430,23 +5489,22 @@ func TestSalesforceEventDocument(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, contact1, model.SalesforceDocumentTypeNameContact)
 	assert.Nil(t, err)
 
-	contact2 := map[string]interface{}{
-		"Id":               contactID2,
+	lead1 := map[string]interface{}{
+		"Id":               leadID1,
 		"Name":             U.RandomString(10),
 		"CreatedDate":      time.Now().Format(model.SalesforceDocumentDateTimeLayout),
 		"LastModifiedDate": time.Now().Format(model.SalesforceDocumentDateTimeLayout),
 	}
-	err = createDummySalesforceDocument(project.ID, contact2, model.SalesforceDocumentTypeNameContact)
+	err = createDummySalesforceDocument(project.ID, lead1, model.SalesforceDocumentTypeNameLead)
 	assert.Nil(t, err)
 
-	eventID := U.RandomLowerAphaNumString(5)
-	eventName := U.RandomString(10)
-	eventCreatedAt := time.Now().Format(model.SalesforceDocumentDateTimeLayout)
-
-	event := map[string]interface{}{
-		"Id":               eventID,
-		"Name":             eventName,
-		"CreatedDate":      eventCreatedAt,
+	eventID1 := U.RandomLowerAphaNumString(5)
+	eventName1 := U.RandomString(10)
+	eventCreatedAt1 := time.Now().Format(model.SalesforceDocumentDateTimeLayout)
+	event1 := map[string]interface{}{
+		"Id":               eventID1,
+		"Name":             eventName1,
+		"CreatedDate":      eventCreatedAt1,
 		"LastModifiedDate": time.Now().Format(model.SalesforceDocumentDateTimeLayout),
 		"Who": IntSalesforce.RelationshipActivityWho{
 			ID:   contactID1,
@@ -5456,44 +5514,102 @@ func TestSalesforceEventDocument(t *testing.T) {
 				"url":  fmt.Sprintf("/services/data/v49.0/sobjects/%s/%s", U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact), contactID1),
 			},
 		},
+		"WhoId": contactID1,
 	}
-	err = createDummySalesforceDocument(project.ID, event, model.SalesforceDocumentTypeNameEvent)
+	err = createDummySalesforceDocument(project.ID, event1, model.SalesforceDocumentTypeNameEvent)
 	assert.Nil(t, err)
 
 	enrichStatus, anyFailure := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, false, anyFailure)
-	assert.Len(t, enrichStatus, 2) // contact1, event
+	assert.Len(t, enrichStatus, 3) // contact1, lead1, event1
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[2].Status)
 
-	// Add contact2 to event
-	event = map[string]interface{}{
-		"Id":               eventID,
-		"Name":             eventName,
-		"CreatedDate":      eventCreatedAt,
+	// Event record with no WhoId
+	eventID2 := U.RandomLowerAphaNumString(5)
+	eventName2 := U.RandomString(10)
+	eventCreatedAt2 := time.Now().Format(model.SalesforceDocumentDateTimeLayout)
+	event2 := map[string]interface{}{
+		"Id":               eventID2,
+		"Name":             eventName2,
+		"CreatedDate":      eventCreatedAt2,
+		"LastModifiedDate": time.Now().Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, event2, model.SalesforceDocumentTypeNameEvent)
+	assert.Nil(t, err)
+
+	enrichStatus, anyFailure = IntSalesforce.Enrich(project.ID, 1, nil)
+	assert.Equal(t, false, anyFailure)
+	assert.Len(t, enrichStatus, 1) // event2
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{eventID2}, model.SalesforceDocumentTypeEvent, false)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{eventID2}, model.SalesforceDocumentTypeEvent, true)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	event2 = map[string]interface{}{
+		"Id":               eventID2,
+		"Name":             eventName2,
+		"CreatedDate":      eventCreatedAt2,
 		"LastModifiedDate": time.Now().Format(model.SalesforceDocumentDateTimeLayout),
 		"Who": IntSalesforce.RelationshipActivityWho{
-			ID:   contactID1,
+			ID:   leadID1,
+			Type: U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameLead),
+			Attributes: map[string]interface{}{
+				"type": "Name",
+				"url":  fmt.Sprintf("/services/data/v49.0/sobjects/%s/%s", U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameLead), leadID1),
+			},
+		},
+		"WhoId": leadID1,
+	}
+	err = createDummySalesforceDocument(project.ID, event2, model.SalesforceDocumentTypeNameEvent)
+	assert.Nil(t, err)
+
+	enrichStatus, anyFailure = IntSalesforce.Enrich(project.ID, 1, nil)
+	assert.Equal(t, false, anyFailure)
+	assert.Len(t, enrichStatus, 1) // event2
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{eventID2}, model.SalesforceDocumentTypeEvent, false)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{eventID2}, model.SalesforceDocumentTypeEvent, true)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	eventID3 := U.RandomLowerAphaNumString(5)
+	eventName3 := U.RandomString(10)
+	eventCreatedAt3 := time.Now().Format(model.SalesforceDocumentDateTimeLayout)
+	event3 := map[string]interface{}{
+		"Id":               eventID3,
+		"Name":             eventName3,
+		"CreatedDate":      eventCreatedAt3,
+		"LastModifiedDate": time.Now().Format(model.SalesforceDocumentDateTimeLayout),
+		"Who": IntSalesforce.RelationshipActivityWho{
+			ID:   contactID2,
 			Type: U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact),
 			Attributes: map[string]interface{}{
 				"type": "Name",
-				"url":  fmt.Sprintf("/services/data/v49.0/sobjects/%s/%s", U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact), contactID1),
+				"url":  fmt.Sprintf("/services/data/v49.0/sobjects/%s/%s", U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact), contactID2),
 			},
 		},
 		"WhoId": contactID2,
 	}
-	err = createDummySalesforceDocument(project.ID, event, model.SalesforceDocumentTypeNameEvent)
-	assert.Nil(t, err)
-
-	contact1["LastModifiedDate"] = time.Now().Format(model.SalesforceDocumentDateTimeLayout)
-	err = createDummySalesforceDocument(project.ID, contact1, model.SalesforceDocumentTypeNameContact)
+	err = createDummySalesforceDocument(project.ID, event3, model.SalesforceDocumentTypeNameEvent)
 	assert.Nil(t, err)
 
 	enrichStatus, anyFailure = IntSalesforce.Enrich(project.ID, 2, nil)
-	assert.Equal(t, false, anyFailure)
-	assert.Len(t, enrichStatus, 2) // contact2, event
-	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
-	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
+	assert.Equal(t, true, anyFailure)
+	assert.Len(t, enrichStatus, 1) // event3
+	assert.Equal(t, util.CRM_SYNC_STATUS_FAILURES, enrichStatus[0].Status)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{eventID3}, model.SalesforceDocumentTypeEvent, false)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	_, errCode = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{eventID3}, model.SalesforceDocumentTypeEvent, true)
+	assert.Equal(t, http.StatusFound, errCode)
 }
 
 func TestSalesforceGetSyncedSalesforceDocumentByType(t *testing.T) {

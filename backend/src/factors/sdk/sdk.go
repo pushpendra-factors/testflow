@@ -161,6 +161,10 @@ const (
 	sdkRequestTypeAMPIdentify              = "sdk_amp_identify"
 )
 
+func IsBot(userAgent, eventName string) bool {
+	return U.IsBotUserAgent(userAgent) || U.IsBotEventByPrefix(eventName)
+}
+
 func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string, error) {
 	// Todo(Dinesh): Retry on panic: Add payload back to queue as return
 	// from defer is not possible and notify panic.
@@ -536,8 +540,8 @@ func Track(projectId int64, request *TrackPayload,
 		return http.StatusInternalServerError, &TrackResponse{Error: "Tracking failed. Invalid project."}
 	}
 
-	// Terminate track calls from bot user_agent.
-	if *projectSettings.ExcludeBot && U.IsBotUserAgent(request.UserAgent) {
+	// Terminate track calls from bot user_agent and event_name prefix.
+	if *projectSettings.ExcludeBot && IsBot(request.UserAgent, request.Name) {
 		return http.StatusNotModified, &TrackResponse{Message: "Tracking skipped. Bot request."}
 	}
 
@@ -1517,7 +1521,7 @@ func enqueueRequest(token, reqType string, reqPayload interface{}) error {
 	return nil
 }
 
-func excludeBotRequestBySetting(token, userAgent string) bool {
+func excludeBotRequestBySetting(token, userAgent string, eventName string) bool {
 	settings, errCode := store.GetStore().GetProjectSettingByTokenWithCacheAndDefault(token)
 	if errCode != http.StatusFound {
 		log.WithField("err_code", errCode).
@@ -1525,7 +1529,7 @@ func excludeBotRequestBySetting(token, userAgent string) bool {
 		return false
 	}
 
-	return settings != nil && *settings.ExcludeBot && U.IsBotUserAgent(userAgent)
+	return settings != nil && *settings.ExcludeBot && IsBot(userAgent, eventName)
 }
 
 func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) {
@@ -1537,7 +1541,8 @@ func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) 
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
 		if IsValidTokenString(token) {
-			logCtx.Error("Failed to get project from sdk project token.")
+			// This is tracked with a metric on the dashboard as it could cause error spikes.
+			logCtx.WithField("tag", "invalid_sdk_token").Info("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")
 		}
@@ -1552,7 +1557,7 @@ func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) 
 func TrackWithQueue(token string, reqPayload *TrackPayload,
 	queueAllowedTokens []string) (int, *TrackResponse) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, reqPayload.Name) {
 		return http.StatusNotModified,
 			&TrackResponse{Message: "Tracking skipped. Bot request."}
 	}
@@ -1601,7 +1606,8 @@ func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyR
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
 		if IsValidTokenString(token) {
-			logCtx.Error("Failed to get project from sdk project token.")
+			// This is tracked with a metric on the dashboard as it could cause error spikes.
+			logCtx.WithField("tag", "invalid_sdk_token").Info("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")
 		}
@@ -1716,7 +1722,8 @@ func AddUserPropertiesByToken(token string,
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
 		if IsValidTokenString(token) {
-			logCtx.Error("Failed to get project from sdk project token.")
+			// This is tracked with a metric on the dashboard as it could cause error spikes.
+			logCtx.WithField("tag", "invalid_sdk_token").Info("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")
 		}
@@ -1771,7 +1778,8 @@ func UpdateEventPropertiesByToken(token string,
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
 		if IsValidTokenString(token) {
-			logCtx.Error("Failed to get project from sdk project token.")
+			// This is tracked with a metric on the dashboard as it could cause error spikes.
+			logCtx.WithField("tag", "invalid_sdk_token").Info("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")
 		}
@@ -1786,7 +1794,7 @@ func UpdateEventPropertiesByToken(token string,
 func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropertiesPayload,
 	queueAllowedTokens []string) (int, *UpdateEventPropertiesResponse) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "") {
 		return http.StatusNotModified, &UpdateEventPropertiesResponse{
 			Message: "Update event properties skipped. Bot request."}
 	}
@@ -2215,7 +2223,7 @@ func GetCacheAMPSDKEventIDByPageURL(projectId int64, userId string, pageURL stri
 func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 	queueAllowedTokens []string) (int, *Response) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "") {
 		return http.StatusNotModified,
 			&Response{Message: "Track skipped. Bot request."}
 	}
@@ -2235,7 +2243,7 @@ func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 func AMPUpdateEventPropertiesWithQueue(token string, reqPayload *AMPUpdateEventPropertiesPayload,
 	queueAllowedTokens []string) (int, *Response) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "") {
 		return http.StatusNotModified,
 			&Response{Message: "Update event properties skipped. Bot request."}
 	}
