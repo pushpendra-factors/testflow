@@ -559,7 +559,7 @@ func TestAPIAgentVerify(t *testing.T) {
 		authData, err := helpers.GetAuthData(email, agent.UUID, agent.Salt, helpers.SecondsInFifteenDays*time.Second)
 		assert.Nil(t, err)
 
-		w := sendAgentVerifyRequest(r, authData, password, firstName, lastName)
+		w := sendAgentVerifyRequest(r, authData, "Test123@!", firstName, lastName)
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		// on retrying
@@ -588,12 +588,11 @@ func TestAPIAgentVerify(t *testing.T) {
 
 		firstName := "test !!"
 		lastName := U.RandomLowerAphaNumString(8)
-		password := U.RandomLowerAphaNumString(8)
 
 		authData, err := helpers.GetAuthData(email, agent.UUID, agent.Salt, helpers.SecondsInFifteenDays*time.Second)
 		assert.Nil(t, err)
 
-		w := sendAgentVerifyRequest(r, authData, password, firstName, lastName)
+		w := sendAgentVerifyRequest(r, authData, "Test123@!", firstName, lastName)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }

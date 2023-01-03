@@ -59,7 +59,7 @@ func TestSignUp(t *testing.T) {
 		authData, err := helpers.GetAuthData(email, agent.UUID, agent.Salt, helpers.SecondsInFifteenDays*time.Second)
 		assert.Nil(t, err)
 
-		w = sendAgentVerifyRequest(r, authData, "12345678", "", "")
+		w = sendAgentVerifyRequest(r, authData, "Test123@!", "", "")
 		assert.Equal(t, http.StatusOK, w.Code)
 		agent, code = store.GetStore().GetAgentByEmail(email)
 		assert.Equal(t, http.StatusFound, code)
@@ -83,7 +83,7 @@ func TestSignUp(t *testing.T) {
 		authData, err := helpers.GetAuthData(email, agent.UUID, agent.Salt, helpers.SecondsInFifteenDays*time.Second)
 		assert.Nil(t, err)
 
-		w = sendAgentVerifyRequest(r, authData, "12345678", "first_name_1", "last_name_1")
+		w = sendAgentVerifyRequest(r, authData, "Test123@!", "first_name_1", "last_name_1")
 		assert.Equal(t, http.StatusOK, w.Code)
 		agent, code = store.GetStore().GetAgentByEmail(email)
 		assert.Equal(t, http.StatusFound, code)
