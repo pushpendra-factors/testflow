@@ -936,6 +936,9 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID i
 	if err != nil {
 		return "", nil, nil, nil
 	}
+	if whereConditionForFilters != "" {
+		whereConditionForFilters = " AND " + whereConditionForFilters
+	}
 	finalFilterStatement := whereConditionForFilters
 	finalParams := make([]interface{}, 0)
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
