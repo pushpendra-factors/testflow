@@ -9,15 +9,15 @@ var googleOrganicRequiredDocumentTypes = []int{2} // 1:combined_performance_repo
 
 var googleOrganicMetricToCalcInfo = map[string]MetricCalculationInfo{
 	M.Impressions: {
-		Props:     []PropInfo{{Name: M.Impressions}},
+		Props:     []ChannelPropInfo{{Name: M.Impressions}},
 		Operation: "sum",
 	},
 	M.Clicks: {
-		Props:     []PropInfo{{Name: M.Clicks}},
+		Props:     []ChannelPropInfo{{Name: M.Clicks}},
 		Operation: "sum",
 	},
 	M.ClickThroughRate: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: "clicks"},
 			{Name: "impressions", ReplaceValue: map[float64]float64{0: 100000, 100000: 0}},
 		},
@@ -25,11 +25,11 @@ var googleOrganicMetricToCalcInfo = map[string]MetricCalculationInfo{
 		Constants: map[string]float64{"product": 100},
 	},
 	"position_avg": {
-		Props:     []PropInfo{{Name: "position"}},
+		Props:     []ChannelPropInfo{{Name: "position"}},
 		Operation: "average",
 	},
 	"position_impression_weighted_avg": {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: "position", DependentKey: "impressions"},
 			{Name: "impressions", ReplaceValue: map[float64]float64{0: 100000, 100000: 0}},
 		},
@@ -39,9 +39,6 @@ var googleOrganicMetricToCalcInfo = map[string]MetricCalculationInfo{
 
 var googleOrganicConstantInfo = map[string]string{
 	"organic_property": "page",
-	// "campaign_id":           "id",
-	// "ad_group_id":           "id",
-	// "keyword_id":            "",
 }
 
 func getGoogleOrganicFilterPropertyReportName(propName string, objectType string) (string, error) {

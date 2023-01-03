@@ -11,19 +11,19 @@ var linkedinRequiredDocumentTypes = []int{1, 2, 3, 4, 5, 6} //Refer memsql.Linke
 
 var linkedinMetricToCalcInfo = map[string]MetricCalculationInfo{
 	M.Impressions: {
-		Props:     []PropInfo{{Name: M.Impressions}},
+		Props:     []ChannelPropInfo{{Name: M.Impressions}},
 		Operation: "sum",
 	},
 	M.Clicks: {
-		Props:     []PropInfo{{Name: M.Clicks}},
+		Props:     []ChannelPropInfo{{Name: M.Clicks}},
 		Operation: "sum",
 	},
 	"spend": {
-		Props:     []PropInfo{{Name: "costInLocalCurrency"}},
+		Props:     []ChannelPropInfo{{Name: "costInLocalCurrency"}},
 		Operation: "sum",
 	},
 	M.Conversions: {
-		Props:     []PropInfo{{Name: "conversionValueInLocalCurrency"}},
+		Props:     []ChannelPropInfo{{Name: "conversionValueInLocalCurrency"}},
 		Operation: "sum",
 	},
 }
@@ -32,9 +32,6 @@ var linkedinConstantInfo = map[string]string{
 	memsql.CAFilterCampaign: M.LinkedinCampaignGroup,
 	memsql.CAFilterAdGroup:  M.LinkedinCampaign,
 	memsql.CAFilterKeyword:  M.LinkedinCreative,
-	// "campaign_id":           M.LinkedinCampaignID,
-	// "ad_group_id":           M.LinkedinAdgroupID,
-	// "keyword_id":            M.LinkedinCreative + "_id",
 }
 
 func getLinkedinFilterPropertyReportName(propName string, objectType string) (string, error) {

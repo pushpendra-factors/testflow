@@ -55,7 +55,7 @@ var channelToPullMap = map[string]func(int64, int64, int64) (*sql.Rows, *sql.Tx,
 
 var peLog = taskLog.WithField("prefix", "Task#PullEvents")
 
-//pull Events (with Hubspot and Salesforce)
+// pull Events (with Hubspot and Salesforce)
 func pullEvents(projectID int64, startTime, endTime int64, eventsFilePath string) (int, string, error) {
 	rows, tx, err := store.GetStore().PullEventRows(projectID, startTime, endTime)
 	if err != nil {
@@ -174,7 +174,7 @@ func pullEvents(projectID int64, startTime, endTime int64, eventsFilePath string
 	return rowCount, eventsFilePath, nil
 }
 
-//pull Events (with Hubspot and Salesforce)
+// pull Events (with Hubspot and Salesforce)
 func pullEventsDaily(projectID int64, startTime, endTime int64, eventsFilePath string, file *os.File) (int, string, map[string]bool, error) {
 	rows, tx, err := store.GetStore().PullEventRows(projectID, startTime, endTime)
 	if err != nil {
@@ -289,7 +289,7 @@ func pullEventsDaily(projectID int64, startTime, endTime int64, eventsFilePath s
 	return rowCount, eventsFilePath, userIdMap, nil
 }
 
-//Pull Channel Data
+// Pull Channel Data
 func pullChannelData(channel string, projectID int64, startTime, endTime int64, eventsFilePath string) (int, string, error) {
 
 	rows, tx, err := channelToPullMap[channel](projectID, startTime, endTime)
@@ -378,7 +378,7 @@ func pullChannelData(channel string, projectID int64, startTime, endTime int64, 
 	return rowCount, eventsFilePath, nil
 }
 
-//Pull Users Data
+// Pull Users Data
 func pullUsersData(dateField string, source int, group int, projectID int64, startTime, endTime int64, eventsFilePath string) (int, string, error) {
 
 	rows, tx, err := store.GetStore().PullUsersRowsForWI(projectID, startTime, endTime, dateField, source, group)
@@ -450,7 +450,7 @@ func pullUsersData(dateField string, source int, group int, projectID int64, sta
 	return rowCount, eventsFilePath, nil
 }
 
-//pull Events for Archive
+// pull Events for Archive
 func PullEventsForArchive(projectID int64, eventsFilePath, usersFilePath string,
 	startTime, endTime int64) (int, string, string, error) {
 

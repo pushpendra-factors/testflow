@@ -16,16 +16,19 @@ import (
 )
 
 type CounterUserFormat struct {
-	Id            string
-	Properties    map[string]interface{}
-	Is_Anonymous  bool
-	JoinTimestamp int64
+	Id            string                 `json:"id"`
+	Properties    map[string]interface{} `json:"pr"`
+	Is_Anonymous  bool                   `json:"ia"`
+	JoinTimestamp int64                  `json:"ts"`
 }
 
+// get within period insights for a week for custom kpi
 func GetCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, insightGranularity string) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	var transformation M.CustomMetricTransformation
-	customMetric, errStr, getStatus := store.GetStore().GetKpiRelatedCustomMetricsByName(projectId, metric)
+
+	//get custom metric details from db
+	customMetric, errStr, getStatus := store.GetStore().GetProfileCustomMetricByProjectIdName(projectId, metric)
 	if getStatus != http.StatusFound {
 		log.WithField("error", errStr).Error("Get custom metrics failed.")
 		return nil, fmt.Errorf("%s", errStr)
@@ -35,14 +38,17 @@ func GetCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval [
 		log.WithField("customMetric", customMetric).WithField("err", err1).Warn("Failed in decoding custom Metric")
 	}
 
+	//add custom metric filters to propFilter
 	newPropFilter := append(propFilter, transformation.Filters...)
 
+	//get file scanner
 	scanner, err := GetUserFileScanner(transformation.DateField, projectId, periodCode, cloudManager, diskManager, insightGranularity, true)
 	if err != nil {
 		log.WithError(err).Error("failed getting " + transformation.DateField + " file scanner for custom kpi")
 		return nil, err
 	}
 
+	//get proper function (complex for avg, simple for unique,sum)
 	var GetCustomMetric func(metric string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, metricFunc string, metricProp string) (*MetricInfo, *MetricInfo, error)
 	if transformation.AggregateFunction == M.AverageAggregateFunction {
 		GetCustomMetric = GetCustomMetricsComplex
@@ -56,9 +62,11 @@ func GetCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval [
 		wpi.MetricInfo = info
 		wpi.ScaleInfo = scale
 	}
+
 	return &wpi, nil
 }
 
+// get custom kpi values for non-fraction type kpi
 func GetCustomMetricsSimple(metric string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, metricFunc string, metricProp string) (*MetricInfo, *MetricInfo, error) {
 	var globalVal float64
 	var globalScale float64
@@ -85,16 +93,13 @@ func GetCustomMetricsSimple(metric string, scanner *bufio.Scanner, propFilter []
 		}
 		addToScaleUser(&globalScale, scaleMap, propsToEval, userDetails)
 
-		if metricFunc == M.UniqueAggregateFunction {
+		if metricFunc == M.CountAggregateFunction || metricFunc == M.UniqueAggregateFunction {
 			addValueToMapForPropsPresent(&globalVal, reqMap, 1, propsToEval, userDetails.Properties, userDetails.Properties)
 		} else if metricFunc == M.SumAggregateFunction {
-			var propVal float64
 			if val, ok := ExistsInProps(metricProp, userDetails.Properties, userDetails.Properties, "up"); ok {
-				propVal = val.(float64)
-			} else {
-				continue
+				propVal, _ := getFloatValueFromInterface(val)
+				addValueToMapForPropsPresent(&globalVal, reqMap, propVal, propsToEval, userDetails.Properties, userDetails.Properties)
 			}
-			addValueToMapForPropsPresent(&globalVal, reqMap, propVal, propsToEval, userDetails.Properties, userDetails.Properties)
 		}
 	}
 
@@ -104,6 +109,7 @@ func GetCustomMetricsSimple(metric string, scanner *bufio.Scanner, propFilter []
 	return &info, &scale, nil
 }
 
+// get custom kpi values for fraction type kpi
 func GetCustomMetricsComplex(metric string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, metricFunc string, metricProp string) (*MetricInfo, *MetricInfo, error) {
 	var globalVal float64
 	var globalFrac Fraction
@@ -132,13 +138,10 @@ func GetCustomMetricsComplex(metric string, scanner *bufio.Scanner, propFilter [
 		}
 		addToScaleUser(&globalScale, scaleMap, propsToEval, userDetails)
 
-		var propVal float64
 		if val, ok := ExistsInProps(metricProp, userDetails.Properties, userDetails.Properties, "up"); ok {
-			propVal = val.(float64)
-		} else {
-			continue
+			propVal, _ := getFloatValueFromInterface(val)
+			addValuesToFractionForPropsPresent(&globalFrac, featInfoMap, propVal, 1, propsToEval, userDetails.Properties, userDetails.Properties)
 		}
-		addValuesToFractionForPropsPresent(&globalFrac, featInfoMap, propVal, 1, propsToEval, userDetails.Properties, userDetails.Properties)
 	}
 
 	globalVal, reqMap = getFractionValue(&globalFrac, featInfoMap)
@@ -148,14 +151,113 @@ func GetCustomMetricsComplex(metric string, scanner *bufio.Scanner, propFilter [
 	return &info, &scale, nil
 }
 
+// check user properties contains all required properties(satisfies constraints)
+func isUserToBeCounted(userDetails CounterUserFormat, propFilter []M.KPIFilter) (bool, error) {
+
+	//check if event contains all requiredProps(constraint)
+	if ok, err := userSatisfiesConstraints(userDetails, propFilter); err != nil {
+		return false, err
+	} else if ok {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// check if user contains all required properties(satisfies constraints)
+func userSatisfiesConstraints(userDetails CounterUserFormat, propFilter []M.KPIFilter) (bool, error) {
+
+	passFilter := true
+	for _, filter := range propFilter {
+
+		if filter.LogicalOp == "AND" {
+			if !passFilter {
+				return false, nil
+			}
+			passFilter = false
+		} else if filter.LogicalOp == "OR" {
+			if passFilter {
+				continue
+			}
+		} else {
+			return false, fmt.Errorf("unknown logical operation: %s", filter.LogicalOp)
+		}
+
+		var eventVal interface{}
+		propName := filter.PropertyName
+
+		if val, ok := ExistsInProps(propName, userDetails.Properties, nil, "either"); !ok {
+			notOp, _, _ := U.StringIn(NotOperations, filter.Condition)
+			if notOp {
+				passFilter = true
+			}
+			continue
+		} else {
+			eventVal = val
+		}
+
+		ok, err := checkValSatisfiesFilterCondition(filter, eventVal)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			passFilter = true
+		}
+	}
+	if !passFilter {
+		return false, nil
+	}
+	return true, nil
+}
+
+// add 1 to globalScale and to scaleMap for all values from propsToEval properties found in userDetails
+func addToScaleUser(globalScale *float64, scaleMap map[string]map[string]float64, propsToEval []string, userDetails CounterUserFormat) {
+	(*globalScale)++
+	for _, propWithType := range propsToEval {
+		propTypeName := strings.SplitN(propWithType, "#", 2)
+		prop := propTypeName[1]
+		propType := propTypeName[0]
+		if val, ok := ExistsInProps(prop, userDetails.Properties, userDetails.Properties, propType); ok {
+			val := fmt.Sprintf("%s", val)
+			if _, ok := scaleMap[propWithType]; !ok {
+				scaleMap[propWithType] = make(map[string]float64)
+			}
+			scaleMap[propWithType][val] += 1
+		}
+	}
+}
+
+// get union of topk prop keys from both files and filter through kpiProperties
+func getFilteredKpiPropertiesForCustomMetric(kpiProperties []map[string]string, metric string, projectId int64, periodCodes []Period, cloudManager *filestore.FileManager,
+	diskManager *serviceDisk.DiskDriver, topK int, insightGranularity string) ([]map[string]string, error) {
+	filteredKpiProperties := make([]map[string]string, 0)
+	propKeys, err := getPropKeysToEvalForCustomMetric(metric, projectId, periodCodes, cloudManager, diskManager, topK, insightGranularity)
+	if err != nil {
+		err := fmt.Errorf("error getting topK keys from 1st scan")
+		log.WithError(err).Error("error getPropKeysToEvalForCustomMetric")
+		return nil, err
+	}
+	for _, propMap := range kpiProperties {
+		//check for true if taking intersection of both week property keys; check ok for union
+		if _, ok := propKeys[propMap["name"]]; ok {
+			filteredKpiProperties = append(filteredKpiProperties, propMap)
+		}
+	}
+
+	return filteredKpiProperties, nil
+}
+
+// get union of topK properties from both files
 func getPropKeysToEvalForCustomMetric(metric string, projectId int64, periodCodes []Period, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, topK int, insightGranularity string) (map[string]bool, error) {
 
 	var finalProps = make(map[string]bool)
+
+	//get datefield of custom metric to get the name of associated user file
 	var datefield string
 	{
 		var transformation M.CustomMetricTransformation
-		customMetric, errStr, getStatus := store.GetStore().GetKpiRelatedCustomMetricsByName(projectId, metric)
+		customMetric, errStr, getStatus := store.GetStore().GetProfileCustomMetricByProjectIdName(projectId, metric)
 		if getStatus != http.StatusFound {
 			log.WithField("error", errStr).Error("Get custom metrics failed.")
 			return nil, fmt.Errorf("%s", errStr)
@@ -168,24 +270,26 @@ func getPropKeysToEvalForCustomMetric(metric string, projectId int64, periodCode
 		datefield = transformation.DateField
 	}
 
+	//add topK props from second week
 	err := addTopKPropKeys(finalProps, datefield, projectId, periodCodes[1], cloudManager, diskManager, topK, insightGranularity)
 	if err != nil {
 		log.WithField("err", err).Error("Failed in getting topk keys")
 		return nil, err
 	}
 
+	//add topK props from first week
 	err = addTopKPropKeys(finalProps, datefield, projectId, periodCodes[0], cloudManager, diskManager, topK, insightGranularity)
 	if err != nil {
 		log.WithField("err", err).Error("Failed in getting topk keys")
 		return nil, err
 	}
 	return finalProps, nil
-
 }
 
-// top K keys meaning unique keys from top K (key,value) pairs
+// get user file and get topK keys(top K keys meaning unique keys from top K [key,value] pairs)
 func addTopKPropKeys(finalProps map[string]bool, datefield string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, topK int, insightGranularity string) error {
+	//get counts map in proper format to use in functions built for events wi
 	var propsPerWeek = make(Level3CatRatioDist)
 	{
 		scanner, err := GetUserFileScanner(datefield, projectId, periodCode, cloudManager, diskManager, insightGranularity, true)
@@ -199,7 +303,6 @@ func addTopKPropKeys(finalProps map[string]bool, datefield string, projectId int
 			return err
 		}
 
-		//get counts map in proper format to use in functions ahead
 		for k, valMap := range countsMap {
 			for val, cnt := range valMap {
 				key := "t#" + k
@@ -215,8 +318,11 @@ func addTopKPropKeys(finalProps map[string]bool, datefield string, projectId int
 	}
 	var wpi WithinPeriodInsights
 	wpi.Target.FeatureMetrics = propsPerWeek
+
 	PrefilterFeatures(&wpi)
 	selectTopKFeatures(&(wpi), topK)
+
+	//add to finalProps (set false in first run and true in second)
 	for k := range wpi.Target.FeatureMetrics {
 		tmpKey := strings.SplitN(k, "#", 2)
 		key := tmpKey[1]
@@ -226,9 +332,11 @@ func addTopKPropKeys(finalProps map[string]bool, datefield string, projectId int
 			finalProps[key] = true
 		}
 	}
+
 	return nil
 }
 
+// get map of counts of prop values (map[prop][value] = count) from user file scanner
 func getCountsMapFromUserScanner(scanner *bufio.Scanner) (map[string]map[string]float64, error) {
 
 	var countsMap = make(map[string]map[string]float64)
@@ -250,23 +358,4 @@ func getCountsMapFromUserScanner(scanner *bufio.Scanner) (map[string]map[string]
 		}
 	}
 	return countsMap, nil
-}
-
-func getFilteredKpiPropertiesForCustomMetric(kpiProperties []map[string]string, metric string, projectId int64, periodCodes []Period, cloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, topK int, insightGranularity string) ([]map[string]string, error) {
-	filteredKpiProperties := make([]map[string]string, 0)
-	propKeys, err := getPropKeysToEvalForCustomMetric(metric, projectId, periodCodes, cloudManager, diskManager, topK, insightGranularity)
-	if err != nil {
-		err := fmt.Errorf("error getting topK keys from 1st scan")
-		log.WithError(err).Error("error getPropKeysToEvalForCustomMetric")
-		return nil, err
-	}
-	for _, propMap := range kpiProperties {
-		//check for true if taking intersection of both week property keys; check ok for union
-		if _, ok := propKeys[propMap["name"]]; ok {
-			filteredKpiProperties = append(filteredKpiProperties, propMap)
-		}
-	}
-
-	return filteredKpiProperties, nil
 }

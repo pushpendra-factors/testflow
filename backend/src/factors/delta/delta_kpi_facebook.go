@@ -11,69 +11,69 @@ var facebookRequiredDocumentTypes = []int{1, 2, 3, 4, 5, 6} //Refer memsql.Faceb
 
 var facebookMetricToCalcInfo = map[string]MetricCalculationInfo{
 	M.Impressions: {
-		Props:     []PropInfo{{Name: M.Impressions}},
+		Props:     []ChannelPropInfo{{Name: M.Impressions}},
 		Operation: "sum",
 	},
 	M.Clicks: {
-		Props:     []PropInfo{{Name: M.Clicks}},
+		Props:     []ChannelPropInfo{{Name: M.Clicks}},
 		Operation: "sum",
 	},
 	"link_clicks": {
-		Props:     []PropInfo{{Name: "inline_link_clicks"}},
+		Props:     []ChannelPropInfo{{Name: "inline_link_clicks"}},
 		Operation: "sum",
 	},
 	"spend": {
-		Props:     []PropInfo{{Name: "spend"}},
+		Props:     []ChannelPropInfo{{Name: "spend"}},
 		Operation: "sum",
 	},
 	"video_p50_watched_actions": {
-		Props:     []PropInfo{{Name: "video_p50_watched_actions"}},
+		Props:     []ChannelPropInfo{{Name: "video_p50_watched_actions"}},
 		Operation: "sum",
 	},
 	"video_p25_watched_actions": {
-		Props:     []PropInfo{{Name: "video_p25_watched_actions"}},
+		Props:     []ChannelPropInfo{{Name: "video_p25_watched_actions"}},
 		Operation: "sum",
 	},
 	"video_30_sec_watched_actions": {
-		Props:     []PropInfo{{Name: "video_30_sec_watched_actions"}},
+		Props:     []ChannelPropInfo{{Name: "video_30_sec_watched_actions"}},
 		Operation: "sum",
 	},
 	"video_p100_watched_actions": {
-		Props:     []PropInfo{{Name: "video_p100_watched_actions"}},
+		Props:     []ChannelPropInfo{{Name: "video_p100_watched_actions"}},
 		Operation: "sum",
 	},
 	"video_p75_watched_actions": {
-		Props:     []PropInfo{{Name: "video_p75_watched_actions"}},
+		Props:     []ChannelPropInfo{{Name: "video_p75_watched_actions"}},
 		Operation: "sum",
 	},
 	"reach": {
-		Props:     []PropInfo{{Name: "reach"}},
+		Props:     []ChannelPropInfo{{Name: "reach"}},
 		Operation: "sum",
 	},
 	"fb_pixel_purchase_count": {
-		Props:     []PropInfo{{Name: "actions_offsite_conversion.fb_pixel_purchase"}},
+		Props:     []ChannelPropInfo{{Name: "actions_offsite_conversion.fb_pixel_purchase"}},
 		Operation: "sum",
 	},
 	"fb_pixel_purchase_revenue": {
-		Props:     []PropInfo{{Name: "action_values_offsite_conversion.fb_pixel_purchase"}},
+		Props:     []ChannelPropInfo{{Name: "action_values_offsite_conversion.fb_pixel_purchase"}},
 		Operation: "sum",
 	},
 	"cost_per_click": {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: "spend"},
 			{Name: M.Clicks, ReplaceValue: map[float64]float64{0: 100000, 100000: 0}},
 		},
 		Operation: "quotient",
 	},
 	"cost_per_link_click": {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: "spend"},
 			{Name: "inline_link_clicks", ReplaceValue: map[float64]float64{0: 100000, 100000: 0}},
 		},
 		Operation: "quotient",
 	},
 	"cost_per_thousand_impressions": {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: "spend"},
 			{Name: M.Impressions, ReplaceValue: map[float64]float64{0: 100000, 100000: 0}},
 		},
@@ -81,7 +81,7 @@ var facebookMetricToCalcInfo = map[string]MetricCalculationInfo{
 		Constants: map[string]float64{"product": 1000},
 	},
 	"click_through_rate": {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.Clicks},
 			{Name: M.Impressions, ReplaceValue: map[float64]float64{0: 100000, 100000: 0}},
 		},
@@ -89,7 +89,7 @@ var facebookMetricToCalcInfo = map[string]MetricCalculationInfo{
 		Constants: map[string]float64{"product": 100},
 	},
 	"link_click_through_rate": {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: "inline_link_clicks"},
 			{Name: M.Impressions, ReplaceValue: map[float64]float64{0: 100000, 100000: 0}},
 		},
@@ -97,21 +97,21 @@ var facebookMetricToCalcInfo = map[string]MetricCalculationInfo{
 		Constants: map[string]float64{"product": 100},
 	},
 	"frequency": {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.Impressions},
 			{Name: "reach", ReplaceValue: map[float64]float64{0: 100000, 100000: 0}},
 		},
 		Operation: "quotient",
 	},
 	"fb_pixel_purchase_cost_per_action_type": {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: "spend"},
 			{Name: "actions_offsite_conversion.fb_pixel_purchase", ReplaceValue: map[float64]float64{0: 100000, 100000: 0}},
 		},
 		Operation: "quotient",
 	},
 	"fb_pixel_purchase_roas": {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: "action_values_offsite_conversion.fb_pixel_purchase"},
 			{Name: "spend", ReplaceValue: map[float64]float64{0: 100000, 100000: 0}},
 		},
@@ -122,10 +122,7 @@ var facebookMetricToCalcInfo = map[string]MetricCalculationInfo{
 var facebookConstantInfo = map[string]string{
 	memsql.CAFilterCampaign: memsql.FacebookCampaign,
 	memsql.CAFilterAdGroup:  memsql.FacebookAdSet,
-	memsql.CAFilterKeyword:  memsql.FacebookAd,
-	// "campaign_id":           M.FacebookCampaignID,
-	// "ad_group_id":           M.FacebookAdgroupID,
-	// "keyword_id":            memsql.FacebookAd + "_id",
+	memsql.CAFilterAd:       memsql.FacebookAd,
 }
 
 func getFacebookFilterPropertyReportName(propName string, objectType string) (string, error) {

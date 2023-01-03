@@ -7,6 +7,7 @@ import (
 	serviceDisk "factors/services/disk"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -315,15 +316,14 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			continue
 		}
 
-		if len(kpiQuery.Queries) > 0 && configs["runKpi"] == false {
-			continue
-		}
-
 		if len(kpiQuery.Queries) > 0 {
+			if !configs["runKpi"].(bool) {
+				continue
+			}
 			if err := CreateKpiInsights(diskManager, cloudManager, periodCodesWithWeekNMinus1, projectId,
-				dashboardUnit.QueryId, kpiQuery, insightGranularity, k, skipWpi, skipWpi2, mailerRun); err != nil {
+				dashboardUnit.QueryId, kpiQuery, insightGranularity, k, skipWpi, skipWpi2, mailerRun, status); err != nil {
 				log.WithError(err).Error("KPI insights error query: ", dashboardUnit.QueryId)
-				status["error-kpi-pass-"+queryIdString] = err
+				status["error-kpi-query-"+queryIdString] = err
 				continue
 			}
 		} else {
@@ -355,8 +355,8 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			}
 			err = processCrossPeriods(periodCodesWithWeekNMinus1, diskManager, projectId, k, queryId, cloudManager, mailerRun)
 			if err != nil {
-				log.WithError(err).Error("failed to process wpi pass 1")
-				status["error-cpi-pass1-"+queryIdString] = err.Error()
+				log.WithError(err).Error("failed to process cpi")
+				status["error-cpi-"+queryIdString] = err.Error()
 				continue
 			}
 		}
@@ -396,7 +396,14 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 		var wpi1 WithinPeriodInsights
 		dateString1 := U.GetDateOnlyFromTimestampZ(periodCode1.From)
 		efTmpPath1, efTmpName1 := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString1, queryId, k, mailerRun)
-		ReadFromJSONFile(efTmpPath1+efTmpName1, &wpi1)
+		err := ReadFromJSONFile(efTmpPath1+efTmpName1, &wpi1)
+		if err != nil {
+			log.WithError(err).Error("failed to read json file")
+			return err
+		}
+		if err := os.Remove(efTmpPath1 + efTmpName1); err != nil {
+			return err
+		}
 		for j, periodCode2 := range periodCodes {
 			if i >= j {
 				continue
@@ -408,6 +415,9 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 			err := ReadFromJSONFile(efTmpPath2+efTmpName2, &wpi2)
 			if err != nil {
 				log.WithError(err).Error("failed to read json file")
+				return err
+			}
+			if err := os.Remove(efTmpPath2 + efTmpName2); err != nil {
 				return err
 			}
 			crossPeriodInsights, err := ComputeCrossPeriodInsights(wpi1, wpi2)

@@ -50,25 +50,25 @@ func TestGetCampaignMetricSimple(t *testing.T) {
 	requiredDocTypes := []int{1, 2, 3, 4, 5, 6}
 
 	metricCalcInfo1 := D.MetricCalculationInfo{
-		Props:     []D.PropInfo{{Name: "numProp1", DependentKey: "prop1"}},
+		Props:     []D.ChannelPropInfo{{Name: "numProp1", DependentKey: "prop1"}},
 		Operation: "sum",
 		Constants: map[string]float64{"quotient": 10000},
 	}
 
 	metricCalcInfo2 := D.MetricCalculationInfo{
-		Props:     []D.PropInfo{{Name: "numProp2", DependentKey: "prop3", DependentValue: 31, DependentOperation: "="}},
+		Props:     []D.ChannelPropInfo{{Name: "numProp2", DependentKey: "prop3", DependentValue: 31, DependentOperation: "="}},
 		Operation: "sum",
 		Constants: map[string]float64{},
 	}
 
 	metricCalcInfo3 := D.MetricCalculationInfo{
-		Props:     []D.PropInfo{{Name: "numProp1", DependentKey: "prop6"}, {Name: "numProp2", ReplaceValue: map[float64]float64{0: 1000}}},
+		Props:     []D.ChannelPropInfo{{Name: "numProp1", DependentKey: "prop6"}, {Name: "numProp2", ReplaceValue: map[float64]float64{0: 1000}}},
 		Operation: "quotient",
 		Constants: map[string]float64{"product": 100},
 	}
 
 	metricCalcInfo4 := D.MetricCalculationInfo{
-		Props:     []D.PropInfo{{Name: "numProp2", DependentKey: "numProp3", DependentValue: 1, DependentOperation: "!="}, {Name: "numProp1", DependentKey: "prop5", ReplaceValue: map[float64]float64{0: 1000}}},
+		Props:     []D.ChannelPropInfo{{Name: "numProp2", DependentKey: "numProp3", DependentValue: 1, DependentOperation: "!="}, {Name: "numProp1", DependentKey: "prop5", ReplaceValue: map[float64]float64{0: 1000}}},
 		Operation: "quotient",
 		Constants: map[string]float64{"product": 100},
 	}
