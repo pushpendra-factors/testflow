@@ -29,7 +29,7 @@ func (store *MemSQL) GetAllExplainV2EntityByProject(projectID int64) ([]model.Ex
 		Where("project_id = ? AND is_deleted = ?", projectID, false).
 		Order("created_at DESC").Limit(LimitExplainV2EntityList).Find(&entity).Error
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch rows from pathanalysis table for project")
+		log.WithError(err).Error("Failed to fetch rows from explain table for project")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -63,8 +63,9 @@ func (store *MemSQL) convertExplainV2ToExplainV2EntityInfo(list []model.ExplainV
 			Status:         obj.Status,
 			CreatedBy:      names[obj.CreatedBy],
 			Date:           obj.UpdatedAt,
-			ExplainV2Query: entity,
+			ExplainV2Query: entity.Query,
 			ModelID:        obj.ModelID,
+			Raw_query:      entity.Raw_query,
 		}
 		res = append(res, e)
 	}
@@ -102,6 +103,11 @@ func (store *MemSQL) CreateExplainV2Entity(userID string, projectId int64, entit
 
 	db := C.GetServices().Db
 	log.Info("memsql Create function triggered.")
+
+	if entity.Query.StartEvent == "" && entity.Query.EndEvent == "" {
+		return nil, http.StatusBadRequest, "Both startevent and endevent are empty"
+
+	}
 
 	if isDuplicateTitleExplainV2(projectId, entity) {
 		return nil, http.StatusConflict, "Please provide a different title"

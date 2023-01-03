@@ -53,14 +53,16 @@ type ExplainV2Query struct {
 	Query          FactorsGoalRule `json:"rule"`
 	StartTimestamp int64           `json:"sts"`
 	EndTimestamp   int64           `json:"ets"`
+	Raw_query      string          `json:"rw"`
 }
 
 type ExplainV2EntityInfo struct {
-	Id             string         `json:"id"`
-	Title          string         `json:"title"`
-	Status         string         `json:"status"`
-	CreatedBy      string         `json:"created_by"`
-	Date           time.Time      `json:"date"`
-	ExplainV2Query ExplainV2Query `json:"query"`
-	ModelID        uint64         `json:"mid"`
+	Id             string          `json:"id"`
+	Title          string          `json:"title"`
+	Status         string          `json:"status"`
+	CreatedBy      string          `json:"created_by"`
+	Date           time.Time       `json:"date"`
+	ExplainV2Query FactorsGoalRule `json:"query"`
+	ModelID        uint64          `json:"mid"`
+	Raw_query      string          `json:"rq"`
 }
