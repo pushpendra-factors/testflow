@@ -9,14 +9,12 @@ import { isStringLengthValid } from 'Utils/global';
 import MomentTz from 'Components/MomentTz';
 import { apiChartAnnotations } from 'Utils/constants';
 import { getChartType } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
-import { saveQuery, updateQuery } from 'Reducers/coreQuery/services';
+import { updateQuery } from 'Reducers/coreQuery/services';
 import { get } from 'lodash';
 import { EMPTY_ARRAY } from 'Utils/global';
-import { saveQueryToDashboard } from 'Reducers/dashboard/services';
 import factorsai from 'factorsai';
 import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import { CoreQueryContext } from 'Context/CoreQueryContext';
-import { QUERY_CREATED, QUERY_UPDATED } from 'Reducers/types';
 import { ACTION_TYPES } from './constants';
 import FaSelect from 'Components/FaSelect';
 import styles from './index.module.scss';
@@ -24,6 +22,12 @@ import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import DeleteQueryModal from 'Components/DeleteQueryModal/index';
 import { deleteReport } from 'Reducers/coreQuery/services';
 import { getErrorMessage } from 'Utils/dataFormatter';
+import { saveAttributionQuery } from 'Attribution/state/services';
+import {
+  ATTRIBUTION_QUERY_CREATED,
+  ATTRIBUTION_QUERY_DELETED,
+  ATTRIBUTION_QUERY_UPDATED
+} from 'Attribution/state/action.constants';
 
 const SaveAttributionQuery = ({
   requestQuery,
@@ -42,9 +46,8 @@ const SaveAttributionQuery = ({
   const [activeAction, setActiveAction] = useState(null);
   const dispatch = useDispatch();
   const { active_project } = useSelector((state) => state.global);
-  const { activeDashboard } = useSelector((state) => state.dashboard);
   const savedQueries = useSelector((state) =>
-    get(state, 'queries.data', EMPTY_ARRAY)
+    get(state, 'attributionDashboard.attributionQueries.data', EMPTY_ARRAY)
   );
 
   const toggleSaveModalVisibility = useCallback(() => {
@@ -102,43 +105,19 @@ const SaveAttributionQuery = ({
       querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
 
       let queryId;
-      let addedToDashboard = false;
 
       if (activeAction === ACTION_TYPES.SAVE) {
         querySettings.dashboardPresentation = dashboardPresentation;
-        const res = await saveQuery(
+        const res = await saveAttributionQuery(
           active_project.id,
           title,
           query,
-          2,
+          3,
           querySettings
         );
-        queryId = res.data.id;
+        queryId = res.data.query.id;
 
-        dispatch({ type: QUERY_CREATED, payload: res.data });
-
-        try {
-          const reqBody = {
-            query_id: queryId
-          };
-
-          await saveQueryToDashboard(
-            active_project.id,
-            [activeDashboard.id].join(','),
-            reqBody
-          );
-
-          addedToDashboard = true;
-          dispatch({
-            type: QUERY_UPDATED,
-            queryId,
-            payload: {
-              is_dashboard_query: true
-            }
-          });
-        } catch (error) {
-          console.error('Error in adding to dashboard', error);
-        }
+        dispatch({ type: ATTRIBUTION_QUERY_CREATED, payload: res.data.query });
       } else {
         const queryGettingUpdated = savedQueries.find(
           (elem) => elem.id === savedQueryId
@@ -159,7 +138,7 @@ const SaveAttributionQuery = ({
         await updateQuery(active_project.id, savedQueryId, reqBody);
 
         dispatch({
-          type: QUERY_UPDATED,
+          type: ATTRIBUTION_QUERY_UPDATED,
           queryId,
           payload: {
             title,
@@ -209,7 +188,7 @@ const SaveAttributionQuery = ({
       setLoading(false);
       toggleDeleteModal();
       setQuerySaved(null);
-      dispatch({ type: QUERY_DELETED, payload: savedQueryId });
+      dispatch({ type: ATTRIBUTION_QUERY_DELETED, payload: savedQueryId });
       notification.success({
         message: 'Report Deleted Successfully',
         duration: 5

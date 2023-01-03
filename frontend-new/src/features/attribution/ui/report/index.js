@@ -89,10 +89,11 @@ function CoreQuery({
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
-  initializeAttributionState
+  initializeAttributionState,
+  location
 }) {
   const { data: savedQueries, loading: QueriesLoading } = useSelector(
-    (state) => state.queries
+    (state) => state.attributionDashboard.attributionQueries
   );
   const { config: kpiConfig } = useSelector((state) => state.kpi);
 
@@ -164,10 +165,6 @@ function CoreQuery({
     attrQueries,
     content_groups
   } = useSelector((state) => state.attributionDashboard);
-
-  const AttributionDashboard = useSelector(
-    (state) => state.attributionDashboard
-  );
 
   const { groupBy } = useSelector((state) => state.coreQuery);
 
@@ -678,14 +675,16 @@ function CoreQuery({
     if (querySaved && querySaved?.id && !queryId) {
       history.replace({
         pathname: ATTRIBUTION_ROUTES.report,
-        search: `?${new URLSearchParams({ queryId: querySaved.id }).toString()}`
+        search: `?${new URLSearchParams({
+          queryId: querySaved.id
+        }).toString()}`
       });
     }
   }, [querySaved]);
 
   useEffect(() => {
     const handleQueryIdChange = () => {
-      if (queryId && querySaved.id === queryId) return;
+      if (queryId && querySaved.id == queryId) return;
       const record = savedQueries.find((sq) => sq.id === queryId);
       if (
         !record ||
@@ -764,6 +763,11 @@ function CoreQuery({
       setSavedReportLoaded(false);
     }
   }, [savedReportLoaded]);
+
+  useEffect(() => {
+    if (location?.state?.navigatedFromDashboard)
+      setNavigatedFromDashboard(location.state.navigatedFromDashboard);
+  }, [location, setNavigatedFromDashboard]);
 
   if (loading || (queryId && QueriesLoading))
     return (
@@ -881,8 +885,7 @@ function CoreQuery({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  KPI_config: state.kpi?.config,
-  existingQueries: state.queries
+  KPI_config: state.kpi?.config
 });
 
 const mapDispatchToProps = (dispatch) =>

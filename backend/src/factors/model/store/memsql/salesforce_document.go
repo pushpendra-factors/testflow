@@ -208,7 +208,7 @@ func (store *MemSQL) GetSyncedSalesforceDocumentByType(projectID int64, ids []st
 	return documents, http.StatusFound
 }
 
-func isExistSalesforceDocumentByIds(projectID int64, ids []string, docType int) (map[string]bool, int) {
+func (store *MemSQL) IsExistSalesforceDocumentByIds(projectID int64, ids []string, docType int) (map[string]bool, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"ids":        ids,
@@ -317,7 +317,7 @@ func (store *MemSQL) CreateSalesforceDocumentInBatches(projectID int64, TypeAlia
 
 	}
 
-	existDocuments, status := isExistSalesforceDocumentByIds(projectID, documentsIDs, docType)
+	existDocuments, status := store.IsExistSalesforceDocumentByIds(projectID, documentsIDs, docType)
 	if status != http.StatusFound && status != http.StatusNotFound {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for existance of documents.")
 		return status
@@ -1073,4 +1073,37 @@ func (store *MemSQL) GetSalesforceDocumentByType(projectID int64, docType int, f
 
 	return documents, http.StatusFound
 
+}
+
+func (store *MemSQL) GetSalesforceDocumentByTypeAndAction(projectID int64, id string, docType int, action model.SalesforceAction) (*model.SalesforceDocument, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"id":         id,
+		"doc_type":   docType,
+		"action":     action,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	var document []model.SalesforceDocument
+	if projectID == 0 || id == "" || docType == 0 || action == 0 {
+		logCtx.Error("Failed to get salesforce document by id and type and action. Invalid project_id or id or type or action.")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	err := db.Where("project_id = ? AND id = ? AND type = ? AND action = ?", projectID, id, docType, action).Find(&document).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		logCtx.WithError(err).Error("Failed to get salesforce documents.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(document) != 1 {
+		return nil, http.StatusNotFound
+	}
+
+	return &document[0], http.StatusFound
 }

@@ -1,4 +1,5 @@
 import { DefaultDateRangeFormat } from 'Views/CoreQuery/utils';
+import { getRearrangedData } from 'Reducers/dashboard/utils';
 import {
   SET_EVENT_GOAL,
   SET_TOUCHPOINTS,
@@ -13,9 +14,20 @@ import {
   ATTRIBUTION_DASHBOARD_UNITS_FAILED,
   ATTRIBUTION_DASHBOARD_UNITS_LOADED,
   ATTRIBUTION_DASHBOARD_UNITS_LOADING,
+  ATTRIBUTION_DASHBOARD_UNITS_UPDATED,
   SET_ATTR_DATE_RANGE,
   SET_ATTR_QUERIES,
-  INITIALIZE_ATTRIBUTION_STATE
+  INITIALIZE_ATTRIBUTION_STATE,
+  ATTRIBUTION_DASHBOARD_LOADING,
+  ATTRIBUTION_DASHBOARD_LOADED,
+  ATTRIBUTION_DASHBOARD_FAILED,
+  ATTRIBUTION_QUERIES_LOADED,
+  ATTRIBUTION_QUERIES_LOADING,
+  ATTRIBUTION_QUERIES_FAILED,
+  ATTRIBUTION_WIDGET_DELETED,
+  ATTRIBUTION_QUERY_DELETED,
+  ATTRIBUTION_QUERY_CREATED,
+  ATTRIBUTION_QUERY_UPDATED
 } from './action.constants';
 
 const defaultState = {
@@ -38,7 +50,15 @@ const defaultState = {
     loading: false,
     error: false,
     data: []
-  }
+  },
+  attributionQueries: {
+    loading: false,
+    error: false,
+    data: []
+  },
+  dashboardLoading: false,
+  dashboardLoadFailed: false,
+  dashboard: null
 };
 
 export default function (state = defaultState, action) {
@@ -47,7 +67,7 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         attributionDashboardUnits: {
-          ...defaultState.attributionDashboardUnits,
+          ...state.attributionDashboardUnits,
           loading: true
         }
       };
@@ -56,8 +76,9 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         attributionDashboardUnits: {
-          ...defaultState.attributionDashboardUnits,
-          data: action.payload
+          ...state.attributionDashboardUnits,
+          loading: false,
+          data: getRearrangedData(action.payload, state.dashboard)
         }
       };
 
@@ -65,10 +86,138 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         attributionDashboardUnits: {
-          ...defaultState.attributionDashboardUnits,
+          ...state.attributionDashboardUnits,
+          loading: false,
           error: true
         }
       };
+
+    case ATTRIBUTION_DASHBOARD_UNITS_UPDATED: {
+      return {
+        ...state,
+        attributionDashboardUnits: {
+          ...state.attributionDashboardUnits,
+          data: [...action.payload]
+        },
+        dashboard: {
+          ...state.dashboard,
+          units_position: action.units_position
+        }
+      };
+    }
+
+    case ATTRIBUTION_WIDGET_DELETED: {
+      const updatedUnitsPosition = { ...state.dashboard.units_position };
+      _.unset(updatedUnitsPosition, `position.${action.payload}`);
+      _.unset(updatedUnitsPosition, `size.${action.payload}`);
+      return {
+        ...state,
+        attributionDashboardUnits: {
+          ...state.attributionDashboardUnits,
+          data: state.attributionDashboardUnits.data.filter(
+            (elem) => elem.id !== action.payload
+          )
+        },
+        dashboard: {
+          ...state.dashboard,
+          units_position: updatedUnitsPosition
+        }
+      };
+    }
+
+    case ATTRIBUTION_DASHBOARD_LOADING:
+      return {
+        ...state,
+        dashboardLoading: true
+      };
+
+    case ATTRIBUTION_DASHBOARD_LOADED:
+      return {
+        ...state,
+        dashboardLoading: false,
+        dashboard: action.payload
+      };
+    case ATTRIBUTION_DASHBOARD_FAILED:
+      return {
+        ...state,
+        dashboardLoading: false,
+        dashboardLoadFailed: true
+      };
+
+    case ATTRIBUTION_QUERIES_LOADING:
+      return {
+        ...state,
+        attributionQueries: {
+          ...state.attributionQueries,
+          loading: true
+        }
+      };
+    case ATTRIBUTION_QUERIES_FAILED:
+      return {
+        ...state,
+        attributionQueries: {
+          ...state.attributionQueries,
+          loading: false,
+          error: true
+        }
+      };
+    case ATTRIBUTION_QUERIES_LOADED:
+      return {
+        ...state,
+        attributionQueries: {
+          ...state.attributionQueries,
+          loading: false,
+          data: action.payload
+        }
+      };
+
+    case ATTRIBUTION_QUERY_CREATED:
+      return {
+        ...state,
+        attributionQueries: {
+          ...state.attributionQueries,
+          data: [action.payload, ...state.attributionQueries.data]
+        }
+      };
+
+    case ATTRIBUTION_QUERY_UPDATED: {
+      const queries = state.attributionQueries.data;
+      const updatedQueryIndex = queries.findIndex(
+        (d) => d.id === action.queryId
+      );
+      if (updatedQueryIndex > -1) {
+        return {
+          ...state,
+          attributionQueries: {
+            ...state.attributionQueries,
+            data: [
+              ...queries.slice(0, updatedQueryIndex),
+              { ...queries[updatedQueryIndex], ...action.payload },
+              ...queries.slice(updatedQueryIndex + 1)
+            ]
+          }
+        };
+      }
+      return state;
+    }
+
+    case ATTRIBUTION_QUERY_DELETED: {
+      const queries = state.attributionQueries.data;
+      let queryIndex = queries.findIndex((d) => d.id === action.payload);
+      return {
+        ...state,
+        attributionQueries: {
+          ...state.attributionQueries,
+          data:
+            queryIndex > -1
+              ? [
+                  ...queries.slice(0, queryIndex),
+                  ...queries.slice(queryIndex + 1)
+                ]
+              : queries
+        }
+      };
+    }
 
     case SET_EVENT_GOAL: {
       return {

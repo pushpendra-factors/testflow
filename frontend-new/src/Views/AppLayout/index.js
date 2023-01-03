@@ -23,7 +23,8 @@ import {
 } from '../../reducers/coreQuery/services';
 import {
   fetchAttrContentGroups,
-  fetchSmartPropertyRules
+  fetchSmartPropertyRules,
+  fetchAttributionQueries
 } from 'Attribution/state/services';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import {
@@ -109,7 +110,8 @@ function AppLayout({
     'solutions@factors.ai',
     'sonali@factors.ai',
     'praveenr@factors.ai',
-    'janani@factors.ai'
+    'janani@factors.ai',
+    'akhil@factors.ai'
   ];
 
   const asyncCallOnLoad = useCallback(async () => {
@@ -166,6 +168,7 @@ function AppLayout({
       dispatch(fetchTemplates());
       fetchProjectSettings(active_project?.id);
       dispatch(fetchEventDisplayNames({ projectId: active_project?.id }));
+      dispatch(fetchAttributionQueries(active_project?.id));
     }
   }, [dispatch, active_project]);
 
@@ -253,7 +256,7 @@ function AppLayout({
                     {(window.document.domain === 'app.factors.ai' &&
                       whiteListedAccounts.includes(activeAgent)) ||
                     window.document.domain === 'staging-app.factors.ai' ||
-                    window.document.domain === 'factors-dev.com' ? (
+                    window.document.domain === 'factors-dev.com' || window.document.domain === 'localhost' ? (
                       <Route
                         // exact
                         path={ATTRIBUTION_ROUTES.base}

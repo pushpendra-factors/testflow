@@ -111,3 +111,17 @@ func StringsWithMatchingPrefix(s []string, prefix string) []string {
 	}
 	return finalStrings
 }
+
+func RemoveDuplicateStringInArray(s []string) []string {
+	finalStrings := make([]string, 0)
+	if len(s) == 0 {
+		return finalStrings
+	}
+
+	for _, a := range s {
+		if !ContainsStringInArray(finalStrings, a) {
+			finalStrings = append(finalStrings, a)
+		}
+	}
+	return finalStrings
+}
