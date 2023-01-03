@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button, Spin } from 'antd';
-import { connect } from 'react-redux';
+import { connect, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { useHistory } from 'react-router-dom';
 import { isEmpty } from 'lodash';
@@ -15,18 +15,26 @@ import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
 import { getDashboardDateRange } from 'Views/Dashboard/utils';
 import { DASHBOARD_KEYS } from 'Constants/localStorage.constants';
+import ConfirmationModal from 'Components/ConfirmationModal';
+import { DeleteUnitFromDashboard } from 'Reducers/dashboard/services';
+import { deleteReport } from 'Reducers/coreQuery/services';
+import {
+  ATTRIBUTION_QUERY_DELETED,
+  ATTRIBUTION_WIDGET_DELETED
+} from 'Attribution/state/action.constants';
 
 function Reports({
-  activeProject,
-  activeDashboard,
   attributionDashboardUnits,
   savedQueries,
   savedQueriesLoading,
-  fetchAttributionActiveUnits,
   currentProjectSettingsLoading,
-  currentProjectSettings
+  currentProjectSettings,
+  activeProject
 }) {
   const history = useHistory();
+  const dispatch = useDispatch();
+  const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
+  const [deleteApiCalled, setDeleteApiCalled] = useState(false);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
 
   const handleDurationChange = (dates) => {
@@ -69,21 +77,46 @@ function Reports({
     }
   }, [currentProjectSettings, currentProjectSettingsLoading]);
 
-  useEffect(() => {
-    fetchAttributionActiveUnits(activeProject.id, activeDashboard.id);
-  }, [activeDashboard]);
+  const activeUnits = useMemo(() => {
+    return attributionDashboardUnits.data.filter(
+      (elem) =>
+        savedQueries.findIndex(
+          (sq) =>
+            sq.id === elem.query_id && sq.query.cl === QUERY_TYPE_ATTRIBUTION
+        ) > -1
+    );
+  }, [attributionDashboardUnits, savedQueries]);
 
-  const activeUnits = useMemo(
-    () =>
-      attributionDashboardUnits.data.filter(
-        (elem) =>
-          savedQueries.findIndex(
-            (sq) =>
-              sq.id === elem.query_id && sq.query.cl === QUERY_TYPE_ATTRIBUTION
-          ) > -1
-      ),
-    [attributionDashboardUnits?.data, savedQueries]
-  );
+  const deleteWidget = useCallback(async () => {
+    try {
+      setDeleteApiCalled(true);
+      await DeleteUnitFromDashboard(
+        activeProject.id,
+        deleteWidgetModal.dashboard_id,
+        deleteWidgetModal.id
+      );
+
+      await deleteReport({
+        project_id: activeProject.id,
+        queryId: deleteWidgetModal.id
+      });
+      dispatch({
+        type: ATTRIBUTION_WIDGET_DELETED,
+        payload: deleteWidgetModal.id
+      });
+      dispatch({ type: ATTRIBUTION_QUERY_DELETED, id: deleteWidgetModal.id });
+      setDeleteApiCalled(false);
+      showDeleteWidgetModal(false);
+    } catch (err) {
+      console.log(err);
+      console.log(err.response);
+    }
+  }, [
+    deleteWidgetModal.dashboard_id,
+    deleteWidgetModal.id,
+    activeProject.id,
+    dispatch
+  ]);
 
   if (
     attributionDashboardUnits?.loading ||
@@ -151,8 +184,22 @@ function Reports({
       </div>
       <div className='w-full px-8 mt-2 flex flex-col'>
         {/* sortable cards */}
-        <SortableCards activeUnits={activeUnits} durationObj={durationObj} />
+        <SortableCards
+          activeUnits={activeUnits}
+          durationObj={durationObj}
+          showDeleteWidgetModal={showDeleteWidgetModal}
+        />
       </div>
+      <ConfirmationModal
+        visible={!!deleteWidgetModal}
+        confirmationText='Are you sure you want to delete this widget?'
+        onOk={deleteWidget}
+        onCancel={showDeleteWidgetModal.bind(this, false)}
+        title='Delete Widget'
+        okText='Confirm'
+        cancelText='Cancel'
+        confirmLoading={deleteApiCalled}
+      />
     </div>
   );
 }
@@ -162,8 +209,9 @@ const mapStateToProps = (state) => ({
   activeDashboard: state.dashboard.activeDashboard,
   attributionDashboardUnits:
     state.attributionDashboard.attributionDashboardUnits,
-  savedQueries: state.queries.data,
-  savedQueriesLoading: state.queries.loading,
+  savedQueries: state.attributionDashboard.attributionQueries.data,
+  savedQueriesLoading: state.attributionDashboard.attributionQueries.loading,
+  attributionDashboard: state.attributionDashboard,
   currentProjectSettings: state.global.currentProjectSettings,
   currentProjectSettingsLoading: state.global.currentProjectSettingsLoading
 });

@@ -18,7 +18,7 @@ import {
   getResultantMetrics,
   getTableFilterOptions,
   shouldFiltersUpdate,
-  isLandingPageSelected
+  isLandingPageOrAllPageViewSelected
 } from './utils';
 
 import AttributionTable from './AttributionTable';
@@ -416,7 +416,7 @@ const AttributionsChart = forwardRef(
             searchText={searchText}
             setSearchText={setSearchText}
             metricsOptionsPopover={
-              isLandingPageSelected(touchpoint) ? null : metricsOptionsPopover
+              isLandingPageOrAllPageViewSelected(touchpoint) ? null : metricsOptionsPopover
             }
             filters={filters}
             filtersVisible={filtersVisible}

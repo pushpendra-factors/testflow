@@ -104,7 +104,13 @@ func TestUtilIsBotUserAgent(t *testing.T) {
 	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) WPMRecorder/2020.2.6 Chrome/87.0.4280.141 Electron/11.3.0 Safari/537.36 PingdomTMS/2020.2"))
 	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) browser/2020.2.2 Chrome/78.0.3904.130 Electron/7.3.2 Safari/537.36 PingdomTMS/2020.2"))
 	assert.True(t, U.IsBotUserAgent("Pingdom.com_bot_version_1.4_(http://www.pingdom.com/)"))
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (Linux; Android 7.0; Moto G (4)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4590.2 Mobile Safari/537.36 Chrome-Lighthouse"))
+}
 
+func TestIsBotEventByPrefix(t *testing.T) {
+	assert.True(t, U.IsBotEventByPrefix("gtm-msr.appspot.com/render2"))
+	assert.True(t, U.IsBotEventByPrefix("gtm-msr.appspot.com/xxx"))
+	assert.True(t, U.IsBotEventByPrefix("gtm-msr.appspot.com/"))
 }
 
 func TestRemoveAllInvalidURLEscapeFromURL(t *testing.T) {

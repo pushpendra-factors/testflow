@@ -61,8 +61,8 @@ export const defaultSortProp = (queryOptions, attrQueries, data) => {
   ];
 };
 
-export const isLandingPageSelected = (touchPoint) =>
-  touchPoint === 'LandingPage';
+const isLandingPageOrAllPageViewSelected = (touchPoint) =>
+  touchPoint === 'LandingPage' || touchPoint === 'AllPageView';
 
 export const getDifferentCampaingns = (data) => {
   const { headers } = data.result;
@@ -127,7 +127,7 @@ export const getSingleTouchPointChartData = (
     currentEventIndex,
     headers: keys(data[0])
   });
-  const listDimensions = isLandingPageSelected(touchPoint)
+  const listDimensions = isLandingPageOrAllPageViewSelected(touchPoint)
     ? content_groups.slice()
     : attr_dimensions.slice();
   const enabledDimensions = listDimensions.filter(
@@ -217,7 +217,7 @@ export const getDualTouchPointChartData = (
   attribution_method_compare,
   currMetricsValue
 ) => {
-  const listDimensions = isLandingPageSelected(touchpoint)
+  const listDimensions = isLandingPageOrAllPageViewSelected(touchpoint)
     ? content_groups.slice()
     : attr_dimensions.slice();
   const enabledDimensions = listDimensions.filter(
@@ -268,7 +268,7 @@ export const formatData = (
   const { headers, rows } = data;
   const touchpointIdx = headers.indexOf(touchPoint);
 
-  const listDimensions = isLandingPageSelected(touchPoint)
+  const listDimensions = isLandingPageOrAllPageViewSelected(touchPoint)
     ? content_groups.slice()
     : attr_dimensions.slice();
   const enabledDimensions = listDimensions.filter(
@@ -531,7 +531,7 @@ export const getTableColumns = (
         : d
   });
 
-  const listDimensions = isLandingPageSelected(touchpoint)
+  const listDimensions = isLandingPageOrAllPageViewSelected(touchpoint)
     ? [...content_groups]
     : [...attr_dimensions];
 
@@ -547,7 +547,11 @@ export const getTableColumns = (
     dimensionColumns = [
       {
         title: getClickableTitleSorter(
-          touchpoint === 'ChannelGroup' ? 'Channel' : touchpoint,
+          touchpoint === 'ChannelGroup'
+            ? 'Channel'
+            : touchpoint === 'AllPageView'
+            ? 'All Page Views'
+            : touchpoint,
           { key: touchpoint, type: 'categorical', subtype: null },
           currentSorter,
           handleSorting,
@@ -806,7 +810,7 @@ export const getEquivalentIndicesMapper = (
 
   const compareDataStringsMapper = comparisonData.rows.reduce(
     (prev, curr, currIndex) => {
-      const str = isLandingPageSelected(touchPoint)
+      const str = isLandingPageOrAllPageViewSelected(touchPoint)
         ? curr[touchPointIdx]
         : curr.slice(0, firstMetricIndex).join(ARR_JOINER);
       return {
@@ -817,7 +821,7 @@ export const getEquivalentIndicesMapper = (
     {}
   );
   const equivalentIndicesMapper = rows.reduce((prev, curr, currIndex) => {
-    const str = isLandingPageSelected(touchPoint)
+    const str = isLandingPageOrAllPageViewSelected(touchPoint)
       ? curr[touchPointIdx]
       : curr.slice(0, firstMetricIndex).join(ARR_JOINER);
     return {
@@ -965,7 +969,7 @@ export const getTableData = (
   const compareCostIdx = headers.indexOf('Compare Cost Per Conversion');
   const compareConvRateIdx = headers.indexOf('Compare UserConversionRate(%)');
 
-  const listDimensions = isLandingPageSelected(touchPoint)
+  const listDimensions = isLandingPageOrAllPageViewSelected(touchPoint)
     ? contentGroups.slice()
     : attrDimensions.slice();
   const enabledDimensions = listDimensions.filter(
@@ -1115,7 +1119,7 @@ export const getScatterPlotChartData = (
   yAxisMetric,
   isComparisonApplied
 ) => {
-  const listDimensions = isLandingPageSelected(selectedTouchPoint)
+  const listDimensions = isLandingPageOrAllPageViewSelected(selectedTouchPoint)
     ? content_groups.slice()
     : attr_dimensions.slice();
   const enabledDimensions = listDimensions.filter(
@@ -1263,12 +1267,12 @@ export const listAttributionDimensions = (
   attr_dimensions,
   content_groups
 ) =>
-  isLandingPageSelected(touchpoint)
+  isLandingPageOrAllPageViewSelected(touchpoint)
     ? content_groups.slice()
     : attr_dimensions.slice();
 
 export const getResultantMetrics = (touchpoint, attribution_metrics) =>
-  isLandingPageSelected(touchpoint)
+  isLandingPageOrAllPageViewSelected(touchpoint)
     ? attribution_metrics.filter(
         (metrics) =>
           metrics.header.includes('Sessions') ||
@@ -1315,7 +1319,7 @@ export const getTableFilterOptions = ({
     });
   });
 
-  const listDimensions = isLandingPageSelected(touchpoint)
+  const listDimensions = isLandingPageOrAllPageViewSelected(touchpoint)
     ? [...contentGroups]
     : [...attrDimensions];
 
@@ -1364,18 +1368,19 @@ export const shouldFiltersUpdate = ({
     return true;
   }
 
-  const metricsNotPresentInFilters = !isLandingPageSelected(touchpoint)
+  const metricsNotPresentInFilters = !isLandingPageOrAllPageViewSelected(
+    touchpoint
+  )
     ? attributionMetrics
         .filter((m) => m.enabled && !m.isEventMetric)
         .filter((m) => filters.findIndex((f) => f.key === m.title) === -1)
     : [];
-  const metricsNotEnabledButPresentInFilters = !isLandingPageSelected(
-    touchpoint
-  )
-    ? attributionMetrics
-        .filter((m) => !m.enabled && !m.isEventMetric)
-        .filter((m) => filters.findIndex((f) => f.key === m.title) > -1)
-    : [];
+  const metricsNotEnabledButPresentInFilters =
+    !isLandingPageOrAllPageViewSelected(touchpoint)
+      ? attributionMetrics
+          .filter((m) => !m.enabled && !m.isEventMetric)
+          .filter((m) => filters.findIndex((f) => f.key === m.title) > -1)
+      : [];
 
   return (
     metricsNotPresentInFilters.length > 0 ||

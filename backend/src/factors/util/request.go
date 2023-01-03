@@ -95,12 +95,27 @@ func IsPingdomBot(userAgent string) bool {
 	return strings.Contains(strings.ToLower(userAgent), "pingdom")
 }
 
+// IsLighthouse - Check whether it is lighthouse useragent or not.
+func IsLighthouse(userAgent string) bool {
+	return strings.Contains(strings.ToLower(userAgent), "lighthouse")
+}
+
 // IsBotUserAgent - Check request user agent is bot or not.
 func IsBotUserAgent(userAgent string) bool {
+	if userAgent == "" {
+		return false
+	}
 
-	if IsPingdomBot(userAgent) {
+	if IsPingdomBot(userAgent) || IsLighthouse(userAgent) {
 		return true
 	}
 
 	return user_agent.New(userAgent).Bot()
+}
+
+// IsBotEventByPrefix - Checks for event_name with selected bot prefix.
+// gtm-msr.appspot.com/render2 is a pageview recorded in multiple
+// projects (Including factors) upto Dec 29, 2022.
+func IsBotEventByPrefix(eventName string) bool {
+	return strings.HasPrefix(eventName, "gtm-msr.appspot.com")
 }

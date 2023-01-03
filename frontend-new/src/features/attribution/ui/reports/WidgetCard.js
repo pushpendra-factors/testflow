@@ -23,7 +23,7 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { DashboardContext } from 'Context/DashboardContext';
 
-function WidgetCard({ unit, onDrop, durationObj }) {
+function WidgetCard({ unit, durationObj, showDeleteWidgetModal }) {
   const hasComponentUnmounted = useRef(false);
   const cardRef = useRef(null);
   const history = useHistory();
@@ -32,10 +32,9 @@ function WidgetCard({ unit, onDrop, durationObj }) {
   const { active_project: activeProject } = useSelector(
     (state) => state.global
   );
-  // const { activeDashboardUnits } = useSelector((state) => state.dashboard);
-  const { metadata } = useSelector((state) => state.insights);
-  const { data: savedQueries } = useSelector((state) => state.queries);
-  const dispatch = useDispatch();
+  const { data: savedQueries } = useSelector(
+    (state) => state.attributionDashboard.attributionQueries
+  );
   const [attributionMetrics, setAttributionMetrics] = useState([
     ...ATTRIBUTION_METRICS
   ]);
@@ -69,7 +68,14 @@ function WidgetCard({ unit, onDrop, durationObj }) {
     if (unit?.query_id) {
       history.push({
         pathname: ATTRIBUTION_ROUTES.report,
-        search: `?${new URLSearchParams({ queryId: unit.query_id }).toString()}`
+        search: `?${new URLSearchParams({
+          queryId: unit.query_id
+        }).toString()}`,
+        state: {
+          query: { ...unit.query, settings: unit.query.settings },
+          global_search: true,
+          navigatedFromDashboard: unit
+        }
       });
     }
   };
@@ -224,12 +230,6 @@ function WidgetCard({ unit, onDrop, durationObj }) {
     };
   }, [durationWithSavedFrequency]);
 
-  // useEffect(() => {
-  //   if (dashboardRefreshState.widgetIdGettingFetched === unit.id) {
-  //     getData(true);
-  //   }
-  // }, [dashboardRefreshState.widgetIdGettingFetched, unit.id, getData]);
-
   useEffect(() => {
     if (
       unit.query &&
@@ -245,24 +245,20 @@ function WidgetCard({ unit, onDrop, durationObj }) {
   }, [unit?.query?.settings]);
 
   const handleDelete = useCallback(() => {
-    // showDeleteWidgetModal(unit);
-  }, [unit]);
+    showDeleteWidgetModal(unit);
+  }, [unit, showDeleteWidgetModal]);
 
   const onWidgetRefresh = useCallback(() => {
-    // handleWidgetRefresh(unit.id);
+    getData(true);
   }, [unit.id]);
 
   const getMenu = () => (
     <Menu>
       <Menu.Item key='0'>
-        <a onClick={handleDelete} href='#!'>
-          Delete Widget
-        </a>
+        <a onClick={handleDelete}>Delete Widget</a>
       </Menu.Item>
       <Menu.Item key='1'>
-        <a onClick={onWidgetRefresh} href='#!'>
-          Refresh
-        </a>
+        <a onClick={onWidgetRefresh}>Refresh</a>
       </Menu.Item>
     </Menu>
   );

@@ -8,6 +8,7 @@ import { connect } from 'react-redux';
 import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 import { fetchProjects } from 'Reducers/global';
 import { getActiveDomain } from '@sentry/hub';
+import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 
 const { SubMenu } = Menu;
 
@@ -16,7 +17,7 @@ const whiteListedAccounts = [
   'solutions@factors.ai',
   'sonali@factors.ai',
   'praveenr@factors.ai',
-  'janani@factors.ai',
+  'janani@factors.ai'
 ];
 
 const MenuItems = {
@@ -40,7 +41,7 @@ const MenuItems = {
   Pages: 'Pages',
   Alerts: 'Alerts',
   Insights: 'Build Insights',
-  Sharing: 'Sharing',
+  Sharing: 'Sharing'
 };
 
 const MapNametToLocation = {
@@ -51,7 +52,7 @@ const MapNametToLocation = {
   attribution: '/attribution',
   configure: '/configure',
   settings: '/settings',
-  setup_assist: '/welcome',
+  setup_assist: '/welcome'
 };
 
 function SiderMenu({
@@ -63,7 +64,7 @@ function SiderMenu({
   fetchSmartEvents,
   fetchProjectAgents,
   fetchAgentInfo,
-  fetchProjects,
+  fetchProjects
 }) {
   const location = useLocation();
   const [openKeys, setOpenKeys] = useState([]);
@@ -84,9 +85,6 @@ function SiderMenu({
     }
   };
 
-
-
-
   const renderSubmenu = (title) => {
     if (title === 'configure') {
       const items = [
@@ -96,7 +94,7 @@ function SiderMenu({
         'Touchpoints',
         'CustomKPI',
         'ExplainDP',
-        'Alerts',
+        'Alerts'
       ];
       return (
         <div className={styles.popover_content}>
@@ -115,13 +113,24 @@ function SiderMenu({
         </div>
       );
     } else if (title === 'settings') {
-      const items = ['general', 'User', 'Attribution', 'SDK', 'Integration', 'Insights', 'Sharing'];
+      const items = [
+        'general',
+        'User',
+        'Attribution',
+        'SDK',
+        'Integration',
+        'Insights',
+        'Sharing'
+      ];
       return (
         <div className={styles.popover_content}>
           {items.map((item) => {
-            if(item == 'Insights' && !whiteListedAccounts.includes(activeAgent)){
-              return null
-            } 
+            if (
+              item == 'Insights' &&
+              !whiteListedAccounts.includes(activeAgent)
+            ) {
+              return null;
+            }
             return (
               <NavLink
                 activeStyle={{ color: '#1890ff' }}
@@ -183,6 +192,10 @@ function SiderMenu({
       if (location.pathname.includes(MapNametToLocation[name])) {
         color = 'purple';
       }
+    }
+    if (name === 'AttributionV1') {
+      if (Object.values(ATTRIBUTION_ROUTES).includes(location.pathname))
+        color = 'purple';
     }
     return (
       <span className='anticon'>
@@ -256,13 +269,24 @@ function SiderMenu({
         <b>Explain</b>
       </Menu.Item>
 
-      {whiteListedAccounts.includes(activeAgent) && <Menu.Item
-        className={styles.menuitems}
-        key='/path-analysis'
-        icon={setIcon('PathAnalysis')}
-      >
-        <b>Path Analysis</b>
-      </Menu.Item> }
+      {whiteListedAccounts.includes(activeAgent) && (
+        <>
+          <Menu.Item
+            className={styles.menuitems}
+            key='/path-analysis'
+            icon={setIcon('PathAnalysis')}
+          >
+            <b>Path Analysis</b>
+          </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems}
+            key='/attribution'
+            icon={setIcon('AttributionV1')}
+          >
+            <b>Attribution</b>
+          </Menu.Item>
+        </>
+      )}
 
       {collapsed ? (
         <Popover
@@ -392,11 +416,11 @@ function SiderMenu({
 }
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  activeAgent: state.agent?.agent_details?.email,
+  activeAgent: state.agent?.agent_details?.email
 });
 export default connect(mapStateToProps, {
   fetchSmartEvents,
   fetchProjectAgents,
   fetchAgentInfo,
-  fetchProjects,
+  fetchProjects
 })(SiderMenu);
