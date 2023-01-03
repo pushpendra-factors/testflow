@@ -59,10 +59,13 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
         />
       </div>
 
-      <div className='queries-list' style={{
-        maxHeight: '500px',
-        overflow: 'auto'
-      }}>
+      <div
+        className='queries-list'
+        style={{
+          maxHeight: '500px',
+          overflow: 'auto'
+        }}
+      >
         {filteredQueries.map((q) => {
           const queryType = getQueryType(q.query);
           const queryTypeName = {
@@ -71,7 +74,7 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
             channel_v1: 'campaigns_cq',
             attribution: 'attributions_cq',
             profiles: 'profiles_cq',
-            kpi: 'KPI_cq',
+            kpi: 'KPI_cq'
           };
           let svgName = '';
           Object.entries(queryTypeName).forEach(([k, v]) => {
