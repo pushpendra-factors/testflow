@@ -1045,6 +1045,20 @@ export function deleteAlert(projectId, id) {
   };
 }
 
+export function editAlert(projectId, payload, id) {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + 'projects/' + projectId + '/v1/alerts/' + id, payload)
+        .then((res) => {
+          resolve(res);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
 export function enableSlackIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
