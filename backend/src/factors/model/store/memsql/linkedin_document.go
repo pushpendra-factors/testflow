@@ -1181,6 +1181,10 @@ func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 		}
 	}
 
+	if query.Channel == model.LinkedinCompanyEngagementsDisplayCategory {
+		return model.LinkedInMemberCompany
+	}
+
 	return model.LinkedinCampaignGroup
 }
 
