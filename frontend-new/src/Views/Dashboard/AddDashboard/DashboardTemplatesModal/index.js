@@ -66,6 +66,11 @@ import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
 import { DASHBOARD_KEYS } from './../../../../constants/localStorage.constants';
 import TemplateThumbnailImage from './TemplateThumbnailImage';
 
+const CATEGORY_SELECTED_STYLES = {
+  background: '#f5f6f8',
+  color: '#1890ff'
+};
+
 let Step1DashboardTemplateModal = ({
   templates,
   handleTemplate,
@@ -140,6 +145,16 @@ let Step1DashboardTemplateModal = ({
             <div
               className={styles.categoryLeftItem}
               onClick={() => handleCategoryFunction()}
+              style={{
+                color:
+                  categorySelected == null
+                    ? CATEGORY_SELECTED_STYLES.color
+                    : '',
+                background:
+                  categorySelected == null
+                    ? CATEGORY_SELECTED_STYLES.background
+                    : ''
+              }}
             >
               All Categories
             </div>
@@ -149,6 +164,16 @@ let Step1DashboardTemplateModal = ({
                   key={eachIndex}
                   className={styles.categoryLeftItem}
                   onClick={() => handleCategoryFunction(eachCategory)}
+                  style={{
+                    color:
+                      eachCategory == categorySelected
+                        ? CATEGORY_SELECTED_STYLES.color
+                        : '',
+                    background:
+                      eachCategory == categorySelected
+                        ? CATEGORY_SELECTED_STYLES.background
+                        : ''
+                  }}
                 >
                   {' '}
                   {eachCategory}{' '}

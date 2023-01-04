@@ -54,7 +54,7 @@ function AddDashboardTab({
           <Row gutter={[24, 4]}>
             <Col span={12}>
               <div
-                onClick={() => setDashboardType.bind(this, 'pr')}
+                onClick={() => setDashboardType('pr')}
                 className={`${
                   dashboardType === 'pr'
                     ? 'fa-dasboard-privacy--card selected'
@@ -93,7 +93,7 @@ function AddDashboardTab({
             </Col>
             <Col span={12}>
               <div
-                onClick={() => setDashboardType.bind(this, 'pv')}
+                onClick={() => setDashboardType('pv')}
                 className={`${
                   dashboardType === 'pv'
                     ? 'fa-dasboard-privacy--card selected'

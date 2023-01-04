@@ -32,7 +32,8 @@ const Alerts = ({
   fetchEventAlerts,
   deleteEventAlert,
   savedAlerts,
-  savedEventAlerts
+  savedEventAlerts,
+  currentAgent
 }) => {
   const [tableData, setTableData] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
@@ -112,6 +113,15 @@ const Alerts = ({
         </Menu.Item>
         <Menu.Item
           key='1'
+          onClick={() => {
+            setAlertState({ state: 'edit', index: item });
+            setAlertDetails(item);
+          }}
+        >
+          <a>Edit</a>
+        </Menu.Item>
+        <Menu.Item
+          key='2'
           onClick={() => {
             showDeleteWidgetModal(item.id);
           }}
@@ -222,6 +232,11 @@ const Alerts = ({
     setTabNo(key);
   }
 
+  const whiteListedAccounts = [
+    'junaid@factors.ai',
+    'solutions@factors.ai',
+  ];
+
   const renderTitle = () => {
     let title = null;
     if (alertState.state === 'list') {
@@ -260,40 +275,23 @@ const Alerts = ({
         <Tabs activeKey={`${tabNo}`} onChange={callback}>
           <TabPane tab='Track KPIs' key='1'>
             <Table
-              onRow={(record) => {
-                return {
-                  onClick: () => {
-                    setAlertDetails(record.actions);
-                    setAlertState({ state: 'view', index: record.actions });
-                  }
-                };
-              }}
               loading={tableLoading}
               className='fa-table--basic mt-8'
               columns={columns}
               dataSource={tableData}
               pagination={false}
-              rowClassName='cursor-pointer'
             />
           </TabPane>
+          {whiteListedAccounts.includes(currentAgent?.email) &&
           <TabPane tab='Event based' key='2'>
             <Table
               className='fa-table--basic mt-8'
-              onRow={(record) => {
-                return {
-                  onClick: () => {
-                    setAlertDetails(record.actions);
-                    setAlertState({ state: 'view', index: record.actions });
-                  }
-                };
-              }}
               loading={tableLoading}
               columns={columns}
               dataSource={tableData}
               pagination={false}
-              rowClassName='cursor-pointer'
             />
-          </TabPane>
+          </TabPane>}
         </Tabs>
       );
     }
@@ -364,7 +362,8 @@ const mapStateToProps = (state) => ({
   kpi: state?.kpi,
   agent_details: state.agent.agent_details,
   slack: state.global.slack,
-  projectSettings: state.global.projectSettingsV1
+  projectSettings: state.global.projectSettingsV1,
+  currentAgent: state.agent.agent_details,
 });
 
 export default connect(mapStateToProps, {

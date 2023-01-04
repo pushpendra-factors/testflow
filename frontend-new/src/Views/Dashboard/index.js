@@ -12,7 +12,10 @@ import {
 } from 'Reducers/global';
 
 import AddDashboard from './AddDashboard';
-import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
+import {
+  ADD_DASHBOARD_MODAL_OPEN,
+  DASHBOARD_UNMOUNTED
+} from '../../reducers/types';
 import { FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
 import { setItemToLocalStorage } from '../../utils/localStorage.helpers';
 import { getDashboardDateRange } from './utils';
@@ -94,6 +97,7 @@ function Dashboard({
     integration?.int_rudderstack;
 
   const handleEditClick = useCallback((dashboard) => {
+    dispatch({ type: ADD_DASHBOARD_MODAL_OPEN });
     setaddDashboardModal(true);
     setEditDashboard(dashboard);
   }, []);

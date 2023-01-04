@@ -28,7 +28,7 @@ import {
   getEventProperties
 } from 'Reducers/coreQuery/middleware';
 import _ from 'lodash';
-import GLobalFilter from './GLobalFilter';
+import GLobalFilter from './GlobalFilter';
 import { formatFilterDate } from '../../../../utils/dataFormatter';
 import styles from './index.module.scss';
 import {

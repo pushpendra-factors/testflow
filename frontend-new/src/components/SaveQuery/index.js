@@ -15,7 +15,7 @@ import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import { QUERY_TYPE_ATTRIBUTION } from 'Utils/constants';
 import { EMPTY_ARRAY } from 'Utils/global';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
-import SaveQueryModal from './SaveQueryModal';
+import SaveQueryModal from './saveQueryModal';
 import {
   ACTION_TYPES,
   SAVE_QUERY_INITIAL_STATE,

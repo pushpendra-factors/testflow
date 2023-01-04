@@ -1570,6 +1570,62 @@ func TestDerivedKPIChannels(t *testing.T) {
 	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusInternalServerError, statusCode)
+
+	// tests for derived kpi with numeric value
+	name3 := U.RandomString(8)
+	description2 := U.RandomString(8)
+	transformations2 := &postgres.Jsonb{json.RawMessage(`{"cl":"kpi","for":"(a*5)/(b*2.5)","qG":[{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["impressions"],"na":"a","pgUrl":"","tz":"Australia/Sydney"},{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["clicks"],"na":"b","pgUrl":"","tz":"Australia/Sydney"}]}`)}
+	w = sendCreateCustomMetric(a, project.ID, agent, transformations2, name3, description2, "google_ads_metrics", 2)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	query = model.KPIQuery{
+		Category:        "channels",
+		DisplayCategory: "google_ads_metrics",
+		PageUrl:         "",
+		Metrics:         []string{name3},
+		GroupBy:         []M.KPIGroupBy{},
+		From:            1659312000,
+		To:              1659657600,
+		QueryType:       "derived",
+	}
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:         "kpi",
+		Queries:       []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{},
+		GlobalGroupBy: []model.KPIGroupBy{},
+	}
+
+	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.Equal(t, result[0].Headers, []string{"google_ads_metrics_" + name3})
+	assert.Equal(t, len(result[0].Rows), 1)
+	assert.Equal(t, result[0].Rows[0][0], float64(10))
+
+	query = model.KPIQuery{
+		Category:         "channels",
+		DisplayCategory:  "google_ads_metrics",
+		PageUrl:          "",
+		Metrics:          []string{name3},
+		GroupBy:          []M.KPIGroupBy{},
+		From:             1659312000,
+		To:               1659657600,
+		GroupByTimestamp: "date",
+		QueryType:        "derived",
+	}
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:         "kpi",
+		Queries:       []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{},
+		GlobalGroupBy: []model.KPIGroupBy{},
+	}
+
+	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.Equal(t, result[0].Headers, []string{"datetime", "google_ads_metrics_" + name3})
+	assert.Equal(t, len(result[0].Rows), 5)
+	assert.Equal(t, result[0].Rows[1][1], float64(10))
 }
 
 func TestDerivedKPIForCustomKPI(t *testing.T) {
