@@ -510,7 +510,7 @@ func getSQLAndParamsFromCustomAdsReportsWithSmartProperty(query *model.ChannelQu
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
 			} else {
-				value := fmt.Sprintf("CASE WHEN %s IS NULL THEN '$none' WHEN %s = '' THEN '$none' ELSE %s END as %s", objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], model.CustomAdsInternalRepresentationToExternalRepresentation[key])
+				value := fmt.Sprintf("CASE WHEN %s IS NULL THEN '$none' WHEN %s = '' THEN '$none' ELSE %s END as %s", objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
 			}
@@ -608,7 +608,7 @@ func getSQLAndParamsFromCustomAdsReports(query *model.ChannelQueryV1, projectID 
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
 		} else {
-			value := fmt.Sprintf("CASE WHEN %s IS NULL THEN '$none' WHEN %s = '' THEN '$none' ELSE %s END as %s", objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], model.CustomAdsInternalRepresentationToExternalRepresentation[key])
+			value := fmt.Sprintf("CASE WHEN %s IS NULL THEN '$none' WHEN %s = '' THEN '$none' ELSE %s END as %s", objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
 		}

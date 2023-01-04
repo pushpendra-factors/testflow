@@ -2307,7 +2307,7 @@ func getChannelGroupKeyIndexesForSlicing(cols []string) (int, int, error) {
 
 	index := 0
 	for _, col := range cols {
-		if strings.HasPrefix(col, "campaign_") || strings.HasPrefix(col, "ad_group_") || strings.HasPrefix(col, "keyword_") || strings.HasPrefix(col, "channel_") || strings.HasPrefix(col, "company_") {
+		if col != "datetime" && col != "aggregate" {
 			if start == -1 {
 				start = index
 			} else {
