@@ -5,7 +5,7 @@ import cx from 'classnames';
 import { SVG, Text } from 'factorsComponents';
 import { EMPTY_STRING } from 'Utils/global';
 
-import styles from './PivotTableControls.module.scss';
+import styles from './pivotTableControls.module.scss';
 import ControlledComponent from '../ControlledComponent';
 
 const SelectedItem = ({ label, showRemoveBtn, onRemove }) => {
@@ -43,11 +43,11 @@ export default SelectedItem;
 SelectedItem.propTypes = {
   label: PropTypes.string,
   showRemoveBtn: PropTypes.bool,
-  onRemove: PropTypes.func,
+  onRemove: PropTypes.func
 };
 
 SelectedItem.defaultProps = {
   label: EMPTY_STRING,
   showRemoveBtn: true,
-  onRemove: _.noop,
+  onRemove: _.noop
 };
