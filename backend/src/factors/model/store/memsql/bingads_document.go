@@ -537,6 +537,9 @@ func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID in
 	if err != nil {
 		return "", nil, nil, nil
 	}
+	if whereConditionForFilters != "" {
+		whereConditionForFilters = " AND " + whereConditionForFilters
+	}
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	finalParams := make([]interface{}, 0)
 	staticWhereParams := []interface{}{projectID, model.BingAdsIntegration, docType, customerAccountIDs, from, to}

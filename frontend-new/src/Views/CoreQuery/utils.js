@@ -1468,7 +1468,8 @@ export const getAttributionQuery = (
   window,
   linkedEvents,
   dateRange = {},
-  tacticOfferType
+  tacticOfferType,
+  v1=false
 ) => {
   const eventFilters = getFilters(eventGoal.filters);
   let touchPointFiltersQuery = [];
@@ -1479,13 +1480,19 @@ export const getAttributionQuery = (
     );
   }
 
-  const attrQueryV1 = new AttributionQueryV1();
+  let attrQueryV1 = {};
+
+  if(v1) {
+    attrQueryV1 = new AttributionQueryV1();
+  }
+
   attrQueryV1.cm = ['Impressions', 'Clicks', 'Spend']
   attrQueryV1.ce = {
     na: eventGoal.label,
     pr: eventFilters
   }
-  attrQueryV1.attribution_key = touchPointFiltersQuery;
+  attrQueryV1.attribution_key = touchpoint;
+  attrQueryV1.attribution_key_f = touchPointFiltersQuery;
   attrQueryV1.query_type = queryType;
   attrQueryV1.attribution_methodology = models[0];
   attrQueryV1.lbw = window;

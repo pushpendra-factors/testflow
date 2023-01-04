@@ -987,6 +987,9 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID i
 	if err != nil {
 		return "", nil, nil, nil
 	}
+	if whereConditionForFilters != "" {
+		whereConditionForFilters = " AND " + whereConditionForFilters
+	}
 	finalParams := make([]interface{}, 0)
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)

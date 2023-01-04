@@ -48,8 +48,7 @@ function UngroupedChart({
         durations={resultState.data.meta}
       />
     );
-  }
-  if (chartType === CHART_TYPE_METRIC_CHART) {
+  } else if (chartType === CHART_TYPE_METRIC_CHART) {
     chartContent = (
       <MetricChart
         headerTitle={CONVERSION_RATE_LABEL}
