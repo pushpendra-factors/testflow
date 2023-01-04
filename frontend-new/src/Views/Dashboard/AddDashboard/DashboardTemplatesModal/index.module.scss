@@ -1,7 +1,9 @@
+@import '../../../../styles/abstracts/variables';
 .startFresh {
 }
 
 .modalTitleHeader {
+  padding-left: 24px;
   padding-top: 0px;
   & > h4 {
     margin: 0 0 0 0px;
@@ -14,6 +16,7 @@
   margin: 2px 0px 2px 0;
   padding: 4px 10px 4px 10px;
   cursor: initial;
+  color: $fa-color--mono-5;
 }
 .templatesShowSection {
   max-height: calc(100vh - 200px);
@@ -24,6 +27,18 @@
   .ant-skeleton,
   .ant-skeleton-element {
     width: 100% !important;
+  }
+
+  .startFreshDescription {
+    color: $fa-color--mono-4;
+  }
+  .templateDescription {
+    color: $fa-color--mono-4;
+  }
+}
+.categoryItemSelectedArray {
+  &::after {
+    content: '->';
   }
 }
 .categoryLeftItem {
@@ -93,10 +108,10 @@
 }
 
 .modalContainerTop {
-  padding: 20px 5px 20px 48px;
+  padding: 14px 10px 20px 14px;
 }
 .modalContainerBody {
-  padding: 0 48px 10px 48px;
+  padding: 0 18px 10px 18px;
 }
 
 .categorySelected {
