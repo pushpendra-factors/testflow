@@ -849,7 +849,7 @@ func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []st
 	missingDocIDs := make([]string, 0)
 	for i := range distinctDocumentIDs {
 		if _, exists := docIDs[distinctDocumentIDs[i]]; !exists {
-			missingDocIDs = append(missingDocIDs, documentIDs[i])
+			missingDocIDs = append(missingDocIDs, distinctDocumentIDs[i])
 		}
 	}
 
