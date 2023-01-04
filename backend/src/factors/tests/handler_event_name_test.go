@@ -864,3 +864,32 @@ func TestEnableEventLevelProperties(t *testing.T) {
 	assert.Contains(t, propertyValues[U.PropertyTypeNumerical], numEnKey1, numEnKey2)
 
 }
+
+func TestDisabledEventUserProperties(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	var properties = struct {
+		DisplayNames                map[string]string `json:"display_names"`
+		DisabledEventUserProperties []string          `json:"disabled_event_user_properties"`
+	}{}
+
+	w := sendGetUserProperties(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &properties)
+
+	// event-level properties disabled
+	assert.Len(t, properties.DisabledEventUserProperties, 3)
+	assert.Equal(t, properties.DisabledEventUserProperties, U.DISABLED_EVENT_USER_PROPERTIES)
+
+	// disabled only on event-level user_properties dropdown.
+	// enabled on global user properties dropdown
+	assert.Equal(t, "Initial Channel", properties.DisplayNames[U.UP_INITIAL_CHANNEL])
+	assert.Equal(t, "Latest Channel", properties.DisplayNames[U.UP_LATEST_CHANNEL])
+
+	// disabled on event-level and global user_properties dropdown.
+	assert.Equal(t, "", properties.DisplayNames[U.UP_SESSION_COUNT])
+}

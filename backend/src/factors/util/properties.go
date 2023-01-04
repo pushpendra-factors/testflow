@@ -1329,6 +1329,7 @@ var DISABLED_USER_PROPERTIES_UI = [...]string{
 	UP_USER_AGENT,
 	UP_BROWSER_WITH_VERSION,
 	UP_OS_WITH_VERSION,
+	UP_SESSION_COUNT,
 }
 
 var DISABLED_EVENT_PROPERTIES_UI = [...]string{
@@ -1722,7 +1723,6 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_INITIAL_CHANNEL:                  "Initial Channel",
 	UP_DAY_OF_FIRST_EVENT:               "Day of First Event",
 	UP_HOUR_OF_FIRST_EVENT:              "Hour of First Event",
-	UP_SESSION_COUNT:                    "Session Count",
 	UP_PAGE_COUNT:                       "Page Count",
 	UP_TOTAL_SPENT_TIME:                 "Session Spent Time",
 	UP_LATEST_PAGE_URL:                  "Latest Page URL",
@@ -1804,6 +1804,12 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	SIX_SIGNAL_SIC_DESCRIPTION:                   "6signal Sic Description",
 	SIX_SIGNAL_STATE:                             "6signal State",
 	SIX_SIGNAL_ZIP:                               "6signal Zip",
+}
+
+var DISABLED_EVENT_USER_PROPERTIES = []string{
+	UP_INITIAL_CHANNEL,
+	UP_LATEST_CHANNEL,
+	UP_SESSION_COUNT,
 }
 
 var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{
