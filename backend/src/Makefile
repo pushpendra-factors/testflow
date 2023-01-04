@@ -280,6 +280,13 @@ upload-monitoring: export IMAGE_NAME=monitoring
 upload-monitoring: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/monitoring:$(TAG)
 
+pack-analyze:
+	docker build -t us.gcr.io/factors-$(ENV)/analyze:$(TAG) -f Dockerfile.analyze_job .
+
+upload-analyze: export IMAGE_NAME=analyze
+upload-analyze: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/analyze:$(TAG)
+
 pack-archive-events:
 	docker build -t us.gcr.io/factors-$(ENV)/archive-events-job:$(TAG) -f Dockerfile.archive_events_job .
 
