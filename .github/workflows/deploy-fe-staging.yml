@@ -9,7 +9,7 @@ on:
 
 jobs:
   deploy_fe_staging_website:
-    runs-on: macos-11
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Branch
         uses: actions/checkout@v3

@@ -10,7 +10,7 @@ on:
 jobs:
   deploy_fe_production_website:
     if: github.ref == 'refs/heads/release'
-    runs-on: macos-11
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Branch
         uses: actions/checkout@v3
