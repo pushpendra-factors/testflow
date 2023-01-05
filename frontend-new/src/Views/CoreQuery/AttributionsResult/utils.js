@@ -61,7 +61,7 @@ export const defaultSortProp = (queryOptions, attrQueries, data) => {
   ];
 };
 
-const isLandingPageOrAllPageViewSelected = (touchPoint) =>
+export const isLandingPageOrAllPageViewSelected = (touchPoint) =>
   touchPoint === 'LandingPage' || touchPoint === 'AllPageView';
 
 export const getDifferentCampaingns = (data) => {
