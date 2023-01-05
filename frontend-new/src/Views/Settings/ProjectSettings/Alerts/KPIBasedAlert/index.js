@@ -335,12 +335,12 @@ const KPIBasedAlert = ({
     // Putting All emails into single array
     let emails = [];
     if (emailEnabled) {
-      if (data.emails) {
+      if (data?.emails) {
         emails = data.emails.map((item) => {
           return item.email;
         });
       }
-      if (data.email) {
+      if (data?.email) {
         emails.push(data.email);
       }
     }
@@ -1132,28 +1132,7 @@ const KPIBasedAlert = ({
             </Col>
           </Row>
           {emailEnabled && (
-            <Row className={'mt-4'}>
-              <Col span={8}>
-                <Form.Item
-                  label={null}
-                  name={'email'}
-                  initialValue={viewAlertDetails?.alert_configuration?.emails[0]}
-                  validateTrigger={['onChange', 'onBlur']}
-                  rules={[
-                    {
-                      type: 'email',
-                      message: 'Please enter a valid e-mail'
-                    },
-                    { required: true, message: 'Please enter email' }
-                  ]}
-                  className={'m-0'}
-                >
-                  <Input
-                    className={'fa-input'}
-                    placeholder={'yourmail@gmail.com'}
-                  />
-                </Form.Item>
-              </Col>
+            <Row className={'mt-1'}>
               <Form.List name='emails' initialValue={viewAlertDetails?.alert_configuration?.emails}>
                 {(fields, { add, remove }) => (
                   <>
@@ -1164,7 +1143,7 @@ const KPIBasedAlert = ({
                             <Col span={9}>
                               <Form.Item
                                 label={null}
-                                initialValue={viewAlertDetails?.alert_configuration?.emails[field.name + 1]}
+                                initialValue={viewAlertDetails?.alert_configuration?.emails[field.name]}
                                 {...field}
                                 name={[field.name, 'email']}
                                 validateTrigger={['onChange', 'onBlur']}
@@ -1202,7 +1181,7 @@ const KPIBasedAlert = ({
                       </Col>
                     ))}
                     <Col span={20} className={'mt-3'}>
-                      {fields.length >= 4 ? null : (
+                      {fields.length >= 5 ? null : (
                         <Button
                           type={'text'}
                           icon={

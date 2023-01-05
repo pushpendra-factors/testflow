@@ -221,6 +221,7 @@ function AnalysisHeader({
 
         return (
           <Button
+            size='large'
             type='link'
             icon={<SVG name='Handshake' size={16} color='blue' />}
             onClick={() => {
@@ -318,7 +319,6 @@ function AnalysisHeader({
         </div>
 
         <div className='flex items-center'>
-          <div className='pr-2'>{renderSaveQueryComp()}</div>
           {isFromAnalysisPage ? (
             <div className='pr-2 '>
               <div className='relative'>
@@ -333,7 +333,8 @@ function AnalysisHeader({
             </div>
           ) : (
             ''
-          )}
+            )}
+          <div className='pr-2'>{renderSaveQueryComp()}</div>
           {renderReportCloseIcon()}
         </div>
       </div>
@@ -347,9 +348,10 @@ function AnalysisHeader({
           width={300}
           height={200}
           style={{ position: 'absolute', top: 60, right: 30 }}
+          mask={false}
         >
           <div className='text-center'>
-            <div className='text-center mx-20 my-2'>
+            <div className='text-center mx-24 my-2'>
               <SVG name={'Files'} />
             </div>
             <Text
