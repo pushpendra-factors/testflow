@@ -7,6 +7,7 @@ import {
   FETCH_GROUP_PROPERTIES,
   SET_GROUPBY,
   RESET_GROUPBY,
+  SET_EVENT_GROUPBY,
   DEL_GROUPBY,
   INITIALIZE_GROUPBY,
   DEL_GROUPBY_EVENT,
@@ -152,6 +153,16 @@ export default function (state = defaultState, action) {
               }
               return gb;
             })
+        }
+      };
+    }
+
+    case SET_EVENT_GROUPBY: {
+      return {
+        ...state,
+        groupBy: {
+          ...state.groupBy,
+          event: action.payload
         }
       };
     }
