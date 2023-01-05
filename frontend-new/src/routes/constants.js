@@ -35,7 +35,7 @@ const Templates = lazyWithRetry(() =>
 // const AppLayout = lazyWithRetry(() => import('../Views/AppLayout'));
 
 const FactorsInsights = lazyWithRetry(() =>
-  import('../Views/Factors/FactorsInsights')
+  import('../Views/Factors/FactorsInsightsNew')
 );
 const CoreQuery = lazyWithRetry(() => import('../Views/CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Views/Dashboard'));
