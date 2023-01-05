@@ -743,6 +743,7 @@ function captureInputFieldValues(appInstance, input) {
             "field_id": inputId,
             "value": newValue,
         }
+        payload.event_properties = getEventProperties();
         updatePayloadWithUserIdFromCookie(payload);
         logger.debug(payload, false);
                 

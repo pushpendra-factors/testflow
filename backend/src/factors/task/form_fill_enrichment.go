@@ -107,6 +107,20 @@ func FormFillProcessing() int {
 
 			properties[U.EP_TIME_SPENT_ON_FORM_FIELD] = timestampUpdatesMap[field].Last - timestampUpdatesMap[field].First
 
+			logCtx := log.WithFields(log.Fields{"project_id": row.ProjectID})
+
+			// Add Page Event Properties to properties.
+			if row.EventProperties != nil {
+				pageProperties, err := U.DecodePostgresJsonbAsPropertiesMap(row.EventProperties)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed decode event properties into properties_map.")
+				} else {
+					for k, v := range *pageProperties {
+						properties[k] = v
+					}
+				}
+			}
+
 			trackPayload := &SDK.TrackPayload{
 				ProjectId:       row.ProjectID,
 				UserId:          row.UserId,
@@ -117,7 +131,7 @@ func FormFillProcessing() int {
 				EventProperties: properties,
 			}
 
-			logCtx := log.WithFields(log.Fields{"project_id": row.ProjectID, "payload": trackPayload})
+			logCtx = logCtx.WithField("payload", trackPayload)
 			errCode, _ := SDK.Track(row.ProjectID, trackPayload, false, SDK.SourceJSSDK, "")
 			if errCode != http.StatusOK {
 				logCtx.WithField("err_code", errCode).Error("Failed to track form fill.")
