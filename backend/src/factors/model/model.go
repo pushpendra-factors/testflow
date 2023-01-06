@@ -399,7 +399,7 @@ type Model interface {
 	DisableExplain(projectId int64) int
 	GetAllWeeklyInsightsEnabledProjects() ([]int64, error)
 	GetAllExplainEnabledProjects() ([]int64, error)
-	GetFormFillEnabledProjectIDs() ([]int64, error)
+	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
 	GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error)
 
 	// project

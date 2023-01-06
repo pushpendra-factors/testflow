@@ -28,14 +28,15 @@ func (store *MemSQL) CreateFormFillEventById(projectId int64, formFillPayload *m
 	}
 
 	formFill := model.FormFill{
-		ProjectID: projectId,
-		UserId:    formFillPayload.UserId,
-		FormId:    formFillPayload.FormId,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Id:        U.GetUUID(),
-		Value:     formFillPayload.Value,
-		FieldId:   formFillPayload.FieldId,
+		ProjectID:       projectId,
+		UserId:          formFillPayload.UserId,
+		FormId:          formFillPayload.FormId,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		Id:              U.GetUUID(),
+		Value:           formFillPayload.Value,
+		FieldId:         formFillPayload.FieldId,
+		EventProperties: formFillPayload.EventProperties,
 	}
 
 	if formFillPayload.UpdatedAt != nil {
@@ -96,15 +97,16 @@ func (store *MemSQL) GetFormFillEventsUpdatedBeforeTenMinutes(projectIds []int64
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	db := C.GetServices().Db
-	var result []model.FormFill
 	var updatedTime = U.TimeNowZ().Add(-time.Minute * 10)
-	err := db.Table("form_fills").Where("project_id IN (?) AND updated_at < ?", projectIds, updatedTime).Find(&result).Error
+	var formFills []model.FormFill
+
+	db := C.GetServices().Db
+	err := db.Table("form_fills").Where("project_id IN (?) AND updated_at < ?", projectIds, updatedTime).Find(&formFills).Error
 	if err != nil {
 		logCtx.WithFields(log.Fields{"project_ids": projectIds}).WithError(err).Error("fetching enabled project_id failed")
-		return result, err
+		return formFills, err
 	}
-	return result, nil
+	return formFills, nil
 }
 
 func (store *MemSQL) DeleteFormFillProcessedRecords(projectId int64, userId string, formId string, fieldId string) (int, error) {
