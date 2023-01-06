@@ -10,13 +10,17 @@ import {
   message,
   notification,
   Checkbox,
-  Modal,
-  Tabs
+  Modal
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { PlusOutlined } from '@ant-design/icons';
 import _ from 'lodash';
-import { createAlert, fetchAlerts, deleteAlert, editAlert } from 'Reducers/global';
+import {
+  createAlert,
+  fetchAlerts,
+  deleteAlert,
+  editAlert
+} from 'Reducers/global';
 import ConfirmationModal from 'Components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
 import { deleteGroupByForEvent } from 'Reducers/coreQuery/middleware';
@@ -28,6 +32,7 @@ import {
 } from 'Reducers/global';
 import SelectChannels from '../SelectChannels';
 import FAFilterSelect from 'Components/FaFilterSelect';
+import useAutoFocus from 'hooks/useAutoFocus';
 
 const { Option } = Select;
 
@@ -47,7 +52,7 @@ const KPIBasedAlert = ({
   enableSlackIntegration,
   viewAlertDetails,
   alertState,
-  setAlertState,
+  setAlertState
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -66,7 +71,7 @@ const KPIBasedAlert = ({
 
   const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
-
+  const inputComponentRef = useAutoFocus();
   const [form] = Form.useForm();
 
   // KPI SELECTION
@@ -146,7 +151,7 @@ const KPIBasedAlert = ({
       for (let key in obj) {
         if (obj[key].length > 0) {
           setViewSelectedChannels(obj[key]);
-          if(alertState.state === 'edit') {
+          if (alertState.state === 'edit') {
             setSaveSelectedChannel(obj[key]);
             setSelectedChannel(obj[key]);
           }
@@ -154,7 +159,7 @@ const KPIBasedAlert = ({
       }
     }
 
-    if(alertState.state === 'edit') {
+    if (alertState.state === 'edit') {
       setEmailEnabled(viewAlertDetails?.alert_configuration?.email_enabled);
       setSlackEnabled(viewAlertDetails?.alert_configuration?.slack_enabled);
     }
@@ -354,9 +359,7 @@ const KPIBasedAlert = ({
       }
     }
 
-    if (
-      (emails.length > 0 || Object.keys(slackChannels).length > 0)
-    ) {
+    if (emails.length > 0 || Object.keys(slackChannels).length > 0) {
       let payload = {
         alert_name: data?.alert_name,
         alert_configuration: {
@@ -388,8 +391,7 @@ const KPIBasedAlert = ({
       setLoading(false);
       notification.error({
         message: 'Error',
-        description:
-          'Please select atleast one delivery option to send alert.'
+        description: 'Please select atleast one delivery option to send alert.'
       });
     }
   };
@@ -578,7 +580,11 @@ const KPIBasedAlert = ({
                 className={'m-0'}
                 rules={[{ required: true, message: 'Please enter alert name' }]}
               >
-                <Input className={'fa-input'} placeholder={'Enter name'} />
+                <Input
+                  className={'fa-input'}
+                  placeholder={'Enter name'}
+                  ref={inputComponentRef}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -977,7 +983,11 @@ const KPIBasedAlert = ({
                 initialValue={viewAlertDetails?.alert_name}
                 rules={[{ required: true, message: 'Please enter alert name' }]}
               >
-                <Input className={'fa-input'} placeholder={'Enter name'} />
+                <Input
+                  className={'fa-input'}
+                  placeholder={'Enter name'}
+                  ref={inputComponentRef}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -1054,7 +1064,9 @@ const KPIBasedAlert = ({
               <Input
                 disabled={true}
                 className={'fa-input w-full'}
-                value={_.startCase(viewAlertDetails?.alert_description?.operator)}
+                value={_.startCase(
+                  viewAlertDetails?.alert_description?.operator
+                )}
               />
             </Col>
             <Col span={8} className={'ml-4 w-24'}>
@@ -1081,7 +1093,9 @@ const KPIBasedAlert = ({
               <Input
                 disabled={true}
                 className={'fa-input w-full'}
-                value={_.startCase(viewAlertDetails?.alert_description?.date_range)}
+                value={_.startCase(
+                  viewAlertDetails?.alert_description?.date_range
+                )}
               />
             </Col>
             {viewAlertDetails?.alert_description?.compared_to && (
@@ -1098,7 +1112,9 @@ const KPIBasedAlert = ({
                 <Input
                   disabled={true}
                   className={'fa-input w-full'}
-                  value={_.startCase(viewAlertDetails?.alert_description?.compared_to)}
+                  value={_.startCase(
+                    viewAlertDetails?.alert_description?.compared_to
+                  )}
                 />
               </Col>
             )}
@@ -1133,7 +1149,10 @@ const KPIBasedAlert = ({
           </Row>
           {emailEnabled && (
             <Row className={'mt-1'}>
-              <Form.List name='emails' initialValue={viewAlertDetails?.alert_configuration?.emails}>
+              <Form.List
+                name='emails'
+                initialValue={viewAlertDetails?.alert_configuration?.emails}
+              >
                 {(fields, { add, remove }) => (
                   <>
                     {fields.map((field, index) => (
@@ -1143,7 +1162,11 @@ const KPIBasedAlert = ({
                             <Col span={9}>
                               <Form.Item
                                 label={null}
-                                initialValue={viewAlertDetails?.alert_configuration?.emails[field.name]}
+                                initialValue={
+                                  viewAlertDetails?.alert_configuration?.emails[
+                                    field.name
+                                  ]
+                                }
                                 {...field}
                                 name={[field.name, 'email']}
                                 validateTrigger={['onChange', 'onBlur']}
@@ -1419,21 +1442,21 @@ const KPIBasedAlert = ({
             <Input
               disabled={true}
               className={'fa-input w-full'}
-            value={(viewAlertDetails?.alert_description?.operator).replace(
-              /_/g,
-              ' '
-            )}
-          />
-        </Col>
-        <Col span={8} className={'ml-4 w-24'}>
-          <Input
-            disabled={true}
-            className={'fa-input'}
-            type={'number'}
-            value={viewAlertDetails?.alert_description?.value}
-          />
-        </Col>
-      </Row>
+              value={(viewAlertDetails?.alert_description?.operator).replace(
+                /_/g,
+                ' '
+              )}
+            />
+          </Col>
+          <Col span={8} className={'ml-4 w-24'}>
+            <Input
+              disabled={true}
+              className={'fa-input'}
+              type={'number'}
+              value={viewAlertDetails?.alert_description?.value}
+            />
+          </Col>
+        </Row>
 
         <Row className={'mt-4'}>
           <Col span={8}>
@@ -1449,7 +1472,9 @@ const KPIBasedAlert = ({
             <Input
               disabled={true}
               className={'fa-input w-full'}
-              value={_.startCase(viewAlertDetails?.alert_description?.date_range)}
+              value={_.startCase(
+                viewAlertDetails?.alert_description?.date_range
+              )}
             />
           </Col>
           {viewAlertDetails?.alert_description?.compared_to && (
@@ -1466,7 +1491,9 @@ const KPIBasedAlert = ({
               <Input
                 disabled={true}
                 className={'fa-input w-full'}
-                value={_.startCase(viewAlertDetails?.alert_description?.compared_to)}
+                value={_.startCase(
+                  viewAlertDetails?.alert_description?.compared_to
+                )}
               />
             </Col>
           )}

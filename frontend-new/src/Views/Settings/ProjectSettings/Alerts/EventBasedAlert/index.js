@@ -14,7 +14,6 @@ import {
   Popover
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import _ from 'lodash';
 import {
   createEventAlert,
   fetchEventAlerts,
@@ -44,6 +43,7 @@ import {
 import { DefaultDateRangeFormat } from '../../../../CoreQuery/utils';
 import TextArea from 'antd/lib/input/TextArea';
 import EventGroupBlock from '../../../../../components/QueryComposer/EventGroupBlock';
+import useAutoFocus from 'hooks/useAutoFocus';
 
 const { Option } = Select;
 
@@ -82,6 +82,7 @@ const EventBasedAlert = ({
 
   const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
+  const inputComponentRef = useAutoFocus();
 
   const [form] = Form.useForm();
 
@@ -301,7 +302,7 @@ const EventBasedAlert = ({
       }
       return gbpReq;
     });
-  }
+  };
 
   const onReset = () => {
     setQueries([]);
@@ -332,12 +333,15 @@ const EventBasedAlert = ({
         message: data?.message,
         message_property:
           groupBy && groupBy.length && groupBy[0] && groupBy[0].property
-            ? getGroupByFromProperties(groupBy
-                .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-                .filter(
-                  (gbp) =>
-                    gbp.eventName === queries[0]?.label && gbp.eventIndex === 1
-                ))
+            ? getGroupByFromProperties(
+                groupBy
+                  .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+                  .filter(
+                    (gbp) =>
+                      gbp.eventName === queries[0]?.label &&
+                      gbp.eventIndex === 1
+                  )
+              )
             : [],
         alert_limit: alertLimit,
         repeat_alerts: notRepeat,
@@ -489,7 +493,11 @@ const EventBasedAlert = ({
                 className={'m-0'}
                 rules={[{ required: true, message: 'Please enter alert name' }]}
               >
-                <Input className={'fa-input'} placeholder={'Enter name'} />
+                <Input
+                  className={'fa-input'}
+                  placeholder={'Enter name'}
+                  ref={inputComponentRef}
+                />
               </Form.Item>
             </Col>
           </Row>
