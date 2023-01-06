@@ -18,8 +18,7 @@ export const getProfileAccounts = (projectId, payload) => (dispatch) => {
         const data = response.data.map((account) => ({
           identity: account.identity,
           account: { name: account.name, host: account?.host_name },
-          associated_contacts: account?.associated_contacts,
-          country: account.country,
+          table_props: account.table_props,
           last_activity: account.last_activity
         }));
         resolve(

@@ -1369,12 +1369,11 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *f
 	if cAlgoProps.Counting_version == 4 {
 		// put all events to be included into one single map
 		jb := cAlgoProps.Job
-		events_to_include_v2[jb.Start_event] = 1
-		events_to_include_v2[jb.End_event] = 1
-		for _, p := range jb.Events_included {
+		events_to_include_v2[jb.Query.StartEvent] = 1
+		events_to_include_v2[jb.Query.EndEvent] = 1
+		for _, p := range jb.Query.Rule.IncludedEvents {
 			events_to_include_v2[p] = 1
 		}
-
 	}
 
 	fileDir, fileName = (*cloudManager).GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId)
@@ -1840,7 +1839,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		cAlgoProps.Job = jb
 		mineLog.Info("before counting all:%v", cAlgoProps.Job)
 
-		time.Sleep(40 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
 
 	mineLog.Infof("job details :%v", cAlgoProps.Job)
@@ -3017,13 +3016,190 @@ func getToBeFilteredKeysInMetaData() map[string]bool {
 	return keys
 }
 
-func addIncludedEventsV2(jb *P.ExplainQueryV2, ec map[string]int) {
+func addIncludedEventsV2(jb *model.ExplainV2Query, ec map[string]int) {
 
-	if len(jb.Events_included) == 0 {
-		for k, _ := range ec {
-			jb.Events_included = append(jb.Events_included, k)
+	if len(jb.Query.Rule.IncludedEvents) == 0 {
+		for ename, _ := range ec {
+			jb.Query.Rule.IncludedEvents = append(jb.Query.Rule.IncludedEvents, ename)
 		}
 
 	}
 	mineLog.Infof("Recal top 50 properties :%v", jb)
+}
+
+func FilterEventsOnRule(ev P.CounterEventFormat, r model.ExplainV2Query, upCatg, epCatg map[string]string) bool {
+
+	var frule model.FactorsGoalRule = r.Query
+
+	ename := ev.EventName
+	if ename == frule.StartEvent {
+
+		if len(frule.Rule.StartEnEventFitler) > 0 {
+			if !checkProperties("StartEventEnFilter", ev, frule, upCatg, epCatg) {
+				return false
+			}
+		}
+
+		if len(frule.Rule.StartEnUserFitler) > 0 {
+			if !checkProperties("StartUserEnFilter", ev, frule, upCatg, epCatg) {
+				return false
+			}
+		}
+
+	} else if ename == frule.EndEvent {
+
+		if len(frule.Rule.EndEnEventFitler) > 0 {
+			if !checkProperties("EndEventEnFilter", ev, frule, upCatg, epCatg) {
+				return false
+			}
+		}
+
+		if len(frule.Rule.EndEnUserFitler) > 0 {
+			if !checkProperties("EndUserEnFilter", ev, frule, upCatg, epCatg) {
+				return false
+			}
+		}
+
+	}
+
+	for _, in_ename := range frule.Rule.IncludedEvents {
+
+		if ename == in_ename {
+
+			if len(frule.Rule.IncludedUserProperties) > 0 {
+				if !checkProperties("IncUserEnFilter", ev, frule, upCatg, epCatg) {
+					return false
+				}
+			}
+
+			if len(frule.Rule.IncludedEventProperties) > 0 {
+				if !checkProperties("IncEventEnFilter", ev, frule, upCatg, epCatg) {
+					return false
+				}
+			}
+
+		}
+
+	}
+
+	return true
+}
+
+func checkProperties(filterString string, ev P.CounterEventFormat, ru model.FactorsGoalRule, upCatg, epCatg map[string]string) bool {
+
+	upr := ev.UserProperties
+	epr := ev.EventProperties
+
+	if filterString == "StartUserEnFilter" {
+		st_us_ft := ru.Rule.StartEnUserFitler
+		num_filters := len(st_us_ft)
+		num_rules_matched := 0
+		for ukey, uval := range upr {
+			for _, fproperty := range st_us_ft {
+
+				if ukey == fproperty.Key {
+					if uval == fproperty.Value {
+						num_rules_matched += 1
+					}
+				}
+			}
+		}
+
+		if num_rules_matched != num_filters {
+			return false
+		}
+	} else if filterString == "StartEventEnFilter" {
+
+		st_ev_ft := ru.Rule.StartEnEventFitler
+		num_filters := len(st_ev_ft)
+		num_rules_matched := 0
+		for ukey, uval := range epr {
+			for _, fproperty := range st_ev_ft {
+
+				if ukey == fproperty.Key {
+					if uval == fproperty.Value {
+						num_rules_matched += 1
+					}
+				}
+			}
+		}
+
+		if num_rules_matched != num_filters {
+			return false
+		}
+
+	} else if filterString == "EndUserEnFilter" {
+
+		en_us_ft := ru.Rule.EndEnUserFitler
+		num_filters := len(en_us_ft)
+		num_rules_matched := 0
+		for ukey, uval := range upr {
+			for _, fproperty := range en_us_ft {
+				if ukey == fproperty.Key {
+					if uval == fproperty.Value {
+						num_rules_matched += 1
+					}
+				}
+			}
+		}
+
+		if num_rules_matched != num_filters {
+			return false
+		}
+	} else if filterString == "EndEventEnFilter" {
+
+		en_ev_ft := ru.Rule.EndEnEventFitler
+		num_filters := len(en_ev_ft)
+		num_rules_matched := 0
+		for ukey, uval := range upr {
+			for _, fproperty := range en_ev_ft {
+				if ukey == fproperty.Key {
+					if uval == fproperty.Value {
+						num_rules_matched += 1
+					}
+				}
+			}
+		}
+
+		if num_rules_matched != num_filters {
+			return false
+		}
+	} else if filterString == "IncEventFilter" {
+
+		in_ev_ft := ru.Rule.IncludedEventProperties
+		num_filters := len(in_ev_ft)
+		num_rules_matched := 0
+		for ukey, _ := range epr {
+			for _, fproperty := range in_ev_ft {
+				if ukey == fproperty {
+					num_rules_matched += 1
+				}
+			}
+		}
+
+		if num_rules_matched != num_filters {
+			return false
+		}
+
+	} else if filterString == "IncUserFilter" {
+
+		in_us_ft := ru.Rule.IncludedUserProperties
+		num_filters := len(in_us_ft)
+		num_rules_matched := 0
+		for ukey, _ := range epr {
+			for _, fproperty := range in_us_ft {
+				if ukey == fproperty {
+					num_rules_matched += 1
+				}
+			}
+		}
+
+		if num_rules_matched != num_filters {
+			return false
+		}
+
+	}
+
+	return true
+
 }

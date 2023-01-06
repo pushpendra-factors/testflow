@@ -12,7 +12,10 @@ import {
 } from 'Reducers/global';
 
 import AddDashboard from './AddDashboard';
-import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
+import {
+  ADD_DASHBOARD_MODAL_OPEN,
+  DASHBOARD_UNMOUNTED
+} from '../../reducers/types';
 import { FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
 import { setItemToLocalStorage } from '../../utils/localStorage.helpers';
 import { getDashboardDateRange } from './utils';
@@ -52,13 +55,14 @@ function Dashboard({
   );
   const queries = useSelector((state) => state.queries);
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
-  const activeProject = useSelector((state) => state.global.active_project); 
+  const activeProject = useSelector((state) => state.global.active_project);
   const { bingAds, marketo } = useSelector((state) => state.global);
   const dispatch = useDispatch();
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject?.id)
       .then((res) => {
+        console.log(res);
         setSdkCheck(res?.data?.int_completed);
       })
       .catch((err) => {
@@ -88,10 +92,12 @@ function Dashboard({
     marketo?.status ||
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
-    (integration?.int_client_six_signal_key || integration?.int_factors_six_signal_key) ||
+    integration?.int_client_six_signal_key ||
+    integration?.int_factors_six_signal_key ||
     integration?.int_rudderstack;
 
   const handleEditClick = useCallback((dashboard) => {
+    dispatch({ type: ADD_DASHBOARD_MODAL_OPEN });
     setaddDashboardModal(true);
     setEditDashboard(dashboard);
   }, []);
@@ -203,6 +209,7 @@ function Dashboard({
   }
 
   if (dashboards.data.length) {
+    8;
     return (
       <ErrorBoundary
         fallback={

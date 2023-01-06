@@ -66,16 +66,14 @@ function SortableCards({
     [activeDashboard?.id, activeProject.id, dispatch]
   );
 
-  const activeUnits = useMemo(
-    () =>
-      activeDashboardUnits.data.filter(
-        (elem) =>
-          savedQueries.findIndex(
-            (sq) => sq.id === elem.query_id && sq.query.cl !== QUERY_TYPE_WEB
-          ) > -1
-      ),
-    [activeDashboardUnits, savedQueries]
-  );
+  const activeUnits = useMemo(() => {
+    return activeDashboardUnits.data.filter(
+      (elem) =>
+        savedQueries.findIndex(
+          (sq) => sq.id === elem.query_id && sq.query.cl !== QUERY_TYPE_WEB
+        ) > -1
+    );
+  }, [activeDashboardUnits, savedQueries]);
 
   const webAnalyticsUnits = useMemo(
     () =>

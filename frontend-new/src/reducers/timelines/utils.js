@@ -73,7 +73,10 @@ export const formatUsersTimeline = (data, config) => {
   return returnData;
 };
 
-export const formatUserPropertiesToCheckList = (userProps, activeProp) => {
+export const formatUserPropertiesToCheckList = (
+  userProps,
+  activeProps = []
+) => {
   const userPropsWithEnableKey = userProps.map((userProp) => {
     const retObj = {
       display_name: userProp[0],
@@ -81,7 +84,7 @@ export const formatUserPropertiesToCheckList = (userProps, activeProp) => {
       type: userProp[2],
       enabled: false
     };
-    if (userProp[1] === activeProp) {
+    if (activeProps.includes(userProp[1])) {
       retObj.enabled = true;
     }
     return retObj;

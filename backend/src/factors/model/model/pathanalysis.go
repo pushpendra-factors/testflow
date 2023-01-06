@@ -15,6 +15,7 @@ const (
 	// Event type
 	STARTSWITH = "startswith"
 	ENDSWITH   = "endswith"
+	BuildLimit = 10
 )
 
 type PathAnalysis struct {
@@ -32,6 +33,7 @@ type PathAnalysis struct {
 type PathAnalysisQuery struct {
 	Title               string              `json:"title"`
 	EventType           string              `json:"event_type"`
+	Group 				string 				`json:"group"`
 	Event               PathAnalysisEvent   `json:"event"`
 	NumberOfSteps       int                 `json:"steps"`
 	IncludeEvents       []PathAnalysisEvent `json:"include_events"`

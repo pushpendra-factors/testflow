@@ -447,7 +447,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     factors6_signal_key text,
     int_client_six_signal_key boolean NOT NULL DEFAULT FALSE,
     int_factors_six_signal_key boolean NOT NULL DEFAULT FALSE,
-    integration_bits varchar(32) DEFAULT '00000000000000000000000000000000';
+    integration_bits varchar(32) DEFAULT '00000000000000000000000000000000',
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
@@ -930,6 +930,7 @@ CREATE TABLE IF NOT EXISTS alerts(
     alert_type int,
     alert_description json,
     alert_configuration json,
+    query_id bigint,
     last_alert_sent bool,
     last_run_time timestamp(6),
     created_at timestamp(6) NOT NULL,
@@ -1157,8 +1158,8 @@ CREATE TABLE IF NOT EXISTS pathanalysis(
     status TEXT,
     created_by TEXT,
     query JSON,
-    created_on timestamp(6) NOT NULL,
-    modified_on timestamp(6) NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
     is_deleted boolean NOT NULL DEFAULT FALSE,
     PRIMARY KEY (project_id, id),
     SHARD KEY(id)

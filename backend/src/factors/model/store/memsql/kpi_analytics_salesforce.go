@@ -121,7 +121,7 @@ func (store *MemSQL) GetPropertiesForSalesforceOpportunities(projectID int64, re
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricObjectType(model.SalesforceOpportunitiesDisplayCategory), 2500,
+	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricSectionDisplayCategory(model.SalesforceOpportunitiesDisplayCategory), 2500,
 		C.GetLookbackWindowForEventUserCache())
 	if status != http.StatusFound {
 		logCtx.Error("Failed to get salesforce opportunities properties. Internal error")
@@ -159,7 +159,7 @@ func (store *MemSQL) GetPropertiesForSalesforceAccounts(projectID int64, reqID s
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricObjectType(model.SalesforceAccountsDisplayCategory), 2500,
+	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricSectionDisplayCategory(model.SalesforceAccountsDisplayCategory), 2500,
 		C.GetLookbackWindowForEventUserCache())
 	if status != http.StatusFound {
 		logCtx.Error("Failed to get salesforce account properties. Internal error")

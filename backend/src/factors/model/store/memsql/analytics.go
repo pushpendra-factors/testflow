@@ -2307,7 +2307,7 @@ func getChannelGroupKeyIndexesForSlicing(cols []string) (int, int, error) {
 
 	index := 0
 	for _, col := range cols {
-		if strings.HasPrefix(col, "campaign_") || strings.HasPrefix(col, "ad_group_") || strings.HasPrefix(col, "keyword_") || col == "channel_" || strings.HasPrefix(col, "company_") {
+		if strings.HasPrefix(col, "campaign_") || strings.HasPrefix(col, "ad_group_") || strings.HasPrefix(col, "keyword_") || strings.HasPrefix(col, "channel_") || strings.HasPrefix(col, "company_") {
 			if start == -1 {
 				start = index
 			} else {
@@ -2330,4 +2330,43 @@ func getChannelGroupKeyIndexesForSlicing(cols []string) (int, int, error) {
 	end = end + 1
 
 	return start, end, nil
+}
+
+var (
+	conversionTimeRegex = regexp.MustCompile(`^(\d+)(D|H|M)$`)
+)
+
+func getConversionTimeJoinCondition(q model.Query, i int) (string, int) {
+	if !conversionTimeRegex.Match([]byte(q.ConversionTime)) {
+		log.WithFields(log.Fields{"query": q}).Error("Invalid conversion time on funnel query.")
+		return "", 0
+	}
+
+	if q.Timezone == "" {
+		log.WithFields(log.Fields{"query": q}).Error("Invalid timezone on funnel query conversion time.")
+		return "", 0
+	}
+
+	substrings := conversionTimeRegex.FindStringSubmatch(q.ConversionTime)
+	numStr, precision := substrings[1], substrings[2]
+	num, err := U.GetPropertyValueAsFloat64(numStr)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert conversion time to count. Continuing with 0.")
+	}
+
+	if precision == "D" {
+		// From current day(0) till nth day in timezone midnight
+		stmnt := fmt.Sprintf(" AND timestampdiff(DAY, DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', '%s')), "+
+			"DATE(CONVERT_TZ(FROM_UNIXTIME(step_%d_timestamp), 'UTC', '%s'))) <= ? ", q.Timezone, i, q.Timezone)
+		return stmnt, int(num)
+	}
+
+	if precision == "H" {
+		stmnt := fmt.Sprintf(" AND (step_%d_timestamp - step_0_timestamp)  <= ? ", i)
+		return stmnt, int(num * 3600)
+	}
+
+	stmnt := fmt.Sprintf(" AND (step_%d_timestamp - step_0_timestamp)  <= ? ", i)
+	return stmnt, int(num * 60)
+
 }

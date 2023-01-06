@@ -86,6 +86,7 @@ function HorizontalBarChart({
         shadow: false,
         borderRadius: 12,
         useHTML: true,
+        outside: true,
         formatter() {
           const self = this;
           const metricType = get(self.point, 'metricType', null);

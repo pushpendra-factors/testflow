@@ -6,15 +6,15 @@ import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
-import { setGroupBy, delGroupBy } from '../../../../../reducers/coreQuery/middleware';
+import { setGroupBy, delGroupBy } from 'Reducers/coreQuery/middleware';
 
 import FaSelect from 'Components/FaSelect';
-import GroupSelect2 from '../../../../../components/KPIComposer/GroupSelect2';
-import EventFilterWrapper from '../../../../../components/KPIComposer/EventFilterWrapper';
-import EventGroupBlock from '../../../../../components/KPIComposer/EventGroupBlock';
-import { QUERY_TYPE_FUNNEL } from '../../../../../utils/constants';
-import AliasModal from '../../../../../components/KPIComposer/AliasModal';
-import { getNormalizedKpi } from '../../../../../utils/kpiQueryComposer.helpers';
+import GroupSelect2 from 'Components/KPIComposer/GroupSelect2';
+import EventFilterWrapper from 'Components/KPIComposer/EventFilterWrapper';
+import EventGroupBlock from 'Components/KPIComposer/EventGroupBlock';
+import { QUERY_TYPE_FUNNEL } from 'Utils/constants';
+import AliasModal from 'Components/KPIComposer/AliasModal';
+import { getNormalizedKpi } from 'Utils/kpiQueryComposer.helpers';
 
 function QueryBlock({
   index,
@@ -256,11 +256,12 @@ function QueryBlock({
         <div className={`relative`}>
           <Button
             type='text'
-            style={{color: '#1E89FF'}}
+            style={{color: '#8692A3'}}
             onClick={() => setAdditionalactions(['Filter By', 'filter'])}
             className={`-ml-2`}
+            icon={<SVG name='plus' color='#8692A3' />}
           >
-            Add filter
+            Add a filter
           </Button>
 
           <AliasModal

@@ -45,7 +45,7 @@ function EventsAnalytics({
             arrayMapper={arrayMapper}
             durationObj={durationObj}
             section={section}
-            ref={renderedCompRef}
+            renderedCompRef={renderedCompRef}
           />
         );
       }

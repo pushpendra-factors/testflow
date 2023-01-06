@@ -13,7 +13,8 @@
       "Views/*": ["./src/Views/*"],
       "Attribution/*": ["./src/features/attribution/*"],
       "Context/*": ["./src/contexts/*"],
-      "Constants/*": ["./src/constants"]
+      "Constants/*": ["./src/constants"],
+      "Routes/*": ["./src/routes"]
     }
   },
   "exclude": ["node_modules", "dist"]

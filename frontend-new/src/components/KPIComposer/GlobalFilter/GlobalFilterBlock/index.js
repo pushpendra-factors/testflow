@@ -75,8 +75,7 @@ function GlobalFilterBlock({
         let filterData = {}; 
         if (selectedMainCategory?.category == 'channels' || selectedMainCategory?.category == 'custom_channels') {
           filterData = {
-            category: selectedMainCategory?.category,
-            // object_type: filter?.extra[3],
+            category: selectedMainCategory?.category, 
             object_type: filter?.extra[3] ? filter?.extra[3] : selectedMainCategory?.group,
             property_name: filter?.extra[1],
             display_category: selectedMainCategory?.group,
@@ -85,7 +84,8 @@ function GlobalFilterBlock({
         } else {
           filterData = {
             category: selectedMainCategory?.category,
-            object_type: selectedMainCategory?.group,
+            object_type: selectedMainCategory?.group, // depreciated! object_type to display_category key change
+            display_category: selectedMainCategory?.group, // object_type to display_category key change
             property_name: filter?.extra[1],
             entity: filter?.extra[3] ? filter?.extra[3] : filter?.extra[2],
           };
@@ -593,7 +593,8 @@ function GlobalFilterBlock({
       } else {
         filterData = {
           category: selectedMainCategory?.category,
-          object_type: selectedMainCategory?.group,
+          object_type: selectedMainCategory?.group, // depreciated! object_type to display_category key change
+          display_category: selectedMainCategory?.group, // object_type to display_category key change
           property_name: props[1],
           entity: props[3] ? props[3] : props[2],
         };

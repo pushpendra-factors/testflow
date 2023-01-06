@@ -924,11 +924,18 @@ func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int,
 	}
 
 	var stepsJoinStmnt string
+	var conversionTimeParams []interface{}
 	for i, fs := range funnelSteps {
 		if i > 0 {
 			// builds "LEFT JOIN step2 on step0_users.coal_user_id=step_0_step_1_users.coal_user_id"
 			stepsJoinStmnt = appendStatement(stepsJoinStmnt,
 				fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id=%s.coal_user_id", fs, funnelSteps[i-1], fs))
+
+			if q.ConversionTime != "" {
+				conversionTimeJoinConditionStmnt, conversionTimeParam := getConversionTimeJoinCondition(q, i)
+				stepsJoinStmnt = appendStatement(stepsJoinStmnt, conversionTimeJoinConditionStmnt)
+				conversionTimeParams = append(conversionTimeParams, conversionTimeParam)
+			}
 		}
 	}
 
@@ -962,6 +969,7 @@ func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int,
 		" " + propertiesJoinStmnt + " " + stepsJoinStmnt
 	qStmnt = joinWithComma(qStmnt, as(stepFunnelName, funnelStmnt))
 	qParams = append(qParams, ugParams...)
+	qParams = append(qParams, conversionTimeParams...)
 
 	var aggregateSelectKeys, aggregateFromName, aggregateGroupBys, aggregateOrderBys string
 	aggregateFromName = stepFunnelName
@@ -1288,6 +1296,7 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 	}
 
 	var stepsJoinStmnt string
+	var conversionTimeParams []interface{}
 	for i, fs := range funnelSteps {
 		if i > 0 {
 			if isFunnelGroupQuery {
@@ -1299,6 +1308,11 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 					fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id=%s.coal_user_id", fs, funnelSteps[i-1], fs))
 			}
 
+			if q.ConversionTime != "" {
+				conversionTimeJoinConditionStmnt, conversionTimeParam := getConversionTimeJoinCondition(q, i)
+				stepsJoinStmnt = appendStatement(stepsJoinStmnt, conversionTimeJoinConditionStmnt)
+				conversionTimeParams = append(conversionTimeParams, conversionTimeParam)
+			}
 		}
 	}
 
@@ -1345,6 +1359,7 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 		" " + propertiesJoinStmnt + " " + stepsJoinStmnt
 	qStmnt = joinWithComma(qStmnt, as(stepFunnelName, funnelStmnt))
 	qParams = append(qParams, ugParams...)
+	qParams = append(qParams, conversionTimeParams...)
 
 	var aggregateSelectKeys, aggregateFromName, aggregateGroupBys, aggregateOrderBys string
 	aggregateFromName = stepFunnelName

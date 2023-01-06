@@ -203,10 +203,10 @@ func GetUserPropertiesHandler(c *gin.Context) {
 			}
 			dupCheck[name] = true
 		}
-		c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp})
+		c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp, "disabled_event_user_properties": U.DISABLED_EVENT_USER_PROPERTIES})
 		return
 	}
-	c.JSON(http.StatusOK, properties)
+	c.JSON(http.StatusOK, gin.H{"properties": properties, "disabled_event_user_properties": U.DISABLED_EVENT_USER_PROPERTIES})
 }
 
 //GetUserPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/user_properties/$country

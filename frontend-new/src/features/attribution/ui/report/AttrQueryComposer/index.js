@@ -6,6 +6,7 @@ import { SVG, Text } from 'Components/factorsComponents';
 import ConversionGoalBlock from './ConversionGoalBlock';
 import FaDatepicker from 'Components/FaDatepicker';
 import ComposerBlock from 'Components/QueryCommons/ComposerBlock';
+import GlobalFilterBlock from 'Components/KPIComposer/GlobalFilter/GlobalFilterBlock';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { INITIALIZE_GROUPBY } from 'Reducers/coreQuery/actions';
 import FaSelect from 'Components/FaSelect';
@@ -58,6 +59,7 @@ const AttrQueryComposer = ({
   const [convGblockOpen, setConvGblockOpen] = useState(true);
   const [tchPointblockOpen, setTchPointblockOpen] = useState(true);
   const [criteriablockOpen, setCriteriablockOpen] = useState(true);
+  const [filterResultsOpen, setFilterResultsOpen] = useState(true);
   const [isGroupDDVisible, setGroupDDVisible] = useState(false);
 
   const { attrQueries } = useSelector((state) => state.attributionDashboard);
@@ -349,6 +351,18 @@ const AttrQueryComposer = ({
     setGroupDDVisible(true);
   };
 
+  const renderFilterResults = () => {
+    return (
+      <GlobalFilterBlock
+        queries={queries}
+        queryOptions={queryOptions}
+        activeProject={activeProject}
+        selectedMainCategory={eventGoal[0]}
+        setQueryOptions={setQueryOptions}
+      />
+    )
+  }
+
   const renderGroupSection = () => {
     try {
       return (
@@ -393,9 +407,9 @@ const AttrQueryComposer = ({
   try {
     return (
       <div className={`${styles.composer}`}>
-        {renderGroupSection()}
+        {/*renderGroupSection()*/}
         <ComposerBlock
-          blockTitle={'CONVERSION GOAL'}
+          blockTitle={'CONVERSION GOALS'}
           isOpen={convGblockOpen}
           showIcon={true}
           onClick={() => setConvGblockOpen(!convGblockOpen)}
@@ -405,20 +419,16 @@ const AttrQueryComposer = ({
         </ComposerBlock>
 
         {eventGoal?.label?.length || queries.length ? (
-          <ComposerBlock
-            blockTitle={'MARKETING TOUCHPOINTS'}
-            isOpen={tchPointblockOpen}
-            showIcon={true}
-            onClick={() => setTchPointblockOpen(!tchPointblockOpen)}
-            extraClass={`no-padding-l no-padding-r`}
+          <div
+            className={`no-padding-l no-padding-r`}
           >
             {renderMarkTouchpointBlock()}
-          </ComposerBlock>
+          </div>
         ) : null}
 
         {eventGoal?.label?.length || queries.length ? (
           <ComposerBlock
-            blockTitle={'CRITERIA'}
+            blockTitle={'Attribution Model'}
             isOpen={criteriablockOpen}
             showIcon={true}
             onClick={() => setCriteriablockOpen(!criteriablockOpen)}
@@ -428,17 +438,18 @@ const AttrQueryComposer = ({
           </ComposerBlock>
         ) : null}
 
-        {eventGoal?.label?.length && (
+      {eventGoal?.label?.length || queries.length ? (
           <ComposerBlock
-            blockTitle={'LINKED EVENTS'}
-            isOpen={linkEvExpansion}
+            blockTitle={'Filter Results'}
+            isOpen={criteriablockOpen}
             showIcon={true}
-            onClick={() => toggleLinkEvExpansion()}
+            onClick={() => setFilterResultsOpen(!filterResultsOpen)}
             extraClass={`no-padding-l no-padding-r`}
           >
-            {linkEvExpansion && models.length <= 1 && renderLinkedEvents()}
+            {renderFilterResults()}
           </ComposerBlock>
-        )}
+        ) : null}
+
 
         {eventGoal?.label?.length || queries.length ? footer() : null}
       </div>

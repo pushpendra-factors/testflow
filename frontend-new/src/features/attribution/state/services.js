@@ -11,22 +11,67 @@ import {
   setAttributionDashboardUnitsLoaded,
   setAttributionDashboardUnitsFailed,
   initializeContentGroups,
-  initializeTouchPointDimensions
+  initializeTouchPointDimensions,
+  setAttributionDashboardLoading,
+  setAttributionDashboardFailed,
+  setAttributionDashboardLoaded,
+  setAttributionQueriesLoading,
+  setAttributionQueriesLoaded,
+  setAttributionQueriesFailed
 } from './actions';
 const host = getHostUrl();
 
 export const fetchAttributionActiveUnits = (projectId, activeDashboardId) =>
   async function (dispatch) {
     try {
-      dispatch(setAttributionDashboardUnitsLoading);
+      dispatch(setAttributionDashboardUnitsLoading());
       const url = `${host}projects/${projectId}/dashboards/${activeDashboardId}/units`;
       const res = await get(null, url);
       dispatch(setAttributionDashboardUnitsLoaded(res?.data));
     } catch (err) {
-      console.log(err);
+      console.error('Error in fetch', err);
       dispatch(setAttributionDashboardUnitsFailed());
     }
   };
+
+export const fetchAttributionDashboard = (projectId) => {
+  return async function (dispatch) {
+    try {
+      dispatch(setAttributionDashboardLoading());
+      const url = `${host}projects/${projectId}/v1/attribution/dashboards`;
+      const res = await get(null, url);
+      dispatch(setAttributionDashboardLoaded(res?.data));
+    } catch (error) {
+      console.error('Error in fetch', error);
+      dispatch(setAttributionDashboardFailed());
+    }
+  };
+};
+
+export const fetchAttributionQueries = (projectId) => {
+  return async function (dispatch) {
+    try {
+      dispatch(setAttributionQueriesLoading());
+      const url = `${host}projects/${projectId}/v1/attribution/queries`;
+      const res = await get(null, url);
+      dispatch(setAttributionQueriesLoaded(res?.data || []));
+    } catch (error) {
+      console.error('Error in fetch', error);
+      dispatch(setAttributionQueriesFailed());
+    }
+  };
+};
+
+export const saveAttributionQuery = (
+  projectId,
+  title,
+  query,
+  type,
+  settings
+) => {
+  const url = `${host}projects/${projectId}/v1/attribution/queries`;
+  return post(null, url, { query, title, type, settings });
+};
 
 export const getEventNames = (dispatch, projectId) =>
   get(

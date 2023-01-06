@@ -1,10 +1,15 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Switch, Route, useRouteMatch } from 'react-router-dom';
 import { ErrorBoundary } from 'react-error-boundary';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 
 import lazyWithRetry from 'Utils/lazyWithRetry';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchAttributionActiveUnits,
+  fetchAttributionDashboard
+} from 'Attribution/state/services';
 
 const BaseComponent = lazyWithRetry(() => import('./baseComponent'));
 
@@ -13,6 +18,23 @@ const Reports = lazyWithRetry(() => import('./reports'));
 
 function Attribution() {
   const { path } = useRouteMatch();
+  const dispatch = useDispatch();
+
+  const { dashboard } = useSelector((state) => state.attributionDashboard);
+  const { active_project: activeProject } = useSelector(
+    (state) => state.global
+  );
+  useEffect(() => {
+    if (activeProject?.id) {
+      dispatch(fetchAttributionDashboard(activeProject.id));
+    }
+  }, [activeProject?.id]);
+
+  useEffect(() => {
+    if (dashboard?.id && activeProject?.id) {
+      dispatch(fetchAttributionActiveUnits(activeProject.id, dashboard.id));
+    }
+  }, [dashboard, activeProject?.id]);
   return (
     <ErrorBoundary
       fallback={

@@ -1,4 +1,4 @@
-import React, { useEffect, memo, useState } from 'react';
+import React, { useEffect, memo, useState, useContext } from 'react';
 import _ from 'lodash';
 import { Button, Tabs } from 'antd';
 import { useSelector } from 'react-redux';
@@ -11,6 +11,7 @@ import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 
 import FaSelect from 'Components/FaSelect';
 import styles from './index.module.scss';
+import { CoreQueryContext } from 'Context/CoreQueryContext';
 const { TabPane } = Tabs;
 
 function AttributionHeader({
@@ -41,9 +42,9 @@ function AttributionHeader({
   }, []);
 
   const history = useHistory();
-  //   const {
-  //     coreQueryState: { navigatedFromDashboard }
-  //   } = useContext(CoreQueryContext);
+  const {
+    coreQueryState: { navigatedFromDashboard }
+  } = useContext(CoreQueryContext);
   const { metadata } = useSelector((state) => state.insights);
   const { active_insight: activeInsight } = useSelector(
     (state) => state.insights
@@ -71,7 +72,14 @@ function AttributionHeader({
   }, []);
 
   const handleCloseButton = () => {
-    history.push(ATTRIBUTION_ROUTES.reports);
+    if (navigatedFromDashboard?.id) {
+      history.push({
+        pathname: ATTRIBUTION_ROUTES.reports,
+        state: { dashboardWidgetId: navigatedFromDashboard.id }
+      });
+    } else {
+      history.push(ATTRIBUTION_ROUTES.reports);
+    }
   };
 
   const renderReportTitle = () => (
@@ -87,11 +95,9 @@ function AttributionHeader({
   );
 
   const renderReportCloseIcon = () => (
-    <Button
-      size='large'
-      type='default'
-      onClick={handleCloseButton}
-    >Close</Button>
+    <Button size='large' type='default' onClick={handleCloseButton}>
+      Close
+    </Button>
   );
 
   const renderLogo = () => (
@@ -137,11 +143,22 @@ function AttributionHeader({
       </div>
     );
   };
+
+  let handleIntercomHelp = () => {
+    const w = window;
+    const ic = w.Intercom;
+    if (typeof ic === 'function') {
+      setHideIntercomState(!hideIntercomState);
+      ic('update', { hide_default_launcher: !hideIntercomState });
+      ic(!hideIntercomState === true ? 'hide' : 'show');
+    }
+  };
   const setActions = (opt) => {
     if (opt[1] === 'help_doc') {
       window.open('https://help.factors.ai/', '_blank');
+    } else if (opt[1] === 'intercom_help') {
+      handleIntercomHelp();
     }
-    setOptions(false);
   };
   const getHelpMenu = () => {
     return helpMenu === false ? (
@@ -174,7 +191,6 @@ function AttributionHeader({
         </div>
 
         <div className='flex items-center'>
-          <div className='pr-2'>{renderSaveQueryComp()}</div>
           {isFromAnalysisPage ? (
             <div className='pr-2 '>
               <div className='relative'>
@@ -189,7 +205,8 @@ function AttributionHeader({
             </div>
           ) : (
             ''
-          )}
+            )}
+          <div className='pr-2'>{renderSaveQueryComp()}</div>
           {renderReportCloseIcon()}
         </div>
       </div>

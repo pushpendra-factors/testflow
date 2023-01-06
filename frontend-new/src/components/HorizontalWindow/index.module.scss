@@ -1,0 +1,61 @@
+.horizontalWindow {
+  background-color: #f5f6f8;
+  .horizontalWindowTitle {
+    text-align: center;
+    padding: 20px;
+  }
+  & > .horizontalWindowBody {
+    display: flex;
+    flex-wrap: nowrap;
+    padding: 0 24px 0 24px;
+  }
+  .controls {
+    display: grid;
+    place-content: center;
+    padding: 10px;
+
+    & > button {
+      background-color: transparent;
+    }
+    & > button:hover {
+      background-color: #dedede;
+    }
+  }
+
+  .contentWindow {
+    border-radius: 5px;
+    &::-webkit-scrollbar {
+      background: transparent; /* Chrome/Safari/Webkit */
+      width: 0px;
+    }
+
+    & div {
+      width: 100%;
+      display: inherit;
+      text-align: center;
+    }
+
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: scroll;
+    width: 100%;
+    scroll-behavior: smooth;
+
+    .windowItem,
+    .windowItem > div {
+      text-align: center;
+      width: 250px;
+    }
+    .windowItem {
+      margin: 0 20px 0 20px;
+      cursor: pointer;
+      // border: 1px solid black;
+      & > img {
+        transition-duration: 0.2s;
+      }
+      & > img:hover {
+        box-shadow: 0 0 10px #dedede;
+      }
+    }
+  }
+}

@@ -181,19 +181,19 @@ func (store *MemSQL) AddIntegrationStatusByProjectId(project_id int64, integrati
 	if err := db.Create(dataAvailability).Error; err != nil {
 		if IsDuplicateRecordError(err) {
 			updateValues := make(map[string]interface{})
-			updateValues["integration"] = integration
 			updateValues["latest_data_timestamp"] = latest_data
 			updateValues["source"] = source
 			updateValues["last_polled"] = U.TimeNowZ()
-			err := db.Model(&model.DataAvailability{}).Where("project_id = ?", project_id).Update(updateValues).Error
+			err := db.Model(&model.DataAvailability{}).Where("project_id = ? AND integration=?", project_id, integration).Update(updateValues).Error
 			if err != nil {
-				log.WithError(err).Error("Failed to create integration status")
+				log.WithError(err).Error("Failed to update integration status")
 				return http.StatusInternalServerError
 			}
+		} else {
+			log.WithFields(log.Fields{"dataavailability": dataAvailability,
+				"project_id": project_id}).WithError(err).Error("Failed to create integration status")
+			return http.StatusInternalServerError
 		}
-		log.WithFields(log.Fields{"dataavailability": dataAvailability,
-			"project_id": project_id}).WithError(err).Error("Failed to create integration status")
-		return http.StatusInternalServerError
 	}
 	return http.StatusOK
 }

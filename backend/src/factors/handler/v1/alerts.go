@@ -49,6 +49,39 @@ func CreateAlertHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	return alert, http.StatusCreated, "", "", false
 }
 
+func EditAlertHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		log.Error("Failed to update alert, ProjectId parse failed.")
+		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
+	}
+	alertID := c.Param("id")
+	if alertID == "" {
+		log.Error("Failed to update alert. failed to parse id")
+		return nil, http.StatusBadRequest, INVALID_INPUT, "ID parse failed", true
+	}
+	var editAlertPayload model.Alert
+	decoder := json.NewDecoder(c.Request.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&editAlertPayload); err != nil {
+		log.WithError(err).Error("Failed to decode Json request on update alert handler.")
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Failed to decode Json request on udpate alert handler.", true
+	}
+	editAlertPayload.CreatedBy = U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	alert, errCode, errMsg := store.GetStore().UpdateAlert(projectID, alertID, editAlertPayload)
+	if errCode != http.StatusAccepted {
+		log.WithFields(log.Fields{"document": alert, "err-message": errMsg}).Error("Failed to insertalert on create create alert handler.")
+		return nil, errCode, PROCESSING_FAILED, errMsg, true
+	}
+
+	alert, errCode = store.GetStore().GetAlertById(alertID, projectID)
+	if errCode != http.StatusFound {
+		return nil, errCode, PROCESSING_FAILED, "Failed to get updated alert", true
+	}
+	return alert, http.StatusOK, "", "", false
+
+}
 func GetAlertsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {

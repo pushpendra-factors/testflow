@@ -6,7 +6,6 @@ import { SPARK_LINE_CHART_TITLE_CHAR_COUNT } from '../../constants/charts.consta
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 import LegendsCircle from '../../styles/components/LegendsCircle';
 import ControlledComponent from '../ControlledComponent/ControlledComponent';
-import styles from "./index.module.scss";
 
 function ChartHeader({
   total,
@@ -34,7 +33,12 @@ function ChartHeader({
       <Tooltip title={headerTitle}>
         <div className={'flex items-center col-gap-1 justify-center w-full'}>
           <LegendsCircle color={bgColor} />
-          <Text color="grey-8" type="title" level={7}  className={styles.eventText}>
+          <Text
+            color='grey-8'
+            type='title'
+            level={7}
+            extraClass='text-with-no-margin'
+          >
             {headerTitle.length > SPARK_LINE_CHART_TITLE_CHAR_COUNT
               ? headerTitle.slice(0, SPARK_LINE_CHART_TITLE_CHAR_COUNT) + '...'
               : headerTitle}
@@ -43,7 +47,13 @@ function ChartHeader({
       </Tooltip>
 
       <ControlledComponent controller={!smallFont}>
-        <Text weight="bold" type="title" level={2} color="grey-2">
+        <Text
+          weight='bold'
+          type='title'
+          level={2}
+          extraClass='text-with-no-margin'
+          color='grey-2'
+        >
           {metricType ? (
             getFormattedKpiValue({ value: total, metricType })
           ) : (
@@ -53,7 +63,13 @@ function ChartHeader({
       </ControlledComponent>
 
       <ControlledComponent controller={smallFont}>
-        <Text weight="bold" type="title" level={3} color="grey-2">
+        <Text
+          weight='bold'
+          type='title'
+          level={3}
+          extraClass='text-with-no-margin'
+          color='grey-2'
+        >
           {metricType ? (
             getFormattedKpiValue({ value: total, metricType })
           ) : (
@@ -63,18 +79,24 @@ function ChartHeader({
       </ControlledComponent>
 
       {comparisonApplied && (
-        <div className="flex flex-col row-gap-1 items-center">
-          <div className="flex col-gap-1 items-center">
+        <div className='flex flex-col row-gap-1 items-center'>
+          <div className='flex col-gap-1 items-center'>
             {changeIcon}
             <Text
               level={7}
-              type="title"
+              type='title'
               color={percentChange < 0 ? 'red' : 'green'}
+              extraClass='text-with-no-margin'
             >
               <NumFormat number={Math.abs(percentChange)} />%
             </Text>
           </div>
-          <Text type="title" level={8} color="grey">
+          <Text
+            type='title'
+            level={8}
+            color='grey'
+            extraClass='text-with-no-margin'
+          >
             {metricType ? (
               getFormattedKpiValue({ value: compareTotal, metricType })
             ) : (

@@ -547,7 +547,8 @@ function GlobalFilterBlock({
     if (props) {
       let filterData = {
         category: 'events',
-        object_type: props[2],
+        object_type: props[2], // depreciated! object_type to display_category key change
+        display_category: props[2], // object_type to display_category key change
         property_name: props[1],
         entity: props[3],
       };

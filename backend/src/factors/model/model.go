@@ -140,8 +140,6 @@ type Model interface {
 	// Custom Metrics
 	CreateCustomMetric(customMetric model.CustomMetric) (*model.CustomMetric, string, int)
 	GetCustomMetricsByProjectId(projectID int64) ([]model.CustomMetric, string, int)
-	GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID int64, queryType int, objectType string) ([]model.CustomMetric, string, int)
-	GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string
 	GetKpiRelatedCustomMetricsByName(projectID int64, name string) (model.CustomMetric, string, int)
 	GetProfileCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
 	GetDerivedCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
@@ -151,7 +149,6 @@ type Model interface {
 	GetDerivedKPIsHavingNameInInternalQueries(projectID int64, customMetricName string) []string
 	GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
 	GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
-	GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string
 	GetCustomEventAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
 
 	//templates
@@ -475,6 +472,8 @@ type Model interface {
 	GetLatestSalesforceDocumentByID(projectID int64, documentIDs []string, docType int, maxTimestamp int64) ([]model.SalesforceDocument, int)
 	GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID int64) (map[int]int64, int64, int)
 	GetSalesforceDocumentByType(projectID int64, docType int, from, to int64) ([]model.SalesforceDocument, int)
+	IsExistSalesforceDocumentByIds(projectID int64, ids []string, docType int) (map[string]bool, int)
+	GetSalesforceDocumentByTypeAndAction(projectID int64, id string, docType int, action model.SalesforceAction) (*model.SalesforceDocument, int)
 
 	// scheduled_task
 	CreateScheduledTask(task *model.ScheduledTask) int
@@ -699,7 +698,8 @@ type Model interface {
 	DeleteAlert(id string, projectID int64) (int, string)
 	CreateAlert(projectID int64, alert model.Alert) (model.Alert, int, string)
 	GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOfQuery string) ([]string, int)
-	UpdateAlert(lastAlertSent bool) (int, string)
+	UpdateAlertStatus(lastAlertSent bool) (int, string)
+	UpdateAlert(projectID int64, alertID string, alert model.Alert) (model.Alert, int, string)
 
 	// sharable url
 	CreateShareableURL(sharableURLParams *model.ShareableURL) (*model.ShareableURL, int)
@@ -759,7 +759,8 @@ type Model interface {
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
-	GetFilteredLeftPanePropWithValue(projectID int64, profileType string, properties *map[string]interface{}) map[string]interface{}
+	GetLeftPaneProperties(projectID int64, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{}
+	FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType string) ([]model.Profile, error)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)

@@ -15,27 +15,34 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type ExplainV2QueryReq struct {
+	Title          string                `json:"name"`
+	Query          CreateGoalInputParams `json:"rule"`
+	StartTimestamp int64                 `json:"sts"`
+	EndTimestamp   int64                 `json:"ets"`
+}
+
 func GetExplainV2EntityHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusForbidden, "", "Get Explain V2 enitity failed. Invalid project.", true
 	}
-	entity, errCode := store.GetStore().GetAllExplainV2EntityByProject(projectID)
+	goals, errCode := store.GetStore().GetAllExplainV2EntityByProject(projectID)
 	if errCode != http.StatusFound {
 		return nil, errCode, "", "Get Saved Queries failed.", true
 	}
 
-	return entity, http.StatusOK, "", "", false
+	return goals, http.StatusOK, "", "", false
 }
 
-func GetModelIdforJob(projectId int64, job_id string) (uint64, int) {
+func GetEntityforJob(projectId int64, job_id string) (model.ExplainV2, int) {
 
 	entity, errCode := store.GetStore().GetExplainV2Entity(projectId, job_id)
 	if errCode != http.StatusFound {
-		return 0, errCode
+		return model.ExplainV2{}, errCode
 	}
 	log.Info("Got job id :%s, model_id: %d, entity:%v :%d", job_id, entity.ModelID, entity, errCode)
-	return entity.ModelID, errCode
+	return entity, errCode
 
 }
 
@@ -59,13 +66,14 @@ func GetFactorsHandlerV2(c *gin.Context) {
 
 	jobId := c.Query("job_id")
 
-	model_id, errInt := GetModelIdforJob(projectId, jobId)
+	entity, errInt := GetEntityforJob(projectId, jobId)
 	if errInt != http.StatusFound {
 
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
+	model_id := entity.ModelID
 	log.Infof("inside get factors handler project id :%d : model_id:%d", projectId, model_id)
 	patternMode := c.Query("pattern_mode")
 	if model_id == 0 {
@@ -234,10 +242,20 @@ func PostFactorsHandlerV2(c *gin.Context) {
 
 	modelId := uint64(0)
 	jobId := c.Query("job_id")
+	var err error
 
-	modelId, errInt := GetModelIdforJob(projectId, jobId)
+	entity, errInt := GetEntityforJob(projectId, jobId)
 	if errInt != http.StatusFound {
 		log.Errorf(" err integer :%d", errInt)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	modelId = entity.ModelID
+
+	var entityv2 model.ExplainV2Query
+	err = U.DecodePostgresJsonbToStructType(entity.ExplainV2Query, &entityv2)
+	if err != nil {
+		log.Errorf("Unable to create goal params")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -245,7 +263,6 @@ func PostFactorsHandlerV2(c *gin.Context) {
 	patternMode := c.Query("pattern_mode")
 	propertyName := c.Query("debug_property_name")
 	propertyValue := c.Query("debug_property_value")
-	var err error
 	inputType := c.Query("type")
 
 	ipParams, err := GetcreateFactorsGoalParams(c)
@@ -256,7 +273,7 @@ func PostFactorsHandlerV2(c *gin.Context) {
 	}
 
 	params, in_en, in_epr, in_upr := MapRule(ipParams.Rule)
-	ps, err := PW.NewPatternServiceWrapperV2("", projectId, modelId)
+	ps, err := PW.NewPatternServiceWrapperV2(reqID, projectId, modelId)
 	if err != nil {
 		logCtx.WithError(err).Error("Pattern Service initialization failed.")
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -268,7 +285,7 @@ func PostFactorsHandlerV2(c *gin.Context) {
 	startConstraints, endConstraints := parseConstraints(params.Rule)
 	if patternMode == "AllPatterns" {
 		allEventPatterns := make([]string, 0)
-		allPatterns, _ := ps.GetAllPatterns("", params.StartEvent, params.EndEvent)
+		allPatterns, _ := ps.GetAllPatterns(reqID, params.StartEvent, params.EndEvent)
 		for _, eventPattern := range allPatterns {
 			pattern := fmt.Sprintf("%v", eventPattern.PerUserCount)
 			for _, eventName := range eventPattern.EventNames {
@@ -317,12 +334,22 @@ func PostFactorsHandlerV2(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	} else {
+		var ex PW.ExplainV2Goals
 		if patternMode != "" {
 			c.JSON(http.StatusOK, debugData)
 		}
 		results.Type = inputType
 		results.GoalRule = params
-		c.JSON(http.StatusOK, results)
+		ex.GoalRule = results.GoalRule
+		ex.Insights = results.Insights
+		ex.GoalUserCount = results.GoalUserCount
+		ex.OverallPercentage = results.OverallPercentage
+		ex.OverallMultiplier = results.OverallMultiplier
+		ex.Type = results.Type
+		ex.StartTimestamp = entityv2.StartTimestamp
+		ex.EndTimestamp = entityv2.EndTimestamp
+
+		c.JSON(http.StatusOK, ex)
 		return
 
 	}
@@ -338,7 +365,7 @@ func CreateExplainV2EntityHandler(c *gin.Context) (interface{}, int, string, str
 	}
 	log.Info("Create function handler triggered.")
 
-	var entity model.ExplainV2Query
+	var entity ExplainV2QueryReq
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&entity); err != nil {
@@ -347,16 +374,21 @@ func CreateExplainV2EntityHandler(c *gin.Context) (interface{}, int, string, str
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 
-	// if len(entity.IncludeEvents) != 0 && len(entity.ExcludeEvents) != 0 {
-	// 	return nil, http.StatusBadRequest, PROCESSING_FAILED, "Provide either IncludeEvents or ExcludeEvents", true
-	// }
+	rule, _, _, _ := MapRule(entity.Query)
 
-	// err := BeforeCreate(projectID)
-	// if err != http.StatusOK {
-	// 	return nil, http.StatusBadRequest, PROCESSING_FAILED, "Build limit reached for creating pathanalysis", true
-	// }
+	query_json, err := json.Marshal(entity.Query)
+	if err != nil {
+		return nil, http.StatusBadRequest, "Unable to create json", "", true
+	}
 
-	_, errCode, errMsg := store.GetStore().CreateExplainV2Entity(userID, projectID, &entity)
+	var explainV2Entity model.ExplainV2Query
+	explainV2Entity.Title = entity.Title
+	explainV2Entity.Query = rule
+	explainV2Entity.StartTimestamp = entity.StartTimestamp
+	explainV2Entity.EndTimestamp = entity.EndTimestamp
+	explainV2Entity.Raw_query = string(query_json)
+
+	_, errCode, errMsg := store.GetStore().CreateExplainV2Entity(userID, projectID, &explainV2Entity)
 	if errCode != http.StatusCreated {
 		log.WithFields(log.Fields{"document": entity, "err-message": errMsg}).Error("Failed to Explain v2 query in handler.")
 		return nil, errCode, PROCESSING_FAILED, errMsg, true

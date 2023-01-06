@@ -30,9 +30,11 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	queryStartTime := time.Now().UTC().Unix()
+
 	if C.GetAttributionDebug() == 1 {
 		logCtx.Info("Hitting ExecuteAttributionQueryV1")
 	}
+
 	var query *model.AttributionQueryV1
 	U.DeepCopy(queryOriginal, &query)
 
@@ -136,11 +138,13 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	}
 
 	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
+
 	store.AppendOTPSessionsV1(projectID, query, &userData, *logCtx)
 	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
 	queryStartTime = time.Now().UTC().Unix()
 
 	attributionData, isCompare, err2 := store.GetAttributionDataV1(projectID, query, userData, userInfo, coalUserIdConversionTimestamp, marketingReports, kpiData, logCtx)
+
 	if err2 != nil {
 		return nil, err2
 	}
@@ -943,7 +947,25 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 
 	result := &model.QueryResult{}
 
-	if query.AttributionKey == model.AttributionKeyLandingPage {
+	if query.AttributionKey == model.AttributionKeyAllPageView {
+
+		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+
+			result = model.ProcessQueryKPIPageUrl(query, attributionData, *logCtx, kpiData, isCompare)
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+			}
+			queryStartTime = time.Now().UTC().Unix()
+
+		} else {
+			result = model.ProcessQueryPageUrl(query, attributionData, *logCtx, isCompare)
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+			}
+			queryStartTime = time.Now().UTC().Unix()
+		}
+
+	} else if query.AttributionKey == model.AttributionKeyLandingPage {
 
 		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities || query.AnalyzeType == model.AnalyzeTypeUserKPI {
 
@@ -995,7 +1017,15 @@ func ProcessAttributionDataToResultV1(projectID int64, query *model.AttributionQ
 
 	result := &model.QueryResult{}
 
-	if query.AttributionKey == model.AttributionKeyLandingPage {
+	if query.AttributionKey == model.AttributionKeyAllPageView {
+
+		result = model.ProcessQueryKPIPageUrlV1(query, attributionData, *logCtx, kpiData, isCompare)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+		}
+		queryStartTime = time.Now().UTC().Unix()
+
+	} else if query.AttributionKey == model.AttributionKeyLandingPage {
 
 		result = model.ProcessQueryKPILandingPageUrlV1(query, attributionData, *logCtx, kpiData, isCompare)
 		if C.GetAttributionDebug() == 1 {

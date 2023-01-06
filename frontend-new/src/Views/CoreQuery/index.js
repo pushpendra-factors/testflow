@@ -15,7 +15,7 @@ import { Drawer, Button, Modal, Row, Col, Spin } from 'antd';
 import MomentTz from 'Components/MomentTz';
 import factorsai from 'factorsai';
 
-import { EMPTY_ARRAY, EMPTY_OBJECT } from 'Utils/global';
+import { EMPTY_ARRAY, EMPTY_OBJECT, generateRandomKey } from 'Utils/global';
 import KPIComposer from 'Components/KPIComposer';
 import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 import moment from 'moment';
@@ -286,7 +286,7 @@ function CoreQuery({
         }
       });
     }
-  }, []);
+  }, [dispatch, query_type]);
   useEffect(() => {
     fetchDemoProject()
       .then((res) => {
@@ -295,7 +295,7 @@ function CoreQuery({
       .catch((err) => {
         console.log(err.data.error);
       });
-  }, [activeProject]);
+  }, [activeProject, fetchDemoProject]);
 
   const handleTour = () => {
     history.push('/');
@@ -329,7 +329,15 @@ function CoreQuery({
     setTimeout(() => {
       setLoading(false);
     }, 1000);
-  }, [activeProject]);
+  }, [
+    activeProject,
+    dashboards?.data,
+    fetchBingAdsIntegration,
+    fetchKPIConfig,
+    fetchMarketoIntegration,
+    fetchProjectSettings,
+    fetchProjectSettingsV1
+  ]);
 
   const isIntegrationEnabled =
     integration?.int_segment ||
@@ -427,9 +435,6 @@ function CoreQuery({
     updateResultState({ ...initialState, loading: true });
     getFunnelData(activeProject.id, null, null, false, query_id).then(
       (res) => {
-        const queryLabels = queryToAdd?.query?.ewp.map((ev) =>
-          ev.an ? ev.an : ev.na
-        );
         const equivalentQuery = getStateQueryFromRequestQuery(
           queryToAdd?.query
         );
@@ -612,16 +617,17 @@ function CoreQuery({
     },
     [
       dispatch,
-      groupBy,
-      queriesA,
-      profileQueries,
       queryType,
+      queriesA,
+      groupBy,
       models,
-      savedQueries,
-      updateAppliedBreakdown,
+      updatePivotConfig,
       setNavigatedFromDashboard,
       updateSavedQuerySettings,
-      updateChartTypes
+      savedQueries,
+      updateChartTypes,
+      updateAppliedBreakdown,
+      profileQueries
     ]
   );
 
@@ -790,17 +796,19 @@ function CoreQuery({
       }
     },
     [
+      groupBy,
       queriesA,
-      dateRange,
       result_criteria,
       user_type,
-      activeProject.id,
-      groupBy,
       globalFilters,
-      updateResultState,
+      activeProject.id,
+      activeProject?.name,
+      getDashboardConfigs,
+      dateRange,
       configActionsOnRunningQuery,
-      updateLocalReducer,
-      getDashboardConfigs
+      updateResultState,
+      resetComparisonData,
+      updateLocalReducer
     ]
   );
 
@@ -863,19 +871,20 @@ function CoreQuery({
       }
     },
     [
+      groupBy,
       queriesA,
       session_analytics_seq,
-      activeProject.id,
-      groupBy,
       globalFilters,
-      dateRange,
       eventsCondition,
       groupAnalysis,
-      updateResultState,
-      configActionsOnRunningQuery,
-      updateLocalReducer,
+      activeProject.id,
+      activeProject?.name,
+      getDashboardConfigs,
+      dateRange,
       resetComparisonData,
-      getDashboardConfigs
+      configActionsOnRunningQuery,
+      updateResultState,
+      updateLocalReducer
     ]
   );
 
@@ -1015,25 +1024,27 @@ function CoreQuery({
       }
     },
     [
-      attrQueries,
-      activeProject.id,
       eventGoal,
-      linkedEvents,
-      models,
       touchpoint,
-      touchpoint_filters,
-      attr_query_type,
-      tacticOfferType,
-      window,
-      attr_dateRange,
-      updateResultState,
       attr_dimensions,
       content_groups,
-      getDashboardConfigs,
-      configActionsOnRunningQuery,
+      touchpoint_filters,
+      attr_query_type,
+      models,
+      window,
+      linkedEvents,
+      tacticOfferType,
+      queryOptions,
+      coreQueryState.navigatedFromDashboard,
+      attr_dateRange,
       resetComparisonData,
+      attrQueries,
+      activeProject.id,
+      activeProject?.name,
+      configActionsOnRunningQuery,
+      updateResultState,
       updateLocalReducer,
-      coreQueryState.navigatedFromDashboard
+      getDashboardConfigs
     ]
   );
 
@@ -1106,15 +1117,16 @@ function CoreQuery({
     },
     [
       queriesA,
-      activeProject.id,
       groupBy,
-      globalFilters,
+      queryOptions,
+      activeProject.id,
+      activeProject?.name,
+      getDashboardConfigs,
       dateRange,
-      updateResultState,
       configActionsOnRunningQuery,
-      updateLocalReducer,
+      updateResultState,
       resetComparisonData,
-      getDashboardConfigs
+      updateLocalReducer
     ]
   );
 
@@ -1183,15 +1195,16 @@ function CoreQuery({
     },
     [
       dispatch,
-      activeProject.id,
+      updateResultState,
+      camp_channels,
       camp_measures,
       camp_filters,
       camp_groupBy,
-      camp_channels,
-      camp_dateRange,
-      updateResultState,
+      activeProject.id,
+      activeProject?.name,
+      getDashboardConfigs,
       setNavigatedFromDashboard,
-      getDashboardConfigs
+      camp_dateRange
     ]
   );
 
@@ -1241,13 +1254,15 @@ function CoreQuery({
     },
     [
       profileQueries,
-      activeProject.id,
       groupBy,
       globalFilters,
-      dateRange,
       groupAnalysis,
+      configActionsOnRunningQuery,
       updateResultState,
-      getDashboardConfigs
+      activeProject.id,
+      activeProject?.name,
+      getDashboardConfigs,
+      dateRange
     ]
   );
 
@@ -1287,7 +1302,8 @@ function CoreQuery({
       dispatch,
       queryType,
       runCampaignsQuery,
-      resetComparisonData
+      resetComparisonData,
+      runKPIQuery
     ]
   );
 
@@ -1396,7 +1412,8 @@ function CoreQuery({
       dispatch,
       runCampaignsQuery,
       runAttributionQuery,
-      runProfileQuery
+      runProfileQuery,
+      runKPIQuery
     ]
   );
 
@@ -1476,9 +1493,16 @@ function CoreQuery({
         }
         queryupdated.push(newEvent);
       }
-      setQueries(queryupdated);
+      setQueries(
+        queryupdated.map((q) => {
+          return {
+            ...q,
+            key: q.key || generateRandomKey()
+          };
+        })
+      );
     },
-    [queriesA]
+    [queriesA, deleteGroupByForEvent]
   );
 
   const profileQueryChange = useCallback(
@@ -1504,7 +1528,7 @@ function CoreQuery({
       }
       setProfileQueries(queryupdated);
     },
-    [profileQueries]
+    [deleteGroupByForEvent, profileQueries]
   );
 
   const closeDrawer = () => {
@@ -1536,6 +1560,9 @@ function CoreQuery({
       case QUERY_TYPE_PROFILE: {
         runProfileQuery(false);
         break;
+      }
+      default: {
+        return false;
       }
     }
   }, [
@@ -1750,9 +1777,33 @@ function CoreQuery({
     setDrawerVisible(flag);
   };
 
+  const findKPIitem = useCallback(
+    (groupName) => {
+      const KPIlist = KPI_config || [];
+      const selGroup = KPIlist.find(
+        (item) => item.display_category === groupName
+      );
+
+      const DDvalues = selGroup?.properties?.map((item) => {
+        if (item == null) return null;
+        const ddName = item.display_name ? item.display_name : item.name;
+        const ddtype =
+          selGroup?.category === 'channels' ||
+          selGroup?.category === 'custom_channels'
+            ? item.object_type
+            : item.entity
+            ? item.entity
+            : item.object_type;
+        return [ddName, item.name, item.data_type, ddtype];
+      });
+      return DDvalues;
+    },
+    [KPI_config]
+  );
+
   useEffect(() => {
     setKPIConfigProps(findKPIitem(selectedMainCategory?.group));
-  }, [selectedMainCategory]);
+  }, [findKPIitem, selectedMainCategory]);
 
   useEffect(() => {
     //collapsing the query composer once run query is executed
@@ -1760,27 +1811,6 @@ function CoreQuery({
       setQueryOpen(false);
     }
   }, [loading]);
-
-  const findKPIitem = (groupName) => {
-    const KPIlist = KPI_config || [];
-    const selGroup = KPIlist.find(
-      (item) => item.display_category === groupName
-    );
-
-    const DDvalues = selGroup?.properties?.map((item) => {
-      if (item == null) return;
-      const ddName = item.display_name ? item.display_name : item.name;
-      const ddtype =
-        selGroup?.category === 'channels' ||
-        selGroup?.category === 'custom_channels'
-          ? item.object_type
-          : item.entity
-          ? item.entity
-          : item.object_type;
-      return [ddName, item.name, item.data_type, ddtype];
-    });
-    return DDvalues;
-  };
 
   const handleCloseDashboardQuery = () => {
     history.push({
@@ -1922,7 +1952,9 @@ function CoreQuery({
                         ? handleCloseDashboardQuery
                         : handleCloseToAnalyse
                     }
-                  >Close</Button>
+                  >
+                    Close
+                  </Button>
                 </div>
               </div>
 

@@ -6,7 +6,7 @@ import { Button, Tooltip } from 'antd';
 import { BUTTON_TYPES } from '../../constants/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
-import {QuestionCircleOutlined} from "@ant-design/icons"
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import {
   CHART_TYPE_SPARKLINES,
   QUERY_TYPE_EVENT,
@@ -19,8 +19,7 @@ import FaSelect from 'Components/FaSelect';
 import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
 import userflow from 'userflow.js';
-import {USERFLOW_CONFIG_ID} from 'Utils/userflowConfig'
-
+import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
 
 const QueryActionsComponent = ({
   queryType,
@@ -35,10 +34,8 @@ const QueryActionsComponent = ({
   setShowShareToEmailModal,
   setShowShareToSlackModal
 }) => {
-
-  
   const [hideIntercomState, setHideIntercomState] = useState(true);
-  let [helpMenu, setHelpMenu] = useState(false)
+  const [helpMenu, setHelpMenu] = useState(false);
 
   useEffect(() => {
     if (window.Intercom) {
@@ -50,18 +47,16 @@ const QueryActionsComponent = ({
       }
     };
   }, []);
-  
 
-  let handleIntercomHelp = ()=>{
-      const w = window;
-      const ic = w.Intercom;
-      if (typeof ic === 'function') {
-        setHideIntercomState(!hideIntercomState);
-        ic('update', { hide_default_launcher: !hideIntercomState });
-        ic(!hideIntercomState === true ? 'hide' : 'show');
-      }
-
-  }
+  const handleIntercomHelp = () => {
+    const w = window;
+    const ic = w.Intercom;
+    if (typeof ic === 'function') {
+      setHideIntercomState(!hideIntercomState);
+      ic('update', { hide_default_launcher: !hideIntercomState });
+      ic(!hideIntercomState === true ? 'hide' : 'show');
+    }
+  };
   const [options, setOptions] = useState(false);
   const [chart, setChart] = useState(null);
   useEffect(() => {
@@ -78,10 +73,10 @@ const QueryActionsComponent = ({
       handleEditClick();
     } else if (opt[1] === 'trash') {
       handleDeleteClick();
-    }else if(opt[1] === 'intercom_help'){
+    } else if (opt[1] === 'intercom_help') {
       handleIntercomHelp();
-    }else if(opt[1] === 'help_doc'){
-      window.open('https://help.factors.ai/','_blank')
+    } else if (opt[1] === 'help_doc') {
+      window.open('https://help.factors.ai/', '_blank');
     }
     setOptions(false);
   };
@@ -91,10 +86,10 @@ const QueryActionsComponent = ({
         <FaSelect
           extraClass={styles.additionalops}
           options={[
-            (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)
+            queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI
               ? ['Email this report', 'envelope']
               : ['Email this report', 'envelope', 'disabled'],
-            (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)
+            queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI
               ? ['Share to slack', 'SlackStroke']
               : ['Share to slack', 'SlackStroke', 'disabled'],
             ['Edit Details', 'edit'],
@@ -119,34 +114,101 @@ const QueryActionsComponent = ({
     ) : null;
   };
   const getHelpMenu = () => {
-    return helpMenu === false ? '' : <FaSelect
-    extraClass={styles.additionalops}
-    options={[
-      ['Help and Support', 'help_doc'],
-      ['Talk to us', 'intercom_help']
-    ]}
-    optionClick={(val) => setActions(val)}
-    onClickOutside={() => setHelpMenu(false)}
-    posRight={true}
-  ></FaSelect>;
-    
+    return helpMenu === false ? (
+      ''
+    ) : (
+      <FaSelect
+        extraClass={styles.additionalops}
+        options={[
+          ['Help and Support', 'help_doc'],
+          ['Talk to us', 'intercom_help']
+        ]}
+        optionClick={(val) => setActions(val)}
+        onClickOutside={() => setHelpMenu(false)}
+        posRight={true}
+      ></FaSelect>
+    );
   };
 
-  const triggerUserFlow  = () =>{
+  const triggerUserFlow = () => {
+    if (
+      queryType == QUERY_TYPE_ATTRIBUTION ||
+      queryType == QUERY_TYPE_FUNNEL ||
+      queryType == QUERY_TYPE_KPI
+    ) {
+      let flowID = '';
+      if (queryType == QUERY_TYPE_ATTRIBUTION) {
+        flowID = USERFLOW_CONFIG_ID?.AttributionQueryBuilder;
+      }
+      if (queryType == QUERY_TYPE_FUNNEL) {
+        flowID = USERFLOW_CONFIG_ID?.FunnelSQueryBuilder;
+      }
+      if (queryType == QUERY_TYPE_KPI) {
+        flowID = USERFLOW_CONFIG_ID?.KPIQueryBuilder;
+      }
 
-    if(queryType == QUERY_TYPE_ATTRIBUTION || queryType == QUERY_TYPE_FUNNEL || queryType == QUERY_TYPE_KPI){
-
-      let flowID = "";
-      if(queryType == QUERY_TYPE_ATTRIBUTION) {flowID = USERFLOW_CONFIG_ID?.AttributionQueryBuilder};
-      if(queryType == QUERY_TYPE_FUNNEL){flowID = USERFLOW_CONFIG_ID?.FunnelSQueryBuilder};
-      if(queryType == QUERY_TYPE_KPI){flowID = USERFLOW_CONFIG_ID?.KPIQueryBuilder};
-
-      userflow.start(flowID)
-  }
-  }
+      userflow.start(flowID);
+    }
+  };
 
   return (
-    <div className="flex gap-x-2 items-center">
+    <div className='flex gap-x-2 items-center'>
+      {(queryType == QUERY_TYPE_ATTRIBUTION ||
+        queryType == QUERY_TYPE_FUNNEL ||
+        queryType == QUERY_TYPE_KPI) && (
+        <>
+          <Tooltip placement='bottom' title='Walk me through'>
+            <Button
+              onClick={triggerUserFlow}
+              size='large'
+              type='text'
+              icon={<SVG name={'Handshake'} size={24} color={'grey'} />}
+            />
+          </Tooltip>
+        </>
+      )}
+
+      <ControlledComponent controller={!!savedQueryId}>
+        <Tooltip placement='bottom' title='Save as New'>
+          <Button
+            onClick={handleSaveClick}
+            size='large'
+            type='text'
+            icon={<SVG name={'pluscopy'} />}
+          ></Button>
+        </Tooltip>
+        <ControlledComponent controller={queryType !== QUERY_TYPE_PROFILE}>
+          <Tooltip placement='bottom' title='Add to Dashboard'>
+            <Button
+              onClick={toggleAddToDashboardModal}
+              size='large'
+              type='text'
+              icon={<SVG name={'addtodash'} />}
+            ></Button>
+          </Tooltip>
+        </ControlledComponent>
+        <div className={'relative'}>
+          <Button
+            size='large'
+            type='text'
+            icon={<SVG name={'threedot'} />}
+            onClick={() => setOptions(!options)}
+            ƒ
+          ></Button>
+          {getActionsMenu()}
+        </div>
+      </ControlledComponent>
+
+      <div className={'relative'}>
+        <Button
+          size='large'
+          type='text'
+          icon={<QuestionCircleOutlined />}
+          onClick={() => setHelpMenu(!helpMenu)}
+        ></Button>
+        {getHelpMenu()}
+      </div>
+
       <ControlledComponent controller={!savedQueryId}>
         <Button
           onClick={handleSaveClick}
@@ -157,58 +219,6 @@ const QueryActionsComponent = ({
           {'Save'}
         </Button>
       </ControlledComponent>
-
-      {(queryType == QUERY_TYPE_ATTRIBUTION || queryType == QUERY_TYPE_FUNNEL || queryType == QUERY_TYPE_KPI) && <>
-        <Tooltip placement="bottom" title="Walk me through">
-          <Button
-            onClick={triggerUserFlow} 
-            size="large"
-            type="text"
-            icon={<SVG name={'Handshake'} size={24} color={'grey'} />}
-          /> 
-        </Tooltip>
-        </>
-        }
-
-      <ControlledComponent controller={!!savedQueryId}>
-        <Tooltip placement="bottom" title="Save as New">
-          <Button
-            onClick={handleSaveClick}
-            size="large"
-            type="text"
-            icon={<SVG name={'pluscopy'} />}
-          ></Button>
-        </Tooltip>
-        <ControlledComponent controller={queryType !== QUERY_TYPE_PROFILE}>
-          <Tooltip placement="bottom" title="Add to Dashboard">
-            <Button
-              onClick={toggleAddToDashboardModal}
-              size="large"
-              type="text"
-              icon={<SVG name={'addtodash'} />}
-            ></Button>
-          </Tooltip>
-        </ControlledComponent>
-        <div className={'relative'}>
-          <Button
-            size="large"
-            type="text"
-            icon={<SVG name={'threedot'} />}
-            onClick={() => setOptions(!options)}ƒ
-          ></Button>
-          {getActionsMenu()}
-        </div>
-      </ControlledComponent>
-
-      <div className={'relative'}>
-          <Button
-            size="large"
-            type="text"
-            icon={<QuestionCircleOutlined />}
-            onClick={()=>setHelpMenu(!helpMenu)}
-          ></Button>
-          {getHelpMenu()}
-        </div>
     </div>
   );
 };

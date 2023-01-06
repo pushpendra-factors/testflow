@@ -32,7 +32,9 @@ import {
 import {
   ACTIVE_DASHBOARD_CHANGE,
   WIDGET_DELETED,
-  DASHBOARD_DELETED
+  DASHBOARD_DELETED,
+  NEW_DASHBOARD_TEMPLATES_MODAL_OPEN,
+  ADD_DASHBOARD_MODAL_OPEN
 } from '../../reducers/types';
 import SortableCards from './SortableCards';
 import DashboardSubMenu from './DashboardSubMenu';
@@ -252,8 +254,9 @@ function ProjectDropdown({
                 className='w-full'
                 icon={<SVG name='plus' />}
                 onClick={() => {
-                  setaddDashboardModal(true);
-                  setSelectVisible(false);
+                  dispatch({ type: ADD_DASHBOARD_MODAL_OPEN });
+                  // setaddDashboardModal(true);
+                  // setSelectVisible(false);
                 }}
               >
                 New Dashboard
@@ -282,7 +285,7 @@ function ProjectDropdown({
           size='large'
           onClick={() => setMoreOptions(true)}
           className='ml-1'
-          style={{ padding: '4px 6px' }}
+          style={{ padding: '0px', height: '32px', width: '32px' }}
         >
           <SVG name='more' size={24} />
         </Button>
@@ -387,18 +390,8 @@ function ProjectDropdown({
       description: 'Identify the channels that contribute'
     },
     {
-      label: 'New Profile Report',
-      key: 4,
-      icon: (
-        <div style={{ padding: '0 10px 0 0px' }}>
-          <SVG name={`profiles_cq`} size={24} color={'blue'} />
-        </div>
-      ),
-      description: 'Slice and dice your visitors'
-    },
-    {
       label: 'New Event Report',
-      key: 5,
+      key: 4,
       icon: (
         <div style={{ padding: '0 10px 0 0px' }}>
           <SVG name={`events_cq`} size={24} color={'blue'} />
@@ -408,7 +401,7 @@ function ProjectDropdown({
     },
     {
       label: 'Saved Report',
-      key: 6,
+      key: 5,
       icon: (
         <div style={{ padding: '0 10px 0 0px' }}>
           {' '}
@@ -445,28 +438,28 @@ function ProjectDropdown({
       });
     } else if (key === '3') {
       history.push({
-        pathname: '/analyse/' + QUERY_TYPE_PROFILE,
-        state: {
-          navigatedFromDashboardExistingReports: true
-        }
-      });
-    } else if (key === '4') {
-      history.push({
         pathname: '/analyse/' + QUERY_TYPE_EVENT,
         state: {
           navigatedFromDashboardExistingReports: true
         }
       });
-    } else if (key === '5') {
+    } else if (key === '4') {
       setIsReportsModalOpen((prev) => !prev);
     }
   };
   const menu = (
-    <Menu onClick={HandleMenuItemClick} style={{ borderRadius: '5px' }}>
+    <Menu
+      onClick={HandleMenuItemClick}
+      style={{ borderRadius: '5px', paddingTop: '8px' }}
+    >
       {items.map((eachItem, eachKey) => {
         return (
           <>
-            {eachKey === 5 ? <Divider style={{ margin: 0 }} /> : ''}
+            {eachKey === items.length - 1 ? (
+              <Divider style={{ margin: 0 }} />
+            ) : (
+              ''
+            )}
             <Menu.Item
               icon={eachItem.icon}
               key={eachKey}
@@ -578,7 +571,7 @@ function ProjectDropdown({
                 size='large'
                 onClick={toggleDashboardSelect}
               >
-                <div className={styles.dropdownbtntext}>
+                <div className={styles.dropdownbtntext + '  text-sm'}>
                   {showDashboardName}
                 </div>
                 <div className={styles.dropdownbtnicon}>
@@ -589,8 +582,11 @@ function ProjectDropdown({
                 shape='circle'
                 icon={<PlusOutlined style={{ fontSize: '18px' }} />}
                 onClick={() => {
-                  setaddDashboardModal(true);
-                  setSelectVisible(false);
+                  // setaddDashboardModal(true);
+                  // setSelectVisible(false);
+                  {
+                    dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
+                  }
                 }}
                 className={styles.addNewDashboardButtonProjectDropdown}
               />
@@ -601,11 +597,11 @@ function ProjectDropdown({
             </Text>
           </div>
           <div className='flex items-center'>
-            <Dropdown overlay={menu} placement='bottomRight'>
+            <Dropdown overlay={menu} placement='bottomRight' trigger={'click'}>
               <Button type='primary'>
                 <Space>
                   <SVG name={'plus'} size={16} color='white' />
-                  Add Report
+                  Report
                   {/* <CaretDownOutlined /> */}
                 </Space>
               </Button>

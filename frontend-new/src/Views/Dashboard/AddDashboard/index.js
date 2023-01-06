@@ -16,13 +16,21 @@ import {
   DASHBOARD_CREATED,
   DASHBOARD_DELETED,
   WIDGET_DELETED,
-  DASHBOARD_UPDATED
+  DASHBOARD_UPDATED,
+  ADD_DASHBOARD_MODAL_CLOSE,
+  NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE,
+  ACTIVE_DASHBOARD_CHANGE
 } from '../../../reducers/types';
 import styles from './index.module.scss';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 import factorsai from 'factorsai';
 import { Link, useHistory, useLocation } from 'react-router-dom';
 import useAutoFocus from 'hooks/useAutoFocus';
+import DashboardTemplatesModal from './DashboardTemplatesModal';
+import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
+import { DASHBOARD_KEYS } from 'Constants/localStorage.constants';
+import { LoadingOutlined } from '@ant-design/icons';
+import { stubFalse } from 'lodash';
 
 function AddDashboard({
   addDashboardModal,
@@ -30,10 +38,11 @@ function AddDashboard({
   editDashboard,
   setEditDashboard
 }) {
+  const [isLoading, setIsLoading] = useState(false);
   const [activeKey, setActiveKey] = useState('1');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [dashboardType, setDashboardType] = useState('pr');
+  const [dashboardType, setDashboardType] = useState('pv');
   const [apisCalled, setApisCalled] = useState(false);
   const [selectedQueries, setSelectedQueries] = useState([]);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
@@ -46,6 +55,9 @@ function AddDashboard({
   const { pathname } = useLocation();
   const inputComponentRef = useAutoFocus(addDashboardModal);
 
+  let { isAddNewDashboardModal } = useSelector(
+    (state) => state.dashboard_templates_Reducer
+  );
   const { TabPane } = Tabs;
 
   useEffect(() => {
@@ -62,10 +74,12 @@ function AddDashboard({
     setActiveKey('1');
     setTitle('');
     setDescription('');
-    setDashboardType('pr');
+    setDashboardType('pv');
     setApisCalled(false);
     setSelectedQueries([]);
     setEditDashboard(null);
+
+    dispatch({ type: ADD_DASHBOARD_MODAL_CLOSE });
   }, [setaddDashboardModal, setEditDashboard]);
 
   const confirmDelete = useCallback(async () => {
@@ -116,6 +130,7 @@ function AddDashboard({
 
   const createNewDashboard = useCallback(async () => {
     try {
+      setIsLoading(true);
       setApisCalled(true);
       const res = await createDashboard(active_project?.id, {
         name: title,
@@ -127,10 +142,20 @@ function AddDashboard({
         await assignUnitsToDashboard(active_project?.id, res.data.id, reqBody);
       }
       dispatch({ type: DASHBOARD_CREATED, payload: res.data });
-      pathname === '/template' && history.push('/');
+      // pathname === '/template' && history.push('/');
+
+      setItemToLocalStorage(DASHBOARD_KEYS.ACTIVE_DASHBOARD_ID, res.data.id);
+      // // Doing this to close NewTemplates Modal after creating Dashboard
+      dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE });
       resetState();
+      setIsLoading(false);
+      dispatch({
+        type: ACTIVE_DASHBOARD_CHANGE,
+        payload: res.data
+      });
       // window.location.reload(); // temporary Fix for empty dashboard
     } catch (err) {
+      setIsLoading(false);
       console.log(err.response);
       setApisCalled(false);
     }
@@ -147,6 +172,7 @@ function AddDashboard({
 
   const editExistingDashboard = useCallback(async () => {
     try {
+      setIsLoading(true);
       setApisCalled(true);
       const newAddedUnits = selectedQueries.filter(
         (elem) =>
@@ -212,9 +238,12 @@ function AddDashboard({
         dashboard_id: editDashboard.id
       });
 
+      dispatch({ type: ADD_DASHBOARD_MODAL_CLOSE });
+      setIsLoading(false);
       setApisCalled(false);
       resetState();
     } catch (err) {
+      setIsLoading(stubFalse);
       console.log(err);
       setApisCalled(false);
     }
@@ -276,9 +305,9 @@ function AddDashboard({
     <>
       <Modal
         title={null}
-        visible={addDashboardModal}
+        visible={isAddNewDashboardModal}
         centered={true}
-        zIndex={1005}
+        zIndex={1010}
         width={700}
         className={'fa-modal--regular p-4 fa-modal--slideInDown'}
         confirmLoading={apisCalled}
@@ -310,30 +339,39 @@ function AddDashboard({
                 className={'fa-tabs'}
               >
                 <TabPane className={styles.tabContent} tab='Setup' key='1'>
-                  <AddDashboardTab
-                    title={title}
-                    setTitle={setTitle}
-                    description={description}
-                    setDescription={setDescription}
-                    dashboardType={dashboardType}
-                    setDashboardType={setDashboardType}
-                    editDashboard={editDashboard}
-                    showDeleteModal={showDeleteModal}
-                    inputComponentRef={inputComponentRef}
-                  />
+                  {activeKey === '1' ? (
+                    <AddDashboardTab
+                      title={title}
+                      setTitle={setTitle}
+                      description={description}
+                      setDescription={setDescription}
+                      dashboardType={dashboardType}
+                      setDashboardType={setDashboardType}
+                      editDashboard={editDashboard}
+                      showDeleteModal={showDeleteModal}
+                      inputComponentRef={inputComponentRef}
+                    />
+                  ) : (
+                    ''
+                  )}
                 </TabPane>
                 <TabPane className={styles.tabContent} tab='Widget' key='2'>
-                  <AddWidgetsTab
-                    queries={queries}
-                    selectedQueries={selectedQueries}
-                    setSelectedQueries={setSelectedQueries}
-                  />
+                  {activeKey === '2' ? (
+                    <AddWidgetsTab
+                      queries={queries}
+                      selectedQueries={selectedQueries}
+                      setSelectedQueries={setSelectedQueries}
+                      setIsLoading={setIsLoading}
+                    />
+                  ) : (
+                    ''
+                  )}
                 </TabPane>
               </Tabs>
             </Col>
           </Row>
-          <div className='flex justify-between mt-6 items-center'>
-            <Link
+          <div className='flex mt-6 items-center justify-end'>
+            {/* <Link
               to={{
                 pathname: '/template',
                 state: { fromSelectTemplateBtn: true }
@@ -343,22 +381,38 @@ function AddDashboard({
             >
               Select from Templates{' '}
               <SVG size={20} name='Arrowright' color={`#1d89ff`} />
-            </Link>
+            </Link> */}
             <div className='flex gap-3'>
               <Button
+                disabled={isLoading}
                 type='default'
                 size='large'
-                onClick={() => handleCancel()}
+                onClick={() => {
+                  dispatch({ type: ADD_DASHBOARD_MODAL_CLOSE });
+                  handleCancel();
+                }}
               >
                 Cancel
               </Button>
-              <Button type='primary' size='large' onClick={() => handleOk()}>
+              <Button
+                disabled={isLoading}
+                type='primary'
+                size='large'
+                onClick={() => handleOk()}
+              >
+                {isLoading === true ? <LoadingOutlined /> : ''}{' '}
                 {activeKey === '2' ? 'Save' : 'Next'}
               </Button>
             </div>
           </div>
         </div>
       </Modal>
+      <DashboardTemplatesModal
+        addDashboardModal={addDashboardModal}
+        apisCalled={apisCalled}
+        setaddDashboardModal={setaddDashboardModal}
+        getOkText={getOkText}
+      />
       <ConfirmationModal
         visible={deleteModal}
         confirmationText='Are you sure you want to delete this Dashboard?'

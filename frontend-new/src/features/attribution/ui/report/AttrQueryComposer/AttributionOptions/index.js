@@ -360,11 +360,6 @@ function AttributionOptions({
   return (
     <div className={`${styles.block}`}>
       {renderAttributionModel()}
-      <div className={`flex items-center m-0 mt-2`}>
-        <SVG name='clock' size={20} extraClass={`mx-2`}></SVG>
-        {renderAttributionWindow()}
-        {renderAttributionTimeline()}
-      </div>
     </div>
   );
 }

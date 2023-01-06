@@ -104,7 +104,6 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	if requestPayload.Query == nil {
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "invalid query. empty query.", true
 	}
-
 	timezoneString, err = SetTimezoneForAttributionQuery(&requestPayload, projectId)
 
 	if err != nil {

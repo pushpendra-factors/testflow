@@ -113,50 +113,27 @@ func CreateMissingPreBuiltCustomKPI(c *gin.Context) (interface{}, int, string, s
 // @Produce json
 // @Param project_id path integer true "Project ID"
 // @Success 200 {string} json "{"result": model.CustomMetricConfig"
-// @Router /{project_id}/v1/custom_metrics/config [get]
-func GetCustomMetricsConfig(c *gin.Context) {
-	reqID, projectID := getReqIDAndProjectID(c)
-	customMetricConfigs := model.CustomMetricConfig{}
-	customMetricObjectTypesAndProperties := make([]model.CustomMetricObjectTypeAndProperties, 0)
-
-	for _, objectType := range model.CustomKPIProfileObjectCategories {
-		currentObjectTypeAndProperties := model.CustomMetricObjectTypeAndProperties{}
-		currentObjectTypeAndProperties.ObjectType = objectType
-		currentObjectTypeAndProperties.Properties = getPropertiesFunctionBasedOnObjectType(objectType)(projectID, reqID)
-
-		customMetricObjectTypesAndProperties = append(customMetricObjectTypesAndProperties, currentObjectTypeAndProperties)
-	}
-
-	customMetricConfigs.AggregateFunctions = model.CustomMetricProfilesAggregateFunctions
-	customMetricConfigs.ObjectTypeAndProperties = customMetricObjectTypesAndProperties
-	c.JSON(http.StatusOK, gin.H{"result": customMetricConfigs})
-}
-
-// GetCustomMetricsConfig godoc
-// @Summary To get config for the building custom metrics on settings.
-// @Tags CustomMetric
-// @Produce json
-// @Param project_id path integer true "Project ID"
-// @Success 200 {string} json "{"result": model.CustomMetricConfig"
 // @Router /{project_id}/v1/custom_metrics/config/v1 [get]
 func GetCustomMetricsConfigV1(c *gin.Context) {
 	reqID, projectID := getReqIDAndProjectID(c)
 	finalConfigs := make([]model.CustomMetricConfigV1, 0)
 
-	for _, objectType := range model.CustomKPIProfileObjectCategories {
+	for _, sectionDisplayCategory := range model.CustomKPIProfileSectionDisplayCategories {
 		// CustomMetricConfigObjectV1
 		currentConfigV1 := model.CustomMetricConfigV1{}
-		currentConfigV1.ObjectType = objectType
+		currentConfigV1.SectionDisplayCategory = sectionDisplayCategory
+		currentConfigV1.ObjectType = currentConfigV1.SectionDisplayCategory
 		currentConfigV1.TypeOfQuery = model.ProfileQueryType
 		currentConfigV1.TypeOfQueryDisplayName = model.ProfileQueryTypeDisplayName
 		currentConfigV1.AggregateFunctions = model.CustomMetricProfilesAggregateFunctions
-		currentConfigV1.Properties = getPropertiesFunctionBasedOnObjectType(objectType)(projectID, reqID)
+		currentConfigV1.Properties = getPropertiesFunctionBasedOnSectionDisplayCategory(sectionDisplayCategory)(projectID, reqID)
 
 		finalConfigs = append(finalConfigs, currentConfigV1)
 	}
 
 	customEventConfig := model.CustomMetricConfigV1{}
-	customEventConfig.ObjectType = model.EventsBasedDisplayCategory
+	customEventConfig.SectionDisplayCategory = model.EventsBasedDisplayCategory
+	customEventConfig.ObjectType = customEventConfig.SectionDisplayCategory
 	customEventConfig.TypeOfQuery = model.EventBasedQueryType
 	customEventConfig.TypeOfQueryDisplayName = model.EventBasedQueryTypeDisplayName
 	customEventConfig.AggregateFunctions = model.CustomEventsAggregateFunctions
@@ -273,22 +250,22 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 	}
 }
 
-func getPropertiesFunctionBasedOnObjectType(objectType string) func(int64, string) []map[string]string {
-	if model.GetGroupNameByMetricObjectType(objectType) == model.GROUP_NAME_HUBSPOT_COMPANY {
+func getPropertiesFunctionBasedOnSectionDisplayCategory(sectionDisplayCategory string) func(int64, string) []map[string]string {
+	if model.GetGroupNameByMetricSectionDisplayCategory(sectionDisplayCategory) == model.GROUP_NAME_HUBSPOT_COMPANY {
 		return store.GetStore().GetPropertiesForHubspotCompanies
-	} else if model.GetGroupNameByMetricObjectType(objectType) == model.GROUP_NAME_HUBSPOT_DEAL {
+	} else if model.GetGroupNameByMetricSectionDisplayCategory(sectionDisplayCategory) == model.GROUP_NAME_HUBSPOT_DEAL {
 		return store.GetStore().GetPropertiesForHubspotDeals
-	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_HUBSPOT) {
+	} else if strings.Contains(sectionDisplayCategory, U.CRM_SOURCE_NAME_HUBSPOT) {
 		return store.GetStore().GetPropertiesForHubspotContacts
-	} else if model.GetGroupNameByMetricObjectType(objectType) == model.GROUP_NAME_SALESFORCE_OPPORTUNITY {
+	} else if model.GetGroupNameByMetricSectionDisplayCategory(sectionDisplayCategory) == model.GROUP_NAME_SALESFORCE_OPPORTUNITY {
 		return store.GetStore().GetPropertiesForSalesforceOpportunities
-	} else if model.GetGroupNameByMetricObjectType(objectType) == model.GROUP_NAME_SALESFORCE_ACCOUNT {
+	} else if model.GetGroupNameByMetricSectionDisplayCategory(sectionDisplayCategory) == model.GROUP_NAME_SALESFORCE_ACCOUNT {
 		return store.GetStore().GetPropertiesForSalesforceAccounts
-	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_SALESFORCE) {
+	} else if strings.Contains(sectionDisplayCategory, U.CRM_SOURCE_NAME_SALESFORCE) {
 		return store.GetStore().GetPropertiesForSalesforceUsers
-	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_MARKETO) {
+	} else if strings.Contains(sectionDisplayCategory, U.CRM_SOURCE_NAME_MARKETO) {
 		return store.GetStore().GetPropertiesForMarketo
-	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_LEADSQUARED) {
+	} else if strings.Contains(sectionDisplayCategory, U.CRM_SOURCE_NAME_LEADSQUARED) {
 		return store.GetStore().GetPropertiesForLeadSquared
 	}
 	return nil

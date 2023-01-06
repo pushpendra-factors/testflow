@@ -8,7 +8,7 @@ import noop from 'lodash/noop';
 import { EMPTY_ARRAY, EMPTY_STRING } from 'Utils/global';
 
 import SelectedItem from './SelectedItem';
-import styles from './PivotTableControls.module.scss';
+import styles from './pivotTableControls.module.scss';
 import ColumnsWrapper from './ColumnsWrapper';
 import ControlledComponent from '../ControlledComponent';
 // import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
@@ -91,8 +91,8 @@ const PivotTableControls = ({
 
   const renderRowsColumn = () => {
     return (
-      <ColumnsWrapper heading="Rows">
-        <div className="flex flex-col gap-y-2">
+      <ColumnsWrapper heading='Rows'>
+        <div className='flex flex-col gap-y-2'>
           {map(selectedRows, (row) => {
             return (
               <React.Fragment key={row}>
@@ -110,8 +110,8 @@ const PivotTableControls = ({
 
   const renderColumnsColumn = () => {
     return (
-      <ColumnsWrapper heading="Columns">
-        <div className="flex flex-col gap-y-2">
+      <ColumnsWrapper heading='Columns'>
+        <div className='flex flex-col gap-y-2'>
           <ControlledComponent controller={!!selectedCol}>
             <SelectedItem
               onRemove={onColumnAttributeRemove}
@@ -129,8 +129,8 @@ const PivotTableControls = ({
 
   const renderValuesColumn = () => {
     return (
-      <ColumnsWrapper heading="Value">
-        <div className="flex flex-col gap-y-2">
+      <ColumnsWrapper heading='Value'>
+        <div className='flex flex-col gap-y-2'>
           {renderDropdown({
             dropdownMenu: aggregatorMenu,
             label: selectedValue
@@ -141,24 +141,24 @@ const PivotTableControls = ({
   };
 
   return (
-    <div className="flex flex-col">
+    <div className='flex flex-col'>
       <div className={cx('flex border border-solid', styles.controls)}>
-        <div className="w-1/3 py-5 px-10 border-r border-solid">
+        <div className='w-1/3 py-5 px-10 border-r border-solid'>
           {renderRowsColumn()}
         </div>
 
-        <div className="w-1/3 py-5 px-10 border-r border-solid">
+        <div className='w-1/3 py-5 px-10 border-r border-solid'>
           {renderColumnsColumn()}
         </div>
 
-        <div className="w-1/3 py-5 px-10">{renderValuesColumn()}</div>
+        <div className='w-1/3 py-5 px-10'>{renderValuesColumn()}</div>
       </div>
 
-      <div className="flex border border-solid">
-        <div className="w-1/3"></div>
-        <div className="w-1/3"></div>
-        <div className="w-1/3 py-5 px-10">
-          <div className="flex gap-x-2 items-center">
+      <div className='flex border border-solid'>
+        <div className='w-1/3'></div>
+        <div className='w-1/3'></div>
+        <div className='w-1/3 py-5 px-10'>
+          <div className='flex gap-x-2 items-center'>
             <span>Function:</span>
             {renderDropdown({
               dropdownMenu: functionsMenu,

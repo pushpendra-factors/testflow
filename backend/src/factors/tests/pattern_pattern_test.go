@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1415,5 +1416,26 @@ func TestGenInterMediateCombinations(t *testing.T) {
 		}
 	}
 	assert.True(t, flagCount, "len not equal to three")
+
+}
+
+func TestFilteringPatterns(t *testing.T) {
+
+	eventsList := make([]P.CounterEventFormat, 0)
+	file, err := os.Open("./data/events_test.txt")
+	assert.Nil(t, err)
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		var eventDetails P.CounterEventFormat
+		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
+			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
+			return
+		}
+		eventsList = append(eventsList, eventDetails)
+	}
+
+	assert.Equal(t, 5, len(eventsList))
 
 }

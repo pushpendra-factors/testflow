@@ -15,6 +15,7 @@ import pathAnalysis from './pathAnalysis';
 import groups from './groups';
 import timelines from './timelines';
 import dashboardTemplateReducer from './dashboard_templates';
+import dashboard_templates_modal_Reducer from './dashboard_templates_modal';
 import attributionReducer from '../features/attribution/state/reducer';
 
 const rootReducer = combineReducers({
@@ -33,6 +34,7 @@ const rootReducer = combineReducers({
   groups,
   timelines,
   dashboardTemplates: dashboardTemplateReducer,
+  dashboard_templates_Reducer: dashboard_templates_modal_Reducer,
   pathAnalysis,
   attributionDashboard: attributionReducer
 });
