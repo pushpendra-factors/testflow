@@ -44,9 +44,6 @@ func TestMain(m *testing.M) {
 	lookbackWindowForEventUserCache := flag.Int("lookback_window_event_user_cache",
 		30, "look back window in cache for event/user cache")
 
-	allowedSalesforceActivityTaskByProjectID := flag.String("allowed_salesforce_activity_tasks_by_project_ids", "*", "Allowed project id for salesforce activity - task")
-	allowedSalesforceActivityEventByProjectID := flag.String("allowed_salesforce_activity_events_by_project_ids", "*", "Allowed project id for salesforce activity - event")
-
 	flag.Parse()
 
 	config = &C.Configuration{
@@ -115,10 +112,11 @@ func TestMain(m *testing.M) {
 		DBMaxAllowedPacket:                                 1048576000,
 		AllowHubspotPastEventsEnrichmentByProjectID:        "*",
 		AllowHubspotContactListInsertByProjectID:           "*",
-		AllowedSalesforceActivityTasksByProjectIDs:         *allowedSalesforceActivityTaskByProjectID,
-		AllowedSalesforceActivityEventsByProjectIDs:        *allowedSalesforceActivityEventByProjectID,
+		AllowedSalesforceActivityTasksByProjectIDs:         "*",
+		AllowedSalesforceActivityEventsByProjectIDs:        "*",
 		EnableUserLevelEventPullForAddSessionByProjectID:   "*",
 		EventsPullMaxLimit:                                 50000,
+		FormFillIdentificationAllowedProjects:              "*",
 	}
 	C.InitConf(config)
 

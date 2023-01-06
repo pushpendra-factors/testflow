@@ -1062,6 +1062,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	}
 
 	userGroupColumn := ""
+	usersUserGroupColumn := ""
 	eventsWrapSelect = joinWithComma(eventsWrapSelect, "events.properties as event_properties, events.user_properties as event_user_properties")
 	if addJoinStmnt != "" {
 		if !strings.Contains(addJoinStmnt, "user_groups") && !strings.Contains(addJoinStmnt, "group_users") {
@@ -1075,6 +1076,8 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 			if strings.Contains(addJoinStmnt, "user_groups") {
 				userGroupColumn = model.GetQueryGroupUserID(addSelecStmnt)
 				eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("%s as group_user_id", userGroupColumn))
+				usersUserGroupColumn = model.GetQueryUserGroupUserID(addSelecStmnt)
+				eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("%s as user_group_user_id", usersUserGroupColumn))
 			}
 
 			if strings.Contains(addJoinStmnt, "group_users") {
@@ -1095,7 +1098,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	eventsWrapWhereCondition := fmt.Sprintf("WHERE events.project_id=? AND timestamp>=%s AND timestamp<=?", fromTimestamp)
 
 	if userGroupColumn != "" {
-		eventsWrapWhereCondition = eventsWrapWhereCondition + " AND " + "group_user_id IS NOT NULL "
+		eventsWrapWhereCondition = eventsWrapWhereCondition + " AND " + " ( group_user_id IS NOT NULL OR user_group_user_id IS NOT NULL )"
 	}
 
 	// Building event_names condition and appending.
@@ -1128,6 +1131,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 
 	if userGroupColumn != "" {
 		addSelecStmnt = strings.ReplaceAll(addSelecStmnt, userGroupColumn, eventsWrapViewName+".group_user_id")
+		addSelecStmnt = strings.ReplaceAll(addSelecStmnt, usersUserGroupColumn, eventsWrapViewName+".user_group_user_id")
 	}
 
 	// Change properties column for the view.
@@ -2307,7 +2311,7 @@ func getChannelGroupKeyIndexesForSlicing(cols []string) (int, int, error) {
 
 	index := 0
 	for _, col := range cols {
-		if strings.HasPrefix(col, "campaign_") || strings.HasPrefix(col, "ad_group_") || strings.HasPrefix(col, "keyword_") || strings.HasPrefix(col, "channel_") || strings.HasPrefix(col, "company_") {
+		if col != "datetime" && col != "aggregate" {
 			if start == -1 {
 				start = index
 			} else {

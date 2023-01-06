@@ -653,11 +653,11 @@ func buildAddSelectForFunnelGroup(stepName string, stepIndex int, groupID, scope
 
 	isGroupEventUser := groupID > 0
 	if !isGroupEventUser {
-		addSelect := fmt.Sprintf("user_groups.group_%d_user_id as group_user_id,"+
-			" FIRST(events.timestamp, FROM_UNIXTIME(events.timestamp)) as timestamp, 1 as %s", scopeGroupID, stepName)
+		addSelect := fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as group_user_id,"+
+			" FIRST(events.timestamp, FROM_UNIXTIME(events.timestamp)) as timestamp, 1 as %s", scopeGroupID, scopeGroupID, stepName)
 
 		if stepIndex > 0 {
-			addSelect = fmt.Sprintf("user_groups.group_%d_user_id as group_user_id, events.timestamp, 1 as %s", scopeGroupID, stepName)
+			addSelect = fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as group_user_id, events.timestamp, 1 as %s", scopeGroupID, scopeGroupID, stepName)
 		}
 		return addSelect
 	}
