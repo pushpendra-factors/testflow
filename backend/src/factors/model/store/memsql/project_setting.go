@@ -1419,8 +1419,8 @@ func (store *MemSQL) GetFormFillEnabledProjectIDWithToken() (*map[int64]string, 
 		return &idWithTokenMap, http.StatusNotFound
 	}
 
-	for _, v := range idsWithToken {
-		idWithTokenMap[v.ProjectID] = v.Token
+	for i := range idsWithToken {
+		idWithTokenMap[idsWithToken[i].ProjectID] = idsWithToken[i].Token
 	}
 
 	return &idWithTokenMap, http.StatusFound
