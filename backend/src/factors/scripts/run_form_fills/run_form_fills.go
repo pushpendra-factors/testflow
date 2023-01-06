@@ -34,6 +34,9 @@ func main() {
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
+	sdkRequestQueueProjectTokens := flag.String("sdk_request_queue_project_tokens", "",
+		"List of project tokens allowed to use sdk request queue")
+
 	flag.Parse()
 
 	if *env != "development" &&
@@ -62,12 +65,13 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
-		SentryDSN:           *sentryDSN,
+		PrimaryDatastore:             *primaryDatastore,
+		RedisHost:                    *redisHost,
+		RedisPort:                    *redisPort,
+		RedisHostPersistent:          *redisHostPersistent,
+		RedisPortPersistent:          *redisPortPersistent,
+		SentryDSN:                    *sentryDSN,
+		SDKRequestQueueProjectTokens: C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
 	}
 
 	C.InitConf(config)

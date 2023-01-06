@@ -278,6 +278,7 @@ type Configuration struct {
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
+	FormFillIdentificationAllowedProjects              string
 }
 
 type Services struct {
@@ -1964,6 +1965,10 @@ func isProjectOnProjectsList(configProjectIDList string, projectID int64) bool {
 
 	_, exists := allowedProjectIDsMap[projectID]
 	return exists
+}
+
+func IsFormFillIdentificationAllowedForProject(projectID int64) bool {
+	return isProjectOnProjectsList(configuration.FormFillIdentificationAllowedProjects, projectID)
 }
 
 func IsChannelGroupingAllowed(projectID int64) bool {

@@ -616,6 +616,19 @@ func GetKeysMapAsArray(keys map[string]bool) []string {
 	return keysArray
 }
 
+func GetKeysOfInt64StringMap(m *map[int64]string) []int64 {
+	if m == nil {
+		return []int64{}
+	}
+
+	keys := make([]int64, 0)
+	for key := range *m {
+		keys = append(keys, key)
+	}
+
+	return keys
+}
+
 func GetSnakeCaseToTitleString(str string) (title string) {
 	if str == "" {
 		return

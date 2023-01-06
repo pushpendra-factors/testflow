@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"factors/config"
 	"factors/model/model"
 	"factors/model/store"
 
@@ -20,13 +21,17 @@ type UpdateTimestamp struct {
 }
 
 func FormFillProcessing() int {
-	projectIds, err := store.GetStore().GetFormFillEnabledProjectIDs()
-	if err != nil {
-		log.Error("Failed to get projectids  form fill event by ID. Invalid parameters")
+	projectIdWithToken, errCode := store.GetStore().GetFormFillEnabledProjectIDWithToken()
+	if errCode == http.StatusInternalServerError {
+		log.Error("Failed to get projectids form fill event by ID. Invalid parameters")
+		return http.StatusNotFound
+	} else if errCode == http.StatusNotFound {
+		log.Error("No projects have enabled forms fills.")
 		return http.StatusNotFound
 	}
 
-	rowsUpadtedBeforeTenMinutes, err := store.GetStore().GetFormFillEventsUpdatedBeforeTenMinutes(projectIds)
+	projectIDs := U.GetKeysOfInt64StringMap(projectIdWithToken)
+	rowsUpadtedBeforeTenMinutes, err := store.GetStore().GetFormFillEventsUpdatedBeforeTenMinutes(projectIDs)
 	if err != nil {
 		log.Error("Failed to get projectids  form fill event by ID. Invalid parameters")
 		return http.StatusNotFound
@@ -89,8 +94,10 @@ func FormFillProcessing() int {
 			}
 
 			var hasValidValue bool
+			var email string
 			if U.IsEmail(row.Value) {
-				properties[U.UP_EMAIL] = row.Value
+				email = row.Value
+				properties[U.UP_EMAIL] = email
 				hasValidValue = true
 			}
 			if U.IsValidPhone(row.Value) {
@@ -120,6 +127,7 @@ func FormFillProcessing() int {
 					}
 				}
 			}
+			projectToken := (*projectIdWithToken)[row.ProjectID]
 
 			trackPayload := &SDK.TrackPayload{
 				ProjectId:       row.ProjectID,
@@ -130,11 +138,12 @@ func FormFillProcessing() int {
 				RequestSource:   model.UserSourceWeb,
 				EventProperties: properties,
 			}
-
-			logCtx = logCtx.WithField("payload", trackPayload)
-			errCode, _ := SDK.Track(row.ProjectID, trackPayload, false, SDK.SourceJSSDK, "")
+			logCtx = logCtx.WithFields(log.Fields{"track_payload": trackPayload})
+			errCode, _ := SDK.TrackWithQueue(projectToken, trackPayload, config.GetSDKRequestQueueAllowedTokens())
 			if errCode != http.StatusOK {
-				logCtx.WithField("err_code", errCode).Error("Failed to track form fill.")
+				logCtx.
+					WithField("payload", trackPayload).WithField("err_code", errCode).
+					Error("Failed to track form fill.")
 				continue
 			}
 		}
