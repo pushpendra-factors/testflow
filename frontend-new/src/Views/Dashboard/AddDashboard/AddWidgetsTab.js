@@ -5,8 +5,14 @@ import styles from './index.module.scss';
 import { SearchOutlined } from '@ant-design/icons';
 import { getQueryType } from '../../../utils/dataFormatter';
 import { QUERY_TYPE_PROFILE } from '../../../utils/constants';
+import VirtualList from 'rc-virtual-list';
+import useAutoFocus from 'hooks/useAutoFocus';
+
+const itemHeight = 48;
+const ContainerHeight = 382;
 
 function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
+  const inputReference = useAutoFocus();
   const [searchVal, setSearchVal] = useState('');
 
   const handleSearchChange = useCallback((e) => {
@@ -55,6 +61,7 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
           value={searchVal}
           className={styles.searchInput}
           placeholder='Make widgets from saved queries'
+          ref={inputReference}
           prefix={<SearchOutlined style={{ width: '1rem' }} color='#0E2647' />}
         />
       </div>
@@ -66,50 +73,56 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
           overflow: 'auto'
         }}
       >
-        {filteredQueries.map((q) => {
-          const queryType = getQueryType(q.query);
-          const queryTypeName = {
-            events: 'events_cq',
-            funnel: 'funnels_cq',
-            channel_v1: 'campaigns_cq',
-            attribution: 'attributions_cq',
-            profiles: 'profiles_cq',
-            kpi: 'KPI_cq'
-          };
-          let svgName = '';
-          Object.entries(queryTypeName).forEach(([k, v]) => {
-            if (queryType === k) {
-              svgName = v;
-            }
-          });
+        <VirtualList
+          data={filteredQueries}
+          height={ContainerHeight}
+          itemHeight={itemHeight}
+          itemKey='id'
+        >
+          {(q) => {
+            const queryType = getQueryType(q.query);
+            const queryTypeName = {
+              events: 'events_cq',
+              funnel: 'funnels_cq',
+              channel_v1: 'campaigns_cq',
+              attribution: 'attributions_cq',
+              profiles: 'profiles_cq',
+              kpi: 'KPI_cq'
+            };
+            let svgName = '';
+            Object.entries(queryTypeName).forEach(([k, v]) => {
+              if (queryType === k) {
+                svgName = v;
+              }
+            });
 
-          const isSelected =
-            selectedQueries.findIndex((sq) => sq.query_id === q.id) > -1;
-
-          return queryType === QUERY_TYPE_PROFILE ? null : (
-            <div
-              key={q.id}
-              className={`flex items-center justify-between px-1 py-3 cursor-pointer ${
-                styles.queryRow
-              } ${isSelected ? styles.selected : ''}`}
-            >
-              <div className='flex justify-start items-center'>
-                <div className='mr-2'>
-                  <Checkbox
-                    checked={isSelected}
-                    onChange={handleCheckBoxClick.bind(this, q)}
-                  />
+            const isSelected =
+              selectedQueries.findIndex((sq) => sq.query_id === q.id) > -1;
+            return (
+              <div
+                key={q.id}
+                className={`flex items-center justify-between px-1 py-3 cursor-pointer ${
+                  styles.queryRow
+                } ${isSelected ? styles.selected : ''}`}
+              >
+                <div className='flex justify-start items-center'>
+                  <div className='mr-2'>
+                    <Checkbox
+                      checked={isSelected}
+                      onChange={handleCheckBoxClick.bind(this, q)}
+                    />
+                  </div>
+                  <Text mini extraClass={styles.queryTitle} type='paragraph'>
+                    {q.title}
+                  </Text>
                 </div>
-                <Text mini extraClass={styles.queryTitle} type='paragraph'>
-                  {q.title}
-                </Text>
+                <div className='flex'>
+                  <SVG name={svgName} size={24} />
+                </div>
               </div>
-              <div className='flex'>
-                <SVG name={svgName} size={24} />
-              </div>
-            </div>
-          );
-        })}
+            );
+          }}
+        </VirtualList>
       </div>
     </div>
   );
