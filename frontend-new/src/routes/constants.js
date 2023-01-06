@@ -203,9 +203,9 @@ export const APP_LAYOUT_ROUTES = {
   ConfigureEvents: {
     exact: true,
     path: '/configure/events',
-    Component: InsightsSettings,
+    Component: Events,
     Private: true,
-    Layout: Events
+    Layout: AppLayout
   },
   ConfigureProperties: {
     exact: true,
