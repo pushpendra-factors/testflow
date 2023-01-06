@@ -191,7 +191,6 @@ function AttributionHeader({
         </div>
 
         <div className='flex items-center'>
-          <div className='pr-2'>{renderSaveQueryComp()}</div>
           {isFromAnalysisPage ? (
             <div className='pr-2 '>
               <div className='relative'>
@@ -206,7 +205,8 @@ function AttributionHeader({
             </div>
           ) : (
             ''
-          )}
+            )}
+          <div className='pr-2'>{renderSaveQueryComp()}</div>
           {renderReportCloseIcon()}
         </div>
       </div>

@@ -1397,19 +1397,33 @@ func (store *MemSQL) DisableExplain(projectId int64) int {
 }
 
 // define a db method to fetch all the rows
-func (store *MemSQL) GetFormFillEnabledProjectIDs() ([]int64, error) {
+func (store *MemSQL) GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int) {
+	type idWithToken struct {
+		ProjectID int64
+		Token     string
+	}
+
+	idsWithToken := make([]idWithToken, 0, 0)
+	idWithTokenMap := map[int64]string{}
+
 	db := C.GetServices().Db
-	result := make([]int64, 0)
-	projectIds := make([]model.ProjectSetting, 0)
-	err := db.Table("project_settings").Select("project_id").Where("auto_capture_form_fills = true").Find(&projectIds).Error
+	err := db.Table("project_settings").Select("projects.id as project_id, projects.token").
+		Joins("LEFT JOIN projects ON project_settings.project_id = projects.id").
+		Where("project_settings.auto_capture_form_fills = true").Find(&idsWithToken).Error
 	if err != nil {
-		log.WithError(err).Error("fetching enabled project_id failed")
-		return result, err
+		log.WithError(err).Error("Fetching form fills enabled project_id failed")
+		return &idWithTokenMap, http.StatusInternalServerError
 	}
-	for _, setting := range projectIds {
-		result = append(result, setting.ProjectId)
+
+	if len(idsWithToken) == 0 {
+		return &idWithTokenMap, http.StatusNotFound
 	}
-	return result, nil
+
+	for _, v := range idsWithToken {
+		idWithTokenMap[v.ProjectID] = v.Token
+	}
+
+	return &idWithTokenMap, http.StatusFound
 }
 
 func (store *MemSQL) GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error) {

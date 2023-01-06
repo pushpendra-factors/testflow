@@ -35,7 +35,7 @@ const Templates = lazyWithRetry(() =>
 // const AppLayout = lazyWithRetry(() => import('../Views/AppLayout'));
 
 const FactorsInsights = lazyWithRetry(() =>
-  import('../Views/Factors/FactorsInsights')
+  import('../Views/Factors/FactorsInsightsNew')
 );
 const CoreQuery = lazyWithRetry(() => import('../Views/CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Views/Dashboard'));
@@ -203,9 +203,9 @@ export const APP_LAYOUT_ROUTES = {
   ConfigureEvents: {
     exact: true,
     path: '/configure/events',
-    Component: InsightsSettings,
+    Component: Events,
     Private: true,
-    Layout: Events
+    Layout: AppLayout
   },
   ConfigureProperties: {
     exact: true,

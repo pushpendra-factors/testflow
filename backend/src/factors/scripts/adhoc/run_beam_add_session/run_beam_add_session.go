@@ -211,7 +211,7 @@ func (f *getAddSessionAllowedProjectsFn) FinishBundle(ctx context.Context, emit 
 }
 
 func (f *getAddSessionAllowedProjectsFn) ProcessElement(ctx context.Context, projectsToRunString string,
-	emit func(uint64)) {
+	emit func(int64)) {
 
 	logCtx := log.WithField("log_type", stepTrace).WithFields(log.Fields{
 		"Method": "getAddSessionAllowedProjectsFn",
@@ -221,7 +221,7 @@ func (f *getAddSessionAllowedProjectsFn) ProcessElement(ctx context.Context, pro
 	stringProjectIDs := strings.TrimSpace(projectIDSplit[0])
 	excludeProjectIDs := strings.TrimSpace(projectIDSplit[1])
 
-	var allowedProjectIds []uint64
+	var allowedProjectIds []int64
 	allowedProjectIds, errCode := session.GetAddSessionAllowedProjects(stringProjectIDs, excludeProjectIDs)
 	if errCode != http.StatusFound {
 		logCtx.WithField("err_code", errCode).Error("Failed to get add session allowed project ids.")
@@ -235,7 +235,7 @@ func (f *getAddSessionAllowedProjectsFn) ProcessElement(ctx context.Context, pro
 
 // EventsByProjectResponse Struct to store events pull by projectId response and emit.
 type EventsByProjectResponse struct {
-	ProjectID        uint64
+	ProjectID        int64
 	UserID           string
 	TimeTaken        int64
 	Events           []model.Event
@@ -261,7 +261,7 @@ func (f *pullEventsByProjectIdFn) FinishBundle(ctx context.Context, emit func(Ev
 }
 
 func (f *pullEventsByProjectIdFn) ProcessElement(ctx context.Context,
-	projectID uint64, emit func(EventsByProjectResponse)) {
+	projectID int64, emit func(EventsByProjectResponse)) {
 
 	logCtx := log.WithField("log_type", stepTrace).WithFields(log.Fields{
 		"method":     "pullEventsByProjectIdFn",
@@ -333,7 +333,7 @@ func (f *pullEventsByProjectIdFn) ProcessElement(ctx context.Context,
 
 // UserIDSessionCreationResponse Struct to store userID session creation response and emit.
 type UserIDSessionCreationResponse struct {
-	ProjectID          uint64
+	ProjectID          int64
 	TimeTaken          int64
 	EventCount         int
 	LastEventTimestamp int64
@@ -423,7 +423,7 @@ func (f *addSessionsByUserIDProjectIDFn) ProcessElement(ctx context.Context, eve
 }
 
 func emitProjectKeyUserSessionResponse(ctx context.Context, sessionResponse UserIDSessionCreationResponse,
-	emit func(uint64, UserIDSessionCreationResponse)) {
+	emit func(int64, UserIDSessionCreationResponse)) {
 	emit(sessionResponse.ProjectID, sessionResponse)
 }
 

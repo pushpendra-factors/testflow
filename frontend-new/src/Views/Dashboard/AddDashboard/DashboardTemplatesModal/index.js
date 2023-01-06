@@ -101,33 +101,34 @@ let Step1DashboardTemplateModal = ({
             }}
           />
         </Col>
-        <Col span={12} className={styles.modalTitleHeader}>
-          <Text
-            type={'title'}
-            level={4}
-            weight={'bold'}
-            extraClass={`m-0 mr-3`}
+        <Row className='w-full' style={{ padding: '10px 0px' }}>
+          <Col span={12} className={styles.modalTitleHeader}>
+            <Text
+              type={'title'}
+              level={3}
+              weight={'bold'}
+              extraClass={`m-0 mr-3`}
+            >
+              What are you tracking today?
+            </Text>
+          </Col>
+          <Col
+            span={12}
+            style={{
+              display: 'flex',
+              justifyContent: 'end',
+              paddingRight: '40px'
+            }}
           >
-            What are you tracking today?
-          </Text>
-        </Col>
-        <Col
-          span={12}
-          style={{
-            display: 'flex',
-            justifyContent: 'end',
-            paddingRight: '40px',
-            paddingTop: '20px'
-          }}
-        >
-          <Input
-            value={searchValue}
-            onChange={searchTemplateHandle}
-            style={{ height: '100%', width: '50%' }}
-            placeholder='Search Templates'
-            prefix={<SearchOutlined />}
-          />
-        </Col>
+            <Input
+              value={searchValue}
+              onChange={searchTemplateHandle}
+              style={{ height: '100%', width: '50%' }}
+              placeholder='Search Templates'
+              prefix={<SearchOutlined />}
+            />
+          </Col>
+        </Row>
       </Row>
       <Row className={styles.modalContainerBody}>
         <Col span={6} style={{ borderRight: '1px solid #dedede' }}>
@@ -143,7 +144,9 @@ let Step1DashboardTemplateModal = ({
               </Text>
             </div>
             <div
-              className={styles.categoryLeftItem}
+              className={`${styles.categoryLeftItem} ${
+                categorySelected == null ? styles.categoryItemSelectedArray : ''
+              }`}
               onClick={() => handleCategoryFunction()}
               style={{
                 color:
@@ -162,7 +165,11 @@ let Step1DashboardTemplateModal = ({
               return (
                 <div
                   key={eachIndex}
-                  className={styles.categoryLeftItem}
+                  className={`${styles.categoryLeftItem} ${
+                    eachCategory == categorySelected
+                      ? styles.categoryItemSelectedArray
+                      : ''
+                  }`}
                   onClick={() => handleCategoryFunction(eachCategory)}
                   style={{
                     color:
@@ -206,7 +213,7 @@ let Step1DashboardTemplateModal = ({
                 type={'title'}
                 level={7}
                 weight={'normal'}
-                extraClass={`m-0 mr-3`}
+                extraClass={`m-0 mr-3 ${styles.startFreshDescription}`}
               >
                 Create an empty dashboard, run queries and add widgets to start
                 monitoring.{' '}
@@ -248,7 +255,7 @@ let Step1DashboardTemplateModal = ({
                         type={'title'}
                         level={7}
                         weight={'normal'}
-                        extraClass={`m-0 mr-3`}
+                        extraClass={`m-0 mr-3 ${styles.templateDescription}`}
                       >
                         {eachState.description}
                       </Text>

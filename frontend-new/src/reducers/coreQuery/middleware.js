@@ -82,10 +82,10 @@ export const getEventProperties = (projectId, eventName) => {
   };
 }
 
-export const setGroupBy = (type, groupBy, index) => {
+export const setGroupBy = (groupByType, groupBy, index) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(setGroupByAction(type, groupBy, index)))
+      resolve(dispatch(setGroupByAction(groupByType, groupBy, index)))
     })
   }
 }

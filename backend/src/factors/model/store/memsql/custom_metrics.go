@@ -18,8 +18,9 @@ func (store *MemSQL) CreateCustomMetric(customMetric model.CustomMetric) (*model
 	logCtx := log.WithFields(logFields)
 
 	// objectType used as sectionDisplayCategory in db
-	customMetric.ObjectType = customMetric.SectionDisplayCategory
-
+	if customMetric.SectionDisplayCategory != "" {
+		customMetric.ObjectType = customMetric.SectionDisplayCategory
+	}
 	db := C.GetServices().Db
 	errMsg, isValidCustomMetric := model.ValidateCustomMetric(customMetric)
 	if !isValidCustomMetric {

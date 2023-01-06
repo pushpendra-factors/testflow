@@ -50,8 +50,8 @@ const (
 	WeekInSecs                       = 7 * DayInSecs
 	MonthInSecs                      = 31 * DayInSecs
 	Alpha                            = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	Numeric                          = "0123456789"
-	AllowedDerivedMetricSpecialChars = "*/+-()."
+	Numeric                          = "0123456789."
+	AllowedDerivedMetricSpecialChars = "*/+-()"
 	AllowedDerivedMetricOperator     = "*/+-"
 )
 
@@ -615,6 +615,19 @@ func GetKeysMapAsArray(keys map[string]bool) []string {
 	}
 
 	return keysArray
+}
+
+func GetKeysOfInt64StringMap(m *map[int64]string) []int64 {
+	if m == nil {
+		return []int64{}
+	}
+
+	keys := make([]int64, 0)
+	for key := range *m {
+		keys = append(keys, key)
+	}
+
+	return keys
 }
 
 func GetSnakeCaseToTitleString(str string) (title string) {
@@ -1398,24 +1411,28 @@ func CapitalizeFirstLetter(data string) string {
 }
 func GetArrayOfTokensFromFormula(formula string) []string {
 	arr := make([]string, 0)
-	numFlag := false
-	subStrStart := 0
-	subStrEnd := 0
+	prevSplTokenIndex := -1
 	for i, c := range formula {
 		ch := string(c)
-		if (ch >= "0" && ch <= "9") || ch == "." {
-			if !numFlag {
-				subStrStart = i
+		if i == 0 {
+			if strings.Contains(AllowedDerivedMetricSpecialChars, ch) {
+				arr = append(arr, ch)
+				prevSplTokenIndex = i
 			}
-			numFlag = true
-			subStrEnd = i
-			continue
-		} else if numFlag {
-			arr = append(arr, formula[subStrStart:subStrEnd+1])
-			numFlag = false
-		}
-		if strings.Contains(Alpha, ch) || strings.Contains(AllowedDerivedMetricSpecialChars, ch) {
+		} else if strings.Contains(AllowedDerivedMetricSpecialChars, ch) {
+			token := formula[prevSplTokenIndex+1 : i]
+			if len(token) != 0 {
+				arr = append(arr, token)
+			}
 			arr = append(arr, ch)
+			prevSplTokenIndex = i
+		}
+	}
+	lastCharOfFormula := string(formula[len(formula)-1])
+	if !strings.Contains(AllowedDerivedMetricSpecialChars, lastCharOfFormula) {
+		token := formula[prevSplTokenIndex+1:]
+		if len(token) != 0 {
+			arr = append(arr, token)
 		}
 	}
 	return arr

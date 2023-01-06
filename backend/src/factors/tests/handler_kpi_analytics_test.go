@@ -1574,7 +1574,7 @@ func TestDerivedKPIChannels(t *testing.T) {
 	// tests for derived kpi with numeric value
 	name3 := U.RandomString(8)
 	description2 := U.RandomString(8)
-	transformations2 := &postgres.Jsonb{json.RawMessage(`{"cl":"kpi","for":"(a*5)/(b*2.5)","qG":[{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["impressions"],"na":"a","pgUrl":"","tz":"Australia/Sydney"},{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["clicks"],"na":"b","pgUrl":"","tz":"Australia/Sydney"}]}`)}
+	transformations2 := &postgres.Jsonb{json.RawMessage(`{"cl":"kpi","for":"(a*5)/(b*2.5)*1","qG":[{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["impressions"],"na":"a","pgUrl":"","tz":"Australia/Sydney"},{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["clicks"],"na":"b","pgUrl":"","tz":"Australia/Sydney"}]}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations2, name3, description2, "google_ads_metrics", 2)
 	assert.Equal(t, http.StatusOK, w.Code)
 

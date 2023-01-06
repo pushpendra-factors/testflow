@@ -31,6 +31,7 @@ export const SET_CAMP_DATE_RANGE = 'SET_CAMP_DATE_RANGE';
 export const SET_DEFAULT_STATE = 'SET_DEFAULT_STATE';
 export const SET_EVENT_NAMES = 'SET_EVENT_NAMES';
 export const SET_ATTR_QUERIES = 'SET_ATTR_QUERIES';
+export const SET_EVENT_GROUPBY = 'SET_EVENT_GROUPBY';
 
 // Action creators
 export const fetchEventsMapAction = (eventsMap) => {
@@ -46,110 +47,117 @@ export const setEventsDisplayAction = (displayNames, status = 'started') => {
 };
 
 export const fetchUserPropertiesAction = (userProps) => {
-  return { type: FETCH_USER_PROPERTIES, payload: userProps};
-}
+  return { type: FETCH_USER_PROPERTIES, payload: userProps };
+};
 
 export const fetchGroupPropertiesAction = (groupProps, groupName) => {
   return {
     type: FETCH_GROUP_PROPERTIES,
     payload: groupProps,
-    groupName: groupName,
+    groupName: groupName
   };
 };
 
 export const setGroupPropertiesNamesAction = (groupPropsDisplayNames) => {
-  return { type: SET_GROUP_PROP_NAME, payload: groupPropsDisplayNames};
-}
+  return { type: SET_GROUP_PROP_NAME, payload: groupPropsDisplayNames };
+};
 
 export const setUserPropertiesNamesAction = (userPropsDisplayNames) => {
-  return { type: SET_USER_PROP_NAME, payload: userPropsDisplayNames};
-}
+  return { type: SET_USER_PROP_NAME, payload: userPropsDisplayNames };
+};
 
 export const fetchEventPropertiesAction = (eventProps, name) => {
   return { type: FETCH_EVENT_PROPERTIES, payload: eventProps, eventName: name };
-}
+};
 
 export const setEventPropertiesNamesAction = (eventPropDisplayNames) => {
-  return { type: SET_EVENT_PROP_NAME, payload: eventPropDisplayNames};
-}
+  return { type: SET_EVENT_PROP_NAME, payload: eventPropDisplayNames };
+};
 
 export const delGroupByAction = (type, payload, index) => {
-  return { type: DEL_GROUPBY, payload: payload, index: index, groupByType: type };
-}
+  return {
+    type: DEL_GROUPBY,
+    payload: payload,
+    index: index,
+    groupByType: type
+  };
+};
 
 export const deleteGroupByEventAction = (ev, index) => {
-  return { type: DEL_GROUPBY_EVENT, payload: ev, index: index};
-}
+  return { type: DEL_GROUPBY_EVENT, payload: ev, index: index };
+};
 
-export const setGroupByAction = (type, groupBy, index) => {
-  return { type: SET_GROUPBY, payload: groupBy, index: index, groupByType: type };
-}
+export const setGroupByAction = (groupByType, groupBy, index) => {
+  return { type: SET_GROUPBY, payload: groupBy, index: index, groupByType };
+};
 export const resetGroupByAction = () => {
-  return { type: RESET_GROUPBY};
-}
+  return { type: RESET_GROUPBY };
+};
 
 export const setEventGoalAction = (goal) => {
-  return { type: SET_EVENT_GOAL, payload: goal};
-}
+  return { type: SET_EVENT_GOAL, payload: goal };
+};
 
 export const setMarketingTouchpointsAction = (touchpoints) => {
-  return { type: SET_TOUCHPOINTS, payload: touchpoints};
-}
+  return { type: SET_TOUCHPOINTS, payload: touchpoints };
+};
 
 export const setTouchPointFiltersAction = (touchpointFilters) => {
-  return { type: SET_TOUCHPOINT_FILTERS, payload: touchpointFilters};
-}
+  return { type: SET_TOUCHPOINT_FILTERS, payload: touchpointFilters };
+};
 
 export const setAttributionQueryTypeAction = (attrQueryType) => {
-  return { type: SET_ATTR_QUERY_TYPE, payload: attrQueryType};
-}
+  return { type: SET_ATTR_QUERY_TYPE, payload: attrQueryType };
+};
 
 export const setTacticOfferTypeAction = (tacticOfferType) => {
-  return { type: SET_TACTIC_OFFER_TYPE, payload: tacticOfferType};
-}
+  return { type: SET_TACTIC_OFFER_TYPE, payload: tacticOfferType };
+};
 
 export const setAttributionModelsAction = (models) => {
-  return { type: SET_ATTRIBUTION_MODEL, payload: models};
-}
+  return { type: SET_ATTRIBUTION_MODEL, payload: models };
+};
 
 export const setAttributionWindowAction = (window) => {
-  return { type: SET_ATTRIBUTION_WINDOW, payload: window};
-}
+  return { type: SET_ATTRIBUTION_WINDOW, payload: window };
+};
 
 export const setAttrLinkEventsAction = (linkedEvents) => {
-  return { type: SET_ATTR_LINK_EVENTS, payload: linkedEvents};
-}
+  return { type: SET_ATTR_LINK_EVENTS, payload: linkedEvents };
+};
 
 export const setAttrDateRangeAction = (dateRange) => {
-  return { type: SET_ATTR_DATE_RANGE, payload: dateRange};
-}
+  return { type: SET_ATTR_DATE_RANGE, payload: dateRange };
+};
 
 export const getCampaignConfigAction = (config) => {
-  return { type: FETCH_CAMP_CONFIG, payload: config};
-}
+  return { type: FETCH_CAMP_CONFIG, payload: config };
+};
 
 export const setCampChannelAction = (channel) => {
-  return { type: SET_CAMP_CHANNEL, payload: channel};
-}
+  return { type: SET_CAMP_CHANNEL, payload: channel };
+};
 
 export const setMeasuresAction = (measures) => {
-  return { type: SET_CAMP_MEASURES, payload: measures};
-}
+  return { type: SET_CAMP_MEASURES, payload: measures };
+};
 
 export const setCampFiltersAction = (filters) => {
-  return { type: SET_CAMP_FILTERS, payload: filters};
-}
+  return { type: SET_CAMP_FILTERS, payload: filters };
+};
 
 export const setCampGroupByAction = (groupBy) => {
-  return { type: SET_CAMP_GROUBY, payload: groupBy};
-}
+  return { type: SET_CAMP_GROUBY, payload: groupBy };
+};
 
 export const setCampDateRangeAction = (dateRange) => {
-  return { type: SET_CAMP_DATE_RANGE, payload: dateRange};
-}
+  return { type: SET_CAMP_DATE_RANGE, payload: dateRange };
+};
 
 export const setDefaultStateAction = () => {
-  return { type: SET_DEFAULT_STATE};
-}
+  return { type: SET_DEFAULT_STATE };
+};
 
-
+export const setEventGroupBy = (payload) => {
+  return { type: SET_EVENT_GROUPBY, payload };
+};
