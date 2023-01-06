@@ -1691,7 +1691,7 @@ func sendAttributionQueryReq(r *gin.Engine, projectID int64, agent *model.Agent,
 func sendAnalyticsQueryReq(r *gin.Engine, queryClass string, projectID int64, agent *model.Agent, dashboardID,
 	unitID int64, preset string, baseQuery model.BaseQuery, refresh bool, withDashboardParams bool) *httptest.ResponseRecorder {
 	return sendAnalyticsQueryReqWithHeader(r, queryClass, projectID, agent, dashboardID, unitID, preset,
-		baseQuery, refresh, withDashboardParams, map[string]string{})
+		baseQuery, refresh, withDashboardParams, map[string]string{model.QueryFunnelV2: "true"})
 }
 
 func sendAnalyticsQueryReqWithHeader(r *gin.Engine, queryClass string, projectID int64, agent *model.Agent, dashboardID,

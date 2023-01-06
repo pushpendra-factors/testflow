@@ -1141,10 +1141,16 @@ func IsQueryGroupByLatestUserProperty(queryGroupByProperty []QueryGroupByPropert
 }
 
 var funnelQueryGroupUserID = regexp.MustCompile("user_groups\\.group_\\d_user_id")
+var funnelQueryUserGroupUserID = regexp.MustCompile("users\\.group_\\d_user_id")
 
 func GetQueryGroupUserID(stmnt string) string {
 
 	return funnelQueryGroupUserID.FindString(stmnt)
+}
+
+func GetQueryUserGroupUserID(stmnt string) string {
+
+	return funnelQueryUserGroupUserID.FindString(stmnt)
 }
 
 func IsValidFunnelQueryGroupName(group string) bool {
