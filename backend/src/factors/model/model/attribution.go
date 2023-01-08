@@ -1463,6 +1463,69 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 	return rows
 }
 
+// GetRowsByMapsAllPage Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
+func GetRowsByMapsAllPage(contentGroupNamesList []string, attributionData *map[string]*AttributionData,
+	linkedEvents []QueryEventWithProperties, isCompare bool) [][]interface{} {
+
+	var defaultMatchingRow []interface{}
+
+	//ConversionEventCount, ConversionEventCountInfluence,ConversionEventCompareCount,ConversionEventCompareCountInfluence
+	defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0), float64(0), float64(0))
+
+	var contentGroups []interface{}
+	for i := 0; i < len(contentGroupNamesList); i++ {
+		contentGroups = append(contentGroups, "none")
+	}
+
+	nonMatchingRow := []interface{}{"none"}
+	nonMatchingRow = append(nonMatchingRow, contentGroups...)
+	nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
+
+	// Add up for linkedEvents for conversion and conversion rate
+	for i := 0; i < len(linkedEvents); i++ {
+		nonMatchingRow = append(nonMatchingRow, float64(0), float64(0))
+	}
+	rows := make([][]interface{}, 0)
+	for _, data := range *attributionData {
+		attributionIdName := data.MarketingInfo.AllPageView
+		if attributionIdName == "" {
+			attributionIdName = PropertyValueNone
+		}
+		if attributionIdName != "" {
+
+			var row []interface{}
+			// Add up Name
+			row = append(row, attributionIdName)
+
+			// Add up content Groups
+			for i := 0; i < len(contentGroups); i++ {
+				if v, exists := data.MarketingInfo.ContentGroupValuesMap[contentGroupNamesList[i]]; exists {
+					row = append(row, v)
+				} else {
+					row = append(row, PropertyValueNone)
+				}
+			}
+			// Append fixed Metrics & ConversionEventCount[0] as only one goal event exists for landing page
+			row = append(row, data.ConversionEventCount[0], data.ConversionEventCountInfluence[0])
+
+			if isCompare {
+
+				row = append(row, data.ConversionEventCompareCount[0])
+				row = append(row, data.ConversionEventCompareCountInfluence[0])
+			} else {
+				row = append(row, float64(0), float64(0))
+			}
+			row = append(row, getLinkedEventColumnAsInterfaceListLandingPagev1(data.LinkedEventsCount, data.LinkedEventsCountInfluence, len(linkedEvents))...)
+			rows = append(rows, row)
+		}
+	}
+	if len(rows) == 0 {
+		// In case of empty result, send a row of zeros
+		rows = append(rows, nonMatchingRow)
+	}
+	return rows
+}
+
 // GetRowsByMapsLandingPage Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
 func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *map[string]*AttributionData,
 	linkedEvents []QueryEventWithProperties, isCompare bool) [][]interface{} {
@@ -1627,7 +1690,7 @@ func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map
 func ProcessQueryPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQueryLandingPageUrl"}
 	logCtx = *logCtx.WithFields(logFields)
-	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
+	dataRows := GetRowsByMapsAllPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
 
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
