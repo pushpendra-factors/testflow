@@ -249,9 +249,11 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	timelinesConfig := model.TimelinesConfig{
 		DisabledEvents: []string{"Contact Updated", "Campaign Member Updated", "Engagement Meeting Updated", "Engagement Call Updated"}, //Display Names. Used on FE only.
 		UserConfig: model.UserConfig{
+			TableProps:    []string{U.UP_COUNTRY},
 			LeftpaneProps: []string{U.UP_EMAIL, U.UP_COUNTRY, U.UP_PAGE_COUNT},
 		},
 		AccountConfig: model.AccountConfig{
+			TableProps:    []string{U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS},
 			LeftpaneProps: []string{U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES},
 			UserProp:      U.UP_USER_ID,
 		},

@@ -33,9 +33,9 @@ export const groups = {
       .format('DD MMM YYYY'),
   Weekly: (item) =>
     `${MomentTz(item.timestamp * 1000)
-      .endOf('week')
-      .format('DD MMM YYYY')} - ${MomentTz(item.timestamp * 1000)
       .startOf('week')
+      .format('DD MMM YYYY')} - ${MomentTz(item.timestamp * 1000)
+      .endOf('week')
       .format('DD MMM YYYY')}`,
   Monthly: (item) =>
     MomentTz(item.timestamp * 1000)
