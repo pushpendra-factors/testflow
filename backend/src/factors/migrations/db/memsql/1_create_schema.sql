@@ -448,6 +448,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_client_six_signal_key boolean NOT NULL DEFAULT FALSE,
     int_factors_six_signal_key boolean NOT NULL DEFAULT FALSE,
     integration_bits varchar(32) DEFAULT '00000000000000000000000000000000',
+    is_path_analysis_enabled boolean,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)

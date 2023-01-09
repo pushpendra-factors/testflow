@@ -182,6 +182,42 @@ func UpdateExplainHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+func UpdatePathAnalysisHandler(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		logCtx.Error("Update project_settings for path analysis failed. Failed to get project_id.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
+		return
+	}
+
+	params, err := getUpdateParams(c)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to parse UpdateParams")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	var errCode int
+	if params.Status == true {
+		errCode = store.GetStore().EnablePathAnalysis(projectId)
+	} else {
+		errCode = store.GetStore().DisablePathAnalysis(projectId)
+	}
+	if errCode != http.StatusOK {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Project setting update failed for PathAnalysis"})
+		return
+	}
+	resp := map[string]string{
+		"status": "success",
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
 type updateLeadSquaredConfigParams struct {
 	AccessKey string `json:"access_key"`
 	SecretKey string `json:"secret_key"`

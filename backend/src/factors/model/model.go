@@ -395,10 +395,13 @@ type Model interface {
 	UpdateLeadSquaredConfig(projectId int64, accessKey string, host string, secretkey string) int
 	EnableWeeklyInsights(projectId int64) int
 	EnableExplain(projectId int64) int
+	EnablePathAnalysis(projectId int64) int
 	DisableWeeklyInsights(projectId int64) int
 	DisableExplain(projectId int64) int
+	DisablePathAnalysis(projectId int64) int
 	GetAllWeeklyInsightsEnabledProjects() ([]int64, error)
 	GetAllExplainEnabledProjects() ([]int64, error)
+	GetAllPathAnalysisEnabledProjects() ([]int64, error)
 	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
 	GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error)
 

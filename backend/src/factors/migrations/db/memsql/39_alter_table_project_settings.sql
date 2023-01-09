@@ -1,0 +1,1 @@
+ALTER TABLE project_settings ADD COLUMN is_path_analysis_enabled boolean;

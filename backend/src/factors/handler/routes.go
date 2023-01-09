@@ -315,6 +315,7 @@ func InitAppRoutes(r *gin.Engine) {
 	// weekly insights, explain
 	authRouteGroup.PUT("/:project_id/v1/weeklyinsights", mid.SetLoggedInAgentInternalOnly(), UpdateWeeklyInsightsHandler)
 	authRouteGroup.PUT("/:project_id/v1/explain", mid.SetLoggedInAgentInternalOnly(), UpdateExplainHandler)
+	authRouteGroup.PUT("/:project_id/v1/pathanalysis", mid.SetLoggedInAgentInternalOnly(), UpdatePathAnalysisHandler)
 
 	// path analysis
 	authRouteGroup.GET("/:project_id/v1/pathanalysis", responseWrapper(V1.GetPathAnalysisEntityHandler))

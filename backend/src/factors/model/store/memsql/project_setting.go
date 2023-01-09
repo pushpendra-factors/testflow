@@ -1339,6 +1339,19 @@ func (store *MemSQL) GetAllWeeklyInsightsEnabledProjects() ([]int64, error) {
 	return result, nil
 }
 
+func (store *MemSQL) GetAllPathAnalysisEnabledProjects() ([]int64, error) {
+
+	db := C.GetServices().Db
+	result := make([]int64, 0)
+	projectSettings := make([]model.ProjectSetting, 0, 0)
+	_ = db.Table("project_settings").Where("is_path_analysis_enabled = true").Find(&projectSettings).Error
+
+	for _, setting := range projectSettings {
+		result = append(result, setting.ProjectId)
+	}
+	return result, nil
+}
+
 func (store *MemSQL) GetAllExplainEnabledProjects() ([]int64, error) {
 
 	db := C.GetServices().Db
@@ -1363,6 +1376,17 @@ func (store *MemSQL) EnableWeeklyInsights(projectId int64) int {
 	return http.StatusOK
 }
 
+func (store *MemSQL) EnablePathAnalysis(projectId int64) int {
+	db := C.GetServices().Db
+	if err := db.Model(&model.ProjectSetting{}).
+		Where("project_id = ?", projectId).
+		Update("is_path_analysis_enabled", true).Error; err != nil {
+		log.WithError(err).Error("Updating is_path_analysis_enabled config failed")
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
+}
+
 func (store *MemSQL) EnableExplain(projectId int64) int {
 	db := C.GetServices().Db
 	if err := db.Model(&model.ProjectSetting{}).
@@ -1380,6 +1404,17 @@ func (store *MemSQL) DisableWeeklyInsights(projectId int64) int {
 		Where("project_id = ?", projectId).
 		Update("is_weekly_insights_enabled", false).Error; err != nil {
 		log.WithError(err).Error("Updating is_weekly_insights_enabled config failed")
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
+}
+
+func (store *MemSQL) DisablePathAnalysis(projectId int64) int {
+	db := C.GetServices().Db
+	if err := db.Model(&model.ProjectSetting{}).
+		Where("project_id = ?", projectId).
+		Update("is_path_analysis_enabled", false).Error; err != nil {
+		log.WithError(err).Error("Updating is_path_analysis_enabled config failed")
 		return http.StatusInternalServerError
 	}
 	return http.StatusOK
