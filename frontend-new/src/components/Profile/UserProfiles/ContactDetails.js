@@ -4,7 +4,7 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
-import { granularityOptions } from '../utils';
+import { DEFAULT_TIMELINE_CONFIG, granularityOptions } from '../utils';
 import {
   udpateProjectSettings,
   fetchProjectSettings
@@ -31,23 +31,23 @@ function ContactDetails({
   const [granularity, setGranularity] = useState('Daily');
   const [collapse, setCollapse] = useState(true);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
-  const [tlConfig, setTimelinesConfig] = useState({
-    disabled_events: [],
-    user_config: {
-      props_to_show: []
-    },
-    account_config: {
-      account_props_to_show: [],
-      user_props_to_show: ''
-    }
-  });
+  const [tlConfig, setTLConfig] = useState({});
 
   useEffect(() => {
     if (currentProjectSettings?.timelines_config) {
-      setTimelinesConfig({
-        ...tlConfig,
-        ...currentProjectSettings.timelines_config
-      });
+      const timelinesConfig = {};
+      timelinesConfig.disabled_events = [
+        ...currentProjectSettings?.timelines_config?.disabled_events
+      ];
+      timelinesConfig.user_config = {
+        ...DEFAULT_TIMELINE_CONFIG.user_config,
+        ...currentProjectSettings?.timelines_config?.user_config
+      };
+      timelinesConfig.account_config = {
+        ...DEFAULT_TIMELINE_CONFIG.account_config,
+        ...currentProjectSettings?.timelines_config?.account_config
+      };
+      setTLConfig(timelinesConfig);
     }
   }, [currentProjectSettings]);
 
@@ -148,8 +148,8 @@ function ContactDetails({
 
   const handleOptionClick = (group, value) => {
     const timelinesConfig = { ...tlConfig };
-    if (!timelinesConfig.user_config.props_to_show.includes(value[1])) {
-      timelinesConfig.user_config.props_to_show.push(value[1]);
+    if (!timelinesConfig.user_config.leftpane_props.includes(value[1])) {
+      timelinesConfig.user_config.leftpane_props.push(value[1]);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...timelinesConfig }
       }).then(() =>
@@ -161,14 +161,13 @@ function ContactDetails({
         )
       );
     }
-
     setPropSelectOpen(false);
   };
 
   const onDelete = (option) => {
     const timelinesConfig = { ...tlConfig };
-    timelinesConfig.user_config.props_to_show.splice(
-      timelinesConfig.user_config.props_to_show.indexOf(option),
+    timelinesConfig.user_config.leftpane_props.splice(
+      timelinesConfig.user_config.leftpane_props.indexOf(option),
       1
     );
     udpateProjectSettings(activeProject.id, {
@@ -179,7 +178,7 @@ function ContactDetails({
   const listLeftPaneProps = (props = []) => {
     const propsList = [];
     const showProps =
-      currentProjectSettings?.timelines_config?.user_config?.props_to_show ||
+      currentProjectSettings?.timelines_config?.user_config?.leftpane_props ||
       [];
 
     showProps.forEach((prop, index) => {
@@ -210,8 +209,9 @@ function ContactDetails({
     );
 
   const renderAddNewProp = () =>
-    currentProjectSettings?.timelines_config?.user_config?.props_to_show
-      ?.length < 5 ? (
+    !currentProjectSettings?.timelines_config?.user_config?.leftpane_props ||
+    currentProjectSettings?.timelines_config?.user_config?.leftpane_props
+      ?.length < 8 ? (
       <div>
         <Button
           type='link'

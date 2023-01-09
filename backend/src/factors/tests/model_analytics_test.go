@@ -2892,10 +2892,14 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
+	location, err := time.LoadLocation(string(U.TimeZoneStringIST))
+	assert.Nil(t, err)
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
-	startTimestampString := time.Unix(startTimestamp, 0).UTC().Format(U.DATETIME_FORMAT_DB)
+	startTimestampString := time.Unix(U.GetBeginningOfDayTimestampIn(startTimestamp, U.TimeZoneStringIST), 0).
+		In(location).Format(U.DATETIME_FORMAT_DB_WITH_TIMEZONE)
 	startTimestampYesterday := U.UnixTimeBeforeDuration(time.Hour * 24)
-	startTimestampStringYesterday := time.Unix(startTimestampYesterday, 0).UTC().Format(U.DATETIME_FORMAT_DB)
+	startTimestampStringYesterday := time.Unix(U.GetBeginningOfDayTimestampIn(startTimestampYesterday, U.TimeZoneStringIST), 0).
+		In(location).Format(U.DATETIME_FORMAT_DB_WITH_TIMEZONE)
 	t.Run("FunnelSingleBreakdown", func(t *testing.T) {
 		// 20 events with single incremented value.
 		eventName1 := "event1"
@@ -2968,15 +2972,49 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 	})
 }
 
-func TestBaseQueryHashStringConsistency(t *testing.T) {
+func TestEventsFunnelChannelWebClassBaseQueryHashStringConsistency(t *testing.T) {
 	var queriesStr = map[string]string{
-		model.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
-		model.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassInsights:  `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassFunnel:    `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassChannel:   `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
+		model.QueryClassEvents:    `{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[{"pr":"$browser","en":"event","pty":"categorical","ena":"$session","eni":1},{"pr":"$campaign","en":"event","pty":"categorical","ena":"MagazineViews","eni":2}],"gbt":"","tz":"Asia/Calcutta"}]}`,
+		model.QueryClassChannelV1: `{ "query_group":[{ "channel": "google_ads", "select_metrics": ["impressions"], "filters": [], "group_by": [], "gbt": "hour", "fr": 1585679400, "to": 1585765800 }], "cl": "channel_v1" }`,
+		model.QueryClassWeb:       `{"units":[{"unit_id":194,"query_name":"bounce_rate"},{"unit_id":195,"query_name":"unique_users"},{"unit_id":196,"query_name":"avg_session_duration"},{"unit_id":197,"query_name":"avg_pages_per_session"},{"unit_id":200,"query_name":"sessions"},{"unit_id":201,"query_name":"total_page_view"},{"unit_id":199,"query_name":"traffic_channel_report"},{"unit_id":198,"query_name":"top_pages_report"}],"custom_group_units":[],"from":1609612200,"to":1610044199}`,
+	}
+	for queryClass, queryString := range queriesStr {
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		queryHashString, err := baseQuery.GetQueryCacheHashString()
+		assert.Nil(t, err)
+		for i := 0; i < 50; i++ {
+			// Query hash should be consistent and same every time.
+			tempQueryHashString, err := baseQuery.GetQueryCacheHashString()
+			assert.Nil(t, err)
+			assert.Equal(t, queryHashString, tempQueryHashString)
+		}
+
+		for rangeString, rangeFunction := range U.QueryDateRangePresets {
+			from, to, errCode := rangeFunction(U.TimeZoneStringIST)
+			assert.Nil(t, errCode)
+			baseQuery.SetQueryDateRange(from, to)
+			assertMsg := fmt.Sprintf("Failed for class:%s:range:%s", queryClass, rangeString)
+
+			tempQueryHashString, err := baseQuery.GetQueryCacheHashString()
+			assert.Nil(t, err, assertMsg)
+			assert.Equal(t, queryHashString, tempQueryHashString, assertMsg)
+		}
+	}
+}
+
+func TestAttributionClassBaseQueryHashStringConsistency(t *testing.T) {
+	var queriesStr = map[string]string{
 		model.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
 		model.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
 		model.QueryClassEvents:      `{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[{"pr":"$browser","en":"event","pty":"categorical","ena":"$session","eni":1},{"pr":"$campaign","en":"event","pty":"categorical","ena":"MagazineViews","eni":2}],"gbt":"","tz":"Asia/Calcutta"}]}`,
 		model.QueryClassChannelV1:   `{ "query_group":[{ "channel": "google_ads", "select_metrics": ["impressions"], "filters": [], "group_by": [], "gbt": "hour", "fr": 1585679400, "to": 1585765800 }], "cl": "channel_v1" }`,
-		model.QueryClassWeb:         `{"units":[{"unit_id":194,"query_name":"bounce_rate"},{"unit_id":195,"query_name":"unique_users"},{"unit_id":196,"query_name":"avg_session_duration"},{"unit_id":197,"query_name":"avg_pages_per_session"},{"unit_id":200,"query_name":"sessions"},{"unit_id":201,"query_name":"total_page_view"},{"unit_id":199,"query_name":"traffic_channel_report"},{"unit_id":198,"query_name":"top_pages_report"}],"custom_group_units":[],"from":1609612200,"to":1610044199}`,
+		model.QueryClassWeb:         `{"units":[{"unit_id":"194","query_name":"bounce_rate"},{"unit_id":"195","query_name":"unique_users"},{"unit_id":"196","query_name":"avg_session_duration"},{"unit_id":"197","query_name":"avg_pages_per_session"},{"unit_id":"200","query_name":"sessions"},{"unit_id":"201","query_name":"total_page_view"},{"unit_id":"199","query_name":"traffic_channel_report"},{"unit_id":"198","query_name":"top_pages_report"}],"custom_group_units":[],"from":1609612200,"to":1610044199}`,
 	}
 	for queryClass, queryString := range queriesStr {
 		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
@@ -4454,4 +4492,324 @@ func TestAnalyticsFunnelBreakdownPropertyFirstOccurence(t *testing.T) {
 	assert.Equal(t, "1", result.Rows[1][0])
 	assert.Equal(t, "3", result.Rows[1][1])
 
+}
+
+func TestFunnelConversionXTime(t *testing.T) {
+	project, _, _, _, err := SetupProjectUserEventNameAgentReturnDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	startTime := U.TimeNowIn(U.TimeZoneStringIST).AddDate(0, 0, -5)
+
+	// user 1
+	userID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, userID1)
+	{
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d,"event_properties":{"value1":"%s","value2":"%s"},"user_properties":{"user_value1":"%s","user_value2":"%s"}}`,
+			"s0", userID1, startTime.Unix(), "A", "B", "UA", "UB")
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response := DecodeJSONResponseToMap(w.Body)
+		assert.Nil(t, response["user_id"])
+
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d,"event_properties":{"value1":"%s","value2":"%s"},"user_properties":{"user_value1":"%s","user_value2":"%s"}}`,
+			"s1", userID1, startTime.Add(15*time.Minute).Unix(), "A", "B", "UA", "UB")
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d,"event_properties":{"value1":"%s","value2":"%s"},"user_properties":{"user_value1":"%s","user_value2":"%s"}}`,
+			"s2", userID1, startTime.Add(3*time.Hour).Unix(), "A", "B", "UA", "UB")
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d,"event_properties":{"value1":"%s","value2":"%s"},"user_properties":{"user_value1":"%s","user_value2":"%s"}}`,
+			"s3", userID1, startTime.AddDate(0, 0, 1).Unix(), "A", "B", "UA", "UB")
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+	}
+
+	// user 2
+	userID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, userID2)
+	{
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d,"event_properties":{"value1":"%s","value2":"%s"},"user_properties":{"user_value1":"%s","user_value2":"%s"}}`,
+			"s0", userID2, startTime.Add(5*time.Minute).Unix(), "A", "B", "UA", "UB")
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response := DecodeJSONResponseToMap(w.Body)
+		assert.Nil(t, response["user_id"])
+
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d,"event_properties":{"value1":"%s","value2":"%s"},"user_properties":{"user_value1":"%s","user_value2":"%s"}}`,
+			"s1", userID2, startTime.Add(40*time.Minute).Unix(), "A", "B", "UA", "UB")
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d,"event_properties":{"value1":"%s","value2":"%s"},"user_properties":{"user_value1":"%s","user_value2":"%s"}}`,
+			"s2", userID2, startTime.Add(5*time.Hour).Unix(), "A", "B", "UA", "UB")
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d,"event_properties":{"value1":"%s","value2":"%s"},"user_properties":{"user_value1":"%s","user_value2":"%s"}}`,
+			"s3", userID2, startTime.AddDate(0, 0, 2).Unix(), "A", "B", "UA", "UB")
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+	}
+
+	// 15 min conversion time
+	query := model.Query{
+		From: startTime.Unix(),
+		To:   startTime.AddDate(0, 0, 5).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+
+			model.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s3",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		Timezone:        string(U.TimeZoneStringIST),
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+		ConversionTime:  "15M",
+	}
+
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(2), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(2), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+
+	query = model.Query{
+		From: startTime.Unix(),
+		To:   startTime.AddDate(0, 0, 5).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+
+			model.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s3",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				EventName:      "s0",
+				EventNameIndex: 1,
+				Property:       "user_value1",
+			},
+			{
+				Entity:         model.PropertyEntityUser,
+				EventName:      "s0",
+				EventNameIndex: 1,
+				Property:       "user_value2",
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		Timezone:        string(U.TimeZoneStringIST),
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+		ConversionTime:  "15M",
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "$no_group", result.Rows[0][0])
+	assert.Equal(t, "$no_group", result.Rows[0][1])
+	assert.Equal(t, float64(2), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "UA", result.Rows[1][0])
+	assert.Equal(t, "UB", result.Rows[1][1])
+	assert.Equal(t, float64(2), result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+
+	// 3 hour conversion time
+	query = model.Query{
+		From: startTime.Unix(),
+		To:   startTime.AddDate(0, 0, 5).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+
+			model.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s2",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s3",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				EventName:      "s0",
+				EventNameIndex: 1,
+				Property:       "user_value1",
+			},
+			{
+				Entity:         model.PropertyEntityUser,
+				EventName:      "s0",
+				EventNameIndex: 1,
+				Property:       "user_value2",
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		Timezone:        string(U.TimeZoneStringIST),
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+		ConversionTime:  "3H",
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "UA", result.Rows[1][0])
+	assert.Equal(t, "UB", result.Rows[1][1])
+	assert.Equal(t, float64(2), result.Rows[1][2])
+	assert.Equal(t, float64(2), result.Rows[1][3])
+	assert.Equal(t, float64(1), result.Rows[1][5])
+
+	// 2 day conversion time
+	query = model.Query{
+		From: startTime.Unix(),
+		To:   startTime.AddDate(0, 0, 5).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+
+			model.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s2",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s3",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				EventName:      "s0",
+				EventNameIndex: 1,
+				Property:       "user_value1",
+			},
+			{
+				Entity:         model.PropertyEntityUser,
+				EventName:      "s0",
+				EventNameIndex: 1,
+				Property:       "user_value2",
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		Timezone:        string(U.TimeZoneStringIST),
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+		ConversionTime:  "2D",
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "UA", result.Rows[1][0])
+	assert.Equal(t, "UB", result.Rows[1][1])
+	assert.Equal(t, float64(2), result.Rows[1][2])
+	assert.Equal(t, float64(2), result.Rows[1][3])
+	assert.Equal(t, float64(2), result.Rows[1][5])
+	assert.Equal(t, float64(2), result.Rows[1][7])
+
+	// 1 day conversion time
+	query.ConversionTime = "1D"
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "UA", result.Rows[1][0])
+	assert.Equal(t, "UB", result.Rows[1][1])
+	assert.Equal(t, float64(2), result.Rows[1][2])
+	assert.Equal(t, float64(2), result.Rows[1][3])
+	assert.Equal(t, float64(2), result.Rows[1][5])
+	assert.Equal(t, float64(1), result.Rows[1][7])
+
+	// any order 1 day any order converison time
+
+	query = model.Query{
+		From: startTime.Unix(),
+		To:   startTime.AddDate(0, 0, 5).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "s2",
+				Properties: []model.QueryProperty{},
+			},
+
+			model.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s3",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				EventName:      "s2",
+				EventNameIndex: 1,
+				Property:       "user_value1",
+			},
+			{
+				Entity:         model.PropertyEntityUser,
+				EventName:      "s2",
+				EventNameIndex: 1,
+				Property:       "user_value2",
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		Timezone:        string(U.TimeZoneStringIST),
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondFunnelAnyGivenEvent,
+		ConversionTime:  "1D",
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "UA", result.Rows[1][0])
+	assert.Equal(t, "UB", result.Rows[1][1])
+	assert.Equal(t, float64(2), result.Rows[1][2])
+	assert.Equal(t, float64(2), result.Rows[1][3])
+	assert.Equal(t, float64(2), result.Rows[1][5])
+	assert.Equal(t, float64(1), result.Rows[1][7])
 }

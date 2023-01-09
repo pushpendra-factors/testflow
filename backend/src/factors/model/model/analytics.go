@@ -220,6 +220,7 @@ type Query struct {
 	From                 int64                      `json:"fr"`
 	To                   int64                      `json:"to"`
 	GroupAnalysis        string                     `json:"grpa"`
+	ConversionTime       string                     `json:"cnvtm"`
 	// Deprecated: Keeping it for old dashboard units.
 	OverridePeriod    bool  `json:"ovp"`
 	SessionStartEvent int64 `json:"sse"`

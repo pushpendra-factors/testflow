@@ -272,6 +272,7 @@ type KPIQuery struct {
 	Operator           string       `json:"op"`
 	QueryType          string       `json:"qt"`
 	Name               string       `json:"na"`
+	AliasName          string       `json:"an"`
 	LimitNotApplicable bool         `json:"lmt_na"`
 }
 
@@ -840,68 +841,93 @@ func GetFinalResultantResultsForKPI(reqID string, kpiQueryGroup KPIQueryGroup, m
 	return finalResultantResults, finalStatusCode
 }
 
+// builds a query result with all the metric values as numeric value passed through the func
+// e.g, if number passed through is 1.5 and gbt is there then, QueryResult.Rows = [[01-01-2023, 1.5],[02-01-2023, 1.5]... and so on] and same with normal group bys and no group bys
+func buildQueryResultForNumericValues(resultKeys map[string]interface{}, headers []string, numValue interface{}, timezone string) QueryResult {
+	res := QueryResult{}
+	rows := make([][]interface{}, 0)
+	for key := range resultKeys {
+		row := SplitKeysAndGetRow(key, timezone)
+		row = append(row, numValue)
+		rows = append(rows, row)
+	}
+	res.Headers = headers
+	res.Rows = rows
+	return res
+}
+
+// ref: https://www.codingninjas.com/codestudio/library/expression-evaluation-using-stack infix evaluation using stacks
+/* this function evalutes the arithmetic formula. eg a*b*1.5, it will take queryResult of a and b, create a new query result just for '1.5'
+and apply artihmetic operations on those results usinfg stack*/
 func EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult map[string]QueryResult, timezone string, formula string) QueryResult {
 	valueStack := make([]QueryResult, 0)
 	operatorStack := make([]string, 0)
 
-	for _, currentVariable := range formula {
+	results := make([]*QueryResult, 0)
+	headers := make([]string, 0)
+	for _, queryResult := range mapOfFormulaVariableToQueryResult {
+		results = append(results, &queryResult)
+		headers = queryResult.Headers
+	}
+	resultKeys := getAllKeysFromResults(results)
+
+	formulaArray := U.GetArrayOfTokensFromFormula(formula)
+
+	for _, currentVariable := range formulaArray {
 		currentFormulaVariable := string(currentVariable)
-		if currentFormulaVariable == "(" {
+
+		if currentFormulaVariable == "(" { // if opening brace, push onto operator stack
 			operatorStack = append(operatorStack, currentFormulaVariable)
-		} else if strings.Contains(U.Alpha, strings.ToLower(currentFormulaVariable)) {
+		} else if U.IsAlphabeticToken(currentFormulaVariable) { // if formula variable push the result from map onto value stack
 			valueStack = append(valueStack, mapOfFormulaVariableToQueryResult[currentFormulaVariable])
-		} else if currentFormulaVariable == ")" {
+		} else if U.IsNumericToken(currentFormulaVariable) {
+			// if numeric value comes, convert that numeric value to float64 or int64 depending on whether '.' is present
+			// use that numeric value to create a new QueryResult and push it onto value stack
+			var numValue interface{}
+			if strings.Contains(currentFormulaVariable, ".") {
+				numValue, _ = strconv.ParseFloat(currentFormulaVariable, 64)
+			} else {
+				numValue, _ = strconv.ParseInt(currentFormulaVariable, 10, 64)
+			}
+
+			valueStack = append(valueStack, buildQueryResultForNumericValues(resultKeys, headers, numValue, timezone))
+
+		} else if currentFormulaVariable == ")" { // if closing brace, keep applying operations on top 2 value till we find '(' or we reach end of operator stack
 			for len(operatorStack) != 0 && operatorStack[len(operatorStack)-1] != "(" {
-				v1 := valueStack[len(valueStack)-1]
-				valueStack = valueStack[:len(valueStack)-1]
-				v2 := valueStack[len(valueStack)-1]
-				valueStack = valueStack[:len(valueStack)-1]
-				results := make([]*QueryResult, 0)
-				results = append(results, &v2)
-				results = append(results, &v1)
-				op := operatorStack[len(operatorStack)-1]
-				ops := make([]string, 0)
-				ops = append(ops, op)
-				operatorStack = operatorStack[:len(operatorStack)-1]
-				valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone)) // apply operations and return result
+				valueStack, operatorStack = applyStackOperation(valueStack, operatorStack, timezone) // apply operations and return result
 			}
 			if len(operatorStack) != 0 {
 				operatorStack = operatorStack[:len(operatorStack)-1]
 			}
-		} else {
+		} else { // apply operations based of precedence
 			for len(operatorStack) != 0 && U.Precedence(operatorStack[len(operatorStack)-1]) >= U.Precedence(currentFormulaVariable) {
-				v1 := valueStack[len(valueStack)-1]
-				valueStack = valueStack[:len(valueStack)-1]
-				v2 := valueStack[len(valueStack)-1]
-				results := make([]*QueryResult, 0)
-				results = append(results, &v2)
-				results = append(results, &v1)
-				valueStack = valueStack[:len(valueStack)-1]
-				op := operatorStack[len(operatorStack)-1]
-				ops := make([]string, 0)
-				ops = append(ops, op)
-				operatorStack = operatorStack[:len(operatorStack)-1]
-				valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone)) // apply operations and return result
+				valueStack, operatorStack = applyStackOperation(valueStack, operatorStack, timezone) // apply operations and return result
 			}
 			operatorStack = append(operatorStack, currentFormulaVariable)
 		}
 	}
 
-	for len(operatorStack) != 0 {
-		v1 := valueStack[len(valueStack)-1]
-		valueStack = valueStack[:len(valueStack)-1]
-		v2 := valueStack[len(valueStack)-1]
-		results := make([]*QueryResult, 0)
-		results = append(results, &v2)
-		results = append(results, &v1)
-		valueStack = valueStack[:len(valueStack)-1]
-		op := operatorStack[len(operatorStack)-1]
-		ops := make([]string, 0)
-		ops = append(ops, op)
-		operatorStack = operatorStack[:len(operatorStack)-1]
-		valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone))
+	for len(operatorStack) != 0 { // emptying out the stack
+		valueStack, operatorStack = applyStackOperation(valueStack, operatorStack, timezone)
 	}
 	return valueStack[len(valueStack)-1]
+}
+
+func applyStackOperation(valueStack []QueryResult, operatorStack []string, timezone string) ([]QueryResult, []string) {
+	v1 := valueStack[len(valueStack)-1]
+	valueStack = valueStack[:len(valueStack)-1]
+	v2 := valueStack[len(valueStack)-1]
+	results := make([]*QueryResult, 0)
+	results = append(results, &v2)
+	results = append(results, &v1)
+	valueStack = valueStack[:len(valueStack)-1]
+	op := operatorStack[len(operatorStack)-1]
+	ops := make([]string, 0)
+	ops = append(ops, op)
+	operatorStack = operatorStack[:len(operatorStack)-1]
+	valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone))
+
+	return valueStack, operatorStack
 }
 
 func getRowAfterDeletionOfDateTime(row []interface{}, headers []string) []interface{} {
@@ -973,22 +999,29 @@ func MergeQueryResults(queryResults []QueryResult, queries []KPIQuery, timezoneS
 	return queryResult
 }
 
+// Renaming of headers only here. Many tranformations are required if done at other places.
 // NOTE: Basing on single metric being sent per query.
 func TransformColumnResultGroup(queryResults []QueryResult, queries []KPIQuery, timezoneString string) []string {
 	finalResultantColumns := make([]string, 0)
 	for index, queryResult := range queryResults {
-		resultantMetrics := make([]string, 0)
+		resultantMetric := ""
 		if queries[index].Category == ChannelCategory {
-			for _, metric := range queries[index].Metrics {
-				resultantMetrics = append(resultantMetrics, queries[index].DisplayCategory+"_"+metric)
+			if queries[index].AliasName == "" {
+				resultantMetric = queries[index].DisplayCategory + "_" + queries[index].Metrics[0]
+			} else {
+				resultantMetric = queries[index].DisplayCategory + "_" + queries[index].AliasName
 			}
 		} else {
-			resultantMetrics = queries[index].Metrics
+			if queries[index].AliasName == "" {
+				resultantMetric = queries[index].Metrics[0]
+			} else {
+				resultantMetric = queries[index].AliasName
+			}
 		}
 		if index == 0 {
-			finalResultantColumns = append(queryResult.Headers[:len(queryResult.Headers)-1], resultantMetrics...)
+			finalResultantColumns = append(queryResult.Headers[:len(queryResult.Headers)-1], resultantMetric)
 		} else {
-			finalResultantColumns = append(finalResultantColumns, resultantMetrics...)
+			finalResultantColumns = append(finalResultantColumns, resultantMetric)
 		}
 	}
 	return finalResultantColumns

@@ -46,6 +46,7 @@ const (
 	TouchPointRuleTypeForms           = "hs_form_submissions"
 	TouchPointRuleTypeHSNormal        = "hs_contact"
 	TouchPointRuleTypeSFNormal        = "sf_contact"
+	TouchPointRuleTypeContactList     = "hs_contact_list"
 
 	TouchPointCRMTypeHS = "hubspot"
 	TouchPointCRMTypeSF = "salesforce"

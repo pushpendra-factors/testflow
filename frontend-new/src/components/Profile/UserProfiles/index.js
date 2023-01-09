@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Spin, Divider, notification, Popover } from 'antd';
+import {
+  Table,
+  Button,
+  Spin,
+  Divider,
+  notification,
+  Popover,
+  Tabs
+} from 'antd';
 import Modal from 'antd/lib/modal/Modal';
 import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -19,10 +27,12 @@ import {
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,
-  fetchBingAdsIntegration
+  fetchBingAdsIntegration,
+  udpateProjectSettings
 } from '../../../reducers/global';
 import ProfileBeforeIntegration from '../ProfileBeforeIntegration';
 import {
+  DEFAULT_TIMELINE_CONFIG,
   formatFiltersForPayload,
   formatPayloadForFilters,
   formatSegmentsObjToGroupSelectObj
@@ -36,6 +46,9 @@ import {
 import _ from 'lodash';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from './SegmentModal';
+import SearchCheckList from 'Components/SearchCheckList';
+import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function UserProfiles({
   activeProject,
@@ -51,31 +64,17 @@ function UserProfiles({
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
   fetchDemoProject,
-  currentProjectSettings
+  currentProjectSettings,
+  udpateProjectSettings
 }) {
-  const headerClassStr =
-    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
+  const integration = useSelector(
+    (state) => state.global.currentProjectSettings
+  );
+  const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
+  const { bingAds, marketo } = useSelector((state) => state.global);
+  const { dashboards } = useSelector((state) => state.dashboard);
+  const userProperties = useSelector((state) => state.coreQuery.userProperties);
 
-  const columns = [
-    {
-      title: <div className={headerClassStr}>Identity</div>,
-      dataIndex: 'identity',
-      key: 'identity'
-    },
-    {
-      title: <div className={headerClassStr}>Country</div>,
-      dataIndex: 'country',
-      key: 'country',
-      render: (item) => item || '-'
-    },
-    {
-      title: <div className={headerClassStr}>Last Activity</div>,
-      dataIndex: 'last_activity',
-      key: 'last_activity',
-      width: 300,
-      render: (item) => MomentTz(item).format('DD MMMM YYYY, hh:mm:ss A')
-    }
-  ];
   const [isUserDDVisible, setUserDDVisible] = useState(false);
   const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
   const [showSegmentModal, setShowSegmentModal] = useState(false);
@@ -83,18 +82,32 @@ function UserProfiles({
   const [demoProjectId, setDemoProjectId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeUser, setActiveUser] = useState({});
+  const [activeSegment, setActiveSegment] = useState({});
+  const [checkListUserProps, setCheckListUserProps] = useState([]);
+  const [showPopOver, setShowPopOver] = useState(false);
+  const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const [timelinePayload, setTimelinePayload] = useState({
     source: 'web',
     filters: []
   });
-  const [activeSegment, setActiveSegment] = useState({});
 
-  const integration = useSelector(
-    (state) => state.global.currentProjectSettings
-  );
-  const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
-  const { bingAds, marketo } = useSelector((state) => state.global);
-  const { dashboards } = useSelector((state) => state.dashboard);
+  useEffect(() => {
+    if (currentProjectSettings?.timelines_config) {
+      const timelinesConfig = {};
+      timelinesConfig.disabled_events = [
+        ...currentProjectSettings?.timelines_config?.disabled_events
+      ];
+      timelinesConfig.user_config = {
+        ...DEFAULT_TIMELINE_CONFIG.user_config,
+        ...currentProjectSettings?.timelines_config?.user_config
+      };
+      timelinesConfig.account_config = {
+        ...DEFAULT_TIMELINE_CONFIG.account_config,
+        ...currentProjectSettings?.timelines_config?.account_config
+      };
+      setTLConfig(timelinesConfig);
+    }
+  }, [currentProjectSettings]);
 
   useEffect(() => {
     fetchDemoProject()
@@ -139,6 +152,14 @@ function UserProfiles({
   }, [activeProject]);
 
   useEffect(() => {
+    const userPropsWithEnableKey = formatUserPropertiesToCheckList(
+      userProperties,
+      currentProjectSettings.timelines_config?.user_config?.table_props
+    );
+    setCheckListUserProps(userPropsWithEnableKey);
+  }, [currentProjectSettings, userProperties]);
+
+  useEffect(() => {
     setTimeout(() => {
       setLoading(false);
     }, 1000);
@@ -147,6 +168,52 @@ function UserProfiles({
   useEffect(() => {
     getSavedSegments(activeProject.id);
   }, [activeProject]);
+
+  const headerClassStr =
+    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
+
+  const getColumns = () => {
+    const columns = [
+      {
+        title: <div className={headerClassStr}>Identity</div>,
+        width: 350,
+        dataIndex: 'identity',
+        key: 'identity',
+        fixed: 'left',
+        ellipsis: true
+      }
+    ];
+    currentProjectSettings?.timelines_config?.user_config?.table_props?.forEach(
+      (prop) => {
+        columns.push({
+          title: <div className={headerClassStr}>{PropTextFormat(prop)}</div>,
+          dataIndex: prop,
+          key: prop,
+          width: 350,
+          render: (item) => item || '-'
+        });
+      }
+    );
+    columns.push({
+      title: <div className={headerClassStr}>Last Activity</div>,
+      dataIndex: 'last_activity',
+      key: 'last_activity',
+      width: 300,
+      fixed: 'right',
+      render: (item) => MomentTz(item).format('DD MMMM YYYY, hh:mm:ss A')
+    });
+    return columns;
+  };
+
+  const getTableData = (data) => {
+    const tableData = data.map((row) => {
+      return {
+        ...row,
+        ...row?.table_props
+      };
+    });
+    return tableData;
+  };
 
   const showModal = () => {
     setIsModalVisible(true);
@@ -181,7 +248,7 @@ function UserProfiles({
     const opts = { ...timelinePayload };
     opts.filters = formatFiltersForPayload(timelinePayload.filters);
     getProfileUsers(activeProject.id, opts);
-  }, [timelinePayload]);
+  }, [timelinePayload, currentProjectSettings]);
 
   const handleSaveSegment = (segmentPayload) => {
     createNewSegment(activeProject.id, segmentPayload)
@@ -319,6 +386,178 @@ function UserProfiles({
     return cardContent;
   };
 
+  const handlePropChange = (option) => {
+    if (
+      option.enabled ||
+      checkListUserProps.filter((item) => item.enabled === true).length < 8
+    ) {
+      const checkListProps = [...checkListUserProps];
+      const optIndex = checkListProps.findIndex(
+        (obj) => obj.prop_name === option.prop_name
+      );
+      checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
+      setCheckListUserProps(checkListProps);
+    } else {
+      notification.error({
+        message: 'Error',
+        description: 'Maximum Table Properties Selection Reached.',
+        duration: 2
+      });
+    }
+  };
+
+  const applyTableProps = () => {
+    const config = { ...tlConfig };
+    config.user_config.table_props = checkListUserProps
+      .filter((item) => item.enabled === true)
+      .map((item) => item?.prop_name);
+    udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...config }
+    });
+    setShowPopOver(false);
+  };
+
+  const popoverContent = () => (
+    <Tabs defaultActiveKey='events' size='small'>
+      <Tabs.TabPane
+        tab={<span className='fa-activity-filter--tabname'>Events</span>}
+        key='events'
+      >
+        <SearchCheckList
+          placeholder='Search Properties'
+          mapArray={checkListUserProps}
+          titleKey='display_name'
+          checkedKey='enabled'
+          onChange={handlePropChange}
+          showApply
+          onApply={applyTableProps}
+        />
+      </Tabs.TabPane>
+    </Tabs>
+  );
+
+  const renderActions = () => (
+    <div className='flex justify-between items-start my-4'>
+      <div className='flex justify-between'>
+        <div className='relative mr-2'>
+          <Button
+            className='dropdown-btn'
+            type='text'
+            icon={<SVG name='user_friends' size={16} />}
+            onClick={() => setUserDDVisible(!isUserDDVisible)}
+          >
+            {ReverseProfileMapper[timelinePayload.source]?.users || 'All'}
+            <SVG name='caretDown' size={16} />
+          </Button>
+          {selectUsers()}
+        </div>
+        <div className='relative mr-2'>
+          <Popover
+            overlayClassName='fa-custom-popover'
+            placement='bottomLeft'
+            trigger={activeSegment.query ? 'hover' : ''}
+            content={segmentInfo}
+          >
+            <Button
+              className='dropdown-btn'
+              type='text'
+              onClick={() => setSegmentDDVisible(!isSegmentDDVisible)}
+            >
+              {Object.keys(activeSegment).length
+                ? activeSegment.name
+                : 'Select Segment'}
+              <SVG name='caretDown' size={16} />
+            </Button>
+          </Popover>
+          {selectSegment()}
+        </div>
+        <div key={0} className='max-w-3xl'>
+          <PropertyFilter
+            profileType='user'
+            source={timelinePayload.source}
+            filters={timelinePayload.filters}
+            setFilters={setFilters}
+            onFiltersLoad={[() => getUserProperties(activeProject.id)]}
+          />
+        </div>
+      </div>
+      <div className='flex items-center justify-between'>
+        {timelinePayload.filters.length ? (
+          <Button
+            className='dropdown-btn'
+            type='text'
+            icon={<SVG name='times_circle' size={16} />}
+            onClick={clearFilters}
+          >
+            Clear Filters
+          </Button>
+        ) : null}
+        <Popover
+          overlayClassName='fa-activity--filter'
+          placement='bottomLeft'
+          visible={showPopOver}
+          onVisibleChange={(visible) => {
+            setShowPopOver(visible);
+          }}
+          onClick={() => {
+            setShowPopOver(true);
+          }}
+          trigger='click'
+          content={popoverContent}
+        >
+          <Button
+            size='large'
+            className='fa-btn--custom mx-2 relative'
+            // type='text'
+          >
+            <SVG name='activity_filter' />
+          </Button>
+        </Popover>
+      </div>
+    </div>
+  );
+
+  const renderTable = () => (
+    <div>
+      <Table
+        onRow={(user) => ({
+          onClick: () => {
+            getProfileUserDetails(
+              activeProject.id,
+              user.identity,
+              user.is_anonymous,
+              currentProjectSettings.timelines_config
+            );
+            setActiveUser(user);
+            showModal();
+          }
+        })}
+        className='fa-table--basic'
+        dataSource={getTableData(contacts.data)}
+        columns={getColumns()}
+        rowClassName='cursor-pointer'
+        pagination={{ position: ['bottom', 'left'] }}
+        scroll={{
+          x:
+            currentProjectSettings?.timelines_config?.user_config?.table_props
+              ?.length * 350
+        }}
+      />
+      <div className='flex flex-row-reverse mt-4'></div>
+    </div>
+  );
+
+  const renderContactDetailsModal = () => (
+    <Modal
+      title={null}
+      visible={isModalVisible}
+      className='fa-modal--full-width'
+      footer={null}
+      closable={null}
+    >
+      <ContactDetails user={activeUser} onCancel={handleCancel} />
+    </Modal>
+  );
   if (loading) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
@@ -329,102 +568,17 @@ function UserProfiles({
 
   if (isIntegrationEnabled || activeProject.id === demoProjectId) {
     return (
-      <div className='fa-container mt-24 mb-12 min-h-screen'>
-        <Text type='title' level={3} weight='bold'>
+      <div className='list-container'>
+        <Text type='title' level={3} weight='bold' extraClass='mt-12'>
           User Profiles
         </Text>
-        <div className='flex justify-between items-start my-4'>
-          <div className='flex justify-between'>
-            <div className='relative mr-2'>
-              <Button
-                className='dropdown-btn'
-                type='text'
-                icon={<SVG name='user_friends' size={16} />}
-                onClick={() => setUserDDVisible(!isUserDDVisible)}
-              >
-                {ReverseProfileMapper[timelinePayload.source]?.users || 'All'}
-                <SVG name='caretDown' size={16} />
-              </Button>
-              {selectUsers()}
-            </div>
-            <div className='relative mr-2'>
-              <Popover
-                overlayClassName='fa-custom-popover'
-                placement='bottomLeft'
-                trigger={activeSegment.query ? 'hover' : ''}
-                content={segmentInfo}
-              >
-                <Button
-                  className='dropdown-btn'
-                  type='text'
-                  onClick={() => setSegmentDDVisible(!isSegmentDDVisible)}
-                >
-                  {Object.keys(activeSegment).length
-                    ? activeSegment.name
-                    : 'Select Segment'}
-                  <SVG name='caretDown' size={16} />
-                </Button>
-              </Popover>
-              {selectSegment()}
-            </div>
-            <div key={0} className='max-w-3xl'>
-              <PropertyFilter
-                profileType='user'
-                source={timelinePayload.source}
-                filters={timelinePayload.filters}
-                setFilters={setFilters}
-                onFiltersLoad={[() => getUserProperties(activeProject.id)]}
-              />
-            </div>
-          </div>
-          {timelinePayload.filters.length ? (
-            <div>
-              <Button
-                className='dropdown-btn'
-                type='text'
-                icon={<SVG name='times_circle' size={16} />}
-                onClick={clearFilters}
-              >
-                Clear Filters
-              </Button>
-            </div>
-          ) : null}
-        </div>
+        {renderActions()}
         {contacts.isLoading ? (
           <Spin size='large' className='fa-page-loader' />
         ) : (
-          <div>
-            <Table
-              onRow={(user) => ({
-                onClick: () => {
-                  getProfileUserDetails(
-                    activeProject.id,
-                    user.identity,
-                    user.is_anonymous,
-                    currentProjectSettings.timelines_config
-                  );
-                  setActiveUser(user);
-                  showModal();
-                }
-              })}
-              className='fa-table--basic'
-              dataSource={contacts.data}
-              columns={columns}
-              rowClassName='cursor-pointer'
-              pagination={{ position: ['bottom', 'left'] }}
-            />
-          </div>
+          renderTable()
         )}
-
-        <Modal
-          title={null}
-          visible={isModalVisible}
-          className='fa-modal--full-width'
-          footer={null}
-          closable={null}
-        >
-          <ContactDetails user={activeUser} onCancel={handleCancel} />
-        </Modal>
+        {renderContactDetailsModal()}
       </div>
     );
   }
@@ -450,7 +604,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchProjectSettings,
       fetchMarketoIntegration,
       fetchBingAdsIntegration,
-      fetchDemoProject
+      fetchDemoProject,
+      udpateProjectSettings
     },
     dispatch
   );

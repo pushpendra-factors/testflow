@@ -99,9 +99,20 @@ function ReportContent({
       setChartTypeMenuItems([]);
     }
     setChartTypeMenuItems(
-      getChartTypeMenuItems(queryType, breakdown?.length, queries)
+      getChartTypeMenuItems(
+        queryType,
+        breakdown?.length,
+        queries,
+        attributionsState?.touchpoint
+      )
     );
-  }, [queryType, breakdown, breakdownType, queries]);
+  }, [
+    queryType,
+    breakdown,
+    breakdownType,
+    queries,
+    attributionsState?.touchpoint
+  ]);
 
   if (resultState.loading) {
     content = (

@@ -1,3 +1,4 @@
+import { isLandingPageOrAllPageViewSelected } from 'Views/CoreQuery/AttributionsResult/utils';
 import {
   QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_EVENT,
@@ -24,7 +25,12 @@ export const isPivotSupported = ({ queryType }) => {
   );
 };
 
-export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
+export const getChartTypeMenuItems = (
+  queryType,
+  breakdownLength,
+  events,
+  touchPoint
+) => {
   let menuItems = [];
   if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_CAMPAIGN) {
     if (breakdownLength) {
@@ -77,16 +83,20 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
     }
   }
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
-    menuItems = [
-      {
-        key: CHART_TYPE_BARCHART,
-        name: 'Columns'
-      },
-      {
-        key: CHART_TYPE_SCATTER_PLOT,
-        name: 'Scatter Plot'
-      }
-    ];
+    if (isLandingPageOrAllPageViewSelected(touchPoint)) {
+      menuItems = [];
+    } else {
+      menuItems = [
+        {
+          key: CHART_TYPE_BARCHART,
+          name: 'Columns'
+        },
+        {
+          key: CHART_TYPE_SCATTER_PLOT,
+          name: 'Scatter Plot'
+        }
+      ];
+    }
   }
   if (queryType === QUERY_TYPE_FUNNEL && breakdownLength) {
     menuItems = [

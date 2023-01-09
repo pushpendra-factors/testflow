@@ -37,6 +37,7 @@ import NonClickableTableHeader from '../../../../components/NonClickableTableHea
 import { getKpiLabel, getFormattedKpiValue } from '../kpiAnalysis.helpers';
 import { BREAKDOWN_TYPES } from '../../constants';
 import { getDifferentDates } from '../../coreQuery.helpers';
+import { isNumeric } from 'Utils/global';
 
 export const getDefaultSortProp = ({ kpis, breakdown }) => {
   const dateTimeBreakdownIndex = findIndex(
@@ -286,7 +287,16 @@ export const getTableColumns = (
       ),
       dataIndex: `${e.property} - ${index}`,
       fixed: !index ? 'left' : '',
-      width: 200
+      width: 200,
+      render: (d) => {
+        if (
+          e.prop_type === 'numerical' &&
+          (typeof d === 'number' || isNumeric(d))
+        ) {
+          return <NumFormat number={d} />;
+        }
+        return d;
+      }
     };
   });
 
@@ -698,7 +708,16 @@ export const getDateBasedColumns = (
       ),
       dataIndex: `${e.property} - ${index}`,
       fixed: !index ? 'left' : '',
-      width: 200
+      width: 200,
+      render: (d) => {
+        if (
+          e.prop_type === 'numerical' &&
+          (typeof d === 'number' || isNumeric(d))
+        ) {
+          return <NumFormat number={d} />;
+        }
+        return d;
+      }
     };
   });
 

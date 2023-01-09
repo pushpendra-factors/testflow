@@ -50,6 +50,7 @@ const (
 	WeekInSecs                       = 7 * DayInSecs
 	MonthInSecs                      = 31 * DayInSecs
 	Alpha                            = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	Numeric                          = "0123456789."
 	AllowedDerivedMetricSpecialChars = "*/+-()"
 	AllowedDerivedMetricOperator     = "*/+-"
 )
@@ -1408,33 +1409,106 @@ func CreateVirtualDisplayName(actualName string) string {
 func CapitalizeFirstLetter(data string) string {
 	return strings.Title(strings.ToLower(data))
 }
+func GetArrayOfTokensFromFormula(formula string) []string {
+	arr := make([]string, 0)
+	prevSplTokenIndex := -1
+	for i, c := range formula {
+		ch := string(c)
+		if i == 0 {
+			if strings.Contains(AllowedDerivedMetricSpecialChars, ch) {
+				arr = append(arr, ch)
+				prevSplTokenIndex = i
+			}
+		} else if strings.Contains(AllowedDerivedMetricSpecialChars, ch) {
+			token := formula[prevSplTokenIndex+1 : i]
+			if len(token) != 0 {
+				arr = append(arr, token)
+			}
+			arr = append(arr, ch)
+			prevSplTokenIndex = i
+		}
+	}
+	lastCharOfFormula := string(formula[len(formula)-1])
+	if !strings.Contains(AllowedDerivedMetricSpecialChars, lastCharOfFormula) {
+		token := formula[prevSplTokenIndex+1:]
+		if len(token) != 0 {
+			arr = append(arr, token)
+		}
+	}
+	return arr
+}
+
+func IsAlphabeticToken(token string) bool {
+	for _, c := range token {
+		ch := string(c)
+		if (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") {
+			continue
+		} else {
+			return false
+		}
+	}
+	return true
+}
+
+func IsNumericToken(token string) bool {
+	for _, c := range token {
+		ch := string(c)
+		if (ch >= "0" && ch <= "9") || (ch == ".") {
+			continue
+		} else {
+			return false
+		}
+	}
+	return true
+}
+
+// this checks the validity of arithmetic formula by running the formula in a stack and if we are able to get the result then the formula is correct
 func ValidateArithmeticFormula(formula string) bool {
 	var valueStack []string
 	var operatorStack []string
-	for i, c := range formula {
+
+	formulaArray := GetArrayOfTokensFromFormula(formula)
+
+	for i, currToken := range formulaArray {
 		if i == 0 {
 			continue
 		}
-		currCh := string(c)
-		prevCh := string(formula[i-1])
-		if !strings.Contains(Alpha, strings.ToLower(currCh)) && !strings.Contains(AllowedDerivedMetricSpecialChars, strings.ToLower(currCh)) {
+		prevToken := formulaArray[i-1]
+
+		if !(IsAlphabeticToken(currToken) || strings.Contains(AllowedDerivedMetricSpecialChars, strings.ToLower(currToken)) || IsNumericToken(currToken)) {
 			return false
 		}
-		if strings.Contains(Alpha, strings.ToLower(currCh)) && (strings.Contains(Alpha, strings.ToLower(prevCh)) || !strings.Contains(AllowedDerivedMetricSpecialChars, strings.ToLower(prevCh))) {
+		if (IsAlphabeticToken(currToken) || IsNumericToken(currToken)) && !strings.Contains(AllowedDerivedMetricSpecialChars, strings.ToLower(prevToken)) {
 			return false
 		}
-		if strings.Contains(AllowedDerivedMetricOperator, strings.ToLower(currCh)) && strings.Contains(AllowedDerivedMetricOperator, strings.ToLower(prevCh)) {
+		if strings.Contains(AllowedDerivedMetricOperator, strings.ToLower(currToken)) && strings.Contains(AllowedDerivedMetricOperator, strings.ToLower(prevToken)) {
 			return false
 		}
 	}
 
-	for _, c := range formula {
-		ch := string(c)
-		if ch == "(" {
-			operatorStack = append(operatorStack, ch)
-		} else if strings.Contains(Alpha, strings.ToLower(ch)) {
-			valueStack = append(valueStack, ch)
-		} else if ch == ")" {
+	// Explained in the EvaluateKPIExpressionWithBraces func, same logic applied at both the places
+	// this run a simulated calculation of the arithmetic formula and let's us know if the formula is correct or not
+	for _, token := range formulaArray {
+
+		if token == "(" {
+			operatorStack = append(operatorStack, token)
+		} else if strings.Contains(Alpha, strings.ToLower(token)) {
+			valueStack = append(valueStack, token)
+
+		} else if strings.Contains(Numeric, string(token[0])) || string(token[0]) == "." {
+			var err error
+			if strings.Contains(token, ".") {
+				_, err = strconv.ParseFloat(token, 64)
+			} else {
+				_, err = strconv.ParseInt(token, 10, 64)
+			}
+			if err != nil {
+				return false
+			} else {
+				valueStack = append(valueStack, token)
+			}
+
+		} else if token == ")" {
 			for len(operatorStack) != 0 && operatorStack[len(operatorStack)-1] != "(" {
 				if len(valueStack) < 2 {
 					return false
@@ -1446,14 +1520,14 @@ func ValidateArithmeticFormula(formula string) bool {
 				operatorStack = operatorStack[:len(operatorStack)-1]
 			}
 		} else {
-			for len(operatorStack) != 0 && Precedence(operatorStack[len(operatorStack)-1]) >= Precedence(ch) {
+			for len(operatorStack) != 0 && Precedence(operatorStack[len(operatorStack)-1]) >= Precedence(token) {
 				if len(valueStack) < 2 {
 					return false
 				}
 				valueStack = valueStack[:len(valueStack)-1]
 				operatorStack = operatorStack[:len(operatorStack)-1]
 			}
-			operatorStack = append(operatorStack, ch)
+			operatorStack = append(operatorStack, token)
 		}
 	}
 	for len(operatorStack) != 0 {

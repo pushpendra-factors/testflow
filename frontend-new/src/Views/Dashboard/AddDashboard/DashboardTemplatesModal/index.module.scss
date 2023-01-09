@@ -1,0 +1,138 @@
+@import '../../../../styles/abstracts/variables';
+.startFresh {
+}
+
+.modalTitleHeader {
+  padding-left: 24px;
+  padding-top: 0px;
+  & > h4 {
+    margin: 0 0 0 0px;
+  }
+}
+.categoryLists {
+  margin: 0 20px 0 20px;
+}
+.categoryLeftItemTitle {
+  margin: 2px 0px 2px 0;
+  padding: 4px 10px 4px 10px;
+  cursor: initial;
+  color: $fa-color--mono-5;
+}
+.templatesShowSection {
+  max-height: calc(100vh - 200px);
+  min-height: calc(100vh - 200px);
+  padding: 4px;
+  overflow-y: scroll;
+
+  .ant-skeleton,
+  .ant-skeleton-element {
+    width: 100% !important;
+  }
+
+  .startFreshDescription {
+    color: $fa-color--mono-4;
+  }
+  .templateDescription {
+    color: $fa-color--mono-4;
+  }
+}
+.categoryItemSelectedArray {
+  &::after {
+    content: '->';
+  }
+}
+.categoryLeftItem {
+  border-radius: 4px;
+  margin: 2px 0px 2px 0;
+  padding: 4px 10px 4px 10px;
+  display: flex;
+  justify-content: space-between;
+  transition-duration: 100ms;
+  cursor: pointer;
+  &:hover {
+    color: #1890ff;
+    background: #f5f6f8;
+
+    &::after {
+      content: '->';
+    }
+  }
+}
+
+.templateSection {
+  // Main Section of Template ( Step 2 )
+  display: flex;
+  flex-wrap: nowrap;
+
+  .templateSectionCopyButton {
+    margin: 10px 0 10px 0;
+  }
+  .templateSectionCopyButtonCopied {
+    background: #5aca89 !important;
+    border-color: #5aca89 !important;
+  }
+  .templatesSectionAlert {
+    background: #dea0691a;
+
+    & .templatesSectionAlertBtn {
+      background-color: transparent;
+      border-color: transparent !important;
+      padding: 0;
+      &:hover {
+        border-color: transparent !important;
+      }
+      & span::after {
+        content: ' ->';
+      }
+    }
+  }
+
+  .templateSectionCol2 {
+    & > div {
+      padding: 10px 0 10px 0;
+      display: flex;
+      flex-wrap: nowrap;
+    }
+  }
+
+  .templateSectionImage {
+    height: 270px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .includedReports > h4 {
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+}
+
+.modalContainerTop {
+  padding: 14px 10px 20px 14px;
+}
+.modalContainerBody {
+  padding: 0 18px 10px 18px;
+}
+
+.categorySelected {
+  background-color: #dedede;
+}
+
+.showMoreBtn {
+  .ant-btn.ant-btn.ant-btn-link {
+    background: white !important;
+  }
+  margin-bottom: 10px;
+  background: white;
+  border-color: transparent !important;
+  padding: 0;
+  color: #1e89ff;
+  & > *,
+  &:hover,
+  &:focus,
+  &:active {
+    color: #1e89ff;
+    border-color: transparent !important;
+    background-color: #fff !important;
+  }
+}

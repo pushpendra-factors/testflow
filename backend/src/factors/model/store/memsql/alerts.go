@@ -248,7 +248,53 @@ func (store *MemSQL) DeleteAlert(id string, projectID int64) (int, string) {
 	}
 	return http.StatusAccepted, ""
 }
-func (store *MemSQL) UpdateAlert(lastAlertSent bool) (int, string) {
+func (store *MemSQL) UpdateAlert(projectID int64, alertID string, alert model.Alert) (model.Alert, int, string) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"alert_id":   alertID,
+	}
+	updatedFields := map[string]interface{}{
+		"alert_name":          alert.AlertName,
+		"alert_configuration": alert.AlertConfiguration,
+		"updated_at":          time.Now().UTC(),
+	}
+	// validating alert config
+	var alertConfiguration model.AlertConfiguration
+	err := U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
+	if err != nil {
+		return model.Alert{}, http.StatusInternalServerError, "failed to decode jsonb to alert configuration"
+	}
+	if !alertConfiguration.IsEmailEnabled && !alertConfiguration.IsSlackEnabled {
+		log.WithFields(logFields).Error("Select at least one notification method")
+		return model.Alert{}, http.StatusBadRequest, "Select at least one notification method"
+	}
+	if alertConfiguration.IsEmailEnabled && len(alertConfiguration.Emails) == 0 {
+		log.WithFields(logFields).Error("empty email list")
+		return model.Alert{}, http.StatusBadRequest, "empty email list"
+	}
+	isSlackIntegrated, errCode := store.IsSlackIntegratedForProject(projectID, alert.CreatedBy)
+	if errCode != http.StatusOK {
+		return model.Alert{}, errCode, "failed to check slack integration"
+	}
+	if alertConfiguration.IsSlackEnabled && !isSlackIntegrated {
+		log.WithFields(logFields).Error("Slack integration is not enabled for this project")
+		return model.Alert{}, http.StatusBadRequest, "Slack integration is not enabled for this project"
+	}
+	_, err = store.checkIfDuplicateAlertNameExists(projectID, alert.AlertName, alertID)
+	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("Failed to update alerts, already exists with name ", alert.AlertName)
+		return model.Alert{}, http.StatusBadRequest, err.Error()
+	}
+	db := C.GetServices().Db
+	err = db.Table("alerts").Where("project_id = ? AND id = ?", projectID, alertID).Updates(updatedFields).Error
+	if err != nil {
+		log.WithFields(logFields).WithError(err).WithField("project_id", projectID).Error(
+			"Failed to update rule object.")
+		return model.Alert{}, http.StatusInternalServerError, "Internal server error"
+	}
+	return alert, http.StatusAccepted, ""
+}
+func (store *MemSQL) UpdateAlertStatus(lastAlertSent bool) (int, string) {
 	db := C.GetServices().Db
 	err := db.Table("alerts").Where("id = ?", lastAlertSent).Updates(map[string]interface{}{"last_alert_sent": lastAlertSent, "updated_at": time.Now().UTC()}).Error
 	if err != nil {
@@ -304,7 +350,7 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 		logCtx.Error("Slack integration is not enabled for this project")
 		return model.Alert{}, http.StatusBadRequest, "Slack integration is not enabled for this project"
 	}
-	_, err = store.checkIfDuplicateAlertNameExists(projectID, alert.AlertName)
+	_, err = store.checkIfDuplicateAlertNameExists(projectID, alert.AlertName, "")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to create alert")
 		return model.Alert{}, http.StatusBadRequest, err.Error()
@@ -351,13 +397,17 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 	return alertRecord, http.StatusCreated, ""
 
 }
-func (store *MemSQL) checkIfDuplicateAlertNameExists(projectID int64, alertName string) (allowed bool, err error) {
+func (store *MemSQL) checkIfDuplicateAlertNameExists(projectID int64, alertName string, alertID string) (allowed bool, err error) {
 	alerts, status := store.GetAllAlerts(projectID, true)
 	if status != http.StatusFound {
 		return false, errors.New(fmt.Sprintf("Failed to get Alerts for project ID %d", projectID))
 	}
 	for _, alert := range alerts {
 		if strings.ToLower(alert.AlertName) == strings.ToLower(alertName) {
+			// should allow if updating the same alert with same name
+			if alert.ID == alertID {
+				continue
+			}
 			return false, errors.New(fmt.Sprintf("Alert with name %s already exists ", alertName))
 		}
 	}

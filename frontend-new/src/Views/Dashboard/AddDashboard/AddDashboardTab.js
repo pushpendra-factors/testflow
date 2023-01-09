@@ -47,14 +47,14 @@ function AddDashboardTab({
       <Row className={'pt-2'} gutter={[24, 4]}>
         <Col span={24}>
           <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>
-            Who can access this dashboard?
+            Who can access this dashboard ?
           </Text>
         </Col>
         <Col span={24}>
           <Row gutter={[24, 4]}>
             <Col span={12}>
               <div
-                onClick={setDashboardType.bind(this, 'pr')}
+                onClick={() => setDashboardType('pr')}
                 className={`${
                   dashboardType === 'pr'
                     ? 'fa-dasboard-privacy--card selected'
@@ -93,7 +93,7 @@ function AddDashboardTab({
             </Col>
             <Col span={12}>
               <div
-                onClick={setDashboardType.bind(this, 'pv')}
+                onClick={() => setDashboardType('pv')}
                 className={`${
                   dashboardType === 'pv'
                     ? 'fa-dasboard-privacy--card selected'

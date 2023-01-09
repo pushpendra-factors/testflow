@@ -2,7 +2,7 @@ import get from 'lodash/get';
 import lowerCase from 'lodash/lowerCase';
 import startCase from 'lodash/startCase';
 
-import { EMPTY_ARRAY, groupFilters } from 'Utils/global';
+import { EMPTY_ARRAY, generateRandomKey, groupFilters } from 'Utils/global';
 import { formatFilterDate, isDateInMilliSeconds } from 'Utils/dataFormatter';
 import MomentTz from 'Components/MomentTz';
 
@@ -27,7 +27,8 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
-  QUERY_TYPE_PROFILE
+  QUERY_TYPE_PROFILE,
+  QUERY_OPTIONS_DEFAULT_VALUE
 } from '../../utils/constants';
 import { FILTER_TYPES, INITIAL_STATE } from './constants';
 
@@ -1134,7 +1135,8 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       alias: e.an,
       label: e.na,
       group: e.grpa,
-      filters
+      filters,
+      key: generateRandomKey()
     };
   });
 
@@ -1178,7 +1180,9 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
 
   const queryType = requestQuery.cl;
   const eventsCondition = requestQuery.ec;
-  const groupAnalysis = requestQuery.grpa;
+  const groupAnalysis = requestQuery.grpa
+    ? requestQuery.grpa
+    : QUERY_OPTIONS_DEFAULT_VALUE.group_analysis;
   const sessionAnalyticsSeq = INITIAL_SESSION_ANALYTICS_SEQ;
   // if (requestQuery.cl && requestQuery.cl === QUERY_TYPE_FUNNEL) {
   //   if (requestQuery.sse && requestQuery.see) {
@@ -1455,8 +1459,6 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
   return result;
 };
 
-
-
 export const getAttributionQuery = (
   eventGoal = { filters: [] },
   touchpoint,
@@ -1469,7 +1471,7 @@ export const getAttributionQuery = (
   linkedEvents,
   dateRange = {},
   tacticOfferType,
-  v1=false
+  v1 = false
 ) => {
   const eventFilters = getFilters(eventGoal.filters);
   let touchPointFiltersQuery = [];
@@ -1482,15 +1484,15 @@ export const getAttributionQuery = (
 
   let attrQueryV1 = {};
 
-  if(v1) {
+  if (v1) {
     attrQueryV1 = new AttributionQueryV1();
   }
 
-  attrQueryV1.cm = ['Impressions', 'Clicks', 'Spend']
+  attrQueryV1.cm = ['Impressions', 'Clicks', 'Spend'];
   attrQueryV1.ce = {
     na: eventGoal.label,
     pr: eventFilters
-  }
+  };
   attrQueryV1.attribution_key = touchpoint;
   attrQueryV1.attribution_key_f = touchPointFiltersQuery;
   attrQueryV1.query_type = queryType;

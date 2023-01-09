@@ -8,14 +8,13 @@ import (
 )
 
 type Profile struct {
-	Identity           string          `json:"identity"`
-	Properties         *postgres.Jsonb `json:"-"`
-	Name               string          `json:"name,omitempty"`
-	HostName           string          `json:"host_name,omitempty"`
-	IsAnonymous        bool            `json:"is_anonymous"`
-	Country            string          `json:"country"`
-	AssociatedContacts uint64          `json:"associated_contacts,omitempty"`
-	LastActivity       time.Time       `json:"last_activity"`
+	Identity     string                 `json:"identity"`
+	Properties   *postgres.Jsonb        `json:"-"`
+	Name         string                 `json:"name,omitempty"`
+	HostName     string                 `json:"host_name,omitempty"`
+	IsAnonymous  bool                   `json:"is_anonymous"`
+	LastActivity time.Time              `json:"last_activity"`
+	TableProps   map[string]interface{} `json:"table_props"`
 }
 
 type ContactDetails struct {

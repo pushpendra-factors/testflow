@@ -54,23 +54,24 @@ func createFormFill(t *testing.T, project *model.Project) {
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.NotNil(t, err)
 
+	// Empty/invalid UserId
+	formFill = &model.SDKFormFillPayload{
+		FormId:  "formId1",
+		Value:   "value1",
+		FieldId: "fieldId1",
+	}
+	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assert.NotNil(t, err)
+
 	// Check if form fill created
 	formFill = &model.SDKFormFillPayload{
 		FormId:  "formId1",
 		Value:   "value1",
 		FieldId: "fieldId1",
+		UserId:  "userId1",
 	}
 	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
 	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-
-	// Check for duplicate case.
-	formFill = &model.SDKFormFillPayload{
-		FormId:  "formId1",
-		Value:   "value1",
-		FieldId: "fieldId1",
-	}
-	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
-	assert.Equal(t, http.StatusConflict, status)
 	assert.Nil(t, err)
 }

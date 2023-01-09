@@ -95,11 +95,9 @@ function AttributionHeader({
   );
 
   const renderReportCloseIcon = () => (
-    <Button
-      size='large'
-      type='default'
-      onClick={handleCloseButton}
-    >Close</Button>
+    <Button size='large' type='default' onClick={handleCloseButton}>
+      Close
+    </Button>
   );
 
   const renderLogo = () => (
@@ -145,11 +143,22 @@ function AttributionHeader({
       </div>
     );
   };
+
+  let handleIntercomHelp = () => {
+    const w = window;
+    const ic = w.Intercom;
+    if (typeof ic === 'function') {
+      setHideIntercomState(!hideIntercomState);
+      ic('update', { hide_default_launcher: !hideIntercomState });
+      ic(!hideIntercomState === true ? 'hide' : 'show');
+    }
+  };
   const setActions = (opt) => {
     if (opt[1] === 'help_doc') {
       window.open('https://help.factors.ai/', '_blank');
+    } else if (opt[1] === 'intercom_help') {
+      handleIntercomHelp();
     }
-    setOptions(false);
   };
   const getHelpMenu = () => {
     return helpMenu === false ? (
@@ -182,7 +191,6 @@ function AttributionHeader({
         </div>
 
         <div className='flex items-center'>
-          <div className='pr-2'>{renderSaveQueryComp()}</div>
           {isFromAnalysisPage ? (
             <div className='pr-2 '>
               <div className='relative'>
@@ -197,7 +205,8 @@ function AttributionHeader({
             </div>
           ) : (
             ''
-          )}
+            )}
+          <div className='pr-2'>{renderSaveQueryComp()}</div>
           {renderReportCloseIcon()}
         </div>
       </div>

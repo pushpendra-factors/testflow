@@ -1021,6 +1021,10 @@ function CoreQuery({
                           onClick={() => {
                             userflow.start(USERFLOW_CONFIG_ID?.AnalysePage);
                           }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center'
+                          }}
                         >
                           Walk me through
                         </Button>

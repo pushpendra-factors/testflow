@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import cx from 'classnames';
 import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -14,8 +15,8 @@ import EventFilterWrapper from '../EventFilterWrapper';
 import GroupSelect2 from '../GroupSelect2';
 import EventGroupBlock from '../EventGroupBlock';
 import {
-  QUERY_TYPE_FUNNEL,
   AvailableGroups,
+  QUERY_TYPE_FUNNEL,
   RevAvailableGroups
 } from '../../../utils/constants';
 import AliasModal from '../AliasModal';
@@ -453,6 +454,15 @@ function QueryBlock({
         } block_section items-center`}
       >
         <div className='flex items-center'>
+          <div
+            className={cx(
+              styles.query_block__additional_actions,
+              'mr-2',
+              styles['drag-icon']
+            )}
+          >
+            <SVG name='drag' />
+          </div>
           <div className='fa--query_block--add-event active flex justify-center items-center mr-2'>
             <Text
               type='title'

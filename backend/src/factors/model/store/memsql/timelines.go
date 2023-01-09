@@ -84,7 +84,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			sourceString = fmt.Sprintf("AND group_%d_id IS NOT NULL", salesforceID)
 		}
 	} else if profileType == model.PROFILE_TYPE_USER {
-		selectString = fmt.Sprintf("COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, JSON_EXTRACT_STRING(properties, '%s') AS country, MAX(updated_at) AS last_activity", U.UP_COUNTRY)
+		selectString = "COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, properties, MAX(updated_at) AS last_activity"
 		isGroupUserString = "(is_group_user=0 OR is_group_user IS NULL)"
 		if model.UserSourceMap[payload.Source] == model.UserSourceWeb {
 			sourceString = "AND (source=" + strconv.Itoa(model.UserSourceMap[payload.Source]) + " OR source IS NULL)"
@@ -163,34 +163,53 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusInternalServerError
 	}
 
-	// Filter Account Properties
+	// Get Table Content
+	returnData, err := store.FormatProfilesStruct(projectID, profiles, profileType)
+	if err != nil {
+		log.WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
+		return nil, http.StatusInternalServerError
+	}
+	return returnData, http.StatusFound
+}
+
+func (store *MemSQL) FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType string) ([]model.Profile, error) {
+	logFields := log.Fields{
+		"project_id":   projectID,
+		"profile_type": profileType,
+	}
+	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
+	if err != nil {
+		log.WithFields(logFields).WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+	}
+
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
 		companyNameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_NAME}
-		companyCountryProps := []string{U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY}
 		hostNameProps := []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE}
+		tableProps := timelinesConfig.AccountConfig.TableProps
+
 		for index, profile := range profiles {
+			filterTableProps := make(map[string]interface{}, 0)
 			properties, err := U.DecodePostgresJsonb(profile.Properties)
 			if err != nil {
 				log.WithFields(logFields).WithFields(log.Fields{"identity": profile.Identity}).WithError(err).Error("Failed decoding account properties.")
 				continue
 			}
-			if value, exists := (*properties)[U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS]; exists {
-				profiles[index].AssociatedContacts = uint64(value.(float64))
+
+			// Filter Table Props
+			for _, prop := range tableProps {
+				if value, exists := (*properties)[prop]; exists {
+					filterTableProps[prop] = value
+				}
 			}
+			profiles[index].TableProps = filterTableProps
+
+			// Filter Company Name and Hostname
 			for _, prop := range companyNameProps {
 				if profiles[index].Name != "" {
 					break
 				}
 				if name, exists := (*properties)[prop]; exists {
 					profiles[index].Name = fmt.Sprintf("%s", name)
-				}
-			}
-			for _, prop := range companyCountryProps {
-				if profiles[index].Country != "" {
-					break
-				}
-				if country, exists := (*properties)[prop]; exists {
-					profiles[index].Country = fmt.Sprintf("%s", country)
 				}
 			}
 			for _, prop := range hostNameProps {
@@ -202,8 +221,26 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 				}
 			}
 		}
+	} else if profileType == model.PROFILE_TYPE_USER {
+		tableProps := timelinesConfig.UserConfig.TableProps
+		for index, profile := range profiles {
+			filterTableProps := make(map[string]interface{}, 0)
+			properties, err := U.DecodePostgresJsonb(profile.Properties)
+			if err != nil {
+				log.WithFields(logFields).WithFields(log.Fields{"identity": profile.Identity}).WithError(err).Error("Failed decoding account properties.")
+				continue
+			}
+
+			// Filter Table Props
+			for _, prop := range tableProps {
+				if value, exists := (*properties)[prop]; exists {
+					filterTableProps[prop] = value
+				}
+			}
+			profiles[index].TableProps = filterTableProps
+		}
 	}
-	return profiles, http.StatusFound
+	return profiles, nil
 }
 
 func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int) {
@@ -263,7 +300,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		uniqueUser.Company = fmt.Sprintf("%s", company)
 	}
 
-	uniqueUser.LeftPaneProps = store.GetFilteredLeftPanePropWithValue(projectID, model.PROFILE_TYPE_USER, propertiesDecoded)
+	uniqueUser.LeftPaneProps = store.GetLeftPaneProperties(projectID, model.PROFILE_TYPE_USER, propertiesDecoded)
 	activities, _ := store.GetUserActivitiesAndSessionCount(projectID, identity, userId)
 	uniqueUser.UserActivity = activities
 	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
@@ -510,12 +547,12 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 		}
 	}
 
-	accountDetails.LeftPaneProps = store.GetFilteredLeftPanePropWithValue(projectID, model.PROFILE_TYPE_ACCOUNT, propertiesDecoded)
+	accountDetails.LeftPaneProps = store.GetLeftPaneProperties(projectID, model.PROFILE_TYPE_ACCOUNT, propertiesDecoded)
 	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
 	if err != nil {
 		log.WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
 	}
-	additionalProp := timelinesConfig.AccountConfig.UserPropToShow
+	additionalProp := timelinesConfig.AccountConfig.UserProp
 	selectStrAdditionalProp := ""
 	if additionalProp != "" {
 		selectStrAdditionalProp = fmt.Sprintf("JSON_EXTRACT_STRING(properties, '%s') as additional_prop,", additionalProp)
@@ -569,7 +606,7 @@ func FormatTimeToString(time time.Time) string {
 	return time.Format("2006-01-02 15:04:05.000000")
 }
 
-func (store *MemSQL) GetFilteredLeftPanePropWithValue(projectID int64, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{} {
+func (store *MemSQL) GetLeftPaneProperties(projectID int64, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{} {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"profile_type": profileType,
@@ -580,17 +617,18 @@ func (store *MemSQL) GetFilteredLeftPanePropWithValue(projectID int64, profileTy
 	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
 	if err != nil {
 		log.WithFields(logFields).WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+		return filteredProperties
 	}
 	var leftPaneProps []string
 
 	if profileType == model.PROFILE_TYPE_USER {
-		leftPaneProps = timelinesConfig.UserConfig.PropsToShow
+		leftPaneProps = timelinesConfig.UserConfig.LeftpaneProps
 	} else if profileType == model.PROFILE_TYPE_ACCOUNT {
-		leftPaneProps = timelinesConfig.AccountConfig.AccountPropsToShow
+		leftPaneProps = timelinesConfig.AccountConfig.LeftpaneProps
 	}
-	for _, propArr := range leftPaneProps {
-		if value, exists := (*propertiesDecoded)[propArr]; exists {
-			filteredProperties[propArr] = value
+	for _, prop := range leftPaneProps {
+		if value, exists := (*propertiesDecoded)[prop]; exists {
+			filteredProperties[prop] = value
 		}
 	}
 	return filteredProperties

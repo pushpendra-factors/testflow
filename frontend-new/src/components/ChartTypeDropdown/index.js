@@ -14,10 +14,10 @@ function ChartTypeDropdown({ menuItems, onClick, chartType }) {
       } ${menuItems.length < 3 ? styles.smallMenu : ''}`}
     >
       {menuItems.map((item) => (
-        
         <Tooltip
           title={CHART_TYPES_DROPDOWN_CONSTANTS[item.key]}
           color={TOOLTIP_CONSTANTS.DARK}
+          key={item.key}
         >
           <div
             className={`${
@@ -25,7 +25,6 @@ function ChartTypeDropdown({ menuItems, onClick, chartType }) {
             } flex flex-col items-center justify-center p-3 cursor-pointer ${
               chartType === item.key ? styles.selectedItem : ''
             }`}
-            key={item.key}
             onClick={onClick.bind(null, { key: item.key })}
           >
             <SVG

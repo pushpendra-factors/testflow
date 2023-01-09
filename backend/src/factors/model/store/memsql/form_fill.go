@@ -39,6 +39,10 @@ func (store *MemSQL) CreateFormFillEventById(projectId int64, formFillPayload *m
 		EventProperties: formFillPayload.EventProperties,
 	}
 
+	if formFillPayload.UpdatedAt != nil {
+		formFill.UpdatedAt = *formFillPayload.UpdatedAt
+	}
+
 	db := C.GetServices().Db
 	dbx := db.Create(&formFill)
 	if dbx.Error != nil {

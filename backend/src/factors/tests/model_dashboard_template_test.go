@@ -210,8 +210,62 @@ func TestAPICreateDashboardFromTemplate(t *testing.T) {
 	rName := U.RandomString(5)
 	desc := "testing create dashboard from template abc"
 	template, errCode, _ := store.GetStore().CreateTemplate(&model.DashboardTemplate{
-		Title:                rName,
-		Description:          desc,
+		Title:       rName,
+		Description: desc,
+		Dashboard: &postgres.Jsonb{RawMessage: json.RawMessage(`{"id":1,
+        "name": "First Dashboard in Test Project",
+        "type": "pv",
+        "class": "template_created",
+        "is_deleted":false,
+        "settings":{"type":"public"}}`)},
+		Units: &postgres.Jsonb{RawMessage: json.RawMessage(`[
+        {
+            "id": 1,
+            "title": "Unit 1",
+            "description": "Description 1",
+            "presentation": "sp",
+            "position": 11,
+            "size": 111,
+            "query_type": 1111,
+            "query_settings": {
+                "chart": "x1"
+            },
+            "query": {
+                "cl": "events",
+                "ec": "each_given_event",
+                "ewp": [
+                    {
+                        "an": "",
+                        "na": "Deal Won",
+                        "pr": []
+                    }
+                ]
+            }
+        },
+        {
+            "id": 2,
+            "title": "Unit 2",
+            "description": "Description 2",
+            "presentation": "pb",
+            "position": 22,
+            "size": 222,
+            "query_type": 2222,
+            "query_settings": {
+                "chart": "x2"
+            },
+            "query": {
+                "cl": "events",
+                "ec": "each_given_event",
+                "ewp": [
+                    {
+                        "an": "",
+                        "na": "Deal Won",
+                        "pr": []
+                    }
+                ]
+            }
+        }
+    ]`)},
 		Categories:           &postgres.Jsonb{RawMessage: json.RawMessage(`["Web Analytics", "CRM Insights"]`)},
 		RequiredIntegrations: &postgres.Jsonb{RawMessage: json.RawMessage(`["hubspot", "marketo"]`)}})
 	if errCode != http.StatusCreated {
@@ -228,6 +282,7 @@ func TestAPICreateDashboardFromTemplate(t *testing.T) {
 	})
 }
 
+// Deprecated test as the function is no longer use to generate template from given Dashboard.
 func TestAPICreateTemplateFromDashboard(t *testing.T) {
 	//assert.Nil(t, err)
 	r := gin.Default()
@@ -241,18 +296,23 @@ func TestAPICreateTemplateFromDashboard(t *testing.T) {
 	rName := U.RandomString(5)
 	desc := "testing create template from dashboard"
 
-	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{
-		Name: rName, Description: desc, Type: model.DashboardTypeProjectVisible})
+	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID,
+		&model.Dashboard{
+			Name:          rName,
+			Description:   desc,
+			UnitsPosition: &postgres.Jsonb{json.RawMessage(`{"position":{"1":0},"size":{"1":1}}`)},
+			Type:          model.DashboardTypeProjectVisible},
+	)
 	assert.NotNil(t, dashboard)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, rName, dashboard.Name)
 
-	dashboard2, errCode := store.GetStore().GetDashboard(project.ID, agent.UUID, dashboard.ID)
+	/*dashboard2, errCode := store.GetStore().GetDashboard(project.ID, agent.UUID, dashboard.ID)
 	if errCode != 302 {
 		log.Error("Error fetching dashboard from database")
 	}
 
 	t.Run("CreateTemplateFromDashboard:WithNoQuery", func(t *testing.T) {
 		sendCreateTemplateFromDashboardReq(r, project.ID, agent, dashboard2.ID, dashboard2)
-	})
+	})*/
 }

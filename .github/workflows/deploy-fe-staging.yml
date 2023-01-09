@@ -1,27 +1,75 @@
 name: Deploy FE to staging env
 
 on:
-  push:
-    branches:
-      - auto-deploy
-    # Optionally configure to run only for specific files. For example:
-    # paths:
-    # - "website/**"
-
-
-env: 
-  PATH_TO_FACTORS : /home/runner/work/factors/factors/frontend-new
+  workflow_dispatch:
+    inputs:
+      description:
+        description: "Description about deployment"
+        default: ""
 
 jobs:
-  deploy_live_website:
+  deploy_fe_staging_website:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      # Add any build steps here. For example:
-      - run: cd ${{ env.PATH_TO_FACTORS }} && npm i && npm run build-staging
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Checkout Branch
+        uses: actions/checkout@v3
+
+      - name: Setting Node Environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: "14"
+
+      - name: Show GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$DEV_NAME"
+
+      - name: Installing Dependencies SDK
+        run: cd $GITHUB_WORKSPACE/sdk/javascript && npm install
+
+      - name: Installing Dependencies Frontend
+        run: cd $GITHUB_WORKSPACE/frontend-new && npm install
+
+      - name: Creating Frontend Build
+        run: cd $GITHUB_WORKSPACE/frontend-new && npm run build-staging-no-deployment
+
+      - name: Creating Old SDK Build
+        run: cd $GITHUB_WORKSPACE/sdk/javascript && npm run build-prod-v0
+
+      - name: Copying Old Sdk Build to Frontend Build
+        run: cp $GITHUB_WORKSPACE/sdk/javascript/dist/factors.v0.js $GITHUB_WORKSPACE/frontend-new/dist/staging/assets/factors.js
+
+      - name: Creating New SDK Build
+        run: cd $GITHUB_WORKSPACE/sdk/javascript && npm run build-prod
+
+      - name: Copying Sdk Build to Frontend Build
+        run: cp $GITHUB_WORKSPACE/sdk/javascript/dist/factors.v1.js $GITHUB_WORKSPACE/frontend-new/dist/staging/assets/v1/factors.js
+
+      - name: Build File Check
+        run: cd $GITHUB_WORKSPACE/frontend-new/dist/staging && ls -R
+
+      - name: Firebase Deployement SDK
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
-          projectId: auto-deploy-test
+          firebaseServiceAccount: "${{ secrets.GKE_STAGING_SA_KEY }}"
+          projectId: factors-staging
           channelId: live
+          target: staging
+          entrypoint: ./sdk/javascript
+
+      - name: Firebase Deployement APP
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.GKE_STAGING_SA_KEY }}"
+          projectId: factors-staging
+          channelId: live
+          target: staging
+          entrypoint: ./frontend-new
+
+      - name: Build Size Validation 1
+        run: cd $GITHUB_WORKSPACE/frontend-new && node sdk-monitor.js stage 2;
+
+      - name: Build Size Validation 2
+        run: cd $GITHUB_WORKSPACE/frontend-new && node sdk-monitor.js staging 2 https://b2mxnuvcer.firebaseapp.com/factors.v1.js

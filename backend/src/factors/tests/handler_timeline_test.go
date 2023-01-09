@@ -30,6 +30,19 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
+	timelinesConfig := &model.TimelinesConfig{
+		UserConfig: model.UserConfig{
+			TableProps: []string{"$country", "$page_count"},
+		},
+	}
+
+	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+	assert.Nil(t, err)
+
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
+	assert.Equal(t, errCode, http.StatusAccepted)
+
 	// Properties Map
 	propsMap := []map[string]interface{}{
 		{"$browser": "Chrome", "$city": "Delhi", "$country": "India", "$device_type": "desktop", "$page_count": 100, "$session_spent_time": 2000},
@@ -149,6 +162,9 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 				} else {
 					assert.Equal(t, user.IsAnonymous, false)
 				}
+				for _, prop := range timelinesConfig.UserConfig.TableProps {
+					assert.NotNil(t, user.TableProps[prop])
+				}
 				assert.NotNil(t, user.LastActivity)
 				if i > 0 {
 					assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
@@ -180,7 +196,9 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	assert.Equal(t, len(resp), 3)
 	assert.Condition(t, func() bool {
 		for i, user := range resp {
-			assert.Equal(t, user.Country, "India")
+			for _, prop := range timelinesConfig.UserConfig.TableProps {
+				assert.NotNil(t, user.TableProps[prop])
+			}
 			assert.NotNil(t, user.LastActivity)
 			if i > 0 {
 				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
@@ -233,6 +251,9 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 				assert.Equal(t, user.IsAnonymous, true)
 			} else {
 				assert.Equal(t, user.IsAnonymous, false)
+			}
+			for _, prop := range timelinesConfig.UserConfig.TableProps {
+				assert.NotNil(t, user.TableProps[prop])
 			}
 			assert.NotNil(t, user.LastActivity)
 			if i > 0 {
@@ -310,6 +331,9 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 			} else {
 				assert.Equal(t, user.IsAnonymous, true)
 			}
+			for _, prop := range timelinesConfig.UserConfig.TableProps {
+				assert.NotNil(t, user.TableProps[prop])
+			}
 			assert.NotNil(t, user.LastActivity)
 			if i > 0 {
 				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
@@ -347,7 +371,9 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 			} else {
 				assert.Equal(t, user.IsAnonymous, true)
 			}
-			assert.Equal(t, user.Country, "UK")
+			for _, prop := range timelinesConfig.UserConfig.TableProps {
+				assert.NotNil(t, user.TableProps[prop])
+			}
 			assert.NotNil(t, user.LastActivity)
 			if i > 0 {
 				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
@@ -390,7 +416,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	var timelinesConfig model.TimelinesConfig
 
 	propsToShow := []string{"$email", "$page_count", "$user_id", "$name", "$session_spent_time"}
-	timelinesConfig.UserConfig.PropsToShow = propsToShow
+	timelinesConfig.UserConfig.LeftpaneProps = propsToShow
 
 	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
 	assert.Nil(t, err)
@@ -866,6 +892,19 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
+	timelinesConfig := &model.TimelinesConfig{
+		AccountConfig: model.AccountConfig{
+			TableProps: []string{"$page_count", "$browser"},
+		},
+	}
+
+	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+	assert.Nil(t, err)
+
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
+	assert.Equal(t, errCode, http.StatusAccepted)
+
 	customerEmail := "@example.com"
 
 	// Create 5 Users with Properties.
@@ -876,6 +915,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	companies := []string{"FactorsAI", "Accenture", "Talentica", "Honeywell", "Meesho", ""}
 	websites := []string{"factors.ai", "accenture.com", "talentica.com", "honeywell.com", "meesho.com"}
 	countries := []string{"India", "Ireland", "India", "US", "India", "US"}
+	browsers := []string{"Chrome", "Brave", "Firefox", "Edge", "Safari", "Opera"}
 	for i := 0; i < numUsers; i++ {
 		var propertiesMap map[string]interface{}
 		if i%2 == 0 {
@@ -900,6 +940,8 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 			}
 
 		}
+		propertiesMap["$page_count"] = 1000 + i
+		propertiesMap["$browser"] = browsers[i]
 		propertiesJSON, err := json.Marshal(propertiesMap)
 		if err != nil {
 			log.WithError(err).Fatal("Marshal error.")
@@ -961,9 +1003,11 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				i = sort.SearchStrings(websites, user.HostName)
 				assert.Condition(t, func() bool { return i < len(websites) })
 				sort.Strings(countries)
-				i = sort.SearchStrings(countries, user.Country)
 				assert.Condition(t, func() bool { return i < len(countries) })
 				assert.NotNil(t, user.LastActivity)
+				for _, prop := range timelinesConfig.AccountConfig.TableProps {
+					assert.NotNil(t, user.TableProps[prop])
+				}
 				if index > 0 {
 					assert.Condition(t, func() bool { return resp[index].LastActivity.Unix() <= resp[index-1].LastActivity.Unix() })
 				}
@@ -1009,9 +1053,11 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				i = sort.SearchStrings(websites, user.HostName)
 				assert.Condition(t, func() bool { return i < len(websites) })
 				sort.Strings(countries)
-				i = sort.SearchStrings(countries, user.Country)
 				assert.Condition(t, func() bool { return i < len(countries) })
 				assert.NotNil(t, user.LastActivity)
+				for _, prop := range timelinesConfig.AccountConfig.TableProps {
+					assert.NotNil(t, user.TableProps[prop])
+				}
 				if index > 0 {
 					assert.Condition(t, func() bool { return resp[index].LastActivity.Unix() <= resp[index-1].LastActivity.Unix() })
 				}
@@ -1054,8 +1100,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	var timelinesConfig model.TimelinesConfig
 
 	propsToShow := []string{"$hubspot_company_industry", "$hubspot_company_country"}
-	timelinesConfig.AccountConfig.AccountPropsToShow = propsToShow
-	timelinesConfig.AccountConfig.UserPropToShow = "$hubspot_contact_jobtitle"
+	timelinesConfig.AccountConfig.LeftpaneProps = propsToShow
+	timelinesConfig.AccountConfig.UserProp = "$hubspot_contact_jobtitle"
 
 	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
 	assert.Nil(t, err)

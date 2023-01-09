@@ -184,7 +184,7 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 			}
 		}
 		alert.LastAlertSent = true
-		statusCode, errMsg := store.GetStore().UpdateAlert(alert.LastAlertSent)
+		statusCode, errMsg := store.GetStore().UpdateAlertStatus(alert.LastAlertSent)
 		if errMsg != "" {
 			log.Errorf("failed to update alert for project_id: %v, alert_name: %s, error: %v", projectID, alert.AlertName, errMsg)
 			continue
