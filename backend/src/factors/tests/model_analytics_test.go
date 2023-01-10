@@ -2657,6 +2657,62 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 	})
+
+	t.Run("AnalyticsInsightsQueryWithQuestionMark", func(t *testing.T) {
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0?",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
+							Property:  "$campaign_id",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "1234",
+						},
+					},
+				},
+				model.QueryEventWithProperties{
+					Name: "s1?",
+				},
+			},
+			Class: model.QueryClassInsights,
+
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+		_, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
+		assert.Equal(t, http.StatusOK, errCode)
+
+		var query2 model.Query
+		U.DeepCopy(&query, &query2)
+		query2.Type = model.QueryTypeEventsOccurrence
+		_, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
+		assert.Equal(t, http.StatusOK, errCode)
+
+		var query3 model.Query
+		U.DeepCopy(&query, &query3)
+		query3.GroupByProperties = []model.QueryGroupByProperty{
+			model.QueryGroupByProperty{
+				Entity:   model.PropertyEntityUser,
+				Property: "$initial_source",
+			},
+		}
+		_, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
+		assert.Equal(t, http.StatusOK, errCode)
+
+		var query4 model.Query
+		U.DeepCopy(&query2, &query4)
+		query4.Type = model.QueryTypeEventsOccurrence
+		_, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
+		assert.Equal(t, http.StatusOK, errCode)
+
+	})
+
 }
 
 func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
