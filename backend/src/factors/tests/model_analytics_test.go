@@ -3996,12 +3996,12 @@ func TestAnalyticsFunnelGroupQuery(t *testing.T) {
 	assert.Equal(t, float64(3), result.Rows[0][0])
 	assert.Equal(t, float64(2), result.Rows[0][1])
 
-	// without headers
+	// without headers also group result
 	w = sendAnalyticsQueryReqWithHeader(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false, nil)
 	assert.Equal(t, http.StatusOK, w.Code)
 	result = DecodeJSONResponseToAnalyticsResult(w.Body)
-	assert.Equal(t, float64(4), result.Rows[0][0])
-	assert.Equal(t, float64(3), result.Rows[0][1])
+	assert.Equal(t, float64(3), result.Rows[0][0])
+	assert.Equal(t, float64(2), result.Rows[0][1])
 	/*
 		event1 to event2 where event1
 			user1(group_1_1), user2(group_1_2), user3, user4(group_1_3) -> user5(group_1_1)
