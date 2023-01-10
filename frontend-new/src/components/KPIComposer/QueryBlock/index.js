@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { SVG, Text } from '../../factorsComponents';
 import styles from './index.module.scss';
-import { Button, Tooltip } from 'antd';
+import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
@@ -80,10 +80,9 @@ function QueryBlock({
 
   const onChange = (value, group, category, type) => {
     let qt;
-    for(let item of kpi?.config) {
-      for(let it of item.metrics) {
-        if(it?.name === value[1])
-          qt = it?.kpi_query_type;
+    for (let item of kpi?.config) {
+      for (let it of item.metrics) {
+        if (it?.name === value[1]) qt = it?.kpi_query_type;
       }
     }
     const newEvent = { alias: '', label: '', filters: [], group: '' };
@@ -135,7 +134,7 @@ function QueryBlock({
           <div className={styles.query_block__event_selector}>
             <GroupSelect2
               groupedProperties={kpiEvents ? kpiEvents : []}
-              placeholder="Select Event"
+              placeholder='Select Event'
               optionClick={(group, val, category) =>
                 onChange(val, group, category)
               }
@@ -169,7 +168,7 @@ function QueryBlock({
               {pageUrlDD ? (
                 <FaSelect
                   options={pageURLs || []}
-                  placeholder="Select Event"
+                  placeholder='Select Event'
                   optionClick={(val) => setPageURL(val)}
                   onClickOutside={() => setPageUrlDD(false)}
                   allowSearch={true}
@@ -193,7 +192,7 @@ function QueryBlock({
   const insertFilters = (filter, filterIndex) => {
     const newEvent = Object.assign({}, event);
     const filtersSorted = newEvent.filters;
-    filtersSorted.sort(compareFilters);    
+    filtersSorted.sort(compareFilters);
     if (filterIndex >= 0) {
       newEvent.filters = filtersSorted.map((filt, i) => {
         if (i === filterIndex) {
@@ -211,10 +210,10 @@ function QueryBlock({
   const removeFilters = (i) => {
     const newEvent = Object.assign({}, event);
     const filtersSorted = newEvent.filters;
-    filtersSorted.sort(compareFilters); 
+    filtersSorted.sort(compareFilters);
     if (filtersSorted[i]) {
       filtersSorted.splice(i, 1);
-      newEvent.filters=filtersSorted;
+      newEvent.filters = filtersSorted;
     }
     eventChange(newEvent, index - 1, 'filters_updated');
   };
@@ -272,33 +271,60 @@ function QueryBlock({
     }
     setMoreOptions(false);
   };
-
+  const getMenu = (filterOptions) => (
+    <Menu style={{ minWidth: '150px', padding: '10px' }}>
+      {filterOptions.map((eachFilter, eachIndex) => {
+        return (
+          <Menu.Item
+            icon={
+              <SVG
+                name={eachFilter[1]}
+                extraClass={'self-center'}
+                style={{ marginRight: '10px' }}
+              ></SVG>
+            }
+            style={{ display: 'flex' }}
+            key='0'
+            onClick={() => setAdditionalactions(eachFilter)}
+          >
+            <span style={{ paddingLeft: '5px' }}>{eachFilter[0]}</span>
+          </Menu.Item>
+        );
+      })}
+    </Menu>
+  );
   const additionalActions = () => {
-    return (
-      <div className={'fa--query_block--actions-cols flex'}>
-        <div className={`relative`}>
-          <Tooltip 
-            title="Filter this KPI"
-            color={TOOLTIP_CONSTANTS.DARK}
-            >
-            <Button
-              type="text"
-              size={'large'}
-              onClick={() => setMoreOptions(true)}
-              className={`fa-btn--custom mr-1 btn-total-round`}
-            >
-              <SVG name="more" />
-            </Button>
-          </Tooltip>
+    // Kept Filter by only, as it was previously, just changed Filter Menu
 
-          {moreOptions ? (
-            <FaSelect
-              // options={[['Filter By', 'filter'], ['Breakdown', 'groupby'], [ !event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']]}
-              options={[['Filter By', 'filter']]}
-              optionClick={(val) => setAdditionalactions(val)}
-              onClickOutside={() => setMoreOptions(false)}
-            ></FaSelect>
+    return (
+      <div className={'flex'}>
+        <div className={`relative`}>
+          {moreOptions == false ? (
+            <>
+              <Tooltip title='Filter this KPI' color={TOOLTIP_CONSTANTS.DARK}>
+                <Button
+                  type='text'
+                  size={'large'}
+                  className={`fa-btn--custom mr-1 btn-total-round`}
+                  onClick={addFilter}
+                >
+                  <SVG name='filter' />
+                </Button>
+              </Tooltip>
+            </>
           ) : (
+            // <FaSelect
+            //   // options={[['Filter By', 'filter'], ['Breakdown', 'groupby'], [ !event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']]}
+            //   options={[['Filter By', 'filter']]}
+            //   optionClick={(val) => setAdditionalactions(val)}
+            //   onClickOutside={() => setMoreOptions(false)}
+            // ></FaSelect>
+            // <FaSelect
+            //   // options={[['Filter By', 'filter'], ['Breakdown', 'groupby'], [ !event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']]}
+            //   options={[['Filter By', 'filter']]}
+            //   optionClick={(val) => setAdditionalactions(val)}
+            //   onClickOutside={() => setMoreOptions(false)}
+            // ></FaSelect>
             false
           )}
 
@@ -312,17 +338,14 @@ function QueryBlock({
             alias={event.alias}
           ></AliasModal>
         </div>
-        <Tooltip 
-          title="Delete this KPI"
-          color={TOOLTIP_CONSTANTS.DARK}
-          >
+        <Tooltip title='Delete this KPI' color={TOOLTIP_CONSTANTS.DARK}>
           <Button
             size={'large'}
-            type="text"
+            type='text'
             onClick={deleteItem}
             className={`fa-btn--custom btn-total-round`}
           >
-            <SVG name="trash" />
+            <SVG name='trash' />
           </Button>
         </Tooltip>
       </div>
@@ -334,19 +357,18 @@ function QueryBlock({
     let index = 0;
     let lastRef = 0;
     if (event && event?.filters?.length) {
-  
       const group = groupFilters(event.filters, 'ref');
       const filtersGroupedByRef = Object.values(group);
       const refValues = Object.keys(group);
-      lastRef = parseInt(refValues[refValues.length-1]);
+      lastRef = parseInt(refValues[refValues.length - 1]);
 
-      filtersGroupedByRef.forEach((filtersGr)=>{
+      filtersGroupedByRef.forEach((filtersGr) => {
         const refValue = filtersGr[0].ref;
-        if(filtersGr.length == 1){
-            const filter = filtersGr[0];
-            filters.push(
-              <div className={'fa--query_block--filters flex flex-row'}>
-                <div key={index}>
+        if (filtersGr.length == 1) {
+          const filter = filtersGr[0];
+          filters.push(
+            <div className={'fa--query_block--filters flex flex-row'}>
+              <div key={index}>
                 <EventFilterWrapper
                   index={index}
                   filter={filter}
@@ -359,33 +381,33 @@ function QueryBlock({
                   selectedMainCategory={selectedMainCategory}
                   refValue={refValue}
                 ></EventFilterWrapper>
+              </div>
+              {index !== orFilterIndex && (
+                <ORButton index={index} setOrFilterIndex={setOrFilterIndex} />
+              )}
+              {index === orFilterIndex && (
+                <div key={'init'}>
+                  <EventFilterWrapper
+                    filterProps={filterProps}
+                    activeProject={activeProject}
+                    event={event}
+                    deleteFilter={closeFilter}
+                    insertFilter={insertFilters}
+                    closeFilter={closeFilter}
+                    selectedMainCategory={selectedMainCategory}
+                    refValue={refValue}
+                    showOr={true}
+                  ></EventFilterWrapper>
                 </div>
-               {index !== orFilterIndex && (
-                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>
-                )}       
-               {index === orFilterIndex && (
-                  <div key={'init'}>
-                    <EventFilterWrapper
-                      filterProps={filterProps}
-                      activeProject={activeProject}
-                      event={event}
-                      deleteFilter={closeFilter}
-                      insertFilter={insertFilters}
-                      closeFilter={closeFilter}
-                      selectedMainCategory={selectedMainCategory}
-                      refValue={refValue}
-                      showOr = {true}
-                    ></EventFilterWrapper>
-                  </div>                
-                )}  
-                </div>     
-            );
-            index+=1;
-        }else{
+              )}
+            </div>
+          );
+          index += 1;
+        } else {
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-              <EventFilterWrapper
+                <EventFilterWrapper
                   index={index}
                   filter={filtersGr[0]}
                   event={event}
@@ -395,12 +417,12 @@ function QueryBlock({
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   selectedMainCategory={selectedMainCategory}
-                refValue={refValue}
+                  refValue={refValue}
                 ></EventFilterWrapper>
               </div>
-              <div key={index+1}>
-              <EventFilterWrapper
-                  index={index+1}
+              <div key={index + 1}>
+                <EventFilterWrapper
+                  index={index + 1}
                   filter={filtersGr[1]}
                   event={event}
                   filterProps={filterProps}
@@ -409,21 +431,21 @@ function QueryBlock({
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   selectedMainCategory={selectedMainCategory}
-                refValue={refValue}
-                showOr = {true}
+                  refValue={refValue}
+                  showOr={true}
                 ></EventFilterWrapper>
               </div>
             </div>
           );
-          index+=2;
+          index += 2;
         }
-      })
+      });
     }
 
     if (isFilterDDVisible) {
       filters.push(
         <div key={'init'} className={'fa--query_block--filters'}>
-          {selectEventFilter(lastRef+1)}
+          {selectEventFilter(lastRef + 1)}
         </div>
       );
     }
@@ -485,7 +507,7 @@ function QueryBlock({
         >
           {
             <Button
-              type="text"
+              type='text'
               onClick={triggerDropDown}
               icon={<SVG name={'plus'} color={'grey'} />}
             >
@@ -498,6 +520,7 @@ function QueryBlock({
     );
   }
 
+  let KPIFilterOptions = [['Filter by', 'filter']];
   return (
     <div
       className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}
@@ -512,7 +535,7 @@ function QueryBlock({
             className={
               'fa--query_block--add-event active flex justify-center items-center mr-2'
             }
-          > 
+          >
             <Text
               type={'title'}
               level={7}
@@ -531,17 +554,17 @@ function QueryBlock({
               <Tooltip title={'Edit Alias'}>
                 <Button
                   className={`${styles.custombtn} mx-1`}
-                  type="text"
+                  type='text'
                   onClick={showModal}
                 >
-                  <SVG size={20} name="edit" color={'grey'} />
+                  <SVG size={20} name='edit' color={'grey'} />
                 </Button>
               </Tooltip>
             </Text>
           ) : null}
         </div>
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-2'}`}>
-          <div className="max-w-7xl ml-2">
+          <div className='max-w-7xl ml-2'>
             <Tooltip
               title={
                 eventNames[event.label] ? eventNames[event.label] : event.label
@@ -551,7 +574,7 @@ function QueryBlock({
               <Button
                 // icon={<SVG name='mouseevent' size={16} color={'purple'} />}
                 className={`fa-button--truncate fa-button--truncate-lg btn-total-round`}
-                type="link"
+                type='link'
                 onClick={triggerDropDown}
               >
                 {eventNames[event.label]
@@ -563,6 +586,19 @@ function QueryBlock({
           </div>
           {(event?.pageViewVal || event?.group == 'page_views') &&
             selectPageUrls()}
+          <Dropdown
+            placement='bottomLeft'
+            overlay={getMenu(KPIFilterOptions)}
+            trigger={['hover']}
+          >
+            <Button
+              type='text'
+              size={'large'}
+              className={`fa-btn--custom mr-1 btn-total-round`}
+            >
+              <SVG name='more' />
+            </Button>
+          </Dropdown>
           <div className={styles.query_block__additional_actions}>
             {additionalActions()}
           </div>

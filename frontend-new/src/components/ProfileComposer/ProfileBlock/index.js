@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { SVG, Text } from '../../factorsComponents';
 import styles from './index.module.scss';
-import { Button, Tooltip } from 'antd';
+import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import ProfileFilterWrapper from '../ProfileFilterWrapper';
 import FaSelect from 'Components/FaSelect';
-import { ProfileMapper, ReverseProfileMapper, profileOptions } from '../../../utils/constants';
+import {
+  ProfileMapper,
+  ReverseProfileMapper,
+  profileOptions
+} from '../../../utils/constants';
 import AliasModal from '../../QueryComposer/AliasModal';
 import { INITIALIZE_GROUPBY } from '../../../reducers/coreQuery/actions';
 import { useDispatch } from 'react-redux';
@@ -23,13 +27,13 @@ function ProfileBlock({
   groupProperties,
   groupAnalysis,
   queryOptions,
-  setQueryOptions,
+  setQueryOptions
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
   const [moreOptions, setMoreOptions] = useState(false);
   const [filterProps, setFilterProperties] = useState({
-    user: [],
+    user: []
   });
   const dispatch = useDispatch();
 
@@ -61,8 +65,8 @@ function ProfileBlock({
       type: INITIALIZE_GROUPBY,
       payload: {
         global: [],
-        event: [],
-      },
+        event: []
+      }
     });
     setQueryOptions(opts);
   };
@@ -120,7 +124,7 @@ function ProfileBlock({
   const insertFilters = (filter, filterIndex) => {
     const newEvent = Object.assign({}, event);
     const filtersSorted = newEvent.filters;
-    filtersSorted.sort(compareFilters);    
+    filtersSorted.sort(compareFilters);
     if (filterIndex >= 0) {
       newEvent.filters = filtersSorted.map((filt, i) => {
         if (i === filterIndex) {
@@ -138,10 +142,10 @@ function ProfileBlock({
   const removeFilters = (i) => {
     const newEvent = Object.assign({}, event);
     const filtersSorted = newEvent.filters;
-    filtersSorted.sort(compareFilters); 
+    filtersSorted.sort(compareFilters);
     if (filtersSorted[i]) {
       filtersSorted.splice(i, 1);
-      newEvent.filters=filtersSorted;
+      newEvent.filters = filtersSorted;
     }
     eventChange(newEvent, index - 1, 'filters_updated');
   };
@@ -173,36 +177,54 @@ function ProfileBlock({
     }
     setMoreOptions(false);
   };
-
+  const getMenu = (filterOptions) => (
+    <Menu style={{ minWidth: '200px', padding: '10px' }}>
+      {filterOptions.map((eachFilter, eachIndex) => {
+        return (
+          <Menu.Item
+            key={eachIndex}
+            icon={
+              <SVG
+                name={eachFilter[1]}
+                extraClass={'self-center'}
+                style={{ marginRight: '10px' }}
+              ></SVG>
+            }
+            style={{ display: 'flex', padding: '10px', margin: '5px' }}
+            onClick={() => setAdditionalactions(eachFilter)}
+          >
+            <span style={{ paddingLeft: '5px' }}>{eachFilter[0]}</span>
+          </Menu.Item>
+        );
+      })}
+    </Menu>
+  );
   const additionalActions = () => {
     return (
       <div className={`fa--query_block--actions-cols flex`}>
         <div className={`relative`}>
-          <Tooltip 
-            title="Filter this Profile"
-            color={TOOLTIP_CONSTANTS.DARK}
-            >
+          <Tooltip title='Filter this Profile' color={TOOLTIP_CONSTANTS.DARK}>
             <Button
               type='text'
-              onClick={() => setMoreOptions(true)}
+              onClick={addFilter}
               className={`fa-btn--custom mr-1 btn-total-round`}
             >
-              <SVG name='more'></SVG>
+              <SVG name='filter'></SVG>
             </Button>
           </Tooltip>
 
-          {moreOptions ? (
+          {/* {moreOptions ? (
             <FaSelect
               options={[
                 ['Filter By', 'filter'],
-                [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit'],
+                [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
               ]}
               optionClick={(val) => setAdditionalactions(val)}
               onClickOutside={() => setMoreOptions(false)}
             ></FaSelect>
           ) : (
             false
-          )}
+          )} */}
           <AliasModal
             visible={isModalVisible}
             event={ReverseProfileMapper[event.label][groupAnalysis]}
@@ -211,11 +233,12 @@ function ProfileBlock({
             alias={event.alias}
           ></AliasModal>
         </div>
-        <Tooltip
-          title='Delete this Profile'
-          color={TOOLTIP_CONSTANTS.DARK}
+        <Tooltip title='Delete this Profile' color={TOOLTIP_CONSTANTS.DARK}>
+          <Button
+            type='text'
+            onClick={deleteItem}
+            className={`fa-btn--custom btn-total-round`}
           >
-          <Button type='text' onClick={deleteItem} className={`fa-btn--custom btn-total-round`}>
             <SVG name='trash'></SVG>
           </Button>
         </Tooltip>
@@ -231,15 +254,15 @@ function ProfileBlock({
       const group = groupFilters(event.filters, 'ref');
       const filtersGroupedByRef = Object.values(group);
       const refValues = Object.keys(group);
-      lastRef = parseInt(refValues[refValues.length-1]);
-      
-      filtersGroupedByRef.forEach((filtersGr)=>{
+      lastRef = parseInt(refValues[refValues.length - 1]);
+
+      filtersGroupedByRef.forEach((filtersGr) => {
         const refValue = filtersGr[0].ref;
-        if(filtersGr.length == 1){
-            const filter = filtersGr[0];
-            filters.push(
-              <div className={'fa--query_block--filters flex flex-row'}>
-                <div key={index}>
+        if (filtersGr.length == 1) {
+          const filter = filtersGr[0];
+          filters.push(
+            <div className={'fa--query_block--filters flex flex-row'}>
+              <div key={index}>
                 <ProfileFilterWrapper
                   index={index}
                   filter={filter}
@@ -251,32 +274,32 @@ function ProfileBlock({
                   closeFilter={closeFilter}
                   refValue={refValue}
                 ></ProfileFilterWrapper>
+              </div>
+              {index !== orFilterIndex && (
+                <ORButton index={index} setOrFilterIndex={setOrFilterIndex} />
+              )}
+              {index === orFilterIndex && (
+                <div key={'init'}>
+                  <ProfileFilterWrapper
+                    filterProps={filterProps}
+                    activeProject={activeProject}
+                    event={event}
+                    deleteFilter={closeFilter}
+                    insertFilter={insertFilters}
+                    closeFilter={closeFilter}
+                    refValue={refValue}
+                    showOr={true}
+                  ></ProfileFilterWrapper>
                 </div>
-               {index !== orFilterIndex && (
-                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>
-                )}       
-               {index === orFilterIndex && (
-                  <div key={'init'}>
-                    <ProfileFilterWrapper
-                      filterProps={filterProps}
-                      activeProject={activeProject}
-                      event={event}
-                      deleteFilter={closeFilter}
-                      insertFilter={insertFilters}
-                      closeFilter={closeFilter}
-                      refValue={refValue}
-                      showOr = {true}
-                    ></ProfileFilterWrapper>
-                  </div>                
-                )}  
-                </div>     
-            );
-            index+=1;
-        }else{
+              )}
+            </div>
+          );
+          index += 1;
+        } else {
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-              <ProfileFilterWrapper
+                <ProfileFilterWrapper
                   index={index}
                   filter={filtersGr[0]}
                   event={event}
@@ -288,9 +311,9 @@ function ProfileBlock({
                   refValue={refValue}
                 ></ProfileFilterWrapper>
               </div>
-              <div key={index+1}>
-              <ProfileFilterWrapper
-                  index={index+1}
+              <div key={index + 1}>
+                <ProfileFilterWrapper
+                  index={index + 1}
                   filter={filtersGr[1]}
                   event={event}
                   filterProps={filterProps}
@@ -299,20 +322,20 @@ function ProfileBlock({
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   refValue={refValue}
-                showOr = {true}
+                  showOr={true}
                 ></ProfileFilterWrapper>
               </div>
             </div>
           );
-          index+=2;
+          index += 2;
         }
-      })
+      });
     }
 
     if (isFilterDDVisible) {
       filters.push(
         <div key={'init'} className={'fa--query_block--filters'}>
-          {selectEventFilter(lastRef+1)}
+          {selectEventFilter(lastRef + 1)}
         </div>
       );
     }
@@ -344,7 +367,10 @@ function ProfileBlock({
       </div>
     );
   }
-
+  let filterOptions = [
+    ['Filter By', 'filter'],
+    [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
+  ];
   return (
     <div
       className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}
@@ -386,7 +412,7 @@ function ProfileBlock({
           ) : null}
         </div>
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-1'}`}>
-        <div className='relative ml-2'>
+          <div className='relative ml-2'>
             <Tooltip title={ReverseProfileMapper[event.label][groupAnalysis]}>
               <Button
                 icon={<SVG name='mouseevent' size={16} color={'purple'} />}
@@ -399,6 +425,19 @@ function ProfileBlock({
               {selectProfile()}
             </Tooltip>
           </div>
+          <Dropdown
+            placement='bottomLeft'
+            overlay={getMenu(filterOptions)}
+            trigger={['hover']}
+          >
+            <Button
+              type='text'
+              size={'large'}
+              className={`fa-btn--custom mr-1 btn-total-round`}
+            >
+              <SVG name='more' />
+            </Button>
+          </Dropdown>
           <div className={styles.query_block__additional_actions}>
             {additionalActions()}
           </div>
@@ -414,7 +453,7 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   userProperties: state.coreQuery.userProperties,
   groupProperties: state.coreQuery.groupProperties,
-  eventNames: state.coreQuery.eventNames,
+  eventNames: state.coreQuery.eventNames
 });
 
 export default connect(mapStateToProps)(ProfileBlock);

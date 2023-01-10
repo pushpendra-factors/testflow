@@ -7,7 +7,7 @@ import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import EventFilterWrapper from '../EventFilterWrapper';
 import { default as EventFilter } from 'Components/QueryComposer/EventFilterWrapper';
 
-import { Button, Tooltip } from 'antd';
+import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { before, isArray } from 'lodash';
 import FaSelect from 'Components/FaSelect';
@@ -296,6 +296,35 @@ const ConversionGoalBlock = ({
     closeFilter();
   };
 
+  const setAdditionalactions = (opt) => {
+    if (opt[1] === 'filter') {
+      addFilterBlock();
+    }
+    setMoreOptions(false);
+  };
+
+  const getMenu = (filterOptions) => (
+    <Menu style={{ minWidth: '200px', padding: '10px' }}>
+      {filterOptions.map((eachFilter, eachIndex) => {
+        return (
+          <Menu.Item
+            icon={
+              <SVG
+                name={eachFilter[1]}
+                extraClass={'self-center'}
+                style={{ marginRight: '10px' }}
+              ></SVG>
+            }
+            style={{ display: 'flex', padding: '10px', margin: '5px' }}
+            key={eachIndex}
+            onClick={() => setAdditionalactions(eachFilter)}
+          >
+            <span style={{ paddingLeft: '5px' }}>{eachFilter[0]}</span>
+          </Menu.Item>
+        );
+      })}
+    </Menu>
+  );
   const additionalActions = () => {
     return (
       <div className={'fa--query_block--actions-cols flex relative ml-2'}>
@@ -303,14 +332,13 @@ const ConversionGoalBlock = ({
           <Tooltip title='Filter this Attribute' color={TOOLTIP_CONSTANTS.DARK}>
             <Button
               type='text'
-              onClick={() => setMoreOptions(true)}
-              className={`fa-btn--custom mr-1 btn-total-round`}
+              onClick={addFilterBlock}
+              className={`fa-btn--custom btn-total-round`}
             >
-              <SVG name='more'></SVG>
+              <SVG name='filter'></SVG>
             </Button>
           </Tooltip>
-
-          {moreOptions ? (
+          {/* {moreOptions ? (
             <FaSelect
               options={[[`Filter By`, 'filter']]}
               optionClick={(val) => {
@@ -321,9 +349,9 @@ const ConversionGoalBlock = ({
             ></FaSelect>
           ) : (
             false
-          )}
+          )} */}
         </div>
-        <Tooltip title='Delete this Attribute'>
+        <Tooltip title='Delete this Attribute' color={TOOLTIP_CONSTANTS.DARK}>
           <Button
             type='text'
             onClick={deleteItem}
@@ -372,6 +400,7 @@ const ConversionGoalBlock = ({
   };
 
   const renderGoalBlockContent = () => {
+    let filterOptions = [['Filter By', 'filter']];
     return (
       <div
         className={`${styles.block__content} flex items-center relative mt-4`}
@@ -400,7 +429,19 @@ const ConversionGoalBlock = ({
         {selectEvents()}
 
         {(!group_analysis || group_analysis === 'users') && renderCountLabel()}
-
+        <Dropdown
+          placement='bottomLeft'
+          overlay={getMenu(filterOptions)}
+          trigger={['hover']}
+        >
+          <Button
+            type='text'
+            size={'large'}
+            className={`fa-btn--custom mr-1 btn-total-round`}
+          >
+            <SVG name='more' />
+          </Button>
+        </Dropdown>
         <div className={styles.block__additional_actions}>
           {additionalActions()}
         </div>
