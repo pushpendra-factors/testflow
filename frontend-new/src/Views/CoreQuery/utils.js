@@ -27,7 +27,8 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
-  QUERY_TYPE_PROFILE
+  QUERY_TYPE_PROFILE,
+  QUERY_OPTIONS_DEFAULT_VALUE
 } from '../../utils/constants';
 import {
   CORE_QUERY_INITIAL_STATE,
@@ -1188,7 +1189,9 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
 
   const queryType = requestQuery.cl;
   const eventsCondition = requestQuery.ec;
-  const groupAnalysis = requestQuery.grpa;
+  const groupAnalysis = requestQuery.grpa
+    ? requestQuery.grpa
+    : QUERY_OPTIONS_DEFAULT_VALUE.group_analysis;
   const sessionAnalyticsSeq = INITIAL_SESSION_ANALYTICS_SEQ;
   // if (requestQuery.cl && requestQuery.cl === QUERY_TYPE_FUNNEL) {
   //   if (requestQuery.sse && requestQuery.see) {

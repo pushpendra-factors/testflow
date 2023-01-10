@@ -7,6 +7,10 @@ on:
         description: "Description about deployment"
         default: ""
 
+env:
+  DEV_NAME: ${{ github.actor }}
+  ACTION_DESCRIPTION: ${{ github.event.inputs.description}}
+
 jobs:
   deploy_fe_staging_website:
     runs-on: ubuntu-latest
@@ -18,6 +22,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "14"
+          cache: "npm"
+          cache-dependency-path: |
+            frontend-new/package-lock.json
+            sdk/javascript/package-lock.json
 
       - name: Show GitHub context
         env:
@@ -25,10 +33,10 @@ jobs:
         run: echo "$DEV_NAME"
 
       - name: Installing Dependencies SDK
-        run: cd $GITHUB_WORKSPACE/sdk/javascript && npm install
+        run: cd $GITHUB_WORKSPACE/sdk/javascript && npm ci
 
       - name: Installing Dependencies Frontend
-        run: cd $GITHUB_WORKSPACE/frontend-new && npm install
+        run: cd $GITHUB_WORKSPACE/frontend-new && npm ci
 
       - name: Creating Frontend Build
         run: cd $GITHUB_WORKSPACE/frontend-new && npm run build-staging-no-deployment
@@ -73,3 +81,6 @@ jobs:
 
       - name: Build Size Validation 2
         run: cd $GITHUB_WORKSPACE/frontend-new && node sdk-monitor.js staging 2 https://b2mxnuvcer.firebaseapp.com/factors.v1.js
+
+      - name: Slack Notification
+        run: $GITHUB_WORKSPACE/frontend-new/notify_deployment_github.sh staging

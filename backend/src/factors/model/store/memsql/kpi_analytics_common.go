@@ -17,6 +17,7 @@ import (
 func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
 	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int) {
 
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	kpiTimezoneString := string(kpiQueryGroup.GetTimeZone())
 	var finalResultantResults []model.QueryResult
 
@@ -34,7 +35,6 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 	if finalStatusCode != http.StatusOK {
 		return []model.QueryResult{{}, {}}, finalStatusCode
 	}
-
 	finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults = model.GetNonGBTResultsFromGBTResultsAndMaps(reqID, kpiQueryGroup,
 		mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults, mapOfGBTKPINormalQueryToResults, externalQueryToInternalQueries)
 	if finalStatusCode == 2 {

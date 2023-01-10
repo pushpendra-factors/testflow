@@ -53,16 +53,17 @@ func FormFillProcessing() int {
 		rowsByFormSorted[key] = rows
 	}
 
-	properties := make(U.PropertiesMap)
 	for _, formFills := range rowsByFormSorted {
 		if formFills == nil {
 			return http.StatusNotFound
 		}
-		// Difference between first field entry - last field entry in seconds.
-		properties[U.EP_TIME_SPENT_ON_FORM] = int64(formFills[0].CreatedAt.Sub(formFills[len(formFills)-1].CreatedAt).Seconds())
 
 		rowsByField := map[string]*model.FormFill{}
 		timestampUpdatesMap := map[string]*UpdateTimestamp{}
+
+		properties := make(U.PropertiesMap)
+		// Difference between first field entry - last field entry in seconds.
+		properties[U.EP_TIME_SPENT_ON_FORM] = int64(formFills[0].CreatedAt.Sub(formFills[len(formFills)-1].CreatedAt).Seconds())
 
 		// Selects one row with valid phone or email for each field on a form.
 		for rowIndex := range formFills {
@@ -127,8 +128,8 @@ func FormFillProcessing() int {
 					}
 				}
 			}
-			projectToken := (*projectIdWithToken)[row.ProjectID]
 
+			projectToken := (*projectIdWithToken)[row.ProjectID]
 			trackPayload := &SDK.TrackPayload{
 				ProjectId:       row.ProjectID,
 				UserId:          row.UserId,

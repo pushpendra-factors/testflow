@@ -237,9 +237,9 @@ func MergeTwoDataRowsV1(row1 []interface{}, row2 []interface{}, keyIndex int, at
 	if attributionKey == AttributionKeyLandingPage {
 
 		row1[keyIndex+1] = row1[keyIndex+1].(float64) + row2[keyIndex+1].(float64) // Conversion.
-		row1[keyIndex+2] = row1[keyIndex+2].(float64) + row2[keyIndex+2].(float64) // Conversion Influence
+		row1[keyIndex+2] = row1[keyIndex+2].(float64) + row2[keyIndex+2].(float64) // Conversion Influence - values same as Linear Touch
 		row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Compare conversion
-		row1[keyIndex+4] = row1[keyIndex+4].(float64) + row2[keyIndex+4].(float64) // Compare conversion-Influence
+		row1[keyIndex+4] = row1[keyIndex+4].(float64) + row2[keyIndex+4].(float64) // Compare conversion-Influence - values same as Linear Touch
 
 		// Remaining linked funnel events & CPCs
 		for i := keyIndex + 5; i < len(row1)-1; i += 2 {
@@ -257,9 +257,9 @@ func MergeTwoDataRowsV1(row1 []interface{}, row2 []interface{}, keyIndex int, at
 		for idx, _ := range conversionFunTypes {
 			nextConPosition := idx * 6
 			row1[keyIndex+8+nextConPosition] = row1[keyIndex+8+nextConPosition].(float64) + row2[keyIndex+8+nextConPosition].(float64)    // Conversion.
-			row1[keyIndex+9+nextConPosition] = row1[keyIndex+9+nextConPosition].(float64) + row2[keyIndex+9+nextConPosition].(float64)    // Conversion Influence
+			row1[keyIndex+9+nextConPosition] = row1[keyIndex+9+nextConPosition].(float64) + row2[keyIndex+9+nextConPosition].(float64)    // Conversion Influence - values same as Linear Touch
 			row1[keyIndex+11+nextConPosition] = row1[keyIndex+11+nextConPosition].(float64) + row2[keyIndex+11+nextConPosition].(float64) // Compare Conversion.
-			row1[keyIndex+12+nextConPosition] = row1[keyIndex+12+nextConPosition].(float64) + row2[keyIndex+12+nextConPosition].(float64) // Compare Conversion Influence
+			row1[keyIndex+12+nextConPosition] = row1[keyIndex+12+nextConPosition].(float64) + row2[keyIndex+12+nextConPosition].(float64) // Compare Conversion Influence - values same as Linear Touch
 		}
 		impressions := (row1[keyIndex+1]).(int64)
 		clicks := (row1[keyIndex+2]).(int64)

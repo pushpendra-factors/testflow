@@ -15,6 +15,8 @@ import FaSelect from '../../../../../components/FaSelect';
 const RULE_TYPE_HS_CONTACT = 'hs_contact';
 const RULE_TYPE_HS_EMAILS = 'hs_emails';
 const RULE_TYPE_HS_FORM_SUBMISSIONS = 'hs_form_submissions';
+const RULE_TYPE_HS_CALLS = 'hs_calls';
+const RULE_TYPE_HS_MEETINGS = 'hs_meetings';
 
 const Extra_PROP_SHOW_OPTIONS = [
   ['Campaign Id', null, 'campaign_id'],
@@ -187,6 +189,12 @@ const TouchpointView = ({
       return '$hubspot_contact_updated';
     } else if (tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
       return '$hubspot_form_submission';
+    } else if (tchRuleType === RULE_TYPE_HS_CALLS) {
+        // TODO temporary
+        return '$hubspot_calls';
+    } else if (tchRuleType === RULE_TYPE_HS_MEETINGS) {
+        // TODO temporary
+        return '$hubspot_meetings';
     }
   };
 
@@ -270,10 +278,6 @@ const TouchpointView = ({
     const filtrs = [...newFilterStates];
     filtrs.splice(index, 1);
     setNewFilterStates(filtrs);
-  };
-
-  const addFilter = () => {
-    console.log('Added');
   };
 
   const renderFilters = () => {
@@ -425,8 +429,33 @@ const TouchpointView = ({
         >
           <Radio value={`$timestamp`}>Form submission timestamp</Radio>
         </Radio.Group>
-      );
+      )
+    } else if (tchRuleType === RULE_TYPE_HS_MEETINGS) {
+        return (
+            <Radio.Group
+              onChange={() => setTimestampRefEmail('$hubspot_meetings')}
+              value={timestampRef}
+              defaultValue={`$hubspot_meetings`}
+            >
+              <Radio value={`$hubspot_meetings`}>
+                Meeting Done Timestamp
+              </Radio>
+            </Radio.Group>
+          )
+    } else if (tchRuleType === RULE_TYPE_HS_CALLS) {
+        return (
+            <Radio.Group
+              onChange={() => setTimestampRefEmail('$hubspot_calls')}
+              value={timestampRef}
+              defaultValue={`$hubspot_calls`}
+            >
+              <Radio value={`$hubspot_calls`}>
+                Call timestamp
+              </Radio>
+            </Radio.Group>
+          )
     }
+    
   };
 
   const renderTimestampRenderOption = () => {
@@ -837,6 +866,12 @@ const TouchpointView = ({
           </Option>
           <Option value={RULE_TYPE_HS_FORM_SUBMISSIONS}>
             Form Submissions
+          </Option>
+          <Option value={RULE_TYPE_HS_MEETINGS}>
+            Meetings
+          </Option>
+          <Option value={RULE_TYPE_HS_CALLS}>
+            Calls
           </Option>
         </Select>
       </Col>
