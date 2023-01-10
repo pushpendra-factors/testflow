@@ -458,6 +458,8 @@ var EP_HUBSPOT_ENGAGEMENT_TIMESTAMP string = "$hubspot_engagement_timestamp"
 var EP_HUBSPOT_ENGAGEMENT_ID string = "$hubspot_engagement_id"
 var EP_HUBSPOT_CONTACT_LIST_LIST_ID string = "$hubspot_contact_list_list_id"
 var EP_OTP_UNIQUE_KEY string = "$otp_unique_key"
+var EP_SF_TASK_ID string = "$salesforce_task_id"
+var EP_SF_EVENT_ID string = "$salesforce_event_id"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
