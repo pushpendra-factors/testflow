@@ -9,7 +9,8 @@ import (
 
 var linkedinRequiredDocumentTypes = []int{1, 2, 3, 4, 5, 6} //Refer memsql.LinkedinDocumentTypeAlias for clarity
 
-var linkedinMetricToCalcInfo = map[string]MetricCalculationInfo{
+// weekly insights calculation info for each linkedin metric
+var linkedinMetricToCalcInfo = map[string]ChannelMetricCalculationInfo{
 	M.Impressions: {
 		Props:     []ChannelPropInfo{{Name: M.Impressions}},
 		Operation: "sum",

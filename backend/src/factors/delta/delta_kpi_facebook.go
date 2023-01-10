@@ -9,7 +9,8 @@ import (
 
 var facebookRequiredDocumentTypes = []int{1, 2, 3, 4, 5, 6} //Refer memsql.FacebookDocumentTypeAlias for clarity
 
-var facebookMetricToCalcInfo = map[string]MetricCalculationInfo{
+// weekly insights calculation info for each facebook metric
+var facebookMetricToCalcInfo = map[string]ChannelMetricCalculationInfo{
 	M.Impressions: {
 		Props:     []ChannelPropInfo{{Name: M.Impressions}},
 		Operation: "sum",

@@ -11,8 +11,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//check if prop exists in props based on entity and returns the interface value (put eventprops in first map, user in second)
-func ExistsInProps(prop string, firstMap map[string]interface{}, secondMap map[string]interface{}, entity string) (interface{}, bool) {
+// check if prop exists in props based on entity and returns the interface value (put eventprops in first map, user in second)
+func existsInProps(prop string, firstMap map[string]interface{}, secondMap map[string]interface{}, entity string) (interface{}, bool) {
 	if firstMap != nil && (entity == "ep" || entity == "either") {
 		if val, ok := firstMap[prop]; ok {
 			return val, true
@@ -38,7 +38,7 @@ func addValueToMapForPropsPresent(globalVal *float64, featMap map[string]map[str
 		} else {
 			pt = "either"
 		}
-		if val, ok := ExistsInProps(prop, propMap1, propMap2, pt); ok {
+		if val, ok := existsInProps(prop, propMap1, propMap2, pt); ok {
 			val, err := getStringValueFromInterface(val)
 			if err != nil {
 				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
@@ -61,7 +61,7 @@ func addValueToMapForPropsPresentUnique(globalVal *float64, featMap map[string]m
 		propTypeName := strings.SplitN(propWithType, "#", 2)
 		prop := propTypeName[1]
 		propType := propTypeName[0]
-		if val, ok := ExistsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
+		if val, ok := existsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
 			val, err := getStringValueFromInterface(val)
 			if err != nil {
 				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
@@ -94,7 +94,7 @@ func addValuesToFractionForPropsPresent(globalVal *Fraction, featMap map[string]
 		} else {
 			pt = "either"
 		}
-		if val, ok := ExistsInProps(prop, firstMap, secondMap, pt); ok {
+		if val, ok := existsInProps(prop, firstMap, secondMap, pt); ok {
 			val, err := getStringValueFromInterface(val)
 			if err != nil {
 				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
@@ -124,7 +124,7 @@ func addValuesToFractionForPropsPresentUnique(globalVal *Fraction, featMap map[s
 		propTypeName := strings.SplitN(propWithType, "#", 2)
 		prop := propTypeName[1]
 		propType := propTypeName[0]
-		if val, ok := ExistsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
+		if val, ok := existsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
 			val, err := getStringValueFromInterface(val)
 			if err != nil {
 				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
@@ -152,7 +152,7 @@ func addValuesToFractionForPropsPresentUnique(globalVal *Fraction, featMap map[s
 	}
 }
 
-//delete keys and values with zero frequency
+// delete keys and values with zero frequency
 func deleteEntriesWithZeroFreq(reqMap map[string]map[string]float64) {
 	for prop, valMap := range reqMap {
 		for val, cnt := range valMap {
@@ -281,18 +281,4 @@ func checkValSatisfiesFilterCondition(filter M.KPIFilter, eventVal interface{}) 
 		return false, fmt.Errorf("strange property type: %s", filter.PropertyDataType)
 	}
 	return true, nil
-}
-
-func MultipleJSDivergenceKpi(metricInfo1, metricInfo2 *MetricInfo, allProps map[string]map[string]bool) Level2CatRatioDist {
-	jsdMetrics := make(Level2CatRatioDist)
-	for key, valMap := range metricInfo1.Features {
-		jsdMetrics[key] = make(Level1CatRatioDist)
-		for val := range valMap {
-			prev1 := metricInfo1.Features[key][val] / metricInfo1.Global
-			prev2 := metricInfo2.Features[key][val] / metricInfo2.Global
-			jsd := SingleJSDivergence(prev1, prev2)
-			jsdMetrics[key][val] = jsd
-		}
-	}
-	return jsdMetrics
 }

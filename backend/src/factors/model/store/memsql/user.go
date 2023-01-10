@@ -2717,7 +2717,29 @@ func (store *MemSQL) GetUserWithoutProperties(projectID int64, id string) (*mode
 	return &user, http.StatusFound
 }
 
-func (store *MemSQL) PullUsersRowsForWI(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error) {
+func (store *MemSQL) PullUsersRowsForWIV2(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	whereGroupStmt := fmt.Sprintf("(is_group_user=1 AND group_%d_id IS NOT NULL)", group)
+	if group == 0 {
+		whereGroupStmt = "(is_group_user=0 OR is_group_user IS NULL)"
+	}
+	rawQuery := fmt.Sprintf("SELECT COALESCE(customer_user_id, id) AS user_id, properties,ISNULL(customer_user_id) AS is_anonymous, join_timestamp AS join_timestamp, "+
+		"COALESCE(JSON_EXTRACT_STRING(properties, '%s'),0) AS timestamp FROM users "+
+		"WHERE %s AND project_id=%d AND source=%d AND UNIX_TIMESTAMP(created_at) BETWEEN %d AND %d AND updated_at<NOW() AND timestamp>0 "+
+		"LIMIT %d",
+		dateField, whereGroupStmt, projectID, source, startTime, endTime, model.UsersPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
+}
+
+func (store *MemSQL) PullUsersRowsForWIV1(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,

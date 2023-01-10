@@ -9,7 +9,8 @@ import (
 
 var adwordsRequiredDocumentTypes = []int{1, 3, 5, 8, 10} //Refer M.AdwordsDocumentTypeAlias for clarity
 
-var adwordsMetricToCalcInfo = map[string]MetricCalculationInfo{
+// weekly insights calculation info for each adwords metric
+var adwordsMetricToCalcInfo = map[string]ChannelMetricCalculationInfo{
 	M.Impressions: {
 		Props:     []ChannelPropInfo{{Name: M.Impressions}},
 		Operation: "sum",

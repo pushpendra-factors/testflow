@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	M "factors/model/model"
 	"factors/model/store/memsql"
+	"factors/pull"
 	U "factors/util"
 	"fmt"
 	"strings"
@@ -20,27 +21,10 @@ type ChannelPropInfo struct {
 	ReplaceValue       map[float64]float64
 }
 
-type MetricCalculationInfo struct {
+type ChannelMetricCalculationInfo struct {
 	Props     []ChannelPropInfo
 	Operation string
 	Constants map[string]float64
-}
-
-type CounterCampaignFormat struct {
-	Id         string                 `json:"id"`
-	Channel    string                 `json:"source"`
-	Doctype    int                    `json:"type"`
-	Timestamp  int64                  `json:"timestamp"`
-	Value      map[string]interface{} `json:"value"`
-	SmartProps map[string]interface{} `json:"sp"`
-}
-
-var ChannelValueFilterName = map[string]string{
-	M.ADWORDS:        "Google Ads",
-	M.BINGADS:        "Bing Ads",
-	M.LINKEDIN:       "LinkedIn Ads",
-	M.FACEBOOK:       "Facebook Ads",
-	M.GOOGLE_ORGANIC: "Google Ads",
 }
 
 var levelStrToIntAlias = map[string]int{
@@ -51,7 +35,7 @@ var levelStrToIntAlias = map[string]int{
 	memsql.CAFilterAd:       1,
 }
 
-func GetCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
+func getCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	wpi.MetricInfo = &MetricInfo{}
 	wpi.ScaleInfo = &MetricInfo{}
@@ -90,7 +74,7 @@ func GetCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanne
 			metric = metricInt
 		}
 	}
-	var GetCampaignMetric func(metric string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo MetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string) (*MetricInfo, *MetricInfo, error)
+	var GetCampaignMetric func(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo ChannelMetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string) (*MetricInfo, *MetricInfo, error)
 	if info, ok := metricToCalcinfo[metric]; ok {
 		if info.Operation == "sum" {
 			GetCampaignMetric = GetCampaignMetricSimple
@@ -102,7 +86,7 @@ func GetCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanne
 		log.WithError(err).Error("error GetCampaignMetricsInfo")
 		return nil, err
 	}
-	if info, scale, err := GetCampaignMetric(metric, scanner, newPropFilter, propsToEvalPerQuery, queryLevel, metricToCalcinfo[metric], docTypeAlias, requiredDocTypes, infoMap); err != nil {
+	if info, scale, err := GetCampaignMetric(scanner, newPropFilter, propsToEvalPerQuery, queryLevel, metricToCalcinfo[metric], docTypeAlias, requiredDocTypes, infoMap); err != nil {
 		log.WithError(err).Error("error GetCampaignMetricsInfo for kpi " + metric)
 		return nil, err
 	} else {
@@ -118,7 +102,7 @@ func GetCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanne
 	return &wpi, nil
 }
 
-func GetCampaignMetricSimple(metric string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo MetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string) (*MetricInfo, *MetricInfo, error) {
+func GetCampaignMetricSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo ChannelMetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string) (*MetricInfo, *MetricInfo, error) {
 	var globalVal float64
 	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
@@ -130,7 +114,7 @@ func GetCampaignMetricSimple(metric string, scanner *bufio.Scanner, propFilter [
 	for scanner.Scan() {
 		txtline := scanner.Text()
 
-		var campaignDetails CounterCampaignFormat
+		var campaignDetails pull.CounterCampaignFormat
 		if err := json.Unmarshal([]byte(txtline), &campaignDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
@@ -209,7 +193,7 @@ func GetCampaignMetricSimple(metric string, scanner *bufio.Scanner, propFilter [
 	return &info, &scale, nil
 }
 
-func GetCampaignMetricComplex(metric string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo MetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string) (*MetricInfo, *MetricInfo, error) {
+func GetCampaignMetricComplex(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo ChannelMetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string) (*MetricInfo, *MetricInfo, error) {
 	var globalVal float64
 	var globalFrac Fraction
 	var globalScale float64
@@ -223,7 +207,7 @@ func GetCampaignMetricComplex(metric string, scanner *bufio.Scanner, propFilter 
 	for scanner.Scan() {
 		txtline := scanner.Text()
 
-		var campaignDetails CounterCampaignFormat
+		var campaignDetails pull.CounterCampaignFormat
 		if err := json.Unmarshal([]byte(txtline), &campaignDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
@@ -318,7 +302,7 @@ func GetCampaignMetricComplex(metric string, scanner *bufio.Scanner, propFilter 
 }
 
 // check if event name is correct and contains all required properties(satisfies constraints)
-func isCampaignToBeCounted(campaignDetails CounterCampaignFormat, propFilter []M.KPIFilter, requiredDocTypes []int) (bool, error) {
+func isCampaignToBeCounted(campaignDetails pull.CounterCampaignFormat, propFilter []M.KPIFilter, requiredDocTypes []int) (bool, error) {
 
 	allowed := false
 	for _, dtype := range requiredDocTypes {
@@ -342,7 +326,7 @@ func isCampaignToBeCounted(campaignDetails CounterCampaignFormat, propFilter []M
 }
 
 // check if campaign report contains all required properties(satisfies constraints)
-func campaignSatisfiesConstraints(campaignDetails CounterCampaignFormat, propFilter []M.KPIFilter) (bool, error) {
+func campaignSatisfiesConstraints(campaignDetails pull.CounterCampaignFormat, propFilter []M.KPIFilter) (bool, error) {
 
 	passFilter := true
 	for _, filter := range propFilter {
@@ -363,8 +347,8 @@ func campaignSatisfiesConstraints(campaignDetails CounterCampaignFormat, propFil
 		var eventVal interface{}
 		propName := filter.PropertyName
 
-		if val, ok := ExistsInProps(propName, campaignDetails.Value, campaignDetails.SmartProps, "either"); !ok {
-			notOp, _, _ := U.StringIn(NotOperations, filter.Condition)
+		if val, ok := existsInProps(propName, campaignDetails.Value, campaignDetails.SmartProps, "either"); !ok {
+			notOp, _, _ := U.StringIn(notOperations, filter.Condition)
 			if notOp {
 				passFilter = true
 			}
@@ -389,13 +373,13 @@ func campaignSatisfiesConstraints(campaignDetails CounterCampaignFormat, propFil
 }
 
 // check dependent prop
-func checkDependentProp(propInfo ChannelPropInfo, campaignDetails CounterCampaignFormat, extraProps map[string]interface{}) (float64, bool, error) {
+func checkDependentProp(propInfo ChannelPropInfo, campaignDetails pull.CounterCampaignFormat, extraProps map[string]interface{}) (float64, bool, error) {
 	var reqVal float64
 	key := propInfo.DependentKey
 	val := propInfo.DependentValue
 	op := propInfo.DependentOperation
 	if key != "" {
-		if docVal, ok := ExistsInProps(key, campaignDetails.Value, extraProps, "either"); !ok {
+		if docVal, ok := existsInProps(key, campaignDetails.Value, extraProps, "either"); !ok {
 			return 0, false, nil
 		} else if op != "" {
 			docVal, err := getFloatValueFromInterface(docVal)
@@ -415,8 +399,8 @@ func checkDependentProp(propInfo ChannelPropInfo, campaignDetails CounterCampaig
 }
 
 // check prop exists and get float value
-func getPropValueCampaign(propInfo ChannelPropInfo, campaignDetails CounterCampaignFormat, extraProps map[string]interface{}) (float64, bool, error) {
-	if val, ok := ExistsInProps(propInfo.Name, campaignDetails.Value, extraProps, "either"); ok {
+func getPropValueCampaign(propInfo ChannelPropInfo, campaignDetails pull.CounterCampaignFormat, extraProps map[string]interface{}) (float64, bool, error) {
+	if val, ok := existsInProps(propInfo.Name, campaignDetails.Value, extraProps, "either"); ok {
 		if floatVal, err := getFloatValueFromInterface(val); err != nil {
 			return 0, false, err
 		} else {
@@ -428,7 +412,7 @@ func getPropValueCampaign(propInfo ChannelPropInfo, campaignDetails CounterCampa
 }
 
 // get smart props + associated props
-func getExtraProps(campaignDetails CounterCampaignFormat, level_id string, associatedProps map[int]map[string]map[string]interface{}, docLevel int) (map[string]interface{}, error) {
+func getExtraProps(campaignDetails pull.CounterCampaignFormat, level_id string, associatedProps map[int]map[string]map[string]interface{}, docLevel int) (map[string]interface{}, error) {
 	var extraProps = make(map[string]interface{})
 	for k, v := range campaignDetails.SmartProps {
 		extraProps[k] = v

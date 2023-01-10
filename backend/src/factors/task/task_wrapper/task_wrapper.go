@@ -84,7 +84,7 @@ func TaskFuncWithProjectId(JobName string, lookback int, projectIds []int64, f f
 		deltasPreFilter, _, _ := store.GetStore().GetAllToBeExecutedDeltas(taskDetails.TaskID, projectId, lookback, nil)
 		projectDetails, _ := store.GetStore().GetProject(projectId)
 		deltas := make([]uint64, 0)
-		if projectDetails.TimeZone != "" {
+		if projectDetails.TimeZone != "" && taskDetails.Frequency != 1{
 			currentMaxDelta := U.DateAsFormattedInt(U.TimeNowIn(U.TimeZoneString(projectDetails.TimeZone)))
 			for _, delta := range deltasPreFilter {
 				if delta <= currentMaxDelta {

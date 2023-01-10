@@ -922,10 +922,41 @@ func (store *MemSQL) GetLatestMetaForBingAdsForGivenDays(projectID int64, days i
 // Selecting VALUE, TIMESTAMP, TYPE from integration_documents and PROPERTIES, OBJECT_TYPE from smart_properties
 // Left join smart_properties filtered by project_id and source=bingads
 // where integration_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
-//	 or integration_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+//	or integration_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
 // [make sure there aren't multiple smart_properties rows for a particular object,
 // or weekly insights for bing would show incorrect data.]
-func (store *MemSQL) PullBingAdsRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+func (store *MemSQL) PullBingAdsRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	rawQuery := fmt.Sprintf("SELECT bing.document_id, bing.value, bing.timestamp, bing.document_type, sp.properties FROM integration_documents bing "+
+		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND "+
+		"((COALESCE(sp.object_type,1) = 1 AND (sp.object_id = JSON_EXTRACT_STRING(bing.value, 'campaign_id') OR sp.object_id = JSON_EXTRACT_STRING(bing.value, 'base_campaign_id'))) OR "+
+		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(bing.value, 'ad_group_id') OR sp.object_id = JSON_EXTRACT_STRING(bing.value, 'base_ad_group_id')))) "+
+		"WHERE bing.project_id = %d AND UNIX_TIMESTAMP(bing.created_at) BETWEEN %d AND %d "+
+		"LIMIT %d",
+		projectID, model.ChannelBingAds, projectID, startTime, endTime, model.BingPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
+}
+
+// PullBingAdsRows - Function to pull all bing integration documents
+// Selecting VALUE, TIMESTAMP, TYPE from integration_documents and PROPERTIES, OBJECT_TYPE from smart_properties
+// Left join smart_properties filtered by project_id and source=bingads
+// where integration_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
+//
+//	or integration_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+// [make sure there aren't multiple smart_properties rows for a particular object,
+// or weekly insights for bing would show incorrect data.]
+func (store *MemSQL) PullBingAdsRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,

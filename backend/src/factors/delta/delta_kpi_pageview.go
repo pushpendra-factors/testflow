@@ -6,6 +6,7 @@ import (
 	U "factors/util"
 )
 
+// weekly insights calculation info for each pageview metric
 var pageviewMetricToCalcInfo = map[string]EventMetricCalculationInfo{
 	M.Entrances: {
 		PropsInfo: []EventPropInfo{
@@ -118,9 +119,10 @@ var pageviewMetricToCalcInfo = map[string]EventMetricCalculationInfo{
 	},
 }
 
+// check if given pageview event quailifies as engaged session (EP_PAGE_SCROLL_PERCENT>50 or EP_PAGE_SPENT_TIME>10)
 func checkEngagedPageview(eventDetails P.CounterEventFormat, pageName string) (float64, bool, error) {
 	isEngaged := false
-	if spentTime, ok := ExistsInProps(U.EP_PAGE_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
+	if spentTime, ok := existsInProps(U.EP_PAGE_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 		spentTime, err := getFloatValueFromInterface(spentTime)
 		if err != nil {
 			return 0, false, err
@@ -129,7 +131,7 @@ func checkEngagedPageview(eventDetails P.CounterEventFormat, pageName string) (f
 			isEngaged = true
 		}
 	}
-	if scrollPerc, ok := ExistsInProps(U.EP_PAGE_SCROLL_PERCENT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
+	if scrollPerc, ok := existsInProps(U.EP_PAGE_SCROLL_PERCENT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 		scrollPerc, err := getFloatValueFromInterface(scrollPerc)
 		if err != nil {
 			return 0, false, err
@@ -141,9 +143,10 @@ func checkEngagedPageview(eventDetails P.CounterEventFormat, pageName string) (f
 	return 0, isEngaged, nil
 }
 
+// check if given session event qualifies as entrance for pageName (SP_INITIAL_PAGE_URL=pageName)
 func checkEntrance(eventDetails P.CounterEventFormat, pageName string) (float64, bool, error) {
 	isEntrance := false
-	if url, ok := ExistsInProps(U.SP_INITIAL_PAGE_URL, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
+	if url, ok := existsInProps(U.SP_INITIAL_PAGE_URL, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 		if url := url.(string); url == pageName {
 			isEntrance = true
 		}
@@ -151,9 +154,10 @@ func checkEntrance(eventDetails P.CounterEventFormat, pageName string) (float64,
 	return 0, isEntrance, nil
 }
 
+// check if given session event qualifies as exit for pageName (SP_LATEST_PAGE_URL=pageName)
 func checkExit(eventDetails P.CounterEventFormat, pageName string) (float64, bool, error) {
 	isEntrance := false
-	if url, ok := ExistsInProps(U.SP_LATEST_PAGE_URL, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
+	if url, ok := existsInProps(U.SP_LATEST_PAGE_URL, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 		if url := url.(string); url == pageName {
 			isEntrance = true
 		}

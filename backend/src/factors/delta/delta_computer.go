@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"factors/filestore"
+	"factors/merge"
 	"factors/model/model"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
@@ -722,9 +723,6 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, multi
 	lineNum := 0
 	for scanner.Scan() {
 		lineNum++
-		if lineNum%10000 == 0 {
-			fmt.Printf("%d lines scanned\n", lineNum)
-		}
 		line := scanner.Text()
 		var event P.CounterEventFormat
 		json.Unmarshal([]byte(line), &event) // TODO: Add error check.
@@ -1489,11 +1487,11 @@ func PublishDeltaInsights(topSortedInsights CrossPeriodInsights, filePath string
 }
 
 // GetEventFileScanner Return handle to events file scanner
-func GetEventFileScanner(projectId int64, periodCode Period, cloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, insightGranularity string, isDownloaded bool) (*bufio.Scanner, error) {
+func GetEventFileScanner(projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
+	diskManager *serviceDisk.DiskDriver, isDownloaded bool, beamConfig *merge.RunBeamConfig, useBucketV2 bool) (*bufio.Scanner, error) {
 	var err error
 	localFile := true
-	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, periodCode.From, insightGranularity)
+	efTmpPath, efTmpName := diskManager.GetEventsFilePathAndName(projectId, periodCode.From, periodCode.To)
 	// TODO: Change this to efTmpPath and efTmpName and write the code to download an events file from cloud to local.
 	// We already have the logic to dump an events file from DB to local and from local to cloud, but not from cloud to local.
 	// The following eventsFilePath will run fine if the cloud_path is a local one. But not if it's an actual remote cloud path.
@@ -1505,11 +1503,19 @@ func GetEventFileScanner(projectId int64, periodCode Period, cloudManager *files
 		deltaComputeLog.WithFields(log.Fields{"err": err,
 			"eventsFilePath": eventsFilePath}).Error("Failed opening event file and getting scanner.")
 	}
+
 	if !isDownloaded || !localFile {
-		efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, periodCode.From, insightGranularity)
+		if useBucketV2 {
+			if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", periodCode.From, periodCode.To,
+				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, false, 0); err != nil {
+				log.Error("Failed creating events file")
+				return nil, err
+			}
+		}
+		efCloudPath, efCloudName := (*sortedCloudManager).GetEventsFilePathAndName(projectId, periodCode.From, periodCode.To)
 		deltaComputeLog.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
 			"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
-		eReader, err := (*cloudManager).Get(efCloudPath, efCloudName)
+		eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
 		if err != nil {
 			deltaComputeLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
 				"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
@@ -1532,11 +1538,11 @@ func GetEventFileScanner(projectId int64, periodCode Period, cloudManager *files
 }
 
 // GetEventFileScanner Return handle to events file scanner
-func GetChannelFileScanner(channel string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, insightGranularity string, isDownloaded bool) (*bufio.Scanner, error) {
+func GetChannelFileScanner(channel string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
+	diskManager *serviceDisk.DiskDriver, isDownloaded bool, beamConfig *merge.RunBeamConfig, useBucketV2 bool) (*bufio.Scanner, error) {
 	var err error
 	localFile := true
-	cfTmpPath, cfTmpName := diskManager.GetModelChannelFilePathAndName(channel, projectId, periodCode.From, insightGranularity)
+	cfTmpPath, cfTmpName := diskManager.GetChannelFilePathAndName(channel, projectId, periodCode.From, periodCode.To)
 	// TODO: Change this to cfTmpPath and cfTmpName and write the code to download an channel file from cloud to local.
 	// We already have the logic to dump an channel file from DB to local and from local to cloud, but not from cloud to local.
 	// The following channelFilePath will run fine if the cloud_path is a local one. But not if it's an actual remote cloud path.
@@ -1549,10 +1555,17 @@ func GetChannelFileScanner(channel string, projectId int64, periodCode Period, c
 			"channelFilePath": channelFilePath}).Error("Failed opening " + channel + " file and getting scanner.")
 	}
 	if !isDownloaded || !localFile {
-		cfCloudPath, cfCloudName := (*cloudManager).GetModelChannelFilePathAndName(channel, projectId, periodCode.From, insightGranularity)
+		if useBucketV2 {
+			if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeAdReport, channel, periodCode.From, periodCode.To,
+				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, false, 0); err != nil {
+				log.Error("Failed creating " + channel + " file")
+				return nil, err
+			}
+		}
+		cfCloudPath, cfCloudName := (*sortedCloudManager).GetChannelFilePathAndName(channel, projectId, periodCode.From, periodCode.To)
 		deltaComputeLog.WithFields(log.Fields{"eventFileCloudPath": cfCloudPath,
 			"channelFileCloudName": cfCloudName}).Info("Downloading " + channel + " file from cloud.")
-		eReader, err := (*cloudManager).Get(cfCloudPath, cfCloudName)
+		eReader, err := (*sortedCloudManager).Get(cfCloudPath, cfCloudName)
 		if err != nil {
 			deltaComputeLog.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
 				"eventFileName": cfCloudName}).Error("Failed downloading " + channel + " file from cloud.")
@@ -1575,43 +1588,51 @@ func GetChannelFileScanner(channel string, projectId int64, periodCode Period, c
 }
 
 // GetFileScanner Return handle to file scanner
-func GetUserFileScanner(name string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, insightGranularity string, isDownloaded bool) (*bufio.Scanner, error) {
+func GetUserFileScanner(dateField string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
+	diskManager *serviceDisk.DiskDriver, isDownloaded bool, beamConfig *merge.RunBeamConfig, useBucketV2 bool) (*bufio.Scanner, error) {
 	var err error
 	localFile := true
-	cfTmpPath, cfTmpName := diskManager.GetModelUsersFilePathAndName(name, projectId, periodCode.From, insightGranularity)
+	cfTmpPath, cfTmpName := diskManager.GetUsersFilePathAndName(dateField, projectId, periodCode.From, periodCode.To)
 	// TODO: Change this to cfTmpPath and cfTmpName and write the code to download an channel file from cloud to local.
 	// We already have the logic to dump an channel file from DB to local and from local to cloud, but not from cloud to local.
-	// The following channelFilePath will run fine if the cloud_path is a local one. But not if it's an actual remote cloud path.
-	filePath := cfTmpPath + cfTmpName
-	fmt.Println(filePath)
-	_, err = T.OpenEventFileAndGetScanner(filePath)
+	// The following userFilePath will run fine if the cloud_path is a local one. But not if it's an actual remote cloud path.
+	userFilePath := cfTmpPath + cfTmpName
+	fmt.Println(userFilePath)
+	_, err = T.OpenEventFileAndGetScanner(userFilePath)
 	if err != nil {
 		localFile = false
 		deltaComputeLog.WithFields(log.Fields{"err": err,
-			"filePath": filePath}).Error("Failed opening " + name + " file and getting scanner.")
+			"filePath": userFilePath}).Error("Failed opening " + dateField + " file and getting scanner.")
 	}
 	if !isDownloaded || !localFile {
-		cfCloudPath, cfCloudName := (*cloudManager).GetModelUsersFilePathAndName(name, projectId, periodCode.From, insightGranularity)
+		if useBucketV2 {
+			if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeUser, dateField, periodCode.From, periodCode.To,
+				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, false, 0); err != nil {
+				log.Error("Failed creating " + dateField + " file")
+				return nil, err
+			}
+		}
+
+		cfCloudPath, cfCloudName := (*sortedCloudManager).GetUsersFilePathAndName(dateField, projectId, periodCode.From, periodCode.To)
 		deltaComputeLog.WithFields(log.Fields{"eventFileCloudPath": cfCloudPath,
-			"fileCloudName": cfCloudName}).Info("Downloading " + name + " file from cloud.")
-		eReader, err := (*cloudManager).Get(cfCloudPath, cfCloudName)
+			"fileCloudName": cfCloudName}).Info("Downloading " + dateField + " file from cloud.")
+		eReader, err := (*sortedCloudManager).Get(cfCloudPath, cfCloudName)
 		if err != nil {
 			deltaComputeLog.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
-				"fileName": cfCloudName}).Error("Failed downloading " + name + " file from cloud.")
+				"fileName": cfCloudName}).Error("Failed downloading " + dateField + " file from cloud.")
 			return nil, err
 		}
 		err = diskManager.Create(cfTmpPath, cfTmpName, eReader)
 		if err != nil {
 			deltaComputeLog.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
-				"efileName": cfCloudName}).Error("Failed downloading " + name + " file from cloud.")
+				"efileName": cfCloudName}).Error("Failed downloading " + dateField + " file from cloud.")
 			return nil, err
 		}
 	}
-	scanner, err := T.OpenEventFileAndGetScanner(filePath)
+	scanner, err := T.OpenEventFileAndGetScanner(userFilePath)
 	if err != nil {
 		deltaComputeLog.WithFields(log.Fields{"err": err,
-			"filePath": filePath}).Error("Failed opening " + name + " file and getting scanner.")
+			"filePath": userFilePath}).Error("Failed opening " + dateField + " file and getting scanner.")
 	}
 
 	return scanner, err

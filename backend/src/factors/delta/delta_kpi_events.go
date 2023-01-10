@@ -35,7 +35,7 @@ func getMetricToCalcInfoMap(queryEvent string) map[string]EventMetricCalculation
 	}
 }
 
-func GetEventMetricsInfo(metric string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
+func getEventMetricsInfo(metric string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 
 	var page string
@@ -48,9 +48,9 @@ func GetEventMetricsInfo(metric string, queryEvent string, scanner *bufio.Scanne
 	}
 	var GetEventMetric func(queryEvent, page string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, propsInfo []EventPropInfo, useUnique bool) (*MetricInfo, *MetricInfo, error)
 	if len(metricCalcInfo.PropsInfo) == 1 {
-		GetEventMetric = GetEventMetricSimple
+		GetEventMetric = getEventMetricSimple
 	} else if len(metricCalcInfo.PropsInfo) == 2 {
-		GetEventMetric = GetEventMetricComplex
+		GetEventMetric = getEventMetricComplex
 	} else {
 		log.Error("error GetEventMetricsInfo: wrong propsInfo")
 		return &wpi, fmt.Errorf("incorrect propsInfo for metric: %s", metric)
@@ -71,7 +71,7 @@ func GetEventMetricsInfo(metric string, queryEvent string, scanner *bufio.Scanne
 	return &wpi, nil
 }
 
-func GetEventMetricSimple(queryEvent, page string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, propsInfo []EventPropInfo, useUnique bool) (*MetricInfo, *MetricInfo, error) {
+func getEventMetricSimple(queryEvent, page string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, propsInfo []EventPropInfo, useUnique bool) (*MetricInfo, *MetricInfo, error) {
 	var globalVal float64
 	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
@@ -127,7 +127,7 @@ func GetEventMetricSimple(queryEvent, page string, scanner *bufio.Scanner, propF
 	return &info, &scale, nil
 }
 
-func GetEventMetricComplex(queryEvent, page string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, propsInfo []EventPropInfo, useUnique bool) (*MetricInfo, *MetricInfo, error) {
+func getEventMetricComplex(queryEvent, page string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, propsInfo []EventPropInfo, useUnique bool) (*MetricInfo, *MetricInfo, error) {
 	var globalFrac Fraction
 	var globalVal float64
 	var globalScale float64
@@ -248,8 +248,8 @@ func eventSatisfiesConstraints(eventDetails P.CounterEventFormat, propFilter []M
 			return false, fmt.Errorf("strange entity of filter property %s - %s", propName, filter.Entity)
 		}
 
-		if val, ok := ExistsInProps(propName, eventDetails.EventProperties, eventDetails.UserProperties, propType); !ok {
-			notOp, _, _ := U.StringIn(NotOperations, filter.Condition)
+		if val, ok := existsInProps(propName, eventDetails.EventProperties, eventDetails.UserProperties, propType); !ok {
+			notOp, _, _ := U.StringIn(notOperations, filter.Condition)
 			if notOp {
 				passFilter = true
 			}
@@ -279,7 +279,7 @@ func addToScale(globalScale *float64, scaleMap map[string]map[string]float64, pr
 		propTypeName := strings.SplitN(propWithType, "#", 2)
 		prop := propTypeName[1]
 		propType := propTypeName[0]
-		if val, ok := ExistsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
+		if val, ok := existsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
 			val := fmt.Sprintf("%s", val)
 			if _, ok := scaleMap[propWithType]; !ok {
 				scaleMap[propWithType] = make(map[string]float64)
@@ -315,7 +315,7 @@ func checkPropInfo(eventDetails P.CounterEventFormat, propInfo EventPropInfo, pa
 
 // check prop exists and get float value
 func getPropValueEvents(eventDetails P.CounterEventFormat, propName string) (float64, bool, error) {
-	if val, ok := ExistsInProps(propName, eventDetails.EventProperties, eventDetails.UserProperties, "either"); ok {
+	if val, ok := existsInProps(propName, eventDetails.EventProperties, eventDetails.UserProperties, "either"); ok {
 		if floatVal, err := getFloatValueFromInterface(val); err != nil {
 			return 0, false, err
 		} else {

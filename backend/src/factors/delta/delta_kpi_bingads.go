@@ -9,7 +9,8 @@ import (
 
 var bingadsRequiredDocumentTypes = []int{1, 2, 3, 4, 5, 6} //Refer M.BingadsDocumentTypeAlias for clarity
 
-var bingadsMetricToCalcInfo = map[string]MetricCalculationInfo{
+// weekly insights calculation info for each bingads metric
+var bingadsMetricToCalcInfo = map[string]ChannelMetricCalculationInfo{
 	M.Impressions: {
 		Props:     []ChannelPropInfo{{Name: M.Impressions}},
 		Operation: "sum",

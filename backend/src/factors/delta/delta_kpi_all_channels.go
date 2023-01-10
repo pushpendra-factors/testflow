@@ -2,6 +2,7 @@ package delta
 
 import (
 	"factors/filestore"
+	"factors/merge"
 	M "factors/model/model"
 	serviceDisk "factors/services/disk"
 	"strings"
@@ -9,8 +10,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, insightGranularity string) (*WithinPeriodInsightsKpi, error) {
+var channelValueFilterName = map[string]string{
+	M.ADWORDS:        "Google Ads",
+	M.BINGADS:        "Bing Ads",
+	M.LINKEDIN:       "LinkedIn Ads",
+	M.FACEBOOK:       "Facebook Ads",
+	M.GOOGLE_ORGANIC: "Google Ads",
+}
+
+func getAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
+	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2 bool) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	wpi.MetricInfo = &MetricInfo{}
 	wpi.ScaleInfo = &MetricInfo{}
@@ -24,7 +33,7 @@ func GetAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEv
 				passFilter = false
 			}
 			if filter.ObjectType == "channel" {
-				if ok, err := checkValSatisfiesFilterCondition(filter, ChannelValueFilterName[channel]); err != nil {
+				if ok, err := checkValSatisfiesFilterCondition(filter, channelValueFilterName[channel]); err != nil {
 					return &wpi, err
 				} else if ok {
 					passFilter = true
@@ -37,7 +46,7 @@ func GetAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEv
 			continue
 		}
 
-		scanner, err := GetChannelFileScanner(channel, projectId, periodCode, cloudManager, diskManager, insightGranularity, true)
+		scanner, err := GetChannelFileScanner(channel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, true, beamConfig, useBucketV2)
 		if err != nil {
 			log.WithError(err).Error("failed getting " + channel + " file scanner for all channel kpi")
 			continue
@@ -56,7 +65,7 @@ func GetAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEv
 			newName := strings.Join([]string{objType, name}, "#")
 			newPropsToEval = append(newPropsToEval, newName)
 		}
-		wpiTmp, err := GetCampaignMetricsInfo(metric, channel, scanner, newPropFilter, newPropsToEval)
+		wpiTmp, err := getCampaignMetricsInfo(metric, channel, scanner, newPropFilter, newPropsToEval)
 		if err != nil {
 			log.WithError(err).Error("error GetCampaignMetricInfo for all channel kpi for source " + channel)
 			continue
@@ -88,7 +97,7 @@ func addMetricInfoStructForSource(source string, baseInfo *MetricInfo, info2add 
 	if _, ok := info.Features["channel#channel_name"]; !ok {
 		info.Features["channel#channel_name"] = make(map[string]float64)
 	}
-	info.Features["channel#channel_name"][ChannelValueFilterName[source]] = info2add.Global
+	info.Features["channel#channel_name"][channelValueFilterName[source]] = info2add.Global
 	return &info
 }
 

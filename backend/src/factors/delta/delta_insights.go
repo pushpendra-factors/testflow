@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"factors/filestore"
+	"factors/merge"
 	serviceDisk "factors/services/disk"
 	"fmt"
 	"net/http"
@@ -44,7 +45,7 @@ func StaticDashboardListForMailer() []M.DashboardUnit {
 	return dashboardUnit
 }
 
-func GetQueryTypeAndClass(queryId int64) (bool, string, string) {
+func getQueryTypeAndClass(queryId int64) (bool, string, string) {
 	if queryId == 1 {
 		return false, CRM, M.QueryClassEvents
 	}
@@ -66,7 +67,7 @@ func GetQueryTypeAndClass(queryId int64) (bool, string, string) {
 	return false, "", ""
 }
 
-func GetQueryHeader(queryId int64) string {
+func getQueryHeader(queryId int64) string {
 	if queryId == 1 {
 		return "Website Sessions"
 	}
@@ -88,7 +89,7 @@ func GetQueryHeader(queryId int64) string {
 	return ""
 }
 
-func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryGroup, bool, bool, bool, map[string]bool) {
+func staticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryGroup, bool, bool, bool, map[string]bool) {
 	if queryId == 1 {
 		return Query{
 			Id: 1,
@@ -96,7 +97,7 @@ func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 				Id:       0,
 				Operator: "And",
 				EventCriterionList: []EventCriterion{
-					EventCriterion{
+					{
 						Id:                  0,
 						Name:                "$session",
 						EqualityFlag:        true,
@@ -108,7 +109,7 @@ func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 				Id:       0,
 				Operator: "And",
 				EventCriterionList: []EventCriterion{
-					EventCriterion{
+					{
 						Id:                  0,
 						Name:                "$session",
 						EqualityFlag:        true,
@@ -125,7 +126,7 @@ func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 				Id:       0,
 				Operator: "And",
 				EventCriterionList: []EventCriterion{
-					EventCriterion{
+					{
 						Id:                  0,
 						Name:                "$session",
 						EqualityFlag:        true,
@@ -137,7 +138,7 @@ func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 				Id:       0,
 				Operator: "And",
 				EventCriterionList: []EventCriterion{
-					EventCriterion{
+					{
 						Id:                  0,
 						Name:                "$form_submitted",
 						EqualityFlag:        true,
@@ -154,7 +155,7 @@ func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 				Id:       0,
 				Operator: "And",
 				EventCriterionList: []EventCriterion{
-					EventCriterion{
+					{
 						Id:                  0,
 						Name:                "$session",
 						EqualityFlag:        true,
@@ -166,17 +167,17 @@ func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 				Id:       0,
 				Operator: "And",
 				EventCriterionList: []EventCriterion{
-					EventCriterion{
+					{
 						Id:           0,
 						Name:         "$hubspot_contact_created",
 						EqualityFlag: true,
 						FilterCriterionList: []EventFilterCriterion{
-							EventFilterCriterion{
+							{
 								Key:            "$hubspot_contact_hs_analytics_source",
 								Type:           "categorical",
 								PropertiesMode: "user",
 								Values: []OperatorValueTuple{
-									OperatorValueTuple{
+									{
 										Operator:  "notEqual",
 										Value:     "OFFLINE",
 										LogicalOp: "AND",
@@ -193,11 +194,11 @@ func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 		return Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{
 			Class: "kpi",
 			Queries: []M.KPIQuery{
-				M.KPIQuery{
+				{
 					Category:        "channels",
 					DisplayCategory: "all_channels_metrics",
 				},
-				M.KPIQuery{
+				{
 					Category:        "channels",
 					DisplayCategory: "all_channels_metrics",
 					Metrics: []string{
@@ -213,14 +214,14 @@ func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 		return Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{
 			Class: "kpi",
 			Queries: []M.KPIQuery{
-				M.KPIQuery{
+				{
 					Category:        "events",
 					DisplayCategory: "website_session",
 					Metrics: []string{
 						"bounce_rate",
 					},
 				},
-				M.KPIQuery{
+				{
 					Category:        "events",
 					DisplayCategory: "website_session",
 					Metrics: []string{
@@ -236,14 +237,14 @@ func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 		return Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{
 			Class: "kpi",
 			Queries: []M.KPIQuery{
-				M.KPIQuery{
+				{
 					Category:        "events",
 					DisplayCategory: "website_session",
 					Metrics: []string{
 						"average_session_duration",
 					},
 				},
-				M.KPIQuery{
+				{
 					Category:        "events",
 					DisplayCategory: "website_session",
 					Metrics: []string{
@@ -268,9 +269,18 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 		return status, false
 	}
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
-	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	modelCloudManager := configs["modelCloudManager"].(*filestore.FileManager)
+	archiveCloudManager := configs["archiveCloudManager"].(*filestore.FileManager)
+	tmpCloudManager := configs["tmpCloudManager"].(*filestore.FileManager)
+	sortedCloudManager := configs["sortedCloudManager"].(*filestore.FileManager)
+	useBucketV2 := configs["useBucketV2"].(bool)
+
+	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
+
 	whitelistedDashboardUnits := configs["whitelistedDashboardUnits"].(map[string]bool)
-	log.Info((*cloudManager).GetBucketName())
+	log.Info("model bucket : ", (*modelCloudManager).GetBucketName())
+	log.Info("sorted data bucket : ", (*sortedCloudManager).GetBucketName())
+	log.Info("archive bucket : ", (*archiveCloudManager).GetBucketName())
 	k := configs["k"].(int)
 	// Cross Period Insights
 	periodCodesWithWeekNMinus1 := []Period{
@@ -287,7 +297,6 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 	if configs["run_type"] != nil && configs["run_type"].(string) == "mailer" {
 		mailerRun = true
 	}
-	insightGranularity := configs["insightGranularity"].(string)
 	skipWpi := configs["skipWpi"].(bool)
 	skipWpi2 := configs["skipWpi2"].(bool)
 	log.Info("Reading delta query.")
@@ -308,7 +317,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 		queryIdString := fmt.Sprintf("%v", dashboardUnit.QueryId)
 		deltaQuery, multiStepQuery, kpiQuery, isEnabled, isEventOccurence, isMultiStep, properties := Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false, make(map[string]bool)
 		if mailerRun == true {
-			deltaQuery, multiStepQuery, kpiQuery, isEnabled, isEventOccurence, isMultiStep, properties = StaticQueriesForMailer(dashboardUnit.QueryId)
+			deltaQuery, multiStepQuery, kpiQuery, isEnabled, isEventOccurence, isMultiStep, properties = staticQueriesForMailer(dashboardUnit.QueryId)
 		} else {
 			deltaQuery, multiStepQuery, kpiQuery, isEnabled, isEventOccurence, isMultiStep, properties = IsDashboardUnitWIEnabled(dashboardUnit)
 		} // Check if this is a valid query with valid filters
@@ -320,8 +329,8 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			if !configs["runKpi"].(bool) {
 				continue
 			}
-			if err := CreateKpiInsights(diskManager, cloudManager, periodCodesWithWeekNMinus1, projectId,
-				dashboardUnit.QueryId, kpiQuery, insightGranularity, k, skipWpi, skipWpi2, mailerRun, status); err != nil {
+			if err := createKpiInsights(diskManager, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, periodCodesWithWeekNMinus1, projectId,
+				dashboardUnit.QueryId, kpiQuery, k, skipWpi, skipWpi2, mailerRun, beamConfig, useBucketV2, status); err != nil {
 				log.WithError(err).Error("KPI insights error query: ", dashboardUnit.QueryId)
 				status["error-kpi-query-"+queryIdString] = err
 				continue
@@ -332,7 +341,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			// TODO: This was changed from set to map
 			unionOfFeatures := make(map[string]map[string]bool)
 			log.Info("1st pass: Scanning events file to get top-k base features for each period.")
-			err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2, mailerRun)
+			err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, isEventOccurence, isMultiStep, skipWpi, skipWpi2, mailerRun, beamConfig, useBucketV2)
 			if err != nil {
 				log.WithError(err).Error("failed to process wpi pass 1")
 				status["error-wpi-pass1-"+queryIdString] = err.Error()
@@ -340,7 +349,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			}
 			isDownloaded = true
 			log.Info("2nd pass: Scanning events file again to compute counts for union of features.")
-			err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2, mailerRun)
+			err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, isEventOccurence, isMultiStep, skipWpi, skipWpi2, mailerRun, beamConfig, useBucketV2)
 			if err != nil {
 				log.WithError(err).Error("failed to process wpi pass 2")
 				status["error-wpi-pass2-"+queryIdString] = err.Error()
@@ -353,7 +362,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			} else {
 				queryId = deltaQuery.Id
 			}
-			err = processCrossPeriods(periodCodesWithWeekNMinus1, diskManager, projectId, k, queryId, cloudManager, mailerRun)
+			err = processCrossPeriods(periodCodesWithWeekNMinus1, diskManager, projectId, k, queryId, modelCloudManager, mailerRun)
 			if err != nil {
 				log.WithError(err).Error("failed to process cpi")
 				status["error-cpi-"+queryIdString] = err.Error()
@@ -380,12 +389,12 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			status["error"] = errMsg
 			return status, false
 		}
-		for property, _ := range properties {
+		for property := range properties {
 			totalProperties[property] = true
 		}
 	}
 	if mailerRun == false {
-		WritePropertiesPath(projectId, totalProperties, *cloudManager)
+		writePropertiesPath(projectId, totalProperties, *modelCloudManager)
 	}
 	status["InsightId"] = insightId
 	return status, true
@@ -432,7 +441,7 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 				log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal events Info.")
 				return err
 			}
-			err = WriteCpiPath(projectId, periodPair.Second, queryId, k, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager, mailerRun)
+			err = writeCpiPath(projectId, periodPair.Second, queryId, k, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager, mailerRun)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("failed to write files to cloud")
 				return err
@@ -442,14 +451,14 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 	return nil
 }
 
-func processSeparatePeriods(projectId int64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool, skipWpi bool, skipWpi2 bool, mailerRun bool) error {
+func processSeparatePeriods(projectId int64, periodCodes []Period, archiveCloudManager, tmpCloudManager, sortedCloudManager, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, isEventOccurence bool, isMultiStep bool, skipWpi bool, skipWpi2 bool, mailerRun bool, beamConfig *merge.RunBeamConfig, useBucketV2 bool) error {
 	earlierWeekMap := make(map[int64]bool)
 	earlierWeekMap[periodCodes[0].From] = periodCodes[0].From < periodCodes[1].From
 	earlierWeekMap[periodCodes[1].From] = periodCodes[0].From > periodCodes[1].From
 	for _, periodCode := range periodCodes {
 		fileDownloaded := false
 		if !skipWpi || (!earlierWeekMap[periodCode.From] && !skipWpi2) {
-			err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep, mailerRun)
+			err := processSinglePeriodData(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, isEventOccurence, isMultiStep, mailerRun, beamConfig, useBucketV2)
 			if err != nil {
 				return err
 			}
@@ -462,7 +471,7 @@ func processSeparatePeriods(projectId int64, periodCodes []Period, cloudManager 
 			reader, err := (*cloudManager).Get(path, name)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err, "filePath": path,
-					"eventFileName": name}).Error("Failed to write to fetch from cloud path")
+					"eventFileName": name}).Error("Failed to fetch from cloud path")
 			} else {
 				efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, deltaQuery.Id, k, mailerRun)
 				err = diskManager.Create(efTmpPath, efTmpName, reader)
@@ -474,7 +483,7 @@ func processSeparatePeriods(projectId int64, periodCodes []Period, cloudManager 
 				}
 			}
 			if !fileDownloaded {
-				err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep, mailerRun)
+				err := processSinglePeriodData(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, isEventOccurence, isMultiStep, mailerRun, beamConfig, useBucketV2)
 				if err != nil {
 					return err
 				}
@@ -484,8 +493,8 @@ func processSeparatePeriods(projectId int64, periodCodes []Period, cloudManager 
 	return nil
 }
 
-func processSinglePeriodData(projectId int64, periodCode Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool, mailerRun bool) error {
-	scanner, err := GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, isDownloaded)
+func processSinglePeriodData(projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, isEventOccurence bool, isMultiStep bool, mailerRun bool, beamConfig *merge.RunBeamConfig, useBucketV2 bool) error {
+	scanner, err := GetEventFileScanner(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, true, beamConfig, useBucketV2)
 	if err != nil {
 		log.WithError(err).Error(fmt.Sprintf("Scanner initialization failed for period %v", periodCode))
 		return err
@@ -540,7 +549,7 @@ func processSinglePeriodData(projectId int64, periodCode Period, cloudManager *f
 		if deltaQuery.Id == 0 {
 			deltaQuery.Id = multiStepQuery.Id
 		}
-		WriteWpiPath(projectId, periodCode, deltaQuery.Id, k, bytes.NewReader(withinPeriodInsightsBytes), *cloudManager, mailerRun)
+		writeWpiPath(projectId, periodCode, deltaQuery.Id, k, bytes.NewReader(withinPeriodInsightsBytes), *cloudManager, mailerRun)
 		dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 		efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, deltaQuery.Id, k, mailerRun)
 		err = diskManager.Create(efTmpPath, efTmpName, bytes.NewReader(withinPeriodInsightsBytes))
@@ -553,11 +562,11 @@ func processSinglePeriodData(projectId int64, periodCode Period, cloudManager *f
 	return nil
 }
 
-func WriteWpiPath(projectId int64, periodCode Period, queryId int64, k int, events *bytes.Reader,
+func writeWpiPath(projectId int64, periodCode Period, queryId int64, k int, reader *bytes.Reader,
 	cloudManager filestore.FileManager, mailerRun bool) error {
 	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 	path, name := cloudManager.GetInsightsWpiFilePathAndName(projectId, dateString, queryId, k, mailerRun)
-	err := cloudManager.Create(path, name, events)
+	err := cloudManager.Create(path, name, reader)
 	if err != nil {
 		log.WithError(err).Error("writeEventInfoFile Failed to write to cloud")
 		return err
@@ -565,11 +574,11 @@ func WriteWpiPath(projectId int64, periodCode Period, queryId int64, k int, even
 	return err
 }
 
-func WriteCpiPath(projectId int64, periodCode Period, queryId int64, k int, events *bytes.Reader,
+func writeCpiPath(projectId int64, periodCode Period, queryId int64, k int, reader *bytes.Reader,
 	cloudManager filestore.FileManager, mailerRun bool) error {
 	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 	path, name := cloudManager.GetInsightsCpiFilePathAndName(projectId, dateString, queryId, k, mailerRun)
-	err := cloudManager.Create(path, name, events)
+	err := cloudManager.Create(path, name, reader)
 	if err != nil {
 		log.WithError(err).Error("writeEventInfoFile Failed to write to cloud")
 		return err
@@ -577,7 +586,7 @@ func WriteCpiPath(projectId int64, periodCode Period, queryId int64, k int, even
 	return err
 }
 
-func WritePropertiesPath(projectId int64, properties map[string]bool, cloudManager filestore.FileManager) error {
+func writePropertiesPath(projectId int64, properties map[string]bool, cloudManager filestore.FileManager) error {
 	path, name := cloudManager.GetWIPropertiesPathAndName(projectId)
 	propertiesJson, err := json.Marshal(properties)
 	if err != nil {
@@ -638,7 +647,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
 							Name:                event.Name,
 							EqualityFlag:        true,
-							FilterCriterionList: MapFilterProperties(event.Properties),
+							FilterCriterionList: mapFilterProperties(event.Properties),
 						})
 					}
 					if query.EventsCondition == M.EventCondAllGivenEvent {
@@ -646,7 +655,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
 							Name:                event.Name,
 							EqualityFlag:        true,
-							FilterCriterionList: MapFilterProperties(event.Properties),
+							FilterCriterionList: mapFilterProperties(event.Properties),
 						})
 					}
 					if query.EventsCondition == M.EventCondAnyGivenEvent {
@@ -654,7 +663,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
 							Name:                event.Name,
 							EqualityFlag:        true,
-							FilterCriterionList: MapFilterProperties(event.Properties),
+							FilterCriterionList: mapFilterProperties(event.Properties),
 						})
 					}
 				}
@@ -685,14 +694,14 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 							EventCriterionList: []EventCriterion{{
 								Name:                query.EventsWithProperties[0].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
+								FilterCriterionList: mapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
 							}}},
 						Target: EventsCriteria{
 							Operator: "And",
 							EventCriterionList: []EventCriterion{{
 								Name:                query.EventsWithProperties[1].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[1].Properties, query.GlobalUserProperties...)),
+								FilterCriterionList: mapFilterProperties(append(query.EventsWithProperties[1].Properties, query.GlobalUserProperties...)),
 							}},
 						}}
 					return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, true, false, false, properties
@@ -703,7 +712,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 							EventCriterionList: []EventCriterion{{
 								Name:                query.EventsWithProperties[0].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
+								FilterCriterionList: mapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
 							}}},
 						Intermediate: make([]EventsCriteria, 0),
 						Target: EventsCriteria{
@@ -711,7 +720,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 							EventCriterionList: []EventCriterion{{
 								Name:                query.EventsWithProperties[len(query.EventsWithProperties)-1].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[len(query.EventsWithProperties)-1].Properties, query.GlobalUserProperties...)),
+								FilterCriterionList: mapFilterProperties(append(query.EventsWithProperties[len(query.EventsWithProperties)-1].Properties, query.GlobalUserProperties...)),
 							}},
 						}}
 					for i := 1; i <= len(query.EventsWithProperties)-2; i++ {
@@ -720,7 +729,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 							EventCriterionList: []EventCriterion{{
 								Name:                query.EventsWithProperties[i].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[i].Properties, query.GlobalUserProperties...)),
+								FilterCriterionList: mapFilterProperties(append(query.EventsWithProperties[i].Properties, query.GlobalUserProperties...)),
 							}},
 						}
 						multiStepFunnel.Intermediate = append(multiStepFunnel.Intermediate, criteria)
@@ -760,7 +769,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 	return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false, properties
 }
 
-func MapFilterProperties(qp []M.QueryProperty) []EventFilterCriterion {
+func mapFilterProperties(qp []M.QueryProperty) []EventFilterCriterion {
 	filters := make(map[string]EventFilterCriterion)
 	for _, prop := range qp {
 		filterProp := EventFilterCriterion{

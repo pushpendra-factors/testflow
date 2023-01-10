@@ -90,21 +90,56 @@ func (gcsd *GCSDriver) GetObjectSize(dir, fileName string) (int64, error) {
 	}
 }
 
+// ListFiles List files present in a folder in cloud storage. Prefix has to be without bucket name.
+// Must not have leading '/' and should have trailing '/' in prefix. Ex: archive/3/.
+func (gcsd *GCSDriver) ListFiles(prefix string) []string {
+	var files []string
+	if !strings.HasSuffix(prefix, separator) {
+		prefix = prefix + separator
+	}
+
+	ctx := context.Background()
+	pathQuery := &storage.Query{Prefix: prefix}
+	filesIterator := gcsd.client.Bucket(gcsd.BucketName).Objects(ctx, pathQuery)
+	for {
+		attributes, err := filesIterator.Next()
+		if err == iterator.Done {
+			break
+		} else if err != nil {
+			log.WithError(err).Errorf("Failed to list file. Attributes: %v\n", attributes)
+			continue
+		} else if attributes.Name == prefix || attributes.Name == (prefix+separator) {
+			// Omit the base prefix if returned as one the objects.
+			continue
+		}
+		files = append(files, attributes.Name)
+	}
+
+	return files
+}
+
 func (gcsd *GCSDriver) GetBucketName() string {
 	return gcsd.BucketName
 }
 
-func (gcsd *GCSDriver) GetProjectModelDir(projectId int64, modelId uint64) string {
-	return fmt.Sprintf("projects/%d/models/%d/", projectId, modelId)
-}
-
-func (gcsd *GCSDriver) GetProjectEventFileDir(projectId int64, startTimestamp int64, modelType string) string {
-	dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
-	return fmt.Sprintf("projects/%d/events/%s/%s/", projectId, modelType, dateFormatted)
-}
-
 func (gcsd *GCSDriver) GetProjectDir(projectId int64) string {
-	return fmt.Sprintf("projects/%d/events/", projectId)
+	return fmt.Sprintf("projects/%d/", projectId)
+}
+
+func (gcsd *GCSDriver) GetProjectModelDir(projectId int64, modelId uint64) string {
+	path := gcsd.GetProjectDir(projectId)
+	return fmt.Sprintf("%smodels/%d/", path, modelId)
+}
+
+func (gcsd *GCSDriver) GetProjectDataFileDir(projectId int64, startTimestamp int64, dataType, modelType string) string {
+	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
+		dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		return fmt.Sprintf("projects/%d/events/%s/%s/", projectId, modelType, dateFormatted)
+	} else {
+		path := gcsd.GetProjectDir(projectId)
+		dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		return fmt.Sprintf("%s%s/%s/", path, dataType, dateFormatted)
+	}
 }
 
 func (gcsd *GCSDriver) GetModelUserPropertiesCategoricalFilePathAndName(projectId int64, modelId uint64) (string, string) {
@@ -132,48 +167,112 @@ func (gcsd *GCSDriver) GetModelEventInfoFilePathAndName(projectId int64, modelId
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
 }
 
-func (gcsd *GCSDriver) GetModelEventsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, "events.txt"
+func (gcsd *GCSDriver) GetEventsFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
+	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
+		fileName = "events.txt"
+	} else {
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("events_%s-%s.txt", dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
 }
-func (gcsd *GCSDriver) GetModelMetricsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+
+func (gcsd *GCSDriver) GetEventsGroupFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, group int) (string, string) {
+	if group == 0 {
+		return gcsd.GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
+	}
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
+	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	fileName = fmt.Sprintf("events_group%d_%s-%s.txt", group, dateFormattedStart, dateFormattedEnd)
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetChannelFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeAdReport, modelType)
+	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
+		fileName = channel + ".txt"
+	} else {
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("%s_%s-%s.txt", channel, dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetUsersFilePathAndName(dateField string, projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeUser, modelType)
+	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
+		path = pb.Join(path, "users")
+		fileName = dateField + ".txt"
+	} else {
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("%s_%s-%s.txt", dateField, dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetModelMetricsFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, "", modelType)
 	return path, "metrics.txt"
 }
 
-func (gcsd *GCSDriver) GetModelAlertsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+func (gcsd *GCSDriver) GetModelAlertsFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, "", modelType)
 	return path, "alerts.txt"
 }
 
-func (gcsd *GCSDriver) GetModelChannelFilePathAndName(channel string, projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, channel + ".txt"
+func (gcsd *GCSDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
+	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
+		fileName = "events_bucketed.txt"
+	} else {
+		path = pb.Join(path, "events_bucketed")
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("events_bucketed_%s-%s.txt", dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
 }
 
-func (gcsd *GCSDriver) GetModelUsersFilePathAndName(dateField string, projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := gcsd.GetModelUsersDir(dateField, projectId, startTimestamp, modelType)
-	return path, dateField + ".txt"
-}
-
-func (gcsd *GCSDriver) GetModelUsersDir(dateField string, projectId int64, startTimestamp int64, modelType string) string {
-	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return fmt.Sprintf("%susers/", path)
-}
-
-func (gcsd *GCSDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, "events_bucketed.txt"
-}
+// Buckets
+// If we have two different files for last week and this week, we might end up having non-overlapping ranges.
+// So keeping one for this week and other as master. If it exists in master pick that else this week, or compute now
 
 func (gcsd *GCSDriver) GetMasterNumericalBucketsFile(projectId int64) (string, string) {
 	path := gcsd.GetProjectDir(projectId)
+	path = pb.Join(path, U.DataTypeEvent)
 	return path, "numerical_buckets_master.txt"
 }
 
-func (gcsd *GCSDriver) GetModelEventsNumericalBucketsFile(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, "numerical_buckets.txt"
+func (gcsd *GCSDriver) GetModelEventsNumericalBucketsFile(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
+	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
+		fileName = "numerical_buckets.txt"
+	} else {
+		path = pb.Join(path, "numerical_buckets")
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("numerical_buckets_%s-%s.txt", dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
 }
 
 func (gcsd *GCSDriver) GetPatternChunksDir(projectId int64, modelId uint64) string {
@@ -204,37 +303,33 @@ func (gcsd *GCSDriver) GetUsersArchiveFilePathAndName(projectID int64, startTime
 	return path, fileName
 }
 
-// ListFiles List files present in a folder in cloud storage. Prefix has to be without bucket name.
-// Must not have leading '/' and should have trailing '/' in prefix. Ex: archive/3/.
-func (gcsd *GCSDriver) ListFiles(prefix string) []string {
-	var files []string
-	if !strings.HasSuffix(prefix, separator) {
-		prefix = prefix + separator
-	}
+func (gcsd *GCSDriver) GetDailyArchiveFilesDir(projectID int64, dataTimestamp int64, dataType string) string {
+	dateFormatted := U.GetDateOnlyFromTimestampZ(dataTimestamp)
+	path := fmt.Sprintf("daily_pull/%d/%s/%s/", projectID, dateFormatted, dataType)
+	return path
+}
 
-	ctx := context.Background()
-	pathQuery := &storage.Query{Prefix: prefix}
-	filesIterator := gcsd.client.Bucket(gcsd.BucketName).Objects(ctx, pathQuery)
-	for {
-		attributes, err := filesIterator.Next()
-		if err == iterator.Done {
-			break
-		} else if err != nil {
-			log.WithError(err).Errorf("Failed to list file. Attributes: %v\n", attributes)
-			continue
-		} else if attributes.Name == prefix || attributes.Name == (prefix+separator) {
-			// Omit the base prefix if returned as one the objects.
-			continue
-		}
-		files = append(files, attributes.Name)
-	}
+func (gcsd *GCSDriver) GetDailyEventArchiveFilePathAndName(projectID int64, dataTimestamp int64, startTime, endTime int64) (string, string) {
+	path := gcsd.GetDailyArchiveFilesDir(projectID, dataTimestamp, U.DataTypeEvent)
+	fileName := fmt.Sprintf("events_created_at_%d-%d.txt", startTime, endTime)
+	return path, fileName
+}
 
-	return files
+func (gcsd *GCSDriver) GetDailyUsersArchiveFilePathAndName(dateField string, projectID int64, dataTimestamp int64, startTime, endTime int64) (string, string) {
+	path := gcsd.GetDailyArchiveFilesDir(projectID, dataTimestamp, U.DataTypeUser)
+	fileName := fmt.Sprintf("%s_created_at_%d-%d.txt", dateField, startTime, endTime)
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetDailyChannelArchiveFilePathAndName(channel string, projectID int64, dataTimestamp int64, startTime, endTime int64) (string, string) {
+	path := gcsd.GetDailyArchiveFilesDir(projectID, dataTimestamp, U.DataTypeAdReport)
+	fileName := fmt.Sprintf("%s_created_at_%d-%d.txt", channel, startTime, endTime)
+	return path, fileName
 }
 
 func (gcsd *GCSDriver) GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string) {
 	path := ""
-	if mailerRun == true {
+	if mailerRun {
 		path = gcsd.GetWeeklyInsightsMailerModelDir(projectId, dateString, queryId, k)
 	} else {
 		path = gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
@@ -244,7 +339,7 @@ func (gcsd *GCSDriver) GetInsightsWpiFilePathAndName(projectId int64, dateString
 
 func (gcsd *GCSDriver) GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string) {
 	path := ""
-	if mailerRun == true {
+	if mailerRun {
 		path = gcsd.GetWeeklyInsightsMailerModelDir(projectId, dateString, queryId, k)
 	} else {
 		path = gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
@@ -252,34 +347,29 @@ func (gcsd *GCSDriver) GetInsightsCpiFilePathAndName(projectId int64, dateString
 	return path, "cpi.txt"
 }
 
+func (gcsd *GCSDriver) GetWIPropertiesDir(projectId int64) string {
+	path := gcsd.GetProjectDir(projectId)
+	return fmt.Sprintf("%sweeklyinsights/", path)
+}
+
 func (gcsd *GCSDriver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
 	path := gcsd.GetWIPropertiesDir(projectId)
 	return path, "properties.txt"
 }
 
-func (gcsd *GCSDriver) GetWIPropertiesDir(projectId int64) string {
-	return fmt.Sprintf("projects/%v/weeklyinsights/", projectId)
-}
-
 func (gcsd *GCSDriver) GetWeeklyInsightsModelDir(projectId int64, dateString string, queryId int64, k int) string {
-	return fmt.Sprintf("projects/%v/weeklyinsights/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
+	path := gcsd.GetWIPropertiesDir(projectId)
+	return fmt.Sprintf("%s%v/q-%v/k-%v/", path, dateString, queryId, k)
 }
 
 func (gcsd *GCSDriver) GetWeeklyInsightsMailerModelDir(projectId int64, dateString string, queryId int64, k int) string {
-	return fmt.Sprintf("projects/%v/weeklyinsightsmailer/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
-}
-
-func (gcsd *GCSDriver) GetWeeklyKPIModelDir(projectId int64, dateString string, queryId int64) string {
-	return fmt.Sprintf("projects/%v/weeklyKPI/%v/q-%v/", projectId, dateString, queryId)
-}
-
-func (gcsd *GCSDriver) GetKPIFilePathAndName(projectId int64, dateString string, queryId int64) (string, string) {
-	path := gcsd.GetWeeklyKPIModelDir(projectId, dateString, queryId)
-	return path, "kpi.txt"
+	path := gcsd.GetProjectDir(projectId)
+	return fmt.Sprintf("%sweeklyinsightsmailer/%v/q-%v/k-%v/", path, dateString, queryId, k)
 }
 
 func (gcsd *GCSDriver) GetAdsDataDir(projectId int64) string {
-	return fmt.Sprintf("projects/%v/AdsImport/", projectId)
+	path := gcsd.GetProjectDir(projectId)
+	return pb.Join(path, "AdsImport")
 }
 
 func (gcsd *GCSDriver) GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string) {
@@ -294,13 +384,15 @@ func (gcsd *GCSDriver) GetPredictProjectDataPath(projectId int64, model_id int64
 
 func (gcsd *GCSDriver) GetPredictProjectDir(projectId int64, model_id int64) string {
 	path := gcsd.GetProjectDir(projectId)
+	path = pb.Join(path, U.DataTypeEvent)
 	model_str := fmt.Sprintf("%d", model_id)
 	return pb.Join(path, "predict", model_str)
 }
 
-func (gcsd *GCSDriver) GetModelEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, "events_raw.txt"
+func (gcsd *GCSDriver) GetEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	path, name := gcsd.GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
+	fileName := "unsorted_" + name
+	return path, fileName
 }
 
 func (gcsd *GCSDriver) GetModelArtifactsPath(projectId int64, modelId uint64) string {
@@ -309,25 +401,37 @@ func (gcsd *GCSDriver) GetModelArtifactsPath(projectId int64, modelId uint64) st
 	return path
 }
 
-func (gcsd *GCSDriver) GetEventsArtificatFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+func (gcsd *GCSDriver) GetEventsArtifactFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
 	path = pb.Join(path, "artifacts")
-	return path, "users_map.txt"
+	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
+		fileName = "users_map.txt"
+	} else {
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("users_map_%s.txt", dateFormattedEnd)
+	}
+	return path, fileName
 }
 
-func (gcsd *GCSDriver) GetEventsForTimerangeFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
-	path := gcsd.GetEventsForTimerangeFileDir(projectId, startTimestamp, endTimestamp)
-	return path, "events.txt"
-}
-
-func (gcsd *GCSDriver) GetEventsForTimerangeFileDir(projectId int64, startTimestamp int64, endTimestamp int64) string {
-	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
-	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
-	return fmt.Sprintf("projects/%v/%v/%v/", projectId, dateFormattedStart, dateFormattedEnd)
+func (gcsd *GCSDriver) GetChannelArtifactFilePathAndName(channel string, projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeAdReport, modelType)
+	path = pb.Join(path, "artifacts")
+	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
+		fileName = "doctypes_map_" + channel + ".txt"
+	} else {
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("doctypes_map_%s_%s.txt", dateFormattedEnd, channel)
+	}
+	return path, fileName
 }
 
 func (gcsd *GCSDriver) GetPathAnalysisTempFileDir(id string, projectId int64) string {
-	return fmt.Sprintf("projects/%v/pathanalysis/%v/", projectId, id)
+	path := gcsd.GetProjectDir(projectId)
+	return fmt.Sprintf("%spathanalysis/%v/", path, id)
 }
 func (gcsd *GCSDriver) GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
 	path := gcsd.GetPathAnalysisTempFileDir(id, projectId)

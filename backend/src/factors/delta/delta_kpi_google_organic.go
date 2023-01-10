@@ -7,7 +7,8 @@ import (
 
 var googleOrganicRequiredDocumentTypes = []int{2} // 1:combined_performance_report, 2:page_performance_report
 
-var googleOrganicMetricToCalcInfo = map[string]MetricCalculationInfo{
+// weekly insights calculation info for each google-organic metric
+var googleOrganicMetricToCalcInfo = map[string]ChannelMetricCalculationInfo{
 	M.Impressions: {
 		Props:     []ChannelPropInfo{{Name: M.Impressions}},
 		Operation: "sum",

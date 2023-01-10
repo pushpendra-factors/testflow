@@ -4,6 +4,7 @@ import (
 	"context"
 	C "factors/config"
 	"factors/filestore"
+	"factors/merge"
 	"factors/model/store"
 	"factors/pattern"
 	serviceDisk "factors/services/disk"
@@ -34,7 +35,7 @@ func registerStructs() {
 
 	beam.RegisterType(reflect.TypeOf((*T.CpThreadDoFn)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*T.UpThreadDoFn)(nil)).Elem())
-	beam.RegisterType(reflect.TypeOf((*T.RunBeamConfig)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*merge.RunBeamConfig)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*T.CPatternsBeam)(nil)).Elem())
 
 }
@@ -100,7 +101,7 @@ func main() {
 	}
 
 	//init beam
-	var beamConfig T.RunBeamConfig
+	var beamConfig merge.RunBeamConfig
 	if *runBeam == 1 {
 		log.Info("Initializing all beam constructs")
 		registerStructs()

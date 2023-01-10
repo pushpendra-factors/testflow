@@ -8,6 +8,7 @@ import (
 	"errors"
 	C "factors/config"
 	"factors/filestore"
+	"factors/merge"
 	M "factors/model/model"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
@@ -65,16 +66,6 @@ type PatterNamesIdx struct {
 	Id      int64    `json:"id"`
 	Pname   []string `json:"pn"`
 	Segment int      `json:"sg"`
-}
-
-type RunBeamConfig struct {
-	RunOnBeam    bool             `json:"runonbeam"`
-	Ctx          context.Context  `json:"ctx"`
-	Scp          beam.Scope       `json:"scp"`
-	Pipe         *beam.Pipeline   `json:"pipeLine"`
-	Env          string           `json:"Env"`
-	DriverConfig *C.Configuration `json:"driverconfig"`
-	NumWorker    int              `json:"nw"`
 }
 
 func InitConfBeam(config *C.Configuration) {
@@ -197,7 +188,7 @@ func shufflePatterns(patternNames [][]string) [][]string {
 
 }
 
-func countPatternController(beamStruct *RunBeamConfig, projectId int64, modelId uint64,
+func countPatternController(beamStruct *merge.RunBeamConfig, projectId int64, modelId uint64,
 	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
 	filepathString string, patterns []*P.Pattern, numRoutines int,
 	userAndEventsInfo *P.UserAndEventsInfo, countOccurence bool,
@@ -338,7 +329,7 @@ func countPatternController(beamStruct *RunBeamConfig, projectId int64, modelId 
 	return patternsFpath, nil
 }
 
-func UserPropertiesHistogramController(beamStruct *RunBeamConfig, projectId int64, modelId uint64,
+func UserPropertiesHistogramController(beamStruct *merge.RunBeamConfig, projectId int64, modelId uint64,
 	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
 	mod_events_path string, patterns []*P.Pattern, numRoutines int,
 	userAndEventsInfo *P.UserAndEventsInfo, countOccurence bool,

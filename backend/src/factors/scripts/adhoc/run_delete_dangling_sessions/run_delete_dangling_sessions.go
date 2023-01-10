@@ -181,7 +181,7 @@ func main() {
 		unusedSessionIDs, errCode = getUnusedSessionIDsFromArchiveFile(cloudStorage, *archiveEventsFilepath, *archiveEventsFilename)
 	} else {
 		logCtx.Info("Reading events from DB.")
-		unusedSessionIDs, errCode = store.GetStore().GetUnusedSessionIDsForJob(*projectID, *startTimestamp, *endTimestamp)
+		unusedSessionIDs, errCode = store.GetStore().GetUnusedSessionIDsForJob(int64(*projectID), *startTimestamp, *endTimestamp)
 	}
 
 	if errCode == http.StatusInternalServerError {
@@ -199,14 +199,14 @@ func main() {
 		return
 	}
 
-	sessionEventName, errCode := store.GetStore().GetSessionEventName(*projectID)
+	sessionEventName, errCode := store.GetStore().GetSessionEventName(int64(*projectID))
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get session event_name.")
 		return
 	}
 
 	logCtx.Info("Started deleting dangling sessions.")
-	errCode = store.GetStore().DeleteEventsByIDsInBatchForJob(*projectID, sessionEventName.ID, unusedSessionIDs, 1000)
+	errCode = store.GetStore().DeleteEventsByIDsInBatchForJob(int64(*projectID), sessionEventName.ID, unusedSessionIDs, 1000)
 	if errCode == http.StatusInternalServerError {
 		log.Error("Failed to delete sessions in batch")
 		return

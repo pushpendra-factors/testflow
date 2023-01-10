@@ -3,6 +3,7 @@ package task
 import (
 	"encoding/json"
 	"factors/filestore"
+	"factors/merge"
 	"factors/model/store"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
@@ -20,20 +21,33 @@ import (
 func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 	//env := configs["env"].(string)
 	//db := configs["db"].(*gorm.DB)
-	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	archiveCloudManager := configs["archiveCloudManager"].(*filestore.FileManager)
+	tmpCloudManager := configs["tmpCloudManager"].(*filestore.FileManager)
+	sortedCloudManager := configs["sortedCloudManager"].(*filestore.FileManager)
 	//etcdClient := configs["etcdClient"].(*serviceEtcd.EtcdClient)
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
 	//bucketName := configs["bucketName"].(string)
 	startTimestamp := configs["startTimestamp"].(int64)
-	//endTimestamp := configs["endTimestamp"].(int64)
-	modelType := configs["modelType"].(string)
+	endTimestamp := configs["endTimestamp"].(int64)
+	hardPull := configs["hardPull"].(bool)
+	useBucketV2 := configs["useBucketV2"].(bool)
+	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
 	status := make(map[string]interface{})
 
-	efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTimestamp, modelType)
-	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, startTimestamp, modelType)
+	if useBucketV2 {
+		if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp,
+			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0); err != nil {
+			mineLog.Error("Failed creating events file")
+			status["error"] = err
+			return status, false
+		}
+	}
+
+	efCloudPath, efCloudName := (*sortedCloudManager).GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
+	efTmpPath, efTmpName := diskManager.GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
 	log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
 		"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
-	eReader, err := (*cloudManager).Get(efCloudPath, efCloudName)
+	eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
 			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
@@ -51,11 +65,11 @@ func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[st
 	log.Info("Successfuly downloaded events file from cloud.", tmpEventsFilepath, efTmpPath, efTmpName)
 
 	//Download master file
-	masterNumBucketCloudPath, masterNumBucketCloudName := (*cloudManager).GetMasterNumericalBucketsFile(projectId)
+	masterNumBucketCloudPath, masterNumBucketCloudName := (*sortedCloudManager).GetMasterNumericalBucketsFile(projectId)
 	masterNumBucketLocalPath, masterNumBucketLocalName := diskManager.GetMasterNumericalBucketsFile(projectId)
-	weekNumBucketCloudPath, weekNumBucketCloudName := (*cloudManager).GetModelEventsNumericalBucketsFile(projectId, startTimestamp, modelType)
-	weekNumBucketLocalPath, weekNumBucketLocalName := diskManager.GetModelEventsNumericalBucketsFile(projectId, startTimestamp, modelType)
-	eReaderMaster, err := (*cloudManager).Get(masterNumBucketCloudPath, masterNumBucketCloudName)
+	weekNumBucketCloudPath, weekNumBucketCloudName := (*sortedCloudManager).GetModelEventsNumericalBucketsFile(projectId, startTimestamp, endTimestamp)
+	weekNumBucketLocalPath, weekNumBucketLocalName := diskManager.GetModelEventsNumericalBucketsFile(projectId, startTimestamp, endTimestamp)
+	eReaderMaster, err := (*sortedCloudManager).Get(masterNumBucketCloudPath, masterNumBucketCloudName)
 	existingEPMasterBuckets, existingUPMasterBuckets := make(map[string][]BucketRange), make(map[string][]BucketRange)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err, "masterFile": masterNumBucketCloudPath,
@@ -134,7 +148,7 @@ func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[st
 		}
 	}
 
-	fPath, fName := diskManager.GetModelEventsBucketingFilePathAndName(projectId, startTimestamp, modelType)
+	fPath, fName := diskManager.GetModelEventsBucketingFilePathAndName(projectId, startTimestamp, endTimestamp)
 	serviceDisk.MkdirAll(fPath) // create dir if not exist.
 	tmpBucketedEventsFile := fPath + fName
 	WriteBucketedEvents(efTmpPath+efTmpName, EPRanges, UPRanges, tmpBucketedEventsFile)
@@ -148,8 +162,8 @@ func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[st
 		return status, false
 	}
 
-	cDir, cName := (*cloudManager).GetModelEventsBucketingFilePathAndName(projectId, startTimestamp, modelType)
-	err = (*cloudManager).Create(cDir, cName, tmpOutputFile)
+	cDir, cName := (*sortedCloudManager).GetModelEventsBucketingFilePathAndName(projectId, startTimestamp, endTimestamp)
+	err = (*sortedCloudManager).Create(cDir, cName, tmpOutputFile)
 	if err != nil {
 		log.WithField("error", err).Error("Failed to write bucketed events. Upload failed.")
 		status["error"] = "Failed to write bucketed events. Upload failed."
@@ -163,7 +177,7 @@ func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[st
 		return status, false
 	}
 
-	err = (*cloudManager).Create(weekNumBucketCloudPath, weekNumBucketCloudName, tmpNumBucketWeekFile)
+	err = (*sortedCloudManager).Create(weekNumBucketCloudPath, weekNumBucketCloudName, tmpNumBucketWeekFile)
 	if err != nil {
 		log.WithField("error", err).Error("Failed to write num buckets. Upload failed.")
 		status["error"] = "Failed to write num buckets. Upload failed."
@@ -177,7 +191,7 @@ func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[st
 		return status, false
 	}
 
-	err = (*cloudManager).Create(masterNumBucketCloudPath, masterNumBucketCloudName, tmpNumBucketMasterFile)
+	err = (*sortedCloudManager).Create(masterNumBucketCloudPath, masterNumBucketCloudName, tmpNumBucketMasterFile)
 	if err != nil {
 		log.WithField("error", err).Error("Failed to write num buckets - master. Upload failed.")
 		status["error"] = "Failed to write num buckets - master. Upload failed."

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"factors/filestore"
+	"factors/merge"
 	M "factors/model/model"
 	"factors/model/store"
 	serviceDisk "factors/services/disk"
@@ -16,10 +17,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var NotOperations = []string{M.NotEqualOpStr, M.NotContainsOpStr, M.NotEqualOp}
+var notOperations = []string{M.NotEqualOpStr, M.NotContainsOpStr, M.NotEqualOp}
 
-// create weekly insights files for kpi type queries
-func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId int64, queryId int64, queryGroup M.KPIQueryGroup, insightGranularity string, topK int, skipWpi, skipWpi2 bool, mailerRun bool, status map[string]interface{}) error {
+func createKpiInsights(diskManager *serviceDisk.DiskDriver, archiveCloudManager, tmpCloudManager, sortedCloudManager, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId int64, queryId int64, queryGroup M.KPIQueryGroup,
+	topK int, skipWpi, skipWpi2 bool, mailerRun bool, beamConfig *merge.RunBeamConfig, useBucketV2 bool, status map[string]interface{}) error {
 	// readEvents := true
 	var err error
 	var newInsightsList = make([]*WithinPeriodInsightsKpi, 0)
@@ -83,7 +84,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 			//get proper props based on category
 			var kpiProperties []map[string]string
 			var channelOrEvent string
-			kpiProperties, spectrum, channelOrEvent, err = getPropertiesToEvaluateAndInfo(projectId, query.DisplayCategory, &pageOrChannel)
+			kpiProperties, spectrum, channelOrEvent, err = getPropertiesToEvaluateAndInfo(projectId, query.DisplayCategory)
 			if err != nil {
 				wpi := &WithinPeriodInsightsKpi{Category: spectrum, MetricInfo: &MetricInfo{}, ScaleInfo: &MetricInfo{}}
 				newInsightsList = append(newInsightsList, wpi)
@@ -93,7 +94,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 				continue
 			}
 			if spectrum == "custom" {
-				kpiProperties, err = getFilteredKpiPropertiesForCustomMetric(kpiProperties, metric, projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, topK, insightGranularity)
+				kpiProperties, err = getFilteredKpiPropertiesForCustomMetric(kpiProperties, metric, projectId, periodCodesWithWeekNMinus1, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2)
 				if err != nil {
 					wpi := &WithinPeriodInsightsKpi{Category: spectrum, MetricInfo: &MetricInfo{}, ScaleInfo: &MetricInfo{}}
 					newInsightsList = append(newInsightsList, wpi)
@@ -129,7 +130,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 
 		//get week 2 metrics by reading file
 		if !skipW2 {
-			if wpi, err := GetMetricEvaluated(spectrum, query.DisplayCategory, metric, pageOrChannel, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[1], cloudManager, diskManager, insightGranularity); err != nil {
+			if wpi, err := getMetricEvaluated(spectrum, query.DisplayCategory, metric, pageOrChannel, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[1], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2); err != nil {
 				wpi = &WithinPeriodInsightsKpi{Category: spectrum, MetricInfo: &MetricInfo{}, ScaleInfo: &MetricInfo{}}
 				newInsightsList = append(newInsightsList, wpi)
 				log.WithError(err).Errorf("error GetMetricEvaluated for week 2 and metric: %s", metric)
@@ -143,7 +144,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 
 		//get week 1 metrics by reading file
 		if !skipW1 {
-			if wpi, err := GetMetricEvaluated(spectrum, query.DisplayCategory, metric, pageOrChannel, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[0], cloudManager, diskManager, insightGranularity); err != nil {
+			if wpi, err := getMetricEvaluated(spectrum, query.DisplayCategory, metric, pageOrChannel, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[0], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2); err != nil {
 				wpi = &WithinPeriodInsightsKpi{Category: spectrum, MetricInfo: &MetricInfo{}, ScaleInfo: &MetricInfo{}}
 				oldInsightsList = append(oldInsightsList, wpi)
 				log.WithError(err).Errorf("error GetMetricEvaluated for week 1 and metric: %s", metric)
@@ -163,7 +164,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 			return err
 		}
 
-		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[1]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager, mailerRun)
+		err = writeWpiPath(projectId, Period(periodCodesWithWeekNMinus1[1]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager, mailerRun)
 		if err != nil {
 			log.WithError(err).Error("write WPI error - ", err)
 			return err
@@ -175,7 +176,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 			log.WithError(err).Error("failed to marshal wpi1 Info.")
 			return err
 		}
-		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[0]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager, mailerRun)
+		err = writeWpiPath(projectId, Period(periodCodesWithWeekNMinus1[0]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager, mailerRun)
 		if err != nil {
 			log.WithError(err).Error("write WPI error - ", err)
 			return err
@@ -185,8 +186,8 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 	//get insights between the weeks
 	var crossPeriodInsightsList []*CrossPeriodInsightsKpi
 	periodPair := PeriodPair{First: periodCodesWithWeekNMinus1[0], Second: periodCodesWithWeekNMinus1[1]}
-	if len(newInsightsList) > 0 && len(oldInsightsList) > 0 {
-		crossPeriodInsightsList, err = ComputeCrossPeriodKpiInsights(periodPair, newInsightsList, oldInsightsList)
+	if len(newInsightsList) > 0 && len(oldInsightsList) > 0 || (skipWpi && skipWpi2) {
+		crossPeriodInsightsList, err = computeCrossPeriodKpiInsights(periodPair, newInsightsList, oldInsightsList)
 		if err != nil {
 			log.WithError(err).Error("compute cpi for kpi error - ", err)
 			return err
@@ -200,7 +201,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 			log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal cpi Info.")
 			return err
 		}
-		err = WriteCpiPath(projectId, periodPair.Second, queryId, topK, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager, mailerRun)
+		err = writeCpiPath(projectId, periodPair.Second, queryId, topK, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager, mailerRun)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("failed to write cpi files to cloud")
 			return err
@@ -211,30 +212,30 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 
 // (queryEvent works as channel or page depending on spectrum)
 // get wpi for kpi for a week
-func GetMetricEvaluated(spectrum, category string, metric string, eventOrChannel string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, insightGranularity string) (*WithinPeriodInsightsKpi, error) {
+func getMetricEvaluated(spectrum, category string, metric string, eventOrChannel string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
+	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2 bool) (*WithinPeriodInsightsKpi, error) {
 
 	var insights *WithinPeriodInsightsKpi
 	var err error
 	var scanner *bufio.Scanner
 	if spectrum == "events" {
-		if scanner, err = GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
+		if scanner, err = GetEventFileScanner(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, true, beamConfig, useBucketV2); err != nil {
 			log.WithError(err).Error("failed getting event file scanner")
 			return nil, err
 		}
-		insights, err = GetEventMetricsInfo(metric, eventOrChannel, scanner, propFilter, propsToEval)
+		insights, err = getEventMetricsInfo(metric, eventOrChannel, scanner, propFilter, propsToEval)
 	} else if spectrum == "campaign" {
 		if category == M.AllChannelsDisplayCategory {
-			insights, err = GetAllChannelMetricsInfo(metric, propFilter, propsToEval, projectId, periodCode, cloudManager, diskManager, insightGranularity)
+			insights, err = getAllChannelMetricsInfo(metric, propFilter, propsToEval, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
 		} else {
-			if scanner, err = GetChannelFileScanner(eventOrChannel, projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
+			if scanner, err = GetChannelFileScanner(eventOrChannel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, true, beamConfig, useBucketV2); err != nil {
 				log.WithError(err).Error("failed getting " + eventOrChannel + " file scanner")
 				return nil, err
 			}
-			insights, err = GetCampaignMetricsInfo(metric, eventOrChannel, scanner, propFilter, propsToEval)
+			insights, err = getCampaignMetricsInfo(metric, eventOrChannel, scanner, propFilter, propsToEval)
 		}
 	} else if spectrum == "custom" {
-		insights, err = GetCustomMetricsInfo(metric, propFilter, propsToEval, projectId, periodCode, cloudManager, diskManager, insightGranularity)
+		insights, err = getCustomMetricsInfo(metric, propFilter, propsToEval, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
 	} else {
 		err = fmt.Errorf("unknown spectrum: %s", spectrum)
 	}
@@ -243,7 +244,7 @@ func GetMetricEvaluated(spectrum, category string, metric string, eventOrChannel
 }
 
 // compute cross period using within period infos
-func ComputeCrossPeriodKpiInsights(periodPair PeriodPair, newInsightsList, oldInsightsList []*WithinPeriodInsightsKpi) ([]*CrossPeriodInsightsKpi, error) {
+func computeCrossPeriodKpiInsights(periodPair PeriodPair, newInsightsList, oldInsightsList []*WithinPeriodInsightsKpi) ([]*CrossPeriodInsightsKpi, error) {
 	crossPeriodInsightsList := make([]*CrossPeriodInsightsKpi, 0)
 	for i := range newInsightsList {
 		var crossPeriodInsights CpiMetricInfo
@@ -364,14 +365,13 @@ func ComputeCrossPeriodKpiInsights(periodPair PeriodPair, newInsightsList, oldIn
 		cpiInsightsKpi.Target = &crossPeriodInsights
 		cpiInsightsKpi.BaseAndTarget = &crossPeriodInsights
 		cpiInsightsKpi.ScaleInfo = &scaleInfo
-		// cpiInsightsKpi.JSDivergence = JSDType{Target: MultipleJSDivergenceKpi(oldInfo, newInfo, allProps)}
 		crossPeriodInsightsList = append(crossPeriodInsightsList, &cpiInsightsKpi)
 	}
 	return crossPeriodInsightsList, nil
 }
 
 // get all info regarding displayCategory (properties, spectrum, channel)
-func getPropertiesToEvaluateAndInfo(projectID int64, displayCategory string, pageOrChannel *string) ([]map[string]string, string, string, error) {
+func getPropertiesToEvaluateAndInfo(projectID int64, displayCategory string) ([]map[string]string, string, string, error) {
 	var kpiProperties []map[string]string
 	var spectrum string
 	var channelOrEvent string
@@ -386,7 +386,7 @@ func getPropertiesToEvaluateAndInfo(projectID int64, displayCategory string, pag
 	} else if displayCategory == M.PageViewsDisplayCategory {
 		kpiProperties = M.KPIPropertiesForPageViews
 		spectrum = "events"
-	} else if displayCategory == M.GoogleAdsDisplayCategory {
+	} else if displayCategory == M.GoogleAdsDisplayCategory || displayCategory == M.AdwordsDisplayCategory {
 		for category, propMap := range M.MapOfAdwordsObjectsToPropertiesAndRelated {
 			for prop, info := range propMap {
 				kpiProperties = append(kpiProperties, map[string]string{

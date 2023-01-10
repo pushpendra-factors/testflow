@@ -3,6 +3,7 @@ package delta
 import (
 	M "factors/model/model"
 	"factors/model/store/memsql"
+	"factors/pull"
 	"fmt"
 	"strings"
 )
@@ -39,7 +40,7 @@ func getConstantsInfo(channel string) map[string]string {
 	return nil
 }
 
-func getMetricToCalculationinfo(channel string) map[string]MetricCalculationInfo {
+func getMetricToCalculationinfo(channel string) map[string]ChannelMetricCalculationInfo {
 	switch channel {
 	case M.ADWORDS:
 		return adwordsMetricToCalcInfo
@@ -147,7 +148,7 @@ func getQueryLevel(propFilter []M.KPIFilter) (int, error) {
 	return level, nil
 }
 
-func addToAssociatedProps(campaignDetails CounterCampaignFormat, associatedProps map[int]map[string]map[string]interface{}, docLevel int, level_id string) error {
+func addToAssociatedProps(campaignDetails pull.CounterCampaignFormat, associatedProps map[int]map[string]map[string]interface{}, docLevel int, level_id string) error {
 	if _, ok := associatedProps[docLevel]; !ok {
 		associatedProps[docLevel] = make(map[string]map[string]interface{})
 	}
@@ -169,7 +170,7 @@ func getDocLevelProps(propsToEval []string, docLevel int, queryLevel int) []stri
 	return propsToEvalPerDoc
 }
 
-func getMetricValueFromFraction(globalFrac *Fraction, featInfoMap map[string]map[string]Fraction, metricCalcInfo MetricCalculationInfo) (float64, map[string]map[string]float64) {
+func getMetricValueFromFraction(globalFrac *Fraction, featInfoMap map[string]map[string]Fraction, metricCalcInfo ChannelMetricCalculationInfo) (float64, map[string]map[string]float64) {
 	var globalVal float64
 	globalVal, _ = getValueFromCalcInfo(globalFrac.Numerator, globalFrac.Denominator, metricCalcInfo)
 	reqMap := make(map[string]map[string]float64)
@@ -188,7 +189,7 @@ func getMetricValueFromFraction(globalFrac *Fraction, featInfoMap map[string]map
 	return globalVal, reqMap
 }
 
-func getMetricValue(global float64, featInfoMap map[string]map[string]float64, metricCalcInfo MetricCalculationInfo) (float64, map[string]map[string]float64) {
+func getMetricValue(global float64, featInfoMap map[string]map[string]float64, metricCalcInfo ChannelMetricCalculationInfo) (float64, map[string]map[string]float64) {
 	var globalVal float64
 	reqMap := make(map[string]map[string]float64)
 
@@ -209,7 +210,7 @@ func getMetricValue(global float64, featInfoMap map[string]map[string]float64, m
 	return globalVal, reqMap
 }
 
-func getValueFromCalcInfo(firstVal float64, secondVal float64, metricCalcInfo MetricCalculationInfo) (float64, error) {
+func getValueFromCalcInfo(firstVal float64, secondVal float64, metricCalcInfo ChannelMetricCalculationInfo) (float64, error) {
 	if val, ok := metricCalcInfo.Props[0].ReplaceValue[firstVal]; ok {
 		firstVal = val
 	}

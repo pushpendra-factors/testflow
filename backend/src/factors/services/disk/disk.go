@@ -90,17 +90,41 @@ func (dd *DiskDriver) GetObjectSize(path, fileName string) (int64, error) {
 	return objSize, err
 }
 
-func (dd *DiskDriver) GetProjectModelDir(projectId int64, modelId uint64) string {
-	return fmt.Sprintf("%s/projects/%d/models/%d/", dd.baseDir, projectId, modelId)
-}
+// ListFiles List files present in a directory.
+func (dd *DiskDriver) ListFiles(path string) []string {
+	var files []string
+	fileObjects, err := ioutil.ReadDir(path)
+	if err != nil {
+		log.WithError(err).Errorln("Failed to read directory contents")
+		return files
+	}
 
-func (dd *DiskDriver) GetProjectEventFileDir(projectId int64, startTimestamp int64, modelType string) string {
-	dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
-	return fmt.Sprintf("%s/projects/%d/events/%s/%s/", dd.baseDir, projectId, modelType, dateFormatted)
+	for _, file := range fileObjects {
+		files = append(files, path+"/"+file.Name())
+	}
+	return files
 }
 
 func (dd *DiskDriver) GetProjectDir(projectId int64) string {
 	return fmt.Sprintf("%s/projects/%d/", dd.baseDir, projectId)
+}
+
+func (dd *DiskDriver) GetProjectModelDir(projectId int64, modelId uint64) string {
+	path := dd.GetProjectDir(projectId)
+	return fmt.Sprintf("%smodels/%d/", path, modelId)
+}
+
+func (dd *DiskDriver) GetProjectDataFileDir(projectId int64, startTimestamp int64, dataType, modelType string) string {
+	pathArr := strings.Split(dd.baseDir, "/")
+	folderName := pathArr[len(pathArr)-1]
+	if folderName == "cloud_storage" {
+		dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		return fmt.Sprintf("projects/%d/events/%s/%s/", projectId, modelType, dateFormatted)
+	} else {
+		path := dd.GetProjectDir(projectId)
+		dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		return fmt.Sprintf("%s%s/%s/", path, dataType, dateFormatted)
+	}
 }
 
 func (dd *DiskDriver) GetModelUserPropertiesCategoricalFilePathAndName(projectId int64, modelId uint64) (string, string) {
@@ -128,9 +152,20 @@ func (dd *DiskDriver) GetModelEventInfoFilePathAndName(projectId int64, modelId 
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
 }
 
-func (dd *DiskDriver) GetModelEventsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, "events.txt"
+func (dd *DiskDriver) GetEventsFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
+	pathArr := strings.Split(dd.baseDir, "/")
+	folderName := pathArr[len(pathArr)-1]
+	if folderName == "cloud_storage" {
+		fileName = "events.txt"
+	} else {
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("events_%s-%s.txt", dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
 }
 
 func (dd *DiskDriver) GetModelArtifactsPath(projectId int64, modelId uint64) string {
@@ -139,56 +174,106 @@ func (dd *DiskDriver) GetModelArtifactsPath(projectId int64, modelId uint64) str
 	return path
 }
 
-func (dd *DiskDriver) GetModelEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, "events_raw.txt"
-}
-func (dd *DiskDriver) GetEventsArtificatFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	path = pb.Join(path, "artifacts")
-	return path, "users_map.txt"
+func (dd *DiskDriver) GetEventsGroupFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, group int) (string, string) {
+	if group == 0 {
+		return dd.GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
+	}
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
+	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	fileName = fmt.Sprintf("events_group%d_%s-%s.txt", group, dateFormattedStart, dateFormattedEnd)
+	return path, fileName
 }
 
-func (dd *DiskDriver) GetModelMetricsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+func (dd *DiskDriver) GetChannelFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeAdReport, modelType)
+	pathArr := strings.Split(dd.baseDir, "/")
+	folderName := pathArr[len(pathArr)-1]
+	if folderName == "cloud_storage" {
+		fileName = channel + ".txt"
+	} else {
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("%s_%s-%s.txt", channel, dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
+}
+
+func (dd *DiskDriver) GetUsersFilePathAndName(dateField string, projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeUser, modelType)
+	pathArr := strings.Split(dd.baseDir, "/")
+	folderName := pathArr[len(pathArr)-1]
+	if folderName == "cloud_storage" {
+		path = pb.Join(path, "users")
+		fileName = dateField + ".txt"
+	} else {
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("%s_%s-%s.txt", dateField, dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
+}
+
+func (dd *DiskDriver) GetModelMetricsFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, "", modelType)
 	return path, "metrics.txt"
 }
 
-func (dd *DiskDriver) GetModelAlertsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+func (dd *DiskDriver) GetModelAlertsFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, "", modelType)
 	return path, "alerts.txt"
 }
 
-func (dd *DiskDriver) GetModelChannelFilePathAndName(channel string, projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, channel + ".txt"
+func (dd *DiskDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
+	pathArr := strings.Split(dd.baseDir, "/")
+	folderName := pathArr[len(pathArr)-1]
+	if folderName == "cloud_storage" {
+		fileName = "events_bucketed.txt"
+	} else {
+		path = pb.Join(path, "events_bucketed")
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("events_bucketed_%s-%s.txt", dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
 }
 
-func (dd *DiskDriver) GetModelUsersFilePathAndName(dateField string, projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := dd.GetModelUsersDir(dateField, projectId, startTimestamp, modelType)
-	return path, dateField + ".txt"
-}
-
-func (dd *DiskDriver) GetModelUsersDir(dateField string, projectId int64, startTimestamp int64, modelType string) string {
-	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return fmt.Sprintf("%susers/", path)
-}
-
-func (dd *DiskDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, "events_bucketed.txt"
-}
-
+// Buckets
 // If we have two different files for last week and this week, we might end up having non-overlapping ranges.
 // So keeping one for this week and other as master. If it exists in master pick that else this week, or compute now
+
 func (dd *DiskDriver) GetMasterNumericalBucketsFile(projectId int64) (string, string) {
 	path := dd.GetProjectDir(projectId)
+	path = pb.Join(path, U.DataTypeEvent)
 	return path, "numerical_buckets_master.txt"
 }
 
-func (dd *DiskDriver) GetModelEventsNumericalBucketsFile(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, "numerical_buckets.txt"
+func (dd *DiskDriver) GetModelEventsNumericalBucketsFile(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
+	pathArr := strings.Split(dd.baseDir, "/")
+	folderName := pathArr[len(pathArr)-1]
+	if folderName == "cloud_storage" {
+		fileName = "numerical_buckets.txt"
+	} else {
+		path = pb.Join(path, "numerical_buckets")
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("numerical_buckets_%s-%s.txt", dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
 }
 
 func (dd *DiskDriver) GetPatternChunksDir(projectId int64, modelId uint64) string {
@@ -219,24 +304,33 @@ func (dd *DiskDriver) GetUsersArchiveFilePathAndName(projectID int64, startTime,
 	return path, fileName
 }
 
-// ListFiles List files present in a directory.
-func (dd *DiskDriver) ListFiles(path string) []string {
-	var files []string
-	fileObjects, err := ioutil.ReadDir(path)
-	if err != nil {
-		log.WithError(err).Errorln("Failed to read directory contents")
-		return files
-	}
+func (dd *DiskDriver) GetDailyArchiveFilesDir(projectID int64, dataTimestamp int64, dataType string) string {
+	dateFormatted := U.GetDateOnlyFromTimestampZ(dataTimestamp)
+	path := fmt.Sprintf("%s/daily_pull/%d/%s/%s/", dd.baseDir, projectID, dateFormatted, dataType)
+	return path
+}
 
-	for _, file := range fileObjects {
-		files = append(files, path+"/"+file.Name())
-	}
-	return files
+func (dd *DiskDriver) GetDailyEventArchiveFilePathAndName(projectID int64, dataTimestamp int64, startTime, endTime int64) (string, string) {
+	path := dd.GetDailyArchiveFilesDir(projectID, dataTimestamp, U.DataTypeEvent)
+	fileName := fmt.Sprintf("events_created_at_%d-%d.txt", startTime, endTime)
+	return path, fileName
+}
+
+func (dd *DiskDriver) GetDailyUsersArchiveFilePathAndName(dateField string, projectID int64, dataTimestamp int64, startTime, endTime int64) (string, string) {
+	path := dd.GetDailyArchiveFilesDir(projectID, dataTimestamp, U.DataTypeUser)
+	fileName := fmt.Sprintf("%s_created_at_%d-%d.txt", dateField, startTime, endTime)
+	return path, fileName
+}
+
+func (dd *DiskDriver) GetDailyChannelArchiveFilePathAndName(channel string, projectID int64, dataTimestamp int64, startTime, endTime int64) (string, string) {
+	path := dd.GetDailyArchiveFilesDir(projectID, dataTimestamp, U.DataTypeAdReport)
+	fileName := fmt.Sprintf("%s_created_at_%d-%d.txt", channel, startTime, endTime)
+	return path, fileName
 }
 
 func (dd *DiskDriver) GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string) {
 	path := ""
-	if mailerRun == true {
+	if mailerRun {
 		path = dd.GetWeeklyInsightsMailerModelDir(projectId, dateString, queryId, k)
 	} else {
 		path = dd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
@@ -246,7 +340,7 @@ func (dd *DiskDriver) GetInsightsWpiFilePathAndName(projectId int64, dateString 
 
 func (dd *DiskDriver) GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string) {
 	path := ""
-	if mailerRun == true {
+	if mailerRun {
 		path = dd.GetWeeklyInsightsMailerModelDir(projectId, dateString, queryId, k)
 	} else {
 		path = dd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
@@ -254,25 +348,29 @@ func (dd *DiskDriver) GetInsightsCpiFilePathAndName(projectId int64, dateString 
 	return path, "cpi.txt"
 }
 
+func (dd *DiskDriver) GetWIPropertiesDir(projectId int64) string {
+	path := dd.GetProjectDir(projectId)
+	return fmt.Sprintf("%sweeklyinsights/", path)
+}
+
+func (dd *DiskDriver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
+	path := dd.GetWIPropertiesDir(projectId)
+	return path, "properties.txt"
+}
+
 func (dd *DiskDriver) GetWeeklyInsightsModelDir(projectId int64, dateString string, queryId int64, k int) string {
-	return fmt.Sprintf("%v/projects/%d/weeklyinsights/%v/q-%v/k-%v/", dd.baseDir, projectId, dateString, queryId, k)
+	path := dd.GetWIPropertiesDir(projectId)
+	return fmt.Sprintf("%s%v/q-%v/k-%v/", path, dateString, queryId, k)
 }
 
 func (dd *DiskDriver) GetWeeklyInsightsMailerModelDir(projectId int64, dateString string, queryId int64, k int) string {
-	return fmt.Sprintf("%v/projects/%d/weeklyinsightsmailer/%v/q-%v/k-%v/", dd.baseDir, projectId, dateString, queryId, k)
-}
-
-func (dd *DiskDriver) GetWeeklyKPIModelDir(projectId int64, dateString string, queryId int64) string {
-	return fmt.Sprintf("%v/projects/%v/weeklyKPI/%v/q-%v/", dd.baseDir, projectId, dateString, queryId)
+	path := dd.GetProjectDir(projectId)
+	return fmt.Sprintf("%sweeklyinsightsmailer/%v/q-%v/k-%v/", path, dateString, queryId, k)
 }
 
 func (dd *DiskDriver) GetAdsDataDir(projectId int64) string {
-	return fmt.Sprintf("%v/projects/%v/AdsImport/", dd.baseDir, projectId)
-}
-
-func (dd *DiskDriver) GetKPIFilePathAndName(projectId int64, dateString string, queryId int64) (string, string) {
-	path := dd.GetWeeklyKPIModelDir(projectId, dateString, queryId)
-	return path, "kpi.txt"
+	path := dd.GetProjectDir(projectId)
+	return pb.Join(path, "AdsImport")
 }
 
 func (dd *DiskDriver) GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string) {
@@ -280,38 +378,59 @@ func (dd *DiskDriver) GetAdsDataFilePathAndName(projectId int64, report string, 
 	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
 }
 
-func (dd *DiskDriver) GetPredictProjectDir(projectId int64, model_id int64) string {
-	path := dd.GetProjectDir(projectId)
-	model_str := fmt.Sprintf("%d", model_id)
-	return pb.Join(path, "predict", model_str)
-}
-
 func (dd *DiskDriver) GetPredictProjectDataPath(projectId int64, model_id int64) string {
 	path := dd.GetPredictProjectDir(projectId, model_id)
 	return pb.Join(path, "data")
 }
-func (dd *DiskDriver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
-	path := dd.GetWIPropertiesDir(projectId)
-	return path, "properties.txt"
+
+func (dd *DiskDriver) GetPredictProjectDir(projectId int64, model_id int64) string {
+	path := dd.GetProjectDir(projectId)
+	path = pb.Join(path, U.DataTypeEvent)
+	model_str := fmt.Sprintf("%d", model_id)
+	return pb.Join(path, "predict", model_str)
 }
 
-func (dd *DiskDriver) GetWIPropertiesDir(projectId int64) string {
-	return fmt.Sprintf("%v/projects/%v/weeklyinsights/", dd.baseDir, projectId)
+func (dd *DiskDriver) GetEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	path, name := dd.GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
+	fileName := "unsorted_" + name
+	return path, fileName
 }
 
-func (dd *DiskDriver) GetEventsForTimerangeFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
-	path := dd.GetEventsForTimerangeFileDir(projectId, startTimestamp, endTimestamp)
-	return path, "events.txt"
+func (dd *DiskDriver) GetEventsArtifactFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
+	path = pb.Join(path, "artifacts")
+	pathArr := strings.Split(dd.baseDir, "/")
+	folderName := pathArr[len(pathArr)-1]
+	if folderName == "cloud_storage" {
+		fileName = "users_map.txt"
+	} else {
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("users_map_%s.txt", dateFormattedEnd)
+	}
+	return path, fileName
 }
 
-func (dd *DiskDriver) GetEventsForTimerangeFileDir(projectId int64, startTimestamp int64, endTimestamp int64) string {
-	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
-	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
-	return fmt.Sprintf("%v/projects/%v/%v/%v/", dd.baseDir, projectId, dateFormattedStart, dateFormattedEnd)
+func (dd *DiskDriver) GetChannelArtifactFilePathAndName(channel string, projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	var fileName string
+	modelType := U.GetModelType(startTimestamp, endTimestamp)
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeAdReport, modelType)
+	path = pb.Join(path, "artifacts")
+	pathArr := strings.Split(dd.baseDir, "/")
+	folderName := pathArr[len(pathArr)-1]
+	if folderName == "cloud_storage" {
+		fileName = "doctypes_map_" + channel + ".txt"
+	} else {
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("doctypes_map_%s_%s.txt", dateFormattedEnd, channel)
+	}
+	return path, fileName
 }
 
 func (dd *DiskDriver) GetPathAnalysisTempFileDir(id string, projectId int64) string {
-	return fmt.Sprintf("%v/projects/%v/pathanalysis/%v/", dd.baseDir, projectId, id)
+	path := dd.GetProjectDir(projectId)
+	return fmt.Sprintf("%spathanalysis/%v/", path, id)
 }
 func (dd *DiskDriver) GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
 	path := dd.GetPathAnalysisTempFileDir(id, projectId)

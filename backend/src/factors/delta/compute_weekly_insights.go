@@ -795,7 +795,7 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 	var class string
 	var query model.Query
 	if mailerRun == true {
-		isEventWebsite, EventType, class = GetQueryTypeAndClass(queryId)
+		isEventWebsite, EventType, class = getQueryTypeAndClass(queryId)
 	} else {
 		QueriesObj, status := store.GetStore().GetQueryWithQueryId(projectId, queryId)
 		if status != http.StatusFound {

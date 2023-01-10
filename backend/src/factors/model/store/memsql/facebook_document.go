@@ -1349,10 +1349,41 @@ func (store *MemSQL) DeleteFacebookIntegration(projectID int64) (int, error) {
 // Selecting VALUE, TIMESTAMP, TYPE from facebook_documents and PROPERTIES, OBJECT_TYPE from smart_properties
 // Left join smart_properties filtered by project_id and source=facebook
 // where facebook_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
-//	 or facebook_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+//	or facebook_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
 // [make sure there aren't multiple smart_properties rows for a particular object,
 // or weekly insights for facebook would show incorrect data.]
-func (store *MemSQL) PullFacebookRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+func (store *MemSQL) PullFacebookRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	rawQuery := fmt.Sprintf("SELECT fb.id, fb.value, fb.timestamp, fb.type, sp.properties FROM facebook_documents fb "+
+		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND "+
+		"((COALESCE(sp.object_type,1) = 1 AND (sp.object_id = JSON_EXTRACT_STRING(fb.value, 'campaign_id') OR sp.object_id = JSON_EXTRACT_STRING(fb.value, 'base_campaign_id'))) OR "+
+		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(fb.value, 'ad_set_id') OR sp.object_id = JSON_EXTRACT_STRING(fb.value, 'base_ad_set_id')))) "+
+		"WHERE fb.project_id = %d AND UNIX_TIMESTAMP(fb.created_at) BETWEEN %d AND %d "+
+		"LIMIT %d",
+		projectID, model.ChannelFacebook, projectID, startTime, endTime, model.FacebookPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
+}
+
+// PullFacebookRows - Function to pull facebook campaign data
+// Selecting VALUE, TIMESTAMP, TYPE from facebook_documents and PROPERTIES, OBJECT_TYPE from smart_properties
+// Left join smart_properties filtered by project_id and source=facebook
+// where facebook_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
+//
+//	or facebook_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+// [make sure there aren't multiple smart_properties rows for a particular object,
+// or weekly insights for facebook would show incorrect data.]
+func (store *MemSQL) PullFacebookRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,

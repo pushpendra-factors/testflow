@@ -2467,11 +2467,43 @@ func (store *MemSQL) DeleteAdwordsIntegration(projectID int64) (int, error) {
 // Selecting VALUE, TIMESTAMP, TYPE from adwords_documents and PROPERTIES, OBJECT_TYPE from smart_properties
 // Left join smart_properties filtered by project_id and source=adwords
 // where adwords_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
-//	 or adwords_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+//	or adwords_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
 // [make sure there aren't multiple smart_properties rows for a particular object,
 // or weekly insights for adwords would show incorrect data.]
 // TODO(anshul) : [all channels]check for index support for faster query
-func (store *MemSQL) PullAdwordsRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+func (store *MemSQL) PullAdwordsRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	rawQuery := fmt.Sprintf("SELECT adwDocs.id, adwDocs.value, adwDocs.timestamp, adwDocs.type, sp.properties FROM adwords_documents adwDocs "+
+		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND "+
+		"((COALESCE(sp.object_type,1) = 1 AND (sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'campaign_id') OR sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'base_campaign_id'))) OR "+
+		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'ad_group_id') OR sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'base_ad_group_id')))) "+
+		"WHERE adwDocs.project_id = %d AND UNIX_TIMESTAMP(adwDocs.created_at) BETWEEN %d AND %d "+
+		"LIMIT %d",
+		projectID, model.ChannelAdwords, projectID, startTime, endTime, model.AdwordsPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
+}
+
+// PullAdwordsRows - Function to pull adwords campaign data
+// Selecting VALUE, TIMESTAMP, TYPE from adwords_documents and PROPERTIES, OBJECT_TYPE from smart_properties
+// Left join smart_properties filtered by project_id and source=adwords
+// where adwords_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
+//
+//	or adwords_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+// [make sure there aren't multiple smart_properties rows for a particular object,
+// or weekly insights for adwords would show incorrect data.]
+// TODO(anshul) : [all channels]check for index support for faster query
+func (store *MemSQL) PullAdwordsRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,

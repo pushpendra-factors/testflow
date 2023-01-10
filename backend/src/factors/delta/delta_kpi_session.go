@@ -6,6 +6,7 @@ import (
 	U "factors/util"
 )
 
+// weekly insights calculation info for each session metric
 var sessionMetricToCalcInfo = map[string]EventMetricCalculationInfo{
 	M.TotalSessions: {
 		PropsInfo: []EventPropInfo{
@@ -150,23 +151,25 @@ var sessionMetricToCalcInfo = map[string]EventMetricCalculationInfo{
 	},
 }
 
+// check if given session event quailifies as bounced session (SP_PAGE_COUNT<2)
 func checkBouncedSession(eventDetails P.CounterEventFormat, pageName string) (float64, bool, error) {
-	if cnt, ok := ExistsInProps(U.SP_PAGE_COUNT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
+	if cnt, ok := existsInProps(U.SP_PAGE_COUNT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 		cnt, err := getFloatValueFromInterface(cnt)
 		if err != nil {
 			return 0, false, err
 		}
 		count := int64(cnt)
-		if count > 2 {
+		if count < 2 {
 			return 0, true, nil
 		}
 	}
 	return 0, false, nil
 }
 
+// check if given session event quailifies as engaged session (SP_PAGE_COUNT>2 or SP_SPENT_TIME>10)
 func checkEngagedSession(eventDetails P.CounterEventFormat, pageName string) (float64, bool, error) {
 	isEngaged := false
-	if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
+	if timeSpent, ok := existsInProps(U.SP_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 		timeSpent, err := getFloatValueFromInterface(timeSpent)
 		if err != nil {
 			return 0, false, err
@@ -175,7 +178,7 @@ func checkEngagedSession(eventDetails P.CounterEventFormat, pageName string) (fl
 			isEngaged = true
 		}
 	}
-	if cnt, ok := ExistsInProps(U.SP_PAGE_COUNT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
+	if cnt, ok := existsInProps(U.SP_PAGE_COUNT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 		cnt, err := getFloatValueFromInterface(cnt)
 		if err != nil {
 			return 0, false, err
@@ -188,14 +191,16 @@ func checkEngagedSession(eventDetails P.CounterEventFormat, pageName string) (fl
 	return 0, isEngaged, nil
 }
 
+// check if given session event quailifies as new session (SP_IS_FIRST_SESSION=true)
 func checkNew(eventDetails P.CounterEventFormat, prop string) (float64, bool, error) {
 	var new bool
-	if first, ok := ExistsInProps(U.SP_IS_FIRST_SESSION, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
+	if first, ok := existsInProps(U.SP_IS_FIRST_SESSION, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 		new = first.(bool)
 	}
 	return 0, new, nil
 }
 
+// check if given session event quailifies as repeat session (not a new session)
 func checkRepeat(eventDetails P.CounterEventFormat, prop string) (float64, bool, error) {
 	val, ok, err := checkNew(eventDetails, prop)
 	return val, !ok, err
