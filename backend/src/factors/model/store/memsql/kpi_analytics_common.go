@@ -1,10 +1,12 @@
 package memsql
 
 import (
+	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
 	"reflect"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -26,18 +28,27 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 	finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults,
 		mapOfGBTKPINormalQueryToResults, externalQueryToInternalQueries := store.ExecuteKPIQueriesAndGetResultsAsMap(projectID,
 		reqID, kpiQueryGroup, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+	if finalStatusCode == 2 {
+		return []model.QueryResult{{}, {}}, http.StatusInternalServerError
+	}
 	if finalStatusCode != http.StatusOK {
 		return []model.QueryResult{{}, {}}, finalStatusCode
 	}
 
 	finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults = model.GetNonGBTResultsFromGBTResultsAndMaps(reqID, kpiQueryGroup,
 		mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults, mapOfGBTKPINormalQueryToResults, externalQueryToInternalQueries)
+	if finalStatusCode == 2 {
+		return []model.QueryResult{{}, {}}, http.StatusInternalServerError
+	}
 	if finalStatusCode != http.StatusOK {
 		return []model.QueryResult{{}, {}}, finalStatusCode
 	}
 
 	finalResultantResults, finalStatusCode = model.GetFinalResultantResultsForKPI(reqID, kpiQueryGroup, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults,
 		mapOfNonGBTKPINormalQueryToResults, mapOfGBTKPINormalQueryToResults, externalQueryToInternalQueries)
+	if finalStatusCode == 2 {
+		return []model.QueryResult{{}, {}}, http.StatusInternalServerError
+	}
 	if finalStatusCode != http.StatusOK {
 		return []model.QueryResult{{}, {}}, finalStatusCode
 	}
@@ -58,7 +69,7 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 func (store *MemSQL) ExecuteKPIQueriesAndGetResultsAsMap(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
 	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (int, map[string]map[string][]model.QueryResult,
 	map[string]map[string][]model.QueryResult, map[string][]model.QueryResult, map[string][]model.QueryResult, map[string]model.KPIQueryGroup) {
-	finalStatusCode := http.StatusOK
+	finalStatus := model.KPIStatus{Status: 2}
 
 	mapOfGBTDerivedKPIToInternalKPIToResults := make(map[string]map[string][]model.QueryResult)
 	mapOfNonGBTDerivedKPIToInternalKPIToResults := make(map[string]map[string][]model.QueryResult)
@@ -67,57 +78,79 @@ func (store *MemSQL) ExecuteKPIQueriesAndGetResultsAsMap(projectID int64, reqID 
 	mapOfNonGBTKPINormalQueryToResults := make(map[string][]model.QueryResult)
 	externalQueryToInternalQueries := make(map[string]model.KPIQueryGroup)
 
+	var waitGroup sync.WaitGroup
+	count := 0
+	actualRoutineLimit := U.MinInt(len(kpiQueryGroup.Queries), model.AllowedGoroutinesForKPI)
+	waitGroup.Add(actualRoutineLimit)
 	for _, query := range kpiQueryGroup.Queries {
-		var result []model.QueryResult
-		var statusCode int
-		var errMsg string
-		internalKPIQuery := model.KPIQueryGroup{}
-		internalQueryToQueryResult := make(map[string][]model.QueryResult)
+		count++
+		go store.runSingleKPIQuery(projectID, reqID, kpiQueryGroup, query,
+			enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
+			mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTKPINormalQueryToResults,
+			mapOfNonGBTKPINormalQueryToResults, externalQueryToInternalQueries, &finalStatus, &waitGroup)
 
-		if query.QueryType == model.KpiDerivedQueryType {
-			var derivedKPIHashCode string
-			internalKPIQuery, internalQueryToQueryResult, statusCode, derivedKPIHashCode, errMsg = store.ExecuteDerivedKPIQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-			if statusCode != http.StatusOK {
-				finalStatusCode = statusCode
-				mapOfGBTDerivedKPIToInternalKPIToResults = make(map[string]map[string][]model.QueryResult)
-				mapOfNonGBTDerivedKPIToInternalKPIToResults = make(map[string]map[string][]model.QueryResult)
+		if count%actualRoutineLimit == 0 {
+			waitGroup.Wait()
+			waitGroup.Add(U.MinInt(len(kpiQueryGroup.Queries)-count, actualRoutineLimit))
+		}
+	}
+	waitGroup.Wait()
+	if finalStatus.Status != http.StatusOK {
+		mapOfGBTDerivedKPIToInternalKPIToResults = make(map[string]map[string][]model.QueryResult)
+		mapOfNonGBTDerivedKPIToInternalKPIToResults = make(map[string]map[string][]model.QueryResult)
 
-				mapOfGBTKPINormalQueryToResults = make(map[string][]model.QueryResult)
-				mapOfNonGBTKPINormalQueryToResults = make(map[string][]model.QueryResult)
-				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error(errMsg)
-				break
-			} else {
-				if query.GroupByTimestamp == "" {
-					mapOfNonGBTDerivedKPIToInternalKPIToResults[derivedKPIHashCode] = internalQueryToQueryResult
-				} else {
-					mapOfGBTDerivedKPIToInternalKPIToResults[derivedKPIHashCode] = internalQueryToQueryResult
-				}
+		mapOfGBTKPINormalQueryToResults = make(map[string][]model.QueryResult)
+		mapOfNonGBTKPINormalQueryToResults = make(map[string][]model.QueryResult)
+	}
 
-				externalQueryToInternalQueries[derivedKPIHashCode] = internalKPIQuery
-			}
+	return finalStatus.Status, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults, mapOfGBTKPINormalQueryToResults, externalQueryToInternalQueries
+}
+
+// internalKPIQuery, internalQueryToQueryResult, statusCode, derivedKPIHashCode, errMsg
+func (store *MemSQL) runSingleKPIQuery(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup, query model.KPIQuery,
+	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
+	mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTDerivedKPIToInternalKPIToResults map[string]map[string][]model.QueryResult,
+	mapOfGBTKPINormalQueryToResults, mapOfNonGBTKPINormalQueryToResults map[string][]model.QueryResult,
+	externalQueryToInternalQueries map[string]model.KPIQueryGroup, finalStatus *model.KPIStatus, waitGroup *sync.WaitGroup) {
+
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+	defer waitGroup.Done()
+	var result []model.QueryResult
+	var statusCode int
+	var errMsg string
+	internalKPIQuery := model.KPIQueryGroup{}
+	internalQueryToQueryResult := make(map[string][]model.QueryResult)
+
+	if query.QueryType == model.KpiDerivedQueryType {
+		var derivedKPIHashCode string
+		internalKPIQuery, internalQueryToQueryResult, statusCode, derivedKPIHashCode, errMsg = store.ExecuteDerivedKPIQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		finalStatus.CheckAndSetStatus(statusCode)
+		if statusCode != http.StatusOK {
+			log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error(errMsg)
+
 		} else {
-			var hashCode string
-			result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-			if statusCode != http.StatusOK {
-				finalStatusCode = statusCode
-				mapOfGBTDerivedKPIToInternalKPIToResults = make(map[string]map[string][]model.QueryResult)
-				mapOfNonGBTDerivedKPIToInternalKPIToResults = make(map[string]map[string][]model.QueryResult)
-
-				mapOfGBTKPINormalQueryToResults = make(map[string][]model.QueryResult)
-				mapOfNonGBTKPINormalQueryToResults = make(map[string][]model.QueryResult)
-				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).WithField("result", result).Error(errMsg)
-				break
+			if query.GroupByTimestamp == "" {
+				mapOfNonGBTDerivedKPIToInternalKPIToResults[derivedKPIHashCode] = internalQueryToQueryResult
 			} else {
-				if query.GroupByTimestamp == "" {
-					mapOfNonGBTKPINormalQueryToResults[hashCode] = result
-				} else {
-					mapOfGBTKPINormalQueryToResults[hashCode] = result
-				}
+				mapOfGBTDerivedKPIToInternalKPIToResults[derivedKPIHashCode] = internalQueryToQueryResult
+			}
+
+			externalQueryToInternalQueries[derivedKPIHashCode] = internalKPIQuery
+		}
+	} else {
+		var hashCode string
+		result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		finalStatus.CheckAndSetStatus(statusCode)
+		if statusCode != http.StatusOK {
+			log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).WithField("result", result).Error(errMsg)
+		} else {
+			if query.GroupByTimestamp == "" {
+				mapOfNonGBTKPINormalQueryToResults[hashCode] = result
+			} else {
+				mapOfGBTKPINormalQueryToResults[hashCode] = result
 			}
 		}
 	}
-
-	return finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults, mapOfGBTKPINormalQueryToResults, externalQueryToInternalQueries
 }
 
 func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQuery model.KPIQuery,
