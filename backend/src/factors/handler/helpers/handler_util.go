@@ -108,7 +108,7 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID int64, requestPayload mo
 	return false, errCode, errors.New("Query Cache: Failed to fetch from cache")
 }
 
-func UseFunnelV2(c *gin.Context) bool {
+func UseUserFunnelV2(c *gin.Context) bool {
 	if c.Request.Header.Get(model.QueryFunnelV2) == "true" {
 		return true
 	}

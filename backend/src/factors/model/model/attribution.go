@@ -1463,6 +1463,69 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 	return rows
 }
 
+// GetRowsByMapsAllPage Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
+func GetRowsByMapsAllPage(contentGroupNamesList []string, attributionData *map[string]*AttributionData,
+	linkedEvents []QueryEventWithProperties, isCompare bool) [][]interface{} {
+
+	var defaultMatchingRow []interface{}
+
+	//ConversionEventCount, ConversionEventCountInfluence,ConversionEventCompareCount,ConversionEventCompareCountInfluence
+	defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0), float64(0), float64(0))
+
+	var contentGroups []interface{}
+	for i := 0; i < len(contentGroupNamesList); i++ {
+		contentGroups = append(contentGroups, "none")
+	}
+
+	nonMatchingRow := []interface{}{"none"}
+	nonMatchingRow = append(nonMatchingRow, contentGroups...)
+	nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
+
+	// Add up for linkedEvents for conversion and conversion rate
+	for i := 0; i < len(linkedEvents); i++ {
+		nonMatchingRow = append(nonMatchingRow, float64(0), float64(0))
+	}
+	rows := make([][]interface{}, 0)
+	for _, data := range *attributionData {
+		attributionIdName := data.MarketingInfo.AllPageView
+		if attributionIdName == "" {
+			attributionIdName = PropertyValueNone
+		}
+		if attributionIdName != "" {
+
+			var row []interface{}
+			// Add up Name
+			row = append(row, attributionIdName)
+
+			// Add up content Groups
+			for i := 0; i < len(contentGroups); i++ {
+				if v, exists := data.MarketingInfo.ContentGroupValuesMap[contentGroupNamesList[i]]; exists {
+					row = append(row, v)
+				} else {
+					row = append(row, PropertyValueNone)
+				}
+			}
+			// Append fixed Metrics & ConversionEventCount[0] as only one goal event exists for landing page
+			row = append(row, data.ConversionEventCount[0], data.ConversionEventCountInfluence[0])
+
+			if isCompare {
+
+				row = append(row, data.ConversionEventCompareCount[0])
+				row = append(row, data.ConversionEventCompareCountInfluence[0])
+			} else {
+				row = append(row, float64(0), float64(0))
+			}
+			row = append(row, getLinkedEventColumnAsInterfaceListLandingPagev1(data.LinkedEventsCount, data.LinkedEventsCountInfluence, len(linkedEvents))...)
+			rows = append(rows, row)
+		}
+	}
+	if len(rows) == 0 {
+		// In case of empty result, send a row of zeros
+		rows = append(rows, nonMatchingRow)
+	}
+	return rows
+}
+
 // GetRowsByMapsLandingPage Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
 func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *map[string]*AttributionData,
 	linkedEvents []QueryEventWithProperties, isCompare bool) [][]interface{} {
@@ -1627,7 +1690,7 @@ func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map
 func ProcessQueryPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQueryLandingPageUrl"}
 	logCtx = *logCtx.WithFields(logFields)
-	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
+	dataRows := GetRowsByMapsAllPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
 
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
@@ -2030,9 +2093,9 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		for idx, _ := range conversionFunTypes {
 			nextConPosition := idx * 6
 			row1[keyIndex+8+nextConPosition] = row1[keyIndex+8+nextConPosition].(float64) + row2[keyIndex+8+nextConPosition].(float64)    // Conversion.
-			row1[keyIndex+9+nextConPosition] = row1[keyIndex+9+nextConPosition].(float64) + row2[keyIndex+9+nextConPosition].(float64)    // Conversion Influence
+			row1[keyIndex+9+nextConPosition] = row1[keyIndex+9+nextConPosition].(float64) + row2[keyIndex+9+nextConPosition].(float64)    // Conversion Influence - values same as Linear Touch
 			row1[keyIndex+11+nextConPosition] = row1[keyIndex+11+nextConPosition].(float64) + row2[keyIndex+11+nextConPosition].(float64) // Compare Conversion.
-			row1[keyIndex+12+nextConPosition] = row1[keyIndex+12+nextConPosition].(float64) + row2[keyIndex+12+nextConPosition].(float64) // Compare Conversion Influence
+			row1[keyIndex+12+nextConPosition] = row1[keyIndex+12+nextConPosition].(float64) + row2[keyIndex+12+nextConPosition].(float64) // Compare Conversion Influence - values same as Linear Touch
 		}
 		impressions := (row1[keyIndex+1]).(int64)
 		clicks := (row1[keyIndex+2]).(int64)
@@ -2095,9 +2158,9 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
 
 		row1[keyIndex+8] = row1[keyIndex+8].(float64) + row2[keyIndex+8].(float64)    // Conversion.
-		row1[keyIndex+9] = row1[keyIndex+9].(float64) + row2[keyIndex+9].(float64)    // Conversion Influence
+		row1[keyIndex+9] = row1[keyIndex+9].(float64) + row2[keyIndex+9].(float64)    // Conversion Influence - values same as Linear Touch
 		row1[keyIndex+11] = row1[keyIndex+11].(float64) + row2[keyIndex+11].(float64) // Compare Conversion.
-		row1[keyIndex+12] = row1[keyIndex+12].(float64) + row2[keyIndex+12].(float64) // Compare Conversion Influence
+		row1[keyIndex+12] = row1[keyIndex+12].(float64) + row2[keyIndex+12].(float64) // Compare Conversion Influence - values same as Linear Touch
 
 		impressions := (row1[keyIndex+1]).(int64)
 		clicks := (row1[keyIndex+2]).(int64)
@@ -2250,17 +2313,6 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 	spendCPM := float64(0)     //6
 	impressionsCPM := int64(0) //6
 
-	spendCPC := float64(0)
-	conversionsCPC := float64(0)
-
-	var spendFunnelConversionCPC []float64      //linked funnel events
-	var conversionFunnelConversionCPC []float64 //linked funnel events
-	for i := keyIndex + 14; i < len(headers)-1; i += 3 {
-
-		spendFunnelConversionCPC = append(spendFunnelConversionCPC, float64(0))
-		conversionFunnelConversionCPC = append(conversionFunnelConversionCPC, float64(0))
-	}
-
 	maxRowSize := 0
 	for _, row := range rows {
 
@@ -2274,9 +2326,9 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 		grandTotalRow[keyIndex+3], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+3].(float64)+row[keyIndex+3].(float64), U.DefaultPrecision) // Spend.
 
 		grandTotalRow[keyIndex+8] = grandTotalRow[keyIndex+8].(float64) + row[keyIndex+8].(float64)    // Conversion.
-		grandTotalRow[keyIndex+9] = grandTotalRow[keyIndex+9].(float64) + row[keyIndex+9].(float64)    // Conversion Influence
+		grandTotalRow[keyIndex+9] = grandTotalRow[keyIndex+9].(float64) + row[keyIndex+9].(float64)    // Conversion Influence - values same as Linear Touch
 		grandTotalRow[keyIndex+11] = grandTotalRow[keyIndex+11].(float64) + row[keyIndex+11].(float64) // Compare Conversion.
-		grandTotalRow[keyIndex+12] = grandTotalRow[keyIndex+12].(float64) + row[keyIndex+12].(float64) // Compare Conversion Influence
+		grandTotalRow[keyIndex+12] = grandTotalRow[keyIndex+12].(float64) + row[keyIndex+12].(float64) // Compare Conversion Influence - values same as Linear Touch
 
 		impressions := (row[keyIndex+1]).(int64)
 		clicks := (row[keyIndex+2]).(int64)
@@ -2296,21 +2348,11 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 			clicksClickConversionRate = clicksClickConversionRate + clicks
 		}
 
-		if spend > 0 {
-			spendCPC, _ = U.FloatRoundOffWithPrecision(spendCPC+spend, U.DefaultPrecision)
-			conversionsCPC, _ = U.FloatRoundOffWithPrecision(conversionsCPC+row[keyIndex+8].(float64), U.DefaultPrecision)
-		}
-
 		// Remaining linked funnel events & CPCs
-		j := 0
 		for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 3 {
 			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)       //LFE Conversion Count
 			grandTotalRow[i+1] = grandTotalRow[i+1].(float64) + row[i+1].(float64) // LFE Conversion Influence
-			if spend > 0 && i < len(grandTotalRow) && j < len(spendFunnelConversionCPC) && len(spendFunnelConversionCPC) > 0 && len(conversionFunnelConversionCPC) > 0 {
-				spendFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[j]+spend, U.DefaultPrecision)
-				conversionFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(conversionFunnelConversionCPC[j]+row[i].(float64), U.DefaultPrecision)
-			}
-			j += 1
+
 		}
 		// If attribution method is influence then replacing the value of grand total row of conversion with conversion Influence
 		if method == AttributionMethodInfluence {
@@ -2355,8 +2397,8 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 	}
 
 	// Conversion - CPC.
-	if conversionsCPC > 0 {
-		grandTotalRow[keyIndex+10], _ = U.FloatRoundOffWithPrecision(spendCPC/conversionsCPC, U.DefaultPrecision)
+	if grandTotalRow[keyIndex+8].(float64) > 0 {
+		grandTotalRow[keyIndex+10], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+3].(float64)/grandTotalRow[keyIndex+8].(float64), U.DefaultPrecision)
 	} else {
 		grandTotalRow[keyIndex+10] = float64(0)
 	}
@@ -2369,16 +2411,15 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 	}
 
 	// Remaining linked funnel events & CPCs
-	k := 0
 	for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 3 {
-		if i < len(grandTotalRow) && k < len(spendFunnelConversionCPC) && len(spendFunnelConversionCPC) > 0 && len(conversionFunnelConversionCPC) > 0 && conversionFunnelConversionCPC[k] > 0 {
+		if grandTotalRow[i].(float64) > 0 {
 			// Funnel - Conversion - CPC.
-			grandTotalRow[i+2], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[k]/conversionFunnelConversionCPC[k], U.DefaultPrecision)
+			grandTotalRow[i+2], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+3].(float64)/grandTotalRow[i].(float64), U.DefaultPrecision)
 		} else {
 			// Funnel - Conversion - CPC.
 			grandTotalRow[i+2] = float64(0)
 		}
-		k += 1
+
 	}
 
 	// concatenated key
@@ -2422,9 +2463,6 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, c
 	spendCPM := float64(0)     //6
 	impressionsCPM := int64(0) //6
 
-	var spendCPC []float64       //9
-	var conversionsCPC []float64 //9
-
 	maxRowSize := 0
 	for _, row := range rows {
 
@@ -2458,15 +2496,10 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, c
 		for idx, _ := range conversionFunTypes {
 			nextConPosition := idx * 6
 			grandTotalRow[keyIndex+8+nextConPosition] = grandTotalRow[keyIndex+8+nextConPosition].(float64) + row[keyIndex+8+nextConPosition].(float64)    // Conversion.
-			grandTotalRow[keyIndex+9+nextConPosition] = grandTotalRow[keyIndex+9+nextConPosition].(float64) + row[keyIndex+9+nextConPosition].(float64)    //Conversion Influence
+			grandTotalRow[keyIndex+9+nextConPosition] = grandTotalRow[keyIndex+9+nextConPosition].(float64) + row[keyIndex+9+nextConPosition].(float64)    // Conversion Influence - values same as Linear Touch
 			grandTotalRow[keyIndex+11+nextConPosition] = grandTotalRow[keyIndex+11+nextConPosition].(float64) + row[keyIndex+11+nextConPosition].(float64) // Compare Conversion.
-			grandTotalRow[keyIndex+12+nextConPosition] = grandTotalRow[keyIndex+12+nextConPosition].(float64) + row[keyIndex+12+nextConPosition].(float64) //Compare Conversion Influence.
-			spendCPC = append(spendCPC, 0.0)
-			conversionsCPC = append(conversionsCPC, 0.0)
-			if spend > 0 {
-				spendCPC[idx], _ = U.FloatRoundOffWithPrecision(spendCPC[idx]+spend, U.DefaultPrecision)
-				conversionsCPC[idx], _ = U.FloatRoundOffWithPrecision(conversionsCPC[idx]+row[keyIndex+8+nextConPosition].(float64), U.DefaultPrecision)
-			}
+			grandTotalRow[keyIndex+12+nextConPosition] = grandTotalRow[keyIndex+12+nextConPosition].(float64) + row[keyIndex+12+nextConPosition].(float64) // Compare Conversion Influence - values same as Linear Touch
+
 			if method == AttributionMethodInfluence {
 				grandTotalRow[keyIndex+8+nextConPosition] = grandTotalRow[keyIndex+9+nextConPosition]
 
@@ -2507,12 +2540,13 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, c
 		// Compare conversion [11, 12,13]  = [Conversion, Conversion Influence,CPC]
 
 		if strings.ToLower(funcType) == "sum" {
-
-			if len(spendCPC) > 0 && spendCPC[idx] > 0 && len(conversionsCPC) > 0 {
-				grandTotalRow[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(conversionsCPC[idx]/spendCPC[idx], U.DefaultPrecision)
+			// Conversion - CPC
+			if grandTotalRow[keyIndex+3].(float64) > 0 {
+				grandTotalRow[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+8+nextConPosition].(float64)/grandTotalRow[keyIndex+3].(float64), U.DefaultPrecision)
 			} else {
 				grandTotalRow[keyIndex+10+nextConPosition] = float64(0)
 			}
+
 			// Compare Conversion - CPC.
 			if grandTotalRow[keyIndex+3].(float64) > 0 {
 				grandTotalRow[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+11+nextConPosition].(float64)/grandTotalRow[keyIndex+3].(float64), U.DefaultPrecision)
@@ -2522,8 +2556,9 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, c
 
 		} else {
 
-			if len(conversionsCPC) > 0 && conversionsCPC[idx] > 0 && len(spendCPC) > 0 {
-				grandTotalRow[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(spendCPC[idx]/conversionsCPC[idx], U.DefaultPrecision)
+			// Conversion - CPC.
+			if grandTotalRow[keyIndex+8+nextConPosition].(float64) > 0 {
+				grandTotalRow[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+3].(float64)/grandTotalRow[keyIndex+8+nextConPosition].(float64), U.DefaultPrecision)
 			} else {
 				grandTotalRow[keyIndex+10+nextConPosition] = float64(0)
 			}
@@ -2569,9 +2604,9 @@ func AddGrandTotalRowKPILandingPage(headers []string, rows [][]interface{}, keyI
 		for idx, _ := range goalEvents {
 			nextConPosition := idx * 4
 			grandTotalRow[keyIndex+1+nextConPosition] = grandTotalRow[keyIndex+1+nextConPosition].(float64) + row[keyIndex+1+nextConPosition].(float64) // Conversion.
-			grandTotalRow[keyIndex+2+nextConPosition] = grandTotalRow[keyIndex+2+nextConPosition].(float64) + row[keyIndex+2+nextConPosition].(float64) // Conversion INFLUENCE
+			grandTotalRow[keyIndex+2+nextConPosition] = grandTotalRow[keyIndex+2+nextConPosition].(float64) + row[keyIndex+2+nextConPosition].(float64) // Conversion INFLUENCE - values same as Linear Touch
 			grandTotalRow[keyIndex+3+nextConPosition] = grandTotalRow[keyIndex+3+nextConPosition].(float64) + row[keyIndex+3+nextConPosition].(float64) // Compare Conversion.
-			grandTotalRow[keyIndex+4+nextConPosition] = grandTotalRow[keyIndex+4+nextConPosition].(float64) + row[keyIndex+4+nextConPosition].(float64) // Compare Conversion Influence
+			grandTotalRow[keyIndex+4+nextConPosition] = grandTotalRow[keyIndex+4+nextConPosition].(float64) + row[keyIndex+4+nextConPosition].(float64) // Compare Conversion Influence - values same as Linear Touch
 
 			if method == AttributionMethodInfluence {
 				grandTotalRow[1] = grandTotalRow[2]

@@ -18,7 +18,7 @@ const (
 	MetaStepTimeInfo = "MetaStepTimeInfo"
 )
 
-func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFilterOpt, enableFunnelV2 bool) (*model.QueryResult, int, string) {
+func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFilterOpt, enableUserFunnelV2 bool) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"query":      query,
@@ -49,13 +49,15 @@ func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFi
 	}
 
 	scopeGroupID := 0
-	if enableFunnelV2 {
+	if query.GroupAnalysis != "" {
 		var valid bool
 		scopeGroupID, valid = store.IsValidFunnelGroupQueryIfExists(projectId, &query, groupIds)
 		if !valid {
 			return nil, http.StatusBadRequest, model.ErrMsgFunnelQueryV2Failure
 		}
 	}
+
+	enableFunnelV2 := scopeGroupID > 0 || enableUserFunnelV2
 
 	stmnt, params, err := BuildFunnelQuery(projectId, query, groupIds, enableFilterOpt, enableFunnelV2, scopeGroupID)
 	if err != nil {
