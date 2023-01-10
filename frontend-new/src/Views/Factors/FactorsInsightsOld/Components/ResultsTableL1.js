@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Row, Col, Button, Spin, Tag, Input
 } from 'antd';
-import { fetchFactorsModels, fetchGoalInsights, saveGoalInsightRules, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
+import { fetchFactorsGoals, fetchFactorsModels, fetchGoalInsights, saveGoalInsightRules, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
 import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
 import { connect } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
@@ -300,4 +300,4 @@ const mapStateToProps = (state) => {
     factors_models: state.factors.factors_models,
   };
 };
-export default connect(mapStateToProps, { fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, fetchProjectAgents, saveGoalInsightRules, fetchGoalInsights, fetchFactorsModels, fetchEventNames, getUserProperties })(ResultsTableL1);
+export default connect(mapStateToProps, { fetchFactorsGoals, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, fetchProjectAgents, saveGoalInsightRules, fetchGoalInsights, fetchFactorsModels, fetchEventNames, getUserProperties })(ResultsTableL1);

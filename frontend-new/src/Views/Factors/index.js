@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
-import { Row, Col, Button, Spin, Tag } from 'antd';
+import { Row, Col, Button, Spin, Tag, Tabs } from 'antd';
 import {
+  fetchSavedExplainGoals,
   fetchFactorsGoals,
   fetchFactorsModels,
   fetchGoalInsights,
@@ -18,6 +19,7 @@ import { connect, useSelector } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
 import _, { isEmpty } from 'lodash';
 import SavedGoals from './SavedGoals';
+import SavedGoalsOld from './SavedGoalsOld';
 import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import ExplainV2 from './FactorsInsightsNew';
@@ -30,6 +32,17 @@ import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import { meetLink } from '../../utils/hubspot';
 import userflow from 'userflow.js';
 import ExplainBeforeIntegration from './ExplainBeforeIntegration';
+
+
+
+const whiteListedAccounts = [
+  'baliga@factors.ai',
+  'vinith@factors.ai',
+  'sonali@factors.ai',
+  'praveenr@factors.ai',
+  'solutions@factors.ai'
+];
+
 
 const ExplainTypeList = [
   {
@@ -53,6 +66,7 @@ const ExplainTypeList = [
 ];
 
 const Factors = ({
+  fetchSavedExplainGoals,
   fetchFactorsGoals,
   activeProject,
   goals,
@@ -69,7 +83,8 @@ const Factors = ({
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,
-  fetchBingAdsIntegration
+  fetchBingAdsIntegration,
+  activeAgent
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [fetchingIngishts, SetfetchingIngishts] = useState(false);
@@ -80,7 +95,7 @@ const Factors = ({
   const [loading, setLoading] = useState(true);
 
   const [demoProjectId, setDemoProjectId] = useState(null);
-  const [ownerID, setOwnerID] = useState();
+  const [tabID, setTabID] = useState(1);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const { projects } = useSelector((state) => state.global);
   const currentAgent = useSelector((state) => state.agent.agent_details);
@@ -145,13 +160,109 @@ const Factors = ({
       await fetchFactorsTrackedUserProperties(activeProject.id);
       await getUserProperties(activeProject.id, 'events');
       await fetchProjectAgents(activeProject.id);
+      await fetchSavedExplainGoals(activeProject.id);
     };
     getData1();
-  }, [activeProject]);
+  }, []);
+
+  const onChangeTab = (key) => { 
+    setTabID(key)
+    if(key == 1){
+      fetchFactorsGoals(activeProject.id);
+    }
+  };
 
   const handleCancel = () => {
     setConfigureDPModal(false);
   };
+
+  const ExplainCards = () =>{
+    return (<Row gutter={[24, 24]}>
+      <Col span={24}>
+        {/* <Text
+          type={'title'}
+          level={3}
+          weight={'bold'}
+          extraClass={'m-0'}
+        >
+          Explain
+        </Text> */}
+        <Text
+          type={'title'}
+          level={6}
+          extraClass={'m-0 mt-2'}
+          color={'grey'}
+        >
+          Investigate the impact of various user segments and
+          their behaviors on your marketing efforts.
+        </Text>
+      </Col>
+      <Col span={24}>
+        <div className={`flex items-stretch justify-between mb-6`}>
+          {ExplainTypeList?.map((item) => {
+            return (
+              <div
+                onClick={
+                  item.active
+                    ? () => {
+                      if(tabID == 1){
+                        history.push('/explain/insights'); 
+                      }
+                      else{
+                        history.push('/explainV2/insights');  
+                      }
+                      }
+                    : null
+                }
+                // style={{ width: '320px' }}
+                className={`relative inline-flex items-stretch justify-start border-radius--sm border--thin-2 cursor-pointer mr-6 ${
+                  item.active
+                    ? 'cursor-pointer'
+                    : 'fa-template--card cursor-not-allowed'
+                }`}
+              >
+                <div className='px-6 py-4 flex flex-col items-center justify-center background-color--brand-color-1'>
+                  <SVG
+                    name={item?.icon ? item.icon : 'organisation'}
+                    size={32}
+                    color={'blue'}
+                    extraClass={'mr-2'}
+                  />
+                </div>
+                <div className='px-4 py-4 flex flex-col items-start justify-start'>
+                  {!item.active && (
+                    <Tag
+                      color='red'
+                      className={'fai--custom-card--badge'}
+                    >
+                      {' '}
+                      Coming Soon{' '}
+                    </Tag>
+                  )}
+                  <Text
+                    type={'title'}
+                    level={7}
+                    weight={'bold'}
+                    extraClass={'m-0'}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text
+                    type={'title'}
+                    level={8}
+                    color={'grey'}
+                    extraClass={'m-0 mb-2'}
+                  >
+                    {item.desc}
+                  </Text>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Col>
+    </Row>)
+  }
 
   if (loading) {
     return (
@@ -251,89 +362,37 @@ const Factors = ({
                   <Col span={20}>
                     <Row gutter={[24, 24]}>
                       <Col span={24}>
-                        <Text
-                          type={'title'}
-                          level={3}
-                          weight={'bold'}
-                          extraClass={'m-0'}
-                        >
-                          Explain
-                        </Text>
-                        <Text
-                          type={'title'}
-                          level={6}
-                          extraClass={'m-0 mt-2'}
-                          color={'grey'}
-                        >
-                          Investigate the impact of various user segments and
-                          their behaviors on your marketing efforts.
-                        </Text>
-                      </Col>
-                      <Col span={24}>
-                        <div className={`flex items-stretch justify-between mb-6`}>
-                          {ExplainTypeList?.map((item) => {
-                            return (
-                              <div
-                                onClick={
-                                  item.active
-                                    ? () => {
-                                        history.push('/explain/insights');
-                                      }
-                                    : null
-                                }
-                                // style={{ width: '320px' }}
-                                className={`relative inline-flex items-stretch justify-start border-radius--sm border--thin-2 cursor-pointer mr-6 ${
-                                  item.active
-                                    ? 'cursor-pointer'
-                                    : 'fa-template--card cursor-not-allowed'
-                                }`}
-                              >
-                                <div className='px-6 py-4 flex flex-col items-center justify-center background-color--brand-color-1'>
-                                  <SVG
-                                    name={item?.icon ? item.icon : 'organisation'}
-                                    size={32}
-                                    color={'grey'}
-                                    extraClass={'mr-2'}
-                                  />
-                                </div>
-                                <div className='px-4 py-4 flex flex-col items-start justify-start'>
-                                  {!item.active && (
-                                    <Tag
-                                      color='red'
-                                      className={'fai--custom-card--badge'}
-                                    >
-                                      {' '}
-                                      Coming Soon{' '}
-                                    </Tag>
-                                  )}
-                                  <Text
-                                    type={'title'}
-                                    level={7}
-                                    weight={'bold'}
-                                    extraClass={'m-0'}
-                                  >
-                                    {item.title}
-                                  </Text>
-                                  <Text
-                                    type={'title'}
-                                    level={8}
-                                    color={'grey'}
-                                    extraClass={'m-0 mb-2'}
-                                  >
-                                    {item.desc}
-                                  </Text>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </Col>
-                    </Row>
+                    
+                      <Tabs defaultActiveKey="1" onChange={onChangeTab}>
+    <Tabs.TabPane tab={<Text type={'title'} level={5} extraClass={'m-0'}>Explain</Text>} key="1">
+
+      {/* Tab 1 - old explain */}
+      <ExplainCards />
+      
                     <Row gutter={[24, 24]}>
                       <Col span={24}>
-                        <SavedGoals SetfetchingIngishts={SetfetchingIngishts} />
+                        <SavedGoalsOld SetfetchingIngishts={SetfetchingIngishts} />
                       </Col>
                     </Row>
+
+    </Tabs.TabPane> 
+    { whiteListedAccounts.includes(activeAgent) &&
+    <Tabs.TabPane tab={<Text type={'title'} level={5} extraClass={'m-0'}>Explain 2.0 <Tag className={'m-0'}>BETA</Tag> </Text>} key="2">
+      {/* Tab 2 - explain 2.0 */}
+    <ExplainCards />
+      
+      <Row gutter={[24, 24]}>
+        <Col span={24}>
+          <SavedGoals SetfetchingIngishts={SetfetchingIngishts} />
+        </Col>
+      </Row>
+    </Tabs.TabPane> }
+    
+  </Tabs> 
+
+                      </Col>
+                    </Row>
+                    
                   </Col>
                 </Row>
               </div>
@@ -362,9 +421,11 @@ const mapStateToProps = (state) => {
     goals: state.factors.goals,
     agents: state.agent.agents,
     factors_models: state.factors.factors_models,
+    activeAgent: state.agent?.agent_details?.email,
   };
 };
 export default connect(mapStateToProps, {
+  fetchSavedExplainGoals,
   fetchFactorsGoals,
   fetchFactorsTrackedEvents,
   fetchFactorsTrackedUserProperties,

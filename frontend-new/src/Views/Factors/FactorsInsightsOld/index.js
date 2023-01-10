@@ -4,7 +4,7 @@ import SearchBar from '../../../components/SearchBar';
 import {
   Row, Col, Button, Spin
 } from 'antd';
-import { fetchSavedExplainGoals, fetchFactorsModels, setGoalInsight, saveGoalInsightRules, saveGoalInsightModel, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
+import { fetchFactorsGoals, fetchFactorsModels, fetchGoalInsights, setGoalInsight, saveGoalInsightRules, saveGoalInsightModel, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
 import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
@@ -13,19 +13,20 @@ import { useHistory } from 'react-router-dom';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import ResultsTableL1 from './Components/ResultsTableL1';
-import ExplainQueryBuilder from '../ExplainQueryBuilder';
+import ExplainQueryBuilderOld from '../ExplainQueryBuilderOld';
 import HeaderContents from './HeaderContents';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import matchEventName from './Utils/MatchEventNames';
 
 const Factors = ({
-  fetchSavedExplainGoals
+  fetchFactorsGoals
   , activeProject
   , goals
   , agents
   , fetchProjectAgents
   , fetchEventNames
-  , fetchFactorsModels 
+  , fetchFactorsModels
+  , fetchGoalInsights
   , fetchFactorsTrackedEvents
   , fetchFactorsTrackedUserProperties
   , getUserProperties,
@@ -48,7 +49,7 @@ const Factors = ({
     dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
     const getData1 = async () => {
       await fetchProjectAgents(activeProject.id);
-      await fetchSavedExplainGoals(activeProject.id);
+      await fetchFactorsGoals(activeProject.id);
       await fetchEventNames(activeProject.id);
       await fetchFactorsModels(activeProject.id);
       await fetchFactorsTrackedEvents(activeProject.id);
@@ -101,7 +102,7 @@ const Factors = ({
             <HeaderContents />
             <div className={'fa-container'}>
               <div className={'mt-24'}>
-                <ExplainQueryBuilder />
+                <ExplainQueryBuilderOld />
                 <div id='fa-explain-results--container'>
                   {!_.isEmpty(goalInsights?.insights) && <ResultsTableL1
                     goalInsights={goalInsights}
@@ -128,4 +129,4 @@ const mapStateToProps = (state) => {
     userPropNames: state.coreQuery.userPropNames
   };
 };
-export default connect(mapStateToProps, { fetchSavedExplainGoals, setGoalInsight, saveGoalInsightModel, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, fetchProjectAgents, saveGoalInsightRules, fetchFactorsModels, fetchEventNames, getUserProperties })(Factors);
+export default connect(mapStateToProps, { fetchFactorsGoals, setGoalInsight, saveGoalInsightModel, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, fetchProjectAgents, saveGoalInsightRules, fetchGoalInsights, fetchFactorsModels, fetchEventNames, getUserProperties })(Factors);

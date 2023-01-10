@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Modal, Form, Input, Button, Row, Col, Select, message
+  Drawer, Button, Row, Col, Select, message
 } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import { fetchEventNames, getUserProperties, getEventProperties } from 'Reducers/coreQuery/middleware';
-import { createExplainJob, fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel, fetchFactorsModelMetadata } from 'Reducers/factors';
+import { fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel, fetchFactorsModelMetadata } from 'Reducers/factors';
 import { connect } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import _ from 'lodash';
@@ -18,7 +18,6 @@ import FaSelect from 'Components/FaSelect';
 import ComposerBlock from '../../components/QueryCommons/ComposerBlock';
 import EventTag from './FactorsInsightsNew/Components/EventTag'
 import factorsai from 'factorsai';
-import FaDatepicker from 'Components/FaDatepicker';
 
 
 const title = (props) => {
@@ -82,10 +81,7 @@ const CreateGoalDrawer = (props) => {
   const [showEventsToIncDD, setShowEventsToIncDD] = useState(false);
 
   const [modelMetadata, setModelMetadata] = useState([]);
-  const [selectedDateRange, setSelectedDateRange] = useState({});
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [loading, setLoading] = useState(false);
   const operatorMap = {
     "=": "equals",
     "!=": "notEqual",
@@ -119,7 +115,23 @@ const CreateGoalDrawer = (props) => {
     // console.log("value-->",value);
     // console.log("event value-->",value);
     setEvent1(value[0]);
-  } 
+  }
+  // const onChangeFilter = (grp, value) => {
+  //   setshowFtDropDown(false)
+  //   console.log('onChangeFilter',value)
+  //   setfilterLoader(true);
+  //   fetchUserPropertyValues(props.activeProject.id,value[0]).then(res => {
+  //     setglobalFilter([ ...globalFilter , 
+  //       {
+  //         "key": value[0],
+  //         "vl": res.data
+  //       }
+  //   ]); 
+  //   console.log('fetchUserPropertyValues',res);
+  //   setfilterLoader(false);
+  //   });
+  //   // setEvent1(value[0]); 
+  // }
   const removeFilter = (index) => {
     const fltrs = globalFilter.filter((v, i) => i !== index);
     setglobalFilter(fltrs);
@@ -129,42 +141,42 @@ const CreateGoalDrawer = (props) => {
     setShowDropDown2(false);
     setEvent2(value[0]);
   }
+  const onChangeDateTime = (grp, value) => {
+    setShowDateTime(false);
+    setSelectedModel(value);
+  }
 
+  const readableTimstamp = (unixTime) => {
+    return moment.unix(unixTime).utc().format('MMM DD, YYYY');
+  }
+  const factorsModels = !_.isEmpty(props.factors_models) && _.isArray(props.factors_models) ? props.factors_models.map((item) => { return [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`] }) : [];
 
-  // const readableTimstamp = (unixTime) => {
-  //   return moment.unix(unixTime).utc().format('MMM DD, YYYY');
-  // }
-
-  // const factorsModels = !_.isEmpty(props.factors_models) && _.isArray(props.factors_models) ? props.factors_models.map((item) => { return [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`] }) : [];
-
-  // const modelMetaDataFn = (projectID, modelID) => {
-  //   props.fetchFactorsModelMetadata(projectID, modelID);
-  //   if (props.factors_model_metadata) {
-  //     setModelMetadata(props?.factors_model_metadata[0]?.events)
+  // useEffect(()=>{ 
+  //   console.log('event-->>',event1);
+  //   if(event1){
+  //     props.getEventProperties(props.activeProject.id,event1)
   //   }
-  // }
+  // },[event1]); 
+  const modelMetaDataFn = (projectID, modelID) => {
+    props.fetchFactorsModelMetadata(projectID, modelID);
+    if (props.factors_model_metadata) {
+      setModelMetadata(props?.factors_model_metadata[0]?.events)
+    }
+  }
 
-  // useEffect(() => {
-  //   let calcModelId = modelIDtoStringMap();
-  //   if (calcModelId) {
-  //     modelMetaDataFn(props?.activeProject?.id, calcModelId[0]?.mid);
-  //   }
-  // }, [selectedModel]);
+  useEffect(() => {
+    let calcModelId = modelIDtoStringMap();
+    if (calcModelId) {
+      modelMetaDataFn(props?.activeProject?.id, calcModelId[0]?.mid);
+    }
+  }, [selectedModel]);
 
   useEffect(() => {
     let goalInsights = props.goal_insights
-    if (goalInsights) { 
-
-      console.log('goalInsights-->>',goalInsights);
-
-      let defaultDate = {
-        startDate: moment.unix(goalInsights?.sts),
-        endDate: moment.unix(goalInsights?.ets),
-      }  
-      setSelectedDateRange(defaultDate)
-
+    if (goalInsights) {
+      console.log("coming from saved insights", goalInsights);
       if (goalInsights.type == "singleevent") {
-        if (goalInsights?.goal?.st_en == '') {
+        if(goalInsights?.goal?.st_en == '') {
           setEvent1(goalInsights?.goal?.en_en)
         } else {
           setEvent1(goalInsights?.goal?.st_en)
@@ -183,18 +195,30 @@ const CreateGoalDrawer = (props) => {
     return findItem ? findItem : item
   }
 
-  useEffect(() => { 
-    //fetching model metada for 'events to include'
-    
-    // let modelID = props.factors_models ? props.factors_models[0]?.mid : 0; 
-
-    // if (props.factors_models) {
-    //   if (props.factors_insight_model) {
-    //     setSelectedModel(props.factors_insight_model);
-    //   } else {
-    //     setSelectedModel(factorsModels[0]);
-    //   }
+  useEffect(() => {
+    // if(!props.GlobalEventNames || !factorsModels){
+    //   const getData = async () => {
+    //     await props.fetchEventNames(props.activeProject.id);
+    //     await props.fetchFactorsModels(props.activeProject.id);
+    //   };
+    //   getData();    
     // }
+    // if(props.GlobalEventNames){ 
+    //   SetEventNames(props.GlobalEventNames);
+
+    // }
+
+    //fetching model metada for 'events to include'
+    let modelID = props.factors_models ? props.factors_models[0]?.mid : 0;
+    modelMetaDataFn(props.activeProject.id, modelID);
+
+    if (props.factors_models) {
+      if (props.factors_insight_model) {
+        setSelectedModel(props.factors_insight_model);
+      } else {
+        setSelectedModel(factorsModels[0]);
+      }
+    }
     if (props.activeProject && props.activeProject.id) {
       props.getUserProperties(props.activeProject.id, 'channel')
     }
@@ -222,27 +246,111 @@ const CreateGoalDrawer = (props) => {
 
   }, [props.userProperties]);
 
+
+  const factorsDataFormatNew = {
+    "name": "",
+    "rule": {
+      "st_en": {
+        "na": "",
+        "pr": [
+          // {
+          //     "en": "user",
+          //     "lop": "",
+          //     "op": "equals",
+          //     "pr": "$user_id12",
+          //     "ty": "categorical",
+          //     "va": "1"
+          // }
+        ]
+      },
+      "en_en": {
+        "na": "",
+        "pr": []
+      },
+      "gpr": [],
+      "vs": true
+    }
+  };
+
+
+  // const factorsDataFormat = {
+  //   name: "",
+  //   rule: {
+  //       st_en: "",
+  //       en_en: "",
+  //       vs: true,
+  //       rule: {
+  //           ft: []
+  //       }
+  //   }
+  // };
+
   const smoothScroll = (element) => {
     document.querySelector(element).scrollIntoView({
       behavior: 'smooth',
     });
   }
 
-  // const modelIDtoStringMap = () => {
-  //   if (_.isArray(props?.factors_models)) {
-  //     return props?.factors_models?.filter((item) => {
-  //       const generateStringArray = [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`];
-  //       if (_.isEqual(selectedModel, generateStringArray)) {
-  //         return item
-  //       }
-  //     });
-  //   }
-  //   else return []
+  const modelIDtoStringMap = () => {
+    if (_.isArray(props?.factors_models)) {
+      return props?.factors_models?.filter((item) => {
+        const generateStringArray = [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`];
+        if (_.isEqual(selectedModel, generateStringArray)) {
+          return item
+        }
+      });
+    }
+    else return []
 
-  // }
+  }
 
 
+  const getInsights = (projectID, isJourney = false) => {
+    setInsightBtnLoading(true);
+    const calcModelId = modelIDtoStringMap();
 
+    // console.log("calcModelId",calcModelId[0].mid);
+    let gprData = getFilters(filters);
+    let event1pr = getFilters(filtersEvent1);
+    let event2pr = getFilters(filtersEvent2);
+    let factorsData = {
+      ...factorsDataFormatNew,
+      rule: {
+        ...factorsDataFormatNew.rule,
+        st_en: {
+          na: event2 ? (event2 ? event1 : null) : null,
+          pr: event2 ? (event2pr ? event1pr : null) : null,
+        },
+        en_en: {
+          na: event2 ? (event2 ? event2 : event1) : event1,
+          pr: event2 ? (event2pr ? event2pr : event1pr) : event1pr,
+        },
+        gpr: gprData,
+        in_en: eventsToInc
+      }
+    }
+
+    props.fetchGoalInsights(projectID, isJourney, factorsData, calcModelId[0]?.mid).then((data) => {
+      props.saveGoalInsightRules(factorsData);
+      props.saveGoalInsightModel(selectedModel);
+      setInsightBtnLoading(false);
+      // history.push('/explain/insights');
+      setCollapse(true);
+      setTimeout(() => {
+        smoothScroll('#explain-builder--footer');
+      }, 200);
+
+    }).catch((err) => {
+      console.log("fetchGoalInsights catch", err);
+      const ErrMsg = err?.data?.error ? err.data.error : `Oops! Something went wrong!`;
+      message.error(ErrMsg);
+      setInsightBtnLoading(false);
+    });
+
+    //Factors RUN_EXPLAIN tracking
+    factorsai.track('RUN_EXPLAIN', { 'query_type': 'explain', project_name: props.activeProject.name, project_id: props.activeProject.id });
+
+  }
   const delOption = (val, index) => {
     const filteredItems = eventsToInc.filter(item => item !== val);
     setEventsToInc(filteredItems)
@@ -255,11 +363,11 @@ const CreateGoalDrawer = (props) => {
     setShowEventsToIncDD(false);
   };
 
-  const removeEvent1 = () => {
+  const removeEvent1 = () =>{
     setEvent1(null);
     setfiltersEvent1([]);
   }
-  const removeEvent2 = () => {
+  const removeEvent2 = () =>{
     setEvent2(null);
     setfiltersEvent2([]);
   }
@@ -267,151 +375,47 @@ const CreateGoalDrawer = (props) => {
   const modelMetadataDDValue = modelMetadata?.map((item) => { return [matchEventName(item)] })
   const queryBuilderCollapse = !_.isEmpty(props?.goal_insights?.insights)
 
-
-  const SaveReportModal = () => {
-    const [form] = Form.useForm();
-
-    const getInsights = (reportName) => {
-      setInsightBtnLoading(true);
-      // const calcModelId = modelIDtoStringMap();
-      let projectID = props.activeProject.id
-  
-      // console.log("calcModelId",calcModelId[0].mid);
-      let gprData = getFilters(filters);
-      let event1pr = getFilters(filtersEvent1);
-      let event2pr = getFilters(filtersEvent2);
-      let payload = {
-        rule: {
-          st_en: {
-            na: event2 ? (event2 ? event1 : null) : null,
-            pr: event2 ? (event2pr ? event1pr : null) : null,
-          },
-          en_en: {
-            na: event2 ? (event2 ? event2 : event1) : event1,
-            pr: event2 ? (event2pr ? event2pr : event1pr) : event1pr,
-          },
-          gpr: gprData,
-          in_en: eventsToInc,
-        },
-        name: reportName,
-        sts: moment(selectedDateRange.startDate).unix(),
-        ets: moment(selectedDateRange.endDate).unix(),
-      }
-  
-      // creating explain job
-      props.createExplainJob(projectID, payload).then((data) => {
-        setInsightBtnLoading(false);
-        history.push('/explain');  
-        message.success('Your report is saved. Find under the saved reports of Explain 2.0');  
-      }).catch((err) => {
-        console.log("createExplainJob catch", err);
-        const ErrMsg = err?.data?.error ? err.data.error : `Oops! Something went wrong!`;
-        message.error(ErrMsg);
-        setInsightBtnLoading(false);
-      });
-  
-      //Factors RUN_EXPLAIN tracking
-      factorsai.track('RUN_EXPLAIN', { 'query_type': 'explain', project_name: props.activeProject.name, project_id: props.activeProject.id });
-  
-    }
-
-    const onFinish = (values) => {
-      getInsights(values?.title).then(() => {
-        setIsModalOpen(false)
-      });
-    };
-    const onFinishFailed = (errorInfo) => {
-      console.log('Failed:', errorInfo);
-    };
-    const onReset = () => {
-      setIsModalOpen(false)
-      form.resetFields();
-    };
-    return (
-      <Modal title="Save report"
-        visible={isModalOpen}
-        okText={'Save'}
-        footer={null}
-        className='fa-modal--regular'
-        afterClose={onReset}
-        onCancel={onReset}
-      >
-
-        <Form
-          name="basic"
-          initialValues={{
-            remember: true,
-          }}
-          onFinish={onFinish}
-          onFinishFailed={onFinishFailed}
-          autoComplete="off"
-          form={form}
-        >
-          <Form.Item
-
-            name="title"
-            rules={[
-              {
-                required: true,
-                message: 'Please enter a name (or) title for the report',
-              },
-            ]}
-          >
-            <Input placeholder={'Name'} className={'fa-input'} size={'large'} />
-          </Form.Item>
-
-          <div className='mt-2'>
-            <Form.Item name="description">
-              <Input.TextArea className={'fa-input'} size={'large'} placeholder={'Description'} />
-            </Form.Item>
-          </div>
-
-          <div className='mt-8 flex justify-end'>
-
-            <Form.Item>
-              <Button size={'large'} htmlType="button" onClick={onReset}>
-                Cancel
-              </Button>
-              <Button size={'large'} type="primary" htmlType="submit"  loading={insightBtnLoading} className={'ml-2'}> Save </Button>
-            </Form.Item>
-          </div>
-
-        </Form>
-      </Modal>
-    )
-  }
-
-
   return (
     <div
     >
+      {/* <Drawer
+        title={title(props)}
+        placement="left"
+        closable={false}
+        visible={props.visible}
+        onClose={props.onClose}
+        getContainer={false}
+        width={'650px'}
+        className={'fa-drawer'}
+      > */}
 
       <div className={`flex flex-col py-4 px-8 border--thin-2 relative `}>
         <div className={`explain-builder--content ${collapse ? 'explain-builder--collapsed' : ''}`}>
 
 
-           <ComposerBlock blockTitle={'SELECT ANALYSIS WINDOW'} isOpen={showDateBlock}
+          <ComposerBlock blockTitle={'SELECT ANALYSIS WINDOW'} isOpen={showDateBlock}
             showIcon={true} onClick={() => setDateBlock(!showDateBlock)}
             extraClass={`no-padding-l`}
           >
-            <div className={'relative mt-4'}>
-            <FaDatepicker
-            customPicker
-            presetRange
-            monthPicker
-            quarterPicker
-            placement='bottomRight'
-            buttonSize={'large'}
-            range={{
-              startDate: selectedDateRange.startDate,
-              endDate: selectedDateRange.endDate,
-            }}
-            onSelect={setSelectedDateRange}
-          />
-
+            <div className={'relative mr-2'}>
+              {<Button size={'large'} onClick={() => setShowDateTime(true)} className='mt-2 border--thin-2 '><SVG name={'calendar'} extraClass={'mr-1'} />{selectedModel ? selectedModel : 'Select Date Range'} </Button>}
+              {showDateTime &&
+                <GroupSelect2
+                  groupedProperties={factorsModels ? [
+                    {
+                      label: 'Most Recent',
+                      icon: 'most_recent',
+                      values: factorsModels
+                    }
+                  ] : null}
+                  placeholder="Select Date Range "
+                  optionClick={(group, val) => onChangeDateTime(group, val)}
+                  onClickOutside={() => setShowDateTime(false)}
+                />
+              }
             </div>
 
-          </ComposerBlock> 
+          </ComposerBlock>
 
           <ComposerBlock blockTitle={'EXPLAIN CONVERSIONS BETWEEN'} isOpen={eventsBlockOpen}
             showIcon={true} onClick={() => setEventsBlockOpen(!eventsBlockOpen)}
@@ -455,7 +459,7 @@ const CreateGoalDrawer = (props) => {
                           }
                         </div>
                       </div>
-                      {(event1 && filtersEvent1.length < 1) && <Button type={'text'} onClick={() => setEventFilter1DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
+                      {(event1 && filtersEvent1.length<1) && <Button type={'text'} onClick={() => setEventFilter1DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
                       {event1 && <Button type={'text'} onClick={() => removeEvent1()} className={'fa-btn--custom m-0'}><SVG name={'delete'} extraClass={'m-0'} /></Button>}
                     </div>
                     <EventFilterBy event={event1} setfiltersParent={setfiltersEvent1} showEventFilterDD={showEventFilter1DD} setEventFilterDD={setEventFilter1DD} />
@@ -505,7 +509,7 @@ const CreateGoalDrawer = (props) => {
                             }
                           </div>
                         </div>
-                        {(event2 && filtersEvent2.length < 1) && <Button type={'text'} onClick={() => setEventFilter2DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
+                        {(event2 && filtersEvent2.length<1) && <Button type={'text'} onClick={() => setEventFilter2DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
                         {event2 && <Button type={'text'} onClick={() => removeEvent2()} className={'fa-btn--custom m-0'}><SVG name={'delete'} extraClass={'m-0'} /></Button>}
                       </div>
                       <EventFilterBy event={event2} setfiltersParent={setfiltersEvent2} showEventFilterDD={showEventFilter2DD} setEventFilterDD={setEventFilter2DD} />
@@ -519,7 +523,7 @@ const CreateGoalDrawer = (props) => {
 
           </ComposerBlock>
 
-          {/* <ComposerBlock blockTitle={'EVENTS TO INCLUDE'} isOpen={eventsToIncBlock}
+          <ComposerBlock blockTitle={'EVENTS TO INCLUDE'} isOpen={eventsToIncBlock}
             showIcon={true} onClick={() => setEventsToIncBlock(!eventsToIncBlock)}
             extraClass={`no-padding-l`}
           >
@@ -576,37 +580,20 @@ const CreateGoalDrawer = (props) => {
               </div>
             </div>
 
-          </ComposerBlock> */}
+          </ComposerBlock>
 
         </div>
-        <div id={`explain-builder--footer`} className={`flex items-center pt-4 border-top--thin-2 justify-between`} >
+        <div id={`explain-builder--footer`} className={`flex items-center pt-4 border-top--thin-2 justify-end`} >
 
-          <div></div>
-      
-          {SaveReportModal()}
-
-          <div className={`flex items-center justify-end`} >
-            {(queryBuilderCollapse || collapse) && <Button
-              className={`mr-2`}
-              size={'large'}
-              type={'default'}
-              onClick={() => setCollapse(!collapse)} >
-              <SVG name={collapse ? `Expand` : `arrowUp`} size={20} extraClass={`mr-1`}></SVG>{`${collapse ? 'Expand' : 'Collapse all'}`}
-            </Button>}
-
-            <Button type="primary" size={'large'}
-              loading={insightBtnLoading}
-              disabled={!(event1)}
-              // onClick={() => getInsights(props.activeProject.id, eventCount === 2 ? true : false)}
-              onClick={() => setIsModalOpen(true)}
-            >{'Save and Build'}</Button>
-          </div>
-
+          {(queryBuilderCollapse || collapse) && <Button className={`mr-2`} size={'large'} type={'default'} onClick={() => setCollapse(!collapse)} > <SVG name={collapse ? `Expand` : `arrowUp`} size={20} extraClass={`mr-1`}></SVG>{`${collapse ? 'Expand' : 'Collapse all'}`} </Button>}
+          <Button type="primary" size={'large'} loading={insightBtnLoading} disabled={!(event1 && selectedModel)} onClick={() => getInsights(props.activeProject.id, eventCount === 2 ? true : false)}>Find Insights</Button>
 
         </div>
 
 
       </div>
+
+      {/* </Drawer> */}
       {!queryBuilderCollapse && <div style={{ marginBottom: '200px' }} />}
     </div>
   );
@@ -628,6 +615,6 @@ const mapStateToProps = (state) => {
   };
 };
 export default connect(mapStateToProps, {
-  fetchEventNames, createExplainJob,
+  fetchEventNames, fetchGoalInsights,
   fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel, getUserProperties, fetchUserPropertyValues, getEventProperties, fetchFactorsModelMetadata
 })(CreateGoalDrawer);
