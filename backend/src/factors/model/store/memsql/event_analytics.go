@@ -54,6 +54,9 @@ func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query,
 	}
 	waitGroup.Wait()
 	for _, result := range resultGroup.Results {
+		if result.Headers == nil {
+			return resultGroup, http.StatusInternalServerError
+		}
 		if result.Headers[0] == model.AliasError {
 			return resultGroup, http.StatusPartialContent
 		}
@@ -68,6 +71,7 @@ func (store *MemSQL) runSingleEventsQuery(projectId int64, query model.Query,
 		"project_id": projectId,
 		"wait_group": waitGroup,
 	}
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	defer waitGroup.Done()

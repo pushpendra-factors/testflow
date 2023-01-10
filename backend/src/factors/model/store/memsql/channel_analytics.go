@@ -407,9 +407,6 @@ func (store *MemSQL) RunChannelGroupQuery(projectID int64, queriesOriginal []mod
 		"req_id":           reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	if projectID == 559 {
-		log.WithField("queriesOriginal", queriesOriginal).WithField("reqID", reqID).Warn("Inside RunChannelGroupQuery - memsql caching test.")
-	}
 	queries := make([]model.ChannelQueryV1, 0, 0)
 	U.DeepCopy(&queriesOriginal, &queries)
 
@@ -429,6 +426,9 @@ func (store *MemSQL) RunChannelGroupQuery(projectID int64, queriesOriginal []mod
 	}
 	waitGroup.Wait()
 	for _, result := range resultGroup.Results {
+		if result.Headers == nil {
+			return resultGroup, http.StatusInternalServerError
+		}
 		if result.Headers[0] == model.AliasError {
 			return resultGroup, http.StatusPartialContent
 		}
@@ -447,10 +447,8 @@ func (store *MemSQL) runSingleChannelQuery(projectID int64, query model.ChannelQ
 		"wait_group":    waitGroup,
 		"req_id":        reqID,
 	}
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	if projectID == 559 {
-		log.WithField("query", query).WithField("reqID", reqID).Warn("Inside runSingleChannelQuery - memsql caching test.")
-	}
 	defer waitGroup.Done()
 	tempResultHolder, _ := store.ExecuteChannelQueryV1(projectID, &query, reqID)
 	resultHolder.Headers = tempResultHolder.Headers
@@ -467,7 +465,6 @@ func (store *MemSQL) ExecuteChannelQueryV1(projectID int64, query *model.Channel
 		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	logCtx := log.WithFields(logFields)
 	queryResult := &model.ChannelQueryResultV1{}
@@ -478,9 +475,6 @@ func (store *MemSQL) ExecuteChannelQueryV1(projectID int64, query *model.Channel
 	sources, _ := store.GetCustomAdsSourcesByProject(projectID)
 	if !(isValidChannel(query.Channel, sources)) {
 		return queryResult, http.StatusBadRequest
-	}
-	if projectID == 559 {
-		log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteChannelQueryV1 - memsql caching test.")
 	}
 
 	switch query.Channel {
