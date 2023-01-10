@@ -74,126 +74,126 @@ const SPARK_CHART_SAMPLE_KPI_DATA = [
   }
 ];
 
-const SPARK_CHART_SAMPLE_KPI_HOURLY_DATA = [
-  {
-    date: new Date('Thu Jul 28 2022 19:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 26
-  },
-  {
-    date: new Date('Thu Jul 28 2022 20:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 42
-  },
+// const SPARK_CHART_SAMPLE_KPI_HOURLY_DATA = [
+//   {
+//     date: new Date('Thu Jul 28 2022 19:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 26
+//   },
+//   {
+//     date: new Date('Thu Jul 28 2022 20:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 42
+//   },
 
-  {
-    date: new Date('Thu Jul 28 2022 21:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 36
-  },
+//   {
+//     date: new Date('Thu Jul 28 2022 21:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 36
+//   },
 
-  {
-    date: new Date('Thu Jul 28 2022 22:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 26
-  },
+//   {
+//     date: new Date('Thu Jul 28 2022 22:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 26
+//   },
 
-  {
-    date: new Date('Thu Jul 28 2022 23:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 45
-  },
+//   {
+//     date: new Date('Thu Jul 28 2022 23:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 45
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 00:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 29
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 00:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 29
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 01:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 27
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 01:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 27
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 02:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 40
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 02:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 40
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 03:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 23
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 03:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 23
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 04:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 22
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 04:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 22
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 05:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 32
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 05:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 32
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 06:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 25
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 06:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 25
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 07:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 36
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 07:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 36
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 08:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 31
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 08:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 31
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 09:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 42
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 09:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 42
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 10:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 26
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 10:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 26
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 11:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 25
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 11:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 25
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 12:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 23
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 12:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 23
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 13:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 29
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 13:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 29
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 14:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 34
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 14:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 34
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 15:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 30
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 15:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 30
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 16:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 15
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 16:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 15
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 17:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 37
-  },
+//   {
+//     date: new Date('Fri Jul 29 2022 17:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 37
+//   },
 
-  {
-    date: new Date('Fri Jul 29 2022 18:30:00 GMT+0530 (India Standard Time)'),
-    $form_submitted: 34
-  }
-];
+//   {
+//     date: new Date('Fri Jul 29 2022 18:30:00 GMT+0530 (India Standard Time)'),
+//     $form_submitted: 34
+//   }
+// ];
 
 const SPARK_CHART_SAMPLE_KPI_DATA_WITH_COMPARISON_DATA = [
   {
@@ -259,12 +259,12 @@ export const DefaultChart = () => {
     // event prop should match the key present in the chartData array. In this case, event is $form_submitted
     <SparkChartWithCount
       chartData={SPARK_CHART_SAMPLE_KPI_DATA}
-      event="$form_submitted"
+      event='$form_submitted'
       total={SPARK_CHART_SAMPLE_KPI_DATA.reduce(
         (total, elem) => total + elem.$form_submitted,
         0
       )}
-      headerTitle="Form Submitted"
+      headerTitle='Form Submitted'
     />
   );
 };
@@ -275,7 +275,7 @@ export const WithComparisonEnabled = () => {
     <SparkChartWithCount
       chartColor={visualizationColors[7]}
       chartData={SPARK_CHART_SAMPLE_KPI_DATA_WITH_COMPARISON_DATA}
-      event="$form_submitted"
+      event='$form_submitted'
       comparisonApplied={true}
       total={SPARK_CHART_SAMPLE_KPI_DATA.reduce(
         (total, elem) => total + elem.$form_submitted,
@@ -287,7 +287,7 @@ export const WithComparisonEnabled = () => {
       )}
       eventNames={eventNames}
       smallFont={true}
-      headerTitle="Form Submitted"
+      headerTitle='Form Submitted'
     />
   );
 };
@@ -298,7 +298,7 @@ export const WithVerticalAlignment = () => {
     <SparkChartWithCount
       chartColor={visualizationColors[4]}
       chartData={SPARK_CHART_SAMPLE_KPI_DATA_WITH_COMPARISON_DATA}
-      event="$form_submitted"
+      event='$form_submitted'
       comparisonApplied={true}
       total={SPARK_CHART_SAMPLE_KPI_DATA.reduce(
         (total, elem) => total + elem.$form_submitted,
@@ -310,8 +310,8 @@ export const WithVerticalAlignment = () => {
       )}
       eventNames={eventNames}
       smallFont={false}
-      alignment="vertical"
-      headerTitle="Form Submitted"
+      alignment='vertical'
+      headerTitle='Form Submitted'
     />
   );
 };

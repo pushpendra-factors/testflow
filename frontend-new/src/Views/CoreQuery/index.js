@@ -109,7 +109,8 @@ import {
   SET_SAVED_QUERY_SETTINGS,
   UPDATE_PIVOT_CONFIG,
   DEFAULT_PIVOT_CONFIG,
-  UPDATE_FUNNEL_TABLE_CONFIG
+  UPDATE_FUNNEL_TABLE_CONFIG,
+  UPDATE_CORE_QUERY_REDUCER
 } from './constants';
 import {
   getValidGranularityOptions,
@@ -134,12 +135,10 @@ function CoreQuery({
   getCampaignConfigData,
   KPI_config,
   fetchDemoProject,
-  getHubspotContact,
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
-  existingQueries,
   fetchKPIConfig
 }) {
   const { query_id, query_type } = useParams();
@@ -503,6 +502,13 @@ function CoreQuery({
     localDispatch({ type, payload });
   }, []);
 
+  const updateCoreQueryReducer = useCallback((payload) => {
+    localDispatch({
+      type: UPDATE_CORE_QUERY_REDUCER,
+      payload
+    });
+  }, []);
+
   const updateFunnelTableConfig = useCallback(
     (payload) => {
       updateLocalReducer(UPDATE_FUNNEL_TABLE_CONFIG, payload);
@@ -826,7 +832,9 @@ function CoreQuery({
           durationObj,
           globalFilters,
           eventsCondition,
-          groupAnalysis
+          groupAnalysis,
+          coreQueryState.funnelConversionDurationNumber,
+          coreQueryState.funnelConversionDurationUnit
         );
 
         if (!isQuerySaved) {
@@ -879,8 +887,10 @@ function CoreQuery({
       groupAnalysis,
       activeProject.id,
       activeProject?.name,
-      getDashboardConfigs,
       dateRange,
+      coreQueryState.funnelConversionDurationNumber,
+      coreQueryState.funnelConversionDurationUnit,
+      getDashboardConfigs,
       resetComparisonData,
       configActionsOnRunningQuery,
       updateResultState,
@@ -1729,7 +1739,8 @@ function CoreQuery({
         setAttributionMetrics,
         setNavigatedFromDashboard,
         resetComparisonData,
-        handleCompareWithClick
+        handleCompareWithClick,
+        updateCoreQueryReducer
       }}
     >
       <Modal
@@ -1876,7 +1887,8 @@ function CoreQuery({
       runProfileQuery,
       setQueries,
       setProfileQueries,
-      runAttributionQuery
+      runAttributionQuery,
+      updateCoreQueryReducer
     }),
     [
       coreQueryState,
@@ -1901,7 +1913,8 @@ function CoreQuery({
       runKPIQuery,
       runProfileQuery,
       runAttributionQuery,
-      setNavigatedFromDashboard
+      setNavigatedFromDashboard,
+      updateCoreQueryReducer
     ]
   );
 
@@ -2103,6 +2116,7 @@ function CoreQuery({
                 updateSavedQuerySettings={updateSavedQuerySettings}
                 setAttributionMetrics={setAttributionMetrics}
                 dateFromTo={dateFromTo}
+                updateCoreQueryReducer={updateCoreQueryReducer}
               />
             )}
 

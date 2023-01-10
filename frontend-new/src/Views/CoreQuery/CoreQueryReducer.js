@@ -9,12 +9,19 @@ import {
   UPDATE_CHART_TYPES,
   SET_SAVED_QUERY_SETTINGS,
   UPDATE_PIVOT_CONFIG,
-  UPDATE_FUNNEL_TABLE_CONFIG
+  UPDATE_FUNNEL_TABLE_CONFIG,
+  UPDATE_CORE_QUERY_REDUCER
 } from './constants';
 
 export default function (state, action) {
   const { payload } = action;
   switch (action.type) {
+    case UPDATE_CORE_QUERY_REDUCER: {
+      return {
+        ...state,
+        ...payload
+      };
+    }
     case SET_NAVIGATED_FROM_DASHBOARD:
       return {
         ...state,

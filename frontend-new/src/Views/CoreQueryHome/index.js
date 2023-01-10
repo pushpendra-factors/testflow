@@ -65,7 +65,7 @@ import {
 } from '../Dashboard/utils';
 import TemplatesModal from '../CoreQuery/Templates';
 import { fetchWeeklyIngishts } from '../../reducers/insights';
-import _, { get } from 'lodash';
+import _ from 'lodash';
 import { getQueryType } from '../../utils/dataFormatter';
 import { fetchAgentInfo } from 'Reducers/agentActions';
 import factorsai from 'factorsai';
@@ -81,7 +81,6 @@ import {
 import AppModal from '../../components/AppModal';
 import userflow from 'userflow.js';
 import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
-import { useHistory } from 'react-router-dom';
 import useAutoFocus from 'hooks/useAutoFocus';
 
 // const whiteListedAccounts_KPI = [
@@ -161,8 +160,8 @@ const columns = [
           <Avatar
             src={
               typeof created_by_user?.email === 'string' &&
-              created_by_user?.email?.length != 0 &&
-              created_by_user.email.split('@')[1] == 'factors.ai'
+              created_by_user?.email?.length !== 0 &&
+              created_by_user.email.split('@')[1] === 'factors.ai'
                 ? 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/factors-icon.svg'
                 : !!created_by_user?.image
                 ? created_by_user?.image
@@ -204,7 +203,8 @@ function CoreQuery({
   fetchSlackChannels,
   fetchProjectSettingsV1,
   enableSlackIntegration,
-  dateFromTo
+  dateFromTo,
+  updateCoreQueryReducer
 }) {
   let activeProjectProfilePicture = useSelector(
     (state) => state.global.active_project.profile_picture
@@ -236,14 +236,12 @@ function CoreQuery({
   const { agent_details } = useSelector((state) => state.agent);
   const inputComponentRef = useAutoFocus(showSearch);
 
-  const history = useHistory();
-
   useEffect(() => {
     const getData = async () => {
       await fetchAgentInfo();
     };
     getData();
-  }, [activeProject]);
+  }, [activeProject, fetchAgentInfo]);
 
   useEffect(() => {
     if (dateFromTo?.to === undefined || dateFromTo?.to === '') {
@@ -375,7 +373,7 @@ function CoreQuery({
         return queryOpts;
       });
     },
-    [dispatch]
+    [dispatch, setQueries, setQueryOptions]
   );
 
   const updateProfileQueryState = useCallback(
@@ -401,7 +399,7 @@ function CoreQuery({
         return queryOpts;
       });
     },
-    [dispatch]
+    [dispatch, setProfileQueries, setQueryOptions]
   );
 
   const updateKPIQueryState = useCallback(
@@ -437,7 +435,7 @@ function CoreQuery({
         return queryOpts;
       });
     },
-    [dispatch]
+    [dispatch, setQueries, setQueryOptions]
   );
 
   const getWeeklyIngishts = (record) => {
@@ -590,6 +588,12 @@ function CoreQuery({
         } else {
           equivalentQuery = getStateQueryFromRequestQuery(record.query);
           updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
+          updateCoreQueryReducer({
+            funnelConversionDurationNumber:
+              equivalentQuery.funnelConversionDurationNumber,
+            funnelConversionDurationUnit:
+              equivalentQuery.funnelConversionDurationUnit
+          });
         }
         updateSavedQuerySettings(record.settings || {});
         setQueryType(equivalentQuery.queryType);
@@ -665,7 +669,7 @@ function CoreQuery({
     } else {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     }
-  }, [location.state, setQueryToState]);
+  }, [dispatch, location, setNavigatedFromDashboard, setQueryToState]);
 
   const data = queriesState.data
     .filter((q) => !(q.query && q.query.cl === QUERY_TYPE_WEB))
@@ -781,7 +785,7 @@ function CoreQuery({
   const onConnectSlack = () => {
     enableSlackIntegration(activeProject.id)
       .then((r) => {
-        if (r.status == 200) {
+        if (r.status === 200) {
           window.open(r.data.redirectURL, '_blank');
           setShowShareToSlackModal(false);
         }
@@ -799,7 +803,13 @@ function CoreQuery({
     if (projectSettingsV1?.int_slack) {
       fetchSlackChannels(activeProject.id);
     }
-  }, [activeProject, projectSettingsV1?.int_slack, showShareToSlackModal]);
+  }, [
+    activeProject,
+    fetchProjectSettingsV1,
+    fetchSlackChannels,
+    projectSettingsV1?.int_slack,
+    showShareToSlackModal
+  ]);
 
   useEffect(() => {
     if (slack?.length > 0) {
@@ -837,7 +847,7 @@ function CoreQuery({
       // "query_id": selectedRow?.key || selectedRow?.id,
       alert_description: {
         message: data?.message,
-        date_range: frequency == 'send_now' ? '' : frequency,
+        date_range: frequency === 'send_now' ? '' : frequency,
         subject: data?.subject
       },
       alert_configuration: {
@@ -904,7 +914,7 @@ function CoreQuery({
       // "query_id": selectedRow?.key || selectedRow?.id,
       alert_description: {
         message: data?.message,
-        date_range: frequency == 'send_now' ? '' : frequency,
+        date_range: frequency === 'send_now' ? '' : frequency,
         subject: data?.subject
       },
       alert_configuration: {

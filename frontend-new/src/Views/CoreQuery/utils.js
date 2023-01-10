@@ -29,7 +29,11 @@ import {
   PREDEFINED_DATES,
   QUERY_TYPE_PROFILE
 } from '../../utils/constants';
-import { FILTER_TYPES, INITIAL_STATE } from './constants';
+import {
+  CORE_QUERY_INITIAL_STATE,
+  FILTER_TYPES,
+  INITIAL_STATE
+} from './constants';
 
 export const initialState = INITIAL_STATE;
 
@@ -468,7 +472,9 @@ export const getFunnelQuery = (
   dateRange,
   globalFilters = [],
   eventsCondition,
-  groupAnalysis
+  groupAnalysis,
+  conversionDurationNumber,
+  conversionDurationUnit
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_FUNNEL;
@@ -493,6 +499,9 @@ export const getFunnelQuery = (
 
   query.ewp = getEventsWithProperties(queries);
   query.gbt = dateRange.frequency;
+  if (conversionDurationNumber != null && conversionDurationUnit != null) {
+    query.cnvtm = conversionDurationNumber + conversionDurationUnit;
+  }
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
   query.gbp = appliedGroupBy.map((opt) => {
@@ -1225,7 +1234,17 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       event,
       global
     },
-    dateRange
+    dateRange,
+    ...(queryType === QUERY_TYPE_FUNNEL && {
+      funnelConversionDurationNumber:
+        requestQuery.cnvtm != null
+          ? parseInt(requestQuery.cnvtm.slice(0, -1))
+          : CORE_QUERY_INITIAL_STATE.funnelConversionDurationNumber,
+      funnelConversionDurationUnit:
+        requestQuery.cnvtm != null
+          ? requestQuery.cnvtm.slice(-1)
+          : CORE_QUERY_INITIAL_STATE.funnelConversionDurationUnit
+    })
   };
   return result;
 };
