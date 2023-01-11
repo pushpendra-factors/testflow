@@ -1944,10 +1944,12 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 		if err != nil {
 			return 0, err
 		}
-		allActiveUsersPattern := allActiveUsersPatterns[0]
-		if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir, createMetadata, metaDataDir); err != nil {
-			mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
-			return 0, err
+		if len(allActiveUsersPatterns) > 0 {
+			allActiveUsersPattern := allActiveUsersPatterns[0]
+			if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir, createMetadata, metaDataDir); err != nil {
+				mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
+				return 0, err
+			}
 		}
 
 	}

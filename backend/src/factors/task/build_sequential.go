@@ -103,7 +103,12 @@ func BuildSequential(projectId int64, configs map[string]interface{}) (map[strin
 func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 	env := configs["env"].(string)
 	db := configs["db"].(*gorm.DB)
-	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	modelCloudManager := configs["modelCloudManager"].(*filestore.FileManager)
+	archiveCloudManager := configs["archiveCloudManager"].(*filestore.FileManager)
+	tmpCloudManager := configs["tmpCloudManager"].(*filestore.FileManager)
+	sortedCloudManager := configs["sortedCloudManager"].(*filestore.FileManager)
+
+	// cloudManager := configs["cloudManager"].(*filestore.FileManager)
 	etcdClient := configs["etcdClient"].(*serviceEtcd.EtcdClient)
 	diskManger := configs["diskManger"].(*serviceDisk.DiskDriver)
 	noOfPatternWorkers := configs["noOfPatternWorkers"].(int)
@@ -154,18 +159,35 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 		count_algo_props.Hmine_support = hmineSupport
 
 		var jb model.ExplainV2Query
+		err := U.DecodePostgresJsonbToStructType(query.ExplainV2Query, &jb)
+		if err != nil {
+			status["error"] = "unable to decodequery"
+			log.Panic("unable to decodequery")
+			return status, false
+		}
+		mineLog.Info("Job to execute 1 :%v", jb)
 
-		jb.Query = actualQuery.Query
 		if jb.Query.StartEvent == "" && jb.Query.EndEvent == "" {
 			status["error"] = "unable to run explain v2 as both start and events are empty"
 			log.Panic("unable to run explain v2 as both start and end events are empty")
 			return status, false
 		}
+		startTimestamp = jb.StartTimestamp
+		endTimestamp = jb.EndTimestamp
 		count_algo_props.Job = jb
 		count_algo_props.JobId = query.ID
-		mineLog.Info("Job to execute:%v", jb)
+		mineLog.Info("Job to execute: %v", jb)
+		mineLog.Info("Job to execute start timestamp: %d", startTimestamp)
+		mineLog.Info("Job to execute end timestamp : %d", endTimestamp)
+		mineLog.Info("Job to execute start evnet : %s", jb.Query.StartEvent)
+		mineLog.Info("Job to execute end event : %s", jb.Query.EndEvent)
 
-		numChunks, err := PatternMine(db, etcdClient, cloudManager, cloudManager, cloudManager, cloudManager, diskManger,
+		// numChunks, err := PatternMine(db, etcdClient, cloudManager, cloudManager, cloudManager, cloudManager, diskManger,
+		// 	noOfPatternWorkers, projectId, modelId, modelType,
+		// 	startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
+		// 	beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2)
+
+		numChunks, err := PatternMine(db, etcdClient, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManger,
 			noOfPatternWorkers, projectId, modelId, modelType,
 			startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
 			beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2)
