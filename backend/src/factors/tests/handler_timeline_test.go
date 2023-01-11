@@ -141,7 +141,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 
 	// Test Cases :-
 	// 1. Users from Different Sources (No filter, no segment applied)
-	sourceToUserCountMap := map[string]interface{}{"All": 15, model.UserSourceSalesforceString: 2, model.UserSourceHubspotString: 3}
+	sourceToUserCountMap := map[string]int{"All": 15, model.UserSourceSalesforceString: 2, model.UserSourceHubspotString: 3}
 	for source, count := range sourceToUserCountMap {
 		payload.Source = source
 		w := sendGetProfileUserRequest(r, project.ID, agent, payload)
@@ -894,7 +894,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 
 	timelinesConfig := &model.TimelinesConfig{
 		AccountConfig: model.AccountConfig{
-			TableProps: []string{"$page_count", "$browser"},
+			TableProps: []string{"$salesforce_account_billingcountry", "$hubspot_company_country"},
 		},
 	}
 
@@ -905,76 +905,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
 	assert.Equal(t, errCode, http.StatusAccepted)
 
-	customerEmail := "@example.com"
-
-	// Create 5 Users with Properties.
-	accounts := make([]model.User, 0)
-	numUsers := 6
-	groupUser := true
-
-	companies := []string{"FactorsAI", "Accenture", "Talentica", "Honeywell", "Meesho", ""}
-	websites := []string{"factors.ai", "accenture.com", "talentica.com", "honeywell.com", "meesho.com"}
-	countries := []string{"India", "Ireland", "India", "US", "India", "US"}
-	browsers := []string{"Chrome", "Brave", "Firefox", "Edge", "Safari", "Opera"}
-	for i := 0; i < numUsers; i++ {
-		var propertiesMap map[string]interface{}
-		if i%2 == 0 {
-			propertiesMap = map[string]interface{}{
-				U.GP_SALESFORCE_ACCOUNT_NAME:           companies[i],
-				U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY: countries[i],
-				U.GP_SALESFORCE_ACCOUNT_WEBSITE:        websites[i],
-			}
-		} else {
-			if i == 5 {
-				propertiesMap = map[string]interface{}{
-					U.GP_HUBSPOT_COMPANY_COUNTRY:                 countries[i],
-					U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS: i * 2,
-				}
-			} else {
-				propertiesMap = map[string]interface{}{
-					U.GP_HUBSPOT_COMPANY_NAME:                    companies[i],
-					U.GP_HUBSPOT_COMPANY_COUNTRY:                 countries[i],
-					U.GP_HUBSPOT_COMPANY_DOMAIN:                  websites[i],
-					U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS: i * 2,
-				}
-			}
-
-		}
-		propertiesMap["$page_count"] = 1000 + i
-		propertiesMap["$browser"] = browsers[i]
-		propertiesJSON, err := json.Marshal(propertiesMap)
-		if err != nil {
-			log.WithError(err).Fatal("Marshal error.")
-		}
-		properties := postgres.Jsonb{RawMessage: propertiesJSON}
-		var source *int
-		var gr1 string
-		var gr2 string
-		if i%2 == 0 {
-			source = model.GetRequestSourcePointer(model.UserSourceSalesforce)
-			gr1 = ""
-			gr2 = "2"
-		} else {
-			source = model.GetRequestSourcePointer(model.UserSourceHubspot)
-			gr1 = "1"
-			gr2 = ""
-		}
-
-		createdUserID, _ := store.GetStore().CreateUser(&model.User{
-			ProjectId:      project.ID,
-			Source:         source,
-			Group1ID:       gr1,
-			Group2ID:       gr2,
-			CustomerUserId: "user" + strconv.Itoa(i) + customerEmail,
-			Properties:     properties,
-			IsGroupUser:    &groupUser,
-		})
-		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
-		assert.Equal(t, http.StatusFound, errCode)
-		accounts = append(accounts, *account)
-	}
-	assert.Equal(t, len(accounts), numUsers)
-
+	// Create Groups
 	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group1)
@@ -982,89 +913,197 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.NotNil(t, group2)
 	assert.Equal(t, http.StatusCreated, status)
 
+	// Properties Map
+	propertiesMap := []map[string]interface{}{
+		{"$salesforce_account_name": "Pepper Content", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "peppercontent.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target"},
+		{"$salesforce_account_name": "o9 Solutions", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "o9solutions.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown"},
+		{"$salesforce_account_name": "GoLinks Reporting", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "golinks.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown"},
+		{"$salesforce_account_name": "Cin7", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "cin7.com", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor"},
+		{"$salesforce_account_name": "Repair Desk", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "repairdesk.co", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer"},
+		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US", "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet"},
+		{"$hubspot_company_name": "Mad Street Den", "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development"},
+		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development"},
+		{"$hubspot_company_name": "Clientjoy Ads", "$hubspot_company_country": "India", "$hubspot_company_domain": "clientjoy.io", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "IT Services"},
+		{"$hubspot_company_name": "Adapt.IO", "$hubspot_company_country": "India", "$hubspot_company_domain": "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services"},
+	}
+
+	// Create 5 Salesforce Accounts
+	accounts := make([]model.User, 0)
+	numUsers := 5
+	groupUser := true
+	for i := 0; i < numUsers; i++ {
+		propertiesJSON, err := json.Marshal(propertiesMap[i])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties := postgres.Jsonb{RawMessage: propertiesJSON}
+		source := model.GetRequestSourcePointer(model.UserSourceSalesforce)
+
+		createdUserID, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         source,
+			Group2ID:       "2",
+			CustomerUserId: fmt.Sprintf("sfuser%d@%s", i+1, propertiesMap[i]["$salesforce_account_website"]),
+			Properties:     properties,
+			IsGroupUser:    &groupUser,
+		})
+		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
+		accounts = append(accounts, *account)
+	}
+
+	// Create 5 Hubspot Companies
+	for i := 0; i < numUsers; i++ {
+		propertiesJSON, err := json.Marshal(propertiesMap[i+5])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties := postgres.Jsonb{RawMessage: propertiesJSON}
+		source := model.GetRequestSourcePointer(model.UserSourceHubspot)
+
+		createdUserID, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         source,
+			Group1ID:       "1",
+			CustomerUserId: fmt.Sprintf("hsuser%d@%s", i+1, propertiesMap[i+5]["$hubspot_company_domain"]),
+			Properties:     properties,
+			IsGroupUser:    &groupUser,
+		})
+		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
+		accounts = append(accounts, *account)
+	}
+	assert.Equal(t, len(accounts), 10)
+
 	var payload model.TimelinePayload
-	payload.Source = "All"
 
-	// Without filters
-	t.Run("Success", func(t *testing.T) {
+	// Test Cases :-
+	// 1. Accounts from Different Sources (No filter, no segment applied)
+	sourceToUserCountMap := map[string]int{"All": 10, U.GROUP_NAME_HUBSPOT_COMPANY: 5, U.GROUP_NAME_SALESFORCE_ACCOUNT: 5}
+	for source, count := range sourceToUserCountMap {
+		payload.Source = source
 		w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		resp := make([]model.Profile, 0)
-		err := json.Unmarshal(jsonResponse, &resp)
+		err = json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
-		assert.Equal(t, len(resp), 6)
+		assert.Equal(t, len(resp), count)
 		assert.Condition(t, func() bool {
-			for index, user := range resp {
-				sort.Strings(companies)
-				i := sort.SearchStrings(companies, user.Name)
-				assert.Condition(t, func() bool { return i < len(companies) })
-				sort.Strings(websites)
-				i = sort.SearchStrings(websites, user.HostName)
-				assert.Condition(t, func() bool { return i < len(websites) })
-				sort.Strings(countries)
-				assert.Condition(t, func() bool { return i < len(countries) })
-				assert.NotNil(t, user.LastActivity)
-				for _, prop := range timelinesConfig.AccountConfig.TableProps {
-					assert.NotNil(t, user.TableProps[prop])
+			for i, user := range resp {
+				if source == "All" {
+					if i < 5 {
+						assert.Equal(t, user.Name, propertiesMap[9-i]["$hubspot_company_name"])
+						assert.Equal(t, user.HostName, propertiesMap[9-i]["$hubspot_company_domain"])
+					} else {
+						assert.Equal(t, user.Name, propertiesMap[9-i]["$salesforce_account_name"])
+						assert.Equal(t, user.HostName, propertiesMap[9-i]["$salesforce_account_website"])
+					}
 				}
-				if index > 0 {
-					assert.Condition(t, func() bool { return resp[index].LastActivity.Unix() <= resp[index-1].LastActivity.Unix() })
+				if source == U.GROUP_NAME_HUBSPOT_COMPANY {
+					assert.Equal(t, user.Name, propertiesMap[count+4-i]["$hubspot_company_name"])
+					assert.Equal(t, user.HostName, propertiesMap[count+4-i]["$hubspot_company_domain"])
+				}
+				if source == U.GROUP_NAME_SALESFORCE_ACCOUNT {
+					assert.Equal(t, user.Name, propertiesMap[count-i-1]["$salesforce_account_name"])
+					assert.Equal(t, user.HostName, propertiesMap[count-i-1]["$salesforce_account_website"])
+				}
+				assert.NotNil(t, user.LastActivity)
+				if i > 0 {
+					assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
+				}
+				for _, prop := range timelinesConfig.UserConfig.TableProps {
+					assert.NotNil(t, user.TableProps[prop])
 				}
 			}
 			return true
 		})
-	})
-
-	//With filters
-	filters := model.QueryProperty{
-		Entity:    "user_g",
-		Type:      "categorical",
-		Property:  U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY,
-		Operator:  "equals",
-		Value:     "India",
-		LogicalOp: "AND",
 	}
-	payload.Filters = append(payload.Filters, filters)
-	filters = model.QueryProperty{
-		Entity:    "user_g",
-		Type:      "categorical",
-		Property:  U.GP_HUBSPOT_COMPANY_COUNTRY,
-		Operator:  "equals",
-		Value:     "US",
-		LogicalOp: "OR",
-	}
-	payload.Filters = append(payload.Filters, filters)
 
-	t.Run("Success", func(t *testing.T) {
-		w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
-		assert.Equal(t, http.StatusOK, w.Code)
-		jsonResponse, _ := ioutil.ReadAll(w.Body)
-		resp := make([]model.Profile, 0)
-		err := json.Unmarshal(jsonResponse, &resp)
-		assert.Nil(t, err)
-		assert.Equal(t, len(resp), 5)
-		assert.Condition(t, func() bool {
-			for index, user := range resp {
-				sort.Strings(companies)
-				i := sort.SearchStrings(companies, user.Name)
-				assert.Condition(t, func() bool { return i < len(companies) })
-				sort.Strings(websites)
-				i = sort.SearchStrings(websites, user.HostName)
-				assert.Condition(t, func() bool { return i < len(websites) })
-				sort.Strings(countries)
-				assert.Condition(t, func() bool { return i < len(countries) })
-				assert.NotNil(t, user.LastActivity)
-				for _, prop := range timelinesConfig.AccountConfig.TableProps {
-					assert.NotNil(t, user.TableProps[prop])
+	// 4. Segment with multiple $hubspot_company filters
+	segmentPayload := &model.SegmentPayload{
+		Name:        "Name1",
+		Description: "dummy info",
+		Query: model.SegmentQuery{
+			GlobalProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "India",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "US",
+					LogicalOp: "OR",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$hubspot_company_num_associated_contacts",
+					Operator:  "equals",
+					Value:     "50",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$hubspot_company_num_associated_contacts",
+					Operator:  "equals",
+					Value:     "20",
+					LogicalOp: "OR",
+				},
+			},
+		},
+		Type: "$hubspot_company",
+	}
+	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
+	// fetch segments
+	segments, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	// add segmentId to timeline payload
+	payload = model.TimelinePayload{
+		Source:    "$hubspot_company",
+		SegmentId: segments["$hubspot_company"][0].Id,
+	}
+
+	w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	resp := make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 3)
+	assert.Condition(t, func() bool {
+		filteredCompaniesNameHostNameMap := map[string]string{"Adapt.IO": "adapt.io", "Clientjoy Ads": "clientjoy.io", "AdPushup": "adpushup.com"}
+		for i, user := range resp {
+			assert.Condition(t, func() bool {
+				for name, hostName := range filteredCompaniesNameHostNameMap {
+					if name == user.Name && hostName == user.HostName {
+						return true
+					}
 				}
-				if index > 0 {
-					assert.Condition(t, func() bool { return resp[index].LastActivity.Unix() <= resp[index-1].LastActivity.Unix() })
-				}
+				return false
+			})
+			assert.NotNil(t, user.LastActivity)
+			if i > 0 {
+				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
 			}
-			return true
-		})
+			for _, prop := range timelinesConfig.UserConfig.TableProps {
+				assert.NotNil(t, user.TableProps[prop])
+			}
+		}
+		return true
 	})
+
 }
 
 func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
