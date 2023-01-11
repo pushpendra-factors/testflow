@@ -563,7 +563,7 @@ function CustomKPI({
           props: [DNa, pr.prDaTy, 'filter'],
           values:
             pr.prDaTy === FILTER_TYPES.DATETIME
-              ? convertDateTimeObjectValuesToMilliSeconds(val)
+              ? [val]
               : val,
           extra: [DNa, pr.prNa, pr.prDaTy]
         });
