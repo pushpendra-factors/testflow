@@ -590,11 +590,11 @@ func TestAttributionEngagementModel(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		createdUserID4, timestamp+11*U.SECONDS_IN_A_DAY-5, "222222", "", "", "", "", "12")
+		createdUserID4, timestamp+11*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "12")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		createdUserID4, timestamp+11*U.SECONDS_IN_A_DAY-6, "222222", "", "", "", "", "13")
+		createdUserID4, timestamp+11*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "13")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestAllPageWithLookbackDays", func(t *testing.T) {
@@ -612,9 +612,9 @@ func TestAttributionEngagementModel(t *testing.T) {
 		var debugQueryKey string
 		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
-		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_222222"))
-		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_333333"))
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "12"))
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "11"))
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "13"))
 
 	})
 }
@@ -1643,8 +1643,8 @@ func TestGetUserGroupWise(t *testing.T) {
 
 		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
-		assert.Equal(t, float64(1), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+		assert.Equal(t, float64(2), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+		assert.Equal(t, float64(2), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
 
 	})
 
