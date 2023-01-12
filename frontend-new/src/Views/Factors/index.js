@@ -18,8 +18,8 @@ import {
 import { connect, useSelector } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
 import _, { isEmpty } from 'lodash';
-import SavedGoals from './SavedGoals';
-import SavedGoalsOld from './SavedGoalsOld';
+import SavedGoals from './savedGoals';
+import SavedGoalsOld from './savedGoalsOld';
 import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import ExplainV2 from './FactorsInsightsNew';
