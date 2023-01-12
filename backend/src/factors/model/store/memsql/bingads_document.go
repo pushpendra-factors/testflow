@@ -43,7 +43,7 @@ var objectAndPropertyToValueInBingAdsReportsMapping = map[string]string{
 var BingAdsMetricsToAggregatesInReportsMapping = map[string]string{
 	"impressions": "SUM(JSON_EXTRACT_STRING(value, 'impressions'))",
 	"clicks":      "SUM(JSON_EXTRACT_STRING(value, 'clicks'))",
-	"spend":       "SUM(JSON_EXTRACT_STRING(value, 'spend'))",
+	"spend":       "SUM(JSON_EXTRACT_STRING(value, 'spend') * inr_value)",
 	"conversions": "SUM(JSON_EXTRACT_STRING(value, 'conversions'))",
 }
 
@@ -266,7 +266,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID int64, 
 	var selectKeys []string
 	var params []interface{}
 	logCtx := log.WithFields(logFields)
-	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForBingads(
+	transformedQuery, customerAccountID, projectCurrency, err := store.transFormRequestFieldsAndFetchRequiredFieldsForBingads(
 		projectID, *query, reqID)
 	if err != nil && err.Error() == "record not found" {
 		logCtx.WithError(err).Info(model.BingSpecificError)
@@ -278,14 +278,15 @@ func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID int64, 
 	}
 	// smart properties check
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
+	dataCurrency := store.GetDataCurrencyForBingAds(projectID)
 	if isSmartPropertyPresent {
-		sql, params, selectKeys, selectMetrics, err = buildBingAdsQueryWithSmartProperty(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+		sql, params, selectKeys, selectMetrics, err = buildBingAdsQueryWithSmartProperty(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 		}
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
-	sql, params, selectKeys, selectMetrics, err = buildBingAdsQueryV1(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+	sql, params, selectKeys, selectMetrics, err = buildBingAdsQueryV1(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 	if err != nil {
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 	}
@@ -293,7 +294,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID int64, 
 }
 
 func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForBingads(projectID int64,
-	query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
+	query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -307,15 +308,39 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForBingads(proj
 	ftMapping, err := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch connector id from db")
-		return &model.ChannelQueryV1{}, "", err
+		return &model.ChannelQueryV1{}, "", "", err
 	}
 	customerAccountID := ftMapping.Accounts
 	transformedQuery, err = convertFromRequestToBingAdsSpecificRepresentation(query)
 	if err != nil {
 		logCtx.Warn("Request failed in validation: ", err)
-		return &model.ChannelQueryV1{}, "", err
+		return &model.ChannelQueryV1{}, "", "", err
 	}
-	return &transformedQuery, customerAccountID, nil
+	projectSetting, _ := store.GetProjectSetting(projectID)
+	return &transformedQuery, customerAccountID, projectSetting.ProjectCurrency, nil
+}
+
+func (store *MemSQL) GetDataCurrencyForBingAds(projectId int64) string{
+	query := "select JSON_EXTRACT_STRING(value, 'currency_code')  from integration_documents where project_id = ? and document_type = 7 and source = 'bingads' limit 1"
+	db := C.GetServices().Db
+	
+
+	params := make([]interface{},0)
+	params = append(params, projectId)
+	rows, err := db.Raw(query, params).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get currency code.")
+	}
+	defer rows.Close()
+
+	var currency string
+	for rows.Next() {
+		if err := db.ScanRows(rows, &currency); err != nil {
+			log.WithError(err).Error("Failed to scan last adwords documents by type for sync info.")
+		}
+	}
+
+	return currency
 }
 
 func convertFromRequestToBingAdsSpecificRepresentation(query model.ChannelQueryV1) (model.ChannelQueryV1, error) {
@@ -397,7 +422,7 @@ func getBingAdsSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.
 }
 
 func buildBingAdsQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool,
-	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, error) {
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -410,12 +435,12 @@ func buildBingAdsQueryV1(query *model.ChannelQueryV1, projectID int64, customerA
 	lowestHierarchyLevel := getLowestHierarchyLevelForBingAds(query)
 	lowestHierarchyReportLevel := model.BingAdsObjectToPerfomanceReportRepresentation[lowestHierarchyLevel] // suffix tbd
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromBingAdsReports(query, projectID, query.From, query.To, model.BingadsDocumentTypeAlias[lowestHierarchyReportLevel],
-		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, customerAccountID)
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, customerAccountID, dataCurrency, projectCurrency)
 	return sql, params, selectKeys, selectMetrics, nil
 }
 
 func buildBingAdsQueryWithSmartProperty(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool,
-	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, error) {
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -428,7 +453,7 @@ func buildBingAdsQueryWithSmartProperty(query *model.ChannelQueryV1, projectID i
 	lowestHierarchyLevel := getLowestHierarchyLevelForBingAds(query)
 	lowestHierarchyReportLevel := model.BingAdsObjectToPerfomanceReportRepresentation[lowestHierarchyLevel] // suffix tbd
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromBingAdsReportsWithSmartProperty(query, projectID, query.From, query.To, model.BingadsDocumentTypeAlias[lowestHierarchyReportLevel],
-		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, customerAccountID)
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, customerAccountID, dataCurrency, projectCurrency)
 	return sql, params, selectKeys, selectMetrics, nil
 }
 
@@ -470,7 +495,7 @@ func getLowestHierarchyLevelForBingAds(query *model.ChannelQueryV1) string {
 
 // Added case when statement for NULL value and empty value for group bys
 func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID int64, from, to int64, docType int,
-	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, customerAccountID string) (string, []interface{}, []string, []string) {
+	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, customerAccountID string, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -542,6 +567,9 @@ func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID in
 	}
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	finalParams := make([]interface{}, 0)
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+		finalParams = append(finalParams, dataCurrency, projectCurrency)
+	}
 	staticWhereParams := []interface{}{projectID, model.BingAdsIntegration, docType, customerAccountIDs, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
@@ -551,7 +579,12 @@ func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID in
 		finalParams = append(finalParams, whereParams...)
 	}
 
-	resultSQLStatement := selectQuery + fromIntegrationDocuments + staticWhereStatementForBingAds + whereConditionForFilters
+	resultSQLStatement := ""
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+		resultSQLStatement = selectQuery + fromIntegrationDocuments + currencyQuery + staticWhereStatementForBingAds + whereConditionForFilters
+	} else {
+		resultSQLStatement = selectQuery + fromIntegrationDocuments + staticWhereStatementForBingAds + whereConditionForFilters
+	}
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
@@ -579,7 +612,7 @@ func getBingAdsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys 
 // Added case when statement for NULL value and empty value for group bys
 // Added case when statement for NULL value for smart properties. Didn't add for empty values as such case will not be present
 func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQueryV1, projectID int64, from, to int64, docType int,
-	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, customerAccountID string) (string, []interface{}, []string, []string) {
+	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, customerAccountID string, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -667,6 +700,9 @@ func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQuer
 	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForBingAdsWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	finalParams := make([]interface{}, 0)
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+		finalParams = append(finalParams, dataCurrency, projectCurrency)
+	}
 	staticWhereParams := []interface{}{projectID, model.BingAdsIntegration, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
@@ -677,7 +713,12 @@ func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQuer
 	}
 
 	fromStatement := getBingAdsFromStatementWithJoins(query.Filters, query.GroupBy)
-	resultSQLStatement := selectQuery + fromStatement + finalFilterStatement
+	resultSQLStatement := ""
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+		resultSQLStatement = selectQuery + fromStatement + currencyQuery +  finalFilterStatement
+	} else {
+		resultSQLStatement = selectQuery + fromStatement + finalFilterStatement
+	}
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}

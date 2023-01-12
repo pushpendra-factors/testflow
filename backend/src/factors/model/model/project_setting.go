@@ -78,6 +78,7 @@ type ProjectSetting struct {
 	IntegrationBits               string          `json: "-"`
 	// Rudderstack integration settings.
 	IntRudderstack *bool `gorm:"not null;default:false" json:"int_rudderstack,omitempty"`
+	ProjectCurrency string `gorm:"currency"`
 	IsPathAnalysisEnabled 		  bool 			   `json:"is_path_analysis_enabled"`
 }
 
