@@ -283,7 +283,6 @@ type Configuration struct {
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
 	FormFillIdentificationAllowedProjects              string
-]
 }
 
 type Services struct {
