@@ -247,6 +247,43 @@ func (store *MemSQL) IsExistSalesforceDocumentByIds(projectID int64, ids []strin
 	return documentIDs, http.StatusFound
 }
 
+func (store *MemSQL) IsExistSalesforceDocumentByIdsWithBatch(projectID int64, ids []string, docType int, batchSize int) (map[string]bool, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"ids":        ids,
+		"doc_type":   docType,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || len(ids) == 0 || docType == 0 {
+		logCtx.Error("Failed to get salesforce document by id and type. Invalid project_id or id or type.")
+		return nil, http.StatusBadRequest
+	}
+
+	batchedIds := U.GetStringListAsBatch(ids, batchSize)
+
+	documentIDs := make(map[string]bool)
+	for i := range batchedIds {
+		docIDsMap, status := store.IsExistSalesforceDocumentByIds(projectID, batchedIds[i], docType)
+		if status != http.StatusFound && status == http.StatusNotFound {
+			return documentIDs, status
+		} else if status == http.StatusNotFound {
+			continue
+		}
+
+		for docID := range docIDsMap {
+			documentIDs[docID] = docIDsMap[docID]
+		}
+	}
+
+	if len(documentIDs) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return documentIDs, http.StatusFound
+}
+
 func getSalesforceDocumentByIDAndType(projectID int64, id string, docType int) ([]model.SalesforceDocument, int) {
 	logFields := log.Fields{
 		"project_id": projectID,

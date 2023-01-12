@@ -840,18 +840,14 @@ func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []st
 		return nil, 0, false
 	}
 
-	docIDs, errCode := store.GetStore().IsExistSalesforceDocumentByIds(projectID, distinctDocumentIDs, model.GetSalesforceDocTypeByAlias(objectName))
+	docIDsMap, errCode := store.GetStore().IsExistSalesforceDocumentByIdsWithBatch(projectID, distinctDocumentIDs, model.GetSalesforceDocTypeByAlias(objectName), 2000)
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		logCtx.Error(fmt.Sprintf("Failed to get salesforce %s documents in syncMissingObjectsForSalesforceActivities.", objectName))
 		return []string{fmt.Sprintf("Failed to get salesforce %s documents in syncMissingObjectsForSalesforceActivities.", objectName)}, 0, true
 	}
 
-	missingDocIDs := make([]string, 0)
-	for i := range distinctDocumentIDs {
-		if _, exists := docIDs[distinctDocumentIDs[i]]; !exists {
-			missingDocIDs = append(missingDocIDs, distinctDocumentIDs[i])
-		}
-	}
+	docIDs := U.GetKeysMapAsArray(docIDsMap)
+	missingDocIDs := U.StringSliceDiff(distinctDocumentIDs, docIDs)
 
 	var failures []string
 	activitiesAPICalls := 0
