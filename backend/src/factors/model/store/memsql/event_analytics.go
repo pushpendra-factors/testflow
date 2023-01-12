@@ -578,7 +578,7 @@ func limitGroupByTimestampResult(result *model.QueryResult, groupByTimestamp boo
 
 		_, keyExists := keyLookup[key]
 		// Limits no.of keys to ResultsLimit.
-		if !keyExists && len(keyLookup) < model.ResultsLimit {
+		if !keyExists && len(keyLookup) < model.MaxResultsLimit {
 			keyLookup[key] = true
 			keyExists = true
 		}
@@ -617,7 +617,7 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 
 		_, leftKeyExists := keyLookup[leftKey]
 		// Limits no.of left keys to ResultsLimit.
-		if !leftKeyExists && len(keyLookup) < model.ResultsLimit {
+		if !leftKeyExists && len(keyLookup) < model.MaxResultsLimit {
 			keyLookup[leftKey] = make(map[interface{}]bool, 0)
 			leftKeyExists = true
 		}
@@ -626,7 +626,7 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 		if leftKeyExists {
 			// Limits no.of right keys to ResultsLimit.
 			_, rightKeyExits := keyLookup[leftKey][row[leftKeyEnd]]
-			if !rightKeyExits && len(keyLookup[leftKey]) < model.ResultsLimit {
+			if !rightKeyExits && len(keyLookup[leftKey]) < model.MaxResultsLimit {
 				keyLookup[leftKey][row[leftKeyEnd]] = true
 				rightKeyExists = true
 			}

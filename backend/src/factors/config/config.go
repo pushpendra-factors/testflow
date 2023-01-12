@@ -2406,11 +2406,11 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 }
 
 func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
-	if configuration.SkipEventNameStepByProjectID == "" {
+	if configuration.IncreaseKPILimitForProjectIDs == "" {
 		return false
 	}
 
-	if configuration.SkipEventNameStepByProjectID == "*" {
+	if configuration.IncreaseKPILimitForProjectIDs == "*" {
 		return true
 	}
 
