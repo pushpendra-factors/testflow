@@ -121,6 +121,7 @@ type Configuration struct {
 	Port                                           int
 	DBInfo                                         DBConf
 	MemSQLInfo                                     DBConf
+	MemSQL2Info                                    DBConf
 	Auth0Info                                      Auth0Conf
 	SessionStore                                   string
 	SessionStoreSecret                             string
@@ -278,11 +279,13 @@ type Configuration struct {
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
+	EnableDBConnectionPool2                            bool
 	FormFillIdentificationAllowedProjects              string
 }
 
 type Services struct {
 	Db                   *gorm.DB
+	Db2                  *gorm.DB
 	DBContext            *context.Context
 	DBContextCancel      *context.CancelFunc
 	GeoLocation          *geoip2.Reader
@@ -410,6 +413,10 @@ func InitPropertiesTypeCache(enablePropertyTypeFromDB bool, propertiesTypeCacheS
 
 	propertiesTypeCache.LastResetDate = U.GetDateOnlyFromTimestampZ(U.TimeNowUnix())
 	log.Info("Properties_type cache initialized.")
+}
+
+func IsDBConnectionPool2Enabled() bool {
+	return configuration.EnableDBConnectionPool2
 }
 
 func IsAllowedCampaignEnrichementByProjectID(projectID int64) bool {
@@ -724,7 +731,11 @@ func InitEtcd(EtcdEndpoints []string) error {
 func InitDBWithMaxIdleAndMaxOpenConn(config Configuration,
 	maxOpenConns, maxIdleConns int) error {
 	if UseMemSQLDatabaseStore() {
-		return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQLInfo, maxOpenConns, maxIdleConns)
+		if IsDBConnectionPool2Enabled() {
+			return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQL2Info, maxOpenConns, maxIdleConns)
+		} else {
+			return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQLInfo, maxOpenConns, maxIdleConns)
+		}
 	}
 	return InitPostgresDBWithMaxIdleAndMaxOpenConn(config.DBInfo, maxOpenConns, maxIdleConns)
 }
@@ -886,11 +897,18 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 	// Removes emoji and cleans up string and postgres.Jsonb columns.
 	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", U.GormCleanupCallback)
 	memSQLDB.Callback().Create().Before("gorm:update").Register("cleanup", U.GormCleanupCallback)
+	var info DBConf
+	if IsDBConnectionPool2Enabled() {
+		info = configuration.MemSQL2Info
+	} else {
+		info = configuration.MemSQLInfo
+	}
 
-	if configuration.MemSQLInfo.UseExactConnFromConfig {
+	// info=
+	if info.UseExactConnFromConfig {
 		// Use connection configuration from flag.
-		maxOpenConns = configuration.MemSQLInfo.MaxOpenConnections
-		maxIdleConns = configuration.MemSQLInfo.MaxIdleConnections
+		maxOpenConns = info.MaxOpenConnections
+		maxIdleConns = info.MaxIdleConnections
 	} else {
 		// Using same no.of connections for both max_open and
 		// max_idle (greatest among two) as a workaround to
