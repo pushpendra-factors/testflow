@@ -583,6 +583,7 @@ func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID in
 	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
 		resultSQLStatement = selectQuery + fromIntegrationDocuments + currencyQuery + staticWhereStatementForBingAds + whereConditionForFilters
 	} else {
+		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
 		resultSQLStatement = selectQuery + fromIntegrationDocuments + staticWhereStatementForBingAds + whereConditionForFilters
 	}
 	if len(groupByStatement) != 0 {
@@ -717,6 +718,7 @@ func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQuer
 	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
 		resultSQLStatement = selectQuery + fromStatement + currencyQuery +  finalFilterStatement
 	} else {
+		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
 		resultSQLStatement = selectQuery + fromStatement + finalFilterStatement
 	}
 	if len(groupByStatement) != 0 {
