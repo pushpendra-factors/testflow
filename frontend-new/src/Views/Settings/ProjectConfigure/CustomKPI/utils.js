@@ -459,72 +459,6 @@ export const getProfileQuery = (
   return query;
 };
 
-export const getFunnelQuery = (
-  groupBy,
-  queries,
-  session_analytics_seq,
-  dateRange,
-  globalFilters = []
-) => {
-  const query = {};
-  query.cl = QUERY_TYPE_FUNNEL;
-  query.ty = TYPE_UNIQUE_USERS;
-
-  const period = {};
-  if (dateRange.from && dateRange.to) {
-    period.from = MomentTz(dateRange.from).startOf('day').utc().unix();
-    period.to = MomentTz(dateRange.to).endOf('day').utc().unix();
-  } else {
-    period.from = MomentTz().startOf('week').utc().unix();
-    period.to =
-      MomentTz().format('dddd') !== 'Sunday'
-        ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
-        : MomentTz().utc().unix();
-  }
-
-  query.fr = period.from;
-  query.to = period.to;
-
-  query.ewp = getEventsWithProperties(queries);
-  query.gbt = dateRange.frequency;
-
-  const appliedGroupBy = [...groupBy.event, ...groupBy.global];
-  query.gbp = appliedGroupBy.map((opt) => {
-    let appGbp = {};
-    if (opt.eventIndex) {
-      appGbp = {
-        pr: opt.property,
-        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
-        pty: opt.prop_type,
-        ena: opt.eventName,
-        eni: opt.eventIndex
-      };
-    } else {
-      appGbp = {
-        pr: opt.property,
-        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
-        pty: opt.prop_type,
-        ena: opt.eventName
-      };
-    }
-    if (opt.prop_type === 'datetime') {
-      opt.grn ? (appGbp.grn = opt.grn) : (appGbp.grn = 'day');
-    }
-    if (opt.prop_type === 'numerical') {
-      opt.gbty ? (appGbp.gbty = opt.gbty) : (appGbp.gbty = '');
-    }
-    return appGbp;
-  });
-  query.gup = getGlobalFilters(globalFilters);
-  // if (session_analytics_seq.start && session_analytics_seq.end) {
-  //   query.sse = session_analytics_seq.start;
-  //   query.see = session_analytics_seq.end;
-  // }
-  query.ec = 'any_given_event';
-  query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
-  return query;
-};
-
 const getEventsWithPropertiesKPI = (filters, category) => {
   const filterProps = [];
   // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
@@ -541,13 +475,13 @@ const getEventsWithPropertiesKPI = (filters, category) => {
             co: operatorMap[fil.operator],
             lOp: !index ? 'AND' : 'OR',
             en:
-              (category === 'channels' || category === 'custom_channels')
+              category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
                 ? fil?.extra[3]
                 : 'event',
             objTy:
-              (category === 'channels' || category === 'custom_channels')
+              category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
@@ -562,9 +496,13 @@ const getEventsWithPropertiesKPI = (filters, category) => {
           co: operatorMap[fil.operator],
           lOp: 'AND',
           en:
-            (category === 'channels' || category === 'custom_channels') ? '' : fil?.extra ? fil?.extra[3] : 'event',
+            category === 'channels' || category === 'custom_channels'
+              ? ''
+              : fil?.extra
+              ? fil?.extra[3]
+              : 'event',
           objTy:
-            (category === 'channels' || category === 'custom_channels')
+            category === 'channels' || category === 'custom_channels'
               ? fil?.extra
                 ? fil?.extra[3]
                 : 'event'
@@ -585,13 +523,13 @@ const getEventsWithPropertiesKPI = (filters, category) => {
             co: operatorMap[fil.operator],
             lOp: !index ? 'AND' : 'OR',
             en:
-              (category === 'channels' || category === 'custom_channels')
+              category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
                 ? fil?.extra[3]
                 : 'event',
             objTy:
-              (category === 'channels' || category === 'custom_channels')
+              category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
@@ -606,9 +544,13 @@ const getEventsWithPropertiesKPI = (filters, category) => {
           co: operatorMap[fil.operator],
           lOp: 'AND',
           en:
-            (category === 'channels' || category === 'custom_channels') ? '' : fil?.extra ? fil?.extra[3] : 'event',
+            category === 'channels' || category === 'custom_channels'
+              ? ''
+              : fil?.extra
+              ? fil?.extra[3]
+              : 'event',
           objTy:
-            (category === 'channels' || category === 'custom_channels')
+            category === 'channels' || category === 'custom_channels'
               ? fil?.extra
                 ? fil?.extra[3]
                 : 'event'
@@ -628,13 +570,13 @@ const getEventsWithPropertiesKPI = (filters, category) => {
             co: operatorMap[fil.operator],
             lOp: 'OR',
             en:
-              (category === 'channels' || category === 'custom_channels')
+              category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
                 ? fil?.extra[3]
                 : 'event',
             objTy:
-              (category === 'channels' || category === 'custom_channels')
+              category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
@@ -649,9 +591,13 @@ const getEventsWithPropertiesKPI = (filters, category) => {
           co: operatorMap[fil.operator],
           lOp: 'OR',
           en:
-            (category === 'channels' || category === 'custom_channels') ? '' : fil?.extra ? fil?.extra[3] : 'event',
+            category === 'channels' || category === 'custom_channels'
+              ? ''
+              : fil?.extra
+              ? fil?.extra[3]
+              : 'event',
           objTy:
-            (category === 'channels' || category === 'custom_channels')
+            category === 'channels' || category === 'custom_channels'
               ? fil?.extra
                 ? fil?.extra[3]
                 : 'event'
@@ -676,8 +622,14 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) => {
         prNa: opt.property,
         prDaTy: opt.prop_type,
         eni: opt.eventIndex,
-        en: (category === 'channels' || category === 'custom_channels') ? '' : opt.prop_category,
-        objTy: (category === 'channels' || category === 'custom_channels') ? opt.prop_category : '',
+        en:
+          category === 'channels' || category === 'custom_channels'
+            ? ''
+            : opt.prop_category,
+        objTy:
+          category === 'channels' || category === 'custom_channels'
+            ? opt.prop_category
+            : '',
         dpNa: opt?.display_name ? opt?.display_name : ''
       };
     } else {
@@ -685,8 +637,14 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) => {
         gr: '',
         prNa: opt.property,
         prDaTy: opt.prop_type,
-        en: (category === 'channels' || category === 'custom_channels') ? '' : opt.prop_category,
-        objTy: (category === 'channels' || category === 'custom_channels') ? opt.prop_category : '',
+        en:
+          category === 'channels' || category === 'custom_channels'
+            ? ''
+            : opt.prop_category,
+        objTy:
+          category === 'channels' || category === 'custom_channels'
+            ? opt.prop_category
+            : '',
         dpNa: opt?.display_name ? opt?.display_name : ''
       };
     }
@@ -1960,7 +1918,10 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
         const DNa = startCase(pr.prNa);
         const isCamp =
-          (requestQuery?.qG[0]?.ca === 'channels' || requestQuery?.qG[0]?.ca === 'custom_channels') ? pr.objTy : pr.en;
+          requestQuery?.qG[0]?.ca === 'channels' ||
+          requestQuery?.qG[0]?.ca === 'custom_channels'
+            ? pr.objTy
+            : pr.en;
         eventFilters.push({
           operator:
             pr.prDaTy === 'datetime'
@@ -1982,7 +1943,10 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
         const DNa = startCase(pr.prNa);
         const isCamp =
-        (requestQuery?.qG[0]?.ca === 'channels' || requestQuery?.qG[0]?.ca === 'custom_channels') ? pr.objTy : pr.en;
+          requestQuery?.qG[0]?.ca === 'channels' ||
+          requestQuery?.qG[0]?.ca === 'custom_channels'
+            ? pr.objTy
+            : pr.en;
         eventFilters.push({
           operator:
             pr.prDaTy === 'datetime'
@@ -2023,7 +1987,11 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       ref += 1;
       const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
       const DNa = startCase(pr.prNa);
-      const isCamp = (requestQuery?.qG[0]?.ca === 'channels' || requestQuery?.qG[0]?.ca === 'custom_channels') ? pr.objTy : pr.en;
+      const isCamp =
+        requestQuery?.qG[0]?.ca === 'channels' ||
+        requestQuery?.qG[0]?.ca === 'custom_channels'
+          ? pr.objTy
+          : pr.en;
       filters.push({
         operator:
           pr.prDaTy === 'datetime'
@@ -2044,7 +2012,11 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     } else {
       const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
       const DNa = startCase(pr.prNa);
-      const isCamp = (requestQuery?.qG[0]?.ca === 'channels' || requestQuery?.qG[0]?.ca === 'custom_channels') ? pr.objTy : pr.en;
+      const isCamp =
+        requestQuery?.qG[0]?.ca === 'channels' ||
+        requestQuery?.qG[0]?.ca === 'custom_channels'
+          ? pr.objTy
+          : pr.en;
       filters.push({
         operator:
           pr.prDaTy === 'datetime'

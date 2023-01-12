@@ -445,9 +445,9 @@ func BackFillEventDataInCacheFromDb(project_id int64, currentTime time.Time, no_
 					categoryMap := make(map[string]int64)
 					categoryMap[category] = property.Count
 					eventProperties.Property[property.Key] = U.PropertyWithTimestamp{
-						category,
-						categoryMap, // Setting precomputed ones to empty
-						U.CountTimestampTuple{
+						Category:          category,
+						CategorywiseCount: categoryMap, // Setting precomputed ones to empty
+						CountTime: U.CountTimestampTuple{
 							LastSeenTimestamp: int64(property.LastSeen),
 							Count:             property.Count}}
 

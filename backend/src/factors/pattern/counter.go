@@ -31,6 +31,10 @@ type CounterEventFormat struct {
 	EventCardinality  uint                   `json:"ecd"`
 	EventProperties   map[string]interface{} `json:"epr"`
 	UserProperties    map[string]interface{} `json:"upr"`
+	Group1UserId      string                 `json:"g1ui"`
+	Group2UserId      string                 `json:"g2ui"`
+	Group3UserId      string                 `json:"g3ui"`
+	Group4UserId      string                 `json:"g4ui"`
 }
 
 type PropertiesInfo struct {
@@ -133,7 +137,7 @@ func GenCandidatesPair(p1 *Pattern, p2 *Pattern, userAndEventsInfo *UserAndEvent
 	return c1Pattern, c2Pattern, true
 }
 
-//GenCandidatesPairRepeat Generate patterns with same eventNames
+// GenCandidatesPairRepeat Generate patterns with same eventNames
 func GenCandidatesPairRepeat(p1 *Pattern, p2 *Pattern, userAndEventsInfo *UserAndEventsInfo) (*Pattern, *Pattern, bool) {
 	p1Len := len(p1.EventNames)
 	p2Len := len(p2.EventNames)
@@ -215,7 +219,7 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int, userAndEventsI
 	return candidatesMapToSlice(candidatesMap), currentMinCount, nil
 }
 
-//GenRepeatedEventCandidates Generate patterns with one off repeated string based on cyclic events
+// GenRepeatedEventCandidates Generate patterns with one off repeated string based on cyclic events
 func GenRepeatedEventCandidates(repeatedEvents []string, pt *Pattern, userAndEventsInfo *UserAndEventsInfo) (map[string]*Pattern, error) {
 	repeatedCandidatesMap := make(map[string]*Pattern)
 	cyclicSet := make(map[string]bool)
@@ -287,7 +291,7 @@ func GetPattEndWithGoal(projectId int64, combinationPatterns, goalPatterns []*Pa
 
 }
 
-//GenSegmentsForTopGoals form candidated with topK goal events
+// GenSegmentsForTopGoals form candidated with topK goal events
 func GenCombinationPatternsEndingWithGoal(projectId int64, currentPatterns, GoalPatterns []*Pattern, userAndEventsInfo *UserAndEventsInfo) (
 	// create pairs of (startPattern, GoalPattern) to count from events file
 	[]*Pattern, uint, error) {
@@ -335,7 +339,7 @@ func GenCombinationPatternsEndingWithGoal(projectId int64, currentPatterns, Goal
 	return combinationGoalPatterns, currentMinCount, nil
 }
 
-//GenSegmentsForRepeatedEvents form candidated for repeated goal events
+// GenSegmentsForRepeatedEvents form candidated for repeated goal events
 func GenSegmentsForRepeatedEvents(currentPatterns []*Pattern, userAndEventsInfo *UserAndEventsInfo, repeatedEvents []*Pattern) (
 	// create pairs of (startPattern, GoalPattern) to count from events file
 	[]*Pattern, uint, error) {

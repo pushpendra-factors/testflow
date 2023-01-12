@@ -6,21 +6,22 @@ import { bindActionCreators } from 'redux';
 
 import {
   setShowCriteria,
-  setPerformanceCriteria,
+  setPerformanceCriteria
 } from '../../../reducers/analyticsQuery';
 
-import { SVG, Text } from '../../factorsComponents';
+import { Text } from '../../factorsComponents';
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   TOTAL_EVENTS_CRITERIA,
   TOTAL_USERS_CRITERIA,
   ACTIVE_USERS_CRITERIA,
-  FREQUENCY_CRITERIA,
+  FREQUENCY_CRITERIA
 } from '../../../utils/constants';
 import FaSelect from '../../FaSelect';
 
 import { Button } from 'antd';
+import FunnelsConversionDurationBlock from '../FunnelsConversionDurationBlock/FunnelsConversionDurationBlock';
 
 const CriteriaSection = ({
   queryType,
@@ -29,7 +30,7 @@ const CriteriaSection = ({
   crit_perf,
   groupByState,
   setShowCriteria,
-  setPerformanceCriteria,
+  setPerformanceCriteria
 }) => {
   const [critShowSelect, setCritShowSelect] = useState(false);
   const [critPerfSelect, setCritPerfSelect] = useState(false);
@@ -38,13 +39,13 @@ const CriteriaSection = ({
     ['Total Events', null, TOTAL_EVENTS_CRITERIA],
     ['Total Users', null, TOTAL_USERS_CRITERIA],
     ['Active Users', null, ACTIVE_USERS_CRITERIA],
-    ['Frequency', null, FREQUENCY_CRITERIA],
+    ['Frequency', null, FREQUENCY_CRITERIA]
   ];
 
   const CRITERIA_PERF_OPTIONS = [
     ['Any Event', null, 'any'],
     ['Each Event', null, 'each'],
-    ['All Events', null, 'all'],
+    ['All Events', null, 'all']
   ];
 
   const isEventGroupSelected = () => {
@@ -113,7 +114,7 @@ const CriteriaSection = ({
     );
   };
 
-  if (queryType == QUERY_TYPE_EVENT) {
+  if (queryType === QUERY_TYPE_EVENT) {
     return (
       <div className={`${styles.criteria} mt-2`}>
         <Text type={'title'} level={7} extraClass={'m-0 mr-2 inline'}>
@@ -125,22 +126,39 @@ const CriteriaSection = ({
         {renderCritPerf()}
       </div>
     );
-  } else {
-    return null;
   }
+
+  if (queryType === QUERY_TYPE_FUNNEL) {
+    return (
+      <div className={`${styles.criteria} mt-2`}>
+        <Text
+          color='grey-2'
+          type={'title'}
+          level={7}
+          weight='medium'
+          extraClass={'m-0 mr-2 inline'}
+        >
+          Conversion within
+        </Text>
+        <FunnelsConversionDurationBlock />
+      </div>
+    );
+  }
+
+  return null;
 };
 
 const mapStateToProps = (state) => ({
   crit_show: state.analyticsQuery.show_criteria,
   crit_perf: state.analyticsQuery.performance_criteria,
-  groupByState: state.coreQuery.groupBy,
+  groupByState: state.coreQuery.groupBy
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setShowCriteria,
-      setPerformanceCriteria,
+      setPerformanceCriteria
     },
     dispatch
   );

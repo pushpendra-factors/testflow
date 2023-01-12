@@ -8,19 +8,36 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	MetricsDateType       = "date_type"
-	MetricsPercentageType = "percentage_type"
-	alpha                 = "abcdefghijklmnopqrstuvwxyz"
-	KpiStaticQueryType    = "static"
-	KpiCustomQueryType    = "custom"
-	KpiDerivedQueryType   = "derived"
+	MetricsDateType         = "date_type"
+	MetricsPercentageType   = "percentage_type"
+	alpha                   = "abcdefghijklmnopqrstuvwxyz"
+	KpiStaticQueryType      = "static"
+	KpiCustomQueryType      = "custom"
+	KpiDerivedQueryType     = "derived"
+	AllowedGoroutinesForKPI = 2
 )
+
+type KPIStatus struct {
+	Status int
+	Lock   sync.Mutex
+}
+
+func (s *KPIStatus) CheckAndSetStatus(inputStatus int) {
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
+
+	if s.Status == 2 || s.Status == http.StatusOK || s.Status != 0 {
+		s.Status = inputStatus
+		return
+	}
+}
 
 type KPIQueryGroup struct {
 	Class         string       `json:"cl"`

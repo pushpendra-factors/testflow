@@ -422,19 +422,15 @@ function QueryComposer({
   };
 
   const renderEACrit = () => (
-    <div>
-      <CriteriaSection
-        queryCount={queries.length}
-        queryType={QUERY_TYPE_EVENT}
-      />
-    </div>
+    <CriteriaSection queryCount={queries.length} queryType={queryType} />
   );
 
   const renderCriteria = () => {
     try {
-      if (queryType === QUERY_TYPE_EVENT) {
-        if (queries.length <= 0) return null;
-
+      if (
+        (queryType === QUERY_TYPE_EVENT && queries.length > 0) ||
+        (queryType === QUERY_TYPE_FUNNEL && queries.length > 1)
+      ) {
         return (
           <ComposerBlock
             blockTitle='CRITERIA'
@@ -449,9 +445,7 @@ function QueryComposer({
           </ComposerBlock>
         );
       }
-      if (queryType === QUERY_TYPE_FUNNEL) {
-        return null;
-      }
+      return null;
     } catch (err) {
       console.log(err);
     }

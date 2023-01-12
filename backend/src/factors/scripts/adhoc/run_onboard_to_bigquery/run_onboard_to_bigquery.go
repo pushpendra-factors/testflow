@@ -101,7 +101,7 @@ func main() {
 	}
 
 	pbLog.Info("Checking for existing config for project_id.")
-	bigquerySetting, status := store.GetStore().GetBigquerySettingByProjectID(*projectIDFlag)
+	bigquerySetting, status := store.GetStore().GetBigquerySettingByProjectID(int64(*projectIDFlag))
 	if status == http.StatusInternalServerError {
 		log.WithError(err).Fatalf("Failed to get bigquery setting for project_id")
 	} else if status == http.StatusNotFound {
@@ -112,7 +112,7 @@ func main() {
 		}
 
 		pbLog.Info("Enabling archival and biguqery in project_settings")
-		if errCode := store.GetStore().EnableBigqueryArchivalForProject(*projectIDFlag); errCode != http.StatusAccepted {
+		if errCode := store.GetStore().EnableBigqueryArchivalForProject(int64(*projectIDFlag)); errCode != http.StatusAccepted {
 			pbLog.Fatal("Error enabling archival and biguqery in project_settings")
 		}
 
@@ -124,7 +124,7 @@ func main() {
 		credentialsBuffer.ReadFrom(credentialsReader)
 
 		bigquerySetting = &model.BigquerySetting{
-			ProjectID:               *projectIDFlag,
+			ProjectID:               int64(*projectIDFlag),
 			BigqueryProjectID:       *bigqueryProjectIDFlag,
 			BigqueryDatasetName:     *bigqueryDatasetFlag,
 			BigqueryCredentialsJSON: strings.ReplaceAll(credentialsBuffer.String(), "\n", ""),
@@ -138,7 +138,7 @@ func main() {
 		pbLog.Infof("Existing config %s found.", bigquerySetting.ID)
 	}
 
-	err = BQ.CreateBigqueryArchivalTables(*projectIDFlag)
+	err = BQ.CreateBigqueryArchivalTables(int64(*projectIDFlag))
 	if err != nil {
 		pbLog.WithError(err).Error("Failed to create one or more tables in bigquery.")
 	}

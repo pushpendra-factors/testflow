@@ -93,18 +93,18 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		} else {
 			sourceString = "AND source=" + strconv.Itoa(model.UserSourceMap[payload.Source])
 		}
-		if payload.SegmentId != "" {
-			segment, status := store.GetSegmentById(projectID, payload.SegmentId)
-			if status != http.StatusFound {
-				return nil, http.StatusBadRequest
-			}
-			segmentQuery := &model.SegmentQuery{}
-			err := U.DecodePostgresJsonbToStructType(segment.Query, segmentQuery)
-			if err != nil {
-				return nil, http.StatusInternalServerError
-			}
-			payload.Filters = append(payload.Filters, segmentQuery.GlobalProperties...)
+	}
+	if payload.SegmentId != "" {
+		segment, status := store.GetSegmentById(projectID, payload.SegmentId)
+		if status != http.StatusFound {
+			return nil, http.StatusBadRequest
 		}
+		segmentQuery := &model.SegmentQuery{}
+		err := U.DecodePostgresJsonbToStructType(segment.Query, segmentQuery)
+		if err != nil {
+			return nil, http.StatusInternalServerError
+		}
+		payload.Filters = append(payload.Filters, segmentQuery.GlobalProperties...)
 	}
 
 	filterString, filterParams, errCode := buildWhereFromProperties(projectID, payload.Filters, 0)

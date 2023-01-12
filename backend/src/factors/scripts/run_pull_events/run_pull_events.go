@@ -9,12 +9,14 @@ import (
 	"context"
 	C "factors/config"
 	"factors/filestore"
+	"factors/merge"
 	"factors/model/store"
+	"factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
 	taskWrapper "factors/task/task_wrapper"
-	"factors/util"
+	U "factors/util"
 	"flag"
 	"fmt"
 	"net/http"
@@ -25,19 +27,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	DayInSecs   = 24 * 60 * 60
-	MonthInSecs = 31 * DayInSecs
-	WeekInSecs  = 7 * DayInSecs
-)
-
 func registerStructs() {
 	log.Info("Registering structs for beam")
-	beam.RegisterType(reflect.TypeOf((*T.CounterCampaignFormat)(nil)).Elem())
-	beam.RegisterType(reflect.TypeOf((*T.CounterUserFormat)(nil)).Elem())
-	beam.RegisterType(reflect.TypeOf((*T.RunBeamConfig)(nil)).Elem())
-	beam.RegisterType(reflect.TypeOf((*T.CUserIdsBeam)(nil)).Elem())
-	beam.RegisterType(reflect.TypeOf((*T.UidMap)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*pattern.CounterEventFormat)(nil)).Elem())
+
+	beam.RegisterType(reflect.TypeOf((*merge.RunBeamConfig)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*merge.CUserIdsBeam)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*merge.UidMap)(nil)).Elem())
 
 	// do fn
 	beam.RegisterType(reflect.TypeOf((*T.SortUsDoFn)(nil)).Elem())
@@ -46,7 +42,9 @@ func registerStructs() {
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
-	tmp_bucketNameFlag := flag.String("bucket_name_tmp", "/usr/local/var/factors/cloud_storage_tmp", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name for tmp artifacts")
+	tmpBucketNameFlag := flag.String("bucket_name_tmp", "/usr/local/var/factors/cloud_storage_tmp", "--bucket_name=/usr/local/var/factors/cloud_storage_tmp pass bucket name for tmp artifacts")
+	archiveBucketNameFlag := flag.String("archive_bucket_name", "/usr/local/var/factors/cloud_storage_archive", "--bucket_name=/usr/local/var/factors/cloud_storage_archive pass archive bucket name")
+	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
 
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory.")
 
@@ -72,7 +70,7 @@ func main() {
 	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
 
 	fileTypesFlag := flag.String("file_types", "*",
-		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to T.fileType map
+		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to pull.FileType map
 	projectIdFlag := flag.String("project_ids", "",
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
@@ -95,8 +93,8 @@ func main() {
 	}
 
 	//init beam
-	var beamConfig T.RunBeamConfig
-	if *runBeam == 1 {
+	var beamConfig merge.RunBeamConfig
+	if !*useBucketV2 && *runBeam == 1 {
 		log.Info("Initializing all beam constructs")
 		registerStructs()
 		beam.Init()
@@ -116,7 +114,7 @@ func main() {
 		beamConfig.RunOnBeam = false
 	}
 
-	defer util.NotifyOnPanic("Task#PullEvents", *env)
+	defer U.NotifyOnPanic("Task#PullEvents", *env)
 
 	appName := "pull_events_job"
 	healthcheckPingID := C.HealthcheckPullEventsPingID
@@ -131,6 +129,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
@@ -156,7 +155,7 @@ func main() {
 	// Initialize configs and connections and close with defer.
 	err := C.InitDB(*config)
 	if err != nil {
-		log.Fatal("Failed to pull events. Init failed.")
+		log.Fatal("Failed to pull data. Init failed.")
 	}
 	db := C.GetServices().Db
 	defer db.Close()
@@ -173,7 +172,7 @@ func main() {
 		fileTypesMap[i] = true
 	}
 
-	projectIdsToRun := make(map[int64]bool, 0)
+	projectIdsToRun := make(map[int64]bool)
 	if *projectsFromDB {
 		wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
 		explain_projects, _ := store.GetStore().GetAllExplainEnabledProjects()
@@ -202,106 +201,155 @@ func main() {
 	for projectId := range projectIdsToRun {
 		projectIdsArray = append(projectIdsArray, projectId)
 	}
+
+	configs := make(map[string]interface{})
 	// Init cloud manager.
-	var cloudManager filestore.FileManager
-	var cloudManagerTmp filestore.FileManager
-
-	if *env == "development" {
-		cloudManager = serviceDisk.New(*bucketNameFlag)
-		cloudManagerTmp = serviceDisk.New(*tmp_bucketNameFlag)
-
+	if *useBucketV2 {
+		var archiveCloudManager filestore.FileManager
+		if *env == "development" {
+			archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
+		} else {
+			archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init archive cloud manager")
+			}
+		}
+		configs["cloudManager"] = &archiveCloudManager
 	} else {
-		cloudManager, err = serviceGCS.New(*bucketNameFlag)
-		if err != nil {
-			log.WithField("error", err).Fatal("Failed to init cloud manager.")
+		var cloudManagerTmp filestore.FileManager
+		if *env == "development" {
+			cloudManagerTmp = serviceDisk.New(*tmpBucketNameFlag)
+		} else {
+			cloudManagerTmp, err = serviceGCS.New(*tmpBucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init cloud manager for tmp.")
+			}
 		}
-		cloudManagerTmp, err = serviceGCS.New(*tmp_bucketNameFlag)
-		if err != nil {
-			log.WithField("error", err).Fatal("Failed to init cloud manager for tmp.")
+		configs["cloudManagertmp"] = &cloudManagerTmp
+		var cloudManager filestore.FileManager
+		if *env == "development" {
+			cloudManager = serviceDisk.New(*bucketNameFlag)
+		} else {
+			cloudManager, err = serviceGCS.New(*bucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init cloud manager.")
+			}
 		}
+		configs["cloudManager"] = &cloudManager
 	}
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
-	configs := make(map[string]interface{})
 	configs["diskManager"] = diskManager
-	configs["cloudManager"] = &cloudManager
-	configs["cloudManagertmp"] = &cloudManagerTmp
 	configs["hardPull"] = hardPull
-	configs["beamConfig"] = &beamConfig
 
-	fileTypesMapOnlyEvents := make(map[int64]bool)
-	fileTypesMapOnlyEvents[1] = true
 	C.PingHealthcheckForStart(healthcheckPingID)
-	if *isWeeklyEnabled {
-		configs["fileTypes"] = fileTypesMapOnlyEvents
-		configs["modelType"] = T.ModelTypeWeek
-		status := taskWrapper.TaskFuncWithProjectId("PullEventsWeeklyOnlyEvents", *lookback, projectIdsArray, T.PullAllData, configs)
-		log.Info(status)
-		var isSuccess bool = true
-		for reason, message := range status {
-			if message == false {
-				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events weekly failure")
-				isSuccess = false
-				break
+
+	if *useBucketV2 {
+		if U.ContainsInt64InArray(fileTypes, 1) {
+			fileTypesMapOnlyEvents := make(map[int64]bool)
+			fileTypesMapOnlyEvents[1] = true
+			configs["fileTypes"] = fileTypesMapOnlyEvents
+			status := taskWrapper.TaskFuncWithProjectId("PullEventsDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
+			log.Info(status)
+			var isSuccess bool = true
+			for reason, message := range status {
+				if message == false {
+					C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events daily failure")
+					isSuccess = false
+					break
+				}
+			}
+			if isSuccess {
+				C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events Daily run success.")
 			}
 		}
-		if isSuccess {
-			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events Weekly run success.")
-		}
-	}
 
-	if *isWeeklyEnabled {
 		configs["fileTypes"] = fileTypesMap
-		configs["modelType"] = T.ModelTypeWeek
-		status := taskWrapper.TaskFuncWithProjectId("PullEventsWeekly", *lookback, projectIdsArray, T.PullAllData, configs)
+		status := taskWrapper.TaskFuncWithProjectId("PullDataDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
 		log.Info(status)
-		var isSuccess bool = true
+		isSuccess := true
 		for reason, message := range status {
 			if message == false {
-				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events weekly run failure")
+				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull data daily run failure")
 				isSuccess = false
 				break
 			}
 		}
 		if isSuccess {
-			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events Weekly run success.")
+			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Data Daily run success.")
+		}
+	} else {
+		configs["beamConfig"] = &beamConfig
+		fileTypesMapOnlyEvents := make(map[int64]bool)
+		fileTypesMapOnlyEvents[1] = true
+		if *isWeeklyEnabled {
+			configs["fileTypes"] = fileTypesMapOnlyEvents
+			status := taskWrapper.TaskFuncWithProjectId("PullEventsWeeklyOnlyEvents", *lookback, projectIdsArray, T.PullAllDataV1, configs)
+			log.Info(status)
+			var isSuccess bool = true
+			for reason, message := range status {
+				if message == false {
+					C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events weekly only events failure")
+					isSuccess = false
+					break
+				}
+			}
+			if isSuccess {
+				C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events Weekly only events run success.")
+			}
+		}
+
+		if *isWeeklyEnabled {
+			configs["fileTypes"] = fileTypesMap
+			status := taskWrapper.TaskFuncWithProjectId("PullEventsWeekly", *lookback, projectIdsArray, T.PullAllDataV1, configs)
+			log.Info(status)
+			var isSuccess bool = true
+			for reason, message := range status {
+				if message == false {
+					C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events weekly run failure")
+					isSuccess = false
+					break
+				}
+			}
+			if isSuccess {
+				C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events Weekly run success.")
+			}
+		}
+
+		if *isMonthlyEnabled {
+			configs["fileTypes"] = fileTypesMapOnlyEvents
+			status := taskWrapper.TaskFuncWithProjectId("PullEventsMonthly", *lookback, projectIdsArray, T.PullAllDataV1, configs)
+			log.Info(status)
+			var isSuccess bool = true
+			for reason, message := range status {
+				if message == false {
+					C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events monthly run failure")
+					isSuccess = false
+					break
+				}
+			}
+			if isSuccess {
+				C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events Monthly run success.")
+			}
+		}
+
+		if *isQuarterlyEnabled {
+			configs["fileTypes"] = fileTypesMapOnlyEvents
+			status := taskWrapper.TaskFuncWithProjectId("PullEventsQuarterly", *lookback, projectIdsArray, T.PullAllDataV1, configs)
+			log.Info(status)
+			var isSuccess bool = true
+			for reason, message := range status {
+				if message == false {
+					C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events quarterly run failure")
+					isSuccess = false
+					break
+				}
+			}
+			if isSuccess {
+				C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events quarterly run success.")
+			}
 		}
 	}
 
-	if *isMonthlyEnabled {
-		configs["fileTypes"] = fileTypesMapOnlyEvents
-		configs["modelType"] = T.ModelTypeMonth
-		status := taskWrapper.TaskFuncWithProjectId("PullEventsMonthly", *lookback, projectIdsArray, T.PullAllData, configs)
-		log.Info(status)
-		var isSuccess bool = true
-		for reason, message := range status {
-			if message == false {
-				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events monthly run failure")
-				isSuccess = false
-				break
-			}
-		}
-		if isSuccess {
-			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events Monthly run success.")
-		}
-	}
-
-	if *isQuarterlyEnabled {
-		configs["fileTypes"] = fileTypesMapOnlyEvents
-		configs["modelType"] = T.ModelTypeQuarter
-		status := taskWrapper.TaskFuncWithProjectId("PullEventsQuarterly", *lookback, projectIdsArray, T.PullAllData, configs)
-		log.Info(status)
-		var isSuccess bool = true
-		for reason, message := range status {
-			if message == false {
-				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events quarterly run failure")
-				isSuccess = false
-				break
-			}
-		}
-		if isSuccess {
-			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events quarterly run success.")
-		}
-	}
 }

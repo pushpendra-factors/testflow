@@ -1,13 +1,11 @@
-FROM golang:1.14-alpine AS builder
-
+FROM golang:1.14-buster
 WORKDIR /go/src/factors
 ADD /factors .
-RUN go build -o $GOPATH/bin/weeklyinsightsjob $GOPATH/src/factors/scripts/run_delta_insights/run_delta_insights.go
 
-# Create stripped down version without go and source code
-FROM alpine:3.7
-RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 # Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
 ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
-COPY --from=builder /go/bin/weeklyinsightsjob /go/bin/weeklyinsightsjob
+
+ENV GOPATH /go
+RUN apt-get update -y && apt-get install -y ca-certificates && go build -o /go/bin/weeklyinsightsjob /go/src/factors/scripts/run_delta_insights/run_delta_insights.go
+
 ENTRYPOINT ["/go/bin/weeklyinsightsjob"]

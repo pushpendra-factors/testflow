@@ -4,7 +4,7 @@ import SearchBar from '../../../components/SearchBar';
 import {
   Row, Col, Button, Spin
 } from 'antd';
-import { fetchFactorsGoals, fetchFactorsModels, fetchGoalInsights, setGoalInsight, saveGoalInsightRules, saveGoalInsightModel, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
+import { fetchSavedExplainGoals, fetchFactorsModels, setGoalInsight, saveGoalInsightRules, saveGoalInsightModel, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
 import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
@@ -19,14 +19,13 @@ import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import matchEventName from './Utils/MatchEventNames';
 
 const Factors = ({
-  fetchFactorsGoals
+  fetchSavedExplainGoals
   , activeProject
   , goals
   , agents
   , fetchProjectAgents
   , fetchEventNames
-  , fetchFactorsModels
-  , fetchGoalInsights
+  , fetchFactorsModels 
   , fetchFactorsTrackedEvents
   , fetchFactorsTrackedUserProperties
   , getUserProperties,
@@ -49,7 +48,7 @@ const Factors = ({
     dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
     const getData1 = async () => {
       await fetchProjectAgents(activeProject.id);
-      await fetchFactorsGoals(activeProject.id);
+      await fetchSavedExplainGoals(activeProject.id);
       await fetchEventNames(activeProject.id);
       await fetchFactorsModels(activeProject.id);
       await fetchFactorsTrackedEvents(activeProject.id);
@@ -129,4 +128,4 @@ const mapStateToProps = (state) => {
     userPropNames: state.coreQuery.userPropNames
   };
 };
-export default connect(mapStateToProps, { fetchFactorsGoals, setGoalInsight, saveGoalInsightModel, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, fetchProjectAgents, saveGoalInsightRules, fetchGoalInsights, fetchFactorsModels, fetchEventNames, getUserProperties })(Factors);
+export default connect(mapStateToProps, { fetchSavedExplainGoals, setGoalInsight, saveGoalInsightModel, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, fetchProjectAgents, saveGoalInsightRules, fetchFactorsModels, fetchEventNames, getUserProperties })(Factors);

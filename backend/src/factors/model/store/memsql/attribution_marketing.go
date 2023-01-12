@@ -36,16 +36,17 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	} else {
 		adwordsCustomerID = *projectSetting.IntAdwordsCustomerAccountId
 	}
+	projectCurrency := projectSetting.ProjectCurrency
 	var adwordsGCLIDData map[string]model.MarketingData
 	var reportType int
 	var adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData map[string]model.MarketingData
 	var adwordsCampaignAllRows, adwordsAdgroupAllRows, adwordsKeywordAllRows []model.MarketingData
 	// Adwords.
 	if adwordsCustomerID != "" && model.DoesAdwordsReportExist(q.AttributionKey) {
-
+		dataCurrency := store.GetDataCurrencyForAdwords(projectID)
 		reportType = model.AdwordsDocumentTypeAlias[model.CampaignPerformanceReport] // 5
 		adwordsCampaignIDData, adwordsCampaignAllRows, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
-			effectiveTo, adwordsCustomerID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
+			effectiveTo, adwordsCustomerID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -60,7 +61,7 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 
 		reportType = model.AdwordsDocumentTypeAlias[model.AdGroupPerformanceReport] // 10
 		adwordsAdgroupIDData, adwordsAdgroupAllRows, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
-			effectiveTo, adwordsCustomerID, model.AdwordsAdgroupID, model.AdwordsAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
+			effectiveTo, adwordsCustomerID, model.AdwordsAdgroupID, model.AdwordsAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -82,7 +83,7 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 
 		reportType = model.AdwordsDocumentTypeAlias[model.KeywordPerformanceReport] // 8
 		adwordsKeywordIDData, adwordsKeywordAllRows, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
-			effectiveTo, adwordsCustomerID, model.AdwordsKeywordID, model.AdwordsKeywordName, model.AdwordsKeywordMatchType, reportType, model.ReportKeyword, q.Timezone)
+			effectiveTo, adwordsCustomerID, model.AdwordsKeywordID, model.AdwordsKeywordName, model.AdwordsKeywordMatchType, reportType, model.ReportKeyword, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -129,11 +130,12 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	var facebookCampaignIDData, facebookAdgroupIDData map[string]model.MarketingData
 	var facebookCampaignAllRows, facebookAdgroupAllRows []model.MarketingData
 	if projectSetting.IntFacebookAdAccount != "" && model.DoesFBReportExist(q.AttributionKey) {
+		dataCurrency := store.GetDataCurrencyForFacebook(projectID)
 		facebookCustomerID := projectSetting.IntFacebookAdAccount
 
 		reportType = FacebookDocumentTypeAlias["campaign_insights"] // 5
 		facebookCampaignIDData, facebookCampaignAllRows, err = store.PullFacebookMarketingData(projectID, effectiveFrom,
-			effectiveTo, facebookCustomerID, model.FacebookCampaignID, model.FacebookCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
+			effectiveTo, facebookCustomerID, model.FacebookCampaignID, model.FacebookCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -147,7 +149,7 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 
 		reportType = FacebookDocumentTypeAlias["ad_set_insights"] // 6
 		facebookAdgroupIDData, facebookAdgroupAllRows, err = store.PullFacebookMarketingData(projectID, effectiveFrom,
-			effectiveTo, facebookCustomerID, model.FacebookAdgroupID, model.FacebookAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
+			effectiveTo, facebookCustomerID, model.FacebookAdgroupID, model.FacebookAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -172,11 +174,12 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	var linkedinCampaignIDData, linkedinAdgroupIDData map[string]model.MarketingData
 	var linkedinCampaignAllRows, linkedinAdgroupAllRows []model.MarketingData
 	if projectSetting.IntLinkedinAdAccount != "" && model.DoesLinkedinReportExist(q.AttributionKey) {
+		dataCurrency := store.GetDataCurrencyForLinkedin(projectID)
 		linkedinCustomerID := projectSetting.IntLinkedinAdAccount
 
 		reportType = LinkedinDocumentTypeAlias["campaign_group_insights"] // 5
 		linkedinCampaignIDData, linkedinCampaignAllRows, err = store.PullLinkedinMarketingData(projectID, effectiveFrom,
-			effectiveTo, linkedinCustomerID, model.LinkedinCampaignID, model.LinkedinCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
+			effectiveTo, linkedinCustomerID, model.LinkedinCampaignID, model.LinkedinCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -190,7 +193,7 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 
 		reportType = LinkedinDocumentTypeAlias["campaign_insights"] // 6
 		linkedinAdgroupIDData, linkedinAdgroupAllRows, err = store.PullLinkedinMarketingData(projectID, effectiveFrom,
-			effectiveTo, linkedinCustomerID, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
+			effectiveTo, linkedinCustomerID, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -218,11 +221,12 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	if enableBingAdsAttribution {
 		isBingAdsIntegrationDone := store.IsBingIntegrationAvailable(projectID)
 		if isBingAdsIntegrationDone && model.DoesBingAdsReportExist(q.AttributionKey) {
+			dataCurrency := store.GetDataCurrencyForBingAds(projectID)
 			bingAdsAccountID, _ := store.getBingAdsAccountId(projectID)
 
 			reportType = model.BingadsDocumentTypeAlias[model.CampaignPerformanceReport] // 4
 			bingadsCampaignIDData, bingadsCampaignAllRows, err = store.PullBingAdsMarketingData(projectID, effectiveFrom,
-				effectiveTo, bingAdsAccountID, model.BingadsCampaignID, model.BingadsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
+				effectiveTo, bingAdsAccountID, model.BingadsCampaignID, model.BingadsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone, projectCurrency, dataCurrency)
 			if err != nil {
 				return data, err
 			}
@@ -236,7 +240,7 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 
 			reportType = model.BingadsDocumentTypeAlias[model.AdGroupPerformanceReport] // 5
 			bingadsAdgroupIDData, bingadsAdgroupAllRows, err = store.PullBingAdsMarketingData(projectID, effectiveFrom,
-				effectiveTo, bingAdsAccountID, model.BingadsAdgroupID, model.BingadsAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
+				effectiveTo, bingAdsAccountID, model.BingadsAdgroupID, model.BingadsAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone, projectCurrency, dataCurrency)
 			if err != nil {
 				return data, err
 			}
@@ -258,7 +262,7 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 
 			reportType = model.BingadsDocumentTypeAlias[model.KeywordPerformanceReport] // 6
 			bingadsKeywordIDData, bingadsKeywordAllRows, err = store.PullBingAdsMarketingData(projectID, effectiveFrom,
-				effectiveTo, bingAdsAccountID, model.BingadsKeywordID, model.BingadsKeywordName, model.PropertyValueNone, reportType, model.ReportKeyword, q.Timezone)
+				effectiveTo, bingAdsAccountID, model.BingadsKeywordID, model.BingadsKeywordName, model.PropertyValueNone, reportType, model.ReportKeyword, q.Timezone, projectCurrency, dataCurrency)
 			if err != nil {
 				return data, err
 			}
@@ -441,16 +445,17 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 	} else {
 		adwordsCustomerID = *projectSetting.IntAdwordsCustomerAccountId
 	}
+	projectCurrency := projectSetting.ProjectCurrency
 	var adwordsGCLIDData map[string]model.MarketingData
 	var reportType int
 	var adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData map[string]model.MarketingData
 	var adwordsCampaignAllRows, adwordsAdgroupAllRows, adwordsKeywordAllRows []model.MarketingData
 	// Adwords.
 	if adwordsCustomerID != "" && model.DoesAdwordsReportExist(q.AttributionKey) {
-
+		dataCurrency := store.GetDataCurrencyForAdwords(projectID)
 		reportType = model.AdwordsDocumentTypeAlias[model.CampaignPerformanceReport] // 5
 		adwordsCampaignIDData, adwordsCampaignAllRows, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
-			effectiveTo, adwordsCustomerID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
+			effectiveTo, adwordsCustomerID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -465,7 +470,7 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 
 		reportType = model.AdwordsDocumentTypeAlias[model.AdGroupPerformanceReport] // 10
 		adwordsAdgroupIDData, adwordsAdgroupAllRows, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
-			effectiveTo, adwordsCustomerID, model.AdwordsAdgroupID, model.AdwordsAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
+			effectiveTo, adwordsCustomerID, model.AdwordsAdgroupID, model.AdwordsAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -487,7 +492,7 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 
 		reportType = model.AdwordsDocumentTypeAlias[model.KeywordPerformanceReport] // 8
 		adwordsKeywordIDData, adwordsKeywordAllRows, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
-			effectiveTo, adwordsCustomerID, model.AdwordsKeywordID, model.AdwordsKeywordName, model.AdwordsKeywordMatchType, reportType, model.ReportKeyword, q.Timezone)
+			effectiveTo, adwordsCustomerID, model.AdwordsKeywordID, model.AdwordsKeywordName, model.AdwordsKeywordMatchType, reportType, model.ReportKeyword, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -534,11 +539,12 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 	var facebookCampaignIDData, facebookAdgroupIDData map[string]model.MarketingData
 	var facebookCampaignAllRows, facebookAdgroupAllRows []model.MarketingData
 	if projectSetting.IntFacebookAdAccount != "" && model.DoesFBReportExist(q.AttributionKey) {
+		dataCurrency := store.GetDataCurrencyForFacebook(projectID)
 		facebookCustomerID := projectSetting.IntFacebookAdAccount
 
 		reportType = FacebookDocumentTypeAlias["campaign_insights"] // 5
 		facebookCampaignIDData, facebookCampaignAllRows, err = store.PullFacebookMarketingData(projectID, effectiveFrom,
-			effectiveTo, facebookCustomerID, model.FacebookCampaignID, model.FacebookCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
+			effectiveTo, facebookCustomerID, model.FacebookCampaignID, model.FacebookCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -552,7 +558,7 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 
 		reportType = FacebookDocumentTypeAlias["ad_set_insights"] // 6
 		facebookAdgroupIDData, facebookAdgroupAllRows, err = store.PullFacebookMarketingData(projectID, effectiveFrom,
-			effectiveTo, facebookCustomerID, model.FacebookAdgroupID, model.FacebookAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
+			effectiveTo, facebookCustomerID, model.FacebookAdgroupID, model.FacebookAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -577,11 +583,12 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 	var linkedinCampaignIDData, linkedinAdgroupIDData map[string]model.MarketingData
 	var linkedinCampaignAllRows, linkedinAdgroupAllRows []model.MarketingData
 	if projectSetting.IntLinkedinAdAccount != "" && model.DoesLinkedinReportExist(q.AttributionKey) {
+		dataCurrency := store.GetDataCurrencyForLinkedin(projectID)
 		linkedinCustomerID := projectSetting.IntLinkedinAdAccount
 
 		reportType = LinkedinDocumentTypeAlias["campaign_group_insights"] // 5
 		linkedinCampaignIDData, linkedinCampaignAllRows, err = store.PullLinkedinMarketingData(projectID, effectiveFrom,
-			effectiveTo, linkedinCustomerID, model.LinkedinCampaignID, model.LinkedinCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
+			effectiveTo, linkedinCustomerID, model.LinkedinCampaignID, model.LinkedinCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -595,7 +602,7 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 
 		reportType = LinkedinDocumentTypeAlias["campaign_insights"] // 6
 		linkedinAdgroupIDData, linkedinAdgroupAllRows, err = store.PullLinkedinMarketingData(projectID, effectiveFrom,
-			effectiveTo, linkedinCustomerID, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
+			effectiveTo, linkedinCustomerID, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone, projectCurrency, dataCurrency)
 		if err != nil {
 			return data, err
 		}
@@ -621,13 +628,14 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 	var bingadsCampaignIDData, bingadsAdgroupIDData, bingadsKeywordIDData map[string]model.MarketingData
 	var bingadsCampaignAllRows, bingadsAdgroupAllRows, bingadsKeywordAllRows []model.MarketingData
 	if enableBingAdsAttribution {
+		dataCurrency := store.GetDataCurrencyForBingAds(projectID)
 		isBingAdsIntegrationDone := store.IsBingIntegrationAvailable(projectID)
 		if isBingAdsIntegrationDone && model.DoesBingAdsReportExist(q.AttributionKey) {
 			bingAdsAccountID, _ := store.getBingAdsAccountId(projectID)
 
 			reportType = model.BingadsDocumentTypeAlias[model.CampaignPerformanceReport] // 4
 			bingadsCampaignIDData, bingadsCampaignAllRows, err = store.PullBingAdsMarketingData(projectID, effectiveFrom,
-				effectiveTo, bingAdsAccountID, model.BingadsCampaignID, model.BingadsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
+				effectiveTo, bingAdsAccountID, model.BingadsCampaignID, model.BingadsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone, projectCurrency, dataCurrency)
 			if err != nil {
 				return data, err
 			}
@@ -641,7 +649,7 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 
 			reportType = model.BingadsDocumentTypeAlias[model.AdGroupPerformanceReport] // 5
 			bingadsAdgroupIDData, bingadsAdgroupAllRows, err = store.PullBingAdsMarketingData(projectID, effectiveFrom,
-				effectiveTo, bingAdsAccountID, model.BingadsAdgroupID, model.BingadsAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
+				effectiveTo, bingAdsAccountID, model.BingadsAdgroupID, model.BingadsAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone, projectCurrency, dataCurrency)
 			if err != nil {
 				return data, err
 			}
@@ -663,7 +671,7 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 
 			reportType = model.BingadsDocumentTypeAlias[model.KeywordPerformanceReport] // 6
 			bingadsKeywordIDData, bingadsKeywordAllRows, err = store.PullBingAdsMarketingData(projectID, effectiveFrom,
-				effectiveTo, bingAdsAccountID, model.BingadsKeywordID, model.BingadsKeywordName, model.PropertyValueNone, reportType, model.ReportKeyword, q.Timezone)
+				effectiveTo, bingAdsAccountID, model.BingadsKeywordID, model.BingadsKeywordName, model.PropertyValueNone, reportType, model.ReportKeyword, q.Timezone, projectCurrency, dataCurrency)
 			if err != nil {
 				return data, err
 			}
@@ -834,7 +842,7 @@ func (store *MemSQL) getBingAdsAccountId(projectID int64) (string, error) {
 
 // PullAdwordsMarketingData Pulls Adds channel data for Adwords.
 func (store *MemSQL) PullAdwordsMarketingData(projectID int64, from, to int64, customerAccountID string, keyID string,
-	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+	keyName string, extraValue1 string, reportType int, reportName string, timeZone string, projectCurrency string, dataCurrency string) (map[string]model.MarketingData, []model.MarketingData, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"from":                from,
@@ -850,15 +858,28 @@ func (store *MemSQL) PullAdwordsMarketingData(projectID int64, from, to int64, c
 
 	logCtx := log.WithFields(logFields)
 	customerAccountIDs := strings.Split(customerAccountID, ",")
-	performanceQuery := "SELECT campaign_id as campaignID, ad_group_id as adgroupID, keyword_id as keywordID, ad_id as adID, " +
+	performanceQuery := ""
+	params := make([]interface{}, 0)
+	if(projectCurrency != "" && dataCurrency != ""){
+		performanceQuery = "SELECT campaign_id as campaignID, ad_group_id as adgroupID, keyword_id as keywordID, ad_id as adID, " +
+			"JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'cost') * inr_value)/1000000 AS total_cost FROM adwords_documents "  + currencyQuery + " " +
+			"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
+			"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1 " + "order by timestamp"
+		params = []interface{}{keyID, keyName, extraValue1, projectCurrency, dataCurrency, projectID, customerAccountIDs, reportType,
+			U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
+	} else {
+		performanceQuery = "SELECT campaign_id as campaignID, ad_group_id as adgroupID, keyword_id as keywordID, ad_id as adID, " +
 		"JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'cost'))/1000000 AS total_cost FROM adwords_documents " +
 		"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1 " + "order by timestamp"
+		params = []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
+			U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
+	}
 
-	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
 	rows, tx, err, reqID := store.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -871,7 +892,7 @@ func (store *MemSQL) PullAdwordsMarketingData(projectID int64, from, to int64, c
 
 // PullFacebookMarketingData Pulls Adds channel data for Facebook.
 func (store *MemSQL) PullFacebookMarketingData(projectID int64, from, to int64, customerAccountID string, keyID string,
-	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+	keyName string, extraValue1 string, reportType int, reportName string, timeZone string, projectCurrency string, dataCurrency string) (map[string]model.MarketingData, []model.MarketingData, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"from":                from,
@@ -887,15 +908,27 @@ func (store *MemSQL) PullFacebookMarketingData(projectID int64, from, to int64, 
 
 	logCtx := log.WithFields(logFields)
 	customerAccountIDs := strings.Split(customerAccountID, ",")
-	performanceQuery := "SELECT campaign_id as campaignID, ad_set_id as adgroupID, '$none' as keywordID, ad_id as adID, " +
+	performanceQuery := ""
+	params := make([]interface{}, 0)
+	if(projectCurrency != "" && dataCurrency != ""){
+		performanceQuery = "SELECT campaign_id as campaignID, ad_set_id as adgroupID, '$none' as keywordID, ad_id as adID, " +
+			"JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'inline_link_clicks')) AS clicks, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'spend') * inr_value) AS total_cost FROM facebook_documents "  + currencyQuery + " " +
+			"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
+			"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1 " + "order by timestamp"
+		params = []interface{}{keyID, keyName, extraValue1, projectCurrency, dataCurrency, projectID, customerAccountIDs, reportType,
+			U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
+	} else {
+		performanceQuery = "SELECT campaign_id as campaignID, ad_set_id as adgroupID, '$none' as keywordID, ad_id as adID, " +
 		"JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'inline_link_clicks')) AS clicks, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_cost FROM facebook_documents " +
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1 " + "order by timestamp"
-
-	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
+		params = []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
+			U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
+	}
 
 	rows, tx, err, reqID := store.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
@@ -910,7 +943,7 @@ func (store *MemSQL) PullFacebookMarketingData(projectID int64, from, to int64, 
 
 // PullLinkedinMarketingData Pulls Adds channel data for Linkedin.
 func (store *MemSQL) PullLinkedinMarketingData(projectID int64, from, to int64, customerAccountID string, keyID string,
-	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+	keyName string, extraValue1 string, reportType int, reportName string, timeZone string, projectCurrency string, dataCurrency string) (map[string]model.MarketingData, []model.MarketingData, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"from":                from,
@@ -926,15 +959,28 @@ func (store *MemSQL) PullLinkedinMarketingData(projectID int64, from, to int64, 
 
 	logCtx := log.WithFields(logFields)
 	customerAccountIDs := strings.Split(customerAccountID, ",")
-	performanceQuery := "SELECT campaign_group_id as campaignID, campaign_id as adgroupID, '$none' as keywordID, creative_id as adID, " +
+	performanceQuery := ""
+	params := make([]interface{}, 0)
+	if(projectCurrency != "" && dataCurrency != ""){
+		performanceQuery = "SELECT campaign_group_id as campaignID, campaign_id as adgroupID, '$none' as keywordID, creative_id as adID, " +
+			"JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'costInLocalCurrency')  * inr_value) AS total_spend FROM linkedin_documents " + currencyQuery + " " +
+			"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
+			"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1 " + "order by timestamp"
+		params = []interface{}{keyID, keyName, extraValue1, projectID, projectCurrency, dataCurrency, customerAccountIDs, reportType,
+			U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
+	} else {
+		performanceQuery = "SELECT campaign_group_id as campaignID, campaign_id as adgroupID, '$none' as keywordID, creative_id as adID, " +
 		"JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'costInLocalCurrency')) AS total_spend FROM linkedin_documents " +
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1 " + "order by timestamp"
+		params = []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
+			U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
+	}
 
-	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
 	rows, tx, err, reqID := store.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -946,7 +992,7 @@ func (store *MemSQL) PullLinkedinMarketingData(projectID int64, from, to int64, 
 	return marketingDataIDMap, allRows, nil
 }
 func (store *MemSQL) PullBingAdsMarketingData(projectID int64, from, to int64, customerAccountID string, keyID string,
-	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+	keyName string, extraValue1 string, reportType int, reportName string, timeZone string, projectCurrency string, dataCurrency string) (map[string]model.MarketingData, []model.MarketingData, error) {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"from":         from,
@@ -962,15 +1008,28 @@ func (store *MemSQL) PullBingAdsMarketingData(projectID int64, from, to int64, c
 
 	logCtx := log.WithFields(logFields)
 	customerAccountIDs := strings.Split(customerAccountID, ",")
-	performanceQuery := "SELECT JSON_EXTRACT_STRING(value, 'campaign_id')  as campaignID, JSON_EXTRACT_STRING(value, 'ad_group_id') as adgroupID, JSON_EXTRACT_STRING(value, 'keyword_id') as keywordID, " +
+	performanceQuery := ""
+	params := make([]interface{}, 0)
+	if(projectCurrency != "" && dataCurrency != ""){
+		performanceQuery = "SELECT JSON_EXTRACT_STRING(value, 'campaign_id')  as campaignID, JSON_EXTRACT_STRING(value, 'ad_group_id') as adgroupID, JSON_EXTRACT_STRING(value, 'keyword_id') as keywordID, " +
+			"'$none' as adId, JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'spend') * inr_value) AS total_spend FROM integration_documents "  + currencyQuery + " " +
+			"where project_id = ? AND source = ? AND customer_account_id IN (?) AND document_type = ? AND timestamp between ? AND ? " +
+			"group by campaignID, adgroupID, keywordID, key_id, key_name, extra_value1 " + "order by timestamp"
+		params = []interface{}{keyID, keyName, extraValue1, projectCurrency, dataCurrency, projectID, model.BingAdsIntegration, customerAccountIDs, reportType,
+			U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
+	} else {
+		performanceQuery = "SELECT JSON_EXTRACT_STRING(value, 'campaign_id')  as campaignID, JSON_EXTRACT_STRING(value, 'ad_group_id') as adgroupID, JSON_EXTRACT_STRING(value, 'keyword_id') as keywordID, " +
 		"'$none' as adId, JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_spend FROM integration_documents " +
 		"where project_id = ? AND source = ? AND customer_account_id IN (?) AND document_type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, key_id, key_name, extra_value1 " + "order by timestamp"
+		params = []interface{}{keyID, keyName, extraValue1, projectID, model.BingAdsIntegration, customerAccountIDs, reportType,
+			U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
+	}
 
-	params := []interface{}{keyID, keyName, extraValue1, projectID, model.BingAdsIntegration, customerAccountIDs, reportType,
-		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
 	rows, tx, err, reqID := store.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -1001,7 +1060,7 @@ func (store *MemSQL) PullCustomAdsMarketingData(projectID int64, from, to int64,
 	performanceQuery := "SELECT JSON_EXTRACT_STRING(value, 'campaign_id')  as campaignID, JSON_EXTRACT_STRING(value, 'ad_group_id') as adgroupID, JSON_EXTRACT_STRING(value, 'keyword_id') as keywordID, " +
 		"'$none' as adId, JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
-		"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_spend, source FROM integration_documents " +
+		"SUM(JSON_EXTRACT_STRING(value, 'spend') * inr_value) AS total_spend, source FROM integration_documents "  + currencyQuery + " " +
 		"where project_id = ? AND source IN (?) AND customer_account_id IN (?) AND document_type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, key_id, key_name, extra_value1, source"
 

@@ -5,8 +5,9 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func MailWeeklyInsights(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
@@ -32,11 +33,11 @@ func MailWeeklyInsights(projectID int64, configs map[string]interface{}) (map[st
 				continue
 			}
 			response := (responseResult).(WeeklyInsights)
-			digestHeader := GetQueryHeader(queryId)
+			digestHeader := getQueryHeader(queryId)
 			headerValue1 := fmt.Sprintf("%.2f", response.Goal.W1)
 			headerValue2 := fmt.Sprintf("%.2f", response.Goal.W2)
 			headerPerc := fmt.Sprintf("%.2f%s", response.Goal.Percentage, "%")
-			if(response.Insights == nil || len(response.Insights) <= 2){
+			if response.Insights == nil || len(response.Insights) <= 2 {
 				continue
 			}
 			line1Value1 := response.Insights[0].Key

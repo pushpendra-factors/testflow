@@ -80,17 +80,17 @@ function Header({ saveGoalInsights, activeProject, factors_insight_rules, setSav
         </div>
         <div style={{ color: '#0E2647', opacity: 0.56, fontSize: '14px' }} className="font-bold leading-5 ml-2">{`Conversions Explorer`}</div>
         <div className="flex items-center items-center"> 
-          {goalInsights && <Button
+          {/* {goalInsights && <Button
             onClick={() => setshowSaveModal(true)}
             className="items-center"
             type="primary"
             icon={<SVG extraClass="mr-1" name={"save"} size={24} color="#FFFFFF" />}
-          > Save </Button>}  
+          > Save </Button>}   */}
           <Link to="/explain" style={{ color: '#0E2647', fontSize: '14px' }} className='ml-4' ><SVG extraClass="mr-1" name={"close"} size={20} color={'grey'} /></Link> 
         </div>
       </div>
 
-      <Modal
+      {/* <Modal
         visible={showSaveModal}
         zIndex={1020}
         onCancel={() => setshowSaveModal(false)}
@@ -142,7 +142,7 @@ function Header({ saveGoalInsights, activeProject, factors_insight_rules, setSav
 
         </div>
 
-      </Modal>
+      </Modal> */}
 
 
     </Header>

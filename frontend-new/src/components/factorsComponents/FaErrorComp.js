@@ -46,6 +46,11 @@ const FaErrorComp = ({ size, className, type, title, subtitle }) => {
       );
   }
 
+  const refreshPage = () => {
+    window.location = '/';
+  }
+  
+
   return (
     <div
       className={`w-full flex flex-col justify-center items-center ${className}`}
@@ -74,7 +79,7 @@ const FaErrorComp = ({ size, className, type, title, subtitle }) => {
           {subtitle}
         </Text>
       )}
-      {/* {resetErrorBoundary &&  <Button size={'large'} className={'mt-4'} onClick={this.reloadPage}>Try again!</Button> } */}
+      <Button size={'large'} className={'mt-4'} onClick={()=>refreshPage()}>Try Again!</Button>
     </div>
   );
 };

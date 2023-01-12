@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"factors/filestore"
+	"factors/merge"
 	"factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
@@ -502,7 +503,7 @@ func mineAndWriteLenOnePatterns(projectID int64, modelId uint64, cloudManager *f
 	eventNames []string, filepathString string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64,
-	countOccurence bool, campaignTypeEvents CampaignEventLists, efTmpPath string, beamConfig *RunBeamConfig,
+	countOccurence bool, campaignTypeEvents CampaignEventLists, efTmpPath string, beamConfig *merge.RunBeamConfig,
 	createMetadata bool, metaDataDir string, cAlgoProps P.CountAlgoProperties) (
 	[]*P.Pattern, int64, error) {
 	var lenOnePatterns []*P.Pattern
@@ -566,7 +567,7 @@ func mineAndWriteLenOnePatterns(projectID int64, modelId uint64, cloudManager *f
 	return filteredLenOnePatterns, patternsSize, nil
 }
 
-//FilterCombinationPatterns filter all start events based on topK logic for URL's,UDE,standardEvents,CampAnalytics
+// FilterCombinationPatterns filter all start events based on topK logic for URL's,UDE,standardEvents,CampAnalytics
 func FilterCombinationPatterns(combinationGoalPatterns, goalPatterns []*P.Pattern, eventNamesWithType map[string]string) []*P.Pattern {
 	combinationPatternsMap := make(map[string][]*P.Pattern)
 	allPatterns := make([]*P.Pattern, 0)
@@ -599,7 +600,7 @@ func mineAndWriteLenTwoPatterns(projectId int64, modelId uint64,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool,
 	goalPatterns []*P.Pattern, eventNamesWithType map[string]string,
-	beamConfig *RunBeamConfig, efTmpPath string, createMetadata bool, metaDataDir string, cAlgoProps P.CountAlgoProperties) (
+	beamConfig *merge.RunBeamConfig, efTmpPath string, createMetadata bool, metaDataDir string, cAlgoProps P.CountAlgoProperties) (
 	[]*P.Pattern, int64, error) {
 
 	var patternsSize int64
@@ -732,7 +733,7 @@ func GetGoalPatterns(projectId int64, filteredPatterns []*P.Pattern, eventNamesW
 
 }
 
-//GenMissingTwoLenPatterns get threeLen-twoLen
+// GenMissingTwoLenPatterns get threeLen-twoLen
 func GenMissingJourneyPatterns(goal, journey []*P.Pattern, userAndEventsInfo *P.UserAndEventsInfo) ([]*P.Pattern, error) {
 	var lenGoal, lenJourney int
 	if len(goal) > 0 && len(journey) > 0 {
@@ -785,7 +786,7 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 	numRoutines int, chunkDir string,
 	maxModelSize int64, countOccurence bool,
 	eventNamesWithType map[string]string, repeatedEvents []string,
-	campTypeEvents CampaignEventLists, efTmpPath string, beamConfig *RunBeamConfig,
+	campTypeEvents CampaignEventLists, efTmpPath string, beamConfig *merge.RunBeamConfig,
 	createMetadata bool, metaDataDir string, cAlgoProps P.CountAlgoProperties) error {
 	var filteredPatterns []*P.Pattern
 	var cumulativePatternsSize int64 = 0
@@ -1763,11 +1764,11 @@ func buildEventsInfoForEncodedEvents(smartEvents CampaignEventLists, userAndEven
 }
 
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
-func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId int64,
+func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager *filestore.FileManager,
+	diskManager *serviceDisk.DiskDriver, numRoutines int, projectId int64,
 	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64,
-	countOccurence bool, campaignLimitCount int, beamConfig *RunBeamConfig,
-	createMetadata bool, cAlgoProps P.CountAlgoProperties) (int, error) {
+	countOccurence bool, campaignLimitCount int, beamConfig *merge.RunBeamConfig,
+	createMetadata bool, cAlgoProps P.CountAlgoProperties, hardPull bool, useBucketV2 bool) (int, error) {
 
 	var err error
 	countsVersion := cAlgoProps.Counting_version
@@ -1780,17 +1781,24 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		reader := bytes.NewReader(data)
 		diskManager.Create(metaDataDir, metaDataFileName, reader)
 	}
+	if useBucketV2 {
+		if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTime, endTime,
+			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0); err != nil {
+			mineLog.WithError(err).Error("Failed creating events file")
+			return 0, err
+		}
+	}
 
 	if cAlgoProps.Counting_version == 4 {
 		mineLog.Infof("explain v2 job :%v", cAlgoProps.Job)
 	}
 
 	// download events file from cloud to local
-	efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTime, modelType)
-	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, startTime, modelType)
+	efCloudPath, efCloudName := (*sortedCloudManager).GetEventsFilePathAndName(projectId, startTime, endTime)
+	efTmpPath, efTmpName := diskManager.GetEventsFilePathAndName(projectId, startTime, endTime)
 	mineLog.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
 		"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
-	eReader, err := (*cloudManager).Get(efCloudPath, efCloudName)
+	eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
 			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
@@ -1824,7 +1832,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 	// ----++++++------
 
-	eventNames, eventNamesWithType, events_count_v2, err := GetEventNamesAndType(tmpEventsFilepath, cloudManager, projectId, modelId, countsVersion)
+	eventNames, eventNamesWithType, events_count_v2, err := GetEventNamesAndType(tmpEventsFilepath, modelCloudManager, projectId, modelId, countsVersion)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get eventName and event type.")
 		return 0, err
@@ -1843,7 +1851,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 
 	mineLog.Infof("job details :%v", cAlgoProps.Job)
-	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(cloudManager, projectId, modelId, eventNames, tmpEventsFilepath)
+	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(modelCloudManager, projectId, modelId, eventNames, tmpEventsFilepath)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		return 0, err
@@ -1866,7 +1874,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		mineLog.Error(errorString)
 		return 0, fmt.Errorf(errorString)
 	}
-	err = writeEventInfoFile(projectId, modelId, bytes.NewReader(userAndEventsInfoBytes), (*cloudManager))
+	err = writeEventInfoFile(projectId, modelId, bytes.NewReader(userAndEventsInfoBytes), (*modelCloudManager))
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events Info.")
 		return 0, err
@@ -1876,7 +1884,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.Info("Number of User Properties: ", len(userPropList))
 	mineLog.Info("Number of Event Properties: ", len(eventPropList))
 
-	campaignAnalyticsSorted, err := buildEventsFileOnProperties(tmpEventsFilepath, efTmpPath, efTmpName, cloudManager, diskManager, projectId,
+	campaignAnalyticsSorted, err := buildEventsFileOnProperties(tmpEventsFilepath, efTmpPath, efTmpName, modelCloudManager, diskManager, projectId,
 		modelId, eReader, userAndEventsInfo, campaignLimitCount, cAlgoProps)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events data.")
@@ -1897,7 +1905,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 
 	//write events file to GCP
 	modEventsFile := fmt.Sprintf("events_modified_%d.txt", modelId)
-	err = writeFileToGCP(projectId, modelId, modEventsFile, tmpEventsFilepath, cloudManager, "")
+	err = writeFileToGCP(projectId, modelId, modEventsFile, tmpEventsFilepath, modelCloudManager, "")
 	if err != nil {
 		return 0, fmt.Errorf("unable to write modified events file to GCP")
 	}
@@ -1924,7 +1932,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		scopeName := "Count_user_prop_hist"
 		patts_all_activeUsers := make([]*P.Pattern, 0)
 		patts_all_activeUsers = append(patts_all_activeUsers, allActiveUsersPattern)
-		all_active_patternsFpath, err := UserPropertiesHistogramController(beamConfig, projectId, modelId, cloudManager, diskManager, tmpEventsFilepath,
+		all_active_patternsFpath, err := UserPropertiesHistogramController(beamConfig, projectId, modelId, modelCloudManager, diskManager, tmpEventsFilepath,
 			patts_all_activeUsers, numRoutines, userAndEventsInfo, countOccurence,
 			efTmpPath, scopeName, cAlgoProps)
 		if err != nil {
@@ -1932,14 +1940,16 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		}
 		mineLog.Info("Reading from file")
 		allActiveUsersPatterns, _, err := ReadFilterAndCompressPatternsFromFile(
-			all_active_patternsFpath, cloudManager, maxModelSize, 0, 2, max_PATTERN_LENGTH)
+			all_active_patternsFpath, modelCloudManager, maxModelSize, 0, 2, max_PATTERN_LENGTH)
 		if err != nil {
 			return 0, err
 		}
-		allActiveUsersPattern := allActiveUsersPatterns[0]
-		if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir, createMetadata, metaDataDir); err != nil {
-			mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
-			return 0, err
+		if len(allActiveUsersPatterns) > 0 {
+			allActiveUsersPattern := allActiveUsersPatterns[0]
+			if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir, createMetadata, metaDataDir); err != nil {
+				mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
+				return 0, err
+			}
 		}
 
 	}
@@ -1951,7 +1961,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		"tmpChunksDir": tmpChunksDir, "routines": numRoutines}).Info("Mining patterns and writing it as chunks.")
 
 	err = mineAndWritePatterns(projectId, modelId, tmpEventsFilepath,
-		userAndEventsInfo, cloudManager, diskManager, eventNames, numRoutines, tmpChunksDir, maxModelSize,
+		userAndEventsInfo, modelCloudManager, diskManager, eventNames, numRoutines, tmpChunksDir, maxModelSize,
 		countOccurence, eventNamesWithType, repeatedEvents, campaignAnalyticsSorted,
 		efTmpPath, beamConfig, createMetadata, metaDataDir, cAlgoProps)
 	if err != nil {
@@ -1963,10 +1973,10 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	var chunkIds []string
 	if cAlgoProps.Counting_version != 4 {
 		// upload chunks to cloud
-		cloudChunksDir := (*cloudManager).GetPatternChunksDir(projectId, modelId)
+		cloudChunksDir := (*modelCloudManager).GetPatternChunksDir(projectId, modelId)
 		mineLog.WithFields(log.Fields{"tmpChunksDir": tmpChunksDir,
 			"cloudChunksDir": cloudChunksDir}).Info("Uploading chunks to cloud.")
-		chunkIds, err := uploadChunksToCloud(tmpChunksDir, cloudChunksDir, cloudManager)
+		chunkIds, err := uploadChunksToCloud(tmpChunksDir, cloudChunksDir, modelCloudManager)
 		if err != nil {
 			mineLog.WithFields(log.Fields{"localChunksDir": tmpChunksDir,
 				"cloudChunksDir": cloudChunksDir}).Error("Failed to upload chunks to cloud.")
@@ -1975,10 +1985,10 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 
 		// upload metadata to cloud
 		if createMetadata {
-			cloudMetaDataDir := (*cloudManager).GetChunksMetaDataDir(projectId, modelId)
+			cloudMetaDataDir := (*modelCloudManager).GetChunksMetaDataDir(projectId, modelId)
 			mineLog.WithFields(log.Fields{"MetaDataDir": metaDataDir,
 				"cloudMetaDataDir": cloudMetaDataDir}).Info("Uploading metadata to cloud.")
-			err = uploadMetaDataToCloud(metaDataDir, cloudMetaDataDir, cloudManager)
+			err = uploadMetaDataToCloud(metaDataDir, cloudMetaDataDir, modelCloudManager)
 			if err != nil {
 				mineLog.WithFields(log.Fields{"localMetaDataDir": metaDataDir,
 					"cloudMetaDataDir": cloudMetaDataDir}).Error("Failed to upload metadata to cloud.")
@@ -2026,11 +2036,11 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	} else {
 
 		// upload chunks to cloud
-		cloudChunksDir, _ := (*cloudManager).GetExplainV2ModelPath(modelId, projectId)
+		cloudChunksDir, _ := (*modelCloudManager).GetExplainV2ModelPath(modelId, projectId)
 
 		mineLog.WithFields(log.Fields{"tmpChunksDir": tmpChunksDir,
 			"cloudChunksDir": cloudChunksDir}).Info("Uploading chunks to cloud.")
-		chunkIds, err = uploadChunksToCloud(tmpChunksDir, cloudChunksDir, cloudManager)
+		chunkIds, err = uploadChunksToCloud(tmpChunksDir, cloudChunksDir, modelCloudManager)
 		if err != nil {
 			mineLog.WithFields(log.Fields{"localChunksDir": tmpChunksDir,
 				"cloudChunksDir": cloudChunksDir}).Error("Failed to upload chunks to cloud.")
@@ -2073,6 +2083,10 @@ func OpenEventFileAndGetScanner(filePath string) (*bufio.Scanner, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
+	}
+	_, err = f.Seek(0, io.SeekStart)
+	if err != nil {
+		log.Fatal(err)
 	}
 	scanner := patternStore.CreateScannerFromReader(f)
 	return scanner, nil
@@ -2444,7 +2458,7 @@ func GetTopSmartEvents(allPatterns []*P.Pattern, eventNamesWithType map[string]s
 
 }
 
-//GetTopStandardPatterns Get all events which starts with $ and not campaign Analytics Event
+// GetTopStandardPatterns Get all events which starts with $ and not campaign Analytics Event
 func GetTopStandardPatterns(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
 
 	allStandardPatterns := make([]*P.Pattern, 0)
@@ -2473,7 +2487,7 @@ func GetTopCampaigns(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
 	return filteredCampaignPatterns
 }
 
-//GetTopSourcePatterns get all top patterns with $session and source set
+// GetTopSourcePatterns get all top patterns with $session and source set
 func GetTopSourcePatterns(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
 	allCampaignPatterns := make([]*P.Pattern, 0)
 	for _, v := range allPatterns {
@@ -2573,7 +2587,7 @@ func FilterAllCausualEvents(allPatterns []*P.Pattern, eventNamesWithType map[str
 	return filteredPatterns, nil
 }
 
-//GenInterMediateCombinations generate cross combination patterns based on len two patt
+// GenInterMediateCombinations generate cross combination patterns based on len two patt
 func GenInterMediateCombinations(lenTwoPatt []*P.Pattern, userAndEventsInfo *P.UserAndEventsInfo) ([]*P.Pattern, error) {
 	// input-> {{"a","g"},{"b","g"}}
 	// result - > {"a","b","g"} {"b","a","g"}

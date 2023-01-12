@@ -788,7 +788,7 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId int64, ampUserId string, times
 	return user.ID, http.StatusCreated
 }
 
-//GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
+// GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
 func (store *MemSQL) GetRecentUserPropertyKeysWithLimits(projectID int64, usersLimit int, propertyLimit int, seedDate time.Time) ([]U.Property, error) {
 	logFields := log.Fields{
 		"project_id":     projectID,
@@ -954,7 +954,7 @@ func (store *MemSQL) GetRequiredUserPropertiesByProject(projectID int64, limit i
 	return properties, resultantPropertyToDisplayName, nil
 }
 
-//GetUserPropertiesByProject This method iterates over n days and gets user properties from cache for a given project
+// GetUserPropertiesByProject This method iterates over n days and gets user properties from cache for a given project
 // Picks all past 24 hrs seen properties and sorts the remaining by count and returns top 'limit'
 func (store *MemSQL) GetUserPropertiesByProject(projectID int64, limit int, lastNDays int) (map[string][]string, error) {
 	logFields := log.Fields{
@@ -1041,7 +1041,7 @@ func getUserPropertiesByProjectFromCache(projectID int64, dateKey string) (U.Cac
 	return cacheValue, nil
 }
 
-//GetPropertyValuesByUserProperty This method iterates over n days and gets user property values
+// GetPropertyValuesByUserProperty This method iterates over n days and gets user property values
 // from cache for a given project/property. Picks all past 24 hrs seen values and sorts the
 // remaining by count and returns top 'limit'
 func (store *MemSQL) GetPropertyValuesByUserProperty(projectID int64,
@@ -2717,7 +2717,29 @@ func (store *MemSQL) GetUserWithoutProperties(projectID int64, id string) (*mode
 	return &user, http.StatusFound
 }
 
-func (store *MemSQL) PullUsersRowsForWI(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error) {
+func (store *MemSQL) PullUsersRowsForWIV2(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	whereGroupStmt := fmt.Sprintf("(is_group_user=1 AND group_%d_id IS NOT NULL)", group)
+	if group == 0 {
+		whereGroupStmt = "(is_group_user=0 OR is_group_user IS NULL)"
+	}
+	rawQuery := fmt.Sprintf("SELECT COALESCE(customer_user_id, id) AS user_id, properties,ISNULL(customer_user_id) AS is_anonymous, join_timestamp AS join_timestamp, "+
+		"COALESCE(JSON_EXTRACT_STRING(properties, '%s'),0) AS timestamp FROM users "+
+		"WHERE %s AND project_id=%d AND source=%d AND UNIX_TIMESTAMP(created_at) BETWEEN %d AND %d AND updated_at<NOW() AND timestamp>0 "+
+		"LIMIT %d",
+		dateField, whereGroupStmt, projectID, source, startTime, endTime, model.UsersPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
+}
+
+func (store *MemSQL) PullUsersRowsForWIV1(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,

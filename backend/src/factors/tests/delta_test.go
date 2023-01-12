@@ -34,9 +34,6 @@ func TestGetCampaignMetricSimple(t *testing.T) {
 		memsql.CAFilterAdGroup:  "y",
 		memsql.CAFilterKeyword:  "z",
 		memsql.CAFilterAd:       "a",
-		// "campaign_id":           "x_id",
-		// "ad_group_id":           "y_id",
-		// "keyword_id":            "z_id",
 	}
 	docTypeAlias := map[string]int{
 		"x":                    1,
@@ -49,31 +46,31 @@ func TestGetCampaignMetricSimple(t *testing.T) {
 	}
 	requiredDocTypes := []int{1, 2, 3, 4, 5, 6}
 
-	metricCalcInfo1 := D.MetricCalculationInfo{
-		Props:     []D.PropInfo{{Name: "numProp1", DependentKey: "prop1"}},
+	metricCalcInfo1 := D.ChannelMetricCalculationInfo{
+		Props:     []D.ChannelPropInfo{{Name: "numProp1", DependentKey: "prop1"}},
 		Operation: "sum",
 		Constants: map[string]float64{"quotient": 10000},
 	}
 
-	metricCalcInfo2 := D.MetricCalculationInfo{
-		Props:     []D.PropInfo{{Name: "numProp2", DependentKey: "prop3", DependentValue: 31, DependentOperation: "="}},
+	metricCalcInfo2 := D.ChannelMetricCalculationInfo{
+		Props:     []D.ChannelPropInfo{{Name: "numProp2", DependentKey: "prop3", DependentValue: 31, DependentOperation: "="}},
 		Operation: "sum",
 		Constants: map[string]float64{},
 	}
 
-	metricCalcInfo3 := D.MetricCalculationInfo{
-		Props:     []D.PropInfo{{Name: "numProp1", DependentKey: "prop6"}, {Name: "numProp2", ReplaceValue: map[float64]float64{0: 1000}}},
+	metricCalcInfo3 := D.ChannelMetricCalculationInfo{
+		Props:     []D.ChannelPropInfo{{Name: "numProp1", DependentKey: "prop6"}, {Name: "numProp2", ReplaceValue: map[float64]float64{0: 1000}}},
 		Operation: "quotient",
 		Constants: map[string]float64{"product": 100},
 	}
 
-	metricCalcInfo4 := D.MetricCalculationInfo{
-		Props:     []D.PropInfo{{Name: "numProp2", DependentKey: "numProp3", DependentValue: 1, DependentOperation: "!="}, {Name: "numProp1", DependentKey: "prop5", ReplaceValue: map[float64]float64{0: 1000}}},
+	metricCalcInfo4 := D.ChannelMetricCalculationInfo{
+		Props:     []D.ChannelPropInfo{{Name: "numProp2", DependentKey: "numProp3", DependentValue: 1, DependentOperation: "!="}, {Name: "numProp1", DependentKey: "prop5", ReplaceValue: map[float64]float64{0: 1000}}},
 		Operation: "quotient",
 		Constants: map[string]float64{"product": 100},
 	}
 
-	simpleMetrics := []D.MetricCalculationInfo{metricCalcInfo1, metricCalcInfo2}
+	simpleMetrics := []D.ChannelMetricCalculationInfo{metricCalcInfo1, metricCalcInfo2}
 	globalExpected := []float64{0.015, 1}
 
 	for i, metricCalcInfo := range simpleMetrics {
@@ -82,7 +79,7 @@ func TestGetCampaignMetricSimple(t *testing.T) {
 			log.Fatal(err)
 		}
 		scanner := bufio.NewScanner(file)
-		if info, _, err := D.GetCampaignMetricSimple(metric, scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap); err != nil {
+		if info, _, err := D.GetCampaignMetricSimple(scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap); err != nil {
 			log.WithError(err).Error("error GetCampaignMetric for kpi " + metric)
 		} else {
 			assert.Equal(t, globalExpected[i], info.Global)
@@ -91,7 +88,7 @@ func TestGetCampaignMetricSimple(t *testing.T) {
 		file.Close()
 	}
 
-	complexMetrics := []D.MetricCalculationInfo{metricCalcInfo3, metricCalcInfo4}
+	complexMetrics := []D.ChannelMetricCalculationInfo{metricCalcInfo3, metricCalcInfo4}
 	globalExpected = []float64{5000, 2.5}
 
 	for i, metricCalcInfo := range complexMetrics {
@@ -100,7 +97,7 @@ func TestGetCampaignMetricSimple(t *testing.T) {
 			log.Fatal(err)
 		}
 		scanner := bufio.NewScanner(file)
-		if info, _, err := D.GetCampaignMetricComplex(metric, scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap); err != nil {
+		if info, _, err := D.GetCampaignMetricComplex(scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap); err != nil {
 			log.WithError(err).Error("error GetCampaignMetric for kpi " + metric)
 		} else {
 			assert.Equal(t, globalExpected[i], info.Global)

@@ -12,6 +12,7 @@ import (
 	"factors/filestore"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/pull"
 	BQ "factors/services/bigquery"
 	serviceDisk "factors/services/disk"
 	"factors/util"
@@ -143,7 +144,7 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 
 		pbLog.Infof("Stating to pull events to file %s", tmpEventsFile)
 
-		rowCount, eventsFilePath, usersFilePath, err := PullEventsForArchive(projectID,
+		rowCount, eventsFilePath, usersFilePath, err := pull.PullEventsForArchive(projectID,
 			tmpEventsFile, tmpUsersFile, batch.StartTime, batch.EndTime)
 		taskDetails.EventCount = int64(rowCount)
 		if err != nil {

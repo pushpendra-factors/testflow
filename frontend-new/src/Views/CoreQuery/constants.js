@@ -21,6 +21,7 @@ export const UPDATE_CHART_TYPES = 'UPDATE_CHART_TYPES';
 export const SET_SAVED_QUERY_SETTINGS = 'SET_SAVED_QUERY_SETTINGS';
 export const UPDATE_PIVOT_CONFIG = 'UPDATE_PIVOT_CONFIG';
 export const UPDATE_FUNNEL_TABLE_CONFIG = 'UPDATE_FUNNEL_TABLE_CONFIG';
+export const UPDATE_CORE_QUERY_REDUCER = 'UPDATE_CORE_QUERY_REDUCER';
 
 export const DEFAULT_PIVOT_CONFIG = {
   rows: EMPTY_ARRAY,
@@ -62,7 +63,9 @@ export const CORE_QUERY_INITIAL_STATE = {
   chartTypes: DefaultChartTypes,
   savedQuerySettings: EMPTY_OBJECT,
   pivotConfig: DEFAULT_PIVOT_CONFIG,
-  funnelTableConfig: DEFAULT_FUNNEL_TABLE_CONFIG
+  funnelTableConfig: DEFAULT_FUNNEL_TABLE_CONFIG,
+  funnelConversionDurationNumber: 90,
+  funnelConversionDurationUnit: 'D' // D/M/H ---> days/minutes/hours
 };
 
 export const FILTER_TYPES = {

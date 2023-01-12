@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetProjectModelDir(t *testing.T) {
-	projectId := U.RandomUint64()
+	projectId := U.RandomInt64()
 	modelId := U.RandomUint64()
 
 	result := gcsDriver.GetProjectModelDir(projectId, modelId)
@@ -33,7 +33,7 @@ func TestGetProjectModelDir(t *testing.T) {
 }
 
 func TestGetModelEventInfoFilePath(t *testing.T) {
-	projectId := U.RandomUint64()
+	projectId := U.RandomInt64()
 	modelId := U.RandomUint64()
 
 	resultPath, resultName := gcsDriver.GetModelEventInfoFilePathAndName(projectId, modelId)
@@ -45,19 +45,20 @@ func TestGetModelEventInfoFilePath(t *testing.T) {
 }
 
 func TestGetModelEventsFilePath(t *testing.T) {
-	projectId := U.RandomUint64()
-	modelId := U.RandomUint64()
+	projectId := U.RandomInt64()
+	var startTimestamp int64 = 1640995200 // 1-1-2022 0:00
+	var endTimestamp int64 = 1641599999   // 7-1-2022 23:59
 
-	resultPath, resultName := gcsDriver.GetModelEventsFilePathAndName(projectId, modelId)
-	expectedPath := gcsDriver.GetProjectModelDir(projectId, modelId)
-	expectedName := fmt.Sprintf("events_%d.txt", modelId)
+	resultPath, resultName := gcsDriver.GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
+	expectedPath := gcsDriver.GetProjectDir(projectId) + "events/20220101/"
+	expectedName := "events_20220101_20220107.txt"
 
 	assert.Equal(t, expectedPath, resultPath)
 	assert.Equal(t, expectedName, resultName)
 }
 
 func TestGetPatternChunkFilePathAndName(t *testing.T) {
-	projectId := U.RandomUint64()
+	projectId := U.RandomInt64()
 	modelId := U.RandomUint64()
 	chunkId := U.RandomString(8)
 	expectedPath := gcsDriver.GetProjectModelDir(projectId, modelId) + "chunks/"

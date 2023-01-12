@@ -2,6 +2,7 @@ package task
 
 import (
 	"factors/filestore"
+	"factors/merge"
 	"factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
@@ -17,13 +18,13 @@ import (
 )
 
 const taskID = "Task#BuildSequential"
-const oneDayInSecs = 24 * 60 * 60
 
 var bsLog = taskLog.WithField("prefix", taskID)
 
 const (
 	ModelTypeMonth   = "m"
 	ModelTypeWeek    = "w"
+	ModelTypeDay     = "d"
 	ModelTypeQuarter = "q"
 )
 
@@ -32,10 +33,12 @@ func BuildSequential(projectId int64, configs map[string]interface{}) (map[strin
 
 	env := configs["env"].(string)
 	db := configs["db"].(*gorm.DB)
-	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	modelCloudManager := configs["modelCloudManager"].(*filestore.FileManager)
+	archiveCloudManager := configs["archiveCloudManager"].(*filestore.FileManager)
+	tmpCloudManager := configs["tmpCloudManager"].(*filestore.FileManager)
+	sortedCloudManager := configs["sortedCloudManager"].(*filestore.FileManager)
 	etcdClient := configs["etcdClient"].(*serviceEtcd.EtcdClient)
-	diskManger := configs["diskManger"].(*serviceDisk.DiskDriver)
-	bucketName := configs["bucketName"].(string)
+	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
 	noOfPatternWorkers := configs["noOfPatternWorkers"].(int)
 	projectIdsToSkip := configs["projectIdsToSkip"].(map[int64]bool)
 	maxModelSize := configs["maxModelSize"].(int64)
@@ -44,10 +47,13 @@ func BuildSequential(projectId int64, configs map[string]interface{}) (map[strin
 	numCampaignsLimit := configs["numCampaignsLimit"].(int)
 	startTimestamp := configs["startTimestamp"].(int64)
 	endTimestamp := configs["endTimestamp"].(int64)
-	beamConfig := configs["beamConfig"].(*RunBeamConfig)
+	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
 	countsVersion := configs["countsVersion"].(int)
 	hmineSupport := configs["hmineSupport"].(float32)
 	hmine_persist := configs["hminePersist"].(int)
+	hardPull := configs["hardPull"].(bool)
+	useBucketV2 := configs["useBucketV2"].(bool)
+
 	createMetadata := configs["create_metadata"].(bool)
 	status := make(map[string]interface{})
 	defer util.NotifyOnPanic(taskID, env)
@@ -75,10 +81,10 @@ func BuildSequential(projectId int64, configs map[string]interface{}) (map[strin
 	count_algo_props.Hmine_persist = hmine_persist
 	count_algo_props.Hmine_support = hmineSupport
 
-	numChunks, err := PatternMine(db, etcdClient, cloudManager, diskManger,
-		bucketName, noOfPatternWorkers, projectId, modelId, modelType,
+	numChunks, err := PatternMine(db, etcdClient, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager,
+		noOfPatternWorkers, projectId, modelId, modelType,
 		startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
-		beamConfig, createMetadata, count_algo_props)
+		beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to mine patterns.")
 		status["error"] = "Failed to mine patterns."
@@ -97,10 +103,14 @@ func BuildSequential(projectId int64, configs map[string]interface{}) (map[strin
 func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 	env := configs["env"].(string)
 	db := configs["db"].(*gorm.DB)
-	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	modelCloudManager := configs["modelCloudManager"].(*filestore.FileManager)
+	archiveCloudManager := configs["archiveCloudManager"].(*filestore.FileManager)
+	tmpCloudManager := configs["tmpCloudManager"].(*filestore.FileManager)
+	sortedCloudManager := configs["sortedCloudManager"].(*filestore.FileManager)
+
+	// cloudManager := configs["cloudManager"].(*filestore.FileManager)
 	etcdClient := configs["etcdClient"].(*serviceEtcd.EtcdClient)
 	diskManger := configs["diskManger"].(*serviceDisk.DiskDriver)
-	bucketName := configs["bucketName"].(string)
 	noOfPatternWorkers := configs["noOfPatternWorkers"].(int)
 	projectIdsToSkip := configs["projectIdsToSkip"].(map[int64]bool)
 	maxModelSize := configs["maxModelSize"].(int64)
@@ -109,9 +119,11 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 	numCampaignsLimit := configs["numCampaignsLimit"].(int)
 	startTimestamp := configs["startTimestamp"].(int64)
 	endTimestamp := configs["endTimestamp"].(int64)
-	beamConfig := configs["beamConfig"].(*RunBeamConfig)
+	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
 	hmineSupport := configs["hmineSupport"].(float32)
 	hmine_persist := configs["hminePersist"].(int)
+	hardPull := configs["hardPull"].(bool)
+	useBucketV2 := configs["useBucketV2"].(bool)
 
 	createMetadata := configs["create_metadata"].(bool)
 	status := make(map[string]interface{})
@@ -147,21 +159,38 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 		count_algo_props.Hmine_support = hmineSupport
 
 		var jb model.ExplainV2Query
+		err := U.DecodePostgresJsonbToStructType(query.ExplainV2Query, &jb)
+		if err != nil {
+			status["error"] = "unable to decodequery"
+			log.Panic("unable to decodequery")
+			return status, false
+		}
+		mineLog.Info("Job to execute 1 :%v", jb)
 
-		jb.Query = actualQuery.Query
 		if jb.Query.StartEvent == "" && jb.Query.EndEvent == "" {
 			status["error"] = "unable to run explain v2 as both start and events are empty"
 			log.Panic("unable to run explain v2 as both start and end events are empty")
 			return status, false
 		}
+		startTimestamp = jb.StartTimestamp
+		endTimestamp = jb.EndTimestamp
 		count_algo_props.Job = jb
 		count_algo_props.JobId = query.ID
-		mineLog.Info("Job to execute:%v", jb)
+		mineLog.Info("Job to execute: %v", jb)
+		mineLog.Info("Job to execute start timestamp: %d", startTimestamp)
+		mineLog.Info("Job to execute end timestamp : %d", endTimestamp)
+		mineLog.Info("Job to execute start evnet : %s", jb.Query.StartEvent)
+		mineLog.Info("Job to execute end event : %s", jb.Query.EndEvent)
 
-		numChunks, err := PatternMine(db, etcdClient, cloudManager, diskManger,
-			bucketName, noOfPatternWorkers, projectId, modelId, modelType,
+		// numChunks, err := PatternMine(db, etcdClient, cloudManager, cloudManager, cloudManager, cloudManager, diskManger,
+		// 	noOfPatternWorkers, projectId, modelId, modelType,
+		// 	startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
+		// 	beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2)
+
+		numChunks, err := PatternMine(db, etcdClient, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManger,
+			noOfPatternWorkers, projectId, modelId, modelType,
 			startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
-			beamConfig, createMetadata, count_algo_props)
+			beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to mine patterns.")
 			status["error"] = "Failed to mine patterns."

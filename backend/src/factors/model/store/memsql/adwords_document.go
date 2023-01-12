@@ -35,11 +35,16 @@ const (
 	adwordsFilterQueryStr          = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM adwords_documents WHERE project_id = ? AND" + " " + "customer_account_id IN (?) AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL AND timestamp BETWEEN ? AND ? LIMIT 5000"
 	staticWhereStatementForAdwords = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument            = " FROM adwords_documents "
+	// This is monthly data populated at the start of every month
+	currencyQuery 				   = " LEFT OUTER JOIN ( "+
+									 "SELECT c1.date as date, c1.inr_value/c2.inr_value as inr_value from currency as c1 inner join currency c2 on c1.date = c2.date where c1.currency = '?' and c2.currency = '?') as c "+
+									 "ON TRUNC(timestamp/100) = c.date "
 
 	shareHigherOrderExpression              = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
 	shareHigherOrderExpressionWithZeroCheck = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL AND JSON_EXTRACT_STRING(value, '%s') != '0.0' THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
 	higherOrderExpressionsWithMultiply      = "SUM(JSON_EXTRACT_STRING(value, '%s'))*%s/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
 	higherOrderExpressionsWithDiv           = "(SUM(JSON_EXTRACT_STRING(value, '%s'))/1000000)/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
+	higherOrderExpressionsWithDivCurrency   = "(SUM(JSON_EXTRACT_STRING(value, '%s') * inr_value)/1000000)/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
 
 	sumOfFloatExp = "sum((JSON_EXTRACT_STRING(value, '%s')))"
 
@@ -167,7 +172,7 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalOperation:        "sum",
 	},
 	"cost": {
-		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000",
+		nonHigherOrderExpression: "SUM(JSON_EXTRACT_STRING(value, 'cost') * inr_value)/1000000",
 		externalValue:            "spend",
 		externalOperation:        "sum",
 	},
@@ -189,13 +194,13 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalOperation:        "sum",
 	},
 	model.CostPerClick: {
-		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "clicks"),
+		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithDivCurrency, "cost", "clicks"),
 		nonHigherOrderExpression: "(sum((value, 'cost'))/1000000)",
 		externalValue:            model.CostPerClick,
 		externalOperation:        "sum",
 	},
 	model.CostPerConversion: {
-		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions"),
+		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithDivCurrency, "cost", "conversions"),
 		nonHigherOrderExpression: "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)",
 		externalValue:            model.CostPerConversion,
 		externalOperation:        "sum",
@@ -1300,7 +1305,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, 
 	var sql string
 	var params []interface{}
 	logCtx := log.WithFields(logFields)
-	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
+	transformedQuery, customerAccountID, projectCurrency, err := store.transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
 	if err != nil && err.Error() == integrationNotAvailable {
 		logCtx.WithError(err).Info(model.AdwordsSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
@@ -1310,16 +1315,17 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, 
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
+	dataCurrency := store.GetDataCurrencyForAdwords(projectID)
 	if isSmartPropertyPresent {
-		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
-	sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+	sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
 // @Kark TODO v1
-func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID int64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, *string, error) {
+func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID int64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, *string, string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -1331,21 +1337,44 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForAdwords(proj
 	var err error
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		return &model.ChannelQueryV1{}, nil, errors.New("Project setting not found")
+		return &model.ChannelQueryV1{}, nil, "",errors.New("Project setting not found")
 	}
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 	if customerAccountID == nil || len(*customerAccountID) == 0 {
-		return &model.ChannelQueryV1{}, nil, errors.New(integrationNotAvailable)
+		return &model.ChannelQueryV1{}, nil, "",errors.New(integrationNotAvailable)
 	}
 
 	transformedQuery, err = convertFromRequestToAdwordsSpecificRepresentation(query)
 	if err != nil {
 		logCtx.Warn("Request failed in validation: ", err)
-		return &model.ChannelQueryV1{}, nil, err
+		return &model.ChannelQueryV1{}, nil, "",err
 	}
-	return &transformedQuery, customerAccountID, nil
+	return &transformedQuery, customerAccountID, projectSetting.ProjectCurrency, nil
 }
 
+func (store *MemSQL) GetDataCurrencyForAdwords(projectId int64) string{
+	query := "select JSON_EXTRACT_STRING(value, 'currency_code') from adwords_documents where project_id = ? and type = 9 limit 1"
+	db := C.GetServices().Db
+	
+
+	params := make([]interface{},0)
+	params = append(params, projectId)
+	rows, err := db.Raw(query, params).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get currency code.")
+	}
+	defer rows.Close()
+
+	var currency string
+	for rows.Next() {
+
+		if err := db.ScanRows(rows, &currency); err != nil {
+			log.WithError(err).Error("Failed to scan last adwords documents by type for sync info.")
+		}
+	}
+
+	return currency
+}
 // @Kark TODO v1
 // Currently, this relies on assumption of Object across different filterObjects. Change when we need robust.
 func convertFromRequestToAdwordsSpecificRepresentation(query model.ChannelQueryV1) (model.ChannelQueryV1, error) {
@@ -1500,7 +1529,7 @@ AND JSON_EXTRACT_STRING(value, 'campaign_name') RLIKE '%Brand - BLR - New_Aug_De
 ORDER BY impressions DESC, clicks DESC LIMIT 2500;
 */
 // - For reference of complex joins, PR which removed older/QueryV1 adwords is 1437.
-func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
+func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
 		"project_id":                    projectID,
@@ -1514,10 +1543,10 @@ func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID int64, cus
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
-	return getSQLAndParamsForAdwordsV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+	return getSQLAndParamsForAdwordsV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency )
 }
 
-func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
+func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
 		"project_id":                    projectID,
@@ -1531,10 +1560,10 @@ func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, pro
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
-	return getSQLAndParamsForAdwordsWithSmartPropertyV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+	return getSQLAndParamsForAdwordsWithSmartPropertyV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 }
 func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, projectID int64, from, to int64, customerAccountID string,
-	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
 		"project_id":                    projectID,
@@ -1657,6 +1686,9 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	}
 	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(adwordsGroupBys)
 	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperty, filterPropertiesStatementBasedOnRequestFilters, filterStatementForSmartPropertyGroupBy)
+	if((dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion))){
+		finalParams = append(finalParams, dataCurrency, projectCurrency)
+	}
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
 	if len(groupByCombinationsForGBT) != 0 {
@@ -1685,8 +1717,13 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 
 	fromStatement := getAdwordsFromStatementWithJoins(query.Filters, query.GroupBy)
 	// finalSQL
-	resultantSQLStatement = finalSelectStatement + fromStatement + finalWhereStatement +
-		finalGroupByStatement + finalOrderByStatement + limitString
+	if(U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion)){
+		resultantSQLStatement = finalSelectStatement + fromStatement + currencyQuery + finalWhereStatement  + 
+			finalGroupByStatement + finalOrderByStatement + limitString
+	} else {
+		resultantSQLStatement = finalSelectStatement + fromStatement + finalWhereStatement +
+			finalGroupByStatement + finalOrderByStatement + limitString
+	}
 
 	return resultantSQLStatement, finalParams, dimensions.values, metrics.values
 }
@@ -1769,7 +1806,7 @@ func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys 
 }
 
 func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, from, to int64, customerAccountID string,
-	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
 		"project_id":                    projectID,
@@ -1872,6 +1909,9 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, f
 		return "", nil, nil, nil
 	}
 	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwords, filterPropertiesStatementBasedOnRequestFilters)
+	if((dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion))){
+		finalParams = append(finalParams, dataCurrency, projectCurrency)
+	}
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
 	if groupByCombinationsForGBT != nil && len(groupByCombinationsForGBT) != 0 {
@@ -1900,8 +1940,13 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, f
 	finalSelectStatement = "SELECT " + joinWithComma(finalSelectKeys...)
 
 	// finalSQL
-	resultantSQLStatement = finalSelectStatement + fromAdwordsDocument + finalWhereStatement +
-		finalGroupByStatement + finalOrderByStatement + limitString
+	if((dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion))){
+		resultantSQLStatement = finalSelectStatement + fromAdwordsDocument + currencyQuery + finalWhereStatement +  
+			finalGroupByStatement + finalOrderByStatement + limitString
+	} else {
+		resultantSQLStatement = finalSelectStatement + fromAdwordsDocument + finalWhereStatement +
+			finalGroupByStatement + finalOrderByStatement + limitString
+	}
 	return resultantSQLStatement, finalParams, dimensions.values, metrics.values
 }
 
@@ -2467,11 +2512,43 @@ func (store *MemSQL) DeleteAdwordsIntegration(projectID int64) (int, error) {
 // Selecting VALUE, TIMESTAMP, TYPE from adwords_documents and PROPERTIES, OBJECT_TYPE from smart_properties
 // Left join smart_properties filtered by project_id and source=adwords
 // where adwords_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
-//	 or adwords_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+//	or adwords_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
 // [make sure there aren't multiple smart_properties rows for a particular object,
 // or weekly insights for adwords would show incorrect data.]
 // TODO(anshul) : [all channels]check for index support for faster query
-func (store *MemSQL) PullAdwordsRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+func (store *MemSQL) PullAdwordsRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	rawQuery := fmt.Sprintf("SELECT adwDocs.id, adwDocs.value, adwDocs.timestamp, adwDocs.type, sp.properties FROM adwords_documents adwDocs "+
+		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND "+
+		"((COALESCE(sp.object_type,1) = 1 AND (sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'campaign_id') OR sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'base_campaign_id'))) OR "+
+		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'ad_group_id') OR sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'base_ad_group_id')))) "+
+		"WHERE adwDocs.project_id = %d AND UNIX_TIMESTAMP(adwDocs.created_at) BETWEEN %d AND %d "+
+		"LIMIT %d",
+		projectID, model.ChannelAdwords, projectID, startTime, endTime, model.AdwordsPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
+}
+
+// PullAdwordsRows - Function to pull adwords campaign data
+// Selecting VALUE, TIMESTAMP, TYPE from adwords_documents and PROPERTIES, OBJECT_TYPE from smart_properties
+// Left join smart_properties filtered by project_id and source=adwords
+// where adwords_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
+//
+//	or adwords_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+// [make sure there aren't multiple smart_properties rows for a particular object,
+// or weekly insights for adwords would show incorrect data.]
+// TODO(anshul) : [all channels]check for index support for faster query
+func (store *MemSQL) PullAdwordsRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,

@@ -184,7 +184,7 @@ func (store *MemSQL) AddIntegrationStatusByProjectId(project_id int64, integrati
 			updateValues["latest_data_timestamp"] = latest_data
 			updateValues["source"] = source
 			updateValues["last_polled"] = U.TimeNowZ()
-			err := db.Model(&model.DataAvailability{}).Where("project_id = ? AND integration=?", project_id, integration).Update(updateValues).Error
+			err := db.Model(&model.DataAvailability{}).Where("project_id = ? AND integration = ?", project_id, integration).Update(updateValues).Error
 			if err != nil {
 				log.WithError(err).Error("Failed to update integration status")
 				return http.StatusInternalServerError

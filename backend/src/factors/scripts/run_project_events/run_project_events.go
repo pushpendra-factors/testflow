@@ -34,7 +34,7 @@ const NO_EVENT = "NoEvent"
 const MetricsReportName = "metrics.txt"
 const AlertsReportName = "alerts.txt"
 
-//const ReportName = "report.txt"
+// const ReportName = "report.txt"
 const DetailedReportName = "detailed_report.txt"
 const LookbackDaysForCacheData = 7
 
@@ -240,7 +240,6 @@ func main() {
 	}
 	fromDate := flag.String("date", date.Format(U.DATETIME_FORMAT_YYYYMMDD), "start date of events")
 	projectIdFlag := flag.String("project_ids", "", "Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
-	modelType := flag.String("modelType", "w", "Model Type of events")
 	awsRegion := flag.String("aws_region", "us-east-1", "")
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
@@ -300,10 +299,11 @@ func main() {
 
 	for _, project_id := range projectIdsList {
 
-		mfCloudPath, mfCloudName := (cloudManager).GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
-		afCloudPath, afCloudName := (cloudManager).GetModelAlertsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
-		efCloudPath, efCloudName := (cloudManager).GetModelEventsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
-		efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
+		toTime := fromTime.Unix() + U.Per_week_epoch - 1
+		mfCloudPath, mfCloudName := (cloudManager).GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), toTime)
+		afCloudPath, afCloudName := (cloudManager).GetModelAlertsFilePathAndName(int64(project_id), fromTime.Unix(), toTime)
+		efCloudPath, efCloudName := (cloudManager).GetEventsFilePathAndName(int64(project_id), fromTime.Unix(), toTime)
+		efTmpPath, efTmpName := diskManager.GetEventsFilePathAndName(int64(project_id), fromTime.Unix(), toTime)
 		log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
 			"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
 		eReader, err := (cloudManager).Get(efCloudPath, efCloudName)
