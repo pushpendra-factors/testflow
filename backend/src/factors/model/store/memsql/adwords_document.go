@@ -1721,6 +1721,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 		resultantSQLStatement = finalSelectStatement + fromStatement + currencyQuery + finalWhereStatement  + 
 			finalGroupByStatement + finalOrderByStatement + limitString
 	} else {
+		finalSelectStatement = strings.Replace(finalSelectStatement, "* inr_value", "", -1)
 		resultantSQLStatement = finalSelectStatement + fromStatement + finalWhereStatement +
 			finalGroupByStatement + finalOrderByStatement + limitString
 	}
@@ -1944,6 +1945,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, f
 		resultantSQLStatement = finalSelectStatement + fromAdwordsDocument + currencyQuery + finalWhereStatement +  
 			finalGroupByStatement + finalOrderByStatement + limitString
 	} else {
+		finalSelectStatement = strings.Replace(finalSelectStatement, "* inr_value", "", -1)
 		resultantSQLStatement = finalSelectStatement + fromAdwordsDocument + finalWhereStatement +
 			finalGroupByStatement + finalOrderByStatement + limitString
 	}

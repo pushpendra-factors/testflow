@@ -871,6 +871,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 	if((dataCurrency != "" && projectCurrency != "")) && U.ContainsStringInArray(query.SelectMetrics, "spend"){
 		resultSQLStatement = selectQuery + fromStatement + currencyQuery + finalFilterStatement
 	} else {
+		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
 		resultSQLStatement = selectQuery + fromStatement + finalFilterStatement
 	}
 	if len(groupByStatement) != 0 {
@@ -991,6 +992,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID i
 	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
 		resultSQLStatement = selectQuery + fromLinkedinDocuments + currencyQuery + staticWhereStatementForLinkedin + finalFilterStatement
 	} else {
+		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
 		resultSQLStatement = selectQuery + fromLinkedinDocuments + staticWhereStatementForLinkedin + finalFilterStatement
 	}
 

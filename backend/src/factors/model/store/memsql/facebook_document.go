@@ -931,6 +931,7 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 		U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
 		resultSQLStatement = selectQuery + fromStatement + currencyQuery + finalFilterStatement
 	} else {
+		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
 		resultSQLStatement = selectQuery + fromStatement + finalFilterStatement
 	}
 	if len(groupByStatement) != 0 {
@@ -1059,6 +1060,7 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID i
 		U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
 		resultSQLStatement = selectQuery + fromFacebookDocuments + currencyQuery + staticWhereStatementForFacebook + whereConditionForFilters
 	} else {
+		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
 		resultSQLStatement = selectQuery + fromFacebookDocuments + staticWhereStatementForFacebook + whereConditionForFilters
 	}
 
