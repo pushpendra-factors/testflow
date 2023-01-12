@@ -72,7 +72,7 @@ services:
                 -  GOPATH=/go/src/factors
                 -  REDIS_HOST=redis
                 -  MEMSQL_HOST=memsql
-            entrypoint: [ "sh","-c","/go/bin/sdkserver --env=development --memsql_host=memsql --primary_datastore=memsql"]
+            entrypoint: [ "sh","-c","/go/bin/sdkserver --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis --env=development --memsql_host=memsql --primary_datastore=memsql"]
             image: testing/sdk:1.0
             ports:
                 - "8085:8085"

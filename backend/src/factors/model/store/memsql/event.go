@@ -431,6 +431,27 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 
 	model.SetCacheUserLastEvent(event.ProjectId, event.UserId,
 		&model.CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
+
+	log.Info("EventTrigger function log")
+	t1 := time.Now()
+	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
+		log.Info("EventTriggerAlerts match function trigger point.")
+		alert, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties)
+		if ErrCode == http.StatusFound && alert != nil {
+			log.WithFields(log.Fields{"project_id": event.ProjectId,
+				"event_trigger_alert": alert}).Info("EventTriggerAlert found. Sending Alert.")
+
+			success := store.SendEventTriggerAlert(alert, event.ProjectId, event.EventNameId, event.UserId)
+			if !success {
+				log.WithFields(log.Fields{"project_id": event.ProjectId,
+					"event_trigger_alert": alert}).Error("Sending Alert failure.")
+			} else {
+				log.Info("Alert send successfully. Returning control.")
+			}
+		}
+	}
+	log.Info("Control past EventTrigger block: ", time.Since(t1))
+
 	return event, http.StatusCreated
 }
 

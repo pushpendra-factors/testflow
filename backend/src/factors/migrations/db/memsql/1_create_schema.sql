@@ -1179,6 +1179,19 @@ CREATE TABLE IF NOT EXISTS form_fills(
     SHARD KEY (project_id, user_id, form_id)
 );
 
+
+CREATE TABLE IF NOT EXISTS event_trigger_alerts(
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    title text,
+    created_by text,
+    event_trigger_alert json,
+    last_alert_at timestamp(6),
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    is_deleted boolean NOT NULL DEFAULT FALSE
+);
+
 CREATE TABLE IF NOT EXISTS segments(
     id text NOT NULL,
     project_id bigint NOT NULL,
@@ -1202,4 +1215,5 @@ CREATE TABLE IF NOT EXISTS explain_v2(
     updated_at timestamp(6) NOT NULL,
     is_deleted boolean NOT NULL DEFAULT FALSE,
     PRIMARY KEY (project_id, id)
+
 );

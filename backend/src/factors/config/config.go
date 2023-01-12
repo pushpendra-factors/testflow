@@ -275,10 +275,15 @@ type Configuration struct {
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
+
+	EventTriggerEnabled                                bool
+	EventTriggerEnabledProjectIDs                      string
+
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
 	FormFillIdentificationAllowedProjects              string
+]
 }
 
 type Services struct {
@@ -2406,6 +2411,20 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	return true
 }
 
+func IsEventTriggerEnabled() bool {
+	return configuration.EventTriggerEnabled
+}
+
+func IsProjectIDEventTriggerEnabledProjectID(id int64) bool {
+	list := GetTokensFromStringListAsUint64(configuration.EventTriggerEnabledProjectIDs)
+	for _, i := range list {
+		if list[i] == id {
+			return true
+		}
+	}
+	return false
+}
+
 func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
 	if configuration.SkipEventNameStepByProjectID == "" {
 		return false
@@ -2433,3 +2452,4 @@ func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
 	}
 	return allowedProjectIDs[projectID]
 }
+

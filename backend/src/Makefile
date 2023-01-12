@@ -592,6 +592,12 @@ upload-compute-and-send-alerts: export IMAGE_NAME=compute-and-send-alerts-job
 upload-compute-and-send-alerts: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/compute-and-send-alerts-job:$(TAG)
 
+pack-event-trigger-alerts:
+	docker build -t us.gcr.io/factors-$(ENV)/event-trigger-alerts-job:$(TAG) -f Dockerfile.event_trigger_alerts_job .
+
+upload-event-trigger-alerts: export IMAGE_NAME=event-trigger-alerts-job
+upload-event-trigger-alerts: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/event-trigger-alerts-job:$(TAG)
 
 pack-channels-to-kpi-migration:
 	docker build -t us.gcr.io/factors-$(ENV)/channels-to-kpi-migration:$(TAG) -f Dockerfile.channels_v1_to_kpi_query_migration .

@@ -822,6 +822,14 @@ type Model interface {
 	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
 	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int, bool)
 
+	// Event Trigger Alerts
+	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int)
+	CreateEventTriggerAlert(userID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string)
+	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
+	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb) (*model.EventTriggerAlert, int)
+	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
+	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
+
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)
 	GetAllSavedExplainV2EntityByProject(projectID int64) ([]model.ExplainV2, int)
