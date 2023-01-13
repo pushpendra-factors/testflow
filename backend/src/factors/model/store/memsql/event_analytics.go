@@ -578,7 +578,7 @@ func limitGroupByTimestampResult(result *model.QueryResult, groupByTimestamp boo
 
 		_, keyExists := keyLookup[key]
 		// Limits no.of keys to ResultsLimit.
-		if !keyExists && len(keyLookup) < model.ResultsLimit {
+		if !keyExists && len(keyLookup) < model.MaxResultsLimit {
 			keyLookup[key] = true
 			keyExists = true
 		}
@@ -617,7 +617,7 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 
 		_, leftKeyExists := keyLookup[leftKey]
 		// Limits no.of left keys to ResultsLimit.
-		if !leftKeyExists && len(keyLookup) < model.ResultsLimit {
+		if !leftKeyExists && len(keyLookup) < model.MaxResultsLimit {
 			keyLookup[leftKey] = make(map[interface{}]bool, 0)
 			leftKeyExists = true
 		}
@@ -626,7 +626,7 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 		if leftKeyExists {
 			// Limits no.of right keys to ResultsLimit.
 			_, rightKeyExits := keyLookup[leftKey][row[leftKeyEnd]]
-			if !rightKeyExits && len(keyLookup[leftKey]) < model.ResultsLimit {
+			if !rightKeyExits && len(keyLookup[leftKey]) < model.MaxResultsLimit {
 				keyLookup[leftKey][row[leftKeyEnd]] = true
 				rightKeyExists = true
 			}
@@ -880,18 +880,20 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			stepSelect = fmt.Sprintf(eventSelect, ", "+stepGroupSelect)
 			stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+stepGroupKeys)
 			stepGroupBy = joinWithComma(commonGroupBy, stepGroupKeys)
+			if q.EventsCondition == model.EventCondEachGivenEvent {
+				stepParams = append(stepParams, eventParam)
+			}
 			stepParams = append(stepParams, stepGroupParams...)
 			stepsToKeysMap[refStepName] = strings.Split(stepGroupKeys, ",")
 		} else {
 			stepSelect = fmt.Sprintf(eventSelect, "")
+			if q.EventsCondition == model.EventCondEachGivenEvent {
+				stepParams = append(stepParams, eventParam)
+			}
 			if commonOrderBy != "" {
 				stepOrderBy = fmt.Sprintf(commonOrderBy, "")
 			}
 			stepGroupBy = commonGroupBy
-		}
-
-		if q.EventsCondition == model.EventCondEachGivenEvent {
-			stepParams = append(stepParams, eventParam)
 		}
 
 		// Default join statement for users.
@@ -2106,18 +2108,17 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 		if stepGroupSelect != "" {
 			stepSelect = eventSelect + ", " + stepGroupSelect
 			stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+stepGroupKeys)
+			stepParams = append(stepParams, eventParam)
 			stepParams = append(stepParams, stepGroupParams...)
 			stepsToKeysMap[refStepName] = strings.Split(stepGroupKeys, ",")
 		} else {
 			stepSelect = eventSelect
+			stepParams = append(stepParams, eventParam)
 			if commonOrderBy != "" {
 				stepOrderBy = fmt.Sprintf(commonOrderBy, "")
 			}
 		}
 
-		if q.EventsCondition == model.EventCondEachGivenEvent {
-			stepParams = append(stepParams, eventParam)
-		}
 		addJoinStmnt := ""
 		if C.SkipUserJoinInEventQueryByProjectID(projectID) {
 
@@ -2150,6 +2151,8 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 		if enableFilterOpt {
 			addFilterFunc = addFilterEventsWithPropsQueryV2
 		}
+		log.WithField("stepSelect", stepSelect).WithField("stepParams", stepParams).WithField("qStmnt", qStmnt).
+			WithField("qParams", qParams).Warn("kark3")
 		err := addFilterFunc(projectID, qStmnt, qParams, ewp, q.From, q.To,
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy, q.GlobalUserProperties)
 		if err != nil {

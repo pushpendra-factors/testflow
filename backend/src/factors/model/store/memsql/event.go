@@ -320,7 +320,7 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		"event": event,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
+
 	logCtx := log.WithFields(logFields)
 	if event.ProjectId == 0 || event.UserId == "" || event.EventNameId == "" {
 		logCtx.Error("CreateEvent Failed. Invalid projectId or userId or eventNameId.")
@@ -425,6 +425,12 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		return nil, http.StatusInternalServerError
 	}
 	defer rows.Close()
+
+	// log for analysis.
+	log.WithField("project_id", event.ProjectId).
+		WithField("event_name_id", event.EventNameId).
+		WithField("tag", "create_event").
+		Info("Created Event.")
 
 	event.CreatedAt = transTime
 	event.UpdatedAt = transTime
@@ -827,6 +833,10 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 	if err == nil {
 		store.addEventDetailsToCache(projectId, &model.Event{EventNameId: event.EventNameId, Properties: *updatedPropertiesOnlyJsonBlob}, true)
 	}
+
+	// Log for analysis.
+	log.WithField("project_id", projectId).WithField("tag", "update_event").Info("Updated event.")
+
 	return http.StatusAccepted
 }
 
@@ -945,6 +955,9 @@ func (store *MemSQL) OverwriteEventProperties(projectId int64, userId string, ev
 		return http.StatusInternalServerError
 	}
 
+	// Log for analysis.
+	log.WithField("project_id", projectId).WithField("tag", "update_event").Info("Updated event.")
+
 	return http.StatusAccepted
 }
 
@@ -971,6 +984,9 @@ func (store *MemSQL) OverwriteEventPropertiesByID(projectId int64, id string,
 		logCtx.WithError(err).Error("Updating event properties failed in OverwriteEventPropertiesByID.")
 		return http.StatusInternalServerError
 	}
+
+	// Log for analysis.
+	log.WithField("project_id", projectId).WithField("tag", "update_event").Info("Updated event.")
 
 	return http.StatusAccepted
 }
@@ -1111,6 +1127,9 @@ func (store *MemSQL) associateSessionByEventIdsWithTransaction(projectId int64,
 		logCtx.WithError(err).Error("Failed to associate session to events.")
 		return http.StatusInternalServerError
 	}
+
+	// Log for analysis.
+	log.WithField("project_id", projectId).WithField("tag", "update_event").Info("Updated event.")
 
 	return http.StatusAccepted
 }
@@ -2214,6 +2233,9 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID int64, userID,
 		logCtx.WithError(err).Error("Failed to overwrite user properteis.")
 		return http.StatusInternalServerError
 	}
+
+	// Log for analysis.
+	log.WithField("project_id", projectID).WithField("tag", "update_event").Info("Updated event.")
 
 	return http.StatusAccepted
 }

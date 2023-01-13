@@ -16,6 +16,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 
+	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -1531,10 +1532,6 @@ func appendLimitByCondition(qStmnt string, groupProps []model.QueryGroupByProper
 		"group_by_timestamp": groupByTimestamp,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	if len(groupProps) == 1 && !groupByTimestamp {
-		return fmt.Sprintf("%s LIMIT %d", qStmnt, model.ResultsLimit)
-	}
-
 	// Limited with max limit on SQL. Limited on server side.
 	return fmt.Sprintf("%s LIMIT %d", qStmnt, model.MaxResultsLimit)
 }
@@ -1907,7 +1904,13 @@ func sanitizeNumericalBucketRanges(result *model.QueryResult, query *model.Query
 func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error, string) {
 	reqID := U.GetUniqueQueryRequestID()
 
-	db := C.GetServices().Db
+	var db *gorm.DB
+	if C.IsDBConnectionPool2Enabled() {
+		db = C.GetServices().Db2
+	} else {
+		db = C.GetServices().Db
+	}
+
 	tx, err := db.DB().Begin()
 	if err != nil {
 		log.WithError(err).Error("Failed to begin DB transaction.")
@@ -1931,10 +1934,11 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	stmnt = fmt.Sprintf("/*!%s-%s*/ ", C.GetConfig().AppName, reqID) + stmnt
 
 	// Set resource pool before query.
-	if usePool, poolName := C.UseResourcePoolForAnalytics(); usePool {
-		C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx, poolName)
+	if !C.IsDBConnectionPool2Enabled() {
+		if usePool, poolName := C.UseResourcePoolForAnalytics(); usePool {
+			C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx, poolName)
+		}
 	}
-
 	startExecTime := time.Now()
 	rows, err := tx.QueryContext(*C.GetServices().DBContext, stmnt, params...)
 	U.LogExecutionTimeWithQueryRequestID(startExecTime, reqID, &logFields)
