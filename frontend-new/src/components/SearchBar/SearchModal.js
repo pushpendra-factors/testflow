@@ -9,6 +9,10 @@ import { getQueryType } from '../../utils/dataFormatter';
 import { QUERY_TYPE_WEB, QUERY_TYPE_TEXT } from '../../utils/constants';
 import { HighlightSearchText } from '../../utils/dataFormatter';
 import useAutoFocus from 'hooks/useAutoFocus';
+import VirtualList from 'rc-virtual-list';
+
+const itemHeight = 47;
+const ContainerHeight = 443;
 
 function SearchModal({ visible, handleClose, handleQueryClick }) {
   const queriesState = useSelector((state) => state.queries);
@@ -71,52 +75,59 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
           >
             <div className={`p-4 ${styles.searchHeadings}`}>Saved Reports</div>
             <div className='fa-global-search--contents'>
-              {data.map((d) => {
-                const queryType = getQueryType(d.query);
-                const queryTypeName = {
-                  events: 'events_cq',
-                  funnel: 'funnels_cq',
-                  channel_v1: 'campaigns_cq',
-                  attribution: 'attributions_cq',
-                  profiles: 'profiles_cq',
-                  kpi: 'KPI_cq'
-                };
-                let svgName = '';
-                Object.entries(queryTypeName).forEach(([k, v]) => {
-                  if (queryType === k) {
-                    svgName = v;
-                  }
-                });
+              <VirtualList
+                data={data}
+                height={ContainerHeight}
+                itemHeight={itemHeight}
+                itemKey='id'
+              >
+                {(d) => {
+                  const queryType = getQueryType(d.query);
+                  const queryTypeName = {
+                    events: 'events_cq',
+                    funnel: 'funnels_cq',
+                    channel_v1: 'campaigns_cq',
+                    attribution: 'attributions_cq',
+                    profiles: 'profiles_cq',
+                    kpi: 'KPI_cq'
+                  };
+                  let svgName = '';
+                  Object.entries(queryTypeName).forEach(([k, v]) => {
+                    if (queryType === k) {
+                      svgName = v;
+                    }
+                  });
 
-                return (
-                  <div
-                    onClick={() => handleQueryClick(d)}
-                    className={`flex justify-between items-center px-4 py-3 cursor-pointer ${styles.queryItem}`}
-                    key={d.id}
-                  >
-                    <div className='flex items-center truncate'>
-                      <div className='mr-2'>
-                        <SVG name={svgName} size={20} />
+                  return (
+                    <div
+                      onClick={() => handleQueryClick(d)}
+                      className={`flex justify-between items-center px-4 py-3 cursor-pointer ${styles.queryItem}`}
+                      key={d.id}
+                    >
+                      <div className='flex items-center truncate'>
+                        <div className='mr-2'>
+                          <SVG name={svgName} size={20} />
+                        </div>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          extraClass={`m-0 ${styles.hoverTextColor}`}
+                        >
+                          <HighlightSearchText
+                            text={d.title}
+                            highlight={searchValue}
+                          />
+                        </Text>
                       </div>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        extraClass={`m-0 ${styles.hoverTextColor}`}
-                      >
-                        <HighlightSearchText
-                          text={d.title}
-                          highlight={searchValue}
-                        />
-                      </Text>
+                      <div className={styles.queryType}>
+                        <Tag style={{ borderRadius: '4px' }}>
+                          {QUERY_TYPE_TEXT[queryType]}
+                        </Tag>
+                      </div>
                     </div>
-                    <div className={styles.queryType}>
-                      <Tag style={{ borderRadius: '4px' }}>
-                        {QUERY_TYPE_TEXT[queryType]}
-                      </Tag>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                }}
+              </VirtualList>
             </div>
           </div>
         ) : null}

@@ -18,11 +18,12 @@ import (
 )
 
 const (
-	FacebookCampaign                                = "campaign"
-	FacebookAdSet                                   = "ad_set"
-	FacebookAd                                      = "ad"
-	facebookStringColumn                            = "facebook"
-	metricsExpressionOfDivisionWithHandleOf0AndNull = "SUM(JSON_EXTRACT_STRING(value,'%s'))*%s/(case when sum(JSON_EXTRACT_STRING(value,'%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value,'%s')), 100000) end)"
+	FacebookCampaign                                				= "campaign"
+	FacebookAdSet                                   				= "ad_set"
+	FacebookAd                                      				= "ad"
+	facebookStringColumn                            				= "facebook"
+	metricsExpressionOfDivisionWithHandleOf0AndNullWithConversion   = "SUM(JSON_EXTRACT_STRING(value,'%s')) * inr_value * %s/(case when sum(JSON_EXTRACT_STRING(value,'%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value,'%s')), 100000) end)"
+	metricsExpressionOfDivisionWithHandleOf0AndNull 				= "SUM(JSON_EXTRACT_STRING(value,'%s'))*%s/(case when sum(JSON_EXTRACT_STRING(value,'%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value,'%s')), 100000) end)"
 )
 
 var FacebookDocumentTypeAlias = map[string]int{
@@ -111,24 +112,25 @@ var facebookMetricsToAggregatesInReportsMapping = map[string]string{
 	"impressions":                            "SUM(JSON_EXTRACT_STRING(value,'impressions'))",
 	"clicks":                                 "SUM(JSON_EXTRACT_STRING(value,'clicks'))",
 	"link_clicks":                            "SUM(JSON_EXTRACT_STRING(value,'inline_link_clicks'))",
-	"spend":                                  "SUM(JSON_EXTRACT_STRING(value,'spend'))",
+	"spend":                                  "SUM(JSON_EXTRACT_STRING(value, 'spend') * inr_value)",
 	"video_p50_watched_actions":              "SUM(JSON_EXTRACT_STRING(value,'video_p50_watched_actions'))",
 	"video_p25_watched_actions":              "SUM(JSON_EXTRACT_STRING(value,'video_p25_watched_actions'))",
 	"video_30_sec_watched_actions":           "SUM(JSON_EXTRACT_STRING(value,'video_30_sec_watched_actions'))",
 	"video_p100_watched_actions":             "SUM(JSON_EXTRACT_STRING(value,'video_p100_watched_actions'))",
 	"video_p75_watched_actions":              "SUM(JSON_EXTRACT_STRING(value,'video_p75_watched_actions'))",
-	"cost_per_click":                         fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "clicks", "clicks"),
-	"cost_per_link_click":                    fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "inline_link_clicks", "inline_link_clicks"),
-	"cost_per_thousand_impressions":          fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1000", "impressions", "impressions"),
+	"cost_per_click":                         fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNullWithConversion, "spend", "1", "clicks", "clicks"),
+	"cost_per_link_click":                    fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNullWithConversion, "spend", "1", "inline_link_clicks", "inline_link_clicks"),
+	"cost_per_thousand_impressions":          fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNullWithConversion, "spend", "1000", "impressions", "impressions"),
 	"click_through_rate":                     fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "clicks", "100", "impressions", "impressions"),
 	"link_click_through_rate":                fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "inline_link_clicks", "100", "impressions", "impressions"),
 	"frequency":                              fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "impressions", "1", "reach", "reach"),
 	"reach":                                  "SUM(JSON_EXTRACT_STRING(value,'reach'))",
 	"fb_pixel_purchase_count":                "SUM(JSON_EXTRACT_STRING(value, 'actions_offsite_conversion.fb_pixel_purchase'))",
 	"fb_pixel_purchase_revenue":              "SUM(JSON_EXTRACT_STRING(value, 'action_values_offsite_conversion.fb_pixel_purchase'))",
-	"fb_pixel_purchase_cost_per_action_type": fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "actions_offsite_conversion.fb_pixel_purchase", "actions_offsite_conversion.fb_pixel_purchase"),
+	"fb_pixel_purchase_cost_per_action_type": fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNullWithConversion, "spend", "1", "actions_offsite_conversion.fb_pixel_purchase", "actions_offsite_conversion.fb_pixel_purchase"),
 	"fb_pixel_purchase_roas":                 fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "action_values_offsite_conversion.fb_pixel_purchase", "1", "spend", "spend"),
 }
+
 
 const platform = "platform"
 
@@ -613,7 +615,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID int64,
 	var sql string
 	var params []interface{}
 	logCtx := log.WithFields(logFields)
-	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForFacebook(
+	transformedQuery, customerAccountID, projectCurrency, err := store.transFormRequestFieldsAndFetchRequiredFieldsForFacebook(
 		projectID, *query, reqID)
 	if err != nil && err.Error() == integrationNotAvailable {
 		logCtx.WithError(err).Info(model.FacebookSpecificError)
@@ -624,23 +626,49 @@ func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID int64,
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
+	dataCurrency := store.GetDataCurrencyForFacebook(projectID)
 	if isSmartPropertyPresent {
-		sql, params, selectKeys, selectMetrics, err = buildFacebookQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+		sql, params, selectKeys, selectMetrics, err = buildFacebookQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 		}
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
 
-	sql, params, selectKeys, selectMetrics, err = buildFacebookQueryV1(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+	sql, params, selectKeys, selectMetrics, err = buildFacebookQueryV1(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 	if err != nil {
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 	}
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
+
+func (store *MemSQL) GetDataCurrencyForFacebook(projectId int64) string{
+	query := "select JSON_EXTRACT_STRING(value, 'account_currency')  from facebook_documents where project_id = ? and type = 4 limit 1"
+	db := C.GetServices().Db
+	
+
+	params := make([]interface{},0)
+	params = append(params, projectId)
+	rows, err := db.Raw(query, params).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get currency code.")
+	}
+	defer rows.Close()
+
+	var currency string
+	for rows.Next() {
+
+		if err := rows.Scan(&currency); err != nil {
+			log.WithError(err).Error("Failed to get facebook currency details")
+		}
+	}
+
+	return currency
+}
+
 func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForFacebook(projectID int64,
-	query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
+	query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -653,19 +681,19 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForFacebook(pro
 	logCtx := log.WithFields(logFields)
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		return &model.ChannelQueryV1{}, "", errors.New("Project setting not found")
+		return &model.ChannelQueryV1{}, "", "", errors.New("Project setting not found")
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
 	if customerAccountID == "" || len(customerAccountID) == 0 {
-		return &model.ChannelQueryV1{}, "", errors.New(integrationNotAvailable)
+		return &model.ChannelQueryV1{}, "", "", errors.New(integrationNotAvailable)
 	}
 
 	transformedQuery, err = convertFromRequestToFacebookSpecificRepresentation(query)
 	if err != nil {
 		logCtx.Warn("Request failed in validation: ", err)
-		return &model.ChannelQueryV1{}, "", err
+		return &model.ChannelQueryV1{}, "", "", err
 	}
-	return &transformedQuery, customerAccountID, nil
+	return &transformedQuery, customerAccountID, projectSetting.ProjectCurrency, nil
 }
 
 // @Kark TODO v1
@@ -751,7 +779,7 @@ func getFacebookSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 	return resultGroupBys, nil
 }
 
-func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, error) {
+func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{},dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -765,10 +793,10 @@ func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID int64, customer
 	lowestHierarchyLevel := getLowestHierarchyLevelForFacebook(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromFacebookReports(query, projectID, query.From, query.To, customerAccountID, FacebookDocumentTypeAlias[lowestHierarchyReportLevel],
-		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 	return sql, params, selectKeys, selectMetrics, nil
 }
-func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, error) {
+func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{},dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -782,14 +810,14 @@ func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 	lowestHierarchyLevel := getLowestHierarchyLevelForFacebook(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromFacebookReportsWithSmartProperty(query, projectID, query.From, query.To, customerAccountID, FacebookDocumentTypeAlias[lowestHierarchyReportLevel],
-		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 	return sql, params, selectKeys, selectMetrics, nil
 }
 
 // Added case when statement for NULL value and empty value for group bys
 // Added case when statement for NULL value for smart properties. Didn't add for empty values as such case will not be present
 func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQueryV1, projectID int64, from, to int64, facebookAccountIDs string,
-	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{},dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -878,6 +906,13 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(query.GroupBy)
 	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForFacebookWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
 	finalParams := make([]interface{}, 0)
+	if (dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "spend") ||
+	U.ContainsStringInArray(query.SelectMetrics, "cost_per_click") ||
+	U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
+	U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
+	U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
+	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
@@ -888,7 +923,17 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 	}
 
 	fromStatement := getFacebookFromStatementWithJoins(query.Filters, query.GroupBy)
-	resultSQLStatement := selectQuery + fromStatement + finalFilterStatement
+	resultSQLStatement := ""
+	if(dataCurrency != "" && projectCurrency != "") &&( U.ContainsStringInArray(query.SelectMetrics, "spend") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_click") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
+		U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
+		resultSQLStatement = selectQuery + fromStatement + currencyQuery + finalFilterStatement
+	} else {
+		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
+		resultSQLStatement = selectQuery + fromStatement + finalFilterStatement
+	}
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += " GROUP BY " + groupByStatement
 	}
@@ -916,7 +961,7 @@ func getFacebookFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 
 // Added case when statement for NULL value and empty value for group bys
 func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID int64, from, to int64, facebookAccountIDs string,
-	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{},dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -991,6 +1036,13 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID i
 		whereConditionForFilters = " AND " + whereConditionForFilters
 	}
 	finalParams := make([]interface{}, 0)
+	if (dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "spend") ||
+	U.ContainsStringInArray(query.SelectMetrics, "cost_per_click") ||
+	U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
+	U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
+	U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
+	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
@@ -1000,7 +1052,18 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID i
 		finalParams = append(finalParams, whereParams...)
 	}
 
-	resultSQLStatement := selectQuery + fromFacebookDocuments + staticWhereStatementForFacebook + whereConditionForFilters
+	resultSQLStatement := ""
+	if (dataCurrency != "" && projectCurrency != "") &&( U.ContainsStringInArray(query.SelectMetrics, "spend") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_click") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
+		U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
+		resultSQLStatement = selectQuery + fromFacebookDocuments + currencyQuery + staticWhereStatementForFacebook + whereConditionForFilters
+	} else {
+		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
+		resultSQLStatement = selectQuery + fromFacebookDocuments + staticWhereStatementForFacebook + whereConditionForFilters
+	}
+
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
@@ -1349,10 +1412,41 @@ func (store *MemSQL) DeleteFacebookIntegration(projectID int64) (int, error) {
 // Selecting VALUE, TIMESTAMP, TYPE from facebook_documents and PROPERTIES, OBJECT_TYPE from smart_properties
 // Left join smart_properties filtered by project_id and source=facebook
 // where facebook_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
-//	 or facebook_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+//	or facebook_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
 // [make sure there aren't multiple smart_properties rows for a particular object,
 // or weekly insights for facebook would show incorrect data.]
-func (store *MemSQL) PullFacebookRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+func (store *MemSQL) PullFacebookRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	rawQuery := fmt.Sprintf("SELECT fb.id, fb.value, fb.timestamp, fb.type, sp.properties FROM facebook_documents fb "+
+		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND "+
+		"((COALESCE(sp.object_type,1) = 1 AND (sp.object_id = JSON_EXTRACT_STRING(fb.value, 'campaign_id') OR sp.object_id = JSON_EXTRACT_STRING(fb.value, 'base_campaign_id'))) OR "+
+		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(fb.value, 'ad_set_id') OR sp.object_id = JSON_EXTRACT_STRING(fb.value, 'base_ad_set_id')))) "+
+		"WHERE fb.project_id = %d AND UNIX_TIMESTAMP(fb.created_at) BETWEEN %d AND %d "+
+		"LIMIT %d",
+		projectID, model.ChannelFacebook, projectID, startTime, endTime, model.FacebookPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
+}
+
+// PullFacebookRows - Function to pull facebook campaign data
+// Selecting VALUE, TIMESTAMP, TYPE from facebook_documents and PROPERTIES, OBJECT_TYPE from smart_properties
+// Left join smart_properties filtered by project_id and source=facebook
+// where facebook_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
+//
+//	or facebook_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+// [make sure there aren't multiple smart_properties rows for a particular object,
+// or weekly insights for facebook would show incorrect data.]
+func (store *MemSQL) PullFacebookRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,

@@ -4,6 +4,7 @@ import (
 	"context"
 	C "factors/config"
 	"factors/filestore"
+	"factors/merge"
 	"factors/model/store"
 	"factors/pattern"
 	serviceDisk "factors/services/disk"
@@ -34,7 +35,7 @@ func registerStructs() {
 
 	beam.RegisterType(reflect.TypeOf((*T.CpThreadDoFn)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*T.UpThreadDoFn)(nil)).Elem())
-	beam.RegisterType(reflect.TypeOf((*T.RunBeamConfig)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*merge.RunBeamConfig)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*T.CPatternsBeam)(nil)).Elem())
 
 }
@@ -48,6 +49,13 @@ func main() {
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
 	numWorkersFlag := flag.Int("num_beam_workers", 100, "Num of beam workers")
+
+	tmpBucketNameFlag := flag.String("bucket_name_tmp", "/usr/local/var/factors/cloud_storage_tmp", "--bucket_name=/usr/local/var/factors/cloud_storage_tmp pass bucket name for tmp artifacts")
+	archiveBucketNameFlag := flag.String("archive_bucket_name", "/usr/local/var/factors/cloud_storage_archive", "--bucket_name=/usr/local/var/factors/cloud_storage_archive pass archive bucket name")
+	sortedBucketNameFlag := flag.String("sorted_bucket_name", "/usr/local/var/factors/cloud_storage_sorted", "--bucket_name=/usr/local/var/factors/cloud_storage_sorted pass sorted bucket name")
+	modelBucketNameFlag := flag.String("model_bucket_name", "/usr/local/var/factors/cloud_storage_models", "--bucket_name=/usr/local/var/factors/cloud_storage_models pass models bucket name")
+	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
+	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
 
 	projectIdFlag := flag.String("project_ids", "",
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
@@ -100,7 +108,7 @@ func main() {
 	}
 
 	//init beam
-	var beamConfig T.RunBeamConfig
+	var beamConfig merge.RunBeamConfig
 	if *runBeam == 1 {
 		log.Info("Initializing all beam constructs")
 		registerStructs()
@@ -184,9 +192,9 @@ func main() {
 
 	var cloudManager filestore.FileManager
 	if *envFlag == "development" {
-		cloudManager = serviceDisk.New(*bucketName)
+		cloudManager = serviceDisk.New(*tmpBucketNameFlag)
 	} else {
-		cloudManager, err = serviceGCS.New(*bucketName)
+		cloudManager, err = serviceGCS.New(*tmpBucketNameFlag)
 		if err != nil {
 			log.WithError(err).Errorln("Failed to init New GCS Client")
 			panic(err)
@@ -236,6 +244,52 @@ func main() {
 	configs["hmineSupport"] = float32(*hmineSupport)
 	configs["hminePersist"] = *hmine_persist
 	configs["modelType"] = "w"
+	configs["tmpCloudManager"] = &cloudManager
+
+	if *useBucketV2 {
+		var archiveCloudManager filestore.FileManager
+		var sortedCloudManager filestore.FileManager
+		var modelCloudManager filestore.FileManager
+		if *envFlag == "development" {
+			modelCloudManager = serviceDisk.New(*modelBucketNameFlag)
+			archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
+			sortedCloudManager = serviceDisk.New(*sortedBucketNameFlag)
+		} else {
+			modelCloudManager, err = serviceGCS.New(*modelBucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init cloud manager.")
+			}
+			archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init archive cloud manager")
+			}
+			sortedCloudManager, err = serviceGCS.New(*sortedBucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init sorted data cloud manager")
+			}
+		}
+		configs["modelCloudManager"] = &modelCloudManager
+		configs["archiveCloudManager"] = &archiveCloudManager
+		configs["sortedCloudManager"] = &sortedCloudManager
+	} else {
+		var cloudManager filestore.FileManager
+		if *envFlag == "development" {
+			cloudManager = serviceDisk.New(*bucketName)
+		} else {
+			cloudManager, err = serviceGCS.New(*bucketName)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init cloud manager.")
+			}
+		}
+		configs["modelCloudManager"] = &cloudManager
+		configs["archiveCloudManager"] = &cloudManager
+		configs["sortedCloudManager"] = &cloudManager
+	}
+
+	configs["diskManager"] = diskManager
+	configs["useBucketV2"] = *useBucketV2
+	configs["beamConfig"] = &beamConfig
+	configs["hardPull"] = *hardPull
 
 	log.Infof("configs :%v", configs)
 

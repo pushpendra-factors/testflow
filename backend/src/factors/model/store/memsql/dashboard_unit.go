@@ -806,7 +806,10 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 			err = response.err
 			errCode = response.errCode
 			errMsg = response.errMsg
-			if err != nil {
+			if errCode == 0 {
+				logCtx.WithFields(log.Fields{"Query": *analyticsQuery, "ErrCode": "PanicOccured", "Error": ""}).Info("Failed for the FunnelORInsights unit")
+				errCode = http.StatusInternalServerError
+			} else if err != nil {
 				logCtx.WithFields(log.Fields{"Query": *analyticsQuery, "ErrCode": "UnitRunTimeOut", "Error": response.err}).Info("Failed for the FunnelORInsights unit")
 				errCode = http.StatusInternalServerError
 			} else if reflect.ValueOf(result).IsNil() {
@@ -836,7 +839,10 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 			err = response.err
 			errCode = response.errCode
 			errMsg = response.errMsg
-			if err != nil && !model.IsIntegrationNotFoundError(response.err) {
+			if errCode == 0 {
+				logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "PanicOccured", "Error": ""}).Info("Failed for the attribution unit")
+				errCode = http.StatusInternalServerError
+			} else if err != nil && !model.IsIntegrationNotFoundError(response.err) {
 				logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut", "Error": response.err}).Info("Failed for the attribution unit")
 				errCode = http.StatusInternalServerError
 			} else if reflect.ValueOf(result).IsNil() {
@@ -919,9 +925,14 @@ type Result struct {
 }
 
 func (store *MemSQL) runFunnelAndInsightsUnit(projectID int64, queryOriginal model.Query, c chan Result, enableFilterOpt bool) {
-	r, eCode, eMsg := store.Analyze(projectID, queryOriginal, enableFilterOpt, false) // disable dashboard caching for funnelv2
+	r, eCode, eMsg := store.WrapperForAnalyze(projectID, queryOriginal, enableFilterOpt)
 	result := Result{res: r, errCode: eCode, errMsg: eMsg, lastComputedAt: U.TimeNowUnix()}
 	c <- result
+}
+
+func (store *MemSQL) WrapperForAnalyze(projectID int64, queryOriginal model.Query, enableFilterOpt bool) (*model.QueryResult, int, string) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+	return store.Analyze(projectID, queryOriginal, enableFilterOpt, false) // disable dashboard caching for funnelv2
 }
 
 func (store *MemSQL) runAttributionUnit(projectID int64, queryOriginal *model.AttributionQuery, c chan Result) {
@@ -933,10 +944,15 @@ func (store *MemSQL) runAttributionUnit(projectID int64, queryOriginal *model.At
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
 	var r *model.QueryResult
 	var err error
-	r, err = store.ExecuteAttributionQueryV0(projectID, queryOriginal, debugQueryKey,
-		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	r, err = store.WrapperForExecuteAttributionQueryV0(projectID, queryOriginal, debugQueryKey)
 	result := Result{res: r, err: err, errMsg: "", lastComputedAt: U.TimeNowUnix()}
 	c <- result
+}
+
+func (store *MemSQL) WrapperForExecuteAttributionQueryV0(projectID int64, queryOriginal *model.AttributionQuery, debugQueryKey string) (*model.QueryResult, error) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+	return store.ExecuteAttributionQueryV0(projectID, queryOriginal, debugQueryKey,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 }
 
 func (store *MemSQL) cacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,

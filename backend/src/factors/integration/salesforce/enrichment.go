@@ -1376,7 +1376,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, otpRules *[]mode
 			err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, &memberDocuments[i], endTimestamp)
 			if err != nil {
 				// log and continue
-				logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("failed creating SF offline touch point")
+				logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Warn("failed creating SF offline touch point")
 			}
 		}
 
@@ -1596,7 +1596,7 @@ func enrichCampaignMember(project *model.Project, otpRules *[]model.OTPRule, doc
 	err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, document, endTimestamp)
 	if err != nil {
 		// log and continue
-		logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Info("Create SF offline touch point")
+		logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Warn("Create SF offline touch point")
 	}
 
 	errCode := enrichCampaignMemberResponded(project, document, userID, *enCampaignMemberProperties)
@@ -1699,10 +1699,10 @@ func canProcessSalesforceActivity(document *model.SalesforceDocument) (bool, err
 	return true, nil
 }
 
-func enrichTask(projectID int64, document *model.SalesforceDocument) int {
-	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
+func enrichTask(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.SalesforceDocument) int {
+	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
 
-	if projectID == 0 || document == nil {
+	if project.ID == 0 || document == nil {
 		logCtx.Error("Invalid parameters in enrich Task")
 		return http.StatusBadRequest
 	}
@@ -1724,7 +1724,7 @@ func enrichTask(projectID int64, document *model.SalesforceDocument) int {
 		}
 	}
 
-	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, _, err := GetSalesforceDocumentProperties(project.ID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return http.StatusInternalServerError
@@ -1746,19 +1746,25 @@ func enrichTask(projectID int64, document *model.SalesforceDocument) int {
 	}
 
 	trackPayload := &SDK.TrackPayload{
-		ProjectId:       projectID,
+		ProjectId:       project.ID,
 		UserId:          activityUserID,
 		EventProperties: *enProperties,
 		RequestSource:   model.UserSourceSalesforce,
 	}
 
-	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "", model.SalesforceDocumentTypeNameTask)
+	eventID, userID, finalPayload, err := TrackSalesforceEventByDocumentType(project.ID, trackPayload, document, "", model.SalesforceDocumentTypeNameTask)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to track salesforce task event.")
 		return http.StatusInternalServerError
 	}
 
-	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
+	err = ApplySFOfflineTouchPointRuleForTasks(project, otpRules, uniqueOTPEventKeys, &finalPayload, document)
+	if err != nil {
+		// log and continue
+		logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Warn("Failed creating offline touch point event for SF Tasks")
+	}
+
+	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, eventID, userID, "", true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce task document as synced.")
 		return http.StatusInternalServerError
@@ -1767,10 +1773,10 @@ func enrichTask(projectID int64, document *model.SalesforceDocument) int {
 	return http.StatusOK
 }
 
-func enrichEvent(projectID int64, document *model.SalesforceDocument) int {
-	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
+func enrichEvent(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.SalesforceDocument) int {
+	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
 
-	if projectID == 0 || document == nil {
+	if project.ID == 0 || document == nil {
 		logCtx.Error("Invalid parameters in enrich Event")
 		return http.StatusBadRequest
 	}
@@ -1792,7 +1798,7 @@ func enrichEvent(projectID int64, document *model.SalesforceDocument) int {
 		}
 	}
 
-	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, _, err := GetSalesforceDocumentProperties(project.ID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return http.StatusInternalServerError
@@ -1814,19 +1820,25 @@ func enrichEvent(projectID int64, document *model.SalesforceDocument) int {
 	}
 
 	trackPayload := &SDK.TrackPayload{
-		ProjectId:       projectID,
+		ProjectId:       project.ID,
 		UserId:          activityUserID,
 		EventProperties: *enProperties,
 		RequestSource:   model.UserSourceSalesforce,
 	}
 
-	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "", model.SalesforceDocumentTypeNameEvent)
+	eventID, userID, finalPayload, err := TrackSalesforceEventByDocumentType(project.ID, trackPayload, document, "", model.SalesforceDocumentTypeNameEvent)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to track salesforce event event.")
 		return http.StatusInternalServerError
 	}
 
-	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
+	err = ApplySFOfflineTouchPointRuleForEvents(project, otpRules, uniqueOTPEventKeys, &finalPayload, document)
+	if err != nil {
+		// log and continue
+		logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Warn("Failed creating offline touch point event for SF Events")
+	}
+
+	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, eventID, userID, "", true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce event document as synced.")
 		return http.StatusInternalServerError
@@ -1835,6 +1847,91 @@ func enrichEvent(projectID int64, document *model.SalesforceDocument) int {
 	return http.StatusOK
 }
 
+//Check if the condition are satisfied for creating OTP events for each rule for SF Tasks Updated.
+func ApplySFOfflineTouchPointRuleForTasks(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument) error {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRuleForTasks",
+		"document_id": document.ID, "document_action": document.Action, "document": document})
+
+	if otpRules == nil || project == nil || trackPayload == nil || document == nil {
+		return nil
+	}
+	for _, rule := range *otpRules {
+
+		otpUniqueKey, err := createOTPUniqueKeyForTasks(rule, trackPayload, logCtx)
+		if err != http.StatusCreated {
+			logCtx.Error("Failed to create otp_unique_key")
+			continue
+		}
+
+		//Check if rule type is sf_tasks
+		if rule.RuleType != model.TouchPointRuleTypeTasks {
+			continue
+		}
+
+		// check if rule is applicable w.r.t filters
+		if !filterCheck(rule, trackPayload, logCtx) {
+			continue
+		}
+
+		//Checks if the otpUniqueKey is already present in other OTP Event Properties
+		if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys) {
+			continue
+		}
+
+		_, err1 := CreateTouchPointEventForTasksAndEvents(project, trackPayload, document, rule, otpUniqueKey)
+		if err1 != nil {
+			logCtx.WithError(err1).Error("failed to create touch point for salesforce tasks.")
+			continue
+		}
+
+	}
+	return nil
+}
+
+//Check if the condition are satisfied for creating OTP events for each rule for SF Event Updated.
+func ApplySFOfflineTouchPointRuleForEvents(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument) error {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRuleForEvents",
+		"document_id": document.ID, "document_action": document.Action, "document": document})
+
+	if otpRules == nil || project == nil || trackPayload == nil || document == nil {
+		return nil
+	}
+	for _, rule := range *otpRules {
+
+		otpUniqueKey, err := createOTPUniqueKeyForEvents(rule, trackPayload, logCtx)
+		if err != http.StatusCreated {
+			logCtx.Error("Failed to create otp_unique_key")
+			continue
+		}
+
+		//Check if rule type is sf_events
+		if rule.RuleType != model.TouchPointRuleTypeEvents {
+			continue
+		}
+
+		// check if rule is applicable w.r.t filters
+		if !filterCheck(rule, trackPayload, logCtx) {
+			continue
+		}
+
+		//Checks if the otpUniqueKey is already present in other OTP Event Properties
+		if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys) {
+			continue
+		}
+
+		_, err1 := CreateTouchPointEventForTasksAndEvents(project, trackPayload, document, rule, otpUniqueKey)
+		if err1 != nil {
+			logCtx.WithError(err1).Error("failed to create touch point for salesforce events.")
+			continue
+		}
+
+	}
+	return nil
+}
+
+//Check if the condition are satisfied for creating OTP events for each rule for SF Campaign.
 func ApplySFOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPRule, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRule",
@@ -1912,6 +2009,78 @@ func ApplySFOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPR
 	return nil
 }
 
+// CreateTouchPointEventForTasksAndEvents - Creates offline touchpoint for SF update events with given rule for SF Tasks/Events
+func CreateTouchPointEventForTasksAndEvents(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument,
+	rule model.OTPRule, otpUniqueKey string) (*SDK.TrackResponse, error) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent", "document_id": document.ID, "document_action": document.Action})
+	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).Info("CreateTouchPointEventForTasksAndEvents: creating salesforce OFFLINE TOUCH POINT document")
+	var trackResponse *SDK.TrackResponse
+	var err error
+	eventProperties := make(U.PropertiesMap, 0)
+	payload := &SDK.TrackPayload{
+		ProjectId:       project.ID,
+		EventProperties: eventProperties,
+		UserId:          trackPayload.UserId,
+		Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+		RequestSource:   trackPayload.RequestSource,
+	}
+
+	var timestamp int64
+	timeValue, exists := (trackPayload.EventProperties)[rule.TouchPointTimeRef]
+	if !exists {
+		logCtx.WithField("TouchPointTimeRef", rule.TouchPointTimeRef).
+			Error("couldn't get the timestamp on hubspot contact properties using given rule.TouchPointTimeRef")
+		return nil, errors.New(fmt.Sprintf("couldn't get the timestamp on hubspot contact properties "+
+			"using given rule.TouchPointTimeRef - %s", rule.TouchPointTimeRef))
+	}
+	val, ok := timeValue.(int64)
+	if !ok {
+		logCtx.WithField("TouchPointTimeRef", rule.TouchPointTimeRef).WithField("TimeValue", timeValue).
+			Error("couldn't convert the timestamp on hubspot contact properties. using trackPayload timestamp instead, val")
+		timestamp = trackPayload.Timestamp
+	} else {
+		timestamp = val
+	}
+
+	// Adding mandatory properties
+	payload.EventProperties[U.EP_OTP_RULE_ID] = rule.ID
+	payload.EventProperties[U.EP_OTP_UNIQUE_KEY] = otpUniqueKey
+	payload.Timestamp = timestamp
+
+	// Mapping touch point properties:
+	var rulePropertiesMap map[string]model.TouchPointPropertyValue
+	err = U.DecodePostgresJsonbToStructType(&rule.PropertiesMap, &rulePropertiesMap)
+	if err != nil {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rule PROPERTIES for salesforce document.")
+		return trackResponse, errors.New(fmt.Sprintf("create salesforce touchpoint event track failed in method CreateTouchPointEventForTasksAndEvents for doc type %d, message %s", document.Type, trackResponse.Error))
+	}
+
+	for key, value := range rulePropertiesMap {
+
+		if value.Type == model.TouchPointPropertyValueAsConstant {
+			payload.EventProperties[key] = value.Value
+		} else {
+			if _, exists := trackPayload.EventProperties[value.Value]; exists {
+				payload.EventProperties[key] = trackPayload.EventProperties[value.Value]
+			} else {
+				// Property value is not found, hence keeping it as $none
+				payload.EventProperties[key] = model.PropertyValueNone
+			}
+		}
+	}
+
+	status, trackResponse := SDK.Track(project.ID, payload, true, SDK.SourceSalesforce, "")
+	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error(fmt.Errorf("create salesforce OTP event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+		return trackResponse, errors.New(fmt.Sprintf("create salesforce touchpoint event track failed in method CreateTouchPointEventForTasksAndEvents for doc type %d, message %s", document.Type, trackResponse.Error))
+	}
+	logCtx.WithField("statusCode", status).WithField("trackResponsePayload", trackResponse).Info("Successfully: created salesforce offline touch point")
+	return trackResponse, nil
+
+}
+
+//CreateTouchPointEvent- Creates offline touch point event for SF Campaign
 func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, rule model.OTPRule) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent", "document_id": document.ID, "document_action": document.Action})
@@ -1978,6 +2147,49 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 	return trackResponse, nil
 }
 
+// Returns true or false if the otpKey (userID+ruleID+keyID) is not present in uniqueOTPEventKeys i.e. Unique OTP key.
+func isSalesforceOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string) bool {
+	return U.StringValueIn(otpUniqueKey, *uniqueOTPEventKeys)
+}
+
+//Creates a unique key using ruleID, userID and salesforce task activity ID  as keyID for Salesforce Tasks.
+func createOTPUniqueKeyForTasks(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) (string, int) {
+
+	ruleID := rule.ID
+	userID := trackPayload.UserId
+	var keyID string
+	var uniqueKey string
+
+	if _, exists := trackPayload.EventProperties[U.EP_SF_TASK_ID]; exists {
+		keyID = fmt.Sprintf("%v", trackPayload.EventProperties[U.EP_SF_TASK_ID])
+	} else {
+		logCtx.Error("Event Property $salesforce_task_id does not exist.")
+		return uniqueKey, http.StatusNotFound
+	}
+
+	uniqueKey = userID + ruleID + keyID
+	return uniqueKey, http.StatusCreated
+}
+
+//Creates a unique key using ruleID, userID and salesforce Event activity ID  as keyID for Salesforce Tasks.
+func createOTPUniqueKeyForEvents(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) (string, int) {
+
+	ruleID := rule.ID
+	userID := trackPayload.UserId
+	var keyID string
+	var uniqueKey string
+
+	if _, exists := trackPayload.EventProperties[U.EP_SF_EVENT_ID]; exists {
+		keyID = fmt.Sprintf("%v", trackPayload.EventProperties[U.EP_SF_EVENT_ID])
+	} else {
+		logCtx.Error("Event Property $salesforce_event_id does not exist.")
+		return uniqueKey, http.StatusNotFound
+	}
+
+	uniqueKey = userID + ruleID + keyID
+	return uniqueKey, http.StatusCreated
+}
+
 func canCreateSFTouchPoint(touchPointTimeRef string, documentActionType model.SalesforceAction) bool {
 	// Ignore created event for "first responded" based rule.
 	if touchPointTimeRef == model.SFCampaignMemberResponded && documentActionType == model.SalesforceDocumentCreated {
@@ -1991,6 +2203,7 @@ func canCreateSFTouchPoint(touchPointTimeRef string, documentActionType model.Sa
 	return true
 }
 
+//filterCheck- Returns true if all the filters applied are passed.
 func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
 
 	var ruleFilters []model.TouchPointFilter
@@ -2066,7 +2279,7 @@ func enrichCampaign(project *model.Project, otpRules *[]model.OTPRule, document 
 	return http.StatusBadRequest
 }
 
-func enrichAll(project *model.Project, otpRules *[]model.OTPRule, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName,
+func enrichAll(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName,
 	pendingOpportunityGroupAssociations map[string]map[string]string, endTimestamp int64) int {
 	if project.ID == 0 {
 		return http.StatusBadRequest
@@ -2087,9 +2300,9 @@ func enrichAll(project *model.Project, otpRules *[]model.OTPRule, documents []mo
 		case model.SalesforceDocumentTypeOpportunityContactRole:
 			errCode = enrichOpportunityContactRoles(project.ID, &documents[i])
 		case model.SalesforceDocumentTypeTask:
-			errCode = enrichTask(project.ID, &documents[i])
+			errCode = enrichTask(project, otpRules, uniqueOTPEventKeys, &documents[i])
 		case model.SalesforceDocumentTypeEvent:
-			errCode = enrichEvent(project.ID, &documents[i])
+			errCode = enrichEvent(project, otpRules, uniqueOTPEventKeys, &documents[i])
 		default:
 			log.Errorf("invalid salesforce document type found %d", documents[i].Type)
 			continue
@@ -2333,9 +2546,10 @@ type enrichWorkerStatus struct {
 }
 
 func enrichAllWorker(project *model.Project, wg *sync.WaitGroup, enrichStatus *enrichWorkerStatus, otpRules *[]model.OTPRule,
-	documents []model.SalesforceDocument, smartEventNames []SalesforceSmartEventName, pendingOpportunityGroupAssociations map[string]map[string]string, timeRange int64) {
+	uniqueOTPEventKeys *[]string, documents []model.SalesforceDocument, smartEventNames []SalesforceSmartEventName,
+	pendingOpportunityGroupAssociations map[string]map[string]string, timeRange int64) {
 	defer wg.Done()
-	errCode := enrichAll(project, otpRules, documents, smartEventNames, pendingOpportunityGroupAssociations, timeRange)
+	errCode := enrichAll(project, otpRules, uniqueOTPEventKeys, documents, smartEventNames, pendingOpportunityGroupAssociations, timeRange)
 
 	enrichStatus.Lock.Lock()
 	defer enrichStatus.Lock.Unlock()
@@ -2385,6 +2599,14 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 		logCtx.WithField("err_code", errCode).Error("Failed to get otp Rules for Project")
 		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectID: projectID,
 			Status: "Failed to get OTP rules"})
+		return statusByProjectAndType, true
+	}
+
+	uniqueOTPEventKeys, errCode := store.GetStore().GetUniqueKeyPropertyForOTPEventForLast3Months(projectID)
+	if errCode != http.StatusFound && errCode != http.StatusNotFound {
+		logCtx.WithField("err_code", errCode).Error("Failed to get OTP Unique Keys for Project")
+		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectID: projectID,
+			Status: "Failed to get OTP Unique Keys"})
 		return statusByProjectAndType, true
 	}
 
@@ -2483,7 +2705,7 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 				for docID := range batch {
 					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias}).Info("Processing Batch by doc_id")
 					wg.Add(1)
-					go enrichAllWorker(project, &wg, &enrichStatus, &otpRules, batch[docID], (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, timeRange[1])
+					go enrichAllWorker(project, &wg, &enrichStatus, &otpRules, &uniqueOTPEventKeys, batch[docID], (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, timeRange[1])
 					workerIndex++
 				}
 				wg.Wait()

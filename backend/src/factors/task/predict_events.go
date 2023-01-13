@@ -5,14 +5,13 @@ import (
 	"factors/filestore"
 	PP "factors/predict"
 	serviceDisk "factors/services/disk"
+	U "factors/util"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 )
 
 var prLog = log.WithField("prefix", "Task#PredictPullEvents")
-
-const ONE_WEEK_EPOCH = 604800
 
 func PredictPullData(configs map[string]interface{}) error {
 
@@ -28,7 +27,7 @@ func PredictPullData(configs map[string]interface{}) error {
 	prjProp.Target_value = configs["target_prop"].(string)
 	prjProp.Model_id = configs["target_time"].(int64)
 
-	prjProp.Buffer_time = prjProp.Buffer_time * ONE_WEEK_EPOCH
+	prjProp.Buffer_time = prjProp.Buffer_time * U.Per_week_epoch
 
 	prjByte, err := json.Marshal(prjProp)
 	if err != nil {

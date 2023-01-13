@@ -50,6 +50,7 @@
                             .fa-custom--popover-content {
                                 div {
                                     max-height: 392px;
+                                    overflow-x: hidden;
                                     overflow-y: scroll;
 
                                     &.apply_active {
@@ -508,6 +509,12 @@
     display: inline-flex;
     flex-wrap: nowrap;
     gap: 6px;
+}
+
+.inline-flex-gap--4 {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    gap: 4px;
 }
 
 .event-name--sm {

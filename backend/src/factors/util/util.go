@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"factors/filestore"
 	"fmt"
 	"math"
 	"math/rand"
@@ -29,6 +30,15 @@ type Int64Tuple struct {
 	First  int64
 	Second int64
 }
+
+const (
+	DataTypeEvent    = "events"
+	DataTypeAdReport = "ad_reports"
+	DataTypeUser     = "users"
+)
+
+const Per_day_epoch int64 = DayInSecs
+const Per_week_epoch int64 = WeekInSecs
 
 // PatternProperties To be used in TakeTopK functions
 type PatternProperties interface {
@@ -615,6 +625,19 @@ func GetKeysMapAsArray(keys map[string]bool) []string {
 	}
 
 	return keysArray
+}
+
+func GetKeysOfInt64StringMap(m *map[int64]string) []int64 {
+	if m == nil {
+		return []int64{}
+	}
+
+	keys := make([]int64, 0)
+	for key := range *m {
+		keys = append(keys, key)
+	}
+
+	return keys
 }
 
 func GetSnakeCaseToTitleString(str string) (title string) {
@@ -1556,5 +1579,28 @@ func ApplyOp(a, b float64, op string) float64 {
 		return a / b
 	default:
 		return 0
+	}
+}
+
+func CheckFileExists(cloudManager *filestore.FileManager, path, name string) (bool, error) {
+	if _, err := (*cloudManager).Get(path, name); err != nil {
+		log.WithFields(log.Fields{"err": err, "filePath": path,
+			"fileName": name}).Info("Failed to fetch from cloud path")
+		return false, err
+	} else {
+		return true, nil
+	}
+}
+
+func GetModelType(start, end int64) string {
+	diff := end - start
+	if diff <= Per_day_epoch {
+		return "d"
+	} else if diff <= Per_week_epoch {
+		return "w"
+	} else if diff < Per_week_epoch*6 {
+		return "m"
+	} else {
+		return "q"
 	}
 }

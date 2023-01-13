@@ -7,6 +7,10 @@ on:
         description: "Description about deployment"
         default: ""
 
+env:
+  DEV_NAME: ${{ github.actor }}
+  ACTION_DESCRIPTION: ${{ github.event.inputs.description}}
+
 jobs:
   deploy_fe_production_website:
     if: github.ref == 'refs/heads/release'
@@ -19,6 +23,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "14"
+          cache: "npm"
+          cache-dependency-path: |
+            frontend-new/package-lock.json
+            sdk/javascript/package-lock.json
 
       - name: Show GitHub context
         env:
@@ -26,10 +34,10 @@ jobs:
         run: echo "$DEV_NAME"
 
       - name: Installing Dependencies SDK
-        run: cd $GITHUB_WORKSPACE/sdk/javascript && npm install
+        run: cd $GITHUB_WORKSPACE/sdk/javascript && npm ci
 
       - name: Installing Dependencies Frontend
-        run: cd $GITHUB_WORKSPACE/frontend-new && npm install
+        run: cd $GITHUB_WORKSPACE/frontend-new && npm ci
 
       - name: Creating Frontend Build
         run: cd $GITHUB_WORKSPACE/frontend-new && npm run build-prod-no-deployment
@@ -76,4 +84,4 @@ jobs:
         run: cd $GITHUB_WORKSPACE/frontend-new && node sdk-monitor.js prod 4; node sdk-monitor.js prod 4 https://b3mxnuvcer.firebaseapp.com/factors.v1.js
 
       - name: Slack Notification
-        run: $GITHUB_WORKSPACE/frontend-new/notify_deployment.sh
+        run: $GITHUB_WORKSPACE/frontend-new/notify_deployment_github.sh production

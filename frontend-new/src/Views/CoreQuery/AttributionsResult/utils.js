@@ -1,7 +1,11 @@
 import React from 'react';
 import cx from 'classnames';
 import moment from 'moment';
-import { SVG, Number as NumFormat, Text } from 'factorsComponents';
+import {
+  SVG,
+  Number as NumFormat,
+  Text
+} from '../../../components/factorsComponents';
 import { get, keys, uniqBy } from 'lodash';
 import {
   SortData,

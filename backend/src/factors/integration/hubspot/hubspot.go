@@ -1442,7 +1442,7 @@ func CreateTouchPointEventForFormsAndContacts(project *model.Project, trackPaylo
 		"document_id": document.ID, "document_action": document.Action})
 	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).
 		Info("CreateTouchPointEvent: creating hubspot offline touch point document")
-	logCtx.WithFields(log.Fields{"ProjectID": project.ID}).Info("Inside method CreateTouchPointEvent")
+
 	var trackResponse *SDK.TrackResponse
 	var err error
 	eventProperties := make(U.PropertiesMap, 0)
@@ -1590,6 +1590,7 @@ func CreateTouchPointEventForLists(project *model.Project, trackPayload *SDK.Tra
 	return trackResponse, nil
 }
 
+//isEmailEngagementAlreadyTracked- Checks if the Email (a type of Engagement) is already tracked for creating OTP event.
 func isEmailEngagementAlreadyTracked(projectID int64, ruleID string, threadID string, engagement Engagements, logCtx *log.Entry) (bool, error) {
 
 	en, status := store.GetStore().CreateOrGetOfflineTouchPointEventName(projectID)
@@ -1786,6 +1787,8 @@ func createOTPUniqueKeyForContactList(rule model.OTPRule, trackPayload *SDK.Trac
 	return uniqueKey, http.StatusCreated
 
 }
+
+//canCreateHSEngagementTouchPoint- Checks if the rule type of OTP rule is in accordance with the engagement type.
 func canCreateHSEngagementTouchPoint(engagementType string, ruleType string) bool {
 
 	switch engagementType {
@@ -1808,6 +1811,7 @@ func canCreateHSEngagementTouchPoint(engagementType string, ruleType string) boo
 	return false
 }
 
+//canCreateHSTouchPoint- Returns true if the document action type is Updated for HS Contacts.
 func canCreateHSTouchPoint(documentActionType int) bool {
 	// Ignore doc types other than HubspotDocumentActionUpdated
 	if documentActionType != model.HubspotDocumentActionUpdated {
@@ -1816,6 +1820,7 @@ func canCreateHSTouchPoint(documentActionType int) bool {
 	return true
 }
 
+//filterCheck- Checks if all the filters applied are passed and checks HS documents for HS Contacts
 func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, prevDoc *model.HubspotDocument, logCtx *log.Entry) bool {
 
 	var ruleFilters []model.TouchPointFilter
@@ -1903,6 +1908,7 @@ func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, document *m
 	return false
 }
 
+//filterCheckGeneral- Returns true if all the filters applied are passed.
 func filterCheckGeneral(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
 
 	var ruleFilters []model.TouchPointFilter
@@ -3430,9 +3436,9 @@ func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, 
 
 	uniqueOTPEventKeys, errCode := store.GetStore().GetUniqueKeyPropertyForOTPEventForLast3Months(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
-		logCtx.WithField("err_code", errCode).Error("Failed to get otp properties for Project")
+		logCtx.WithField("err_code", errCode).Error("Failed to get OTP Unique Keys for Project")
 		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,
-			Status: "Failed to get OTP properties"})
+			Status: "Failed to get OTP Unique Keys"})
 		return statusByProjectAndType, true
 	}
 

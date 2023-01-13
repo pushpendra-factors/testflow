@@ -262,7 +262,6 @@ func TestKpiAnalytics(t *testing.T) {
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
-		log.WithField("result", result).Warn("kark3")
 
 		assert.Equal(t, result[0].Headers, []string{"abc", "average_initial_page_load_time"})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -558,7 +557,6 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		assert.Equal(t, len(result[1].Rows), 1)
 		assert.Equal(t, result[1].Rows[0][0], float64(300))
 
-		log.WithField("result", result).Warn("kark1")
 	})
 
 	t.Run("test hubspot contacts with filters only - timerange overshoot check with $none filters", func(t *testing.T) {
@@ -661,8 +659,6 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		assert.Equal(t, len(result[1].Rows), 1)
 		assert.Equal(t, result[1].Rows[0][0], float64(300))
 
-		log.WithField("result", result).Warn("kark1")
-
 		// Query which supports complex function - Average
 		query3 := model.KPIQuery{
 			Category:         model.ProfileCategory,
@@ -687,7 +683,6 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		}
 		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		log.WithField("result2", result2).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode2)
 		assert.Equal(t, result2[0].Headers, []string{"datetime", name3})
 		assert.Equal(t, len(result2[0].Rows), 1)
@@ -739,8 +734,6 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		assert.Equal(t, result[1].Rows[0][0], "india")
 		assert.Equal(t, result[1].Rows[0][1], float64(300))
 
-		log.WithField("result", result).Warn("kark1")
-
 		// Query which supports complex function - Average
 		query3 := model.KPIQuery{
 			Category:         model.ProfileCategory,
@@ -765,7 +758,6 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		}
 		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		log.WithField("result2", result2).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode2)
 		assert.Equal(t, result2[0].Headers, []string{"datetime", groupBy.PropertyName, name3})
 		assert.Equal(t, len(result2[0].Rows), 1)
@@ -896,7 +888,6 @@ func TestKPIProfilesForGroups(t *testing.T) {
 		}
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		log.WithField("result", result).Warn("kark1")
 		assert.Equal(t, http.StatusOK, statusCode)
 
 		assert.Equal(t, float64(10), result[0].Rows[0][1])
@@ -1177,7 +1168,6 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
-		log.WithField("result", result).Warn("kark3")
 
 		assert.Equal(t, result[0].Headers, []string{"abc", name})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -1723,15 +1713,14 @@ func TestDerivedKPIForCustomKPI(t *testing.T) {
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
 
-		result2, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
-		log.WithField("result", result2).Warn("kark2")
-		// assert.Equal(t, result[0].Headers, []string{"datetime", "page_views"})
-		// assert.Equal(t, len(result[0].Rows), 1)
-		// assert.Equal(t, result[1].Headers, []string{"page_views"})
-		// assert.Equal(t, len(result[1].Rows), 1)
-		// assert.Equal(t, result[0].Rows[0][1], float64(1))
+		assert.Equal(t, result[0].Headers, []string{"datetime", "page_views"})
+		assert.Equal(t, len(result[0].Rows), 1)
+		assert.Equal(t, result[1].Headers, []string{"page_views"})
+		assert.Equal(t, len(result[1].Rows), 1)
+		assert.Equal(t, result[0].Rows[0][1], float64(1))
 	})
 
 	t.Run("Custom Events Query with no groupby and no filter.", func(t *testing.T) {

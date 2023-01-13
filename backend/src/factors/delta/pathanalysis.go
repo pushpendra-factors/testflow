@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	C "factors/config"
 	"factors/filestore"
+	"factors/merge"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	U "factors/util"
@@ -19,6 +20,8 @@ import (
 	"factors/model/store"
 
 	"io/ioutil"
+
+	"net/http"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -43,23 +46,59 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 	// Write the final paths to a file
 
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
-	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	archiveCloudManager := configs["archiveCloudManager"].(*filestore.FileManager)
+	sortedCloudManager := configs["sortedCloudManager"].(*filestore.FileManager)
+	modelCloudManager := configs["modelCloudManager"].(*filestore.FileManager)
+	tmpCloudManager := configs["tmpCloudManager"].(*filestore.FileManager)
+	hardPull := configs["hardPull"].(bool)
+	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
+	useBucketV2 := configs["useBucketV2"].(bool)
 
 	queries, _ := store.GetStore().GetAllSavedPathAnalysisEntityByProject(projectId)
 	for _, query := range queries {
+
 		store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.BUILDING)
 		var actualQuery M.PathAnalysisQuery
 		U.DecodePostgresJsonbToStructType(query.PathAnalysisQuery, &actualQuery)
 		if len(actualQuery.IncludeEvents) > 0 {
 			actualQuery.IncludeEvents = append(actualQuery.IncludeEvents, actualQuery.Event)
 		}
+		groupId := int(0)
+		if actualQuery.Group != "" {
+			eventNamesObj, eventnameerr := store.GetStore().GetEventName(actualQuery.Event.Label, projectId)
+			if eventnameerr != http.StatusFound {
+				log.Fatal(eventnameerr)
+			}
+			groupNameFromDb, _ := store.GetStore().IsGroupEventName(projectId, actualQuery.Event.Label, eventNamesObj.ID)
+			if groupNameFromDb != "" {
+				if actualQuery.Group != groupNameFromDb {
+					log.Error("group names mismatch", actualQuery.Group, groupNameFromDb)
+					log.Fatal("group names mismatch")
+				} else {
+					groupId = int(0)
+				}
+			} else {
+				groupDetails, groupErr := store.GetStore().GetGroup(projectId, actualQuery.Group)
+				if groupErr != http.StatusFound {
+					log.Fatal(groupErr)
+				}
+				groupId = groupDetails.ID
+			}
+		}
+		if useBucketV2 {
+			if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", actualQuery.StartTimestamp, actualQuery.EndTimestamp,
+				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId); err != nil {
+				log.Error("Failed creating events file")
+			}
+		}
 		log.Info("Processing Query ID: ", query.ID, " query: ", actualQuery)
 		var err error
-		cfTmpPath, cfTmpName := diskManager.GetEventsForTimerangeFilePathAndName(projectId, actualQuery.StartTimestamp, actualQuery.EndTimestamp)
+		cfTmpPath, cfTmpName := diskManager.GetEventsGroupFilePathAndName(projectId, actualQuery.StartTimestamp, actualQuery.EndTimestamp, groupId)
 		localFilePath := cfTmpPath + cfTmpName
 		log.Info("Starting cloud events file get")
-		cfCloudPath, cfCloudName := "projects/2251799829000005/", "events.txt"
-		eReader, err := (*cloudManager).Get(cfCloudPath, cfCloudName)
+		// "projects/2251799829000005/", "events.txt"
+		cfCloudPath, cfCloudName := (*sortedCloudManager).GetEventsGroupFilePathAndName(projectId, actualQuery.StartTimestamp, actualQuery.EndTimestamp, groupId)
+		eReader, err := (*sortedCloudManager).Get(cfCloudPath, cfCloudName)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
 				"eventFileName": cfCloudName}).Error("Failed downloading  file from cloud.")
@@ -92,13 +131,13 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		queryCriteria := EventCriterion{
 			Name:                actualQuery.Event.Label,
 			EqualityFlag:        true,
-			FilterCriterionList: MapFilterProperties(AllFilters),
+			FilterCriterionList: mapFilterProperties(AllFilters),
 		}
 		log.Info("Transformed Query: ", queryCriteria)
 		finalEvents := make([]string, 0)
 		shouldStopForThisUser := false
 		stepsProcessed := 0
-		prevUserId := ""
+		prevId := ""
 		matched := false
 		lineNo := 0
 		for scanner.Scan() {
@@ -112,10 +151,23 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			if err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("Failed unmarshaling file")
 			}
-			if prevUserId == "" {
-				prevUserId = event.UserId
+			currentId := event.UserId
+			if groupId == 1 {
+				currentId = event.Group1UserId
+			} else if groupId == 2 {
+				currentId = event.Group2UserId
+			} else if groupId == 3 {
+				currentId = event.Group3UserId
+			} else if groupId == 4 {
+				currentId = event.Group4UserId
 			}
-			if event.UserId != prevUserId {
+			if currentId == "" {
+				continue
+			}
+			if prevId == "" {
+				prevId = currentId
+			}
+			if currentId != prevId {
 				if len(finalEvents) > 0 && matched == true {
 					pwmBytes, _ := json.Marshal(finalEvents)
 					pString := string(pwmBytes)
@@ -130,10 +182,10 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				// Write the existing list and reset
 				// Reset all the previous events and after events
 			}
-			if shouldStopForThisUser && event.UserId == prevUserId {
+			if shouldStopForThisUser && currentId == prevId {
 				continue
 			}
-			prevUserId = event.UserId
+			prevId = currentId
 			if len(actualQuery.IncludeEvents) > 0 {
 				if StringNotIn(actualQuery.IncludeEvents, event.EventName) {
 					continue
@@ -293,7 +345,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			pBytes := []byte(pString)
 			_, err = resultFile.Write(pBytes)
 		}
-		WriteResultsToCloud(diskManager, cloudManager, query.ID, projectId)
+		WriteResultsToCloud(diskManager, modelCloudManager, query.ID, projectId)
 		store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.ACTIVE)
 	}
 	return nil, true

@@ -140,6 +140,7 @@ type Model interface {
 	// Custom Metrics
 	CreateCustomMetric(customMetric model.CustomMetric) (*model.CustomMetric, string, int)
 	GetCustomMetricsByProjectId(projectID int64) ([]model.CustomMetric, string, int)
+	GetCustomMetricByProjectIdAndQueryType(projectID int64, queryType int) ([]model.CustomMetric, string, int)
 	GetKpiRelatedCustomMetricsByName(projectID int64, name string) (model.CustomMetric, string, int)
 	GetProfileCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
 	GetDerivedCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
@@ -264,13 +265,20 @@ type Model interface {
 	GetAllEventsForSessionCreationAsUserEventsMap(projectID int64, sessionEventNameId string, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID int64, from, to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int)
 	OverwriteEventUserPropertiesByID(projectID int64, userID, id string, properties *postgres.Jsonb) int
-	PullEventRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullAdwordsRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullFacebookRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullBingAdsRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullLinkedInRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullGoogleOrganicRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullUsersRowsForWI(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error)
+	PullEventRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullAdwordsRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullFacebookRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullBingAdsRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullLinkedInRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullGoogleOrganicRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullUsersRowsForWIV1(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error)
+	PullEventRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullAdwordsRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullFacebookRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullBingAdsRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullLinkedInRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullGoogleOrganicRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullUsersRowsForWIV2(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error)
 	PullEventRowsForArchivalJob(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
 	GetUnusedSessionIDsForJob(projectID int64, startTimestamp, endTimestamp int64) ([]string, int)
 	DeleteEventsByIDsInBatchForJob(projectID int64, eventNameID string, ids []string, batchSize int) int
@@ -395,11 +403,14 @@ type Model interface {
 	UpdateLeadSquaredConfig(projectId int64, accessKey string, host string, secretkey string) int
 	EnableWeeklyInsights(projectId int64) int
 	EnableExplain(projectId int64) int
+	EnablePathAnalysis(projectId int64) int
 	DisableWeeklyInsights(projectId int64) int
 	DisableExplain(projectId int64) int
+	DisablePathAnalysis(projectId int64) int
 	GetAllWeeklyInsightsEnabledProjects() ([]int64, error)
 	GetAllExplainEnabledProjects() ([]int64, error)
-	GetFormFillEnabledProjectIDs() ([]int64, error)
+	GetAllPathAnalysisEnabledProjects() ([]int64, error)
+	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
 	GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error)
 
 	// project
@@ -653,6 +664,7 @@ type Model interface {
 	GetGroups(projectID int64) ([]model.Group, int)
 	GetPropertiesByGroup(projectID int64, groupName string, limit int, lastNDays int) (map[string][]string, int)
 	GetPropertyValuesByGroupProperty(projectID int64, groupName string, propertyName string, limit int, lastNDays int) ([]string, error)
+	IsGroupEventName(projectID int64, eventName, eventNameID string) (string, int)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID int64, channelName string) (int, error)
@@ -809,6 +821,14 @@ type Model interface {
 	// leadsquaredmarker
 	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
 	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int, bool)
+
+	// Event Trigger Alerts
+	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int)
+	CreateEventTriggerAlert(userID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string)
+	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
+	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb) (*model.EventTriggerAlert, int)
+	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
+	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)

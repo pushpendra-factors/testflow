@@ -9,28 +9,29 @@ import (
 
 var adwordsRequiredDocumentTypes = []int{1, 3, 5, 8, 10} //Refer M.AdwordsDocumentTypeAlias for clarity
 
-var adwordsMetricToCalcInfo = map[string]MetricCalculationInfo{
+// weekly insights calculation info for each adwords metric
+var adwordsMetricToCalcInfo = map[string]ChannelMetricCalculationInfo{
 	M.Impressions: {
-		Props:     []PropInfo{{Name: M.Impressions}},
+		Props:     []ChannelPropInfo{{Name: M.Impressions}},
 		Operation: "sum",
 	},
 	M.Clicks: {
-		Props:     []PropInfo{{Name: M.Clicks}},
+		Props:     []ChannelPropInfo{{Name: M.Clicks}},
 		Operation: "sum",
 	},
 	"cost": {
-		Props:     []PropInfo{{Name: "cost"}},
+		Props:     []ChannelPropInfo{{Name: "cost"}},
 		Operation: "sum",
 		Constants: map[string]float64{"quotient": 1000000},
 	},
 	M.Conversions: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.Conversions},
 		},
 		Operation: "sum",
 	},
 	M.ClickThroughRate: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.Clicks},
 			{Name: M.Impressions, ReplaceValue: map[float64]float64{0: 100000}},
 		},
@@ -38,7 +39,7 @@ var adwordsMetricToCalcInfo = map[string]MetricCalculationInfo{
 		Constants: map[string]float64{"product": 100},
 	},
 	M.ConversionRate: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.Conversions},
 			{Name: M.Clicks, ReplaceValue: map[float64]float64{0: 100000}},
 		},
@@ -46,7 +47,7 @@ var adwordsMetricToCalcInfo = map[string]MetricCalculationInfo{
 		Constants: map[string]float64{"product": 100},
 	},
 	M.CostPerClick: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: "cost"},
 			{Name: M.Clicks, ReplaceValue: map[float64]float64{0: 100000}},
 		},
@@ -54,7 +55,7 @@ var adwordsMetricToCalcInfo = map[string]MetricCalculationInfo{
 		Constants: map[string]float64{"quotient": 1000000},
 	},
 	M.CostPerConversion: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: "cost"},
 			{Name: M.Conversions, ReplaceValue: map[float64]float64{0: 100000}},
 		},
@@ -62,77 +63,77 @@ var adwordsMetricToCalcInfo = map[string]MetricCalculationInfo{
 		Constants: map[string]float64{"quotient": 1000000},
 	},
 	M.SearchImpressionShare: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.Impressions, DependentKey: M.SearchImpressionShare, DependentValue: 0, DependentOperation: "!="},
 			{Name: M.TotalSearchImpression, DependentKey: M.SearchImpressionShare},
 		},
 		Operation: "quotient",
 	},
 	M.SearchClickShare: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.Impressions, DependentKey: M.SearchClickShare, DependentValue: 0, DependentOperation: "!="},
 			{Name: M.TotalSearchClick, DependentKey: M.SearchClickShare},
 		},
 		Operation: "quotient",
 	},
 	M.SearchTopImpressionShare: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.TopImpressions, DependentKey: M.SearchTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
 			{Name: M.TotalTopImpressions, DependentKey: M.SearchTopImpressionShare},
 		},
 		Operation: "quotient",
 	},
 	M.SearchAbsoluteTopImpressionShare: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.AbsoluteTopImpressions, DependentKey: M.SearchAbsoluteTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
 			{Name: M.TotalTopImpressions, DependentKey: M.SearchAbsoluteTopImpressionShare},
 		},
 		Operation: "quotient",
 	},
 	M.SearchBudgetLostAbsoluteTopImpressionShare: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.AbsoluteTopImpressionLostDueToBudget, DependentKey: M.SearchBudgetLostAbsoluteTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
 			{Name: M.TotalTopImpressions, DependentKey: M.SearchBudgetLostAbsoluteTopImpressionShare},
 		},
 		Operation: "quotient",
 	},
 	M.SearchBudgetLostImpressionShare: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.ImpressionLostDueToBudget, DependentKey: M.SearchBudgetLostImpressionShare, DependentValue: 0, DependentOperation: "!="},
 			{Name: M.TotalSearchImpression, DependentKey: M.SearchBudgetLostImpressionShare},
 		},
 		Operation: "quotient",
 	},
 	M.SearchBudgetLostTopImpressionShare: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.TopImpressionLostDueToBudget, DependentKey: M.SearchBudgetLostTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
 			{Name: M.TotalTopImpressions, DependentKey: M.SearchBudgetLostTopImpressionShare},
 		},
 		Operation: "quotient",
 	},
 	M.SearchRankLostAbsoluteTopImpressionShare: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.AbsoluteTopImpressionLostDueToRank, DependentKey: M.SearchRankLostAbsoluteTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
 			{Name: M.TotalTopImpressions, DependentKey: M.SearchRankLostAbsoluteTopImpressionShare},
 		},
 		Operation: "quotient",
 	},
 	M.SearchRankLostImpressionShare: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.ImpressionLostDueToRank, DependentKey: M.SearchRankLostImpressionShare, DependentValue: 0, DependentOperation: "!="},
 			{Name: M.TotalSearchImpression, DependentKey: M.SearchRankLostImpressionShare},
 		},
 		Operation: "quotient",
 	},
 	M.SearchRankLostTopImpressionShare: {
-		Props: []PropInfo{
+		Props: []ChannelPropInfo{
 			{Name: M.TopImpressionLostDueToRank, DependentKey: M.SearchRankLostTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
 			{Name: M.TotalTopImpressions, DependentKey: M.SearchRankLostTopImpressionShare},
 		},
 		Operation: "quotient",
 	},
 	M.ConversionValue: {
-		Props:     []PropInfo{{Name: M.ConversionValue}},
+		Props:     []ChannelPropInfo{{Name: M.ConversionValue}},
 		Operation: "sum",
 	},
 }
@@ -141,9 +142,6 @@ var adwordsConstantInfo = map[string]string{
 	memsql.CAFilterCampaign: M.AdwordsCampaign,
 	memsql.CAFilterAdGroup:  M.AdwordsAdGroup,
 	memsql.CAFilterKeyword:  M.AdwordsKeyword,
-	// "campaign_id":           M.AdwordsCampaignID,
-	// "ad_group_id":           M.AdwordsAdgroupID,
-	// "keyword_id":            M.AdwordsKeywordID,
 }
 
 func getAdwordsFilterPropertyReportName(propName string, objectType string) (string, error) {

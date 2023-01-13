@@ -259,6 +259,7 @@ function UserProfiles({
             description: response?.payload?.message,
             duration: 3
           });
+          setShowSegmentModal(false);
           setSegmentDDVisible(false);
         }
       })
@@ -287,10 +288,14 @@ function UserProfiles({
   const generateSegmentsList = () => {
     const segmentsList = [];
     if (timelinePayload.source === 'All') {
-      Object.entries(segments).forEach(([group, vals]) => {
-        const obj = formatSegmentsObjToGroupSelectObj(group, vals);
-        segmentsList.push(obj);
-      });
+      Object.entries(segments)
+        .filter((segment) =>
+          Object.keys(ReverseProfileMapper).includes(segment[0])
+        )
+        .forEach(([group, vals]) => {
+          const obj = formatSegmentsObjToGroupSelectObj(group, vals);
+          segmentsList.push(obj);
+        });
     } else {
       const obj = formatSegmentsObjToGroupSelectObj(
         timelinePayload.source,
@@ -352,7 +357,9 @@ function UserProfiles({
                 )}
               </div>
               <SegmentModal
+                profileType='user'
                 type={timelinePayload.source}
+                typeOptions={[...profileOptions.users]}
                 visible={showSegmentModal}
                 segment={{}}
                 onSave={handleSaveSegment}
@@ -420,8 +427,8 @@ function UserProfiles({
   const popoverContent = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
-        tab={<span className='fa-activity-filter--tabname'>Events</span>}
-        key='events'
+        tab={<span className='fa-activity-filter--tabname'>Properties</span>}
+        key='properties'
       >
         <SearchCheckList
           placeholder='Search Properties'

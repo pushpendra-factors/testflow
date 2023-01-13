@@ -18,7 +18,7 @@ const (
 	MetaStepTimeInfo = "MetaStepTimeInfo"
 )
 
-func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFilterOpt, enableFunnelV2 bool) (*model.QueryResult, int, string) {
+func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFilterOpt, enableUserFunnelV2 bool) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"query":      query,
@@ -49,13 +49,15 @@ func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFi
 	}
 
 	scopeGroupID := 0
-	if enableFunnelV2 {
+	if query.GroupAnalysis != "" {
 		var valid bool
 		scopeGroupID, valid = store.IsValidFunnelGroupQueryIfExists(projectId, &query, groupIds)
 		if !valid {
 			return nil, http.StatusBadRequest, model.ErrMsgFunnelQueryV2Failure
 		}
 	}
+
+	enableFunnelV2 := scopeGroupID > 0 || enableUserFunnelV2
 
 	stmnt, params, err := BuildFunnelQuery(projectId, query, groupIds, enableFilterOpt, enableFunnelV2, scopeGroupID)
 	if err != nil {
@@ -653,11 +655,11 @@ func buildAddSelectForFunnelGroup(stepName string, stepIndex int, groupID, scope
 
 	isGroupEventUser := groupID > 0
 	if !isGroupEventUser {
-		addSelect := fmt.Sprintf("user_groups.group_%d_user_id as group_user_id,"+
-			" FIRST(events.timestamp, FROM_UNIXTIME(events.timestamp)) as timestamp, 1 as %s", scopeGroupID, stepName)
+		addSelect := fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as group_user_id,"+
+			" FIRST(events.timestamp, FROM_UNIXTIME(events.timestamp)) as timestamp, 1 as %s", scopeGroupID, scopeGroupID, stepName)
 
 		if stepIndex > 0 {
-			addSelect = fmt.Sprintf("user_groups.group_%d_user_id as group_user_id, events.timestamp, 1 as %s", scopeGroupID, stepName)
+			addSelect = fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as group_user_id, events.timestamp, 1 as %s", scopeGroupID, scopeGroupID, stepName)
 		}
 		return addSelect
 	}

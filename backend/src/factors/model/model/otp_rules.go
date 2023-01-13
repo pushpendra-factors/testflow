@@ -47,6 +47,8 @@ const (
 	TouchPointRuleTypeHSNormal        = "hs_contact"
 	TouchPointRuleTypeSFNormal        = "sf_contact"
 	TouchPointRuleTypeContactList     = "hs_contact_list"
+	TouchPointRuleTypeTasks           = "sf_tasks"
+	TouchPointRuleTypeEvents          = "sf_events"
 
 	TouchPointCRMTypeHS = "hubspot"
 	TouchPointCRMTypeSF = "salesforce"

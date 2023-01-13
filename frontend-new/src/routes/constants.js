@@ -34,8 +34,11 @@ const Templates = lazyWithRetry(() =>
 );
 // const AppLayout = lazyWithRetry(() => import('../Views/AppLayout'));
 
-const FactorsInsights = lazyWithRetry(() =>
+const FactorsInsightsNew = lazyWithRetry(() =>
   import('../Views/Factors/FactorsInsightsNew')
+);
+const FactorsInsightsOld = lazyWithRetry(() =>
+  import('../Views/Factors/FactorsInsightsOld')
 );
 const CoreQuery = lazyWithRetry(() => import('../Views/CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Views/Dashboard'));
@@ -128,11 +131,19 @@ export const APP_LAYOUT_ROUTES = {
     Private: true,
     Layout: AppLayout
   },
+  ExplainInsightsV2: {
+    exact: true,
+    path: '/explainV2/insights',
+    title: 'ExplainV2',
+    Component: FactorsInsightsNew,
+    Private: true,
+    Layout: AppLayout
+  },
   ExplainInsights: {
     exact: true,
     path: '/explain/insights',
-    title: 'Factors',
-    Component: FactorsInsights,
+    title: 'Explain',
+    Component: FactorsInsightsOld,
     Private: true,
     Layout: AppLayout
   },

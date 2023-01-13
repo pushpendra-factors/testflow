@@ -169,7 +169,7 @@ func main() {
 
 	diskBaseDir := flag.String("disk_dir", "/usr/local/var/factors/local_disk", "")
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
-	bucketNameV2 := flag.String("bucket_name_v2", "/usr/local/var/factors/cloud_storage", "")
+	bucketNameV2 := flag.String("bucket_name_v2", "/usr/local/var/factors/cloud_storage_models", "")
 	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
 	projectIdV2 := flag.String("project_ids_v2", "",
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")

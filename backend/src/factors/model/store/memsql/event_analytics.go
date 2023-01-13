@@ -54,6 +54,9 @@ func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query,
 	}
 	waitGroup.Wait()
 	for _, result := range resultGroup.Results {
+		if result.Headers == nil {
+			return resultGroup, http.StatusInternalServerError
+		}
 		if result.Headers[0] == model.AliasError {
 			return resultGroup, http.StatusPartialContent
 		}
@@ -68,6 +71,7 @@ func (store *MemSQL) runSingleEventsQuery(projectId int64, query model.Query,
 		"project_id": projectId,
 		"wait_group": waitGroup,
 	}
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	defer waitGroup.Done()
@@ -866,15 +870,17 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			projectID, &q.EventsWithProperties[i], q.GroupByProperties, i+1, q.Timezone)
 
 		eventSelect := commonSelectArr[i]
+		eventParam := ""
 		if q.EventsCondition == model.EventCondEachGivenEvent {
-			eventNameSelect := "'" + strconv.Itoa(i) + "_" + ewp.Name + "'" + " AS event_name "
+			eventNameSelect := fmt.Sprintf("? AS event_name ")
+			eventParam = fmt.Sprintf("%s_%s", strconv.Itoa(i), ewp.Name)
 			eventSelect = joinWithComma(eventSelect, eventNameSelect)
 		}
 		if stepGroupSelect != "" {
 			stepSelect = fmt.Sprintf(eventSelect, ", "+stepGroupSelect)
 			stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+stepGroupKeys)
 			stepGroupBy = joinWithComma(commonGroupBy, stepGroupKeys)
-			stepParams = stepGroupParams
+			stepParams = append(stepParams, stepGroupParams...)
 			stepsToKeysMap[refStepName] = strings.Split(stepGroupKeys, ",")
 		} else {
 			stepSelect = fmt.Sprintf(eventSelect, "")
@@ -882,6 +888,10 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 				stepOrderBy = fmt.Sprintf(commonOrderBy, "")
 			}
 			stepGroupBy = commonGroupBy
+		}
+
+		if q.EventsCondition == model.EventCondEachGivenEvent {
+			stepParams = append(stepParams, eventParam)
 		}
 
 		// Default join statement for users.
@@ -2089,7 +2099,9 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 
 		eventSelect := commonSelectArr[i]
 		stepParams = append(stepParams, commonParams...)
-		eventNameSelect := "'" + strconv.Itoa(i) + "_" + ewp.Name + "'" + " AS event_name "
+		eventParam := ""
+		eventNameSelect := fmt.Sprintf("? AS event_name ")
+		eventParam = fmt.Sprintf("%s_%s", strconv.Itoa(i), ewp.Name)
 		eventSelect = joinWithComma(eventSelect, eventNameSelect)
 		if stepGroupSelect != "" {
 			stepSelect = eventSelect + ", " + stepGroupSelect
@@ -2103,6 +2115,9 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 			}
 		}
 
+		if q.EventsCondition == model.EventCondEachGivenEvent {
+			stepParams = append(stepParams, eventParam)
+		}
 		addJoinStmnt := ""
 		if C.SkipUserJoinInEventQueryByProjectID(projectID) {
 

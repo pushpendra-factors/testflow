@@ -108,7 +108,7 @@ func main() {
 	}
 
 	// Call the task. Task can be managed from a task manager in a different script.
-	err = T.ComputeStreamingMetrics(db, &cloudManager, diskManager, *bucketName, *projectIdFlag, *modelIdFlag)
+	err = T.ComputeStreamingMetrics(db, &cloudManager, diskManager, *bucketName, int64(*projectIdFlag), *modelIdFlag)
 	if err != nil {
 		log.WithError(err).Fatal("Compute Streaming Metrics failed")
 	}

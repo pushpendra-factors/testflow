@@ -5,7 +5,7 @@ import {
   reverseOperatorMap
 } from '../../Views/CoreQuery/utils';
 import { formatDurationIntoString } from 'Utils/dataFormatter';
-import { ReverseProfileMapper } from 'Utils/constants';
+import { RevAvailableGroups, ReverseProfileMapper } from 'Utils/constants';
 
 export const granularityOptions = [
   'Timestamp',
@@ -33,9 +33,9 @@ export const groups = {
       .format('DD MMM YYYY'),
   Weekly: (item) =>
     `${MomentTz(item.timestamp * 1000)
-      .endOf('week')
-      .format('DD MMM YYYY')} - ${MomentTz(item.timestamp * 1000)
       .startOf('week')
+      .format('DD MMM YYYY')} - ${MomentTz(item.timestamp * 1000)
+      .endOf('week')
       .format('DD MMM YYYY')}`,
   Monthly: (item) =>
     MomentTz(item.timestamp * 1000)
@@ -67,6 +67,12 @@ export const TimelineHoverPropDisplayNames = {
   '$hubspot_form_submission_page-url-no-qp': 'Page URL',
   '$hubspot_form_submission_page-title': 'Page Title',
   $hubspot_form_submission_timestamp: 'Form Submit Timestamp'
+};
+
+export const displayFilterOpts = {
+  All: 'All Accounts',
+  $hubspot_company: 'Hubspot Companies',
+  $salesforce_account: 'Salesforce Accounts'
 };
 
 export const formatFiltersForPayload = (filters = []) => {
@@ -208,7 +214,10 @@ export const propValueFormat = (key, value) => {
 
 export const formatSegmentsObjToGroupSelectObj = (group, vals) => {
   const obj = {
-    label: ReverseProfileMapper[group]?.users,
+    label:
+      ReverseProfileMapper[group]?.users ||
+      RevAvailableGroups[group] ||
+      'Others',
     icon: '',
     values: []
   };

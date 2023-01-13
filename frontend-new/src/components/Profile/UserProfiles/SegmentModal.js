@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from 'antd';
 import PropertyFilter from './PropertyFilter';
-import { formatFiltersForPayload } from '../utils';
+import { displayFilterOpts, formatFiltersForPayload } from '../utils';
 import { SVG, Text } from 'Components/factorsComponents';
 import InputFieldWithLabel from '../MyComponents/InputFieldWithLabel/index';
 import {
@@ -12,7 +12,9 @@ import {
 import FaSelect from 'Components/FaSelect';
 
 function SegmentModal({
+  profileType,
   type,
+  typeOptions,
   editMode = false,
   visible,
   segment = {},
@@ -24,7 +26,12 @@ function SegmentModal({
     name: '',
     description: '',
     query: { ewp: [], gp: [] },
-    type: type
+    type:
+      type === 'All'
+        ? profileType === 'user'
+          ? 'web'
+          : '$hubspot_company'
+        : type
   });
   const [filterProps, setFilterProps] = useState([]);
 
@@ -41,10 +48,19 @@ function SegmentModal({
   };
 
   const setSegmentType = (val) => {
-    if ((ProfileMapper[val[0]] || val[0]) !== segmentPayload.type) {
-      const opts = { ...segmentPayload };
-      opts.type = ProfileMapper[val[0]] || val[0];
-      setSegmentPayload(opts);
+    if (profileType === 'user') {
+      if ((ProfileMapper[val[0]] || val[0]) !== segmentPayload.type) {
+        const opts = { ...segmentPayload };
+        opts.type = ProfileMapper[val[0]] || val[0];
+        setSegmentPayload(opts);
+      }
+    }
+    if (profileType === 'account') {
+      if (val[1] !== segmentPayload.type) {
+        const opts = { ...segmentPayload };
+        opts.type = val[1];
+        setSegmentPayload(opts);
+      }
     }
     setUserDDVisible(false);
   };
@@ -64,7 +80,7 @@ function SegmentModal({
     <div className='absolute top-0'>
       {isUserDDVisible ? (
         <FaSelect
-          options={[['All'], ...profileOptions.users]}
+          options={typeOptions}
           onClickOutside={() => setUserDDVisible(false)}
           optionClick={(val) => setSegmentType(val)}
         />
@@ -118,7 +134,9 @@ function SegmentModal({
             icon={<SVG name='user_friends' size={16} />}
             onClick={() => setUserDDVisible(!isUserDDVisible)}
           >
-            {ReverseProfileMapper[segmentPayload.type]?.users || 'All'}
+            {profileType === 'user'
+              ? ReverseProfileMapper[segmentPayload.type]?.users
+              : displayFilterOpts[segmentPayload.type] || 'All'}
             <SVG name='caretDown' size={16} />
           </Button>
           {selectUsers()}
@@ -136,7 +154,7 @@ function SegmentModal({
             With Properties
           </Text>
           <PropertyFilter
-            profileType='user'
+            profileType={profileType}
             source={segmentPayload.type}
             filters={filterProps}
             setFilters={setFilters}

@@ -56,9 +56,10 @@ func createButtonClick(t *testing.T, project *model.Project) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Nil(t, err)
 
+	// Duplicate allowed
 	status, err = store.GetStore().CreateClickableElement(project.ID, buttonClick)
-	assert.Equal(t, http.StatusConflict, status)
-	assert.NotNil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
 }
 
 func TestDeleteClickableElementsOlderThanGivenDays(t *testing.T) {

@@ -11,11 +11,13 @@ import {
 import { useDispatch } from 'react-redux';
 import { WIDGET_DELETED } from 'Reducers/types';
 import { getQueryType } from 'Utils/dataFormatter';
+import useAutoFocus from 'hooks/useAutoFocus';
 
 const ExistingReportsModal = ({
   isReportsModalOpen,
   setIsReportsModalOpen
 }) => {
+  const inputReference = useAutoFocus();
   const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(
     (state) => state.dashboard
   );
@@ -147,6 +149,7 @@ const ExistingReportsModal = ({
           Reports
         </Text>
         <Input
+          ref={inputReference}
           onChange={HandleSearchReportModal}
           className={`fa-global-search--input fa-global-search--input-fw py-1 mb-4`}
           placeholder='Search Reports'
@@ -162,9 +165,8 @@ const ExistingReportsModal = ({
           <VirtualList
             data={data}
             height={ContainerHeight}
-            itemHeight={51}
+            itemHeight={48}
             itemKey='email'
-            // onScroll={onScroll}
           >
             {(item, index) => {
               const queryType = getQueryType(item.query);
@@ -174,22 +176,23 @@ const ExistingReportsModal = ({
                   svgName = v;
                 }
               });
-              if(queryType === 'profiles') {return <></>;}
-              else
-              return (
-                <List.Item key={index}>
-                  <Checkbox
-                    onChange={(e) => handleReportItemChange(e, item.id)}
-                    defaultChecked={selectedQuerySet.has(item.id)}
-                  >
-                    {item.title}
-                  </Checkbox>
+              if (queryType === 'profiles') {
+                return <></>;
+              } else
+                return (
+                  <List.Item key={index}>
+                    <Checkbox
+                      onChange={(e) => handleReportItemChange(e, item.id)}
+                      defaultChecked={selectedQuerySet.has(item.id)}
+                    >
+                      {item.title}
+                    </Checkbox>
 
-                  <div>
-                    <SVG name={svgName} size={24} color={'blue'} />
-                  </div>
-                </List.Item>
-              );
+                    <div>
+                      <SVG name={svgName} size={24} color={'blue'} />
+                    </div>
+                  </List.Item>
+                );
             }}
           </VirtualList>
         </List>

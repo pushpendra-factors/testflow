@@ -114,30 +114,38 @@ const SavedGoals = ({ goals, fetchGoalInsights, factors_models, agents, saveGoal
         setdataSource(formattedArray);
       });
       SetLoadingTable(false);
+    } 
+    else{
+      setdataSource([]);
+      SetLoadingTable(false);
     }
   }, [goals]);
 
   const getInsights = (project_id, rule, name) => {
 
     SetfetchingIngishts(true);
+    
     const isJourney = !_.isEmpty(rule?.rule?.st_en);
     const ruleData = {
       name: name,
       rule: rule
     }
-    const getData = async () => {
-      await fetchGoalInsights(project_id, isJourney, ruleData, factors_models[0].mid);
-    };
-    getData().then(() => {
+    
+    fetchGoalInsights(project_id, isJourney, ruleData, factors_models[0].mid).then(()=>{
       saveGoalInsightRules(ruleData);
       history.push('/explain/insights');
       SetfetchingIngishts(false)
+    }).catch((err) => {
+      console.log("fetchExplainGoalInsights catch", err);
+      const ErrMsg = err?.data?.error ? err.data.error : `Oops! Something went wrong!`;
+      message.error(ErrMsg);
+      SetfetchingIngishts(false) 
     });
   };
 
 
   return (
-    <Table loading={loadingTable} className="fa-table--basic mt-8" columns={columns} dataSource={dataSource} pagination={false}
+    <Table loading={loadingTable} className="fa-table--basic mt-8" columns={columns} dataSource={dataSource} pagination={true}
 
     />
   );
@@ -146,7 +154,7 @@ const SavedGoals = ({ goals, fetchGoalInsights, factors_models, agents, saveGoal
 
 const mapStateToProps = (state) => {
   return {
-    goals: state.factors.goals,
+    goals: state.factors.goalsOld,
     agents: state.agent.agents,
     factors_models: state.factors.factors_models,
   };

@@ -503,6 +503,10 @@ func TestAttributionEngagementModel(t *testing.T) {
 		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
+	createdUserID4, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID4)
+	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
 		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
@@ -579,6 +583,39 @@ func TestAttributionEngagementModel(t *testing.T) {
 		// Assert below won't work with ExecuteAttributionQueryV0, because for camp '123456' event is 'event2'
 		// While attributing, we pull users for 'event1' and not by default all sessions. Hence no longer valid.
 		// assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
+	})
+
+	errCode = createEventWithSession(project.ID, "event1",
+		createdUserID4, timestamp+11*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "11")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	errCode = createEventWithSession(project.ID, "event1",
+		createdUserID4, timestamp+11*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "12")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	errCode = createEventWithSession(project.ID, "event1",
+		createdUserID4, timestamp+11*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "13")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("TestAllPageWithLookbackDays", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			AnalyzeType:            model.AnalyzeTypeUsers,
+			From:                   timestamp + 10*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 15*U.SECONDS_IN_A_DAY,
+			AttributionKey:         model.AttributionKeyAllPageView,
+			AttributionMethodology: model.AttributionMethodInfluence,
+			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           20,
+			TacticOfferType:        model.MarketingEventTypeOffer,
+		}
+
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "12"))
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "11"))
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "13"))
+
 	})
 }
 func TestWShapedAttributionModel(t *testing.T) {
@@ -1600,14 +1637,14 @@ func TestGetUserGroupWise(t *testing.T) {
 			AttributionKey:          model.AttributionKeyAllPageView,
 			TacticOfferType:         model.MarketingEventTypeOffer,
 			AttributionKeyDimension: []string{model.FieldAllPageViewUrl},
-			AttributionMethodology:  model.AttributionMethodLinear,
+			AttributionMethodology:  model.AttributionMethodInfluence,
 			LookbackDays:            10,
 		}
 
 		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
-		assert.Equal(t, float64(1), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+		assert.Equal(t, float64(2), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+		assert.Equal(t, float64(2), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
 
 	})
 

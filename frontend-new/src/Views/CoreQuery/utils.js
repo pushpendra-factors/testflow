@@ -27,9 +27,14 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
-  QUERY_TYPE_PROFILE
+  QUERY_TYPE_PROFILE,
+  QUERY_OPTIONS_DEFAULT_VALUE
 } from '../../utils/constants';
-import { FILTER_TYPES, INITIAL_STATE } from './constants';
+import {
+  CORE_QUERY_INITIAL_STATE,
+  FILTER_TYPES,
+  INITIAL_STATE
+} from './constants';
 
 export const initialState = INITIAL_STATE;
 
@@ -468,7 +473,9 @@ export const getFunnelQuery = (
   dateRange,
   globalFilters = [],
   eventsCondition,
-  groupAnalysis
+  groupAnalysis,
+  conversionDurationNumber,
+  conversionDurationUnit
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_FUNNEL;
@@ -493,6 +500,9 @@ export const getFunnelQuery = (
 
   query.ewp = getEventsWithProperties(queries);
   query.gbt = dateRange.frequency;
+  if (conversionDurationNumber != null && conversionDurationUnit != null) {
+    query.cnvtm = conversionDurationNumber + conversionDurationUnit;
+  }
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
   query.gbp = appliedGroupBy.map((opt) => {
@@ -1179,7 +1189,9 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
 
   const queryType = requestQuery.cl;
   const eventsCondition = requestQuery.ec;
-  const groupAnalysis = requestQuery.grpa;
+  const groupAnalysis = requestQuery.grpa
+    ? requestQuery.grpa
+    : QUERY_OPTIONS_DEFAULT_VALUE.group_analysis;
   const sessionAnalyticsSeq = INITIAL_SESSION_ANALYTICS_SEQ;
   // if (requestQuery.cl && requestQuery.cl === QUERY_TYPE_FUNNEL) {
   //   if (requestQuery.sse && requestQuery.see) {
@@ -1225,7 +1237,17 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       event,
       global
     },
-    dateRange
+    dateRange,
+    ...(queryType === QUERY_TYPE_FUNNEL && {
+      funnelConversionDurationNumber:
+        requestQuery.cnvtm != null
+          ? parseInt(requestQuery.cnvtm.slice(0, -1))
+          : CORE_QUERY_INITIAL_STATE.funnelConversionDurationNumber,
+      funnelConversionDurationUnit:
+        requestQuery.cnvtm != null
+          ? requestQuery.cnvtm.slice(-1)
+          : CORE_QUERY_INITIAL_STATE.funnelConversionDurationUnit
+    })
   };
   return result;
 };

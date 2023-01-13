@@ -445,9 +445,9 @@ func BackFillEventDataInCacheFromDb(project_id int64, currentTime time.Time, no_
 					categoryMap := make(map[string]int64)
 					categoryMap[category] = property.Count
 					eventProperties.Property[property.Key] = U.PropertyWithTimestamp{
-						category,
-						categoryMap, // Setting precomputed ones to empty
-						U.CountTimestampTuple{
+						Category:          category,
+						CategorywiseCount: categoryMap, // Setting precomputed ones to empty
+						CountTime: U.CountTimestampTuple{
 							LastSeenTimestamp: int64(property.LastSeen),
 							Count:             property.Count}}
 
@@ -684,8 +684,13 @@ func Track(projectId int64, request *TrackPayload,
 	if hasDefinedMarketingProperty {
 		U.FillLatestTouchUserProperties(userProperties, eventProperties)
 	}
-	// Add user properties from form submit event properties.
-	if request.Name == U.EVENT_NAME_FORM_SUBMITTED {
+
+	// Identify users with form events.
+	isFormEvent := request.Name == U.EVENT_NAME_FORM_SUBMITTED
+	if C.IsFormFillIdentificationAllowedForProject(projectId) {
+		isFormEvent = request.Name == U.EVENT_NAME_FORM_SUBMITTED || request.Name == U.EVENT_NAME_FORM_FILL
+	}
+	if isFormEvent {
 		customerUserID, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(
 			projectId, request.UserId, eventProperties)
 		if errCode == http.StatusInternalServerError {
@@ -699,13 +704,19 @@ func Track(projectId int64, request *TrackPayload,
 			pageURL := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
 			errCode, _ := Identify(projectId, &IdentifyPayload{
-				UserId: request.UserId, CustomerUserId: customerUserID, Timestamp: request.Timestamp, PageURL: pageURL, Source: sdkRequestTypeEventTrack, RequestSource: request.RequestSource}, true)
+				UserId:         request.UserId,
+				CustomerUserId: customerUserID,
+				Timestamp:      request.Timestamp,
+				PageURL:        pageURL,
+				Source:         sdkRequestTypeEventTrack,
+				RequestSource:  request.RequestSource,
+			}, request.Name == U.EVENT_NAME_FORM_SUBMITTED)
 			if errCode != http.StatusOK {
 				log.WithFields(log.Fields{"projectId": projectId, "userId": request.UserId,
 					"customerUserId": customerUserID}).Error("Failed to identify user on form submit event.")
 			}
 
-			// fill form submit properties once identification is successful
+			// Add user properties from form submit event properties.
 			if errCode == http.StatusOK {
 				for k, v := range *formSubmitUserProperties {
 					(*userProperties)[k] = v
@@ -1007,7 +1018,9 @@ func allowedCustomerUserIDSourceIdentificationOverwrite(incomingCustomerUseridSo
 	return false
 }
 
-func ShouldAllowIdentificationOverwrite(projectID int64, userID string, incomingCustomerUserid string, incomingRequestSource int, incomingSource string) bool {
+func ShouldAllowIdentificationOverwrite(projectID int64, userID string,
+	incomingCustomerUserid string, incomingRequestSource int, incomingSource string) bool {
+
 	// sdk indentify source always overwrite the customer_user_id
 	if incomingSource == sdkRequestTypeUserIdentify {
 		return true
@@ -1676,7 +1689,9 @@ func AMPIdentifyWithQueue(token string, reqPayload *AMPIdentifyPayload,
 
 func IdentifyWithQueue(token string, reqPayload *IdentifyPayload,
 	queueAllowedTokens []string) (int, *IdentifyResponse) {
-	reqPayload.Source = sdkRequestTypeUserIdentify
+	if reqPayload.Source == "" {
+		reqPayload.Source = sdkRequestTypeUserIdentify
+	}
 
 	if U.UseQueue(token, queueAllowedTokens) {
 		response := &IdentifyResponse{}
