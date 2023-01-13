@@ -1436,6 +1436,6 @@ func TestFilteringPatterns(t *testing.T) {
 		eventsList = append(eventsList, eventDetails)
 	}
 
-	assert.Equal(t, 5, len(eventsList))
+	assert.Equal(t, 6, len(eventsList))
 
 }
