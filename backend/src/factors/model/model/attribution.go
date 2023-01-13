@@ -651,7 +651,7 @@ func GetRowsByMapsKPILandingPage(contentGroupNamesList []string, attributionData
 
 			for idx, _ := range data.ConversionEventCount {
 				row = append(row, data.ConversionEventCount[idx], data.ConversionEventCountInfluence[idx])
-				if isCompare {
+				if isCompare && data.ConversionEventCompareCount != nil {
 
 					row = append(row, data.ConversionEventCompareCount[idx])
 					row = append(row, data.ConversionEventCompareCountInfluence[idx])
@@ -1259,7 +1259,7 @@ func GetRowsByMapsKPIPage(attributionKey string, contentGroupNamesList []string,
 
 			for idx, _ := range data.ConversionEventCount {
 				row = append(row, data.ConversionEventCount[idx], data.ConversionEventCountInfluence[idx])
-				if isCompare {
+				if isCompare && data.ConversionEventCompareCount != nil {
 
 					row = append(row, data.ConversionEventCompareCount[idx])
 					row = append(row, data.ConversionEventCompareCountInfluence[idx])
@@ -1508,7 +1508,7 @@ func GetRowsByMapsAllPage(contentGroupNamesList []string, attributionData *map[s
 			// Append fixed Metrics & ConversionEventCount[0] as only one goal event exists for landing page
 			row = append(row, data.ConversionEventCount[0], data.ConversionEventCountInfluence[0])
 
-			if isCompare {
+			if isCompare && data.ConversionEventCompareCount != nil {
 
 				row = append(row, data.ConversionEventCompareCount[0])
 				row = append(row, data.ConversionEventCompareCountInfluence[0])
@@ -1571,7 +1571,7 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 			// Append fixed Metrics & ConversionEventCount[0] as only one goal event exists for landing page
 			row = append(row, data.ConversionEventCount[0], data.ConversionEventCountInfluence[0])
 
-			if isCompare {
+			if isCompare && data.ConversionEventCompareCount != nil {
 
 				row = append(row, data.ConversionEventCompareCount[0])
 				row = append(row, data.ConversionEventCompareCountInfluence[0])
