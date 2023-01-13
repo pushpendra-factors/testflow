@@ -732,10 +732,10 @@ func InitDBWithMaxIdleAndMaxOpenConn(config Configuration,
 	maxOpenConns, maxIdleConns int) error {
 	if UseMemSQLDatabaseStore() {
 		if IsDBConnectionPool2Enabled() {
-			return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQL2Info, maxOpenConns, maxIdleConns)
-		} else {
-			return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQLInfo, maxOpenConns, maxIdleConns)
+			return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQL2Info, maxOpenConns, maxIdleConns, true)
 		}
+
+		return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQLInfo, maxOpenConns, maxIdleConns, false)
 	}
 	return InitPostgresDBWithMaxIdleAndMaxOpenConn(config.DBInfo, maxOpenConns, maxIdleConns)
 }
@@ -881,7 +881,7 @@ func isValidMemSQLResourcePool(resourcePool string) bool {
 	return exists
 }
 
-func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleConns int) error {
+func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleConns int, isDb2 bool) error {
 	if services == nil {
 		services = &Services{}
 	}
@@ -942,7 +942,13 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	services.Db = memSQLDB
+	// initiates corresponding service.
+	if isDb2 {
+		services.Db2 = memSQLDB
+	} else {
+		services.Db = memSQLDB
+	}
+
 	configuration.DBInfo = dbConf
 	services.DBContext = &ctx
 	services.DBContextCancel = &cancel
