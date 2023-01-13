@@ -659,8 +659,8 @@ func (store *MemSQL) GetDataCurrencyForFacebook(projectId int64) string{
 	var currency string
 	for rows.Next() {
 
-		if err := db.ScanRows(rows, &currency); err != nil {
-			log.WithError(err).Error("Failed to scan last adwords documents by type for sync info.")
+		if err := rows.Scan(&currency); err != nil {
+			log.WithError(err).Error("Failed to get facebook currency details")
 		}
 	}
 
@@ -911,7 +911,7 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 	U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
 	U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
 	U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
-		finalParams = append(finalParams, dataCurrency, projectCurrency)
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
@@ -1041,7 +1041,7 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID i
 	U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
 	U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
 	U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
-		finalParams = append(finalParams, dataCurrency, projectCurrency)
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)

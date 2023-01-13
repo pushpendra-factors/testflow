@@ -335,8 +335,8 @@ func (store *MemSQL) GetDataCurrencyForBingAds(projectId int64) string{
 
 	var currency string
 	for rows.Next() {
-		if err := db.ScanRows(rows, &currency); err != nil {
-			log.WithError(err).Error("Failed to scan last adwords documents by type for sync info.")
+		if err := rows.Scan(&currency); err != nil {
+			log.WithError(err).Error("Failed to get currency details for bingads")
 		}
 	}
 
@@ -568,7 +568,7 @@ func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID in
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	finalParams := make([]interface{}, 0)
 	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
-		finalParams = append(finalParams, dataCurrency, projectCurrency)
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, model.BingAdsIntegration, docType, customerAccountIDs, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
@@ -702,7 +702,7 @@ func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQuer
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	finalParams := make([]interface{}, 0)
 	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
-		finalParams = append(finalParams, dataCurrency, projectCurrency)
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, model.BingAdsIntegration, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
