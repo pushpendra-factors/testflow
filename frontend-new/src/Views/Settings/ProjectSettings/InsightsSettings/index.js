@@ -6,7 +6,7 @@ import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import { connect } from 'react-redux';
 import { Text } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
-import { buildExplainInsights, buildWeeklyInsights } from 'Reducers/insights';
+import { buildExplainInsights, buildWeeklyInsights, buildPathAnalysis } from 'Reducers/insights';
 import _ from 'lodash';
 
 const InsightsSettings = ({
@@ -15,7 +15,8 @@ const InsightsSettings = ({
   buildExplainInsights,
   buildWeeklyInsights,
   activeProject,
-  fetchProjectSettings
+  fetchProjectSettings,
+  buildPathAnalysis
 
 }) => {
 
@@ -56,6 +57,16 @@ const InsightsSettings = ({
     })
   };
 
+  const toggleEnablePathAnalysis = (checked) => {
+    buildPathAnalysis(activeProject?.id, { "status": checked }).then((data) => {
+      message.success(`Path Analysis is turned ${checked ? "ON" : "OFF"} for this project`);
+      fetchProjectSettings(activeProject?.id);
+    }).catch((err) => {
+      message.error(`Something went wrong!`);
+      console.log("buildPathAnalysis error", err)
+    })
+  };
+
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
   }, [activeProject]);
@@ -76,7 +87,7 @@ const InsightsSettings = ({
     <div className={'fa-container mt-32 mb-12 min-h-screen'}>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={20}>
-          <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0 ml-2'}>Build WI/Explain</Text>
+          <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0 ml-2'}>Build WI/Explain/Path Analysis</Text>
         </Col>
         {_.isEmpty(projectSettings) ? <Col span={20}> <Spin /> </Col> : <>
           <Col span={20}>
@@ -104,6 +115,18 @@ const InsightsSettings = ({
             </div>
             <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Build Explain Insights for this project.</Text>
           </Col>
+          <Col span={20}>
+            <div span={24} className={'flex flex-start items-center mt-2'}>
+              <span style={{ width: '50px' }}><Switch checkedChildren="On"
+                // disabled={enableEdit} 
+                defaultChecked={projectSettings?.is_path_analysis_enabled}
+                unCheckedChildren="OFF"
+                onChange={toggleEnablePathAnalysis}
+              /></span>
+              <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Path Analysis</Text>
+            </div>
+            <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Enable Path Analysis for this project.</Text>
+          </Col>
         </>
         }
 
@@ -121,4 +144,4 @@ const mapStateToProps = (state) => {
   };
 };
 
-export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings, buildExplainInsights, buildWeeklyInsights })(InsightsSettings);
+export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings, buildExplainInsights, buildWeeklyInsights, buildPathAnalysis })(InsightsSettings);
