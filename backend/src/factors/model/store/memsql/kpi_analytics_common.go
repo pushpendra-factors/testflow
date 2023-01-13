@@ -6,6 +6,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"reflect"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -15,6 +16,12 @@ import (
 // Note: All of the hash functions use the query without GBT to form keys.
 func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
 	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query":      kpiQueryGroup,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	kpiTimezoneString := string(kpiQueryGroup.GetTimeZone())
@@ -60,6 +67,12 @@ func (store *MemSQL) ExecuteKPIQueriesAndGetResultsAsMap(projectID int64, reqID 
 	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (int, map[string]map[string][]model.QueryResult,
 	map[string]map[string][]model.QueryResult, map[string][]model.QueryResult, map[string][]model.QueryResult, map[string]model.KPIQueryGroup) {
 	finalStatusCode := http.StatusOK
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query":      kpiQueryGroup,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	mapOfGBTDerivedKPIToInternalKPIToResults := make(map[string]map[string][]model.QueryResult)
 	mapOfNonGBTDerivedKPIToInternalKPIToResults := make(map[string]map[string][]model.QueryResult)
