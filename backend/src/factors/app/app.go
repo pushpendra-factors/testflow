@@ -54,6 +54,7 @@ func main() {
 	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
 	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
 
+	enableDBConnectionPool2 := flag.Bool("enable_db_conn_pool2", false, "")
 	memSQLHost2 := flag.String("memsql_host_2", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort2 := flag.Int("memsql_port_2", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser2 := flag.String("memsql_user_2", C.MemSQLDefaultDBParams.User, "")
@@ -179,7 +180,6 @@ func main() {
 	allowEventsFunnelsGroupSupport := flag.String("allow_events_funnels_group_support", "", "")
 
 	enableBingAdsAttribution := flag.Bool("enable_bing_ads_attribution", false, "")
-	enableDBConnectionPool2 := flag.Bool("enable_db_conn_pool2", false, "")
 	salesforcePropertyLookBackTimeHr := flag.Int("salesforce_property_lookback_time_hr", 0, "")
 	hubspotPropertyLookbackLimit := flag.Int("hubspot_property_lookback_limit", 1000, "")
 	enableSlowDBQueryLogging := flag.Bool("log_slow_db_queries", false, "Logs queries with execution time greater than 50ms.")
