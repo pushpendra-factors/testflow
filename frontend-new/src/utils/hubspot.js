@@ -6,5 +6,5 @@ export const meetLink = (ownerID) => {
     //     case '116053799': return 'https://factors1.us4.opv1.com/meeting/factors/ralitsa';
     //     default : return 'https://meetings.hubspot.com/sunil-seervi';
     // }
-    return 'https://meetings.hubspot.com/ralitsa-dsouza';
+    return 'https://meetings.hubspot.com/ashwin-sande';
 }
