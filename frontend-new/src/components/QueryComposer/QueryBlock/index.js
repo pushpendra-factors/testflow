@@ -446,7 +446,6 @@ function QueryBlock({
 
   const ifQueries = queries.length > 0;
   let filterOptions = [
-    ['Filter By', 'filter'],
     ['Breakdown', 'groupby'],
     [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
   ];

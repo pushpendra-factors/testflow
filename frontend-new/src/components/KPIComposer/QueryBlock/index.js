@@ -520,7 +520,7 @@ function QueryBlock({
     );
   }
 
-  let KPIFilterOptions = [['Filter by', 'filter']];
+  let KPIFilterOptions = [];
   return (
     <div
       className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}
@@ -586,19 +586,23 @@ function QueryBlock({
           </div>
           {(event?.pageViewVal || event?.group == 'page_views') &&
             selectPageUrls()}
-          <Dropdown
-            placement='bottomLeft'
-            overlay={getMenu(KPIFilterOptions)}
-            trigger={['hover']}
-          >
-            <Button
-              type='text'
-              size={'large'}
-              className={`fa-btn--custom mr-1 btn-total-round`}
+          {KPIFilterOptions.length != 0 ? (
+            <Dropdown
+              placement='bottomLeft'
+              overlay={getMenu(KPIFilterOptions)}
+              trigger={['hover']}
             >
-              <SVG name='more' />
-            </Button>
-          </Dropdown>
+              <Button
+                type='text'
+                size={'large'}
+                className={`fa-btn--custom mr-1 btn-total-round`}
+              >
+                <SVG name='more' />
+              </Button>
+            </Dropdown>
+          ) : (
+            ''
+          )}
           <div className={styles.query_block__additional_actions}>
             {additionalActions()}
           </div>

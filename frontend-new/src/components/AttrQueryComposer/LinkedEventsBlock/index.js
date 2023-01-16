@@ -238,7 +238,7 @@ const LinkedEventsBlock = ({
   };
 
   const renderLinkEventBlockContent = () => {
-    let filterOptions = [['Filter By', 'filter']];
+    let filterOptions = [];
     return (
       <div
         className={`${styles.block__content} fa--query_block_section--basic mt-4 relative`}
@@ -265,19 +265,23 @@ const LinkedEventsBlock = ({
         }
 
         {selectEvents()}
-        <Dropdown
-          placement='bottomLeft'
-          overlay={getMenu(filterOptions)}
-          trigger={['hover']}
-        >
-          <Button
-            type='text'
-            size={'large'}
-            className={`fa-btn--custom mr-1 btn-total-round`}
+        {filterOptions.length != 0 ? (
+          <Dropdown
+            placement='bottomLeft'
+            overlay={getMenu(filterOptions)}
+            trigger={['hover']}
           >
-            <SVG name='more' />
-          </Button>
-        </Dropdown>
+            <Button
+              type='text'
+              size={'large'}
+              className={`fa-btn--custom mr-1 btn-total-round`}
+            >
+              <SVG name='more' />
+            </Button>
+          </Dropdown>
+        ) : (
+          ''
+        )}
         <div className={styles.block__additional_actions}>
           {additionalActions()}
         </div>

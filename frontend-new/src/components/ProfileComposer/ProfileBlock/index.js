@@ -368,7 +368,6 @@ function ProfileBlock({
     );
   }
   let filterOptions = [
-    ['Filter By', 'filter'],
     [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
   ];
   return (
@@ -425,19 +424,23 @@ function ProfileBlock({
               {selectProfile()}
             </Tooltip>
           </div>
-          <Dropdown
-            placement='bottomLeft'
-            overlay={getMenu(filterOptions)}
-            trigger={['hover']}
-          >
-            <Button
-              type='text'
-              size={'large'}
-              className={`fa-btn--custom mr-1 btn-total-round`}
+          {filterOptions.length != 0 ? (
+            <Dropdown
+              placement='bottomLeft'
+              overlay={getMenu(filterOptions)}
+              trigger={['hover']}
             >
-              <SVG name='more' />
-            </Button>
-          </Dropdown>
+              <Button
+                type='text'
+                size={'large'}
+                className={`fa-btn--custom mr-1 btn-total-round`}
+              >
+                <SVG name='more' />
+              </Button>
+            </Dropdown>
+          ) : (
+            ''
+          )}
           <div className={styles.query_block__additional_actions}>
             {additionalActions()}
           </div>
