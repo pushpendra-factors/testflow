@@ -607,8 +607,6 @@ func (store *MemSQL) getAllThePages(projectId int64, sessionEventNameId string, 
 		if C.GetAttributionDebug() == 1 {
 			logCtx.Info("Attribution before ProcessEventRows")
 		}
-		defer U.CloseReadQuery(rows, tx)
-
 		processErr := model.ProcessEventRows(rows, query, reports, contentGroupNamesList, &attributedSessionsByUserId, &userIdsWithSession, logCtx, reqID)
 		U.CloseReadQuery(rows, tx)
 		if processErr != nil {
