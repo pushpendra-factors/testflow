@@ -283,8 +283,10 @@ function AccountProfiles({
   const popoverContent = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
-        tab={<span className='fa-activity-filter--tabname'>Properties</span>}
-        key='properties'
+        tab={
+          <span className='fa-activity-filter--tabname'>Table Properties</span>
+        }
+        key='props'
       >
         <SearchCheckList
           placeholder='Search Properties'

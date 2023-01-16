@@ -204,10 +204,13 @@ export const propValueFormat = (key, value) => {
     return MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A');
   }
   if (key.includes('_time')) {
-    return formatDurationIntoString(value);
+    return formatDurationIntoString(parseInt(value));
   }
   if (key.includes('durationmilliseconds')) {
     return formatDurationIntoString(parseInt(value / 1000));
+  }
+  if (!isNaN(value)) {
+    return parseInt(value);
   }
   return value;
 };
