@@ -889,12 +889,12 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		}
 		if stepGroupSelect != "" {
 			stepSelect = fmt.Sprintf(eventSelect, ", "+stepGroupSelect)
+			stepParams = append(stepParams, stepGroupParams...)
 			stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+stepGroupKeys)
 			stepGroupBy = joinWithComma(commonGroupBy, stepGroupKeys)
 			if q.EventsCondition == model.EventCondEachGivenEvent {
 				stepParams = append(stepParams, eventParam)
 			}
-			stepParams = append(stepParams, stepGroupParams...)
 			stepsToKeysMap[refStepName] = strings.Split(stepGroupKeys, ",")
 		} else {
 			stepSelect = fmt.Sprintf(eventSelect, "")
