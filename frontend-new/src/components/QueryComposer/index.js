@@ -51,15 +51,6 @@ function QueryComposer({
   collapse = false,
   setCollapse
 }) {
-  const agentState = useSelector((state) => state.agent);
-  const activeAgent = agentState?.agent_details?.email;
-  const whiteListedAccounts = [
-    'vikas@factors.ai',
-    'solutions@factors.ai',
-    'sonali@factors.ai',
-    'praveenr@factors.ai'
-  ];
-
   const [filterBlockOpen, setFilterBlockOpen] = useState(true);
   const [groupBlockOpen, setGroupBlockOpen] = useState(true);
   const [criterieaBlockOpen, setCriterieaBlockOpen] = useState(true);
@@ -507,12 +498,7 @@ function QueryComposer({
   return (
     <div className={styles.composer_body}>
       {queryType === QUERY_TYPE_FUNNEL && renderEventsConditionSection()}
-      {queryType === QUERY_TYPE_FUNNEL &&
-        ((window.document.domain === 'app.factors.ai' &&
-          whiteListedAccounts.includes(activeAgent)) ||
-          window.document.domain === 'staging-app.factors.ai' ||
-          window.document.domain === 'factors-dev.com') &&
-        renderGroupSection()}
+      {queryType === QUERY_TYPE_FUNNEL && renderGroupSection()}
       {renderQueryList()}
       {renderGlobalFilterBlock()}
       {groupByBlock()}
