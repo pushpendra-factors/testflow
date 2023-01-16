@@ -276,10 +276,8 @@ type Configuration struct {
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
-
 	EventTriggerEnabled                                bool
 	EventTriggerEnabledProjectIDs                      string
-
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
@@ -2469,4 +2467,3 @@ func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
 	}
 	return allowedProjectIDs[projectID]
 }
-

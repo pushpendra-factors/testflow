@@ -790,3 +790,66 @@ func zRemRange(key *Key, startIndex int, endIndex int, persistent bool) (int64, 
 
 	return redis.Int64(redisConn.Do("ZREMRANGEBYRANK", cKey, startIndex, endIndex))
 }
+
+func ZRem(key *Key, OnlyPrefixKey bool, members ...string) (int64, error) {
+	return zRem(key, OnlyPrefixKey, false, members...)
+}
+func ZRemPersistent(key *Key, OnlyPrefixKey bool, members ...string) (int64, error) {
+	return zRem(key, OnlyPrefixKey, true, members...)
+}
+func zRem(key *Key, OnlyPrefixKey bool, persistent bool, members ...string) (int64, error) {
+	if key == nil {
+		return 0, ErrorInvalidKey
+	}
+
+	var cKey string
+	var err error
+	if OnlyPrefixKey {
+		cKey, err = key.KeyWithOnlyPrefix()
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		cKey, err = key.Key()
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	return redis.Int64(redisConn.Do("ZREM", redis.Args{}.Add(cKey).AddFlat(members)...))
+}
+
+func SetExpiry(key *Key, expiryInSeconds int) (int64, error) {
+	return setExpiry(key, false, expiryInSeconds)
+}
+func SetExpiryPersistent(key *Key, expiryInSeconds int) (int64, error) {
+	return setExpiry(key, true, expiryInSeconds)
+}
+func setExpiry(key *Key, persistent bool, expiryInSeconds int) (int64, error) {
+	if key == nil {
+		return 0, ErrorInvalidKey
+	}
+
+	cKey, err := key.Key()
+	if err != nil {
+		return 0, err
+	}
+
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	return redis.Int64(redisConn.Do("EXPIRE", cKey, expiryInSeconds))
+}

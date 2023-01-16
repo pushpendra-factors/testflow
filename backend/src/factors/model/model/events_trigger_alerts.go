@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
-	U "factors/util"
 	"fmt"
 	"time"
 
@@ -14,13 +13,16 @@ import (
 
 const (
 	// DeliveryOptions
-	SLACK                              = "slack"
-	WEBHOOK                            = "webhook"
-	tableNameforAlerts                 = "ETA"
-	cachedIndexEventTiggerAlert        = "Alert"
-	cachedIndexEventTiggerAlertCounter = "Counter"
-	cacheExpiry                        = 0
-	cacheCounterExpiry                 = 24 * 60 * 60
+	SLACK              = "slack"
+	WEBHOOK            = "webhook"
+	tableNameforAlerts = "ETA"
+	counterIndex       = "Counter"
+	cacheExpiry        = 0
+	cacheCounterExpiry = 24 * 60 * 60
+
+	// cachekey structure = ETA:pid:<project_id>:<alert_id>:<UnixTime>
+	// cacheCounterKey structure = ETA:Counter:pid:<project_id>:<alert_id>:<YYYYMMDD>
+	// sortedset key structure = ETA:pid:<project_id>
 )
 
 type EventTriggerAlert struct {
@@ -58,12 +60,8 @@ type EventTriggerAlertInfo struct {
 }
 
 type CachedEventTriggerAlert struct {
-	AlertID   string
-	Timestamp time.Time
-	Message   EventTriggerAlertMessage
+	Message EventTriggerAlertMessage
 }
-
-type CacheEventTriggerAlertCounter int
 
 type EventTriggerAlertMessage struct {
 	Title           string
@@ -72,68 +70,31 @@ type EventTriggerAlertMessage struct {
 	Message         string
 }
 
-func SetCacheForEventTriggerAlert(projectId int64, userId string, cacheETA *CachedEventTriggerAlert) error {
-	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
-	if projectId == 0 || userId == "" {
-		logCtx.Error("Invalid project or user id")
-		return errors.New("invalid project or user id")
-	}
+func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTriggerAlert) error {
 	if cacheETA == nil {
-		logCtx.Error("Nil cache event on setCacheUserLastEventTriggerAlert")
+		log.Error("Nil cache event on setCacheUserLastEventTriggerAlert")
 		return errors.New("nil cache event")
 	}
 
 	cacheETAJson, err := json.Marshal(cacheETA)
 	if err != nil {
-		logCtx.Error("Failed cache event trigger alert json marshal.")
-		return err
-	}
-
-	date := time.Now().UTC().Format(U.DATETIME_FORMAT_YYYYMMDD)
-	key, err := GetEventTriggerAlertCacheKey(projectId, userId, cacheETA.AlertID, date)
-	if err != nil || key == nil {
-		logCtx.WithError(err).Error("Failed at GetEventTriggerAlertCacheKey.")
+		log.Error("Failed cache event trigger alert json marshal.")
 		return err
 	}
 
 	err = cacheRedis.SetPersistent(key, string(cacheETAJson), float64(cacheExpiry))
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to set Cache for EventTriggerAlert.")
+		log.WithError(err).Error("Failed to set Cache for EventTriggerAlert.")
 	}
 
 	log.Info("Adding to cache successful.")
 	return err
 }
 
-func SetCacheCounterForEventTriggerAlert(projectId int64, userId, alertId string, counterPresent bool) error {
-	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
+func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string) (*cacheRedis.Key, error) {
 
-	date := time.Now().UTC().Format(U.DATETIME_FORMAT_YYYYMMDD)
-	key, err := GetEventTriggerAlertCacheCounterKey(projectId, userId, alertId, date)
-	if err != nil || key == nil {
-		logCtx.WithError(err).Error("Failed at GetEventTriggerAlertCacheCounterKey.")
-		return err
-	}
-
-	if counterPresent {
-		_, err := cacheRedis.IncrPersistentBatch(key)
-		if err != nil {
-			log.WithError(err).Error("Cache cannot be updated")
-		}
-	} else {
-		err = cacheRedis.SetPersistent(key, "1", float64(cacheCounterExpiry))
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to setCacheUserLastEventTriggerAlert.")
-		}
-	}
-	log.Info("Adding to cache successful.")
-	return err
-}
-
-func GetEventTriggerAlertCacheKey(projectId int64, userId, alertId, date string) (*cacheRedis.Key, error) {
-
-	suffix := fmt.Sprintf("uid:%s:aid:%s:%s", userId, alertId, date)
-	prefix := fmt.Sprintf("%s:%s", tableNameforAlerts, cachedIndexEventTiggerAlert)
+	suffix := fmt.Sprintf("%s:%d", alertID, timestamp)
+	prefix := tableNameforAlerts
 
 	log.Info("Fetching redisKey, inside GetEventTriggerAlertCacheKey.")
 
@@ -146,16 +107,16 @@ func GetEventTriggerAlertCacheKey(projectId int64, userId, alertId, date string)
 	return key, err
 }
 
-func GetEventTriggerAlertCacheCounterKey(projectId int64, userId, alertId, date string) (*cacheRedis.Key, error) {
+func GetEventTriggerAlertCacheCounterKey(projectId int64, alertId, date string) (*cacheRedis.Key, error) {
 
-	suffix := fmt.Sprintf("uid:%s:aid:%s:%s", userId, alertId, date)
-	prefix := fmt.Sprintf("%s:%s", tableNameforAlerts, cachedIndexEventTiggerAlertCounter)
+	suffix := fmt.Sprintf("%s:%s", alertId, date)
+	prefix := fmt.Sprintf("%s:%s", tableNameforAlerts, counterIndex)
 
-	log.Info("Fetching redisKey, inside GetEventTriggerAlertCacheCounterKey.")
+	log.Info("Fetching redisKey, inside GetEventTriggerAlertCacheKey.")
 
 	key, err := cacheRedis.NewKey(projectId, prefix, suffix)
 	if err != nil || key == nil {
-		log.WithError(err).Error("cacheKey NewKey function failure for counter")
+		log.WithError(err).Error("cacheKey NewKey function failure")
 		return nil, err
 	}
 

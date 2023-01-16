@@ -7,7 +7,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -18,6 +18,8 @@ import (
 const (
 	ListLimit          = 1000
 	AlertCreationLimit = 100
+	SortedSetCacheKey  = "ETA:pid"
+	oneDayInSeconds    = 24 * 60 * 60
 )
 
 func (store *MemSQL) GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int) {
@@ -253,8 +255,23 @@ func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([
 	return eventAlerts, http.StatusFound
 }
 
+type PropMap struct {
+	Entity   string
+	Operator string
+	Property string
+	Value    string
+}
+
 func MapFilterPropertiesToEventFilterCriterion(qp []model.QueryProperty) []U.PropertiesMap {
 	log.Info("Converting filters to propertiesMap")
+
+	defer func() {
+		//This is to prevent breakage due to any panics occured during type conversion
+		if err := recover(); err != nil {
+			log.Error("panic occured at memsql/event_trigger_alerts:", err)
+		}
+	}()
+
 	filterMap := make([]U.PropertiesMap, 0)
 	FilterEq := make(U.PropertiesMap)
 	FilterNotEq := make(U.PropertiesMap)
@@ -267,38 +284,129 @@ func MapFilterPropertiesToEventFilterCriterion(qp []model.QueryProperty) []U.Pro
 		} else if prop.Operator == "notEqual" {
 			FilterNotEq[prop.Property] = prop.Value
 		} else if prop.Operator == "contains" {
-			FilterCont[prop.Property] = prop.Value
+			if FilterCont[prop.Property] != nil {
+				tt := append(FilterCont[prop.Property].([]string), prop.Value)
+				FilterCont[prop.Property] = tt
+			} else {
+				FilterCont[prop.Property] = []string{prop.Value}
+			}
 		} else if prop.Operator == "notContains" {
-			FilterNotCont[prop.Property] = prop.Value
+			if FilterNotCont[prop.Property] != nil {
+				tt := append(FilterNotCont[prop.Property].([]string), prop.Value)
+				FilterNotCont[prop.Property] = tt
+			} else {
+				FilterNotCont[prop.Property] = []string{prop.Value}
+			}
 		}
 	}
-	filterMap = append(filterMap, FilterEq, FilterNotEq, FilterCont, FilterCont)
+	filterMap = append(filterMap, FilterEq, FilterNotEq, FilterCont, FilterNotCont)
 	return filterMap
 }
 
+//matchContains will try to match tprops with any value present in matchWith,
+//if there is a match it will return true, else will return false
+func matchContains(tprops interface{}, matchWith interface{}) bool {
+
+	defer func() {
+		//This is to handle any panics occured during type conversion
+		if err := recover(); err != nil {
+			log.Error("panic occured in memsql/event_trigger_alerts:", err)
+		}
+	}()
+
+	log.Info("Inside matchContains")
+	var tp string
+	if tprops != nil {
+		tp = tprops.(string)
+	} else {
+		return false
+	}
+	for _, k := range matchWith.([]string) {
+		log.Info("Event/User Property: ", tp, "; filter Property: ", k)
+		if strings.EqualFold(k, tp) {
+			return true
+		}
+	}
+	return false
+}
+
+//matchNotContains will try to check if tprops is not in matchWith interface,
+//if there is a match it will return false, else will return true
+func matchNotContains(tprops interface{}, matchWith interface{}) bool {
+
+	defer func() {
+		//This is to handle any panics occured during type conversion
+		if err := recover(); err != nil {
+			log.Error("panic occured in memsql/event_trigger_alerts:", err)
+		}
+	}()
+
+	log.Info("Inside matchNotContains")
+	var tp string
+	if tprops != nil {
+		tp = tprops.(string)
+	} else {
+		return false
+	}
+	for _, k := range matchWith.([]string) {
+		log.Info("Event/User Property: ", tp, "; filter Property: ", k)
+		if strings.EqualFold(k, tp) {
+			return false
+		}
+	}
+	return true
+}
+
 func matchFilterProps(filter []U.PropertiesMap, userProps, eventProps U.PropertiesMap) bool {
-	log.Info("inside matchProps function")
+	log.Info("inside matchFilterProps function")
 	if len(filter) == 0 {
 		return true
 	}
 	log.Info(fmt.Printf("%+v\n", filter))
 	for key, prop := range filter[0] {
+		log.Info(fmt.Printf("key: %s, value: %s", key, prop))
 		if userProps[key] == prop || eventProps[key] == prop {
-			log.Info("matchProps function found a mismatch in one of the property. Returning.")
+			continue
+		} else {
+			log.Info("matchProps function found a mismatch in ", key, " ", prop, "Returning.")
 			return false
 		}
 	}
 	for key, prop := range filter[1] {
+		log.Info(fmt.Printf("key: %s, value: %s", key, prop))
 		if userProps[key] != prop && eventProps[key] != prop {
-			log.Info("matchProps function found a mismatch in one of the property. Returning.")
+			continue
+		} else {
+			log.Info("matchProps function found a mismatch in ", key, " ", prop, "Returning.")
 			return false
 		}
 	}
+
 	//TODO: Match 'contains' and 'notContains' operator type filters
+	for key, prop := range filter[2] {
+		log.Info(fmt.Printf("key: %s, value: %s", key, prop))
+		if matchContains(userProps[key], prop) || matchContains(eventProps[key], prop) {
+			continue
+		} else {
+			log.Info("matchProps function found a mismatch in ", key, " ", prop, "Returning.")
+			return false
+		}
+	}
+
+	for key, prop := range filter[3] {
+		log.Info(fmt.Printf("key: %s, value: %s", key, prop))
+		if matchNotContains(userProps[key], prop) && matchNotContains(eventProps[key], prop) {
+			continue
+		} else {
+			log.Info("matchProps function found a mismatch in ", key, " ", prop, "Returning.")
+			return false
+		}
+	}
+
 	return true
 }
 
-func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId string, eventProps, userProps *postgres.Jsonb) (*model.EventTriggerAlert, int) {
+func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId string, eventProps, userProps *postgres.Jsonb) (*[]model.EventTriggerAlert, int) {
 	logFields := log.Fields{
 		"project_id":       projectId,
 		"event_name":       eventNameId,
@@ -329,6 +437,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	log.Info(fmt.Printf("%+v\n", userPropMap))
 	log.Info(fmt.Printf("%+v\n", eventPropMap))
 
+	var matchedAlerts []model.EventTriggerAlert
 	for _, alert := range alerts {
 		var config model.EventTriggerAlertConfig
 		err := U.DecodePostgresJsonbToStructType(alert.EventTriggerAlert, &config)
@@ -337,52 +446,40 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 			return nil, http.StatusInternalServerError
 		}
 		filterProps := MapFilterPropertiesToEventFilterCriterion(config.Filter)
-		matched := matchFilterProps(filterProps, userPropMap, eventPropMap)
-		if matched {
+
+		if matchFilterProps(filterProps, userPropMap, eventPropMap) {
 			log.WithFields(logFields).Info("Match found for the event_trigger_alerts")
-			return &alert, http.StatusFound
+			matchedAlerts = append(matchedAlerts, alert)
 		}
 	}
-	log.WithFields(logFields).Info("Match function did not find anything in event_trigger_alerts")
-	return nil, http.StatusNotFound
+	if len(matchedAlerts) == 0 {
+		log.WithFields(logFields).Info("Match function did not find anything in event_trigger_alerts")
+		return nil, http.StatusNotFound
+	}
+	return &matchedAlerts, http.StatusFound
 }
 
-func AddAlertToCache(projectID int64, userID string, alert *model.EventTriggerAlert, counterPresent bool) (int, error) {
+func AddAlertToCache(alert *model.EventTriggerAlertConfig, key *cacheRedis.Key) (int, error) {
 	logFields := log.Fields{
-		"project_id":          projectID,
 		"event_trigger_alert": alert,
+		"CacheKey":            key,
 	}
 	log.Info("Inside AddAlertToCache function.")
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	var config model.EventTriggerAlertConfig
-	err := U.DecodePostgresJsonbToStructType(alert.EventTriggerAlert, &config)
-	if err != nil {
-		log.WithError(err).Error("Unable to decide json into struct type")
-		return http.StatusInternalServerError, err
-	}
-
 	message := model.EventTriggerAlertMessage{
 		Title:           alert.Title,
-		Event:           config.Event,
-		MessageProperty: string(config.MessageProperty.RawMessage),
-		Message:         config.Message,
+		Event:           alert.Event,
+		MessageProperty: string(alert.MessageProperty.RawMessage),
+		Message:         alert.Message,
 	}
 
 	cachePackage := model.CachedEventTriggerAlert{
-		AlertID:   alert.ID,
-		Timestamp: time.Now(),
-		Message:   message,
+		Message: message,
 	}
 
 	log.WithFields(logFields).Info("SetCacheForEventTriggerAlert function inside AddAlertToCache.")
-	err = model.SetCacheForEventTriggerAlert(projectID, userID, &cachePackage)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Error("setting cache failed inside AddAlertToCache")
-		return http.StatusInternalServerError, err
-	}
-
-	err = model.SetCacheCounterForEventTriggerAlert(projectID, userID, alert.ID, counterPresent)
+	err := model.SetCacheForEventTriggerAlert(key, &cachePackage)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("setting cache failed inside AddAlertToCache")
 		return http.StatusInternalServerError, err
@@ -391,55 +488,29 @@ func AddAlertToCache(projectID int64, userID string, alert *model.EventTriggerAl
 	return http.StatusCreated, nil
 }
 
-func GetCacheKeyForAlert(alert *model.EventTriggerAlert, counter bool) (*cacheRedis.Key, error) {
-	log.Info("Inside GetCacheKey function")
-
-	var cacheKey *cacheRedis.Key
-	var err error
-	date := time.Now().UTC().Format(U.DATETIME_FORMAT_YYYYMMDD)
-
-	if counter {
-		cacheKey, err = model.GetEventTriggerAlertCacheCounterKey(alert.ProjectID, alert.CreatedBy, alert.ID, date)
-		if err != nil {
-			log.WithError(err).Error("Counter CacheKey getting function failure.")
-			return nil, err
-		}
-	} else {
-		cacheKey, err = model.GetEventTriggerAlertCacheKey(alert.ProjectID, alert.CreatedBy, alert.ID, date)
-		if err != nil {
-			log.WithError(err).Error("CacheKey getting function failure.")
-			return nil, err
-		}
+func getSortedSetCacheKey(projectId int64) (*cacheRedis.Key, error) {
+	prefix := fmt.Sprintf("%s:%d", SortedSetCacheKey, projectId)
+	key, err := cacheRedis.NewKeyWithOnlyPrefix(prefix)
+	if err != nil {
+		log.WithError(err).Error("Cannot adding only prefix key")
+		return nil, err
 	}
-	return cacheKey, nil
+	return key, err
 }
 
-func checkCacheForAlert(alert *model.EventTriggerAlert) (*cacheRedis.Key, bool) {
-	log.Info("Inside checkCacheForAlert function")
+func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, projectId int64, name, userID string) bool {
 
-	cacheKey, err := GetCacheKeyForAlert(alert, true)
-	log.Info("Control returning to checkCacheForAlert")
-	if err != nil {
-		log.WithError(err).Error("CacheKey getting function failure.")
-		return nil, false
-	}
-	kk, err := cacheKey.Key()
-	if err != nil {
-		log.Info("cachekey string conversion failure")
-	}
-	log.Info("CacheKey: ", kk)
-	exists, err := cacheRedis.ExistsPersistent(cacheKey)
-	if err != nil {
-		log.WithError(err).Error("CacheKey existence failure.")
-		return nil, false
-	}
-	log.Info("cacheRedisKey successfully retrieved. Key exists is ", exists)
-	return cacheKey, exists
-}
+	//Adding alert to cache
+	//If the counterKey is present, then
+	//INCR the counter key
+	//Else set the counter key with one day of expiry
+	//If the counter key has count less than daily limit, then
+	//Get sorted set keys from where all the alert keys for a particular projectID are retrieved
+	//Get the alert and counter key as well
+	//Add the alert key to the sorted set and cache
+	//Else return
 
-func (store *MemSQL) SendEventTriggerAlert(alert *model.EventTriggerAlert, projectId int64, name, userID string) bool {
-
-	log.Info("Inside SendEventTriggerAlert function.")
+	log.Info("Inside CacheEventTriggerAlert function.")
 	log.Info(fmt.Printf("%+v\n", *alert))
 
 	var eta model.EventTriggerAlertConfig
@@ -448,25 +519,61 @@ func (store *MemSQL) SendEventTriggerAlert(alert *model.EventTriggerAlert, proje
 		return false
 	}
 
-	log.Info("Checking cache for alert's existence.")
-	cacheKey, status := checkCacheForAlert(alert)
-	var count int64
+	tt := time.Now()
+	timestamp := tt.Unix()
+	date := tt.UTC().Format(U.DATETIME_FORMAT_YYYYMMDD)
 
-	if status {
-		limit, err := cacheRedis.GetPersistent(cacheKey)
-		if err != nil {
-			log.WithError(err).Error("Redis error while fetching counter in event_trigger_alerts")
-		}
+	counterKey, err := model.GetEventTriggerAlertCacheCounterKey(projectId, alert.ID, date)
+	if err != nil {
+		log.WithError(err).Error("error while getting cache counter Key")
+		return false
+	}
 
-		count, err = strconv.ParseInt(limit, 10, 64)
+	cc, err := cacheRedis.IncrPersistentBatch(counterKey)
+	if err != nil {
+		log.WithError(err).Error("error while getting count from cache counter Key")
+		return false
+	}
+	count := cc[0]
+
+	if count == 1 {
+		_, err := cacheRedis.SetExpiryPersistent(counterKey, oneDayInSeconds)
 		if err != nil {
-			count = 0
-			log.WithError(err).Error("string conversion to int64 failure. Defaulting to 0.")
+			log.WithError(err).Error("error while setting expiry for cache counter Key")
+			return false
 		}
 	}
 
 	if count <= eta.AlertLimit {
-		successCode, err := AddAlertToCache(projectId, userID, alert, status)
+		ssKey, err := getSortedSetCacheKey(projectId)
+		if err != nil {
+			log.WithError(err).Error("error while getting sorted set cache Key")
+			return false
+		}
+
+		key, err := model.GetEventTriggerAlertCacheKey(projectId, timestamp, alert.ID)
+		if err != nil {
+			log.WithError(err).Error("error while getting cache Key")
+			return false
+		}
+
+		ssValue, err := key.Key()
+		if err != nil {
+			log.WithError(err).Error("error while getting cache Key to string")
+			return false
+		}
+
+		sortedSetTuple := cacheRedis.SortedSetKeyValueTuple{
+			Key:   ssKey,
+			Value: ssValue,
+		}
+
+		_, err = cacheRedis.ZincrPersistentBatch(true, sortedSetTuple)
+		if err != nil {
+			log.WithError(err).Error("error while getting INCR value")
+		}
+
+		successCode, err := AddAlertToCache(&eta, key)
 		if err != nil || successCode != http.StatusCreated {
 			log.WithFields(log.Fields{"project_id": projectId,
 				"event_trigger_alert": alert, log.ErrorKey: err}).Error("Failed to send alert.")
