@@ -32,12 +32,7 @@ import { DASHBOARD_KEYS } from 'Constants/localStorage.constants';
 import { LoadingOutlined } from '@ant-design/icons';
 import { stubFalse } from 'lodash';
 
-function AddDashboard({
-  addDashboardModal,
-  setaddDashboardModal,
-  editDashboard,
-  setEditDashboard
-}) {
+function AddDashboard({ editDashboard, setEditDashboard }) {
   const [isLoading, setIsLoading] = useState(false);
   const [activeKey, setActiveKey] = useState('1');
   const [title, setTitle] = useState('');
@@ -53,7 +48,7 @@ function AddDashboard({
   const dispatch = useDispatch();
   const history = useHistory();
   const { pathname } = useLocation();
-  const inputComponentRef = useAutoFocus(addDashboardModal);
+  const inputComponentRef = useAutoFocus(true);
 
   let { isAddNewDashboardModal } = useSelector(
     (state) => state.dashboard_templates_Reducer
@@ -70,17 +65,17 @@ function AddDashboard({
   }, [editDashboard, activeDashboardUnits.data]);
 
   const resetState = useCallback(() => {
-    setaddDashboardModal(false);
     setActiveKey('1');
     setTitle('');
     setDescription('');
     setDashboardType('pv');
     setApisCalled(false);
     setSelectedQueries([]);
-    setEditDashboard(null);
+    // This is top avoid situation when we open create new Dadshboard
+    if (setEditDashboard) setEditDashboard(null);
 
     dispatch({ type: ADD_DASHBOARD_MODAL_CLOSE });
-  }, [setaddDashboardModal, setEditDashboard]);
+  }, [setEditDashboard]);
 
   const confirmDelete = useCallback(async () => {
     try {
@@ -407,12 +402,7 @@ function AddDashboard({
           </div>
         </div>
       </Modal>
-      <DashboardTemplatesModal
-        addDashboardModal={addDashboardModal}
-        apisCalled={apisCalled}
-        setaddDashboardModal={setaddDashboardModal}
-        getOkText={getOkText}
-      />
+      <DashboardTemplatesModal apisCalled={apisCalled} getOkText={getOkText} />
       <ConfirmationModal
         visible={deleteModal}
         confirmationText='Are you sure you want to delete this Dashboard?'
