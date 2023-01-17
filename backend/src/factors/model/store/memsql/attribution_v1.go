@@ -437,7 +437,7 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 	var usersIDsToAttribute []string
 	var kpiDataForGroupQuery map[string]model.KPIInfo
 	var kpiDataList []map[string]model.KPIInfo
-	var headerPositionMap map[string]int64
+	headerPositionMap := make(map[string]int64)
 	var defaultHeader []string
 	headerCount := int64(0)
 
