@@ -325,7 +325,8 @@ function CoreQuery({
           window,
           linkedEvents,
           durationObj,
-          tacticOfferType
+          tacticOfferType,
+          true
         );
 
         const dtRange = { ...durationObj, frequency: 'hour' };

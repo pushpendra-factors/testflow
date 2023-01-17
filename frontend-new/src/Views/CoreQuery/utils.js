@@ -34,6 +34,8 @@ import { FILTER_TYPES, INITIAL_STATE } from './constants';
 
 export const initialState = INITIAL_STATE;
 
+const USER_KPIS = ['form_submission'];
+
 export const labelsObj = {
   [TOTAL_EVENTS_CRITERIA]: 'Event Count',
   [TOTAL_USERS_CRITERIA]: 'User Count',
@@ -812,23 +814,59 @@ export const getKPIQuery = (
 };
 
 const mapQueriesByGroup = (queries) => {
-  const user_kpis = ['form_submission'];
   const group = {
-    'user_kpi': [],
-    'hubspot_deals': [],
-    'salesforce_opportunities': []
+    user_kpi: [],
+    hubspot_deals: [],
+    salesforce_opportunities: []
   };
   queries.forEach((query) => {
-    if(user_kpis.includes(query.group)) {
+    if (USER_KPIS.includes(query.group)) {
       group['user_kpi'].push(query);
     } else {
       group[query.group].push(query);
     }
     return group;
-  })
+  });
 
   return group;
-}
+};
+
+const getGroupByByGroup = (grp) => {
+  if (USER_KPIS.includes(grp)) {
+    return [
+      {
+        gr: '',
+        prNa: '$user_id',
+        prDaTy: 'numerical',
+        en: 'user',
+        objTy: '',
+        gbty: 'raw_values'
+      }
+    ];
+  } else if (grp === 'hubspot_deals') {
+    return [
+      {
+        gr: '',
+        prNa: '$hubspot_deal_hs_object_id',
+        prDaTy: 'numerical',
+        en: 'user',
+        objTy: '',
+        gbty: 'raw_values'
+      }
+    ];
+  } else if (grp === 'salesforce_opportunities') {
+    return [
+      {
+        gr: '',
+        prNa: '$salesforce_opportunity_id',
+        prDaTy: 'numerical',
+        en: 'user',
+        objTy: '',
+        gbty: 'raw_values'
+      }
+    ];
+  }
+};
 
 export const getKPIQueryAttributionV1 = (
   queries,
@@ -842,6 +880,7 @@ export const getKPIQueryAttributionV1 = (
 
   const period = {};
   if (dateRange?.from && dateRange?.to) {
+
       period.from = MomentTz(dateRange.from).startOf('day').utc().unix();
       period.to = MomentTz(dateRange.to).endOf('day').utc().unix();
       period.frequency = dateRange.frequency;
@@ -854,32 +893,28 @@ export const getKPIQueryAttributionV1 = (
       period.frequency = dateRange.frequency;
   }
     
+
   Object.keys(kpiQueriesByGroup).forEach((groupKey) => {
     const kpiQuery = {
       kpi_query_group: [],
       analyze_type: ''
     };
-    const GlobalGrpBy = [...groupBy.global];
     const eventGrpBy = [...groupBy.event];
-    
-    kpiQueriesByGroup[groupKey].forEach((que) => {
-      kpiQuery.kpi_query_group.push({
-        cl: QUERY_TYPE_KPI?.toLocaleLowerCase(),
-        qG: getKPIqueryGroup([que], eventGrpBy, period),
-        gGBy: getGroupByWithPropertiesKPI(
-            GlobalGrpBy,
-            null,
-            que[0]?.category
-          ),
-        gFil: getEventsWithPropertiesKPI(
-            queryOptions?.globalFilters,
-            que[0]?.category
-          ),
-        for: ""
-      });
-    })
+
+    kpiQuery.kpi_query_group = {
+      cl: QUERY_TYPE_KPI?.toLocaleLowerCase(),
+      qG: getKPIqueryGroup(kpiQueriesByGroup[groupKey], eventGrpBy, period),
+      gGBy: getGroupByByGroup(kpiQueriesByGroup[groupKey].group),
+      gFil: getEventsWithPropertiesKPI(
+        queryOptions?.globalFilters,
+        kpiQueriesByGroup[groupKey][0]?.category
+      ),
+      for: ''
+    }
     kpiQuery.analyze_type = groupKey;
-    kpiQueries.push(kpiQuery);
+    if(kpiQueriesByGroup[groupKey].length) {
+      kpiQueries.push(kpiQuery);
+    }
   });
 
   return kpiQueries;
