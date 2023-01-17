@@ -48,8 +48,6 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
   const dispatch = useDispatch();
   const history = useHistory();
   const { pathname } = useLocation();
-  const inputComponentRef = useAutoFocus(true);
-
   let { isAddNewDashboardModal } = useSelector(
     (state) => state.dashboard_templates_Reducer
   );
@@ -298,75 +296,75 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
 
   return (
     <>
-      <Modal
-        title={null}
-        visible={isAddNewDashboardModal}
-        centered={true}
-        zIndex={1010}
-        width={700}
-        className={'fa-modal--regular p-4 fa-modal--slideInDown'}
-        confirmLoading={apisCalled}
-        closable={false}
-        okText={getOkText()}
-        transitionName=''
-        maskTransitionName=''
-        footer={null}
-      >
-        <div>
-          <Row>
-            <Col span={24}>
-              <Text
-                type={'title'}
-                level={4}
-                weight={'bold'}
-                size={'grey'}
-                extraClass={'m-0'}
-              >
-                {editDashboard ? 'Edit Dashboard' : 'New Dashboard'}
-              </Text>
-            </Col>
-          </Row>
-          <Row>
-            <Col span={24}>
-              <Tabs
-                onChange={handleTabChange}
-                activeKey={activeKey}
-                className={'fa-tabs'}
-              >
-                <TabPane className={styles.tabContent} tab='Setup' key='1'>
-                  {activeKey === '1' ? (
-                    <AddDashboardTab
-                      title={title}
-                      setTitle={setTitle}
-                      description={description}
-                      setDescription={setDescription}
-                      dashboardType={dashboardType}
-                      setDashboardType={setDashboardType}
-                      editDashboard={editDashboard}
-                      showDeleteModal={showDeleteModal}
-                      inputComponentRef={inputComponentRef}
-                    />
-                  ) : (
-                    ''
-                  )}
-                </TabPane>
-                <TabPane className={styles.tabContent} tab='Widget' key='2'>
-                  {activeKey === '2' ? (
-                    <AddWidgetsTab
-                      queries={queries}
-                      selectedQueries={selectedQueries}
-                      setSelectedQueries={setSelectedQueries}
-                      setIsLoading={setIsLoading}
-                    />
-                  ) : (
-                    ''
-                  )}
-                </TabPane>
-              </Tabs>
-            </Col>
-          </Row>
-          <div className='flex mt-6 items-center justify-end'>
-            {/* <Link
+      {isAddNewDashboardModal === true ? (
+        <Modal
+          title={null}
+          visible={isAddNewDashboardModal}
+          centered={true}
+          zIndex={1010}
+          width={700}
+          className={'fa-modal--regular p-4 fa-modal--slideInDown'}
+          confirmLoading={apisCalled}
+          closable={false}
+          okText={getOkText()}
+          transitionName=''
+          maskTransitionName=''
+          footer={null}
+        >
+          <div>
+            <Row>
+              <Col span={24}>
+                <Text
+                  type={'title'}
+                  level={4}
+                  weight={'bold'}
+                  size={'grey'}
+                  extraClass={'m-0'}
+                >
+                  {editDashboard ? 'Edit Dashboard' : 'New Dashboard'}
+                </Text>
+              </Col>
+            </Row>
+            <Row>
+              <Col span={24}>
+                <Tabs
+                  onChange={handleTabChange}
+                  activeKey={activeKey}
+                  className={'fa-tabs'}
+                >
+                  <TabPane className={styles.tabContent} tab='Setup' key='1'>
+                    {activeKey === '1' ? (
+                      <AddDashboardTab
+                        title={title}
+                        setTitle={setTitle}
+                        description={description}
+                        setDescription={setDescription}
+                        dashboardType={dashboardType}
+                        setDashboardType={setDashboardType}
+                        editDashboard={editDashboard}
+                        showDeleteModal={showDeleteModal}
+                      />
+                    ) : (
+                      ''
+                    )}
+                  </TabPane>
+                  <TabPane className={styles.tabContent} tab='Widget' key='2'>
+                    {activeKey === '2' ? (
+                      <AddWidgetsTab
+                        queries={queries}
+                        selectedQueries={selectedQueries}
+                        setSelectedQueries={setSelectedQueries}
+                        setIsLoading={setIsLoading}
+                      />
+                    ) : (
+                      ''
+                    )}
+                  </TabPane>
+                </Tabs>
+              </Col>
+            </Row>
+            <div className='flex mt-6 items-center justify-end'>
+              {/* <Link
               to={{
                 pathname: '/template',
                 state: { fromSelectTemplateBtn: true }
@@ -377,31 +375,34 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
               Select from Templates{' '}
               <SVG size={20} name='Arrowright' color={`#1d89ff`} />
             </Link> */}
-            <div className='flex gap-3'>
-              <Button
-                disabled={isLoading}
-                type='default'
-                size='large'
-                onClick={() => {
-                  dispatch({ type: ADD_DASHBOARD_MODAL_CLOSE });
-                  handleCancel();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                disabled={isLoading}
-                type='primary'
-                size='large'
-                onClick={() => handleOk()}
-              >
-                {isLoading === true ? <LoadingOutlined /> : ''}{' '}
-                {activeKey === '2' ? 'Save' : 'Next'}
-              </Button>
+              <div className='flex gap-3'>
+                <Button
+                  disabled={isLoading}
+                  type='default'
+                  size='large'
+                  onClick={() => {
+                    dispatch({ type: ADD_DASHBOARD_MODAL_CLOSE });
+                    handleCancel();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={isLoading}
+                  type='primary'
+                  size='large'
+                  onClick={() => handleOk()}
+                >
+                  {isLoading === true ? <LoadingOutlined /> : ''}{' '}
+                  {activeKey === '2' ? 'Save' : 'Next'}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
+      ) : (
+        ''
+      )}
       <DashboardTemplatesModal apisCalled={apisCalled} getOkText={getOkText} />
       <ConfirmationModal
         visible={deleteModal}
