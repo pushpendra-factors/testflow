@@ -21,9 +21,18 @@ const renderRoutes = (routesObj) => {
       if (!Component || !path) return null;
 
       if (Private) {
-        return <PrivateRoute exact={exact} path={path} component={Component} />;
+        return (
+          <PrivateRoute
+            exact={exact}
+            path={path}
+            component={Component}
+            key={path}
+          />
+        );
       }
-      return <Route exact={exact} path={path} component={Component} />;
+      return (
+        <Route exact={exact} path={path} component={Component} key={path} />
+      );
     })
     .filter((route) => !!route);
 };

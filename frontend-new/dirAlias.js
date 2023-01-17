@@ -30,8 +30,23 @@ module.exports = {
       ['Views', './src/Views'],
       ['Attribution', './src/features/attribution'],
       ['Context', './src/contexts'],
-      ['Constants', './src/constants']
+      ['Constants', './src/constants'],
+      ['Routes', './src/routes']
     ],
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
+  },
+  jestDirAlias: {
+    '^Utils(.*)$': '<rootDir>/src/utils$1',
+    '^Components(.*)$': '<rootDir>/src/components$1',
+    '^factorsComponents(.*)$': '<rootDir>/src/components/factorsComponents$1',
+    '^Reducers(.*)$': '<rootDir>/src/reducers$1',
+    '^svgIcons(.*)$': '<rootDir>/src/components/svgIcons$1',
+    '^Styles(.*)$': '<rootDir>/src/styles$1',
+    '^hooks(.*)$': '<rootDir>/src/hooks$1',
+    '^Views(.*)$': '<rootDir>/src/Views$1',
+    '^Attribution(.*)$': '<rootDir>/src/features/attribution$1',
+    '^Context(.*)$': '<rootDir>/src/contexts$1',
+    '^Constants(.*)$': '<rootDir>/src/Constants$1',
+    '^Routes(.*)$': '<rootDir>/src/routes$1'
   }
 };
