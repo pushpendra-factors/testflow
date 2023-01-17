@@ -71,9 +71,9 @@ func (store *MemSQL) GetEventTriggerAlertByID(id string) (*model.EventTriggerAle
 func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []model.EventTriggerAlert) []model.EventTriggerAlertInfo {
 
 	res := make([]model.EventTriggerAlertInfo, 0)
-	var alert model.EventTriggerAlertConfig
 
 	for _, obj := range list {
+		var alert model.EventTriggerAlertConfig
 		err := U.DecodePostgresJsonbToStructType(obj.EventTriggerAlert, &alert)
 		if err != nil {
 			log.WithError(err).Error("Problem deserializing pathanalysis query.")
@@ -147,7 +147,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID string, projectID int64, ale
 	transTime := gorm.NowFunc()
 	id := U.GetUUID()
 
-	trigger, err := U.EncodeStructTypeToPostgresJsonb(alertConfig)
+	trigger, err := U.EncodeStructTypeToPostgresJsonb(*alertConfig)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("TriggerAlert conversion to Jsonb failed")
 		return nil, http.StatusInternalServerError, "TiggerAlert conversion to Jsonb failed"
