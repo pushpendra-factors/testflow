@@ -1508,10 +1508,12 @@ func GetRowsByMapsAllPage(contentGroupNamesList []string, attributionData *map[s
 			// Validate if conversion values are not nil
 			if data.ConversionEventCount == nil {
 				emptyConversionEventRow := make([]float64, 0)
+				emptyConversionEventRow = append(emptyConversionEventRow, 0.0)
 				data.ConversionEventCount = emptyConversionEventRow
 			}
 			if data.ConversionEventCountInfluence == nil {
 				emptyConversionEventRowInfluence := make([]float64, 0)
+				emptyConversionEventRowInfluence = append(emptyConversionEventRowInfluence, 0.0)
 				data.ConversionEventCountInfluence = emptyConversionEventRowInfluence
 			}
 			// Append fixed Metrics & ConversionEventCount[0] as only one goal event exists for landing page
@@ -1580,10 +1582,12 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 			// Validate if conversion values are not nil
 			if data.ConversionEventCount == nil {
 				emptyConversionEventRow := make([]float64, 0)
+				emptyConversionEventRow = append(emptyConversionEventRow, 0.0)
 				data.ConversionEventCount = emptyConversionEventRow
 			}
 			if data.ConversionEventCountInfluence == nil {
 				emptyConversionEventRowInfluence := make([]float64, 0)
+				emptyConversionEventRowInfluence = append(emptyConversionEventRowInfluence, 0.0)
 				data.ConversionEventCountInfluence = emptyConversionEventRowInfluence
 			}
 			// Append fixed Metrics & ConversionEventCount[0] as only one goal event exists for landing page
