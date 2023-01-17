@@ -243,7 +243,7 @@ function QueryBlock({
               ></SVG>
             }
             style={{ display: 'flex', padding: '10px', margin: '5px' }}
-            key='0'
+            key={eachIndex}
             onClick={() => setAdditionalactions(eachFilter)}
           >
             <span style={{ paddingLeft: '5px' }}>{eachFilter[0]}</span>
@@ -446,6 +446,7 @@ function QueryBlock({
 
   const ifQueries = queries.length > 0;
   let filterOptions = [
+    ['Filter By', 'filter'],
     ['Breakdown', 'groupby'],
     [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
   ];
@@ -539,19 +540,23 @@ function QueryBlock({
               {selectEvents()}
             </Tooltip>
           </div>
-          <Dropdown
-            placement='bottomLeft'
-            overlay={getMenu(filterOptions)}
-            trigger={['hover']}
-          >
-            <Button
-              type='text'
-              size={'large'}
-              className={`fa-btn--custom mr-1 btn-total-round`}
+          {filterOptions.length != 0 ? (
+            <Dropdown
+              placement='bottomLeft'
+              overlay={getMenu(filterOptions)}
+              trigger={['hover']}
             >
-              <SVG name='more' />
-            </Button>
-          </Dropdown>
+              <Button
+                type='text'
+                size={'large'}
+                className={`fa-btn--custom mr-1 btn-total-round ml-2`}
+              >
+                <SVG name='more' />
+              </Button>
+            </Dropdown>
+          ) : (
+            ''
+          )}
           <div className={styles.query_block__additional_actions}>
             {additionalActions()}
           </div>

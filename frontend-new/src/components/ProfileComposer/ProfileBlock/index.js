@@ -368,6 +368,7 @@ function ProfileBlock({
     );
   }
   let filterOptions = [
+    ['Filter By', 'filter'],
     [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
   ];
   return (
@@ -433,7 +434,7 @@ function ProfileBlock({
               <Button
                 type='text'
                 size={'large'}
-                className={`fa-btn--custom mr-1 btn-total-round`}
+                className={`fa-btn--custom mr-1 btn-total-round ml-2`}
               >
                 <SVG name='more' />
               </Button>

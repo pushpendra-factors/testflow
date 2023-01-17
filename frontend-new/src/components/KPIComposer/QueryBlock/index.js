@@ -297,7 +297,7 @@ function QueryBlock({
     // Kept Filter by only, as it was previously, just changed Filter Menu
 
     return (
-      <div className={'flex'}>
+      <div className={'flex ml-2'}>
         <div className={`relative`}>
           {moreOptions == false ? (
             <>
