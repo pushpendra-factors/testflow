@@ -32,12 +32,16 @@ import { deleteGroupByForEvent } from 'Reducers/coreQuery/middleware';
 import {
   initialState,
   getKPIQuery,
+  getKPIQueryAttributionV1,
   DefaultDateRangeFormat,
   getAttributionQuery,
   isComparisonEnabled,
   getAttributionStateFromRequestQuery
 } from 'Views/CoreQuery/utils';
-import { getAttributionsData } from 'Reducers/coreQuery/services';
+import {
+  getAttributionsData,
+  getAttributionsDataV1
+} from 'Reducers/coreQuery/services';
 import {
   QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_ATTRIBUTION,
@@ -303,7 +307,7 @@ function CoreQuery({
   );
 
   const runAttributionQuery = useCallback(
-    async (isQuerySaved, durationObj, isCompareQuery) => {
+    async (isQuerySaved, durationObj, isCompareQuery, v1 = false) => {
       try {
         if (!durationObj) {
           durationObj = attr_dateRange;
@@ -324,44 +328,47 @@ function CoreQuery({
           tacticOfferType
         );
 
-        if (
-          queryOptions.group_analysis &&
-          queryOptions.group_analysis !== 'users'
-        ) {
-          const dtRange = { ...durationObj, frequency: 'hour' };
-          const kpiQuery = getKPIQuery(
+        const dtRange = { ...durationObj, frequency: 'hour' };
+        const kpiQuery = getKPIQuery(
+          attrQueries,
+          dtRange,
+          { event: [], global: [] },
+          queryOptions,
+          []
+        );
+        if (queryOptions.group_analysis === 'hubspot_deals') {
+          kpiQuery.gGBy = [
+            {
+              gr: '',
+              prNa: '$hubspot_deal_hs_object_id',
+              prDaTy: 'numerical',
+              en: 'user',
+              objTy: '',
+              gbty: 'raw_values'
+            }
+          ];
+        } else if (queryOptions.group_analysis === 'salesforce_opportunities') {
+          kpiQuery.gGBy = [
+            {
+              gr: '',
+              prNa: '$salesforce_opportunity_id',
+              prDaTy: 'numerical',
+              en: 'user',
+              objTy: '',
+              gbty: 'raw_values'
+            }
+          ];
+        }
+        // query.query.analyze_type = queryOptions.group_analysis;
+        if (v1) {
+          query.query.kpi_queries = getKPIQueryAttributionV1(
             attrQueries,
             dtRange,
             { event: [], global: [] },
             queryOptions,
             []
           );
-          if (queryOptions.group_analysis === 'hubspot_deals') {
-            kpiQuery.gGBy = [
-              {
-                gr: '',
-                prNa: '$hubspot_deal_hs_object_id',
-                prDaTy: 'numerical',
-                en: 'user',
-                objTy: '',
-                gbty: 'raw_values'
-              }
-            ];
-          } else if (
-            queryOptions.group_analysis === 'salesforce_opportunities'
-          ) {
-            kpiQuery.gGBy = [
-              {
-                gr: '',
-                prNa: '$salesforce_opportunity_id',
-                prDaTy: 'numerical',
-                en: 'user',
-                objTy: '',
-                gbty: 'raw_values'
-              }
-            ];
-          }
-          query.query.analyze_type = queryOptions.group_analysis;
+        } else {
           query.query.kpi_query_group = kpiQuery;
         }
 
@@ -404,12 +411,25 @@ function CoreQuery({
           if (!isCompareQuery) {
             setLoading(true);
           }
-          const res = await getAttributionsData(
-            activeProject.id,
-            query,
-            getDashboardConfigs(isQuerySaved),
-            true
-          );
+
+          let res;
+
+          if (v1) {
+            res = await getAttributionsDataV1(
+              activeProject.id,
+              query,
+              getDashboardConfigs(isQuerySaved),
+              true
+            );
+          } else {
+            res = await getAttributionsData(
+              activeProject.id,
+              query,
+              getDashboardConfigs(isQuerySaved),
+              true
+            );
+          }
+
           if (isCompareQuery) {
             updateLocalReducer(
               COMPARISON_DATA_FETCHED,
@@ -567,7 +587,7 @@ function CoreQuery({
   }, []);
 
   const handleRunQuery = useCallback(() => {
-    runAttributionQuery(false);
+    runAttributionQuery(false, null, null, true);
     setQueryOpen(false);
   }, [queryType, runAttributionQuery]);
 

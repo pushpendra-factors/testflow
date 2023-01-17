@@ -14,6 +14,7 @@ import { Button, Popover, Radio, Row } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import TouchPointDimensions from './TouchPointDimensions';
 import FaSelect from 'Components/FaSelect';
+import FaSelect2 from 'Components/FaSelect2';
 
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';

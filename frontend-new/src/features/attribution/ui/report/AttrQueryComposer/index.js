@@ -152,30 +152,14 @@ const AttrQueryComposer = ({
   };
 
   const renderConversionBlock = () => {
-    if (
-      !queryOptions.group_analysis ||
-      queryOptions.group_analysis === 'users'
-    ) {
-      if (eventGoal) {
-        return (
-          <ConversionGoalBlock
-            eventGoal={eventGoal}
-            eventGoalChange={goalChange}
-            delEvent={goalDel}
-            showDerivedKPI={false}
-          ></ConversionGoalBlock>
-        );
-      } else {
-        return <ConversionGoalBlock></ConversionGoalBlock>;
-      }
-    } else {
+    
       const qs = queries.map((query, index) => {
         return (
           <ConversionGoalBlock
             eventGoal={query}
             eventGoalChange={(val) => setToQueries(val, index)}
             delEvent={() => delQuery(index)}
-            group_analysis={queryOptions.group_analysis}
+            group_analysis={'all'}
             showDerivedKPI={false}
           ></ConversionGoalBlock>
         );
@@ -185,14 +169,13 @@ const AttrQueryComposer = ({
         qs.push(
           <ConversionGoalBlock
             eventGoalChange={(val) => setToQueries(val, -1)}
-            group_analysis={queryOptions.group_analysis}
+            group_analysis={'all'}
             showDerivedKPI={false}
           ></ConversionGoalBlock>
         );
       }
 
       return qs;
-    }
   };
 
   const renderMarkTouchpointBlock = () => {
@@ -352,57 +335,18 @@ const AttrQueryComposer = ({
   };
 
   const renderFilterResults = () => {
-    return (
-      <GlobalFilterBlock
-        queries={queries}
-        queryOptions={queryOptions}
-        activeProject={activeProject}
-        selectedMainCategory={eventGoal[0]}
-        setQueryOptions={setQueryOptions}
-      />
-    )
-  }
+    return null;
 
-  const renderGroupSection = () => {
-    try {
-      return (
-        <div className={`flex items-center pt-6`}>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'normal'}
-            extraClass={`m-0 mr-3`}
-          >
-            Analyse
-          </Text>{' '}
-          <div className={`${styles.groupsection}`}>
-            <Tooltip title='Attribute at a User, Deal, or Opportunity level'>
-              <Button
-                className={`${styles.groupsection_button}`}
-                type='text'
-                onClick={triggerDropDown}
-              >
-                <div className={`flex items-center`}>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    weight={'bold'}
-                    extraClass={`m-0 mr-1`}
-                  >
-                    {PropTextFormat(queryOptions.group_analysis)}
-                  </Text>
-                  <SVG name='caretDown' />
-                </div>
-              </Button>
-            </Tooltip>
-            {selectGroup()}
-          </div>
-        </div>
-      );
-    } catch (err) {
-      console.log(err);
-    }
-  };
+    // return (
+    //   <GlobalFilterBlock
+    //     queries={queries}
+    //     queryOptions={queryOptions}
+    //     activeProject={activeProject}
+    //     selectedMainCategory={eventGoal[0]}
+    //     setQueryOptions={setQueryOptions}
+    //   />
+    // )
+  }
 
   try {
     return (
@@ -438,7 +382,7 @@ const AttrQueryComposer = ({
           </ComposerBlock>
         ) : null}
 
-      {eventGoal?.label?.length || queries.length ? (
+      {/* {eventGoal?.label?.length || queries.length ? (
           <ComposerBlock
             blockTitle={'Filter Results'}
             isOpen={criteriablockOpen}
@@ -448,7 +392,7 @@ const AttrQueryComposer = ({
           >
             {renderFilterResults()}
           </ComposerBlock>
-        ) : null}
+        ) : null} */}
 
 
         {eventGoal?.label?.length || queries.length ? footer() : null}

@@ -2663,6 +2663,12 @@ const ChevronRightSVG = ({ size = 24, extraClass, color }) => {
     </svg>
   );
 };
+
+const ChevronUpSVG = ({size = 24, extraClass, color}) => {
+  return(<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 16 16" fill={color} className={extraClass}>
+  <path d="M8.16895 4.82489C7.95801 4.61395 7.60645 4.61395 7.39551 4.82489L2.8252 9.37177C2.61426 9.60614 2.61426 9.9577 2.8252 10.1686L3.36426 10.7077C3.5752 10.9186 3.92676 10.9186 4.16113 10.7077L7.79395 7.09833L11.4033 10.7077C11.6377 10.9186 11.9893 10.9186 12.2002 10.7077L12.7393 10.1686C12.9502 9.9577 12.9502 9.60614 12.7393 9.37177L8.16895 4.82489Z" fill="#8692A3"/>
+  </svg>)
+}
 const ChevronDownSVG = ({ size = 24, extraClass, color }) => {
   return (
     <svg
@@ -5894,6 +5900,7 @@ export {
   ArrowLiftSVG,
   ArrowDownSVG,
   ChevronRightSVG,
+  ChevronUpSVG,
   ChevronDownSVG,
   DropoffSVG,
   StackedareachartSVG,

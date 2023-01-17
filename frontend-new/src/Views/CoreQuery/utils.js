@@ -811,6 +811,52 @@ export const getKPIQuery = (
   return query;
 };
 
+export const getKPIQueryAttributionV1 = (
+  queries,
+  dateRange,
+  groupBy,
+  queryOptions
+  // globalFilters = []
+) => {
+  const kpiQueries = [];
+  queries.forEach((que) => {
+    const kpiQuery = {};
+    kpiQuery.cl = QUERY_TYPE_KPI?.toLocaleLowerCase();
+    const period = {};
+    if (dateRange?.from && dateRange?.to) {
+      period.from = MomentTz(dateRange.from).startOf('day').utc().unix();
+      period.to = MomentTz(dateRange.to).endOf('day').utc().unix();
+      period.frequency = dateRange.frequency;
+    } else {
+      period.from = MomentTz().startOf('week').utc().unix();
+      period.to =
+        MomentTz().format('dddd') !== 'Sunday'
+          ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+          : MomentTz().utc().unix();
+      period.frequency = dateRange.frequency;
+    }
+
+    const eventGrpBy = [...groupBy.event];
+    kpiQuery.qG = getKPIqueryGroup([que], eventGrpBy, period);
+    const GlobalGrpBy = [...groupBy.global];
+    kpiQuery.gGBy = getGroupByWithPropertiesKPI(
+      GlobalGrpBy,
+      null,
+      queries[0]?.category
+    );
+
+    kpiQuery.gFil = getEventsWithPropertiesKPI(
+      queryOptions?.globalFilters,
+      queries[0]?.category
+    );
+
+    kpiQueries.push(kpiQuery);
+
+  });
+
+  return kpiQueries;
+};
+
 export const getSessionsQuery = ({ period }) => {
   return {
     cl: QUERY_TYPE_EVENT,

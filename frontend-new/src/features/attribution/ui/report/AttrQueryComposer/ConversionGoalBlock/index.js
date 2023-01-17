@@ -52,8 +52,13 @@ function ConversionGoalBlock({
   }, [userProperties, eventProperties, group_analysis]);
 
   useEffect(() => {
-    if (!showDerivedKPI && !KPI_config_without_derived_kpi)
+    if (!showDerivedKPI && !KPI_config_without_derived_kpi) {
       fetchKPIConfigWithoutDerivedKPI(activeProject.id);
+    }
+
+    if(KPI_config_without_derived_kpi) {
+      getKpiGroupListAll()
+    }
   }, [activeProject, showDerivedKPI, KPI_config_without_derived_kpi]);
 
   const setEventPropsForUserGroup = () => {
@@ -348,11 +353,34 @@ function ConversionGoalBlock({
     );
   };
 
+  const getKpiGroupListAll = () => {
+    const filterList = ['hubspot_deals', 'salesforce_opportunities', 'form_submission']
+    let KPIlist = showDerivedKPI
+      ? KPI_config
+      : KPI_config_without_derived_kpi || [];
+    let selGroup = KPIlist.find((item) => {
+      return filterList.includes(item?.display_category);
+    });
+
+    const group = ((selGroup) => {
+      return getNormalizedKpi({ kpi: selGroup });
+    })(selGroup);
+    return [group];
+  };
+
+
+  const getGroupedProps = () => {
+    if(!group_analysis || group_analysis === 'users') return eventNameOptions;
+    if(group_analysis === 'all') {
+      return getKpiGroupListAll();
+    }
+    else {
+      return getKpiGroupList(group_analysis);
+    }
+  }
+
   const selectEvents = () => {
-    const groupedProps =
-      !group_analysis || group_analysis === 'users'
-        ? eventNameOptions
-        : getKpiGroupList(group_analysis);
+    const groupedProps = getGroupedProps();
     return (
       <div className={styles.block__event_selector}>
         {selectVisible ? (
