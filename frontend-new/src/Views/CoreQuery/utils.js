@@ -811,6 +811,25 @@ export const getKPIQuery = (
   return query;
 };
 
+const mapQueriesByGroup = (queries) => {
+  const user_kpis = ['form_submission'];
+  const group = {
+    'user_kpi': [],
+    'hubspot_deals': [],
+    'salesforce_opportunities': []
+  };
+  queries.forEach((query) => {
+    if(user_kpis.includes(query.group)) {
+      group['user_kpi'].push(query);
+    } else {
+      group[query.group].push(query);
+    }
+    return group;
+  })
+
+  return group;
+}
+
 export const getKPIQueryAttributionV1 = (
   queries,
   dateRange,
@@ -818,12 +837,11 @@ export const getKPIQueryAttributionV1 = (
   queryOptions
   // globalFilters = []
 ) => {
+  const kpiQueriesByGroup = mapQueriesByGroup(queries);
   const kpiQueries = [];
-  queries.forEach((que) => {
-    const kpiQuery = {};
-    kpiQuery.cl = QUERY_TYPE_KPI?.toLocaleLowerCase();
-    const period = {};
-    if (dateRange?.from && dateRange?.to) {
+
+  const period = {};
+  if (dateRange?.from && dateRange?.to) {
       period.from = MomentTz(dateRange.from).startOf('day').utc().unix();
       period.to = MomentTz(dateRange.to).endOf('day').utc().unix();
       period.frequency = dateRange.frequency;
@@ -834,24 +852,34 @@ export const getKPIQueryAttributionV1 = (
           ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
           : MomentTz().utc().unix();
       period.frequency = dateRange.frequency;
-    }
-
-    const eventGrpBy = [...groupBy.event];
-    kpiQuery.qG = getKPIqueryGroup([que], eventGrpBy, period);
+  }
+    
+  Object.keys(kpiQueriesByGroup).forEach((groupKey) => {
+    const kpiQuery = {
+      kpi_query_group: [],
+      analyze_type: ''
+    };
     const GlobalGrpBy = [...groupBy.global];
-    kpiQuery.gGBy = getGroupByWithPropertiesKPI(
-      GlobalGrpBy,
-      null,
-      queries[0]?.category
-    );
-
-    kpiQuery.gFil = getEventsWithPropertiesKPI(
-      queryOptions?.globalFilters,
-      queries[0]?.category
-    );
-
+    const eventGrpBy = [...groupBy.event];
+    
+    kpiQueriesByGroup[groupKey].forEach((que) => {
+      kpiQuery.kpi_query_group.push({
+        cl: QUERY_TYPE_KPI?.toLocaleLowerCase(),
+        qG: getKPIqueryGroup([que], eventGrpBy, period),
+        gGBy: getGroupByWithPropertiesKPI(
+            GlobalGrpBy,
+            null,
+            que[0]?.category
+          ),
+        gFil: getEventsWithPropertiesKPI(
+            queryOptions?.globalFilters,
+            que[0]?.category
+          ),
+        for: ""
+      });
+    })
+    kpiQuery.analyze_type = groupKey;
     kpiQueries.push(kpiQuery);
-
   });
 
   return kpiQueries;

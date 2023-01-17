@@ -6,8 +6,6 @@ import { SVG, Text } from 'Components/factorsComponents';
 import ConversionGoalBlock from './ConversionGoalBlock';
 import FaDatepicker from 'Components/FaDatepicker';
 import ComposerBlock from 'Components/QueryCommons/ComposerBlock';
-import GlobalFilterBlock from 'Components/KPIComposer/GlobalFilter/GlobalFilterBlock';
-import { PropTextFormat } from 'Utils/dataFormatter';
 import { INITIALIZE_GROUPBY } from 'Reducers/coreQuery/actions';
 import FaSelect from 'Components/FaSelect';
 
@@ -57,10 +55,7 @@ const AttrQueryComposer = ({
 }) => {
   const [linkEvExpansion, setLinkEvExpansion] = useState(true);
   const [convGblockOpen, setConvGblockOpen] = useState(true);
-  const [tchPointblockOpen, setTchPointblockOpen] = useState(true);
   const [criteriablockOpen, setCriteriablockOpen] = useState(true);
-  const [filterResultsOpen, setFilterResultsOpen] = useState(true);
-  const [isGroupDDVisible, setGroupDDVisible] = useState(false);
 
   const { attrQueries } = useSelector((state) => state.attributionDashboard);
 
@@ -68,14 +63,6 @@ const AttrQueryComposer = ({
 
   const dispatch = useDispatch();
 
-  const enabledGroups = () => {
-    let groups = [
-      ['Users', 'users'],
-      ['Hubspot Deals', 'hubspot_deals'],
-      ['Salesforce Opportunity', 'salesforce_opportunities']
-    ];
-    return groups;
-  };
   useEffect(() => {
     if (activeProject && activeProject.id) {
       getCampaignConfigData(activeProject.id, 'all_ads');
@@ -198,29 +185,6 @@ const AttrQueryComposer = ({
     );
   };
 
-  const renderLinkedEvents = () => {
-    const linkEventsList = [];
-    if (linkedEvents && linkedEvents.length) {
-      linkedEvents.forEach((ev, index) => {
-        linkEventsList.push(
-          <LinkedEventsBlock
-            linkEvent={ev}
-            linkEventChange={(ev) => linkEventChange(ev, index)}
-            delLinkEvent={() => linkEventDel(index)}
-          ></LinkedEventsBlock>
-        );
-      });
-    }
-
-    linkEventsList.push(
-      <LinkedEventsBlock
-        linkEventChange={(ev) => linkEventChange(ev, -1)}
-      ></LinkedEventsBlock>
-    );
-
-    return linkEventsList;
-  };
-
   const toggleLinkEvExpansion = () => {
     if (models.length > 1) return null;
     setLinkEvExpansion(!linkEvExpansion);
@@ -310,44 +274,6 @@ const AttrQueryComposer = ({
     setQueryOptions(opts);
   };
 
-  const onGroupSelect = (val) => {
-    setGroupAnalysis(val);
-    setGroupDDVisible(false);
-  };
-
-  const selectGroup = () => {
-    return (
-      <div className={`${styles.groupsection_dropdown}`}>
-        {isGroupDDVisible ? (
-          <FaSelect
-            extraClass={`${styles.groupsection_dropdown_menu}`}
-            options={enabledGroups()}
-            onClickOutside={() => setGroupDDVisible(false)}
-            optionClick={(val) => onGroupSelect(val[1])}
-          ></FaSelect>
-        ) : null}
-      </div>
-    );
-  };
-
-  const triggerDropDown = () => {
-    setGroupDDVisible(true);
-  };
-
-  const renderFilterResults = () => {
-    return null;
-
-    // return (
-    //   <GlobalFilterBlock
-    //     queries={queries}
-    //     queryOptions={queryOptions}
-    //     activeProject={activeProject}
-    //     selectedMainCategory={eventGoal[0]}
-    //     setQueryOptions={setQueryOptions}
-    //   />
-    // )
-  }
-
   try {
     return (
       <div className={`${styles.composer}`}>
@@ -381,18 +307,6 @@ const AttrQueryComposer = ({
             {renderAttributionOptions()}
           </ComposerBlock>
         ) : null}
-
-      {/* {eventGoal?.label?.length || queries.length ? (
-          <ComposerBlock
-            blockTitle={'Filter Results'}
-            isOpen={criteriablockOpen}
-            showIcon={true}
-            onClick={() => setFilterResultsOpen(!filterResultsOpen)}
-            extraClass={`no-padding-l no-padding-r`}
-          >
-            {renderFilterResults()}
-          </ComposerBlock>
-        ) : null} */}
 
 
         {eventGoal?.label?.length || queries.length ? footer() : null}
