@@ -2433,7 +2433,7 @@ func IsEventTriggerEnabled() bool {
 func IsProjectIDEventTriggerEnabledProjectID(id int64) bool {
 	list := GetTokensFromStringListAsUint64(configuration.EventTriggerEnabledProjectIDs)
 	for _, i := range list {
-		if list[i] == id {
+		if i == id {
 			return true
 		}
 	}

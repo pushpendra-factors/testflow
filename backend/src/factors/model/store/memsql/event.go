@@ -454,9 +454,8 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 				}
 			}
 		}
+		log.Info("Control past EventTrigger block: ", time.Since(t1))
 	}
-	log.Info("Control past EventTrigger block: ", time.Since(t1))
-
 	return event, http.StatusCreated
 }
 
