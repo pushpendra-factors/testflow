@@ -131,8 +131,7 @@ function GroupedChart({
   return (
     <div
       className={cx('w-full flex-1', {
-        'p-2 flex items-center': chartType !== CHART_TYPE_TABLE,
-        'overflow-scroll': chartType === CHART_TYPE_TABLE
+        'px-2 flex items-center': chartType !== CHART_TYPE_TABLE
       })}
     >
       {chartContent}
