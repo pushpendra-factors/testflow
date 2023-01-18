@@ -68,7 +68,7 @@ type Model interface {
 		query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 		logCtx log.Entry) (map[string]model.UserInfo, []model.UserEventInfo, map[string]int64, error)
 	PullConvertedUsers(projectID int64, query *model.AttributionQuery, conversionFrom int64, conversionTo int64,
-		eventNameToIDList map[string][]interface{}, kpiData map[string]model.KPIInfo,
+		eventNameToIDList map[string][]interface{},
 		debugQueryKey string, enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
 		logCtx *log.Entry) (map[string]int64, []model.UserEventInfo, map[string]model.KPIInfo, []string, error)
 	GetAttributionData(projectID int64, query *model.AttributionQuery, sessions map[string]map[string]model.UserSessionData,

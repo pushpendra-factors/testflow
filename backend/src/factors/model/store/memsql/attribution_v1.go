@@ -91,7 +91,7 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 
 	logCtx.Info("Done PullCustomDimensionData")
 
-	sessionEventNameID, eventNameToIDList, err := store.getEventInformationV1(projectID, query, *logCtx)
+	sessionEventNameID, _, err := store.getEventInformationV1(projectID, query, *logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -110,17 +110,8 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	var usersIDsToAttribute []string
 	var kpiData map[string]model.KPIInfo
 
-	// Default conversion for AttributionQueryTypeConversionBased.
-	conversionFrom := query.From
-	conversionTo := query.To
-	// Extend the campaign window for engagement based attribution.
-	if query.QueryType == model.AttributionQueryTypeEngagementBased {
-		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
-	}
-
-	coalUserIdConversionTimestamp, userInfo, kpiData, usersIDsToAttribute, err3 := store.PullConvertedUsersV1(projectID, query, conversionFrom, conversionTo, eventNameToIDList,
-		kpiData, debugQueryKey, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
+	coalUserIdConversionTimestamp, userInfo, kpiData, usersIDsToAttribute, err3 := store.PullConvertedUsersV1(projectID, query, debugQueryKey,
+		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
 
 	if err3 != nil {
 		return nil, err3
@@ -341,13 +332,14 @@ func (store *MemSQL) PullSessionsOfConvertedUsersV1(projectID int64, query *mode
 }
 
 func (store *MemSQL) PullConvertedUsers(projectID int64, query *model.AttributionQuery, conversionFrom int64, conversionTo int64,
-	eventNameToIDList map[string][]interface{}, kpiData map[string]model.KPIInfo,
+	eventNameToIDList map[string][]interface{},
 	debugQueryKey string, enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
 	logCtx *log.Entry) (map[string]int64, []model.UserEventInfo, map[string]model.KPIInfo, []string, error) {
 
 	var coalUserIdConversionTimestamp map[string]int64
 	var usersToBeAttributed []model.UserEventInfo
 	var usersIDsToAttribute []string
+	kpiData := make(map[string]model.KPIInfo)
 	var err error
 
 	if query.AnalyzeType == model.AnalyzeTypeUsers {
@@ -427,8 +419,7 @@ func (store *MemSQL) PullConvertedUsers(projectID int64, query *model.Attributio
 }
 
 //PullConvertedUsersV1 runs kpi group query and returns converted users in the form of kpi data
-func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.AttributionQueryV1, conversionFrom int64, conversionTo int64,
-	eventNameToIDList map[string][]interface{}, kpiData map[string]model.KPIInfo,
+func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.AttributionQueryV1,
 	debugQueryKey string, enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
 	logCtx *log.Entry) (map[string]int64, []model.UserEventInfo, map[string]model.KPIInfo, []string, error) {
 
@@ -440,6 +431,7 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 	headerPositionMap := make(map[string]int64)
 	var defaultHeader []string
 	headerCount := int64(0)
+	kpiData := make(map[string]model.KPIInfo)
 
 	for index, individualKPIQuery := range query.KPIQueries {
 
@@ -519,12 +511,11 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 		// combining data with same kpiId
 		for kpiId, val := range kpiDataForGroupQuery {
 			if value, ok := kpiData[kpiId]; ok {
-				value.KpiValuesList = append(kpiData[kpiId].KpiValuesList, val.KpiValuesList...)
+				value.KpiValuesList = append(value.KpiValuesList, val.KpiValuesList...)
 				kpiData[kpiId] = value
 			}
 			kpiData[kpiId] = val
 		}
-
 	}
 
 	if C.GetAttributionDebug() == 1 {
