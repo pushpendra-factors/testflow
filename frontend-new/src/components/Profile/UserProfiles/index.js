@@ -403,7 +403,9 @@ function UserProfiles({
         (obj) => obj.prop_name === option.prop_name
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListUserProps(checkListProps);
+      setCheckListUserProps(
+        checkListProps.sort((a, b) => b.enabled - a.enabled)
+      );
     } else {
       notification.error({
         message: 'Error',
