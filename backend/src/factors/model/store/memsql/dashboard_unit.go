@@ -306,6 +306,45 @@ func (store *MemSQL) GetDashboardUnitNamesByProjectIdTypeAndName(projectID int64
 	return rDashboardUnitNames, http.StatusFound
 }
 
+func (store *MemSQL) GetDashboardUnitNamesByProjectIdTypeAndPropertyMappingName(projectID int64, reqID, nameOfPropertyMappings string) ([]string, int) {
+	rDashboardUnitNames := make([]string, 0)
+	dashboardUnits, statusCode := store.GetDashboardUnitsForProjectID(projectID)
+	logCtx := log.WithField("reqID", reqID).WithField("projectID", projectID)
+	if statusCode != http.StatusFound {
+		logCtx.Warn("Failed in getting dashboardUnits - GetDashboardUnitNamesByProjectIdTypeAndName")
+		return rDashboardUnitNames, statusCode
+	}
+	for _, dashboardUnit := range dashboardUnits {
+		queryClass, queryInfo, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+		if errMsg != "" && !strings.Contains(errMsg, model.QueryNotFoundError) {
+			logCtx.WithField("errMsg", errMsg).WithField("dashboardUnit", dashboardUnit).Warn("Error during decode of Dashboard unit - GetDashboardUnitNamesByProjectIdTypeAndName")
+			return rDashboardUnitNames, http.StatusInternalServerError
+		} else if strings.Contains(errMsg, model.QueryNotFoundError) {
+			continue
+		}
+
+		// TODO: Are other query classes also required?
+		if queryClass == model.QueryClassKPI {
+			// Decode query from jsonb to KPIQueryGroup struct
+			var query model.KPIQueryGroup
+			if err := U.DecodePostgresJsonbToStructType(&queryInfo.Query, &query); err != nil {
+				errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
+				logCtx.WithField("dashboardUnit", dashboardUnit).WithField("errMsg", errMsg).WithField("err", err).Warn("GetDashboardUnitNamesByProjectIdTypeAndName")
+				return rDashboardUnitNames, http.StatusInternalServerError
+			}
+
+			// Check if property mapping name is present in Global Filters and Group By of KPI Query
+			if query.CheckIfPropertyMappingNameIsPresent(nameOfPropertyMappings) {
+				rDashboardUnitNames = append(rDashboardUnitNames, queryInfo.Title)
+			}
+		}
+	}
+	if len(rDashboardUnitNames) == 0 {
+		return rDashboardUnitNames, http.StatusNotFound
+	}
+	return rDashboardUnitNames, http.StatusFound
+}
+
 func (store *MemSQL) DeleteDashboardUnit(projectId int64, agentUUID string, dashboardId int64, id int64) int {
 	logFields := log.Fields{
 		"project_id":   projectId,

@@ -1251,7 +1251,6 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		assert.Equal(t, result[0].Rows[0][1], float64(2))
 
 	})
-
 }
 
 func TestKPIChannelsWithSmartProperties(t *testing.T) {

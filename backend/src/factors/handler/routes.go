@@ -336,7 +336,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/explainV2/job", responseWrapper(V1.CreateExplainV2EntityHandler))
 	authRouteGroup.DELETE("/:project_id/v1/explainV2/:id", V1.DeleteSavedExplainV2EntityHandler)
 
-
+	// property mapping
+	authRouteGroup.POST("/:project_id/kpi/property_mappings", responseWrapper(V1.CreatePropertyMapping))
+	authRouteGroup.GET("/:project_id/kpi/property_mappings", responseWrapper(V1.GetPropertyMappings))
+	authRouteGroup.DELETE("/:project_id/kpi/property_mappings/:id", responseWrapper(V1.DeletePropertyMapping))
+	authRouteGroup.POST("/:project_id/kpi/property_mappings/commom_properties", responseWrapper(V1.GetCommonPropertyMappings))
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

@@ -1399,6 +1399,15 @@ func FormatProperty(property string) string {
 	return property
 }
 
+func CreatePropertyNameFromDisplayName(displayName string) string {
+	displaySplit := strings.Split(displayName, " ")
+	propertyName := strings.ToLower(displaySplit[0])
+	for _, splitString := range displaySplit[1:] {
+		propertyName = fmt.Sprintf("%v_%v", propertyName, strings.ToLower(splitString))
+	}
+	return propertyName
+}
+
 func CreateVirtualDisplayName(actualName string) string {
 	displayName := ""
 	if strings.HasPrefix(actualName, "$") {
