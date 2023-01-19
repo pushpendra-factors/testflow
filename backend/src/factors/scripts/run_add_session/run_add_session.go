@@ -68,6 +68,7 @@ func main() {
 
 	enableUserLevelEventPullForAddSessionByProjectID := flag.String("enable_user_level_pull", "", "List of projectIds where user level event pull is enabled for AddSession job")
 	eventsPullMaxLimit := flag.Int("max_limit_for_events_pull", 50000, "Maximum limit for pulling events in V2") // Default is 50000
+	batchRangeInSeconds := flag.Int64("batch_range_in_seconds", 0, "Batch size for Add Session job")
 
 	flag.Parse()
 
@@ -161,13 +162,49 @@ func main() {
 		maxLookbackTimestamp = util.UnixTimeBeforeDuration(time.Hour * time.Duration(*maxLookbackHours))
 	}
 
-	statusMap, err := session.AddSession(allowedProjectIds, maxLookbackTimestamp,
-		*startTimestamp, *endTimestamp, *bufferTimeBeforeCreateSessionInMins,
-		*numProjectRoutines, *numUserRoutines)
+	overAllStatusMap := make(map[int64]session.Status, 0)
+	var overAllError error
+
+	if *startTimestamp > 0 && *endTimestamp > 0 && *batchRangeInSeconds > 0 { // New logic
+		batchedTimestamp := util.GetBatchRangeFromStartAndEndTimestamp(*startTimestamp, *endTimestamp, *batchRangeInSeconds)
+		for _, timeRange := range batchedTimestamp {
+			statusMap, err := session.AddSession(allowedProjectIds, maxLookbackTimestamp,
+				timeRange[0], timeRange[1], *bufferTimeBeforeCreateSessionInMins, *numProjectRoutines, *numUserRoutines)
+
+			if err != nil {
+				overAllError = err
+			}
+
+			for pid, status := range statusMap {
+				if _, exists := overAllStatusMap[pid]; !exists {
+					overAllStatusMap[pid] = status
+					continue
+				}
+
+				existingStatus := overAllStatusMap[pid]
+				if existingStatus.SeenFailure {
+					existingStatus.Status = session.StatusFailed
+					continue
+				}
+
+				if status.Status != session.StatusNotModified {
+					existingStatus.Status = status.Status
+				}
+
+				existingStatus.NoOfSessionsCreated += status.NoOfSessionsCreated
+				existingStatus.NoOfEventsProcessed += status.NoOfEventsProcessed
+				existingStatus.NoOfUserPropertiesUpdates += status.NoOfUserPropertiesUpdates
+				overAllStatusMap[pid] = existingStatus
+			}
+		}
+	} else { // Old logic
+		overAllStatusMap, overAllError = session.AddSession(allowedProjectIds, maxLookbackTimestamp,
+			*startTimestamp, *endTimestamp, *bufferTimeBeforeCreateSessionInMins,
+			*numProjectRoutines, *numUserRoutines)
+	}
 
 	modifiedStatusMap := make(map[int64]session.Status, 0)
-
-	for pid, status := range statusMap {
+	for pid, status := range overAllStatusMap {
 		if status.Status == session.StatusNotModified {
 			continue
 		}
@@ -178,9 +215,9 @@ func main() {
 		"new_session_status": modifiedStatusMap,
 	}
 
-	if err != nil {
-		C.PingHealthcheckForFailure(healthcheckPingID, err)
-		log.WithError(err).WithField("status", statusMap).Error("Seen failures while adding sessions.")
+	if overAllError != nil {
+		C.PingHealthcheckForFailure(healthcheckPingID, overAllError)
+		log.WithError(overAllError).WithField("status", overAllStatusMap).Error("Seen failures while adding sessions.")
 	} else {
 		C.PingHealthcheckForSuccess(healthcheckPingID, status)
 		log.WithField("no_of_projects", len(allowedProjectIds)).Info("Successfully added sessions.")

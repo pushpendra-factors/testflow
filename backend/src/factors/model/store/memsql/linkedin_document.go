@@ -582,7 +582,10 @@ func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64,
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
-	dataCurrency := store.GetDataCurrencyForLinkedin(projectID)
+	dataCurrency := ""
+	if(projectCurrency != ""){
+		dataCurrency = store.GetDataCurrencyForLinkedin(projectID)
+	}
 	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource,
 			limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)

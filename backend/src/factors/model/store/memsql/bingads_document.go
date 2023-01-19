@@ -278,7 +278,10 @@ func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID int64, 
 	}
 	// smart properties check
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
-	dataCurrency := store.GetDataCurrencyForBingAds(projectID)
+	dataCurrency := ""
+	if(projectCurrency != ""){
+		dataCurrency = store.GetDataCurrencyForBingAds(projectID)
+	}
 	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics, err = buildBingAdsQueryWithSmartProperty(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 		if err != nil {

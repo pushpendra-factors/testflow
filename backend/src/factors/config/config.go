@@ -287,9 +287,11 @@ type Configuration struct {
 
 type Services struct {
 	Db                   *gorm.DB
-	Db2                  *gorm.DB
 	DBContext            *context.Context
 	DBContextCancel      *context.CancelFunc
+	Db2                  *gorm.DB
+	DBContext2           *context.Context
+	DBContextCancel2     *context.CancelFunc
 	GeoLocation          *geoip2.Reader
 	Etcd                 *serviceEtcd.EtcdClient
 	Redis                *redis.Pool
@@ -735,10 +737,10 @@ func InitDBWithMaxIdleAndMaxOpenConn(config Configuration,
 	maxOpenConns, maxIdleConns int) error {
 	if UseMemSQLDatabaseStore() {
 		if IsDBConnectionPool2Enabled() {
-			return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQL2Info, maxOpenConns, maxIdleConns)
-		} else {
-			return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQLInfo, maxOpenConns, maxIdleConns)
+			InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQL2Info, maxOpenConns, maxIdleConns, true)
 		}
+
+		return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQLInfo, maxOpenConns, maxIdleConns, false)
 	}
 	return InitPostgresDBWithMaxIdleAndMaxOpenConn(config.DBInfo, maxOpenConns, maxIdleConns)
 }
@@ -884,7 +886,7 @@ func isValidMemSQLResourcePool(resourcePool string) bool {
 	return exists
 }
 
-func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleConns int) error {
+func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleConns int, isDb2 bool) error {
 	if services == nil {
 		services = &Services{}
 	}
@@ -945,10 +947,19 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	services.Db = memSQLDB
+	// initiates corresponding service.
+	if isDb2 {
+		services.Db2 = memSQLDB
+		services.DBContext2 = &ctx
+		services.DBContextCancel2 = &cancel
+	} else {
+		services.Db = memSQLDB
+		services.DBContext = &ctx
+		services.DBContextCancel = &cancel
+	}
+
 	configuration.DBInfo = dbConf
-	services.DBContext = &ctx
-	services.DBContextCancel = &cancel
+
 	return nil
 }
 
@@ -1021,8 +1032,13 @@ func KillDBQueriesOnExit() {
 		case <-c:
 			if GetServices().DBContext != nil && GetServices().DBContextCancel != nil {
 				(*GetServices().DBContextCancel)()
-				signal.Stop(c)
 			}
+
+			if GetServices().DBContext2 != nil && GetServices().DBContextCancel2 != nil {
+				(*GetServices().DBContextCancel2)()
+			}
+
+			signal.Stop(c)
 		}
 	}()
 }

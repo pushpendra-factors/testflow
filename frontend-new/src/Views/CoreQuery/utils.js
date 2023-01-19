@@ -38,6 +38,8 @@ import {
 
 export const initialState = INITIAL_STATE;
 
+const USER_KPIS = ['form_submission'];
+
 export const labelsObj = {
   [TOTAL_EVENTS_CRITERIA]: 'Event Count',
   [TOTAL_USERS_CRITERIA]: 'User Count',
@@ -818,6 +820,113 @@ export const getKPIQuery = (
   );
 
   return query;
+};
+
+const mapQueriesByGroup = (queries) => {
+  const group = {
+    user_kpi: [],
+    hubspot_deals: [],
+    salesforce_opportunities: []
+  };
+  queries.forEach((query) => {
+    if (USER_KPIS.includes(query.group)) {
+      group['user_kpi'].push(query);
+    } else {
+      group[query.group].push(query);
+    }
+    return group;
+  });
+
+  return group;
+};
+
+const getGroupByByGroup = (grp) => {
+  if (USER_KPIS.includes(grp)) {
+    return [
+      {
+        gr: '',
+        prNa: '$user_id',
+        prDaTy: 'numerical',
+        en: 'user',
+        objTy: '',
+        gbty: 'raw_values'
+      }
+    ];
+  } else if (grp === 'hubspot_deals') {
+    return [
+      {
+        gr: '',
+        prNa: '$hubspot_deal_hs_object_id',
+        prDaTy: 'numerical',
+        en: 'user',
+        objTy: '',
+        gbty: 'raw_values'
+      }
+    ];
+  } else if (grp === 'salesforce_opportunities') {
+    return [
+      {
+        gr: '',
+        prNa: '$salesforce_opportunity_id',
+        prDaTy: 'numerical',
+        en: 'user',
+        objTy: '',
+        gbty: 'raw_values'
+      }
+    ];
+  }
+};
+
+export const getKPIQueryAttributionV1 = (
+  queries,
+  dateRange,
+  groupBy,
+  queryOptions
+  // globalFilters = []
+) => {
+  const kpiQueriesByGroup = mapQueriesByGroup(queries);
+  const kpiQueries = [];
+
+  const period = {};
+  if (dateRange?.from && dateRange?.to) {
+
+      period.from = MomentTz(dateRange.from).startOf('day').utc().unix();
+      period.to = MomentTz(dateRange.to).endOf('day').utc().unix();
+      period.frequency = dateRange.frequency;
+    } else {
+      period.from = MomentTz().startOf('week').utc().unix();
+      period.to =
+        MomentTz().format('dddd') !== 'Sunday'
+          ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+          : MomentTz().utc().unix();
+      period.frequency = dateRange.frequency;
+  }
+    
+
+  Object.keys(kpiQueriesByGroup).forEach((groupKey) => {
+    const kpiQuery = {
+      kpi_query_group: [],
+      analyze_type: ''
+    };
+    const eventGrpBy = [...groupBy.event];
+
+    kpiQuery.kpi_query_group = {
+      cl: QUERY_TYPE_KPI?.toLocaleLowerCase(),
+      qG: getKPIqueryGroup(kpiQueriesByGroup[groupKey], eventGrpBy, period),
+      gGBy: getGroupByByGroup(kpiQueriesByGroup[groupKey].group),
+      gFil: getEventsWithPropertiesKPI(
+        queryOptions?.globalFilters,
+        kpiQueriesByGroup[groupKey][0]?.category
+      ),
+      for: ''
+    }
+    kpiQuery.analyze_type = groupKey;
+    if(kpiQueriesByGroup[groupKey].length) {
+      kpiQueries.push(kpiQuery);
+    }
+  });
+
+  return kpiQueries;
 };
 
 export const getSessionsQuery = ({ period }) => {

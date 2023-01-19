@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -1532,6 +1533,10 @@ func appendLimitByCondition(qStmnt string, groupProps []model.QueryGroupByProper
 		"group_by_timestamp": groupByTimestamp,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if len(groupProps) == 1 && !groupByTimestamp {
+		return fmt.Sprintf("%s LIMIT %d", qStmnt, model.ResultsLimit)
+	}
+
 	// Limited with max limit on SQL. Limited on server side.
 	return fmt.Sprintf("%s LIMIT %d", qStmnt, model.MaxResultsLimit)
 }
@@ -1940,7 +1945,15 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 		}
 	}
 	startExecTime := time.Now()
-	rows, err := tx.QueryContext(*C.GetServices().DBContext, stmnt, params...)
+
+	var dbContext *context.Context
+	if C.IsDBConnectionPool2Enabled() {
+		dbContext = C.GetServices().DBContext2
+	} else {
+		dbContext = C.GetServices().DBContext
+	}
+
+	rows, err := tx.QueryContext(*dbContext, stmnt, params...)
 	U.LogExecutionTimeWithQueryRequestID(startExecTime, reqID, &logFields)
 	if err != nil {
 		log.WithError(err).WithFields(logFields).Error("Failed to exec query with context.")

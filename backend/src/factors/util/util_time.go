@@ -3,9 +3,10 @@ package util
 import (
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Datetime related utility functions.
@@ -435,6 +436,21 @@ func GetQueryRangePresetLast30MinutesIn(timezoneString TimeZoneString) (int64, i
 	endTime := timeNow.Unix()
 	startTime := endTime - 30*60
 	return startTime, endTime, nil
+}
+
+func GetBatchRangeFromStartAndEndTimestamp(startTimestamp, endTimestamp, batchRangeInSeconds int64) [][]int64 {
+	batchedTimestamp := make([][]int64, 0, 0)
+	for i := startTimestamp; i < endTimestamp; {
+		nextTimestamp := i + batchRangeInSeconds
+		if nextTimestamp > endTimestamp {
+			nextTimestamp = endTimestamp
+		}
+
+		batchedTimestamp = append(batchedTimestamp, []int64{i, nextTimestamp})
+		i = nextTimestamp
+	}
+
+	return batchedTimestamp
 }
 
 func GetBeginningDayTimestampFromDateString(date string) (int64, error) {

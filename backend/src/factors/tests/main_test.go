@@ -29,6 +29,14 @@ func TestMain(m *testing.M) {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
+
+	enableDBConnectionPool2 := flag.Bool("enable_db_conn_pool2", false, "")
+	memSQLHost2 := flag.String("memsql_host_2", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort2 := flag.Int("memsql_port_2", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser2 := flag.String("memsql_user_2", C.MemSQLDefaultDBParams.User, "")
+	memSQLName2 := flag.String("memsql_name_2", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass2 := flag.String("memsql_pass_2", C.MemSQLDefaultDBParams.Password, "")
+
 	allowedCampaignEnrichmentByProjectID := flag.String("allowed_campaign_enrichment_by_project_id", "*", "Campaign enrichment by project_id.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -64,6 +72,13 @@ func TestMain(m *testing.M) {
 			User:     *memSQLUser,
 			Name:     *memSQLName,
 			Password: *memSQLPass,
+		},
+		MemSQL2Info: C.DBConf{
+			Host:     *memSQLHost2,
+			Port:     *memSQLPort2,
+			User:     *memSQLUser2,
+			Name:     *memSQLName2,
+			Password: *memSQLPass2,
 		},
 		PrimaryDatastore:            *primaryDatastore,
 		RedisHost:                   *redisHost,
@@ -117,6 +132,7 @@ func TestMain(m *testing.M) {
 		EnableUserLevelEventPullForAddSessionByProjectID:   "*",
 		EventsPullMaxLimit:                                 50000,
 		FormFillIdentificationAllowedProjects:              "*",
+		EnableDBConnectionPool2:                            *enableDBConnectionPool2,
 	}
 	C.InitConf(config)
 

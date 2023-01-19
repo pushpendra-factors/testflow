@@ -152,7 +152,7 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 
 	startComputeTime := time.Now()
 	groupPropsLen := len(query.GroupByProperties)
-	err = LimitQueryResult(result, groupPropsLen, query.GetGroupByTimestamp() != "")
+	err = LimitQueryResult(projectId, result, groupPropsLen, query.GetGroupByTimestamp() != "")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed processing query results for limiting.")
 		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -537,17 +537,17 @@ func (store *MemSQL) BuildInsightsQuery(projectId int64, query model.Query, enab
 	return "", nil, errors.New("invalid query")
 }
 
-func LimitQueryResult(result *model.QueryResult, groupPropsLen int, groupByTimestamp bool) error {
+func LimitQueryResult(projectID int64, result *model.QueryResult, groupPropsLen int, groupByTimestamp bool) error {
 	logFields := log.Fields{
 		"group_props_len": groupPropsLen,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if groupPropsLen > 0 && groupByTimestamp {
-		return limitGroupByTimestampResult(result, groupByTimestamp)
+		return limitGroupByTimestampResult(projectID, result, groupByTimestamp)
 	}
 
 	if groupPropsLen > 1 {
-		return limitMultiGroupByPropertiesResult(result, groupByTimestamp)
+		return limitMultiGroupByPropertiesResult(projectID, result, groupByTimestamp)
 	}
 
 	// Others limited on SQL Query.
@@ -557,7 +557,7 @@ func LimitQueryResult(result *model.QueryResult, groupPropsLen int, groupByTimes
 // Limits top results and makes sure same group key combination available on different
 // datetime, if exists on SQL result. Assumes result is sorted by count. Preserves all
 // datetime for the limited combination of group keys.
-func limitGroupByTimestampResult(result *model.QueryResult, groupByTimestamp bool) error {
+func limitGroupByTimestampResult(projectID int64, result *model.QueryResult, groupByTimestamp bool) error {
 	logFields := log.Fields{
 		"group_by_timestamp": groupByTimestamp,
 	}
@@ -578,7 +578,12 @@ func limitGroupByTimestampResult(result *model.QueryResult, groupByTimestamp boo
 
 		_, keyExists := keyLookup[key]
 		// Limits no.of keys to ResultsLimit.
-		if !keyExists && len(keyLookup) < model.MaxResultsLimit {
+		maxLimit := model.ResultsLimit
+		if C.IsKPILimitIncreaseAllowedForProject(projectID) {
+			maxLimit = model.MaxResultsLimit
+		}
+
+		if !keyExists && len(keyLookup) < maxLimit {
 			keyLookup[key] = true
 			keyExists = true
 		}
@@ -595,7 +600,7 @@ func limitGroupByTimestampResult(result *model.QueryResult, groupByTimestamp boo
 // Limits results by left and right keys. Assumes result is already
 // sorted by count and all group keys are used on SQL group by (makes all three group by
 // values together as unique). Limited set dimension = ResultLimit * ResultLimit.
-func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimestamp bool) error {
+func limitMultiGroupByPropertiesResult(projectID int64, result *model.QueryResult, groupByTimestamp bool) error {
 	logFields := log.Fields{
 		"group_by_timestamp": groupByTimestamp,
 	}
@@ -617,7 +622,12 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 
 		_, leftKeyExists := keyLookup[leftKey]
 		// Limits no.of left keys to ResultsLimit.
-		if !leftKeyExists && len(keyLookup) < model.MaxResultsLimit {
+		maxLimit := model.ResultsLimit
+		if C.IsKPILimitIncreaseAllowedForProject(projectID) {
+			maxLimit = model.MaxResultsLimit
+		}
+
+		if !leftKeyExists && len(keyLookup) < maxLimit {
 			keyLookup[leftKey] = make(map[interface{}]bool, 0)
 			leftKeyExists = true
 		}
@@ -626,7 +636,8 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 		if leftKeyExists {
 			// Limits no.of right keys to ResultsLimit.
 			_, rightKeyExits := keyLookup[leftKey][row[leftKeyEnd]]
-			if !rightKeyExits && len(keyLookup[leftKey]) < model.MaxResultsLimit {
+
+			if !rightKeyExits && len(keyLookup[leftKey]) < maxLimit {
 				keyLookup[leftKey][row[leftKeyEnd]] = true
 				rightKeyExists = true
 			}
@@ -878,12 +889,12 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		}
 		if stepGroupSelect != "" {
 			stepSelect = fmt.Sprintf(eventSelect, ", "+stepGroupSelect)
+			stepParams = append(stepParams, stepGroupParams...)
 			stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+stepGroupKeys)
 			stepGroupBy = joinWithComma(commonGroupBy, stepGroupKeys)
 			if q.EventsCondition == model.EventCondEachGivenEvent {
 				stepParams = append(stepParams, eventParam)
 			}
-			stepParams = append(stepParams, stepGroupParams...)
 			stepsToKeysMap[refStepName] = strings.Split(stepGroupKeys, ",")
 		} else {
 			stepSelect = fmt.Sprintf(eventSelect, "")
@@ -2151,8 +2162,6 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 		if enableFilterOpt {
 			addFilterFunc = addFilterEventsWithPropsQueryV2
 		}
-		log.WithField("stepSelect", stepSelect).WithField("stepParams", stepParams).WithField("qStmnt", qStmnt).
-			WithField("qParams", qParams).Warn("kark3")
 		err := addFilterFunc(projectID, qStmnt, qParams, ewp, q.From, q.To,
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy, q.GlobalUserProperties)
 		if err != nil {

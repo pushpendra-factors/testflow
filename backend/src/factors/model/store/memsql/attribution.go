@@ -124,7 +124,7 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	}
 
 	coalUserIdConversionTimestamp, userInfo, kpiData, usersIDsToAttribute, err3 := store.PullConvertedUsers(projectID, query, conversionFrom, conversionTo, eventNameToIDList,
-		kpiData, debugQueryKey, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
+		debugQueryKey, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
 
 	if query.AnalyzeType == model.AnalyzeTypeUserKPI || C.GetAttributionDebug() == 1 {
 		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
@@ -607,8 +607,6 @@ func (store *MemSQL) getAllThePages(projectId int64, sessionEventNameId string, 
 		if C.GetAttributionDebug() == 1 {
 			logCtx.Info("Attribution before ProcessEventRows")
 		}
-		defer U.CloseReadQuery(rows, tx)
-
 		processErr := model.ProcessEventRows(rows, query, reports, contentGroupNamesList, &attributedSessionsByUserId, &userIdsWithSession, logCtx, reqID)
 		U.CloseReadQuery(rows, tx)
 		if processErr != nil {

@@ -214,6 +214,21 @@ export const getAttributionsData = (
   return post(null, url, reqBody);
 };
 
+export const getAttributionsDataV1 = (
+  projectId,
+  reqBody,
+  dashboard,
+  isQuery = false
+) => {
+  let url;
+  if (!dashboard) {
+    url = `${host}projects/${projectId}/v1/attribution/query`;
+  } else {
+    url = `${host}projects/${projectId}/v1/attribution/query?refresh=${dashboard.refresh}&dashboard_id=${dashboard.id}&dashboard_unit_id=${dashboard.unit_id}&is_query=${isQuery}`;
+  }
+  return post(null, url, reqBody);
+};
+
 export const fetchCampaignConfig = (projectId, channel) => {
   const url = `${host}projects/${projectId}/v1/channels/config?channel=${channel}`;
   return get(null, url);

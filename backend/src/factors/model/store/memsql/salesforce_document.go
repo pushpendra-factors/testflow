@@ -266,10 +266,8 @@ func (store *MemSQL) IsExistSalesforceDocumentByIdsWithBatch(projectID int64, id
 	documentIDs := make(map[string]bool)
 	for i := range batchedIds {
 		docIDsMap, status := store.IsExistSalesforceDocumentByIds(projectID, batchedIds[i], docType)
-		if status != http.StatusFound && status == http.StatusNotFound {
+		if status != http.StatusFound && status != http.StatusNotFound {
 			return documentIDs, status
-		} else if status == http.StatusNotFound {
-			continue
 		}
 
 		for docID := range docIDsMap {
