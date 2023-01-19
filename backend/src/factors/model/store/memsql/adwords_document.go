@@ -1315,7 +1315,10 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, 
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
-	dataCurrency := store.GetDataCurrencyForAdwords(projectID)
+	dataCurrency := ""
+	if(projectCurrency != ""){
+		dataCurrency = store.GetDataCurrencyForAdwords(projectID)
+	}
 	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
