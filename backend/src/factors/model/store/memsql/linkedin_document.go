@@ -45,7 +45,7 @@ var objectAndPropertyToValueInLinkedinReportsMapping = map[string]string{
 var linkedinMetricsToAggregatesInReportsMapping = map[string]string{
 	"impressions": "SUM(JSON_EXTRACT_STRING(value, 'impressions'))",
 	"clicks":      "SUM(JSON_EXTRACT_STRING(value, 'clicks'))",
-	"spend":       "SUM(JSON_EXTRACT_STRING(value, 'costInLocalCurrency'))",
+	"spend":       "SUM(JSON_EXTRACT_STRING(value, 'costInLocalCurrency') * inr_value)",
 	"conversions": "SUM(JSON_EXTRACT_STRING(value, 'conversionValueInLocalCurrency'))",
 	// "cost_per_click": "average_cost",
 	// "conversion_rate": "conversion_rate"
@@ -572,7 +572,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64,
 	var selectKeys []string
 	var params []interface{}
 	logCtx := log.WithFields(logFields)
-	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID, *query, reqID)
+	transformedQuery, customerAccountID, projectCurrency, err := store.transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID, *query, reqID)
 	if err != nil && err.Error() == integrationNotAvailable {
 		logCtx.WithError(err).Info(model.LinkedinSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
@@ -582,9 +582,10 @@ func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64,
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
+	dataCurrency := store.GetDataCurrencyForLinkedin(projectID)
 	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource,
-			limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+			limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 		}
@@ -592,14 +593,14 @@ func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64,
 	}
 
 	sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryV1(transformedQuery, projectID, customerAccountID, fetchSource,
-		limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+		limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 	if err != nil {
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 	}
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
-func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID int64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
+func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID int64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -612,19 +613,44 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(pro
 	logCtx := log.WithFields(logFields)
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		return &model.ChannelQueryV1{}, "", errors.New("Project setting not found")
+		return &model.ChannelQueryV1{}, "", "", errors.New("Project setting not found")
 	}
 	customerAccountID := projectSetting.IntLinkedinAdAccount
 	if customerAccountID == "" || len(customerAccountID) == 0 {
-		return &model.ChannelQueryV1{}, "", errors.New(integrationNotAvailable)
+		return &model.ChannelQueryV1{}, "", "", errors.New(integrationNotAvailable)
 	}
 
 	query, err = convertFromRequestToLinkedinSpecificRepresentation(query)
 	if err != nil {
 		logCtx.Warn("Request failed in validation: ", err)
-		return &model.ChannelQueryV1{}, "", err
+		return &model.ChannelQueryV1{}, "", "", err
 	}
-	return &query, customerAccountID, nil
+	return &query, customerAccountID, projectSetting.ProjectCurrency, nil
+}
+
+
+func (store *MemSQL) GetDataCurrencyForLinkedin(projectId int64) string{
+	query := "select JSON_EXTRACT_STRING(value, 'currency') from linkedin_documents where project_id = ? and type = 7 limit 1"
+	db := C.GetServices().Db
+	
+
+	params := make([]interface{},0)
+	params = append(params, projectId)
+	rows, err := db.Raw(query, params).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get currency code.")
+	}
+	defer rows.Close()
+
+	var currency string
+	for rows.Next() {
+
+		if err := rows.Scan(&currency); err != nil {
+			log.WithError(err).Error("Failed to get currency details for linkedin")
+		}
+	}
+
+	return currency
 }
 
 func convertFromRequestToLinkedinSpecificRepresentation(query model.ChannelQueryV1) (model.ChannelQueryV1, error) {
@@ -702,7 +728,7 @@ func getLinkedinSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 }
 
 func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool,
-	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, error) {
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -716,11 +742,11 @@ func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 	lowestHierarchyLevel := getLowestHierarchyLevelForLinkedin(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinWithSmartPropertyReports(query, projectID, query.From, query.To, customerAccountID, LinkedinDocumentTypeAlias[lowestHierarchyReportLevel],
-		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 	return sql, params, selectKeys, selectMetrics, nil
 }
 func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool,
-	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, error) {
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{},dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -734,14 +760,14 @@ func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID int64, customer
 	lowestHierarchyLevel := getLowestHierarchyLevelForLinkedin(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinReports(query, projectID, query.From, query.To, customerAccountID, LinkedinDocumentTypeAlias[lowestHierarchyReportLevel],
-		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 	return sql, params, selectKeys, selectMetrics, nil
 }
 
 // Added case when statement for NULL value and empty value for group bys
 // Added case when statement for NULL value for smart properties. Didn't add for empty values as such case will not be present
 func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQueryV1, projectID int64, from, to int64, linkedinAccountIDs string, docType int,
-	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
+	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -830,6 +856,9 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 
 	fromStatement := getLinkedinFromStatementWithJoins(query.Filters, query.GroupBy)
 	finalParams := make([]interface{}, 0)
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
+	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
@@ -838,7 +867,13 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 		finalFilterStatement += " AND (" + whereConditionForGBT + ") "
 		finalParams = append(finalParams, whereParams...)
 	}
-	resultSQLStatement := selectQuery + fromStatement + finalFilterStatement
+	resultSQLStatement := ""
+	if((dataCurrency != "" && projectCurrency != "")) && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+		resultSQLStatement = selectQuery + fromStatement + currencyQuery + finalFilterStatement
+	} else {
+		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
+		resultSQLStatement = selectQuery + fromStatement + finalFilterStatement
+	}
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += " GROUP BY " + groupByStatement
 	}
@@ -866,7 +901,7 @@ func getLinkedinFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 
 // Added case when statement for NULL value and empty value for group bys
 func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID int64, from, to int64, linkedinAccountIDs string, docType int,
-	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
+	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -941,6 +976,9 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID i
 	}
 	finalFilterStatement := whereConditionForFilters
 	finalParams := make([]interface{}, 0)
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
+	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
@@ -950,7 +988,14 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID i
 		finalParams = append(finalParams, whereParams...)
 	}
 
-	resultSQLStatement := selectQuery + fromLinkedinDocuments + staticWhereStatementForLinkedin + finalFilterStatement
+	resultSQLStatement := ""
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+		resultSQLStatement = selectQuery + fromLinkedinDocuments + currencyQuery + staticWhereStatementForLinkedin + finalFilterStatement
+	} else {
+		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
+		resultSQLStatement = selectQuery + fromLinkedinDocuments + staticWhereStatementForLinkedin + finalFilterStatement
+	}
+
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
@@ -1295,10 +1340,39 @@ func (store *MemSQL) DeleteLinkedinIntegration(projectID int64) (int, error) {
 // Selecting VALUE, TIMESTAMP, TYPE from linkedin_documents and PROPERTIES, OBJECT_TYPE from smart_properties
 // Left join smart_properties filtered by project_id and source=linkedin
 // where linkedin_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
-//	 or linkedin_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+//	or linkedin_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
 // [make sure there aren't multiple smart_properties rows for a particular object,
 // or weekly insights for LinkedIn would show incorrect data.]
-func (store *MemSQL) PullLinkedInRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+func (store *MemSQL) PullLinkedInRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	rawQuery := fmt.Sprintf("SELECT linDocs.id, linDocs.value, linDocs.timestamp, linDocs.type, sp.properties FROM linkedin_documents linDocs "+
+		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND ((COALESCE(sp.object_type,1) = 1 AND sp.object_id = linDocs.campaign_group_id) OR (COALESCE(sp.object_type,2) = 2 AND sp.object_id = linDocs.campaign_id))"+
+		"WHERE linDocs.project_id = %d AND UNIX_TIMESTAMP(linDocs.created_at) BETWEEN %d AND %d "+
+		"LIMIT %d",
+		projectID, model.ChannelLinkedin, projectID, startTime, endTime, model.LinkedInPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
+}
+
+// PullLinkedInRows - Function to pull LinkedIn campaign data
+// Selecting VALUE, TIMESTAMP, TYPE from linkedin_documents and PROPERTIES, OBJECT_TYPE from smart_properties
+// Left join smart_properties filtered by project_id and source=linkedin
+// where linkedin_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
+//
+//	or linkedin_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+//
+// [make sure there aren't multiple smart_properties rows for a particular object,
+// or weekly insights for LinkedIn would show incorrect data.]
+func (store *MemSQL) PullLinkedInRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,

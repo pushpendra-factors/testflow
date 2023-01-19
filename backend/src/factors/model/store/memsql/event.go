@@ -437,6 +437,25 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 
 	model.SetCacheUserLastEvent(event.ProjectId, event.UserId,
 		&model.CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
+
+	t1 := time.Now()
+	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
+		log.Info("EventTriggerAlerts match function trigger point.")
+		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties)
+		if ErrCode == http.StatusFound && alerts != nil {
+			log.WithFields(log.Fields{"project_id": event.ProjectId,
+				"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
+
+			for _, alert := range *alerts {
+				success := store.CacheEventTriggerAlert(&alert, event.ProjectId, event.EventNameId, event.UserId)
+				if !success {
+					log.WithFields(log.Fields{"project_id": event.ProjectId,
+						"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
+				}
+			}
+		}
+		log.Info("Control past EventTrigger block: ", time.Since(t1))
+	}
 	return event, http.StatusCreated
 }
 
@@ -2220,7 +2239,28 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID int64, userID,
 }
 
 // PullEventRows - Function to pull events for factors model building sequentially.
-func (store *MemSQL) PullEventRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+func (store *MemSQL) PullEventRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
+		" events.properties, users.join_timestamp, events.user_properties, users.group_1_user_id, users.group_2_user_id, users.group_3_user_id, users.group_4_user_id FROM events "+
+		"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
+		"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
+		"WHERE events.project_id = %d AND UNIX_TIMESTAMP(events.created_at) BETWEEN  %d AND %d "+
+		"LIMIT %d",
+		projectID, projectID, startTime, endTime, model.EventsPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
+}
+
+// PullEventRows - Function to pull events for factors model building sequentially.
+func (store *MemSQL) PullEventRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,

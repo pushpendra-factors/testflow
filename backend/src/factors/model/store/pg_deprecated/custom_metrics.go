@@ -44,6 +44,22 @@ func (pg *Postgres) GetCustomMetricsByProjectId(projectID uint64) ([]model.Custo
 	return customMetrics, "", http.StatusFound
 }
 
+// Considering profileQueryType as of now.
+func (pg *Postgres) GetCustomMetricByProjectIdAndQueryType(projectID uint64, queryType int) ([]model.CustomMetric, string, int) {
+	logCtx := log.WithField("project_id", projectID)
+	db := C.GetServices().Db
+	if projectID == 0 {
+		return make([]model.CustomMetric, 0), "Invalid project ID for custom metric", http.StatusBadRequest
+	}
+	var customMetrics []model.CustomMetric
+	err := db.Where("project_id = ? AND type_of_query = ?", projectID, queryType).Find(&customMetrics).Error
+	if err != nil {
+		logCtx.WithError(err).WithField("projectID", projectID).Warn("Failed while retrieving custom metrics.")
+		return make([]model.CustomMetric, 0), err.Error(), http.StatusInternalServerError
+	}
+	return customMetrics, "", http.StatusFound
+}
+
 func (pg *Postgres) GetCustomMetricByProjectIdAndObjectType(projectID uint64, queryType int, objectType string) ([]model.CustomMetric, string, int) {
 	logCtx := log.WithField("projectID", projectID)
 	db := C.GetServices().Db

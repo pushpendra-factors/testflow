@@ -532,3 +532,54 @@ func IsANumericFeature(keyName string, valStats Level2CatRatioDist) bool {
 		return false
 	}
 }
+
+func getFloatValueFromInterface(inter interface{}) (float64, error) {
+	if inter == nil {
+		return 0, nil
+	}
+	switch val := inter.(type) {
+	case float64:
+		return val, nil
+	case string:
+		interFloat, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			return 0, err
+		}
+		return interFloat, nil
+	case int:
+		return float64(val), nil
+	}
+
+	return 0, fmt.Errorf("interface type unknown - cant convert to float")
+}
+
+func getStringValueFromInterface(inter interface{}) (string, error) {
+	if inter == nil {
+		return "", nil
+	}
+	switch val := inter.(type) {
+	case float64:
+		return fmt.Sprintf("%f", val), nil
+	case string:
+		return val, nil
+	case int:
+		return fmt.Sprintf("%d", val), nil
+	}
+	return "", fmt.Errorf("interface type unknown - cant convert to string")
+}
+
+func performOperation(operation string, val1 float64, val2 float64) (float64, error) {
+	var reqVal float64
+	if operation == "sum" {
+		reqVal = val1 + val2
+	} else if operation == "quotient" {
+		reqVal = val1 / val2
+	} else if operation == "product" {
+		reqVal = val1 * val2
+	} else if operation == "difference" {
+		reqVal = val1 - val2
+	} else {
+		return 0, fmt.Errorf("unknown operation : %s", operation)
+	}
+	return reqVal, nil
+}

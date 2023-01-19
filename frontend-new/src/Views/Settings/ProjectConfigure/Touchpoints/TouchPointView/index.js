@@ -12,31 +12,21 @@ import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import { fetchEventPropertyValues } from 'Reducers/coreQuery/services';
 import FaSelect from '../../../../../components/FaSelect';
 
-const RULE_TYPE_HS_CONTACT = 'hs_contact';
-const RULE_TYPE_HS_EMAILS = 'hs_emails';
-const RULE_TYPE_HS_FORM_SUBMISSIONS = 'hs_form_submissions';
-
-const Extra_PROP_SHOW_OPTIONS = [
-  ['Campaign Id', null, 'campaign_id'],
-  ['Adgroup', null, 'adgroup'],
-  ['Adgroup ID', null, 'adgroup_id'],
-  ['Page URL', null, 'page_url']
-];
-
-const SEARCHSOURCE = {
-  source: '',
-  campaign: '',
-  channel: '',
-  campaign_id: '',
-  adgroup: '',
-  adgroup_id: '',
-  page_url: ''
-};
-
 import {
   getFiltersWithoutOrProperty,
   getStateFromFilters
 } from '../../../../../Views/CoreQuery/utils';
+
+import {
+  RULE_TYPE_HS_CONTACT,
+  RULE_TYPE_HS_CALLS,
+  RULE_TYPE_HS_EMAILS,
+  RULE_TYPE_HS_FORM_SUBMISSIONS,
+  RULE_TYPE_HS_LISTS,
+  RULE_TYPE_HS_MEETINGS,
+  SEARCHSOURCE,
+  Extra_PROP_SHOW_OPTIONS
+} from '../utils';
 
 const TouchpointView = ({
   activeProject,
@@ -55,15 +45,13 @@ const TouchpointView = ({
 
   const [tchRuleType, setTchRuleType] = useState(RULE_TYPE_HS_CONTACT);
 
-  const [timestampRef, setTimestampRefState] =
-    tchType === '2'
-      ? useState('LAST_MODIFIED_TIME_REF')
-      : useState('campaign_member_created_date');
+  const [timestampRef, setTimestampRefState] = useState(() =>
+    tchType === '2' ? 'LAST_MODIFIED_TIME_REF' : 'campaign_member_created_date'
+  );
   //touch_point_time_ref
-  const [touchPointPropRef, setTouchPointPropRef] =
-    tchType === '2'
-      ? useState('LAST_MODIFIED_TIME_REF')
-      : useState('campaign_member_created_date');
+  const [touchPointPropRef, setTouchPointPropRef] = useState(() =>
+    tchType === '2' ? 'LAST_MODIFIED_TIME_REF' : 'campaign_member_created_date'
+  );
   const [timestampPropertyRef, setTimestampPropRef] = useState(false);
   const [dateTypeDD, setDateTypeDD] = useState(false);
   const [dateTypeProps, setDateTypeProps] = useState([]);
@@ -118,7 +106,7 @@ const TouchpointView = ({
         setTimestampPropRef(false);
         setTouchPointPropRef('LAST_MODIFIED_TIME_REF');
       } else {
-        setTimestampRefState(``);
+        setTimestampRefState(rule.touch_point_time_ref);
         setTouchPointPropRef(rule.touch_point_time_ref);
         setTchRuleType(rule.rule_type);
         setTimestampPropRef(true);
@@ -187,6 +175,12 @@ const TouchpointView = ({
       return '$hubspot_contact_updated';
     } else if (tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
       return '$hubspot_form_submission';
+    } else if (tchRuleType === RULE_TYPE_HS_CALLS) {
+      return '$hubspot_engagement_call_updated';
+    } else if (tchRuleType === RULE_TYPE_HS_MEETINGS) {
+      return '$hubspot_engagement_meeting_updated';
+    } else if (tchRuleType === RULE_TYPE_HS_LISTS) {
+      return '$hubspot_contact_list';
     }
   };
 
@@ -209,7 +203,7 @@ const TouchpointView = ({
               eventProps.push(prop);
             }
           })
-        : null;
+        : (() => {})();
       tchRuleType !== RULE_TYPE_HS_FORM_SUBMISSIONS &&
         userProperties.forEach((prop) => {
           if (startsWith?.length ? prop[1]?.startsWith(startsWith) : true) {
@@ -223,7 +217,7 @@ const TouchpointView = ({
               eventProps.push(prop);
             }
           })
-        : null;
+        : (() => {})();
       userProperties.forEach((prop) => {
         if (prop[1]?.startsWith('$salesforce_campaign')) {
           tchUserProps.push(prop);
@@ -270,10 +264,6 @@ const TouchpointView = ({
     const filtrs = [...newFilterStates];
     filtrs.splice(index, 1);
     setNewFilterStates(filtrs);
-  };
-
-  const addFilter = () => {
-    console.log('Added');
   };
 
   const renderFilters = () => {
@@ -375,7 +365,7 @@ const TouchpointView = ({
     let isReady = true;
     const propKeys = Object.keys(propertyMap);
     for (let i = 0; i < propKeys.length; i++) {
-      propertyMap[propKeys[i]]['va'] ? null : (isReady = false);
+      propertyMap[propKeys[i]]['va'] ? (() => {})() : (isReady = false);
       if (!isReady) {
         break;
       }
@@ -424,6 +414,43 @@ const TouchpointView = ({
           defaultValue={`$timestamp`}
         >
           <Radio value={`$timestamp`}>Form submission timestamp</Radio>
+        </Radio.Group>
+      );
+    } else if (tchRuleType === RULE_TYPE_HS_MEETINGS) {
+      return (
+        <Radio.Group
+          onChange={() => setTimestampRefEmail('$hubspot_engagement_timestamp')}
+          value={timestampRef}
+          defaultValue={`$hubspot_engagement_timestamp`}
+        >
+          <Radio value={`$hubspot_engagement_timestamp`}>
+            Meeting Done Timestamp
+          </Radio>
+        </Radio.Group>
+      );
+    } else if (tchRuleType === RULE_TYPE_HS_CALLS) {
+      return (
+        <Radio.Group
+          onChange={() => setTimestampRefEmail('$hubspot_engagement_timestamp')}
+          value={timestampRef}
+          defaultValue={`$hubspot_engagement_timestamp`}
+        >
+          <Radio value={`$hubspot_engagement_timestamp`}>Call timestamp</Radio>
+        </Radio.Group>
+      );
+    } else if (tchRuleType === RULE_TYPE_HS_LISTS) {
+      return (
+        <Radio.Group
+          onChange={(val) => setTimestampRefEmail(val?.target?.value)}
+          value={timestampRef}
+          defaultValue={`$hubspot_contact_list_timestamp`}
+        >
+          <Radio value={`$hubspot_contact_list_timestamp`}>
+            Added to the List timestamp
+          </Radio>
+          <Radio value={`$hubspot_contact_list_list_create_timestamp`}>
+            List create timestamp
+          </Radio>
         </Radio.Group>
       );
     }
@@ -557,12 +584,18 @@ const TouchpointView = ({
   };
 
   const getStartsWith = () => {
-    if (tchRuleType === RULE_TYPE_HS_EMAILS) {
+    if (
+      tchRuleType === RULE_TYPE_HS_EMAILS ||
+      tchRuleType === RULE_TYPE_HS_MEETINGS ||
+      tchRuleType === RULE_TYPE_HS_CALLS
+    ) {
       return '$hubspot_engagement';
     } else if (tchRuleType === RULE_TYPE_HS_CONTACT) {
       return '$hubspot_contact';
     } else if (tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
       return '';
+    } else if (tchRuleType === RULE_TYPE_HS_LISTS) {
+      return '$hubspot_contact_list';
     }
   };
 
@@ -829,15 +862,18 @@ const TouchpointView = ({
           size={'large'}
           value={tchRuleType}
           onSelect={setTchRuleType}
-          defaultValue={``}
+          defaultValue={RULE_TYPE_HS_CONTACT}
         >
-          <Option value={RULE_TYPE_HS_EMAILS}>Email</Option>
           <Option value={RULE_TYPE_HS_CONTACT}>
             Change in Hubspot contact field value
           </Option>
           <Option value={RULE_TYPE_HS_FORM_SUBMISSIONS}>
             Form Submissions
           </Option>
+          <Option value={RULE_TYPE_HS_EMAILS}>Email</Option>
+          <Option value={RULE_TYPE_HS_MEETINGS}>Meetings</Option>
+          <Option value={RULE_TYPE_HS_CALLS}>Calls</Option>
+          <Option value={RULE_TYPE_HS_LISTS}>Lists</Option>
         </Select>
       </Col>
     );

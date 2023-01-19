@@ -14,7 +14,6 @@ import {
   Popover
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import _ from 'lodash';
 import {
   createEventAlert,
   fetchEventAlerts,
@@ -26,9 +25,10 @@ import {
   deleteGroupByForEvent,
   setGroupBy,
   delGroupBy,
-  getUserProperties
+  getUserProperties,
+  resetGroupBy
 } from 'Reducers/coreQuery/middleware';
-import { getEventsWithPropertiesKPI, getStateFromFilters } from '../utils';
+import { getEventsWithProperties, getStateFromFiltersEvent } from '../utils';
 import {
   fetchSlackChannels,
   fetchProjectSettingsV1,
@@ -44,6 +44,7 @@ import {
 import { DefaultDateRangeFormat } from '../../../../CoreQuery/utils';
 import TextArea from 'antd/lib/input/TextArea';
 import EventGroupBlock from '../../../../../components/QueryComposer/EventGroupBlock';
+import useAutoFocus from 'hooks/useAutoFocus';
 
 const { Option } = Select;
 
@@ -64,7 +65,8 @@ const EventBasedAlert = ({
   setGroupBy,
   delGroupBy,
   getUserProperties,
-  groupBy
+  groupBy,
+  resetGroupBy
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -72,7 +74,7 @@ const EventBasedAlert = ({
   const [slackEnabled, setSlackEnabled] = useState(false);
   const [notRepeat, setNotRepeat] = useState(false);
   const [notifications, setNotifications] = useState(false);
-  const [alertLimit, setAlertLimit] = useState('5');
+  const [alertLimit, setAlertLimit] = useState(5);
   const [viewFilter, setViewFilter] = useState([]);
   const [channelOpts, setChannelOpts] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState([]);
@@ -82,6 +84,7 @@ const EventBasedAlert = ({
 
   const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
+  const inputComponentRef = useAutoFocus();
 
   const [form] = Form.useForm();
 
@@ -130,17 +133,14 @@ const EventBasedAlert = ({
   }, [deleteWidgetModal]);
 
   useEffect(() => {
-    if (viewAlertDetails?.filter) {
-      const filter = getStateFromFilters(viewAlertDetails.filter);
+    if (viewAlertDetails?.event_alert?.filter) {
+      const filter = getStateFromFiltersEvent(
+        viewAlertDetails.event_alert.filter
+      );
       setViewFilter(filter);
     }
-    if (viewAlertDetails?.slack_channels) {
-      let obj = viewAlertDetails?.slack_channels;
-      for (let key in obj) {
-        if (obj[key].length > 0) {
-          setViewSelectedChannels(obj[key]);
-        }
-      }
+    if (viewAlertDetails?.event_alert?.slack_channels) {
+      setViewSelectedChannels(viewAlertDetails?.event_alert?.slack_channels);
     }
   }, [viewAlertDetails]);
 
@@ -153,6 +153,7 @@ const EventBasedAlert = ({
             JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)
           ) {
             deleteGroupByForEvent(newEvent, index);
+            resetGroupBy();
           }
           queryupdated[index] = newEvent;
         } else if (changeType === 'filters_updated') {
@@ -160,6 +161,7 @@ const EventBasedAlert = ({
           queryupdated[index] = newEvent;
         } else {
           deleteGroupByForEvent(newEvent, index);
+          resetGroupBy();
           queryupdated.splice(index, 1);
         }
       } else {
@@ -274,6 +276,47 @@ const EventBasedAlert = ({
     return groupByEvents;
   };
 
+  const viewGroupByItems = (groupBy) => {
+    const groupByEvents = [];
+
+    if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
+      groupBy
+        .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+        .filter(
+          (gbp) =>
+            gbp.eventName === viewAlertDetails?.event_alert?.event &&
+            gbp.eventIndex === 1
+        )
+        .forEach((gbp, gbpIndex) => {
+          const { groupByIndex, ...orgGbp } = gbp;
+          groupByEvents.push(
+            <div key={gbpIndex} className='fa--query_block--filters'>
+              <EventGroupBlock
+                index={gbp.groupByIndex}
+                grpIndex={gbpIndex}
+                eventIndex={1}
+                groupByEvent={orgGbp}
+                event={viewAlertDetails?.event_alert?.event}
+                delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
+                setGroupState={pushGroupBy}
+                closeDropDown={() => setGroupByDDVisible(false)}
+              />
+            </div>
+          );
+        });
+    }
+
+    if (isGroupByDDVisible) {
+      groupByEvents.push(
+        <div key='init' className='fa--query_block--filters'>
+          {selectGroupByEvent()}
+        </div>
+      );
+    }
+
+    return groupByEvents;
+  };
+
   const getGroupByFromProperties = (appliedGroupBy) => {
     return appliedGroupBy.map((opt) => {
       let gbpReq = {};
@@ -301,48 +344,76 @@ const EventBasedAlert = ({
       }
       return gbpReq;
     });
-  }
+  };
+
+  const getGroupByFromState = (appliedGroupBy) => {
+    return appliedGroupBy.map((opt) => {
+      let gbpReq = {};
+      if (opt.eni) {
+        gbpReq = {
+          property: opt.pr,
+          prop_category: opt.en === 'group' ? 'user' : opt.en,
+          prop_type: opt.pty,
+          eventName: opt.ena,
+          eventIndex: opt.eni
+        };
+      } else {
+        gbpReq = {
+          property: opt.pr,
+          prop_category: opt.en === 'group' ? 'user' : opt.en,
+          prop_type: opt.pty,
+          eventName: opt.ena
+        };
+      }
+      if (opt.pty === 'datetime') {
+        opt.grn ? (gbpReq.grn = opt.grn) : (gbpReq.grn = 'day');
+      }
+      if (opt.pty === 'numerical') {
+        opt.gbty ? (gbpReq.gbty = opt.gbty) : (gbpReq.gbty = '');
+      }
+      return gbpReq;
+    });
+  };
 
   const onReset = () => {
     setQueries([]);
     setSlackEnabled(false);
-    setAlertLimit('5');
+    setAlertLimit(5);
     setNotRepeat(false);
     setNotifications(false);
     setSelectedChannel([]);
     setSaveSelectedChannel([]);
     form.resetFields();
     setAlertState({ state: 'list', index: 0 });
+    resetGroupBy();
   };
 
   const onFinish = (data) => {
     setLoading(true);
 
-    let slackChannels = [];
-    if (slackEnabled) {
-      slackChannels = saveSelectedChannel;
-    }
-
-    if (queries.length > 0 && slackChannels.length > 0) {
+    if (queries.length > 0 && saveSelectedChannel.length > 0) {
       let payload = {
         title: data?.alert_name,
         event: queries[0]?.label,
-        filter: getEventsWithPropertiesKPI(queries[0]?.filters, 'event'),
+        filter: getEventsWithProperties(queries),
         notifications: notifications,
         message: data?.message,
         message_property:
           groupBy && groupBy.length && groupBy[0] && groupBy[0].property
-            ? getGroupByFromProperties(groupBy
-                .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-                .filter(
-                  (gbp) =>
-                    gbp.eventName === queries[0]?.label && gbp.eventIndex === 1
-                ))
+            ? getGroupByFromProperties(
+                groupBy
+                  .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+                  .filter(
+                    (gbp) =>
+                      gbp.eventName === queries[0]?.label &&
+                      gbp.eventIndex === 1
+                  )
+              )
             : [],
         alert_limit: alertLimit,
         repeat_alerts: notRepeat,
         slack: slackEnabled,
-        slack_channels: slackChannels
+        slack_channels: saveSelectedChannel
       };
 
       createEventAlert(activeProject.id, payload)
@@ -390,6 +461,10 @@ const EventBasedAlert = ({
 
   const onChange = () => {
     seterrorInfo(null);
+  };
+
+  const handleAlertLimit = (value) => {
+    setAlertLimit(value);
   };
 
   useEffect(() => {
@@ -489,7 +564,11 @@ const EventBasedAlert = ({
                 className={'m-0'}
                 rules={[{ required: true, message: 'Please enter alert name' }]}
               >
-                <Input className={'fa-input'} placeholder={'Enter name'} />
+                <Input
+                  className={'fa-input'}
+                  placeholder={'Enter name'}
+                  ref={inputComponentRef}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -539,10 +618,11 @@ const EventBasedAlert = ({
                   content={
                     <div className='m-0 m-2'>
                       <p className='m-0 text-gray-900 text-base font-bold'>
-                        This is how it shown in the slacks
+                        Your notification inside slack
                       </p>
                       <p className='m-0 mb-2 text-gray-700'>
-                        The slack message will be like this
+                        As events across your marketing activities happen, get
+                        alerts that motivate actions right inside Slack
                       </p>
                       <img
                         className='m-0'
@@ -640,13 +720,13 @@ const EventBasedAlert = ({
                     style={{
                       width: 100
                     }}
-                    defaultValue='5'
-                    onChange={() => setAlertLimit(value)}
+                    defaultValue={5}
+                    onChange={handleAlertLimit}
                   >
-                    <Option value='5'>5 alerts</Option>
-                    <Option value='10'>10 alerts</Option>
-                    <Option value='15'>15 alerts</Option>
-                    <Option value='15'>20 alerts</Option>
+                    <Option value={5}>5 alerts</Option>
+                    <Option value={10}>10 alerts</Option>
+                    <Option value={15}>15 alerts</Option>
+                    <Option value={20}>20 alerts</Option>
                   </Select>
                 </div>
               </Form.Item>
@@ -866,11 +946,11 @@ const EventBasedAlert = ({
         <Row className={'m-0 mt-2'}>
           <Col>
             <Button className={`mr-2`} type='link' disabled={true}>
-              {viewAlertDetails?.event}
+              {viewAlertDetails?.event_alert?.event}
             </Button>
           </Col>
         </Row>
-        {viewAlertDetails?.filter?.length > 0 && (
+        {viewAlertDetails?.event_alert?.filter?.length > 0 && (
           <Row className={'mt-2'}>
             <Col span={18}>
               <Text
@@ -909,26 +989,64 @@ const EventBasedAlert = ({
         </Row>
         <Row className={'mt-4'}>
           <Col span={8} className={'ml-4'}>
-            <Input
+            <TextArea
               disabled={true}
               className={'fa-input'}
-              type={'number'}
-              value={viewAlertDetails?.message}
+              maxLength={300}
+              value={viewAlertDetails?.event_alert?.message}
             />
           </Col>
         </Row>
+        {viewAlertDetails?.event_alert?.message_property?.length > 0 && (
+          <Row className={'mt-4'}>
+            <Col span={12} className={'ml-4'}>
+              <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>
+                Attach properties with this message
+              </Text>
+              <div>
+                {viewGroupByItems(
+                  viewAlertDetails?.event_alert?.message_property &&
+                    viewAlertDetails?.event_alert?.message_property.length &&
+                    viewAlertDetails?.event_alert?.message_property[0] &&
+                    getGroupByFromState(
+                      viewAlertDetails?.event_alert?.message_property
+                        .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+                        .filter(
+                          (gbp) =>
+                            gbp.ena === viewAlertDetails?.event_alert?.event &&
+                            gbp.eni === 1
+                        )
+                    )
+                )}
+              </div>
+            </Col>
+          </Row>
+        )}
         <Row className={'mt-2 ml-4'}>
           <Col span={8}>
-            <Checkbox disabled={true} checked={viewAlertDetails?.repeat_alerts}>
+            <Checkbox
+              disabled={true}
+              checked={viewAlertDetails?.event_alert?.repeat_alerts}
+            >
               Do not repeat an alert more than once
             </Checkbox>
           </Col>
         </Row>
         <Row className={'mt-2 ml-4'}>
           <Col span={8}>
-            <Checkbox disabled={true} checked={viewAlertDetails?.alert_limit}>
+            <Checkbox
+              disabled={true}
+              checked={viewAlertDetails?.event_alert?.notifications}
+            >
               Set limit for alerts per day to
             </Checkbox>
+            <div className='inline'>
+              <Input
+                disabled={true}
+                className={'fa-input'}
+                value={viewAlertDetails?.event_alert?.alert_limit + ' alerts'}
+              />
+            </div>
           </Col>
         </Row>
 
@@ -949,13 +1067,16 @@ const EventBasedAlert = ({
 
         <Row className={'mt-2 ml-2'}>
           <Col span={4}>
-            <Checkbox disabled={true} checked={viewAlertDetails?.slack}>
+            <Checkbox
+              disabled={true}
+              checked={viewAlertDetails?.event_alert?.slack}
+            >
               Slack
             </Checkbox>
           </Col>
         </Row>
-        {viewAlertDetails?.slack &&
-          viewAlertDetails?.slack_channels.length > 0 && (
+        {viewAlertDetails?.event_alert?.slack &&
+          viewAlertDetails?.event_alert?.slack_channels.length > 0 && (
             <Row className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}>
               <Col className={'m-0'}>
                 <Text
@@ -1081,7 +1202,7 @@ const mapStateToProps = (state) => ({
   slack: state.global.slack,
   projectSettings: state.global.projectSettingsV1,
   groupBy: state.coreQuery.groupBy.event,
-  groupByMagic: state.coreQuery.groupBy
+  groupByMagic: state.coreQuery.groupBy,
 });
 
 export default connect(mapStateToProps, {
@@ -1093,5 +1214,6 @@ export default connect(mapStateToProps, {
   enableSlackIntegration,
   setGroupBy,
   delGroupBy,
-  getUserProperties
+  getUserProperties,
+  resetGroupBy
 })(EventBasedAlert);

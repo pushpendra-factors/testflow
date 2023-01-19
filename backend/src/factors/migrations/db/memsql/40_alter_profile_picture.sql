@@ -1,0 +1,1 @@
+ALTER TABLE projects MODIFY COLUMN profile_picture MEDIUMTEXT;

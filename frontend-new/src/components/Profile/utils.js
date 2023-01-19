@@ -5,7 +5,7 @@ import {
   reverseOperatorMap
 } from '../../Views/CoreQuery/utils';
 import { formatDurationIntoString } from 'Utils/dataFormatter';
-import { ReverseProfileMapper } from 'Utils/constants';
+import { RevAvailableGroups, ReverseProfileMapper } from 'Utils/constants';
 
 export const granularityOptions = [
   'Timestamp',
@@ -67,6 +67,12 @@ export const TimelineHoverPropDisplayNames = {
   '$hubspot_form_submission_page-url-no-qp': 'Page URL',
   '$hubspot_form_submission_page-title': 'Page Title',
   $hubspot_form_submission_timestamp: 'Form Submit Timestamp'
+};
+
+export const displayFilterOpts = {
+  All: 'All Accounts',
+  $hubspot_company: 'Hubspot Companies',
+  $salesforce_account: 'Salesforce Accounts'
 };
 
 export const formatFiltersForPayload = (filters = []) => {
@@ -198,17 +204,23 @@ export const propValueFormat = (key, value) => {
     return MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A');
   }
   if (key.includes('_time')) {
-    return formatDurationIntoString(value);
+    return formatDurationIntoString(parseInt(value));
   }
   if (key.includes('durationmilliseconds')) {
     return formatDurationIntoString(parseInt(value / 1000));
+  }
+  if (!isNaN(value)) {
+    return parseInt(value);
   }
   return value;
 };
 
 export const formatSegmentsObjToGroupSelectObj = (group, vals) => {
   const obj = {
-    label: ReverseProfileMapper[group]?.users,
+    label:
+      ReverseProfileMapper[group]?.users ||
+      RevAvailableGroups[group] ||
+      'Others',
     icon: '',
     values: []
   };

@@ -98,7 +98,7 @@ const BreakdownCharts = ({
 
   if (!aggregateData.length) {
     return (
-      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
         <NoDataChart />
       </div>
     );
@@ -155,7 +155,7 @@ const BreakdownCharts = ({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`line-${unit.id}`}
       />
@@ -167,7 +167,7 @@ const BreakdownCharts = ({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
       />
@@ -179,7 +179,7 @@ const BreakdownCharts = ({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
       />
@@ -189,8 +189,7 @@ const BreakdownCharts = ({
   return (
     <div
       className={cx('w-full flex-1', {
-        'p-2': chartType !== CHART_TYPE_TABLE,
-        'overflow-scroll': chartType === CHART_TYPE_TABLE
+        'px-2': chartType !== CHART_TYPE_TABLE
       })}
     >
       {chartContent}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import cx from 'classnames';
-import { Button, Tooltip } from 'antd';
+import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import FaSelect from '../../FaSelect';
@@ -230,60 +230,84 @@ function QueryBlock({
     setMoreOptions(false);
   };
 
-  const additionalActions = () => (
-    <div className='fa--query_block--actions-cols flex'>
-      <div className='relative'>
+  const getMenu = (filterOptions) => (
+    <Menu style={{ minWidth: '200px', padding: '10px' }}>
+      {filterOptions.map((eachFilter, eachIndex) => {
+        return (
+          <Menu.Item
+            icon={
+              <SVG
+                name={eachFilter[1]}
+                extraClass={'self-center'}
+                style={{ marginRight: '10px' }}
+              ></SVG>
+            }
+            style={{ display: 'flex', padding: '10px', margin: '5px' }}
+            key={eachIndex}
+            onClick={() => setAdditionalactions(eachFilter)}
+          >
+            <span style={{ paddingLeft: '5px' }}>{eachFilter[0]}</span>
+          </Menu.Item>
+        );
+      })}
+    </Menu>
+  );
+  const additionalActions = () => {
+    return (
+      <div className='fa--query_block--actions-cols flex'>
+        <div className='relative'>
+          <Tooltip
+            title={`Filter this ${queryType === 'funnel' ? 'funnel' : 'event'}`}
+            color={TOOLTIP_CONSTANTS.DARK}
+          >
+            <Button
+              type='text'
+              onClick={addFilter}
+              className='fa-btn--custom mr-1 btn-total-round'
+            >
+              <SVG name='filter' />
+            </Button>
+          </Tooltip>
+
+          {moreOptions ? (
+            <FaSelect
+              options={[
+                ['Filter By', 'filter'],
+                ['Breakdown', 'groupby'],
+                [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
+              ]}
+              optionClick={(val) => setAdditionalactions(val)}
+              onClickOutside={() => setMoreOptions(false)}
+            />
+          ) : (
+            false
+          )}
+
+          <AliasModal
+            visible={isModalVisible}
+            event={
+              eventNames[event.label] ? eventNames[event.label] : event.label
+            }
+            onOk={handleOk}
+            onCancel={handleCancel}
+            alias={event.alias}
+          />
+        </div>
         <Tooltip
-          title={`Filter this ${queryType === 'funnel' ? 'funnel' : 'event'}`}
+          title={`Delete this ${queryType === 'funnel' ? 'funnel' : 'event'}`}
           color={TOOLTIP_CONSTANTS.DARK}
         >
           <Button
             type='text'
-            onClick={() => setMoreOptions(true)}
-            className='fa-btn--custom mr-1 btn-total-round'
+            onClick={deleteItem}
+            className='fa-btn--custom btn-total-round'
           >
-            <SVG name='more' />
+            <SVG name='trash' />
           </Button>
         </Tooltip>
-
-        {moreOptions ? (
-          <FaSelect
-            options={[
-              ['Filter By', 'filter'],
-              ['Breakdown', 'groupby'],
-              [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
-            ]}
-            optionClick={(val) => setAdditionalactions(val)}
-            onClickOutside={() => setMoreOptions(false)}
-          />
-        ) : (
-          false
-        )}
-
-        <AliasModal
-          visible={isModalVisible}
-          event={
-            eventNames[event.label] ? eventNames[event.label] : event.label
-          }
-          onOk={handleOk}
-          onCancel={handleCancel}
-          alias={event.alias}
-        />
       </div>
-      <Tooltip
-        title={`Delete this ${queryType === 'funnel' ? 'funnel' : 'event'}`}
-        color={TOOLTIP_CONSTANTS.DARK}
-      >
-        <Button
-          type='text'
-          onClick={deleteItem}
-          className='fa-btn--custom btn-total-round'
-        >
-          <SVG name='trash' />
-        </Button>
-      </Tooltip>
-    </div>
-  );
+    );
+  };
 
   const eventFilters = () => {
     const filters = [];
@@ -421,6 +445,11 @@ function QueryBlock({
   };
 
   const ifQueries = queries.length > 0;
+  let filterOptions = [
+    ['Filter By', 'filter'],
+    ['Breakdown', 'groupby'],
+    [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
+  ];
   if (!event) {
     return (
       <div
@@ -511,6 +540,23 @@ function QueryBlock({
               {selectEvents()}
             </Tooltip>
           </div>
+          {filterOptions.length != 0 ? (
+            <Dropdown
+              placement='bottomLeft'
+              overlay={getMenu(filterOptions)}
+              trigger={['hover']}
+            >
+              <Button
+                type='text'
+                size={'large'}
+                className={`fa-btn--custom mr-1 btn-total-round ml-2`}
+              >
+                <SVG name='more' />
+              </Button>
+            </Dropdown>
+          ) : (
+            ''
+          )}
           <div className={styles.query_block__additional_actions}>
             {additionalActions()}
           </div>

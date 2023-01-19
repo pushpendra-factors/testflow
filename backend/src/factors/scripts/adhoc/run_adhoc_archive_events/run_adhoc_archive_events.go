@@ -155,7 +155,7 @@ func main() {
 }
 
 func runArchiveAsRoutineForProjectID(db *gorm.DB, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
-	projectID uint64, startTime, endTime time.Time, waitGroup *sync.WaitGroup, allJobDetails, allJobErrors *sync.Map) {
+	projectID int64, startTime, endTime time.Time, waitGroup *sync.WaitGroup, allJobDetails, allJobErrors *sync.Map) {
 	defer waitGroup.Done()
 
 	jobDetails, err := T.ArchiveEventsForProject(db, cloudManager, diskManager, projectID, 0, startTime, endTime, true)

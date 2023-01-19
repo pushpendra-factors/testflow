@@ -66,6 +66,11 @@
 
   .templateSectionCopyButton {
     margin: 10px 0 10px 0;
+    &:disabled,
+    &[disabled] {
+      background-color: #5e5e5e;
+      border-color: #5e5e5e;
+    }
   }
   .templateSectionCopyButtonCopied {
     background: #5aca89 !important;

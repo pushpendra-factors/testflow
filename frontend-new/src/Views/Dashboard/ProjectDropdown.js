@@ -496,10 +496,14 @@ function ProjectDropdown({
         }
         onError={FaErrorLog}
       >
-        <ExistingReportsModal
-          isReportsModalOpen={isReportsModalOpen}
-          setIsReportsModalOpen={setIsReportsModalOpen}
-        />
+        {isReportsModalOpen === true ? (
+          <ExistingReportsModal
+            isReportsModalOpen={isReportsModalOpen}
+            setIsReportsModalOpen={setIsReportsModalOpen}
+          />
+        ) : (
+          ''
+        )}
         {active_project.id === demoProjectId ? (
           <div className='rounded-lg border-2 h-20 mb-3 mx-10'>
             <Row justify='space-between' className='m-0 p-3'>

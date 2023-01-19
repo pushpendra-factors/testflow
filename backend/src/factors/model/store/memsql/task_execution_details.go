@@ -488,6 +488,150 @@ func (store *MemSQL) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays i
 	return deltas, http.StatusOK, ""
 }
 
+// func (store *MemSQL) GetAllDeltasByConfiguration2(taskID uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
+// 	logFields := log.Fields{
+// 		"task_id":          taskID,
+// 		"lookback_in_days": lookbackInDays,
+// 		"end_date":         endDate,
+// 	}
+// 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+// 	// get all the processed deltas with the given range
+// 	logCtx := log.WithFields(logFields)
+// 	deltas := make([]uint64, 0)
+// 	if taskID == 0 || lookbackInDays == 0 {
+// 		logCtx.Error("missing taskID/lookback")
+// 		return deltas, http.StatusBadRequest, "missing taskID/lookback"
+// 	}
+
+// 	taskDetails, errCode, status := store.GetTaskDetailsById(taskID)
+// 	if errCode != 200 {
+// 		logCtx.Error(status)
+// 		return deltas, http.StatusInternalServerError, status
+// 	}
+// 	skipEndIndex := taskDetails.SkipEndIndex
+// 	skipStartIndex := taskDetails.SkipStartIndex
+// 	intervals := make([]int, 0)
+// 	if taskDetails.Frequency == model.Hourly {
+// 		if taskDetails.SkipEndIndex == -1 {
+// 			skipEndIndex = 23
+// 		}
+// 	}
+// 	if taskDetails.Frequency == model.Daily {
+// 		if taskDetails.SkipEndIndex == -1 {
+// 			skipEndIndex = 6
+// 		}
+// 	}
+// 	if taskDetails.Frequency == model.Weekly {
+// 		if taskDetails.SkipEndIndex == -1 {
+// 			skipEndIndex = 3
+// 		}
+// 	}
+// 	i := skipStartIndex
+// 	for {
+// 		if i > skipEndIndex {
+// 			break
+// 		}
+// 		intervals = append(intervals, i)
+// 		i = i + taskDetails.FrequencyInterval
+// 		if taskDetails.Recurrence == false {
+// 			break
+// 		}
+// 	}
+// 	var startDateTime time.Time
+// 	var endDateTime time.Time
+// 	if endDate == nil {
+// 		endDateTime = U.TimeNowZ()
+// 	} else {
+// 		endDateTime = *endDate
+// 	}
+// 	if lookbackInDays > 0 {
+// 		startDateTime = endDateTime.AddDate(0, 0, -lookbackInDays)
+// 	} else {
+// 		startDateTime = endDateTime
+// 		endDateTime = endDateTime.AddDate(0, 0, -lookbackInDays)
+// 	}
+// 	if taskDetails.Frequency == model.Hourly {
+// 		i := startDateTime
+// 		for {
+// 			if i.After(endDateTime) {
+// 				break
+// 			}
+// 			if arrayContains(intervals, i.Hour()) {
+// 				deltas = append(deltas, U.DateAsFormattedInt(i))
+// 			}
+// 			i = i.Add(time.Hour * time.Duration(1))
+// 		}
+// 	}
+// 	if taskDetails.Frequency == model.Daily {
+// 		i, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, startDateTime.Format(U.DATETIME_FORMAT_YYYYMMDD))
+// 		endDateTime = endDateTime.AddDate(0, 0, 2)
+// 		for {
+// 			if i.After(endDateTime) {
+// 				break
+// 			}
+// 			if arrayContains(intervals, int(i.Weekday())) {
+// 				deltas = append(deltas, U.DateAsFormattedInt(i))
+// 			}
+// 			i = i.AddDate(0, 0, 1)
+// 		}
+// 	}
+// 	if taskDetails.Frequency == model.Weekly {
+// 		// Weekly doesnt support skipping a week
+// 		weekday := startDateTime.Weekday()
+// 		nearestSundayIndex := int(weekday)
+// 		i, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, startDateTime.Format(U.DATETIME_FORMAT_YYYYMMDD))
+// 		if nearestSundayIndex != 0 {
+// 			i = i.AddDate(0, 0, -nearestSundayIndex)
+// 		}
+// 		for {
+// 			if i.After(endDateTime) {
+// 				break
+// 			}
+// 			deltas = append(deltas, U.DateAsFormattedInt(i))
+// 			i = i.AddDate(0, 0, 7)
+// 		}
+// 	}
+// 	if taskDetails.Frequency == model.Monthly {
+// 		// Weekly doesnt support skipping a week
+// 		dateValue := startDateTime.Day()
+// 		i, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, startDateTime.Format(U.DATETIME_FORMAT_YYYYMMDD))
+// 		if dateValue != 1 {
+// 			i = i.AddDate(0, 0, -(dateValue - 1))
+// 		}
+// 		for {
+// 			if i.After(endDateTime) {
+// 				break
+// 			}
+// 			deltas = append(deltas, U.DateAsFormattedInt(i))
+// 			i = i.AddDate(0, 1, 0)
+// 		}
+// 	}
+// 	if taskDetails.Frequency == model.Quarterly {
+// 		// Weekly doesnt support skipping a week
+// 		dateValue := startDateTime.Day()
+// 		monthValue := int(startDateTime.Month() % 3)
+// 		i, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, startDateTime.Format(U.DATETIME_FORMAT_YYYYMMDD))
+// 		if dateValue != 1 {
+// 			i = i.AddDate(0, 0, -(dateValue - 1))
+// 		}
+// 		if monthValue != 1 {
+// 			i = i.AddDate(0, -(monthValue - 1), 0)
+// 		}
+// 		for {
+// 			if i.After(endDateTime) {
+// 				break
+// 			}
+// 			deltas = append(deltas, U.DateAsFormattedInt(i))
+// 			i = i.AddDate(0, 3, 0)
+// 		}
+// 	}
+// 	if taskDetails.Frequency == model.Stateless {
+// 		deltas = append(deltas, U.DateAsFormattedInt(U.TimeNowZ()))
+// 	}
+// 	return deltas, http.StatusOK, ""
+// }
+
 // TODO: JANANI tasks with same frequency but different offset. how to handle that? - May be avoid adding such dependencies
 // avoid adding offsets for stateless
 // To check if all the dependent jobs for a give date/hour range is done

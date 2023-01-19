@@ -45,6 +45,7 @@ import {
   QUERY_OPTIONS_DEFAULT_VALUE
 } from '../../../../utils/constants';
 import EventFilter from './EventFilter/GlobalFilter';
+import useAutoFocus from 'hooks/useAutoFocus';
 
 const { Option } = Select;
 
@@ -85,6 +86,7 @@ function CustomKPI({
   const [EventfilterDDValues, setEventFilterDDValues] = useState();
   const [EventfilterValues, setEventFilterValues] = useState([]);
   const [EventFn, setEventFn] = useState(false);
+  const inputComponentRef = useAutoFocus(showForm && !viewMode);
 
   const [form] = Form.useForm();
 
@@ -963,6 +965,7 @@ function CustomKPI({
                         size='large'
                         className='fa-input w-full'
                         placeholder='Display Name'
+                        ref={inputComponentRef}
                       />
                     </Form.Item>
                   </Col>

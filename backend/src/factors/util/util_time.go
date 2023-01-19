@@ -436,3 +436,22 @@ func GetQueryRangePresetLast30MinutesIn(timezoneString TimeZoneString) (int64, i
 	startTime := endTime - 30*60
 	return startTime, endTime, nil
 }
+
+func GetBeginningDayTimestampFromDateString(date string) (int64, error) {
+	if len(date) != 8 {
+		return 0, fmt.Errorf("wrong datestring provided: %s", date)
+	}
+	startYear, err := strconv.ParseInt(date[0:4], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	startMonth, err := strconv.ParseInt(date[4:6], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	startDay, err := strconv.ParseInt(date[6:8], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return time.Date(int(startYear), time.Month(startMonth), int(startDay), 0, 0, 0, 0, time.FixedZone("UTC", 0)).Unix(), nil
+}

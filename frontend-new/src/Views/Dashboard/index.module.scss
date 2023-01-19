@@ -120,7 +120,11 @@ $dropdownbtn-mono-1: #f5f6f8;
   border-radius: 10px;
 }
 .widgetCardCustomCSS {
-  overflow: auto;
+  overflow: hidden;
+
+  &:hover {
+    overflow: auto;
+  }
 }
 
 .addNewDashboardButtonProjectDropdown {

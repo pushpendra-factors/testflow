@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	C "factors/config"
 	"factors/filestore"
+	"factors/merge"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
+	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -26,30 +28,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type CUserIdsBeam struct {
-	ProjectID  int64  `json:"pid"`
-	LowNum     int64  `json:"ln"`
-	HighNum    int64  `json:"hn"`
-	BucketName string `json:"bnm"`
-	ScopeName  string `json:"ScopeName"`
-	Env        string `json:"Env"`
-	StartTime  int64  `json:"ts"`
-	ModelType  string `json:"mt"`
-}
-type UidMap struct {
-	Userid string `json:"uid"`
-	Index  int64  `json:"idx"`
-}
-
 func PullEventsDataDaily(projectId int64, cloudManager *filestore.FileManager, cloudManagerTmp *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
-	startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64,
-	modelType string, beamConfig *RunBeamConfig, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
+	startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, beamConfig *merge.RunBeamConfig, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
 
 	logCtx.Info("Pulling events.")
 	per_day_epoch := int64(86400)
 	start_time := startTimestampInProjectTimezone
 	userIdsMap := make(map[string]int)
-	fPath, fName := diskManager.GetModelEventsUnsortedFilePathAndName(projectId, startTimestamp, modelType)
+	fPath, fName := diskManager.GetEventsUnsortedFilePathAndName(projectId, startTimestamp, endTimestamp)
 	serviceDisk.MkdirAll(fPath) // create dir if not exist.
 	tmpEventsFile := filepath.Join(fPath, fName)
 	startAt := time.Now().UnixNano()
@@ -104,7 +90,7 @@ func PullEventsDataDaily(projectId int64, cloudManager *filestore.FileManager, c
 		return err, false
 	}
 
-	cDir, cName := (*cloudManagerTmp).GetModelEventsUnsortedFilePathAndName(projectId, startTimestamp, modelType)
+	cDir, cName := (*cloudManagerTmp).GetEventsUnsortedFilePathAndName(projectId, startTimestamp, endTimestamp)
 	err = (*cloudManagerTmp).Create(cDir, cName, tmpOutputFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Failed to pull events. Upload failed.")
@@ -122,7 +108,7 @@ func PullEventsDataDaily(projectId int64, cloudManager *filestore.FileManager, c
 
 	batch_size := beamConfig.NumWorker
 	numsortedEvents, err := pull_events_on_beam(projectId, fPath, cDir, cName, batch_size, userIdsMap,
-		beamConfig, cloudManager, cloudManagerTmp, diskManager, startTimestamp, modelType)
+		beamConfig, cloudManager, cloudManagerTmp, diskManager, startTimestamp, endTimestamp)
 	if err != nil {
 		return err, false
 	}
@@ -153,9 +139,9 @@ func initConf(config *C.Configuration) {
 }
 
 func putUserIdsToGCP(projectId int64, userIds map[string]int64, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
-	startTime int64, modelType string) error {
+	startTime, endTime int64) error {
 
-	cDir, cName := (diskManager).GetEventsArtificatFilePathAndName(projectId, startTime, modelType)
+	cDir, cName := (diskManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime)
 	path := filepath.Join(cDir, cName)
 	err := (diskManager).Create(cDir, cName, bytes.NewReader([]byte("")))
 	if err != nil {
@@ -168,7 +154,7 @@ func putUserIdsToGCP(projectId int64, userIds map[string]int64, cloudManager *fi
 	}
 
 	for userId, index := range userIds {
-		uidStruct := UidMap{Userid: userId, Index: index}
+		uidStruct := merge.UidMap{Userid: userId, Index: index}
 		ud, err := json.Marshal(uidStruct)
 		if err != nil {
 			return err
@@ -188,7 +174,7 @@ func putUserIdsToGCP(projectId int64, userIds map[string]int64, cloudManager *fi
 		return fmt.Errorf("unable to open file : %s :%v", path, err)
 	}
 	r := bufio.NewReader(f)
-	gDir, gName := (*cloudManager).GetEventsArtificatFilePathAndName(projectId, startTime, modelType)
+	gDir, gName := (*cloudManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime)
 	err = (*cloudManager).Create(gDir, gName, r)
 	if err != nil {
 		return err
@@ -198,10 +184,10 @@ func putUserIdsToGCP(projectId int64, userIds map[string]int64, cloudManager *fi
 }
 
 func getUserIdsFile(ctx context.Context, projectId int64, cloudManager *filestore.FileManager,
-	startTime int64, modelType string, low, high int64) ([]string, error) {
+	startTime, endTime int64, low, high int64) ([]string, error) {
 
 	beamlog.Infof(ctx, "getting users file :%d,%d,%d", projectId, low, high)
-	gDir, gName := (*cloudManager).GetEventsArtificatFilePathAndName(projectId, startTime, modelType)
+	gDir, gName := (*cloudManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime)
 	r, err := (*cloudManager).Get(gDir, gName)
 	if err != nil {
 		return nil, err
@@ -214,7 +200,7 @@ func getUserIdsFile(ctx context.Context, projectId int64, cloudManager *filestor
 
 	for scannerEvents.Scan() {
 		line := scannerEvents.Text()
-		var ud UidMap
+		var ud merge.UidMap
 		if err := json.Unmarshal([]byte(line), &ud); err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
 			return nil, err
@@ -242,8 +228,8 @@ func createEventsFile(path string) error {
 }
 
 func pull_events_beam_controller(projectId int64, local_dir string, cloud_dir, cloud_file string,
-	batchSize int, userIdMap map[string]int, beamStruct *RunBeamConfig,
-	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTime int64, modelType string) error {
+	batchSize int, userIdMap map[string]int, beamStruct *merge.RunBeamConfig,
+	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTime, endTime int64) error {
 
 	peLog.Infof(" Sorting pull events in beam Project Id :%d", projectId)
 	UIdsBeamString := make([]string, 0)
@@ -272,7 +258,7 @@ func pull_events_beam_controller(projectId int64, local_dir string, cloud_dir, c
 		userIdMapList[uid] = int64(idx)
 	}
 
-	err = putUserIdsToGCP(projectId, userIdMapList, cloudManager, diskManager, startTime, modelType)
+	err = putUserIdsToGCP(projectId, userIdMapList, cloudManager, diskManager, startTime, endTime)
 	if err != nil {
 		return err
 	}
@@ -283,7 +269,7 @@ func pull_events_beam_controller(projectId int64, local_dir string, cloud_dir, c
 		// Each worker gets a slice of patterns to count.
 		low := int(math.Min(float64(batchSize*i), float64(num_users)))
 		high := int(math.Min(float64(batchSize*(i+1)), float64(num_users)))
-		tmp := CUserIdsBeam{projectId, int64(low), int64(high), bucketName, "", beamStruct.Env, startTime, modelType}
+		tmp := merge.CUserIdsBeam{projectId, int64(low), int64(high), bucketName, "", beamStruct.Env, startTime, endTime, "", 0}
 
 		t, err := json.Marshal(tmp)
 		if err != nil {
@@ -299,7 +285,7 @@ func pull_events_beam_controller(projectId int64, local_dir string, cloud_dir, c
 	return nil
 }
 
-func SortUsersExecutor(beamStruct *RunBeamConfig, cPatternsString []string) error {
+func SortUsersExecutor(beamStruct *merge.RunBeamConfig, cPatternsString []string) error {
 
 	s := beamStruct.Scp
 	s = s.Scope("pull_events")
@@ -348,7 +334,7 @@ func (f *SortUsDoFn) FinishBundle(ctx context.Context) {
 func (f *SortUsDoFn) ProcessElement(ctx context.Context, cpString string) error {
 	beamlog.Info(ctx, "Initializing process ctx from sortDoFn")
 
-	var up CUserIdsBeam
+	var up merge.CUserIdsBeam
 	err := json.Unmarshal([]byte(cpString), &up)
 	if err != nil {
 		return fmt.Errorf("unable to unmarshall string in processElement :%s", cpString)
@@ -359,7 +345,7 @@ func (f *SortUsDoFn) ProcessElement(ctx context.Context, cpString string) error 
 	lowNum := up.LowNum
 	highNum := up.HighNum
 	startTime := up.StartTime
-	modelType := up.ModelType
+	endTime := up.EndTime
 	bucketName := up.BucketName
 	beamlog.Infof(ctx, "Processing Project:%s,%d,%d", projectId, lowNum, highNum)
 
@@ -376,19 +362,19 @@ func (f *SortUsDoFn) ProcessElement(ctx context.Context, cpString string) error 
 			panic(err)
 		}
 	}
-	userIDs, err := getUserIdsFile(ctx, projectId, &cloudManager, startTime, modelType, lowNum, highNum)
+	userIDs, err := getUserIdsFile(ctx, projectId, &cloudManager, startTime, endTime, lowNum, highNum)
 	if err != nil {
 		return err
 	}
 
-	err = downloadAndSortEventsFile(ctx, projectId, &cloudManager, startTime, modelType, userIDs)
+	err = downloadAndSortEventsFile(ctx, projectId, &cloudManager, startTime, endTime, userIDs)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func downloadAndSortEventsFile(ctx context.Context, projectId int64, cloudManager *filestore.FileManager, startTime int64, modelType string,
+func downloadAndSortEventsFile(ctx context.Context, projectId int64, cloudManager *filestore.FileManager, startTime, endTime int64,
 	userIds []string) error {
 
 	beamlog.Infof(ctx, "Downloading and sorting events file")
@@ -398,7 +384,7 @@ func downloadAndSortEventsFile(ctx context.Context, projectId int64, cloudManage
 		userIDmap[uid] += 1
 	}
 
-	gcpPath, gcpFName := (*cloudManager).GetModelEventsUnsortedFilePathAndName(projectId, startTime, modelType)
+	gcpPath, gcpFName := (*cloudManager).GetEventsUnsortedFilePathAndName(projectId, startTime, endTime)
 	rc, err := (*cloudManager).Get(gcpPath, gcpFName)
 	if err != nil {
 		return fmt.Errorf("unable to get file from cloud :%v", err)
@@ -446,7 +432,7 @@ func downloadAndSortEventsFile(ctx context.Context, projectId int64, cloudManage
 	if err != nil {
 		beamlog.Error(ctx, "unable to close sorted events file")
 	}
-	err = writeSorteddEventFileToGCP(ctx, projectId, startTime, modelType, eventsTmpFile.Name(), cloudManager)
+	err = writeSorteddEventFileToGCP(ctx, projectId, startTime, endTime, eventsTmpFile.Name(), cloudManager)
 	if err != nil {
 		beamlog.Error(ctx, "Failed to write sorted events to gcp:%v", err)
 
@@ -460,7 +446,7 @@ func downloadAndSortEventsFile(ctx context.Context, projectId int64, cloudManage
 	return nil
 }
 
-func writeSorteddEventFileToGCP(ctx context.Context, projectId int64, timestamp int64, modelType string, tmpEventsFile string,
+func writeSorteddEventFileToGCP(ctx context.Context, projectId int64, startTime, endTime int64, tmpEventsFile string,
 	cloudManager *filestore.FileManager) error {
 
 	beamlog.Infof(ctx, "reading and uploading from :%v", tmpEventsFile)
@@ -471,7 +457,7 @@ func writeSorteddEventFileToGCP(ctx context.Context, projectId int64, timestamp 
 	}
 	defer tmpOutputFile.Close()
 
-	cDir, _ := (*cloudManager).GetModelEventsFilePathAndName(projectId, timestamp, modelType)
+	cDir, _ := (*cloudManager).GetEventsFilePathAndName(projectId, startTime, endTime)
 	cDir = path.Join(cDir, "parts")
 	lastName := strings.Split(tmpOutputFile.Name(), "/")
 
@@ -581,17 +567,17 @@ func sortEventsWithUserIds(ctx context.Context, userIdMap map[string][]*P.Counte
 }
 
 func pull_events_on_beam(projectId int64, local_dir string, cloud_dir, cloud_file string,
-	batchSize int, userIdMap map[string]int, beamStruct *RunBeamConfig,
+	batchSize int, userIdMap map[string]int, beamStruct *merge.RunBeamConfig,
 	cloudManager *filestore.FileManager, cloudManagerTmp *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
-	startTime int64, modelType string) (int64, error) {
+	startTime, endTime int64) (int64, error) {
 
 	peLog.Infof("sorting on beam")
-	local_events_dir := (diskManager).GetProjectEventFileDir(projectId, startTime, modelType)
+	local_events_dir := (diskManager).GetProjectDataFileDir(projectId, startTime, U.DataTypeEvent, U.GetModelType(startTime, endTime))
 
-	cloud_events_dir_tmp, cloud_name := (*cloudManagerTmp).GetModelEventsFilePathAndName(projectId, startTime, modelType)
-	cloud_events_dir, _ := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTime, modelType)
+	cloud_events_dir_tmp, cloud_name := (*cloudManagerTmp).GetEventsFilePathAndName(projectId, startTime, endTime)
+	cloud_events_dir, _ := (*cloudManager).GetEventsFilePathAndName(projectId, startTime, endTime)
 
-	err := pull_events_beam_controller(projectId, local_events_dir, cloud_events_dir_tmp, cloud_name, batchSize, userIdMap, beamStruct, cloudManagerTmp, diskManager, startTime, modelType)
+	err := pull_events_beam_controller(projectId, local_events_dir, cloud_events_dir_tmp, cloud_name, batchSize, userIdMap, beamStruct, cloudManagerTmp, diskManager, startTime, endTime)
 	if err != nil {
 		return 0, err
 	}

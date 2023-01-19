@@ -82,7 +82,7 @@ function SingleEventMultipleBreakdown({
 
   if (!visibleProperties.length) {
     return (
-      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
         <NoDataChart />
       </div>
     );
@@ -92,7 +92,7 @@ function SingleEventMultipleBreakdown({
 
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
-      <div className="flex mt-4">
+      <div className='flex mt-4'>
         <BarChart
           chartData={visibleProperties}
           height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
@@ -135,7 +135,7 @@ function SingleEventMultipleBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`area-${unit.id}`}
       />
@@ -147,7 +147,7 @@ function SingleEventMultipleBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
       />
@@ -159,7 +159,7 @@ function SingleEventMultipleBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`line-${unit.id}`}
       />
@@ -178,8 +178,7 @@ function SingleEventMultipleBreakdown({
   return (
     <div
       className={cx('w-full flex-1', {
-        'p-2': chartType !== CHART_TYPE_TABLE,
-        'overflow-scroll': chartType === CHART_TYPE_TABLE
+        'px-2': chartType !== CHART_TYPE_TABLE
       })}
     >
       {chartContent}

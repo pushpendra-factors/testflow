@@ -6,10 +6,11 @@ import { bindActionCreators } from 'redux';
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import EventFilterWrapper from '../../QueryComposer/EventFilterWrapper';
 
-import { Button, Tooltip } from 'antd';
+import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { isArray } from 'lodash';
 import FaSelect from 'Components/FaSelect';
+import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 
 const LinkedEventsBlock = ({
   linkEvent,
@@ -19,14 +20,14 @@ const LinkedEventsBlock = ({
   activeProject,
   eventProperties,
   eventNames,
-  userProperties,
+  userProperties
 }) => {
   const [selectVisible, setSelectVisible] = useState(false);
   const [filterBlockVisible, setFilterBlockVisible] = useState(false);
 
   const [filterProps, setFilterProperties] = useState({
     event: [],
-    user: [],
+    user: []
   });
 
   const [moreOptions, setMoreOptions] = useState(false);
@@ -142,20 +143,52 @@ const LinkedEventsBlock = ({
     linkEventChange(currentLinkEvent);
     setSelectVisible(false);
   };
+  const setAdditionalactions = (opt) => {
+    if (opt[1] === 'filter') {
+      addFilterBlock();
+    }
+    setMoreOptions(false);
+  };
 
+  const getMenu = (filterOptions) => (
+    <Menu style={{ minWidth: '200px', padding: '10px' }}>
+      {filterOptions.map((eachFilter, eachIndex) => {
+        return (
+          <Menu.Item
+            icon={
+              <SVG
+                name={eachFilter[1]}
+                extraClass={'self-center'}
+                style={{ marginRight: '10px' }}
+              ></SVG>
+            }
+            style={{ display: 'flex', padding: '10px', margin: '5px' }}
+            key={eachIndex}
+            onClick={() => setAdditionalactions(eachFilter)}
+          >
+            <span style={{ paddingLeft: '5px' }}>{eachFilter[0]}</span>
+          </Menu.Item>
+        );
+      })}
+    </Menu>
+  );
   const additionalActions = () => {
     return (
       <div className={'fa--query_block--actions--cols flex relative ml-2'}>
         <div className={`relative flex`}>
-          <Button
-            type='text'
-            onClick={() => setMoreOptions(true)}
-            className={'fa-btn--custom mr-1'}
+          <Tooltip
+            title='Filter this Linked Event'
+            color={TOOLTIP_CONSTANTS.DARK}
           >
-            <SVG name='more'></SVG>
-          </Button>
-
-          {moreOptions ? (
+            <Button
+              className={'fa-btn--custom btn-total-round'}
+              type='text'
+              onClick={addFilterBlock}
+            >
+              <SVG name='filter'></SVG>
+            </Button>
+          </Tooltip>
+          {/* {moreOptions ? (
             <FaSelect
               options={[[`Filter By`, 'filter']]}
               optionClick={(val) => {
@@ -166,11 +199,21 @@ const LinkedEventsBlock = ({
             ></FaSelect>
           ) : (
             false
-          )}
+          )} */}
         </div>
-        <Button className={'fa-btn--custom'} type='text' onClick={deleteItem}>
-          <SVG name='trash'></SVG>
-        </Button>
+        <Tooltip
+          title='Delete this Linked Event'
+          color={TOOLTIP_CONSTANTS.DARK}
+        >
+          {' '}
+          <Button
+            className={'fa-btn--custom btn-total-round'}
+            type='text'
+            onClick={deleteItem}
+          >
+            <SVG name='trash'></SVG>
+          </Button>
+        </Tooltip>
       </div>
     );
   };
@@ -195,6 +238,7 @@ const LinkedEventsBlock = ({
   };
 
   const renderLinkEventBlockContent = () => {
+    let filterOptions = [];
     return (
       <div
         className={`${styles.block__content} fa--query_block_section--basic mt-4 relative`}
@@ -221,7 +265,23 @@ const LinkedEventsBlock = ({
         }
 
         {selectEvents()}
-
+        {filterOptions.length != 0 ? (
+          <Dropdown
+            placement='bottomLeft'
+            overlay={getMenu(filterOptions)}
+            trigger={['hover']}
+          >
+            <Button
+              type='text'
+              size={'large'}
+              className={`fa-btn--custom mr-1 btn-total-round`}
+            >
+              <SVG name='more' />
+            </Button>
+          </Dropdown>
+        ) : (
+          ''
+        )}
         <div className={styles.block__additional_actions}>
           {additionalActions()}
         </div>
@@ -261,7 +321,7 @@ const mapStateToProps = (state) => ({
   eventProperties: state.coreQuery.eventProperties,
   userProperties: state.coreQuery.userProperties,
   eventNameOptions: state.coreQuery.eventOptions,
-  eventNames: state.coreQuery.eventNames,
+  eventNames: state.coreQuery.eventNames
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators({}, dispatch);

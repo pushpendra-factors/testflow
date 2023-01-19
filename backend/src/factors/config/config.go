@@ -276,6 +276,8 @@ type Configuration struct {
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
+	EventTriggerEnabled                                bool
+	EventTriggerEnabledProjectIDs                      string
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
@@ -338,6 +340,7 @@ const (
 	HealthcheckPullEventsPingID                 = "088cc760-f350-4eb1-bbb6-c2bbde66b530"
 	HealthcheckPathAnalysisPingID               = "9f71b930-9233-4e58-9935-5de0434d8fa8"
 	HealthCheckPreBuiltCustomKPIPingID          = "9e5ac799-e15f-4f44-86b0-4be88379f486"
+	HealthCheckAnalyzeJobPingID                 = "3d1bd82d-e036-4433-a794-1042a7f29976"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
@@ -2437,6 +2440,20 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	}
 
 	return true
+}
+
+func IsEventTriggerEnabled() bool {
+	return configuration.EventTriggerEnabled
+}
+
+func IsProjectIDEventTriggerEnabledProjectID(id int64) bool {
+	list := GetTokensFromStringListAsUint64(configuration.EventTriggerEnabledProjectIDs)
+	for _, i := range list {
+		if i == id {
+			return true
+		}
+	}
+	return false
 }
 
 func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {

@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Spin, Popover, Tabs, notification } from 'antd';
+import {
+  Table,
+  Button,
+  Modal,
+  Spin,
+  Popover,
+  Tabs,
+  notification,
+  Divider
+} from 'antd';
 import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from '../../factorsComponents';
@@ -10,12 +19,17 @@ import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import {
   DEFAULT_TIMELINE_CONFIG,
+  displayFilterOpts,
   formatFiltersForPayload,
+  formatPayloadForFilters,
+  formatSegmentsObjToGroupSelectObj,
   getHost
 } from '../utils';
 import {
   getProfileAccounts,
-  getProfileAccountDetails
+  getProfileAccountDetails,
+  createNewSegment,
+  getSavedSegments
 } from '../../../reducers/timelines/middleware';
 import {
   fetchProjectSettings,
@@ -24,10 +38,15 @@ import {
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
+import SegmentModal from '../UserProfiles/SegmentModal';
 
 function AccountProfiles({
   activeProject,
   accounts,
+  segments,
+  createNewSegment,
+  getSavedSegments,
   accountDetails,
   fetchProjectSettings,
   udpateProjectSettings,
@@ -37,7 +56,10 @@ function AccountProfiles({
   getGroupProperties
 }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isDDVisible, setDDVisible] = useState(false);
+  const [isAccountDDVisible, setAccountDDVisible] = useState(false);
+  const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
+  const [showSegmentModal, setShowSegmentModal] = useState(false);
+  const [activeSegment, setActiveSegment] = useState({});
   const [filterPayload, setFilterPayload] = useState({
     source: 'All',
     filters: []
@@ -70,12 +92,6 @@ function AccountProfiles({
     }
   }, [currentProjectSettings]);
 
-  const displayFilterOpts = {
-    All: 'All Accounts',
-    $hubspot_company: 'Hubspot Companies',
-    $salesforce_account: 'Salesforce Accounts'
-  };
-
   const enabledGroups = () => {
     const groups = [['All Accounts', 'All']];
     groupOpts?.forEach((elem) => {
@@ -96,6 +112,10 @@ function AccountProfiles({
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
+  }, [activeProject]);
+
+  useEffect(() => {
+    getSavedSegments(activeProject.id);
   }, [activeProject]);
 
   const headerClassStr =
@@ -179,7 +199,7 @@ function AccountProfiles({
       opts.source = val;
       setFilterPayload(opts);
     }
-    setDDVisible(false);
+    setAccountDDVisible(false);
   };
 
   const setFilters = (filters) => {
@@ -202,10 +222,10 @@ function AccountProfiles({
 
   const selectUsers = () => (
     <div className='absolute top-0'>
-      {isDDVisible ? (
+      {isAccountDDVisible ? (
         <FaSelect
           options={enabledGroups()}
-          onClickOutside={() => setDDVisible(false)}
+          onClickOutside={() => setAccountDDVisible(false)}
           optionClick={(val) => onChange(val[1])}
         />
       ) : null}
@@ -239,7 +259,9 @@ function AccountProfiles({
         (obj) => obj.prop_name === option.prop_name
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListAccountProps(checkListProps);
+      setCheckListAccountProps(
+        checkListProps.sort((a, b) => b.enabled - a.enabled)
+      );
     } else {
       notification.error({
         message: 'Error',
@@ -263,8 +285,10 @@ function AccountProfiles({
   const popoverContent = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
-        tab={<span className='fa-activity-filter--tabname'>Properties</span>}
-        key='properties'
+        tab={
+          <span className='fa-activity-filter--tabname'>Table Properties</span>
+        }
+        key='props'
       >
         <SearchCheckList
           placeholder='Search Properties'
@@ -279,20 +303,173 @@ function AccountProfiles({
     </Tabs>
   );
 
+  const generateSegmentsList = () => {
+    const segmentsList = [];
+    if (filterPayload.source === 'All') {
+      Object.entries(segments)
+        .filter((segment) =>
+          ['$hubspot_company', '$salesforce_account'].includes(segment[0])
+        )
+        .forEach(([group, vals]) => {
+          const obj = formatSegmentsObjToGroupSelectObj(group, vals);
+          segmentsList.push(obj);
+        });
+    } else {
+      const obj = formatSegmentsObjToGroupSelectObj(
+        filterPayload.source,
+        segments[filterPayload.source]
+      );
+      segmentsList.push(obj);
+    }
+    return segmentsList;
+  };
+
+  const onOptionClick = (_, data) => {
+    const opts = { ...filterPayload };
+    opts.segment_id = data[1];
+    setActiveSegment(data[2]);
+    setFilterPayload(opts);
+    setSegmentDDVisible(false);
+  };
+
+  const handleSaveSegment = (segmentPayload) => {
+    createNewSegment(activeProject.id, segmentPayload)
+      .then((response) => {
+        if (response.type === 'SEGMENT_CREATION_FULFILLED') {
+          notification.success({
+            message: 'Success!',
+            description: response?.payload?.message,
+            duration: 3
+          });
+          setShowSegmentModal(false);
+          setSegmentDDVisible(false);
+        }
+      })
+      .then(() => getSavedSegments(activeProject.id))
+      .catch((err) => {
+        notification.error({
+          message: 'Error',
+          description: 'Segment Creation Failed. Invalid Parameters.',
+          duration: 3
+        });
+      });
+  };
+
+  const clearSegment = () => {
+    const opts = { ...filterPayload };
+    opts.segment_id = '';
+    setActiveSegment({});
+    setFilterPayload(opts);
+    setSegmentDDVisible(false);
+  };
+
+  const selectSegment = () => (
+    <div className='absolute top-8'>
+      {isSegmentDDVisible ? (
+        <GroupSelect2
+          groupedProperties={generateSegmentsList()}
+          placeholder='Search Segments'
+          optionClick={onOptionClick}
+          onClickOutside={() => setSegmentDDVisible(false)}
+          allowEmpty
+          additionalActions={
+            <>
+              <Divider className='divider-margin' />
+              <div className='flex items-center'>
+                <Button
+                  type='link'
+                  size='large'
+                  className='w-full'
+                  icon={<SVG name='plus' color='purple' />}
+                  onClick={() => setShowSegmentModal(true)}
+                >
+                  Add New Segment
+                </Button>
+                {filterPayload.segment_id && (
+                  <Button
+                    type='primary'
+                    size='large'
+                    className='w-full ml-1'
+                    onClick={clearSegment}
+                    danger
+                  >
+                    Clear Segment
+                  </Button>
+                )}
+              </div>
+              <SegmentModal
+                profileType='account'
+                type={filterPayload.source}
+                typeOptions={enabledGroups().filter(
+                  (group) => group[1] !== 'All'
+                )}
+                visible={showSegmentModal}
+                segment={{}}
+                onSave={handleSaveSegment}
+                onCancel={() => setShowSegmentModal(false)}
+              />
+            </>
+          }
+        />
+      ) : null}
+    </div>
+  );
+
+  const segmentInfo = () => {
+    const cardContent = [];
+    if (activeSegment.query) {
+      if (activeSegment.query.gp) {
+        const filters = formatPayloadForFilters(activeSegment.query.gp);
+        cardContent.push(
+          <div className='pointer-events-none mt-3'>
+            <PropertyFilter
+              mode='display'
+              filtersLimit={10}
+              profileType='account'
+              source={filterPayload.source}
+              filters={filters}
+            ></PropertyFilter>
+          </div>
+        );
+      }
+    }
+    return cardContent;
+  };
+
   const renderActions = () => (
     <div className='flex justify-between items-start my-4'>
-      <div className='flex items-start'>
+      <div className='flex justify-between'>
         <div className='relative mr-2'>
           <Button
-            className='fa-dd--custom-btn'
+            className='dropdown-btn'
             type='text'
             icon={<SVG name='user_friends' size={16} />}
-            onClick={() => setDDVisible(!isDDVisible)}
+            onClick={() => setAccountDDVisible(!isAccountDDVisible)}
           >
             {displayFilterOpts[filterPayload.source]}
             <SVG name='caretDown' size={16} />
           </Button>
           {selectUsers()}
+        </div>
+        <div className='relative mr-2'>
+          <Popover
+            overlayClassName='fa-custom-popover'
+            placement='bottomLeft'
+            trigger={activeSegment.query ? 'hover' : ''}
+            content={segmentInfo}
+          >
+            <Button
+              className='dropdown-btn'
+              type='text'
+              onClick={() => setSegmentDDVisible(!isSegmentDDVisible)}
+            >
+              {Object.keys(activeSegment).length
+                ? activeSegment.name
+                : 'Select Segment'}
+              <SVG name='caretDown' size={16} />
+            </Button>
+          </Popover>
+          {selectSegment()}
         </div>
         <div key={0} className='max-w-3xl'>
           <PropertyFilter
@@ -413,6 +590,7 @@ function AccountProfiles({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   accounts: state.timelines.accounts,
+  segments: state.timelines.segments,
   accountDetails: state.timelines.accountDetails,
   currentProjectSettings: state.global.currentProjectSettings
 });
@@ -422,6 +600,8 @@ const mapDispatchToProps = (dispatch) =>
     {
       getProfileAccounts,
       getProfileAccountDetails,
+      createNewSegment,
+      getSavedSegments,
       getGroupProperties,
       fetchProjectSettings,
       udpateProjectSettings
