@@ -42,7 +42,8 @@ export const AppRoutes = () => (
 export const AppLayoutRoutes = ({
   activeAgent,
   demoProjectId,
-  active_project
+  active_project,
+  currentProjectSettings
 }) => {
   return (
     <Switch>
@@ -60,7 +61,7 @@ export const AppLayoutRoutes = ({
         />
       ) : null}
 
-      {WhiteListedAccounts.includes(activeAgent) && (
+      {currentProjectSettings?.is_path_analysis_enabled && (
         <>
           <Route
             path='/path-analysis'
