@@ -320,7 +320,7 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		"event": event,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
+
 	logCtx := log.WithFields(logFields)
 	if event.ProjectId == 0 || event.UserId == "" || event.EventNameId == "" {
 		logCtx.Error("CreateEvent Failed. Invalid projectId or userId or eventNameId.")
@@ -426,32 +426,36 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	}
 	defer rows.Close()
 
+	// log for analysis.
+	log.WithField("project_id", event.ProjectId).
+		WithField("event_name_id", event.EventNameId).
+		WithField("tag", "create_event").
+		Info("Created Event.")
+
 	event.CreatedAt = transTime
 	event.UpdatedAt = transTime
 
 	model.SetCacheUserLastEvent(event.ProjectId, event.UserId,
 		&model.CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
 
-	log.Info("EventTrigger function log")
 	t1 := time.Now()
 	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
 		log.Info("EventTriggerAlerts match function trigger point.")
-		alert, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties)
-		if ErrCode == http.StatusFound && alert != nil {
+		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties)
+		if ErrCode == http.StatusFound && alerts != nil {
 			log.WithFields(log.Fields{"project_id": event.ProjectId,
-				"event_trigger_alert": alert}).Info("EventTriggerAlert found. Sending Alert.")
+				"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
 
-			success := store.SendEventTriggerAlert(alert, event.ProjectId, event.EventNameId, event.UserId)
-			if !success {
-				log.WithFields(log.Fields{"project_id": event.ProjectId,
-					"event_trigger_alert": alert}).Error("Sending Alert failure.")
-			} else {
-				log.Info("Alert send successfully. Returning control.")
+			for _, alert := range *alerts {
+				success := store.CacheEventTriggerAlert(&alert, event.ProjectId, event.EventNameId, event.UserId)
+				if !success {
+					log.WithFields(log.Fields{"project_id": event.ProjectId,
+						"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
+				}
 			}
 		}
+		log.Info("Control past EventTrigger block: ", time.Since(t1))
 	}
-	log.Info("Control past EventTrigger block: ", time.Since(t1))
-
 	return event, http.StatusCreated
 }
 
@@ -827,6 +831,10 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 	if err == nil {
 		store.addEventDetailsToCache(projectId, &model.Event{EventNameId: event.EventNameId, Properties: *updatedPropertiesOnlyJsonBlob}, true)
 	}
+
+	// Log for analysis.
+	log.WithField("project_id", projectId).WithField("tag", "update_event").Info("Updated event.")
+
 	return http.StatusAccepted
 }
 
@@ -945,6 +953,9 @@ func (store *MemSQL) OverwriteEventProperties(projectId int64, userId string, ev
 		return http.StatusInternalServerError
 	}
 
+	// Log for analysis.
+	log.WithField("project_id", projectId).WithField("tag", "update_event").Info("Updated event.")
+
 	return http.StatusAccepted
 }
 
@@ -971,6 +982,9 @@ func (store *MemSQL) OverwriteEventPropertiesByID(projectId int64, id string,
 		logCtx.WithError(err).Error("Updating event properties failed in OverwriteEventPropertiesByID.")
 		return http.StatusInternalServerError
 	}
+
+	// Log for analysis.
+	log.WithField("project_id", projectId).WithField("tag", "update_event").Info("Updated event.")
 
 	return http.StatusAccepted
 }
@@ -1111,6 +1125,9 @@ func (store *MemSQL) associateSessionByEventIdsWithTransaction(projectId int64,
 		logCtx.WithError(err).Error("Failed to associate session to events.")
 		return http.StatusInternalServerError
 	}
+
+	// Log for analysis.
+	log.WithField("project_id", projectId).WithField("tag", "update_event").Info("Updated event.")
 
 	return http.StatusAccepted
 }
@@ -2214,6 +2231,9 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID int64, userID,
 		logCtx.WithError(err).Error("Failed to overwrite user properteis.")
 		return http.StatusInternalServerError
 	}
+
+	// Log for analysis.
+	log.WithField("project_id", projectID).WithField("tag", "update_event").Info("Updated event.")
 
 	return http.StatusAccepted
 }

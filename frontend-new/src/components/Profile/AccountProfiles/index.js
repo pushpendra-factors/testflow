@@ -259,7 +259,9 @@ function AccountProfiles({
         (obj) => obj.prop_name === option.prop_name
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListAccountProps(checkListProps);
+      setCheckListAccountProps(
+        checkListProps.sort((a, b) => b.enabled - a.enabled)
+      );
     } else {
       notification.error({
         message: 'Error',
@@ -283,8 +285,10 @@ function AccountProfiles({
   const popoverContent = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
-        tab={<span className='fa-activity-filter--tabname'>Properties</span>}
-        key='properties'
+        tab={
+          <span className='fa-activity-filter--tabname'>Table Properties</span>
+        }
+        key='props'
       >
         <SearchCheckList
           placeholder='Search Properties'

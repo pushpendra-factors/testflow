@@ -5,62 +5,68 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
-	slack "factors/slack_bot/handler"
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	scanCount = 10000
-	limit     = 10000
-)
-
-func EventTriggerAlertsSender(configs map[string]interface{}) (map[string]interface{}, bool) {
+func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 	log.Info("Inside task manager")
-	prefix := "ETA:Alert:pid:*"
-	allKeys, err := cacheRedis.ScanPersistent(prefix, scanCount, limit)
+
+	prefix := fmt.Sprintf("ETA:pid:%d", projectID)
+	ssKey, err := cacheRedis.NewKeyWithOnlyPrefix(prefix)
 	if err != nil {
-		log.Fatalf("Failed to get all alerts for project")
+		log.WithError(err).Error("Failed to fetch cacheKey for sortedSet")
 		return nil, false
 	}
+	allKeys, err := cacheRedis.ZrangeWithScoresPersistent(true, ssKey)
+	if err != nil {
+		log.WithError(err).Error("Failed to get all alert keys for project: ", projectID)
+		return nil, false
+	}
+
+	log.Info(fmt.Printf("%+v\n", allKeys))
 	status := make(map[string]interface{})
 
-	for _, key := range allKeys {
-		cacheStr, err := cacheRedis.GetPersistent(key)
+	for key := range allKeys {
+		cacheKey, err := cacheRedis.KeyFromStringWithPid(key)
 		if err != nil {
-			log.Fatalf("Failed to get alert from the cache")
-			return nil, false
-		}
-		log.Info("Key found: ", key)
-
-		counterKey := cacheRedis.Key{
-			ProjectID: key.ProjectID,
-			Prefix:    "ETA:Counter",
-			Suffix:    key.Suffix,
+			log.Error("Failed to get cacheKey from the key string")
+			continue
 		}
 
-		log.Info(fmt.Printf("%+v\n", counterKey))
+		log.Info("Key found: ", cacheKey)
 
-		var alert model.CachedEventTriggerAlert
-		err = U.DecodeJSONStringToStructType(cacheStr, &alert)
+		alertID := strings.Split(cacheKey.Suffix, ":")[0]
+		cacheStr, err := cacheRedis.GetPersistent(cacheKey)
 		if err != nil {
-			log.WithError(err).Errorf("failed to decode alert for event_trigger_alert: %s", alert.AlertID)
+			log.WithError(err).Error("failed to find message for the alert ", alertID)
+			continue
+		}
+		var msg model.CachedEventTriggerAlert
+		err = U.DecodeJSONStringToStructType(cacheStr, &msg)
+		if err != nil {
+			log.WithError(err).Error("failed to decode alert for event_trigger_alert")
 			status["error"] = err
-			return status, false
+			continue
 		}
 
 		log.Info("Proceeding with sendHelper function.")
-		success := sendHelperForEventTriggerAlert(key, &counterKey, &alert)
+		success := sendHelperForEventTriggerAlert(cacheKey, &msg, alertID)
 
 		if success {
-			err := cacheRedis.DelPersistent(key)
+			err := cacheRedis.DelPersistent(cacheKey)
 			if err != nil {
 				log.WithError(err).Error("Cannot remove alert from cache")
+			}
+			cc, err := cacheRedis.ZRemPersistent(ssKey, true, key)
+			if err != nil || cc != 1 {
+				log.WithError(err).Error("Cannot remove alert by zrem")
 			}
 			log.Info("Alert removed from cache")
 		}
@@ -69,31 +75,28 @@ func EventTriggerAlertsSender(configs map[string]interface{}) (map[string]interf
 	return nil, true
 }
 
-func sendHelperForEventTriggerAlert(key, counterKey *cacheRedis.Key, alert *model.CachedEventTriggerAlert) bool {
-	var alertConfiguration model.EventTriggerAlertConfig
-	var sendSuccess bool
+func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEventTriggerAlert, alertID string) bool {
 
-	eta, errCode := store.GetStore().GetEventTriggerAlertByID(alert.AlertID)
-	if errCode != http.StatusFound {
-		log.WithFields(log.Fields{"event_trigger_alert": alert, log.ErrorKey: errCode}).Error(
-			"Failed to decode alert.")
+	eta, errCode := store.GetStore().GetEventTriggerAlertByID(alertID)
+	if errCode != http.StatusFound || eta == nil {
+		log.Error("Failed to fetch alert from db, ", errCode)
 		return false
 	}
+
+	var alertConfiguration model.EventTriggerAlertConfig
 	err := U.DecodePostgresJsonbToStructType(eta.EventTriggerAlert, &alertConfiguration)
 	if err != nil {
-		log.WithFields(log.Fields{"event_trigger_alert": alert, log.ErrorKey: err}).Error(
-			"Failed to decode alert.")
+		log.WithError(err).Error("Failed to decode Jsonb to struct type")
 		return false
 	}
 
-	notify := alertConfiguration.Notifications
-	if notify {
-		msg :=  alert.Message
-		if alertConfiguration.Slack {
-			log.Info(fmt.Printf("Message to be sent: %s", msg))
-			log.Info(fmt.Printf("%+v\n", alertConfiguration))
-			sendSuccess = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.CreatedBy, msg, alertConfiguration.SlackChannels)
-		}
+	var sendSuccess bool
+
+	msg := alert.Message
+	if alertConfiguration.Slack {
+		log.Info(fmt.Printf("Message to be sent: %s", msg))
+		log.Info(fmt.Printf("%+v\n", alertConfiguration))
+		sendSuccess = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.CreatedBy, msg, alertConfiguration.SlackChannels)
 	}
 
 	if sendSuccess {
@@ -132,11 +135,11 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 	for _, channel := range slackChannels {
 		log.Info("Sending alert for slack channel ", channel)
 
-		status, err := slack.SendSlackAlert(projectID, msg.Message, agentUUID, channel)
-		if err != nil || !status {
-			logCtx.WithError(err).Error("failed to send slack alert ", msg)
-			return false
-		}
+		// status, err := slack.SendSlackAlert(projectID, msg.Message, agentUUID, channel)
+		// if err != nil || !status {
+		// 	logCtx.WithError(err).Error("failed to send slack alert ", msg)
+		// 	return false
+		// }
 
 		logCtx.Info("slack alert sent")
 	}

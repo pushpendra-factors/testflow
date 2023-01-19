@@ -64,7 +64,8 @@ function SiderMenu({
   fetchSmartEvents,
   fetchProjectAgents,
   fetchAgentInfo,
-  fetchProjects
+  fetchProjects,
+  currentProjectSettings
 }) {
   const location = useLocation();
   const [openKeys, setOpenKeys] = useState([]);
@@ -269,7 +270,7 @@ function SiderMenu({
         <b>Explain</b>
       </Menu.Item>
 
-      {whiteListedAccounts.includes(activeAgent) && (
+      {currentProjectSettings?.is_path_analysis_enabled && (
         <>
           <Menu.Item
             className={styles.menuitems}
@@ -277,7 +278,11 @@ function SiderMenu({
             icon={setIcon('PathAnalysis')}
           >
             <b>Path Analysis</b>
-          </Menu.Item>
+          </Menu.Item> 
+        </>
+      )}
+      {whiteListedAccounts.includes(activeAgent) && (
+        <> 
           <Menu.Item
             className={styles.menuitems}
             key='/attribution'
@@ -416,7 +421,8 @@ function SiderMenu({
 }
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  activeAgent: state.agent?.agent_details?.email
+  activeAgent: state.agent?.agent_details?.email,
+  currentProjectSettings: state.global.currentProjectSettings,
 });
 export default connect(mapStateToProps, {
   fetchSmartEvents,

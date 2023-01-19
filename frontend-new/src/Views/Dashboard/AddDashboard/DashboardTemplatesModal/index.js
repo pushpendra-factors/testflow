@@ -665,12 +665,7 @@ let Step2DashboardTemplateModal = ({
 /*
   Main Component Responsible for Rendering of Modal and initial Methods
 */
-let DashboardTemplatesModal = ({
-  addDashboardModal,
-  apisCalled,
-  setaddDashboardModal,
-  getOkText
-}) => {
+let DashboardTemplatesModal = ({ apisCalled, getOkText }) => {
   let dispatch = useDispatch();
 
   let dashboardTemplates = useSelector((state) => state.dashboardTemplates);

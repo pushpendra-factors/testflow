@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 
+	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -1907,7 +1909,13 @@ func sanitizeNumericalBucketRanges(result *model.QueryResult, query *model.Query
 func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error, string) {
 	reqID := U.GetUniqueQueryRequestID()
 
-	db := C.GetServices().Db
+	var db *gorm.DB
+	if C.IsDBConnectionPool2Enabled() {
+		db = C.GetServices().Db2
+	} else {
+		db = C.GetServices().Db
+	}
+
 	tx, err := db.DB().Begin()
 	if err != nil {
 		log.WithError(err).Error("Failed to begin DB transaction.")
@@ -1931,12 +1939,21 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	stmnt = fmt.Sprintf("/*!%s-%s*/ ", C.GetConfig().AppName, reqID) + stmnt
 
 	// Set resource pool before query.
-	if usePool, poolName := C.UseResourcePoolForAnalytics(); usePool {
-		C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx, poolName)
+	if !C.IsDBConnectionPool2Enabled() {
+		if usePool, poolName := C.UseResourcePoolForAnalytics(); usePool {
+			C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx, poolName)
+		}
+	}
+	startExecTime := time.Now()
+
+	var dbContext *context.Context
+	if C.IsDBConnectionPool2Enabled() {
+		dbContext = C.GetServices().DBContext2
+	} else {
+		dbContext = C.GetServices().DBContext
 	}
 
-	startExecTime := time.Now()
-	rows, err := tx.QueryContext(*C.GetServices().DBContext, stmnt, params...)
+	rows, err := tx.QueryContext(*dbContext, stmnt, params...)
 	U.LogExecutionTimeWithQueryRequestID(startExecTime, reqID, &logFields)
 	if err != nil {
 		log.WithError(err).WithFields(logFields).Error("Failed to exec query with context.")

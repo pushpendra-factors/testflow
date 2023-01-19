@@ -28,7 +28,7 @@ const HorizontalWindow = ({ windowTemplates, onWindowClick }) => {
   useEffect(() => {
     let elements = [];
     let length = windowTemplates.length;
-    let windowLength = length / 3;
+    let windowLength = Math.floor(length / 3);
     let odd = length % 3;
     for (let i = 0; i < length - odd; i += 3) {
       elements.push([
@@ -39,7 +39,7 @@ const HorizontalWindow = ({ windowTemplates, onWindowClick }) => {
     }
     let oddarr = [];
     for (let i = 0; i < odd; i++) {
-      oddarr.push(windowTemplates[3 * windowLength - 1 + i]);
+      oddarr.push(windowTemplates[3 * windowLength + i]);
     }
     elements.push(oddarr);
     setAllItems(elements);

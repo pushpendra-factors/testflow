@@ -101,6 +101,20 @@ export function buildExplainInsights(projectID,data) {
     });
   }
 }
+export function buildPathAnalysis(projectID,data) {
+  return function(dispatch) {
+    return new Promise((resolve,reject) => { 
+      put(dispatch, host + "projects/"+projectID+`/v1/pathanalysis`, data)    
+        .then((response)=>{        
+          dispatch({type:"UPDATE_INSIGHT_FEEDBACK_FULLFILLED", payload: response.data});
+          resolve(response)
+        }).catch((err)=>{        
+          dispatch({type:"UPDATE_INSIGHT_FEEDBACK__REJECTED", payload: err});
+          reject(err);
+        });
+    });
+  }
+}
 export function buildWeeklyInsights(projectID,data) {
   return function(dispatch) {
     return new Promise((resolve,reject) => { 

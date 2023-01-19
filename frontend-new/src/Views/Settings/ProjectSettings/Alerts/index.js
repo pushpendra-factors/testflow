@@ -111,6 +111,7 @@ const Alerts = ({
         >
           <a>View</a>
         </Menu.Item>
+        {tabNo === '1' && 
         <Menu.Item
           key='1'
           onClick={() => {
@@ -119,7 +120,7 @@ const Alerts = ({
           }}
         >
           <a>Edit</a>
-        </Menu.Item>
+        </Menu.Item>}
         <Menu.Item
           key='2'
           onClick={() => {
@@ -217,7 +218,7 @@ const Alerts = ({
           savedArr.push({
             key: index,
             alert_name: item.title,
-            dop: item?.slack && 'Slack',
+            dop: item?.delivery_options,
             actions: item
           });
         });
@@ -275,8 +276,8 @@ const Alerts = ({
         <Tabs activeKey={`${tabNo}`} onChange={callback}>
           <TabPane tab='Track KPIs' key='1'>
             <Table
-              loading={tableLoading}
               className='fa-table--basic mt-8'
+              loading={tableLoading}
               columns={columns}
               dataSource={tableData}
               pagination={false}

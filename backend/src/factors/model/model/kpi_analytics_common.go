@@ -637,6 +637,11 @@ func GetNonGBTResultsFromGBTResultsAndMaps(reqID string, kpiQueryGroup KPIQueryG
 	mapOfGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult, mapOfNonGBTKPINormalQueryToResults map[string][]QueryResult,
 	mapOfGBTKPINormalQueryToResults map[string][]QueryResult, externalQueryToInternalQueries map[string]KPIQueryGroup) (
 	int, map[string]map[string][]QueryResult, map[string][]QueryResult) {
+	logFields := log.Fields{
+		"query":  kpiQueryGroup,
+		"req_id": reqID,
+	}
+	defer LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	finalStatusCode := http.StatusOK
 	logEntry := log.WithField("reqID", reqID).
@@ -758,6 +763,11 @@ func GetFinalResultantResultsForKPI(reqID string, kpiQueryGroup KPIQueryGroup, m
 	mapOfGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult, mapOfNonGBTKPINormalQueryToResults map[string][]QueryResult,
 	mapOfGBTKPINormalQueryToResults map[string][]QueryResult, externalQueryToInternalQueries map[string]KPIQueryGroup) ([]QueryResult, int) {
 
+	logFields := log.Fields{
+		"query":  kpiQueryGroup,
+		"req_id": reqID,
+	}
+	defer LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	finalResultantResults := make([]QueryResult, 0)
 	finalStatusCode := http.StatusOK
 	logEntry := log.WithField("reqID", reqID).
@@ -986,6 +996,11 @@ func SplitQueryResultsIntoGBTAndNonGBT(queryResults []QueryResult, kpiQueryGroup
 	gbtRelatedQueries := make([]KPIQuery, 0)
 	nonGbtRelatedQueryResults := make([]QueryResult, 0)
 	nonGbtRelatedQueries := make([]KPIQuery, 0)
+	logFields := log.Fields{
+		"query": kpiQueryGroup,
+	}
+	defer LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
 	for index, kpiQuery := range kpiQueryGroup.Queries {
 		if kpiQuery.GroupByTimestamp != "" {
 			gbtRelatedQueryResults = append(gbtRelatedQueryResults, queryResults[index])
@@ -1009,6 +1024,11 @@ func MergeQueryResults(queryResults []QueryResult, queries []KPIQuery, timezoneS
 		queryResult := QueryResult{}
 		return queryResult
 	}
+
+	logFields := log.Fields{
+		"query": queries,
+	}
+	defer LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	queryResult := QueryResult{}
 	queryResult.Headers = TransformColumnResultGroup(queryResults, queries, timezoneString)

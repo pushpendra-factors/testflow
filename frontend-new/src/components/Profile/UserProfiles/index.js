@@ -403,7 +403,9 @@ function UserProfiles({
         (obj) => obj.prop_name === option.prop_name
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListUserProps(checkListProps);
+      setCheckListUserProps(
+        checkListProps.sort((a, b) => b.enabled - a.enabled)
+      );
     } else {
       notification.error({
         message: 'Error',
@@ -427,8 +429,10 @@ function UserProfiles({
   const popoverContent = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
-        tab={<span className='fa-activity-filter--tabname'>Properties</span>}
-        key='properties'
+        tab={
+          <span className='fa-activity-filter--tabname'>Table Properties</span>
+        }
+        key='props'
       >
         <SearchCheckList
           placeholder='Search Properties'

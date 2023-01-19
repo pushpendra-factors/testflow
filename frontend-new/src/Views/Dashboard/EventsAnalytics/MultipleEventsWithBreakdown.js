@@ -110,7 +110,7 @@ function MultipleEventsWithBreakdown({
 
   if (!visibleProperties.length) {
     return (
-      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
         <NoDataChart />
       </div>
     );
@@ -136,7 +136,7 @@ function MultipleEventsWithBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`area-${unit.id}`}
       />
@@ -148,7 +148,7 @@ function MultipleEventsWithBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
       />
@@ -186,7 +186,7 @@ function MultipleEventsWithBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`line-${unit.id}`}
       />
@@ -196,8 +196,7 @@ function MultipleEventsWithBreakdown({
   return (
     <div
       className={cx('w-full flex-1', {
-        'p-2': chartType !== CHART_TYPE_TABLE,
-        'overflow-scroll': chartType === CHART_TYPE_TABLE
+        'px-2': chartType !== CHART_TYPE_TABLE
       })}
     >
       {chartContent}

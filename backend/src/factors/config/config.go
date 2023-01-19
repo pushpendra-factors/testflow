@@ -121,6 +121,7 @@ type Configuration struct {
 	Port                                           int
 	DBInfo                                         DBConf
 	MemSQLInfo                                     DBConf
+	MemSQL2Info                                    DBConf
 	Auth0Info                                      Auth0Conf
 	SessionStore                                   string
 	SessionStoreSecret                             string
@@ -275,13 +276,12 @@ type Configuration struct {
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
-
 	EventTriggerEnabled                                bool
 	EventTriggerEnabledProjectIDs                      string
-
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
+	EnableDBConnectionPool2                            bool
 	FormFillIdentificationAllowedProjects              string
 }
 
@@ -289,6 +289,9 @@ type Services struct {
 	Db                   *gorm.DB
 	DBContext            *context.Context
 	DBContextCancel      *context.CancelFunc
+	Db2                  *gorm.DB
+	DBContext2           *context.Context
+	DBContextCancel2     *context.CancelFunc
 	GeoLocation          *geoip2.Reader
 	Etcd                 *serviceEtcd.EtcdClient
 	Redis                *redis.Pool
@@ -415,6 +418,10 @@ func InitPropertiesTypeCache(enablePropertyTypeFromDB bool, propertiesTypeCacheS
 
 	propertiesTypeCache.LastResetDate = U.GetDateOnlyFromTimestampZ(U.TimeNowUnix())
 	log.Info("Properties_type cache initialized.")
+}
+
+func IsDBConnectionPool2Enabled() bool {
+	return configuration.EnableDBConnectionPool2
 }
 
 func IsAllowedCampaignEnrichementByProjectID(projectID int64) bool {
@@ -729,7 +736,11 @@ func InitEtcd(EtcdEndpoints []string) error {
 func InitDBWithMaxIdleAndMaxOpenConn(config Configuration,
 	maxOpenConns, maxIdleConns int) error {
 	if UseMemSQLDatabaseStore() {
-		return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQLInfo, maxOpenConns, maxIdleConns)
+		if IsDBConnectionPool2Enabled() {
+			InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQL2Info, maxOpenConns, maxIdleConns, true)
+		}
+
+		return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQLInfo, maxOpenConns, maxIdleConns, false)
 	}
 	return InitPostgresDBWithMaxIdleAndMaxOpenConn(config.DBInfo, maxOpenConns, maxIdleConns)
 }
@@ -875,7 +886,7 @@ func isValidMemSQLResourcePool(resourcePool string) bool {
 	return exists
 }
 
-func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleConns int) error {
+func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleConns int, isDb2 bool) error {
 	if services == nil {
 		services = &Services{}
 	}
@@ -891,11 +902,18 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 	// Removes emoji and cleans up string and postgres.Jsonb columns.
 	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", U.GormCleanupCallback)
 	memSQLDB.Callback().Create().Before("gorm:update").Register("cleanup", U.GormCleanupCallback)
+	var info DBConf
+	if IsDBConnectionPool2Enabled() {
+		info = configuration.MemSQL2Info
+	} else {
+		info = configuration.MemSQLInfo
+	}
 
-	if configuration.MemSQLInfo.UseExactConnFromConfig {
+	// info=
+	if info.UseExactConnFromConfig {
 		// Use connection configuration from flag.
-		maxOpenConns = configuration.MemSQLInfo.MaxOpenConnections
-		maxIdleConns = configuration.MemSQLInfo.MaxIdleConnections
+		maxOpenConns = info.MaxOpenConnections
+		maxIdleConns = info.MaxIdleConnections
 	} else {
 		// Using same no.of connections for both max_open and
 		// max_idle (greatest among two) as a workaround to
@@ -929,10 +947,19 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	services.Db = memSQLDB
+	// initiates corresponding service.
+	if isDb2 {
+		services.Db2 = memSQLDB
+		services.DBContext2 = &ctx
+		services.DBContextCancel2 = &cancel
+	} else {
+		services.Db = memSQLDB
+		services.DBContext = &ctx
+		services.DBContextCancel = &cancel
+	}
+
 	configuration.DBInfo = dbConf
-	services.DBContext = &ctx
-	services.DBContextCancel = &cancel
+
 	return nil
 }
 
@@ -1005,8 +1032,13 @@ func KillDBQueriesOnExit() {
 		case <-c:
 			if GetServices().DBContext != nil && GetServices().DBContextCancel != nil {
 				(*GetServices().DBContextCancel)()
-				signal.Stop(c)
 			}
+
+			if GetServices().DBContext2 != nil && GetServices().DBContextCancel2 != nil {
+				(*GetServices().DBContextCancel2)()
+			}
+
+			signal.Stop(c)
 		}
 	}()
 }
@@ -2417,7 +2449,7 @@ func IsEventTriggerEnabled() bool {
 func IsProjectIDEventTriggerEnabledProjectID(id int64) bool {
 	list := GetTokensFromStringListAsUint64(configuration.EventTriggerEnabledProjectIDs)
 	for _, i := range list {
-		if list[i] == id {
+		if i == id {
 			return true
 		}
 	}
@@ -2425,11 +2457,11 @@ func IsProjectIDEventTriggerEnabledProjectID(id int64) bool {
 }
 
 func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
-	if configuration.SkipEventNameStepByProjectID == "" {
+	if configuration.IncreaseKPILimitForProjectIDs == "" {
 		return false
 	}
 
-	if configuration.SkipEventNameStepByProjectID == "*" {
+	if configuration.IncreaseKPILimitForProjectIDs == "*" {
 		return true
 	}
 
@@ -2451,4 +2483,3 @@ func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
 	}
 	return allowedProjectIDs[projectID]
 }
-

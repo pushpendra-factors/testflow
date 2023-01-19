@@ -1,0 +1,66 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: default-pool
+  name: analyze-job
+spec:
+  concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+          labels:
+            layer: jobs
+            nodePool: default-pool
+        spec:
+          containers:
+          - args:
+            - --env
+            - $(ENV)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_ADMIN_USER)
+            - --memsql_pass
+            - $(MEMSQL_ADMIN_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
+            - --gcp_project_id
+            - $(GCP_PROJECT_ID)
+            - --gcp_project_location
+            - $(GCP_PROJECT_LOCATION)
+            - --analyze_tables_interval
+            - "60"
+            - --enable_analyze_table
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-memsql
+            - secretRef:
+                name: secret-memsql
+            image: us.gcr.io/factors-staging/analyze:v1-17b7f8187
+            imagePullPolicy: IfNotPresent
+            name: analyze
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          nodeSelector:
+            cloud.google.com/gke-nodepool: default-pool
+          restartPolicy: OnFailure
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+  schedule: '*/15 * * * *'
+  successfulJobsHistoryLimit: 5
+  suspend: false

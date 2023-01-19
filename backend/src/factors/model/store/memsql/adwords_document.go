@@ -37,7 +37,7 @@ const (
 	fromAdwordsDocument            = " FROM adwords_documents "
 	// This is monthly data populated at the start of every month
 	currencyQuery 				   = " LEFT OUTER JOIN ( "+
-									 "SELECT c1.date as date, c1.inr_value/c2.inr_value as inr_value from currency as c1 inner join currency c2 on c1.date = c2.date where c1.currency = '?' and c2.currency = '?') as c "+
+									 "SELECT c1.date as date, c1.inr_value/c2.inr_value as inr_value from currency as c1 inner join currency c2 on c1.date = c2.date where c1.currency = ? and c2.currency = ?) as c "+
 									 "ON TRUNC(timestamp/100) = c.date "
 
 	shareHigherOrderExpression              = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
@@ -1315,7 +1315,10 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, 
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
-	dataCurrency := store.GetDataCurrencyForAdwords(projectID)
+	dataCurrency := ""
+	if(projectCurrency != ""){
+		dataCurrency = store.GetDataCurrencyForAdwords(projectID)
+	}
 	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
@@ -1368,8 +1371,8 @@ func (store *MemSQL) GetDataCurrencyForAdwords(projectId int64) string{
 	var currency string
 	for rows.Next() {
 
-		if err := db.ScanRows(rows, &currency); err != nil {
-			log.WithError(err).Error("Failed to scan last adwords documents by type for sync info.")
+		if err := rows.Scan(&currency); err != nil {
+			log.WithError(err).Error("Failed to get currency details for adwords")
 		}
 	}
 
@@ -1687,7 +1690,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(adwordsGroupBys)
 	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperty, filterPropertiesStatementBasedOnRequestFilters, filterStatementForSmartPropertyGroupBy)
 	if((dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion))){
-		finalParams = append(finalParams, dataCurrency, projectCurrency)
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
@@ -1717,7 +1720,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 
 	fromStatement := getAdwordsFromStatementWithJoins(query.Filters, query.GroupBy)
 	// finalSQL
-	if(U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion)){
+	if((dataCurrency != "" && projectCurrency != "")  && (U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion))){
 		resultantSQLStatement = finalSelectStatement + fromStatement + currencyQuery + finalWhereStatement  + 
 			finalGroupByStatement + finalOrderByStatement + limitString
 	} else {
@@ -1911,7 +1914,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, f
 	}
 	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwords, filterPropertiesStatementBasedOnRequestFilters)
 	if((dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion))){
-		finalParams = append(finalParams, dataCurrency, projectCurrency)
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)

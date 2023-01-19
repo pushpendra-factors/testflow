@@ -68,7 +68,7 @@ type Model interface {
 		query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 		logCtx log.Entry) (map[string]model.UserInfo, []model.UserEventInfo, map[string]int64, error)
 	PullConvertedUsers(projectID int64, query *model.AttributionQuery, conversionFrom int64, conversionTo int64,
-		eventNameToIDList map[string][]interface{}, kpiData map[string]model.KPIInfo,
+		eventNameToIDList map[string][]interface{},
 		debugQueryKey string, enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
 		logCtx *log.Entry) (map[string]int64, []model.UserEventInfo, map[string]model.KPIInfo, []string, error)
 	GetAttributionData(projectID int64, query *model.AttributionQuery, sessions map[string]map[string]model.UserSessionData,
@@ -484,6 +484,7 @@ type Model interface {
 	GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID int64) (map[int]int64, int64, int)
 	GetSalesforceDocumentByType(projectID int64, docType int, from, to int64) ([]model.SalesforceDocument, int)
 	IsExistSalesforceDocumentByIds(projectID int64, ids []string, docType int) (map[string]bool, int)
+	IsExistSalesforceDocumentByIdsWithBatch(projectID int64, ids []string, docType int, batchSize int) (map[string]bool, int)
 	GetSalesforceDocumentByTypeAndAction(projectID int64, id string, docType int, action model.SalesforceAction) (*model.SalesforceDocument, int)
 
 	// scheduled_task
@@ -826,7 +827,7 @@ type Model interface {
 	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int)
 	CreateEventTriggerAlert(userID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string)
 	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
-	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb) (*model.EventTriggerAlert, int)
+	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb) (*[]model.EventTriggerAlert, int)
 	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
 	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
 

@@ -43,7 +43,10 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	var adwordsCampaignAllRows, adwordsAdgroupAllRows, adwordsKeywordAllRows []model.MarketingData
 	// Adwords.
 	if adwordsCustomerID != "" && model.DoesAdwordsReportExist(q.AttributionKey) {
-		dataCurrency := store.GetDataCurrencyForAdwords(projectID)
+		dataCurrency := ""
+		if(projectCurrency != ""){
+			dataCurrency = store.GetDataCurrencyForAdwords(projectID)
+		}
 		reportType = model.AdwordsDocumentTypeAlias[model.CampaignPerformanceReport] // 5
 		adwordsCampaignIDData, adwordsCampaignAllRows, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
 			effectiveTo, adwordsCustomerID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone, projectCurrency, dataCurrency)
@@ -130,7 +133,10 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	var facebookCampaignIDData, facebookAdgroupIDData map[string]model.MarketingData
 	var facebookCampaignAllRows, facebookAdgroupAllRows []model.MarketingData
 	if projectSetting.IntFacebookAdAccount != "" && model.DoesFBReportExist(q.AttributionKey) {
-		dataCurrency := store.GetDataCurrencyForFacebook(projectID)
+		dataCurrency := ""
+		if(projectCurrency != ""){
+			dataCurrency = store.GetDataCurrencyForFacebook(projectID)
+		}
 		facebookCustomerID := projectSetting.IntFacebookAdAccount
 
 		reportType = FacebookDocumentTypeAlias["campaign_insights"] // 5
@@ -174,7 +180,10 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	var linkedinCampaignIDData, linkedinAdgroupIDData map[string]model.MarketingData
 	var linkedinCampaignAllRows, linkedinAdgroupAllRows []model.MarketingData
 	if projectSetting.IntLinkedinAdAccount != "" && model.DoesLinkedinReportExist(q.AttributionKey) {
-		dataCurrency := store.GetDataCurrencyForLinkedin(projectID)
+		dataCurrency := ""
+		if(projectCurrency != ""){
+			dataCurrency = store.GetDataCurrencyForLinkedin(projectID)
+		}
 		linkedinCustomerID := projectSetting.IntLinkedinAdAccount
 
 		reportType = LinkedinDocumentTypeAlias["campaign_group_insights"] // 5
@@ -221,7 +230,10 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	if enableBingAdsAttribution {
 		isBingAdsIntegrationDone := store.IsBingIntegrationAvailable(projectID)
 		if isBingAdsIntegrationDone && model.DoesBingAdsReportExist(q.AttributionKey) {
-			dataCurrency := store.GetDataCurrencyForBingAds(projectID)
+			dataCurrency := ""
+			if(projectCurrency != ""){
+					dataCurrency = store.GetDataCurrencyForBingAds(projectID)
+			}
 			bingAdsAccountID, _ := store.getBingAdsAccountId(projectID)
 
 			reportType = model.BingadsDocumentTypeAlias[model.CampaignPerformanceReport] // 4
@@ -452,7 +464,10 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 	var adwordsCampaignAllRows, adwordsAdgroupAllRows, adwordsKeywordAllRows []model.MarketingData
 	// Adwords.
 	if adwordsCustomerID != "" && model.DoesAdwordsReportExist(q.AttributionKey) {
-		dataCurrency := store.GetDataCurrencyForAdwords(projectID)
+		dataCurrency := ""
+		if(projectCurrency != ""){
+			dataCurrency = store.GetDataCurrencyForAdwords(projectID)
+		}
 		reportType = model.AdwordsDocumentTypeAlias[model.CampaignPerformanceReport] // 5
 		adwordsCampaignIDData, adwordsCampaignAllRows, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
 			effectiveTo, adwordsCustomerID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone, projectCurrency, dataCurrency)
@@ -539,7 +554,10 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 	var facebookCampaignIDData, facebookAdgroupIDData map[string]model.MarketingData
 	var facebookCampaignAllRows, facebookAdgroupAllRows []model.MarketingData
 	if projectSetting.IntFacebookAdAccount != "" && model.DoesFBReportExist(q.AttributionKey) {
-		dataCurrency := store.GetDataCurrencyForFacebook(projectID)
+		dataCurrency := ""
+		if(projectCurrency != ""){
+			dataCurrency = store.GetDataCurrencyForFacebook(projectID)
+		}
 		facebookCustomerID := projectSetting.IntFacebookAdAccount
 
 		reportType = FacebookDocumentTypeAlias["campaign_insights"] // 5
@@ -583,7 +601,10 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 	var linkedinCampaignIDData, linkedinAdgroupIDData map[string]model.MarketingData
 	var linkedinCampaignAllRows, linkedinAdgroupAllRows []model.MarketingData
 	if projectSetting.IntLinkedinAdAccount != "" && model.DoesLinkedinReportExist(q.AttributionKey) {
-		dataCurrency := store.GetDataCurrencyForLinkedin(projectID)
+		dataCurrency := ""
+		if(projectCurrency != ""){
+			dataCurrency = store.GetDataCurrencyForLinkedin(projectID)
+		}
 		linkedinCustomerID := projectSetting.IntLinkedinAdAccount
 
 		reportType = LinkedinDocumentTypeAlias["campaign_group_insights"] // 5
@@ -628,7 +649,10 @@ func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.Attributio
 	var bingadsCampaignIDData, bingadsAdgroupIDData, bingadsKeywordIDData map[string]model.MarketingData
 	var bingadsCampaignAllRows, bingadsAdgroupAllRows, bingadsKeywordAllRows []model.MarketingData
 	if enableBingAdsAttribution {
-		dataCurrency := store.GetDataCurrencyForBingAds(projectID)
+		dataCurrency := ""
+		if(projectCurrency != ""){
+			dataCurrency = store.GetDataCurrencyForBingAds(projectID)
+		}
 		isBingAdsIntegrationDone := store.IsBingIntegrationAvailable(projectID)
 		if isBingAdsIntegrationDone && model.DoesBingAdsReportExist(q.AttributionKey) {
 			bingAdsAccountID, _ := store.getBingAdsAccountId(projectID)

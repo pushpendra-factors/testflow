@@ -238,9 +238,7 @@ const LinkedEventsBlock = ({
   };
 
   const renderLinkEventBlockContent = () => {
-    let filterOptions = [
-      // ['Filter By', 'filter']
-    ];
+    let filterOptions = [];
     return (
       <div
         className={`${styles.block__content} fa--query_block_section--basic mt-4 relative`}

@@ -78,7 +78,8 @@ func main() {
 	defer db.Close()
 
 	conf := make(map[string]interface{})
-	status := taskWrapper.TaskFunc("EventTriggerAlertSender", 1, T.EventTriggerAlertsSender, conf)
+	projectIDs := C.GetTokensFromStringListAsUint64(config.EventTriggerEnabledProjectIDs)
+	status := taskWrapper.TaskFuncWithProjectId("EventTriggerAlertSender", 1, projectIDs, T.EventTriggerAlertsSender, conf)
 	log.Info(status)
 	if status["err"] != nil {
 		log.Error("Event Trigger Alert job failing.")

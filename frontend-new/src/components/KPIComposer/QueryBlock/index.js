@@ -297,7 +297,7 @@ function QueryBlock({
     // Kept Filter by only, as it was previously, just changed Filter Menu
 
     return (
-      <div className={'flex'}>
+      <div className={'flex ml-2'}>
         <div className={`relative`}>
           {moreOptions == false ? (
             <>
@@ -520,9 +520,7 @@ function QueryBlock({
     );
   }
 
-  let KPIFilterOptions = [
-    // ['Filter by', 'filter']
-  ];
+  let KPIFilterOptions = [];
   return (
     <div
       className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}

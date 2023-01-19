@@ -54,6 +54,17 @@ func main() {
 	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
 	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
 
+	enableDBConnectionPool2 := flag.Bool("enable_db_conn_pool2", false, "")
+	memSQLHost2 := flag.String("memsql_host_2", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort2 := flag.Int("memsql_port_2", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser2 := flag.String("memsql_user_2", C.MemSQLDefaultDBParams.User, "")
+	memSQLName2 := flag.String("memsql_name_2", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass2 := flag.String("memsql_pass_2", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate2 := flag.String("memsql_cert_2", "", "")
+
+	memSQLDBMaxOpenConnections2 := flag.Int("memsql_max_open_connections_2", 100, "Max no.of open connections allowed on connection pool of memsql")
+	memSQLDBMaxIdleConnections2 := flag.Int("memsql_max_idle_connections_2", 50, "Max no.of idle connections allowed on connection pool of memsql")
+
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	disableDBWrites := flag.Bool("disable_db_writes", false, "To disable DB writes.")
 	disableQueryCache := flag.Bool("disable_query_cache", false, "To disable dashboard and query analytics cache.")
@@ -244,6 +255,19 @@ func main() {
 			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
 			UseExactConnFromConfig: true,
 		},
+		MemSQL2Info: C.DBConf{
+			Host:        *memSQLHost2,
+			Port:        *memSQLPort2,
+			User:        *memSQLUser2,
+			Name:        *memSQLName2,
+			Password:    *memSQLPass2,
+			Certificate: *memSQLCertificate2,
+			AppName:     appName,
+
+			MaxOpenConnections:     *memSQLDBMaxOpenConnections2,
+			MaxIdleConnections:     *memSQLDBMaxIdleConnections2,
+			UseExactConnFromConfig: true,
+		},
 		Auth0Info: C.Auth0Conf{
 			Domain:       *auth0Domain,
 			ClientId:     *auth0ClientID,
@@ -341,6 +365,7 @@ func main() {
 		LinkedinMemberCompanyConfigProjectIDs:          C.GetTokensFromStringListAsString(*linkedinMemberCompanyConfigProjectIDs),
 		ProjectIdsV2:                                   projectIdsArrayV2,
 		IncreaseKPILimitForProjectIDs:                  *IncreaseKPILimitForProjectIDs,
+		EnableDBConnectionPool2:                        *enableDBConnectionPool2,
 	}
 	C.InitConf(config)
 

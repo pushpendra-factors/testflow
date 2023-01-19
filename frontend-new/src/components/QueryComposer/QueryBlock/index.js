@@ -243,7 +243,7 @@ function QueryBlock({
               ></SVG>
             }
             style={{ display: 'flex', padding: '10px', margin: '5px' }}
-            key='0'
+            key={eachIndex}
             onClick={() => setAdditionalactions(eachFilter)}
           >
             <span style={{ paddingLeft: '5px' }}>{eachFilter[0]}</span>
@@ -540,23 +540,19 @@ function QueryBlock({
               {selectEvents()}
             </Tooltip>
           </div>
-          {filterOptions.length != 0 ? (
-            <Dropdown
-              placement='bottomLeft'
-              overlay={getMenu(filterOptions)}
-              trigger={['hover']}
+          <Dropdown
+            placement='bottomLeft'
+            overlay={getMenu(filterOptions)}
+            trigger={['hover']}
+          >
+            <Button
+              type='text'
+              size={'large'}
+              className={`fa-btn--custom mr-1 btn-total-round`}
             >
-              <Button
-                type='text'
-                size={'large'}
-                className={`fa-btn--custom mr-1 btn-total-round`}
-              >
-                <SVG name='more' />
-              </Button>
-            </Dropdown>
-          ) : (
-            ''
-          )}
+              <SVG name='more' />
+            </Button>
+          </Dropdown>
           <div className={styles.query_block__additional_actions}>
             {additionalActions()}
           </div>

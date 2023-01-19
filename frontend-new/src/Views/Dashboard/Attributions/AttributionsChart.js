@@ -1,4 +1,10 @@
-import React, { useState, useContext, useCallback, useEffect } from 'react';
+import React, {
+  useState,
+  useContext,
+  useCallback,
+  useEffect,
+  useMemo
+} from 'react';
 import cx from 'classnames';
 import { useSelector } from 'react-redux';
 import get from 'lodash/get';
@@ -7,7 +13,8 @@ import {
   getTableColumns,
   getTableData,
   getSingleTouchPointChartData,
-  getDualTouchPointChartData
+  getDualTouchPointChartData,
+  getResultantMetrics
 } from '../../CoreQuery/AttributionsResult/utils';
 
 import AttributionTable from '../../CoreQuery/AttributionsResult/AttributionTable';
@@ -57,6 +64,10 @@ const AttributionsChart = ({
   queryOptions
 }) => {
   const { attributionMetrics } = useContext(DashboardContext);
+  const displayedAttributionMetrics = useMemo(
+    () => getResultantMetrics(touchpoint, attributionMetrics),
+    [touchpoint, attributionMetrics]
+  );
 
   const { eventNames } = useSelector((state) => state.coreQuery);
 
@@ -90,7 +101,7 @@ const AttributionsChart = ({
         linkedEvents,
         event,
         eventNames,
-        attributionMetrics,
+        displayedAttributionMetrics,
         attr_dimensions,
         content_groups,
         durationObj,
@@ -104,7 +115,7 @@ const AttributionsChart = ({
   }, [
     attr_dimensions,
     content_groups,
-    attributionMetrics,
+    displayedAttributionMetrics,
     attribution_method,
     attribution_method_compare,
     event,
@@ -128,7 +139,7 @@ const AttributionsChart = ({
       attribution_method_compare,
       touchpoint,
       linkedEvents,
-      attributionMetrics,
+      displayedAttributionMetrics,
       attr_dimensions,
       content_groups,
       undefined,
@@ -149,7 +160,7 @@ const AttributionsChart = ({
   }, [
     attr_dimensions,
     content_groups,
-    attributionMetrics,
+    displayedAttributionMetrics,
     attribution_method_compare,
     data,
     event,
@@ -239,7 +250,7 @@ const AttributionsChart = ({
           ? GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES
           : MAX_ALLOWED_VISIBLE_PROPERTIES
       }
-      attributionMetrics={attributionMetrics}
+      attributionMetrics={displayedAttributionMetrics}
       section={section}
       columns={columns}
       tableData={tableData}
@@ -301,8 +312,7 @@ const AttributionsChart = ({
   return (
     <div
       className={cx('w-full flex-1', {
-        'p-2 flex justify-center flex-col': chartType !== CHART_TYPE_TABLE,
-        'overflow-scroll': chartType === CHART_TYPE_TABLE
+        'px-2 flex justify-center flex-col': chartType !== CHART_TYPE_TABLE
       })}
     >
       {chartContent}

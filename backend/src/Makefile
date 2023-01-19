@@ -553,11 +553,15 @@ pack-sdk-bundle: pack-sdk-request-worker
 pack-sdk-bundle: pack-integration-request-worker
 pack-sdk-bundle: pack-hubspot-enrich
 pack-sdk-bundle: pack-salesforce-enrich
+pack-sdk-bundle: pack-marketo-enrich
+pack-sdk-bundle: pack-leadsquared-enrich
 
 upload-sdk-bundle: upload-sdk-request-worker
 upload-sdk-bundle: upload-integration-request-worker
 upload-sdk-bundle: upload-hubspot-enrich
 upload-sdk-bundle: upload-salesforce-enrich
+upload-sdk-bundle: upload-marketo-enrich
+upload-sdk-bundle: upload-leadsquared-enrich
 
 pack-event-bundle: pack-sdk-bundle
 pack-event-bundle: pack-add-session

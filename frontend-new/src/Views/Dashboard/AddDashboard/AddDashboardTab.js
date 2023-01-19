@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, SVG } from '../../../components/factorsComponents';
 import { Row, Col, Input, Button } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
+import useAutoFocus from 'hooks/useAutoFocus';
 // const { Option } = Select;
 
 function AddDashboardTab({
@@ -12,9 +13,10 @@ function AddDashboardTab({
   dashboardType,
   setDashboardType,
   editDashboard,
-  showDeleteModal,
-  inputComponentRef
+  showDeleteModal
 }) {
+  const inputComponentRef = useAutoFocus();
+
   return (
     <>
       <Row className={'pt-4'} gutter={[24, 24]}>

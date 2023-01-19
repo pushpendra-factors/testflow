@@ -47,6 +47,8 @@ const ConversionGoalBlock = ({
   useEffect(() => {
     if (!group_analysis || group_analysis === 'users') {
       setEventPropsForUserGroup();
+    } else if(group_analysis === 'all') {
+      setFilterPropsforKpiGroups();
     } else {
       setFilterPropsforKpiGroups();
     }
@@ -72,6 +74,13 @@ const ConversionGoalBlock = ({
 
   const setFilterPropsforKpiGroups = () => {
     const assignFilterProps = Object.assign({}, filterProps);
+    assignFilterProps.event = getKPIProps(group_analysis);
+    setFilterProperties(assignFilterProps);
+  };
+
+  const setFilterPropsforKpiGroupsAll = () => {
+    const assignFilterProps = Object.assign({}, filterProps);
+    const hs_deals = getKPIProps()
     assignFilterProps.event = getKPIProps(group_analysis);
     setFilterProperties(assignFilterProps);
   };
@@ -102,6 +111,20 @@ const ConversionGoalBlock = ({
       : KPI_config_without_derived_kpi || [];
     let selGroup = KPIlist.find((item) => {
       return item?.display_category == groupName;
+    });
+
+    const group = ((selGroup) => {
+      return getNormalizedKpi({ kpi: selGroup });
+    })(selGroup);
+    return [group];
+  };
+
+  const getKpiGroupListAll = () => {
+    let KPIlist = showDerivedKPI
+      ? KPI_config
+      : KPI_config_without_derived_kpi || [];
+    let selGroup = KPIlist.find((item) => {
+      return item?.display_category == 'hubspot_deals' || 'salesforce_opportunities';
     });
 
     const group = ((selGroup) => {
@@ -378,11 +401,18 @@ const ConversionGoalBlock = ({
     );
   };
 
+  const getGroupedProps = () => {
+    if(!group_analysis || group_analysis === 'users') return eventNameOptions;
+    if(group_analysis === 'all') {
+      return getKpiGroupListAll();
+    }
+    else {
+      return getKpiGroupList(group_analysis);
+    }
+  }
+
   const selectEvents = () => {
-    const groupedProps =
-      !group_analysis || group_analysis === 'users'
-        ? eventNameOptions
-        : getKpiGroupList(group_analysis);
+    const groupedProps = getGroupedProps();
     return (
       <div className={styles.block__event_selector}>
         {selectVisible ? (
@@ -400,9 +430,8 @@ const ConversionGoalBlock = ({
   };
 
   const renderGoalBlockContent = () => {
-    let filterOptions = [
-      // ['Filter By', 'filter']
-    ];
+    let filterOptions = [];
+    
     return (
       <div
         className={`${styles.block__content} flex items-center relative mt-4`}

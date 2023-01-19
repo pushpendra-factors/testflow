@@ -209,7 +209,7 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 		if C.IsKPILimitIncreaseAllowedForProject(projectID) {
 			stepSqlStmnt = fmt.Sprintf("%s LIMIT %d", stepSqlStmnt, model.MaxResultsLimit)
 		} else {
-			stepSqlStmnt += fmt.Sprintf("%s LIMIT %d", stepSqlStmnt, model.ResultsLimit)
+			stepSqlStmnt = fmt.Sprintf("%s LIMIT %d", stepSqlStmnt, model.ResultsLimit)
 
 		}
 	}

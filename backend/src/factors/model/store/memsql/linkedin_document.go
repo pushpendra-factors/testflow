@@ -582,7 +582,10 @@ func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64,
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
-	dataCurrency := store.GetDataCurrencyForLinkedin(projectID)
+	dataCurrency := ""
+	if(projectCurrency != ""){
+		dataCurrency = store.GetDataCurrencyForLinkedin(projectID)
+	}
 	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource,
 			limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
@@ -645,8 +648,8 @@ func (store *MemSQL) GetDataCurrencyForLinkedin(projectId int64) string{
 	var currency string
 	for rows.Next() {
 
-		if err := db.ScanRows(rows, &currency); err != nil {
-			log.WithError(err).Error("Failed to scan last adwords documents by type for sync info.")
+		if err := rows.Scan(&currency); err != nil {
+			log.WithError(err).Error("Failed to get currency details for linkedin")
 		}
 	}
 
@@ -857,7 +860,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 	fromStatement := getLinkedinFromStatementWithJoins(query.Filters, query.GroupBy)
 	finalParams := make([]interface{}, 0)
 	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
-		finalParams = append(finalParams, dataCurrency, projectCurrency)
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
@@ -977,7 +980,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID i
 	finalFilterStatement := whereConditionForFilters
 	finalParams := make([]interface{}, 0)
 	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
-		finalParams = append(finalParams, dataCurrency, projectCurrency)
+		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)

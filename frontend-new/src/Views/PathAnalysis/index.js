@@ -12,7 +12,8 @@ import PathAnalysisLP from './landingPage'
 
 const Factors = ({ 
   activeProject,  
-  fetchSavedPathAnalysis
+  fetchSavedPathAnalysis,
+  currentProjectSettings
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [fetchingIngishts, SetfetchingIngishts] = useState(false);
@@ -22,6 +23,10 @@ const Factors = ({
 
 
   useEffect(()=>{
+    if(!currentProjectSettings?.is_path_analysis_enabled){
+      history.push('/')
+    }
+
     fetchSavedPathAnalysis(activeProject?.id).then(()=>{
         setLoading(false);
     })
@@ -69,6 +74,7 @@ const Factors = ({
 const mapStateToProps = (state) => {
   return {
     activeProject: state.global.active_project, 
+    currentProjectSettings: state.global.currentProjectSettings
   };
 };
 export default connect(mapStateToProps, {fetchSavedPathAnalysis})(Factors);
