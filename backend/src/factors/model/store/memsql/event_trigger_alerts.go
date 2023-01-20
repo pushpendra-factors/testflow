@@ -237,7 +237,7 @@ func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([
 	}
 
 	if err := db.Where("project_id = ? AND is_deleted = 0", projectId).
-		Where("JSON_EXTRACT_STRING(event_trigger_alert, 'event') LIKE ?", fmt.Sprintf("%s%%", eventName.Name)).
+		Where("JSON_EXTRACT_STRING(event_trigger_alert, 'event') LIKE ?", fmt.Sprintf("%s", eventName.Name)).
 		Find(&eventAlerts).Error; err != nil {
 		log.WithFields(log.Fields{"projectId": projectId, "event": eventName.Name}).WithError(err).Error(
 			"filtering eventName failed on GetFilterEventNamesByEvent")
@@ -267,7 +267,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	log.Info("Inside Match function of event_trigger_alerts.")
 	alerts, errCode := store.GetEventTriggerAlertsByEvent(projectId, eventNameId)
 	if errCode != http.StatusFound || alerts == nil {
-		log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
+		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
 		return nil, errCode
 	}
 
