@@ -4550,7 +4550,7 @@ func TestAnalyticsFunnelBreakdownPropertyFirstOccurence(t *testing.T) {
 
 }
 
-func TestFunnelConversionXTime(t *testing.T) {
+func TestAnalyticsFunnelConversionXTime(t *testing.T) {
 	project, _, _, _, err := SetupProjectUserEventNameAgentReturnDAO()
 	assert.Nil(t, err)
 	r := gin.Default()
@@ -4586,6 +4586,15 @@ func TestFunnelConversionXTime(t *testing.T) {
 		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d,"event_properties":{"value1":"%s","value2":"%s"},"user_properties":{"user_value1":"%s","user_value2":"%s"}}`,
+			"s4", userID1, startTime.AddDate(0, 0, 90).Unix(), "A", "B", "UA", "UB")
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d,"event_properties":{"value1":"%s","value2":"%s"},"user_properties":{"user_value1":"%s","user_value2":"%s"}}`,
+			"s5", userID1, startTime.AddDate(0, 0, 91).Unix(), "A", "B", "UA", "UB")
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
 	}
 
 	// user 2
@@ -4815,6 +4824,39 @@ func TestFunnelConversionXTime(t *testing.T) {
 	assert.Equal(t, float64(2), result.Rows[1][3])
 	assert.Equal(t, float64(2), result.Rows[1][5])
 	assert.Equal(t, float64(1), result.Rows[1][7])
+
+	// default conversion time 90 days check
+	// should fail, s5 outside 90 days
+	query = model.Query{
+		From: startTime.Unix(),
+		To:   startTime.AddDate(0, 0, 91).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+
+			model.QueryEventWithProperties{
+				Name:       "s5",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		Timezone:        string(U.TimeZoneStringIST),
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(2), result.Rows[0][0])
+	assert.Equal(t, float64(0), result.Rows[0][1])
+
+	// set 91 days, should passs 1 user
+	query.ConversionTime = "91"
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(2), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
 
 	// any order 1 day any order converison time
 

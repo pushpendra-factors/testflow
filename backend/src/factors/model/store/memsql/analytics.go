@@ -2363,9 +2363,10 @@ func getConversionTimeJoinCondition(q model.Query, i int) (string, int) {
 		return "", 0
 	}
 
-	if q.Timezone == "" {
-		log.WithFields(log.Fields{"query": q}).Error("Invalid timezone on funnel query conversion time.")
-		return "", 0
+	timeZone := q.Timezone
+	if timeZone == "" {
+		log.WithFields(log.Fields{"query": q}).Error("Empty timezone on funnel query conversion time. Using IST timezone.")
+		timeZone = string(U.TimeZoneStringIST)
 	}
 
 	substrings := conversionTimeRegex.FindStringSubmatch(q.ConversionTime)
@@ -2378,7 +2379,7 @@ func getConversionTimeJoinCondition(q model.Query, i int) (string, int) {
 	if precision == "D" {
 		// From current day(0) till nth day in timezone midnight
 		stmnt := fmt.Sprintf(" AND timestampdiff(DAY, DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', '%s')), "+
-			"DATE(CONVERT_TZ(FROM_UNIXTIME(step_%d_timestamp), 'UTC', '%s'))) <= ? ", q.Timezone, i, q.Timezone)
+			"DATE(CONVERT_TZ(FROM_UNIXTIME(step_%d_timestamp), 'UTC', '%s'))) <= ? ", timeZone, i, timeZone)
 		return stmnt, int(num)
 	}
 
