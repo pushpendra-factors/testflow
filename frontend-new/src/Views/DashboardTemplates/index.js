@@ -5,110 +5,163 @@ import SelectTemplates from './SelectTemplates';
 import { useDispatch, useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import AddDashboard from '../Dashboard/AddDashboard';
-import { ADD_DASHBOARD_MODAL_OPEN } from 'Reducers/types';
+
+import { StartFreshImage } from 'Constants/templates.constants';
+import TemplatesThumbnail from 'Constants/templates.constants';
+import {
+  ADD_DASHBOARD_MODAL_OPEN,
+  NEW_DASHBOARD_TEMPLATES_MODAL_OPEN,
+  UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE
+} from 'Reducers/types';
 
 function DashboardTemplates() {
-  const history = useHistory();
   const dispatch = useDispatch();
+  const history = useHistory();
   const { state } = useLocation();
+  const [addDashboardModal, setaddDashboardModal] = useState(false);
+
   const [showTemplates, setShowTemplates] = useState(
     state?.fromSelectTemplateBtn ? true : false
   );
   const { templates } = useSelector((state) => state.dashboardTemplates);
-  const handleCreateNewDashboard = () => {
-    dispatch({ type: ADD_DASHBOARD_MODAL_OPEN });
+
+  const [selectedTemplateFirst, setSelectedTemplateFirst] = useState('');
+  const onClick = (templateID) => {
+    dispatch({
+      type: UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE,
+      payload: templateID
+    });
+
+    // dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
+    // setSelectedTemplateFirst();
   };
+  const templatesToShow = [
+    {
+      title: 'Blank',
+      description: 'Start fresh and add your own widgets',
+      image: StartFreshImage,
+      onClick: () => {
+        dispatch({ type: ADD_DASHBOARD_MODAL_OPEN });
+      }
+    },
+    {
+      title: 'Web Analytics',
+      description: 'Track your main Web KPIs and more with one click',
+      image: TemplatesThumbnail.get('webanalytics')?.image,
+
+      id: '3de1776a-2b06-4223-adf3-a57012833ec5'
+    },
+    {
+      title: 'Paid Marketing',
+      description: 'Keep track of your marketing spends performance',
+      image: TemplatesThumbnail.get('paidsocialmarketing')?.image,
+
+      id: 'c3caa37c-afaa-4bc1-bf1a-b69f3e377b3e'
+    },
+    {
+      title: 'Hubspot Insights',
+      description: 'A quick way to get started with CRM analysis',
+      image: TemplatesThumbnail.get('hubspotinsights')?.image,
+
+      id: '215d866d-129c-415a-a728-592672604cfa'
+    }
+  ];
   return (
     <>
-      {showTemplates && (
+      {/* {showTemplates && (
+
         <div className='ant-modal-wrap bg-white'>
           <SelectTemplates
             setShowTemplates={setShowTemplates}
             templates={templates}
           />
         </div>
-      )}
+      )} */}
       <div
         className={`flex justify-center flex-col items-center m-auto ${styles.contentClass}`}
       >
-        <div className='mb-2'>
-          <SVG
-            name={'selectTemplatesBackgroundChart'}
-            height='160'
-            width='250'
-          />
-        </div>
-        <Text
-          type={'title'}
-          level={6}
-          weight={'bold'}
-          color={'grey-2'}
-          extraClass={'m-0'}
-        >
-          Create a dashboard to monitor your metrics in one place.
-        </Text>
-        <div className='flex flex-row my-3 justify-center'>
-          <div
-            onClick={handleCreateNewDashboard}
-            className={`flex flex-row ${styles.cardnew} w-1/3 mr-6`}
-          >
-            <div className='px-6 py-4 flex flex-col items-center justify-center background-color--brand-color-1'>
-              <SVG
-                name={'addNew'}
-                extraClass={'mr-2'}
-                width='3rem'
-                height='3rem'
-                color={'grey'}
-              />
-            </div>
-            <div className='flex flex-col py-4 px-2 justify-start items-start'>
-              <Text type={'title'} level={7} weight={'bold'}>
-                Create New
-              </Text>
-              <Text
-                type={'title'}
-                level={7}
-                color={'grey'}
-                extraClass={'m-0 mb-2'}
-              >
-                Build a new Dashborad that stores all your reports in one place.
-              </Text>
-            </div>
+        <div className='text-center'>
+          <div style={{ width: 'min-content', margin: '0 auto' }}>
+            <SVG
+              name={'selectTemplatesBackgroundChart'}
+              height='160'
+              width='250'
+            />
           </div>
-          <div
-            onClick={() => setShowTemplates(true)}
-            className={`flex flex-row ${styles.cardnew} w-1/3 ml-6`}
+          <Text
+            type={'title'}
+            level={4}
+            weight={'bold'}
+            color={'grey-2'}
+            extraClass={'m-0'}
           >
-            <div className='px-6 py-4 flex flex-col items-center justify-center background-color--brand-color-1'>
-              <SVG
-                name={'selectFromTemplates'}
-                extraClass={'mr-2'}
-                width='3rem'
-                height='3rem'
-                color={'grey'}
-              />
-            </div>
-            <div className='flex flex-col py-4 px-2 justify-start'>
-              <Text type='title' level={7} weight={'bold'}>
-                Select From Templates
-              </Text>
-              <Text
-                type='title'
-                level={7}
-                color={'grey'}
-                extraClass={'m-0 mb-2'}
-              >
-                Pick from pre-built dashboard templates to analyse overall
-                marketing performance.
-              </Text>
-            </div>
+            Hey there 👋
+          </Text>
+          <Text
+            type={'title'}
+            level={6}
+            weight={'bold'}
+            color={'grey-2'}
+            extraClass={'m-0'}
+          >
+            Start fresh or choose from templates
+          </Text>
+        </div>
+        <div className={`${styles.firstDashboardChoicesContainer}`}>
+          <div className={`${styles.firstViewMoreTemplates}`}>
+            <Link
+              onClick={() =>
+                dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN })
+              }
+            >
+              View more templates →
+            </Link>
+          </div>
+          <div className={`flex flex-row my-3 justify-center`}>
+            {templatesToShow.map((eachTemplate, eachIndex) => {
+              return (
+                <div
+                  className={styles.firstChoiceTemplatesItem}
+                  key={eachIndex}
+                  onClick={
+                    eachIndex === 0
+                      ? eachTemplate.onClick
+                      : () => onClick(eachTemplate.id)
+                  }
+                >
+                  <div>
+                    {' '}
+                    <img src={eachTemplate.image} alt={eachTemplate.title} />
+                  </div>
+                  <div className={styles.firstChoiceTemplatesItemContent}>
+                    <Text
+                      type={'title'}
+                      level={5}
+                      weight={'bold'}
+                      color={'grey-2'}
+                      extraClass={'m-0'}
+                    >
+                      {eachTemplate.title}
+                    </Text>
+                    <div>{eachTemplate.description}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-        {/* <Text type={'title'} level={7} color={'grey'} weight={'bold'} extraClass={'m-0'}>
-                        Learn <Link>Dashboard Basics</Link>
-                    </Text> */}
+        <div className='text-center pt-2'>
+          Learn{' '}
+          <Link href='https://help.factors.ai/en/articles/6294988-dashboards'>
+            Dashboard Basics
+          </Link>
+        </div>
       </div>
-      <AddDashboard />
+      <AddDashboard
+        addDashboardModal={addDashboardModal}
+        setaddDashboardModal={setaddDashboardModal}
+      />
+
     </>
   );
 }
