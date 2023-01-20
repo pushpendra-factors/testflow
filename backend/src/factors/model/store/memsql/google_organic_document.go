@@ -680,7 +680,7 @@ func getGoogleOrganicFiltersWhereStatement(filters []model.ChannelFilterV1) stri
 			if filter.Condition == model.EqualsOpStr || filter.Condition == model.ContainsOpStr {
 				currentFilterStatement = fmt.Sprintf("(JSON_EXTRACT_STRING(value, '%s') IS NULL OR JSON_EXTRACT_STRING(value, '%s') = '') ", filter.Property, filter.Property)
 			} else {
-				currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') IS NOT NULL AND JSON_EXTRACT_STRING(value, '%s') != '')", filter.Property, filter.Property)
+				currentFilterStatement = fmt.Sprintf("(JSON_EXTRACT_STRING(value, '%s') IS NOT NULL AND JSON_EXTRACT_STRING(value, '%s') != '')", filter.Property, filter.Property)
 			}
 		}
 		if index == 0 {
