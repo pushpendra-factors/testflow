@@ -892,7 +892,7 @@ export const getKPIQueryAttributionV1 = (
 
       period.from = MomentTz(dateRange.from).startOf('day').utc().unix();
       period.to = MomentTz(dateRange.to).endOf('day').utc().unix();
-      period.frequency = dateRange.frequency;
+      period.frequency = 'second';
     } else {
       period.from = MomentTz().startOf('week').utc().unix();
       period.to =
