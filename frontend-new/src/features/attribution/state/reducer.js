@@ -27,7 +27,8 @@ import {
   ATTRIBUTION_WIDGET_DELETED,
   ATTRIBUTION_QUERY_DELETED,
   ATTRIBUTION_QUERY_CREATED,
-  ATTRIBUTION_QUERY_UPDATED
+  ATTRIBUTION_QUERY_UPDATED,
+  ATTRIBUTION_DASHBOARD_UNIT_ADDED
 } from './action.constants';
 
 const defaultState = {
@@ -102,6 +103,16 @@ export default function (state = defaultState, action) {
         dashboard: {
           ...state.dashboard,
           units_position: action.units_position
+        }
+      };
+    }
+
+    case ATTRIBUTION_DASHBOARD_UNIT_ADDED: {
+      return {
+        ...state,
+        attributionDashboardUnits: {
+          ...state.attributionDashboardUnits,
+          data: [...state.attributionDashboardUnits.data, action.payload]
         }
       };
     }

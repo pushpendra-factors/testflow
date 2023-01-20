@@ -24,6 +24,7 @@ import { deleteReport } from 'Reducers/coreQuery/services';
 import { getErrorMessage } from 'Utils/dataFormatter';
 import { saveAttributionQuery } from 'Attribution/state/services';
 import {
+  ATTRIBUTION_DASHBOARD_UNIT_ADDED,
   ATTRIBUTION_QUERY_CREATED,
   ATTRIBUTION_QUERY_DELETED,
   ATTRIBUTION_QUERY_UPDATED
@@ -56,7 +57,7 @@ const SaveAttributionQuery = ({
 
   const {
     attributionMetrics,
-    coreQueryState: { chartTypes, pivotConfig }
+    coreQueryState: { chartTypes }
   } = useContext(CoreQueryContext);
 
   const savedQueryPresentation = useMemo(() => {
@@ -116,8 +117,13 @@ const SaveAttributionQuery = ({
           querySettings
         );
         queryId = res.data.query.id;
-
+        //updating locally saved attribution queries
         dispatch({ type: ATTRIBUTION_QUERY_CREATED, payload: res.data.query });
+        //updating locally saved attribution dashboard units
+        dispatch({
+          type: ATTRIBUTION_DASHBOARD_UNIT_ADDED,
+          payload: res.data.dashboard_unit
+        });
       } else {
         const queryGettingUpdated = savedQueries.find(
           (elem) => elem.id === savedQueryId
