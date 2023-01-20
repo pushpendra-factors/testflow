@@ -841,7 +841,7 @@ const mapQueriesByGroup = (queries) => {
 };
 
 const getGroupByByGroup = (grp) => {
-  if (USER_KPIS.includes(grp)) {
+  if (grp === 'user_kpi') {
     return [
       {
         gr: '',
@@ -899,7 +899,7 @@ export const getKPIQueryAttributionV1 = (
         MomentTz().format('dddd') !== 'Sunday'
           ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
           : MomentTz().utc().unix();
-      period.frequency = dateRange.frequency;
+      period.frequency = 'second';
   }
     
 
@@ -913,7 +913,7 @@ export const getKPIQueryAttributionV1 = (
     kpiQuery.kpi_query_group = {
       cl: QUERY_TYPE_KPI?.toLocaleLowerCase(),
       qG: getKPIqueryGroup(kpiQueriesByGroup[groupKey], eventGrpBy, period),
-      gGBy: getGroupByByGroup(kpiQueriesByGroup[groupKey].group),
+      gGBy: getGroupByByGroup(groupKey),
       gFil: getEventsWithPropertiesKPI(
         queryOptions?.globalFilters,
         kpiQueriesByGroup[groupKey][0]?.category

@@ -14,10 +14,11 @@ function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
 
   const onChange = (group, value) => {
     const opts = Object.assign({}, attrConfig);
-    const newEv = { label: '', group: '' };
+    const newEv = { label: '', group: '', value: '' };
     newEv.label = value[0];
     newEv.group = group;
-    opts.kpis_to_attribute[header] === null
+    newEv.value = value[1];
+    !opts.kpis_to_attribute[header]
       ? (opts.kpis_to_attribute[header] = [])
       : opts.kpis_to_attribute[header];
     index > opts.kpis_to_attribute[header].length
