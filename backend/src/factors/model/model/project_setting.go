@@ -77,9 +77,9 @@ type ProjectSetting struct {
 	IsExplainEnabled              bool            `json:"is_explain_enabled"`
 	IntegrationBits               string          `json: "-"`
 	// Rudderstack integration settings.
-	IntRudderstack *bool `gorm:"not null;default:false" json:"int_rudderstack,omitempty"`
-	ProjectCurrency string `gorm:"currency"`
-	IsPathAnalysisEnabled 		  bool 			   `json:"is_path_analysis_enabled"`
+	IntRudderstack        *bool  `gorm:"not null;default:false" json:"int_rudderstack,omitempty"`
+	ProjectCurrency       string `gorm:"currency"`
+	IsPathAnalysisEnabled bool   `json:"is_path_analysis_enabled"`
 }
 
 /* Sample Attribution Setting
@@ -141,13 +141,14 @@ type AccountConfig struct {
 
 type AttributionConfig struct {
 	KpisToAttribute                   AttributionKpis `json:"kpis_to_attribute"`
-	AttributionWindow                 int64           `json:"attribution_window"`
+	AttributionWindow                 int             `json:"attribution_window"`
 	AnalyzeTypeUserKPI                bool            `json:"user_kpi"`
 	AnalyzeTypeHSDealsEnabled         bool            `json:"hubspot_deals"`
 	AnalyzeTypeSFOpportunitiesEnabled bool            `json:"salesforce_opportunities"`
 	AnalyzeTypeHSCompaniesEnabled     bool            `json:"hubspot_companies"`
 	AnalyzeTypeSFAccountsEnabled      bool            `json:"salesforce_accounts"`
 	PreComputeEnabled                 bool            `json:"pre_compute_enabled"`
+	QueryType                         string          `json:"query_type"`
 }
 
 type AttributionKpis struct {
