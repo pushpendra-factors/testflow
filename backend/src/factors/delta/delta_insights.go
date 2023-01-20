@@ -18,6 +18,7 @@ import (
 	"factors/model/store"
 
 	M "factors/model/model"
+	E "factors/event_match"
 )
 
 var isDownloaded bool
@@ -93,10 +94,10 @@ func staticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 	if queryId == 1 {
 		return Query{
 			Id: 1,
-			Base: EventsCriteria{
+			Base: E.EventsCriteria{
 				Id:       0,
 				Operator: "And",
-				EventCriterionList: []EventCriterion{
+				EventCriterionList: []E.EventCriterion{
 					{
 						Id:                  0,
 						Name:                "$session",
@@ -105,10 +106,10 @@ func staticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 					},
 				},
 			},
-			Target: EventsCriteria{
+			Target: E.EventsCriteria{
 				Id:       0,
 				Operator: "And",
-				EventCriterionList: []EventCriterion{
+				EventCriterionList: []E.EventCriterion{
 					{
 						Id:                  0,
 						Name:                "$session",
@@ -122,10 +123,10 @@ func staticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 	if queryId == 2 {
 		return Query{
 			Id: 2,
-			Base: EventsCriteria{
+			Base: E.EventsCriteria{
 				Id:       0,
 				Operator: "And",
-				EventCriterionList: []EventCriterion{
+				EventCriterionList: []E.EventCriterion{
 					{
 						Id:                  0,
 						Name:                "$session",
@@ -134,10 +135,10 @@ func staticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 					},
 				},
 			},
-			Target: EventsCriteria{
+			Target: E.EventsCriteria{
 				Id:       0,
 				Operator: "And",
-				EventCriterionList: []EventCriterion{
+				EventCriterionList: []E.EventCriterion{
 					{
 						Id:                  0,
 						Name:                "$form_submitted",
@@ -151,10 +152,10 @@ func staticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 	if queryId == 3 {
 		return Query{
 			Id: 3,
-			Base: EventsCriteria{
+			Base: E.EventsCriteria{
 				Id:       0,
 				Operator: "And",
-				EventCriterionList: []EventCriterion{
+				EventCriterionList: []E.EventCriterion{
 					{
 						Id:                  0,
 						Name:                "$session",
@@ -163,20 +164,20 @@ func staticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 					},
 				},
 			},
-			Target: EventsCriteria{
+			Target: E.EventsCriteria{
 				Id:       0,
 				Operator: "And",
-				EventCriterionList: []EventCriterion{
+				EventCriterionList: []E.EventCriterion{
 					{
 						Id:           0,
 						Name:         "$hubspot_contact_created",
 						EqualityFlag: true,
-						FilterCriterionList: []EventFilterCriterion{
+						FilterCriterionList: []E.EventFilterCriterion{
 							{
 								Key:            "$hubspot_contact_hs_analytics_source",
 								Type:           "categorical",
 								PropertiesMode: "user",
-								Values: []OperatorValueTuple{
+								Values: []E.OperatorValueTuple{
 									{
 										Operator:  "notEqual",
 										Value:     "OFFLINE",
@@ -631,39 +632,39 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 			isEventOccurence := query.Type == M.QueryTypeEventsOccurrence
 			if (query.EventsCondition == M.EventCondAnyGivenEvent || query.EventsCondition == M.EventCondAllGivenEvent) || (query.EventsCondition == M.EventCondEachGivenEvent && len(query.EventsWithProperties) == 1) {
 				deltaQuery = Query{Id: dashboardUnit.QueryId,
-					Base: EventsCriteria{
+					Base: E.EventsCriteria{
 						Operator: "And",
-						EventCriterionList: []EventCriterion{{
+						EventCriterionList: []E.EventCriterion{{
 							Name:         "$session",
 							EqualityFlag: true,
 						}}},
-					Target: EventsCriteria{
-						EventCriterionList: []EventCriterion{},
+					Target: E.EventsCriteria{
+						EventCriterionList: []E.EventCriterion{},
 					}}
 				for _, event := range query.EventsWithProperties {
 					event.Properties = append(event.Properties, query.GlobalUserProperties...)
 					if query.EventsCondition == M.EventCondEachGivenEvent {
 						deltaQuery.Target.Operator = "And"
-						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
+						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, E.EventCriterion{
 							Name:                event.Name,
 							EqualityFlag:        true,
-							FilterCriterionList: mapFilterProperties(event.Properties),
+							FilterCriterionList: E.MapFilterProperties(event.Properties),
 						})
 					}
 					if query.EventsCondition == M.EventCondAllGivenEvent {
 						deltaQuery.Target.Operator = "And"
-						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
+						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, E.EventCriterion{
 							Name:                event.Name,
 							EqualityFlag:        true,
-							FilterCriterionList: mapFilterProperties(event.Properties),
+							FilterCriterionList: E.MapFilterProperties(event.Properties),
 						})
 					}
 					if query.EventsCondition == M.EventCondAnyGivenEvent {
 						deltaQuery.Target.Operator = "Or"
-						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
+						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, E.EventCriterion{
 							Name:                event.Name,
 							EqualityFlag:        true,
-							FilterCriterionList: mapFilterProperties(event.Properties),
+							FilterCriterionList: E.MapFilterProperties(event.Properties),
 						})
 					}
 				}
@@ -689,47 +690,47 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 			if query.EventsCondition == M.EventCondAnyGivenEvent {
 				if len(query.EventsWithProperties) == 2 {
 					deltaQuery = Query{Id: dashboardUnit.QueryId,
-						Base: EventsCriteria{
+						Base: E.EventsCriteria{
 							Operator: "And",
-							EventCriterionList: []EventCriterion{{
+							EventCriterionList: []E.EventCriterion{{
 								Name:                query.EventsWithProperties[0].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: mapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
+								FilterCriterionList: E.MapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
 							}}},
-						Target: EventsCriteria{
+						Target: E.EventsCriteria{
 							Operator: "And",
-							EventCriterionList: []EventCriterion{{
+							EventCriterionList: []E.EventCriterion{{
 								Name:                query.EventsWithProperties[1].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: mapFilterProperties(append(query.EventsWithProperties[1].Properties, query.GlobalUserProperties...)),
+								FilterCriterionList: E.MapFilterProperties(append(query.EventsWithProperties[1].Properties, query.GlobalUserProperties...)),
 							}},
 						}}
 					return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, true, false, false, properties
 				} else {
 					multiStepFunnel := MultiFunnelQuery{Id: dashboardUnit.QueryId,
-						Base: EventsCriteria{
+						Base: E.EventsCriteria{
 							Operator: "And",
-							EventCriterionList: []EventCriterion{{
+							EventCriterionList: []E.EventCriterion{{
 								Name:                query.EventsWithProperties[0].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: mapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
+								FilterCriterionList: E.MapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
 							}}},
-						Intermediate: make([]EventsCriteria, 0),
-						Target: EventsCriteria{
+						Intermediate: make([]E.EventsCriteria, 0),
+						Target: E.EventsCriteria{
 							Operator: "And",
-							EventCriterionList: []EventCriterion{{
+							EventCriterionList: []E.EventCriterion{{
 								Name:                query.EventsWithProperties[len(query.EventsWithProperties)-1].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: mapFilterProperties(append(query.EventsWithProperties[len(query.EventsWithProperties)-1].Properties, query.GlobalUserProperties...)),
+								FilterCriterionList: E.MapFilterProperties(append(query.EventsWithProperties[len(query.EventsWithProperties)-1].Properties, query.GlobalUserProperties...)),
 							}},
 						}}
 					for i := 1; i <= len(query.EventsWithProperties)-2; i++ {
-						criteria := EventsCriteria{
+						criteria := E.EventsCriteria{
 							Operator: "And",
-							EventCriterionList: []EventCriterion{{
+							EventCriterionList: []E.EventCriterion{{
 								Name:                query.EventsWithProperties[i].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: mapFilterProperties(append(query.EventsWithProperties[i].Properties, query.GlobalUserProperties...)),
+								FilterCriterionList: E.MapFilterProperties(append(query.EventsWithProperties[i].Properties, query.GlobalUserProperties...)),
 							}},
 						}
 						multiStepFunnel.Intermediate = append(multiStepFunnel.Intermediate, criteria)
@@ -769,40 +770,3 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 	return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false, properties
 }
 
-func mapFilterProperties(qp []M.QueryProperty) []EventFilterCriterion {
-	filters := make(map[string]EventFilterCriterion)
-	for _, prop := range qp {
-		filterProp := EventFilterCriterion{
-			Key: prop.Property,
-		}
-		filterProp.Type = prop.Type
-		if prop.Entity == "user" || prop.Entity == "user_g" {
-			filterProp.PropertiesMode = "user"
-		} else if prop.Entity == "event" {
-			filterProp.PropertiesMode = "event"
-		} else {
-			log.Error("Incorrect entity type")
-			return nil
-		}
-		keyString := fmt.Sprintf("%s-%s", prop.Entity, prop.Property)
-		propertyInMap, exists := filters[keyString]
-		var values []OperatorValueTuple
-		if !exists {
-			values = make([]OperatorValueTuple, 0)
-		} else {
-			values = propertyInMap.Values
-		}
-		values = append(values, OperatorValueTuple{
-			Operator:  prop.Operator,
-			Value:     prop.Value,
-			LogicalOp: prop.LogicalOp,
-		})
-		filterProp.Values = values
-		filters[keyString] = filterProp
-	}
-	criterias := make([]EventFilterCriterion, 0)
-	for _, criteria := range filters {
-		criterias = append(criterias, criteria)
-	}
-	return criterias
-}
