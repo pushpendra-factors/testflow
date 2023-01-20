@@ -206,24 +206,99 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 	}
 
 	log.Info("Inside sendSlackAlert function")
-	dryRunFlag := C.GetConfig().EnableDryRunAlerts
-	if dryRunFlag {
-		log.Info("Dry run mode enabled. No alerts will be sent")
-		log.Info(msg, projectID)
-		return false
-	}
 
-	for _, channel := range slackChannels {
-		log.Info("Sending alert for slack channel ", channel)
+	wetRun := true
+	if(wetRun){
+		for _, channel := range slackChannels {
+			log.Info("Sending alert for slack channel ", channel)
 
-		status, err := slack.SendSlackAlert(projectID, msg.Message, agentUUID, channel)
-		if err != nil || !status {
-			logCtx.WithError(err).Error("failed to send slack alert ", msg)
-			return false
+			status, err := slack.SendSlackAlert(projectID, getSlackMsgBlock(msg), agentUUID, channel)
+			if err != nil || !status {
+				logCtx.WithError(err).Error("failed to send slack alert ", msg)
+				return false
+			}
+
+			logCtx.Info("slack alert sent")
 		}
-
-		logCtx.Info("slack alert sent")
+	} else {
+		log.Info("Dry run mode enabled. No alerts will be sent")
+		log.Info("*****", msg, projectID)
+		return true
 	}
 
 	return true
+}
+
+
+func returnSlackMessage(actualmsg string) string{
+	template := fmt.Sprintf(`
+		[
+			{
+				"type": "section",
+				"text": {
+					"type": "plain_text",
+					"text": "%s",
+					"emoji": true
+				}
+			}
+		]
+	`, actualmsg)
+	return template
+}
+
+func getPropsBlock(propMap U.PropertiesMap) string {
+	var propBlock string
+	for key, prop := range propMap {
+		propBlock += fmt.Sprintf(
+			`{
+				"type": "section",
+				"fields": [
+					{
+						"type": "mrkdwn",
+						"text": "%s"
+					},
+					{
+						"type": "plain_text",
+						"text": "%v",
+					}
+				]
+			},
+			{
+				"type": "divider"
+			},`, key, prop)
+	}
+	return propBlock
+}
+
+func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
+
+	propBlock := getPropsBlock(msg.MessageProperty)
+
+	mainBlock := fmt.Sprintf(`[
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "%s\n*%s*\n"
+			}
+		},
+		%s
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "*Know more*",
+						"emoji": true
+					},
+					"value": "click_me_123",
+					"action_id": "actionId-0"
+				}
+			]
+		}
+	]`, msg.Title, msg.Message, propBlock)
+
+	return mainBlock
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 	E "factors/event_match"
-	"encoding/json"
 )
 
 const (
@@ -333,16 +332,10 @@ func AddAlertToCache(alert *model.EventTriggerAlertConfig, event *model.Event, k
 		}
 	}
 
-	strMP, err := json.Marshal(propMap)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Error("Jsonb encoding failure")
-		return http.StatusInternalServerError, err
-	}
-
 	message := model.EventTriggerAlertMessage{
 		Title:           alert.Title,
 		Event:           alert.Event,
-		MessageProperty: string(strMP),
+		MessageProperty: propMap,
 		Message:         alert.Message,
 	}
 	cachePackage := model.CachedEventTriggerAlert{
