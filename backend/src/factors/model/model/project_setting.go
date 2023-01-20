@@ -140,7 +140,7 @@ type AccountConfig struct {
 }
 
 type AttributionConfig struct {
-	KpisToAttribute                   AttributionKpis `json:"kpis_to_attribute"`
+	KpisToAttribute                   *postgres.Jsonb `json:"kpis_to_attribute"`
 	AttributionWindow                 int             `json:"attribution_window"`
 	AnalyzeTypeUserKPI                bool            `json:"user_kpi"`
 	AnalyzeTypeHSDealsEnabled         bool            `json:"hubspot_deals"`
@@ -151,11 +151,11 @@ type AttributionConfig struct {
 	QueryType                         string          `json:"query_type"`
 }
 
-type AttributionKpis struct {
+/*type AttributionKpis struct {
 	UserKpi *postgres.Jsonb `json:"user_kpi"`
 	HsKpi   *postgres.Jsonb `json:"hs_kpi"`
 	SfKpi   *postgres.Jsonb `json:"sf_kpi"`
-}
+}*/
 
 type LeadSquaredConfig struct {
 	Host            string `json:"host"`
