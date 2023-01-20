@@ -71,10 +71,15 @@ export const getProfileUsers = (projectId, payload) => (dispatch) => {
   return new Promise((resolve) => {
     fetchProfileUsers(projectId, payload)
       .then((response) => {
+        const data = response.data.map((user) => ({
+          identity: { id: user.identity, isAnonymous: user.is_anonymous },
+          table_props: user.table_props,
+          last_activity: user.last_activity
+        }));
         resolve(
           dispatch({
             type: 'FETCH_PROFILE_USERS_FULFILLED',
-            payload: response.data
+            payload: data
           })
         );
       })

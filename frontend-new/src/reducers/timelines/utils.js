@@ -38,7 +38,11 @@ export const formatAccountTimeline = (data, config) => {
     ?.sort((a, b) =>
       compareObjTimestampsDesc(a.user_activities[0], b.user_activities[0])
     )
-    .map((user) => ({ title: user.user_name, subtitle: user.additional_prop }));
+    .map((user) => ({
+      title: user.user_name,
+      subtitle: user.additional_prop,
+      isAnonymous: user.is_anonymous
+    }));
   returnData.account_events = getAccountActivitiesWithEnableKeyConfig(
     data?.account_timeline,
     config?.disabled_events

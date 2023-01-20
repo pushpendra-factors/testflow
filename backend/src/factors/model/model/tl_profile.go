@@ -44,6 +44,7 @@ type UserActivity struct {
 	AliasName   string          `json:"alias_name,omitempty"`
 	Properties  *postgres.Jsonb `json:"properties,omitempty"`
 	Timestamp   uint64          `json:"timestamp"`
+	Icon        string          `json:"icon"`
 }
 
 type TimelinePayload struct {
@@ -62,7 +63,7 @@ type AccountDetails struct {
 
 type UserTimeline struct {
 	UserId         string         `json:"-"`
-	IsAnonymous    bool           `json:"-"`
+	IsAnonymous    bool           `json:"is_anonymous"`
 	UserName       string         `json:"user_name"`
 	AdditionalProp string         `json:"additional_prop"`
 	UserActivities []UserActivity `json:"user_activities,omitempty"`
@@ -89,3 +90,14 @@ var HOVER_EVENTS_NAME_PROPERTY_MAP = map[string][]string{
 
 // Page View Events Hover Properties
 var PAGE_VIEW_HOVERPROPS_LIST = []string{U.EP_IS_PAGE_VIEW, U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, U.EP_PAGE_LOAD_TIME}
+
+var EVENT_ICONS_MAP = map[string]string{
+	U.EVENT_NAME_SESSION:                            "brand",
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL:           "envelope",
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED: "HandshakeOutlined",
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED: "HandshakeOutlined",
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED:    "phone",
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED:    "phone",
+	U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:    "list_check",
+	U.EVENT_NAME_FORM_SUBMITTED:                     "hand_pointer",
+}
