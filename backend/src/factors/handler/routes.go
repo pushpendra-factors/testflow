@@ -85,6 +85,21 @@ func InitAppRoutes(r *gin.Engine) {
 	r.POST(routePrefix+"/InsertTaskBeginRecord", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.InsertTaskBeginRecordHandler))
 	r.POST(routePrefix+"/InsertTaskEndRecord", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.InsertTaskEndRecordHandler))
 	r.GET("/hubspot/getcontact", V1.GetHubspotContactByEmail)
+	r.GET(routePrefix+"/"+ROUTE_PROJECTS_ROOT_V1,
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		V1.GetProjectsHandler)
+	r.GET(routePrefix+"/v1/demoprojects",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		V1.GetDemoProjects)
+
+	// Feature Gates Auth Group
+	featuresGatesRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
+	featuresGatesRouteGroup.Use(mid.SetLoggedInAgent())
+	featuresGatesRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
+	featuresGatesRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
+	featuresGatesRouteGroup.Use(mid.FeatureMiddleware())
 
 	// Shareable link routes
 	shareRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
@@ -97,65 +112,41 @@ func InitAppRoutes(r *gin.Engine) {
 	shareRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
 	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
-	// Auth route group with authentication an authorization middleware.
-	authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
-	authRouteGroup.Use(mid.SetLoggedInAgent())
-	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
-	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
-
-	authRouteGroup.PUT("/:project_id", mid.SkipDemoProjectWriteAccess(), EditProjectHandler)
-
 	// Dashboard endpoints
-	authRouteGroup.GET("/:project_id/dashboards", stringifyWrapper(GetDashboardsHandler))
-	authRouteGroup.POST("/:project_id/dashboards", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateDashboardHandler))
-	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id", mid.SkipDemoProjectWriteAccess(), UpdateDashboardHandler)
-	authRouteGroup.GET("/:project_id/dashboards/:dashboard_id/units", stringifyWrapper(GetDashboardUnitsHandler))
-	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/units", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateDashboardUnitHandler))
-	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id/units/:unit_id", mid.SkipDemoProjectWriteAccess(), UpdateDashboardUnitHandler)
-	authRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id", mid.SkipDemoProjectWriteAccess(), DeleteDashboardUnitHandler)
-	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics",
+	featuresGatesRouteGroup.GET("/:project_id/dashboards", stringifyWrapper(GetDashboardsHandler))
+	featuresGatesRouteGroup.POST("/:project_id/dashboards", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateDashboardHandler))
+	featuresGatesRouteGroup.PUT("/:project_id/dashboards/:dashboard_id", mid.SkipDemoProjectWriteAccess(), UpdateDashboardHandler)
+	featuresGatesRouteGroup.GET("/:project_id/dashboards/:dashboard_id/units", stringifyWrapper(GetDashboardUnitsHandler))
+	featuresGatesRouteGroup.POST("/:project_id/dashboards/:dashboard_id/units", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateDashboardUnitHandler))
+	featuresGatesRouteGroup.PUT("/:project_id/dashboards/:dashboard_id/units/:unit_id", mid.SkipDemoProjectWriteAccess(), UpdateDashboardUnitHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id", mid.SkipDemoProjectWriteAccess(), DeleteDashboardUnitHandler)
+	featuresGatesRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics",
 		DashboardUnitsWebAnalyticsQueryHandler)
-	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
-	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
-	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
 
 	// Offline Touch Point rules
-	authRouteGroup.GET("/:project_id/otp_rules", responseWrapper(GetOTPRuleHandler))
-	authRouteGroup.POST("/:project_id/otp_rules", mid.SkipDemoProjectWriteAccess(), responseWrapper(CreateOTPRuleHandler))
-	authRouteGroup.PUT("/:project_id/otp_rules/:rule_id", mid.SkipDemoProjectWriteAccess(), responseWrapper(UpdateOTPRuleHandler))
-	authRouteGroup.GET("/:project_id/otp_rules/:rule_id", responseWrapper(SearchOTPRuleHandler))
-	authRouteGroup.DELETE("/:project_id/otp_rules/:rule_id", mid.SkipDemoProjectWriteAccess(), responseWrapper(DeleteOTPRuleHandler))
+	featuresGatesRouteGroup.GET("/:project_id/otp_rules", responseWrapper(GetOTPRuleHandler))
+	featuresGatesRouteGroup.POST("/:project_id/otp_rules", mid.SkipDemoProjectWriteAccess(), responseWrapper(CreateOTPRuleHandler))
+	featuresGatesRouteGroup.PUT("/:project_id/otp_rules/:rule_id", mid.SkipDemoProjectWriteAccess(), responseWrapper(UpdateOTPRuleHandler))
+	featuresGatesRouteGroup.GET("/:project_id/otp_rules/:rule_id", responseWrapper(SearchOTPRuleHandler))
+	featuresGatesRouteGroup.DELETE("/:project_id/otp_rules/:rule_id", mid.SkipDemoProjectWriteAccess(), responseWrapper(DeleteOTPRuleHandler))
 
 	// Dashboard templates
-	authCommonRouteGroup := r.Group(routePrefix + ROUTE_COMMON_ROOT)
-	authCommonRouteGroup.GET("/dashboard_templates/:id/search", SearchTemplateHandler)
-	authCommonRouteGroup.GET("/dashboard_templates", GetDashboardTemplatesHandler)
-	authCommonRouteGroup.POST("/dashboard_template/create", mid.SkipDemoProjectWriteAccess(), CreateTemplateHandler)
-	authRouteGroup.POST("/:project_id/dashboard_template/:id/trigger", mid.SkipDemoProjectWriteAccess(), GenerateDashboardFromTemplateHandler)
-	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/trigger", mid.SkipDemoProjectWriteAccess(), GenerateTemplateFromDashboardHandler)
 
-	authRouteGroup.GET("/:project_id/queries", stringifyWrapper(GetQueriesHandler))
-	authRouteGroup.POST("/:project_id/queries", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateQueryHandler))
+	featuresGatesRouteGroup.POST("/:project_id/dashboard_template/:id/trigger", mid.SkipDemoProjectWriteAccess(), GenerateDashboardFromTemplateHandler)
+	featuresGatesRouteGroup.POST("/:project_id/dashboards/:dashboard_id/trigger", mid.SkipDemoProjectWriteAccess(), GenerateTemplateFromDashboardHandler)
 
-	authRouteGroup.PUT("/:project_id/queries/:query_id", mid.SkipDemoProjectWriteAccess(), UpdateSavedQueryHandler)
-	authRouteGroup.DELETE("/:project_id/queries/:query_id", mid.SkipDemoProjectWriteAccess(), DeleteSavedQueryHandler)
-	authRouteGroup.GET("/:project_id/queries/search", stringifyWrapper(SearchQueriesHandler))
-	authRouteGroup.GET("/:project_id/models", GetProjectModelsHandler)
-	authRouteGroup.GET("/:project_id/filters", GetFiltersHandler)
-	authRouteGroup.POST("/:project_id/filters", mid.SkipDemoProjectWriteAccess(), CreateFilterHandler)
-	authRouteGroup.PUT("/:project_id/filters/:filter_id", mid.SkipDemoProjectWriteAccess(), UpdateFilterHandler)
-	authRouteGroup.DELETE("/:project_id/filters/:filter_id", mid.SkipDemoProjectWriteAccess(), DeleteFilterHandler)
-	authRouteGroup.GET("/:project_id/event_names/:event_name/properties", GetEventPropertiesHandler)
-	authRouteGroup.GET("/:project_id/event_names/:event_name/properties/:property_name/values", GetEventPropertyValuesHandler)
-	authRouteGroup.GET("/:project_id/groups", GetGroupsHandler)
-	authRouteGroup.GET("/:project_id/groups/:group_name/properties", GetGroupPropertiesHandler)
-	authRouteGroup.GET("/:project_id/groups/:group_name/properties/:property_name/values", GetGroupPropertyValuesHandler)
-	authRouteGroup.GET("/:project_id/users", GetUsersHandler)
-	authRouteGroup.GET("/:project_id/users/:user_id", GetUserHandler)
-	authRouteGroup.GET("/:project_id/user_properties", GetUserPropertiesHandler)
-	authRouteGroup.GET("/:project_id/user_properties/:property_name/values", GetUserPropertyValuesHandler)
-	authRouteGroup.GET("/:project_id/channel_grouping_properties", GetChannelGroupingPropertiesHandler)
-	authRouteGroup.POST("/:project_id/factor", FactorHandler)
+	featuresGatesRouteGroup.GET("/:project_id/queries", stringifyWrapper(GetQueriesHandler))
+	featuresGatesRouteGroup.POST("/:project_id/queries", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateQueryHandler))
+
+	featuresGatesRouteGroup.PUT("/:project_id/queries/:query_id", mid.SkipDemoProjectWriteAccess(), UpdateSavedQueryHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/queries/:query_id", mid.SkipDemoProjectWriteAccess(), DeleteSavedQueryHandler)
+	featuresGatesRouteGroup.GET("/:project_id/queries/search", stringifyWrapper(SearchQueriesHandler))
+	featuresGatesRouteGroup.GET("/:project_id/models", GetProjectModelsHandler)
+	featuresGatesRouteGroup.GET("/:project_id/filters", GetFiltersHandler)
+	featuresGatesRouteGroup.POST("/:project_id/filters", mid.SkipDemoProjectWriteAccess(), CreateFilterHandler)
+	featuresGatesRouteGroup.PUT("/:project_id/filters/:filter_id", mid.SkipDemoProjectWriteAccess(), UpdateFilterHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/filters/:filter_id", mid.SkipDemoProjectWriteAccess(), DeleteFilterHandler)
+	featuresGatesRouteGroup.POST("/:project_id/factor", FactorHandler)
 
 	// Moved to shareable routes
 	// authRouteGroup.POST("/:project_id/query", responseWrapper(QueryHandler))
@@ -168,60 +159,144 @@ func InitAppRoutes(r *gin.Engine) {
 	// authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
 	// shareable url endpoints
-	authRouteGroup.GET("/:project_id/shareable_url", GetShareableURLsHandler)
-	authRouteGroup.POST("/:project_id/shareable_url", CreateShareableURLHandler)
-	authRouteGroup.DELETE("/:project_id/shareable_url/:share_id", mid.SkipDemoProjectWriteAccess(), DeleteShareableURLHandler)
-	authRouteGroup.DELETE("/:project_id/shareable_url/revoke/:query_id", mid.SkipDemoProjectWriteAccess(), RevokeShareableURLHandler)
+	featuresGatesRouteGroup.GET("/:project_id/shareable_url", GetShareableURLsHandler)
+	featuresGatesRouteGroup.POST("/:project_id/shareable_url", CreateShareableURLHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/shareable_url/:share_id", mid.SkipDemoProjectWriteAccess(), DeleteShareableURLHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/shareable_url/revoke/:query_id", mid.SkipDemoProjectWriteAccess(), RevokeShareableURLHandler)
 
 	// v1 Dashboard endpoints
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateDashboardUnitForMultiDashboardsHandler))
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateDashboardUnitsForMultipleQueriesHandler))
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id/units/multi/:unit_ids", mid.SkipDemoProjectWriteAccess(), DeleteMultiDashboardUnitHandler)
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id", mid.SkipDemoProjectWriteAccess(), DeleteDashboardHandler)
+	featuresGatesRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateDashboardUnitForMultiDashboardsHandler))
+	featuresGatesRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateDashboardUnitsForMultipleQueriesHandler))
+	featuresGatesRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id/units/multi/:unit_ids", mid.SkipDemoProjectWriteAccess(), DeleteMultiDashboardUnitHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id", mid.SkipDemoProjectWriteAccess(), DeleteDashboardHandler)
 
 	// attribution V1 endpoints
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/attribution/queries", stringifyWrapper(V1.GetAttributionQueriesHandler))
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/attribution/queries", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(V1.CreateAttributionV1QueryAndSaveToDashboardHandler))
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/attribution/dashboards", stringifyWrapper(V1.GetOrCreateAttributionV1DashboardHandler))
-
-	// v1 KPI endpoints
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/config", responseWrapper(V1.GetKPIConfigHandler))
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", responseWrapper(V1.GetKPIFilterValuesHandler))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/attribution/queries", stringifyWrapper(V1.GetAttributionQueriesHandler))
+	featuresGatesRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/attribution/queries", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(V1.CreateAttributionV1QueryAndSaveToDashboardHandler))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/attribution/dashboards", stringifyWrapper(V1.GetOrCreateAttributionV1DashboardHandler))
 
 	// v1 custom metrics - admin/settings side.
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config/v1", V1.GetCustomMetricsConfigV1)
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateCustomMetric))
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.GetCustomMetrics))
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DeleteCustomMetrics))
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/prebuilt/add_missing", responseWrapper(V1.CreateMissingPreBuiltCustomKPI))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config/v1", V1.GetCustomMetricsConfigV1)
+	featuresGatesRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateCustomMetric))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.GetCustomMetrics))
+	featuresGatesRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DeleteCustomMetrics))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/prebuilt/add_missing", responseWrapper(V1.CreateMissingPreBuiltCustomKPI))
 
 	// v1 CRM And Smart Event endpoints
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.SkipDemoProjectWriteAccess(), CreateSmartEventFilterHandler)
-	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.SkipDemoProjectWriteAccess(), UpdateSmartEventFilterHandler)
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.SkipDemoProjectWriteAccess(), responseWrapper(DeleteSmartEventFilterHandler))
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/crm/:crm_source/:object_type/properties", GetCRMObjectPropertiesHandler)
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/crm/:crm_source/:object_type/properties/:property_name/values", GetCRMObjectValuesByPropertyNameHandler)
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/config", responseWrapper(V1.GetTemplateConfigHandler))
-	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/config", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.UpdateTemplateConfigHandler))
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/query", responseWrapper(V1.ExecuteTemplateQueryHandler))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)
+	featuresGatesRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.SkipDemoProjectWriteAccess(), CreateSmartEventFilterHandler)
+	featuresGatesRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.SkipDemoProjectWriteAccess(), UpdateSmartEventFilterHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.SkipDemoProjectWriteAccess(), responseWrapper(DeleteSmartEventFilterHandler))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/config", responseWrapper(V1.GetTemplateConfigHandler))
+	featuresGatesRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/config", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.UpdateTemplateConfigHandler))
+	featuresGatesRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/query", responseWrapper(V1.ExecuteTemplateQueryHandler))
 
 	// smart Properties
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/config/:object_type", responseWrapper(GetSmartPropertyRulesConfigHandler))
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules", mid.SkipDemoProjectWriteAccess(), responseWrapper(CreateSmartPropertyRulesHandler))
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules", responseWrapper(GetSmartPropertyRulesHandler))
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", responseWrapper(GetSmartPropertyRuleByRuleIDHandler))
-	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", mid.SkipDemoProjectWriteAccess(), responseWrapper(UpdateSmartPropertyRulesHandler))
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", mid.SkipDemoProjectWriteAccess(), responseWrapper(DeleteSmartPropertyRulesHandler))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/config/:object_type", responseWrapper(GetSmartPropertyRulesConfigHandler))
+	featuresGatesRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules", mid.SkipDemoProjectWriteAccess(), responseWrapper(CreateSmartPropertyRulesHandler))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules", responseWrapper(GetSmartPropertyRulesHandler))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", responseWrapper(GetSmartPropertyRuleByRuleIDHandler))
+	featuresGatesRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", mid.SkipDemoProjectWriteAccess(), responseWrapper(UpdateSmartPropertyRulesHandler))
+	featuresGatesRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", mid.SkipDemoProjectWriteAccess(), responseWrapper(DeleteSmartPropertyRulesHandler))
 
 	// content groups
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/contentgroup", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateContentGroupHandler))
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/contentgroup", responseWrapper(V1.GetContentGroupHandler))
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", responseWrapper(V1.GetContentGroupByIDHandler))
-	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.UpdateContentGroupHandler))
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DeleteContentGroupHandler))
+	featuresGatesRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/contentgroup", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateContentGroupHandler))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/contentgroup", responseWrapper(V1.GetContentGroupHandler))
+	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", responseWrapper(V1.GetContentGroupByIDHandler))
+	featuresGatesRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.UpdateContentGroupHandler))
+	featuresGatesRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DeleteContentGroupHandler))
 	// TODO
 	// Scope this with Project Admin
+	featuresGatesRouteGroup.GET("/:project_id/clickable_elements", GetClickableElementsHandler)
+	featuresGatesRouteGroup.GET("/:project_id/clickable_elements/:id/toggle", ToggleClickableElementHandler)
+	featuresGatesRouteGroup.PUT("/:project_id/leadsquaredsettings", mid.SkipDemoProjectWriteAccess(), UpdateLeadSquaredConfigHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/leadsquaredsettings/remove", mid.SkipDemoProjectWriteAccess(), RemoveLeadSquaredConfigHandler)
+
+	// Tracked Events
+	featuresGatesRouteGroup.POST("/:project_id/v1/factors/tracked_event", mid.SkipDemoProjectWriteAccess(), V1.CreateFactorsTrackedEventsHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/v1/factors/tracked_event/remove", mid.SkipDemoProjectWriteAccess(), V1.RemoveFactorsTrackedEventsHandler)
+	featuresGatesRouteGroup.GET("/:project_id/v1/factors/tracked_event", V1.GetAllFactorsTrackedEventsHandler)
+	featuresGatesRouteGroup.GET("/:project_id/v1/factors/grouped_tracked_event", V1.GetAllGroupedFactorsTrackedEventsHandler)
+
+	// Tracked User Property
+	featuresGatesRouteGroup.POST("/:project_id/v1/factors/tracked_user_property", mid.SkipDemoProjectWriteAccess(), V1.CreateFactorsTrackedUserPropertyHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/v1/factors/tracked_user_property/remove", mid.SkipDemoProjectWriteAccess(), V1.RemoveFactorsTrackedUserPropertyHandler)
+	featuresGatesRouteGroup.GET("/:project_id/v1/factors/tracked_user_property", V1.GetAllFactorsTrackedUserPropertiesHandler)
+
+	// Goals
+	featuresGatesRouteGroup.POST("/:project_id/v1/factors/goals", mid.SkipDemoProjectWriteAccess(), V1.CreateFactorsGoalsHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/v1/factors/goals/remove", mid.SkipDemoProjectWriteAccess(), V1.RemoveFactorsGoalsHandler)
+	featuresGatesRouteGroup.GET("/:project_id/v1/factors/goals", V1.GetAllFactorsGoalsHandler)
+	featuresGatesRouteGroup.PUT("/:project_id/v1/factors/goals/update", mid.SkipDemoProjectWriteAccess(), V1.UpdateFactorsGoalsHandler)
+	featuresGatesRouteGroup.GET("/:project_id/v1/factors/goals/search", V1.SearchFactorsGoalHandler)
+	featuresGatesRouteGroup.POST("/:project_id/v1/factor", V1.PostFactorsHandler)
+	featuresGatesRouteGroup.POST("/:project_id/v1/factor/compare", V1.PostFactorsCompareHandler)
+	featuresGatesRouteGroup.POST("/:project_id/v1/events/displayname", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateDisplayNamesHandler))
+	featuresGatesRouteGroup.GET("/:project_id/v1/events/displayname", responseWrapper(V1.GetAllDistinctEventProperties))
+	featuresGatesRouteGroup.GET("/:project_id/v1/factor", V1.GetFactorsHandler)
+	featuresGatesRouteGroup.GET("/:project_id/v1/factor/model_metadata", V1.GetModelMetaData)
+
+	featuresGatesRouteGroup.GET("/:project_id/insights", responseWrapper(V1.GetWeeklyInsightsHandler))
+	featuresGatesRouteGroup.GET("/:project_id/weekly_insights_metadata", responseWrapper(V1.GetWeeklyInsightsMetadata))
+	featuresGatesRouteGroup.POST("/:project_id/feedback", mid.SkipDemoProjectWriteAccess(), V1.PostFeedbackHandler)
+
+	// bingads integration
+	featuresGatesRouteGroup.POST("/:project_id/v1/bingads", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateBingAdsIntegration))
+	featuresGatesRouteGroup.DELETE("/:project_id/v1/bingads/disable", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DisableBingAdsIntegration))
+	featuresGatesRouteGroup.GET("/:project_id/v1/bingads", responseWrapper(V1.GetBingAdsIntegration))
+	featuresGatesRouteGroup.PUT("/:project_id/v1/bingads/enable", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.EnableBingAdsIntegration))
+
+	// marketo integration
+	featuresGatesRouteGroup.POST("/:project_id/v1/marketo", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateMarketoIntegration))
+	featuresGatesRouteGroup.DELETE("/:project_id/v1/marketo/disable", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DisableMarketoIntegration))
+	featuresGatesRouteGroup.GET("/:project_id/v1/marketo", responseWrapper(V1.GetMarketoIntegration))
+	featuresGatesRouteGroup.PUT("/:project_id/v1/marketo/enable", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.EnableMarketoIntegration))
+
+	// alerts
+	featuresGatesRouteGroup.POST("/:project_id/v1/alerts", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateAlertHandler))
+	featuresGatesRouteGroup.GET("/:project_id/v1/alerts", responseWrapper(V1.GetAlertsHandler))
+	featuresGatesRouteGroup.GET("/:project_id/v1/alerts/:id", responseWrapper(V1.GetAlertByIDHandler))
+	featuresGatesRouteGroup.DELETE("/:project_id/v1/alerts/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DeleteAlertHandler))
+	featuresGatesRouteGroup.PUT("/:project_id/v1/alerts/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.EditAlertHandler))
+	featuresGatesRouteGroup.POST("/:project_id/slack/auth", mid.SkipDemoProjectWriteAccess(), slack.SlackAuthRedirectHandler)
+	featuresGatesRouteGroup.GET("/:project_id/slack/channels", mid.SkipDemoProjectWriteAccess(), slack.GetSlackChannelsListHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/slack/delete", mid.SkipDemoProjectWriteAccess(), slack.DeleteSlackIntegrationHandler)
+	featuresGatesRouteGroup.POST("/:project_id/v1/alerts/send_now", mid.SkipDemoProjectWriteAccess(), V1.QuerySendNowHandler)
+
+	// Timeline
+	featuresGatesRouteGroup.POST("/:project_id/v1/profiles/users", responseWrapper(V1.GetProfileUsersHandler))
+	featuresGatesRouteGroup.GET("/:project_id/v1/profiles/users/:id", responseWrapper(V1.GetProfileUserDetailsHandler))
+	featuresGatesRouteGroup.POST("/:project_id/v1/profiles/accounts", responseWrapper(V1.GetProfileAccountsHandler))
+	featuresGatesRouteGroup.GET("/:project_id/v1/profiles/accounts/:id", responseWrapper(V1.GetProfileAccountDetailsHandler))
+	featuresGatesRouteGroup.POST("/:project_id/segments", CreateSegmentHandler)
+	featuresGatesRouteGroup.GET("/:project_id/segments", responseWrapper(GetSegmentsHandler))
+	featuresGatesRouteGroup.GET("/:project_id/segments/:id", responseWrapper(GetSegmentByIdHandler))
+	featuresGatesRouteGroup.PUT("/:project_id/segments/:id", UpdateSegmentHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/segments/:id", DeleteSegmentByIdHandler)
+
+	// path analysis
+	featuresGatesRouteGroup.GET("/:project_id/v1/pathanalysis", responseWrapper(V1.GetPathAnalysisEntityHandler))
+	featuresGatesRouteGroup.POST("/:project_id/v1/pathanalysis", responseWrapper(V1.CreatePathAnalysisEntityHandler))
+	featuresGatesRouteGroup.DELETE("/:project_id/v1/pathanalysis/:id", V1.DeleteSavedPathAnalysisEntityHandler)
+	featuresGatesRouteGroup.GET("/:project_id/v1/pathanalysis/:id", responseWrapper(V1.GetPathAnalysisData))
+
+	//explainV2
+	featuresGatesRouteGroup.GET("/:project_id/v1/explainV2", V1.GetFactorsHandlerV2)
+	featuresGatesRouteGroup.GET("/:project_id/v1/explainV2/goals", responseWrapper(V1.GetExplainV2EntityHandler))
+	featuresGatesRouteGroup.POST("/:project_id/v1/explainV2", V1.PostFactorsHandlerV2)
+	featuresGatesRouteGroup.POST("/:project_id/v1/explainV2/job", responseWrapper(V1.CreateExplainV2EntityHandler))
+	featuresGatesRouteGroup.DELETE("/:project_id/v1/explainV2/:id", V1.DeleteSavedExplainV2EntityHandler)
+
+	// event trigger alert
+	featuresGatesRouteGroup.GET("/:project_id/v1/eventtriggeralert", responseWrapper(V1.GetEventTriggerAlertsByProjectHandler))
+	featuresGatesRouteGroup.POST("/:project_id/v1/eventtriggeralert", responseWrapper(V1.CreateEventTriggerAlertHandler))
+	featuresGatesRouteGroup.DELETE("/:project_id/v1/eventtriggeralert/:id", V1.DeleteEventTriggerAlertHandler)
+
+	// Auth route group with authentication an authorization middleware.
+	authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
+	authRouteGroup.Use(mid.SetLoggedInAgent())
+	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
+	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
 	authRouteGroup.GET("/:project_id/agents", GetProjectAgentsHandler)
 	authRouteGroup.POST("/:project_id/agents/invite", mid.SkipDemoProjectWriteAccess(), AgentInvite)
 	authRouteGroup.POST("/:project_id/agents/batchinvite", mid.SkipDemoProjectWriteAccess(), AgentInviteBatch)
@@ -230,111 +305,43 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/settings", mid.SkipDemoProjectWriteAccess(), GetProjectSettingHandler)
 	authRouteGroup.GET("/:project_id/v1/settings", mid.SkipDemoProjectWriteAccess(), V1.GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", mid.SkipDemoProjectWriteAccess(), UpdateProjectSettingsHandler)
-	authRouteGroup.GET("/:project_id/clickable_elements", GetClickableElementsHandler)
-	authRouteGroup.GET("/:project_id/clickable_elements/:id/toggle", ToggleClickableElementHandler)
-	authRouteGroup.PUT("/:project_id/leadsquaredsettings", mid.SkipDemoProjectWriteAccess(), UpdateLeadSquaredConfigHandler)
-	authRouteGroup.DELETE("/:project_id/leadsquaredsettings/remove", mid.SkipDemoProjectWriteAccess(), RemoveLeadSquaredConfigHandler)
-
+	authRouteGroup.PUT("/:project_id", mid.SkipDemoProjectWriteAccess(), EditProjectHandler)
+	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
+	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
+	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
+	authRouteGroup.GET("/:project_id/event_names/:event_name/properties", GetEventPropertiesHandler)
+	authRouteGroup.GET("/:project_id/event_names/:event_name/properties/:property_name/values", GetEventPropertyValuesHandler)
+	authRouteGroup.GET("/:project_id/groups", GetGroupsHandler)
+	authRouteGroup.GET("/:project_id/groups/:group_name/properties", GetGroupPropertiesHandler)
+	authRouteGroup.GET("/:project_id/groups/:group_name/properties/:property_name/values", GetGroupPropertyValuesHandler)
+	authRouteGroup.GET("/:project_id/users", GetUsersHandler)
+	authRouteGroup.GET("/:project_id/users/:user_id", GetUserHandler)
+	authRouteGroup.GET("/:project_id/user_properties", GetUserPropertiesHandler)
+	authRouteGroup.GET("/:project_id/user_properties/:property_name/values", GetUserPropertyValuesHandler)
+	authRouteGroup.GET("/:project_id/channel_grouping_properties", GetChannelGroupingPropertiesHandler)
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/crm/:crm_source/:object_type/properties", GetCRMObjectPropertiesHandler)
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/crm/:crm_source/:object_type/properties/:property_name/values", GetCRMObjectValuesByPropertyNameHandler)
+	// v1 KPI endpoints
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/config", responseWrapper(V1.GetKPIConfigHandler))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", responseWrapper(V1.GetKPIFilterValuesHandler))
 	// V1 Routes
 	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/v1/event_names/:type", V1.GetEventNamesByTypeHandler)
 	authRouteGroup.GET("/:project_id/v1/agents", mid.SkipDemoProjectWriteAccess(), V1.GetProjectAgentsHandler)
-	r.GET(routePrefix+"/"+ROUTE_PROJECTS_ROOT_V1,
-		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(),
-		V1.GetProjectsHandler)
-	r.GET(routePrefix+"/v1/demoprojects",
-		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(),
-		V1.GetDemoProjects)
-
-	// Tracked Events
-	authRouteGroup.POST("/:project_id/v1/factors/tracked_event", mid.SkipDemoProjectWriteAccess(), V1.CreateFactorsTrackedEventsHandler)
-	authRouteGroup.DELETE("/:project_id/v1/factors/tracked_event/remove", mid.SkipDemoProjectWriteAccess(), V1.RemoveFactorsTrackedEventsHandler)
-	authRouteGroup.GET("/:project_id/v1/factors/tracked_event", V1.GetAllFactorsTrackedEventsHandler)
-	authRouteGroup.GET("/:project_id/v1/factors/grouped_tracked_event", V1.GetAllGroupedFactorsTrackedEventsHandler)
-
-	// Tracked User Property
-	authRouteGroup.POST("/:project_id/v1/factors/tracked_user_property", mid.SkipDemoProjectWriteAccess(), V1.CreateFactorsTrackedUserPropertyHandler)
-	authRouteGroup.DELETE("/:project_id/v1/factors/tracked_user_property/remove", mid.SkipDemoProjectWriteAccess(), V1.RemoveFactorsTrackedUserPropertyHandler)
-	authRouteGroup.GET("/:project_id/v1/factors/tracked_user_property", V1.GetAllFactorsTrackedUserPropertiesHandler)
-
-	// Goals
-	authRouteGroup.POST("/:project_id/v1/factors/goals", mid.SkipDemoProjectWriteAccess(), V1.CreateFactorsGoalsHandler)
-	authRouteGroup.DELETE("/:project_id/v1/factors/goals/remove", mid.SkipDemoProjectWriteAccess(), V1.RemoveFactorsGoalsHandler)
-	authRouteGroup.GET("/:project_id/v1/factors/goals", V1.GetAllFactorsGoalsHandler)
-	authRouteGroup.PUT("/:project_id/v1/factors/goals/update", mid.SkipDemoProjectWriteAccess(), V1.UpdateFactorsGoalsHandler)
-	authRouteGroup.GET("/:project_id/v1/factors/goals/search", V1.SearchFactorsGoalHandler)
-	authRouteGroup.POST("/:project_id/v1/factor", V1.PostFactorsHandler)
-	authRouteGroup.POST("/:project_id/v1/factor/compare", V1.PostFactorsCompareHandler)
-	authRouteGroup.POST("/:project_id/v1/events/displayname", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateDisplayNamesHandler))
-	authRouteGroup.GET("/:project_id/v1/events/displayname", responseWrapper(V1.GetAllDistinctEventProperties))
-	authRouteGroup.GET("/:project_id/v1/factor", V1.GetFactorsHandler)
-	authRouteGroup.GET("/:project_id/v1/factor/model_metadata", V1.GetModelMetaData)
-
-	authRouteGroup.GET("/:project_id/insights", responseWrapper(V1.GetWeeklyInsightsHandler))
-	authRouteGroup.GET("/:project_id/weekly_insights_metadata", responseWrapper(V1.GetWeeklyInsightsMetadata))
-	authRouteGroup.POST("/:project_id/feedback", mid.SkipDemoProjectWriteAccess(), V1.PostFeedbackHandler)
-
-	// bingads integration
-	authRouteGroup.POST("/:project_id/v1/bingads", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateBingAdsIntegration))
-	authRouteGroup.DELETE("/:project_id/v1/bingads/disable", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DisableBingAdsIntegration))
-	authRouteGroup.GET("/:project_id/v1/bingads", responseWrapper(V1.GetBingAdsIntegration))
-	authRouteGroup.PUT("/:project_id/v1/bingads/enable", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.EnableBingAdsIntegration))
-
-	// marketo integration
-	authRouteGroup.POST("/:project_id/v1/marketo", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateMarketoIntegration))
-	authRouteGroup.DELETE("/:project_id/v1/marketo/disable", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DisableMarketoIntegration))
-	authRouteGroup.GET("/:project_id/v1/marketo", responseWrapper(V1.GetMarketoIntegration))
-	authRouteGroup.PUT("/:project_id/v1/marketo/enable", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.EnableMarketoIntegration))
-
-	// alerts
-	authRouteGroup.POST("/:project_id/v1/alerts", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateAlertHandler))
-	authRouteGroup.GET("/:project_id/v1/alerts", responseWrapper(V1.GetAlertsHandler))
-	authRouteGroup.GET("/:project_id/v1/alerts/:id", responseWrapper(V1.GetAlertByIDHandler))
-	authRouteGroup.DELETE("/:project_id/v1/alerts/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DeleteAlertHandler))
-	authRouteGroup.PUT("/:project_id/v1/alerts/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.EditAlertHandler))
-	authRouteGroup.POST("/:project_id/slack/auth", mid.SkipDemoProjectWriteAccess(), slack.SlackAuthRedirectHandler)
-	authRouteGroup.GET("/:project_id/slack/channels", mid.SkipDemoProjectWriteAccess(), slack.GetSlackChannelsListHandler)
-	authRouteGroup.DELETE("/:project_id/slack/delete", mid.SkipDemoProjectWriteAccess(), slack.DeleteSlackIntegrationHandler)
-	authRouteGroup.POST("/:project_id/v1/alerts/send_now", mid.SkipDemoProjectWriteAccess(), V1.QuerySendNowHandler)
+	// project analytics
 	authRouteGroup.GET("/:project_id/v1/dataobservability/metrics", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAnalyticsMetricsFromStorage))
 	authRouteGroup.GET("/:project_id/v1/dataobservability/alerts", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAnalyticsAlertsFromStorage))
-
-	// Timeline
-	authRouteGroup.POST("/:project_id/v1/profiles/users", responseWrapper(V1.GetProfileUsersHandler))
-	authRouteGroup.GET("/:project_id/v1/profiles/users/:id", responseWrapper(V1.GetProfileUserDetailsHandler))
-	authRouteGroup.POST("/:project_id/v1/profiles/accounts", responseWrapper(V1.GetProfileAccountsHandler))
-	authRouteGroup.GET("/:project_id/v1/profiles/accounts/:id", responseWrapper(V1.GetProfileAccountDetailsHandler))
-	authRouteGroup.POST("/:project_id/segments", CreateSegmentHandler)
-	authRouteGroup.GET("/:project_id/segments", responseWrapper(GetSegmentsHandler))
-	authRouteGroup.GET("/:project_id/segments/:id", responseWrapper(GetSegmentByIdHandler))
-	authRouteGroup.PUT("/:project_id/segments/:id", UpdateSegmentHandler)
-	authRouteGroup.DELETE("/:project_id/segments/:id", DeleteSegmentByIdHandler)
-
 	// weekly insights, explain
 	authRouteGroup.PUT("/:project_id/v1/weeklyinsights", mid.SetLoggedInAgentInternalOnly(), UpdateWeeklyInsightsHandler)
 	authRouteGroup.PUT("/:project_id/v1/explain", mid.SetLoggedInAgentInternalOnly(), UpdateExplainHandler)
 	authRouteGroup.PUT("/:project_id/v1/pathanalysis", mid.SetLoggedInAgentInternalOnly(), UpdatePathAnalysisHandler)
+	// feature gate
+	featuresGatesRouteGroup.POST("/:project_id/v1/feature_gates", mid.SetLoggedInAgentInternalOnly(), V1.UpdateFeatureStatusHandler)
 
-	// path analysis
-	authRouteGroup.GET("/:project_id/v1/pathanalysis", responseWrapper(V1.GetPathAnalysisEntityHandler))
-	authRouteGroup.POST("/:project_id/v1/pathanalysis", responseWrapper(V1.CreatePathAnalysisEntityHandler))
-	authRouteGroup.DELETE("/:project_id/v1/pathanalysis/:id", V1.DeleteSavedPathAnalysisEntityHandler)
-	authRouteGroup.GET("/:project_id/v1/pathanalysis/:id", responseWrapper(V1.GetPathAnalysisData))
-
-
-	// event trigger alert
-	authRouteGroup.GET("/:project_id/v1/eventtriggeralert", responseWrapper(V1.GetEventTriggerAlertsByProjectHandler))
-	authRouteGroup.POST("/:project_id/v1/eventtriggeralert", responseWrapper(V1.CreateEventTriggerAlertHandler))
-	authRouteGroup.DELETE("/:project_id/v1/eventtriggeralert/:id", V1.DeleteEventTriggerAlertHandler)
-
-	//explainV2
-	authRouteGroup.GET("/:project_id/v1/explainV2", V1.GetFactorsHandlerV2)
-	authRouteGroup.GET("/:project_id/v1/explainV2/goals", responseWrapper(V1.GetExplainV2EntityHandler))
-	authRouteGroup.POST("/:project_id/v1/explainV2", V1.PostFactorsHandlerV2)
-	authRouteGroup.POST("/:project_id/v1/explainV2/job", responseWrapper(V1.CreateExplainV2EntityHandler))
-	authRouteGroup.DELETE("/:project_id/v1/explainV2/:id", V1.DeleteSavedExplainV2EntityHandler)
+	authCommonRouteGroup := r.Group(routePrefix + ROUTE_COMMON_ROOT)
+	authCommonRouteGroup.GET("/dashboard_templates/:id/search", mid.FeatureMiddleware(), SearchTemplateHandler)
+	authCommonRouteGroup.GET("/dashboard_templates", mid.FeatureMiddleware(), GetDashboardTemplatesHandler)
+	authCommonRouteGroup.POST("/dashboard_template/create", mid.FeatureMiddleware(), mid.SkipDemoProjectWriteAccess(), CreateTemplateHandler)
 
 	// property mapping
 	authRouteGroup.POST("/:project_id/kpi/property_mappings", responseWrapper(V1.CreatePropertyMapping))
@@ -393,6 +400,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 
 func InitIntRoutes(r *gin.Engine) {
 	intRouteGroup := r.Group(ROUTE_INTEGRATIONS_ROOT)
+	intRouteGroup.Use(mid.FeatureMiddleware())
 
 	// Deprecated: /shopify routes are deprecated.
 	// blocked gracefully for existing projects.
@@ -464,81 +472,81 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup := r.Group(ROUTE_DATA_SERVICE_ROOT)
 
 	//todo @ashhar: merge adwords and google_organic whereever possible
-	dataServiceRouteGroup.POST("/adwords/documents/add",
+	dataServiceRouteGroup.POST("/adwords/documents/add", mid.FeatureMiddleware(),
 		IH.DataServiceAdwordsAddDocumentHandler)
-	dataServiceRouteGroup.POST("/adwords/documents/add_multiple",
+	dataServiceRouteGroup.POST("/adwords/documents/add_multiple", mid.FeatureMiddleware(),
 		IH.DataServiceAdwordsAddMultipleDocumentsHandler)
 
-	dataServiceRouteGroup.POST("/adwords/add_refresh_token",
+	dataServiceRouteGroup.POST("/adwords/add_refresh_token", mid.FeatureMiddleware(),
 		IntAdwordsAddRefreshTokenHandler)
 
-	dataServiceRouteGroup.POST("/adwords/get_refresh_token",
+	dataServiceRouteGroup.POST("/adwords/get_refresh_token", mid.FeatureMiddleware(),
 		IntAdwordsGetRefreshTokenHandler)
 
-	dataServiceRouteGroup.GET("/adwords/documents/project_last_sync_info",
+	dataServiceRouteGroup.GET("/adwords/documents/project_last_sync_info", mid.FeatureMiddleware(),
 		IH.DataServiceAdwordsGetLastSyncForProjectInfoHandler)
 
-	dataServiceRouteGroup.GET("/adwords/documents/last_sync_info",
+	dataServiceRouteGroup.GET("/adwords/documents/last_sync_info", mid.FeatureMiddleware(),
 		IH.DataServiceAdwordsGetLastSyncInfoHandler)
 
-	dataServiceRouteGroup.POST("/google_organic/documents/add",
+	dataServiceRouteGroup.POST("/google_organic/documents/add", mid.FeatureMiddleware(),
 		IH.DataServiceGoogleOrganicAddDocumentHandler)
 
-	dataServiceRouteGroup.POST("/google_organic/documents/add_multiple",
+	dataServiceRouteGroup.POST("/google_organic/documents/add_multiple", mid.FeatureMiddleware(),
 		IH.DataServiceGoogleOrganicAddMultipleDocumentsHandler)
 
-	dataServiceRouteGroup.POST("/google_organic/add_refresh_token",
+	dataServiceRouteGroup.POST("/google_organic/add_refresh_token", mid.FeatureMiddleware(),
 		IntGoogleOrganicAddRefreshTokenHandler)
 
-	dataServiceRouteGroup.POST("/google_organic/get_refresh_token",
+	dataServiceRouteGroup.POST("/google_organic/get_refresh_token", mid.FeatureMiddleware(),
 		IntGoogleOrganicGetRefreshTokenHandler)
 
-	dataServiceRouteGroup.GET("/google_organic/documents/project_last_sync_info",
+	dataServiceRouteGroup.GET("/google_organic/documents/project_last_sync_info", mid.FeatureMiddleware(),
 		IH.DataServiceGoogleOrganicGetLastSyncForProjectInfoHandler)
 
-	dataServiceRouteGroup.GET("/google_organic/documents/last_sync_info",
+	dataServiceRouteGroup.GET("/google_organic/documents/last_sync_info", mid.FeatureMiddleware(),
 		IH.DataServiceGoogleOrganicGetLastSyncInfoHandler)
 
-	dataServiceRouteGroup.POST("/hubspot/documents/add",
+	dataServiceRouteGroup.POST("/hubspot/documents/add", mid.FeatureMiddleware(),
 		IH.DataServiceHubspotAddDocumentHandler)
 
-	dataServiceRouteGroup.POST("/hubspot/documents/add_batch",
+	dataServiceRouteGroup.POST("/hubspot/documents/add_batch", mid.FeatureMiddleware(),
 		IH.DataServiceHubspotAddBatchDocumentHandler)
 
-	dataServiceRouteGroup.GET("/hubspot/documents/sync_info",
+	dataServiceRouteGroup.GET("/hubspot/documents/sync_info", mid.FeatureMiddleware(),
 		IH.DataServiceHubspotGetSyncInfoHandler)
 
-	dataServiceRouteGroup.POST("/hubspot/documents/sync_info",
+	dataServiceRouteGroup.POST("/hubspot/documents/sync_info", mid.FeatureMiddleware(),
 		IH.DataServiceHubspotUpdateSyncInfo)
 
-	dataServiceRouteGroup.GET("/hubspot/documents/types/form",
+	dataServiceRouteGroup.GET("/hubspot/documents/types/form", mid.FeatureMiddleware(),
 		IH.DataServiceGetHubspotFormDocumentsHandler)
 
-	dataServiceRouteGroup.GET("/facebook/project/settings",
+	dataServiceRouteGroup.GET("/facebook/project/settings", mid.FeatureMiddleware(),
 		IH.DataServiceFacebookGetProjectSettings)
 
-	dataServiceRouteGroup.POST("/facebook/documents/add",
+	dataServiceRouteGroup.POST("/facebook/documents/add", mid.FeatureMiddleware(),
 		IH.DataServiceFacebookAddDocumentHandler)
 
-	dataServiceRouteGroup.GET("/facebook/documents/last_sync_info",
+	dataServiceRouteGroup.GET("/facebook/documents/last_sync_info", mid.FeatureMiddleware(),
 		IH.DataServiceFacebookGetLastSyncInfoHandler)
 
-	dataServiceRouteGroup.GET("linkedin/documents/last_sync_info",
+	dataServiceRouteGroup.GET("linkedin/documents/last_sync_info", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinGetLastSyncInfoHandler)
 
-	dataServiceRouteGroup.POST("/linkedin/documents/add",
+	dataServiceRouteGroup.POST("/linkedin/documents/add", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinAddDocumentHandler)
 
-	dataServiceRouteGroup.PUT("/linkedin/access_token",
+	dataServiceRouteGroup.PUT("/linkedin/access_token", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinUpdateAccessToken)
 
-	dataServiceRouteGroup.POST("/metrics",
+	dataServiceRouteGroup.POST("/metrics", mid.FeatureMiddleware(),
 		IH.DataServiceRecordMetricHandler)
 
-	dataServiceRouteGroup.GET("/linkedin/project/settings",
+	dataServiceRouteGroup.GET("/linkedin/project/settings", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinGetProjectSettings)
 
-	dataServiceRouteGroup.GET("/linkedin/project/settings/projects",
+	dataServiceRouteGroup.GET("/linkedin/project/settings/projects", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinGetProjectSettingsForProjects)
 
 	dataServiceRouteGroup.GET("/task/details", responseWrapper(V1.GetTaskDetailsByNameHandler))

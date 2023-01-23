@@ -281,6 +281,7 @@ type Configuration struct {
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
+	EnableFeatureGates                                 bool
 	EnableDBConnectionPool2                            bool
 	FormFillIdentificationAllowedProjects              string
 }
@@ -2482,4 +2483,8 @@ func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
 		return true
 	}
 	return allowedProjectIDs[projectID]
+}
+
+func IsEnabledFeatureGates() bool {
+	return configuration.EnableFeatureGates
 }

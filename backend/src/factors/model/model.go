@@ -843,6 +843,11 @@ type Model interface {
 	GetExplainV2ProjectCountWithStatus(projectID int64, status []string) (int, int, string)
 	UpdateExplainV2EntityStatus(projectID int64, id string, status string, model_id uint64) (int, string)
 
+	// Feature Gates
+	GetFeaturesForProject(projectID int64) (model.FeatureGate, error)
+	UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error)
+	GetFeatureStatusForProject(projectID int64, featureName string) (int, error)
+
 	// Property Mapping
 	CreatePropertyMapping(propertyMapping model.PropertyMapping) (*model.PropertyMapping, string, int)
 	GetPropertyMappingByID(projectID int64, id string) (*model.PropertyMapping, string, int)

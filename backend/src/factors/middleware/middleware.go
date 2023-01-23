@@ -25,6 +25,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/xid"
 	log "github.com/sirupsen/logrus"
+	"reflect"
+	"runtime"
 )
 
 // scope constants.
@@ -889,4 +891,54 @@ func BlockMaliciousPayload() gin.HandlerFunc {
 		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 		c.Next()
 	}
+}
+
+// Feature gate middleware
+func FeatureMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get the name of the handler function
+		if !C.IsEnabledFeatureGates() {
+			c.Next()
+			return
+		}
+		handlerName := runtime.FuncForPC(reflect.ValueOf(c.Handler()).Pointer()).Name()
+		projectID := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
+		handlerFeatures := GetFeatureMap()
+		features, ok := handlerFeatures[handlerName]
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Handler is not mapped to any feature" + handlerName})
+			return
+		}
+
+		for _, feature := range features {
+			status, err := store.GetStore().GetFeatureStatusForProject(projectID, feature)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get feature status for this project " + feature})
+				return
+			}
+			if !isFeatureAvailable(status) {
+				c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Feature not available for this project "})
+				return
+			}
+
+			// if !isFeatureEnabled(status) {
+			// 	c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Feature not enabled for this project "})
+			// 	return
+
+			// }
+		}
+
+		c.Next()
+	}
+}
+
+// Check if a feature is available
+func isFeatureAvailable(status int) bool {
+
+	return status > 0
+}
+
+// Check if a feature is enabled
+func isFeatureEnabled(status int) bool {
+	return status == 2
 }
