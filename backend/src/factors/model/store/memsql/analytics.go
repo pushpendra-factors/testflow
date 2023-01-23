@@ -748,6 +748,7 @@ func addFilterEventsWithPropsQuery(projectId int64, qStmnt *string, qParams *[]i
 	}
 
 	whereCond := fmt.Sprintf("WHERE events.project_id=? AND timestamp>=%s AND timestamp<=?", fromTimestamp)
+
 	// select id of event_names from names step.
 	if !skipEventNameStep {
 		whereCond = whereCond + fmt.Sprintf(" "+"AND events.event_name_id IN (SELECT id FROM %s WHERE project_id=? AND name=?)", eventNamesRef)

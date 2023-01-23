@@ -823,23 +823,31 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	var aggregateSelect string
 	var aggregateParams []interface{}
 
-	if q.GetGroupByTimestamp() != "" {
-		selectTimestamp := getSelectTimestampByType(q.GetGroupByTimestamp(), q.Timezone)
-		// select and order by with datetime.
-		commonSelect = fmt.Sprintf("COALESCE(users.customer_user_id, events.user_id) as coal_user_id%%, %s as %s,", selectTimestamp, model.AliasDateTime) +
-			" FIRST(events.user_id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
-
+	if q.Caller == model.USER_PROFILE_CALLER {
+		commonSelect = fmt.Sprintf("COALESCE(users.customer_user_id, events.user_id) as coal_user_id%%, users.updated_at as last_activity, ISNULL(users.customer_user_id) AS is_anonymous, users.properties as properties")
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
-
-		commonOrderBy = fmt.Sprintf("coal_user_id%%, %s, events.timestamp ASC", model.AliasDateTime)
-		commonOrderBy = strings.ReplaceAll(commonOrderBy, "%", "%s")
-		commonGroupBy = "datetime, coal_user_id"
+	} else if q.Caller == model.ACCOUNT_PROFILE_CALLER {
+		commonSelect = fmt.Sprintf("users.id as identity%%, users.updated_at as last_activity, users.properties as properties")
+		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 	} else {
-		// default select.
-		commonSelect = "COALESCE(users.customer_user_id, events.user_id)" +
-			" as coal_user_id%s, FIRST(events.user_id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
-		commonGroupBy = "coal_user_id"
+		if q.GetGroupByTimestamp() != "" {
+			selectTimestamp := getSelectTimestampByType(q.GetGroupByTimestamp(), q.Timezone)
+			// select and order by with datetime.
+			commonSelect = fmt.Sprintf("COALESCE(users.customer_user_id, events.user_id) as coal_user_id%%, %s as %s,", selectTimestamp, model.AliasDateTime) +
+				" FIRST(events.user_id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
 
+			commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
+
+			commonOrderBy = fmt.Sprintf("coal_user_id%%, %s, events.timestamp ASC", model.AliasDateTime)
+			commonOrderBy = strings.ReplaceAll(commonOrderBy, "%", "%s")
+			commonGroupBy = "datetime, coal_user_id"
+		} else {
+			// default select.
+			commonSelect = "COALESCE(users.customer_user_id, events.user_id)" +
+				" as coal_user_id%s, FIRST(events.user_id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
+			commonGroupBy = "coal_user_id"
+
+		}
 	}
 
 	var commonSelectArr []string
@@ -869,6 +877,11 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	}
 
 	steps := make([]string, 0, 0)
+	// Adding source string
+	var addSourceStmt, addColsString string
+	if IsCallerProfiles(q.Caller) {
+		addSourceStmt, addColsString = store.addSourceFilterForSegments(projectID, q.Source, q.Caller)
+	}
 	for i, ewp := range q.EventsWithProperties {
 		refStepName := stepNameByIndex(i)
 		steps = append(steps, refStepName)
@@ -882,7 +895,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 
 		eventSelect := commonSelectArr[i]
 		eventParam := ""
-		if q.EventsCondition == model.EventCondEachGivenEvent {
+		if q.EventsCondition == model.EventCondEachGivenEvent && !IsCallerProfiles(q.Caller) {
 			eventNameSelect := fmt.Sprintf("? AS event_name ")
 			eventParam = fmt.Sprintf("%s_%s", strconv.Itoa(i), ewp.Name)
 			eventSelect = joinWithComma(eventSelect, eventNameSelect)
@@ -898,7 +911,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			stepsToKeysMap[refStepName] = strings.Split(stepGroupKeys, ",")
 		} else {
 			stepSelect = fmt.Sprintf(eventSelect, "")
-			if q.EventsCondition == model.EventCondEachGivenEvent {
+			if q.EventsCondition == model.EventCondEachGivenEvent && !IsCallerProfiles(q.Caller) {
 				stepParams = append(stepParams, eventParam)
 			}
 			if commonOrderBy != "" {
@@ -932,12 +945,117 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		addFilterFunc(projectID, qStmnt, qParams, ewp, q.From, q.To,
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy, q.GlobalUserProperties)
 
+		// adding source check
+		if IsCallerProfiles(q.Caller) {
+			if C.EnableOptimisedFilterOnEventUserQuery() {
+				if i == 0 {
+					addSourceStmt = strings.ReplaceAll(addSourceStmt, "_event_users_view.", fmt.Sprintf("%s_event_users_view.", refStepName))
+				} else {
+					addSourceStmt = strings.ReplaceAll(addSourceStmt, fmt.Sprintf("step_%d_event_users_view.", i-1), fmt.Sprintf("%s_event_users_view.", refStepName))
+
+				}
+			}
+			*qStmnt = strings.TrimSuffix(*qStmnt, ")") + addSourceStmt + ")"
+		}
 		if i < len(q.EventsWithProperties)-1 {
 			*qStmnt = *qStmnt + ","
 		}
 	}
 
+	// adding source columns
+	if IsCallerProfiles(q.Caller) && C.EnableOptimisedFilterOnEventUserQuery() {
+		qStmtSplit := strings.Split(*qStmnt, "(SELECT")
+		result := qStmtSplit[0] + "(SELECT" + qStmtSplit[1]
+		for idx := 2; idx < len(qStmtSplit); idx++ {
+			if idx%2 == 0 {
+				result = result + "(SELECT " + addColsString + ", " + qStmtSplit[idx]
+			} else {
+				result = result + "(SELECT " + qStmtSplit[idx]
+			}
+		}
+		*qStmnt = result
+	}
+
 	return steps, stepsToKeysMap
+}
+
+func IsCallerProfiles(caller string) bool {
+	return (caller == model.USER_PROFILE_CALLER || caller == model.ACCOUNT_PROFILE_CALLER)
+}
+
+// Adds source string, Example
+// WITH  step_0 AS (SELECT users.id as identity, users.updated_at as last_activity, users.properties as properties
+// FROM events  JOIN users ON events.user_id=users.id AND users.project_id = '2000009' WHERE events.project_id='2000009'
+// AND timestamp='1671686385' AND timestamp='1674105588' AND  ( events.event_name_id = '061b66b9-ea69-4aae-bd09-551e868ba320' )
+// AND ( (JSON_EXTRACT_STRING(events.properties, '$salesforce_campaign_type') = 'Some Salesforce Type') )
+// AND (users.is_group_user=1) AND users.group_1_id IS NOT NULL), step_1 AS (SELECT users.id as identity,
+// users.updated_at as last_activity, users.properties as properties FROM events  JOIN users ON
+// events.user_id=users.id AND users.project_id = '2000009' WHERE events.project_id='2000009' AND timestamp='1671686385'
+// AND timestamp='1674105588' AND  ( events.event_name_id = '061b66b9-ea69-4aae-bd09-551e868ba320' )  AND
+// ( (JSON_EXTRACT_STRING(events.properties, '$channel') = 'ChannelName1') ) AND (users.is_group_user=1) AND
+// users.group_1_id IS NOT NULL)
+func (store *MemSQL) addSourceFilterForSegments(projectID int64,
+	source string, caller string) (string, string) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	var addSourceStmt string
+	addColString := " " + "users.updated_at, users.is_group_user,"
+	var selectVal string
+	if C.EnableOptimisedFilterOnEventUserQuery() {
+		selectVal = "_event_users_view"
+	} else {
+		selectVal = "users"
+	}
+	if caller == model.USER_PROFILE_CALLER {
+		addSourceStmt = " " + fmt.Sprintf("AND (%s.is_group_user=0 OR %s.is_group_user IS NULL)", selectVal, selectVal)
+		if model.UserSourceMap[source] == model.UserSourceWeb {
+			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.source="+strconv.Itoa(model.UserSourceMap[source])+" OR %s.source IS NULL)", selectVal, selectVal)
+		} else if source == "All" {
+			addSourceStmt = addSourceStmt + ""
+		} else {
+			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.source=", selectVal) + strconv.Itoa(model.UserSourceMap[source])
+		}
+		addColString = addColString + " " + "users.source"
+	} else if caller == model.ACCOUNT_PROFILE_CALLER {
+		groups, errCode := store.GetGroups(projectID)
+		if errCode != http.StatusFound {
+			log.WithField("status", errCode).Error("Failed to get groups while adding group info.")
+		}
+		groupNameIDMap := make(map[string]int)
+		if len(groups) > 0 {
+			for _, group := range groups {
+				if group.Name == model.GROUP_NAME_HUBSPOT_COMPANY || group.Name == model.GROUP_NAME_SALESFORCE_ACCOUNT {
+					groupNameIDMap[group.Name] = group.ID
+				}
+			}
+		}
+		hubspotID, hubspotExists := groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY]
+		salesforceID, salesforceExists := groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT]
+
+		if !hubspotExists && !salesforceExists {
+			log.WithFields(logFields).Error("No CRMs Enabled for this project.")
+		}
+		if source == model.GROUP_NAME_HUBSPOT_COMPANY && !hubspotExists {
+			log.WithFields(logFields).Error("Hubspot Not Enabled for this project.")
+		}
+		if source == model.GROUP_NAME_SALESFORCE_ACCOUNT && !salesforceExists {
+			log.WithFields(logFields).Error("Salesforce Not Enabled for this project.")
+		}
+		addSourceStmt = " " + fmt.Sprintf("AND (%s.is_group_user=1)", selectVal)
+		if source == "All" && hubspotExists && salesforceExists {
+			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.group_%d_id IS NOT NULL OR %s.group_%d_id IS NOT NULL)", selectVal, hubspotID, selectVal, salesforceID)
+			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.group_%d_id", hubspotID, salesforceID)
+		} else if (source == "All" || source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
+			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, hubspotID)
+			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", hubspotID)
+		} else if (source == "All" || source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
+			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, salesforceID)
+			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", salesforceID)
+		}
+	}
+	return addSourceStmt, addColString
 }
 
 /*
@@ -1082,6 +1200,12 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 		aggregateSelect = aggregateSelect + " ORDER BY " + aggregateOrderBys
 	} else {
 		aggregateSelect = appendOrderByAggr(aggregateSelect)
+	}
+
+	if query.Caller == model.USER_PROFILE_CALLER {
+		aggregateSelect = fmt.Sprintf("SELECT DISTINCT(coal_user_id) as identity, is_anonymous, last_activity, properties FROM %s", aggregateFromStepName)
+	} else if query.Caller == model.ACCOUNT_PROFILE_CALLER {
+		aggregateSelect = fmt.Sprintf("SELECT DISTINCT(identity) as identity, last_activity, properties FROM %s", aggregateFromStepName)
 	}
 	aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
 	*qStmnt = appendStatement(*qStmnt, aggregateSelect)
@@ -1283,6 +1407,11 @@ func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
 	for i, step := range steps {
 		selectStr := fmt.Sprintf("%s.event_name as event_name, %s.coal_user_id as coal_user_id, %s.event_user_id as event_user_id", step, step, step)
 		selectStr = appendSelectTimestampColIfRequired(selectStr, isGroupByTimestamp)
+		if query.Caller == model.USER_PROFILE_CALLER {
+			selectStr = fmt.Sprintf("%s.coal_user_id as coal_user_id, %s.is_anonymous, %s.last_activity, %s.properties", step, step, step, step)
+		} else if query.Caller == model.ACCOUNT_PROFILE_CALLER {
+			selectStr = fmt.Sprintf("%s.identity, %s.last_activity, %s.properties", step, step, step)
+		}
 		egKeysForStep := getKeysForStep(step, steps, stepsToKeysMap, totalGroupKeys)
 		if egKeysForStep != "" {
 			selectStr = selectStr + " , " + egKeysForStep
@@ -1452,7 +1581,14 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 	steps, _ := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
 
 	// users intersection
-	intersectSelect := fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_user_id as coal_user_id", steps[0], steps[0])
+	var intersectSelect string
+	if query.Caller == model.USER_PROFILE_CALLER {
+		intersectSelect = fmt.Sprintf("%s.coal_user_id as coal_user_id, %s.is_anonymous, %s.last_activity, %s.properties", steps[0], steps[0], steps[0], steps[0])
+	} else if query.Caller == model.ACCOUNT_PROFILE_CALLER {
+		intersectSelect = fmt.Sprintf("%s.identity, %s.last_activity, %s.properties", steps[0], steps[0], steps[0])
+	} else {
+		intersectSelect = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_user_id as coal_user_id", steps[0], steps[0])
+	}
 	if query.GetGroupByTimestamp() != "" {
 		intersectSelect = joinWithComma(intersectSelect,
 			fmt.Sprintf("%s.%s as %s", steps[0], model.AliasDateTime, model.AliasDateTime))
@@ -1466,8 +1602,13 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 	var intersectJoin string
 	for i := range steps {
 		if i > 0 {
-			intersectJoin = intersectJoin + " " + fmt.Sprintf("JOIN %s ON %s.coal_user_id = %s.coal_user_id",
-				steps[i], steps[i], steps[i-1])
+			if query.Caller == model.ACCOUNT_PROFILE_CALLER {
+				intersectJoin = intersectJoin + " " + fmt.Sprintf("JOIN %s ON %s.identity = %s.identity",
+					steps[i], steps[i], steps[i-1])
+			} else {
+				intersectJoin = intersectJoin + " " + fmt.Sprintf("JOIN %s ON %s.coal_user_id = %s.coal_user_id",
+					steps[i], steps[i], steps[i-1])
+			}
 
 			// include date also intersection condition on
 			// group by timestamp.
@@ -1599,6 +1740,11 @@ func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 		selectStr := fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_user_id as coal_user_id", step, step)
 		selectStr = appendSelectTimestampColIfRequired(selectStr, isGroupByTimestamp)
 
+		if query.Caller == model.USER_PROFILE_CALLER {
+			selectStr = fmt.Sprintf("%s.coal_user_id as coal_user_id, %s.is_anonymous, %s.last_activity, %s.properties", step, step, step, step)
+		} else if query.Caller == model.ACCOUNT_PROFILE_CALLER {
+			selectStr = fmt.Sprintf("%s.identity, %s.last_activity, %s.properties", step, step, step)
+		}
 		egKeysForStep := getKeysForStep(step, steps, stepsToKeysMap, totalGroupKeys)
 		selectStr = joinWithComma(selectStr, egKeysForStep)
 

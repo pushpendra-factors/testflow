@@ -212,8 +212,8 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	segmentPayload := &model.SegmentPayload{
 		Name:        "Name1",
 		Description: "dummy info",
-		Query: model.SegmentQuery{
-			GlobalProperties: []model.QueryProperty{
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
 				{
 					Entity:    "user_g",
 					Type:      "categorical",
@@ -267,8 +267,8 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	segmentPayload = &model.SegmentPayload{
 		Name:        "Name1",
 		Description: "dummy info",
-		Query: model.SegmentQuery{
-			GlobalProperties: []model.QueryProperty{
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
 				{
 					Entity:    "user_g",
 					Type:      "categorical",
@@ -1024,8 +1024,8 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	segmentPayload := &model.SegmentPayload{
 		Name:        "Name1",
 		Description: "dummy info",
-		Query: model.SegmentQuery{
-			GlobalProperties: []model.QueryProperty{
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
 				{
 					Entity:    "user_g",
 					Type:      "categorical",
@@ -1605,4 +1605,828 @@ func sendGetProfileAccountDetailsRequest(r *gin.Engine, projectId int64, agent *
 	}
 	r.ServeHTTP(w, req)
 	return w
+}
+
+func TestSegmentEventAnalyticsQuery(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	var createdUserID string
+	// Properties Map
+	propsMap := []map[string]interface{}{
+		{"$browser": "Chrome", "$city": "London", "$country": "UK", "$device_type": "iPad", "$page_count": 105, "$session_spent_time": 3000},
+		{"$browser": "Edge", "$city": "London", "$country": "UK", "$device_type": "desktop", "$page_count": 120, "$session_spent_time": 2000},
+		{"$browser": "Firefox", "$city": "London", "$country": "UK", "$device_type": "iPad", "$page_count": 100, "$session_spent_time": 3000},
+		{"$browser": "Edge", "$city": "New York", "$country": "US", "$device_type": "desktop", "$page_count": 110, "$session_spent_time": 2500},
+		{"$browser": "Chrome", "$city": "New York", "$country": "US", "$device_type": "desktop", "$page_count": 100, "$session_spent_time": 2500},
+		{"$browser": "Edge", "$city": "DC", "$country": "US", "$device_type": "iPad", "$page_count": 120, "$session_spent_time": 2500},
+		{"$browser": "Chrome", "$city": "Delhi", "$country": "India", "$device_type": "iPad", "$page_count": 150, "$session_spent_time": 2100},
+		{"$browser": "Chrome", "$city": "UP", "$country": "India", "$device_type": "desktop", "$page_count": 100, "$session_spent_time": 2000},
+		{"$browser": "Brave", "$city": "Delhi", "$country": "India", "$device_type": "iPad", "$page_count": 110, "$session_spent_time": 2500},
+		{"$browser": "Brave", "$city": "Paris", "$country": "France", "$device_type": "iPad", "$page_count": 120, "$session_spent_time": 3000},
+		{"$browser": "Chrome", "$city": "Paris", "$country": "France", "$device_type": "desktop", "$page_count": 110, "$session_spent_time": 2000},
+		{"$browser": "Brave", "$city": "Cannes", "$country": "France", "$device_type": "iPad", "$page_count": 150, "$session_spent_time": 2500},
+		{"$browser": "Firefox", "$city": "Dubai", "$country": "UAE", "$device_type": "desktop", "$page_count": 150, "$session_spent_time": 2100},
+		{"$browser": "Chrome", "$city": "Abu Dhabi", "$country": "UAE", "$device_type": "tablet", "$page_count": 110, "$session_spent_time": 2200},
+		{"$browser": "Firefox", "$city": "Dubai", "$country": "UAE", "$device_type": "tablet", "$page_count": 120, "$session_spent_time": 2800},
+	}
+	// Create 15 Users
+	users := make([]model.User, 0)
+	numUsers := 15
+	var randomURLs []string
+	for i := 0; i < numUsers; i++ {
+		randomURLs = append(randomURLs, RandomURL())
+	}
+	for i := 0; i < numUsers; i++ {
+		propertiesJSON, err := json.Marshal(propsMap[i])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		var src *int
+		if i%2 == 0 {
+			src = model.GetRequestSourcePointer(model.UserSourceSalesforce)
+		} else {
+			src = model.GetRequestSourcePointer(model.UserSourceWeb)
+		}
+		properties := postgres.Jsonb{RawMessage: propertiesJSON}
+		createdUserID, _ = store.GetStore().CreateUser(&model.User{
+			ProjectId:  project.ID,
+			Source:     src,
+			Properties: properties,
+		})
+		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
+		users = append(users, *user)
+
+		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+		//randomURL := RandomURL()
+		eventProperties := []map[string]interface{}{
+			{
+				U.EP_PAGE_COUNT:                              5,
+				U.EP_CHANNEL:                                 "ChannelName",
+				U.EP_CAMPAIGN:                                "CampaignName",
+				U.SP_SPENT_TIME:                              120,
+				U.EP_REFERRER_URL:                            RandomURL(),
+				U.EP_FORM_NAME:                               "Form Name",
+				U.EP_PAGE_URL:                                RandomURL(),
+				U.EP_SALESFORCE_CAMPAIGN_TYPE:                "Some Type",
+				U.EP_SALESFORCE_CAMPAIGNMEMBER_STATUS:        "CurrentStatus",
+				U.EP_HUBSPOT_ENGAGEMENT_SOURCE:               "Some Engagement Source",
+				U.EP_HUBSPOT_ENGAGEMENT_TYPE:                 "Some Engagement Type",
+				U.EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME:       "Some Outcome",
+				U.EP_HUBSPOT_ENGAGEMENT_STARTTIME:            "Start time",
+				U.EP_HUBSPOT_ENGAGEMENT_DURATIONMILLISECONDS: 10000000000,
+				U.EP_HUBSPOT_FORM_SUBMISSION_FORMTYPE:        "Some HS Form Submission Type",
+				U.EP_HUBSPOT_FORM_SUBMISSION_PAGEURL:         RandomURL(),
+				U.EP_HUBSPOT_ENGAGEMENT_ENDTIME:              "End Time",
+				U.EP_SALESFORCE_CAMPAIGN_NAME:                "Some Salesforce Campaign Name",
+				U.EP_HUBSPOT_FORM_SUBMISSION_TITLE:           "Some form submission title",
+				U.EP_HUBSPOT_ENGAGEMENT_SUBJECT:              "Some Engagement Subject",
+				U.EP_HUBSPOT_ENGAGEMENT_TITLE:                "Some Engagement Title",
+			},
+		}
+		val := i + (i % 2)
+		trackPayload := SDK.TrackPayload{
+			UserId:          createdUserID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            randomURLs[val],
+			EventProperties: eventProperties[0],
+			UserProperties:  propsMap[i],
+			Timestamp:       timestamp,
+			ProjectId:       project.ID,
+			Auto:            false,
+			RequestSource:   *src,
+		}
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotEmpty(t, response)
+		assert.Equal(t, http.StatusOK, status)
+	}
+	assert.Equal(t, len(users), 15)
+
+	var payload model.TimelinePayload
+
+	// creating a segment with only global properties
+
+	startTimestamp := U.UnixTimeBeforeDuration(24 * 28 * time.Hour)
+	segmentPayload := &model.SegmentPayload{
+		Name:        "Name1",
+		Description: "dummy info",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Type:      "categorical",
+					Property:  "$country",
+					Operator:  "equals",
+					Value:     "UK",
+					LogicalOp: "AND",
+					Entity:    "user_g",
+				},
+				{
+					Type:      "categorical",
+					Property:  "$device_type",
+					Operator:  "equals",
+					Value:     "iPad",
+					LogicalOp: "AND",
+					Entity:    "user_g",
+				},
+			},
+			Class:           model.QueryClassProfiles,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+			Timezone:        "America/Vancouver",
+			From:            startTimestamp,
+			To:              time.Now().UTC().Unix(),
+			Caller:          "user_profiles",
+			Source:          "salesforce",
+			TableProps:      []string{"$country", "$page_count"},
+		},
+		Type: "salesforce",
+	}
+	status, err := store.GetStore().CreateSegment(project.ID, segmentPayload)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
+	// fetch segments
+	segments, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	// add segmentId to timeline payload
+	payload = model.TimelinePayload{
+		Source:    "salesforce",
+		SegmentId: segments["salesforce"][0].Id,
+	}
+	w := sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	resp := make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+	for _, profile := range resp {
+		assert.Equal(t, "UK", profile.TableProps[U.UP_COUNTRY])
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+	}
+
+	// creating a segment with only ewp
+	segmentPayload = &model.SegmentPayload{
+		Name:        "Name2",
+		Description: "dummy info",
+		Query: model.Query{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name: randomURLs[4],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_SALESFORCE_CAMPAIGN_TYPE,
+							Operator:  "equals",
+							Value:     "Some Type",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+			Timezone:        "America/Vancouver",
+			From:            startTimestamp,
+			To:              time.Now().UTC().Unix(),
+			Caller:          "user_profiles",
+			Source:          "web",
+			TableProps:      []string{"$country", "$page_count"},
+		},
+		Type: "web1",
+	}
+	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
+	// fetch segments
+	segments, status = store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	// add segmentId to timeline payload
+	payload = model.TimelinePayload{
+		Source:    "web",
+		SegmentId: segments["web1"][0].Id,
+	}
+	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 1)
+	for _, profile := range resp {
+		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+	}
+
+	// creating a segment
+
+	segmentPayload = &model.SegmentPayload{
+		Name:        "Name3",
+		Description: "dummy info",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Type:      "categorical",
+					Property:  "$country",
+					Operator:  "equals",
+					Value:     "India",
+					LogicalOp: "AND",
+					Entity:    "user_g",
+				},
+			},
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name: randomURLs[6],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_SALESFORCE_CAMPAIGN_TYPE,
+							Operator:  "equals",
+							Value:     "Some Type",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+				{
+					Name: randomURLs[8],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_FORM_NAME,
+							Operator:  "equals",
+							Value:     "Form Name",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAnyGivenEvent,
+			Timezone:        "America/Vancouver",
+			From:            startTimestamp,
+			To:              time.Now().UTC().Unix(),
+			Caller:          "user_profiles",
+			Source:          "salesforce",
+			TableProps:      []string{"$country", "$page_count"},
+		},
+		Type: "web2",
+	}
+	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
+	// fetch segments
+	segments, status = store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	// add segmentId to timeline payload
+	payload = model.TimelinePayload{
+		Source:    "salesforce",
+		SegmentId: segments["web2"][0].Id,
+	}
+	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+	for _, profile := range resp {
+		assert.Equal(t, "India", profile.TableProps["$country"])
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+	}
+
+	// creating a segment
+
+	segmentPayload = &model.SegmentPayload{
+		Name:        "Name4",
+		Description: "dummy info",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Type:      "categorical",
+					Property:  "$country",
+					Operator:  "equals",
+					Value:     "France",
+					LogicalOp: "AND",
+					Entity:    "user_g",
+				},
+				{
+					Type:      "categorical",
+					Property:  "$device_type",
+					Operator:  "equals",
+					Value:     "desktop",
+					LogicalOp: "AND",
+					Entity:    "user_g",
+				},
+			},
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name: randomURLs[10],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_SALESFORCE_CAMPAIGN_TYPE,
+							Operator:  "equals",
+							Value:     "Some Type",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+				{
+					Name: randomURLs[10],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_FORM_NAME,
+							Operator:  "equals",
+							Value:     "Form Name",
+							LogicalOp: "OR",
+							Entity:    "event",
+						},
+					},
+				},
+				{
+					Name: randomURLs[10],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_CHANNEL,
+							Operator:  "equals",
+							Value:     "ChannelName",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+				{
+					Name: randomURLs[10],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  "$browser",
+							Operator:  "equals",
+							Value:     "Chrome",
+							LogicalOp: "AND",
+							Entity:    "user",
+						},
+					},
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+			Timezone:        "America/Vancouver",
+			From:            startTimestamp,
+			To:              time.Now().UTC().Unix(),
+			Caller:          "user_profiles",
+			Source:          "salesforce",
+			TableProps:      []string{"$country", "$page_count"},
+		},
+		Type: "web3",
+	}
+	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
+	// fetch segments
+	segments, status = store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	// add segmentId to timeline payload
+	payload = model.TimelinePayload{
+		Source:    "salesforce",
+		SegmentId: segments["web3"][0].Id,
+	}
+	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse1, _ := ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse1, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 1)
+	for _, profile := range resp {
+		assert.Equal(t, "France", profile.TableProps[U.UP_COUNTRY])
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+	}
+
+	// ACCOUNT FILTERS
+	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group1)
+	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.NotNil(t, group2)
+	assert.Equal(t, http.StatusCreated, status)
+	propertiesMap := []map[string]interface{}{
+		{"$salesforce_account_name": "Pepper Content", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "peppercontent.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target"},
+		{"$salesforce_account_name": "o9 Solutions", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "o9solutions.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown"},
+		{"$salesforce_account_name": "GoLinks Reporting", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "golinks.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown"},
+		{"$salesforce_account_name": "Cin7", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "cin7.com", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor"},
+		{"$salesforce_account_name": "Repair Desk", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "repairdesk.co", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer"},
+		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US", "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$country": "US"},
+		{"$hubspot_company_name": "Mad Street Den", "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$country": "US"},
+		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development", "$country": "US"},
+		{"$hubspot_company_name": "Clientjoy Ads", "$hubspot_company_country": "India", "$hubspot_company_domain": "clientjoy.io", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "IT Services", "$country": "US"},
+		{"$hubspot_company_name": "Adapt.IO", "$hubspot_company_country": "India", "$hubspot_company_domain": "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services", "$country": "US"},
+	}
+
+	// Create 5 Salesforce Accounts
+	accounts := make([]model.User, 0)
+	numUsers = 5
+	groupUser := true
+	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+	for i := 0; i < numUsers; i++ {
+		propertiesJSON, err := json.Marshal(propertiesMap[i])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties := postgres.Jsonb{RawMessage: propertiesJSON}
+		source := model.GetRequestSourcePointer(model.UserSourceSalesforce)
+
+		createdUserID, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         source,
+			Group2ID:       "2",
+			CustomerUserId: fmt.Sprintf("sfuser%d@%s", i+1, propertiesMap[i]["$salesforce_account_website"]),
+			Properties:     properties,
+			IsGroupUser:    &groupUser,
+		})
+		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
+		accounts = append(accounts, *account)
+	}
+
+	// Create 5 Hubspot Companies
+	for i := 0; i < numUsers; i++ {
+		propertiesJSON, err := json.Marshal(propertiesMap[i+5])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties := postgres.Jsonb{RawMessage: propertiesJSON}
+		source := model.GetRequestSourcePointer(model.UserSourceHubspot)
+
+		createdUserID, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         source,
+			Group1ID:       "1",
+			CustomerUserId: fmt.Sprintf("hsuser%d@%s", i+1, propertiesMap[i+5]["$hubspot_company_domain"]),
+			Properties:     properties,
+			IsGroupUser:    &groupUser,
+		})
+		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
+		accounts = append(accounts, *account)
+
+		eventProperties := map[string]interface{}{
+			U.EP_CHANNEL:                           "ChannelName1",
+			U.EP_CAMPAIGN:                          "CampaignName1",
+			U.EP_FORM_NAME:                         "Form Name For Accountts",
+			U.EP_SALESFORCE_CAMPAIGN_TYPE:          "Some Salesforce Type",
+			U.EP_SALESFORCE_CAMPAIGNMEMBER_STATUS:  "CurrentStatusNow",
+			U.EP_HUBSPOT_ENGAGEMENT_SOURCE:         "Some Engagement Source For Accounts",
+			U.EP_HUBSPOT_ENGAGEMENT_TYPE:           "Some Engagement Type",
+			U.EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME: "Some Outcome",
+			U.EP_HUBSPOT_ENGAGEMENT_STARTTIME:      "Start time",
+		}
+		val := i + (i % 2)
+		trackPayload := SDK.TrackPayload{
+			UserId:          createdUserID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            randomURLs[val],
+			EventProperties: eventProperties,
+			UserProperties:  propertiesMap[i+5],
+			Timestamp:       timestamp,
+			ProjectId:       project.ID,
+			Auto:            false,
+			RequestSource:   *source,
+		}
+
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotEmpty(t, response)
+		assert.Equal(t, http.StatusOK, status)
+	}
+	assert.Equal(t, len(accounts), 10)
+
+	// Test Cases :-
+	//1. gpb and ewp
+	segmentPayload = &model.SegmentPayload{
+		Name:        "Name5",
+		Description: "dummy info",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "India",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "US",
+					LogicalOp: "OR",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$hubspot_company_num_associated_contacts",
+					Operator:  "equals",
+					Value:     "50",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$hubspot_company_num_associated_contacts",
+					Operator:  "equals",
+					Value:     "20",
+					LogicalOp: "OR",
+				},
+			},
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name: randomURLs[0],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_SALESFORCE_CAMPAIGN_TYPE,
+							Operator:  "equals",
+							Value:     "Some Salesforce Type",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+				{
+					Name: randomURLs[2],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_CHANNEL,
+							Operator:  "equals",
+							Value:     "ChannelName1",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+			Timezone:        "America/Vancouver",
+			From:            startTimestamp,
+			To:              time.Now().UTC().Unix(),
+			Caller:          "account_profiles",
+			Source:          "$hubspot_company",
+			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
+		},
+		Type: "$hubspot_company1",
+	}
+	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
+	// fetch segments
+	segments, status = store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	payload = model.TimelinePayload{
+		Source:    "$hubspot_company",
+		SegmentId: segments["$hubspot_company1"][0].Id,
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 1)
+	for _, profile := range resp {
+		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+	}
+
+	segmentPayload = &model.SegmentPayload{
+		Name:        "Name6",
+		Description: "dummy info",
+		Query: model.Query{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name: randomURLs[2],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_SALESFORCE_CAMPAIGN_TYPE,
+							Operator:  "equals",
+							Value:     "Some Salesforce Type",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+				{
+					Name: randomURLs[0],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_CHANNEL,
+							Operator:  "equals",
+							Value:     "ChannelName1",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+			Timezone:        "America/Vancouver",
+			From:            startTimestamp,
+			To:              time.Now().UTC().Unix(),
+			Caller:          "account_profiles",
+			Source:          "$hubspot_company",
+			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
+		},
+		Type: "$hubspot_company2",
+	}
+	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
+	// fetch segments
+	segments, status = store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	payload = model.TimelinePayload{
+		Source:    "$hubspot_company",
+		SegmentId: segments["$hubspot_company2"][0].Id,
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 3)
+	for _, profile := range resp {
+		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+	}
+
+	segmentPayload = &model.SegmentPayload{
+		Name:        "Name7",
+		Description: "dummy info",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "India",
+					LogicalOp: "AND",
+					Entity:    "user_g",
+				},
+			},
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name: randomURLs[4],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_FORM_NAME,
+							Operator:  "equals",
+							Value:     "Form Name For Accountts",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+			Timezone:        "America/Vancouver",
+			From:            startTimestamp,
+			To:              time.Now().UTC().Unix(),
+			Caller:          "account_profiles",
+			Source:          "$hubspot_company",
+			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
+		},
+		Type: "$hubspot_company3",
+	}
+	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
+	// fetch segments
+	segments, status = store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	payload = model.TimelinePayload{
+		Source:    "$hubspot_company3",
+		SegmentId: segments["$hubspot_company3"][0].Id,
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+	for _, profile := range resp {
+		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+	}
+
+	segmentPayload = &model.SegmentPayload{
+		Name:        "Name8",
+		Description: "dummy info",
+		Query: model.Query{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name: randomURLs[2],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_SALESFORCE_CAMPAIGN_TYPE,
+							Operator:  "equals",
+							Value:     "Some Salesforce Type",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+				{
+					Name: randomURLs[2],
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_CHANNEL,
+							Operator:  "equals",
+							Value:     "ChannelName1",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+			Timezone:        "America/Vancouver",
+			From:            startTimestamp,
+			To:              time.Now().UTC().Unix(),
+			Caller:          "account_profiles",
+			Source:          "$hubspot_company",
+			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
+		},
+		Type: "$hubspot_company4",
+	}
+	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
+	// fetch segments
+	segments, status = store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	payload = model.TimelinePayload{
+		Source:    "$hubspot_company",
+		SegmentId: segments["$hubspot_company4"][0].Id,
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+	for _, profile := range resp {
+		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+	}
 }

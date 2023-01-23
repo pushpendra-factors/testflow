@@ -8,10 +8,10 @@ type SegmentResponse struct {
 }
 
 type SegmentPayload struct {
-	Name        string       `json:"name"`
-	Description string       `json:"description"`
-	Query       SegmentQuery `json:"query"`
-	Type        string       `json:"type"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Query       Query  `json:"query"`
+	Type        string `json:"type"`
 }
 
 type Segment struct {
@@ -21,15 +21,4 @@ type Segment struct {
 	Description string          `json:"description"`
 	Query       *postgres.Jsonb `json:"query"`
 	Type        string          `json:"type"`
-}
-
-type SegmentQuery struct {
-	EventsWithProperties []EventWithProperty `json:"ewp"`
-	GlobalProperties     []QueryProperty     `json:"gp"`
-}
-
-type EventWithProperty struct {
-	Names           string          `json:"na"`
-	Properties      []QueryProperty `json:"pr"`
-	LogicalOperator string          `json:"lop"`
 }

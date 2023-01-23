@@ -73,6 +73,10 @@ type UserTimeline struct {
 const PROFILE_TYPE_USER = "user"
 const PROFILE_TYPE_ACCOUNT = "account"
 
+// Profile type for Segment Events
+const USER_PROFILE_CALLER = "user_profiles"
+const ACCOUNT_PROFILE_CALLER = "account_profiles"
+
 // Hover Events Property Map
 var HOVER_EVENTS_NAME_PROPERTY_MAP = map[string][]string{
 	U.EVENT_NAME_SESSION:                            {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SPENT_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
