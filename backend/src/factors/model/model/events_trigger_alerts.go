@@ -9,6 +9,7 @@ import (
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
+	U "factors/util"
 )
 
 const (
@@ -66,7 +67,7 @@ type CachedEventTriggerAlert struct {
 type EventTriggerAlertMessage struct {
 	Title           string
 	Event           string
-	MessageProperty string
+	MessageProperty U.PropertiesMap
 	Message         string
 }
 

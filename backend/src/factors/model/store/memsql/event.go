@@ -440,11 +440,11 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 
 	t1 := time.Now()
 	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
-		log.Info("EventTriggerAlerts match function trigger point.")
+		//log.Info("EventTriggerAlerts match function trigger point.")
 		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties)
 		if ErrCode == http.StatusFound && alerts != nil {
-			log.WithFields(log.Fields{"project_id": event.ProjectId,
-				"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
+			// log.WithFields(log.Fields{"project_id": event.ProjectId,
+			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
 
 			for _, alert := range *alerts {
 				success := store.CacheEventTriggerAlert(&alert, event)

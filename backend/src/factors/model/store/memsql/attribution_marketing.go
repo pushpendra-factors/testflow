@@ -1084,7 +1084,7 @@ func (store *MemSQL) PullCustomAdsMarketingData(projectID int64, from, to int64,
 	performanceQuery := "SELECT JSON_EXTRACT_STRING(value, 'campaign_id')  as campaignID, JSON_EXTRACT_STRING(value, 'ad_group_id') as adgroupID, JSON_EXTRACT_STRING(value, 'keyword_id') as keywordID, " +
 		"'$none' as adId, JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
-		"SUM(JSON_EXTRACT_STRING(value, 'spend') * inr_value) AS total_spend, source FROM integration_documents "  + currencyQuery + " " +
+		"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_spend, source FROM integration_documents " +
 		"where project_id = ? AND source IN (?) AND customer_account_id IN (?) AND document_type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, key_id, key_name, extra_value1, source"
 

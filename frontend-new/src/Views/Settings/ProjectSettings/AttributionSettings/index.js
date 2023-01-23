@@ -23,6 +23,7 @@ const defaultAttrConfigValue = {
     hs_kpi: []
   },
   attribution_window: 1,
+  query_type: 'ConversionBased',
   enabled: true,
   user_kpi: true,
   hubspot_deals: false,
@@ -67,6 +68,13 @@ const AttributionSettings = ({
     opts.attribution_window = val;
     setAttrConfig(opts);
   };
+
+  const onQueryTypeChange = (val) => {
+    const opts = Object.assign({}, attrConfig);
+    opts.query_type = val;
+    setAttrConfig(opts);
+
+  }
 
   const renderEditActions = () => {
     return (
@@ -137,8 +145,32 @@ const AttributionSettings = ({
     return blockList;
   };
 
+  const selectQueryType = () => {
+    const queryTypes = [['Conversion Time', 'ConversionBased'], ['Interaction Time', 'EngagementBased']];
+    return (
+      <Select
+        value={attrConfig?.query_type}
+        style={{ width: 300 }}
+        placement='bottomLeft'
+        defaultValue='ConversionBased'
+        onChange={(val) => {
+          onQueryTypeChange(val);
+        }}
+      >
+        {queryTypes.map((qType, index) => {
+          return (
+            <Option value={qType[1]}>
+              {qType[0]}
+            </Option>
+          );
+        })}
+      </Select>
+    );
+
+  }
+
   const selectWindow = () => {
-    const window = [1, 3, 7, 14, 20, 30, 60, 90, 180, 365, -1];
+    const window = [1, 3, 7, 14, 20, 30, 60, 90, 180, 365];
     return (
       <Select
         value={attrConfig?.attribution_window}
@@ -151,11 +183,7 @@ const AttributionSettings = ({
         {window.map((days, index) => {
           return (
             <Option value={days}>
-              {Number.isInteger(days) && days !== -1
-                ? `${days} ${days === 1 ? 'day' : 'days'}`
-                : days === -1
-                ? 'Full User Journey'
-                : days}
+              {Number.isInteger(days) && `${days} ${days === 1 ? 'day' : 'days'}`}
             </Option>
           );
         })}
@@ -186,6 +214,30 @@ const AttributionSettings = ({
       </div>
     );
   };
+
+  const renderAttributionQueryType = () => {
+    return (
+      <div>
+        <Row>
+          <Col span={24}>
+            <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
+              Attributions Query Type
+            </Text>
+          </Col>
+          <Col span={18}>
+            {/* <Text type={'title'} level={7} extraClass={'m-0'}>
+              Changing the attribution window will only apply going forward.
+              These changes will be reflected in all reports within the
+              Analytics property.
+            </Text> */}
+          </Col>
+          <Col span={24}>
+            <div className={'mt-4'}>{selectQueryType()}</div>
+          </Col>
+        </Row>
+      </div>
+    );
+  }
 
   const renderAttributionContent = () => {
     return (
@@ -238,6 +290,7 @@ const AttributionSettings = ({
       return DealOrOppurtunity;
     return null;
   };
+  
 
   const selectGroupAttribution = () => {
     return (
@@ -330,6 +383,11 @@ const AttributionSettings = ({
           <Row>
             <Col span={24}>
               <div className={'my-6'}>{attributionWindow()}</div>
+            </Col>
+          </Row>
+          <Row>
+            <Col span={24}>
+              <div className={'my-6'}>{renderAttributionQueryType()}</div>
             </Col>
           </Row>
           <Row>
