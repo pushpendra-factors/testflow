@@ -829,7 +829,7 @@ const mapQueriesByGroup = (queries) => {
     salesforce_opportunities: []
   };
   queries.forEach((query) => {
-    if (USER_KPIS.includes(query.group)) {
+    if (query.group !== 'hubspot_deals' || query.group !== 'salesforce_opportunities') {
       group['user_kpi'].push(query);
     } else {
       group[query.group].push(query);
@@ -918,7 +918,6 @@ export const getKPIQueryAttributionV1 = (
         queryOptions?.globalFilters,
         kpiQueriesByGroup[groupKey][0]?.category
       ),
-      for: ''
     }
     kpiQuery.analyze_type = groupKey;
     if(kpiQueriesByGroup[groupKey].length) {
