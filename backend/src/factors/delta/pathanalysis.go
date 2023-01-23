@@ -24,6 +24,7 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
+	E "factors/event_match"
 )
 
 const (
@@ -128,10 +129,10 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			log.WithFields(log.Fields{"err": err}).Error("Failed creating pathanalysis temp file")
 		}
 		AllFilters := append(actualQuery.Event.Filter, actualQuery.Filter...)
-		queryCriteria := EventCriterion{
+		queryCriteria := E.EventCriterion{
 			Name:                actualQuery.Event.Label,
 			EqualityFlag:        true,
-			FilterCriterionList: mapFilterProperties(AllFilters),
+			FilterCriterionList: E.MapFilterProperties(AllFilters),
 		}
 		log.Info("Transformed Query: ", queryCriteria)
 		finalEvents := make([]string, 0)
@@ -197,7 +198,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				}
 			}
 			if actualQuery.EventType == M.STARTSWITH {
-				if EventMatchesCriterion(event, queryCriteria) { // check if a particular event matches the request criteria
+				if E.EventMatchesCriterion(event.EventName, event.UserProperties, event.EventProperties, queryCriteria) { // check if a particular event matches the request criteria
 					matched = true
 				}
 				if matched == true {
@@ -216,7 +217,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 					finalEvents = RemoveFromArray(finalEvents, event.EventName)
 				}
 				finalEvents = EnqueueWithSize(finalEvents, event.EventName, actualQuery.NumberOfSteps+1)
-				if EventMatchesCriterion(event, queryCriteria) { // check if a particular event matches the request criteria
+				if E.EventMatchesCriterion(event.EventName, event.UserProperties, event.EventProperties, queryCriteria) { // check if a particular event matches the request criteria
 					matched = true
 				}
 				// Check this has to be the last event or the first event

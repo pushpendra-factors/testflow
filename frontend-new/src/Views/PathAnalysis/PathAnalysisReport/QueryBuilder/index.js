@@ -387,7 +387,7 @@ const QueryBuilder = ({
             />
           </div>
           <div className={'mt-2'}>
-            <Checkbox defaultChecked={repetativeStep} onChange={(e) => setRepetativeStep(e.target.checked)}>Avoid repeated events</Checkbox>
+            <Checkbox checked={repetativeStep} onChange={(e) => setRepetativeStep(e.target.checked)}>Avoid repeated events</Checkbox>
             <Text type={'title'} level={8} extraClass={`m-0 ml-6`} >Restrict events to appear only once in this path</Text>
           </div>
         </div>

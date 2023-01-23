@@ -5,7 +5,6 @@ import SelectTemplates from './SelectTemplates';
 import { useDispatch, useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import AddDashboard from '../Dashboard/AddDashboard';
-
 import { StartFreshImage } from 'Constants/templates.constants';
 import TemplatesThumbnail from 'Constants/templates.constants';
 import {
@@ -19,12 +18,10 @@ function DashboardTemplates() {
   const history = useHistory();
   const { state } = useLocation();
   const [addDashboardModal, setaddDashboardModal] = useState(false);
-
   const [showTemplates, setShowTemplates] = useState(
     state?.fromSelectTemplateBtn ? true : false
   );
   const { templates } = useSelector((state) => state.dashboardTemplates);
-
   const [selectedTemplateFirst, setSelectedTemplateFirst] = useState('');
   const onClick = (templateID) => {
     dispatch({
@@ -69,7 +66,6 @@ function DashboardTemplates() {
   return (
     <>
       {/* {showTemplates && (
-
         <div className='ant-modal-wrap bg-white'>
           <SelectTemplates
             setShowTemplates={setShowTemplates}
@@ -161,7 +157,6 @@ function DashboardTemplates() {
         addDashboardModal={addDashboardModal}
         setaddDashboardModal={setaddDashboardModal}
       />
-
     </>
   );
 }

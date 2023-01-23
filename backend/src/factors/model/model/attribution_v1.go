@@ -326,7 +326,13 @@ func EnrichRequestUsingAttributionConfigV1(projectID int64, query *AttributionQu
 		return errors.New("failed to decode attribution config from project settings")
 	}
 
-	//Todo (Anil) Add enrichment of attribution Window, handle case of 'Entire User Journey'
+	query.LookbackDays = attributionConfig.AttributionWindow
+	if attributionConfig.QueryType == "" {
+		query.QueryType = AttributionQueryTypeEngagementBased
+	} else {
+		query.QueryType = attributionConfig.QueryType
+	}
+
 	for index := range query.KPIQueries {
 		switch query.KPIQueries[index].AnalyzeType {
 

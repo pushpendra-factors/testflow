@@ -430,7 +430,8 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 	var kpiDataList []map[string]model.KPIInfo
 	headerPositionMap := make(map[string]int64)
 	var defaultHeader []string
-	headerCount := int64(0)
+	var KpiAggFunctionTypesList []string
+	headerPosition := int64(0)
 	kpiData := make(map[string]model.KPIInfo)
 
 	for index, individualKPIQuery := range query.KPIQueries {
@@ -449,7 +450,7 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 				return nil, nil, nil, nil, err
 			}
 
-			log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiDataForGroupQuery}).Info("UserKPI Attribution kpiData")
+			log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiDataForGroupQuery": kpiDataForGroupQuery}).Info("UserKPI Attribution kpiData")
 
 			_uniqueUsers := make(map[string]int)
 			// Get user IDs for Revenue Attribution
@@ -476,7 +477,7 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 			}
 
 			if C.GetAttributionDebug() == 1 {
-				log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiDataForGroupQuery}).Info("KPI Attribution kpiData")
+				log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiDataForGroupQuery": kpiDataForGroupQuery}).Info("KPI Attribution kpiData")
 			}
 
 			_uniqueUsers := make(map[string]int)
@@ -498,11 +499,12 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 		// adding header position in headerPositionMap and creating default header
 		kpiDataList = append(kpiDataList, kpiDataForGroupQuery)
 		for _, val := range kpiDataForGroupQuery {
-			for _, header := range val.KpiHeaderNames {
+			for idx, header := range val.KpiHeaderNames {
 				if _, ok := headerPositionMap[header]; !ok {
-					headerCount = headerCount + 1
 					defaultHeader = append(defaultHeader, header)
-					headerPositionMap[header] = headerCount
+					KpiAggFunctionTypesList = append(KpiAggFunctionTypesList, val.KpiAggFunctionTypes[idx])
+					headerPositionMap[header] = headerPosition
+					headerPosition = headerPosition + 1
 				}
 			}
 			break
@@ -521,17 +523,24 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 	if C.GetAttributionDebug() == 1 {
 		log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData}).Info("KPI Attribution kpiData with separate headers")
 	}
+
+	log.WithFields(log.Fields{"KPIAttribution": "Debug",
+		"defaultHeader":     defaultHeader,
+		"headerPositionMap": headerPositionMap,
+		"headerPosition":    headerPosition}).Info("KPI Attribution kpiData with separate headers")
+
 	// updating kpiData with all the headers and respective values
 	for kpiId, KpiInfo := range kpiData {
 		var newKpiValuesList []model.KpiRowValue
 		for _, kpiRowValue := range KpiInfo.KpiValuesList {
-			var defaultValue = make([]float64, headerCount)
+			var defaultValue = make([]float64, len(defaultHeader))
 			for index, header := range KpiInfo.KpiHeaderNames {
 				defaultValue[headerPositionMap[header]] = kpiRowValue.Values[index]
 			}
 			kpiRowValue.Values = defaultValue
 			newKpiValuesList = append(newKpiValuesList, kpiRowValue)
 		}
+		KpiInfo.KpiAggFunctionTypes = KpiAggFunctionTypesList
 		KpiInfo.KpiValuesList = newKpiValuesList
 		KpiInfo.KpiHeaderNames = defaultHeader
 		kpiData[kpiId] = KpiInfo

@@ -519,7 +519,7 @@ const CreateGoalDrawer = (props) => {
 
           </ComposerBlock>
 
-          {/* <ComposerBlock blockTitle={'EVENTS TO INCLUDE'} isOpen={eventsToIncBlock}
+        <ComposerBlock blockTitle={'EVENTS TO INCLUDE'} isOpen={eventsToIncBlock}
             showIcon={true} onClick={() => setEventsToIncBlock(!eventsToIncBlock)}
             extraClass={`no-padding-l`}
           >
@@ -563,7 +563,7 @@ const CreateGoalDrawer = (props) => {
                     'position': 'absolute'
                   }}>
                     <FaSelect
-                      options={modelMetadata ? modelMetadataDDValue : []}
+                      options={TrackedEventNames ? TrackedEventNames : []}
                       onClickOutside={() => setShowEventsToIncDD(false)}
                       applClick={(val) => valuesSelect(val)}
                       allowSearch={true}
@@ -576,7 +576,7 @@ const CreateGoalDrawer = (props) => {
               </div>
             </div>
 
-          </ComposerBlock> */}
+          </ComposerBlock>
 
         </div>
         <div id={`explain-builder--footer`} className={`flex items-center pt-4 border-top--thin-2 justify-between`} >

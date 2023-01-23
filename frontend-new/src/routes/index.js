@@ -4,6 +4,7 @@ import lazyWithRetry from 'Utils/lazyWithRetry';
 import PrivateRoute from 'Components/PrivateRoute';
 import { APP_LAYOUT_ROUTES, APP_ROUTES } from './constants';
 import { WhiteListedAccounts } from 'Routes/constants';
+import { featureLock } from './feature';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import SetupAssist from 'Views/Settings/SetupAssist';
 const PathAnalysis = lazyWithRetry(() => import('../Views/PathAnalysis'));
@@ -51,17 +52,15 @@ export const AppRoutes = () => (
 export const AppLayoutRoutes = ({
   activeAgent,
   demoProjectId,
-  active_project
+  active_project,
+  currentProjectSettings
 }) => {
   return (
     <Switch>
       {renderRoutes(APP_LAYOUT_ROUTES)}
 
       {/* Additional Conditional routes  */}
-      {(window.document.domain === 'app.factors.ai' &&
-        WhiteListedAccounts.includes(activeAgent)) ||
-      window.document.domain === 'staging-app.factors.ai' ||
-      window.document.domain === 'factors-dev.com' ? (
+      {featureLock(activeAgent) ? (
         <Route
           path={ATTRIBUTION_ROUTES.base}
           name='attribution'
@@ -69,7 +68,7 @@ export const AppLayoutRoutes = ({
         />
       ) : null}
 
-      {WhiteListedAccounts.includes(activeAgent) && (
+      {currentProjectSettings?.is_path_analysis_enabled && (
         <>
           <Route
             path='/path-analysis'

@@ -30,7 +30,8 @@ function ConversionGoalBlock({
   KPI_config,
   KPI_config_without_derived_kpi,
   showDerivedKPI = false,
-  fetchKPIConfigWithoutDerivedKPI
+  fetchKPIConfigWithoutDerivedKPI,
+  currentProjectSettings
 }) {
   const [selectVisible, setSelectVisible] = useState(false);
   const [filterBlockVisible, setFilterBlockVisible] = useState(false);
@@ -38,10 +39,18 @@ function ConversionGoalBlock({
   const [moreOptions, setMoreOptions] = useState(false);
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
+  const [groupProps, setGroupProps] = useState();
+
   const [filterProps, setFilterProperties] = useState({
     event: [],
     user: []
   });
+
+  const attrGroupNameMap = {
+    'hs_kpi': {label: 'Hubspot Deals', value: 'hubspot_deals'},
+    'sf_kpi': {label: 'Salesforce Opportunities', value: 'salesforce_opportunities'},
+    'user_kpi': {label: 'Users', value: 'user_kpi'}
+  }
 
   useEffect(() => {
     if (!group_analysis || group_analysis === 'users') {
@@ -52,14 +61,33 @@ function ConversionGoalBlock({
   }, [userProperties, eventProperties, group_analysis]);
 
   useEffect(() => {
-    if (!showDerivedKPI && !KPI_config_without_derived_kpi) {
-      fetchKPIConfigWithoutDerivedKPI(activeProject.id);
+    // if (!showDerivedKPI && !KPI_config_without_derived_kpi) {
+    //   fetchKPIConfigWithoutDerivedKPI(activeProject.id);
+    // }
+
+    // if(KPI_config_without_derived_kpi) {
+    //   getKpiGroupListAll()
+    // }
+
+    if(currentProjectSettings.attribution_config && currentProjectSettings.attribution_config.kpis_to_attribute) {
+      const kpiList = currentProjectSettings.attribution_config.kpis_to_attribute;
+      const groupedList = [];
+      Object.keys(kpiList).forEach((grpName) => {
+        const propertyObj = {label: '', icon: '', values: []};
+        propertyObj.label = attrGroupNameMap[grpName]?.label;
+        propertyObj.icon = grpName;
+        kpiList[grpName].forEach((item) => {
+          propertyObj.values.push([item.label, item.value])
+        });
+        groupedList.push(propertyObj);
+      });
+      setGroupProps(groupedList);
+      
     }
 
-    if(KPI_config_without_derived_kpi) {
-      getKpiGroupListAll()
-    }
-  }, [activeProject, showDerivedKPI, KPI_config_without_derived_kpi]);
+  }, [activeProject, showDerivedKPI, currentProjectSettings]);
+
+  
 
   const setEventPropsForUserGroup = () => {
     if (!eventGoal || !eventGoal?.label?.length) {
@@ -289,7 +317,8 @@ function ConversionGoalBlock({
     if (group_analysis !== 'users') {
       currentEventGoal.label = val[0];
       currentEventGoal.metric = val[1] ? val[1] : val[0];
-      currentEventGoal.group = group;
+      const grp = Object.keys(attrGroupNameMap).find((val) => attrGroupNameMap[val].label === group);
+      currentEventGoal.group = attrGroupNameMap[grp].value;
       if (category) {
         currentEventGoal.category = category;
       }
@@ -385,7 +414,7 @@ function ConversionGoalBlock({
       <div className={styles.block__event_selector}>
         {selectVisible ? (
           <GroupSelect2
-            groupedProperties={groupedProps}
+            groupedProperties={groupProps}
             placeholder='Select Event'
             optionClick={(group, val, category) =>
               onEventSelect(val, group, category)
@@ -461,6 +490,7 @@ function ConversionGoalBlock({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
+  currentProjectSettings: state.global.currentProjectSettings,
   eventProperties: state.coreQuery.eventProperties,
   userProperties: state.coreQuery.userProperties,
   eventNameOptions: state.coreQuery.eventOptions,

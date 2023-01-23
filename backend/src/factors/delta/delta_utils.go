@@ -16,12 +16,13 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	E "factors/event_match"
 )
 
 var TARGET_BEFORE_BASE_ERROR error = errors.New("LOGICAL ERROR: User hits target but misses base. It's recommended to change your base criteria")
 
 // This is an enumerated list with values And or Or.
-type BooleanOperator string
+
 
 type Fraction struct {
 	Numerator   float64
@@ -32,76 +33,6 @@ type MetricInfo struct {
 	Global   float64
 	Features map[string]map[string]float64
 }
-
-// const (
-// 	And BooleanOperator = iota
-// 	Or
-// )
-
-// var toID = map[string]BooleanOperator{
-// 	"And": And,
-// 	"Or":  Or,
-// }
-
-// var toString = map[BooleanOperator]string{
-// 	And: "And",
-// 	Or:  "Or",
-// }
-
-// Values allowed = "user", "event" for "userProperty" and "eventProperty" respectively.
-type PropertiesMode string
-
-// const (
-// 	Up PropertiesMode = iota
-// 	Ep
-// )
-
-// var toOpID = map[string]PropertiesMode{
-// 	"Up": Up,
-// 	"Ep": Ep,
-// }
-
-// var toOpString = map[PropertiesMode]string{
-// 	Up: "Up",
-// 	Ep: "Ep",
-// }
-
-// EventFilterCriterion represents a filter-criterion that an event has to follow.
-// It is composed of a feature key, its allowed values, and an equality flag.
-// If equality is True, it translates to "key in values", otherwise, "key not in values".
-// In other words, if equality flag is True, then key "can take any of the values" (OR),
-// and if it is False, key "cannot take any of the values" (AND).
-type EventFilterCriterion struct {
-	Id             int    `json:"id"`
-	Key            string `json:"key"`
-	Type           string
-	Values         []OperatorValueTuple
-	PropertiesMode PropertiesMode `json:"propmode"`
-}
-
-type OperatorValueTuple struct {
-	Operator  string
-	Value     string
-	LogicalOp string
-}
-
-// EventCriterion abstracts a single event-criterion that users/events have to adhere to.
-// More specifically, it contains an event name, equality flag, and a list of filter-criterion.
-type EventCriterion struct {
-	Id                  int                    `json:"id"`
-	Name                string                 `json:"en"`
-	EqualityFlag        bool                   `json:"eq"`
-	FilterCriterionList []EventFilterCriterion `json:"filters"`
-}
-
-// EventsCriteria represents one period's event-criteria that users/events have to adhere to.
-// It is basically an AND or an OR of multiple event-criterion.
-type EventsCriteria struct {
-	Id                 int              `json:"id"`
-	Operator           BooleanOperator  `json:"op"`
-	EventCriterionList []EventCriterion `json:"events"`
-}
-
 // type EventCriterionMatchResult struct {
 // 	event P.CounterEventFormat
 // 	op    BooleanOperator
@@ -163,15 +94,15 @@ type CriterionResult struct {
 // Query abstracts the concept of a delta-query, consisting of one base, and a list of target criteria.
 type Query struct {
 	Id     int64          `json:"id"`
-	Base   EventsCriteria `json:"base"`
-	Target EventsCriteria `json:"target"`
+	Base   E.EventsCriteria `json:"base"`
+	Target E.EventsCriteria `json:"target"`
 }
 
 type MultiFunnelQuery struct {
 	Id           int64            `json:"id"`
-	Base         EventsCriteria   `json:"base"`
-	Intermediate []EventsCriteria `json:"intermediate"`
-	Target       EventsCriteria   `json:"target"`
+	Base         E.EventsCriteria   `json:"base"`
+	Intermediate []E.EventsCriteria `json:"intermediate"`
+	Target       E.EventsCriteria   `json:"target"`
 }
 
 // ValCountTable is a map where feature-values are keys and their frequency counts are values.

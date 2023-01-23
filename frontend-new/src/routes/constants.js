@@ -283,3 +283,9 @@ export const WhiteListedAccounts = [
   'praveenr@factors.ai',
   'janani@factors.ai'
 ];
+
+export const TestEnvs = [
+  'localhost',
+  'factors-dev.com',
+  'staging-app.factors.ai'
+];
