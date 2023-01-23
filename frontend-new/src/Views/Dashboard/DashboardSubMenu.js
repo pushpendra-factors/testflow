@@ -20,7 +20,7 @@ function DashboardSubMenu({
     btn = (
       <Tooltip
         overlayStyle={{ maxWidth: '160px' }}
-        placement="bottom"
+        placement='bottom'
         title={'This dashboard is visible only to you.'}
         mouseEnterDelay={0.2}
       >
@@ -37,7 +37,7 @@ function DashboardSubMenu({
     btn = (
       <Tooltip
         overlayStyle={{ maxWidth: '160px' }}
-        placement="bottom"
+        placement='bottom'
         title={'This dashboard is visible to everyone.'}
         mouseEnterDelay={0.2}
       >
@@ -67,15 +67,15 @@ function DashboardSubMenu({
             startDate: durationObj.from,
             endDate: durationObj.to
           }}
-          placement="bottomLeft"
+          placement='bottomLeft'
           onSelect={handleDurationChange}
           buttonSize={'default'}
           className={'datepicker-minWidth'}
         />
         {btn}
       </div>
-      <div className={'flex justify-between items-center'}>
-        <div className="border-right--thin-3 px-3">
+      <div className={'flex justify-between items-center mr-4'}>
+        <div className='border-right--thin-3 px-3'>
           {!!oldestRefreshTime && (
             <Text type={'title'} level={7} extraClass={'m-0'}>
               {moment.unix(oldestRefreshTime).fromNow()}
@@ -84,7 +84,7 @@ function DashboardSubMenu({
         </div>
 
         <Tooltip
-          placement="bottom"
+          placement='bottom'
           title={'Refresh data now'}
           mouseEnterDelay={0.2}
         >

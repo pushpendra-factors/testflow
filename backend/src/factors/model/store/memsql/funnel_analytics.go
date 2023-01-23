@@ -217,6 +217,11 @@ func BuildFunnelQuery(projectId int64, query model.Query, groupIds []int, enable
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	addIndexToGroupByProperties(&query)
 
+	// default to 90 days conversion time
+	if query.ConversionTime == "" {
+		query.ConversionTime = "90D"
+	}
+
 	if query.EventsCondition == model.QueryTypeEventsOccurrence {
 		return "", nil, errors.New("funnel on events occurrence is not supported")
 	}

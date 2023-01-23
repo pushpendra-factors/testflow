@@ -19,6 +19,7 @@ import {
   Modal,
   Row,
   Skeleton,
+  Spin,
   Tag
 } from 'antd';
 import { Content, Footer, Header } from 'antd/lib/layout/layout';
@@ -34,7 +35,9 @@ import { CATEGORY_TYPES } from './../../../../constants/categories.constants';
 import {
   ACTIVE_DASHBOARD_CHANGE,
   ADD_DASHBOARD_MODAL_OPEN,
-  NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE
+  NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE,
+  NEW_DASHBOARD_TEMPLATES_MODAL_OPEN,
+  UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE
 } from '../../../../reducers/types';
 import styles from './index.module.scss';
 import { getHostUrl } from 'Utils/request';
@@ -80,6 +83,9 @@ let Step1DashboardTemplateModal = ({
   searchValue
 }) => {
   let dispatch = useDispatch();
+
+  let dashboardTemplates = useSelector((state) => state.dashboardTemplates);
+
   let handleCategoryFunction = (eachCategory) => {
     if (!eachCategory) {
       setCategorySelected(null);
@@ -189,7 +195,7 @@ let Step1DashboardTemplateModal = ({
             })}
           </div>
         </Col>
-        <Col span={18} className={styles.templatesShowSection}>
+        <Col span={18} className={styles.templatesShowSection + ' text-center'}>
           <Row
             gutter={[8, 8]}
             style={{ cursor: 'pointer' }}
@@ -221,61 +227,65 @@ let Step1DashboardTemplateModal = ({
             </Col>
           </Row>
           <Divider />
-          <Row gutter={[8, 8]} style={{ height: '50%' }}>
-            {templates?.length > 0 ? (
-              <>
-                {templates?.map((eachState, eachIndex) => {
-                  return (
-                    <Col
-                      key={eachIndex + '-' + eachState.title}
-                      span={12}
-                      style={{
-                        padding: '0 20px 0 20px',
-                        width: '300px',
-                        cursor: 'pointer',
-                        borderRadius: '2.6792px',
-                        margin: '10px 0px'
-                      }}
-                      onClick={() => handleTemplate(eachIndex)}
-                    >
-                      <TemplateThumbnailImage
-                        TemplatesThumbnail={TemplatesThumbnail}
-                        eachState={eachState}
-                      />
+          {dashboardTemplates.templates.loading ? (
+            <Spin style={{ margin: '0 auto' }} />
+          ) : (
+            <Row gutter={[8, 8]} style={{ height: '50%' }}>
+              {templates?.length > 0 ? (
+                <>
+                  {templates?.map((eachState, eachIndex) => {
+                    return (
+                      <Col
+                        key={eachIndex + '-' + eachState.title}
+                        span={12}
+                        style={{
+                          padding: '0 20px 0 20px',
+                          width: '300px',
+                          cursor: 'pointer',
+                          borderRadius: '2.6792px',
+                          margin: '10px 0px'
+                        }}
+                        onClick={() => handleTemplate(eachIndex)}
+                      >
+                        <TemplateThumbnailImage
+                          TemplatesThumbnail={TemplatesThumbnail}
+                          eachState={eachState}
+                        />
 
-                      <Text
-                        type={'title'}
-                        level={6}
-                        weight={'bold'}
-                        extraClass={`m-0 mr-3`}
-                      >
-                        {eachState.title}
-                      </Text>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        weight={'normal'}
-                        extraClass={`m-0 mr-3 ${styles.templateDescription}`}
-                      >
-                        {eachState.description}
-                      </Text>
-                    </Col>
-                  );
-                })}
-              </>
-            ) : (
-              <Col style={{ width: '100%', textAlign: 'center' }}>
-                <Text
-                  type={'title'}
-                  level={6}
-                  weight={'bold'}
-                  extraClass={`m-0 mr-3`}
-                >
-                  No templates here yet. Coming soon!
-                </Text>
-              </Col>
-            )}
-          </Row>
+                        <Text
+                          type={'title'}
+                          level={6}
+                          weight={'bold'}
+                          extraClass={`m-0 mr-3`}
+                        >
+                          {eachState.title}
+                        </Text>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          weight={'normal'}
+                          extraClass={`m-0 mr-3 ${styles.templateDescription}`}
+                        >
+                          {eachState.description}
+                        </Text>
+                      </Col>
+                    );
+                  })}
+                </>
+              ) : (
+                <Col style={{ width: '100%', textAlign: 'center' }}>
+                  <Text
+                    type={'title'}
+                    level={6}
+                    weight={'bold'}
+                    extraClass={`m-0 mr-3`}
+                  >
+                    No templates here yet. Coming soon!
+                  </Text>
+                </Col>
+              )}
+            </Row>
+          )}
         </Col>
       </Row>
     </>
@@ -333,20 +343,13 @@ let Step2DashboardTemplateModal = ({
       marketo
     );
     let keyname = template.title.toLowerCase().replace(/\s/g, '');
-    console.log(keyname, template, Templates.get(keyname), integrationChecks);
     let integrationResults = integrationChecks.checkRequirements(
       template.required_integrations
     );
     setHaveRequirements(integrationResults.result);
-    console.log(integrationCheckFailedAt);
     setIntegrationCheckFailedAt(integrationResults.failedAt);
     setCopiedState(1);
   }, [template]);
-
-  // Below UseEffect is to toggle Button whether to allow or not Copy Dashboard operation
-  useEffect(() => {
-    console.log({ haveRequirements });
-  }, [haveRequirements]);
 
   // Below UseEffect gets called once in a lifetime
   useEffect(() => {
@@ -383,6 +386,11 @@ let Step2DashboardTemplateModal = ({
               icon={<SVG size={20} name='close' />}
               onClick={() => {
                 setStep(1);
+                setSelectedTemplate(null);
+                dispatch({
+                  type: UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE,
+                  payload: null
+                });
                 dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE });
               }}
             />
@@ -449,7 +457,14 @@ let Step2DashboardTemplateModal = ({
             size='large'
             type='text'
             icon={<ArrowLeftSVG />}
-            onClick={() => setStep(1)}
+            onClick={() => {
+              setSelectedTemplate(null);
+              dispatch({
+                type: UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE,
+                payload: null
+              });
+              setStep(1);
+            }}
           />
           <Button
             size='large'
@@ -457,6 +472,11 @@ let Step2DashboardTemplateModal = ({
             icon={<SVG size={20} name='close' />}
             onClick={() => {
               setStep(1);
+              setSelectedTemplate(null);
+              dispatch({
+                type: UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE,
+                payload: null
+              });
               dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE });
             }}
           />
@@ -528,20 +548,22 @@ let Step2DashboardTemplateModal = ({
                       extraClass={`m-0 mr-3 `}
                     >
                       <>
-                        {console.log(integrationCheckFailedAt)}
                         Please complete{' '}
                         {integrationCheckFailedAt != undefined &&
                           integrationCheckFailedAt.map(
                             (eachIntegration, eachIndex) => (
                               <span
                                 key={eachIndex}
-                                style={{ textTransform: 'capitalize' }}
+                                style={{
+                                  fontWeight: '600',
+                                  textTransform: 'capitalize'
+                                }}
                               >
-                                <b>{eachIntegration}</b>{' '}
+                                {eachIntegration}
                                 {eachIndex ===
                                 integrationCheckFailedAt.length - 1
                                   ? ''
-                                  : ','}
+                                  : ', '}
                               </span>
                             )
                           )}{' '}
@@ -673,7 +695,6 @@ let DashboardTemplatesModal = ({ apisCalled, getOkText }) => {
   let dashboard_templates_modal_state = useSelector(
     (state) => state.dashboard_templates_Reducer
   );
-
   let [allTemplates, setAllTemplates] = useState([]);
   const [finalTemplates, setFinalTemplates] = useState([]);
   let [step, setStep] = useState(1);
@@ -686,14 +707,15 @@ let DashboardTemplatesModal = ({ apisCalled, getOkText }) => {
   const searchTemplateHandle = (event) => {
     setSearchValue(event.target.value);
   };
+  // THis useEffect gets Called when Any Category Selection Change happens
   useEffect(() => {
-    console.log({ categorySelected, categoryMap });
     if (categorySelected) {
       setFinalTemplates(
         categoryMap.get(categorySelected.toLowerCase().replace(/\s/g, ''))
       );
     } else setFinalTemplates(allTemplates);
   }, [categorySelected]);
+  // THis UseEffect callback function gets called when search value is changed
   useEffect(() => {
     let searchResults = allTemplates.filter((item) =>
       item?.title?.toLowerCase().includes(searchValue.toLowerCase())
@@ -701,31 +723,44 @@ let DashboardTemplatesModal = ({ apisCalled, getOkText }) => {
     setSearchedTemplates(searchResults);
     setCategorySelected(null);
   }, [searchValue]);
+  // This useEffect is to Select Templates from First Dashboard Experience
   useEffect(() => {
-    // Intial Load
-    // fetchAllTemplates(setAllTemplates);
+    if (dashboard_templates_modal_state.pickedFirstTemplate) {
+      let temp = allTemplates.find(
+        (ele) => ele.id == dashboard_templates_modal_state.pickedFirstTemplate
+      );
+      dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
+      setStep(2);
+      setSelectedTemplate(temp);
+    }
+  }, [dashboard_templates_modal_state.pickedFirstTemplate]);
+  useEffect(() => {
+    // fetchDashboards(setAllTemplates)
     setAllTemplates(dashboardTemplates.templates.data);
   }, []);
+  // This useEffect gets called whenever templates data gets changed in Redux store
+  useEffect(() => {
+    setAllTemplates(dashboardTemplates.templates.data);
+  }, [dashboardTemplates.templates.data]);
+
+  // This is useeffect callback gets called when  Set of searched Templates  changes
   useEffect(() => {
     setFinalTemplates(searchedTemplates);
     setCategorySelected(null);
   }, [searchedTemplates]);
+
   useEffect(() => {
     setFinalTemplates(allTemplates);
   }, [allTemplates]);
   useEffect(() => {
     // if (selectedTemplate != null) setStep(2);
   }, [selectedTemplate]);
-  useEffect(() => {
-    console.log(finalTemplates);
-  }, [finalTemplates]);
+
   useEffect(() => {
     allTemplates.forEach((element) => {
       if (element.categories) {
         element.categories.forEach((eachCategory) => {
           if (!categoryMap.has(eachCategory.toLowerCase().replace(/\s/g, ''))) {
-            console.log({ categoryMap, element, eachCategory });
-
             categoryMap.set(eachCategory.toLowerCase().replace(/\s/g, ''), [
               element
             ]);
@@ -737,49 +772,53 @@ let DashboardTemplatesModal = ({ apisCalled, getOkText }) => {
         });
       }
     });
-    console.log(allTemplates);
   }, [allTemplates]);
 
   let handleTemplate = (template) => {
     setStep(2);
     setSelectedTemplate(finalTemplates[template]);
   };
-
   return (
-    <Modal
-      bodyStyle={{ padding: '0px 0px 24px 0' }}
-      title={null}
-      visible={dashboard_templates_modal_state.isNewDashboardTemplateModal}
-      centered={true}
-      zIndex={1005}
-      width={1052}
-      className={'fa-modal--regular p-4 fa-modal--slideInDown '}
-      confirmLoading={apisCalled}
-      closable={false}
-      okText={getOkText()}
-      transitionName=''
-      maskTransitionName=''
-      footer={null}
-    >
-      {' '}
-      {step === 1 ? (
-        <Step1DashboardTemplateModal
-          templates={finalTemplates}
-          handleTemplate={handleTemplate}
-          searchTemplateHandle={searchTemplateHandle}
-          setCategorySelected={setCategorySelected}
-          searchValue={searchValue}
-          categorySelected={categorySelected}
-        />
+    <>
+      {dashboard_templates_modal_state.isNewDashboardTemplateModal ? (
+        <Modal
+          bodyStyle={{ padding: '0px 0px 24px 0' }}
+          title={null}
+          visible={dashboard_templates_modal_state.isNewDashboardTemplateModal}
+          centered={true}
+          zIndex={1005}
+          width={1052}
+          className={'fa-modal--regular p-4 fa-modal--slideInDown '}
+          confirmLoading={apisCalled}
+          closable={false}
+          okText={getOkText()}
+          transitionName=''
+          maskTransitionName=''
+          footer={null}
+        >
+          {' '}
+          {step === 1 ? (
+            <Step1DashboardTemplateModal
+              templates={finalTemplates}
+              handleTemplate={handleTemplate}
+              searchTemplateHandle={searchTemplateHandle}
+              setCategorySelected={setCategorySelected}
+              searchValue={searchValue}
+              categorySelected={categorySelected}
+            />
+          ) : (
+            <Step2DashboardTemplateModal
+              template={selectedTemplate ? selectedTemplate : null}
+              setStep={setStep}
+              setSelectedTemplate={setSelectedTemplate}
+              allTemplates={allTemplates}
+            />
+          )}
+        </Modal>
       ) : (
-        <Step2DashboardTemplateModal
-          template={selectedTemplate ? selectedTemplate : null}
-          setStep={setStep}
-          setSelectedTemplate={setSelectedTemplate}
-          allTemplates={allTemplates}
-        />
+        ''
       )}
-    </Modal>
+    </>
   );
 };
 export default React.memo(DashboardTemplatesModal);

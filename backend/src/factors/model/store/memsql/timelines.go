@@ -377,6 +377,8 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			// Display Names
 			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
 				userActivity.DisplayName = "Page View"
+				// Page View Icon
+				userActivity.Icon = "window"
 			} else if standardDisplayNames[userActivity.EventName] != "" {
 				userActivity.DisplayName = standardDisplayNames[userActivity.EventName]
 			} else if projectDisplayNames[userActivity.EventName] != "" {
@@ -403,6 +405,20 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED {
 				userActivity.AliasName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TITLE])
 			}
+
+			// Set Icons
+			if icon, exists := model.EVENT_ICONS_MAP[userActivity.EventName]; exists {
+				userActivity.Icon = icon
+			} else if strings.Contains(userActivity.EventName, "hubspot_") || strings.Contains(userActivity.EventName, "hs_") {
+				userActivity.Icon = "hubspot_ads"
+			} else if strings.Contains(userActivity.EventName, "salesforce_") || strings.Contains(userActivity.EventName, "sf_") {
+				userActivity.Icon = "salesforce_ads"
+			}
+			// Default Icon
+			if userActivity.Icon == "" {
+				userActivity.Icon = "calendar_star"
+			}
+
 			// Filtered Properties
 			userActivity.Properties = GetFilteredProperties(userActivity.EventName, userActivity.EventType, properties)
 		}

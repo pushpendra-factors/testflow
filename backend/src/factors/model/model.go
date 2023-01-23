@@ -151,6 +151,7 @@ type Model interface {
 	GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
 	GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
 	GetCustomEventAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
+	GetDisplayCategoriesByProjectIdAndNameFromDerivedCustomKPI(projectID int64, name string) ([]string, string)
 
 	//templates
 	RunTemplateQuery(projectID int64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)
@@ -179,6 +180,7 @@ type Model interface {
 	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload, enableFilterOpt bool) (int, string, model.CachingUnitReport)
 	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool)
 	GetDashboardUnitNamesByProjectIdTypeAndName(projectID int64, reqID string, typeOfQuery string, nameOfQuery string) ([]string, int)
+	GetDashboardUnitNamesByProjectIdTypeAndPropertyMappingName(projectID int64, reqID, propertyMappingName string) ([]string, int)
 
 	// dashboard
 	CreateDashboard(projectID int64, agentUUID string, dashboard *model.Dashboard) (*model.Dashboard, int)
@@ -713,6 +715,7 @@ type Model interface {
 	GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOfQuery string) ([]string, int)
 	UpdateAlertStatus(lastAlertSent bool) (int, string)
 	UpdateAlert(projectID int64, alertID string, alert model.Alert) (model.Alert, int, string)
+	GetAlertNamesByProjectIdTypeAndNameAndPropertyMappingName(projectID int64, reqID, nameOfPropertyMappings string) ([]string, int)
 
 	// sharable url
 	CreateShareableURL(sharableURLParams *model.ShareableURL) (*model.ShareableURL, int)
@@ -839,4 +842,18 @@ type Model interface {
 	DeleteExplainV2Entity(projectID int64, id string) (int, string)
 	GetExplainV2ProjectCountWithStatus(projectID int64, status []string) (int, int, string)
 	UpdateExplainV2EntityStatus(projectID int64, id string, status string, model_id uint64) (int, string)
+
+	// Feature Gates
+	GetFeaturesForProject(projectID int64) (model.FeatureGate, error)
+	UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error)
+	GetFeatureStatusForProject(projectID int64, featureName string) (int, error)
+
+	// Property Mapping
+	CreatePropertyMapping(propertyMapping model.PropertyMapping) (*model.PropertyMapping, string, int)
+	GetPropertyMappingByID(projectID int64, id string) (*model.PropertyMapping, string, int)
+	GetDisplayCategoryToPropertiesByProjectIDAndPropertyMappingName(projectID int64, name string) (map[string]model.Property, string, int)
+	GetPropertyMappingByProjectIDAndName(projectID int64, name string) (*model.PropertyMapping, string, int)
+	GetPropertyMappingsByProjectId(projectID int64) ([]*model.PropertyMapping, string, int)
+	GetPropertyMappingsByProjectIdAndSectionBitMap(projectID int64, sectionBitMap int64) ([]*model.PropertyMapping, string, int)
+	DeletePropertyMappingByID(projectID int64, id string) int
 }

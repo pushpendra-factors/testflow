@@ -1309,6 +1309,21 @@ func addGroups(t *testing.T, project *model.Project) map[string]*model.Group {
 
 	status := store.GetStore().CreateAdwordsDocument(document)
 	assert.Equal(t, http.StatusCreated, status)
+
+	// Adwords Campaign performance report
+	value = []byte(`{"cost": "10","clicks": "10","campaign_id":"1000","impressions": "1", "campaign_name": "test1"}`)
+	document = &model.AdwordsDocument{
+		ProjectID:         project.ID,
+		ID:                "1000",
+		CustomerAccountID: adwordsCustomerAccountId,
+		TypeAlias:         model.CampaignPerformanceReport,
+		Timestamp:         20200511,
+		Value:             &postgres.Jsonb{RawMessage: value},
+		CampaignID:        1000,
+	}
+
+	status = store.GetStore().CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
 	groups := make(map[string]*model.Group, 0)
 
 	//create new groups
@@ -1345,7 +1360,7 @@ func createUsersForHubspotDeals(t *testing.T, project *model.Project, groups map
 
 		assert.Equal(t, http.StatusCreated, status)
 
-		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "", "lp1111")
+		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test1", "x", "xs", "ss", "xyz", "lp1111")
 
 		// update user properties to add $group_id property = group.ID of created user
 		newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
@@ -1364,7 +1379,7 @@ func createUsersForHubspotDeals(t *testing.T, project *model.Project, groups map
 
 		assert.Equal(t, http.StatusCreated, status)
 
-		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "", "lp1112")
+		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "xyz", "lp1112")
 
 		// update user properties to add $group_id property = group.ID of created user
 		newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
@@ -1541,6 +1556,117 @@ func TestAttributionKPI(t *testing.T) {
 			AnalyzeTypeSFOpportunitiesEnabled: false,
 		},
 	})
+
+	t.Run("TestForHubspotDealsSource", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotDealsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"Deals"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.HSDealIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQuery{
+			AnalyzeType:             model.AnalyzeTypeHSDeals,
+			RunType:                 model.RunTypeHSDeals,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			KPI:                     kpiQueryGroup,
+			AttributionKey:          model.AttributionKeySource,
+			AttributionKeyDimension: []string{model.FieldSource, model.FieldCampaignName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			AttributionMethodology:  model.AttributionMethodLinear,
+			LookbackDays:            10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, float64(2), getConversionUserCountKpi(query.AttributionKey, result, "test:-:xyz"))
+		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "test:-:xyz"))
+		assert.Equal(t, int64(11), getClicks(query.AttributionKey, result, "test:-:xyz"))
+
+		assert.Nil(t, err)
+
+	})
+
+	t.Run("TestForHubspotDealsChannelGroup", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotDealsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"Deals"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.HSDealIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQuery{
+			AnalyzeType:             model.AnalyzeTypeHSDeals,
+			RunType:                 model.RunTypeHSDeals,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			KPI:                     kpiQueryGroup,
+			AttributionKey:          model.AttributionKeyChannel,
+			AttributionKeyDimension: []string{model.FieldChannelGroup, model.FieldCampaignName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			AttributionMethodology:  model.AttributionMethodLinear,
+			LookbackDays:            10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, float64(2), getConversionUserCountKpi(query.AttributionKey, result, "test:-:Other Campaigns"))
+		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "test:-:Other Campaigns"))
+		assert.Equal(t, int64(11), getClicks(query.AttributionKey, result, "test:-:Other Campaigns"))
+
+		assert.Nil(t, err)
+
+	})
+
 	assert.Equal(t, http.StatusOK, w.Code)
 	t.Run("HubspotDealsLandingPage", func(t *testing.T) {
 

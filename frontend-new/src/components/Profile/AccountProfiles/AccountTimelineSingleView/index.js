@@ -1,10 +1,12 @@
-import { Spin } from 'antd';
+import { Avatar, Spin } from 'antd';
 import React, { useState, useEffect } from 'react';
 import {
   convertSVGtoURL,
+  eventIconsColorMap,
   eventsFormattedForGranularity,
   getEventCategory,
   getIconForCategory,
+  iconColors,
   propValueFormat,
   singleTimelineIconSVGs,
   TimelineHoverPropDisplayNames
@@ -20,7 +22,6 @@ function AccountTimelineSingleView({
   eventNamesMap
 }) {
   const [formattedData, setFormattedData] = useState({});
-
   useEffect(() => {
     const data = eventsFormattedForGranularity(timelineEvents, 'Daily', true);
     setFormattedData(data);
@@ -50,43 +51,101 @@ function AccountTimelineSingleView({
                   <div className='top-40'>{timestamp}</div>
                 </td>
                 <td className='bg-none pt-6'>
-                  {Object.entries(allEvents).map(([user, data]) => (
-                    <div>
-                      <div className='timeline-user-card'>
-                        <h2>{user}</h2>
-                      </div>
-                      <div class='user-timeline__events'>
-                        {data?.events.map((event) => {
-                          const category = getEventCategory(
-                            event,
-                            eventNamesMap
-                          );
-                          const icon = getIconForCategory(category);
-                          const svgUrl = convertSVGtoURL(
-                            singleTimelineIconSVGs[icon]
-                          );
-                          return (
-                            <div
-                              class='timeline-event__container'
-                              style={{ '--svg-url': `${svgUrl}` }}
-                            >
-                              <div class='timestamp'>
-                                {MomentTz(event?.timestamp * 1000).format(
-                                  'hh:mm A'
-                                )}
-                              </div>
-                              <div class='content'>
-                                <div className='fa-popupcard'>
-                                  <Text
-                                    extraClass='m-0 mb-3'
-                                    type='title'
-                                    level={6}
-                                    weight='bold'
-                                    color='grey-2'
-                                  >
-                                    {event?.alias_name ||
-                                      PropTextFormat(event?.display_name)}
-                                  </Text>
+                  {Object.entries(allEvents).map(([user, data]) => {
+                    const currentUser = timelineUsers.find(
+                      (obj) => obj.title === user
+                    );
+                    const isAnonymous = currentUser.isAnonymous;
+                    return (
+                      <div>
+                        <div className='timeline-user-card'>
+                          <div className='inline-flex gap--8 items-center'>
+                            {isAnonymous ? (
+                              <SVG
+                                name={`TrackedUser${user.match(/\d/g)[0]}`}
+                                size={32}
+                              />
+                            ) : (
+                              <Avatar
+                                size={32}
+                                className='userlist-avatar'
+                                style={{
+                                  '--avatar-bg': `${
+                                    iconColors[Math.floor(Math.random() * 8)]
+                                  }`,
+                                  '--font-size': '14px'
+                                }}
+                              >
+                                {user.charAt(0).toUpperCase()}
+                              </Avatar>
+                            )}
+                            <h2 className='m-0'>{user}</h2>
+                          </div>
+                        </div>
+                        <div class='user-timeline__events'>
+                          {data?.events.map((event) => {
+                            const category = getEventCategory(
+                              event,
+                              eventNamesMap
+                            );
+                            const sourceIcon = getIconForCategory(category);
+                            const svgUrl = convertSVGtoURL(
+                              singleTimelineIconSVGs[
+                                event.icon || 'calendar_star'
+                              ]
+                            );
+                            return (
+                              <div
+                                class='timeline-event__container'
+                                style={{
+                                  '--svg-url': `${svgUrl}`,
+                                  '--svg-bg': `${
+                                    eventIconsColorMap[
+                                      event.icon || 'calendar_star'
+                                    ].bgColor
+                                  }`,
+                                  '--svg-border-color': `${
+                                    eventIconsColorMap[
+                                      event.icon || 'calendar_star'
+                                    ].borderColor
+                                  }`
+                                }}
+                              >
+                                <div class='timestamp'>
+                                  {MomentTz(event?.timestamp * 1000).format(
+                                    'hh:mm A'
+                                  )}
+                                </div>
+                                <div class='card'>
+                                  <div className='top-section'>
+                                    {event.alias_name ? (
+                                      <div className='heading-with-sub'>
+                                        <div className='sub'>
+                                          {PropTextFormat(event.display_name)}
+                                        </div>
+                                        <div className='main'>
+                                          {event.alias_name}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className='heading'>
+                                        {PropTextFormat(event.display_name)}
+                                      </div>
+                                    )}
+
+                                    <div className='icon'>
+                                      <SVG
+                                        name={sourceIcon}
+                                        size={24}
+                                        color={
+                                          sourceIcon === 'events_cq'
+                                            ? 'blue'
+                                            : null
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+
                                   {Object.entries(event?.properties || {}).map(
                                     ([key, value]) => {
                                       if (
@@ -153,12 +212,12 @@ function AccountTimelineSingleView({
                                   )}
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </td>
               </tr>
             ))}

@@ -17,7 +17,7 @@ function Number({
     : number;
 
   return (
-    <span className={className}>
+    <span className={className} data-testid='number'>
       {shortHand ? (
         `${prefix}${abbreviateNumber(number)}${suffix}`
       ) : (

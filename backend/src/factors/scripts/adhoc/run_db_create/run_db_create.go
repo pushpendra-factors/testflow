@@ -799,6 +799,13 @@ func main() {
 		log.Info("Created Alerts table.")
 	}
 
+	// Create Property Mapping Table
+	if err := db.CreateTable(&model.PropertyMapping{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Property Mapping table creation failed.")
+	} else {
+		log.Info("Created Property Mapping table.")
+	}
+
 	if *isDevSetup {
 		InitialiseDevSetup()
 	}

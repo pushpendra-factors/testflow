@@ -265,6 +265,24 @@ func (customKPI *KPIQueryGroup) ValidateQueries() bool {
 	return true
 }
 
+// Used to check if the KPIQueryGroup Global Filters or Global GroupBy contains a given property mapping
+// Checks only at Global level
+func (query *KPIQueryGroup) CheckIfPropertyMappingNameIsPresent(propertyMappingName string) bool {
+	for _, filter := range query.GlobalFilters {
+		if filter.IsPropertyMapping && filter.PropertyName == propertyMappingName {
+			return true
+		}
+	}
+
+	for _, groupBy := range query.GlobalGroupBy {
+		if groupBy.IsPropertyMapping && groupBy.PropertyName == propertyMappingName {
+			return true
+		}
+	}
+
+	return false
+}
+
 func transformDateTypeFiltersForKPIFilters(filters []KPIFilter, timezoneString U.TimeZoneString) error {
 	for i := range filters {
 		err := filters[i].TransformDateTypeFilters(timezoneString)
@@ -325,6 +343,22 @@ func (query *KPIQuery) CheckIfNameIsPresent(nameOfQuery string) bool {
 	return false
 }
 
+func (query *KPIQuery) CheckIfPropertyMappingNameIsPresent(propertyMappingName string) bool {
+	for _, filter := range query.Filters {
+		if filter.IsPropertyMapping && filter.PropertyName == propertyMappingName {
+			return true
+		}
+	}
+
+	for _, groupBy := range query.GroupBy {
+		if groupBy.IsPropertyMapping && groupBy.PropertyName == propertyMappingName {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (query *KPIQuery) IsValid() bool {
 	for _, filter := range query.Filters {
 		if !filter.IsValid() {
@@ -342,13 +376,14 @@ func (query *KPIQuery) IsValid() bool {
 }
 
 type KPIFilter struct {
-	ObjectType       string `json:"objTy"`
-	PropertyName     string `json:"prNa"`
-	PropertyDataType string `json:"prDaTy"`
-	Entity           string `json:"en"`
-	Condition        string `json:"co"`
-	Value            string `json:"va"`
-	LogicalOp        string `json:"lOp"`
+	ObjectType        string `json:"objTy"`
+	PropertyName      string `json:"prNa"`
+	PropertyDataType  string `json:"prDaTy"`
+	IsPropertyMapping bool   `json:"isPrMa"` // Only applicable for KPIQueryGroup GlobalFilters for identifying a property mapping
+	Entity            string `json:"en"`
+	Condition         string `json:"co"`
+	Value             string `json:"va"`
+	LogicalOp         string `json:"lOp"`
 }
 
 // Basic type validation.
@@ -406,12 +441,13 @@ func (qp *KPIFilter) TransformDateTypeFilters(timezoneString U.TimeZoneString) e
 }
 
 type KPIGroupBy struct {
-	ObjectType       string `json:"objTy"`
-	PropertyName     string `json:"prNa"`
-	PropertyDataType string `json:"prDaTy"`
-	GroupByType      string `json:"gbty"`
-	Entity           string `json:"en"`
-	Granularity      string `json:"grn"`
+	ObjectType        string `json:"objTy"`
+	PropertyName      string `json:"prNa"`
+	PropertyDataType  string `json:"prDaTy"`
+	IsPropertyMapping bool   `json:"isPrMa"` // Only applicable for KPIQueryGroup Global GroupBy for identifying a property mapping
+	GroupByType       string `json:"gbty"`
+	Entity            string `json:"en"`
+	Granularity       string `json:"grn"`
 }
 
 func (kpiGroupBy *KPIGroupBy) IsValid() bool {

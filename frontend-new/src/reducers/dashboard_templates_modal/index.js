@@ -2,7 +2,8 @@ import {
   NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE,
   NEW_DASHBOARD_TEMPLATES_MODAL_OPEN,
   ADD_DASHBOARD_MODAL_OPEN,
-  ADD_DASHBOARD_MODAL_CLOSE
+  ADD_DASHBOARD_MODAL_CLOSE,
+  UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE
 } from '../types';
 import { defaultState } from './constants';
 
@@ -28,7 +29,11 @@ export default function (state = defaultState, action) {
         ...state,
         isAddNewDashboardModal: false
       };
-
+    case UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE:
+      return {
+        ...state,
+        pickedFirstTemplate: action.payload
+      };
     default:
       return state;
   }

@@ -218,7 +218,7 @@ function AccountProfiles({
     const opts = { ...filterPayload };
     opts.filters = formatFiltersForPayload(filterPayload.filters);
     getProfileAccounts(activeProject.id, opts);
-  }, [activeProject, filterPayload]);
+  }, [activeProject, currentProjectSettings, filterPayload]);
 
   const selectUsers = () => (
     <div className='absolute top-0'>
@@ -542,7 +542,11 @@ function AccountProfiles({
         }}
         footer={() => (
           <div className='text-right'>
-            <a className='font-size--small' href='https://clearbit.com'>
+            <a
+              className='font-size--small'
+              href='https://clearbit.com'
+              target='_blank'
+            >
               Logos provided by Clearbit
             </a>
           </div>

@@ -112,6 +112,7 @@
         position: sticky;
         top: 0;
         width: 20%;
+        min-width: 300px;
         height: 100vh;
         background: #FFFFFF;
         padding: 96px 0 36px;
@@ -121,10 +122,15 @@
             padding: 0 36px;
 
             &__avatar {
-                color: #3E516C;
-                background-color: #F1F1F1;
+                background-color: var(--avatar-bg);
                 display: flex;
                 align-items: center;
+                color: #FFF;
+                font-family: 'Inter';
+                font-style: normal;
+                font-weight: 600;
+                font-size: 24px;
+                line-height: 28px;
             }
         }
 
@@ -140,7 +146,7 @@
 
     .timeline-view {
         width: 80%;
-        padding: 96px 36px;
+        padding: 96px 36px 36px;
         border-left: 1px solid #E7E9ED;
         min-height: 100vh !important;
     }
@@ -206,9 +212,9 @@
 }
 
 .table-scroll {
-    position: relative;
-    max-height: 720px;
+    max-height: 80vh;
     overflow: scroll;
+    border-bottom: 1px solid #E7E9ED;
 
     table {
         border-collapse: separate;
@@ -253,11 +259,11 @@
                 }
 
                 &.bg-gradient--44px {
-                    background-position: 44px;
+                    background-position: 40px;
                 }
 
                 &.bg-gradient--120px {
-                    background-position: 118px;
+                    background-position: 108px;
                 }
 
                 &:first-child {
@@ -295,11 +301,11 @@
     max-width: 400px;
 
     &.single-user--padding {
-        padding: 16px 100px;
+        padding: 16px 96px;
     }
 
     &.multi-user--padding {
-        padding: 16px 24px;
+        padding: 16px 28px;
     }
 
     &--collapsed {
@@ -316,13 +322,33 @@
     }
 
     &__event {
-        color: #3E516C;
-        width: fit-content;
-        max-width: 300px;
-        height: 28px;
-        background: #F5F6F8;
-        border-radius: 4px;
-        padding: 3px 12px;
+        display: inline-flex;
+        flex-wrap: nowrap;
+        gap: 4px;
+
+        .icon {
+            height: 24px;
+            width: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-color);
+            border: 1px solid;
+            border-color: var(--border-color);
+            border-radius: 50%;
+        }
+
+        .tag {
+            color: #3E516C;
+            width: fit-content;
+            max-width: 300px;
+            height: 24px;
+            background: #F5F6F8;
+            border-radius: 4px;
+            padding: 1px 12px;
+            align-items: center;
+        }
+
     }
 
     &__num {
@@ -332,10 +358,10 @@
         font-size: 14px;
         color: #3E516C;
         width: fit-content;
-        height: 28px;
+        height: 24px;
         background: #F5F6F8;
         border-radius: 4px;
-        padding: 3px 12px;
+        padding: 3px 8px;
         color: #1890FF;
         cursor: pointer;
     }
@@ -375,8 +401,8 @@
     &::after {
         content: '';
         position: absolute;
-        width: 1px;
-        background: #E7E9ED;
+        width: 2px;
+        background: #BAE7FF;
         top: 0;
         bottom: 0;
         left: 20%;
@@ -396,8 +422,8 @@
         position: absolute;
         width: 24px;
         height: 1px;
-        top: 44px;
-        background: #B7BEC8;
+        top: 48px;
+        background: #BAE7FF;
         z-index: 1;
         left: 8px;
     }
@@ -405,14 +431,15 @@
     &::after {
         content: var(--svg-url);
         position: absolute;
-        width: 24px;
-        height: 24px;
+        width: 32px;
+        height: 32px;
         top: 32px;
-        background: #F5F6F8;
-        border: 1px solid #E7E9ED;
+        background: var(--svg-bg);
+        border: 1px solid;
+        border-color: var(--svg-border-color);
         border-radius: 20px;
         z-index: 1;
-        left: -12px;
+        left: -16px;
     }
 
     .timestamp {
@@ -428,25 +455,61 @@
         left: -100px;
     }
 
-    .content {
+    .card {
         padding: 16px 20px;
         position: relative;
         background: #FFFFFF;
         box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.3);
         border-radius: 4px;
+    }
+}
 
-        h2 {
-            font-size: 14px;
+.top-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+
+    .heading {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+    }
+
+    .heading-with-sub {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+
+        .sub {
+            font-family: 'Inter';
+            font-style: normal;
             font-weight: 500;
-            color: #3E516C;
+            font-size: 10px;
+            line-height: 16px;
         }
 
-        p {
-            margin: 0;
+        .main {
+            font-family: 'Inter';
+            font-style: normal;
+            font-weight: 600;
             font-size: 16px;
-            line-height: 22px;
-            color: #000000;
+            line-height: 24px;
         }
+    }
+
+    .icon {
+        height: 40px;
+        width: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #F6F6F6;
+        border: 1px solid;
+        border-color: #FAFAFA;
+        border-radius: 50%;
     }
 }
 
@@ -505,16 +568,25 @@
     }
 }
 
-.inline-flex-gap--6 {
+.inline-flex {
     display: inline-flex;
     flex-wrap: nowrap;
-    gap: 6px;
-}
 
-.inline-flex-gap--4 {
-    display: inline-flex;
-    flex-wrap: nowrap;
-    gap: 4px;
+    &.gap--4 {
+        gap: 4px;
+    }
+
+    &.gap--6 {
+        gap: 6px;
+    }
+
+    &.gap--8 {
+        gap: 8px;
+    }
+
+    &.gap--12 {
+        gap: 12px;
+    }
 }
 
 .event-name--sm {
@@ -522,4 +594,17 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.userlist-avatar {
+    background-color: var(--avatar-bg);
+    display: flex;
+    align-items: center;
+    color: #FFF;
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400;
+    font-size: var(--font-size);
+    line-height: 18px;
+    letter-spacing: 0.01em;
 }

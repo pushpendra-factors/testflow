@@ -343,6 +343,7 @@ func PostFactorsHandlerV2(c *gin.Context) {
 		ex.GoalRule = results.GoalRule
 		ex.Insights = results.Insights
 		ex.GoalUserCount = results.GoalUserCount
+		ex.TotalUsersCount = results.TotalUsersCount
 		ex.OverallPercentage = results.OverallPercentage
 		ex.OverallMultiplier = results.OverallMultiplier
 		ex.Type = results.Type

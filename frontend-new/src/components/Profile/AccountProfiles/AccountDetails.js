@@ -308,7 +308,11 @@ function AccountDetails({
       </div>
       <div className='px-8 pb-8'>{renderAddNewProp()}</div>
       <div className='absolute bottom-0 px-8 py-4'>
-        <a className='font-size--small' href='https://clearbit.com'>
+        <a
+          className='font-size--small'
+          href='https://clearbit.com'
+          target='_blank'
+        >
           Brand Logo provided by Clearbit
         </a>
       </div>

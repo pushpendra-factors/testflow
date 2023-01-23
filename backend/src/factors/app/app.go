@@ -204,6 +204,7 @@ func main() {
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
 	// remove follwing flag from yaml if removing from here
 	linkedinMemberCompanyConfigProjectIDs := flag.String("linkedin_member_company_config_project_ids", "", "List of projectIds whose linkedin member company config is enabled.")
+	enableFeatureGates := flag.Bool("enable_feature_gates", false, "Enable Feature Gates")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -365,6 +366,7 @@ func main() {
 		LinkedinMemberCompanyConfigProjectIDs:          C.GetTokensFromStringListAsString(*linkedinMemberCompanyConfigProjectIDs),
 		ProjectIdsV2:                                   projectIdsArrayV2,
 		IncreaseKPILimitForProjectIDs:                  *IncreaseKPILimitForProjectIDs,
+		EnableFeatureGates:                             *enableFeatureGates,
 		EnableDBConnectionPool2:                        *enableDBConnectionPool2,
 	}
 	C.InitConf(config)

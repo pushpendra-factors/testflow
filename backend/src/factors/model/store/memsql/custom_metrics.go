@@ -2,6 +2,7 @@ package memsql
 
 import (
 	C "factors/config"
+	U "factors/util"
 	"factors/model/model"
 	"net/http"
 	"time"
@@ -136,6 +137,27 @@ func (store *MemSQL) getDerivedKPIMetricsByProjectId(projectID int64) []model.Cu
 		logCtx.WithField("err", err).Warn("Failed to get the custom Metric by object type")
 	}
 	return customMetrics
+}
+
+func (store *MemSQL) GetDisplayCategoriesByProjectIdAndNameFromDerivedCustomKPI(projectID int64, name string) ([]string, string) {
+	logCtx := log.WithField("project_id", projectID)
+
+	displayCategories := []string{}
+	derivedMetric, errMsg, status := store.GetDerivedCustomMetricByProjectIdName(projectID, name)
+	if status != http.StatusFound {
+		logCtx.WithField("err", errMsg).Warn("Failed to get the derived Metric by name")
+		return nil, errMsg
+	}
+	var derivedMetricTransformation model.KPIQueryGroup
+	err := U.DecodePostgresJsonbToStructType(derivedMetric.Transformations, &derivedMetricTransformation)
+	if err != nil {
+		logCtx.WithField("err", err).Warn("Error during decode of derived metrics transformations.")
+		return nil, "Error during decode of derived metrics transformations."
+	}
+	for _, kpiQuery := range derivedMetricTransformation.Queries {
+		displayCategories = append(displayCategories, kpiQuery.DisplayCategory)
+	}
+	return displayCategories, ""
 }
 
 func (store *MemSQL) GetProfileCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int) {
