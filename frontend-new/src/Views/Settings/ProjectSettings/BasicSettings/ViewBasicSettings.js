@@ -3,12 +3,14 @@ import { Row, Col, Button, Avatar, Skeleton, Tooltip } from 'antd';
 import { Text } from 'factorsComponents';
 import { connect } from 'react-redux';
 import { getTimeZoneNameFromCity } from 'Utils/constants';
+import { Currency } from 'Utils/currency';
 
 function ViewBasicSettings({
   activeProject,
   setEditMode,
   agents,
-  currentAgent
+  currentAgent,
+  currentProjectSettings
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [enableEdit, setEnableEdit] = useState(false);
@@ -25,7 +27,7 @@ function ViewBasicSettings({
         }
       });
     setDataLoading(false);
-  }, [activeProject, agents, currentAgent]);
+  }, [activeProject, agents, currentAgent, currentProjectSettings]);
 
   return (
     <>
@@ -181,6 +183,24 @@ function ViewBasicSettings({
               </Text>
             )}
           </Col>
+          <Col span={12}>
+            <Text type={'title'} level={7} extraClass={'m-0'}>
+              Currency
+            </Text>
+            {dataLoading ? (
+              <Skeleton.Input
+                style={{ width: 200 }}
+                active={true}
+                size={'small'}
+              />
+            ) : (
+              <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>
+                {currentProjectSettings?.currency
+                  ? `${Currency[currentProjectSettings?.currency]} (${currentProjectSettings?.currency})`
+                  : '---'}
+              </Text>
+            )}
+          </Col>
         </Row>
       </div>
     </>
@@ -191,7 +211,8 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   agents: state.agent.agents,
   projects: state.global.projects,
-  currentAgent: state.agent.agent_details
+  currentAgent: state.agent.agent_details,
+  currentProjectSettings: state.global.currentProjectSettings,
 });
 
 export default connect(mapStateToProps)(ViewBasicSettings);

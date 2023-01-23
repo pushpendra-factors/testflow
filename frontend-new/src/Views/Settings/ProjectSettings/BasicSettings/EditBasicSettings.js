@@ -14,12 +14,13 @@ import {
 import { Text } from 'factorsComponents';
 import { LoadingOutlined, UserOutlined } from '@ant-design/icons';
 import { connect } from 'react-redux';
-import { udpateProjectDetails } from 'Reducers/global';
+import { udpateProjectDetails, udpateProjectSettings } from 'Reducers/global';
 import {
   TimeZoneOffsetValueArr,
   getTimeZoneNameFromCity
 } from 'Utils/constants';
 import sanitizeInputString from 'Utils/sanitizeInputString';
+import { Currency } from 'Utils/currency';
 
 const { Option } = Select;
 
@@ -27,19 +28,25 @@ function EditBasicSettings({
   activeProject,
   setEditMode,
   udpateProjectDetails,
-  agent
+  agent,
+  udpateProjectSettings,
+  currentProjectSettings
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState('');
   const [form] = Form.useForm();
   const [isLoaded, setIsLoaded] = useState(false);
+  const [currencyVal, setCurrencyVal] = useState();
 
   useEffect(() => {
+    if(currentProjectSettings && currentProjectSettings?.currency){
+      setCurrencyVal(currentProjectSettings?.currency)
+    }
     setTimeout(() => {
       setDataLoading(false);
       setIsLoaded(true);
     }, 200);
-  }, []);
+  }, [currentProjectSettings]);
 
   const onFinish = (values) => {
     setDataLoading(true);
@@ -95,6 +102,24 @@ function EditBasicSettings({
     });
     // }
   };
+ 
+  const setCurrencyFn = (value) => {
+    console.log('setCurrency value', value); 
+    setCurrencyVal(value);
+    let data = {
+      'currency': value
+    }
+    udpateProjectSettings(activeProject.id, data)
+    .then(() => { 
+      message.success('Currency details updated!'); 
+    })
+    .catch((err) => { 
+      console.log('err->', err);
+      message.error(err.data.error);
+    });
+
+};
+
 
   return (
     <>
@@ -108,11 +133,9 @@ function EditBasicSettings({
             project_uri: activeProject?.project_uri,
             date_format: activeProject?.date_format,
             time_format: activeProject?.time_format,
-            time_zone: `${
-              getTimeZoneNameFromCity(activeProject?.time_zone)?.name
-            } (UTC ${
-              getTimeZoneNameFromCity(activeProject?.time_zone)?.offset
-            })`
+            time_zone: `${getTimeZoneNameFromCity(activeProject?.time_zone)?.name
+              } (UTC ${getTimeZoneNameFromCity(activeProject?.time_zone)?.offset
+              })`
           }}
         >
           <Row>
@@ -259,7 +282,7 @@ function EditBasicSettings({
           </Row>
 
           {agent?.email == 'solutions@factors.ai' ||
-          agent?.email == 'baliga@factors.ai' ? (
+            agent?.email == 'baliga@factors.ai' ? (
             <Row className={'mt-6'}>
               <Col span={24}>
                 <Text type={'title'} level={7} extraClass={'m-0'}>
@@ -301,18 +324,47 @@ function EditBasicSettings({
                   weight={'bold'}
                 >
                   {activeProject?.time_zone
-                    ? `${
-                        getTimeZoneNameFromCity(activeProject?.time_zone)?.name
-                      } (UTC ${
-                        getTimeZoneNameFromCity(activeProject?.time_zone)
-                          ?.offset
-                      })`
+                    ? `${getTimeZoneNameFromCity(activeProject?.time_zone)?.name
+                    } (UTC ${getTimeZoneNameFromCity(activeProject?.time_zone)
+                      ?.offset
+                    })`
                     : '---'}
                 </Text>
               </Col>
             </Row>
           )}
         </Form>
+
+        <Row className={'mt-6'}>
+          <Col span={24}>
+            <Text type={'title'} level={7} extraClass={'m-0'}>Currency</Text>
+            <Select className={'fa-select w-full'} 
+            value={currencyVal}
+             placeholder={'Currency'} 
+            size={'large'} 
+            onChange={setCurrencyFn}
+            showSearch
+            optionFilterProp='children'
+            filterOption={(input, option) =>
+              option.children
+                .toLowerCase()
+                .indexOf(input.toLowerCase()) >= 0
+            }
+            filterSort={(optionA, optionB) =>
+              optionA.children
+                .toLowerCase()
+                .localeCompare(optionB.children.toLowerCase())
+            }
+            
+            >
+
+              {Currency && Object.keys(Currency).map((key, index) => {
+                return (<Option value={`${key}`}>{`${Currency[key]} (${key})`}</Option>)
+              })
+              }
+            </Select>
+          </Col>
+        </Row>
       </div>
     </>
   );
@@ -320,9 +372,10 @@ function EditBasicSettings({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
+  currentProjectSettings: state.global.currentProjectSettings,
   agent: state.agent.agent_details
 });
 
-export default connect(mapStateToProps, { udpateProjectDetails })(
+export default connect(mapStateToProps, { udpateProjectDetails, udpateProjectSettings })(
   EditBasicSettings
 );
