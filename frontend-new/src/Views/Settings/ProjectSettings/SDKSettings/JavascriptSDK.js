@@ -5,8 +5,9 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import { fetchClickableElements, toggleClickableElement } from '../../../../reducers/settings/middleware';
-import { connect } from 'react-redux';
+import { connect, useSelector } from 'react-redux';
 import MomentTz from '../../../../components/MomentTz';
+import DemoSDK from './DemoSDK';
 
 const { TabPane } = Tabs;
 
@@ -539,7 +540,14 @@ function JavascriptSDK({
   clickableElements
 }) {
   const [dataLoading, setDataLoading] = useState(true);
-
+  const [isDemo, setIsDemo] = useState(null);
+  const projectId = useSelector((state) => state?.global?.active_project?.id);
+  useEffect(() => {
+    console.log(projectId);
+    if (projectId == '519') {
+      setIsDemo(true);
+    }
+  }, []);
   useEffect(() => {
     fetchProjectSettings(activeProject.id).then(() => {
       setDataLoading(false);
@@ -610,7 +618,19 @@ function JavascriptSDK({
         </Row>
         <Row className={'mt-2'}>
           <Col span={24}>
-            { dataLoading ? <Skeleton active paragraph={{ rows: 4 }}/> : <Tabs defaultActiveKey="1" onChange={callback}>{renderTabs()} </Tabs> }
+          {isDemo === true ? (
+              <DemoSDK />
+            ) : (
+              <>
+                {dataLoading ? (
+                  <Skeleton active paragraph={{ rows: 4 }} />
+                ) : (
+                  <Tabs defaultActiveKey='1' onChange={callback}>
+                    {renderTabs()}{' '}
+                  </Tabs>
+                )}
+              </>
+            )}
           </Col>
         </Row>
       </div>
