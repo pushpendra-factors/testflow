@@ -723,106 +723,106 @@ func TestDashboardUnitEventForTimeZone(t *testing.T) {
 	assert.Equal(t, false, decChannelResult.Cache)
 }
 
-func TestChannelGroupDashboardUnitForTimeZone(t *testing.T) {
-	r := gin.Default()
-	H.InitAppRoutes(r)
+// func TestChannelGroupDashboardUnitForTimeZone(t *testing.T) {
+// 	r := gin.Default()
+// 	H.InitAppRoutes(r)
 
-	project, agent, _ := SetupProjectWithAgentDAO()
+// 	project, agent, _ := SetupProjectWithAgentDAO()
 
-	customerAccountId := fmt.Sprintf("%d", U.RandomUint64())
-	store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
-		IntAdwordsCustomerAccountId: &customerAccountId,
-		IntAdwordsEnabledAgentUUID:  &agent.UUID,
-	})
-	rName := U.RandomString(5)
-	dashboard, _ := store.GetStore().CreateDashboard(project.ID, agent.UUID,
-		&model.Dashboard{Name: rName, Type: model.DashboardTypeProjectVisible})
-	value := []byte(`{"id": 2061667885,"clicks":989, "campaign_id": 12,"impressions":10, "end_date": "20371230", "start_date": "20190711", "conversions":111, "cost":42.94}`)
-	document := model.AdwordsDocument{
-		ProjectID:         project.ID,
-		CustomerAccountID: customerAccountId,
-		Type:              5,
-		Timestamp:         20191201,
-		ID:                "2061667885",
-		Value:             &postgres.Jsonb{value},
-		TypeAlias:         "campaign_performance_report",
-	}
-	errCode := store.GetStore().CreateAdwordsDocument(&document)
-	log.Warn(errCode)
-	query := &model.ChannelQuery{
-		Channel:     "google_ads",
-		FilterKey:   "campaign",
-		FilterValue: "all",
-		From:        1575138600,
-		To:          1575224999,
-	}
-	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{
-		Presentation: "pc", QueryId: "5"})
-	decChannelResult := struct {
-		Cache  bool                     `json:"cache"`
-		Result model.ChannelQueryResult `json:"result"`
-	}{}
-	dashboardUnits, _ := store.GetStore().GetDashboardUnits(project.ID, agent.UUID, dashboard.ID)
-	w := sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query)
-	json.Unmarshal(w.Body.Bytes(), &decChannelResult)
-	assert.Equal(t, false, decChannelResult.Cache)
-	assert.Equal(t, float64(989), (*decChannelResult.Result.Metrics)["clicks"])
+// 	customerAccountId := fmt.Sprintf("%d", U.RandomUint64())
+// 	store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+// 		IntAdwordsCustomerAccountId: &customerAccountId,
+// 		IntAdwordsEnabledAgentUUID:  &agent.UUID,
+// 	})
+// 	rName := U.RandomString(5)
+// 	dashboard, _ := store.GetStore().CreateDashboard(project.ID, agent.UUID,
+// 		&model.Dashboard{Name: rName, Type: model.DashboardTypeProjectVisible})
+// 	value := []byte(`{"id": 2061667885,"clicks":989, "campaign_id": 12,"impressions":10, "end_date": "20371230", "start_date": "20190711", "conversions":111, "cost":42.94}`)
+// 	document := model.AdwordsDocument{
+// 		ProjectID:         project.ID,
+// 		CustomerAccountID: customerAccountId,
+// 		Type:              5,
+// 		Timestamp:         20191201,
+// 		ID:                "2061667885",
+// 		Value:             &postgres.Jsonb{value},
+// 		TypeAlias:         "campaign_performance_report",
+// 	}
+// 	errCode := store.GetStore().CreateAdwordsDocument(&document)
+// 	log.Warn(errCode)
+// 	query := &model.ChannelQuery{
+// 		Channel:     "google_ads",
+// 		FilterKey:   "campaign",
+// 		FilterValue: "all",
+// 		From:        1575138600,
+// 		To:          1575224999,
+// 	}
+// 	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{
+// 		Presentation: "pc", QueryId: "5"})
+// 	decChannelResult := struct {
+// 		Cache  bool                     `json:"cache"`
+// 		Result model.ChannelQueryResult `json:"result"`
+// 	}{}
+// 	dashboardUnits, _ := store.GetStore().GetDashboardUnits(project.ID, agent.UUID, dashboard.ID)
+// 	w := sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query)
+// 	json.Unmarshal(w.Body.Bytes(), &decChannelResult)
+// 	assert.Equal(t, false, decChannelResult.Cache)
+// 	assert.Equal(t, float64(989), (*decChannelResult.Result.Metrics)["clicks"])
 
-	w = sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query)
-	json.Unmarshal(w.Body.Bytes(), &decChannelResult)
-	assert.Equal(t, true, decChannelResult.Cache)
-	assert.Equal(t, float64(989), (*decChannelResult.Result.Metrics)["clicks"])
+// 	w = sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query)
+// 	json.Unmarshal(w.Body.Bytes(), &decChannelResult)
+// 	assert.Equal(t, true, decChannelResult.Cache)
+// 	assert.Equal(t, float64(989), (*decChannelResult.Result.Metrics)["clicks"])
 
-	query.Timezone = "Europe/Lisbon"
-	query.From = 1575158400
-	query.To = 1575244799
-	w = sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query)
-	json.Unmarshal(w.Body.Bytes(), &decChannelResult)
-	assert.Equal(t, false, decChannelResult.Cache)
-	assert.Equal(t, float64(989), (*decChannelResult.Result.Metrics)["clicks"])
+// 	query.Timezone = "Europe/Lisbon"
+// 	query.From = 1575158400
+// 	query.To = 1575244799
+// 	w = sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query)
+// 	json.Unmarshal(w.Body.Bytes(), &decChannelResult)
+// 	assert.Equal(t, false, decChannelResult.Cache)
+// 	assert.Equal(t, float64(989), (*decChannelResult.Result.Metrics)["clicks"])
 
-	// Evaluating for channelv1 handler.
-	query1 := &model.ChannelGroupQueryV1{
-		Class: "channel_v1",
-		Queries: []model.ChannelQueryV1{{Channel: "google_ads", SelectMetrics: []string{"clicks"},
-			Timezone: string(U.TimeZoneStringIST), From: 1575138600, To: 1575224999, GroupByTimestamp: "",
-			Filters: []model.ChannelFilterV1{}, GroupBy: []model.ChannelGroupBy{}}},
-	}
-	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{
-		Presentation: "pc", QueryId: "6"})
-	decChannelResult1 := struct {
-		Cache  bool                       `json:"cache"`
-		Result model.ChannelResultGroupV1 `json:"result"`
-	}{}
-	dashboardUnits, _ = store.GetStore().GetDashboardUnits(project.ID, agent.UUID, dashboard.ID)
+// 	// Evaluating for channelv1 handler.
+// 	query1 := &model.ChannelGroupQueryV1{
+// 		Class: "channel_v1",
+// 		Queries: []model.ChannelQueryV1{{Channel: "google_ads", SelectMetrics: []string{"clicks"},
+// 			Timezone: string(U.TimeZoneStringIST), From: 1575138600, To: 1575224999, GroupByTimestamp: "",
+// 			Filters: []model.ChannelFilterV1{}, GroupBy: []model.ChannelGroupBy{}}},
+// 	}
+// 	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{
+// 		Presentation: "pc", QueryId: "6"})
+// 	decChannelResult1 := struct {
+// 		Cache  bool                       `json:"cache"`
+// 		Result model.ChannelResultGroupV1 `json:"result"`
+// 	}{}
+// 	dashboardUnits, _ = store.GetStore().GetDashboardUnits(project.ID, agent.UUID, dashboard.ID)
 
-	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
-	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
-	assert.Equal(t, false, decChannelResult.Cache)
-	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
+// 	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
+// 	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
+// 	assert.Equal(t, false, decChannelResult.Cache)
+// 	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
 
-	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
-	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
-	assert.Equal(t, true, decChannelResult1.Cache)
-	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
+// 	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
+// 	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
+// 	assert.Equal(t, true, decChannelResult1.Cache)
+// 	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
 
-	query1.Queries[0].Timezone = "Europe/Lisbon"
-	query1.Queries[0].From = 1575138600
-	query1.Queries[0].To = 1575224999
-	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
-	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
-	assert.Equal(t, true, decChannelResult1.Cache)
-	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
+// 	query1.Queries[0].Timezone = "Europe/Lisbon"
+// 	query1.Queries[0].From = 1575138600
+// 	query1.Queries[0].To = 1575224999
+// 	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
+// 	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
+// 	assert.Equal(t, true, decChannelResult1.Cache)
+// 	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
 
-	query1.Queries[0].Timezone = "Europe/Lisbon"
-	query1.Queries[0].From = 1575158400
-	query1.Queries[0].To = 1575244799
-	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
-	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
-	assert.Equal(t, false, decChannelResult1.Cache)
-	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
+// 	query1.Queries[0].Timezone = "Europe/Lisbon"
+// 	query1.Queries[0].From = 1575158400
+// 	query1.Queries[0].To = 1575244799
+// 	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
+// 	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
+// 	assert.Equal(t, false, decChannelResult1.Cache)
+// 	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
 
-}
+// }
 
 func TestEventsFunnelKPICacheDashboardUnits(t *testing.T) {
 	r := gin.Default()

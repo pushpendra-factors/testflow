@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestChannelGroupDashboardUnitForTimeZone - To add this as well.
 func TestKpiAnalytics(t *testing.T) {
 	a := gin.Default()
 	H.InitAppRoutes(a)
