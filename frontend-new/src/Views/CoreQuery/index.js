@@ -110,7 +110,8 @@ import {
   UPDATE_PIVOT_CONFIG,
   DEFAULT_PIVOT_CONFIG,
   UPDATE_FUNNEL_TABLE_CONFIG,
-  UPDATE_CORE_QUERY_REDUCER
+  UPDATE_CORE_QUERY_REDUCER,
+  SET_NAVIGATED_FROM_ANALYSE
 } from './constants';
 import {
   getValidGranularityOptions,
@@ -545,6 +546,14 @@ function CoreQuery({
     [updateLocalReducer]
   );
 
+
+  const setNavigatedFromAnalyse = useCallback(
+    (payload) => {
+      updateLocalReducer(SET_NAVIGATED_FROM_ANALYSE, payload);
+    },
+    [updateLocalReducer]
+  );
+
   const updateSavedQuerySettings = useCallback(
     (payload) => {
       updateLocalReducer(SET_SAVED_QUERY_SETTINGS, payload);
@@ -561,7 +570,7 @@ function CoreQuery({
       if (!isQuerySaved) {
         // reset pivot config
         updatePivotConfig({ ...DEFAULT_PIVOT_CONFIG });
-        setNavigatedFromDashboard(false);
+        // setNavigatedFromDashboard(false);
         updateSavedQuerySettings(EMPTY_OBJECT);
         setAttributionMetrics([...ATTRIBUTION_METRICS]);
       } else if (queryType !== QUERY_TYPE_CAMPAIGN) {
@@ -1149,6 +1158,7 @@ function CoreQuery({
         setQuerySaved(isQuerySaved);
         if (!isQuerySaved) {
           setNavigatedFromDashboard(false);
+          setNavigatedFromAnalyse(false);
         }
         updateResultState({
           ...initialState,
@@ -1214,6 +1224,7 @@ function CoreQuery({
       activeProject?.name,
       getDashboardConfigs,
       setNavigatedFromDashboard,
+      setNavigatedFromAnalyse,
       camp_dateRange
     ]
   );
@@ -1718,6 +1729,7 @@ function CoreQuery({
   const handleBreadCrumbClick = () => {
     setShowResult(false);
     setNavigatedFromDashboard(false);
+    setNavigatedFromAnalyse(false);
     setQuerySaved(false);
     updateRequestQuery(null);
     closeDrawer();
@@ -1738,6 +1750,7 @@ function CoreQuery({
         attributionMetrics,
         setAttributionMetrics,
         setNavigatedFromDashboard,
+        setNavigatedFromAnalyse,
         resetComparisonData,
         handleCompareWithClick,
         updateCoreQueryReducer
@@ -1873,6 +1886,7 @@ function CoreQuery({
       KPIConfigProps,
       setAttributionMetrics,
       setNavigatedFromDashboard,
+      setNavigatedFromAnalyse,
       resetComparisonData,
       handleCompareWithClick,
       updatePivotConfig,
@@ -1914,6 +1928,7 @@ function CoreQuery({
       runProfileQuery,
       runAttributionQuery,
       setNavigatedFromDashboard,
+      setNavigatedFromAnalyse,
       updateCoreQueryReducer
     ]
   );
@@ -2112,6 +2127,7 @@ function CoreQuery({
                 setActiveKey={setActiveKey}
                 setBreakdownType={setBreakdownType}
                 setNavigatedFromDashboard={setNavigatedFromDashboard}
+                setNavigatedFromAnalyse={setNavigatedFromAnalyse}
                 updateChartTypes={updateChartTypes}
                 updateSavedQuerySettings={updateSavedQuerySettings}
                 setAttributionMetrics={setAttributionMetrics}

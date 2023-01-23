@@ -1,5 +1,6 @@
 import {
   SET_NAVIGATED_FROM_DASHBOARD,
+  SET_NAVIGATED_FROM_ANALYSE,
   SET_COMPARISON_ENABLED,
   COMPARISON_DATA_LOADING,
   COMPARISON_DATA_FETCHED,
@@ -26,6 +27,11 @@ export default function (state, action) {
       return {
         ...state,
         navigatedFromDashboard: payload
+      };
+    case SET_NAVIGATED_FROM_ANALYSE:
+      return {
+        ...state,
+        navigatedFromAnalyse: payload
       };
     case SET_COMPARISON_SUPPORTED:
       return {

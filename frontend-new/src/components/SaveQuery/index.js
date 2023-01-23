@@ -68,7 +68,8 @@ function SaveQuery({
   sendAlertNow,
   dateFromTo,
   showSaveQueryModal,
-  setShowSaveQueryModal
+  setShowSaveQueryModal,
+  showUpdateQuery
 }) {
   const dispatch = useDispatch();
 
@@ -95,7 +96,7 @@ function SaveQuery({
 
   const {
     attributionMetrics,
-    coreQueryState: { chartTypes, pivotConfig }
+    coreQueryState: { chartTypes, pivotConfig, navigatedFromDashboard, navigatedFromAnalyse }
   } = useContext(CoreQueryContext);
 
   const [saveQueryState, localDispatch] = useReducer(
@@ -116,6 +117,12 @@ function SaveQuery({
       handleSaveClick();
     }
   }, [showSaveQueryModal]);
+
+  useEffect(() => {
+    if (showUpdateQuery) {
+      handleUpdateClick();
+    }
+  }, [showUpdateQuery]);
 
   const {
     activeAction,
@@ -452,6 +459,99 @@ function SaveQuery({
     ]
   );
 
+  const handleUpdateClick = useCallback(async () => {
+    try {
+      let navigatedData;
+      if(navigatedFromDashboard) {
+        navigatedData = navigatedFromDashboard;
+      }
+      if(navigatedFromAnalyse){
+        navigatedData = navigatedFromAnalyse;
+      }
+      const query = getQuery({ queryType, requestQuery, user_type });
+
+      const querySettings = {
+        ...getCurrentSorter(),
+        chart:
+          apiChartAnnotations[
+            getChartType({
+              queryType,
+              chartTypes,
+              breakdown,
+              attributionModels: attributionsState.models,
+              campaignGroupBy: campaignState.group_by
+            })
+          ]
+      };
+
+      if (isPivotSupported({ queryType })) {
+        querySettings.pivotConfig = JSON.stringify(pivotConfig);
+      }
+
+      if (queryType === QUERY_TYPE_ATTRIBUTION) {
+        querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
+      }
+
+      const queryGettingUpdated = savedQueries.find(
+        (elem) => elem.id === (navigatedData?.query_id || navigatedData?.key || navigatedData?.id)
+      );
+
+      const updatedSettings = {
+        ...queryGettingUpdated.settings,
+        ...querySettings
+      };
+
+      const reqBody = {
+        title: (navigatedData?.query?.title || navigatedData?.title),
+        query: query,
+        settings: updatedSettings
+      };
+
+      await updateQuery(active_project.id, (navigatedData?.query_id || navigatedData?.key || navigatedData?.id), reqBody);
+
+      dispatch({
+        type: QUERY_UPDATED,
+        queryId: (navigatedData?.query_id || navigatedData?.key || navigatedData?.id),
+        payload: {
+          title: (navigatedData?.query?.title || navigatedData?.title),
+          query,
+          settings: updatedSettings
+        }
+      });
+      setQuerySaved({ name: (navigatedData?.query?.title || navigatedData?.title), id: (navigatedData?.query_id || navigatedData?.key || navigatedData?.id) });
+
+      notification.success({
+        message: 'Report Saved Successfully',
+        duration: 5
+      });
+      dispatch(fetchWeeklyIngishtsMetaData(active_project.id));
+    } catch (err) {
+      console.log(err);
+      console.log(err.response);
+      notification.error({
+        message: 'Error!',
+        description: `${err?.data?.error}`,
+        duration: 5
+      });
+    }
+  }, [
+    active_project.id,
+    requestQuery,
+    dispatch,
+    queryType,
+    setQuerySaved,
+    attributionMetrics,
+    getCurrentSorter,
+    navigatedFromDashboard?.id,
+    navigatedFromAnalyse?.key,
+    activeAction,
+    chartTypes,
+    breakdown,
+    attributionsState,
+    campaignState,
+    user_type
+  ]);
+
   const onConnectSlack = () => {
     enableSlackIntegration(active_project.id)
       .then((r) => {
@@ -639,6 +739,7 @@ function SaveQuery({
         savedQueryId={savedQueryId}
         handleSaveClick={handleSaveClick}
         handleEditClick={handleEditClick}
+        handleUpdateClick={handleUpdateClick}
         handleDeleteClick={toggleDeleteModal}
         toggleAddToDashboardModal={toggleAddToDashModal}
         setShowShareToEmailModal={setShowShareToEmailModal}

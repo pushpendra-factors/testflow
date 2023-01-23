@@ -30,6 +30,7 @@ const QueryActionsComponent = ({
   handleSaveClick,
   handleEditClick,
   handleDeleteClick,
+  handleUpdateClick,
   toggleAddToDashboardModal,
   setShowShareToEmailModal,
   setShowShareToSlackModal
@@ -47,6 +48,10 @@ const QueryActionsComponent = ({
       }
     };
   }, []);
+
+  const {
+    coreQueryState: { navigatedFromDashboard, navigatedFromAnalyse }
+  } = useContext(CoreQueryContext);
 
   const handleIntercomHelp = () => {
     const w = window;
@@ -169,14 +174,6 @@ const QueryActionsComponent = ({
       )}
 
       <ControlledComponent controller={!!savedQueryId}>
-        <Tooltip placement='bottom' title='Save as New'>
-          <Button
-            onClick={handleSaveClick}
-            size='large'
-            type='text'
-            icon={<SVG name={'pluscopy'} />}
-          ></Button>
-        </Tooltip>
         <ControlledComponent controller={queryType !== QUERY_TYPE_PROFILE}>
           <Tooltip placement='bottom' title='Add to Dashboard'>
             <Button
@@ -209,16 +206,47 @@ const QueryActionsComponent = ({
         {getHelpMenu()}
       </div>
 
-      <ControlledComponent controller={!savedQueryId}>
+      {((navigatedFromDashboard?.id || navigatedFromAnalyse?.key) && !savedQueryId) && (
+        <Tooltip placement='bottom' title='Save as New'>
+          <Button
+            onClick={handleSaveClick}
+            size='large'
+            type='text'
+            icon={<SVG name={'pluscopy'} />}
+          ></Button>
+        </Tooltip>
+      )}
+
+      {savedQueryId ? (
+        <Tooltip placement='bottom' title={'No changes to be saved'}>
+          <Button
+            onClick={
+              navigatedFromDashboard?.id || navigatedFromAnalyse?.key
+                ? handleUpdateClick
+                : handleSaveClick
+            }
+            disabled={savedQueryId}
+            type={BUTTON_TYPES.PRIMARY}
+            size={'large'}
+            icon={<SVG name={'save'} size={20} color={'white'} />}
+          >
+            {'Save'}
+          </Button>
+        </Tooltip>
+      ) : (
         <Button
-          onClick={handleSaveClick}
+          onClick={
+            navigatedFromDashboard?.id || navigatedFromAnalyse?.key
+              ? handleUpdateClick
+              : handleSaveClick
+          }
           type={BUTTON_TYPES.PRIMARY}
           size={'large'}
           icon={<SVG name={'save'} size={20} color={'white'} />}
         >
           {'Save'}
         </Button>
-      </ControlledComponent>
+      )}
     </div>
   );
 };

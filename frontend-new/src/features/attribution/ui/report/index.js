@@ -71,7 +71,8 @@ import {
   UPDATE_CHART_TYPES,
   SET_SAVED_QUERY_SETTINGS,
   UPDATE_PIVOT_CONFIG,
-  DEFAULT_PIVOT_CONFIG
+  DEFAULT_PIVOT_CONFIG,
+  SET_NAVIGATED_FROM_ANALYSE
 } from 'Views/CoreQuery/constants';
 import { initializeAttributionState } from 'Attribution/state/actions';
 import { shouldDataFetch } from 'Utils/dataFormatter';
@@ -219,6 +220,13 @@ function CoreQuery({
     [updateLocalReducer]
   );
 
+  const setNavigatedFromAnalyse = useCallback(
+    (payload) => {
+      updateLocalReducer(SET_NAVIGATED_FROM_ANALYSE, payload);
+    },
+    [updateLocalReducer]
+  );
+
   const updateSavedQuerySettings = useCallback(
     (payload) => {
       updateLocalReducer(SET_SAVED_QUERY_SETTINGS, payload);
@@ -234,7 +242,7 @@ function CoreQuery({
       if (!isQuerySaved) {
         // reset pivot config
         updatePivotConfig({ ...DEFAULT_PIVOT_CONFIG });
-        setNavigatedFromDashboard(false);
+        // setNavigatedFromDashboard(false);
         updateSavedQuerySettings(EMPTY_OBJECT);
         setAttributionMetrics([...ATTRIBUTION_METRICS]);
       } else if (queryType !== QUERY_TYPE_CAMPAIGN) {
@@ -668,6 +676,7 @@ function CoreQuery({
       showResult,
       setAttributionMetrics,
       setNavigatedFromDashboard,
+      setNavigatedFromAnalyse,
       resetComparisonData,
       handleCompareWithClick,
       updatePivotConfig,
@@ -788,7 +797,9 @@ function CoreQuery({
   useEffect(() => {
     if (location?.state?.navigatedFromDashboard)
       setNavigatedFromDashboard(location.state.navigatedFromDashboard);
-  }, [location, setNavigatedFromDashboard]);
+    if(location?.state?.navigatedFromAnalyse)
+    setNavigatedFromAnalyse(location.state.navigatedFromAnalyse)
+  }, [location, setNavigatedFromDashboard, setNavigatedFromAnalyse]);
 
   if (loading || (queryId && QueriesLoading))
     return (
