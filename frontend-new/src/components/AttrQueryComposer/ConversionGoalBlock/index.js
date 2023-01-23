@@ -431,7 +431,6 @@ const ConversionGoalBlock = ({
 
   const renderGoalBlockContent = () => {
     let filterOptions = [];
-    
     return (
       <div
         className={`${styles.block__content} flex items-center relative mt-4`}

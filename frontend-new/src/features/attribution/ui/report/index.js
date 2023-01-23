@@ -320,7 +320,7 @@ function CoreQuery({
           attr_dimensions,
           content_groups,
           touchpoint_filters,
-          attr_query_type,
+          null,
           models,
           window,
           linkedEvents,

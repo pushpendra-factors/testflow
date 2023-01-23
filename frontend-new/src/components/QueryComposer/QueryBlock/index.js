@@ -540,19 +540,23 @@ function QueryBlock({
               {selectEvents()}
             </Tooltip>
           </div>
-          <Dropdown
-            placement='bottomLeft'
-            overlay={getMenu(filterOptions)}
-            trigger={['hover']}
-          >
-            <Button
-              type='text'
-              size={'large'}
-              className={`fa-btn--custom mr-1 btn-total-round`}
+          {filterOptions.length != 0 ? (
+            <Dropdown
+              placement='bottomLeft'
+              overlay={getMenu(filterOptions)}
+              trigger={['hover']}
             >
-              <SVG name='more' />
-            </Button>
-          </Dropdown>
+              <Button
+                type='text'
+                size={'large'}
+                className={`fa-btn--custom mr-1 btn-total-round ml-2`}
+              >
+                <SVG name='more' />
+              </Button>
+            </Dropdown>
+          ) : (
+            ''
+          )}
           <div className={styles.query_block__additional_actions}>
             {additionalActions()}
           </div>

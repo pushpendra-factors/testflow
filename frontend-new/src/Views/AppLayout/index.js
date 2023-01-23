@@ -68,6 +68,7 @@ function AppLayout({
   const { active_project } = useSelector((state) => state.global);
   const { projects } = useSelector((state) => state.global);
   const { show_analytics_result } = useSelector((state) => state.coreQuery);
+  const {currentProjectSettings} = useSelector((state) => state.global);
   const dispatch = useDispatch();
   const [sidebarCollapse, setSidebarCollapse] = useState(true);
 
@@ -183,6 +184,7 @@ function AppLayout({
                     activeAgent={activeAgent}
                     demoProjectId={demoProjectId}
                     active_project={active_project}
+                    currentProjectSettings={currentProjectSettings}
                   />
                 </Suspense>
               </Content>
