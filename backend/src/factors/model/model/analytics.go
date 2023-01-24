@@ -221,6 +221,12 @@ type Query struct {
 	To                   int64                      `json:"to"`
 	GroupAnalysis        string                     `json:"grpa"`
 	ConversionTime       string                     `json:"cnvtm"`
+
+	// For EventsWithProperties in segments
+	Caller     string   `gorm:"default:null" json:"caller"`
+	Source     string   `json:"source"`
+	TableProps []string `json:"table_props"`
+
 	// Deprecated: Keeping it for old dashboard units.
 	OverridePeriod    bool  `json:"ovp"`
 	SessionStartEvent int64 `json:"sse"`

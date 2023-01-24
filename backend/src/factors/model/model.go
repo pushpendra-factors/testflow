@@ -777,6 +777,7 @@ type Model interface {
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
 	GetLeftPaneProperties(projectID int64, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{}
 	FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType string) ([]model.Profile, error)
+	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
