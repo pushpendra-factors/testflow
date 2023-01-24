@@ -2090,7 +2090,7 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 		filledResult = append(filledResult, row)
 	}
 
-	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+	timestamps, offsets := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GetGroupByTimestamp(), query.Timezone)
 
 	// range over timestamps between given from and to.
@@ -2138,7 +2138,7 @@ func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 		filledResult = append(filledResult, row)
 	}
 
-	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+	timestamps, offsets := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GetGroupByTimestamp(), query.Timezone)
 
 	for _, row := range result.Rows {
@@ -2207,7 +2207,7 @@ func addMissingTimestampsOnChannelResultWithoutGroupByProps(result *model.QueryR
 		rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)] = row
 	}
 
-	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+	timestamps, offsets := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GroupByTimestamp, query.Timezone)
 
 	filledResult := make([][]interface{}, 0, 0)
@@ -2269,7 +2269,7 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 		filledResult = append(filledResult, row)
 	}
 
-	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+	timestamps, offsets := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GroupByTimestamp, query.Timezone)
 
 	for _, row := range result.Rows {

@@ -714,7 +714,15 @@ func transformTimeValueInResults(result *model.QueryResult, timeIndex int, timez
 
 		// overrides timestamp with user timezone as sql results doesn't
 		// return timezone used to query.
-		result.Rows[index][timeIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
+		// when broken by monthly, data is present for 2022-04-01T00:00:00+11:00
+		// when broken by day, data is present for 2022-04-03T00:00:00+10:00, where the time got changed at 2:00.
+		// Hence converting it using offsets.
+		ts := U.GetTimeFromTimestampStr(timestampWithTimezone)
+		offset := U.GetTimezoneOffsetFromString(ts, timezone)
+		currTimeStrFromOffset := U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offset)
+		currTimeFromOffset := U.GetTimeFromParseTimeStr(currTimeStrFromOffset)
+
+		result.Rows[index][timeIndex] = currTimeFromOffset
 	}
 }
 
@@ -743,8 +751,8 @@ func sortChannelResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex
 	})
 }
 
-// In day light savings, the timezone gets changed at 1:00AM or 2:00AM. Hence giving the beginning timestamp, but offset which remains for longer time.
-func getAllTimestampsAndOffsetBetweenByType(from, to int64, typ, timezone string) ([]time.Time, []string) {
+// In day light savings, the timezone gets changed at 1:00AM or 2:00AM. Offsets are relied upon the start of Timestamp consideration.
+func GetAllTimestampsAndOffsetBetweenByType(from, to int64, typ, timezone string) ([]time.Time, []string) {
 	logFields := log.Fields{
 		"from":     from,
 		"to":       to,
