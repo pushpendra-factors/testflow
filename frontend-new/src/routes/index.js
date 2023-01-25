@@ -12,6 +12,9 @@ const PathAnalysisReport = lazyWithRetry(() =>
   import('../Views/PathAnalysis/PathAnalysisReport')
 );
 const Attribution = lazyWithRetry(() => import('../features/attribution/ui'));
+const SixSignalReport = lazyWithRetry(() =>
+  import('../features/6signal-report/ui')
+);
 
 const renderRoutes = (routesObj) => {
   return Object.keys(routesObj)
@@ -61,22 +64,30 @@ export const AppLayoutRoutes = ({
 
       {/* Additional Conditional routes  */}
       {featureLock(activeAgent) ? (
-        <Route
+        <PrivateRoute
           path={ATTRIBUTION_ROUTES.base}
           name='attribution'
           component={Attribution}
         />
       ) : null}
 
+      {featureLock(activeAgent) ? (
+        <Route
+          path='/reports/6_signal'
+          name='6-signal-report'
+          component={SixSignalReport}
+        />
+      ) : null}
+
       {currentProjectSettings?.is_path_analysis_enabled && (
         <>
-          <Route
+          <PrivateRoute
             path='/path-analysis'
             name='PathAnalysis'
             exact
             component={PathAnalysis}
           />
-          <Route
+          <PrivateRoute
             path='/path-analysis/insights'
             name='PathAnalysisInsights'
             exact
@@ -86,7 +97,7 @@ export const AppLayoutRoutes = ({
       )}
 
       {!demoProjectId.includes(active_project?.id) ? (
-        <Route path='/project-setup' component={SetupAssist} />
+        <PrivateRoute path='/project-setup' component={SetupAssist} />
       ) : (
         <Redirect to='/' />
       )}
