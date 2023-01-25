@@ -48,7 +48,7 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		return nil, errors.New("failed to get project settings during attribution call")
 	}
 	// enrich RunType for attribution query
-	err := model.EnrichRequestUsingAttributionConfig(projectID, query, settings, logCtx)
+	err := model.EnrichRequestUsingAttributionConfig(query, settings, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -126,11 +126,12 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	coalUserIdConversionTimestamp, userInfo, kpiData, usersIDsToAttribute, err3 := store.PullConvertedUsers(projectID, query, conversionFrom, conversionTo, eventNameToIDList,
 		debugQueryKey, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
 
-	if query.AnalyzeType == model.AnalyzeTypeUserKPI || C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"KPIAttribution": "Debug",
+			"kpiData":                       kpiData,
 			"coalUserIdConversionTimestamp": coalUserIdConversionTimestamp,
 			"userInfo":                      userInfo,
-			"usersIDsToAttribute":           usersIDsToAttribute}).Info("KPI values after PullConvertedUsers")
+			"usersIDsToAttribute":           usersIDsToAttribute}).Info("Attributable users list - ConvertedUsers")
 	}
 
 	if err3 != nil {
@@ -159,7 +160,7 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	}
 	queryStartTime = time.Now().UTC().Unix()
 
-	attributionData, isCompare, err2 := store.GetAttributionData(projectID, query, userData, userInfo, coalUserIdConversionTimestamp, marketingReports, kpiData, logCtx)
+	attributionData, isCompare, err2 := store.GetAttributionData(query, userData, userInfo, coalUserIdConversionTimestamp, marketingReports, kpiData, logCtx)
 	if err2 != nil {
 		return nil, err2
 	}
@@ -268,7 +269,7 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
 		_allCoalIds[v.CoalUserID] = 1
 	}
 
-	for id, _ := range _allCoalIds {
+	for id := range _allCoalIds {
 		coalIDsList = append(coalIDsList, id)
 	}
 
@@ -294,7 +295,7 @@ func (store *MemSQL) getOfflineEventData(projectID int64, logCtx log.Entry) (mod
 	return eventNames[0], nil
 }
 
-// Return conversion event Id, list of all event_ids(Conversion and funnel events) and a Id to name mapping
+// getEventInformation Returns conversion event Id, list of all event_ids(Conversion and funnel events) and a Id to name mapping
 func (store *MemSQL) getEventInformation(projectId int64,
 	query *model.AttributionQuery, logCtx log.Entry) (string, map[string][]interface{}, error) {
 
@@ -447,7 +448,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom,
 			U.CloseReadQuery(rows, tx)
 			U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 		}
-		// Get coalesced Id for Funnel Event user_ids
+		// Get coalesced ID for Funnel Event user_ids
 		userIDToCoalIDInfo, _, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
 		if err != nil {
 			return err, nil
@@ -462,7 +463,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom,
 	return nil, usersToBeAttributed
 }
 
-// GetAdwordsCurrency Returns currency used for adwords customer_account_id
+// GetAdwordsCurrency Returns currency used for Google Ads (adwords) customer_account_id
 func (store *MemSQL) GetAdwordsCurrency(projectID int64, customerAccountID string, from, to int64, logCtx log.Entry) (string, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
@@ -515,7 +516,7 @@ func (store *MemSQL) GetAdwordsCurrency(projectID int64, customerAccountID strin
 }
 
 // Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
-// users from given period including lookback
+// users from given period including look back
 func (store *MemSQL) getAllThePages(projectId int64, sessionEventNameId string, query *model.AttributionQuery, usersToPullSessionFor []string,
 	reports *model.MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
 	logFields := log.Fields{

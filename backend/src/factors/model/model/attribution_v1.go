@@ -319,7 +319,7 @@ func MergeTwoDataRowsV1(row1 []interface{}, row2 []interface{}, keyIndex int, at
 }
 
 // EnrichRequestUsingAttributionConfigV1 adds some fields in attribution query using attribution config
-func EnrichRequestUsingAttributionConfigV1(projectID int64, query *AttributionQueryV1, settings *ProjectSetting, logCtx *log.Entry) error {
+func EnrichRequestUsingAttributionConfigV1(query *AttributionQueryV1, settings *ProjectSetting, logCtx *log.Entry) error {
 
 	attributionConfig, err1 := decodeAttributionConfig(settings.AttributionConfig)
 	if err1 != nil {
@@ -623,7 +623,7 @@ func ProcessQueryKPILandingPageUrlV1(query *AttributionQueryV1, attributionData 
 	result.Rows = dataRows
 
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensionsV1(result, query, logCtx)
+	err := GetUpdatedRowsByDimensionsV1(result, query)
 	if err != nil {
 		return nil
 	}
@@ -649,7 +649,7 @@ func ProcessQueryKPILandingPageUrlV1(query *AttributionQueryV1, attributionData 
 	})
 	logCtx.Info("MergeDataRowsHavingSameKey")
 
-	result.Rows = AddGrandTotalRowKPILandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), goalEvents, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	result.Rows = AddGrandTotalRowKPILandingPage(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), goalEvents, query.AttributionMethodology, query.AttributionMethodologyCompare)
 	logCtx.Info("Done AddGrandTotal")
 	return result
 
@@ -672,7 +672,7 @@ func ProcessQueryKPIPageUrlV1(query *AttributionQueryV1, attributionData *map[st
 	result.Rows = dataRows
 
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensionsV1(result, query, logCtx)
+	err := GetUpdatedRowsByDimensionsV1(result, query)
 	if err != nil {
 		return nil
 	}
@@ -698,7 +698,7 @@ func ProcessQueryKPIPageUrlV1(query *AttributionQueryV1, attributionData *map[st
 	})
 	logCtx.Info("MergeDataRowsHavingSameKey")
 
-	result.Rows = AddGrandTotalRowKPILandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), goalEvents, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	result.Rows = AddGrandTotalRowKPILandingPage(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), goalEvents, query.AttributionMethodology, query.AttributionMethodologyCompare)
 	logCtx.Info("Done AddGrandTotal")
 	return result
 
@@ -738,7 +738,7 @@ func MergeDataRowsHavingSameKeyV1(rows [][]interface{}, keyIndex int, attributio
 }
 
 // GetUpdatedRowsByDimensionsV1 updated the granular result with reduced dimensions
-func GetUpdatedRowsByDimensionsV1(result *QueryResult, query *AttributionQueryV1, logCtx log.Entry) error {
+func GetUpdatedRowsByDimensionsV1(result *QueryResult, query *AttributionQueryV1) error {
 
 	validHeadersDimensions := make(map[string]int)
 	for _, val := range query.AttributionKeyDimension {
@@ -844,7 +844,7 @@ func ProcessQueryKPIV1(query *AttributionQueryV1, attributionData *map[string]*A
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "result": result}).Info("Done GetRowsByMaps AddHeadersByAttributionKey")
 	}
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensionsV1(result, query, *logCtx)
+	err := GetUpdatedRowsByDimensionsV1(result, query)
 	if err != nil {
 		return nil
 	}
@@ -888,7 +888,7 @@ func ProcessQueryKPIV1(query *AttributionQueryV1, attributionData *map[string]*A
 		return true
 	})
 
-	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	result.Rows = AddGrandTotalRowKPI(result.Rows, GetLastKeyValueIndex(result.Headers), goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
 
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")

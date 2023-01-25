@@ -30,7 +30,7 @@ func (store *MemSQL) fetchOTPSessions(projectID int64, offlineTouchPointEventNam
 	caseSelectStmt := "CASE WHEN JSON_EXTRACT_STRING(sessions.properties, ?) IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(sessions.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(sessions.properties, ?) END"
 
-	queryUserOTPsessions := "SELECT sessions.user_id, " +
+	queryUserOTPSessions := "SELECT sessions.user_id, " +
 		caseSelectStmt + " AS campaignID, " +
 		caseSelectStmt + " AS campaignName, " +
 		caseSelectStmt + " AS source, " +
@@ -50,7 +50,7 @@ func (store *MemSQL) fetchOTPSessions(projectID int64, offlineTouchPointEventNam
 		attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 		projectID, offlineTouchPointEventNameId, effectiveFrom, effectiveTo)
 
-	rows, tx, err, reqID := store.ExecQueryWithContext(queryUserOTPsessions, qParams)
+	rows, tx, err, reqID := store.ExecQueryWithContext(queryUserOTPSessions, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
@@ -83,7 +83,7 @@ func (store *MemSQL) fetchOTPSessionsV1(projectID int64, offlineTouchPointEventN
 	caseSelectStmt := "CASE WHEN JSON_EXTRACT_STRING(sessions.properties, ?) IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(sessions.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(sessions.properties, ?) END"
 
-	queryUserOTPsessions := "SELECT sessions.user_id, " +
+	queryUserOTPSessions := "SELECT sessions.user_id, " +
 		caseSelectStmt + " AS campaignID, " +
 		caseSelectStmt + " AS campaignName, " +
 		caseSelectStmt + " AS source, " +
@@ -103,7 +103,7 @@ func (store *MemSQL) fetchOTPSessionsV1(projectID int64, offlineTouchPointEventN
 		attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 		projectID, offlineTouchPointEventNameId, effectiveFrom, effectiveTo)
 
-	rows, tx, err, reqID := store.ExecQueryWithContext(queryUserOTPsessions, qParams)
+	rows, tx, err, reqID := store.ExecQueryWithContext(queryUserOTPSessions, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
