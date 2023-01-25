@@ -1,6 +1,7 @@
 import { Avatar, Spin } from 'antd';
 import React, { useState, useEffect } from 'react';
 import {
+  ALPHANUMSTR,
   convertSVGtoURL,
   eventIconsColorMap,
   eventsFormattedForGranularity,
@@ -34,6 +35,13 @@ function AccountTimelineSingleView({
           <SVG name='nodata' />
         </div>
         <div className='ant-empty-description'>No Associated Users</div>
+      </div>
+    ) : timelineEvents.length === 0 ? (
+      <div className='ant-empty ant-empty-normal'>
+        <div className='ant-empty-image'>
+          <SVG name='nodata' />
+        </div>
+        <div className='ant-empty-description'>Enable Events to Show</div>
       </div>
     ) : (
       <div className='table-scroll'>
@@ -70,10 +78,14 @@ function AccountTimelineSingleView({
                                 size={32}
                                 className='userlist-avatar'
                                 style={{
-                                  '--avatar-bg': `${
-                                    iconColors[Math.floor(Math.random() * 8)]
+                                  backgroundColor: `${
+                                    iconColors[
+                                      ALPHANUMSTR.indexOf(
+                                        user.charAt(0).toUpperCase()
+                                      ) % 8
+                                    ]
                                   }`,
-                                  '--font-size': '14px'
+                                  fontSize: '16px'
                                 }}
                               >
                                 {user.charAt(0).toUpperCase()}

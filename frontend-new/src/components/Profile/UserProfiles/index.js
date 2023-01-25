@@ -33,6 +33,7 @@ import {
 } from '../../../reducers/global';
 import ProfileBeforeIntegration from '../ProfileBeforeIntegration';
 import {
+  ALPHANUMSTR,
   DEFAULT_TIMELINE_CONFIG,
   formatFiltersForPayload,
   formatPayloadForFilters,
@@ -183,31 +184,33 @@ function UserProfiles({
         key: 'identity',
         fixed: 'left',
         ellipsis: true,
-        render: (identity) =>
-          (
-            <div className='flex items-center'>
-              {identity.isAnonymous ? (
-                <SVG
-                  name={`TrackedUser${identity.id.match(/\d/g)[0]}`}
-                  size={24}
-                />
-              ) : (
-                <Avatar
-                  size={24}
-                  className='userlist-avatar'
-                  style={{
-                    '--avatar-bg': `${
-                      iconColors[Math.floor(Math.random() * 8)]
-                    }`,
-                    '--font-size': '14px'
-                  }}
-                >
-                  {identity.id.charAt(0).toUpperCase()}
-                </Avatar>
-              )}
-              <span className='ml-2'>{identity.id}</span>
-            </div>
-          ) || '-'
+        render: (identity) => (
+          <div className='flex items-center'>
+            {identity.isAnonymous ? (
+              <SVG
+                name={`TrackedUser${identity.id.match(/\d/g)[0]}`}
+                size={24}
+              />
+            ) : (
+              <Avatar
+                size={24}
+                className='userlist-avatar'
+                style={{
+                  backgroundColor: `${
+                    iconColors[
+                      ALPHANUMSTR.indexOf(identity.id.charAt(0).toUpperCase()) %
+                        8
+                    ]
+                  }`,
+                  fontSize: '16px'
+                }}
+              >
+                {identity.id.charAt(0).toUpperCase()}
+              </Avatar>
+            )}
+            <span className='ml-2'>{identity.id}</span>
+          </div>
+        )
       }
     ];
     currentProjectSettings?.timelines_config?.user_config?.table_props?.forEach(
@@ -558,6 +561,7 @@ function UserProfiles({
   const renderTable = () => (
     <div>
       <Table
+        size='large'
         onRow={(user) => ({
           onClick: () => {
             getProfileUserDetails(
@@ -570,11 +574,11 @@ function UserProfiles({
             showModal();
           }
         })}
-        className='fa-table--basic'
+        className='fa-table--userlist'
         dataSource={getTableData(contacts.data)}
         columns={getColumns()}
         rowClassName='cursor-pointer'
-        pagination={{ position: ['bottom', 'left'] }}
+        pagination={{ position: ['bottom', 'left'], defaultPageSize: '25' }}
         scroll={{
           x:
             currentProjectSettings?.timelines_config?.user_config?.table_props

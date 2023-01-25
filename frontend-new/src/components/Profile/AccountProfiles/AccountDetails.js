@@ -296,8 +296,8 @@ function AccountDetails({
             }
           }}
           alt=''
-          height={72}
-          width={72}
+          height={96}
+          width={96}
         />
         <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
           {accountDetails?.data?.name}
