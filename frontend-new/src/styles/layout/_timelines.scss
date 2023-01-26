@@ -122,7 +122,6 @@
             padding: 0 36px;
 
             &__avatar {
-                background-color: var(--avatar-bg);
                 display: flex;
                 align-items: center;
                 color: #FFF;
@@ -597,14 +596,41 @@
 }
 
 .userlist-avatar {
-    background-color: var(--avatar-bg);
     display: flex;
     align-items: center;
     color: #FFF;
     font-family: 'Inter';
     font-style: normal;
     font-weight: 400;
-    font-size: var(--font-size);
     line-height: 18px;
     letter-spacing: 0.01em;
+}
+
+.fa-table--userlist {
+    
+    // table head
+    .ant-table-thead {
+        .ant-table-cell {
+            font-weight: $font-weight--bold;
+            font-size: 12px;
+            padding: 11px 12px;
+            color: $fa-color--mono-5;
+        }
+    }
+
+    // table body
+    .ant-table-tbody {
+        .ant-table-row {
+            .ant-table-cell {
+                border-top: 4px solid white;
+                border-bottom: 4px solid white;
+                font-weight: $font-weight--regular;
+                font-size: 14px;
+                line-height: 24px;
+                padding: 12px;
+                color: $fa-color--mono-6;
+            }
+
+        }
+    }
 }

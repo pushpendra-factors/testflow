@@ -1129,9 +1129,9 @@ func GetKeyIndexOrAddedKeySize(attributionKey string) int {
 	case AttributionKeyKeyword:
 		addedKeysSize = 4
 	case AttributionKeySource:
-		addedKeysSize = 1
+		addedKeysSize = 0
 	case AttributionKeyChannel:
-		addedKeysSize = 1
+		addedKeysSize = 0
 	default:
 	}
 	return addedKeysSize

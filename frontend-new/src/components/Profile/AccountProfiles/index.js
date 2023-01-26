@@ -530,11 +530,11 @@ function AccountProfiles({
             showModal();
           }
         })}
-        className='fa-table--basic'
+        className='fa-table--userlist'
         dataSource={getTableData(accounts.data)}
         columns={getColumns()}
         rowClassName='cursor-pointer'
-        pagination={{ position: ['bottom', 'left'] }}
+        pagination={{ position: ['bottom', 'left'], defaultPageSize: '25' }}
         scroll={{
           x:
             currentProjectSettings?.timelines_config?.account_config
@@ -552,7 +552,6 @@ function AccountProfiles({
           </div>
         )}
       />
-      <div className='flex flex-row-reverse mt-4'></div>
     </div>
   );
 

@@ -435,3 +435,5 @@ export const iconColors = [
   '#A0D911',
   '#FAAD14'
 ];
+
+export const ALPHANUMSTR = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";

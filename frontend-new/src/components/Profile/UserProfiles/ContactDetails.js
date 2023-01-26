@@ -5,6 +5,7 @@ import { bindActionCreators } from 'redux';
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
 import {
+  ALPHANUMSTR,
   DEFAULT_TIMELINE_CONFIG,
   granularityOptions,
   iconColors
@@ -234,14 +235,21 @@ function ContactDetails({
         {user.identity.isAnonymous ? (
           <SVG
             name={`TrackedUser${user.identity.id.match(/\d/g)[0]}`}
-            size={80}
+            size={96}
           />
         ) : (
           <Avatar
-            size={72}
+            size={96}
             className='leftpane__user__avatar'
             style={{
-              '--avatar-bg': `${iconColors[Math.floor(Math.random() * 8)]}`,
+              backgroundColor: `${
+                iconColors[
+                  ALPHANUMSTR.indexOf(
+                    user.identity.id.charAt(0).toUpperCase()
+                  ) % 8
+                ]
+              }`,
+              fontSize: '32px'
             }}
           >
             {user.identity.id.charAt(0).toUpperCase()}
