@@ -187,6 +187,10 @@ func AddHeadersByAttributionKeyV1(result *QueryResult, query *AttributionQueryV1
 			result.Headers = append(result.Headers, AddedKeysForAdgroup...)
 		case AttributionKeyKeyword:
 			result.Headers = append(result.Headers, AddedKeysForKeyword...)
+		case AttributionKeySource:
+			result.Headers = append(result.Headers, AddedKeysForSource...)
+		case AttributionKeyChannel:
+			result.Headers = append(result.Headers, AddedKeysForChannel...)
 		default:
 		}
 
