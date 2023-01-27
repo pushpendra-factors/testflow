@@ -990,6 +990,10 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 			result.Headers = append(result.Headers, AddedKeysForAdgroup...)
 		case AttributionKeyKeyword:
 			result.Headers = append(result.Headers, AddedKeysForKeyword...)
+		case AttributionKeySource:
+			result.Headers = append(result.Headers, AddedKeysForSource...)
+		case AttributionKeyChannel:
+			result.Headers = append(result.Headers, AddedKeysForChannel...)
 		default:
 		}
 
@@ -1031,7 +1035,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 		case AttributionKeySource:
 			result.Headers = append(result.Headers, AddedKeysForSource...)
 		case AttributionKeyChannel:
-			result.Headers = append(result.Headers, AddedKeysForSource...)
+			result.Headers = append(result.Headers, AddedKeysForChannel...)
 		default:
 		}
 
@@ -1129,9 +1133,9 @@ func GetKeyIndexOrAddedKeySize(attributionKey string) int {
 	case AttributionKeyKeyword:
 		addedKeysSize = 4
 	case AttributionKeySource:
-		addedKeysSize = 0
+		addedKeysSize = 1
 	case AttributionKeyChannel:
-		addedKeysSize = 0
+		addedKeysSize = 1
 	default:
 	}
 	return addedKeysSize
