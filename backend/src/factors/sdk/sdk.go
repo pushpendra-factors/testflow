@@ -1249,13 +1249,13 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 		return http.StatusOK, response
 	}
 
-	scopeUser, errCode := store.GetStore().GetUser(projectId, request.UserId)
+	customerUserId, errCode := store.GetStore().GetCustomerUserIdFromUserId(projectId, request.UserId)
 	if errCode != http.StatusFound {
 		return errCode, &IdentifyResponse{Error: "Identification failed. Invalid user_id."}
 	}
 
 	// Precondition: Given user already identified as given customer_user.
-	if scopeUser.CustomerUserId == request.CustomerUserId {
+	if customerUserId == request.CustomerUserId {
 		return http.StatusOK, &IdentifyResponse{Message: "Identified already."}
 	}
 
@@ -1280,7 +1280,7 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 
 	// Precondition: user is already identified with different customer_user.
 	// Creating a new user with the given customer_user_id and respond with new_user_id.
-	if scopeUser.CustomerUserId != "" && !overwrite {
+	if customerUserId != "" && !overwrite {
 		newUser := model.User{
 			ProjectId:      projectId,
 			CustomerUserId: request.CustomerUserId,
@@ -1935,7 +1935,7 @@ func UpdateEventProperties(projectId int64,
 		WithField("timestamp", request.Timestamp)
 
 	// TODO: Add support for user_id on SDK and use user_id on GetEventById for routing to a shard.
-	event, errCode := store.GetStore().GetEventById(projectId, request.EventId, request.UserId)
+	eventID, userID, errCode := store.GetStore().GetUserIdFromEventId(projectId, request.EventId, request.UserId)
 	if errCode == http.StatusNotFound && request.Timestamp > U.UnixTimeBeforeDuration(time.Hour*5) {
 		logCtx.Warn("Failed old update event properties request with unavailable event_id permanently.")
 		return http.StatusBadRequest, &UpdateEventPropertiesResponse{
@@ -1946,19 +1946,15 @@ func UpdateEventProperties(projectId int64,
 			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid event."}
 	}
 
-	errCode = store.GetStore().UpdateEventProperties(projectId, request.EventId,
-		request.UserId, properitesToBeUpdated, request.Timestamp, nil)
+	errCode = store.GetStore().UpdateEventProperties(projectId, eventID, userID, properitesToBeUpdated, request.Timestamp, nil)
 	if errCode != http.StatusAccepted {
-		return errCode,
-			&UpdateEventPropertiesResponse{
-				Error: "Update event properties failed. Failed to update given properties."}
+		return errCode, &UpdateEventPropertiesResponse{Error: "Update event properties failed. Failed to update given properties."}
 	}
 
 	newInitialUserProperties := U.GetUpdateAllowedInitialUserProperties(properitesToBeUpdated)
 
 	// Update user_properties state associate to event and lastest user properties state of user.
-	errCode = updateInitialUserPropertiesFromUpdateEventProperties(projectId, event.ID,
-		event.UserId, newInitialUserProperties)
+	errCode = updateInitialUserPropertiesFromUpdateEventProperties(projectId, eventID, userID, newInitialUserProperties)
 	if errCode != http.StatusAccepted {
 		return errCode,
 			&UpdateEventPropertiesResponse{

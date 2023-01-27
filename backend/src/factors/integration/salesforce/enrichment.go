@@ -312,14 +312,14 @@ func TrackSalesforceEventByDocumentType(projectID int64, trackPayload *SDK.Track
 				return "", "", finalPayload, errors.New("failed to get synced document")
 			}
 
-			event, status := store.GetStore().GetEventById(projectID, documents[0].SyncID, "")
+			_, userID, status := store.GetStore().GetUserIdFromEventId(projectID, documents[0].SyncID, "")
 			if status != http.StatusFound {
 				return "", "", finalPayload, errors.New("failed to get event from sync id ")
 			}
 
 			if customerUserID != "" {
 				status, _ = SDK.Identify(projectID, &SDK.IdentifyPayload{
-					UserId:         event.UserId,
+					UserId:         userID,
 					CustomerUserId: customerUserID,
 					Timestamp:      lastModifiedTimestamp,
 					RequestSource:  model.UserSourceSalesforce,
@@ -329,7 +329,6 @@ func TrackSalesforceEventByDocumentType(projectID int64, trackPayload *SDK.Track
 					return "", "", finalPayload, fmt.Errorf("failed indentifying user on update event track")
 				}
 			}
-			userID = event.UserId
 		} else {
 			finalPayload.Timestamp = createdTimestamp
 		}

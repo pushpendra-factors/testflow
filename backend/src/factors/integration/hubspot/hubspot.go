@@ -916,13 +916,12 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 
 		deleteContactUserID := contactDocuments[0].UserId
 		if deleteContactUserID == "" {
-			event, errCode := store.GetStore().GetEventById(project.ID, contactDocuments[0].SyncId, "")
-			if errCode != http.StatusFound {
+			_, deleteContactUserID, status = store.GetStore().GetUserIdFromEventId(project.ID, contactDocuments[0].SyncId, "")
+			if status != http.StatusFound {
 				logCtx.WithField("delete_contact", contactDocuments[0].ID).Error(
 					"Failed to get merged contact created event for getting user id.")
 				return http.StatusInternalServerError
 			}
-			deleteContactUserID = event.UserId
 		}
 
 		_, errCode := store.GetStore().UpdateUserProperties(project.ID, deleteContactUserID, userPropertiesJsonb,
@@ -983,13 +982,12 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 
 						mergedContactUserID := mergedContact.UserId
 						if mergedContactUserID == "" {
-							event, errCode := store.GetStore().GetEventById(project.ID, mergedContact.SyncId, "")
-							if errCode != http.StatusFound {
+							_, mergedContactUserID, status = store.GetStore().GetUserIdFromEventId(project.ID, mergedContact.SyncId, "")
+							if status != http.StatusFound {
 								logCtx.WithField("merged_contact", mergedContact.ID).Error(
 									"Failed to get merged contact created event for getting user id.")
 								continue
 							}
-							mergedContactUserID = event.UserId
 						}
 
 						_, errCode := store.GetStore().UpdateUserProperties(project.ID, mergedContactUserID,
@@ -1138,7 +1136,7 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 		if createdDocuments[0].UserId != "" {
 			userID = createdDocuments[0].UserId
 		} else {
-			event, errCode := store.GetStore().GetEventById(project.ID, createdDocuments[0].SyncId, "")
+			eventID, userID, errCode := store.GetStore().GetUserIdFromEventId(project.ID, createdDocuments[0].SyncId, "")
 			if errCode != http.StatusFound {
 				logCtx.WithField("event_id", createdDocuments[0].SyncId).Error(
 					"Failed to get contact created event for getting user id.")
@@ -1146,12 +1144,10 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 			}
 
 			errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
-				project.ID, document.ID, model.HubspotDocumentTypeContact, event.ID, createdDocuments[0].Timestamp, model.HubspotDocumentActionCreated, event.UserId, "")
+				project.ID, document.ID, model.HubspotDocumentTypeContact, eventID, createdDocuments[0].Timestamp, model.HubspotDocumentActionCreated, userID, "")
 			if errCode != http.StatusAccepted {
 				logCtx.Error("Failed to update hubspot contact created document user id.")
 			}
-
-			userID = event.UserId
 		}
 
 		if !C.AllowIdentificationOverwriteUsingSource(project.ID) {
@@ -1221,13 +1217,11 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 		defaultSmartEventTimestamp = timestamp
 	}
 
-	user, status := store.GetStore().GetUser(project.ID, userID)
+	existingCustomerUserID, status := store.GetStore().GetCustomerUserIdFromUserId(project.ID, userID)
 	if status != http.StatusFound {
 		logCtx.WithField("error_code", status).Error("Failed to get user on sync contact.")
 		return http.StatusInternalServerError
 	}
-
-	existingCustomerUserID := user.CustomerUserId
 
 	if existingCustomerUserID != customerUserID {
 		logCtx.WithFields(log.Fields{"existing_customer_user_id": existingCustomerUserID, "new_customer_user_id": customerUserID}).
@@ -2033,14 +2027,14 @@ func getDealUserID(projectID int64, deal *Deal) string {
 		return ""
 	}
 
-	event, errCode := store.GetStore().GetEventById(projectID, contactDocument.SyncId, "")
+	_, dealUserID, errCode := store.GetStore().GetUserIdFromEventId(projectID, contactDocument.SyncId, "")
 	if errCode != http.StatusFound {
 		logCtx.WithField("event_id", contactDocument.SyncId).Error(
 			"Failed to get deal user. Failed to get hubspot contact created event using sync_id.")
 		return ""
 	}
 
-	return event.UserId
+	return dealUserID
 }
 
 // HubspotSmartEventName holds event_name and filter expression
@@ -2229,13 +2223,11 @@ func syncCompany(projectID int64, document *model.HubspotDocument) int {
 	contactUpdateCount := 0
 	for _, contactDocument := range contactDocuments {
 		if contactDocument.SyncId != "" {
-			contactSyncEvent, errCode := store.GetStore().GetEventById(
-				projectID, contactDocument.SyncId, "")
+			_, contactSyncEventUserId, errCode := store.GetStore().GetUserIdFromEventId(projectID, contactDocument.SyncId, "")
 			if errCode == http.StatusFound {
-
-				contactUser, status := store.GetStore().GetUser(projectID, contactSyncEvent.UserId)
+				status := store.GetStore().IsUserExistByID(projectID, contactSyncEventUserId)
 				if status != http.StatusFound {
-					logCtx.WithField("user_id", contactSyncEvent.UserId).Error(
+					logCtx.WithField("user_id", contactSyncEventUserId).Error(
 						"Failed to get user by contact event user update user properties with company properties.")
 					isContactsUpdateFailed = true
 					continue
@@ -2243,7 +2235,7 @@ func syncCompany(projectID int64, document *model.HubspotDocument) int {
 
 				if C.IsAllowedHubspotGroupsByProjectID(projectID) {
 					logCtx.Info("Updating user company group user id.")
-					_, status = store.GetStore().UpdateUserGroup(projectID, contactUser.ID, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID)
+					_, status = store.GetStore().UpdateUserGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID)
 					if status != http.StatusAccepted && status != http.StatusNotModified {
 						logCtx.Error("Failed to update user group id.")
 					}

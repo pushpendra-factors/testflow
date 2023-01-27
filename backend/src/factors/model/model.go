@@ -288,6 +288,7 @@ type Model interface {
 	IsSmartEventAlreadyExist(projectID int64, userID, eventNameID, referenceEventID string, eventTimestamp int64) (bool, error)
 	GetLastEventWithSessionByUser(projectId int64, userId string, firstEventTimestamp int64) (*model.Event, int)
 	GetAllEventsForSessionCreationAsUserEventsMapV2(projectID int64, sessionEventNameId string, startTimestamp int64, endTimestamp int64) (*map[string][]model.Event, int, int)
+	GetUserIdFromEventId(projectID int64, id string, userID string) (string, string, int)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -552,6 +553,7 @@ type Model interface {
 	UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string) (*model.User, int)
 	UpdateUserGroupProperties(projectID int64, userID string, newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int)
 	GetPropertiesUpdatedTimestampOfUser(projectId int64, id string) (int64, int)
+	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 
 	// web_analytics
 	GetWebAnalyticsQueriesFromDashboardUnits(projectID int64) (int64, *model.WebAnalyticsQueries, int)

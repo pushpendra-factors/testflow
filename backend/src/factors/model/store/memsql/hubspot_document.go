@@ -1667,7 +1667,7 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 	}
 
 	if !newGroupUser {
-		user, status := store.GetUser(projectID, groupUserID)
+		user, status := store.GetUserWithoutProperties(projectID, groupUserID)
 		if status != http.StatusFound {
 			return "", errors.New("failed to get user")
 		}

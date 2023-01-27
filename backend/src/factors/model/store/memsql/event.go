@@ -2448,3 +2448,35 @@ func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMapV2(projectId i
 
 	return &userEventsMap, len(events), http.StatusFound
 }
+
+func (store *MemSQL) GetUserIdFromEventId(projectID int64, id string, userId string) (string, string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"id":         id,
+		"user_id":    userId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || id == "" {
+		logCtx.Error("Invalid parameters.")
+		return "", "", http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	dbx := db.Where("project_id = ? AND id = ?", projectID, id)
+	if userId != "" {
+		dbx = dbx.Where("user_id = ?", userId)
+	}
+
+	var event model.Event
+	if err := dbx.Limit(1).Select("id, user_id").Find(&event).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return "", "", http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Getting user_id failed on GetUserIdFromEventById")
+		return "", "", http.StatusInternalServerError
+	}
+	return event.ID, event.UserId, http.StatusFound
+}
