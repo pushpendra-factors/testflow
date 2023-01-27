@@ -2745,12 +2745,12 @@ func (store *MemSQL) GetCustomerUserIdFromUserId(projectID int64, id string) (st
 	var user model.User
 
 	db := C.GetServices().Db
-	if err := db.Limit(1).Where("project_id = ? AND id = ?", projectID, id).Select("c_uid").Find(&user).Error; err != nil {
+	if err := db.Limit(1).Where("project_id = ? AND id = ?", projectID, id).Select("customer_user_id").Find(&user).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return "", http.StatusNotFound
 		}
 
-		logCtx.WithError(err).Error("Getting c_uid failed on GetCustomerUserIdFromUserId")
+		logCtx.WithError(err).Error("Getting customer_user_id failed on GetCustomerUserIdFromUserId")
 		return "", http.StatusInternalServerError
 	}
 	return user.CustomerUserId, http.StatusFound
