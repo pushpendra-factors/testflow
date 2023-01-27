@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/now"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetAllWeeksAsTimestamp(t *testing.T) {
@@ -129,4 +130,15 @@ func TestOffsetsAndDateTimesForSpecificLocation(t1 *testing.T) {
 	// t = now.New(t).BeginningOfMonth()
 	// p(t)
 	// p(t.Month())
+}
+
+func TestGetAllDatesAndOffsetsAsTimestampForAustraliaTimezone(t *testing.T) {
+	timestamp1 := 1648818000
+	timestamp2 := 1649080799
+	time, offsets := U.GetAllDatesAndOffsetAsTimestamp(int64(timestamp1), int64(timestamp2), "Australia/Sydney")
+	assert.Len(t, time, 3)
+	assert.Len(t, offsets, 3)
+	assert.Equal(t, "+11:00", offsets[0])
+	assert.Equal(t, "+10:00", offsets[1])
+	assert.Equal(t, "+10:00", offsets[2])
 }
