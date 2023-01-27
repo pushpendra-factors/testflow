@@ -202,8 +202,6 @@ func main() {
 	blockedEmailDomainList := flag.String("blocked_email_domain_list", "", "List containing all blocked email domains")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
-	// remove follwing flag from yaml if removing from here
-	linkedinMemberCompanyConfigProjectIDs := flag.String("linkedin_member_company_config_project_ids", "", "List of projectIds whose linkedin member company config is enabled.")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -362,7 +360,6 @@ func main() {
 		BlockedIPList:                                  C.GetBlockedIPFromStringListAsString(*blockedIPList),
 		BlockedEmailDomainList:                         C.GetBlockedEmailDomainFromStringListAsString(*blockedEmailDomainList),
 		IngestionTimezoneEnabledProjectIDs:             C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
-		LinkedinMemberCompanyConfigProjectIDs:          C.GetTokensFromStringListAsString(*linkedinMemberCompanyConfigProjectIDs),
 		ProjectIdsV2:                                   projectIdsArrayV2,
 		IncreaseKPILimitForProjectIDs:                  *IncreaseKPILimitForProjectIDs,
 		EnableDBConnectionPool2:                        *enableDBConnectionPool2,
