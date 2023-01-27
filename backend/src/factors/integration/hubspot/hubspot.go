@@ -1136,16 +1136,16 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 		if createdDocuments[0].UserId != "" {
 			userID = createdDocuments[0].UserId
 		} else {
-			eventID, userID, errCode := store.GetStore().GetUserIdFromEventId(project.ID, createdDocuments[0].SyncId, "")
-			if errCode != http.StatusFound {
+			_, userID, status = store.GetStore().GetUserIdFromEventId(project.ID, createdDocuments[0].SyncId, "")
+			if status != http.StatusFound {
 				logCtx.WithField("event_id", createdDocuments[0].SyncId).Error(
 					"Failed to get contact created event for getting user id.")
 				return http.StatusInternalServerError
 			}
 
-			errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
-				project.ID, document.ID, model.HubspotDocumentTypeContact, eventID, createdDocuments[0].Timestamp, model.HubspotDocumentActionCreated, userID, "")
-			if errCode != http.StatusAccepted {
+			status = store.GetStore().UpdateHubspotDocumentAsSynced(
+				project.ID, document.ID, model.HubspotDocumentTypeContact, createdDocuments[0].SyncId, createdDocuments[0].Timestamp, model.HubspotDocumentActionCreated, userID, "")
+			if status != http.StatusAccepted {
 				logCtx.Error("Failed to update hubspot contact created document user id.")
 			}
 		}
