@@ -853,7 +853,7 @@ func (store *MemSQL) GetUserEventsByEventNameId(projectId int64, userId string, 
 	var events []model.Event
 
 	db := C.GetServices().Db
-	if err := db.Order("timestamp DESC").Where("project_id = ? AND user_id = ? AND event_name_id = ?",
+	if err := db.Where("project_id = ? AND user_id = ? AND event_name_id = ?",
 		projectId, userId, eventNameId).Find(&events).Error; err != nil {
 
 		return events, http.StatusInternalServerError
@@ -862,6 +862,11 @@ func (store *MemSQL) GetUserEventsByEventNameId(projectId int64, userId string, 
 	if len(events) == 0 {
 		return events, http.StatusNotFound
 	}
+
+	// sort by timestamp DESC
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].Timestamp > events[j].Timestamp
+	})
 
 	return events, http.StatusFound
 }
@@ -1813,9 +1818,8 @@ func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId int
 	// event used for enrichment.
 	excludeSkipSessionCondition := fmt.Sprintf("(JSON_EXTRACT_STRING(properties, '%s') IS NULL OR JSON_EXTRACT_STRING(properties, '%s') = 'f')",
 		U.EP_SKIP_SESSION, U.EP_SKIP_SESSION)
-	if err := db.Order("timestamp, created_at ASC").
-		Where("project_id = ? AND event_name_id != ? AND timestamp BETWEEN ? AND ?"+" AND "+excludeSkipSessionCondition,
-			projectId, sessionEventNameId, startTimestamp, endTimestamp).
+	if err := db.Where("project_id = ? AND event_name_id != ? AND timestamp BETWEEN ? AND ?"+" AND "+excludeSkipSessionCondition,
+		projectId, sessionEventNameId, startTimestamp, endTimestamp).
 		Find(&events).Error; err != nil {
 
 		logCtx.WithError(err).Error("Failed to get all events of project.")
@@ -1833,6 +1837,15 @@ func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId int
 	if queryTimeInSecs >= (2 * 60) {
 		logCtx.Error("Too much time taken to download events on get_all_events_as_user_map.")
 	}
+
+	// sort by timestamp, created_at ASC
+	sort.Slice(events, func(i, j int) bool {
+		if events[i].Timestamp != events[j].Timestamp {
+			return events[i].Timestamp < events[j].Timestamp
+		}
+
+		return events[i].CreatedAt.Before(events[j].CreatedAt)
+	})
 
 	userEventsMap = make(map[string][]model.Event)
 	for i := range events {

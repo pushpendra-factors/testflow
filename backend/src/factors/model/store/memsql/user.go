@@ -341,9 +341,9 @@ func (store *MemSQL) GetUsersByCustomerUserID(projectID int64, customerUserID st
 		return nil, http.StatusNotFound
 	}
 
-	// Sort by created_at.
+	// Sort by created_at ASC
 	sort.Slice(users, func(i, j int) bool {
-		return users[i].CreatedAt.Before(users[i].CreatedAt)
+		return users[i].CreatedAt.Before(users[j].CreatedAt)
 	})
 
 	return users, http.StatusFound
@@ -392,12 +392,15 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerU
 	}
 
 	var users []model.User
-	if err := db.Order("created_at ASC").
-		Where("project_id = ? AND id IN ( ? )", projectID, userIDs).
-		Find(&users).Error; err != nil {
+	if err := db.Where("project_id = ? AND id IN ( ? )", projectID, userIDs).Find(&users).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to get selected users for id")
 		return nil, http.StatusInternalServerError
 	}
+
+	// sort by created_at ASC
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].CreatedAt.Before(users[j].CreatedAt)
+	})
 
 	return users, http.StatusFound
 }
