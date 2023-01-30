@@ -230,7 +230,7 @@ function UserProfiles({
       key: 'last_activity',
       width: 300,
       fixed: 'right',
-      render: (item) => MomentTz(item).format('DD MMMM YYYY, hh:mm:ss A')
+      render: (item) => MomentTz(item).fromNow()
     });
     return columns;
   };
