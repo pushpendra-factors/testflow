@@ -77,6 +77,7 @@ def add_multiple_linkedin_documents(project_id, ad_account_id, doc_type, docs, t
                                     doc_type, doc, timestamp) for doc in docs]
 
     retries = 0
+    response = {}
     while retries < 3:
         response = requests.post(url, json=batch_of_payloads)
         if not response.ok:
@@ -90,6 +91,7 @@ def add_multiple_linkedin_documents(project_id, ad_account_id, doc_type, docs, t
     return response
 
 def add_all_linkedin_documents(project_id, customer_acc_id, doc_type, docs, timestamp, options):
+    response = {}
     for i in range(0, len(docs), BATCH_SIZE):
         batch = docs[i:i+BATCH_SIZE]
         response = add_multiple_linkedin_documents(project_id, customer_acc_id,

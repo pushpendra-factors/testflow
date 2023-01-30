@@ -67,12 +67,12 @@ def get_insights(linkedin_int_setting, timestamp, doc_type, pivot, meta_request_
 
 def insert_insights(options, doc_type, project_id, ad_account, response, timestamp):
     log.warning(INSERTION_LOG.format(doc_type, 'insights', timestamp))
-    
-    add_documents_response = add_all_linkedin_documents(project_id, ad_account, doc_type, response, timestamp, options)
-    if not add_documents_response.ok and add_documents_response.status_code != 409:
-        errString = DOC_INSERT_ERROR.format(doc_type, 'insights',add_documents_response.status, add_documents_response.text, project_id, ad_account)
-        log.error(errString)
-        return errString
+    if len(response) > 0:
+        add_documents_response = add_all_linkedin_documents(project_id, ad_account, doc_type, response, timestamp, options)
+        if not add_documents_response.ok and add_documents_response.status_code != 409:
+            errString = DOC_INSERT_ERROR.format(doc_type, 'insights',add_documents_response.status, add_documents_response.text, project_id, ad_account)
+            log.error(errString)
+            return errString
     log.warning(INSERTION_END_LOG.format(doc_type, 'insights', timestamp))
     return ''
 
@@ -240,7 +240,7 @@ def get_campaign_group_data(options, linkedin_int_setting, sync_info_with_type, 
     for data in metadata:
         meta[str(data['id'])] = {CAMPAIGN_GROUP_ID: str(data['id']), 'campaign_group_name': data['name'], 'campaign_group_status': data['status']}
     
-    if options.insert_metadata != 'False':
+    if options.insert_metadata != 'False' and len(metadata) > 0:
         log.warning("No of metadata records for campaign group to be inserted for project %s : %d", linkedin_int_setting[PROJECT_ID], len(metadata))
         timestamp_range_for_meta = get_timestamp_range(CAMPAIGN_GROUPS, sync_info_with_type, start_timestamp, end_timestamp)
         for timestamp in timestamp_range_for_meta:
@@ -274,7 +274,7 @@ def get_campaign_data(options, linkedin_int_setting, sync_info_with_type , campa
         meta[str(data['id'])] = {'campaign_group_id': campaign_group_id,'campaign_id': str(data['id']), 'campaign_name': data['name'], 'campaign_status': data['status'], 'campaign_type': data['type']}
 
     
-    if options.insert_metadata != 'False':
+    if options.insert_metadata != 'False' and len(metadata) > 0:
         log.warning("No of metadata records for campaigns to be inserted for project %s : %d", linkedin_int_setting[PROJECT_ID], len(metadata))
         timestamp_range_for_meta = get_timestamp_range(CAMPAIGNS, sync_info_with_type, start_timestamp, end_timestamp)
         
@@ -309,7 +309,7 @@ def get_creative_data(options, linkedin_int_setting, sync_info_with_type, campai
         campaign_group_id = campaign_meta[campaign_id][CAMPAIGN_GROUP_ID]
         meta[str(data['id'])] = {'campaign_group_id': campaign_group_id, 'campaign_id': campaign_id ,'creative_id': str(data['id']), 'creative_status': data['status'], 'creative_type': data['type']}
    
-    if options.insert_metadata != 'False':
+    if options.insert_metadata != 'False' and len(metadata) > 0:
         log.warning("No of metadata records for campaigns to be inserted for project %s : %d", linkedin_int_setting[PROJECT_ID], len(metadata))
         timestamp_range_for_meta = get_timestamp_range(CREATIVES, sync_info_with_type, start_timestamp, end_timestamp)
         
