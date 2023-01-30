@@ -127,6 +127,7 @@ const linkedinCampaignMetadataFetchQueryStr = "select campaign_information.campa
 	"from linkedin_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_ad_account_id IN (?) group by campaign_id_1 " +
 	") as campaign_latest_timestamp_id " +
 	"ON campaign_information.campaign_id_1 = campaign_latest_timestamp_id.campaign_id_1 AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp "
+const insertLinkedinStr = "INSERT INTO linkedin_documents (project_id,customer_ad_account_id,type,timestamp,id,campaign_group_id,campaign_id,creative_id,value,created_at,updated_at) VALUES "
 
 func (store *MemSQL) satisfiesLinkedinDocumentForeignConstraints(linkedinDocument model.LinkedinDocument) int {
 	logFields := log.Fields{
@@ -251,6 +252,27 @@ func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountI
 	return linkedinLastSyncInfos, http.StatusOK
 }
 
+func validateLinkedinDocuments(linkedinDocuments []model.LinkedinDocument) int {
+	for index, document := range linkedinDocuments {
+		if document.CustomerAdAccountID == "" || document.TypeAlias == "" {
+			log.WithField("document", document).Error("Invalid linkedin document.")
+			return http.StatusBadRequest
+		}
+		if document.ProjectID == 0 || document.Timestamp == 0 {
+			log.WithField("document", document).Error("Invalid linkedin document.")
+			return http.StatusBadRequest
+		}
+
+		docType, docTypeExists := LinkedinDocumentTypeAlias[document.TypeAlias]
+		if !docTypeExists {
+			log.WithField("document", document).Error("Invalid linkedin document.")
+			return http.StatusBadRequest
+		}
+		addLinkedinDocType(&linkedinDocuments[index], docType)
+	}
+	return http.StatusOK
+}
+
 // CreatelinkedinDocument ...
 func (store *MemSQL) CreateLinkedinDocument(projectID int64, document *model.LinkedinDocument) int {
 	logFields := log.Fields{
@@ -277,8 +299,8 @@ func (store *MemSQL) CreateLinkedinDocument(projectID int64, document *model.Lin
 	}
 	document.Type = docType
 
-	campaignGroupID, campaignID, creativeID, error := getLinkedinHierarchyColumnsByType(docType, document.Value)
-	if error != nil {
+	campaignGroupID, campaignID, creativeID, err := getLinkedinHierarchyColumnsByType(docType, document.Value)
+	if err != nil {
 		logCtx.Error("Invalid docType alias.")
 		return http.StatusBadRequest
 	}
@@ -295,7 +317,7 @@ func (store *MemSQL) CreateLinkedinDocument(projectID int64, document *model.Lin
 	}
 
 	db := C.GetServices().Db
-	err := db.Create(&document).Error
+	err = db.Create(&document).Error
 	if err != nil {
 		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).WithField("id", document.ID).Error(
@@ -307,6 +329,74 @@ func (store *MemSQL) CreateLinkedinDocument(projectID int64, document *model.Lin
 		return http.StatusInternalServerError
 	}
 	UpdateCountCacheByDocumentType(projectID, &document.CreatedAt, "linkedin")
+	return http.StatusCreated
+}
+
+func addColumnInformationForLinkedinDocuments(linkedinDocuments []model.LinkedinDocument) ([]model.LinkedinDocument, int) {
+	logFields := log.Fields{"linkedin_documents": linkedinDocuments}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	for index, document := range linkedinDocuments {
+		campaignGroupID, campaignID, creativeID, err := getLinkedinHierarchyColumnsByType(document.Type, document.Value)
+		if err != nil {
+			log.WithField("document", linkedinDocuments[index]).Error("Invalid docType alias.")
+			return linkedinDocuments, http.StatusBadRequest
+		}
+		addColumnInformationForLinkedinDocument(&linkedinDocuments[index], campaignGroupID, campaignID, creativeID)
+	}
+	return linkedinDocuments, http.StatusOK
+}
+func addColumnInformationForLinkedinDocument(linkedinDocument *model.LinkedinDocument, campaignGroupID string, campaignID string, creativeID string) {
+	linkedinDocument.CampaignGroupID = campaignGroupID
+	linkedinDocument.CampaignID = campaignID
+	linkedinDocument.CreativeID = creativeID
+}
+
+func addLinkedinDocType(linkedinDoc *model.LinkedinDocument, docType int) {
+	linkedinDoc.Type = docType
+}
+
+// CreateMultipleLinkedinDocument ...
+func (store *MemSQL) CreateMultipleLinkedinDocument(linkedinDocuments []model.LinkedinDocument) int {
+	logFields := log.Fields{"linkedin_documents": linkedinDocuments}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	status := validateLinkedinDocuments(linkedinDocuments)
+	if status != http.StatusOK {
+		return status
+	}
+	linkedinDocuments, status = addColumnInformationForLinkedinDocuments(linkedinDocuments)
+	if status != http.StatusOK {
+		return status
+	}
+
+	db := C.GetServices().Db
+
+	insertStatement := insertLinkedinStr
+	insertValuesStatement := make([]string, 0, 0)
+	insertValues := make([]interface{}, 0, 0)
+	for _, linkedinDoc := range linkedinDocuments {
+		insertValuesStatement = append(insertValuesStatement, fmt.Sprintf("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+		insertValues = append(insertValues, linkedinDoc.ProjectID, linkedinDoc.CustomerAdAccountID,
+			linkedinDoc.Type, linkedinDoc.Timestamp, linkedinDoc.ID, linkedinDoc.CampaignGroupID, linkedinDoc.CampaignID, linkedinDoc.CreativeID, linkedinDoc.Value, linkedinDoc.CreatedAt, linkedinDoc.UpdatedAt)
+		UpdateCountCacheByDocumentType(linkedinDoc.ProjectID, &linkedinDoc.CreatedAt, "linkedin")
+	}
+	insertStatement += joinWithComma(insertValuesStatement...)
+	rows, err := db.Raw(insertStatement, insertValues...).Rows()
+
+	if err != nil {
+		if IsDuplicateRecordError(err) {
+			log.WithError(err).WithField("linkedinDocuments", linkedinDocuments).Error("Failed to create an linkedin doc. Duplicate.")
+			return http.StatusConflict
+		} else {
+			log.WithError(err).WithField("linkedinDocuments", linkedinDocuments).Error(
+				"Failed to create an linkedin doc. Continued inserting other docs.")
+			return http.StatusInternalServerError
+		}
+	}
+	defer rows.Close()
+
+	if status != http.StatusOK {
+		return status
+	}
 	return http.StatusCreated
 }
 func getLinkedinHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (string, string, string, error) {
@@ -583,7 +673,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64,
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
 	dataCurrency := ""
-	if(projectCurrency != ""){
+	if projectCurrency != "" {
 		dataCurrency = store.GetDataCurrencyForLinkedin(projectID)
 	}
 	if isSmartPropertyPresent {
@@ -631,13 +721,11 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(pro
 	return &query, customerAccountID, projectSetting.ProjectCurrency, nil
 }
 
-
-func (store *MemSQL) GetDataCurrencyForLinkedin(projectId int64) string{
+func (store *MemSQL) GetDataCurrencyForLinkedin(projectId int64) string {
 	query := "select JSON_EXTRACT_STRING(value, 'currency') from linkedin_documents where project_id = ? and type = 7 limit 1"
 	db := C.GetServices().Db
-	
 
-	params := make([]interface{},0)
+	params := make([]interface{}, 0)
 	params = append(params, projectId)
 	rows, err := db.Raw(query, params).Rows()
 	if err != nil {
@@ -749,7 +837,7 @@ func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 	return sql, params, selectKeys, selectMetrics, nil
 }
 func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool,
-	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{},dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -859,7 +947,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 
 	fromStatement := getLinkedinFromStatementWithJoins(query.Filters, query.GroupBy)
 	finalParams := make([]interface{}, 0)
-	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend") {
 		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
@@ -871,7 +959,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 		finalParams = append(finalParams, whereParams...)
 	}
 	resultSQLStatement := ""
-	if((dataCurrency != "" && projectCurrency != "")) && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend") {
 		resultSQLStatement = selectQuery + fromStatement + currencyQuery + finalFilterStatement
 	} else {
 		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
@@ -979,7 +1067,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID i
 	}
 	finalFilterStatement := whereConditionForFilters
 	finalParams := make([]interface{}, 0)
-	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend") {
 		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
@@ -992,7 +1080,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID i
 	}
 
 	resultSQLStatement := ""
-	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend") {
 		resultSQLStatement = selectQuery + fromLinkedinDocuments + currencyQuery + staticWhereStatementForLinkedin + finalFilterStatement
 	} else {
 		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)

@@ -36,9 +36,9 @@ const (
 	staticWhereStatementForAdwords = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument            = " FROM adwords_documents "
 	// This is monthly data populated at the start of every month
-	currencyQuery 				   = " LEFT OUTER JOIN ( "+
-									 "SELECT c1.date as date, c1.inr_value/c2.inr_value as inr_value from currency as c1 inner join currency c2 on c1.date = c2.date where c1.currency = ? and c2.currency = ?) as c "+
-									 "ON TRUNC(timestamp/100) = c.date "
+	currencyQuery = " LEFT OUTER JOIN ( " +
+		"SELECT c1.date as date, c1.inr_value/c2.inr_value as inr_value from currency as c1 inner join currency c2 on c1.date = c2.date where c1.currency = ? and c2.currency = ?) as c " +
+		"ON TRUNC(timestamp/100) = c.date "
 
 	shareHigherOrderExpression              = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
 	shareHigherOrderExpressionWithZeroCheck = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL AND JSON_EXTRACT_STRING(value, '%s') != '0.0' THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
@@ -1316,7 +1316,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, 
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
 	dataCurrency := ""
-	if(projectCurrency != ""){
+	if projectCurrency != "" {
 		dataCurrency = store.GetDataCurrencyForAdwords(projectID)
 	}
 	if isSmartPropertyPresent {
@@ -1340,27 +1340,26 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForAdwords(proj
 	var err error
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		return &model.ChannelQueryV1{}, nil, "",errors.New("Project setting not found")
+		return &model.ChannelQueryV1{}, nil, "", errors.New("Project setting not found")
 	}
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 	if customerAccountID == nil || len(*customerAccountID) == 0 {
-		return &model.ChannelQueryV1{}, nil, "",errors.New(integrationNotAvailable)
+		return &model.ChannelQueryV1{}, nil, "", errors.New(integrationNotAvailable)
 	}
 
 	transformedQuery, err = convertFromRequestToAdwordsSpecificRepresentation(query)
 	if err != nil {
 		logCtx.Warn("Request failed in validation: ", err)
-		return &model.ChannelQueryV1{}, nil, "",err
+		return &model.ChannelQueryV1{}, nil, "", err
 	}
 	return &transformedQuery, customerAccountID, projectSetting.ProjectCurrency, nil
 }
 
-func (store *MemSQL) GetDataCurrencyForAdwords(projectId int64) string{
+func (store *MemSQL) GetDataCurrencyForAdwords(projectId int64) string {
 	query := "select JSON_EXTRACT_STRING(value, 'currency_code') from adwords_documents where project_id = ? and type = 9 limit 1"
 	db := C.GetServices().Db
-	
 
-	params := make([]interface{},0)
+	params := make([]interface{}, 0)
 	params = append(params, projectId)
 	rows, err := db.Raw(query, params).Rows()
 	if err != nil {
@@ -1378,6 +1377,7 @@ func (store *MemSQL) GetDataCurrencyForAdwords(projectId int64) string{
 
 	return currency
 }
+
 // @Kark TODO v1
 // Currently, this relies on assumption of Object across different filterObjects. Change when we need robust.
 func convertFromRequestToAdwordsSpecificRepresentation(query model.ChannelQueryV1) (model.ChannelQueryV1, error) {
@@ -1546,7 +1546,7 @@ func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID int64, cus
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
-	return getSQLAndParamsForAdwordsV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency )
+	return getSQLAndParamsForAdwordsV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 }
 
 func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
@@ -1689,7 +1689,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	}
 	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(adwordsGroupBys)
 	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperty, filterPropertiesStatementBasedOnRequestFilters, filterStatementForSmartPropertyGroupBy)
-	if((dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion))){
+	if (dataCurrency != "" && projectCurrency != "") && (U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion)) {
 		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	finalParams = append(finalParams, staticWhereParams...)
@@ -1720,8 +1720,8 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 
 	fromStatement := getAdwordsFromStatementWithJoins(query.Filters, query.GroupBy)
 	// finalSQL
-	if((dataCurrency != "" && projectCurrency != "")  && (U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion))){
-		resultantSQLStatement = finalSelectStatement + fromStatement + currencyQuery + finalWhereStatement  + 
+	if (dataCurrency != "" && projectCurrency != "") && (U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion)) {
+		resultantSQLStatement = finalSelectStatement + fromStatement + currencyQuery + finalWhereStatement +
 			finalGroupByStatement + finalOrderByStatement + limitString
 	} else {
 		finalSelectStatement = strings.Replace(finalSelectStatement, "* inr_value", "", -1)
@@ -1913,7 +1913,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, f
 		return "", nil, nil, nil
 	}
 	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwords, filterPropertiesStatementBasedOnRequestFilters)
-	if((dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion))){
+	if (dataCurrency != "" && projectCurrency != "") && (U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion)) {
 		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	finalParams = append(finalParams, staticWhereParams...)
@@ -1944,8 +1944,8 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, f
 	finalSelectStatement = "SELECT " + joinWithComma(finalSelectKeys...)
 
 	// finalSQL
-	if((dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion))){
-		resultantSQLStatement = finalSelectStatement + fromAdwordsDocument + currencyQuery + finalWhereStatement +  
+	if (dataCurrency != "" && projectCurrency != "") && (U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion)) {
+		resultantSQLStatement = finalSelectStatement + fromAdwordsDocument + currencyQuery + finalWhereStatement +
 			finalGroupByStatement + finalOrderByStatement + limitString
 	} else {
 		finalSelectStatement = strings.Replace(finalSelectStatement, "* inr_value", "", -1)

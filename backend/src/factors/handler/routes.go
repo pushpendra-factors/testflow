@@ -323,7 +323,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/v1/pathanalysis/:id", V1.DeleteSavedPathAnalysisEntityHandler)
 	authRouteGroup.GET("/:project_id/v1/pathanalysis/:id", responseWrapper(V1.GetPathAnalysisData))
 
-
 	// event trigger alert
 	authRouteGroup.GET("/:project_id/v1/eventtriggeralert", responseWrapper(V1.GetEventTriggerAlertsByProjectHandler))
 	authRouteGroup.POST("/:project_id/v1/eventtriggeralert", responseWrapper(V1.CreateEventTriggerAlertHandler))
@@ -335,7 +334,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/explainV2", V1.PostFactorsHandlerV2)
 	authRouteGroup.POST("/:project_id/v1/explainV2/job", responseWrapper(V1.CreateExplainV2EntityHandler))
 	authRouteGroup.DELETE("/:project_id/v1/explainV2/:id", V1.DeleteSavedExplainV2EntityHandler)
-
 
 }
 
@@ -524,6 +522,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.POST("/linkedin/documents/add",
 		IH.DataServiceLinkedinAddDocumentHandler)
+
+	dataServiceRouteGroup.POST("/linkedin/documents/add_multiple",
+		IH.DataServiceLinkedinAddMultipleDocumentsHandler)
 
 	dataServiceRouteGroup.PUT("/linkedin/access_token",
 		IH.DataServiceLinkedinUpdateAccessToken)
