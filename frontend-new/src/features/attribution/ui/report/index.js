@@ -753,8 +753,8 @@ function CoreQuery({
         query_id: record.key || record.id
       });
     };
-    if (queryId) handleQueryIdChange();
-  }, [queryId, savedQueries, querySaved]);
+    if (queryId && !QueriesLoading) handleQueryIdChange();
+  }, [queryId, savedQueries, querySaved, QueriesLoading]);
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
