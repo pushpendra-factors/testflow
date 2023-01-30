@@ -44,8 +44,6 @@ function CardContent({ unit, resultState, durationObj }) {
     }
   }, [unit.query.query, attr_dimensions, content_groups, kpiConfig]);
 
-  const { queryType } = equivalentQuery;
-
   const attributionsState = useMemo(() => {
     return {
       eventGoal: equivalentQuery.eventGoal,
@@ -57,7 +55,7 @@ function CardContent({ unit, resultState, durationObj }) {
       queryOptions: { group_analysis: equivalentQuery.analyze_type },
       attrQueries: equivalentQuery.attrQueries
     };
-  }, [equivalentQuery, queryType]);
+  }, [equivalentQuery]);
 
   if (resultState.loading) {
     content = (

@@ -143,8 +143,6 @@ spec:
           - memsql
           - --disable_mql_db_writes
           - --disable_mql_redis_writes
-          - --linkedin_member_company_config_project_ids
-          - ""
         env:
           - name: MY_POD_IP
             valueFrom:

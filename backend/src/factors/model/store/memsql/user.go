@@ -341,9 +341,9 @@ func (store *MemSQL) GetUsersByCustomerUserID(projectID int64, customerUserID st
 		return nil, http.StatusNotFound
 	}
 
-	// Sort by created_at.
+	// Sort by created_at ASC
 	sort.Slice(users, func(i, j int) bool {
-		return users[i].CreatedAt.Before(users[i].CreatedAt)
+		return users[i].CreatedAt.Before(users[j].CreatedAt)
 	})
 
 	return users, http.StatusFound
@@ -392,12 +392,15 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerU
 	}
 
 	var users []model.User
-	if err := db.Order("created_at ASC").
-		Where("project_id = ? AND id IN ( ? )", projectID, userIDs).
-		Find(&users).Error; err != nil {
+	if err := db.Where("project_id = ? AND id IN ( ? )", projectID, userIDs).Find(&users).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to get selected users for id")
 		return nil, http.StatusInternalServerError
 	}
+
+	// sort by created_at ASC
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].CreatedAt.Before(users[j].CreatedAt)
+	})
 
 	return users, http.StatusFound
 }
@@ -2544,7 +2547,7 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 
 	groupIndex := fmt.Sprintf("group_%d_id", group.ID)
 	groupUserIndex := fmt.Sprintf("group_%d_user_id", group.ID)
-	user, status := store.GetUser(projectID, userID)
+	user, status := store.GetUserWithoutProperties(projectID, userID)
 	if status != http.StatusFound {
 		logCtx.Error("Failed to get user for group association.")
 		return nil, http.StatusInternalServerError
@@ -2724,6 +2727,33 @@ func (store *MemSQL) GetUserWithoutProperties(projectID int64, id string) (*mode
 	}
 
 	return &user, http.StatusFound
+}
+
+func (store *MemSQL) GetCustomerUserIdFromUserId(projectID int64, id string) (string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"user_id":    id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || id == "" {
+		logCtx.Error("Invalid parameters.")
+		return "", http.StatusBadRequest
+	}
+
+	var user model.User
+
+	db := C.GetServices().Db
+	if err := db.Limit(1).Where("project_id = ? AND id = ?", projectID, id).Select("customer_user_id").Find(&user).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return "", http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Getting customer_user_id failed on GetCustomerUserIdFromUserId")
+		return "", http.StatusInternalServerError
+	}
+	return user.CustomerUserId, http.StatusFound
 }
 
 func (store *MemSQL) PullUsersRowsForWIV2(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error) {

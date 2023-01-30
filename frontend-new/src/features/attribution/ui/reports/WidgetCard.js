@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState
 } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { SVG, Text } from 'Components/factorsComponents';
 import _ from 'lodash';
 import { ATTRIBUTION_METRICS, QUERY_TYPE_ATTRIBUTION } from 'Utils/constants';
@@ -17,11 +17,17 @@ import {
   getSavedAttributionMetrics,
   getValidGranularityForSavedQueryWithSavedGranularity
 } from 'Views/Dashboard/utils';
-import { initialState } from 'Views/CoreQuery/utils';
 import { shouldDataFetch } from 'Utils/dataFormatter';
 import { useHistory, useLocation } from 'react-router-dom';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { DashboardContext } from 'Context/DashboardContext';
+import {
+  initialState,
+  formatApiData,
+  calculateActiveUsersData,
+  calculateFrequencyData,
+  getStateQueryFromRequestQuery
+} from 'Views/CoreQuery/utils';
 
 function WidgetCard({ unit, durationObj, showDeleteWidgetModal }) {
   const hasComponentUnmounted = useRef(false);
@@ -41,7 +47,7 @@ function WidgetCard({ unit, durationObj, showDeleteWidgetModal }) {
 
   const savedQuery = useMemo(
     () => _.find(savedQueries, (sq) => sq.id === unit.query_id),
-    [savedQueries]
+    [savedQueries, unit.query_id]
   );
 
   const durationWithSavedFrequency = useMemo(() => {
@@ -93,7 +99,7 @@ function WidgetCard({ unit, durationObj, showDeleteWidgetModal }) {
       location.state = undefined;
       window.history.replaceState(null, '');
     }
-  }, [location.state, unit.id]);
+  }, [unit.id, location]);
 
   const getData = async (refresh = false) => {
     try {
