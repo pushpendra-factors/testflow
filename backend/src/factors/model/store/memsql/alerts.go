@@ -226,6 +226,55 @@ func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOf
 	return rAlertNames, http.StatusFound
 }
 
+func (store *MemSQL) GetAlertNamesByProjectIdTypeAndNameAndPropertyMappingName(projectID int64, reqID, nameOfPropertyMappings string) ([]string, int) {
+	rAlertNames := make([]string, 0)
+	alerts, statusCode := store.GetAllAlerts(projectID, true)
+	if statusCode != http.StatusFound {
+		return rAlertNames, statusCode
+	}
+
+	for _, alert := range alerts {
+		if alert.AlertType == model.ALERT_TYPE_SINGLE_RANGE || alert.AlertType == model.ALERT_TYPE_MULTI_RANGE {
+			_, _, kpiQuery, err := model.DecodeAndFetchAlertRelatedStructs(projectID, alert)
+			if err != nil {
+				log.WithField("kpiQuery", kpiQuery).WithField("alert", alert).Warn("Failed to decode and fetch alert - GetAlertNamesByProjectIdTypeAndNameAndPropertyMappingName")
+				return rAlertNames, http.StatusInternalServerError
+			}
+
+			if kpiQuery.CheckIfPropertyMappingNameIsPresent(nameOfPropertyMappings) {
+				rAlertNames = append(rAlertNames, alert.AlertName)
+			}
+		} else if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
+			query, status := store.GetQueryWithQueryId(alert.ProjectID, alert.QueryID)
+			if status != http.StatusFound {
+				log.Error("Query not found for id ", alert.QueryID)
+				continue
+			}
+			class, errMsg := store.GetQueryClassFromQueries(*query)
+			if errMsg != "" {
+				log.Error("Class not Found for queryID ", errMsg)
+				continue
+			}
+			if class == model.QueryClassKPI {
+				kpiQueryGroup := model.KPIQueryGroup{}
+				U.DecodePostgresJsonbToStructType(&query.Query, &kpiQueryGroup)
+				if len(kpiQueryGroup.Queries) == 0 {
+					log.Error("Query failed. Empty query group.")
+					continue
+				}
+				if kpiQueryGroup.CheckIfPropertyMappingNameIsPresent(nameOfPropertyMappings) {
+					rAlertNames = append(rAlertNames, alert.AlertName)
+				}
+			}
+		}
+	}
+
+	if len(rAlertNames) == 0 {
+		return rAlertNames, http.StatusNotFound
+	}
+	return rAlertNames, http.StatusFound
+}
+
 func (store *MemSQL) DeleteAlert(id string, projectID int64) (int, string) {
 	logFields := log.Fields{
 		"id":         id,

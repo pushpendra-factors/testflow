@@ -44,9 +44,6 @@ const HorizontalWindow = ({ windowTemplates, onWindowClick }) => {
     elements.push(oddarr);
     setAllItems(elements);
   }, [windowTemplates]);
-  useEffect(() => {
-    console.log(allItems);
-  }, [allItems]);
   const onLeftBtn = () => {
     ref.current.prev();
   };

@@ -5,6 +5,7 @@ import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
 import { SVG } from '../factorsComponents';
 import InfoCard from './InfoCard';
 import {
+  eventIconsColorMap,
   getEventCategory,
   getIconForCategory,
   groups,
@@ -40,6 +41,26 @@ function FaTimeline({
     setShowAll(showAllState);
   };
 
+  const renderIcon = (event) => (
+    <div
+      className='icon'
+      style={{
+        '--border-color': `${
+          eventIconsColorMap[event.icon || 'calendar_star'].borderColor
+        }`,
+        '--bg-color': `${
+          eventIconsColorMap[event.icon || 'calendar_star'].bgColor
+        }`
+      }}
+    >
+      <SVG
+        name={event.icon || 'calendar_star'}
+        size={16}
+        color={eventIconsColorMap[event.icon || 'calendar_star'].iconColor}
+      />
+    </div>
+  );
+
   const renderInfoCard = (event) => {
     const eventName =
       event.display_name === 'Page View'
@@ -54,31 +75,31 @@ function FaTimeline({
     const icon = getIconForCategory(category);
 
     return (
-      <InfoCard
-        title={event?.alias_name || event.display_name}
-        eventName={event?.event_name}
-        properties={event?.properties || {}}
-        trigger={hoverConditionals ? 'hover' : []}
-        icon={
-          <SVG
-            name={icon}
-            size={24}
-            color={icon === 'events_cq' ? 'blue' : null}
-          />
-        }
-      >
-        <div className='inline-flex-gap--6 items-center'>
-          <div>
+      <div className='tag'>
+        <InfoCard
+          title={event?.alias_name}
+          eventSource={event?.display_name}
+          eventName={event?.event_name}
+          properties={event?.properties || {}}
+          trigger={hoverConditionals ? 'hover' : []}
+          icon={
             <SVG
               name={icon}
-              size={16}
+              size={24}
               color={icon === 'events_cq' ? 'blue' : null}
             />
+          }
+        >
+          <div className='inline-flex gap--6 items-center'>
+            <div className='event-name--sm'>{eventName}</div>
+            {hoverConditionals ? (
+              <CaretRightOutlined
+                style={{ fontSize: '12px', color: '#8692A3' }}
+              />
+            ) : null}
           </div>
-          <div className='event-name--sm'>{eventName}</div>
-          {hoverConditionals ? <CaretRightOutlined /> : null}
-        </div>
-      </InfoCard>
+        </InfoCard>
+      </div>
     );
   };
 
@@ -130,6 +151,7 @@ function FaTimeline({
                     >
                       {eventsList?.map((event) => (
                         <div className='timeline-events__event'>
+                          {renderIcon(event)}
                           {renderInfoCard(event)}
                         </div>
                       ))}

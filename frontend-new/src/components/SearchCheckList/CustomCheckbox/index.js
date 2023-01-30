@@ -6,7 +6,7 @@ export default function CustomCheckbox({ key, name, checked, onChange }) {
   return (
     <div
       key={key}
-      className='inline-flex-gap--4 min-w-full p-2'
+      className='inline-flex gap--4 min-w-full p-2'
     >
       <div className='mr-2'>
         <Checkbox checked={checked} onChange={onChange} />

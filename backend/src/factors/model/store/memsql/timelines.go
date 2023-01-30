@@ -2,11 +2,13 @@ package memsql
 
 import (
 	"encoding/json"
+	"errors"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -99,12 +101,25 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		if status != http.StatusFound {
 			return nil, http.StatusBadRequest
 		}
-		segmentQuery := &model.SegmentQuery{}
+		segmentQuery := &model.Query{}
 		err := U.DecodePostgresJsonbToStructType(segment.Query, segmentQuery)
 		if err != nil {
 			return nil, http.StatusInternalServerError
 		}
-		payload.Filters = append(payload.Filters, segmentQuery.GlobalProperties...)
+		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
+			if C.IsEnabledEventsFilterInSegments() {
+				profiles, errCode, _ := store.GetAnalyzeResultForSegments(projectID, segment)
+				if errCode != http.StatusOK {
+					return nil, errCode
+				}
+				return profiles, http.StatusFound
+			} else {
+				var profiles = make([]model.Profile, 0)
+				return profiles, http.StatusBadRequest
+			}
+		} else {
+			payload.Filters = append(payload.Filters, segmentQuery.GlobalUserProperties...)
+		}
 	}
 
 	filterString, filterParams, errCode := buildWhereFromProperties(projectID, payload.Filters, 0)
@@ -377,6 +392,8 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			// Display Names
 			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
 				userActivity.DisplayName = "Page View"
+				// Page View Icon
+				userActivity.Icon = "window"
 			} else if standardDisplayNames[userActivity.EventName] != "" {
 				userActivity.DisplayName = standardDisplayNames[userActivity.EventName]
 			} else if projectDisplayNames[userActivity.EventName] != "" {
@@ -403,6 +420,20 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED {
 				userActivity.AliasName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TITLE])
 			}
+
+			// Set Icons
+			if icon, exists := model.EVENT_ICONS_MAP[userActivity.EventName]; exists {
+				userActivity.Icon = icon
+			} else if strings.Contains(userActivity.EventName, "hubspot_") || strings.Contains(userActivity.EventName, "hs_") {
+				userActivity.Icon = "hubspot_ads"
+			} else if strings.Contains(userActivity.EventName, "salesforce_") || strings.Contains(userActivity.EventName, "sf_") {
+				userActivity.Icon = "salesforce_ads"
+			}
+			// Default Icon
+			if userActivity.Icon == "" {
+				userActivity.Icon = "calendar_star"
+			}
+
 			// Filtered Properties
 			userActivity.Properties = GetFilteredProperties(userActivity.EventName, userActivity.EventType, properties)
 		}
@@ -632,4 +663,87 @@ func (store *MemSQL) GetLeftPaneProperties(projectID int64, profileType string, 
 		}
 	}
 	return filteredProperties
+}
+
+func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error) {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"name":       segment.Name,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectId == 0 || segment.Name == "" {
+		logCtx.Error("Segment event query Failed. Invalid parameters.")
+		return nil, http.StatusBadRequest, errors.New("segment event query failed. invalid parameters")
+	}
+
+	segmentQuery := &model.Query{}
+	err := U.DecodePostgresJsonbToStructType(segment.Query, segmentQuery)
+	if err != nil {
+		logCtx.Error("failed to decode json. aborting")
+		return nil, http.StatusBadRequest, errors.New("segment event query failed. invalid parameters")
+	}
+
+	result, errCode, errMsg := store.Analyze(projectId, *segmentQuery, C.EnableOptimisedFilterOnEventUserQuery(), false)
+	if errCode != http.StatusOK {
+		logCtx.Error("Failed at building query. ", errMsg)
+		return nil, errCode, nil
+	}
+
+	profiles := make([]model.Profile, 0)
+	if segmentQuery.Caller == model.USER_PROFILE_CALLER {
+		for _, profile := range result.Rows {
+			var row model.Profile
+			row.TableProps = make(map[string]interface{}, 0)
+			row.Identity = profile[0].(string)
+			var val bool
+			if profile[1] == float64(1) {
+				val = true
+			} else {
+				val = false
+			}
+			row.IsAnonymous = val
+			row.LastActivity = profile[2].(time.Time)
+			reflectProps := reflect.ValueOf(profile[3])
+			props := make(map[string]interface{}, 0)
+			if err := json.Unmarshal([]byte(reflectProps.String()), &props); err != nil {
+				logCtx.Error("Failed at unmarshalling props. ")
+				return nil, http.StatusInternalServerError, nil
+			}
+			filterTableProps := make(map[string]interface{}, 0)
+
+			for _, prop := range segmentQuery.TableProps {
+				if value, exists := (props)[prop]; exists {
+					filterTableProps[prop] = value
+				}
+			}
+			row.TableProps = filterTableProps
+			profiles = append(profiles, row)
+		}
+	} else if segmentQuery.Caller == model.ACCOUNT_PROFILE_CALLER {
+		for _, profile := range result.Rows {
+			var row model.Profile
+			row.TableProps = make(map[string]interface{}, 0)
+			row.Identity = profile[0].(string)
+			row.LastActivity = profile[1].(time.Time)
+			reflectProps := reflect.ValueOf(profile[2])
+			props := make(map[string]interface{}, 0)
+			if err := json.Unmarshal([]byte(reflectProps.String()), &props); err != nil {
+				logCtx.Error("Failed at unmarshalling props.")
+				return nil, http.StatusInternalServerError, nil
+			}
+			filterTableProps := make(map[string]interface{}, 0)
+
+			for _, prop := range segmentQuery.TableProps {
+				if value, exists := (props)[prop]; exists {
+					filterTableProps[prop] = value
+				}
+			}
+			row.TableProps = filterTableProps
+			profiles = append(profiles, row)
+		}
+	}
+
+	return profiles, http.StatusOK, nil
 }

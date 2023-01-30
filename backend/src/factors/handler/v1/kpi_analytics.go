@@ -19,21 +19,22 @@ import (
 )
 
 type KPIFilterValuesRequest struct {
-	Category        string `json:"category"`
-	DisplayCategory string `json:"display_category"`
-	ObjectType      string `json:"object_type"` // used for channels ex. object_type = campaign and for events. ex. object_type = event_name 
-	PropertyName    string `json:"property_name"`
-	Entity          string `json:"entity"`
-	Metric          string `json:"me"`
+	Category          string `json:"category"`
+	DisplayCategory   string `json:"display_category"`
+	ObjectType        string `json:"object_type"` // used for channels ex. object_type = campaign and for events. ex. object_type = event_name
+	PropertyName      string `json:"property_name"`
+	Entity            string `json:"entity"`
+	Metric            string `json:"me"`
+	IsPropertyMapping bool   `json:"is_property_mapping"` // true if requested property_name is a property mapping
 }
 
 func (req *KPIFilterValuesRequest) isValid() bool {
 	if req == nil {
 		return false
 	}
-	if req.Category == "" || !U.ContainsStringInArray([]string{model.ChannelCategory, model.CustomChannelCategory, model.EventCategory, model.ProfileCategory}, req.Category) ||
+	if !req.IsPropertyMapping && (req.Category == "" || !U.ContainsStringInArray([]string{model.ChannelCategory, model.CustomChannelCategory, model.EventCategory, model.ProfileCategory}, req.Category) ||
 		req.Entity == "" || !U.ContainsStringInArray([]string{model.EventEntity, model.UserEntity}, req.Entity) ||
-		req.ObjectType == "" || req.PropertyName == "" {
+		req.ObjectType == "") || req.PropertyName == "" {
 		return false
 	}
 	return true
@@ -148,8 +149,6 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 // @Router /{project_id}/v1/channels/filter_values [get]
 func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	reqID, projectID := getReqIDAndProjectID(c)
-	storeSelected := store.GetStore()
-	var resultantFilterValuesResponse interface{}
 	logCtx := log.WithField("projectID", projectID).WithField("req_id", reqID)
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "", true
@@ -163,8 +162,72 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 		logCtx.Warn(err)
 		return nil, http.StatusInternalServerError, INVALID_INPUT, "Error during validation of KPI FilterValues Data.", true
 	}
-	logCtx = logCtx.WithField("request", request)
 
+	// If property mapping is requested, then get the union of individual property values
+	if request.IsPropertyMapping {
+		return getKpiFilterValuesForPropertyMapping(request, projectID, reqID)
+	} else {
+		return getKpiFilterValuesForStaticProperty(request, projectID, reqID)
+	}
+}
+
+// Gets filter values for property mapping request as union of individual property values
+func getKpiFilterValuesForPropertyMapping(request KPIFilterValuesRequest, projectID int64, reqID string) (interface{}, int, string, string, bool) {
+
+	storeSelected := store.GetStore()
+	logCtx := log.WithField("projectID", projectID).WithField("req_id", reqID).WithField("request", request)
+
+	propertyMappings, errMsg, statusCode := storeSelected.GetPropertyMappingByProjectIDAndName(projectID, request.PropertyName)
+	if statusCode != http.StatusOK {
+		return nil, statusCode, PROCESSING_FAILED, errMsg, true
+	}
+
+	var properties []model.Property
+	err := U.DecodePostgresJsonbToStructType(propertyMappings.Properties, &properties)
+	if err != nil {
+		logCtx.WithError(err).Error("Error during decode of property_mapping property")
+		return nil, statusCode, PROCESSING_FAILED, "Error during decode of property_mapping property - KPIFilterValues handler.", true
+	}
+
+	// set to avoid duplicate values (to make a union of values)
+	filterValuesSet := map[interface{}]struct{}{}
+	for _, property := range properties {
+		request := KPIFilterValuesRequest{
+			Category:        property.Category,
+			DisplayCategory: property.DisplayCategory,
+			ObjectType:      property.ObjectType,
+			PropertyName:    property.Name,
+			Entity:          property.Entity,
+		}
+		filterValues, statusCode, err, errMsg, isError := getKpiFilterValuesForStaticProperty(request, projectID, reqID)
+		if isError {
+			logCtx.Error("Error during fetch of KPI Filter Values Data.")
+			return nil, statusCode, err, errMsg, true
+		}
+		// as channel and custom channel returns []interface{} and others return []string
+		if request.Category == model.ChannelCategory || request.Category == model.CustomChannelCategory {
+			for _, filterValue := range filterValues.([]interface{}) {
+				filterValuesSet[filterValue] = struct{}{}
+			}
+		} else {
+			for _, filterValue := range filterValues.([]string) {
+				filterValuesSet[filterValue] = struct{}{}
+			}
+		}
+	}
+	resultantFilterValuesResponse := make([]interface{}, 0, len(filterValuesSet))
+	for filterValue := range filterValuesSet {
+		resultantFilterValuesResponse = append(resultantFilterValuesResponse, filterValue)
+	}
+	return resultantFilterValuesResponse, http.StatusOK, "", "", false
+}
+
+// Gets filter values for static property request
+func getKpiFilterValuesForStaticProperty(request KPIFilterValuesRequest, projectID int64, reqID string) (interface{}, int, string, string, bool) {
+	storeSelected := store.GetStore()
+	var resultantFilterValuesResponse interface{}
+
+	logCtx := log.WithField("projectID", projectID).WithField("req_id", reqID).WithField("request", request)
 	if request.Category == model.ChannelCategory {
 		currentChannel, err := model.GetChannelFromKPIQuery(request.DisplayCategory, request.Category)
 		if err != nil {

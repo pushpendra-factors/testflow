@@ -196,17 +196,29 @@ function ProjectModal(props) {
               }}
             >
               <div className='flex items-center flex-no-wrap'>
-                <Avatar
-                  size={28}
-                  shape='square'
-                  style={{
-                    background: '#83D2D2',
-                    fontSize: '14px',
-                    textTransform: 'uppercase',
-                    fontWeight: '400',
-                    borderRadius: '4px'
-                  }}
-                >{`${project?.name?.charAt(0)}`}</Avatar>
+                {project.profile_picture ? (
+                  <img
+                    src={project.profile_picture}
+                    style={{
+                      borderRadius: '4px',
+                      width: '28px',
+                      height: '28px'
+                    }}
+                  />
+                ) : (
+                  <Avatar
+                    size={28}
+                    shape='square'
+                    style={{
+                      background: '#83D2D2',
+                      fontSize: '14px',
+                      textTransform: 'uppercase',
+                      fontWeight: '400',
+                      borderRadius: '4px'
+                    }}
+                  >{`${project?.name?.charAt(0)}`}</Avatar>
+                )}
+
                 <span className='font-bold ml-3'>{project?.name}</span>
               </div>
               {props.active_project?.id === project?.id ? (
@@ -266,17 +278,25 @@ function ProjectModal(props) {
             type='text'
             size='large'
           >
-            <Avatar
-              size={36}
-              shape='square'
-              style={{
-                background: '#ff0000',
-                opacity: '0.6',
-                textTransform: 'uppercase',
-                fontWeight: '400',
-                borderRadius: '4px'
-              }}
-            >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
+            {props.active_project.profile_picture ? (
+              <img
+                src={props.active_project.profile_picture}
+                style={{ width: '36px', borderRadius: '4px' }}
+                alt='avatar'
+              />
+            ) : (
+              <Avatar
+                size={36}
+                shape='square'
+                style={{
+                  background: '#ff0000',
+                  opacity: '0.6',
+                  textTransform: 'uppercase',
+                  fontWeight: '400',
+                  borderRadius: '4px'
+                }}
+              >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
+            )}
 
             <div className='flex flex-col items-start ml-2'>
               <div className='flex items-center'>

@@ -4,7 +4,12 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
-import { DEFAULT_TIMELINE_CONFIG, granularityOptions } from '../utils';
+import {
+  ALPHANUMSTR,
+  DEFAULT_TIMELINE_CONFIG,
+  granularityOptions,
+  iconColors
+} from '../utils';
 import {
   udpateProjectSettings,
   fetchProjectSettings
@@ -155,8 +160,8 @@ function ContactDetails({
       }).then(() =>
         getProfileUserDetails(
           activeProject?.id,
-          user?.identity,
-          user?.is_anonymous,
+          user?.identity?.id,
+          user?.identity?.isAnonymous,
           currentProjectSettings?.timelines_config
         )
       );
@@ -227,9 +232,29 @@ function ContactDetails({
   const renderLeftPane = () => (
     <div className='leftpane'>
       <div className='leftpane__user'>
-        <Avatar size={72} className='leftpane__user__avatar'>
-          <SVG name='user' size={40} />
-        </Avatar>
+        {user.identity.isAnonymous ? (
+          <SVG
+            name={`TrackedUser${user.identity.id.match(/\d/g)[0]}`}
+            size={96}
+          />
+        ) : (
+          <Avatar
+            size={96}
+            className='leftpane__user__avatar'
+            style={{
+              backgroundColor: `${
+                iconColors[
+                  ALPHANUMSTR.indexOf(
+                    user.identity.id.charAt(0).toUpperCase()
+                  ) % 8
+                ]
+              }`,
+              fontSize: '32px'
+            }}
+          >
+            {user.identity.id.charAt(0).toUpperCase()}
+          </Avatar>
+        )}
         <div className='py-2'>
           <Text type='title' level={6} extraClass='m-0' weight='bold'>
             {userDetails.data.title}

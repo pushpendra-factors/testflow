@@ -120,7 +120,7 @@ func TestAPIGroupPropertiesAndValuesHandler(t *testing.T) {
 	C.GetConfig().LookbackWindowForEventUserCache = 1
 
 	// Test groups properties handler.
-	groupNameEncoded := b64.StdEncoding.EncodeToString([]byte("g1"))
+	groupNameEncoded := b64.StdEncoding.EncodeToString([]byte(b64.StdEncoding.EncodeToString([]byte("g1"))))
 	var properties map[string]map[string][]string
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/groups/%s/properties", project.ID, groupNameEncoded)).
 		WithCookie(&http.Cookie{

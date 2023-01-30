@@ -281,8 +281,10 @@ type Configuration struct {
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
+	EnableFeatureGates                                 bool
 	EnableDBConnectionPool2                            bool
 	FormFillIdentificationAllowedProjects              string
+	EnableEventFiltersInSegments                       bool
 }
 
 type Services struct {
@@ -540,6 +542,11 @@ func ResetPropertyDetailsCacheByDate(timestamp int64) {
 // IsEnabledPropertyDetailFromDB should allow property type check from DB.
 func IsEnabledPropertyDetailFromDB() bool {
 	return configuration.enablePropertyTypeFromDB
+}
+
+// IsEnabledEventsFilterInSegments should allow event properties to be added in the query.
+func IsEnabledEventsFilterInSegments() bool {
+	return configuration.EnableEventFiltersInSegments
 }
 
 // IsEnabledPropertyDetailByProjectID enabled project_id for property type check from DB
@@ -2472,4 +2479,8 @@ func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
 		return true
 	}
 	return allowedProjectIDs[projectID]
+}
+
+func IsEnabledFeatureGates() bool {
+	return configuration.EnableFeatureGates
 }

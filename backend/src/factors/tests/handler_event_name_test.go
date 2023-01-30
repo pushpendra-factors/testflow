@@ -100,7 +100,7 @@ func sendGetEventProperties(projectId int64, event string, agent *model.Agent, r
 }
 
 func buildEventPropertiesRequest(projectId int64, event string, requestType, cookieData string) (*http.Request, error) {
-	eventEncoded := b64.StdEncoding.EncodeToString([]byte(event))
+	eventEncoded := b64.StdEncoding.EncodeToString([]byte(b64.StdEncoding.EncodeToString([]byte(event))))
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/event_names/%s/properties?is_display_name_enabled=true", projectId, eventEncoded)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -722,7 +722,7 @@ func TestEnableEventLevelProperties(t *testing.T) {
 	configs := make(map[string]interface{})
 	configs["rollupLookback"] = 1
 	event_user_cache.DoRollUpSortedSet(configs)
-	eventEncoded := b64.StdEncoding.EncodeToString([]byte(eventNameCreated))
+	eventEncoded := b64.StdEncoding.EncodeToString([]byte(b64.StdEncoding.EncodeToString([]byte(eventNameCreated))))
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	assert.Equal(t, err, nil)
 
@@ -839,7 +839,7 @@ func TestEnableEventLevelProperties(t *testing.T) {
 	configs = make(map[string]interface{})
 	configs["rollupLookback"] = 1
 	event_user_cache.DoRollUpSortedSet(configs)
-	eventEncoded = b64.StdEncoding.EncodeToString([]byte(eventNameCreated))
+	eventEncoded = b64.StdEncoding.EncodeToString([]byte(b64.StdEncoding.EncodeToString([]byte(eventNameCreated))))
 	cookieData, err = helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	assert.Equal(t, err, nil)
 

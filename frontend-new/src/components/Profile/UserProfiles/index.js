@@ -6,7 +6,8 @@ import {
   Divider,
   notification,
   Popover,
-  Tabs
+  Tabs,
+  Avatar
 } from 'antd';
 import Modal from 'antd/lib/modal/Modal';
 import { connect, useSelector } from 'react-redux';
@@ -32,10 +33,12 @@ import {
 } from '../../../reducers/global';
 import ProfileBeforeIntegration from '../ProfileBeforeIntegration';
 import {
+  ALPHANUMSTR,
   DEFAULT_TIMELINE_CONFIG,
   formatFiltersForPayload,
   formatPayloadForFilters,
-  formatSegmentsObjToGroupSelectObj
+  formatSegmentsObjToGroupSelectObj,
+  iconColors
 } from '../utils';
 import {
   getProfileUsers,
@@ -180,7 +183,34 @@ function UserProfiles({
         dataIndex: 'identity',
         key: 'identity',
         fixed: 'left',
-        ellipsis: true
+        ellipsis: true,
+        render: (identity) => (
+          <div className='flex items-center'>
+            {identity.isAnonymous ? (
+              <SVG
+                name={`TrackedUser${identity.id.match(/\d/g)[0]}`}
+                size={24}
+              />
+            ) : (
+              <Avatar
+                size={24}
+                className='userlist-avatar'
+                style={{
+                  backgroundColor: `${
+                    iconColors[
+                      ALPHANUMSTR.indexOf(identity.id.charAt(0).toUpperCase()) %
+                        8
+                    ]
+                  }`,
+                  fontSize: '16px'
+                }}
+              >
+                {identity.id.charAt(0).toUpperCase()}
+              </Avatar>
+            )}
+            <span className='ml-2'>{identity.id}</span>
+          </div>
+        )
       }
     ];
     currentProjectSettings?.timelines_config?.user_config?.table_props?.forEach(
@@ -248,7 +278,7 @@ function UserProfiles({
     const opts = { ...timelinePayload };
     opts.filters = formatFiltersForPayload(timelinePayload.filters);
     getProfileUsers(activeProject.id, opts);
-  }, [timelinePayload, currentProjectSettings]);
+  }, [activeProject.id, timelinePayload, currentProjectSettings]);
 
   const handleSaveSegment = (segmentPayload) => {
     createNewSegment(activeProject.id, segmentPayload)
@@ -531,23 +561,24 @@ function UserProfiles({
   const renderTable = () => (
     <div>
       <Table
+        size='large'
         onRow={(user) => ({
           onClick: () => {
             getProfileUserDetails(
               activeProject.id,
-              user.identity,
-              user.is_anonymous,
+              user.identity.id,
+              user.identity.isAnonymous,
               currentProjectSettings.timelines_config
             );
             setActiveUser(user);
             showModal();
           }
         })}
-        className='fa-table--basic'
+        className='fa-table--userlist'
         dataSource={getTableData(contacts.data)}
         columns={getColumns()}
         rowClassName='cursor-pointer'
-        pagination={{ position: ['bottom', 'left'] }}
+        pagination={{ position: ['bottom', 'left'], defaultPageSize: '25' }}
         scroll={{
           x:
             currentProjectSettings?.timelines_config?.user_config?.table_props
