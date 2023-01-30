@@ -44,7 +44,7 @@ def get_last_sync_info(linkedin_int_setting, options):
     all_info = response.json()
     sync_info_with_type = {}
     for info in all_info:
-        date = datetime.strptime(str(info['last_timestamp']), '%Y%m%d')+ timedelta(days=1)
+        date = datetime.strptime(str(info['last_timestamp']), '%Y%m%d')
         sync_info_with_type[info['type_alias']]= date.strftime('%Y-%m-%d')
     return sync_info_with_type, ''
 

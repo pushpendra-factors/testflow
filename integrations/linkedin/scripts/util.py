@@ -34,9 +34,9 @@ def sort_by_timestamp(data):
 
 def get_timestamp_range(doc_type, sync_info_with_type, start_timestamp, end_timestamp):
     timestamps =[]
-
     date_start = ''
     date_end = ''
+
     if start_timestamp != None:
         date_start = datetime.strptime(str(start_timestamp), '%Y%m%d')
         if end_timestamp != None:
@@ -47,15 +47,20 @@ def get_timestamp_range(doc_type, sync_info_with_type, start_timestamp, end_time
         if doc_type not in sync_info_with_type:
             date_start = (datetime.now() - timedelta(days=MAX_LOOKBACK))
         else:
-            date_start = sync_info_with_type[doc_type]
+            date_start = datetime.strptime(str(sync_info_with_type[doc_type]), '%Y-%m-%d')
         date_end = datetime.now() - timedelta(days=1)
     num_of_days = (date_end-date_start).days
     if num_of_days <=0:
         return []
+
     for i in range (0, num_of_days):
         date_start = date_start + timedelta(days=1)
         date_required = date_start.strftime("%Y%m%d")
         timestamps.append(date_required)
+    
+    #if range greater than max lookback, get latest range with length of maxlookback
+    if len(timestamps) > MAX_LOOKBACK:
+        timestamps = timestamps[-MAX_LOOKBACK:]
     return timestamps
 
 def update_result_with_metadata(response, doc_type, campaign_group_meta, campaign_meta, creative_meta):
