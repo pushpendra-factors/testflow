@@ -405,8 +405,8 @@ function UserProfiles({
   const segmentInfo = () => {
     const cardContent = [];
     if (activeSegment.query) {
-      if (activeSegment.query.gp) {
-        const filters = formatPayloadForFilters(activeSegment.query.gp);
+      if (activeSegment.query.gup) {
+        const filters = formatPayloadForFilters(activeSegment.query.gup);
         cardContent.push(
           <div className='pointer-events-none mt-3'>
             <PropertyFilter
