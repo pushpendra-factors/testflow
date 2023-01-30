@@ -1876,6 +1876,9 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		return v1 > v2
 	})
 
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"result": result}).Info("result before addGrandTotal")
+	}
 	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
 	return result
 }
