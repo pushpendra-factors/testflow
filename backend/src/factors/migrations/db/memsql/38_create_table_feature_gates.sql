@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS feature_gates (
   dashboard INT DEFAULT 2,
   offline_touchpoints INT DEFAULT 2,
   saved_queries INT DEFAULT 2,
-  explain INT DEFAULT 1,
+  explain_feature INT DEFAULT 1,
   filters INT DEFAULT 2,
   shareable_url INT DEFAULT 2,
   custom_metrics INT DEFAULT 2,

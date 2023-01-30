@@ -24,7 +24,7 @@ type FeatureGate struct {
 	Dashboard          int       `json:"dashboard"`
 	OfflineTouchpoints int       `json:"offline_touchpoints"`
 	SavedQueries       int       `json:"saved_queries"`
-	Explain            int       `json:"explain"`
+	ExplainFeature     int       `json:"explain_feature"`
 	Filters            int       `json:"filters"`
 	ShareableURL       int       `json:"shareable_url"`
 	CustomMetrics      int       `json:"custom_metrics"`
