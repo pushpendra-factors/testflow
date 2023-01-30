@@ -54,11 +54,9 @@ const  FAFilterSelect = ({
   const [eventFilterInfo, seteventFilterInfo] = useState(null);
   const [dateOptionSelectOpen,setDateOptionSelectOpen]=useState(false);
   const [containButton, setContainButton] = useState(true);
-
   const { userPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
   );
-
   useEffect(() => {
     if (filter) { 
       const prop = filter.props;
@@ -126,7 +124,6 @@ const  FAFilterSelect = ({
     setValuesByProps([...val]);
     seteventFilterInfo(val);
   };
-
   const valuesSelect = (val) => { 
     setValuesState(val.map((vl) => JSON.parse(vl)[0]));
     // setValuesState(val);
