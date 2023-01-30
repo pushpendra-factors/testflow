@@ -358,6 +358,9 @@ def get_member_company_data(options, linkedin_int_setting, sync_info_with_type):
         results, resp = get_insights(linkedin_int_setting, timestamp, MEMBER_COMPANY_INSIGHTS, 'MEMBER_COMPANY', request_counter)
         if resp['status'] == 'failed' or resp['errMsg'] != '':
             return resp
+        request_counter = resp[API_REQUESTS]
+        if len(results) == 0:
+            continue
         
         resp = get_company_name_and_insert(options, MEMBER_COMPANY_INSIGHTS,linkedin_int_setting[PROJECT_ID],linkedin_int_setting[LINKEDIN_AD_ACCOUNT],linkedin_int_setting[ACCESS_TOKEN], results, resp[API_REQUESTS], timestamp)
         if resp['status'] == 'failed' or resp['errMsg'] != '':
