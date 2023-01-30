@@ -7,12 +7,12 @@ import (
 	"factors/handler/helpers"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -192,6 +192,39 @@ func sendCreateCustomMetric(r *gin.Engine, project_id int64, agent *model.Agent,
 		"transformations": transformations,
 		"objTy":           objectType,
 		"type_of_query":   queryType,
+	}
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	url := "/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/v1/custom_metrics"
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, url).
+		WithPostParams(payload).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error sending create custom metrics request.")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func sendCreateCustomMetricWithPercentage(r *gin.Engine, project_id int64, agent *model.Agent, transformations *postgres.Jsonb, name string,
+	description string, objectType string, queryType int) *httptest.ResponseRecorder {
+	payload := map[string]interface{}{
+		"name":              name,
+		"description":       description,
+		"transformations":   transformations,
+		"objTy":             objectType,
+		"type_of_query":     queryType,
+		"display_result_as": model.MetricsPercentageType,
 	}
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {

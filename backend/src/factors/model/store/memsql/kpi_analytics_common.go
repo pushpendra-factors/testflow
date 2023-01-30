@@ -92,6 +92,7 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 				return []model.QueryResult{{}, {}}, http.StatusInternalServerError
 			}
 
+			internalKPIQueryGroup.DisplayResultAs = derivedMetric.DisplayResultAs
 			for internalIndex, internalQuery := range internalKPIQueryGroup.Queries {
 				internalKPIQueryGroup.Queries[internalIndex].Filters = append(internalQuery.Filters, query.Filters...)
 				internalKPIQueryGroup.Queries[internalIndex].GroupBy = query.GroupBy
@@ -204,7 +205,7 @@ func (store *MemSQL) ExecuteKPIQueriesAndGetResultsAsMap(projectID int64, reqID 
 }
 
 // runSingleKPIQuery runs a single KPI query
-// It branches execution into 2 cases: 
+// It branches execution into 2 cases:
 // 1. Normal KPI query using ExecuteNonDerivedKPIQuery
 // 2. Derived KPI query using ExecuteDerivedKPIQuery
 // Adds the result to the map of results
@@ -296,7 +297,7 @@ func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQ
 	return mapOfInternalQueryToResult, http.StatusOK, derivedQueryHashCode, ""
 }
 
-// ExecuteNonDerivedKPIQuery executes a non derived kpi query and returns the result. 
+// ExecuteNonDerivedKPIQuery executes a non derived kpi query and returns the result.
 // If property mapping is used in filters or group by, it will be resolved to the internal property
 // Results are obtained by executing the query based on its QueryType
 // Result headers are converted back to property mapping names if any property mapping is group by

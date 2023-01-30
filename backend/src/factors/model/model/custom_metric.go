@@ -59,8 +59,9 @@ type CustomMetric struct {
 	Description            string          `json:"description"`
 	TypeOfQuery            int             `json:"type_of_query"`
 	Transformations        *postgres.Jsonb `json:"transformations"`
-	ObjectType             string          `json:"obj_ty"` // Previously used as KPI Display Category for the metric
+	ObjectType             string          `json:"obj_ty"`                             // Previously used as KPI Display Category for the metric
 	SectionDisplayCategory string          `gorm:"-"  json:"section_display_category"` // To be used as KPI Display Category for the metric
+	DisplayResultAs        string          `json:"display_result_as"`
 	CreatedAt              time.Time       `json:"created_at"`
 	UpdatedAt              time.Time       `json:"updated_at"`
 }
@@ -75,6 +76,9 @@ func (customMetric *CustomMetric) GetKPIConfig() map[string]string {
 	currentMetric["name"] = customMetric.Name
 	currentMetric["display_name"] = customMetric.Name
 	currentMetric["type"] = ""
+	if customMetric.TypeOfQuery == DerivedQueryType {
+		currentMetric["type"] = customMetric.DisplayResultAs
+	}
 	return currentMetric
 }
 
@@ -110,6 +114,10 @@ func (customMetric *CustomMetric) IsValid() (bool, string) {
 		if strings.Contains(derivedMetricTransformation.Formula, " ") {
 			return false, "No empty space allowed in formula field"
 		}
+		if customMetric.DisplayResultAs != MetricsPercentageType && customMetric.DisplayResultAs != "" {
+			return false, "Invalid metric type - custom_metrics handler."
+		}
+
 		isValidDerivedKPI, errMsg := derivedMetricTransformation.IsValidDerivedKPI()
 		if !isValidDerivedKPI {
 			return false, errMsg

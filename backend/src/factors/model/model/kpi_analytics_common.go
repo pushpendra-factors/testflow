@@ -40,11 +40,12 @@ func (s *KPIStatus) CheckAndSetStatus(inputStatus int) {
 }
 
 type KPIQueryGroup struct {
-	Class         string       `json:"cl"`
-	Queries       []KPIQuery   `json:"qG"`
-	GlobalFilters []KPIFilter  `json:"gFil"`
-	GlobalGroupBy []KPIGroupBy `json:"gGBy"`
-	Formula       string       `json:"for"`
+	Class           string       `json:"cl"`
+	Queries         []KPIQuery   `json:"qG"`
+	GlobalFilters   []KPIFilter  `json:"gFil"`
+	GlobalGroupBy   []KPIGroupBy `json:"gGBy"`
+	Formula         string       `json:"for"`
+	DisplayResultAs string       `json:"display_result_as"`
 }
 
 func (q *KPIQueryGroup) GetClass() string {
@@ -877,7 +878,11 @@ func GetFinalResultantResultsForKPI(reqID string, kpiQueryGroup KPIQueryGroup, m
 				mapOfFormulaVariableToQueryResult[internalQuery.Name] = queryResult
 			}
 
-			finalResultantResults = append(finalResultantResults, EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult, externalQuery.Timezone, strings.ToLower(internalKPIQuery.Formula)))
+			formula := strings.ToLower(internalKPIQuery.Formula)
+			if internalKPIQuery.DisplayResultAs == MetricsPercentageType {
+				formula = fmt.Sprintf("(%s)*100", formula)
+			}
+			finalResultantResults = append(finalResultantResults, EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult, externalQuery.Timezone, formula))
 
 		} else {
 			if groupByTimestamp == "" {
