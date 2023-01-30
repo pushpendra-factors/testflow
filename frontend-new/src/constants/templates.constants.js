@@ -47,7 +47,6 @@ export class Integration_Checks {
   // 1. Requirements = Array<{mandatory, name, keyname}>
   checkRequirements = (requirements = []) => {
     let result = undefined;
-    console.log(requirements);
     let failed = [];
     try {
       requirements.forEach((element) => {
@@ -57,12 +56,10 @@ export class Integration_Checks {
           result = result && this[element];
         }
         if (!this[element]) failed.push(element);
-        console.log({ TRACE: result, element });
       });
     } catch (error) {
       console.log(error);
     }
-    console.log({ result, t: this, failed });
     return { result, failedAt: failed };
   };
 }
@@ -113,13 +110,13 @@ const ThumbnailAssetsWithName = [
   }
 ];
 
-const Templates = new Map();
+const TemplatesThumbnail = new Map();
 
 ThumbnailAssetsWithName.forEach((element) => {
-  Templates.set(element.name, element);
+  TemplatesThumbnail.set(element.name, element);
 });
 
 export const FallBackImage = TEMPLATES_HOSTCDN + 'FallBack.png';
 export const StartFreshImage = TEMPLATES_HOSTCDN + 'StartFresh.png';
 
-export default Templates;
+export default TemplatesThumbnail;

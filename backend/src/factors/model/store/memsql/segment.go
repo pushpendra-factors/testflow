@@ -76,7 +76,7 @@ func isValidSegment(segmentPayload *model.SegmentPayload) bool {
 		logCtx.Error("Segment Creation Failed. No Name Added.")
 		return false
 	}
-	if len(segmentPayload.Query.EventsWithProperties) == 0 && len(segmentPayload.Query.GlobalProperties) == 0 {
+	if len(segmentPayload.Query.EventsWithProperties) == 0 && len(segmentPayload.Query.GlobalUserProperties) == 0 {
 		logCtx.Error("Segment Creation Failed. No Query Added.")
 		return false
 	}
@@ -186,14 +186,14 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 
 	updatedQuery := segmentPayload.Query
 	if segmentPayload.Type != "" {
-		if len(updatedQuery.EventsWithProperties) == 0 && len(updatedQuery.GlobalProperties) == 0 {
+		if len(updatedQuery.EventsWithProperties) == 0 && len(updatedQuery.GlobalUserProperties) == 0 {
 			logCtx.Error("Failed to update segment by ID. Query is empty.")
 			return nil, http.StatusBadRequest
 		}
 		updateFields["type"] = segmentPayload.Type
 	}
 
-	if len(updatedQuery.EventsWithProperties) > 0 || len(updatedQuery.GlobalProperties) > 0 {
+	if len(updatedQuery.EventsWithProperties) > 0 || len(updatedQuery.GlobalUserProperties) > 0 {
 		querySegment, err := U.EncodeStructTypeToPostgresJsonb(segmentPayload.Query)
 		if err != nil {
 			log.WithFields(logFields).WithError(err).Error("Failed to encode segment query while segment updation")

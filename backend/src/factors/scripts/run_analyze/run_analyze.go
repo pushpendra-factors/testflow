@@ -24,17 +24,18 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+	analyzeIntervalInMins := flag.Int("analyze_tables_interval", 60, "Runs analyze for table, if not analyzed in given interval.")
 
 	defaultAppName := "analyze_job"
-	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	appName := C.GetAppName(defaultAppName, *overrideAppName)
-	enableAnalyzeTable := flag.Bool("enable_analyze_table", false, "Enables ANALYZE table if given.")
-	analyzeIntervalInMins := flag.Int("analyze_tables_interval", 60,
-		"Runs analyze for table, if not analyzed in given interval.")
 
 	defaultHealthcheckPingID := C.HealthCheckAnalyzeJobPingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
+
 	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
+
+	flag.Parse()
 
 	config := &C.Configuration{
 		AppName:            appName,
@@ -62,16 +63,14 @@ func main() {
 	defer db.Close()
 
 	analyzeStatus := map[string]interface{}{}
-	if *enableAnalyzeTable {
-		status, failedTables := mqlStore.AnalyzeTableInAnInterval(*analyzeIntervalInMins)
-		if status == http.StatusInternalServerError {
-			analyzeStatus["status"] = "FAILED"
-			if len(failedTables) > 0 {
-				analyzeStatus["failedTables"] = failedTables
-			}
+	status, failedTables := mqlStore.AnalyzeTableInAnInterval(*analyzeIntervalInMins)
+	if status == http.StatusInternalServerError {
+		analyzeStatus["status"] = "FAILED"
+		if len(failedTables) > 0 {
+			analyzeStatus["failedTables"] = failedTables
 		}
-		analyzeStatus["status"] = "SUCCESS"
 	}
+	analyzeStatus["status"] = "SUCCESS"
 
 	if len(analyzeStatus) > 0 {
 		analyzeStatus["analyzeStatus"] = analyzeStatus

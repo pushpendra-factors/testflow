@@ -368,7 +368,7 @@ function ProfileBlock({
     );
   }
   let filterOptions = [
-    ['Filter By', 'filter'],
+    // ['Filter By', 'filter'],
     [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
   ];
   return (

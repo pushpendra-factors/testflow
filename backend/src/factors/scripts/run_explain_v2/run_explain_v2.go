@@ -33,10 +33,17 @@ func registerStructs() {
 	beam.RegisterType(reflect.TypeOf((*pattern.PropertiesCount)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*C.Configuration)(nil)).Elem())
 
+	beam.RegisterType(reflect.TypeOf((*merge.RunBeamConfig)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*merge.CUserIdsBeam)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*merge.UidMap)(nil)).Elem())
+
 	beam.RegisterType(reflect.TypeOf((*T.CpThreadDoFn)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*T.UpThreadDoFn)(nil)).Elem())
-	beam.RegisterType(reflect.TypeOf((*merge.RunBeamConfig)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*T.CPatternsBeam)(nil)).Elem())
+
+	// do fn
+	beam.RegisterType(reflect.TypeOf((*merge.SortUsDoFn)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*merge.SortAdDoFn)(nil)).Elem())
 
 }
 

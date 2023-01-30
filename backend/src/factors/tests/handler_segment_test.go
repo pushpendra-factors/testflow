@@ -147,7 +147,7 @@ func TestPostAPISegmentHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create new segment.
-	events := make([]model.EventWithProperty, 1)
+	events := make([]model.QueryEventWithProperties, 1)
 	properties := make([]model.QueryProperty, 1)
 	prop := model.QueryProperty{
 		Value:     "1",
@@ -157,15 +157,14 @@ func TestPostAPISegmentHandler(t *testing.T) {
 		Type:      "type1",
 	}
 	properties[0] = prop
-	event := model.EventWithProperty{
-		Names:           "eventName1",
-		Properties:      properties,
-		LogicalOperator: "logicalOp1",
+	event := model.QueryEventWithProperties{
+		Name:       "eventName1",
+		Properties: properties,
 	}
 	events[0] = event
-	querySegment := model.SegmentQuery{
+	querySegment := model.Query{
 		EventsWithProperties: events,
-		GlobalProperties:     properties,
+		GlobalUserProperties: properties,
 	}
 
 	segment := &model.SegmentPayload{
@@ -200,7 +199,7 @@ func TestPostAPISegmentHandler(t *testing.T) {
 		Name:        "Name2",
 		Description: "dummy info",
 		Type:        "event",
-		Query:       model.SegmentQuery{},
+		Query:       model.Query{},
 	}
 
 	w = sendSegmentPostReq(r, *segment, project.ID, agent)
@@ -237,7 +236,7 @@ func TestPostAPISegmentHandler(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	// creating record with only EventsWithProperties in Query
-	querySegment = model.SegmentQuery{
+	querySegment = model.Query{
 		EventsWithProperties: events,
 	}
 	segment = &model.SegmentPayload{
@@ -250,9 +249,9 @@ func TestPostAPISegmentHandler(t *testing.T) {
 	w = sendSegmentPostReq(r, *segment, project.ID, agent)
 	assert.Equal(t, http.StatusCreated, w.Code)
 
-	// creating record with only GlobalProperties in Query
-	querySegment = model.SegmentQuery{
-		GlobalProperties: properties,
+	// creating record with only GlobalUserProperties in Query
+	querySegment = model.Query{
+		GlobalUserProperties: properties,
 	}
 	segment = &model.SegmentPayload{
 		Name:        "Name4",
@@ -273,7 +272,7 @@ func TestGetAPIAllSegmentsHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create new segment.
-	events := make([]model.EventWithProperty, 1)
+	events := make([]model.QueryEventWithProperties, 1)
 	properties := make([]model.QueryProperty, 1)
 	prop := model.QueryProperty{
 		Value:     "1",
@@ -283,15 +282,13 @@ func TestGetAPIAllSegmentsHandler(t *testing.T) {
 		Type:      "type1",
 	}
 	properties[0] = prop
-	event := model.EventWithProperty{
-		Names:           "eventName1",
-		Properties:      properties,
-		LogicalOperator: "logicalOp1",
-	}
+	event := model.QueryEventWithProperties{
+		Name:       "eventName1",
+		Properties: properties}
 	events[0] = event
-	querySegment := model.SegmentQuery{
+	querySegment := model.Query{
 		EventsWithProperties: events,
-		GlobalProperties:     properties,
+		GlobalUserProperties: properties,
 	}
 
 	segment := &model.SegmentPayload{
@@ -313,15 +310,14 @@ func TestGetAPIAllSegmentsHandler(t *testing.T) {
 		Type:      "type1",
 	}
 	properties[0] = prop
-	event = model.EventWithProperty{
-		Names:           "eventName1",
-		Properties:      properties,
-		LogicalOperator: "logicalOp1",
+	event = model.QueryEventWithProperties{
+		Name:       "eventName1",
+		Properties: properties,
 	}
 	events[0] = event
-	querySegment = model.SegmentQuery{
+	querySegment = model.Query{
 		EventsWithProperties: events,
-		GlobalProperties:     properties,
+		GlobalUserProperties: properties,
 	}
 
 	segment = &model.SegmentPayload{
@@ -349,7 +345,7 @@ func TestGetAPISegmentByIdHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create new segment.
-	events := make([]model.EventWithProperty, 1)
+	events := make([]model.QueryEventWithProperties, 1)
 	properties := make([]model.QueryProperty, 1)
 	prop := model.QueryProperty{
 		Value:     "1",
@@ -359,15 +355,14 @@ func TestGetAPISegmentByIdHandler(t *testing.T) {
 		Type:      "type1",
 	}
 	properties[0] = prop
-	event := model.EventWithProperty{
-		Names:           "eventName1",
-		Properties:      properties,
-		LogicalOperator: "logicalOp1",
+	event := model.QueryEventWithProperties{
+		Name:       "eventName1",
+		Properties: properties,
 	}
 	events[0] = event
-	querySegment := model.SegmentQuery{
+	querySegment := model.Query{
 		EventsWithProperties: events,
-		GlobalProperties:     properties,
+		GlobalUserProperties: properties,
 	}
 
 	segment := &model.SegmentPayload{
@@ -408,7 +403,7 @@ func TestPutAPISegmentHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create new segment.
-	events := make([]model.EventWithProperty, 1)
+	events := make([]model.QueryEventWithProperties, 1)
 	properties := make([]model.QueryProperty, 1)
 	prop := model.QueryProperty{
 		Value:     "1",
@@ -418,15 +413,14 @@ func TestPutAPISegmentHandler(t *testing.T) {
 		Type:      "type1",
 	}
 	properties[0] = prop
-	event := model.EventWithProperty{
-		Names:           "eventName1",
-		Properties:      properties,
-		LogicalOperator: "logicalOp1",
+	event := model.QueryEventWithProperties{
+		Name:       "eventName1",
+		Properties: properties,
 	}
 	events[0] = event
-	querySegment := model.SegmentQuery{
+	querySegment := model.Query{
 		EventsWithProperties: events,
-		GlobalProperties:     properties,
+		GlobalUserProperties: properties,
 	}
 
 	segment := &model.SegmentPayload{
@@ -461,8 +455,8 @@ func TestPutAPISegmentHandler(t *testing.T) {
 		Type:      "new type1",
 	}
 	properties[0] = prop
-	querySegment = model.SegmentQuery{
-		GlobalProperties:     properties,
+	querySegment = model.Query{
+		GlobalUserProperties: properties,
 		EventsWithProperties: events,
 	}
 
@@ -497,7 +491,7 @@ func TestDeleteAPISegmentHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create new segment.
-	events := make([]model.EventWithProperty, 1)
+	events := make([]model.QueryEventWithProperties, 1)
 	properties := make([]model.QueryProperty, 1)
 	prop := model.QueryProperty{
 		Value:     "1",
@@ -507,15 +501,14 @@ func TestDeleteAPISegmentHandler(t *testing.T) {
 		Type:      "type1",
 	}
 	properties[0] = prop
-	event := model.EventWithProperty{
-		Names:           "eventName1",
-		Properties:      properties,
-		LogicalOperator: "logicalOp1",
+	event := model.QueryEventWithProperties{
+		Name:       "eventName1",
+		Properties: properties,
 	}
 	events[0] = event
-	querySegment := model.SegmentQuery{
+	querySegment := model.Query{
 		EventsWithProperties: events,
-		GlobalProperties:     properties,
+		GlobalUserProperties: properties,
 	}
 
 	segment := &model.SegmentPayload{

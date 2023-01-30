@@ -253,12 +253,12 @@ function Dashboard({
         <DashboardAfterIntegration
           setaddDashboardModal={setaddDashboardModal}
         />
-        <AddDashboard
+        {/* <AddDashboard
           setEditDashboard={setEditDashboard}
           editDashboard={editDashboard}
           addDashboardModal={addDashboardModal}
           setaddDashboardModal={setaddDashboardModal}
-        />
+        /> */}
       </>
     );
   }

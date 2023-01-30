@@ -202,6 +202,8 @@ func main() {
 	blockedEmailDomainList := flag.String("blocked_email_domain_list", "", "List containing all blocked email domains")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
+	enableEventFiltersInSegments := flag.Bool("enable_event_filters_in_segments", false, "Enables adding event filters in segment query")
+	enableFeatureGates := flag.Bool("enable_feature_gates", false, "Enable Feature Gates")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -362,6 +364,8 @@ func main() {
 		IngestionTimezoneEnabledProjectIDs:             C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		ProjectIdsV2:                                   projectIdsArrayV2,
 		IncreaseKPILimitForProjectIDs:                  *IncreaseKPILimitForProjectIDs,
+		EnableEventFiltersInSegments:                   *enableEventFiltersInSegments,
+		EnableFeatureGates:                             *enableFeatureGates,
 		EnableDBConnectionPool2:                        *enableDBConnectionPool2,
 	}
 	C.InitConf(config)

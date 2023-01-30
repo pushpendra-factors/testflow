@@ -212,40 +212,7 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 			return nil, http.StatusOK, "", "", false
 		}
 	} else {
-		errorMessage := "This Custom KPI is part of \""
-		IsPrevious := false
-		if len(dashboardUnitNames) > 0 {
-			errorMessage = errorMessage + strings.Join(dashboardUnitNames, "\", \"") + "\" dashboard unit"
-			if len(dashboardUnitNames) > 1 {
-				errorMessage = errorMessage + "s"
-			}
-			IsPrevious = true
-		}
-		if len(alertNames) > 0 {
-			if IsPrevious {
-				errorMessage = errorMessage + " and \""
-			}
-			errorMessage = errorMessage + strings.Join(alertNames, "\", \"") + "\" alert"
-			if len(alertNames) > 1 {
-				errorMessage = errorMessage + "s"
-			}
-			IsPrevious = true
-		}
-		if len(derivedKPINames) > 0 {
-			if IsPrevious {
-				errorMessage = errorMessage + " and "
-			}
-			errorMessage = errorMessage + strings.Join(derivedKPINames, "\", \"") + "\" derived KPI"
-			if len(derivedKPINames) > 1 {
-				errorMessage = errorMessage + "s"
-			}
-		}
-
-		pronoun := "it"
-		if (len(dashboardUnitNames) + len(alertNames) + len(derivedKPINames)) > 1 {
-			pronoun = "them"
-		}
-		errorMessage = errorMessage + ". Please remove " + pronoun + " first."
+		errorMessage := BuildDependentsErrorMessage("Custom KPI", [][]string{dashboardUnitNames, alertNames, derivedKPINames}, []string{"dashboard unit", "alert", "derived KPI"})
 		return nil, http.StatusBadRequest, DEPENDENT_RECORD_PRESENT, errorMessage, true
 	}
 }

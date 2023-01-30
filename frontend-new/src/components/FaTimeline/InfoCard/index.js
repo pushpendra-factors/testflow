@@ -9,6 +9,7 @@ import {
 
 function InfoCard({
   title,
+  eventSource,
   icon,
   eventName,
   properties = {},
@@ -17,17 +18,16 @@ function InfoCard({
 }) {
   const popoverContent = () => (
     <div className='fa-popupcard'>
-      <div className='inline-flex-gap--6 items-start mb-3'>
-        {icon}
-        <Text
-          extraClass='m-0'
-          type='title'
-          level={6}
-          weight='bold'
-          color='grey-2'
-        >
-          {PropTextFormat(title)}
-        </Text>
+      <div className='top-section'>
+        {title ? (
+          <div className='heading-with-sub'>
+            <div className='sub'>{PropTextFormat(eventSource)}</div>
+            <div className='main'>{title}</div>
+          </div>
+        ) : (
+          <div className='heading'>{PropTextFormat(eventSource)}</div>
+        )}{' '}
+        <div className='icon'>{icon}</div>
       </div>
 
       {Object.entries(properties).map(([key, value]) => {

@@ -53,7 +53,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
       maskTransitionName=''
       mask={false}
     >
-      <div data-tour='step-3' className='search-bar'>
+      <div data-testid='search-modal' data-tour='step-3' className='search-bar'>
         <div className='flex justify-center px-4'>
           <Input
             value={searchValue}
@@ -65,6 +65,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
             className={`fa-global-search--input fa-global-search--input-fw py-4 mt-4`}
             placeholder='Search Reports'
             prefix={<SVG name='search' size={16} color={'grey'} />}
+            data-testid='search-modal-input'
           />
         </div>
 
@@ -81,7 +82,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
                 itemHeight={itemHeight}
                 itemKey='id'
               >
-                {(d) => {
+                {(d, i) => {
                   const queryType = getQueryType(d.query);
                   const queryTypeName = {
                     events: 'events_cq',
@@ -103,6 +104,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
                       onClick={() => handleQueryClick(d)}
                       className={`flex justify-between items-center px-4 py-3 cursor-pointer ${styles.queryItem}`}
                       key={d.id}
+                      data-testid={`search-element-${i}`}
                     >
                       <div className='flex items-center truncate'>
                         <div className='mr-2'>
@@ -133,7 +135,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
         ) : null}
 
         {!data.length ? (
-          <div className='search-list pb-2'>
+          <div className='search-list pb-2' data-testid='no-data'>
             <div className={'p-4 flex '}>
               <Text
                 type={'title'}

@@ -113,7 +113,7 @@ func (store *MemSQL) CreateExplainV2Entity(userID string, projectId int64, entit
 		return nil, http.StatusConflict, "Please provide a different title"
 	}
 
-	if status, errMsg := store.isRuleValid(entity.Query, projectId); status == false {
+	if status, errMsg := store.isRuleValidv2(entity.Query, projectId); status == false {
 		return nil, http.StatusBadRequest, errMsg
 	}
 
@@ -333,4 +333,131 @@ func (store *MemSQL) UpdateExplainV2EntityStatus(projectID int64, id string, sta
 		return http.StatusInternalServerError, dbErr.Error()
 	}
 	return http.StatusOK, ""
+}
+
+func (store *MemSQL) isRuleValidv2(Rule model.FactorsGoalRule, ProjectID int64) (bool, string) {
+	logFields := log.Fields{
+		"project_id": ProjectID,
+		"rule":       Rule,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	res, msg := store.isEventObjectValidv2(Rule.EndEvent, Rule.Rule.EndEnEventFitler, ProjectID)
+	if res == false {
+		return res, msg
+	}
+	if Rule.StartEvent != "" {
+		res, msg := store.isEventObjectValidv2(Rule.StartEvent, Rule.Rule.StartEnEventFitler, ProjectID)
+		if res == false {
+			return res, msg
+		}
+	}
+	userProperties := make([]string, 0)
+	for _, filter := range Rule.Rule.GlobalFilters {
+		userProperties = append(userProperties, filter.Key)
+	}
+	res, msg = store.isUserPropertiesValidv2(ProjectID, userProperties)
+	if res == false {
+		logCtx.Error(msg)
+		return false, msg
+	}
+	userProperties = make([]string, 0)
+	for _, filter := range Rule.Rule.StartEnUserFitler {
+		userProperties = append(userProperties, filter.Key)
+	}
+	res, msg = store.isUserPropertiesValidv2(ProjectID, userProperties)
+	if res == false {
+		logCtx.Error(msg)
+		return false, msg
+	}
+	userProperties = make([]string, 0)
+	for _, filter := range Rule.Rule.EndEnUserFitler {
+		userProperties = append(userProperties, filter.Key)
+	}
+	res, msg = store.isUserPropertiesValidv2(ProjectID, userProperties)
+	if res == false {
+		logCtx.Error(msg)
+		return false, msg
+	}
+	return true, ""
+}
+
+func (store *MemSQL) isUserPropertiesValidv2(ProjectID int64, UserProperties []string) (bool, string) {
+	logFields := log.Fields{
+		"project_id":      ProjectID,
+		"user_properties": UserProperties,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	allUserPropertiesByCategory, err := store.GetUserPropertiesByProject(ProjectID, 10000, 30)
+	if err != nil {
+		logCtx.WithError(err).Error("Get user Properties from cache failed")
+		return false, "user proeprties missing"
+	}
+	userPropertiesMap := make(map[string]bool)
+	for _, properties := range allUserPropertiesByCategory {
+		for _, property := range properties {
+			userPropertiesMap[property] = true
+		}
+	}
+	for _, userProperty := range UserProperties {
+		if userPropertiesMap[userProperty] == false {
+			logCtx.Error("User Property not associated with project")
+			return false, "user property not associated to this project"
+		}
+	}
+	return true, ""
+}
+
+func (store *MemSQL) isEventPropertiesValidV2(ProjectID int64, EventName string, EventProperties []string) (bool, string) {
+	logFields := log.Fields{
+		"project_id":       ProjectID,
+		"event_name":       EventName,
+		"event_properties": EventProperties,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	allEventPropertiesByCategory, err := store.GetPropertiesByEvent(ProjectID, EventName, 10000, 30)
+	if err != nil {
+		logCtx.WithError(err).Error("Get event Properties from cache failed")
+		return false, "event proeprties missing"
+	}
+	eventPropertiesMap := make(map[string]bool)
+	for _, properties := range allEventPropertiesByCategory {
+		for _, property := range properties {
+			eventPropertiesMap[property] = true
+		}
+	}
+	for _, eventProperty := range EventProperties {
+		if eventPropertiesMap[eventProperty] == false {
+			logCtx.Error("event Property not associated with project")
+			return false, "event property not associated to this project"
+		}
+	}
+	return true, ""
+}
+
+func (store *MemSQL) isEventObjectValidv2(event string, eventFilters []model.KeyValueTuple, ProjectID int64) (bool, string) {
+	logFields := log.Fields{
+		"project_id":    ProjectID,
+		"event":         event,
+		"event_filters": eventFilters,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	_, err := store.GetEventName(event, ProjectID)
+	if err != http.StatusFound {
+		logCtx.Error("Get Event details failed")
+		return false, "event doesnt exist"
+	}
+	eventProperties := make([]string, 0)
+	for _, filter := range eventFilters {
+		eventProperties = append(eventProperties, filter.Key)
+	}
+	res, msg := store.isEventPropertiesValid(ProjectID, event, eventProperties)
+	if res == false {
+		logCtx.Error(msg)
+		return false, msg
+	}
+	return true, ""
 }

@@ -296,8 +296,8 @@ function AccountDetails({
             }
           }}
           alt=''
-          height={72}
-          width={72}
+          height={96}
+          width={96}
         />
         <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
           {accountDetails?.data?.name}
@@ -308,7 +308,11 @@ function AccountDetails({
       </div>
       <div className='px-8 pb-8'>{renderAddNewProp()}</div>
       <div className='absolute bottom-0 px-8 py-4'>
-        <a className='font-size--small' href='https://clearbit.com'>
+        <a
+          className='font-size--small'
+          href='https://clearbit.com'
+          target='_blank'
+        >
           Brand Logo provided by Clearbit
         </a>
       </div>

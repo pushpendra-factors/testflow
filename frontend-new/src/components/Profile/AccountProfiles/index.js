@@ -218,7 +218,7 @@ function AccountProfiles({
     const opts = { ...filterPayload };
     opts.filters = formatFiltersForPayload(filterPayload.filters);
     getProfileAccounts(activeProject.id, opts);
-  }, [activeProject, filterPayload]);
+  }, [activeProject, currentProjectSettings, filterPayload]);
 
   const selectUsers = () => (
     <div className='absolute top-0'>
@@ -530,11 +530,11 @@ function AccountProfiles({
             showModal();
           }
         })}
-        className='fa-table--basic'
+        className='fa-table--userlist'
         dataSource={getTableData(accounts.data)}
         columns={getColumns()}
         rowClassName='cursor-pointer'
-        pagination={{ position: ['bottom', 'left'] }}
+        pagination={{ position: ['bottom', 'left'], defaultPageSize: '25' }}
         scroll={{
           x:
             currentProjectSettings?.timelines_config?.account_config
@@ -542,13 +542,16 @@ function AccountProfiles({
         }}
         footer={() => (
           <div className='text-right'>
-            <a className='font-size--small' href='https://clearbit.com'>
+            <a
+              className='font-size--small'
+              href='https://clearbit.com'
+              target='_blank'
+            >
               Logos provided by Clearbit
             </a>
           </div>
         )}
       />
-      <div className='flex flex-row-reverse mt-4'></div>
     </div>
   );
 

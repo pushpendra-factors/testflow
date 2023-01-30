@@ -2023,7 +2023,7 @@ func getFilterPropertiesForAdwordsReportsNew(filters []model.ChannelFilterV1) (r
 					if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
 						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL OR JSON_EXTRACT_STRING(%s.properties, '%s') = '')", p.Object, p.Property, p.Object, p.Property)
 					} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
-						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s.properties, '%s') IS NOT NULL OR JSON_EXTRACT_STRING(%s.properties, '%s') != '')", p.Object, p.Property, p.Object, p.Property)
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s.properties, '%s') IS NOT NULL AND JSON_EXTRACT_STRING(%s.properties, '%s') != '')", p.Object, p.Property, p.Object, p.Property)
 					} else {
 						return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
 					}

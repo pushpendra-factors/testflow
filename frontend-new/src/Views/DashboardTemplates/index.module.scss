@@ -1,29 +1,59 @@
-$cq-card-transition: transform .2s ease-in-out;
+$cq-card-transition: transform 0.2s ease-in-out;
 
-.cardnew
-{
-    border: 1px solid #E7E9ED;
-    border-radius: 8px;
-    transition: all 0.3s;
-    cursor: pointer;
-    // width: 50vw;
-    // margin-left: 1.2em;
-    // overflow: hidden;
-    &:first-child{
-        margin-left: 0px; 
-    }
+.cardnew {
+  border: 1px solid #e7e9ed;
+  border-radius: 8px;
+  transition: all 0.3s;
+  cursor: pointer;
+  // width: 50vw;
+  // margin-left: 1.2em;
+  // overflow: hidden;
+  &:first-child {
+    margin-left: 0px;
+  }
 
-    &:hover{
-        box-shadow : 6px 7px 17px #E7E9ED;
-    }
-    &.disabled{
-        pointer-events: none; 
-        cursor: not-allowed;
-        box-shadow : none !important;
-        opacity: 0.7;
-    }
+  &:hover {
+    box-shadow: 6px 7px 17px #e7e9ed;
+  }
+  &.disabled {
+    pointer-events: none;
+    cursor: not-allowed;
+    box-shadow: none !important;
+    opacity: 0.7;
+  }
 }
 
-.contentClass{
-  height:70vh;
+.contentClass {
+  display: grid;
+  place-content: center;
+  height: 70vh;
+}
+
+.firstDashboardChoicesContainer {
+  background-color: #f5f6f8;
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 5px;
+
+  .firstViewMoreTemplates {
+    display: flex;
+    color: #1e89ff;
+    justify-content: flex-end;
+  }
+  .firstChoiceTemplatesItem {
+    min-width: 220px;
+    width: 220px;
+    margin: auto 10px;
+    cursor: pointer;
+    .firstChoiceTemplatesItemContent {
+      padding: 10px 0 0 0;
+      &:nth-child(1) {
+        color: #3e516c;
+        line-height: 20px;
+      }
+      &:nth-child(2) {
+        color: #8692a3;
+      }
+    }
+  }
 }
