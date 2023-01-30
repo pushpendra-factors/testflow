@@ -84,7 +84,7 @@ function MarkTouchpointBlock({
 
   const deleteItem = () => {
     setTouchpoint('');
-    setFilters([]);
+    // setFilters([]);
   };
   const toggleTouchPointSelect = () => {
     setSelectVisible(!selectVisible);

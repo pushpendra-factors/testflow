@@ -60,6 +60,34 @@ func DataServiceLinkedinAddDocumentHandler(c *gin.Context) {
 	c.JSON(errCode, gin.H{"message": "Successfully upserted linkedin document."})
 }
 
+// DataServiceLinkedinAddMultipleDocumentsHandler can help bulk insert of 10
+func DataServiceLinkedinAddMultipleDocumentsHandler(c *gin.Context) {
+	r := c.Request
+
+	var linkedinDocuments []model.LinkedinDocument
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&linkedinDocuments); err != nil {
+		log.WithError(err).Error("Failed to decode JSON request")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Failed to decode JSON request."})
+		return
+	}
+	errCode := store.GetStore().CreateMultipleLinkedinDocument(linkedinDocuments)
+	if errCode == http.StatusConflict {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Duplicate documents."})
+		return
+	}
+
+	if errCode != http.StatusCreated {
+		c.AbortWithStatusJSON(errCode,
+			gin.H{"error": "Failed creating linkedin document."})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Created linkedin document."})
+}
+
 type LinkedinUpdateAccessToken struct {
 	ProjectID   int64  `json:"project_id"`
 	AccessToken string `json:"access_token"`

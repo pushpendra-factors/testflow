@@ -268,7 +268,7 @@ const ConversionGoalBlock = ({
               )}
               {index === orFilterIndex && (
                 <div key={'init'}>
-                  {renderFilterWrapper(index, refValue, filter, true)}
+                  {renderFilterWrapper(index, refValue, undefined, true)}
                 </div>
               )}
             </div>

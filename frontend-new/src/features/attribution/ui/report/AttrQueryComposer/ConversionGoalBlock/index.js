@@ -77,7 +77,7 @@ function ConversionGoalBlock({
         propertyObj.label = attrGroupNameMap[grpName]?.label;
         propertyObj.icon = grpName;
         kpiList[grpName].forEach((item) => {
-          propertyObj.values.push([item.label, item.value])
+          propertyObj.values.push([item.label, item.value, item.category, item.group])
         });
         groupedList.push(propertyObj);
       });
@@ -87,7 +87,6 @@ function ConversionGoalBlock({
 
   }, [activeProject, showDerivedKPI, currentProjectSettings]);
 
-  
 
   const setEventPropsForUserGroup = () => {
     if (!eventGoal || !eventGoal?.label?.length) {
@@ -319,8 +318,11 @@ function ConversionGoalBlock({
       currentEventGoal.metric = val[1] ? val[1] : val[0];
       const grp = Object.keys(attrGroupNameMap).find((val) => attrGroupNameMap[val].label === group);
       currentEventGoal.group = attrGroupNameMap[grp].value;
-      if (category) {
-        currentEventGoal.category = category;
+      if (val[2]) {
+        currentEventGoal.category = val[2];
+      }
+      if(val[3]) {
+        currentEventGoal.group = val[3];
       }
     }
     eventGoalChange(currentEventGoal);

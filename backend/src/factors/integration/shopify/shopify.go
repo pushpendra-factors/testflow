@@ -380,7 +380,7 @@ func GetTrackDetailsFromCartObject(
 	}
 	eventTimestamp := eventTime.Unix()
 
-	_, errCode = store.GetStore().GetUser(projectId, userId)
+	errCode = store.GetStore().IsUserExistByID(projectId, userId)
 	if errCode != http.StatusFound {
 		return "", "", false, nil, nil, 0, fmt.Errorf(
 			fmt.Sprintf("Shopify User not found projectId:%d userId:%s for cart_token:%s",

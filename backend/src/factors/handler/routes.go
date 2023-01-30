@@ -537,6 +537,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.POST("/linkedin/documents/add", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinAddDocumentHandler)
 
+	dataServiceRouteGroup.POST("/linkedin/documents/add_multiple",
+		IH.DataServiceLinkedinAddMultipleDocumentsHandler)
+
 	dataServiceRouteGroup.PUT("/linkedin/access_token", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinUpdateAccessToken)
 

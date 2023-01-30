@@ -172,7 +172,7 @@ func (store *MemSQL) GetPropertiesByGroup(projectID int64, groupName string, lim
 		}
 	}
 
-	propertyDetails, propertyDetailsStatus := store.GetAllPropertyDetailsByProjectID(projectID, groupName, false)
+	propertyDetails, propertyDetailsStatus := store.GetAllPropertyDetailsByProjectID(projectID, groupName, true)
 	for _, v := range groupPropertiesSorted {
 		category := v.Category
 		if propertyDetailsStatus == http.StatusFound {

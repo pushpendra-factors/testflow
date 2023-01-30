@@ -12,12 +12,13 @@ function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
     return getNormalizedKpi({ kpi: item });
   });
 
-  const onChange = (group, value) => {
+  const onChange = (group, value, category) => {
     const opts = Object.assign({}, attrConfig);
-    const newEv = { label: '', group: '', value: '' };
+    const newEv = { label: '', group: '', value: '', category: '' };
     newEv.label = value[0];
     newEv.group = group;
     newEv.value = value[1];
+    newEv.category = category;
     !opts.kpis_to_attribute[header]
       ? (opts.kpis_to_attribute[header] = [])
       : opts.kpis_to_attribute[header];
@@ -48,7 +49,7 @@ function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
           <GroupSelect2
             groupedProperties={groupedProps}
             placeholder="Select Event"
-            optionClick={(group, val) => onChange(group, val)}
+            optionClick={(group, val, category) => onChange(group, val, category)}
             onClickOutside={() => setDDVisible(false)}
             allowEmpty={true}
           />

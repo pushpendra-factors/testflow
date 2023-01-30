@@ -476,3 +476,63 @@ func TestDeleteEventByIDs(t *testing.T) {
 	_, errCode = store.GetStore().GetEvent(projectId, userId, event.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 }
+
+func TestGetUserEventsByEventNameId(t *testing.T) {
+	// Initialize a project, user and  the event.
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	event1Timestamp := time.Now().Unix()
+	event1 := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: event1Timestamp}
+	_, errCode := store.GetStore().CreateEvent(event1)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	event2Timestamp := event1Timestamp + 1000
+	event2 := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: event2Timestamp}
+	_, errCode = store.GetStore().CreateEvent(event2)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	event3Timestamp := event2Timestamp + 1000
+	event3 := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: event3Timestamp}
+	_, errCode = store.GetStore().CreateEvent(event3)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	events, errCode := store.GetStore().GetUserEventsByEventNameId(projectId, userId, eventNameId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Len(t, events, 3)
+	assert.Equal(t, event3.ID, events[0].ID)
+	assert.Equal(t, event2.ID, events[1].ID)
+	assert.Equal(t, event1.ID, events[2].ID)
+	assert.Greater(t, events[0].Timestamp, events[1].Timestamp)
+	assert.Greater(t, events[1].Timestamp, events[2].Timestamp)
+}
+
+func TestGetEventByIdWithoutEventAndUserProperties(t *testing.T) {
+	// Initialize a project, user and  the event.
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	start := time.Now()
+	newEvent := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: start.Unix()}
+	event, errCode := store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	event, errCode = store.GetStore().GetEventById(projectId, event.ID, userId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, event.Properties)
+	assert.NotNil(t, event.UserProperties)
+
+	eventID, userID, errCode := store.GetStore().GetUserIdFromEventId(projectId, event.ID, "")
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, event.ID, eventID)
+	assert.Equal(t, newEvent.UserId, userID)
+
+	eventID, userID, errCode = store.GetStore().GetUserIdFromEventId(projectId, event.ID, userId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, event.ID, eventID)
+	assert.Equal(t, newEvent.UserId, userID)
+}

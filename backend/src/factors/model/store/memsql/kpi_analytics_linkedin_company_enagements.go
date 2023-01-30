@@ -1,7 +1,6 @@
 package memsql
 
 import (
-	C "factors/config"
 	"factors/model/model"
 	"net/http"
 	"strconv"
@@ -16,9 +15,6 @@ func (store *MemSQL) GetKPIConfigsForLinkedinCompanyEngagements(projectID int64,
 		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	if !C.IsLinkedinMemberCompanyConfigEnabled(projectID) {
-		return nil, http.StatusOK
-	}
 	projectIDInString := []string{strconv.FormatInt(projectID, 10)}
 	settings, errCode := store.GetLinkedinEnabledProjectSettingsForProjects(projectIDInString)
 	if errCode != http.StatusOK {

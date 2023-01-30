@@ -762,8 +762,8 @@ function CoreQuery({
         query_id: record.key || record.id
       });
     };
-    if (queryId) handleQueryIdChange();
-  }, [queryId, savedQueries, querySaved]);
+    if (queryId && !QueriesLoading) handleQueryIdChange();
+  }, [queryId, savedQueries, querySaved, QueriesLoading]);
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
@@ -801,7 +801,7 @@ function CoreQuery({
     setNavigatedFromAnalyse(location.state.navigatedFromAnalyse)
   }, [location, setNavigatedFromDashboard, setNavigatedFromAnalyse]);
 
-  if (loading || (queryId && QueriesLoading))
+  if (queryId && QueriesLoading)
     return (
       <div className='w-full h-full flex items-center justify-center'>
         <div className='w-full h-64 flex items-center justify-center'>
@@ -873,8 +873,13 @@ function CoreQuery({
                     Expand
                   </Button>
                 </div>
-
-                {requestQuery && (
+                {loading ? (
+                  <div className='w-full h-full flex items-center justify-center'>
+                    <div className='w-full h-64 flex items-center justify-center'>
+                      <Spin size='large' />
+                    </div>
+                  </div>
+                ) : requestQuery ? (
                   <ReportContent
                     breakdownType={breakdownType}
                     queryType={QUERY_TYPE_ATTRIBUTION}
@@ -892,7 +897,7 @@ function CoreQuery({
                     section={REPORT_SECTION}
                     runAttrCmprQuery={null}
                   />
-                )}
+                ) : null}
               </>
             )}
 

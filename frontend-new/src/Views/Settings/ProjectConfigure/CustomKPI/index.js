@@ -563,10 +563,7 @@ function CustomKPI({
               ? reverseDateOperatorMap[pr.co]
               : reverseOperatorMap[pr.co],
           props: [DNa, pr.prDaTy, 'filter'],
-          values:
-            pr.prDaTy === FILTER_TYPES.DATETIME
-              ? [val]
-              : val,
+          values: pr.prDaTy === FILTER_TYPES.DATETIME ? [val] : val,
           extra: [DNa, pr.prNa, pr.prDaTy]
         });
       } else if (pr.prDaTy === FILTER_TYPES.CATEGORICAL) {
@@ -1053,11 +1050,15 @@ function CustomKPI({
                                 .indexOf(input.toLowerCase()) >= 0
                             }
                           >
-                            {customKPIConfig?.result?.map((item) => (
-                              <Option key={item.obj_ty} value={item.obj_ty}>
-                                {_.startCase(item.obj_ty)}
-                              </Option>
-                            ))}
+                            {customKPIConfig?.result?.map((item) => {
+                              if (item.type_of_query === 1) {
+                                return (
+                                  <Option key={item.obj_ty} value={item.obj_ty}>
+                                    {_.startCase(item.obj_ty)}
+                                  </Option>
+                                );
+                              }
+                            })}
                           </Select>
                         </Form.Item>
                       </Col>
