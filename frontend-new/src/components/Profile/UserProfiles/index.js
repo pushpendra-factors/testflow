@@ -208,7 +208,7 @@ function UserProfiles({
                 {identity.id.charAt(0).toUpperCase()}
               </Avatar>
             )}
-            <span className='ml-2'>{identity.id}</span>
+            <span className='ml-2 truncate'>{identity.id}</span>
           </div>
         )
       }
@@ -405,8 +405,8 @@ function UserProfiles({
   const segmentInfo = () => {
     const cardContent = [];
     if (activeSegment.query) {
-      if (activeSegment.query.gp) {
-        const filters = formatPayloadForFilters(activeSegment.query.gp);
+      if (activeSegment.query.gup) {
+        const filters = formatPayloadForFilters(activeSegment.query.gup);
         cardContent.push(
           <div className='pointer-events-none mt-3'>
             <PropertyFilter
@@ -549,7 +549,6 @@ function UserProfiles({
           <Button
             size='large'
             className='fa-btn--custom mx-2 relative'
-            // type='text'
           >
             <SVG name='activity_filter' />
           </Button>

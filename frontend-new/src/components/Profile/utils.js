@@ -269,7 +269,7 @@ export const getIconForCategory = (category) => {
   return 'events_cq';
 };
 
-export const convertSVGtoURL = (svg) => {
+export const convertSVGtoURL = (svg = '') => {
   // svg needs to be passed with backticks
   const escapeRegExp = (str) => {
     return str.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, '\\$1');
@@ -300,6 +300,15 @@ export const convertSVGtoURL = (svg) => {
 
 // Made a seperate object for singleview timeline because I needed to fix the viewbox manually. This can be a temporary hack till I find something better.
 export const singleTimelineIconSVGs = {
+  brand: `<svg width="24" height="24" viewBox="-6 -6 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M21.1001 13.8955V3.74634C15.4949 3.74634 10.9509 8.2903 10.9509 13.8955H21.1001Z" fill="#EE3C3C"/>
+  <path d="M21.1001 3.74634L31.2493 3.74634C31.2493 9.35159 26.7054 13.8955 21.1001 13.8955V3.74634Z" fill="#EE3C3C"/>
+  <path d="M21.1001 15.9367V26.0859H10.9509L10.9509 15.9367H21.1001Z" fill="#EE3C3C"/>
+  <path d="M21.1001 15.9367H31.2493C31.2493 21.5419 26.7054 26.0859 21.1001 26.0859V15.9367Z" fill="#EE3C3C"/>
+  <path d="M10.9509 28.1044H21.1001C21.1001 33.7097 16.5562 38.2537 10.9509 38.2537V28.1044Z" fill="#EE3C3C"/>
+  <path opacity="0.1" fill-rule="evenodd" clip-rule="evenodd" d="M18.5034 13.8957C21.6169 9.31403 26.0567 5.75914 31.2489 3.82245C31.2081 9.39275 26.6799 13.8957 21.1 13.8957H18.5034ZM13.9264 26.0861C14.3794 22.4286 15.5324 18.9965 17.2428 15.9369H21.1H31.2492C31.2492 21.5421 26.7052 26.0861 21.1 26.0861H13.9264ZM14.8328 37.4849C14.1032 34.9843 13.7112 32.3331 13.7112 29.5877C13.7112 29.0901 13.7241 28.5956 13.7495 28.1046H21.1C21.1 32.3349 18.5119 35.9606 14.8328 37.4849Z" fill="white"/>
+  </svg>
+  `,
   salesforce_ads: `<svg width="24" height="24" viewBox="-12 -12 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
   <g clip-path="url(#clip0_4894_35075)">
   <mask id="mask0_4894_35075" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="2" y="8" width="48" height="34">
@@ -436,4 +445,4 @@ export const iconColors = [
   '#FAAD14'
 ];
 
-export const ALPHANUMSTR = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+export const ALPHANUMSTR = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';

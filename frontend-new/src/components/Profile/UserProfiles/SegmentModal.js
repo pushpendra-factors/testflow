@@ -25,7 +25,7 @@ function SegmentModal({
   const [segmentPayload, setSegmentPayload] = useState({
     name: '',
     description: '',
-    query: { ewp: [], gp: [] },
+    query: { ewp: [], gup: [] },
     type:
       type === 'All'
         ? profileType === 'user'
@@ -72,7 +72,7 @@ function SegmentModal({
   useEffect(() => {
     const opts = { ...segmentPayload };
     const filters = formatFiltersForPayload(filterProps);
-    opts.query = { gp: filters };
+    opts.query = { gup: filters };
     setSegmentPayload(opts);
   }, [filterProps]);
 

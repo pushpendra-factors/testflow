@@ -1876,6 +1876,9 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		return v1 > v2
 	})
 
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"result": result}).Info("result before addGrandTotal")
+	}
 	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers),
 		query.AttributionMethodology, query.AttributionMethodologyCompare)
 	return result
@@ -2136,19 +2139,17 @@ func AddCampaignDataForSource(attributionData map[string]*AttributionData, repor
 		validHeadersDimensions[KeyDimensionToHeaderMap[val]] = 1
 	}
 
-	if validHeadersDimensions[AttributionKeyCampaign] == 1 {
+	CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
+	for campaignName, value := range CampaignNameWiseMap {
+		if _, ok := attributionData[reports.CampaignSourceMapping[campaignName]]; ok {
 
-		CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
-		for campaignName, value := range CampaignNameWiseMap {
-			if _, ok := attributionData[reports.CampaignSourceMapping[campaignName]]; ok {
+			attributionData[reports.CampaignSourceMapping[campaignName]].Impressions += value.Impressions
+			attributionData[reports.CampaignSourceMapping[campaignName]].Clicks += value.Clicks
+			attributionData[reports.CampaignSourceMapping[campaignName]].Spend += value.Spend
 
-				attributionData[reports.CampaignSourceMapping[campaignName]].Impressions += value.Impressions
-				attributionData[reports.CampaignSourceMapping[campaignName]].Clicks += value.Clicks
-				attributionData[reports.CampaignSourceMapping[campaignName]].Spend += value.Spend
-
-			}
 		}
 	}
+
 	return nil
 }
 
@@ -2167,19 +2168,17 @@ func AddCampaignDataForChannelGroup(attributionData map[string]*AttributionData,
 		validHeadersDimensions[KeyDimensionToHeaderMap[val]] = 1
 	}
 
-	if validHeadersDimensions[AttributionKeyCampaign] == 1 {
+	CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
+	for campaignName, value := range CampaignNameWiseMap {
+		if _, ok := attributionData[reports.CampaignChannelGroupMapping[campaignName]]; ok {
 
-		CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
-		for campaignName, value := range CampaignNameWiseMap {
-			if _, ok := attributionData[reports.CampaignChannelGroupMapping[campaignName]]; ok {
+			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Impressions += value.Impressions
+			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Clicks += value.Clicks
+			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Spend += value.Spend
 
-				attributionData[reports.CampaignChannelGroupMapping[campaignName]].Impressions += value.Impressions
-				attributionData[reports.CampaignChannelGroupMapping[campaignName]].Clicks += value.Clicks
-				attributionData[reports.CampaignChannelGroupMapping[campaignName]].Spend += value.Spend
-
-			}
 		}
 	}
+
 	return nil
 }
 
@@ -2198,19 +2197,17 @@ func AddCampaignDataForSourceV1(attributionData map[string]*AttributionData, rep
 		validHeadersDimensions[KeyDimensionToHeaderMap[val]] = 1
 	}
 
-	if validHeadersDimensions[AttributionKeyCampaign] == 1 {
+	CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
+	for campaignName, value := range CampaignNameWiseMap {
+		if _, ok := attributionData[reports.CampaignSourceMapping[campaignName]]; ok {
 
-		CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
-		for campaignName, value := range CampaignNameWiseMap {
-			if _, ok := attributionData[reports.CampaignSourceMapping[campaignName]]; ok {
+			attributionData[reports.CampaignSourceMapping[campaignName]].Impressions += value.Impressions
+			attributionData[reports.CampaignSourceMapping[campaignName]].Clicks += value.Clicks
+			attributionData[reports.CampaignSourceMapping[campaignName]].Spend += value.Spend
 
-				attributionData[reports.CampaignSourceMapping[campaignName]].Impressions += value.Impressions
-				attributionData[reports.CampaignSourceMapping[campaignName]].Clicks += value.Clicks
-				attributionData[reports.CampaignSourceMapping[campaignName]].Spend += value.Spend
-
-			}
 		}
 	}
+
 	return nil
 }
 
@@ -2229,20 +2226,17 @@ func AddCampaignDataForChannelGroupV1(attributionData map[string]*AttributionDat
 		validHeadersDimensions[KeyDimensionToHeaderMap[val]] = 1
 	}
 
-	if validHeadersDimensions[AttributionKeyCampaign] == 1 {
+	CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
+	for campaignName, value := range CampaignNameWiseMap {
+		if _, ok := attributionData[reports.CampaignChannelGroupMapping[campaignName]]; ok {
 
-		CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
-		for campaignName, value := range CampaignNameWiseMap {
-			if _, ok := attributionData[reports.CampaignChannelGroupMapping[campaignName]]; ok {
+			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Impressions += value.Impressions
+			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Clicks += value.Clicks
+			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Spend += value.Spend
 
-				attributionData[reports.CampaignChannelGroupMapping[campaignName]].Impressions += value.Impressions
-				attributionData[reports.CampaignChannelGroupMapping[campaignName]].Clicks += value.Clicks
-				attributionData[reports.CampaignChannelGroupMapping[campaignName]].Spend += value.Spend
-
-			}
 		}
-
 	}
+
 	return nil
 }
 
