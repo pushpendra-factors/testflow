@@ -1285,28 +1285,35 @@ func TestDerivedKPIChannels(t *testing.T) {
 	w := sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, "google_ads_metrics", 2)
 	assert.Equal(t, http.StatusOK, w.Code)
 	query := model.KPIQuery{
-		Category:        "channels",
-		DisplayCategory: "google_ads_metrics",
-		PageUrl:         "",
-		Metrics:         []string{name1},
-		GroupBy:         []M.KPIGroupBy{},
-		From:            1659312000,
-		To:              1659657600,
-		QueryType:       "derived",
+		Category:         "channels",
+		DisplayCategory:  "google_ads_metrics",
+		PageUrl:          "",
+		Metrics:          []string{name1},
+		GroupBy:          []M.KPIGroupBy{},
+		From:             1659312000,
+		To:               1659657600,
+		QueryType:        "derived",
+		GroupByTimestamp: "date",
 	}
+	query1 := model.KPIQuery{}
+	U.DeepCopy(&query, &query1)
+	query1.GroupByTimestamp = ""
+
 	kpiQueryGroup := model.KPIQueryGroup{
 		Class:         "kpi",
-		Queries:       []model.KPIQuery{query},
+		Queries:       []model.KPIQuery{query, query1},
 		GlobalFilters: []model.KPIFilter{},
 		GlobalGroupBy: []model.KPIGroupBy{},
 	}
 
 	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	log.WithField("result", result).Warn("kark")
 	assert.Equal(t, http.StatusOK, statusCode)
-	assert.Equal(t, result[0].Headers, []string{"google_ads_metrics_" + name1})
-	assert.Equal(t, len(result[0].Rows), 1)
-	assert.Equal(t, result[0].Rows[0][0], float64(5))
+	assert.Equal(t, result[0].Headers, []string{"datetime", "google_ads_metrics_" + name1})
+	assert.Equal(t, result[1].Headers, []string{"google_ads_metrics_" + name1})
+	assert.Equal(t, len(result[1].Rows), 1)
+	assert.Equal(t, result[1].Rows[0][0], float64(5))
 
 	query = model.KPIQuery{
 		Category:         "channels",
