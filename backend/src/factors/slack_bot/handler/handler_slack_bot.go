@@ -142,8 +142,22 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 	if err != nil {
 		c.JSON(status, gin.H{"error": err})
 	}
-	channels := jsonResponse["channels"].([]interface{})
-	responseMetadata := jsonResponse["response_metadata"].(map[string]interface{})
+	var channels []interface{}
+	if v, ok := jsonResponse["channels"].([]interface{}); ok {
+		channels = v
+	} else {
+		log.Error("Error while reading channels from json Response for Project ", projectID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading channels from json Response"})
+		return
+	}
+	var responseMetadata map[string]interface{}
+	if v, ok := jsonResponse["response_metadata"].(map[string]interface{}); ok {
+		responseMetadata = v
+	} else {
+		log.Error("Error while reading response metadata from json Response for Project ", projectID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading response metadata from json Response"})
+		return
+	}
 	nextCursor := responseMetadata["next_cursor"].(string)
 	for nextCursor != "" {
 		jsonResponse, status, err = GetSlackChannels(accessTokens, nextCursor)
@@ -248,4 +262,3 @@ func SendSlackAlert(projectID int64, message, agentUUID string, channel model.Sl
 	defer resp.Body.Close()
 	return false, errors.New("Failed to send slack alert")
 }
-
