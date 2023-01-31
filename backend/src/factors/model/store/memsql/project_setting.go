@@ -196,7 +196,7 @@ func (store *MemSQL) SetIntegrationBits(projectID int64, integrationBits string)
 	db := C.GetServices().Db
 	logCtx := log.WithFields(logFields)
 
-	if err := db.Where("project_id = ?", projectID).Update("integration_bits", integrationBits).Error; err != nil {
+	if err := db.Table("project_settings").Where("project_id = ?", projectID).Update("integration_bits", integrationBits).Error; err != nil {
 		logCtx.WithError(err).Error("Setting integration_bits from project_setting failed")
 		return http.StatusInternalServerError
 	}

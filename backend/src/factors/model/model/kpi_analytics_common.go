@@ -312,17 +312,11 @@ type KPIQuery struct {
 	LimitNotApplicable bool         `json:"lmt_na"`
 }
 
-func (q KPIQuery) GetHashCodeForKPI() (string, error) {
-	hashCode := ""
-	var err error
-	if q.Category == ProfileCategory && q.GroupByTimestamp != "" {
-		q.GroupByTimestamp = ""
-		hashCode, err = q.GetQueryCacheHashString()
-	}
-	return hashCode, err
-}
-
-func (q *KPIQuery) GetQueryCacheHashString() (string, error) {
+// Here hash has to be considered only with GBT as empty string.
+// To keep hashCode logic consistent across KPI Query Execute, we are using below.
+// While using this, we need to handle GBT and NonGBT separately.
+func (q KPIQuery) GetQueryCacheHashString() (string, error) {
+	q.GroupByTimestamp = ""
 	queryMap, err := U.EncodeStructTypeToMap(q)
 	if err != nil {
 		return "", err
@@ -672,7 +666,7 @@ func ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys []KPIGroupBy, confi
 
 func GetNonGBTResultsFromGBTResultsAndMaps(reqID string, kpiQueryGroup KPIQueryGroup, mapOfNonGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult,
 	mapOfGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult, mapOfNonGBTKPINormalQueryToResults map[string][]QueryResult,
-	mapOfGBTKPINormalQueryToResults map[string][]QueryResult, externalQueryToInternalQueries map[string]KPIQueryGroup) (
+	mapOfGBTKPINormalQueryToResults map[string][]QueryResult, externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries map[string]KPIQueryGroup) (
 	int, map[string]map[string][]QueryResult, map[string][]QueryResult) {
 	logFields := log.Fields{
 		"query":  kpiQueryGroup,
@@ -687,7 +681,9 @@ func GetNonGBTResultsFromGBTResultsAndMaps(reqID string, kpiQueryGroup KPIQueryG
 		WithField("mapOfGBTDerivedKPIToInternalKPIToResults", mapOfGBTDerivedKPIToInternalKPIToResults).
 		WithField("mapOfNonGBTKPINormalQueryToResults", mapOfNonGBTKPINormalQueryToResults).
 		WithField("mapOfGBTKPINormalQueryToResults", mapOfGBTKPINormalQueryToResults).
-		WithField("externalQueryToInternalQueries", externalQueryToInternalQueries)
+		WithField("externalQueryToInternalQueries", externalGBTQueryToInternalQueries).
+		WithField("externalQueryToInternalQueries", externalNonGBTQueryToInternalQueries)
+
 	for _, externalQuery := range kpiQueryGroup.Queries {
 		if externalQuery.QueryType == Derived {
 			if externalQuery.GroupByTimestamp == "" {
@@ -698,8 +694,13 @@ func GetNonGBTResultsFromGBTResultsAndMaps(reqID string, kpiQueryGroup KPIQueryG
 					finalStatusCode = http.StatusInternalServerError
 					break
 				}
-
-				internalKPIQuery, exists := externalQueryToInternalQueries[externalQueryHashCode]
+				var internalKPIQuery KPIQueryGroup
+				var exists bool
+				if externalQuery.GroupByTimestamp == "" {
+					internalKPIQuery, exists = externalNonGBTQueryToInternalQueries[externalQueryHashCode]
+				} else {
+					internalKPIQuery, exists = externalGBTQueryToInternalQueries[externalQueryHashCode]
+				}
 				if !exists {
 					logEntry.Warn("Hash code not found in hash map 1")
 					finalStatusCode = http.StatusInternalServerError
@@ -798,7 +799,7 @@ func GetNonGBTResultsFromGBTResults(hashMapOfQueryToResult map[string][]QueryRes
 
 func GetFinalResultantResultsForKPI(reqID string, kpiQueryGroup KPIQueryGroup, mapOfNonGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult,
 	mapOfGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult, mapOfNonGBTKPINormalQueryToResults map[string][]QueryResult,
-	mapOfGBTKPINormalQueryToResults map[string][]QueryResult, externalQueryToInternalQueries map[string]KPIQueryGroup) ([]QueryResult, int) {
+	mapOfGBTKPINormalQueryToResults map[string][]QueryResult, externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries map[string]KPIQueryGroup) ([]QueryResult, int) {
 
 	logFields := log.Fields{
 		"query":  kpiQueryGroup,
@@ -813,12 +814,12 @@ func GetFinalResultantResultsForKPI(reqID string, kpiQueryGroup KPIQueryGroup, m
 		WithField("mapOfGBTDerivedKPIToInternalKPIToResults", mapOfGBTDerivedKPIToInternalKPIToResults).
 		WithField("mapOfNonGBTKPINormalQueryToResults", mapOfNonGBTKPINormalQueryToResults).
 		WithField("mapOfGBTKPINormalQueryToResults", mapOfGBTKPINormalQueryToResults).
-		WithField("externalQueryToInternalQueries", externalQueryToInternalQueries)
+		WithField("externalQueryToInternalQueries", externalGBTQueryToInternalQueries).
+		WithField("externalQueryToInternalQueries", externalNonGBTQueryToInternalQueries)
 
 	for _, externalQuery := range kpiQueryGroup.Queries {
 		results := make([]QueryResult, 0)
 		groupByTimestamp := externalQuery.GroupByTimestamp
-		externalQuery.GroupByTimestamp = ""
 		externalQueryHashCode, err := externalQuery.GetQueryCacheHashString()
 		logEntry = logEntry.WithField("externalQuery", externalQuery).WithField("externalQueryHashCode", externalQueryHashCode)
 		if err != nil {
@@ -827,9 +828,14 @@ func GetFinalResultantResultsForKPI(reqID string, kpiQueryGroup KPIQueryGroup, m
 			break
 		}
 		if externalQuery.QueryType == Derived {
-
 			mapOfFormulaVariableToQueryResult := make(map[string]QueryResult)
-			internalKPIQuery, exists := externalQueryToInternalQueries[externalQueryHashCode]
+			var internalKPIQuery KPIQueryGroup
+			var exists bool
+			if externalQuery.GroupByTimestamp == "" {
+				internalKPIQuery, exists = externalNonGBTQueryToInternalQueries[externalQueryHashCode]
+			} else {
+				internalKPIQuery, exists = externalGBTQueryToInternalQueries[externalQueryHashCode]
+			}
 			if !exists {
 				logEntry.Warn("Hash code not found in hash map 3")
 				finalStatusCode = http.StatusInternalServerError
@@ -858,7 +864,6 @@ func GetFinalResultantResultsForKPI(reqID string, kpiQueryGroup KPIQueryGroup, m
 
 				} else {
 
-					internalQuery.GroupByTimestamp = ""
 					internalQueryHashCode, err := internalQuery.GetQueryCacheHashString()
 					logEntry = logEntry.WithField("internalQueryHashCode", internalQueryHashCode)
 					if err != nil {
