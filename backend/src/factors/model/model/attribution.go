@@ -1349,6 +1349,12 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 		nonMatchingRow = append(nonMatchingRow, "none", "none", "none", "none") // channel, camp, adgroup, match_type
 		nonMatchingRow = append(nonMatchingRow, customDims...)
 		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
+	case AttributionKeySource:
+		nonMatchingRow = append(nonMatchingRow, "none") // camp
+		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
+	case AttributionKeyChannel:
+		nonMatchingRow = append(nonMatchingRow, "none") // camp
+		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
 	default:
 		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
 	}
