@@ -6,6 +6,8 @@ import (
 	"factors/model/store"
 	"net/http"
 
+	U "factors/util"
+
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -106,17 +108,15 @@ func SetFirstTimeIntegrationDone(projectID int64, integration string) int {
 		integrationBits = model.DEFAULT_STRING_WITH_ZEROES_32BIT
 	}
 
-	byteArray := []byte(integrationBits)
 	if integration == HubspotIntegrationName {
-		byteArray[0] = 1
+		integrationBits = U.SetBitAtPosition(integrationBits, "1", 0)
 	} else if integration == LeadSquaredIntegrationName {
-		byteArray[1] = 1
+		integrationBits = U.SetBitAtPosition(integrationBits, "1", 1)
 	} else if integration == model.MarketoIntegration {
-		byteArray[2] = 1
+		integrationBits = U.SetBitAtPosition(integrationBits, "1", 2)
 	} else {
-		byteArray[3] = 1
+		integrationBits = U.SetBitAtPosition(integrationBits, "1", 3)
 	}
-	integrationBits = string(byteArray)
 	statusCode2 := storeSelected.SetIntegrationBits(projectID, integrationBits)
 	if statusCode2 != http.StatusAccepted {
 		return statusCode2

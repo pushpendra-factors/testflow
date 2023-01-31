@@ -1613,3 +1613,8 @@ func GetModelType(start, end int64) string {
 		return "q"
 	}
 }
+
+func SetBitAtPosition(input string, replacement string, index int) string {
+	return input[:index] + string(replacement) + input[index+1:]
+
+}

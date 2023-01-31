@@ -46,21 +46,21 @@ function DashboardTemplates() {
       description: 'Track your main Web KPIs and more with one click',
       image: TemplatesThumbnail.get('webanalytics')?.image,
 
-      id: '3de1776a-2b06-4223-adf3-a57012833ec5'
+      id: BUILD_CONFIG.firstTimeDashboardTemplates?.webanalytics,
     },
     {
-      title: 'Paid Marketing',
+      title: 'All Paid Marketing',
       description: 'Keep track of your marketing spends performance',
-      image: TemplatesThumbnail.get('paidsocialmarketing')?.image,
+      image: TemplatesThumbnail.get('allpaidmarketing')?.image,
 
-      id: 'c3caa37c-afaa-4bc1-bf1a-b69f3e377b3e'
+      id:  BUILD_CONFIG.firstTimeDashboardTemplates?.allpaidmarketing,
     },
     {
       title: 'Hubspot Insights',
       description: 'A quick way to get started with CRM analysis',
       image: TemplatesThumbnail.get('hubspotinsights')?.image,
 
-      id: '215d866d-129c-415a-a728-592672604cfa'
+      id:  BUILD_CONFIG.firstTimeDashboardTemplates?.hubspotinsights,
     }
   ];
   return (
