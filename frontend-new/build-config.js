@@ -8,7 +8,12 @@ const CONFIG = {
       'https://storage.googleapis.com/factors-staging-v2/sdk/android/sdk-staging-v0.1.aar',
     factors_sdk_token: 'dummy',
     facebook_app_id: '1022017331596075',
-    linkedin_client_id: '861ix78kpo39ge'
+    linkedin_client_id: '861ix78kpo39ge',
+    firstTimeDashboardTemplates: {
+      'webanalytics':'3de1776a-2b06-4223-adf3-a57012833ec5',
+      'allpaidmarketing':'c3caa37c-afaa-4bc1-bf1a-b69f3e377b3e',
+      'hubspotinsights':'215d866d-129c-415a-a728-592672604cfa'
+    }
   },
   staging: {
     backend_host: 'https://staging-api.factors.ai',
@@ -17,7 +22,12 @@ const CONFIG = {
       'https://storage.googleapis.com/factors-staging-v2/sdk/android/sdk-staging-v0.1.aar',
     factors_sdk_token: 'we0jyjxcs0ix4ggnkptymjh48ur8y7q7',
     facebook_app_id: '1022017331596075',
-    linkedin_client_id: '861ix78kpo39ge'
+    linkedin_client_id: '861ix78kpo39ge',
+    firstTimeDashboardTemplates: {
+      'webanalytics':'3de1776a-2b06-4223-adf3-a57012833ec5',
+      'allpaidmarketing':'c3caa37c-afaa-4bc1-bf1a-b69f3e377b3e',
+      'hubspotinsights':'215d866d-129c-415a-a728-592672604cfa'
+    }
   },
   test: {
     backend_host: 'http://localhost:8080',
@@ -33,7 +43,12 @@ const CONFIG = {
       'https://storage.googleapis.com/factors-production-v2/sdk/android/sdk-production-v0.1.aar',
     factors_sdk_token: 'we0jyjxcs0ix4ggnkptymjh48ur8y7q7',
     facebook_app_id: '1022017331596075',
-    linkedin_client_id: '861ix78kpo39ge'
+    linkedin_client_id: '861ix78kpo39ge',
+    firstTimeDashboardTemplates: {
+      'webanalytics':'6d966a20-07a6-46db-b2d4-1b1d4d7fb8ec',
+      'allpaidmarketing':'43caefad-fa5b-4791-aa23-03d6f8f3ab6e',
+      'hubspotinsights':'71a9e6e6-a370-49ff-a701-9b5f4f273b6a'
+    } 
   }
 };
 

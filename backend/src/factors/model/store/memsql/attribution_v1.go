@@ -134,6 +134,10 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	} else {
 		userData, err4 = store.PullSessionsOfConvertedUsersV1(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
 	}
+
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"userData": userData}).Info("log after PullingSessions")
+	}
 	if err4 != nil {
 		return nil, err4
 	}
@@ -158,6 +162,10 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Metrics, Performance report, filter took time")
 		queryStartTime = time.Now().UTC().Unix()
+	}
+
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"attributionData": attributionData, "kpiData": kpiData, "userData": userData}).Info("log before ProcessAttributionDataToResultV1")
 	}
 
 	result := ProcessAttributionDataToResultV1(query, attributionData, isCompare, queryStartTime, marketingReports, kpiData, logCtx)
@@ -1221,10 +1229,18 @@ func (store *MemSQL) runAttributionV1(goalEvent model.QueryEventWithProperties,
 
 	goalEventName := goalEvent.Name
 
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"goalEventName": goalEventName, "sessions": sessions, "usersToBeAttributed": usersToBeAttributed}).Info("log before ApplyAttribution")
+	}
+
 	// 4. Apply attribution based on given attribution methodology
 	userConversionHit, userLinkedFEHit, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		goalEventName, *usersToBeAttributed, sessions, *coalUserIdConversionTimestamp,
 		query.LookbackDays, query.From, query.To, query.AttributionKey, logCtx)
+
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"userConversionHit": userConversionHit}).Info("log after ApplyAttribution")
+	}
 	if err != nil {
 		return nil, err
 	}
