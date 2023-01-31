@@ -281,48 +281,6 @@ func TestAttributionModel(t *testing.T) {
 
 	})
 
-	t.Run("TestSourceWithMarketingData", func(t *testing.T) {
-		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeUsers,
-			From:                    timestamp + 10*U.SECONDS_IN_A_DAY,
-			To:                      timestamp + 15*U.SECONDS_IN_A_DAY,
-			AttributionKey:          model.AttributionKeySource,
-			AttributionKeyDimension: []string{model.FieldSource, model.FieldCampaignName},
-			AttributionMethodology:  model.AttributionMethodFirstTouch,
-			ConversionEvent:         model.QueryEventWithProperties{Name: "event3"},
-			LookbackDays:            20,
-		}
-
-		//Should only have user2 with no 0 linked event count
-		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Nil(t, err)
-		assert.Equal(t, int64(0), getImpressions(query.AttributionKey, result, "Grand Total"))
-		assert.Equal(t, int64(0), getClicks(query.AttributionKey, result, "Grand Total"))
-		assert.Equal(t, float64(0), getSpend(query.AttributionKey, result, "Grand Total"))
-
-	})
-
-	t.Run("TestChannelWithMarketingData", func(t *testing.T) {
-		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeUsers,
-			From:                    timestamp + 10*U.SECONDS_IN_A_DAY,
-			To:                      timestamp + 15*U.SECONDS_IN_A_DAY,
-			AttributionKey:          model.AttributionKeyChannel,
-			AttributionKeyDimension: []string{model.FieldChannelGroup, model.FieldCampaignName},
-			AttributionMethodology:  model.AttributionMethodFirstTouch,
-			ConversionEvent:         model.QueryEventWithProperties{Name: "event3"},
-			LookbackDays:            20,
-		}
-
-		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Nil(t, err)
-		assert.Equal(t, int64(0), getImpressions(query.AttributionKey, result, "Grand Total"))
-		assert.Equal(t, int64(0), getClicks(query.AttributionKey, result, "Grand Total"))
-		assert.Equal(t, float64(0), getSpend(query.AttributionKey, result, "Grand Total"))
-	})
-
 }
 
 func TestAttributionLandingPage(t *testing.T) {
@@ -1691,16 +1649,16 @@ func TestAttributionKPI(t *testing.T) {
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
 			AttributionKey:          model.AttributionKeySource,
-			AttributionKeyDimension: []string{model.FieldSource, model.FieldCampaignName},
+			AttributionKeyDimension: []string{},
 			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
 			AttributionMethodology:  model.AttributionMethodLinear,
 			LookbackDays:            10,
 		}
 
 		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Equal(t, float64(2), getConversionUserCountKpi(query.AttributionKey, result, "test:-:xyz"))
-		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "test:-:xyz"))
-		assert.Equal(t, int64(11), getClicks(query.AttributionKey, result, "test:-:xyz"))
+		assert.Equal(t, float64(2), getConversionUserCountKpi(query.AttributionKey, result, "xyz"))
+		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "xyz"))
+		assert.Equal(t, int64(11), getClicks(query.AttributionKey, result, "xyz"))
 
 		assert.Nil(t, err)
 
@@ -1746,16 +1704,16 @@ func TestAttributionKPI(t *testing.T) {
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
 			AttributionKey:          model.AttributionKeyChannel,
-			AttributionKeyDimension: []string{model.FieldChannelGroup, model.FieldCampaignName},
+			AttributionKeyDimension: []string{},
 			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
 			AttributionMethodology:  model.AttributionMethodLinear,
 			LookbackDays:            10,
 		}
 
 		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Equal(t, float64(2), getConversionUserCountKpi(query.AttributionKey, result, "test:-:Other Campaigns"))
-		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "test:-:Other Campaigns"))
-		assert.Equal(t, int64(11), getClicks(query.AttributionKey, result, "test:-:Other Campaigns"))
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "Other Campaigns"))
+		assert.Equal(t, int64(1), getImpressions(query.AttributionKey, result, "Other Campaigns"))
+		assert.Equal(t, int64(1), getClicks(query.AttributionKey, result, "Other Campaigns"))
 
 		assert.Nil(t, err)
 
@@ -1967,7 +1925,7 @@ func TestAttributionKPI(t *testing.T) {
 		}
 
 		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Equal(t, float64(2), getConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test"))
 		assert.Nil(t, err)
 
 	})

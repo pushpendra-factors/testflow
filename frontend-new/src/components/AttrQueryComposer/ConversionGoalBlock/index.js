@@ -213,7 +213,7 @@ const ConversionGoalBlock = ({
     }
   };
 
-  const renderFilterWrapper = (index, refValue, filter, showOr = false) =>
+  const renderFilterWrapper = (index, refValue, filter, showOr, inFilter, deleteFilter) =>
     group_analysis !== 'users' ? (
       <EventFilterWrapper
         index={index}
@@ -221,8 +221,8 @@ const ConversionGoalBlock = ({
         event={eventGoal}
         filterProps={filterProps}
         activeProject={activeProject}
-        deleteFilter={delFilter}
-        insertFilter={addFilter}
+        deleteFilter={deleteFilter}
+        insertFilter={inFilter}
         closeFilter={closeFilter}
         selectedMainCategory={eventGoal}
         showOr={showOr}
@@ -235,8 +235,8 @@ const ConversionGoalBlock = ({
         event={eventGoal}
         filterProps={filterProps}
         activeProject={activeProject}
-        deleteFilter={delFilter}
-        insertFilter={addFilter}
+        deleteFilter={deleteFilter}
+        insertFilter={inFilter}
         closeFilter={closeFilter}
         selectedMainCategory={eventGoal}
         showOr={showOr}
@@ -261,14 +261,14 @@ const ConversionGoalBlock = ({
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-                {renderFilterWrapper(index, refValue, filter)}
+                {renderFilterWrapper(index, refValue,filter,false,(val,index) => editFiler(index,val),delFilter)}
               </div>
               {index !== orFilterIndex && (
                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex} />
               )}
               {index === orFilterIndex && (
                 <div key={'init'}>
-                  {renderFilterWrapper(index, refValue, undefined, true)}
+                  {renderFilterWrapper(undefined, refValue, undefined, true,addFilter,closeFilter)}
                 </div>
               )}
             </div>
@@ -278,10 +278,10 @@ const ConversionGoalBlock = ({
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-                {renderFilterWrapper(index, refValue, filtersGr[0])}
+                {renderFilterWrapper(index, refValue, filtersGr[0],false,(val,index) => editFiler(index,val),delFilter)}
               </div>
               <div key={index + 1}>
-                {renderFilterWrapper(index + 1, refValue, filtersGr[1], true)}
+                {renderFilterWrapper(index + 1, refValue, filtersGr[1],true,(val,index) => editFiler(index,val),delFilter)}
               </div>
             </div>
           );

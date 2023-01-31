@@ -194,12 +194,12 @@ func (store *MemSQL) GetAttributionV1DashboardByDashboardName(projectId int64, d
 
 	if err := db.Where("project_id = ? AND name = ? AND type = ? AND is_deleted = ?",
 		projectId, dashboardName, model.DashboardTypeAttributionV1, false).First(&dashboard).Error; err != nil {
-		logCtx.WithError(err).WithField("dashboardName", dashboardName).Error(
-			"Getting dashboard failed in GetDashboard")
+
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
-
+		logCtx.WithError(err).WithField("dashboardName", dashboardName).Error(
+			"Getting dashboard failed in GetDashboard")
 		return nil, http.StatusInternalServerError
 	}
 

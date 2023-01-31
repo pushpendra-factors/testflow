@@ -101,26 +101,19 @@ function AccountTimelineSingleView({
                               eventNamesMap
                             );
                             const sourceIcon = getIconForCategory(category);
+                            const eventIcon = singleTimelineIconSVGs[event.icon]
+                              ? event.icon
+                              : 'calendar_star';
                             const svgUrl = convertSVGtoURL(
-                              singleTimelineIconSVGs[
-                                event.icon || 'calendar_star'
-                              ]
+                              singleTimelineIconSVGs[eventIcon]
                             );
                             return (
                               <div
                                 class='timeline-event__container'
                                 style={{
                                   '--svg-url': `${svgUrl}`,
-                                  '--svg-bg': `${
-                                    eventIconsColorMap[
-                                      event.icon || 'calendar_star'
-                                    ].bgColor
-                                  }`,
-                                  '--svg-border-color': `${
-                                    eventIconsColorMap[
-                                      event.icon || 'calendar_star'
-                                    ].borderColor
-                                  }`
+                                  '--svg-bg': `${eventIconsColorMap[eventIcon]?.bgColor}`,
+                                  '--svg-border-color': `${eventIconsColorMap[eventIcon]?.borderColor}`
                                 }}
                               >
                                 <div class='timestamp'>

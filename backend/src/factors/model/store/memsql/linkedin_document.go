@@ -942,8 +942,8 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 	if err != nil {
 		return "", nil, nil, nil
 	}
-	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyLinkedinGroupBys(query.GroupBy)
-	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForLinkedinWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
+
+	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForLinkedinWithSmartProperty, whereConditionForFilters)
 
 	fromStatement := getLinkedinFromStatementWithJoins(query.Filters, query.GroupBy)
 	finalParams := make([]interface{}, 0)

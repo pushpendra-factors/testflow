@@ -3,6 +3,7 @@ import Lottie from 'react-lottie';
 import * as Sentry from '@sentry/react';
 import animationData from '../../assets/lottie/38064-error-cone.json';
 import { Text } from '../factorsComponents';
+import { Button } from 'antd';
 
 const defaultOptions = {
   loop: true,

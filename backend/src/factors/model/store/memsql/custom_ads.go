@@ -545,8 +545,8 @@ func getSQLAndParamsFromCustomAdsReportsWithSmartProperty(query *model.ChannelQu
 	if err != nil {
 		return "", nil, nil, nil
 	}
-	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(query.GroupBy)
-	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForCustomAdsWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
+
+	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForCustomAdsWithSmartProperty, whereConditionForFilters)
 	finalParams := make([]interface{}, 0)
 	staticWhereParams := []interface{}{projectID, query.Channel, customerAccountID, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
