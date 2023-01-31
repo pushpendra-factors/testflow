@@ -163,6 +163,7 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 		jsonResponse, status, err = GetSlackChannels(accessTokens, nextCursor)
 		if err != nil {
 			c.JSON(status, gin.H{"error": err})
+			return 
 		}
 		newChannels := jsonResponse["channels"].([]interface{})
 		channels = append(channels, newChannels...)
