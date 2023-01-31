@@ -1597,8 +1597,6 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	finalOrderByStatement := ""
 	resultantSQLStatement := ""
 
-	adwordsGroupBys := make([]model.ChannelGroupBy, 0, 0)
-
 	// Group By
 	dimensions := fields{}
 	for _, groupBy := range query.GroupBy {
@@ -1687,8 +1685,8 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	if err != nil {
 		return "", nil, nil, nil
 	}
-	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(adwordsGroupBys)
-	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperty, filterPropertiesStatementBasedOnRequestFilters, filterStatementForSmartPropertyGroupBy)
+
+	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperty, filterPropertiesStatementBasedOnRequestFilters)
 	if (dataCurrency != "" && projectCurrency != "") && (U.ContainsStringInArray(query.SelectMetrics, "cost") || U.ContainsStringInArray(query.SelectMetrics, model.CostPerClick) || U.ContainsStringInArray(query.SelectMetrics, model.CostPerConversion)) {
 		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
@@ -2054,39 +2052,6 @@ func getFilterPropertiesForAdwordsReportsNew(filters []model.ChannelFilterV1) (r
 		rStmnt += (" AND " + adGroupFilter)
 	}
 	return rStmnt, rParams, nil
-}
-
-func getNotNullFilterStatementForSmartPropertyGroupBys(groupBys []model.ChannelGroupBy) string {
-	logFields := log.Fields{
-		"group_bys": groupBys,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	resultStatement := ""
-	for _, groupBy := range groupBys {
-		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
-		isSmartProperty := !isPresent
-		if isSmartProperty {
-			if groupBy.Object == model.AdwordsCampaign || groupBy.Object == model.BingAdsCampaign {
-				if resultStatement == "" {
-					resultStatement += fmt.Sprintf("( JSON_EXTRACT_STRING(campaign.properties, '%s') IS NOT NULL ", groupBy.Property)
-				} else {
-					resultStatement += fmt.Sprintf("AND JSON_EXTRACT_STRING(campaign.properties, '%s') IS NOT NULL ", groupBy.Property)
-				}
-			} else {
-				if resultStatement == "" {
-					resultStatement += fmt.Sprintf("( JSON_EXTRACT_STRING(ad_group.properties,'%s') IS NOT NULL ", groupBy.Property)
-				} else {
-					resultStatement += fmt.Sprintf("AND JSON_EXTRACT_STRING(ad_group.properties,'%s') IS NOT NULL ", groupBy.Property)
-				}
-			}
-
-		}
-	}
-
-	if resultStatement == "" {
-		return resultStatement
-	}
-	return resultStatement + ")"
 }
 
 func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {

@@ -18,12 +18,12 @@ import (
 )
 
 const (
-	FacebookCampaign                                				= "campaign"
-	FacebookAdSet                                   				= "ad_set"
-	FacebookAd                                      				= "ad"
-	facebookStringColumn                            				= "facebook"
-	metricsExpressionOfDivisionWithHandleOf0AndNullWithConversion   = "SUM(JSON_EXTRACT_STRING(value,'%s')) * inr_value * %s/(case when sum(JSON_EXTRACT_STRING(value,'%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value,'%s')), 100000) end)"
-	metricsExpressionOfDivisionWithHandleOf0AndNull 				= "SUM(JSON_EXTRACT_STRING(value,'%s'))*%s/(case when sum(JSON_EXTRACT_STRING(value,'%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value,'%s')), 100000) end)"
+	FacebookCampaign                                              = "campaign"
+	FacebookAdSet                                                 = "ad_set"
+	FacebookAd                                                    = "ad"
+	facebookStringColumn                                          = "facebook"
+	metricsExpressionOfDivisionWithHandleOf0AndNullWithConversion = "SUM(JSON_EXTRACT_STRING(value,'%s')) * inr_value * %s/(case when sum(JSON_EXTRACT_STRING(value,'%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value,'%s')), 100000) end)"
+	metricsExpressionOfDivisionWithHandleOf0AndNull               = "SUM(JSON_EXTRACT_STRING(value,'%s'))*%s/(case when sum(JSON_EXTRACT_STRING(value,'%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value,'%s')), 100000) end)"
 )
 
 var FacebookDocumentTypeAlias = map[string]int{
@@ -130,7 +130,6 @@ var facebookMetricsToAggregatesInReportsMapping = map[string]string{
 	"fb_pixel_purchase_cost_per_action_type": fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNullWithConversion, "spend", "1", "actions_offsite_conversion.fb_pixel_purchase", "actions_offsite_conversion.fb_pixel_purchase"),
 	"fb_pixel_purchase_roas":                 fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "action_values_offsite_conversion.fb_pixel_purchase", "1", "spend", "spend"),
 }
-
 
 const platform = "platform"
 
@@ -627,7 +626,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID int64,
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
 	dataCurrency := ""
-	if(projectCurrency != ""){
+	if projectCurrency != "" {
 		dataCurrency = store.GetDataCurrencyForFacebook(projectID)
 	}
 	if isSmartPropertyPresent {
@@ -645,13 +644,11 @@ func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID int64,
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
-
-func (store *MemSQL) GetDataCurrencyForFacebook(projectId int64) string{
+func (store *MemSQL) GetDataCurrencyForFacebook(projectId int64) string {
 	query := "select JSON_EXTRACT_STRING(value, 'account_currency')  from facebook_documents where project_id = ? and type = 4 limit 1"
 	db := C.GetServices().Db
-	
 
-	params := make([]interface{},0)
+	params := make([]interface{}, 0)
 	params = append(params, projectId)
 	rows, err := db.Raw(query, params).Rows()
 	if err != nil {
@@ -782,7 +779,7 @@ func getFacebookSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 	return resultGroupBys, nil
 }
 
-func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{},dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
+func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -799,7 +796,7 @@ func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID int64, customer
 		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, dataCurrency, projectCurrency)
 	return sql, params, selectKeys, selectMetrics, nil
 }
-func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{},dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
+func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -820,7 +817,7 @@ func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 // Added case when statement for NULL value and empty value for group bys
 // Added case when statement for NULL value for smart properties. Didn't add for empty values as such case will not be present
 func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQueryV1, projectID int64, from, to int64, facebookAccountIDs string,
-	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{},dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -906,14 +903,14 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 	if err != nil {
 		return "", nil, nil, nil
 	}
-	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(query.GroupBy)
-	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForFacebookWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
+
+	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForFacebookWithSmartProperty, whereConditionForFilters)
 	finalParams := make([]interface{}, 0)
-	if (dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "spend") ||
-	U.ContainsStringInArray(query.SelectMetrics, "cost_per_click") ||
-	U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
-	U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
-	U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
+	if (dataCurrency != "" && projectCurrency != "") && (U.ContainsStringInArray(query.SelectMetrics, "spend") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_click") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
+		U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type")) {
 		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
@@ -927,11 +924,11 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 
 	fromStatement := getFacebookFromStatementWithJoins(query.Filters, query.GroupBy)
 	resultSQLStatement := ""
-	if(dataCurrency != "" && projectCurrency != "") &&( U.ContainsStringInArray(query.SelectMetrics, "spend") ||
+	if (dataCurrency != "" && projectCurrency != "") && (U.ContainsStringInArray(query.SelectMetrics, "spend") ||
 		U.ContainsStringInArray(query.SelectMetrics, "cost_per_click") ||
 		U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
 		U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
-		U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
+		U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type")) {
 		resultSQLStatement = selectQuery + fromStatement + currencyQuery + finalFilterStatement
 	} else {
 		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
@@ -964,7 +961,7 @@ func getFacebookFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 
 // Added case when statement for NULL value and empty value for group bys
 func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID int64, from, to int64, facebookAccountIDs string,
-	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{},dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, dataCurrency string, projectCurrency string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -1039,11 +1036,11 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID i
 		whereConditionForFilters = " AND " + whereConditionForFilters
 	}
 	finalParams := make([]interface{}, 0)
-	if (dataCurrency != "" && projectCurrency != "") && ( U.ContainsStringInArray(query.SelectMetrics, "spend") ||
-	U.ContainsStringInArray(query.SelectMetrics, "cost_per_click") ||
-	U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
-	U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
-	U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
+	if (dataCurrency != "" && projectCurrency != "") && (U.ContainsStringInArray(query.SelectMetrics, "spend") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_click") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
+		U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
+		U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type")) {
 		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
@@ -1056,11 +1053,11 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID i
 	}
 
 	resultSQLStatement := ""
-	if (dataCurrency != "" && projectCurrency != "") &&( U.ContainsStringInArray(query.SelectMetrics, "spend") ||
+	if (dataCurrency != "" && projectCurrency != "") && (U.ContainsStringInArray(query.SelectMetrics, "spend") ||
 		U.ContainsStringInArray(query.SelectMetrics, "cost_per_click") ||
 		U.ContainsStringInArray(query.SelectMetrics, "cost_per_link_click") ||
 		U.ContainsStringInArray(query.SelectMetrics, "cost_per_thousand_impressions") ||
-		U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type") ){
+		U.ContainsStringInArray(query.SelectMetrics, "fb_pixel_purchase_cost_per_action_type")) {
 		resultSQLStatement = selectQuery + fromFacebookDocuments + currencyQuery + staticWhereStatementForFacebook + whereConditionForFilters
 	} else {
 		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)

@@ -279,7 +279,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID int64, 
 	// smart properties check
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
 	dataCurrency := ""
-	if(projectCurrency != ""){
+	if projectCurrency != "" {
 		dataCurrency = store.GetDataCurrencyForBingAds(projectID)
 	}
 	if isSmartPropertyPresent {
@@ -323,12 +323,11 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForBingads(proj
 	return &transformedQuery, customerAccountID, projectSetting.ProjectCurrency, nil
 }
 
-func (store *MemSQL) GetDataCurrencyForBingAds(projectId int64) string{
+func (store *MemSQL) GetDataCurrencyForBingAds(projectId int64) string {
 	query := "select JSON_EXTRACT_STRING(value, 'currency_code')  from integration_documents where project_id = ? and document_type = 7 and source = 'bingads' limit 1"
 	db := C.GetServices().Db
-	
 
-	params := make([]interface{},0)
+	params := make([]interface{}, 0)
 	params = append(params, projectId)
 	rows, err := db.Raw(query, params).Rows()
 	if err != nil {
@@ -570,7 +569,7 @@ func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID in
 	}
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	finalParams := make([]interface{}, 0)
-	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend") {
 		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, model.BingAdsIntegration, docType, customerAccountIDs, from, to}
@@ -583,7 +582,7 @@ func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID in
 	}
 
 	resultSQLStatement := ""
-	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend") {
 		resultSQLStatement = selectQuery + fromIntegrationDocuments + currencyQuery + staticWhereStatementForBingAds + whereConditionForFilters
 	} else {
 		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
@@ -700,11 +699,11 @@ func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQuer
 	if err != nil {
 		return "", nil, nil, nil
 	}
-	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(query.GroupBy)
-	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForBingAdsWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
+
+	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForBingAdsWithSmartProperty, whereConditionForFilters)
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	finalParams := make([]interface{}, 0)
-	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend") {
 		finalParams = append(finalParams, projectCurrency, dataCurrency)
 	}
 	staticWhereParams := []interface{}{projectID, model.BingAdsIntegration, customerAccountIDs, docType, from, to}
@@ -718,8 +717,8 @@ func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQuer
 
 	fromStatement := getBingAdsFromStatementWithJoins(query.Filters, query.GroupBy)
 	resultSQLStatement := ""
-	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend"){
-		resultSQLStatement = selectQuery + fromStatement + currencyQuery +  finalFilterStatement
+	if (dataCurrency != "" && projectCurrency != "") && U.ContainsStringInArray(query.SelectMetrics, "spend") {
+		resultSQLStatement = selectQuery + fromStatement + currencyQuery + finalFilterStatement
 	} else {
 		selectQuery = strings.Replace(selectQuery, "* inr_value", "", -1)
 		resultSQLStatement = selectQuery + fromStatement + finalFilterStatement

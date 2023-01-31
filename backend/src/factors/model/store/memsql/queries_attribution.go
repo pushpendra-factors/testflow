@@ -87,6 +87,12 @@ func (store *MemSQL) GetOrCreateAttributionV1Dashboard(projectId int64, agentUUI
 	if C.GetAttributionDebug() == 1 {
 		log.WithFields(log.Fields{"method": "GetOrCreateAttributionV1Dashboard", "dashboard": *dashboard}).Info("Attribution v1 dashboard debug. After GetAttributionV1DashboardByDashboardName")
 	}
+
+	if errCode == http.StatusInternalServerError {
+		log.Error("Failed to find attribution dashboard")
+		return nil, http.StatusInternalServerError
+	}
+
 	if errCode == http.StatusNotFound {
 
 		dashboardRequest := &model.Dashboard{

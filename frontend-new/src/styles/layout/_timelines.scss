@@ -607,7 +607,6 @@
 }
 
 .fa-table--userlist {
-    
     // table head
     .ant-table-thead {
         .ant-table-cell {
@@ -617,20 +616,17 @@
             color: $fa-color--mono-5;
         }
     }
-
     // table body
     .ant-table-tbody {
         .ant-table-row {
             .ant-table-cell {
-                border-top: 4px solid white;
-                border-bottom: 4px solid white;
+                border: none;
                 font-weight: $font-weight--regular;
                 font-size: 14px;
                 line-height: 24px;
-                padding: 12px;
+                padding: 16px 12px;
                 color: $fa-color--mono-6;
             }
-
         }
     }
 }
