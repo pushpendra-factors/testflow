@@ -878,7 +878,7 @@ function CoreQuery({
                     campaignState={campaignState}
                     savedQueryId={savedQueryId}
                     handleChartTypeChange={handleChartTypeChange}
-                    queryOptions={queryOptions}
+                    queryOptions={{...queryOptions, group_analysis: 'all'}}
                     resultState={resultState}
                     queries={appliedQueries}
                     handleDurationChange={handleDurationChange}
