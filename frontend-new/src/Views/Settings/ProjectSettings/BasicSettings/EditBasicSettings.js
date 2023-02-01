@@ -21,6 +21,7 @@ import {
 } from 'Utils/constants';
 import sanitizeInputString from 'Utils/sanitizeInputString';
 import { Currency } from 'Utils/currency';
+import _ from 'lodash';
 
 const { Option } = Select;
 
@@ -39,7 +40,7 @@ function EditBasicSettings({
   const [currencyVal, setCurrencyVal] = useState();
 
   useEffect(() => {
-    if(currentProjectSettings && currentProjectSettings?.currency){
+    if (currentProjectSettings && currentProjectSettings?.currency) {
       setCurrencyVal(currentProjectSettings?.currency)
     }
     setTimeout(() => {
@@ -102,23 +103,23 @@ function EditBasicSettings({
     });
     // }
   };
- 
+
   const setCurrencyFn = (value) => {
-    console.log('setCurrency value', value); 
+    console.log('setCurrency value', value);
     setCurrencyVal(value);
     let data = {
       'currency': value
     }
     udpateProjectSettings(activeProject.id, data)
-    .then(() => { 
-      message.success('Currency details updated!'); 
-    })
-    .catch((err) => { 
-      console.log('err->', err);
-      message.error(err.data.error);
-    });
+      .then(() => {
+        message.success('Currency details updated!');
+      })
+      .catch((err) => {
+        console.log('err->', err);
+        message.error(err.data.error);
+      });
 
-};
+  };
 
 
   return (
@@ -133,9 +134,9 @@ function EditBasicSettings({
             project_uri: activeProject?.project_uri,
             date_format: activeProject?.date_format,
             time_format: activeProject?.time_format,
-            time_zone: `${getTimeZoneNameFromCity(activeProject?.time_zone)?.name
+            time_zone: !_.isEmpty(activeProject?.time_zone) ? `${getTimeZoneNameFromCity(activeProject?.time_zone)?.name
               } (UTC ${getTimeZoneNameFromCity(activeProject?.time_zone)?.offset
-              })`
+              })` : ""
           }}
         >
           <Row>
@@ -323,7 +324,7 @@ function EditBasicSettings({
                   extraClass={'m-0'}
                   weight={'bold'}
                 >
-                  {activeProject?.time_zone
+                  {!_.isEmpty(activeProject?.time_zone)
                     ? `${getTimeZoneNameFromCity(activeProject?.time_zone)?.name
                     } (UTC ${getTimeZoneNameFromCity(activeProject?.time_zone)
                       ?.offset
@@ -338,24 +339,24 @@ function EditBasicSettings({
         <Row className={'mt-6'}>
           <Col span={24}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Currency</Text>
-            <Select className={'fa-select w-full'} 
-            value={currencyVal}
-             placeholder={'Currency'} 
-            size={'large'} 
-            onChange={setCurrencyFn}
-            showSearch
-            optionFilterProp='children'
-            filterOption={(input, option) =>
-              option.children
-                .toLowerCase()
-                .indexOf(input.toLowerCase()) >= 0
-            }
-            filterSort={(optionA, optionB) =>
-              optionA.children
-                .toLowerCase()
-                .localeCompare(optionB.children.toLowerCase())
-            }
-            
+            <Select className={'fa-select w-full'}
+              value={currencyVal}
+              placeholder={'Currency'}
+              size={'large'}
+              onChange={setCurrencyFn}
+              showSearch
+              optionFilterProp='children'
+              filterOption={(input, option) =>
+                option.children
+                  .toLowerCase()
+                  .indexOf(input.toLowerCase()) >= 0
+              }
+              filterSort={(optionA, optionB) =>
+                optionA.children
+                  .toLowerCase()
+                  .localeCompare(optionB.children.toLowerCase())
+              }
+
             >
 
               {Currency && Object.keys(Currency).map((key, index) => {
