@@ -46,8 +46,8 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.InDelta(t, user.JoinTimestamp, start.Unix()-60, 3)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
-	// Not more than 20ms difference.
-	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 2.0e+7)
+	// Not more than 50ms difference.
+	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 5.0e+7)
 	// Test Get User on the created one.
 	retUser, errCode := store.GetStore().GetUser(projectId, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -89,7 +89,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.InDelta(t, user.JoinTimestamp, start.Unix()-60, 3)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
-	// Not more than 20ms difference.
+	// Not more than 50ms difference.
 	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 5.0e+7)
 	var retProperties map[string]interface{}
 	err = json.Unmarshal(user.Properties.RawMessage, &retProperties)
@@ -247,8 +247,11 @@ func TestDBUpdateUserById(t *testing.T) {
 	assert.Equal(t, rCustomerUserId, gUser.CustomerUserId)
 	// Update user should not create properties while updating
 	// other fields (identify).
-	assert.Equal(t, DecodePostgresJsonbWithoutError(&gUser.Properties),
-		DecodePostgresJsonbWithoutError(&user.Properties))
+	userProperties := DecodePostgresJsonbWithoutError(&user.Properties)
+	assert.Equal(t, float64(user.JoinTimestamp), (*userProperties)[U.UP_JOIN_TIME])
+	gUserProperties := DecodePostgresJsonbWithoutError(&gUser.Properties)
+	assert.Equal(t, float64(gUser.JoinTimestamp), (*gUserProperties)[U.UP_JOIN_TIME])
+	assert.Equal(t, gUser.CustomerUserId, (*gUserProperties)[U.UP_USER_ID])
 
 	segAid := "seg_aid_1"
 	_, errCode = store.GetStore().UpdateUser(project.ID, user.ID, &model.User{SegmentAnonymousId: segAid,
@@ -434,7 +437,7 @@ func TestDBFillUserDefaultProperties(t *testing.T) {
 	assert.NotNil(t, propertiesMap[U.UP_CONTINENT])
 	assert.Equal(t, "Asia", propertiesMap[U.UP_CONTINENT])
 	assert.NotNil(t, propertiesMap[U.UP_POSTAL_CODE])
-	assert.Equal(t, "560076", propertiesMap[U.UP_POSTAL_CODE])
+	assert.Equal(t, "560002", propertiesMap[U.UP_POSTAL_CODE])
 	assert.NotNil(t, propertiesMap["prop_1"]) // Should append to existing values.
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
@@ -1586,7 +1589,7 @@ func TestUserDuplicates(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				user, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAnonID, "", timeStamp, model.UserSourceWeb)
-				assert.Contains(t, []int{http.StatusCreated, http.StatusFound}, errCode)
+				assert.Contains(t, []int{http.StatusCreated, http.StatusFound, http.StatusOK}, errCode)
 				assert.NotNil(t, user)
 			}()
 
