@@ -1671,18 +1671,14 @@ func (store *MemSQL) OverwriteUserPropertiesByCustomerUserID(projectID int64,
 }
 
 func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(batchedOverwriteUserPropertiesByIDParams []model.OverwriteUserPropertiesByIDParams) bool {
-	logFields := log.Fields{"batched_overwrite_user_properties_by_id_params": batchedOverwriteUserPropertiesByIDParams}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	db := C.GetServices().Db
 	dbTx := db.Begin()
 	if dbTx.Error != nil {
-		logCtx.WithError(dbTx.Error).Error("Failed to begin transaction in OverwriteUserPropertiesByIDInBatch.")
+		log.WithError(dbTx.Error).Error("Failed to begin transaction in OverwriteUserPropertiesByIDInBatch.")
 		return true
 	}
-	logCtx.Info("Using batch transaction in OverwriteUserPropertiesByIDInBatch.")
 
 	hasFailure := false
 	for i := range batchedOverwriteUserPropertiesByIDParams {
@@ -1696,7 +1692,7 @@ func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(batchedOverwriteUserProp
 		status := store.overwriteUserPropertiesByIDWithTransaction(projectID, userID, userProperties,
 			withUpdateTimestamp, updateTimestamps, source, dbTx)
 		if status != http.StatusAccepted {
-			logCtx.WithFields(log.Fields{"overwrite_user_properties_by_id_params": batchedOverwriteUserPropertiesByIDParams[i]}).
+			log.WithFields(log.Fields{"overwrite_user_properties_by_id_params": batchedOverwriteUserPropertiesByIDParams[i]}).
 				Error("Failed to overwrite user properties in batch using OverwriteUserPropertiesByIDInBatch.")
 			hasFailure = true
 		}
@@ -1704,7 +1700,7 @@ func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(batchedOverwriteUserProp
 
 	err := dbTx.Commit().Error
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to commit in OverwriteUserPropertiesByIDInBatch.")
+		log.WithError(err).Error("Failed to commit in OverwriteUserPropertiesByIDInBatch.")
 		hasFailure = true
 	}
 
