@@ -424,7 +424,7 @@ function QueryComposer({
       ) {
         return (
           <ComposerBlock
-            blockTitle='CRITERIA'
+            blockTitle='FUNNEL CRITERIA'
             isOpen={criterieaBlockOpen}
             showIcon
             onClick={() => {

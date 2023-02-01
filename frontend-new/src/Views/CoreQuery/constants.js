@@ -66,7 +66,7 @@ export const CORE_QUERY_INITIAL_STATE = {
   savedQuerySettings: EMPTY_OBJECT,
   pivotConfig: DEFAULT_PIVOT_CONFIG,
   funnelTableConfig: DEFAULT_FUNNEL_TABLE_CONFIG,
-  funnelConversionDurationNumber: 90,
+  funnelConversionDurationNumber: '90',
   funnelConversionDurationUnit: 'D' // D/M/H ---> days/minutes/hours
 };
 
