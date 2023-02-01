@@ -38,7 +38,7 @@ func CreateCustomMetric(c *gin.Context) (interface{}, int, string, string, bool)
 	if err != nil {
 		var requestAsMap map[string]interface{}
 		c.BindJSON(&requestAsMap)
-		logCtx.Warnf("Decode failed on request to profiles struct. %v", requestAsMap)
+		logCtx.Warnf("Decode failed on request to Custom Metrics struct. %v", requestAsMap)
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during decode of custom metrics.", true
 	}
 
@@ -158,6 +158,7 @@ func GetCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool) {
 	reqID, projectID := getReqIDAndProjectID(c)
 	logCtx := log.WithField("reqID", reqID).WithField("projectID", projectID)
 	if projectID == 0 {
+		logCtx.Warn("GetCustomMetrics - Custom metrics projectID is not given.")
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Invalid project id provided.", true
 	}
 	customMetrics, errMsg, statusCode := store.GetStore().GetCustomMetricsByProjectId(projectID)

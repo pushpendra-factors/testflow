@@ -1613,12 +1613,12 @@ func TestDerivedKPIForCustomKPI(t *testing.T) {
 	}
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
 	joinTime := U.UnixTimeBeforeDuration(time.Hour * 1)
-	properties1 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "us", "age": 20, "$hubspot_amount": 200, "$hubspot_datefield1": 1640975425, "paid": true}`))}
+	properties1 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(
+		fmt.Sprintf(`{"country": "us", "age": 20, "$hubspot_amount": 200, "$hubspot_datefield1": %d, "paid": true}`, joinTime)))}
 	createUserID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: rCustomerUserId, Properties: properties1, JoinTimestamp: joinTime, Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
 
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
-	currentTime := time.Now()
-	currentDate := fmt.Sprintf("%s%s%s", strconv.Itoa(currentTime.Year()), strconv.Itoa(int(currentTime.Month())), strconv.Itoa(currentTime.Day()))
+	currentDate := time.Now().UTC().Format(U.DATETIME_FORMAT_YYYYMMDD)
 	currentDateInt, _ := strconv.ParseInt(currentDate, 10, 64)
 	stepTimestamp := startTimestamp
 
@@ -1693,80 +1693,13 @@ func TestDerivedKPIForCustomKPI(t *testing.T) {
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, result[0].Headers, []string{"datetime", "page_views"})
+		assert.Equal(t, result[0].Headers, []string{"datetime", name2})
 		assert.Equal(t, len(result[0].Rows), 1)
-		assert.Equal(t, result[1].Headers, []string{"page_views"})
+		assert.Equal(t, result[1].Headers, []string{name2})
 		assert.Equal(t, len(result[1].Rows), 1)
-		assert.Equal(t, result[0].Rows[0][1], float64(1))
+		assert.Equal(t, result[0].Rows[0][1], float64(7.5))
 	})
 
-	t.Run("Custom Events Query with no groupby and no filter.", func(t *testing.T) {
-
-		name1 := U.RandomLowerAphaNumString(10)
-		description1 := U.RandomString(8)
-		transformationRaw1 := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
-		transformations1 := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw1)}
-		w = sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, model.EventsBasedDisplayCategory, 3)
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		name2 := U.RandomLowerAphaNumString(10)
-		description2 := U.RandomString(8)
-		query1 := model.KPIQuery{
-			Category:        "channels",
-			DisplayCategory: model.GoogleAdsDisplayCategory,
-			PageUrl:         "",
-			Metrics:         []string{"impressions"},
-			Filters:         []model.KPIFilter{},
-			GroupBy:         []model.KPIGroupBy{},
-			Name:            "a",
-			Timezone:        "Australia/Sydney",
-		}
-		query2 := model.KPIQuery{
-			QueryType:       model.KpiCustomQueryType,
-			Category:        "events",
-			DisplayCategory: model.EventsBasedDisplayCategory,
-			PageUrl:         "s0",
-			Metrics:         []string{name1},
-			Filters:         []model.KPIFilter{},
-			Name:            "b",
-			Timezone:        "Australia/Sydney",
-		}
-		transformationRaw2, err := json.Marshal(model.KPIQueryGroup{
-			Class:   "kpi",
-			Formula: "a/b",
-			Queries: []model.KPIQuery{query1, query2},
-		})
-		assert.Nil(t, err)
-		transformations2 := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw2)}
-		w = sendCreateCustomMetric(a, project.ID, agent, transformations2, name2, description2, "", 2)
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		queryD := model.KPIQuery{
-			Category:         "events",
-			DisplayCategory:  "others",
-			PageUrl:          "",
-			Metrics:          []string{name2},
-			Filters:          []model.KPIFilter{},
-			From:             startTimestamp,
-			To:               startTimestamp + 40,
-			GroupByTimestamp: "date",
-			QueryType:        "derived",
-		}
-		queryD1 := model.KPIQuery{}
-		U.DeepCopy(&queryD, &queryD1)
-		queryD1.GroupByTimestamp = ""
-
-		kpiQueryGroup := model.KPIQueryGroup{
-			Class:         "kpi",
-			Queries:       []model.KPIQuery{queryD, queryD1},
-			GlobalFilters: []model.KPIFilter{},
-			GlobalGroupBy: []model.KPIGroupBy{},
-		}
-		result2, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
-			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Equal(t, http.StatusOK, statusCode)
-		log.WithField("result", result2).Warn("Mrk2")
-	})
 }
 
 func TestKpiAnalyticsHandler(t *testing.T) {

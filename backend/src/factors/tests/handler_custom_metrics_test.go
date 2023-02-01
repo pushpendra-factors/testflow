@@ -152,7 +152,7 @@ func TestCustomMetricsGetHandler(t *testing.T) {
 	name1 := U.RandomString(8)
 	description1 := U.RandomString(8)
 	t.Run("GetCustomMetricsSuccess", func(t *testing.T) {
-		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "SUM", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "hubspot_contacts", 1)
 		assert.Equal(t, http.StatusOK, w.Code)
 		w1 := sendGetCustomMetrics(r, project.ID, agent)
