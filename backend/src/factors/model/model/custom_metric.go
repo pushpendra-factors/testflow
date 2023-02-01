@@ -91,6 +91,22 @@ func GetKPIConfig(customMetrics []CustomMetric) []map[string]string {
 	return rCustomMetrics
 }
 
+// This is used to fetch event name from transformation only. This is applicable for custom KPI - events.
+func (customMetric *CustomMetric) GetEventName() (string, string) {
+	if customMetric.TypeOfQuery == EventBasedQueryType {
+
+		var customMetricTransformation CustomMetricTransformation
+		err := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &customMetricTransformation)
+		if err != nil {
+			return "", "Error during decode of custom metrics transformations - custom_metrics handler."
+		}
+		return customMetricTransformation.EventName, ""
+
+	} else {
+		return "", "Wrong query type is forwarded"
+	}
+}
+
 func (customMetric *CustomMetric) IsValid() (bool, string) {
 	if customMetric.TypeOfQuery == ProfileQueryType || customMetric.TypeOfQuery == EventBasedQueryType {
 

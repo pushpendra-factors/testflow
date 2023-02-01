@@ -30,17 +30,6 @@ var FORCED_EVENT_NAMES = map[int64][]string{
 	},
 }
 
-var BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES = map[string]string{
-	"$hubspot_contact_created": "$hubspot_",
-	"$hubspot_contact_updated": "$hubspot_",
-	"$hubspot_company_":        "$hubspot_",
-	"$hubspot_deal_":           "$hubspot_",
-	"$sf_contact_":             "$salesforce_",
-	"$sf_lead_":                "$salesforce_",
-	"$sf_account_":             "$salesforce_",
-	"$sf_opportunity_":         "$salesforce_",
-}
-
 func GetDisplayEventNamesHandler(displayNames map[string]string) map[string]string {
 	displayNameEvents := make(map[string]string)
 	standardEvents := U.STANDARD_EVENTS_DISPLAY_NAMES
@@ -422,40 +411,11 @@ func GetEventPropertiesHandler(c *gin.Context) {
 	logCtx.WithField("decodedEventName", eventName).Debug("Decoded event name on properties request.")
 
 	if isExplain != "true" {
-		propertiesFromCache, err := store.GetStore().GetPropertiesByEvent(projectId, eventName, 2500,
-			C.GetLookbackWindowForEventUserCache())
-		toBeFiltered := false
-		propertyPrefixToRemove := ""
-
-		enableEventLevelEventProperties := C.EnableEventLevelEventProperties(projectId)
-		for eventPrefix, propertyPrefix := range BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES {
-			if strings.HasPrefix(eventName, eventPrefix) && !enableEventLevelEventProperties {
-				propertyPrefixToRemove = propertyPrefix
-				toBeFiltered = true
-				break
-			}
-		}
-		if toBeFiltered == true {
-			for category, props := range propertiesFromCache {
-				if properties[category] == nil {
-					properties[category] = make([]string, 0)
-				}
-				for _, property := range props {
-					if !strings.HasPrefix(property, propertyPrefixToRemove) {
-						properties[category] = append(properties[category], property)
-					}
-				}
-			}
-		} else {
-			properties = propertiesFromCache
-		}
-		if err != nil {
-			logCtx.WithError(err).Error("get properties by event")
+		var statusCode int
+		properties, statusCode = store.GetStore().GetEventNamesAndModifyResultsForNonExplain(projectId, eventName)
+		if statusCode != http.StatusOK {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
-		}
-		if len(properties) == 0 {
-			logCtx.WithError(err).Error(fmt.Sprintf("No event properties Returned - ProjectID - %v, EventName - %s", projectId, eventName))
 		}
 	} else {
 		var status int
@@ -474,43 +434,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 	U.FilterDisabledCoreEventProperties(overrides, &properties)
 
 	if isDisplayNameEnabled == "true" {
-		_, displayNames := store.GetStore().GetDisplayNamesForAllEventProperties(projectId, eventName)
-		standardPropertiesAllEvent := U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES
-		displayNamesOp := make(map[string]string)
-		for property, displayName := range standardPropertiesAllEvent {
-			displayNamesOp[property] = strings.Title(displayName)
-		}
-		if eventName == U.EVENT_NAME_SESSION {
-			standardPropertiesSession := U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES
-			for property, displayName := range standardPropertiesSession {
-				displayNamesOp[property] = strings.Title(displayName)
-			}
-		}
-		for property, displayName := range displayNames {
-			displayNamesOp[property] = strings.Title(displayName)
-		}
-
-		_, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(projectId)
-		for property, displayName := range displayNames {
-			displayNamesOp[property] = strings.Title(displayName)
-		}
-		for _, props := range properties {
-			for _, prop := range props {
-				displayName := U.CreateVirtualDisplayName(prop)
-				_, exist := displayNamesOp[prop]
-				if !exist {
-					displayNamesOp[prop] = displayName
-				}
-			}
-		}
-		dupCheck := make(map[string]bool)
-		for _, name := range displayNamesOp {
-			_, exists := dupCheck[name]
-			if exists {
-				logCtx.Warning(fmt.Sprintf("Duplicate display name %s", name))
-			}
-			dupCheck[name] = true
-		}
+		displayNamesOp := store.GetStore().GetDisplayNamesForEventName(projectId, properties, eventName)
 		c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp})
 		return
 	}

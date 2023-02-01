@@ -18,6 +18,10 @@ func (store *MemSQL) GetKPIConfigsForFormSubmissions(projectID int64, reqID stri
 	rMetrics := model.GetStaticallyDefinedMetricsForDisplayCategory(model.FormSubmissionsDisplayCategory)
 	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.FormSubmissionsDisplayCategory, includeDerivedKPIs)...)
 
+	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
+	rProperties := append(model.KPIPropertiesForFormSubmissions, standardUserProperties...)
+
 	config["metrics"] = rMetrics
+	config["properties"] = rProperties
 	return config, http.StatusOK
 }

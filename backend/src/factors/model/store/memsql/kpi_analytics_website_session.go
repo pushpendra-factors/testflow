@@ -16,8 +16,13 @@ func (store *MemSQL) GetKPIConfigsForWebsiteSessions(projectID int64, reqID stri
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	config := model.KPIConfigForWebsiteSessions
+
 	kpiPropertiesFromContentGroup := store.getWebsiteRelatedContentGroupPropertiesForKPI(projectID)
-	config["properties"] = append(model.KPIPropertiesForWebsiteSessions, kpiPropertiesFromContentGroup...)
+	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
+	rProperties := append(model.KPIPropertiesForWebsiteSessions, kpiPropertiesFromContentGroup...)
+	rProperties = append(rProperties, standardUserProperties...)
+	config["properties"] = rProperties
+
 	rMetrics := model.GetStaticallyDefinedMetricsForDisplayCategory(model.WebsiteSessionDisplayCategory)
 	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.WebsiteSessionDisplayCategory, includeDerivedKPIs)...)
 

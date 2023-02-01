@@ -232,6 +232,8 @@ type Model interface {
 	GetEventTypeFromDb(projectID int64, eventNames []string, limit int64) (map[string]string, error)
 	GetMostFrequentlyEventNamesByType(projectID int64, limit int, lastNDays int, typeOfEvent string) ([]string, error)
 	GetEventNamesOrderedByOccurenceAndRecency(projectID int64, limit int, lastNDays int) (map[string][]string, error)
+	GetDisplayNamesForEventName(projectId int64, properties map[string][]string, eventName string) map[string]string
+	GetEventNamesAndModifyResultsForNonExplain(projectId int64, eventName string) (map[string][]string, int)
 	GetPropertiesByEvent(projectID int64, eventName string, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertyValuesByEventProperty(projectID int64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
 	GetPropertiesForHubspotContacts(projectID int64, reqID string) []map[string]string

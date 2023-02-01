@@ -600,6 +600,31 @@ func AddObjectTypeToProperties(kpiConfig map[string]interface{}, value string) m
 	return kpiConfig
 }
 
+func TransformEventPropertiesToKPIConfigProperties(properties map[string][]string, propertiesToDisplayNames map[string]string) []map[string]string {
+	var resultantKPIConfigProperties []map[string]string
+	var tempKPIConfigProperty map[string]string
+	for dataType, propertyNames := range properties {
+		for _, propertyName := range propertyNames {
+			var displayName string
+			displayName, exists := propertiesToDisplayNames[propertyName]
+			if !exists {
+				displayName = U.CreateVirtualDisplayName(propertyName)
+			}
+			tempKPIConfigProperty = map[string]string{
+				"name":         propertyName,
+				"display_name": displayName,
+				"data_type":    dataType,
+				"entity":       EventEntity,
+			}
+			resultantKPIConfigProperties = append(resultantKPIConfigProperties, tempKPIConfigProperty)
+		}
+	}
+	if resultantKPIConfigProperties == nil {
+		return make([]map[string]string, 0)
+	}
+	return resultantKPIConfigProperties
+}
+
 func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string, propertiesToDisplayNames map[string]string, prefix string) []map[string]string {
 	var resultantKPIConfigProperties []map[string]string
 	var tempKPIConfigProperty map[string]string
