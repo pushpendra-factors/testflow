@@ -2444,7 +2444,7 @@ func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMapV2(projectId i
 		userEventsMap[events[i].UserId] = append(userEventsMap[events[i].UserId], events[i])
 	}
 
-	logCtx.WithFields(log.Fields{"no_of_users": len(userEventsMap), "user_events_map": userEventsMap}).Info("Got all events on get_all_events_as_user_map_v2.")
+	logCtx.WithFields(log.Fields{"no_of_users": len(userEventsMap)}).Info("Got all events on get_all_events_as_user_map_v2.")
 
 	return &userEventsMap, len(events), http.StatusFound
 }
