@@ -41,6 +41,14 @@ type User struct {
 	Group3UserID string `gorm:"default:null;column:group_3_user_id" json:"group_3_user_id"`
 	Group4ID     string `gorm:"default:null;column:group_4_id" json:"group_4_id"`
 	Group4UserID string `gorm:"default:null;column:group_4_user_id" json:"group_4_user_id"`
+	Group5ID     string `gorm:"default:null;column:group_5_id" json:"group_5_id"`
+	Group5UserID string `gorm:"default:null;column:group_5_user_id" json:"group_5_user_id"`
+	Group6ID     string `gorm:"default:null;column:group_6_id" json:"group_6_id"`
+	Group6UserID string `gorm:"default:null;column:group_6_user_id" json:"group_6_user_id"`
+	Group7ID     string `gorm:"default:null;column:group_7_id" json:"group_7_id"`
+	Group7UserID string `gorm:"default:null;column:group_7_user_id" json:"group_7_user_id"`
+	Group8ID     string `gorm:"default:null;column:group_8_id" json:"group_8_id"`
+	Group8UserID string `gorm:"default:null;column:group_8_user_id" json:"group_8_user_id"`
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
 	CustomerUserId       string `gorm:"type:varchar(255);default:null" json:"c_uid"`
