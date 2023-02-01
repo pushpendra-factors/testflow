@@ -7,13 +7,14 @@ import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from 'Components/FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
-import { DISPLAY_PROP } from 'Utils/constants';
+import { DISPLAY_PROP, OPERATORS } from 'Utils/constants';
 import { TOOLTIP_CONSTANTS } from '../../../../../../constants/tooltips.constans';
+import { DEFAULT_OP_PROPS } from 'Utils/operatorMapping';
 
 const defaultOpProps = {
-  categorical: ['=', '!=', 'contains', 'does not contain'],
-  numerical: ['=', '!=', '<', '<=', '>', '>='],
-  datetime: ['=']
+  categorical: DEFAULT_OP_PROPS['categorical'],
+  numerical: DEFAULT_OP_PROPS['numerical'],
+  datetime: [OPERATORS['equalTo']]
 };
 
 function AttrFilterSelect({
@@ -59,6 +60,15 @@ function AttrFilterSelect({
       updateStateApply(false);
     }
   }, [updateState]);
+
+  useEffect(() => {
+    if (
+      operatorState?.[0] === OPERATORS['isKnown'] ||
+      operatorState?.[0] === OPERATORS['isUnknown']
+    ) {
+      valuesSelectSingle('$none');
+    }
+  }, [operatorState]);
 
   const setValues = () => {
     let values;
@@ -333,7 +343,11 @@ function AttrFilterSelect({
 
       {propState?.name ? renderOperatorSelector() : null}
 
-      {operatorState ? renderValuesSelector() : null}
+      {operatorState &&
+      operatorState?.[0] !== OPERATORS['isKnown'] &&
+      operatorState?.[0] !== OPERATORS['isUnknown']
+        ? renderValuesSelector()
+        : null}
     </div>
   );
 }

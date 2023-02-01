@@ -10,7 +10,7 @@
       display: flex;
       flex-direction: column;
       max-height: 250px;
-      overflow: auto;
+      overflow-y: auto;
     }
   }
 
@@ -60,5 +60,5 @@
 
 .optText {
   // text-transform: capitalize;
-  width: 100%;
+  width: 90%;
 }

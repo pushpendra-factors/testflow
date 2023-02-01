@@ -70,6 +70,7 @@ function ReportsLayout({
 
   const {
     setNavigatedFromDashboard,
+    setNavigatedFromAnalyse,
     coreQueryState: { chartTypes },
     queriesA,
     runQuery,
@@ -98,7 +99,8 @@ function ReportsLayout({
   const handleBreadCrumbClick = useCallback(() => {
     setShowResult(false);
     setNavigatedFromDashboard(false);
-  }, [setNavigatedFromDashboard, setShowResult]);
+    setNavigatedFromAnalyse(false);
+  }, [setNavigatedFromDashboard, setShowResult], setNavigatedFromAnalyse);
 
 
   useEffect(() => {

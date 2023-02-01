@@ -9,7 +9,7 @@ import { DEFAULT_OPERATOR_PROPS } from '../../../../FaFilterSelect/utils';
 import FAFilterSelect from '../../../../FaFilterSelect';
 
 export default function PropFilterBlock({
-  mode,
+  displayMode,
   index,
   filterProps,
   activeProject,
@@ -63,7 +63,7 @@ export default function PropFilterBlock({
   const renderFilterContent = () => {
     return (
       <FAFilterSelect
-        mode={mode}
+        displayMode={displayMode}
         propOpts={filterDropDownOptions.props}
         operatorOpts={filterDropDownOptions.operator}
         valueOpts={dropDownValues}
@@ -188,7 +188,7 @@ export default function PropFilterBlock({
   const filterSelComp = () => {
     return (
       <FAFilterSelect
-        mode={mode}
+        displayMode={displayMode}
         propOpts={filterDropDownOptions.props}
         operatorOpts={filterDropDownOptions.operator}
         valueOpts={dropDownValues}
@@ -203,7 +203,7 @@ export default function PropFilterBlock({
       <div className={`relative flex`}>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>
-      {delFilter && (
+      {delFilter && !displayMode && (
         <Button
           type='text'
           onClick={delFilter}

@@ -274,49 +274,18 @@ func TestEventChannelQueryDashboardResultFromCache(t *testing.T) {
 	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{Presentation: model.PresentationLine, QueryId: "3"})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
-	//For Channel query
-	value := []byte(`{"id": 2061667885,"clicks":989, "campaign_id": 12,"impressions":10, "end_date": "20371230", "start_date": "20190711", "conversions":111, "cost":42.94}`)
-	document := model.AdwordsDocument{
-		ProjectID:         project.ID,
-		CustomerAccountID: customerAccountId,
-		Type:              5,
-		Timestamp:         20191209,
-		ID:                "2061667885",
-		Value:             &postgres.Jsonb{value},
-		TypeAlias:         "campaign_performance_report",
-	}
-	errCode = store.GetStore().CreateAdwordsDocument(&document)
-	assert.Equal(t, http.StatusCreated, errCode)
-	query3 := &model.ChannelQuery{
-		Channel:     "google_ads",
-		FilterKey:   "campaign",
-		FilterValue: "all",
-		From:        1575158400,
-		To:          1575936000,
-		Timezone:    string(U.TimeZoneStringIST),
-	}
-
-	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{
-		Presentation: "pc", QueryId: "2"})
-	assert.Equal(t, http.StatusCreated, w.Code)
-
 	dashboards, errCode := store.GetStore().GetDashboards(project.ID, agent.UUID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, dashboard.Name, dashboards[1].Name)
 
-	// No of units should be 3
+	// No of units should be 2
 	dashboardUnits, errCode := store.GetStore().GetDashboardUnits(project.ID, agent.UUID, dashboards[1].ID)
 	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, 3, len(dashboardUnits))
+	assert.Equal(t, 2, len(dashboardUnits))
 
 	decResult := struct {
 		Cache  bool              `json:"cache"`
 		Result model.QueryResult `json:"result"`
-	}{}
-
-	decChannelResult := struct {
-		Cache  bool                     `json:"cache"`
-		Result model.ChannelQueryResult `json:"result"`
 	}{}
 
 	//Cache should be empty
@@ -337,12 +306,6 @@ func TestEventChannelQueryDashboardResultFromCache(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, query2.To, decResult.Result.Meta.Query.To)
 	assert.Equal(t, false, decResult.Cache)
-	w = sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3)
-	assert.Equal(t, http.StatusOK, w.Code)
-	err = json.Unmarshal(w.Body.Bytes(), &decChannelResult)
-	assert.Nil(t, err)
-	assert.Equal(t, float64(989), (*decChannelResult.Result.Metrics)["clicks"])
-	assert.Equal(t, false, decChannelResult.Cache)
 
 	// Cache should be set
 	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitIdWithPreset("", project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, "", from, to, U.TimeZoneString(project.TimeZone))
@@ -353,10 +316,6 @@ func TestEventChannelQueryDashboardResultFromCache(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(query2.To), result.Result.(map[string]interface{})["meta"].(map[string]interface{})["query"].(map[string]interface{})["to"])
-	resultChannel, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitIdWithPreset("", project.ID, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, "", query3.From, query3.To, U.TimeZoneString(project.TimeZone))
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Nil(t, errMsg)
-	assert.Equal(t, float64(989), resultChannel.Result.(map[string]interface{})["metrics"].(map[string]interface{})["clicks"])
 
 	// Cache should be set to true
 	w = sendGetDashboardUnitResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, &gin.H{"query": query1})

@@ -3,7 +3,6 @@ import { Layout, Spin } from 'antd';
 
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { useHistory } from 'react-router-dom';
 import Highcharts from 'highcharts';
 import {
   fetchProjects,
@@ -62,35 +61,25 @@ function AppLayout({
   const [dataLoading, setDataLoading] = useState(true);
   const [demoProjectId, setDemoProjectId] = useState(EMPTY_ARRAY);
   const { Content } = Layout;
-  const history = useHistory();
   const agentState = useSelector((state) => state.agent);
   const isAgentLoggedIn = agentState.isLoggedIn;
   const { active_project } = useSelector((state) => state.global);
   const { projects } = useSelector((state) => state.global);
   const { show_analytics_result } = useSelector((state) => state.coreQuery);
-  const {currentProjectSettings} = useSelector((state) => state.global);
+  const { currentProjectSettings } = useSelector((state) => state.global);
   const dispatch = useDispatch();
   const [sidebarCollapse, setSidebarCollapse] = useState(true);
 
   const activeAgent = agentState?.agent_details?.email;
 
-  const whiteListedAccounts = [
-    'baliga@factors.ai',
-    'solutions@factors.ai',
-    'sonali@factors.ai',
-    'praveenr@factors.ai',
-    'janani@factors.ai',
-    'akhil@factors.ai'
-  ];
-
   const asyncCallOnLoad = useCallback(async () => {
     try {
-      await fetchProjects();
+      if (isAgentLoggedIn) await fetchProjects();
       setDataLoading(false);
     } catch (err) {
       console.log(err);
     }
-  }, [fetchProjects]);
+  }, [fetchProjects, isAgentLoggedIn]);
 
   useEffect(() => {
     asyncCallOnLoad();
@@ -121,7 +110,7 @@ function AppLayout({
   }, [projects]);
 
   useEffect(() => {
-    if (active_project && active_project?.id) {
+    if (active_project && active_project?.id && isAgentLoggedIn) {
       dispatch(fetchDashboards(active_project?.id));
       dispatch(fetchQueries(active_project?.id));
       dispatch(fetchGroups(active_project?.id));
@@ -141,11 +130,6 @@ function AppLayout({
     }
   }, [dispatch, active_project]);
 
-  if (!isAgentLoggedIn) {
-    history.push('/login');
-    return null;
-  }
-
   return (
     // eslint-disable-next-line react/jsx-no-useless-fragment
     <>
@@ -163,7 +147,7 @@ function AppLayout({
             }
             onError={FaErrorLog}
           >
-            {!show_analytics_result ? (
+            {!show_analytics_result && isAgentLoggedIn ? (
               <>
                 <FaHeader
                   collapse={sidebarCollapse}

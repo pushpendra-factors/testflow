@@ -26,7 +26,7 @@ import {
 } from 'Reducers/settings/middleware';
 import PropetyValueModal from '../PropetyValueModal';
 
-import { reverseOperatorMap } from '../utils';
+import { reverseOperatorMap } from 'Utils/operatorMapping';
 import ConfirmationModal from '../../../../../components/ConfirmationModal';
 import useAutoFocus from 'hooks/useAutoFocus';
 const { Option } = Select;

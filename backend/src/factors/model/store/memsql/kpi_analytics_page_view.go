@@ -14,9 +14,13 @@ func (store *MemSQL) GetKPIConfigsForPageViews(projectID int64, reqID string, in
 		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
 	config := model.KPIConfigForPageViews
 	rMetrics := model.GetStaticallyDefinedMetricsForDisplayCategory(model.PageViewsDisplayCategory)
+	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
+	rProperties := append(model.KPIPropertiesForPageViews, standardUserProperties...)
 
 	config["metrics"] = rMetrics
+	config["properties"] = rProperties
 	return config, http.StatusOK
 }

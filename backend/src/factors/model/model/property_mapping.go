@@ -113,7 +113,7 @@ func GenerateSectionBitMapFromProperties(properties []Property) (int64, string) 
 }
 
 // Takes list of display category
-// Returns sectionBitMap 
+// Returns sectionBitMap
 // Binary bits are marked based on display_category from properties from left to right.
 func GenerateSectionBitMap(displayCategories []string) (int64, string) {
 

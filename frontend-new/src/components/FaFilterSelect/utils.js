@@ -1,17 +1,17 @@
+import { DEFAULT_OP_PROPS } from 'Utils/operatorMapping';
+
 export const DEFAULT_OPERATOR_PROPS = {
-  categorical: ['=', '!=', 'contains', 'does not contain'],
-  numerical: ['=', '!=', '<', '<=', '>', '>='],
-  datetime: [
-    'between',
-    'not between',
-    'in the current',
-    'not in the current',
-    'in the previous',
-    'not in the previous',
-    'before',
-    'since',
-  ],
+  categorical: DEFAULT_OP_PROPS['categorical'],
+  numerical: DEFAULT_OP_PROPS['numerical'],
+  datetime: DEFAULT_OP_PROPS['datetime']
 };
-export const dateTimeSelect = new Map(
-  [['Days','days'],['Weeks','week'],['Months','month'],['Quarters','quarter'],['days','Days'],['week','Weeks'],['month','Months'],['quarter','Quarters']]
-);
+export const dateTimeSelect = new Map([
+  ['Days', 'days'],
+  ['Weeks', 'week'],
+  ['Months', 'month'],
+  ['Quarters', 'quarter'],
+  ['days', 'Days'],
+  ['week', 'Weeks'],
+  ['month', 'Months'],
+  ['quarter', 'Quarters']
+]);

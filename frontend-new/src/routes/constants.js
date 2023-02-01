@@ -81,8 +81,7 @@ export const APP_ROUTES = {
   },
   APPLayout: {
     path: '/',
-    Component: AppLayout,
-    Private: true
+    Component: AppLayout
   }
 };
 

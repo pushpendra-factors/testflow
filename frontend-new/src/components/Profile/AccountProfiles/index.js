@@ -20,6 +20,7 @@ import FaSelect from '../../FaSelect';
 import {
   DEFAULT_TIMELINE_CONFIG,
   displayFilterOpts,
+  formatEventsFromSegment,
   formatFiltersForPayload,
   formatPayloadForFilters,
   formatSegmentsObjToGroupSelectObj,
@@ -40,6 +41,7 @@ import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from '../UserProfiles/SegmentModal';
+import EventsBlock from '../UserProfiles/EventsBlock';
 
 function AccountProfiles({
   activeProject,
@@ -56,11 +58,11 @@ function AccountProfiles({
   getGroupProperties
 }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isAccountDDVisible, setAccountDDVisible] = useState(false);
+  const [isGroupDDVisible, setGroupDDVisible] = useState(false);
   const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
   const [showSegmentModal, setShowSegmentModal] = useState(false);
   const [activeSegment, setActiveSegment] = useState({});
-  const [filterPayload, setFilterPayload] = useState({
+  const [accountPayload, setAccountPayload] = useState({
     source: 'All',
     filters: []
   });
@@ -168,9 +170,10 @@ function AccountProfiles({
       title: <div className={headerClassStr}>Last Activity</div>,
       dataIndex: 'last_activity',
       key: 'last_activity',
-      width: 300,
+      width: 250,
       fixed: 'right',
-      render: (item) => MomentTz(item).format('DD MMMM YYYY, hh:mm:ss A')
+      align: 'right',
+      render: (item) => MomentTz(item).fromNow()
     });
     return columns;
   };
@@ -194,38 +197,38 @@ function AccountProfiles({
   };
 
   const onChange = (val) => {
-    if (val !== filterPayload.source) {
-      const opts = { ...filterPayload };
+    if (val !== accountPayload.source) {
+      const opts = { ...accountPayload };
       opts.source = val;
-      setFilterPayload(opts);
+      setAccountPayload(opts);
     }
-    setAccountDDVisible(false);
+    setGroupDDVisible(false);
   };
 
   const setFilters = (filters) => {
-    const opts = { ...filterPayload };
+    const opts = { ...accountPayload };
     opts.filters = filters;
-    setFilterPayload(opts);
+    setAccountPayload(opts);
   };
 
   const clearFilters = () => {
-    const opts = { ...filterPayload };
+    const opts = { ...accountPayload };
     opts.filters = [];
-    setFilterPayload(opts);
+    setAccountPayload(opts);
   };
 
   useEffect(() => {
-    const opts = { ...filterPayload };
-    opts.filters = formatFiltersForPayload(filterPayload.filters);
+    const opts = { ...accountPayload };
+    opts.filters = formatFiltersForPayload(accountPayload.filters);
     getProfileAccounts(activeProject.id, opts);
-  }, [activeProject, currentProjectSettings, filterPayload]);
+  }, [activeProject, currentProjectSettings, accountPayload]);
 
-  const selectUsers = () => (
+  const selectGroup = () => (
     <div className='absolute top-0'>
-      {isAccountDDVisible ? (
+      {isGroupDDVisible ? (
         <FaSelect
           options={enabledGroups()}
-          onClickOutside={() => setAccountDDVisible(false)}
+          onClickOutside={() => setGroupDDVisible(false)}
           optionClick={(val) => onChange(val[1])}
         />
       ) : null}
@@ -305,7 +308,7 @@ function AccountProfiles({
 
   const generateSegmentsList = () => {
     const segmentsList = [];
-    if (filterPayload.source === 'All') {
+    if (accountPayload.source === 'All') {
       Object.entries(segments)
         .filter((segment) =>
           ['$hubspot_company', '$salesforce_account'].includes(segment[0])
@@ -316,8 +319,8 @@ function AccountProfiles({
         });
     } else {
       const obj = formatSegmentsObjToGroupSelectObj(
-        filterPayload.source,
-        segments[filterPayload.source]
+        accountPayload.source,
+        segments[accountPayload.source]
       );
       segmentsList.push(obj);
     }
@@ -325,10 +328,10 @@ function AccountProfiles({
   };
 
   const onOptionClick = (_, data) => {
-    const opts = { ...filterPayload };
+    const opts = { ...accountPayload };
     opts.segment_id = data[1];
     setActiveSegment(data[2]);
-    setFilterPayload(opts);
+    setAccountPayload(opts);
     setSegmentDDVisible(false);
   };
 
@@ -356,12 +359,50 @@ function AccountProfiles({
   };
 
   const clearSegment = () => {
-    const opts = { ...filterPayload };
+    const opts = { ...accountPayload };
     opts.segment_id = '';
     setActiveSegment({});
-    setFilterPayload(opts);
+    setAccountPayload(opts);
     setSegmentDDVisible(false);
   };
+
+  const renderAdditionalActionsInSegment = () => (
+    <div className='mb-2'>
+      <Divider className='divider-margin' />
+      <div className='flex items-center flex-col'>
+        {accountPayload.segment_id && (
+          <Button
+            size='large'
+            type='text'
+            className='w-full mb-2'
+            onClick={clearSegment}
+            icon={<SVG name='remove' />}
+          >
+            Clear Segment
+          </Button>
+        )}
+        <Button
+          type='link'
+          size='large'
+          className='w-full'
+          icon={<SVG name='plus' color='purple' />}
+          onClick={() => setShowSegmentModal(true)}
+        >
+          Add New Segment
+        </Button>
+      </div>
+      <SegmentModal
+        profileType='account'
+        type={accountPayload.source}
+        typeOptions={enabledGroups().filter((group) => group[1] !== 'All')}
+        visible={showSegmentModal}
+        segment={{}}
+        onSave={handleSaveSegment}
+        onCancel={() => setShowSegmentModal(false)}
+        caller={'account_profiles'}
+      />
+    </div>
+  );
 
   const selectSegment = () => (
     <div className='absolute top-8'>
@@ -372,146 +413,163 @@ function AccountProfiles({
           optionClick={onOptionClick}
           onClickOutside={() => setSegmentDDVisible(false)}
           allowEmpty
-          additionalActions={
-            <>
-              <Divider className='divider-margin' />
-              <div className='flex items-center'>
-                <Button
-                  type='link'
-                  size='large'
-                  className='w-full'
-                  icon={<SVG name='plus' color='purple' />}
-                  onClick={() => setShowSegmentModal(true)}
-                >
-                  Add New Segment
-                </Button>
-                {filterPayload.segment_id && (
-                  <Button
-                    type='primary'
-                    size='large'
-                    className='w-full ml-1'
-                    onClick={clearSegment}
-                    danger
-                  >
-                    Clear Segment
-                  </Button>
-                )}
-              </div>
-              <SegmentModal
-                profileType='account'
-                type={filterPayload.source}
-                typeOptions={enabledGroups().filter(
-                  (group) => group[1] !== 'All'
-                )}
-                visible={showSegmentModal}
-                segment={{}}
-                onSave={handleSaveSegment}
-                onCancel={() => setShowSegmentModal(false)}
-              />
-            </>
-          }
+          additionalActions={renderAdditionalActionsInSegment()}
         />
       ) : null}
     </div>
   );
 
-  const segmentInfo = () => {
-    const cardContent = [];
-    if (activeSegment.query) {
-      if (activeSegment.query.gup) {
-        const filters = formatPayloadForFilters(activeSegment.query.gup);
-        cardContent.push(
-          <div className='pointer-events-none mt-3'>
-            <PropertyFilter
-              mode='display'
-              filtersLimit={10}
-              profileType='account'
-              source={filterPayload.source}
-              filters={filters}
-            ></PropertyFilter>
-          </div>
-        );
-      }
-    }
-    return cardContent;
+  const eventsList = (listEvents) => {
+    const blockList = [];
+    listEvents.forEach((event, index) => {
+      blockList.push(
+        <div key={index} className='m-0 mr-2 mb-2'>
+          <EventsBlock
+            index={index + 1}
+            event={event}
+            queries={listEvents}
+            displayMode
+          />
+        </div>
+      );
+    });
+
+    return (
+      <div className='flex items-start'>
+        {blockList.length ? (
+          <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
+            Performed Events
+          </h2>
+        ) : null}
+        <div className='flex flex-wrap flex-col'>{blockList}</div>
+      </div>
+    );
   };
+
+  const filtersList = (filters) => {
+    return (
+      <div className='flex items-start'>
+        <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
+          Properties
+        </h2>
+        <div className='flex flex-wrap flex-col'>
+          <PropertyFilter
+            filtersLimit={10}
+            profileType='user'
+            source={accountPayload.source}
+            filters={filters}
+            displayMode
+          ></PropertyFilter>
+        </div>
+      </div>
+    );
+  };
+
+  const segmentInfo = () => {
+    if (activeSegment.query) {
+      return (
+        <div className='p-3 pointer-events-none'>
+          {activeSegment.query.ewp && activeSegment.query.ewp.length
+            ? eventsList(formatEventsFromSegment(activeSegment.query.ewp))
+            : null}
+          {activeSegment.query.gup && activeSegment.query.gup.length
+            ? filtersList(formatPayloadForFilters(activeSegment.query.gup))
+            : null}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderGroupSelectDD = () => (
+    <div className='relative mr-2'>
+      <Button
+        className='dropdown-btn'
+        type='text'
+        icon={<SVG name='user_friends' size={16} />}
+        onClick={() => setGroupDDVisible(!isGroupDDVisible)}
+      >
+        {displayFilterOpts[accountPayload.source]}
+        <SVG name='caretDown' size={16} />
+      </Button>
+      {selectGroup()}
+    </div>
+  );
+
+  const renderSegmentSelect = () => (
+    <div className='relative mr-2'>
+      <Popover
+        overlayClassName='fa-custom-popover'
+        placement='bottomLeft'
+        trigger={activeSegment.query ? 'hover' : ''}
+        content={segmentInfo}
+      >
+        <Button
+          className='dropdown-btn'
+          type='text'
+          onClick={() => setSegmentDDVisible(!isSegmentDDVisible)}
+        >
+          {Object.keys(activeSegment).length
+            ? activeSegment.name
+            : 'Select Segment'}
+          <SVG name='caretDown' size={16} />
+        </Button>
+      </Popover>
+      {selectSegment()}
+    </div>
+  );
+
+  const renderPropertyFilter = () => (
+    <div key={0} className='max-w-3xl'>
+      <PropertyFilter
+        profileType='account'
+        source={accountPayload.source}
+        filters={accountPayload.filters}
+        setFilters={setFilters}
+      />
+    </div>
+  );
+
+  const renderClearFilterButton = () => (
+    <Button
+      className='dropdown-btn'
+      type='text'
+      icon={<SVG name='times_circle' size={16} />}
+      onClick={clearFilters}
+    >
+      Clear Filters
+    </Button>
+  );
+  const renderTablePropsSelect = () => (
+    <Popover
+      overlayClassName='fa-activity--filter'
+      placement='bottomLeft'
+      visible={showPopOver}
+      onVisibleChange={(visible) => {
+        setShowPopOver(visible);
+      }}
+      onClick={() => {
+        setShowPopOver(true);
+      }}
+      trigger='click'
+      content={popoverContent}
+    >
+      <Button size='large' className='fa-btn--custom mx-2 relative'>
+        <SVG name='activity_filter' />
+      </Button>
+    </Popover>
+  );
 
   const renderActions = () => (
     <div className='flex justify-between items-start my-4'>
       <div className='flex justify-between'>
-        <div className='relative mr-2'>
-          <Button
-            className='dropdown-btn'
-            type='text'
-            icon={<SVG name='user_friends' size={16} />}
-            onClick={() => setAccountDDVisible(!isAccountDDVisible)}
-          >
-            {displayFilterOpts[filterPayload.source]}
-            <SVG name='caretDown' size={16} />
-          </Button>
-          {selectUsers()}
-        </div>
-        <div className='relative mr-2'>
-          <Popover
-            overlayClassName='fa-custom-popover'
-            placement='bottomLeft'
-            trigger={activeSegment.query ? 'hover' : ''}
-            content={segmentInfo}
-          >
-            <Button
-              className='dropdown-btn'
-              type='text'
-              onClick={() => setSegmentDDVisible(!isSegmentDDVisible)}
-            >
-              {Object.keys(activeSegment).length
-                ? activeSegment.name
-                : 'Select Segment'}
-              <SVG name='caretDown' size={16} />
-            </Button>
-          </Popover>
-          {selectSegment()}
-        </div>
-        <div key={0} className='max-w-3xl'>
-          <PropertyFilter
-            profileType='account'
-            source={filterPayload.source}
-            filters={filterPayload.filters}
-            setFilters={setFilters}
-          />
-        </div>
+        {renderGroupSelectDD()}
+        {renderSegmentSelect()}
+        {renderPropertyFilter()}
       </div>
       <div className='flex items-center justify-between'>
-        {filterPayload.filters.length ? (
-          <Button
-            className='dropdown-btn'
-            type='text'
-            icon={<SVG name='times_circle' size={16} />}
-            onClick={clearFilters}
-          >
-            Clear Filters
-          </Button>
-        ) : null}
-        <Popover
-          overlayClassName='fa-activity--filter'
-          placement='bottomLeft'
-          visible={showPopOver}
-          onVisibleChange={(visible) => {
-            setShowPopOver(visible);
-          }}
-          onClick={() => {
-            setShowPopOver(true);
-          }}
-          trigger='click'
-          content={popoverContent}
-        >
-          <Button
-            size='large'
-            className='fa-btn--custom mx-2 relative'
-            // type='text'
-          >
-            <SVG name='activity_filter' />
-          </Button>
-        </Popover>
+        {accountPayload.filters.length ? renderClearFilterButton() : null}
+        {renderTablePropsSelect()}
       </div>
     </div>
   );
@@ -582,9 +640,12 @@ function AccountProfiles({
       ) : accounts.data.length ? (
         renderTable()
       ) : (
-        <Text type='title' level={6} extraClass='mt-20 italic'>
-          There are currently no Accounts available for this project.
-        </Text>
+        <div className='ant-empty ant-empty-normal'>
+          <div className='ant-empty-image'>
+            <SVG name='nodata' size={150} />
+          </div>
+          <div className='ant-empty-description'>No Accounts Found</div>
+        </div>
       )}
       {renderAccountDetailsModal()}
     </div>

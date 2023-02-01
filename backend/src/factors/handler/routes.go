@@ -324,6 +324,7 @@ func InitAppRoutes(r *gin.Engine) {
 	// v1 KPI endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/config", responseWrapper(V1.GetKPIConfigHandler))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", responseWrapper(V1.GetKPIFilterValuesHandler))
+	authRouteGroup.GET("/:project_id/v1/kpi/:custom_event_kpi/properties", V1.GetPropertiesForCustomKPIEventBased)
 	// V1 Routes
 	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/v1/event_names/:type", V1.GetEventNamesByTypeHandler)

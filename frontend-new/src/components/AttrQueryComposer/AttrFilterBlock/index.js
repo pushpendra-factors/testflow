@@ -6,19 +6,21 @@ import { Input, Button, Result } from 'antd';
 import MomentTz from 'Components/MomentTz';
 import { SVG, Text } from 'factorsComponents';
 import { DEFAULT_DATE_RANGE } from '../../QueryComposer/DateRangeSelector/utils';
+import { OPERATORS } from 'Utils/constants';
 
 const defaultOpProps = {
-  categorical: ['=', '!=', 'contains', 'does not contain'],
-  numerical: ['=', '!=', '<', '<=', '>', '>='],
-  datetime: ['='],
+  categorical: DEFAULT_OP_PROPS['categorical'],
+  numerical: DEFAULT_OP_PROPS['numerical'],
+  datetime: [OPERATORS['equalTo']]
 };
 
 import {
   fetchEventPropertyValues,
   fetchUserPropertyValues,
-  fetchChannelObjPropertyValues,
+  fetchChannelObjPropertyValues
 } from 'Reducers/coreQuery/services';
 import AttrFilterSelect from '../AttrFilterSelect';
+import { DEFAULT_OP_PROPS } from 'Utils/operatorMapping';
 
 export default function AttrFilterBlock({
   index,
@@ -38,7 +40,7 @@ export default function AttrFilterBlock({
   deleteFilter,
   insertFilter,
   closeFilter,
-  showOr,
+  showOr
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -46,12 +48,12 @@ export default function AttrFilterBlock({
   const [newFilterState, setNewFilterState] = useState({
     props: [],
     operator: '',
-    values: [],
+    values: []
   });
 
   const [dropDownValues, setDropDownValues] = useState({});
   const [selectedRngState, setSelectedRngState] = useState([
-    { ...DEFAULT_DATE_RANGE },
+    { ...DEFAULT_DATE_RANGE }
   ]);
 
   const [hoverDelIcon, setHoverDelIcon] = useState('');
@@ -59,21 +61,21 @@ export default function AttrFilterBlock({
   const placeHolder = {
     props: 'Choose a property',
     operator: 'Choose an operator',
-    values: 'Choose values',
+    values: 'Choose values'
   };
 
   const [filterDropDownOptions, setFiltDD] = useState({
     props: [
       {
         label: 'Event Properties',
-        icon: 'event',
+        icon: 'event'
       },
       {
         label: 'User Properties',
-        icon: 'user',
-      },
+        icon: 'user'
+      }
     ],
-    operator: operatorProps,
+    operator: operatorProps
   });
 
   useEffect(() => {
@@ -90,7 +92,7 @@ export default function AttrFilterBlock({
       propState.push({
         label: k,
         icon: k === 'event' ? 'event' : k,
-        values: filterProps[k],
+        values: filterProps[k]
       });
     });
     filterDD.props = propState;
@@ -236,7 +238,7 @@ export default function AttrFilterBlock({
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[newFilterState.props[0]] = [
                 ...res?.data?.result?.filter_values,
-                '$none',
+                '$none'
               ];
               setDropDownValues(ddValues);
             })
@@ -299,7 +301,7 @@ export default function AttrFilterBlock({
     const rangeValue = {
       fr: newRange[0].startDate.getTime(),
       to: endRange,
-      ovp: false,
+      ovp: false
     };
     newFilter[filterTypeState] = JSON.stringify(rangeValue);
     setNewFilterState(newFilter);
@@ -678,21 +680,37 @@ export default function AttrFilterBlock({
   };
 
   return (
-      <div className={`flex items-center relative ${!showOr?'ml-10':''}`}>
-        {!showOr && (index >=1 ? (
-        <Text level={8} type={'title'} extraClass={'m-0 mr-16'} weight={'thin'}>
-          and
-        </Text>
-        ):(
-        <Text level={8} type={'title'} extraClass={'m-0 mr-10'} weight={'thin'}>
-          Filter by
-        </Text>
+    <div className={`flex items-center relative ${!showOr ? 'ml-10' : ''}`}>
+      {!showOr &&
+        (index >= 1 ? (
+          <Text
+            level={8}
+            type={'title'}
+            extraClass={'m-0 mr-16'}
+            weight={'thin'}
+          >
+            and
+          </Text>
+        ) : (
+          <Text
+            level={8}
+            type={'title'}
+            extraClass={'m-0 mr-10'}
+            weight={'thin'}
+          >
+            Filter by
+          </Text>
         ))}
-        {showOr && (
-        <Text level={8} type={'title'} extraClass={'m-0 mr-2 ml-2'} weight={'thin'}>
+      {showOr && (
+        <Text
+          level={8}
+          type={'title'}
+          extraClass={'m-0 mr-2 ml-2'}
+          weight={'thin'}
+        >
           or
         </Text>
-        )}
+      )}
       <div className={`relative flex`}>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>

@@ -223,7 +223,8 @@
 
         th {
             min-width: 175px;
-            padding: 9px 16px;
+            padding: 10px 16px;
+            padding-left: 24px;
             border-bottom: 1px solid #E7E9ED;
             vertical-align: top;
             background: #F5F6F8;
@@ -285,8 +286,8 @@
                             top: 40px;
                         }
 
-                        &.top-75 {
-                            top: 75px;
+                        &.top-64 {
+                            top: 64px;
                         }
                     }
                 }
@@ -470,6 +471,7 @@
     margin-bottom: 8px;
 
     .heading {
+        width: 80%;
         font-family: 'Inter';
         font-style: normal;
         font-weight: 600;
@@ -478,6 +480,7 @@
     }
 
     .heading-with-sub {
+        width: 80%;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
@@ -607,6 +610,7 @@
 }
 
 .fa-table--userlist {
+
     // table head
     .ant-table-thead {
         .ant-table-cell {
@@ -616,6 +620,7 @@
             color: $fa-color--mono-5;
         }
     }
+
     // table body
     .ant-table-tbody {
         .ant-table-row {
@@ -629,4 +634,8 @@
             }
         }
     }
+}
+
+.line-height-8 {
+    line-height: 32px;
 }

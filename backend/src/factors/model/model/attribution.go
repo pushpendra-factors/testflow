@@ -204,7 +204,7 @@ var KeyDimensionToHeaderMap = map[string]string{
 	FieldLandingPageUrl:   "LandingPage",
 	FieldAllPageViewUrl:   "AllPageView",
 }
-var AttributionFixedHeadersLandingPage = []string{}
+var AttributionFixedHeadersLandingPage []string
 var AttributionFixedHeadersPostPostConversionLanding = []string{"Compare - Users", "Compare-Users (InfluenceRemove)"}
 
 // ToDo change here as well.
@@ -339,31 +339,31 @@ func (q *AttributionQueryUnit) GetQueryCacheExpiry() float64 {
 	return getQueryCacheResultExpiry(q.Query.From, q.Query.To, q.Query.Timezone)
 }
 
-func (query *AttributionQueryUnit) TransformDateTypeFilters() error {
-	return query.Query.TransformDateTypeFilters()
+func (q *AttributionQueryUnit) TransformDateTypeFilters() error {
+	return q.Query.TransformDateTypeFilters()
 }
 
-func (query *AttributionQueryUnit) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
-	query.Query.ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone)
+func (q *AttributionQueryUnit) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
+	q.Query.ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone)
 	return nil
 }
 
-func (query *AttributionQueryUnit) CheckIfNameIsPresent(nameOfQuery string) bool {
+func (q *AttributionQueryUnit) CheckIfNameIsPresent(nameOfQuery string) bool {
 	return false
 }
 
-func (query *AttributionQueryUnit) SetDefaultGroupByTimestamp() {
-	if query.Query.KPI.Class == "" {
+func (q *AttributionQueryUnit) SetDefaultGroupByTimestamp() {
+	if q.Query.KPI.Class == "" {
 		return
 	}
-	for index := range query.Query.KPI.Queries {
-		if query.Query.KPI.Queries[index].GroupByTimestamp == GroupByTimestampHour {
-			query.Query.KPI.Queries[index].GroupByTimestamp = GroupByTimestampSecond
+	for index := range q.Query.KPI.Queries {
+		if q.Query.KPI.Queries[index].GroupByTimestamp == GroupByTimestampHour {
+			q.Query.KPI.Queries[index].GroupByTimestamp = GroupByTimestampSecond
 		}
 	}
 }
 
-func (query *AttributionQueryUnit) GetGroupByTimestamps() []string {
+func (q *AttributionQueryUnit) GetGroupByTimestamps() []string {
 	return []string{}
 }
 
@@ -972,8 +972,8 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 				result.Headers = append(result.Headers, conversion, conversionInfluence)
 
 				conversionC := fmt.Sprintf("%s - Conversion(compare)", goal)
-				conversionC_influence := fmt.Sprintf("%s - Conversion InfluenceRemove(compare)", goal)
-				result.Headers = append(result.Headers, conversionC, conversionC_influence)
+				conversionCInfluence := fmt.Sprintf("%s - Conversion InfluenceRemove(compare)", goal)
+				result.Headers = append(result.Headers, conversionC, conversionCInfluence)
 			}
 
 		} else {
@@ -1059,9 +1059,9 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 				result.Headers = append(result.Headers, conversion, conversionInfluence, cpc)
 
 				conversionC := fmt.Sprintf("%s - Conversion Value(compare)", goal)
-				conversionC_influence := fmt.Sprintf("%s - Conversion Value InfluenceRemove(compare)", goal)
+				conversionCInfluence := fmt.Sprintf("%s - Conversion Value InfluenceRemove(compare)", goal)
 				cpcC := fmt.Sprintf("%s - Return on Cost(compare)", goal)
-				result.Headers = append(result.Headers, conversionC, conversionC_influence, cpcC)
+				result.Headers = append(result.Headers, conversionC, conversionCInfluence, cpcC)
 			} else {
 				conversion := fmt.Sprintf("%s - Conversion", goal)
 				conversionInfluence := fmt.Sprintf("%s - Conversion Value (InfluenceRemove) ", goal)
@@ -1069,9 +1069,9 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 				result.Headers = append(result.Headers, conversion, conversionInfluence, cpc)
 
 				conversionC := fmt.Sprintf("%s - Conversion(compare)", goal)
-				conversionC_influence := fmt.Sprintf("%s - Conversion InfluenceRemove(compare)", goal)
+				conversionCInfluence := fmt.Sprintf("%s - Conversion InfluenceRemove(compare)", goal)
 				cpcC := fmt.Sprintf("%s - Cost Per Conversion(compare)", goal)
-				result.Headers = append(result.Headers, conversionC, conversionC_influence, cpcC)
+				result.Headers = append(result.Headers, conversionC, conversionCInfluence, cpcC)
 			}
 		}
 
@@ -1647,11 +1647,11 @@ func ProcessQueryKPIPageUrl(query *AttributionQuery, attributionData *map[string
 	result.Rows = dataRows
 
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query, logCtx)
+	err := GetUpdatedRowsByDimensions(result, query)
 	if err != nil {
 		return nil
 	}
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil, logCtx)
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil)
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndexKPI(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
@@ -1673,7 +1673,7 @@ func ProcessQueryKPIPageUrl(query *AttributionQuery, attributionData *map[string
 	})
 	logCtx.Info("MergeDataRowsHavingSameKey")
 
-	result.Rows = AddGrandTotalRowKPILandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), goalEvents, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	result.Rows = AddGrandTotalRowKPILandingPage(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), goalEvents, query.AttributionMethodology, query.AttributionMethodologyCompare)
 	logCtx.Info("Done AddGrandTotal")
 	return result
 
@@ -1696,11 +1696,11 @@ func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map
 	result.Rows = dataRows
 
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query, logCtx)
+	err := GetUpdatedRowsByDimensions(result, query)
 	if err != nil {
 		return nil
 	}
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil, logCtx)
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil)
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndexKPI(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
@@ -1722,7 +1722,7 @@ func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map
 	})
 	logCtx.Info("MergeDataRowsHavingSameKey")
 
-	result.Rows = AddGrandTotalRowKPILandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), goalEvents, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	result.Rows = AddGrandTotalRowKPILandingPage(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), goalEvents, query.AttributionMethodology, query.AttributionMethodologyCompare)
 	logCtx.Info("Done AddGrandTotal")
 	return result
 
@@ -1740,11 +1740,11 @@ func ProcessQueryPageUrl(query *AttributionQuery, attributionData *map[string]*A
 	result.Rows = dataRows
 
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query, logCtx)
+	err := GetUpdatedRowsByDimensions(result, query)
 	if err != nil {
 		return nil
 	}
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil, logCtx)
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil)
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndex(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
@@ -1782,11 +1782,11 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 	result.Rows = dataRows
 
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query, logCtx)
+	err := GetUpdatedRowsByDimensions(result, query)
 	if err != nil {
 		return nil
 	}
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil, logCtx)
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil)
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndex(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
@@ -1813,15 +1813,15 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 }
 
 // ProcessQuery converts attribution data into result
-func ProcessQuery(query *AttributionQuery, attributionData *map[string]*AttributionData, marketingReports *MarketingReports, isCompare bool, projectId int64, logCtx log.Entry) *QueryResult {
+func ProcessQuery(query *AttributionQuery, attributionData *map[string]*AttributionData, marketingReports *MarketingReports, isCompare bool, logCtx log.Entry) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQuery"}
 	logCtx = *logCtx.WithFields(logFields)
 
 	// add CampaignData result based on Key Dimensions
-	AddCampaignDataForSource(*attributionData, marketingReports, query)
+	_ = AddCampaignDataForSource(*attributionData, marketingReports, query)
 
 	// add CampaignData result based on Key Dimensions
-	AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
+	_ = AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
 
 	for key, _ := range *attributionData {
 		//add key to attribution data
@@ -1846,12 +1846,12 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		break
 	}
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query, logCtx)
+	err := GetUpdatedRowsByDimensions(result, query)
 	if err != nil {
 		return nil
 	}
 
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes, logCtx)
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes)
 
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
@@ -1879,7 +1879,8 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"result": result}).Info("result before addGrandTotal")
 	}
-	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers),
+		query.AttributionMethodology, query.AttributionMethodologyCompare)
 	return result
 }
 
@@ -1916,10 +1917,10 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	}
 
 	// add CampaignData result based on Key Dimensions
-	AddCampaignDataForSource(*attributionData, marketingReports, query)
+	_ = AddCampaignDataForSource(*attributionData, marketingReports, query)
 
 	// add CampaignData result based on Key Dimensions
-	AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
+	_ = AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
 
 	for key, _ := range *attributionData {
 		//add key to attribution data
@@ -1966,7 +1967,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "result": result}).Info("Done GetRowsByMaps AddHeadersByAttributionKey")
 	}
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query, *logCtx)
+	err := GetUpdatedRowsByDimensions(result, query)
 	if err != nil {
 		return nil
 	}
@@ -2010,7 +2011,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 		return true
 	})
 
-	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	result.Rows = AddGrandTotalRowKPI(result.Rows, GetLastKeyValueIndex(result.Headers), goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
 
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
@@ -2027,10 +2028,10 @@ func ProcessQueryUserKPI(query *AttributionQuery, attributionData *map[string]*A
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData}).Info("KPI Attribution data")
 
 	// add CampaignData result based on Key Dimensions
-	AddCampaignDataForSource(*attributionData, marketingReports, query)
+	_ = AddCampaignDataForSource(*attributionData, marketingReports, query)
 
 	// add CampaignData result based on Key Dimensions
-	AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
+	_ = AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
 
 	for key, _ := range *attributionData {
 		//add key to attribution data
@@ -2074,7 +2075,7 @@ func ProcessQueryUserKPI(query *AttributionQuery, attributionData *map[string]*A
 	result.Rows = dataRows
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "result": result}).Info("Done GetRowsByMaps AddHeadersByAttributionKey")
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query, *logCtx)
+	err := GetUpdatedRowsByDimensions(result, query)
 	if err != nil {
 		return nil
 	}
@@ -2116,7 +2117,7 @@ func ProcessQueryUserKPI(query *AttributionQuery, attributionData *map[string]*A
 		return true
 	})
 
-	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	result.Rows = AddGrandTotalRowKPI(result.Rows, GetLastKeyValueIndex(result.Headers), goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
 
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
 
@@ -2240,7 +2241,7 @@ func AddCampaignDataForChannelGroupV1(attributionData map[string]*AttributionDat
 }
 
 // GetUpdatedRowsByDimensions updated the granular result with reduced dimensions
-func GetUpdatedRowsByDimensions(result *QueryResult, query *AttributionQuery, logCtx log.Entry) error {
+func GetUpdatedRowsByDimensions(result *QueryResult, query *AttributionQuery) error {
 
 	validHeadersDimensions := make(map[string]int)
 	for _, val := range query.AttributionKeyDimension {
@@ -2466,7 +2467,7 @@ func SanitizeResult(result *QueryResult) {
 }
 
 // MergeDataRowsHavingSameKey merges rows having same key by adding each column value
-func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionKey string, analyzeType string, conversionFunTypes []string, logCtx log.Entry) [][]interface{} {
+func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionKey string, analyzeType string, conversionFunTypes []string) [][]interface{} {
 
 	rowKeyMap := make(map[string][]interface{})
 	maxRowSize := 0
@@ -2499,7 +2500,7 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionK
 }
 
 // AddGrandTotalRow adds a row with grand total in report
-func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, analyzeType string, conversionFunTypes []string, method string, methodCompare string) [][]interface{} {
+func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, method string, methodCompare string) [][]interface{} {
 
 	var grandTotalRow []interface{}
 
@@ -2650,7 +2651,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 }
 
 // AddGrandTotalRowKPI adds a row with grand total in report for KPI queries
-func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, conversionFunTypes []string, method string, methodCompare string) [][]interface{} {
+func AddGrandTotalRowKPI(rows [][]interface{}, keyIndex int, conversionFunTypes []string, method string, methodCompare string) [][]interface{} {
 
 	var grandTotalRow []interface{}
 
@@ -2794,7 +2795,7 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, c
 	return rows
 
 }
-func AddGrandTotalRowKPILandingPage(headers []string, rows [][]interface{}, keyIndex int, goalEvents []string, method string, methodCompare string) [][]interface{} {
+func AddGrandTotalRowKPILandingPage(rows [][]interface{}, keyIndex int, goalEvents []string, method string, methodCompare string) [][]interface{} {
 
 	var grandTotalRow []interface{}
 
@@ -2976,7 +2977,7 @@ func AddUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
 			for _, keyWeight := range attributionKeys {
 				if attributionData[keyWeight.Key] != nil {
 					attributionData[keyWeight.Key].LinkedEventsCount[linkedEventToPositionMap[linkedEventName]] += keyWeight.Weight
-					attributionData[keyWeight.Key].LinkedEventsCountInfluence[linkedEventToPositionMap[linkedEventName]] += (keyWeight.Weight / float64(len(attributionKeys)))
+					attributionData[keyWeight.Key].LinkedEventsCountInfluence[linkedEventToPositionMap[linkedEventName]] += keyWeight.Weight / float64(len(attributionKeys))
 				}
 			}
 		}
@@ -3931,7 +3932,7 @@ func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData
 			}
 			(*attributionData)[k].CustomDimensions[dim] = PropertyValueNone
 
-			customDimKey := GetKeyForCustomDimensionsName(v.MarketingInfo.CampaignID, v.MarketingInfo.CampaignName, v.MarketingInfo.AdgroupID, v.MarketingInfo.AdgroupName, attributionKey)
+			customDimKey := GetKeyForCustomDimensionsName(v.MarketingInfo.CampaignName, v.MarketingInfo.AdgroupName, attributionKey)
 			if customDimKey == "" {
 				continue
 			}
@@ -3975,7 +3976,7 @@ func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData
 	}
 }
 
-func GetKeyForCustomDimensionsName(cID, cName, adgID, adgName, attributionKey string) string {
+func GetKeyForCustomDimensionsName(cName, adgName, attributionKey string) string {
 
 	key := ""
 	if attributionKey == AttributionKeyCampaign {
@@ -4051,7 +4052,7 @@ func isSessionWithinQueryPeriod(queryType string,
 	return false
 }
 
-func EnrichRequestUsingAttributionConfig(projectID int64, query *AttributionQuery, settings *ProjectSetting, logCtx *log.Entry) error {
+func EnrichRequestUsingAttributionConfig(query *AttributionQuery, settings *ProjectSetting, logCtx *log.Entry) error {
 
 	attributionConfig, err1 := decodeAttributionConfig(settings.AttributionConfig)
 	if err1 != nil {
@@ -4097,10 +4098,6 @@ func EnrichRequestUsingAttributionConfig(projectID int64, query *AttributionQuer
 		// logCtx.WithFields(log.Fields{"Query": query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
 		// return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
 	}
-	query.AnalyzeType = AnalyzeTypeUsers
-	query.RunType = RunTypeUser
-	return nil
-	// return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
 }
 
 // decodeAttributionConfig decode attribution config from project settings to map

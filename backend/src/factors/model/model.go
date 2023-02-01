@@ -71,7 +71,7 @@ type Model interface {
 		eventNameToIDList map[string][]interface{},
 		debugQueryKey string, enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
 		logCtx *log.Entry) (map[string]int64, []model.UserEventInfo, map[string]model.KPIInfo, []string, error)
-	GetAttributionData(projectID int64, query *model.AttributionQuery, sessions map[string]map[string]model.UserSessionData,
+	GetAttributionData(query *model.AttributionQuery, sessions map[string]map[string]model.UserSessionData,
 		usersToBeAttributed []model.UserEventInfo, coalUserIdConversionTimestamp map[string]int64, marketingReports *model.MarketingReports,
 		kpiData map[string]model.KPIInfo, logCtx *log.Entry) (*map[string]*model.AttributionData, bool, error)
 	PullSessionsOfConvertedUsers(projectID int64, query *model.AttributionQuery, sessionEventNameID string, usersToBeAttributed []string,
@@ -232,6 +232,8 @@ type Model interface {
 	GetEventTypeFromDb(projectID int64, eventNames []string, limit int64) (map[string]string, error)
 	GetMostFrequentlyEventNamesByType(projectID int64, limit int, lastNDays int, typeOfEvent string) ([]string, error)
 	GetEventNamesOrderedByOccurenceAndRecency(projectID int64, limit int, lastNDays int) (map[string][]string, error)
+	GetDisplayNamesForEventProperties(projectId int64, properties map[string][]string, eventName string) map[string]string
+	GetEventPropertiesAndModifyResultsForNonExplain(projectId int64, eventName string) (map[string][]string, int)
 	GetPropertiesByEvent(projectID int64, eventName string, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertyValuesByEventProperty(projectID int64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
 	GetPropertiesForHubspotContacts(projectID int64, reqID string) []map[string]string

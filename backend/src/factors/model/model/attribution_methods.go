@@ -8,7 +8,7 @@ import (
 	"sort"
 )
 
-// ApplyAttribution This method maps the user to the attribution key based on given attribution methodology.
+// AttributionKeyWeight This method maps the user to the attribution key based on given attribution methodology.
 type AttributionKeyWeight struct {
 	Key    string
 	Weight float64
@@ -52,7 +52,7 @@ func ApplyAttributionKPI(attributionType string,
 
 			case AttributionMethodLastTouchNonDirect:
 				attributionKeys = getLastTouchNDId(attributionType, userSessions, conversionTime,
-					lookbackPeriod, campaignFrom, campaignTo, attributionKey)
+					lookbackPeriod, campaignFrom, campaignTo)
 				break
 
 			case AttributionMethodLinear:
@@ -132,7 +132,7 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 
 		case AttributionMethodLastTouchNonDirect:
 			attributionKeys = getLastTouchNDId(attributionType, userSessions, conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo, attributionKey)
+				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodLinear:
@@ -528,7 +528,7 @@ func getFirstTouchNDId(attributionType string, attributionTimerange map[string]U
 
 // returns the last non $none attributionId and corresponding weight
 func getLastTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
-	lookbackPeriod, from, to int64, attributionKey string) []AttributionKeyWeight {
+	lookbackPeriod, from, to int64) []AttributionKeyWeight {
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = SortInteractionTime(interactions, SortDESC)

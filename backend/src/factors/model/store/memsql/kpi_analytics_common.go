@@ -93,6 +93,7 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 				return []model.QueryResult{{}, {}}, http.StatusInternalServerError
 			}
 
+			internalKPIQueryGroup.DisplayResultAs = derivedMetric.DisplayResultAs
 			for internalIndex, internalQuery := range internalKPIQueryGroup.Queries {
 				internalKPIQueryGroup.Queries[internalIndex].Filters = append(internalQuery.Filters, query.Filters...)
 				internalKPIQueryGroup.Queries[internalIndex].GroupBy = query.GroupBy

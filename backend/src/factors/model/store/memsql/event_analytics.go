@@ -714,7 +714,15 @@ func transformTimeValueInResults(result *model.QueryResult, timeIndex int, timez
 
 		// overrides timestamp with user timezone as sql results doesn't
 		// return timezone used to query.
-		result.Rows[index][timeIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
+		// when broken by monthly, data is present for 2022-04-01T00:00:00+11:00
+		// when broken by day, data is present for 2022-04-03T00:00:00+10:00, where the time got changed at 2:00.
+		// Hence converting it using offsets.
+		ts := U.GetTimeFromTimestampStr(timestampWithTimezone)
+		offset := U.GetTimezoneOffsetFromString(ts, timezone)
+		currTimeStrFromOffset := U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offset)
+		currTimeFromOffset := U.GetTimeFromParseTimeStr(currTimeStrFromOffset)
+
+		result.Rows[index][timeIndex] = currTimeFromOffset
 	}
 }
 
@@ -743,8 +751,8 @@ func sortChannelResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex
 	})
 }
 
-// In day light savings, the timezone gets changed at 1:00AM or 2:00AM. Hence giving the beginning timestamp, but offset which remains for longer time.
-func getAllTimestampsAndOffsetBetweenByType(from, to int64, typ, timezone string) ([]time.Time, []string) {
+// In day light savings, the timezone gets changed at 1:00AM or 2:00AM. Offsets are relied upon the start of Timestamp consideration.
+func GetAllTimestampsAndOffsetBetweenByType(from, to int64, typ, timezone string) ([]time.Time, []string) {
 	logFields := log.Fields{
 		"from":     from,
 		"to":       to,
@@ -935,7 +943,6 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			}
 		}
 
-		addJoinStmnt = addJoinStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
 		stepParams = append(stepParams, projectID)
 
 		addFilterFunc := addFilterEventsWithPropsQuery
@@ -954,8 +961,14 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 					addSourceStmt = strings.ReplaceAll(addSourceStmt, fmt.Sprintf("step_%d_event_users_view.", i-1), fmt.Sprintf("%s_event_users_view.", refStepName))
 
 				}
+				if len(q.GlobalUserProperties) == 0 && len(ewp.Properties) == 0 {
+					*qStmnt = strings.TrimSuffix(*qStmnt, ")") + " WHERE" + addSourceStmt + ")"
+				} else {
+					*qStmnt = strings.TrimSuffix(*qStmnt, ")") + " AND" + addSourceStmt + ")"
+				}
+			} else {
+				*qStmnt = strings.TrimSuffix(*qStmnt, ")") + " AND" + addSourceStmt + ")"
 			}
-			*qStmnt = strings.TrimSuffix(*qStmnt, ")") + addSourceStmt + ")"
 		}
 		if i < len(q.EventsWithProperties)-1 {
 			*qStmnt = *qStmnt + ","
@@ -1009,7 +1022,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		selectVal = "users"
 	}
 	if caller == model.USER_PROFILE_CALLER {
-		addSourceStmt = " " + fmt.Sprintf("AND (%s.is_group_user=0 OR %s.is_group_user IS NULL)", selectVal, selectVal)
+		addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=0 OR %s.is_group_user IS NULL)", selectVal, selectVal)
 		if model.UserSourceMap[source] == model.UserSourceWeb {
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.source="+strconv.Itoa(model.UserSourceMap[source])+" OR %s.source IS NULL)", selectVal, selectVal)
 		} else if source == "All" {
@@ -1043,7 +1056,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		if source == model.GROUP_NAME_SALESFORCE_ACCOUNT && !salesforceExists {
 			log.WithFields(logFields).Error("Salesforce Not Enabled for this project.")
 		}
-		addSourceStmt = " " + fmt.Sprintf("AND (%s.is_group_user=1)", selectVal)
+		addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=1)", selectVal)
 		if source == "All" && hubspotExists && salesforceExists {
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.group_%d_id IS NOT NULL OR %s.group_%d_id IS NOT NULL)", selectVal, hubspotID, selectVal, salesforceID)
 			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.group_%d_id", hubspotID, salesforceID)
@@ -1138,7 +1151,6 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
-		termStmnt = termStmnt + getUsersFilterJoinStatement(projectID, query.GlobalUserProperties)
 		// Using string format for project_id condition, as the value is from internal system.
 		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
@@ -1956,7 +1968,6 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
-		termStmnt = termStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
 		// Using string format for project_id condition, as the value is from internal system.
 		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
@@ -2302,8 +2313,6 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 			stepParams = append(stepParams, projectID)
 		}
 
-		addJoinStmnt = addJoinStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
-
 		addFilterFunc := addFilterEventsWithPropsQuery
 		if enableFilterOpt {
 			addFilterFunc = addFilterEventsWithPropsQueryV2
@@ -2396,7 +2405,6 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
-		termStmnt = termStmnt + getUsersFilterJoinStatement(projectID, query.GlobalUserProperties)
 		termStmnt = termStmnt + " "
 
 		// Using string format for project_id condition, as the value is from internal system.

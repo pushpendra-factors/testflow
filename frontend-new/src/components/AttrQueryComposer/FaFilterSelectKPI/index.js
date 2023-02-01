@@ -14,7 +14,7 @@ import {
 } from 'Components/FaFilterSelect/utils';
 import moment from 'moment';
 import _ from 'lodash';
-import { DISPLAY_PROP } from '../../../utils/constants';
+import { DISPLAY_PROP, OPERATORS } from 'Utils/constants';
 import { toCapitalCase } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
@@ -82,6 +82,15 @@ const FAFilterSelect = ({
       updateStateApply(false);
     }
   }, [updateState]);
+
+  useEffect(() => {
+    if (
+      operatorState?.[0] === OPERATORS['isKnown'] ||
+      operatorState?.[0] === OPERATORS['isUnknown']
+    ) {
+      valuesSelectSingle('$none');
+    }
+  }, [operatorState]);
 
   const setValues = () => {
     let values;
@@ -601,7 +610,11 @@ const FAFilterSelect = ({
 
       {propState?.name ? renderOperatorSelector() : null}
 
-      {operatorState ? renderValuesSelector() : null}
+      {operatorState &&
+      operatorState?.[0] !== OPERATORS['isKnown'] &&
+      operatorState?.[0] !== OPERATORS['isUnknown']
+        ? renderValuesSelector()
+        : null}
     </div>
   );
 };

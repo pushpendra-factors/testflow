@@ -24,7 +24,7 @@ const (
 	DASHBOARD           = "dashboard"
 	OFFLINE_TOUCHPOINTS = "offline_touchpoints"
 	SAVED_QUERIES       = "saved_queries"
-	EXPLAIN             = "explain"
+	EXPLAIN_FEATURE     = "explain_feature"
 	FILTERS             = "filters"
 	SHAREABLE_URL       = "shareable_url"
 	CUSTOM_METRICS      = "custom_metrics"
@@ -131,28 +131,28 @@ func initFeatureMap() {
 	featureMap["SearchQueriesHandler"] = []string{SAVED_QUERIES}
 
 	// explain
-	featureMap["GetProjectModelsHandler"] = []string{EXPLAIN}
-	featureMap["FactorHandler"] = []string{EXPLAIN}
-	featureMap["CreateFactorsTrackedEventsHandler"] = []string{EXPLAIN}
-	featureMap["RemoveFactorsTrackedEventsHandler"] = []string{EXPLAIN}
-	featureMap["GetAllFactorsTrackedEventsHandler"] = []string{EXPLAIN}
-	featureMap["GetAllGroupedFactorsTrackedEventsHandler"] = []string{EXPLAIN}
-	featureMap["CreateFactorsTrackedUserPropertyHandler"] = []string{EXPLAIN}
-	featureMap["RemoveFactorsTrackedUserPropertyHandler"] = []string{EXPLAIN}
-	featureMap["GetAllFactorsTrackedUserPropertiesHandler"] = []string{EXPLAIN}
-	featureMap["CreateFactorsGoalsHandler"] = []string{EXPLAIN}
-	featureMap["RemoveFactorsGoalsHandler"] = []string{EXPLAIN}
-	featureMap["GetAllFactorsGoalsHandler"] = []string{EXPLAIN}
-	featureMap["UpdateFactorsGoalsHandler"] = []string{EXPLAIN}
-	featureMap["SearchFactorsGoalHandler"] = []string{EXPLAIN}
-	featureMap["PostFactorsHandler"] = []string{EXPLAIN}
-	featureMap["PostFactorsCompareHandler"] = []string{EXPLAIN}
-	featureMap["GetModelMetaData"] = []string{EXPLAIN}
-	featureMap["GetFactorsHandler"] = []string{EXPLAIN}
-	featureMap["GetFactorsHandlerV2"] = []string{EXPLAIN}
-	featureMap["PostFactorsHandlerV2"] = []string{EXPLAIN}
-	featureMap["CreateExplainV2EntityHandler"] = []string{EXPLAIN}
-	featureMap["DeleteSavedExplainV2EntityHandler"] = []string{EXPLAIN}
+	featureMap["GetProjectModelsHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["FactorHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["CreateFactorsTrackedEventsHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["RemoveFactorsTrackedEventsHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["GetAllFactorsTrackedEventsHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["GetAllGroupedFactorsTrackedEventsHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["CreateFactorsTrackedUserPropertyHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["RemoveFactorsTrackedUserPropertyHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["GetAllFactorsTrackedUserPropertiesHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["CreateFactorsGoalsHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["RemoveFactorsGoalsHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["GetAllFactorsGoalsHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["UpdateFactorsGoalsHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["SearchFactorsGoalHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["PostFactorsHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["PostFactorsCompareHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["GetModelMetaData"] = []string{EXPLAIN_FEATURE}
+	featureMap["GetFactorsHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["GetFactorsHandlerV2"] = []string{EXPLAIN_FEATURE}
+	featureMap["PostFactorsHandlerV2"] = []string{EXPLAIN_FEATURE}
+	featureMap["CreateExplainV2EntityHandler"] = []string{EXPLAIN_FEATURE}
+	featureMap["DeleteSavedExplainV2EntityHandler"] = []string{EXPLAIN_FEATURE}
 
 	// Filters
 	featureMap["GetFiltersHandler"] = []string{FILTERS}

@@ -177,10 +177,16 @@ function AccountTimelineBirdView({
                       </Avatar>
                     )}
                     <div className='flex items-start flex-col'>
-                      <Text type='title' truncate level={7} weight='medium'>
+                      <Text
+                        type='title'
+                        truncate
+                        level={7}
+                        weight='medium'
+                        extraClass='m-0'
+                      >
                         {user.title}
                       </Text>
-                      <Text type='title' truncate level={8}>
+                      <Text type='title' truncate level={8} extraClass='m-0'>
                         {user.subtitle || '-'}
                       </Text>
                     </div>
@@ -193,7 +199,7 @@ function AccountTimelineBirdView({
             {Object.entries(formattedData).map(([timestamp, allEvents]) => (
               <tr>
                 <td>
-                  <div className='top-75'>{timestamp}</div>
+                  <div className='top-64'>{timestamp}</div>
                 </td>
                 {timelineUsers.map((user) => {
                   if (!allEvents[user.title])

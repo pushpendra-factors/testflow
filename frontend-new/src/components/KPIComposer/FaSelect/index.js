@@ -4,6 +4,7 @@ import { SVG, Text } from 'factorsComponents';
 import { Input, Button, Spin } from 'antd';
 import { DISPLAY_PROP } from '../../../utils/constants';
 import useAutoFocus from '../../../hooks/useAutoFocus';
+import { generateRandomKey } from 'Utils/global';
 
 function FaSelect({
   options,
@@ -95,7 +96,7 @@ function FaSelect({
           <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
             Select:
           </Text>
-          <span className={`ml-1 ${styles.optText}`}>{searchTerm}</span>
+          <span className={`ml-1 ${styles.optText} `}>{searchTerm}</span>
           {isSelected ? (
             <SVG
               name='checkmark'
@@ -148,11 +149,46 @@ function FaSelect({
         }
       });
     } else {
-      options.forEach((op, index) => {
-        isSelected = isSelectedCheck(op);
+      multiSelect && selectedOpts.forEach((op, index) => {
+        let is = isSelectedCheck([op])
+        if(!is){
+           return;
+          }
+        
         rendOpts.push(
           <div
-            key={index}
+            key={op ? op: generateRandomKey()}
+            className={`${
+              allowSearch
+                ? 'fa-select-group-select--options'
+                : 'fa-select--options'
+            } ${styles.fa_selected}`}
+            onClick={() => {
+              optClick(() => optionClick([op]), [op])
+ 
+            }}
+          >
+            <span className={`ml-1 ${styles.optText}`}>
+              {DISPLAY_PROP[op] ? DISPLAY_PROP[op] : op}
+            </span>
+            <SVG
+                name='checkmark'
+                extraClass={'self-center'}
+                size={17}
+                color={'purple'}
+              />
+          </div>
+        );
+      });
+      options.forEach((op, index) => {
+        isSelected = isSelectedCheck(op);
+        
+        let is = selectedOpts.includes(op[0]) && isSelected;
+        if(is) return;
+        rendOpts.push(
+       
+          <div
+            key={op ? op[0] : generateRandomKey()}
             title={DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
             className={`${
               allowSearch
@@ -227,6 +263,7 @@ function FaSelect({
       );
     }
 
+
     return rendOpts;
   };
 
@@ -240,6 +277,7 @@ function FaSelect({
         className={`${styles.selectInput} fa-filter-select fa-search-select`}
       >
         <Input
+          style={{overflow: "hidden"}}
           prefix={<SVG name={'search'} />}
           size='large'
           placeholder={'Search'}

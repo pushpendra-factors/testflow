@@ -40,11 +40,12 @@ func (s *KPIStatus) CheckAndSetStatus(inputStatus int) {
 }
 
 type KPIQueryGroup struct {
-	Class         string       `json:"cl"`
-	Queries       []KPIQuery   `json:"qG"`
-	GlobalFilters []KPIFilter  `json:"gFil"`
-	GlobalGroupBy []KPIGroupBy `json:"gGBy"`
-	Formula       string       `json:"for"`
+	Class           string       `json:"cl"`
+	Queries         []KPIQuery   `json:"qG"`
+	GlobalFilters   []KPIFilter  `json:"gFil"`
+	GlobalGroupBy   []KPIGroupBy `json:"gGBy"`
+	Formula         string       `json:"for"`
+	DisplayResultAs string       `json:"display_result_as"`
 }
 
 func (q *KPIQueryGroup) GetClass() string {
@@ -599,6 +600,31 @@ func AddObjectTypeToProperties(kpiConfig map[string]interface{}, value string) m
 	return kpiConfig
 }
 
+func TransformEventPropertiesToKPIConfigProperties(properties map[string][]string, propertiesToDisplayNames map[string]string) []map[string]string {
+	var resultantKPIConfigProperties []map[string]string
+	var tempKPIConfigProperty map[string]string
+	for dataType, propertyNames := range properties {
+		for _, propertyName := range propertyNames {
+			var displayName string
+			displayName, exists := propertiesToDisplayNames[propertyName]
+			if !exists {
+				displayName = U.CreateVirtualDisplayName(propertyName)
+			}
+			tempKPIConfigProperty = map[string]string{
+				"name":         propertyName,
+				"display_name": displayName,
+				"data_type":    dataType,
+				"entity":       EventEntity,
+			}
+			resultantKPIConfigProperties = append(resultantKPIConfigProperties, tempKPIConfigProperty)
+		}
+	}
+	if resultantKPIConfigProperties == nil {
+		return make([]map[string]string, 0)
+	}
+	return resultantKPIConfigProperties
+}
+
 func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string, propertiesToDisplayNames map[string]string, prefix string) []map[string]string {
 	var resultantKPIConfigProperties []map[string]string
 	var tempKPIConfigProperty map[string]string
@@ -882,7 +908,11 @@ func GetFinalResultantResultsForKPI(reqID string, kpiQueryGroup KPIQueryGroup, m
 				mapOfFormulaVariableToQueryResult[internalQuery.Name] = queryResult
 			}
 
-			finalResultantResults = append(finalResultantResults, EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult, externalQuery.Timezone, strings.ToLower(internalKPIQuery.Formula)))
+			formula := strings.ToLower(internalKPIQuery.Formula)
+			if internalKPIQuery.DisplayResultAs == MetricsPercentageType {
+				formula = fmt.Sprintf("(%s)*100", formula)
+			}
+			finalResultantResults = append(finalResultantResults, EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult, externalQuery.Timezone, formula))
 
 		} else {
 			if groupByTimestamp == "" {
