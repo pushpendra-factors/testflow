@@ -35,6 +35,7 @@ function GlobalFilterBlock({
   fetchKPIFilterValues,
   selectedMainCategory,
   showOr,
+  viewMode = false
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -141,6 +142,7 @@ function GlobalFilterBlock({
         setValuesByProps={setValuesByProps}
         filter={filter} 
         refValue={refValue}
+        viewMode={viewMode}
 
       />
     );
@@ -627,6 +629,7 @@ function GlobalFilterBlock({
           setValuesByProps={setValuesByProps}
           filter={filter} 
           refValue={refValue}
+          viewMode={viewMode}
         />
       </>
     );
@@ -642,7 +645,7 @@ function GlobalFilterBlock({
       <div className={`relative flex`}>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>
-      {delFilter && (
+      {!viewMode && delFilter && (
         <Button
           type='text'
           onClick={delFilter}

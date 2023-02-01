@@ -421,10 +421,9 @@ export const getProfileQuery = (
   return query;
 };
 
-const getEventsWithPropertiesKPI = (filters, category) => {
+export const getEventsWithPropertiesKPI = (filters, category) => {
   const filterProps = [];
   // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
-
   const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));
   filtersGroupedByRef.forEach((filtersGr) => {
     if (filtersGr.length === 1) {
@@ -432,7 +431,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
-            prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+            prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
             lOp: !index ? 'AND' : 'OR',
@@ -453,7 +452,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
-          prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+          prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: 'AND',
@@ -480,7 +479,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
-            prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+            prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
             lOp: !index ? 'AND' : 'OR',
@@ -501,7 +500,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
-          prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+          prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: 'AND',
@@ -527,7 +526,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val) => {
           filterProps.push({
-            prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+            prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
             lOp: 'OR',
@@ -548,7 +547,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
-          prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+          prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: 'OR',
