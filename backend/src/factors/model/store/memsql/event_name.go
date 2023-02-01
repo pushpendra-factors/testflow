@@ -459,7 +459,7 @@ func (store *MemSQL) GetOrderedEventNamesFromDb(
 	return eventNames, nil
 }
 
-func (store *MemSQL) GetDisplayNamesForEventName(projectId int64, properties map[string][]string, eventName string) map[string]string {
+func (store *MemSQL) GetDisplayNamesForEventProperties(projectId int64, properties map[string][]string, eventName string) map[string]string {
 	logCtx := log.WithFields(log.Fields{
 		"projectId": projectId,
 	})
@@ -608,7 +608,9 @@ func getPropertyValuesByEventPropertyFromCache(projectID int64, eventName string
 	return cacheValue, nil
 }
 
-func (store *MemSQL) GetEventNamesAndModifyResultsForNonExplain(projectId int64, eventName string) (map[string][]string, int) {
+// We fetch properties from Cache and filter the required properties based on the eventName provided.
+ 
+func (store *MemSQL) GetEventPropertiesAndModifyResultsForNonExplain(projectId int64, eventName string) (map[string][]string, int) {
 
 	logCtx := log.WithFields(log.Fields{
 		"projectId": projectId,

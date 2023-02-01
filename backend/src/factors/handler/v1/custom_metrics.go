@@ -215,13 +215,13 @@ func GetPropertiesForCustomKPIEventBased(c *gin.Context) {
 		return
 	}
 
-	propertiesFromCache, statusCode := store.GetStore().GetEventNamesAndModifyResultsForNonExplain(projectID, eventName)
+	propertiesFromCache, statusCode := store.GetStore().GetEventPropertiesAndModifyResultsForNonExplain(projectID, eventName)
 	if statusCode != http.StatusOK {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	displayNamesOp := store.GetStore().GetDisplayNamesForEventName(projectID, propertiesFromCache, eventName)
+	displayNamesOp := store.GetStore().GetDisplayNamesForEventProperties(projectID, propertiesFromCache, eventName)
 
 	kpiConfig := model.TransformEventPropertiesToKPIConfigProperties(propertiesFromCache, displayNamesOp)
 	// Handling both error and NotFound.

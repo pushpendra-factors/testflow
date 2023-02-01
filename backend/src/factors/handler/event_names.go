@@ -412,7 +412,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 	if isExplain != "true" {
 		var statusCode int
-		properties, statusCode = store.GetStore().GetEventNamesAndModifyResultsForNonExplain(projectId, eventName)
+		properties, statusCode = store.GetStore().GetEventPropertiesAndModifyResultsForNonExplain(projectId, eventName)
 		if statusCode != http.StatusOK {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
@@ -434,7 +434,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 	U.FilterDisabledCoreEventProperties(overrides, &properties)
 
 	if isDisplayNameEnabled == "true" {
-		displayNamesOp := store.GetStore().GetDisplayNamesForEventName(projectId, properties, eventName)
+		displayNamesOp := store.GetStore().GetDisplayNamesForEventProperties(projectId, properties, eventName)
 		c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp})
 		return
 	}
