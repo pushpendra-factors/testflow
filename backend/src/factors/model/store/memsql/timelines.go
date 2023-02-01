@@ -45,6 +45,33 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusBadRequest
 	}
 
+	if payload.SegmentId != "" {
+		segment, status := store.GetSegmentById(projectID, payload.SegmentId)
+		if status != http.StatusFound {
+			return nil, http.StatusBadRequest
+		}
+		payload.Source = segment.Type
+		segmentQuery := &model.Query{}
+		err := U.DecodePostgresJsonbToStructType(segment.Query, segmentQuery)
+		if err != nil {
+			return nil, http.StatusInternalServerError
+		}
+		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
+			if C.IsEnabledEventsFilterInSegments() {
+				profiles, errCode, _ := store.GetAnalyzeResultForSegments(projectID, segment)
+				if errCode != http.StatusOK {
+					return nil, errCode
+				}
+				return profiles, http.StatusFound
+			} else {
+				var profiles = make([]model.Profile, 0)
+				return profiles, http.StatusBadRequest
+			}
+		} else {
+			payload.Filters = append(payload.Filters, segmentQuery.GlobalUserProperties...)
+		}
+	}
+
 	var selectString, isGroupUserString, sourceString string
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
@@ -94,31 +121,6 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			sourceString = ""
 		} else {
 			sourceString = "AND source=" + strconv.Itoa(model.UserSourceMap[payload.Source])
-		}
-	}
-	if payload.SegmentId != "" {
-		segment, status := store.GetSegmentById(projectID, payload.SegmentId)
-		if status != http.StatusFound {
-			return nil, http.StatusBadRequest
-		}
-		segmentQuery := &model.Query{}
-		err := U.DecodePostgresJsonbToStructType(segment.Query, segmentQuery)
-		if err != nil {
-			return nil, http.StatusInternalServerError
-		}
-		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
-			if C.IsEnabledEventsFilterInSegments() {
-				profiles, errCode, _ := store.GetAnalyzeResultForSegments(projectID, segment)
-				if errCode != http.StatusOK {
-					return nil, errCode
-				}
-				return profiles, http.StatusFound
-			} else {
-				var profiles = make([]model.Profile, 0)
-				return profiles, http.StatusBadRequest
-			}
-		} else {
-			payload.Filters = append(payload.Filters, segmentQuery.GlobalUserProperties...)
 		}
 	}
 

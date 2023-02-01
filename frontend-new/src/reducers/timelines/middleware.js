@@ -32,8 +32,8 @@ export const getProfileAccounts = (projectId, payload) => (dispatch) => {
         console.log(err);
         resolve(
           dispatch({
-            type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
-            payload: {}
+            type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
+            payload: []
           })
         );
       });
@@ -58,7 +58,7 @@ export const getProfileAccountDetails =
           console.log(err);
           resolve(
             dispatch({
-              type: 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED',
+              type: 'FETCH_PROFILE_ACCOUNT_DETAILS_FAILED',
               payload: {}
             })
           );
@@ -87,8 +87,8 @@ export const getProfileUsers = (projectId, payload) => (dispatch) => {
         console.log(err);
         resolve(
           dispatch({
-            type: 'FETCH_PROFILE_USERS_FULFILLED',
-            payload: {}
+            type: 'FETCH_PROFILE_USERS_FAILED',
+            payload: []
           })
         );
       });
@@ -113,7 +113,7 @@ export const getProfileUserDetails =
           console.log(err);
           resolve(
             dispatch({
-              type: 'FETCH_PROFILE_USER_DETAILS_FULFILLED',
+              type: 'FETCH_PROFILE_USER_DETAILS_FAILED',
               payload: {}
             })
           );

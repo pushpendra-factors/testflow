@@ -8,7 +8,6 @@ const initialState = {
   contactDetails: { isLoading: false, data: {} },
   accounts: { isLoading: false, data: [] },
   accountDetails: { isLoading: false, data: {} },
-  error: false,
   segmentCreateStatus: '',
   segmentUpdateStatus: '',
   segments: {}
@@ -21,7 +20,7 @@ export default function (state = initialState, action) {
     case 'FETCH_PROFILE_USERS_FULFILLED':
       return { ...state, contacts: { isLoading: false, data: action.payload } };
     case 'FETCH_PROFILE_USERS_FAILED':
-      return { ...initialState, error: true };
+      return { ...state, contacts: { isLoading: false, data: [] } };
     case 'FETCH_PROFILE_USER_DETAILS_LOADING':
       return { ...state, contactDetails: { isLoading: true, data: {} } };
     case 'FETCH_PROFILE_USER_DETAILS_FULFILLED':
@@ -35,13 +34,13 @@ export default function (state = initialState, action) {
         contactDetails: { isLoading: false, data: action.payload }
       };
     case 'FETCH_PROFILE_USER_DETAILS_FAILED':
-      return { ...initialState, error: true };
+      return { ...state, contactDetails: { isLoading: false, data: {} } };
     case 'FETCH_PROFILE_ACCOUNTS_LOADING':
       return { ...state, accounts: { isLoading: true, data: [] } };
     case 'FETCH_PROFILE_ACCOUNTS_FULFILLED':
       return { ...state, accounts: { isLoading: false, data: action.payload } };
     case 'FETCH_PROFILE_ACCOUNTS_FAILED':
-      return { ...initialState, error: true };
+      return { ...state, accounts: { isLoading: false, data: [] } };
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_LOADING':
       return { ...state, accountDetails: { isLoading: true, data: {} } };
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED':
@@ -50,7 +49,7 @@ export default function (state = initialState, action) {
         accountDetails: { isLoading: false, data: action.payload }
       };
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_FAILED':
-      return { ...initialState, error: true };
+      return { ...state, accountDetails: { isLoading: false, data: {} } };
     case 'SEGMENT_CREATION_FULFILLED':
       return { ...state, segmentCreateStatus: action.payload };
     case 'SEGMENT_CREATION_REJECTED':

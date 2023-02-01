@@ -13,7 +13,7 @@ import {
   fetchEventPropertyValues,
   fetchUserPropertyValues,
   fetchChannelObjPropertyValues,
-  fetchGroupPropertyValues,
+  fetchGroupPropertyValues
 } from '../../../reducers/coreQuery/services';
 import FAFilterSelect from '../../FaFilterSelect';
 import { AvailableGroups } from '../../../utils/constants';
@@ -21,6 +21,7 @@ import { AvailableGroups } from '../../../utils/constants';
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 export default function EventFilterWrapper({
+  displayMode,
   index,
   refValue,
   blockType = 'event',
@@ -39,6 +40,8 @@ export default function EventFilterWrapper({
   insertFilter,
   closeFilter,
   showOr,
+  filterPrefix = 'Filter by',
+  caller
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -46,35 +49,35 @@ export default function EventFilterWrapper({
   const [newFilterState, setNewFilterState] = useState({
     props: [],
     operator: '',
-    values: [],
+    values: []
   });
   const [dropDownValues, setDropDownValues] = useState({});
   const [selectedRngState, setSelectedRngState] = useState([
-    { ...DEFAULT_DATE_RANGE },
+    { ...DEFAULT_DATE_RANGE }
   ]);
 
   const placeHolder = {
     props: 'Choose a property',
     operator: 'Choose an operator',
-    values: 'Choose values',
+    values: 'Choose values'
   };
 
   const [filterDropDownOptions, setFiltDD] = useState({
     props: [
       {
         label: 'Event Properties',
-        icon: 'event',
+        icon: 'event'
       },
       {
         label: 'User Properties',
-        icon: 'user',
+        icon: 'user'
       },
       {
         label: 'Group Properties',
-        icon: 'group',
-      },
+        icon: 'group'
+      }
     ],
-    operator: operatorProps,
+    operator: operatorProps
   });
 
   const { userPropNames } = useSelector((state) => state.coreQuery);
@@ -93,7 +96,7 @@ export default function EventFilterWrapper({
       propState.push({
         label: k,
         icon: k,
-        values: filterProps[k],
+        values: filterProps[k]
       });
     });
     filterDD.props = propState;
@@ -111,6 +114,7 @@ export default function EventFilterWrapper({
   const renderFilterContent = () => {
     return (
       <FAFilterSelect
+        displayMode={displayMode}
         propOpts={filterDropDownOptions.props}
         operatorOpts={filterDropDownOptions.operator}
         valueOpts={dropDownValues}
@@ -258,7 +262,7 @@ export default function EventFilterWrapper({
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[newFilterState.props[0]] = [
                 ...res?.data?.result?.filter_values,
-                '$none',
+                '$none'
               ];
               setDropDownValues(ddValues);
             })
@@ -321,7 +325,7 @@ export default function EventFilterWrapper({
     const rangeValue = {
       fr: newRange[0].startDate.getTime(),
       to: endRange,
-      ovp: false,
+      ovp: false
     };
     newFilter[filterTypeState] = JSON.stringify(rangeValue);
     setNewFilterState(newFilter);
@@ -688,6 +692,7 @@ export default function EventFilterWrapper({
     return (
       <>
         <FAFilterSelect
+          displayMode={displayMode}
           propOpts={filterDropDownOptions.props}
           operatorOpts={filterDropDownOptions.operator}
           valueOpts={dropDownValues}
@@ -700,26 +705,48 @@ export default function EventFilterWrapper({
   };
 
   return (
-    <div className={`flex items-center relative ${!showOr?'ml-10':''}`}>
-        {!showOr && (index >=1 ? (
-        <Text level={8} type={'title'} extraClass={'m-0 mr-16'} weight={'thin'}>
-          and
-        </Text>
-        ):(
-        <Text level={8} type={'title'} extraClass={'m-0 mr-10'} weight={'thin'}>
-          Filter by
-        </Text>
+    <div
+      className={`flex items-center relative ${
+        caller === 'profiles' ? 'mb-2' : ''
+      }`}
+    >
+      {!showOr &&
+        (index >= 1 ? (
+          <Text
+            level={8}
+            type={'title'}
+            extraClass={`m-0 ${caller === 'profiles' ? 'mx-4' : 'mr-16 ml-10'}`}
+            weight={'thin'}
+          >
+            and
+          </Text>
+        ) : (
+          <Text
+            level={8}
+            type={'title'}
+            extraClass={`whitespace-no-wrap m-0 ${
+              caller === 'profiles' ? 'mx-4' : 'mx-10'
+            }`}
+            weight={'thin'}
+          >
+            {filterPrefix}
+          </Text>
         ))}
-        {showOr && (
-        <Text level={8} type={'title'} extraClass={'m-0 mr-2 ml-2'} weight={'thin'}>
+      {showOr && (
+        <Text
+          level={8}
+          type={'title'}
+          extraClass={`m-0 ${caller === 'profiles' ? 'mx-4' : 'mr-16'}`}
+          weight={'thin'}
+        >
           or
         </Text>
-        )}
+      )}
 
       <div className={`relative flex`}>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>
-      {delFilter && (
+      {delFilter && !displayMode && (
         <Button
           type='text'
           onClick={delFilter}

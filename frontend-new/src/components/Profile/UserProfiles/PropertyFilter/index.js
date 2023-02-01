@@ -6,7 +6,7 @@ import { compareFilters } from '../../../../utils/global';
 import PropFilterBlock from './PropFilterBlock';
 
 function PropertyFilter({
-  mode = 'query',
+  displayMode,
   filtersLimit = 3,
   profileType,
   source,
@@ -74,7 +74,7 @@ function PropertyFilter({
         list.push(
           <div key={id} className='m-0 mr-2 mb-2'>
             <PropFilterBlock
-              mode={mode}
+              displayMode={displayMode}
               activeProject={activeProject}
               index={id}
               filter={filter}
@@ -92,7 +92,7 @@ function PropertyFilter({
           list.push(
             <div key={list.length} className='m-0 mr-2 mb-2'>
               <PropFilterBlock
-                mode={mode}
+                displayMode={displayMode}
                 activeProject={activeProject}
                 index={list.length}
                 deleteFilter={() => closeFilter()}
@@ -103,7 +103,7 @@ function PropertyFilter({
               />
             </div>
           );
-        } else if (mode !== 'display') {
+        } else if (!displayMode) {
           list.push(
             <div key={list.length} className='flex m-0 mr-2 mb-2'>
               <Button
