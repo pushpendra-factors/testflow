@@ -675,3 +675,26 @@ export const RevFunnelEventsConditionMap = {
   'This Order': 'any_given_event',
   'Any Order': 'funnel_any_given_event'
 };
+
+export const OPERATORS = {
+  equalTo: '=',
+  notEqualTo: '!=',
+  contain: 'contains',
+  doesNotContain: 'does not contain',
+  lesserThan: '<',
+  lesserThanOrEqual: '<=',
+  greaterThan: '>',
+  greaterThanOrEqual: '>=',
+  between: 'between',
+  notBetween: 'not between',
+  inThePrevious: 'in the previous',
+  notInThePrevious: 'not in the previous',
+  inTheLast: 'in the last',
+  notInTheLast: 'not in the last',
+  inTheCurrent: 'in the current',
+  notInTheCurrent: 'not in the current',
+  before: 'before',
+  since: 'since',
+  isKnown: 'is known',
+  isUnknown: 'is unknown'
+};

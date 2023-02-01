@@ -8,13 +8,14 @@ import FaDatepicker from '../../FaDatepicker';
 import FaSelect from '../../FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
-import { DISPLAY_PROP } from '../../../utils/constants';
+import { DISPLAY_PROP, OPERATORS } from 'Utils/constants';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
+import { DEFAULT_OP_PROPS } from 'Utils/operatorMapping';
 
 const defaultOpProps = {
-  categorical: ['=', '!=', 'contains', 'does not contain'],
-  numerical: ['=', '!=', '<', '<=', '>', '>='],
-  datetime: ['='],
+  categorical: DEFAULT_OP_PROPS['categorical'],
+  numerical: DEFAULT_OP_PROPS['numerical'],
+  datetime: [OPERATORS['equalTo']]
 };
 
 const AttrFilterSelect = ({
@@ -24,12 +25,12 @@ const AttrFilterSelect = ({
   setValuesByProps,
   applyFilter,
   filter,
-  refValue,
+  refValue
 }) => {
   const [propState, setPropState] = useState({
     icon: '',
     name: '',
-    type: '',
+    type: ''
   });
 
   const [operatorState, setOperatorState] = useState('=');
@@ -65,6 +66,15 @@ const AttrFilterSelect = ({
     }
   }, [updateState]);
 
+  useEffect(() => {
+    if (
+      operatorState?.[0] === OPERATORS['isKnown'] ||
+      operatorState?.[0] === OPERATORS['isUnknown']
+    ) {
+      valuesSelectSingle('$none');
+    }
+  }, [operatorState]);
+
   const setValues = () => {
     let values;
     if (filter.props[1] === 'datetime') {
@@ -86,7 +96,7 @@ const AttrFilterSelect = ({
         props: [propState.name, propState.type, propState.icon],
         operator: operatorState,
         values: valuesState,
-        ref: refValue,
+        ref: refValue
       });
     }
   };
@@ -140,7 +150,7 @@ const AttrFilterSelect = ({
     const rangeValue = {
       fr: startDate,
       to: endDate,
-      ovp: false,
+      ovp: false
     };
 
     setValuesState(JSON.stringify(rangeValue));
@@ -158,7 +168,7 @@ const AttrFilterSelect = ({
     return {
       from: fromVal,
       to: toVal,
-      ovp: false,
+      ovp: false
     };
     // return (MomentTz(fromVal).format('MMM DD, YYYY') + ' - ' +
     //           MomentTz(toVal).format('MMM DD, YYYY'));
@@ -177,7 +187,10 @@ const AttrFilterSelect = ({
   const renderPropSelect = () => {
     return (
       <div className={styles.filter__propContainer}>
-        <Tooltip title={renderGroupDisplayName(propState)} color={TOOLTIP_CONSTANTS.DARK}>
+        <Tooltip
+          title={renderGroupDisplayName(propState)}
+          color={TOOLTIP_CONSTANTS.DARK}
+        >
           <Button
             icon={
               propState && propState.icon ? (
@@ -211,9 +224,10 @@ const AttrFilterSelect = ({
   const renderOperatorSelector = () => {
     return (
       <div className={styles.filter__propContainer}>
-        <Tooltip 
+        <Tooltip
           title='Select an equator to define your filter rules. '
-          color={TOOLTIP_CONSTANTS.DARK}>
+          color={TOOLTIP_CONSTANTS.DARK}
+        >
           <Button
             className={`filter-buttons-radius filter-buttons-margin`}
             type='link'
@@ -240,7 +254,14 @@ const AttrFilterSelect = ({
     if (propState.type === 'categorical') {
       selectionComponent = (
         <FaSelect
-          multiSelect={((isArray(operatorState) ? operatorState[0] : operatorState) === '!=' || (isArray(operatorState) ? operatorState[0] : operatorState) === 'does not contain') ? false : true}
+          multiSelect={
+            (isArray(operatorState) ? operatorState[0] : operatorState) ===
+              '!=' ||
+            (isArray(operatorState) ? operatorState[0] : operatorState) ===
+              'does not contain'
+              ? false
+              : true
+          }
           options={
             valueOpts && valueOpts[propState.name]?.length
               ? valueOpts[propState.name].map((op) => [op])
@@ -265,7 +286,7 @@ const AttrFilterSelect = ({
       const dateRange = parseDateRangeFilter(fromRange, parsedValues.to);
       const rang = {
         startDate: dateRange.from,
-        endDate: dateRange.to,
+        endDate: dateRange.to
       };
 
       selectionComponent = (
@@ -331,7 +352,11 @@ const AttrFilterSelect = ({
 
       {propState?.name ? renderOperatorSelector() : null}
 
-      {operatorState ? renderValuesSelector() : null}
+      {operatorState &&
+      operatorState?.[0] !== OPERATORS['isKnown'] &&
+      operatorState?.[0] !== OPERATORS['isUnknown']
+        ? renderValuesSelector()
+        : null}
     </div>
   );
 };

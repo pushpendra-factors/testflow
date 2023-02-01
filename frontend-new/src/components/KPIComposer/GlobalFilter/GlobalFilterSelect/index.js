@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
-import { Button, InputNumber, Tooltip, Select, DatePicker,Input } from 'antd';
+import { Button, InputNumber, Tooltip, Select, DatePicker, Input } from 'antd';
 import GroupSelect2 from '../../GroupSelect2';
 import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from 'Components/FaSelect';
@@ -10,11 +10,14 @@ import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import moment from 'moment';
 import _ from 'lodash';
-import { DEFAULT_OPERATOR_PROPS,dateTimeSelect } from 'Components/FaFilterSelect/utils';
-const DISPLAY_PROP = { $none: '(Not Set)' };
+import {
+  DEFAULT_OPERATOR_PROPS,
+  dateTimeSelect
+} from 'Components/FaFilterSelect/utils';
 import { toCapitalCase } from '../../../../utils/global';
 
 import { TOOLTIP_CONSTANTS } from '../../../../constants/tooltips.constans';
+import { DISPLAY_PROP, OPERATORS } from 'Utils/constants';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -27,7 +30,7 @@ const GlobalFilterSelect = ({
   setValuesByProps,
   applyFilter,
   filter,
-  refValue,
+  refValue
 }) => {
   const rangePicker = ['=', '!='];
   const customRangePicker = ['between', 'not between'];
@@ -38,7 +41,7 @@ const GlobalFilterSelect = ({
   const [propState, setPropState] = useState({
     icon: '',
     name: '',
-    type: '',
+    type: ''
   });
 
   const [operatorState, setOperatorState] = useState('between');
@@ -56,14 +59,14 @@ const GlobalFilterSelect = ({
   const { userPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
   );
-  const [dateOptionSelectOpen,setDateOptionSelectOpen]=useState(false);
+  const [dateOptionSelectOpen, setDateOptionSelectOpen] = useState(false);
 
   useEffect(() => {
-    if (filter) { 
+    if (filter) {
       const prop = filter.props;
       setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
       setOperatorState(filter.operator);
-      seteventFilterInfo(filter?.extra)
+      seteventFilterInfo(filter?.extra);
       // Set values state
       setValues();
       setPropSelectOpen(false);
@@ -78,6 +81,15 @@ const GlobalFilterSelect = ({
       updateStateApply(false);
     }
   }, [updateState]);
+
+  useEffect(() => {
+    if (
+      operatorState?.[0] === OPERATORS['isKnown'] ||
+      operatorState?.[0] === OPERATORS['isUnknown']
+    ) {
+      valuesSelectSingle('$none');
+    }
+  }, [operatorState]);
 
   const setValues = () => {
     let values;
@@ -105,7 +117,7 @@ const GlobalFilterSelect = ({
         operator: operatorState,
         values: valuesState,
         ref: refValue,
-        extra: eventFilterInfo ? eventFilterInfo : null,
+        extra: eventFilterInfo ? eventFilterInfo : null
       });
     }
   };
@@ -179,7 +191,7 @@ const GlobalFilterSelect = ({
     const rangeValue = {
       fr: startDate,
       to: endDate,
-      ovp: false,
+      ovp: false
     };
 
     setValuesState(JSON.stringify(rangeValue));
@@ -199,7 +211,7 @@ const GlobalFilterSelect = ({
       to: toVal,
       ovp: false,
       num: value['num'],
-      gran: value['gran'],
+      gran: value['gran']
     };
     // return (MomentTz(fromVal).format('MMM DD, YYYY') + ' - ' +
     //           MomentTz(toVal).format('MMM DD, YYYY'));
@@ -221,7 +233,7 @@ const GlobalFilterSelect = ({
         <Tooltip
           title={renderGroupDisplayName(propState)}
           color={TOOLTIP_CONSTANTS.DARK}
-          >
+        >
           <Button
             // icon={propState && propState.icon ? <SVG name={propState.icon} size={16} color={'purple'} /> : null}
             className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
@@ -254,7 +266,7 @@ const GlobalFilterSelect = ({
         <Tooltip
           title='Select an equator to define your filter rules.'
           color={TOOLTIP_CONSTANTS.DARK}
-          >
+        >
           <Button
             className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
             type='link'
@@ -401,21 +413,23 @@ const GlobalFilterSelect = ({
           ></InputNumber>
 
           <Button
-          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          onClick={() => setDateOptionSelectOpen(true)}
+            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+            type='link'
+            onClick={() => setDateOptionSelectOpen(true)}
           >
-          {parsedValues['gran'] ? dateTimeSelect.get(parsedValues['gran']) : 'Select'}
+            {parsedValues['gran']
+              ? dateTimeSelect.get(parsedValues['gran'])
+              : 'Select'}
           </Button>
 
           {dateOptionSelectOpen && (
             <FaSelect
-              options={[['Days'],['Weeks'],['Months'],['Quarters']]}
+              options={[['Days'], ['Weeks'], ['Months'], ['Quarters']]}
               optionClick={(val) => setDeltaGran(dateTimeSelect.get(val[0]))}
               onClickOutside={() => setDateOptionSelectOpen(false)}
             ></FaSelect>
           )}
-      </div>
+        </div>
       );
     }
 
@@ -423,16 +437,18 @@ const GlobalFilterSelect = ({
       selectorComponent = (
         <div className={`fa-filter-dateDeltaContainer`}>
           <Button
-          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          onClick={() => setDateOptionSelectOpen(true)}
+            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+            type='link'
+            onClick={() => setDateOptionSelectOpen(true)}
           >
-          {parsedValues['gran'] ? toCapitalCase(parsedValues['gran']) : 'Select'}
+            {parsedValues['gran']
+              ? toCapitalCase(parsedValues['gran'])
+              : 'Select'}
           </Button>
 
           {dateOptionSelectOpen && (
             <FaSelect
-              options={[['Week'],['Month'],['Quarter']]}
+              options={[['Week'], ['Month'], ['Quarter']]}
               optionClick={(val) => setCurrentGran(val[0].toLowerCase())}
               onClickOutside={() => setDateOptionSelectOpen(false)}
             ></FaSelect>
@@ -479,7 +495,14 @@ const GlobalFilterSelect = ({
 
     selectionComponent = (
       <FaSelect
-        multiSelect={((isArray(operatorState) ? operatorState[0] : operatorState) === '!=' || (isArray(operatorState) ? operatorState[0] : operatorState) === 'does not contain') ? false : true}
+        multiSelect={
+          (isArray(operatorState) ? operatorState[0] : operatorState) ===
+            '!=' ||
+          (isArray(operatorState) ? operatorState[0] : operatorState) ===
+            'does not contain'
+            ? false
+            : true
+        }
         options={
           valueOpts && valueOpts[propState.name]?.length
             ? valueOpts[propState.name].map((op) => [op])
@@ -507,7 +530,7 @@ const GlobalFilterSelect = ({
       );
       const rang = {
         startDate: dateRange.from,
-        endDate: dateRange.to,
+        endDate: dateRange.to
       };
 
       selectionComponent = selectDateTimeSelector(
@@ -519,30 +542,33 @@ const GlobalFilterSelect = ({
     if (propState.type === 'numerical') {
       selectionComponent = (
         <div>
-        {containButton && (
-          <Button
-          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          onClick={() => setContainButton(false)}
-        >
-          {valuesState ? valuesState : 'Enter Value'}
-        </Button>)}
-        {!containButton &&
-        (<Input
-          type="number"
-          value={valuesState}
-          placeholder={'Enter Value'}
-          autoFocus={true}
-          onBlur={() => {
-            emitFilter()
-            setContainButton(true)}}
-          onPressEnter={()=>{
-            emitFilter()
-            setContainButton(true)}}
-          onChange={setNumericalValue}
-          className={`input-value filter-buttons-radius filter-buttons-margin`}
-        ></Input>)
-        }
+          {containButton && (
+            <Button
+              className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+              type='link'
+              onClick={() => setContainButton(false)}
+            >
+              {valuesState ? valuesState : 'Enter Value'}
+            </Button>
+          )}
+          {!containButton && (
+            <Input
+              type='number'
+              value={valuesState}
+              placeholder={'Enter Value'}
+              autoFocus={true}
+              onBlur={() => {
+                emitFilter();
+                setContainButton(true);
+              }}
+              onPressEnter={() => {
+                emitFilter();
+                setContainButton(true);
+              }}
+              onChange={setNumericalValue}
+              className={`input-value filter-buttons-radius filter-buttons-margin`}
+            ></Input>
+          )}
         </div>
       );
     }
@@ -588,7 +614,11 @@ const GlobalFilterSelect = ({
 
       {propState?.name ? renderOperatorSelector() : null}
 
-      {operatorState ? renderValuesSelector() : null}
+      {operatorState &&
+      operatorState?.[0] !== OPERATORS['isKnown'] &&
+      operatorState?.[0] !== OPERATORS['isUnknown']
+        ? renderValuesSelector()
+        : null}
     </div>
   );
 };
