@@ -962,8 +962,14 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 					addSourceStmt = strings.ReplaceAll(addSourceStmt, fmt.Sprintf("step_%d_event_users_view.", i-1), fmt.Sprintf("%s_event_users_view.", refStepName))
 
 				}
+				if len(q.GlobalUserProperties) == 0 && len(ewp.Properties) == 0 {
+					*qStmnt = strings.TrimSuffix(*qStmnt, ")") + " WHERE" + addSourceStmt + ")"
+				} else {
+					*qStmnt = strings.TrimSuffix(*qStmnt, ")") + " AND" + addSourceStmt + ")"
+				}
+			} else {
+				*qStmnt = strings.TrimSuffix(*qStmnt, ")") + " AND" + addSourceStmt + ")"
 			}
-			*qStmnt = strings.TrimSuffix(*qStmnt, ")") + addSourceStmt + ")"
 		}
 		if i < len(q.EventsWithProperties)-1 {
 			*qStmnt = *qStmnt + ","
@@ -1017,7 +1023,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		selectVal = "users"
 	}
 	if caller == model.USER_PROFILE_CALLER {
-		addSourceStmt = " " + fmt.Sprintf("AND (%s.is_group_user=0 OR %s.is_group_user IS NULL)", selectVal, selectVal)
+		addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=0 OR %s.is_group_user IS NULL)", selectVal, selectVal)
 		if model.UserSourceMap[source] == model.UserSourceWeb {
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.source="+strconv.Itoa(model.UserSourceMap[source])+" OR %s.source IS NULL)", selectVal, selectVal)
 		} else if source == "All" {
@@ -1051,7 +1057,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		if source == model.GROUP_NAME_SALESFORCE_ACCOUNT && !salesforceExists {
 			log.WithFields(logFields).Error("Salesforce Not Enabled for this project.")
 		}
-		addSourceStmt = " " + fmt.Sprintf("AND (%s.is_group_user=1)", selectVal)
+		addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=1)", selectVal)
 		if source == "All" && hubspotExists && salesforceExists {
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.group_%d_id IS NOT NULL OR %s.group_%d_id IS NOT NULL)", selectVal, hubspotID, selectVal, salesforceID)
 			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.group_%d_id", hubspotID, salesforceID)
