@@ -4,6 +4,7 @@ import { Text } from 'factorsComponents';
 import { connect } from 'react-redux';
 import { getTimeZoneNameFromCity } from 'Utils/constants';
 import { Currency } from 'Utils/currency';
+import _ from 'lodash';
 
 function ViewBasicSettings({
   activeProject,
@@ -173,7 +174,7 @@ function ViewBasicSettings({
               />
             ) : (
               <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>
-                {activeProject?.time_zone
+                {!_.isEmpty(activeProject?.time_zone)
                   ? `${
                       getTimeZoneNameFromCity(activeProject?.time_zone)?.name
                     } (UTC ${

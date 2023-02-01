@@ -31,6 +31,10 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
+	memSQLUseExactConnectionsConfig := flag.Bool("memsql_use_exact_connection_config", false, "Use exact connection for open and idle as given.")
+	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
+	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
+
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
@@ -108,6 +112,10 @@ func main() {
 			Password:    *memSQLPass,
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
+
+			MaxOpenConnections:     *memSQLDBMaxOpenConnections,
+			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
+			UseExactConnFromConfig: *memSQLUseExactConnectionsConfig,
 		},
 		PrimaryDatastore:                    *primaryDatastore,
 		RedisHost:                           *redisHost,
@@ -122,7 +130,7 @@ func main() {
 		SessionBatchTransactionBatchSize:    *sessionBatchTransactionBatchSize,
 		IngestionTimezoneEnabledProjectIDs:  C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		EnableUserLevelEventPullForAddSessionByProjectID: *enableUserLevelEventPullForAddSessionByProjectID,
-		EventsPullMaxLimit: *eventsPullMaxLimit,
+		EventsPullMaxLimit:            *eventsPullMaxLimit,
 		EventTriggerEnabled:           *eventTriggerEnabled,
 		EventTriggerEnabledProjectIDs: *eventTriggerEnabledProjectIDs,
 	}
