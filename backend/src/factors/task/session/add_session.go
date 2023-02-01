@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -220,6 +221,9 @@ func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList st
 			return projectIDs, http.StatusNotFound
 		}
 
+		sort.Slice(projectIDs, func(i, j int) bool {
+			return projectIDs[i] < projectIDs[j]
+		})
 		return projectIDs, http.StatusFound
 	}
 
@@ -238,6 +242,10 @@ func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList st
 			allowedProjectIds = append(allowedProjectIds, projectIds[i])
 		}
 	}
+
+	sort.Slice(allowedProjectIds, func(i, j int) bool {
+		return allowedProjectIds[i] < allowedProjectIds[j]
+	})
 
 	return allowedProjectIds, http.StatusFound
 }
