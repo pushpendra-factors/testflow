@@ -861,7 +861,6 @@ func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int,
 		} else {
 			addJoinStatement = "JOIN users ON events.user_id=users.id AND users.project_id = ? "
 		}
-		addJoinStatement = addJoinStatement + getUsersFilterJoinStatement(projectId, q.GlobalUserProperties)
 		addParams = append(addParams, projectId)
 
 		var groupBy string
@@ -1221,8 +1220,6 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 			addJoinStatement = "JOIN users ON events.user_id=users.id AND users.project_id = ? "
 			addParams = append(addParams, projectId)
 		}
-
-		addJoinStatement = addJoinStatement + getUsersFilterJoinStatement(projectId, q.GlobalUserProperties)
 
 		var groupBy string
 		if isFunnelGroupQuery {

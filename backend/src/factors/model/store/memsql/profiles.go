@@ -176,14 +176,12 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 		return "", make([]interface{}, 0), err
 	}
 
-	filterJoinStmnt := getUsersFilterJoinStatement(projectID, query.Filters)
-
 	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
 	allowProfilesGroupSupport := C.IsProfileGroupSupportEnabled(projectID)
 
 	var stepSqlStmnt string
 	stepSqlStmnt = fmt.Sprintf(
-		"SELECT %s FROM users %s WHERE users.project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterJoinStmnt, filterStmnt)
+		"SELECT %s FROM users WHERE users.project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterStmnt)
 	params = append(params, groupBySelectParams...)
 	params = append(params, projectID)
 	params = append(params, filterParams...)
@@ -282,16 +280,13 @@ func buildAllUsersQueryV2(projectID int64, query model.ProfileQuery) (string, []
 		return "", make([]interface{}, 0), err
 	}
 
-	// TODO: Remove the depdency of user_properties_json table.
-	filterJoinStmnt := getUsersFilterJoinStatement(projectID, query.Filters)
-
 	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
 	allowProfilesGroupSupport := C.IsProfileGroupSupportEnabled(projectID)
 
 	var stepSqlStmnt string
 	stepSqlStmnt = fmt.Sprintf(
-		"SELECT %s FROM users %s WHERE users.project_id = ? AND join_timestamp>=? AND join_timestamp<=?",
-		selectStmnt, filterJoinStmnt,
+		"SELECT %s FROM users WHERE users.project_id = ? AND join_timestamp>=? AND join_timestamp<=?",
+		selectStmnt,
 	)
 
 	params = append(params, groupBySelectParams...)

@@ -943,7 +943,6 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			}
 		}
 
-		addJoinStmnt = addJoinStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
 		stepParams = append(stepParams, projectID)
 
 		addFilterFunc := addFilterEventsWithPropsQuery
@@ -1152,7 +1151,6 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
-		termStmnt = termStmnt + getUsersFilterJoinStatement(projectID, query.GlobalUserProperties)
 		// Using string format for project_id condition, as the value is from internal system.
 		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
@@ -1970,7 +1968,6 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
-		termStmnt = termStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
 		// Using string format for project_id condition, as the value is from internal system.
 		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
@@ -2316,8 +2313,6 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 			stepParams = append(stepParams, projectID)
 		}
 
-		addJoinStmnt = addJoinStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
-
 		addFilterFunc := addFilterEventsWithPropsQuery
 		if enableFilterOpt {
 			addFilterFunc = addFilterEventsWithPropsQueryV2
@@ -2410,7 +2405,6 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
-		termStmnt = termStmnt + getUsersFilterJoinStatement(projectID, query.GlobalUserProperties)
 		termStmnt = termStmnt + " "
 
 		// Using string format for project_id condition, as the value is from internal system.
