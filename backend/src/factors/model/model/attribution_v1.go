@@ -982,13 +982,14 @@ func ProcessEventRowsV1(rows *sql.Rows, query *AttributionQueryV1, reports *Mark
 		var attributionIdNull sql.NullString
 		var gclIDNull sql.NullString
 		var landingPageUrlNull sql.NullString
+		var allPageViewUrlNull sql.NullString
 		var timestampNull sql.NullInt64
 		contentGroupValuesListNull := make([]sql.NullString, len(contentGroupNamesList))
 
 		var fields []interface{}
 		fields = append(fields, &userIDNull, &campaignIDNull, &campaignNameNull,
 			&adgroupIDNull, &adgroupNameNull, &keywordNameNull, &keywordMatchTypeNull, &sourceNameNull, &channelGroupNull,
-			&attributionIdNull, &gclIDNull, &landingPageUrlNull)
+			&attributionIdNull, &gclIDNull, &landingPageUrlNull, &allPageViewUrlNull)
 
 		// contentGroupValuesListNull wil be empty for queries where property is not "Landing page url"
 		for i := 0; i < len(contentGroupValuesListNull); i++ {
@@ -1014,6 +1015,7 @@ func ProcessEventRowsV1(rows *sql.Rows, query *AttributionQueryV1, reports *Mark
 		var attributionKeyName string
 		var gclID string
 		var landingPageUrl string
+		var allPageViewUrl string
 		var timestamp int64
 		contentGroupValuesMap := make(map[string]string)
 
@@ -1029,6 +1031,7 @@ func ProcessEventRowsV1(rows *sql.Rows, query *AttributionQueryV1, reports *Mark
 		attributionKeyName = U.IfThenElse(attributionIdNull.Valid, attributionIdNull.String, PropertyValueNone).(string)
 		gclID = U.IfThenElse(gclIDNull.Valid, gclIDNull.String, PropertyValueNone).(string)
 		landingPageUrl = U.IfThenElse(landingPageUrlNull.Valid, landingPageUrlNull.String, PropertyValueNone).(string)
+		allPageViewUrl = U.IfThenElse(allPageViewUrlNull.Valid, allPageViewUrlNull.String, PropertyValueNone).(string)
 		timestamp = U.IfThenElse(timestampNull.Valid, timestampNull.Int64, int64(0)).(int64)
 		for i, val := range contentGroupValuesListNull {
 			contentGroupValuesMap[contentGroupNamesList[i]] = U.IfThenElse(val.Valid, val.String, PropertyValueNone).(string)
@@ -1046,7 +1049,7 @@ func ProcessEventRowsV1(rows *sql.Rows, query *AttributionQueryV1, reports *Mark
 		}
 		marketingValues := MarketingData{Channel: PropertyValueNone, CampaignID: campaignID, CampaignName: campaignName, AdgroupID: adgroupID,
 			AdgroupName: adgroupName, KeywordName: keywordName, KeywordMatchType: keywordMatchType, Source: sourceName, ChannelGroup: channelGroup,
-			LandingPageUrl: landingPageUrl, ContentGroupValuesMap: contentGroupValuesMap}
+			LandingPageUrl: landingPageUrl, AllPageView: allPageViewUrl, ContentGroupValuesMap: contentGroupValuesMap}
 		// Override GCLID based campaign info if presents
 		if gclID != PropertyValueNone && !(query.AttributionKey == AttributionKeyKeyword && !IsASearchSlotKeyword(&(*reports).AdwordsGCLIDData, gclID)) {
 			countEnrichedGclid++

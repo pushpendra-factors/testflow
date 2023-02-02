@@ -736,7 +736,7 @@ export default function EventFilterWrapper({
         <Text
           level={8}
           type={'title'}
-          extraClass={`m-0 ${caller === 'profiles' ? 'mx-4' : 'mr-16'}`}
+          extraClass={`m-0 ${caller === 'profiles' ? 'mx-4' : 'mx-2'}`}
           weight={'thin'}
         >
           or

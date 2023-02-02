@@ -14,7 +14,6 @@ import (
 	"time"
 
 	slack "factors/slack_bot/handler"
-
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -208,7 +207,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 	log.Info("Inside sendSlackAlert function")
 
 	wetRun := true
-	if(wetRun){
+	if wetRun {
 		for _, channel := range slackChannels {
 			log.Info("Sending alert for slack channel ", channel)
 
@@ -229,8 +228,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 	return true
 }
 
-
-func returnSlackMessage(actualmsg string) string{
+func returnSlackMessage(actualmsg string) string {
 	template := fmt.Sprintf(`
 		[
 			{
@@ -249,6 +247,9 @@ func returnSlackMessage(actualmsg string) string{
 func getPropsBlock(propMap U.PropertiesMap) string {
 	var propBlock string
 	for key, prop := range propMap {
+		if(prop == ""){
+			prop = "<nil>"
+		}
 		propBlock += fmt.Sprintf(
 			`{
 				"type": "section",
@@ -290,15 +291,16 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 					"type": "button",
 					"text": {
 						"type": "plain_text",
-						"text": "*Know more*",
+						"text": "Know more",
 						"emoji": true
 					},
 					"value": "click_me_123",
-					"action_id": "actionId-0"
+					"url": "https://app.factors.ai/profiles/people",
+					"action_id": "button-action"
 				}
 			]
 		}
-	]`, msg.Title, msg.Message, propBlock)
+	]`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock)
 
 	return mainBlock
 }

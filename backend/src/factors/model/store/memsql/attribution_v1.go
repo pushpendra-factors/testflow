@@ -1499,7 +1499,8 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 			caseSelectStmt + " AS channel, " +
 			caseSelectStmt + " AS attribution_id, " +
 			caseSelectStmt + " AS gcl_id, " +
-			caseSelectStmt + " AS landingPageUrl, "
+			caseSelectStmt + " AS landingPageUrl, " +
+			caseSelectStmt + " AS allPageViewUrl, "
 
 		var qParams []interface{}
 
@@ -1514,7 +1515,8 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 			U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 			attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 			U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
-			U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL)
+			U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL,
+			U.EP_PAGE_URL, model.PropertyValueNone, U.EP_PAGE_URL, model.PropertyValueNone, U.EP_PAGE_URL)
 
 		wStmt, wParams, err := getSelectSQLStmtForContentGroup(contentGroupNamesToDummyNamesMap)
 		if err != nil {
@@ -1595,7 +1597,8 @@ func (store *MemSQL) getAllTheSessionsAttributionKPI(projectId int64, sessionEve
 			caseSelectStmt + " AS channel, " +
 			caseSelectStmt + " AS attribution_id, " +
 			caseSelectStmt + " AS gcl_id, " +
-			caseSelectStmt + " AS landingPageUrl, "
+			caseSelectStmt + " AS landingPageUrl, " +
+			caseSelectStmt + " AS allPageViewUrl, "
 
 		var qParams []interface{}
 
@@ -1610,7 +1613,8 @@ func (store *MemSQL) getAllTheSessionsAttributionKPI(projectId int64, sessionEve
 			U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 			attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 			U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
-			U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL)
+			U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL,
+			U.EP_PAGE_URL, model.PropertyValueNone, U.EP_PAGE_URL, model.PropertyValueNone, U.EP_PAGE_URL)
 
 		wStmt, wParams, err := getSelectSQLStmtForContentGroup(contentGroupNamesToDummyNamesMap)
 		if err != nil {

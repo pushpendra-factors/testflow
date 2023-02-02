@@ -1014,7 +1014,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var addSourceStmt string
-	addColString := " " + "users.updated_at, users.is_group_user,"
+	addColString := " " + "users.updated_at,"
 	var selectVal string
 	if C.EnableOptimisedFilterOnEventUserQuery() {
 		selectVal = "_event_users_view"
@@ -1030,7 +1030,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		} else {
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.source=", selectVal) + strconv.Itoa(model.UserSourceMap[source])
 		}
-		addColString = addColString + " " + "users.source"
+		addColString = addColString + " " + "users.is_group_user, users.source"
 	} else if caller == model.ACCOUNT_PROFILE_CALLER {
 		groups, errCode := store.GetGroups(projectID)
 		if errCode != http.StatusFound {
@@ -1056,15 +1056,14 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		if source == model.GROUP_NAME_SALESFORCE_ACCOUNT && !salesforceExists {
 			log.WithFields(logFields).Error("Salesforce Not Enabled for this project.")
 		}
-		addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=1)", selectVal)
 		if source == "All" && hubspotExists && salesforceExists {
-			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.group_%d_id IS NOT NULL OR %s.group_%d_id IS NOT NULL)", selectVal, hubspotID, selectVal, salesforceID)
+			addSourceStmt = " " + fmt.Sprintf("(%s.group_%d_id IS NOT NULL OR %s.group_%d_id IS NOT NULL)", selectVal, hubspotID, selectVal, salesforceID)
 			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.group_%d_id", hubspotID, salesforceID)
 		} else if (source == "All" || source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
-			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, hubspotID)
+			addSourceStmt = " " + fmt.Sprintf("%s.group_%d_id IS NOT NULL", selectVal, hubspotID)
 			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", hubspotID)
 		} else if (source == "All" || source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
-			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, salesforceID)
+			addSourceStmt = " " + fmt.Sprintf("%s.group_%d_id IS NOT NULL", selectVal, salesforceID)
 			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", salesforceID)
 		}
 	}

@@ -53,7 +53,7 @@ export const labelsObj = {
   [FREQUENCY_CRITERIA]: 'Count'
 };
 
-const getEventsWithProperties = (queries) => {
+export const getEventsWithProperties = (queries) => {
   const ewps = [];
   queries.forEach((ev) => {
     const filterProps = [];

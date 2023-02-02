@@ -224,15 +224,31 @@ func (gcsd *GCSDriver) GetUsersFilePathAndName(dateField string, projectId int64
 }
 
 func (gcsd *GCSDriver) GetModelMetricsFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
 	modelType := U.GetModelType(startTimestamp, endTimestamp)
-	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, "", modelType)
-	return path, "metrics.txt"
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, "metrics", modelType)
+	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
+		fileName = "metrics.txt"
+	} else {
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("metrics_%s-%s.txt", dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
 }
 
 func (gcsd *GCSDriver) GetModelAlertsFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
 	modelType := U.GetModelType(startTimestamp, endTimestamp)
-	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, "", modelType)
-	return path, "alerts.txt"
+	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, "alerts", modelType)
+	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
+		fileName = "alerts.txt"
+	} else {
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("alerts_%s-%s.txt", dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
 }
 
 func (gcsd *GCSDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
