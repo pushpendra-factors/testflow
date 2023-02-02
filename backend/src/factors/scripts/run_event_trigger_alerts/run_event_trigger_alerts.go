@@ -14,7 +14,7 @@ import (
 	"time"
 
 	slack "factors/slack_bot/handler"
-
+	"strconv"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -298,7 +298,7 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 				}
 			]
 		}
-	]`, msg.Title, msg.Message, propBlock)
+	]`, strconv.Quote(msg.Title), msg.Message, propBlock)
 
 	return mainBlock
 }
