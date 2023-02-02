@@ -254,3 +254,7 @@ func GetUpdateEventPropertiesParamsAsBatch(list []UpdateEventPropertiesParams, b
 
 	return batchList
 }
+
+func PrependEvent(e Event, events []Event) []Event {
+	return append([]Event{e}, events...)
+}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -220,6 +221,9 @@ func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList st
 			return projectIDs, http.StatusNotFound
 		}
 
+		sort.Slice(projectIDs, func(i, j int) bool {
+			return projectIDs[i] < projectIDs[j]
+		})
 		return projectIDs, http.StatusFound
 	}
 
@@ -238,6 +242,10 @@ func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList st
 			allowedProjectIds = append(allowedProjectIds, projectIds[i])
 		}
 	}
+
+	sort.Slice(allowedProjectIds, func(i, j int) bool {
+		return allowedProjectIds[i] < allowedProjectIds[j]
+	})
 
 	return allowedProjectIds, http.StatusFound
 }
@@ -314,6 +322,15 @@ func addSessionUserEventsWorker(projectID int64, userID string, events []model.E
 func AddSession(projectIds []int64, maxLookbackTimestamp, startTimestamp, endTimestamp,
 	bufferTimeBeforeSessionCreateInMins int64, numProjectRoutines, numUserRoutines int) (map[int64]Status, error) {
 
+	logCtx := log.WithFields(log.Fields{
+		"project_ids":      projectIds,
+		"start_timestamp":  startTimestamp,
+		"end_timestamp":    endTimestamp,
+		"buffer_time":      bufferTimeBeforeSessionCreateInMins,
+		"project_routines": numProjectRoutines,
+		"user_routines":    numUserRoutines,
+	})
+
 	hasFailures := false
 	statusMap := make(map[int64]Status, 0)
 	var statusLock sync.Mutex
@@ -335,6 +352,8 @@ func AddSession(projectIds []int64, maxLookbackTimestamp, startTimestamp, endTim
 		chunkProjectIds = append(chunkProjectIds, projectIds[i:next])
 		i = next
 	}
+
+	logCtx.WithField("chunk_project_ids", chunkProjectIds).Info("Session allowed projects list.")
 
 	bufferTimeBeforeSessionCreateInSecs := bufferTimeBeforeSessionCreateInMins * 60
 
