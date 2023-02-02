@@ -441,7 +441,7 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	t1 := time.Now()
 	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
 		//log.Info("EventTriggerAlerts match function trigger point.")
-		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties)
+		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties, false)
 		if ErrCode == http.StatusFound && alerts != nil {
 			// log.WithFields(log.Fields{"project_id": event.ProjectId,
 			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
@@ -834,7 +834,7 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 
 	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
 		//log.Info("EventTriggerAlerts match function trigger point.")
-		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, updatedPostgresJsonb, event.UserProperties)
+		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, updatedPropertiesOnlyJsonBlob, event.UserProperties, true)
 		if ErrCode == http.StatusFound && alerts != nil {
 			// log.WithFields(log.Fields{"project_id": event.ProjectId,
 			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
