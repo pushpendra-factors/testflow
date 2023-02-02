@@ -65,19 +65,21 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 			linkedinEvents, _ := GetEventsFromCacheByDocumentType(projId, "linkedin", dateKey)
 			salesforceEvents, _ := GetEventsFromCacheByDocumentType(projId, "salesforce", dateKey)
 			sixSignalAPIHits := six_signal.GetSixSignalAPICountCacheResult(int64(projIdInt), uint64(dateKeyInt))
+			sixSignalAPITotalHits := six_signal.GetSixSignalAPITotalHitCountCacheResult(int64(projIdInt), uint64(dateKeyInt))
 			result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
-				ProjectID:         int64(projIdInt),
-				TotalEvents:       uint64(totalEvents),
-				TotalUniqueEvents: uint64(uniqueEvents),
-				TotalUniqueUsers:  uint64(uniqueUsers),
-				AdwordsEvents:     uint64(adwordsEvents),
-				FacebookEvents:    uint64(facebookEvents),
-				HubspotEvents:     uint64(hubspotEvents),
-				LinkedinEvents:    uint64(linkedinEvents),
-				SalesforceEvents:  uint64(salesforceEvents),
-				SixSignalAPIHits:  uint64(sixSignalAPIHits),
-				ProjectName:       projectIDNameMap[int64(projIdInt)],
-				Date:              dateKey,
+				ProjectID:             int64(projIdInt),
+				TotalEvents:           uint64(totalEvents),
+				TotalUniqueEvents:     uint64(uniqueEvents),
+				TotalUniqueUsers:      uint64(uniqueUsers),
+				AdwordsEvents:         uint64(adwordsEvents),
+				FacebookEvents:        uint64(facebookEvents),
+				HubspotEvents:         uint64(hubspotEvents),
+				LinkedinEvents:        uint64(linkedinEvents),
+				SalesforceEvents:      uint64(salesforceEvents),
+				SixSignalAPIHits:      uint64(sixSignalAPIHits),
+				SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
+				ProjectName:           projectIDNameMap[int64(projIdInt)],
+				Date:                  dateKey,
 			})
 
 		}

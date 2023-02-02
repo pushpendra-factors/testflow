@@ -134,3 +134,66 @@ func SetSixSignalAPICountCacheResult(projectID int64, timeZone U.TimeZoneString)
 	}
 
 }
+
+//GetSixSignalAPITotalHitCountCacheRedisKey returns the redis key when given projectID and timeZone
+func GetSixSignalAPITotalHitCountCacheRedisKey(projectID int64, date uint64) (*cacheRedis.Key, error) {
+	prefix := "ip:enrichment:total:sixsignal"
+	suffix := fmt.Sprintf("%d", date)
+	return cacheRedis.NewKey(projectID, prefix, suffix) //Sample Key: "ip:enrichment:total:sixsignal:pid:399:20221130"
+}
+
+//GetSixSignalAPITotalHitCountCacheResult returns the total count of number of times 6Signal API has been called when projectID and timeZone is given
+func GetSixSignalAPITotalHitCountCacheResult(projectID int64, date uint64) int {
+	cacheResult := 0
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
+	cacheKey, err := GetSixSignalAPITotalHitCountCacheRedisKey(projectID, date)
+	if err != nil {
+		logCtx.WithError(err).Error("Error getting cache key")
+		return cacheResult
+	}
+
+	result, err := cacheRedis.GetPersistent(cacheKey)
+	if err == redis.ErrNil {
+		return cacheResult
+	} else if err != nil {
+		logCtx.WithError(err).Error("Error getting key from redis")
+		return cacheResult
+	}
+
+	err = json.Unmarshal([]byte(result), &cacheResult)
+	if err != nil {
+		logCtx.Warn("Error decoding redis result %v", result)
+		return cacheResult
+	}
+	return cacheResult
+
+}
+
+//SetSixSignalAPITotalHitCountCacheResult fetches the total count of number of times API has been hit and increases it by 1.
+func SetSixSignalAPITotalHitCountCacheResult(projectID int64, timeZone U.TimeZoneString) {
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
+
+	date := U.DateAsYYYYMMDDFormat(U.TimeNowIn(timeZone))
+
+	cacheKey, err := GetSixSignalAPITotalHitCountCacheRedisKey(projectID, date)
+	if err != nil {
+		logCtx.Warn("Failed to get cache key total api hit count")
+		return
+	}
+	count := GetSixSignalAPITotalHitCountCacheResult(projectID, date)
+	if count <= 0 {
+		count = 0
+	}
+	count = count + 1
+	var apiCountCacheInvalidationDuration int64 = 60 * U.SECONDS_IN_A_DAY
+	err = cacheRedis.SetPersistent(cacheKey, strconv.Itoa(count), float64(apiCountCacheInvalidationDuration))
+	if err != nil {
+		logCtx.Warn("Failed to set cache for API Total Count")
+		return
+	}
+
+}
