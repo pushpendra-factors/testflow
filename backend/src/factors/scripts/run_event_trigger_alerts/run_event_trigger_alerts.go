@@ -14,7 +14,6 @@ import (
 	"time"
 
 	slack "factors/slack_bot/handler"
-	"strconv"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -248,6 +247,9 @@ func returnSlackMessage(actualmsg string) string {
 func getPropsBlock(propMap U.PropertiesMap) string {
 	var propBlock string
 	for key, prop := range propMap {
+		if(prop == ""){
+			prop = "<nil>"
+		}
 		propBlock += fmt.Sprintf(
 			`{
 				"type": "section",
@@ -298,7 +300,7 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 				}
 			]
 		}
-	]`, strconv.Quote(msg.Title), msg.Message, propBlock)
+	]`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock)
 
 	return mainBlock
 }
