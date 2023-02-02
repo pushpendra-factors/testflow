@@ -832,6 +832,23 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 		store.addEventDetailsToCache(projectId, &model.Event{EventNameId: event.EventNameId, Properties: *updatedPropertiesOnlyJsonBlob}, true)
 	}
 
+	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
+		//log.Info("EventTriggerAlerts match function trigger point.")
+		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, updatedPostgresJsonb, event.UserProperties)
+		if ErrCode == http.StatusFound && alerts != nil {
+			// log.WithFields(log.Fields{"project_id": event.ProjectId,
+			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
+
+			for _, alert := range *alerts {
+				success := store.CacheEventTriggerAlert(&alert, event)
+				if !success {
+					log.WithFields(log.Fields{"project_id": event.ProjectId,
+						"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
+				}
+			}
+		}
+	}
+
 	// Log for analysis.
 	log.WithField("project_id", projectId).WithField("tag", "update_event").Info("Updated event.")
 
