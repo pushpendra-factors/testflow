@@ -536,3 +536,18 @@ func TestGetEventByIdWithoutEventAndUserProperties(t *testing.T) {
 	assert.Equal(t, event.ID, eventID)
 	assert.Equal(t, newEvent.UserId, userID)
 }
+
+func TestPrependEvent(t *testing.T) {
+	e1 := model.Event{ID: "e1"}
+	e2 := model.Event{ID: "e2"}
+
+	events := make([]model.Event, 0, 0)
+	events = append(events, e1, e2)
+
+	e3 := model.Event{ID: "e3"}
+
+	events = model.PrependEvent(e3, events)
+	assert.Equal(t, "e3", events[0].ID)
+	assert.Equal(t, "e1", events[1].ID)
+	assert.Equal(t, "e2", events[2].ID)
+}

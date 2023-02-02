@@ -1241,6 +1241,15 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 	if len(userEvents) == 0 {
 		return 0, 0, false, 0, false, http.StatusNotModified
 	}
+
+	isV2Enabled := C.EnableUserLevelEventPullForAddSessionByProjectID(projectId)
+	if isV2Enabled {
+		eventWithSession, status := store.GetLastEventWithSessionByUser(projectId, userEvents[0].UserId, userEvents[0].Timestamp)
+		if status == http.StatusFound && eventWithSession != nil {
+			userEvents = model.PrependEvent(*eventWithSession, userEvents)
+		}
+	}
+
 	startTimestamp := userEvents[0].Timestamp
 
 	latestUserEvent := &userEvents[len(userEvents)-1]
@@ -1616,7 +1625,6 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 	}
 
 	if C.GetSessionBatchTransactionBatchSize() > 0 {
-
 		batchedUpdatedEventPropertiesParams := model.GetUpdateEventPropertiesParamsAsBatch(updateEventPropertiesParams,
 			C.GetSessionBatchTransactionBatchSize())
 		for batchIndex := range batchedUpdatedEventPropertiesParams {
@@ -2430,15 +2438,6 @@ func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMapV2(projectId i
 	for i := range events {
 		if _, exists := userEventsMap[events[i].UserId]; !exists {
 			userEventsMap[events[i].UserId] = make([]model.Event, 0, 0)
-			eventWithSession, status := GetStore().GetLastEventWithSessionByUser(projectId, events[i].UserId, events[0].Timestamp)
-			if status == http.StatusBadRequest || status == http.StatusInternalServerError {
-				logCtx.WithField("user_id", events[i].UserId).Error("Failed to get latest user event with session")
-				continue
-			}
-
-			if status == http.StatusFound {
-				userEventsMap[events[i].UserId] = append(userEventsMap[events[i].UserId], *eventWithSession)
-			}
 		}
 
 		userEventsMap[events[i].UserId] = append(userEventsMap[events[i].UserId], events[i])
