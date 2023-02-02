@@ -45,7 +45,8 @@ import {
   getProfileUsers,
   getProfileUserDetails,
   createNewSegment,
-  getSavedSegments
+  getSavedSegments,
+  updateSegmentForId
 } from '../../../reducers/timelines/middleware';
 import _ from 'lodash';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
@@ -54,7 +55,6 @@ import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import EventsBlock from './EventsBlock';
-import PropFilterBlock from './PropertyFilter/PropFilterBlock';
 
 function UserProfiles({
   activeProject,
@@ -71,7 +71,8 @@ function UserProfiles({
   fetchBingAdsIntegration,
   fetchDemoProject,
   currentProjectSettings,
-  udpateProjectSettings
+  udpateProjectSettings,
+  updateSegmentForId
 }) {
   const integration = useSelector(
     (state) => state.global.currentProjectSettings
@@ -80,6 +81,7 @@ function UserProfiles({
   const { bingAds, marketo } = useSelector((state) => state.global);
   const { dashboards } = useSelector((state) => state.dashboard);
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
+  const { userPropNames } = useSelector((state) => state.coreQuery);
 
   const [isUserDDVisible, setUserDDVisible] = useState(false);
   const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
@@ -158,12 +160,15 @@ function UserProfiles({
   }, [activeProject]);
 
   useEffect(() => {
+    const tableProps = timelinePayload.segment_id
+      ? activeSegment.query.table_props
+      : currentProjectSettings.timelines_config?.user_config?.table_props;
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
       userProperties,
-      currentProjectSettings.timelines_config?.user_config?.table_props
+      tableProps
     );
     setCheckListUserProps(userPropsWithEnableKey);
-  }, [currentProjectSettings, userProperties]);
+  }, [currentProjectSettings, userProperties, timelinePayload]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -216,17 +221,21 @@ function UserProfiles({
         )
       }
     ];
-    currentProjectSettings?.timelines_config?.user_config?.table_props?.forEach(
-      (prop) => {
-        columns.push({
-          title: <div className={headerClassStr}>{PropTextFormat(prop)}</div>,
-          dataIndex: prop,
-          key: prop,
-          width: 350,
-          render: (item) => item || '-'
-        });
-      }
-    );
+    const tableProps = timelinePayload.segment_id
+      ? activeSegment.query.table_props
+      : currentProjectSettings?.timelines_config?.user_config?.table_props;
+    tableProps?.forEach((prop) => {
+      const propDisplayName = userPropNames[prop]
+        ? userPropNames[prop]
+        : PropTextFormat(prop);
+      columns.push({
+        title: <div className={headerClassStr}>{propDisplayName}</div>,
+        dataIndex: prop,
+        key: prop,
+        width: 350,
+        render: (item) => item || '-'
+      });
+    });
     columns.push({
       title: <div className={headerClassStr}>Last Activity</div>,
       dataIndex: 'last_activity',
@@ -282,7 +291,7 @@ function UserProfiles({
     const opts = { ...timelinePayload };
     opts.filters = formatFiltersForPayload(timelinePayload.filters);
     getProfileUsers(activeProject.id, opts);
-  }, [activeProject.id, timelinePayload, currentProjectSettings]);
+  }, [activeProject.id, timelinePayload, currentProjectSettings, segments]);
 
   const handleSaveSegment = (segmentPayload) => {
     createNewSegment(activeProject.id, segmentPayload)
@@ -497,13 +506,25 @@ function UserProfiles({
   };
 
   const applyTableProps = () => {
-    const config = { ...tlConfig };
-    config.user_config.table_props = checkListUserProps
-      .filter((item) => item.enabled === true)
-      .map((item) => item?.prop_name);
-    udpateProjectSettings(activeProject.id, {
-      timelines_config: { ...config }
-    });
+    if (timelinePayload.segment_id.length) {
+      const query = { ...activeSegment.query };
+      query.table_props = checkListUserProps
+        .filter((item) => item.enabled === true)
+        .map((item) => item?.prop_name);
+      updateSegmentForId(activeProject.id, timelinePayload.segment_id, {
+        query: { ...query }
+      })
+        .then(() => getSavedSegments(activeProject.id))
+        .then(() => setActiveSegment({ ...activeSegment, query }));
+    } else {
+      const config = { ...tlConfig };
+      config.user_config.table_props = checkListUserProps
+        .filter((item) => item.enabled === true)
+        .map((item) => item?.prop_name);
+      udpateProjectSettings(activeProject.id, {
+        timelines_config: { ...config }
+      });
+    }
     setShowPopOver(false);
   };
 
@@ -712,7 +733,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchMarketoIntegration,
       fetchBingAdsIntegration,
       fetchDemoProject,
-      udpateProjectSettings
+      udpateProjectSettings,
+      updateSegmentForId
     },
     dispatch
   );

@@ -30,7 +30,8 @@ import {
   getProfileAccounts,
   getProfileAccountDetails,
   createNewSegment,
-  getSavedSegments
+  getSavedSegments,
+  updateSegmentForId
 } from '../../../reducers/timelines/middleware';
 import {
   fetchProjectSettings,
@@ -55,7 +56,8 @@ function AccountProfiles({
   currentProjectSettings,
   getProfileAccounts,
   getProfileAccountDetails,
-  getGroupProperties
+  getGroupProperties,
+  updateSegmentForId
 }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isGroupDDVisible, setGroupDDVisible] = useState(false);
@@ -66,6 +68,7 @@ function AccountProfiles({
     source: 'All',
     filters: []
   });
+  const { groupPropNames } = useSelector((state) => state.coreQuery);
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
@@ -155,17 +158,21 @@ function AccountProfiles({
           ) || '-'
       }
     ];
-    currentProjectSettings?.timelines_config?.account_config?.table_props?.forEach(
-      (prop) => {
-        columns.push({
-          title: <div className={headerClassStr}>{PropTextFormat(prop)}</div>,
-          dataIndex: prop,
-          key: prop,
-          width: 350,
-          render: (item) => item || '-'
-        });
-      }
-    );
+    const tableProps = accountPayload.segment_id
+      ? activeSegment.query.table_props
+      : currentProjectSettings?.timelines_config?.user_config?.table_props;
+    tableProps?.forEach((prop) => {
+      const propDisplayName = groupPropNames[prop]
+        ? groupPropNames[prop]
+        : PropTextFormat(prop);
+      columns.push({
+        title: <div className={headerClassStr}>{propDisplayName}</div>,
+        dataIndex: prop,
+        key: prop,
+        width: 350,
+        render: (item) => item || '-'
+      });
+    });
     columns.push({
       title: <div className={headerClassStr}>Last Activity</div>,
       dataIndex: 'last_activity',
@@ -221,7 +228,7 @@ function AccountProfiles({
     const opts = { ...accountPayload };
     opts.filters = formatFiltersForPayload(accountPayload.filters);
     getProfileAccounts(activeProject.id, opts);
-  }, [activeProject, currentProjectSettings, accountPayload]);
+  }, [activeProject, currentProjectSettings, accountPayload, segments]);
 
   const selectGroup = () => (
     <div className='absolute top-0'>
@@ -244,13 +251,15 @@ function AccountProfiles({
         ? groupProperties.$salesforce_account
         : [])
     ];
-
-    const userPropsWithEnableKey = formatUserPropertiesToCheckList(
+    const tableProps = accountPayload.segment_id
+      ? activeSegment.query.table_props
+      : currentProjectSettings.timelines_config?.account_config?.table_props;
+    const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
       listProperties,
-      currentProjectSettings.timelines_config?.account_config?.table_props
+      tableProps
     );
-    setCheckListAccountProps(userPropsWithEnableKey);
-  }, [currentProjectSettings, groupProperties]);
+    setCheckListAccountProps(accountPropsWithEnableKey);
+  }, [currentProjectSettings, groupProperties, accountPayload]);
 
   const handlePropChange = (option) => {
     if (
@@ -275,13 +284,25 @@ function AccountProfiles({
   };
 
   const applyTableProps = () => {
-    const config = { ...tlConfig };
-    config.account_config.table_props = checkListAccountProps
-      .filter((item) => item.enabled === true)
-      .map((item) => item?.prop_name);
-    udpateProjectSettings(activeProject.id, {
-      timelines_config: { ...config }
-    });
+    if (accountPayload.segment_id.length) {
+      const query = { ...activeSegment.query };
+      query.table_props = checkListAccountProps
+        .filter((item) => item.enabled === true)
+        .map((item) => item?.prop_name);
+      updateSegmentForId(activeProject.id, accountPayload.segment_id, {
+        query: { ...query }
+      })
+        .then(() => getSavedSegments(activeProject.id))
+        .then(() => setActiveSegment({ ...activeSegment, query }));
+    } else {
+      const config = { ...tlConfig };
+      config.account_config.table_props = checkListAccountProps
+        .filter((item) => item.enabled === true)
+        .map((item) => item?.prop_name);
+      udpateProjectSettings(activeProject.id, {
+        timelines_config: { ...config }
+      });
+    }
     setShowPopOver(false);
   };
 
@@ -668,7 +689,8 @@ const mapDispatchToProps = (dispatch) =>
       getSavedSegments,
       getGroupProperties,
       fetchProjectSettings,
-      udpateProjectSettings
+      udpateProjectSettings,
+      updateSegmentForId
     },
     dispatch
   );
