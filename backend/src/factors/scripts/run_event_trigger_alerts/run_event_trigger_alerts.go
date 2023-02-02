@@ -208,7 +208,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 	log.Info("Inside sendSlackAlert function")
 
 	wetRun := true
-	if(wetRun){
+	if wetRun {
 		for _, channel := range slackChannels {
 			log.Info("Sending alert for slack channel ", channel)
 
@@ -229,8 +229,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 	return true
 }
 
-
-func returnSlackMessage(actualmsg string) string{
+func returnSlackMessage(actualmsg string) string {
 	template := fmt.Sprintf(`
 		[
 			{
@@ -290,11 +289,12 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 					"type": "button",
 					"text": {
 						"type": "plain_text",
-						"text": "*Know more*",
+						"text": "Know more",
 						"emoji": true
 					},
 					"value": "click_me_123",
-					"action_id": "actionId-0"
+					"url": "https://app.factors.ai/profiles/people",
+					"action_id": "button-action"
 				}
 			]
 		}
