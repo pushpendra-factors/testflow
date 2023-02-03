@@ -1,7 +1,7 @@
 import { Text } from 'Components/factorsComponents';
 import React from 'react';
 
-const BrandInfo = ({ logo, name, description, links }) => {
+const BrandInfo = ({ logo, name, description, links }: BrandInfoProps) => {
   return (
     <div className='flex flex-col justify-start gap-1 p-5 pb-0'>
       <div className='flex items-center w-16 h-16'>
@@ -39,6 +39,16 @@ const BrandInfo = ({ logo, name, description, links }) => {
       </div>
     </div>
   );
+};
+
+type BrandInfoProps = {
+  logo: string;
+  name: string;
+  description: string;
+  links: {
+    href: string;
+    source: string;
+  }[];
 };
 
 export default BrandInfo;

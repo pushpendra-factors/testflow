@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text } from 'Components/factorsComponents';
 
-const Properties = ({ properties }) => {
+const Properties = ({ properties }: Props) => {
   return (
     <div className='flex flex-col justify-start gap-1 px-5 pb-0'>
       <div className='flex flex-col justify-start gap-4'>
@@ -23,6 +23,13 @@ const Properties = ({ properties }) => {
       </div>
     </div>
   );
+};
+
+type Props = {
+  properties: {
+    name: string;
+    value: string;
+  }[];
 };
 
 export default Properties;
