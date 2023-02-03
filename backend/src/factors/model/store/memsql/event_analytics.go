@@ -835,7 +835,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		commonSelect = fmt.Sprintf("COALESCE(users.customer_user_id, events.user_id) as coal_user_id%%, users.updated_at as last_activity, ISNULL(users.customer_user_id) AS is_anonymous, users.properties as properties")
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 	} else if q.Caller == model.ACCOUNT_PROFILE_CALLER {
-		commonSelect = fmt.Sprintf("users.id as identity%%, users.updated_at as last_activity, users.properties as properties")
+		commonSelect = fmt.Sprintf("users.id as identity%%, users.updated_at as last_activity, events.user_properties as properties")
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 	} else {
 		if q.GetGroupByTimestamp() != "" {

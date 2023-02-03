@@ -187,7 +187,7 @@ function UserProfiles({
     const columns = [
       {
         title: <div className={headerClassStr}>Identity</div>,
-        width: 360,
+        width: 280,
         dataIndex: 'identity',
         key: 'identity',
         fixed: 'left',
@@ -216,7 +216,9 @@ function UserProfiles({
                 {identity.id.charAt(0).toUpperCase()}
               </Avatar>
             )}
-            <span className='ml-2 truncate'>{identity.id}</span>
+            <span className='ml-2 truncate'>
+              {identity.isAnonymous ? 'Unidentified User' : identity.id}
+            </span>
           </div>
         )
       }
@@ -229,11 +231,26 @@ function UserProfiles({
         ? userPropNames[prop]
         : PropTextFormat(prop);
       columns.push({
-        title: <div className={headerClassStr}>{propDisplayName}</div>,
+        title: (
+          <Text
+            type='title'
+            level={7}
+            color='grey-2'
+            weight='bold'
+            className='m-0'
+            truncate
+          >
+            {propDisplayName}
+          </Text>
+        ),
         dataIndex: prop,
         key: prop,
-        width: 350,
-        render: (item) => item || '-'
+        width: 300,
+        render: (item) => (
+          <Text type='title' level={7} className='m-0' truncate>
+            {item || '-'}
+          </Text>
+        )
       });
     });
     columns.push({
@@ -506,7 +523,7 @@ function UserProfiles({
   };
 
   const applyTableProps = () => {
-    if (timelinePayload.segment_id.length) {
+    if (timelinePayload?.segment_id?.length) {
       const query = { ...activeSegment.query };
       query.table_props = checkListUserProps
         .filter((item) => item.enabled === true)
@@ -668,7 +685,7 @@ function UserProfiles({
         scroll={{
           x:
             currentProjectSettings?.timelines_config?.user_config?.table_props
-              ?.length * 350
+              ?.length * 300
         }}
       />
       <div className='flex flex-row-reverse mt-4'></div>

@@ -160,17 +160,32 @@ function AccountProfiles({
     ];
     const tableProps = accountPayload.segment_id
       ? activeSegment.query.table_props
-      : currentProjectSettings?.timelines_config?.user_config?.table_props;
+      : currentProjectSettings?.timelines_config?.account_config?.table_props;
     tableProps?.forEach((prop) => {
       const propDisplayName = groupPropNames[prop]
         ? groupPropNames[prop]
         : PropTextFormat(prop);
       columns.push({
-        title: <div className={headerClassStr}>{propDisplayName}</div>,
+        title: (
+          <Text
+            type='title'
+            level={7}
+            color='grey-2'
+            weight='bold'
+            className='m-0'
+            truncate
+          >
+            {propDisplayName}
+          </Text>
+        ),
         dataIndex: prop,
         key: prop,
-        width: 350,
-        render: (item) => item || '-'
+        width: 300,
+        render: (item) => (
+          <Text type='title' level={7} className='m-0' truncate>
+            {item || '-'}
+          </Text>
+        )
       });
     });
     columns.push({
@@ -284,7 +299,7 @@ function AccountProfiles({
   };
 
   const applyTableProps = () => {
-    if (accountPayload.segment_id.length) {
+    if (accountPayload?.segment_id?.length) {
       const query = { ...activeSegment.query };
       query.table_props = checkListAccountProps
         .filter((item) => item.enabled === true)
@@ -617,7 +632,7 @@ function AccountProfiles({
         scroll={{
           x:
             currentProjectSettings?.timelines_config?.account_config
-              ?.table_props?.length * 350
+              ?.table_props?.length * 300
         }}
         footer={() => (
           <div className='text-right'>

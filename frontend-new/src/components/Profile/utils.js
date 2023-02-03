@@ -260,7 +260,7 @@ export const propValueFormat = (key, value) => {
   ) {
     return MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A');
   }
-  if (key.includes('_time')) {
+  if (key.endsWith('time') || key.includes('_time')) {
     return formatDurationIntoString(parseInt(value));
   }
   if (key.includes('durationmilliseconds')) {
