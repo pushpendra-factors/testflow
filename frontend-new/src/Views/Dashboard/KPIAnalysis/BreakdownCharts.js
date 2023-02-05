@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useContext,
-  memo
-} from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import cx from 'classnames';
 import {
   formatData,
@@ -32,7 +26,6 @@ import BreakdownTable from '../../CoreQuery/KPIAnalysis/BreakdownCharts/Breakdow
 import HorizontalBarChartTable from '../../CoreQuery/KPIAnalysis/BreakdownCharts/HorizontalBarChartTable';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
-import { DashboardContext } from '../../../contexts/DashboardContext';
 
 const BreakdownCharts = ({
   breakdown,
@@ -53,7 +46,6 @@ const BreakdownCharts = ({
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [data, setData] = useState([]);
-  const { handleEditQuery } = useContext(DashboardContext);
 
   const handleSorting = useCallback((prop) => {
     setSorter((currentSorter) => {
@@ -86,7 +78,7 @@ const BreakdownCharts = ({
     setAggregateData(aggData);
     setCategories(cats);
     setData(d);
-  }, [responseData, breakdown, currentEventIndex]);
+  }, [responseData, breakdown, currentEventIndex, kpis, chartType]);
 
   useEffect(() => {
     setVisibleProperties(getVisibleData(aggregateData, sorter));

@@ -5,7 +5,7 @@ import { Text } from 'Components/factorsComponents';
 import TopLegends from 'Components/GroupedBarChart/TopLegends';
 import MetricChart from 'Components/MetricChart/MetricChart';
 import {
-  CHART_TYPE_BARCHART,
+  CHART_TYPE_FUNNEL_CHART,
   FUNNEL_CHART_MARGIN
 } from '../../../../utils/constants';
 import { generateColors } from '../../../../utils/dataFormatter';
@@ -23,7 +23,7 @@ function ChartSection({
   comparison_duration,
   chartType
 }) {
-  if (chartType === CHART_TYPE_BARCHART) {
+  if (chartType === CHART_TYPE_FUNNEL_CHART) {
     if (!comparisonChartData) {
       return (
         <FunnelChart

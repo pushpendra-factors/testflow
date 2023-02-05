@@ -6499,6 +6499,24 @@ const TrackedUser9SVG = ({ size = 16, extraClass, color }) => (
   </svg>
 );
 
+const FunnelchartSVG = ({ size, color, extraClass }) => {
+  return (
+    <svg
+      className={extraClass}
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <rect width={size} height={size} fill='transparent' />
+      <path
+        d='M14.3982 5.55078H5.99203C5.35568 5.55078 4.99611 6.28103 5.3841 6.78541L9.22806 11.7826V16.1366C9.22806 16.5637 9.74441 16.7776 10.0464 16.4756L11.1455 15.3765V11.7826L15.0051 6.78668C15.3946 6.28252 15.0353 5.55078 14.3982 5.55078Z'
+        fill={color}
+      />
+    </svg>
+  );
+};
 const MixChartSVG = ({ size = 16, color = '#5ACA89', extraClass }) => (
   <svg
     width={size}
@@ -6712,5 +6730,6 @@ export {
   TrackedUser7SVG,
   TrackedUser8SVG,
   TrackedUser9SVG,
+  FunnelchartSVG,
   MixChartSVG
 };

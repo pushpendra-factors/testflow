@@ -166,6 +166,7 @@ export function WithComparison() {
           ]
         }
       ]}
+      hideXAxis
     />
   );
 }

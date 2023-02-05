@@ -25,16 +25,12 @@ const FaErrorComp = ({ size, className, type, title, subtitle }) => {
     switch (size) {
       case 'large':
         return 200;
-        break;
       case 'medium':
         return 150;
-        break;
       case 'small':
         return 100;
-        break;
       default:
         return 100;
-        break;
     }
   };
   let finalSize = sizeCal(size);
@@ -49,8 +45,7 @@ const FaErrorComp = ({ size, className, type, title, subtitle }) => {
 
   const refreshPage = () => {
     window.location = '/';
-  }
-  
+  };
 
   return (
     <div
@@ -80,7 +75,9 @@ const FaErrorComp = ({ size, className, type, title, subtitle }) => {
           {subtitle}
         </Text>
       )}
-      <Button size={'large'} className={'mt-4'} onClick={()=>refreshPage()}>Try Again!</Button>
+      <Button size={'large'} className={'mt-4'} onClick={() => refreshPage()}>
+        Try Again!
+      </Button>
     </div>
   );
 };
