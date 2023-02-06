@@ -55,7 +55,7 @@ func main() {
 			"AND source=2 " +
 			"AND (is_group_user=0 or is_group_user IS NULL)")
 	startTime := U.TimeNowUnix()
-	rows, tx, err := store.GetStore().ExecQueryWithContext(appCountQuery, []interface{}{})
+	rows, tx, err, _ := store.GetStore().ExecQueryWithContext(appCountQuery, []interface{}{})
 	if err != nil {
 		log.WithError(err).Error("appCountQuery failed.")
 	}
@@ -82,7 +82,7 @@ func main() {
 			"AND source=2 " +
 			"AND (is_group_user=0 or is_group_user IS NULL)")
 	startTime = U.TimeNowUnix()
-	rows, tx, err = store.GetStore().ExecQueryWithContext(appSumQuery, []interface{}{})
+	rows, tx, err, _ = store.GetStore().ExecQueryWithContext(appSumQuery, []interface{}{})
 	if err != nil {
 		log.WithError(err).Error("appSumQuery failed.")
 	}
@@ -110,7 +110,7 @@ func main() {
 			"AND source=2 " +
 			"AND (is_group_user=0 or is_group_user IS NULL)")
 	startTime = U.TimeNowUnix()
-	rows, tx, err = store.GetStore().ExecQueryWithContext(sqlCountQuery, []interface{}{})
+	rows, tx, err, _ = store.GetStore().ExecQueryWithContext(sqlCountQuery, []interface{}{})
 	if err != nil {
 		log.WithError(err).Error("sqlCountQuery failed.")
 	}
@@ -135,7 +135,7 @@ func main() {
 			"AND source=2 " +
 			"AND (is_group_user=0 or is_group_user IS NULL)")
 	startTime = U.TimeNowUnix()
-	rows, tx, err = store.GetStore().ExecQueryWithContext(sqlSumQuery, []interface{}{})
+	rows, tx, err, _ = store.GetStore().ExecQueryWithContext(sqlSumQuery, []interface{}{})
 	if err != nil {
 		log.WithError(err).Error("sqlSumQuery failed.")
 	}

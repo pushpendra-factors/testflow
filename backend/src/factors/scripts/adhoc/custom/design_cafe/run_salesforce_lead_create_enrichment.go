@@ -38,7 +38,7 @@ func main() {
 	filePath := flag.String("file_path", "", "")
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
-	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
+	projectIdFlag := flag.Int64("project_id", 0, "Project Id.")
 	sheetName := flag.String("sheet_name", "report1597302806687", " xlsx file") // internal sheet name
 
 	flag.Parse()
@@ -164,7 +164,7 @@ func getPhoneNoAsCustomerUserId(phoneNo string) string {
 }
 
 //userIndentificationByPhoneNo tries various pattern in specific order for identifying customer_user_id
-func userIndentificationByPhoneNo(projectId uint64, phoneNo string) string {
+func userIndentificationByPhoneNo(projectId int64, phoneNo string) string {
 
 	if len(phoneNo) > 2 {
 
@@ -217,7 +217,7 @@ func buildSalesforcePropertyKeys(keys []string) []string {
 	return fmtHeaders
 }
 
-func buildUserCreatedEvent(projectID uint64, properties map[string]interface{}, eventName string) error {
+func buildUserCreatedEvent(projectID int64, properties map[string]interface{}, eventName string) error {
 	trackPayload := &SDK.TrackPayload{
 		Name:            eventName,
 		ProjectId:       projectID,

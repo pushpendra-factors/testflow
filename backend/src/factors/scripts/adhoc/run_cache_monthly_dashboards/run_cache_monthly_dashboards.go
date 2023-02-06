@@ -127,7 +127,7 @@ func cacheMonthlyDashboardUnitsForProjects(projectIDs, excludeProjectIDs string,
 		defer waitGroup.Done()
 	}
 	startTime := util.TimeNowUnix()
-	store.GetStore().CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs, numMonths, numRoutines, reportCollector)
+	store.GetStore().CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs, numMonths, numRoutines, reportCollector, true)
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	timeTaken.Store("all", timeTakenString)
 }

@@ -77,7 +77,7 @@ func main() {
 			os.Exit(0)
 		}
 	} else {
-		projectIdsArray := make([]uint64, 0)
+		projectIdsArray := make([]int64, 0)
 		for projectId, _ := range projectIdsToRun {
 			projectIdsArray = append(projectIdsArray, projectId)
 		}
@@ -107,7 +107,7 @@ func main() {
 		finalResultantKPIQuery := model.TransformChannelsV1QueryToKPIQueryGroup(sourceFormatOfQuery)
 
 		if *normalRun == false {
-			result, _ := store.GetStore().ExecuteKPIQueryGroup(dbQuery.ProjectID, "", finalResultantKPIQuery, true)
+			result, _ := store.GetStore().ExecuteKPIQueryGroup(dbQuery.ProjectID, "", finalResultantKPIQuery, true, true)
 			if result[0].Headers == nil || result[0].Rows == nil {
 				log.WithField("time", U.TimeNowZ()).WithField("dbQuery", dbQuery).WithField("finalResultantKPIQuery", finalResultantKPIQuery).Warn("Failed in transforming channel v1 to kpi query.")
 			} else {

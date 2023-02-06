@@ -16,7 +16,7 @@ import (
 
 func main() {
 	envFlag := flag.String("env", C.DEVELOPMENT, "Environment. Could be development|staging|production.")
-	projectIDFlag := flag.Uint64("project_id", 0, "Project ID for the bigquery account")
+	projectIDFlag := flag.Int64("project_id", 0, "Project ID for the bigquery account")
 	queryFlag := flag.String("query", "", "Query to run on Bigquery")
 	outputFileFlag := flag.String("outf", "", "If the query result is to be written to a file")
 

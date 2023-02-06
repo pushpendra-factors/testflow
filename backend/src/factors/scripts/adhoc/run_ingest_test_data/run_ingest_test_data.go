@@ -3,24 +3,25 @@ package main
 import (
 	"bufio"
 	"context"
-	"fmt"
-	"io"
 	"encoding/json"
 	"errors"
 	C "factors/config"
 	M "factors/model/model"
 	"flag"
+	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
+	"time"
+
 	"cloud.google.com/go/storage"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
-	log "github.com/sirupsen/logrus"
-	"time"
 	"github.com/jinzhu/gorm/dialects/postgres"
-
+	log "github.com/sirupsen/logrus"
 )
+
 // temp structs just for this script
 type Event struct {
 	// Composite primary key with project_id and uuid.
@@ -31,12 +32,12 @@ type Event struct {
 	// project_id -> projects(id)
 	// (project_id, user_id) -> users(project_id, id)
 	// (project_id, event_name_id) -> event_names(project_id, id)
-	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	ProjectId int64  `gorm:"primary_key:true;" json:"project_id"`
 	UserId    string `json:"user_id"`
 
 	UserProperties *postgres.Jsonb `json:"user_properties"`
 	SessionId      *string         `json:session_id`
-	EventNameId    uint64          `json:"event_name_id"`
+	EventNameId    int64           `json:"event_name_id"`
 	Count          uint64          `json:"count"`
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties                 postgres.Jsonb `json:"properties,omitempty"`
@@ -48,18 +49,19 @@ type Event struct {
 }
 type EventName struct {
 	// Composite primary key with projectId.
-	ID   uint64 `gorm:"primary_key:true;" json:"id"`
+	ID   int64  `gorm:"primary_key:true;" json:"id"`
 	Name string `json:"name"`
 	Type string `gorm:"not null;type:varchar(2)" json:"type"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
-	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	ProjectId int64 `gorm:"primary_key:true;" json:"project_id"`
 	// if default is not set as NULL empty string will be installed.
 	FilterExpr string    `gorm:"type:varchar(500);default:null" json:"filter_expr"`
 	Deleted    bool      `gorm:"	not null;default:false" json:"deleted"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
+
 var jobMap = map[string][]string{
 	"dashboard_caching":          []string{"event_names", "users", "events", "dashboards", "dashboard_units"},
 	"add_session":                []string{"event_names", "users", "events"},
@@ -68,19 +70,19 @@ var jobMap = map[string][]string{
 	"web_analytics_dashboard":    []string{"event_names", "users", "events"},
 	"explain_feature_testing_ui": []string{"event_names", "users", "events"},
 	"attribution":                []string{"event_names", "users", "events", "project_settings", "adwords_documents", "facebook_documents", "linkedin_documents", "smart_property_rules", "smart_properties"},
-	"test": []string{"adwords_documents","facebook_documents","linkedin_documents"},
+	"test":                       []string{"adwords_documents", "facebook_documents", "linkedin_documents"},
 }
-var projectIdStaging *uint64
+var projectIdStaging *int64
 var folderName *string
 
 // to map eventName id to the generated id
-var eventNamesIDMap = make(map[uint64]uint64)
+var eventNamesIDMap = make(map[int64]int64)
 
 // to map userId to the generated id
 var userIdMap = make(map[string]string)
 
 // to map dashBoardId to the generated dashboard ID
-var dashboardIdMap = make(map[uint64]uint64)
+var dashboardIdMap = make(map[int64]int64)
 
 type agentUUID struct {
 	AgentUUID string `json:"agent_uuid"`
@@ -92,13 +94,13 @@ type eventName struct {
 	EventName string `json:"name"`
 }
 type Result struct {
-	Id uint64 `json:"id"`
+	Id int64 `json:"id"`
 }
 
 var numberOfLinesCopied int = 0
 var numberOfLinesFailed int = 0
-var currDashboardId uint64 = 0
-var currEventNameId uint64 = 0
+var currDashboardId int64 = 0
+var currEventNameId int64 = 0
 
 func main() {
 
@@ -112,7 +114,7 @@ func main() {
 	jobConfig := flag.String("jobConfig", "default", "please enter a job config type")
 
 	// project id to be written in staging table.
-	projectIdStaging = flag.Uint64("projectIdStaging", 000000, "specify project id to be written in staging")
+	projectIdStaging = flag.Int64("projectIdStaging", 000000, "specify project id to be written in staging")
 
 	folderName = flag.String("folderName", "default", "Enter the folder name which contains records text files")
 	flag.Parse()

@@ -88,8 +88,6 @@ func main() {
 			}
 			query := model.Queries{
 				ProjectID: dashboardUnit.ProjectID,
-				Title:     dashboardUnit.Title,
-				Query:     dashboardUnit.Query,
 				Type:      model.QueryTypeDashboardQuery,
 				CreatedAt: dashboardUnit.CreatedAt,
 				UpdatedAt: dashboardUnit.UpdatedAt,

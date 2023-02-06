@@ -128,7 +128,7 @@ var permanantlyDisabledTables = []string{
 var heavyTables = []string{tableEvents, tableUsers, tableAdwordsDocuments, tableHubspotDocuments}
 
 type TableRecord struct {
-	ProjectID uint64      `json:"project_id"`
+	ProjectID int64       `json:"project_id"`
 	ID        interface{} `json:"id"`      // Using interface, as type of ID can be uint64 or uuid.
 	UUID      interface{} `json:"uuid"`    // Agents table is using uuid instead of id.
 	UserID    string      `json:"user_id"` // For analytics tables.
@@ -176,7 +176,7 @@ type dest_EventName_pg struct {
 	Type string `gorm:"not null;type:varchar(2)" json:"type"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
-	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	ProjectId int64 `gorm:"primary_key:true;" json:"project_id"`
 	// if default is not set as NULL empty string will be installed.
 	FilterExpr string    `gorm:"type:varchar(500);default:null" json:"filter_expr"`
 	Deleted    bool      `gorm:"not null;default:false" json:"deleted"`
@@ -193,7 +193,7 @@ type dest_Event struct {
 	// project_id -> projects(id)
 	// (project_id, user_id) -> users(project_id, id)
 	// (project_id, event_name_id) -> event_names(project_id, id)
-	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	ProjectId int64  `gorm:"primary_key:true;" json:"project_id"`
 	UserId    string `json:"user_id"`
 
 	// TODO(Dinesh): Remove user_properties_id column and field after
@@ -432,7 +432,7 @@ func getDedupeMap(tableName string) *sync.Map {
 	}
 }
 
-func doesExistByUserAndIDOnMemSQLDB(tableName string, projectID uint64,
+func doesExistByUserAndIDOnMemSQLDB(tableName string, projectID int64,
 	userID string, id interface{}) (bool, *TableRecord, error) {
 
 	logCtx := log.WithField("project_id", projectID).
@@ -553,11 +553,11 @@ func getPrimaryKeyConditionByTableName(tableName string, sourceTableRecord *Tabl
 	return condition, params
 }
 
-func isValidProjectID(tableName string, id uint64) bool {
+func isValidProjectID(tableName string, id int64) bool {
 	return id > 0 || tableName == tableTaskExecutionDetails
 }
 
-func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interface{},
+func getTableRecordByIDFromMemSQL(projectID int64, tableName string, id interface{},
 	sourceTableRecord *TableRecord) (*TableRecord, int) {
 
 	logCtx := log.WithField("project_id", projectID).WithField("id", id).
@@ -602,7 +602,7 @@ func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interfa
 	return &record, http.StatusFound
 }
 
-func deleteByIDOnMemSQL(projectID uint64, tableName string, id interface{}, sourceTableRecord *TableRecord) int {
+func deleteByIDOnMemSQL(projectID int64, tableName string, id interface{}, sourceTableRecord *TableRecord) int {
 	logCtx := log.WithField("project_id", projectID).WithField("table_name", tableName).
 		WithField("id", id).WithField("user_id", sourceTableRecord.UserID)
 
@@ -653,7 +653,7 @@ func isDefaultValue(x interface{}) bool {
 	return x == nil || reflect.DeepEqual(x, reflect.Zero(reflect.TypeOf(x)).Interface())
 }
 
-func createOnMemSQL(projectID uint64, tableName string, record interface{}, id interface{}, isFromUpdate bool) int {
+func createOnMemSQL(projectID int64, tableName string, record interface{}, id interface{}, isFromUpdate bool) int {
 	logCtx := log.WithField("project_id", projectID).WithField("table_name", tableName).
 		WithField("record", record)
 
@@ -734,7 +734,7 @@ func isProjectAssociatedTable(tableName string) bool {
 	})
 }
 
-func updateIfExistOnMemSQL(projectID uint64, tableName string, pgRecord interface{}, pgTableRecord, memsqlTableRecord *TableRecord) int {
+func updateIfExistOnMemSQL(projectID int64, tableName string, pgRecord interface{}, pgTableRecord, memsqlTableRecord *TableRecord) int {
 	logCtx := log.WithField("project_id", projectID).WithField("table_name", tableName)
 
 	var status int
@@ -989,7 +989,7 @@ func isTableWithoutProjectID(tableName string) bool {
 	return U.StringValueIn(tableName, []string{tableAgents, tableProjects, tableBillingAccounts, tableTaskDetails, tableTaskExecutionDetails, tableTaskExecutionDependencyDetails})
 }
 
-func buildStringList(ids []uint64) string {
+func buildStringList(ids []int64) string {
 	var list string
 	for i, id := range ids {
 		if i > 0 {
@@ -1018,7 +1018,7 @@ func getRecordsAsChunks(list []interface{}, batchSize int) [][]interface{} {
 	return batchList
 }
 
-func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt *time.Time) (*time.Time, int, int) {
+func migrateTableByName(projectIDs []int64, tableName string, lastPageUpdatedAt *time.Time) (*time.Time, int, int) {
 	logCtx := log.WithField("table_name", tableName).
 		WithField("project_id", projectIDs)
 
@@ -1332,7 +1332,7 @@ func createOrUpdateOnMemSQLInParallel(tableName string, records []interface{}, w
 	}
 }
 
-func migrateAllTables(projectIDs []uint64) {
+func migrateAllTables(projectIDs []int64) {
 	// Runs replication continiously for each table
 	// on a separate go routine.
 	for i := range supportedTables {
@@ -1347,7 +1347,7 @@ func migrateAllTables(projectIDs []uint64) {
 	select {} // Keeps main routine alive forever.
 }
 
-func migrateTableContiniously(table string, projectIDs []uint64) {
+func migrateTableContiniously(table string, projectIDs []int64) {
 	logCtx := log.WithField("table_name", table)
 
 	for {
@@ -1364,7 +1364,7 @@ func migrateTableContiniously(table string, projectIDs []uint64) {
 	}
 }
 
-func migrateTableByNameWithPagination(table string, projectIDs []uint64) int {
+func migrateTableByNameWithPagination(table string, projectIDs []int64) int {
 	logCtx := log.WithField("table", table)
 
 	for {

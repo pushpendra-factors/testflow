@@ -13,7 +13,7 @@ import (
 )
 
 // NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
-func doGoalCleanUp(projectID uint64) int64 {
+func doGoalCleanUp(projectID int64) int64 {
 	db := C.GetServices().Db
 	dbObj := db.Where("type = ?", "AT").Where("project_id = ?", projectID).Delete(&model.FactorsGoal{})
 	if dbObj.Error != nil {
@@ -25,7 +25,7 @@ func doGoalCleanUp(projectID uint64) int64 {
 }
 
 // NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
-func doTrackedEventsCleanUp(projectID uint64) int64 {
+func doTrackedEventsCleanUp(projectID int64) int64 {
 	db := C.GetServices().Db
 	var trackedEvent model.FactorsTrackedEvent
 	dbObj := db.Where("type = ?", "AT").Where("project_id = ?", projectID).Delete(&trackedEvent)
@@ -38,7 +38,7 @@ func doTrackedEventsCleanUp(projectID uint64) int64 {
 }
 
 // NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
-func doTrackedUserPropertiesCleanUp(projectID uint64) int64 {
+func doTrackedUserPropertiesCleanUp(projectID int64) int64 {
 	db := C.GetServices().Db
 	dbObj := db.Where("type = ?", "AT").Where("project_id = ?", projectID).Delete(&model.FactorsTrackedUserProperty{})
 	if dbObj.Error != nil {

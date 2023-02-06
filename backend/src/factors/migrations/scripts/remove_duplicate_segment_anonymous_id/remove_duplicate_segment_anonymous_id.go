@@ -93,7 +93,7 @@ func main() {
 }
 
 // NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
-func getSegmentUsersToFix(projectId uint64, segAnonId string) ([]model.User, error) {
+func getSegmentUsersToFix(projectId int64, segAnonId string) ([]model.User, error) {
 	user, errCode := store.GetStore().GetUserBySegmentAnonymousId(projectId, segAnonId)
 	if errCode != http.StatusFound {
 		log.WithField("project_id", projectId).WithField("err_code",

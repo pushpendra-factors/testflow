@@ -2,7 +2,6 @@ package main
 
 import (
 	C "factors/config"
-	"factors/model/store"
 	"factors/sdk"
 	"factors/util"
 	U "factors/util"
@@ -29,7 +28,6 @@ func main() {
 
 	projectIds := flag.String("project_ids", "", "Projects for which the cache is to be refreshed")
 	eventRecordsLimit := flag.Int("event_records_limit", 100000, "")
-	usersProcessedLimit := flag.Int("users_processed_limit", 10000, "")
 	eventsLimit := flag.Int("events_limit", 10000, "")
 	propertiesLimit := flag.Int("properties_limit", 5000, "")
 	valuesLimit := flag.Int("values_limit", 2000, "")
@@ -104,7 +102,6 @@ func main() {
 
 	for projectId, _ := range projectIdMap {
 		sdk.BackFillEventDataInCacheFromDb(projectId, startOfCurrentDay, *lookBackDays, *eventsLimit, *propertiesLimit, *valuesLimit, *eventRecordsLimit, *perQueryPullRange, *skipExpiry)
-		store.GetStore().BackFillUserDataInCacheFromDb(projectId, startOfCurrentDay, *usersProcessedLimit, *propertiesLimit, *valuesLimit, *skipExpiry)
 	}
 	fmt.Println("Done!!!")
 }
