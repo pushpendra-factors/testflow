@@ -33,11 +33,6 @@ type dateRanges struct {
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
@@ -45,7 +40,7 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	awsRegion := flag.String("aws_region", "us-east-1", "")
@@ -77,13 +72,6 @@ func main() {
 	config := &C.Configuration{
 		AppName: appName,
 		Env:     *env,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,

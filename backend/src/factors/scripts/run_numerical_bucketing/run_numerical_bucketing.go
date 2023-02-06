@@ -59,12 +59,6 @@ func mainRunNumericalBucketing() {
 	sortedBucketNameFlag := flag.String("sorted_bucket_name", "/usr/local/var/factors/cloud_storage_sorted", "--bucket_name=/usr/local/var/factors/cloud_storage_sorted pass sorted bucket name")
 	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
 
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
-
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
@@ -127,13 +121,6 @@ func mainRunNumericalBucketing() {
 	config := &C.Configuration{
 		AppName: "compute_numerical_bucketing",
 		Env:     *envFlag,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,

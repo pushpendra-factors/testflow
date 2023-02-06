@@ -458,11 +458,6 @@ func getSmartEventMetaData(queryStmnt string, queryParams []interface{}) (map[st
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 	projectID := flag.Uint64("project_id", 0, "Project id.")
 	from := flag.Int64("from", 0, "Project id.")
 	to := flag.Int64("to", 0, "Project id.")
@@ -485,14 +480,7 @@ func main() {
 
 	appName := "hubspot_smart_event_validator"
 	config := &C.Configuration{
-		Env: *env,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-		},
+		Env:       *env,
 		SentryDSN: *sentryDSN,
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,

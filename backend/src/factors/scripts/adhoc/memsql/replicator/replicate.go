@@ -227,7 +227,6 @@ func main() {
 	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
 	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
 	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
-	sourceDatastore = flag.String("source", C.DatastoreTypePostgres, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
@@ -285,7 +284,7 @@ func main() {
 	migrationRoutinesOther = *routinesOther
 	modeMigrate = *migrate
 
-	if !U.StringValueIn(*sourceDatastore, []string{C.DatastoreTypePostgres, C.DatastoreTypeMemSQL}) {
+	if !U.StringValueIn(*sourceDatastore, []string{C.DatastoreTypeMemSQL}) {
 		log.WithField("source", *sourceDatastore).Fatal("Invalid source provided.")
 	}
 
@@ -399,8 +398,6 @@ func initMemSQLDB(env string, dbConf *C.DBConf, maxOpenConns int) {
 
 func getDestinationDB() *gorm.DB {
 	switch *sourceDatastore {
-	case C.DatastoreTypePostgres:
-		return memSQLDB
 	case C.DatastoreTypeMemSQL:
 		return C.GetServices().Db
 	default:
@@ -410,8 +407,6 @@ func getDestinationDB() *gorm.DB {
 
 func getSourceDB() *gorm.DB {
 	switch *sourceDatastore {
-	case C.DatastoreTypePostgres:
-		return C.GetServices().Db
 	case C.DatastoreTypeMemSQL:
 		return memSQLDB
 	default:

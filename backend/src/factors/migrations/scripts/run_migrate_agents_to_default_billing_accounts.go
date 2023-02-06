@@ -15,11 +15,6 @@ import (
 // go run run_migrate_agents_to_default_billing_accounts.go --env=development --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
@@ -41,13 +36,6 @@ func main() {
 
 	config := &C.Configuration{
 		Env: *env,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:     *memSQLHost,
 			Port:     *memSQLPort,

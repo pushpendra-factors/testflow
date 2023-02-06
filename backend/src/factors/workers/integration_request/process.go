@@ -34,12 +34,6 @@ func main() {
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
-
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
@@ -99,18 +93,10 @@ func main() {
 	defer U.NotifyOnPanic(workerName, *env)
 
 	config := &C.Configuration{
-		AppName:            workerName,
-		Env:                *env,
-		GCPProjectID:       *gcpProjectID,
-		GCPProjectLocation: *gcpProjectLocation,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-			AppName:  workerName,
-		},
+		AppName:                 workerName,
+		Env:                     *env,
+		GCPProjectID:            *gcpProjectID,
+		GCPProjectLocation:      *gcpProjectLocation,
 		RedisHost:               *redisHost,
 		RedisPort:               *redisPort,
 		QueueRedisHost:          *queueRedisHost,

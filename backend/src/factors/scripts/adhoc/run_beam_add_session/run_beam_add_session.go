@@ -44,12 +44,7 @@ go run scripts/run_beam_add_session/run_beam_add_session.go --project_ids='2,3' 
 const stepTrace = "StepTrace"
 
 var (
-	env    = flag.String("env", "development", "")
-	dbHost = flag.String("db_host", "localhost", "")
-	dbPort = flag.Int("db_port", 5432, "")
-	dbUser = flag.String("db_user", "autometa", "")
-	dbName = flag.String("db_name", "autometa", "")
-	dbPass = flag.String("db_pass", "@ut0me7a", "")
+	env = flag.String("env", "development", "")
 
 	memSQLHost        = flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort        = flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
@@ -659,14 +654,6 @@ func main() {
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-			AppName:  appName,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,

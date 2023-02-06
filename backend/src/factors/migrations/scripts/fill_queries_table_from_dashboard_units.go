@@ -17,12 +17,6 @@ func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 	projectIDFlag := flag.String("project_id", "", "Comma separated project ids to run for. * to run for all")
 
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
-
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
@@ -47,13 +41,6 @@ func main() {
 
 	config := &C.Configuration{
 		Env: *env,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:     *memSQLHost,
 			Port:     *memSQLPort,

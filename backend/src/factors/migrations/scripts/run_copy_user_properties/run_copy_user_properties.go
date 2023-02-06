@@ -424,11 +424,6 @@ const appName = "copy_user_properties_migration"
 
 func main() {
 	env := flag.String("env", "development", "")
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
 	projectIDStringList := flag.String("project_ids", "", "")
 	pageSize := flag.Int("page_size", 0, "No.of records per page.")
@@ -458,15 +453,8 @@ func main() {
 	migrationRoutines = *routines
 
 	config := &C.Configuration{
-		Env:     *env,
-		AppName: appName,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-		},
+		Env:       *env,
+		AppName:   appName,
 		SentryDSN: *sentryDSN,
 	}
 	C.InitConf(config)
