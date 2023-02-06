@@ -81,7 +81,6 @@ function EventFilterWrapper({
       setValuesByProps(filter.props);
       setNewFilterState(filter);
 
-
       if (filter && filter?.extra) {
         let filterData = {};
         if (event?.category == 'channels' || event?.category == 'custom_channels') {
@@ -95,8 +94,8 @@ function EventFilterWrapper({
         } else {
           filterData = {
             category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
-            object_type: event?.group, // depreciated! object_type to display_category key change
-            display_category: event?.group, // object_type to display_category key change
+            object_type: event?.pageViewVal ? event?.pageViewVal : event?.group, // depreciated! object_type to display_category key change
+            display_category: event?.pageViewVal ? event?.pageViewVal : event?.group, // object_type to display_category key change
             property_name: filter?.extra[1],
             entity: filter?.extra[3] ? filter?.extra[3] : filter?.extra[2],
           };
@@ -173,6 +172,7 @@ function EventFilterWrapper({
   };
 
   const setValuesByProps = (props) => {
+
     if (props && props[3]) {
       let filterData = {}; 
       if (event?.category == 'channels' || event?.category == 'custom_channels') { //use event instead of selectedMainCategory since it is in induvidual level
@@ -186,8 +186,8 @@ function EventFilterWrapper({
       } else {
         filterData = {
           category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
-          object_type: event?.group, // depreciated! object_type to display_category key change
-          display_category: event?.group, // object_type to display_category key change
+          object_type:  event?.pageViewVal ? event?.pageViewVal : event?.group, // depreciated! object_type to display_category key change
+          display_category: event?.pageViewVal ? event?.pageViewVal :  event?.group, // object_type to display_category key change
           property_name: props[1],
           entity: props[3] ? props[3] : props[2],
         };

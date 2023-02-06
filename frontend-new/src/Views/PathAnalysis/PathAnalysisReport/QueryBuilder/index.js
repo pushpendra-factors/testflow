@@ -15,6 +15,9 @@ import moment from 'moment';
 import GLobalFilter from './GlobalFilter';
 import { getGlobalFilters, getGlobalFiltersfromSavedState } from './utils'
 import _ from 'lodash';
+import FaSelect from 'Components/FaSelect';
+import { PropTextFormat } from 'Utils/dataFormatter';
+import { RevAvailableGroups } from 'Utils/constants';
 
 const QueryBuilder = ({
   queryOptions = {},
@@ -22,8 +25,6 @@ const QueryBuilder = ({
   fetchSavedPathAnalysis,
   createPathPathAnalysisQuery, 
   activeProject,
-  collapse,
-  setCollapse,
   activeQuery,
 }) => { 
   const [singleQueries, setSingleQueries] = useState([]);
@@ -36,9 +37,12 @@ const QueryBuilder = ({
   const [repetativeStep, setRepetativeStep] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState({});
-
+  const [isGroupDDVisible, setGroupDDVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const groupOpts = groupState?.data;
+  const [groupCategory, setGroupCategory] = useState('users');
+  const [collapse, setCollapse] = useState(false);
+  const [showCollapseBtn, setCollapseBtn] = useState(false);
 
   const history = useHistory();
 
@@ -64,6 +68,7 @@ const QueryBuilder = ({
     let payload = {
       "title": data?.title,
       "event_type": pathCondition,
+      "group": groupCategory,
       "event": transformIndividualFilter(singleQueries),
       "steps": Number(pathStepCount),
       "include_events": (excludeEvents == 'false') ? multipleQueries : null,
@@ -90,7 +95,8 @@ const QueryBuilder = ({
 
   useEffect(() => {
     if (activeQuery) {
-      console.log("activeQuery useEffect-->>", activeQuery)
+      setCollapseBtn(true);
+      setCollapse(true)
       setRepetativeStep(activeQuery?.avoid_repeated_events)
       setPathCondition(`${activeQuery?.event_type}`)
       setPathStepCount(`${activeQuery?.steps}`)
@@ -109,10 +115,14 @@ const QueryBuilder = ({
     }
   }, [activeQuery])
 
+  const triggerDropDown = () => {
+    setGroupDDVisible(true);
+  };
+
   const enabledGroups = () => {
     let groups = [['Users', 'users']];
     groupOpts?.forEach((elem) => {
-      const formatName = PropTextFormat(elem.name);
+      const formatName = RevAvailableGroups[elem.name];
       groups.push([formatName, elem.name]);
     });
     return groups;
@@ -175,25 +185,62 @@ const QueryBuilder = ({
     [multipleQueries]
   );
 
+  const onGroupSelect = (val) => {
+    setGroupCategory(val); 
+    setGroupDDVisible(false);
+  };
+
+  const selectGroup = () => {
+    return (
+      <div className={`${styles.groupsection_dropdown}`}>
+        {isGroupDDVisible ? (
+          <FaSelect
+            extraClass={`${styles.groupsection_dropdown_menu}`}
+            options={enabledGroups()}
+            onClickOutside={() => setGroupDDVisible(false)}
+            optionClick={(val) => onGroupSelect(val[1])}
+          ></FaSelect>
+        ) : null}
+      </div>
+    );
+  };
+
 
 
   const renderGroupSection = () => {
     try {
       return (
-        <div className={'flex items-center mt-4'}>
-          <Text type={'title'} level={7} weight={'thin'} extraClass={`m-0`} >Analyse</Text>
-          <Select
-            bordered={false}
-            disabled={true}
-            value={'users'}
-            className={'fa-select-ghost--bold'}
-            options={[
-              {
-                value: 'users',
-                label: 'Users',
-              }
-            ]}
-          />
+        <div className={`flex items-center pt-6`}>
+          <Text
+            type={'title'}
+            level={6}
+            weight={'normal'}
+            extraClass={`m-0 mr-3`}
+          >
+            Analyse
+          </Text>{' '}
+          <div className={`${styles.groupsection}`}>
+            <Tooltip title='Attribute at a User, Deal, or Opportunity level'>
+              <Button
+                className={`${styles.groupsection_button}`}
+                type='text'
+                onClick={triggerDropDown}
+              >
+                <div className={`flex items-center`}>
+                  <Text
+                    type={'title'}
+                    level={6}
+                    weight={'bold'}
+                    extraClass={`m-0 mr-1`}
+                  >
+                    {PropTextFormat(groupCategory)}
+                  </Text>
+                  <SVG name='caretDown' />
+                </div>
+              </Button>
+            </Tooltip>
+            {selectGroup()}
+          </div>
         </div>
       );
     } catch (err) {
@@ -211,7 +258,7 @@ const QueryBuilder = ({
       }
       :
       {
-        eventLimit: 5,
+        eventLimit: 15,
         extraActions: false
       }
 
@@ -483,33 +530,32 @@ const QueryBuilder = ({
           // className={ !collapse ? styles.composer_footer : styles.composer_footer_right }
           className='flex justify-between w-100 mt-6 pt-6 mb-6 border-top--thin-2'
         >
-          {!collapse ? (
-            <FaDatepicker
-              customPicker
-              presetRange
-              monthPicker
-              quarterPicker
-              placement='topRight'
-              buttonSize={'large'}
-              range={{
-                startDate: selectedDateRange.startDate,
-                endDate: selectedDateRange.endDate,
-              }}
-              onSelect={setDateRange}
-            />
-          ) : (
-            <Button
+          <FaDatepicker
+            customPicker
+            presetRange
+            monthPicker
+            quarterPicker
+            placement='topRight'
+            buttonSize={'large'}
+            range={{
+              startDate: selectedDateRange.startDate,
+              endDate: selectedDateRange.endDate,
+            }}
+            onSelect={setDateRange}
+          /> 
+
+          <div className='flex justify-end items-center'> 
+         {showCollapseBtn && <Button
               className={`mr-2`}
               size={'large'}
               type={'default'}
-              onClick={() => setCollapse(false)}
+              onClick={() => setCollapse(true)}
             >
               <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>
               Collapse all
-            </Button>
-          )}
-
+            </Button> }
           <Button type='primary' size='large' disabled={_.isEmpty(singleQueries)} loading={loading} onClick={() => setIsModalOpen(true)}> {`Save and Build`}</Button>
+          </div>
 
         </div>
       );
@@ -527,7 +573,7 @@ const QueryBuilder = ({
         <div
           className={`query_card_cont mb-10 ${!collapse ? `query_card_open` : `query_card_close`
             }`}
-          onClick={(e) => setCollapse(false)}
+          // onClick={(e) => setCollapse(false)}
         >
           {renderGroupSection()}
 

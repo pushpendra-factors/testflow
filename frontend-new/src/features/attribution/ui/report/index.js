@@ -119,7 +119,7 @@ function CoreQuery({
   //   const [breakdownType, setBreakdownType] = useState(EACH_USER_TYPE);
   const breakdownType = EACH_USER_TYPE;
   const [queriesA, setQueries] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const renderedCompRef = useRef(null);
   const [queryOpen, setQueryOpen] = useState(true);
 
@@ -550,7 +550,7 @@ function CoreQuery({
           // set range in reducer only when original date is changed and not the comparisom date
           dispatch({ type: SET_ATTR_DATE_RANGE, payload });
         }
-        runAttributionQuery(querySaved, payload, isCompareDate);
+        runAttributionQuery(querySaved, payload, isCompareDate, true);
       }
     },
     [
@@ -772,9 +772,6 @@ function CoreQuery({
       fetchBingAdsIntegration(activeProject?.id);
       fetchMarketoIntegration(activeProject?.id);
     }
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
   }, [activeProject]);
 
   useEffect(() => {
@@ -889,7 +886,7 @@ function CoreQuery({
                     campaignState={campaignState}
                     savedQueryId={savedQueryId}
                     handleChartTypeChange={handleChartTypeChange}
-                    queryOptions={{...queryOptions, group_analysis: 'all'}}
+                    queryOptions={{ ...queryOptions, group_analysis: 'all' }}
                     resultState={resultState}
                     queries={appliedQueries}
                     handleDurationChange={handleDurationChange}
