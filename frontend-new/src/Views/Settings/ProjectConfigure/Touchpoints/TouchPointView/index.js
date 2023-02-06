@@ -389,7 +389,10 @@ const TouchpointView = ({
   const getTimestampOptionByRule = () => {
     if (tchRuleType === RULE_TYPE_HS_CONTACT) {
       return (
-        <Radio.Group onChange={setTimestampRef} value={timestampRef}>
+        <Radio.Group
+          onChange={setTimestampRef}
+          value={timestampRef === 'LAST_MODIFIED_TIME_REF' ? timestampRef : ''}
+        >
           <Radio value={`LAST_MODIFIED_TIME_REF`}>
             Factors Last modified time
           </Radio>

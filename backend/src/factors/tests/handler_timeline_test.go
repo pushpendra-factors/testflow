@@ -223,6 +223,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 					LogicalOp: "AND",
 				},
 			},
+			TableProps: []string{"$country", "$page_count"},
 		},
 		Type: "web",
 	}
@@ -302,6 +303,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 					LogicalOp: "OR",
 				},
 			},
+			TableProps: []string{"$country", "$page_count"},
 		},
 		Type: "web",
 	}
@@ -2570,5 +2572,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
 		assert.NotNil(t, profile.Identity)
 		assert.NotNil(t, profile.LastActivity)
+		assert.NotNil(t, profile.Name)
+		assert.NotNil(t, profile.HostName)
 	}
 }

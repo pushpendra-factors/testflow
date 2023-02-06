@@ -835,7 +835,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		commonSelect = fmt.Sprintf("COALESCE(users.customer_user_id, events.user_id) as coal_user_id%%, users.updated_at as last_activity, ISNULL(users.customer_user_id) AS is_anonymous, users.properties as properties")
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 	} else if q.Caller == model.ACCOUNT_PROFILE_CALLER {
-		commonSelect = fmt.Sprintf("users.id as identity%%, users.updated_at as last_activity, users.properties as properties")
+		commonSelect = fmt.Sprintf("events.user_id as identity%%, users.updated_at as last_activity, users.properties as properties")
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 	} else {
 		if q.GetGroupByTimestamp() != "" {
@@ -936,7 +936,11 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		if status == http.StatusFound {
 			group, status := store.GetGroup(projectID, groupName)
 			if status == http.StatusFound {
-				addJoinStmnt = fmt.Sprintf("LEFT JOIN users ON events.user_id=users.group_%d_user_id AND users.project_id = ? ", group.ID)
+				if q.Caller == model.ACCOUNT_PROFILE_CALLER {
+					addJoinStmnt = "LEFT JOIN users ON events.user_id=users.id AND users.project_id = ?"
+				} else {
+					addJoinStmnt = fmt.Sprintf("LEFT JOIN users ON events.user_id=users.group_%d_user_id AND users.project_id = ? ", group.ID)
+				}
 			} else {
 				log.WithField("project_id", projectID).WithField("group", groupName).
 					Error("Failed to find group on analytical query execution.")
@@ -1014,7 +1018,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var addSourceStmt string
-	addColString := " " + "users.updated_at,"
+	addColString := " " + "users.updated_at, users.is_group_user,"
 	var selectVal string
 	if C.EnableOptimisedFilterOnEventUserQuery() {
 		selectVal = "_event_users_view"
@@ -1030,7 +1034,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		} else {
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.source=", selectVal) + strconv.Itoa(model.UserSourceMap[source])
 		}
-		addColString = addColString + " " + "users.is_group_user, users.source"
+		addColString = addColString + " " + "users.source"
 	} else if caller == model.ACCOUNT_PROFILE_CALLER {
 		groups, errCode := store.GetGroups(projectID)
 		if errCode != http.StatusFound {
@@ -1056,14 +1060,15 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		if source == model.GROUP_NAME_SALESFORCE_ACCOUNT && !salesforceExists {
 			log.WithFields(logFields).Error("Salesforce Not Enabled for this project.")
 		}
+		addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=1)", selectVal)
 		if source == "All" && hubspotExists && salesforceExists {
-			addSourceStmt = " " + fmt.Sprintf("(%s.group_%d_id IS NOT NULL OR %s.group_%d_id IS NOT NULL)", selectVal, hubspotID, selectVal, salesforceID)
+			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.group_%d_id IS NOT NULL OR %s.group_%d_id IS NOT NULL)", selectVal, hubspotID, selectVal, salesforceID)
 			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.group_%d_id", hubspotID, salesforceID)
 		} else if (source == "All" || source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
-			addSourceStmt = " " + fmt.Sprintf("%s.group_%d_id IS NOT NULL", selectVal, hubspotID)
+			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, hubspotID)
 			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", hubspotID)
 		} else if (source == "All" || source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
-			addSourceStmt = " " + fmt.Sprintf("%s.group_%d_id IS NOT NULL", selectVal, salesforceID)
+			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, salesforceID)
 			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", salesforceID)
 		}
 	}

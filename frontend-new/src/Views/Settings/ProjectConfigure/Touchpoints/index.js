@@ -23,7 +23,7 @@ import { setDisplayName } from 'Utils/dataFormatter';
 import {
   reverseOperatorMap,
   reverseDateOperatorMap
-} from '../../../../Views/CoreQuery/utils';
+} from 'Utils/operatorMapping';
 
 import { MoreOutlined } from '@ant-design/icons';
 import { OTPService } from '../../../../reducers/touchpoints/services';

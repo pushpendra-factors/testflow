@@ -45,6 +45,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusBadRequest
 	}
 
+	var tableProps []string
 	if payload.SegmentId != "" {
 		segment, status := store.GetSegmentById(projectID, payload.SegmentId)
 		if status != http.StatusFound {
@@ -56,19 +57,36 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		if err != nil {
 			return nil, http.StatusInternalServerError
 		}
+		tableProps = segmentQuery.TableProps
 		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
 			if C.IsEnabledEventsFilterInSegments() {
 				profiles, errCode, _ := store.GetAnalyzeResultForSegments(projectID, segment)
 				if errCode != http.StatusOK {
 					return nil, errCode
 				}
-				return profiles, http.StatusFound
+				// Get Table Content
+				returnData, err := FormatProfilesStruct(profiles, profileType, tableProps)
+				if err != nil {
+					log.WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
+					return nil, http.StatusInternalServerError
+				}
+				return returnData, http.StatusFound
 			} else {
 				var profiles = make([]model.Profile, 0)
 				return profiles, http.StatusBadRequest
 			}
 		} else {
 			payload.Filters = append(payload.Filters, segmentQuery.GlobalUserProperties...)
+		}
+	} else {
+		timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
+		if err != nil {
+			log.WithFields(logFields).WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+		}
+		if profileType == model.PROFILE_TYPE_ACCOUNT {
+			tableProps = timelinesConfig.AccountConfig.TableProps
+		} else if profileType == model.PROFILE_TYPE_USER {
+			tableProps = timelinesConfig.UserConfig.TableProps
 		}
 	}
 
@@ -181,7 +199,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 
 	// Get Table Content
-	returnData, err := store.FormatProfilesStruct(projectID, profiles, profileType)
+	returnData, err := FormatProfilesStruct(profiles, profileType, tableProps)
 	if err != nil {
 		log.WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
 		return nil, http.StatusInternalServerError
@@ -189,20 +207,14 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	return returnData, http.StatusFound
 }
 
-func (store *MemSQL) FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType string) ([]model.Profile, error) {
+func FormatProfilesStruct(profiles []model.Profile, profileType string, tableProps []string) ([]model.Profile, error) {
 	logFields := log.Fields{
-		"project_id":   projectID,
 		"profile_type": profileType,
-	}
-	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
-	if err != nil {
-		log.WithFields(logFields).WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
 	}
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
 		companyNameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_NAME}
 		hostNameProps := []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE}
-		tableProps := timelinesConfig.AccountConfig.TableProps
 
 		for index, profile := range profiles {
 			filterTableProps := make(map[string]interface{}, 0)
@@ -239,7 +251,6 @@ func (store *MemSQL) FormatProfilesStruct(projectID int64, profiles []model.Prof
 			}
 		}
 	} else if profileType == model.PROFILE_TYPE_USER {
-		tableProps := timelinesConfig.UserConfig.TableProps
 		for index, profile := range profiles {
 			filterTableProps := make(map[string]interface{}, 0)
 			properties, err := U.DecodePostgresJsonb(profile.Properties)
@@ -697,7 +708,6 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, segment *model
 	if segmentQuery.Caller == model.USER_PROFILE_CALLER {
 		for _, profile := range result.Rows {
 			var row model.Profile
-			row.TableProps = make(map[string]interface{}, 0)
 			row.Identity = profile[0].(string)
 			var val bool
 			if profile[1] == float64(1) {
@@ -713,14 +723,11 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, segment *model
 				logCtx.Error("Failed at unmarshalling props. ")
 				return nil, http.StatusInternalServerError, nil
 			}
-			filterTableProps := make(map[string]interface{}, 0)
-
-			for _, prop := range segmentQuery.TableProps {
-				if value, exists := (props)[prop]; exists {
-					filterTableProps[prop] = value
-				}
+			row.Properties, err = U.EncodeToPostgresJsonb(&props)
+			if err != nil {
+				logCtx.Error("Failed at encoding props. ")
+				return nil, http.StatusInternalServerError, nil
 			}
-			row.TableProps = filterTableProps
 			profiles = append(profiles, row)
 		}
 	} else if segmentQuery.Caller == model.ACCOUNT_PROFILE_CALLER {
@@ -735,14 +742,11 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, segment *model
 				logCtx.Error("Failed at unmarshalling props.")
 				return nil, http.StatusInternalServerError, nil
 			}
-			filterTableProps := make(map[string]interface{}, 0)
-
-			for _, prop := range segmentQuery.TableProps {
-				if value, exists := (props)[prop]; exists {
-					filterTableProps[prop] = value
-				}
+			row.Properties, err = U.EncodeToPostgresJsonb(&props)
+			if err != nil {
+				logCtx.Error("Failed at encoding props. ")
+				return nil, http.StatusInternalServerError, nil
 			}
-			row.TableProps = filterTableProps
 			profiles = append(profiles, row)
 		}
 	}

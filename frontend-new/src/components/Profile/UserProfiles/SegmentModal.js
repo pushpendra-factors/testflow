@@ -298,7 +298,6 @@ function SegmentModal({
               insertFilter={(val) => editFilter(id, val)}
               closeFilter={closeFilter}
               filterProps={filterProperties}
-              propsConstants={['user']}
             />
           </div>
         );
@@ -314,7 +313,6 @@ function SegmentModal({
                 insertFilter={addFilter}
                 closeFilter={closeFilter}
                 filterProps={filterProperties}
-                propsConstants={['user']}
               />
             </div>
           );
