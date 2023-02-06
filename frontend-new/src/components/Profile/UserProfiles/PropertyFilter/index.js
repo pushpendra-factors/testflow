@@ -82,7 +82,6 @@ function PropertyFilter({
               insertFilter={(val) => editFilter(id, val)}
               closeFilter={closeFilter}
               filterProps={filterProps}
-              propsConstants={['user']}
             />
           </div>
         );
@@ -99,7 +98,6 @@ function PropertyFilter({
                 insertFilter={addFilter}
                 closeFilter={closeFilter}
                 filterProps={filterProps}
-                propsConstants={['user']}
               />
             </div>
           );

@@ -207,7 +207,11 @@ function AccountProfiles({
         ...row?.table_props
       };
     });
-    return tableData;
+    return tableData.sort(
+      (a, b) =>
+        parseInt((new Date(b.last_activity).getTime() / 1000).toFixed(0)) -
+        parseInt((new Date(a.last_activity).getTime() / 1000).toFixed(0))
+    );
   };
 
   const showModal = () => {
@@ -429,6 +433,7 @@ function AccountProfiles({
       </div>
       <SegmentModal
         profileType='account'
+        activeProject={activeProject}
         type={accountPayload.source}
         typeOptions={enabledGroups().filter((group) => group[1] !== 'All')}
         visible={showSegmentModal}
