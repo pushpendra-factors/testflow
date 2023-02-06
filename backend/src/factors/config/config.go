@@ -284,6 +284,7 @@ type Configuration struct {
 	EnableDBConnectionPool2                            bool
 	FormFillIdentificationAllowedProjects              string
 	EnableEventFiltersInSegments                       bool
+	EnableDebuggingForIP                               bool
 }
 
 type Services struct {
@@ -2427,4 +2428,8 @@ func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
 
 func IsEnabledFeatureGates() bool {
 	return configuration.EnableFeatureGates
+}
+
+func IsEnableDebuggingForIP() bool {
+	return configuration.EnableDebuggingForIP
 }
