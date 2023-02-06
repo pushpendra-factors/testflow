@@ -2185,6 +2185,8 @@ func TestAttributionKPIV1(t *testing.T) {
 			AnalyzeTypeHSDealsEnabled:         true,
 			AnalyzeTypeSFAccountsEnabled:      false,
 			AnalyzeTypeSFOpportunitiesEnabled: true,
+			AttributionWindow:                 10,
+			QueryType:                         model.AttributionQueryTypeConversionBased,
 		},
 	})
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -2235,11 +2237,11 @@ func TestAttributionKPIV1(t *testing.T) {
 			AttributionKey:          model.AttributionKeyCampaign,
 			AttributionKeyDimension: []string{model.FieldCampaignName},
 			AttributionMethodology:  model.AttributionMethodLinear,
-			LookbackDays:            10,
 		}
 
 		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Equal(t, float64(2), getConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test1"))
 		assert.Nil(t, err)
 
 	})
@@ -2325,11 +2327,11 @@ func TestAttributionKPIV1(t *testing.T) {
 			AttributionKey:          model.AttributionKeyCampaign,
 			AttributionKeyDimension: []string{model.FieldCampaignName},
 			AttributionMethodology:  model.AttributionMethodLinear,
-			LookbackDays:            10,
 		}
 
 		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Equal(t, float64(2), getConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test1"))
 		assert.Nil(t, err)
 
 	})
