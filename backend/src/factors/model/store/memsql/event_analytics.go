@@ -938,8 +938,9 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			if status == http.StatusFound {
 				if q.Caller == model.ACCOUNT_PROFILE_CALLER {
 					addJoinStmnt = "LEFT JOIN users ON events.user_id=users.id AND users.project_id = ?"
+				} else {
+					addJoinStmnt = fmt.Sprintf("LEFT JOIN users ON events.user_id=users.group_%d_user_id AND users.project_id = ? ", group.ID)
 				}
-				addJoinStmnt = fmt.Sprintf("LEFT JOIN users ON events.user_id=users.group_%d_user_id AND users.project_id = ? ", group.ID)
 			} else {
 				log.WithField("project_id", projectID).WithField("group", groupName).
 					Error("Failed to find group on analytical query execution.")
