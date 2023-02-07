@@ -1419,13 +1419,32 @@ func TestGenInterMediateCombinations(t *testing.T) {
 
 }
 
-func TestFilteringPatterns(t *testing.T) {
+func TestFilteringPatternsNotMatching(t *testing.T) {
 
+	// var rl model.FactorsGoalRule
+	var qr model.ExplainV2Query
+	qr.Title = "test"
+	qr.StartTimestamp = 1672491600
+	qr.EndTimestamp = 1672491601
 	eventsList := make([]P.CounterEventFormat, 0)
-	file, err := os.Open("./data/events_test.txt")
+
+	eventsListTrue := make([]P.CounterEventFormat, 0)
+
+	file, err := os.Open("./data/events_filter.txt")
 	assert.Nil(t, err)
+
+	filter_string := []byte(`{"st_en":"www.acme.com","en_en":"www.acme.com/pricing","rule":{"st_en_ft":[],"en_en_ft":[],"st_us_ft":[{"key":"Country","vl":"US","operator":true,"lower_bound":0,"upper_bound":0,"property_type":"categorical"}],"en_us_ft":[{"key":"Country","vl":"US","operator":true,"lower_bound":0,"upper_bound":0,"property_type":"categorical"}],"ft":[],"in_en":[],"in_epr":null,"in_upr":null},"vs":false}`)
+	err = json.Unmarshal(filter_string, &qr.Query)
+
+	assert.Nil(t, err, "Unable to decode filter string")
+	qr.Raw_query = string(filter_string)
+	fmt.Println("$$$$$$$$$$$$$$$$$$$$$$$$")
+	fmt.Println(qr.Query)
+	fmt.Println("$$$$$$$$$$$$$$$$$$$$$$$$")
 	scanner := bufio.NewScanner(file)
 
+	upg := make(map[string]string)
+	epg := make(map[string]string)
 	for scanner.Scan() {
 		line := scanner.Text()
 		var eventDetails P.CounterEventFormat
@@ -1434,8 +1453,65 @@ func TestFilteringPatterns(t *testing.T) {
 			return
 		}
 		eventsList = append(eventsList, eventDetails)
+		if T.FilterEventsOnRule(eventDetails, qr, upg, epg) {
+			eventsListTrue = append(eventsListTrue, eventDetails)
+			_, _ = fmt.Println(eventDetails)
+			fmt.Println("---------")
+		}
 	}
 
-	assert.Equal(t, 6, len(eventsList))
+	assert.Equal(t, 18, len(eventsList))
+	assert.Equal(t, 0, len(eventsListTrue))
+
+}
+
+func TestFilteringPatternsMatching(t *testing.T) {
+
+	// var rl model.FactorsGoalRule
+	var qr model.ExplainV2Query
+	qr.Title = "test"
+	qr.StartTimestamp = 1672491600
+	qr.EndTimestamp = 1672491601
+	eventsList := make([]P.CounterEventFormat, 0)
+
+	eventsListTrue := make([]P.CounterEventFormat, 0)
+
+	file, err := os.Open("./data/events_filter.txt")
+	// file, err := os.Open("/Users/vinithkumar/work/data/events_20230101-20230108.txt")
+	assert.Nil(t, err)
+
+	filter_string := []byte(`{"st_en":"$session","en_en":"$form_submitted","rule":{"st_en_ft":[],"en_en_ft":[],"st_us_ft":[{"key":"$country","vl":"India","operator":true,"lower_bound":0,"upper_bound":0,"property_type":"categorical"},{"key":"$city","vl":"Chennai","operator":true,"lower_bound":0,"upper_bound":0,"property_type":"categorical"}],"en_us_ft":[{"key":"$country","vl":"United States","operator":false,"lower_bound":0,"upper_bound":0,"property_type":"categorical"}],"ft":[],"in_en":[],"in_epr":null,"in_upr":null},"vs":false}`)
+	// filter_string := []byte(`{"en_en":"app.factors.ai","rule":{"en_en_ft":null,"en_us_ft":null,"ft":null,"in_en":["$hubspot_contact_updated","www.factors.ai/features","RUN-QUERY","$hubspot_engagement_email","VIEW_DASHBOARD","www.factors.ai/pricing","www.factors.ai","staging-app.factors.ai","app.factors.ai/analyse"],"in_epr":null,"in_upr":null,"st_en_ft":null,"st_us_ft":null},"st_en":"$session","vs":false}`)
+	err = json.Unmarshal(filter_string, &qr.Query)
+	assert.Nil(t, err, "Unable to decode filter string")
+	qr.Raw_query = string(filter_string)
+	fmt.Println(qr.Query)
+	scanner := bufio.NewScanner(file)
+	emap := make(map[string]bool)
+	upg := make(map[string]string)
+	epg := make(map[string]string)
+	for scanner.Scan() {
+		line := scanner.Text()
+		var eventDetails P.CounterEventFormat
+		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
+			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
+			return
+		}
+		eventsList = append(eventsList, eventDetails)
+
+		if T.FilterEventsOnRule(eventDetails, qr, upg, epg) == true {
+			eventsListTrue = append(eventsListTrue, eventDetails)
+			_, _ = fmt.Println(eventDetails.EventName)
+			emap[eventDetails.EventName] = true
+			fmt.Println(eventDetails)
+			fmt.Println("====")
+		}
+	}
+
+	for k, _ := range emap {
+		fmt.Println(fmt.Sprintf("key --> %s", k))
+	}
+	assert.Equal(t, 18, len(eventsList))
+	assert.Equal(t, 5, len(eventsListTrue))
 
 }
