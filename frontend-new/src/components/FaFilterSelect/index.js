@@ -278,9 +278,13 @@ const FAFilterSelect = ({
                 />
               ) : null
             }
-            className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
+            className={`fa-button--truncate fa-button--truncate-xs ${
+              displayMode ? 'static-button' : ''
+            }  btn-left-round filter-buttons-margin`}
             type={displayMode ? 'default' : 'link'}
-            onClick={() => setPropSelectOpen(!propSelectOpen)}
+            onClick={() =>
+              displayMode ? null : setPropSelectOpen(!propSelectOpen)
+            }
           >
             {renderGroupDisplayName(propState)}
           </Button>
@@ -305,12 +309,15 @@ const FAFilterSelect = ({
         <Tooltip
           title='Select an equator to define your filter rules. '
           color={TOOLTIP_CONSTANTS.DARK}
+          trigger={displayMode ? [] : 'hover'}
         >
           <Button
             disabled={disabled}
-            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+            className={`fa-button--truncate ${
+              displayMode ? 'static-button' : ''
+            } filter-buttons-radius filter-buttons-margin`}
             type={displayMode ? 'default' : 'link'}
-            onClick={() => setOperSelectOpen(true)}
+            onClick={() => (displayMode ? null : setOperSelectOpen(true))}
           >
             {operatorState ? operatorState : 'Select Operator'}
           </Button>
@@ -459,9 +466,12 @@ const FAFilterSelect = ({
 
           <Button
             disabled={disabled}
-            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+            trigger={displayMode ? [] : 'hover'}
+            className={`fa-button--truncate ${
+              displayMode ? 'static-button' : ''
+            } filter-buttons-radius filter-buttons-margin`}
             type={displayMode ? 'default' : 'link'}
-            onClick={() => setDateOptionSelectOpen(true)}
+            onClick={() => (displayMode ? null : setDateOptionSelectOpen(true))}
           >
             {parsedValues['gran']
               ? dateTimeSelect.get(parsedValues['gran'])
@@ -484,9 +494,12 @@ const FAFilterSelect = ({
         <div className={`fa-filter-dateDeltaContainer`}>
           <Button
             disabled={disabled}
-            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+            trigger={displayMode ? [] : 'hover'}
+            className={`fa-button--truncate ${
+              displayMode ? 'static-button' : ''
+            } filter-buttons-radius filter-buttons-margin`}
             type={displayMode ? 'default' : 'link'}
-            onClick={() => setDateOptionSelectOpen(true)}
+            onClick={() => (displayMode ? null : setDateOptionSelectOpen(true))}
           >
             {parsedValues['gran']
               ? toCapitalCase(parsedValues['gran'])
@@ -596,9 +609,12 @@ const FAFilterSelect = ({
           {containButton && (
             <Button
               disabled={disabled}
-              className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+              trigger={displayMode ? [] : 'hover'}
+              className={`fa-button--truncate ${
+                displayMode ? 'static-button' : ''
+              } filter-buttons-radius filter-buttons-margin`}
               type={displayMode ? 'default' : 'link'}
-              onClick={() => setContainButton(false)}
+              onClick={() => (displayMode ? null : setContainButton(false))}
             >
               {valuesState ? valuesState : 'Enter Value'}
             </Button>
@@ -646,12 +662,18 @@ const FAFilterSelect = ({
               color={TOOLTIP_CONSTANTS.DARK}
             >
               <Button
-                className={`fa-button--truncate  ${
-                  displayMode ? 'btn-right-round' : 'filter-buttons-radius'
+                className={`fa-button--truncate ${
+                  displayMode
+                    ? 'btn-right-round static-button'
+                    : 'filter-buttons-radius'
                 } filter-buttons-margin`}
                 type={displayMode ? 'default' : 'link'}
                 disabled={disabled}
-                onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
+                onClick={() =>
+                  displayMode
+                    ? null
+                    : setValuesSelectionOpen(!valuesSelectionOpen)
+                }
               >
                 {valuesState && valuesState.length
                   ? valuesState

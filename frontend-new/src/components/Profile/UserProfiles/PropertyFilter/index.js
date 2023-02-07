@@ -116,7 +116,11 @@ function PropertyFilter({
           );
         }
       }
-      return <div className='flex flex-wrap'>{list}</div>;
+      return (
+        <div className={`flex ${displayMode ? 'flex-col' : 'flex-wrap'}`}>
+          {list}
+        </div>
+      );
     }
     return null;
   };

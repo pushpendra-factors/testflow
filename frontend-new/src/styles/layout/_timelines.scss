@@ -639,3 +639,21 @@
 .line-height-8 {
     line-height: 32px;
 }
+
+.static-button {
+    align-items: center;
+    background-color: #f5f6f8;
+    font-weight: bold;
+    font-size: 14px;
+    color: grey;
+    height: 32px;
+    border: none;
+    cursor: default;
+
+    &:focus,
+    &:hover,
+    &:active,
+    &:visited {
+        background-color: #f5f6f8;
+    }
+}

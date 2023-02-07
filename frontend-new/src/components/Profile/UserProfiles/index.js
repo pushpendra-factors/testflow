@@ -493,7 +493,7 @@ function UserProfiles({
   const segmentInfo = () => {
     if (!activeSegment.query) return null;
     return (
-      <div className='p-3 pointer-events-none'>
+      <div className='p-3'>
         {activeSegment.query.ewp && activeSegment.query.ewp.length
           ? eventsList(formatEventsFromSegment(activeSegment.query.ewp))
           : null}
