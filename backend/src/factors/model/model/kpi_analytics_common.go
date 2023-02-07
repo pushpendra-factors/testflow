@@ -150,10 +150,82 @@ func (q *KPIQueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone,
 	return nil
 }
 
-func (q *KPIQueryGroup) IsValid() bool {
+func (q *KPIQueryGroup) IsValid() (bool, string) {
 	for _, query := range q.Queries {
 		if !query.IsValid() {
-			return false
+			return false, "Invalid query in query group"
+		}
+	}
+
+	// If only single non derived query is present
+	// No property_mapping should be used
+	if len(q.Queries) == 2 && q.Queries[0].QueryType != KpiDerivedQueryType {
+		for _, filter := range q.GlobalFilters {
+			if filter.IsPropertyMapping {
+				return false, "Property mapping can not be used in global filters for single metric"
+			}
+		}
+		for _, groupBy := range q.GlobalGroupBy {
+			if groupBy.IsPropertyMapping {
+				return false, "Property mapping can not be used in global groupBy for single metric"
+			}
+		}
+	}
+
+	// Check if the query group has multiple display categories included
+	// If yes, Global Filters and GroupBys can only be having property mappings
+	areMultipleDisplayCategoriesPresent := false
+	firstDisplayCategory := q.Queries[0].DisplayCategory
+	for _, query := range q.Queries {
+		if query.DisplayCategory == OthersDisplayCategory || query.DisplayCategory != firstDisplayCategory {
+			areMultipleDisplayCategoriesPresent = true
+			break
+		}
+	}
+	if areMultipleDisplayCategoriesPresent {
+		for _, filter := range q.GlobalFilters {
+			if !filter.IsPropertyMapping {
+				return false, "Global Filters can only be having property mappings"
+			}
+		}
+		for _, groupBy := range q.GlobalGroupBy {
+			if !groupBy.IsPropertyMapping || groupBy.ObjectType != "" || groupBy.Entity != "" {
+				return false, "Global GroupBys can only be having property mappings"
+			}
+		}
+	}
+
+	// If property mapping is used, then object type and entity should be empty
+	for _, filter := range q.GlobalFilters {
+		if filter.IsPropertyMapping && (filter.ObjectType != "" || filter.Entity != "") {
+			return false, "Invalid property mapping filter in query group"
+		}
+	}
+	for _, groupBy := range q.GlobalGroupBy {
+		if groupBy.IsPropertyMapping && (groupBy.ObjectType != "" || groupBy.Entity != "") {
+			return false, "Invalid property mapping groupBy in query group"
+		}
+	}
+	return true, ""
+}
+
+func (q *KPIQueryGroup) AreDisplayCategoriesPresentInPropertyMapping(mapOfPropertyMappingNameToDisplayCategoryToProperty map[string]map[string]Property, globalFilters []KPIFilter, globalGroupBys []KPIGroupBy) bool {
+	for _, query := range q.Queries {
+		if query.QueryType != KpiDerivedQueryType {
+			for _, filter := range globalFilters {
+				if filter.IsPropertyMapping {
+					if _, ok := mapOfPropertyMappingNameToDisplayCategoryToProperty[filter.PropertyName][query.DisplayCategory]; !ok {
+						return false
+					}
+				}
+			}
+			for _, groupBy := range globalGroupBys {
+				if groupBy.IsPropertyMapping {
+					if _, ok := mapOfPropertyMappingNameToDisplayCategoryToProperty[groupBy.PropertyName][query.DisplayCategory]; !ok {
+						return false
+					}
+				}
+			}
 		}
 	}
 	return true

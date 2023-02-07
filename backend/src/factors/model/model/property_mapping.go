@@ -38,7 +38,6 @@ type Property struct {
 	Name            string `json:"name"`
 	DataType        string `json:"da_ty"`
 	Entity          string `json:"en"`
-	GroupByType     string `json:"gb_ty"`
 }
 
 type PropertyMapping struct {
@@ -56,10 +55,6 @@ type PropertyMapping struct {
 
 func (propertyMapping *PropertyMapping) IsValid(properties []Property) (bool, string) {
 
-	// Validating project_id and name
-	if propertyMapping.ProjectID == 0 {
-		return false, "Invalid project ID for property mapping"
-	}
 	// TODO: more validation to be added, $ _ validation
 	if propertyMapping.DisplayName == "" {
 		return false, "Invalid display name for property mapping"
