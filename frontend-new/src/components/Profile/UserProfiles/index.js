@@ -39,7 +39,8 @@ import {
   formatFiltersForPayload,
   formatPayloadForFilters,
   formatSegmentsObjToGroupSelectObj,
-  iconColors
+  iconColors,
+  propValueFormat
 } from '../utils';
 import {
   getProfileUsers,
@@ -248,7 +249,7 @@ function UserProfiles({
         width: 300,
         render: (item) => (
           <Text type='title' level={7} className='m-0' truncate>
-            {item || '-'}
+            {propValueFormat(prop, item) || '-'}
           </Text>
         )
       });
