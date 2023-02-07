@@ -834,7 +834,7 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 
 	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
 		//log.Info("EventTriggerAlerts match function trigger point.")
-		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob,  true)
+		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
 		if ErrCode == http.StatusFound && alerts != nil {
 			// log.WithFields(log.Fields{"project_id": event.ProjectId,
 			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
@@ -2378,9 +2378,14 @@ func (store *MemSQL) GetLastEventWithSessionByUser(projectId int64, userId strin
 
 	var event model.Event
 
+	// Max window size by the inactivity period allowed for session continuation.
+	// We don't consider last event with session, which is older than the inactivity period.
+	startTimestamp := (firstEventTimestamp - model.NewUserSessionInactivityInSeconds) + 2
+
 	db := C.GetServices().Db
 	if err := db.Limit(1).Order("timestamp, created_at DESC").
-		Where("project_id = ? AND user_id = ? AND session_id IS NOT NULL AND timestamp < ?", projectId, userId, firstEventTimestamp).
+		Where("project_id = ? AND user_id = ? AND timestamp > ? AND timestamp < ? AND session_id IS NOT NULL",
+			projectId, userId, startTimestamp, firstEventTimestamp).
 		Find(&event).Error; err != nil {
 
 		if gorm.IsRecordNotFoundError(err) {
