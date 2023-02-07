@@ -698,6 +698,8 @@ const FAFilterSelect = ({
       {propState?.name ? renderOperatorSelector() : null}
 
       {operatorState &&
+      operatorState !== OPERATORS['isKnown'] &&
+      operatorState !== OPERATORS['isUnknown'] &&
       operatorState?.[0] !== OPERATORS['isKnown'] &&
       operatorState?.[0] !== OPERATORS['isUnknown']
         ? renderValuesSelector()
