@@ -30,7 +30,7 @@
 /backend/src/factors/middleware/ janani@factors.ai
 /backend/src/factors/migrations/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
 /backend/src/factors/model/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
-/backend/src/factors/pattern/ vinith@factors.ai
+/backend/src/factors/pattern/ anshul@factors.ai janani@factors.ai vinith@factors.ai
 /backend/src/factors/pattern_client/ vinith@factors.ai
 /backend/src/factors/pattern_server/ vinith@factors.ai
 /backend/src/factors/pattern_server_wrapper/ vinith@factors.ai
@@ -53,9 +53,9 @@
 /email-templates/ baliga@factors.ai
 
 /frontend-new/ akhil@factors.ai baliga@factors.ai jitesh@factors.ai vikas@factors.ai
-/frontend-new/src/Views/AppLayout/ akhil@factors.ai
-/frontend-new/src/Views/CoreQuery/ akhil@factors.ai
-/frontend-new/src/Views/CoreQueryHome/ akhil@factors.ai
+/frontend-new/src/Views/AppLayout/ akhil@factors.ai baliga@factors.ai
+/frontend-new/src/Views/CoreQuery/ akhil@factors.ai baliga@factors.ai
+/frontend-new/src/Views/CoreQueryHome/ akhil@factors.ai baliga@factors.ai
 /frontend-new/src/Views/Dashboard/ jitesh@factors.ai
 /frontend-new/src/Views/DashboardTemplates/ akhil@factors.ai
 /frontend-new/src/Views/Factors/ baliga@factors.ai
