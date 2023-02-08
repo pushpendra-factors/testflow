@@ -24,7 +24,8 @@ import {
   formatFiltersForPayload,
   formatPayloadForFilters,
   formatSegmentsObjToGroupSelectObj,
-  getHost
+  getHost,
+  propValueFormat
 } from '../utils';
 import {
   getProfileAccounts,
@@ -183,7 +184,7 @@ function AccountProfiles({
         width: 300,
         render: (item) => (
           <Text type='title' level={7} className='m-0' truncate>
-            {item || '-'}
+            {propValueFormat(prop, item) || '-'}
           </Text>
         )
       });
@@ -509,7 +510,7 @@ function AccountProfiles({
   const segmentInfo = () => {
     if (activeSegment.query) {
       return (
-        <div className='p-3 pointer-events-none'>
+        <div className='p-3'>
           {activeSegment.query.ewp && activeSegment.query.ewp.length
             ? eventsList(formatEventsFromSegment(activeSegment.query.ewp))
             : null}

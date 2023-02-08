@@ -60,6 +60,13 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		tableProps = segmentQuery.TableProps
 		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
 			if C.IsEnabledEventsFilterInSegments() {
+				segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters...)
+				query, err := U.EncodeStructTypeToPostgresJsonb(segmentQuery)
+				if err != nil {
+					log.WithFields(logFields).Error("Failed to append payload filters with global properties.")
+				} else {
+					segment.Query = query
+				}
 				profiles, errCode, _ := store.GetAnalyzeResultForSegments(projectID, segment)
 				if errCode != http.StatusOK {
 					return nil, errCode

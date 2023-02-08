@@ -345,10 +345,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authCommonRouteGroup.POST("/dashboard_template/create", mid.FeatureMiddleware(), mid.SkipDemoProjectWriteAccess(), CreateTemplateHandler)
 
 	// property mapping
-	authRouteGroup.POST("/:project_id/kpi/property_mappings", responseWrapper(V1.CreatePropertyMapping))
-	authRouteGroup.GET("/:project_id/kpi/property_mappings", responseWrapper(V1.GetPropertyMappings))
-	authRouteGroup.DELETE("/:project_id/kpi/property_mappings/:id", responseWrapper(V1.DeletePropertyMapping))
-	authRouteGroup.POST("/:project_id/kpi/property_mappings/commom_properties", responseWrapper(V1.GetCommonPropertyMappings))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings", responseWrapper(V1.CreatePropertyMapping))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings", responseWrapper(V1.GetPropertyMappings))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings/:id", responseWrapper(V1.DeletePropertyMapping))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings/commom_properties", responseWrapper(V1.GetCommonPropertyMappings))
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

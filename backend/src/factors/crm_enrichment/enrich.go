@@ -5,6 +5,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -14,12 +15,13 @@ import (
 )
 
 type CRMSourceConfig struct {
-	projectID       int64
-	sourceAlias     string
-	objectTypeAlias map[int]string
-	userTypes       map[int]bool
-	groupTypes      map[int]bool
-	activityTypes   map[int]bool
+	projectID          int64
+	sourceAlias        string
+	objectTypeAlias    map[int]string
+	userTypes          map[int]bool
+	groupTypes         map[int]bool
+	activityTypes      map[int]bool
+	recordProcessLimit int
 }
 
 const (
@@ -43,15 +45,15 @@ func (c *CRMSourceConfig) GetCRMObjectTypeAlias(objectType int) (string, error) 
 	return c.objectTypeAlias[objectType], nil
 }
 
-func getCRMRecordByTypeForSync(projectID int64, source U.CRMSource, tableName string, startTimestamp, endTimestamp int64) (interface{}, int) {
+func getCRMRecordByTypeForSync(projectID int64, source U.CRMSource, tableName string, startTimestamp, endTimestamp int64, recordProcessLimit int) (interface{}, int) {
 	log.WithFields(log.Fields{"project_id": projectID, "start_time": startTimestamp, "end_time": endTimestamp, "table_name": tableName}).
 		Info("Getting records for following range.")
 
 	switch tableName {
 	case TableNameCRMusers:
-		return store.GetStore().GetCRMUsersInOrderForSync(projectID, source, startTimestamp, endTimestamp)
+		return store.GetStore().GetCRMUsersInOrderForSync(projectID, source, startTimestamp, endTimestamp, recordProcessLimit)
 	case TableNameCRMActivities:
-		return store.GetStore().GetCRMActivityInOrderForSync(projectID, source, startTimestamp, endTimestamp)
+		return store.GetStore().GetCRMActivityInOrderForSync(projectID, source, startTimestamp, endTimestamp, recordProcessLimit)
 	}
 
 	return nil, http.StatusBadRequest
@@ -71,13 +73,14 @@ func enrichByType(project *model.Project, config *CRMSourceConfig, recordsInt in
 }
 
 type EnrichStatus struct {
-	TableName  string `json:"table_name"`
-	ObjectType string `json:"type"`
-	Status     string `json:"status"`
+	TableName            string `json:"table_name"`
+	ObjectType           string `json:"type"`
+	Status               string `json:"status"`
+	ProcessLimitExceeded string `json:"process_limit_exceeded,omitempty"`
 }
 
 func NewCRMEnrichmentConfig(sourceAlias string, sourceObjectTypeAndAlias map[int]string,
-	userTypes, groupTypes, activityTypes map[int]bool) (*CRMSourceConfig, error) {
+	userTypes, groupTypes, activityTypes map[int]bool, recordProcessLimit int) (*CRMSourceConfig, error) {
 
 	// for validating sdk request source
 	if !model.IsValidUserSource(sourceAlias) {
@@ -124,11 +127,12 @@ func NewCRMEnrichmentConfig(sourceAlias string, sourceObjectTypeAndAlias map[int
 	}
 
 	sourceConfig := &CRMSourceConfig{
-		sourceAlias:     sourceAlias,
-		objectTypeAlias: sourceObjectTypeAndAlias,
-		userTypes:       userTypes,
-		groupTypes:      groupTypes,
-		activityTypes:   activityTypes,
+		sourceAlias:        sourceAlias,
+		objectTypeAlias:    sourceObjectTypeAndAlias,
+		userTypes:          userTypes,
+		groupTypes:         groupTypes,
+		activityTypes:      activityTypes,
+		recordProcessLimit: recordProcessLimit,
 	}
 
 	return sourceConfig, nil
@@ -275,6 +279,73 @@ func CreateOrGetCRMEventNames(projectID int64, config *CRMSourceConfig) int {
 	return http.StatusOK
 }
 
+func EnrichByOrderedTimeSeries(project *model.Project, sourceConfig *CRMSourceConfig, source U.CRMSource, orderedTimeSeries [][]int64, batchSize int, recordProcessLimit int) (map[string]map[string]bool, bool) {
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "crm_source_config": sourceConfig})
+
+	processedCount := 0
+	overAllSyncStatus := make(map[string]map[string]bool)
+
+	isProcessLimitSet := recordProcessLimit > 0
+
+	for _, timeRange := range orderedTimeSeries {
+		for _, tableName := range enrichOrder {
+			records, status := getCRMRecordByTypeForSync(project.ID, source, tableName, timeRange[0], timeRange[1], recordProcessLimit)
+			if status != http.StatusFound {
+				if status == http.StatusNotFound {
+					continue
+				}
+				logCtx.WithFields(log.Fields{"table_name": tableName, "time_range": timeRange}).Error("Failed to get crm records.")
+				continue
+			}
+
+			batches, err := GetBatchRecordInOrder(records, batchSize)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to get batched records.")
+				continue
+			}
+
+			workerIndex := 0
+			var enrichStatus enrichWorkerStatus
+			enrichStatus.TypeStatus = make(map[string]bool)
+			isProcessLimitExceeded := false
+			for i := range batches {
+				batch := batches[i]
+				var wg sync.WaitGroup
+				for docID := range batch {
+					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "table_name": tableName}).Info("Processing Batch by doc_id")
+					wg.Add(1)
+					go enrichAllWorker(project, &wg, &enrichStatus, sourceConfig, batch[docID])
+					workerIndex++
+					processedCount++
+				}
+				wg.Wait()
+				if isProcessLimitSet && processedCount > recordProcessLimit { // record limit set and total processed record limit exceeded
+					isProcessLimitExceeded = true
+					break
+				}
+			}
+
+			for objectType, failure := range enrichStatus.TypeStatus {
+				if _, exist := overAllSyncStatus[tableName]; !exist {
+					overAllSyncStatus[tableName] = make(map[string]bool)
+				}
+
+				if failure && !overAllSyncStatus[tableName][objectType] {
+					overAllSyncStatus[tableName][objectType] = true
+				} else {
+					overAllSyncStatus[tableName][objectType] = false
+				}
+			}
+
+			if isProcessLimitExceeded {
+				return overAllSyncStatus, true
+			}
+		}
+	}
+
+	return overAllSyncStatus, false
+}
+
 func Enrich(projectID int64, sourceConfig *CRMSourceConfig, batchSize int, minTimestampForSync int64) []EnrichStatus {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "crm_source_config": sourceConfig})
 
@@ -305,6 +376,8 @@ func Enrich(projectID int64, sourceConfig *CRMSourceConfig, batchSize int, minTi
 		return []EnrichStatus{{Status: U.CRM_SYNC_STATUS_FAILURES}}
 	}
 
+	recordProcessLimit := sourceConfig.recordProcessLimit
+
 	project, status := store.GetStore().GetProject(sourceConfig.projectID)
 	if status != http.StatusFound {
 		if status == http.StatusNotFound {
@@ -325,59 +398,16 @@ func Enrich(projectID int64, sourceConfig *CRMSourceConfig, batchSize int, minTi
 	logCtx.WithFields(log.Fields{"min_timestamp": minTimestamp}).Info("Using minimum timestamp.")
 	orderedTimeSeries := model.GetCRMTimeSeriesByStartTimestamp(projectID, minTimestamp, U.CRM_SOURCE_NAME_MARKETO)
 
-	typeFailures := make(map[string]map[string]bool)
-	for i := range orderedTimeSeries {
-		for _, tableName := range enrichOrder {
-
-			records, status := getCRMRecordByTypeForSync(sourceConfig.projectID, source, tableName, orderedTimeSeries[i][0], orderedTimeSeries[i][1])
-			if status != http.StatusFound {
-				if status == http.StatusNotFound {
-					continue
-				}
-				logCtx.WithFields(log.Fields{"table_name": tableName}).Error("Failed to get crm records.")
-				return []EnrichStatus{{Status: U.CRM_SYNC_STATUS_FAILURES, TableName: tableName}}
-			}
-
-			batches, err := GetBatchRecordInOrder(records, batchSize)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to get batched records.")
-				return []EnrichStatus{{Status: U.CRM_SYNC_STATUS_FAILURES, TableName: tableName}}
-			}
-
-			workerIndex := 0
-			var enrichStatus enrichWorkerStatus
-			enrichStatus.TypeStatus = make(map[string]bool)
-			for i := range batches {
-				batch := batches[i]
-				var wg sync.WaitGroup
-				for docID := range batch {
-					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "table_name": tableName}).Info("Processing Batch by doc_id")
-					wg.Add(1)
-					go enrichAllWorker(project, &wg, &enrichStatus, sourceConfig, batch[docID])
-					workerIndex++
-				}
-				wg.Wait()
-			}
-
-			for objectType, failure := range enrichStatus.TypeStatus {
-				if _, exist := typeFailures[tableName]; !exist {
-					typeFailures[tableName] = make(map[string]bool)
-				}
-
-				if failure == true && typeFailures[tableName][objectType] != true {
-					typeFailures[tableName][objectType] = true
-				} else {
-					typeFailures[tableName][objectType] = false
-				}
-			}
-		}
-
-	}
-
+	typeFailures, isProcessLimitExceeded := EnrichByOrderedTimeSeries(project, sourceConfig, source, orderedTimeSeries, batchSize, recordProcessLimit)
 	for tableName, typeFailure := range typeFailures {
 		crmEnrichStatus := EnrichStatus{
 			TableName: tableName,
 		}
+
+		if recordProcessLimit > 0 {
+			crmEnrichStatus.ProcessLimitExceeded = strconv.FormatBool(isProcessLimitExceeded)
+		}
+
 		for objectType, failure := range typeFailure {
 			typeStatus := crmEnrichStatus
 			typeStatus.ObjectType = objectType

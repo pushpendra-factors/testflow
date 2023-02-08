@@ -139,7 +139,7 @@ func (store *MemSQL) CreateCRMActivity(crmActivity *model.CRMActivity) (int, err
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) GetCRMActivityInOrderForSync(projectID int64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMActivity, int) {
+func (store *MemSQL) GetCRMActivityInOrderForSync(projectID int64, source U.CRMSource, startTimestamp, endTimestamp int64, recordProcessLimit int) ([]model.CRMActivity, int) {
 	logFields := log.Fields{
 		"project_id":     projectID,
 		"source":         source,
@@ -157,9 +157,13 @@ func (store *MemSQL) GetCRMActivityInOrderForSync(projectID int64, source U.CRMS
 
 	var crmActivity []model.CRMActivity
 	db := C.GetServices().Db
-	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND synced = false AND timestamp between ? AND ?",
-		projectID, source, startTimestamp, endTimestamp).Order("timestamp, created_at").Find(&crmActivity).Error
-	if err != nil {
+	dbx := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND synced = false AND timestamp between ? AND ?",
+		projectID, source, startTimestamp, endTimestamp).Order("timestamp, created_at")
+	if recordProcessLimit > 0 {
+		dbx = dbx.Limit(recordProcessLimit)
+	}
+
+	if err := dbx.Find(&crmActivity).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}

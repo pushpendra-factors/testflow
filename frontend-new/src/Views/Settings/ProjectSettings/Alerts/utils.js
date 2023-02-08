@@ -2,30 +2,12 @@ import _ from 'lodash';
 import { formatFilterDate } from 'Utils/dataFormatter';
 import { groupFilters } from 'Utils/global';
 import { FILTER_TYPES } from '../../../CoreQuery/constants';
+import { convertDateTimeObjectValuesToMilliSeconds } from '../../../CoreQuery/utils';
 import {
-  convertDateTimeObjectValuesToMilliSeconds,
-  reverseDateOperatorMap,
-  reverseOperatorMap
-} from '../../../CoreQuery/utils';
-
-const operatorMap = {
-  '=': 'equals',
-  '!=': 'notEqual',
-  contains: 'contains',
-  'does not contain': 'notContains',
-  '<': 'lesserThan',
-  '<=': 'lesserThanOrEqual',
-  '>': 'greaterThan',
-  '>=': 'greaterThanOrEqual',
-  between: 'between',
-  'not between': 'notInBetween',
-  'in the previous': 'inLast',
-  'not in the previous': 'notInLast',
-  'in the current': 'inCurrent',
-  'not in the current': 'notInCurrent',
-  before: 'before',
-  since: 'since'
-};
+  operatorMap,
+  reverseOperatorMap,
+  reverseDateOperatorMap
+} from 'Utils/operatorMapping';
 
 export const getEventsWithProperties = (queries) => {
   const ewps = [];

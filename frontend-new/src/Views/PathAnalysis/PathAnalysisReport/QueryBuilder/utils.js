@@ -1,5 +1,9 @@
 import { EMPTY_ARRAY, groupFilters } from 'Utils/global';
-import { operatorMap, reverseOperatorMap } from 'Utils/operatorMapping';
+import {
+  operatorMap,
+  reverseOperatorMap,
+  reverseDateOperatorMap
+} from 'Utils/operatorMapping';
 
 export const getGlobalFilters = (globalFilters = []) => {
   const filterProps = [];

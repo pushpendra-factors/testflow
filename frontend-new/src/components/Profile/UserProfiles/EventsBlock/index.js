@@ -333,9 +333,11 @@ function EventsBlock({
                         color={displayMode ? 'grey' : 'purple'}
                       />
                     }
-                    className='fa-button--truncate fa-button--truncate-lg btn-total-round'
+                    className={`fa-button--truncate fa-button--truncate-lg ${
+                      displayMode ? 'static-button' : ''
+                    } btn-total-round`}
                     type={displayMode ? 'default' : 'link'}
-                    onClick={() => setDDVisible(true)}
+                    onClick={() => (displayMode ? null : setDDVisible(true))}
                   >
                     {eventNames[event.label]
                       ? eventNames[event.label]
@@ -345,7 +347,7 @@ function EventsBlock({
                 {selectEvents()}
               </Tooltip>
             </div>
-            {event ? (
+            {event && !displayMode ? (
               <div className={styles.query_block__additional_actions}>
                 {additionalActions()}
               </div>

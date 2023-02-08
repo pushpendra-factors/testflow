@@ -54,6 +54,8 @@ func main() {
 	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 
+	recordProcessLimit := flag.Int("record_process_limit", 0, "Adding limit for processing records") // By default, pull all records
+
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
@@ -129,7 +131,7 @@ func main() {
 		model.MarketoDocumentTypeAlias[model.MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP]: true,
 	}
 
-	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes, *recordProcessLimit)
 	if err != nil {
 		log.WithError(err).Error("Failed to create new crm enrichment config.")
 		anyFailure = true

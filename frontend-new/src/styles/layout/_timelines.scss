@@ -108,6 +108,12 @@
     display: flex;
     align-items: flex-start;
 
+    &::-webkit-scrollbar {
+        background: transparent;
+        /* Chrome/Safari/Webkit */
+        width: 0px;
+    }
+
     .leftpane {
         position: sticky;
         top: 0;
@@ -135,11 +141,21 @@
 
         &__props {
             padding: 16px 0;
+            overflow-y: scroll;
+            max-height: 66%;
         }
 
         &__groups {
             padding: 8px 36px;
             border-top: 1px dashed #E7E9ED;
+        }
+
+        &__logo_attr {
+            width: 100%;
+            position: absolute;
+            bottom: 0;
+            padding: 16px 32px;
+            background-color: white;
         }
     }
 
@@ -148,6 +164,12 @@
         padding: 96px 36px 36px;
         border-left: 1px solid #E7E9ED;
         min-height: 100vh !important;
+
+        &::-webkit-scrollbar {
+            background: transparent;
+            /* Chrome/Safari/Webkit */
+            width: 0px;
+        }
     }
 }
 
@@ -638,4 +660,22 @@
 
 .line-height-8 {
     line-height: 32px;
+}
+
+.static-button {
+    align-items: center;
+    background-color: #f5f6f8;
+    font-weight: bold;
+    font-size: 14px;
+    color: grey;
+    height: 32px;
+    border: none;
+    cursor: default;
+
+    &:focus,
+    &:hover,
+    &:active,
+    &:visited {
+        background-color: #f5f6f8;
+    }
 }
