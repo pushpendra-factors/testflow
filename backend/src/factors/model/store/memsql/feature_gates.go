@@ -20,17 +20,17 @@ func (store *MemSQL) GetFeaturesForProject(projectID int64) (model.FeatureGate, 
 	}
 	return featureGate, nil
 }
-func (store *MemSQL) GetFeatureStatusForProject(projectID int64, featureName string) (int, error){
-	var status int 
+func (store *MemSQL) GetFeatureStatusForProject(projectID int64, featureName string) (int, error) {
+	var status int
 	db := C.GetServices().Db
-	sqlQuery := fmt.Sprintf("SELECT %s from feature_gates where project_id = %d LIMIT 1",featureName,projectID)
-	rows,err := db.Raw(sqlQuery).Rows()
+	sqlQuery := fmt.Sprintf("SELECT %s from feature_gates where project_id = %d LIMIT 1", featureName, projectID)
+	rows, err := db.Raw(sqlQuery).Rows()
 	if err != nil {
-		log.WithError(err).Error("Failed to execute query on get feature status for project ",projectID)
+		log.WithError(err).Error("Failed to execute query on get feature status for project ", projectID)
 		return 0, err
 	}
 	defer rows.Close()
-	for rows.Next(){
+	for rows.Next() {
 		if err := db.ScanRows(rows, &status); err != nil {
 			log.WithError(err).Error("Failed scanning rows on getSegmentDuplicateUsers")
 			return 0, err
@@ -52,4 +52,19 @@ func (store *MemSQL) UpdateStatusForFeature(projectID int64, featureName string,
 		return http.StatusInternalServerError, errors.New("Failed to get feature gates")
 	}
 	return http.StatusAccepted, nil
+}
+
+func (*MemSQL) CreateDefaultFeatureGatesConfigForProject(ProjectID int64) (int, error) {
+	db := C.GetServices().Db
+	var featureGate model.FeatureGate
+	featureGate.ProjectID = ProjectID
+
+	err := db.Create(featureGate).Error
+
+	if err != nil {
+		log.WithError(err).Error("Failed to create feature gates dependency for Project ID ", ProjectID)
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusCreated, nil
+
 }
