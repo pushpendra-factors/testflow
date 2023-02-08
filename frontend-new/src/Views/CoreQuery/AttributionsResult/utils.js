@@ -86,7 +86,8 @@ const getBarLineChartSeriesKeys = ({
 }) => {
   if (
     groupAnalysis &&
-    groupAnalysis !== ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
+    groupAnalysis !== ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS &&
+    groupAnalysis !== ATTRIBUTION_GROUP_ANALYSIS_KEYS.ALL
   ) {
     const query = attrQueries[currentEventIndex];
     const result = [];
@@ -103,9 +104,32 @@ const getBarLineChartSeriesKeys = ({
       }
     }
     return result;
+  } else if (
+    groupAnalysis &&
+    groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.ALL
+  ) {
+    const query = attrQueries[currentEventIndex];
+    const result = [];
+    return getQueryLabelConversions(query, headers, result);
   }
   return ['Conversion', 'Cost Per Conversion'];
 };
+
+const getQueryLabelConversions = (query, headers, result) => {
+  if (query) {
+    if (headers.includes(`${query.label} - Conversion`)) {
+      result.push(`${query.label} - Conversion`);
+    } else {
+      result.push(`${query.label} - Conversion`);
+    }
+    if (headers.includes(`${query.label} - Cost Per Conversion`)) {
+      result.push(`${query.label} - Cost Per Conversion`);
+    } else {
+      result.push(`${query.label} - Cost Per Conversion`);
+    }
+  }
+  return result;
+}
 
 const getLegendsLabel = ({ key }) => {
   if (key === 'Conversion') {
