@@ -208,7 +208,7 @@ const FAFilterSelect = ({
     //   propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
     // }
 
-    propertyName = _.startCase(propState?.name);
+    propertyName = propState?.name;
 
     if (!propState.name) {
       propertyName = 'Select Property';
