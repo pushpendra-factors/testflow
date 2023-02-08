@@ -99,8 +99,13 @@ function App({
       });
     }
 
-    //Factorsai init
-    factorsai.init('we0jyjxcs0ix4ggnkptymjh48ur8y7q7');
+    // Factorsai init
+    if (window.location.href.indexOf('https://app.factors.ai') != -1) {
+      factorsai.init('we0jyjxcs0ix4ggnkptymjh48ur8y7q7');
+    } else {
+      // Development hits will also be pushed to staging to avoid dependency with local api.
+      factorsai.init('we0jyjxcs0ix4ggnkptymjh48ur8y7q7', {host: "https://staging-api.factors.ai"});
+    }
 
     if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
       // DEV env
