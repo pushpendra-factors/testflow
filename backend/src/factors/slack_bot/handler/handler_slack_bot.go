@@ -148,6 +148,11 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading channels from json Response"})
 		return
 	}
+	if jsonResponse["channels"] == nil {
+		log.Error("Error while reading channels from json Response for Project, nil response found ", projectID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading channels from json Response"})
+		return
+	}
 	if v, ok := jsonResponse["channels"].([]interface{}); ok {
 		channels = v
 	} else {
@@ -158,6 +163,11 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 	var responseMetadata map[string]interface{}
 	if _, exists := jsonResponse["response_metadata"]; !exists {
 		log.Error("Error while reading response metadata from json Response for Project ", projectID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading response metadata from json Response"})
+		return
+	}
+	if jsonResponse["response_metadata"] == nil {
+		log.Error("Error while reading response metadata from json Response for Project, nil response found ", projectID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading response metadata from json Response"})
 		return
 	}
