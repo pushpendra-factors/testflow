@@ -259,9 +259,11 @@ function ContactDetails({
           <Text type='title' level={6} extraClass='m-0' weight='bold'>
             {userDetails.data.title}
           </Text>
-          <Text type='title' level={7} extraClass='m-0' color='grey'>
-            {userDetails.data.subtitle}
-          </Text>
+          {user.identity.isAnonymous ? null : (
+            <Text type='title' level={7} extraClass='m-0' color='grey'>
+              {userDetails.data.subtitle}
+            </Text>
+          )}
         </div>
       </div>
       <div className='leftpane__props'>
