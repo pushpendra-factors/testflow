@@ -354,7 +354,7 @@ func ConvertCustomKPIQueryToInternalEventQueriesAndTransformationOperations(proj
 	query.AggregateProperty = transformation.AggregateProperty
 	query.AggregatePropertyType = transformation.AggregatePropertyType
 	query.GroupByProperties = getGroupByEventsForEventsAnalytics(kpiQuery.GroupBy, objectType)
-	kpiQuery.Filters = append(kpiQuery.Filters, kpiQuery.Filters...)
+	kpiQuery.Filters = append(kpiQuery.Filters, transformation.Filters...)
 	query.EventsWithProperties, query.GlobalUserProperties = getFilterEventsForEventAnalytics(kpiQuery.Filters, objectType)
 	operations := make([]string, 0)
 

@@ -65,7 +65,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			actualQuery.IncludeEvents = append(actualQuery.IncludeEvents, actualQuery.Event)
 		}
 		groupId := int(0)
-		if actualQuery.Group != "" {
+		if actualQuery.Group != "" && actualQuery.Group != "users" {
 			eventNamesObj, eventnameerr := store.GetStore().GetEventName(actualQuery.Event.Label, projectId)
 			if eventnameerr != http.StatusFound {
 				log.Fatal(eventnameerr)

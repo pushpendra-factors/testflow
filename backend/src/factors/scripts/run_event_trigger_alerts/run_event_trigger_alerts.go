@@ -266,7 +266,7 @@ func getPropsBlock(propMap U.PropertiesMap) string {
 			},
 			{
 				"type": "divider"
-			},`, key, prop)
+			},`, key, strings.Replace(fmt.Sprintf("%v", prop), "\"", "", -1))
 	}
 	return propBlock
 }

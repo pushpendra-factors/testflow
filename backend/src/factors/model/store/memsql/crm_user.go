@@ -211,7 +211,7 @@ func (store *MemSQL) UpdateCRMUserAsSynced(projectID int64, source U.CRMSource, 
 	return crmUser, http.StatusAccepted
 }
 
-func (store *MemSQL) GetCRMUsersInOrderForSync(projectID int64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMUser, int) {
+func (store *MemSQL) GetCRMUsersInOrderForSync(projectID int64, source U.CRMSource, startTimestamp, endTimestamp int64, recordProcessLimit int) ([]model.CRMUser, int) {
 
 	logFields := log.Fields{
 		"project_id":     projectID,
@@ -230,9 +230,13 @@ func (store *MemSQL) GetCRMUsersInOrderForSync(projectID int64, source U.CRMSour
 
 	var crmUsers []model.CRMUser
 	db := C.GetServices().Db
-	err := db.Model(&model.CRMUser{}).Where("project_id = ? AND source = ? AND synced = false AND timestamp BETWEEN ? AND ?",
-		projectID, source, startTimestamp, endTimestamp).Order("timestamp, created_at").Find(&crmUsers).Error
-	if err != nil {
+	dbx := db.Model(&model.CRMUser{}).Where("project_id = ? AND source = ? AND synced = false AND timestamp BETWEEN ? AND ?",
+		projectID, source, startTimestamp, endTimestamp).Order("timestamp, created_at")
+	if recordProcessLimit > 0 {
+		dbx = dbx.Limit(recordProcessLimit)
+	}
+
+	if err := dbx.Find(&crmUsers).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}

@@ -256,7 +256,7 @@ func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([
 	return eventAlerts, http.StatusFound
 }
 
-func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId string, eventProps, userProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, int) {
+func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, int) {
 	logFields := log.Fields{
 		"project_id":       projectId,
 		"event_name":       eventNameId,
@@ -272,12 +272,15 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		return nil, errCode
 	}
 
-	var userPropMap, eventPropMap *map[string]interface{}
+	var userPropMap, eventPropMap, updatedEventProps *map[string]interface{}
 	if userProps != nil {
 		userPropMap, _ = U.DecodePostgresJsonb(userProps)
 	}
 	if eventProps != nil {
 		eventPropMap, _ = U.DecodePostgresJsonb(eventProps)
+	}
+	if UpdatedEventProps != nil {
+		updatedEventProps, _ = U.DecodePostgresJsonb(UpdatedEventProps)
 	}
 
 	var matchedAlerts []model.EventTriggerAlert
@@ -290,12 +293,12 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		}
 
 		if(isUpdate == true){
-			if(len(*eventPropMap) == 0){
+			if(len(*updatedEventProps) == 0){
 				continue
 			} else {
 				isPropertyInFilterUpdated := false
 				for _, fil := range config.Filter {
-					_, exists := (*eventPropMap)[fil.Property]
+					_, exists := (*updatedEventProps)[fil.Property]
 					if(fil.Entity == "event" && exists == true){
 						isPropertyInFilterUpdated = true
 					}
