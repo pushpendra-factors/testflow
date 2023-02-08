@@ -16,6 +16,7 @@ type EnrichStatus struct {
 func RunLeadSquaredEnrich(projectID int64, config map[string]interface{}) (map[string]interface{}, bool) {
 	numDocRoutines := config["document_routines"].(int)
 	minSyncTimestamp := config["min_sync_timestamp"].(int64)
+	recordProcessLimit := config["record_process_limit"].(int)
 
 	sourceObjectTypeAndAlias := model.GetLeadSquaredTypeToAliasMap(model.LeadSquaredDocumentTypeAlias)
 
@@ -69,7 +70,7 @@ func RunLeadSquaredEnrich(projectID int64, config map[string]interface{}) (map[s
 		model.LeadSquaredDocumentTypeAlias[model.LEADSQUARED_EMAIL_RECEIVED]:                                    true,
 	}
 
-	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_LEADSQUARED, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_LEADSQUARED, sourceObjectTypeAndAlias, userTypes, nil, activityTypes, recordProcessLimit)
 	if err != nil {
 		log.WithError(err).Error("Failed to create new crm enrichment config for leadsquared.")
 		return nil, false

@@ -46,6 +46,8 @@ func main() {
 	disabledProjectIDList := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 
+	recordProcessLimit := flag.Int("record_process_limit", 0, "Adding limit for processing records") // By default, pull all records
+
 	flag.Parse()
 
 	appName := "lead_squared_enrich"
@@ -129,6 +131,7 @@ func main() {
 	configs := make(map[string]interface{})
 	configs["document_routines"] = *numDocRoutines
 	configs["min_sync_timestamp"] = *minSyncTimestamp
+	configs["record_process_limit"] = *recordProcessLimit
 	status := taskWrapper.TaskFuncWithProjectId(appName, *lookback, projectIdsArray, leadSquaredEnrich.RunLeadSquaredEnrich, configs)
 	if len(status) == 0 { // skip ping to healthcheck if no task ran
 		return
