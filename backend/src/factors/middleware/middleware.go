@@ -45,6 +45,12 @@ const SUB_ROUTE_SHOPIFY_INTEGRATION_SDK = "/shopify_sdk"
 
 const ADMIN_LOGIN_TOKEN_SEP = ":"
 
+const (
+	FEATURE_UNAVAILABLE = 0
+	FEATURE_AVAILABLE   = 1
+	FEATURE_ENABLED     = 2
+)
+
 // BlockRequestGracefully - Blocks HTTP requests from proceeding
 // further with StatusOK response, on mounted routes.
 func BlockRequestGracefully() gin.HandlerFunc {
@@ -906,6 +912,7 @@ func FeatureMiddleware() gin.HandlerFunc {
 		handlerFeatures := GetFeatureMap()
 		features, ok := handlerFeatures[handlerName]
 		if !ok {
+			log.Error("Handler is not mapped to any feature", handlerName)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Handler is not mapped to any feature" + handlerName})
 			return
 		}
@@ -916,8 +923,8 @@ func FeatureMiddleware() gin.HandlerFunc {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get feature status for this project " + feature})
 				return
 			}
-			if !isFeatureAvailable(status) {
-				c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Feature not available for this project "})
+			if isFeatureAvailable(status) {
+				c.Next()
 				return
 			}
 
@@ -927,18 +934,17 @@ func FeatureMiddleware() gin.HandlerFunc {
 
 			// }
 		}
-
-		c.Next()
+		c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Feature not available for this project "})
 	}
 }
 
 // Check if a feature is available
 func isFeatureAvailable(status int) bool {
 
-	return status > 0
+	return status != FEATURE_UNAVAILABLE
 }
 
 // Check if a feature is enabled
 func isFeatureEnabled(status int) bool {
-	return status == 2
+	return status == FEATURE_ENABLED
 }
