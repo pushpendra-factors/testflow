@@ -83,7 +83,19 @@ const GlobalFilterSelect = ({
     ) {
       const prop = filter.props;
       setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
-      setOperatorState(filter.operator);
+      if (
+        (filter.operator === OPERATORS['equalTo'] ||
+          filter.operator === OPERATORS['notEqualTo'] ||
+          filter.operator?.[0] === OPERATORS['equalTo'] ||
+          filter.operator?.[0] === OPERATORS['notEqualTo']) &&
+        filter.values?.[0] === '$none'
+      ) {
+        if (filter.operator === OPERATORS['equalTo'])
+          setOperatorState(OPERATORS['isUnknown']);
+        else setOperatorState(OPERATORS['isKnown']);
+      } else {
+        setOperatorState(filter.operator);
+      }
       // Set values state
       setValues();
       setPropSelectOpen(false);
@@ -648,7 +660,6 @@ const GlobalFilterSelect = ({
       </div>
     );
   };
-
   return (
     <div className={styles.filter}>
       {renderPropSelect()}
@@ -656,6 +667,8 @@ const GlobalFilterSelect = ({
       {propState?.name ? renderOperatorSelector() : null}
 
       {operatorState &&
+      operatorState !== OPERATORS['isKnown'] &&
+      operatorState !== OPERATORS['isUnknown'] &&
       operatorState?.[0] !== OPERATORS['isKnown'] &&
       operatorState?.[0] !== OPERATORS['isUnknown']
         ? renderValuesSelector()
