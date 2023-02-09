@@ -228,7 +228,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 		typeActivityProgramMember: true,
 	}
 
-	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes, 0)
 	assert.Nil(t, err)
 	enrichStatus := enrichment.Enrich(project.ID, sourceConfig, 2, 0)
 
@@ -448,7 +448,7 @@ func TestCRMEmptyPropertiesUpdated(t *testing.T) {
 		typeUserLead: "lead",
 	}
 
-	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, nil)
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, nil, 0)
 	assert.Nil(t, err)
 
 	enrichStatus := enrichment.Enrich(project.ID, sourceConfig, 2, 0)
@@ -606,7 +606,7 @@ func TestCRMPropertiesSync(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusConflict, status)
 
-	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, typeAlias, userTypeMap, nil, activityTypeMap)
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, typeAlias, userTypeMap, nil, activityTypeMap, 0)
 	assert.Nil(t, err)
 	enrichStatus := enrichment.Enrich(project.ID, sourceConfig, 2, 0)
 	for i := range enrichStatus {
@@ -771,7 +771,7 @@ func TestCreateOrGetCRMEventNames(t *testing.T) {
 		typeActivityProgramMember: true,
 	}
 
-	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes, 0)
 	assert.Nil(t, err)
 
 	status = enrichment.CreateOrGetCRMEventNames(project.ID, sourceConfig)

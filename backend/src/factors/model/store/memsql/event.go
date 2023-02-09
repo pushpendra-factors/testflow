@@ -441,7 +441,7 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	t1 := time.Now()
 	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
 		//log.Info("EventTriggerAlerts match function trigger point.")
-		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties)
+		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties, nil, false)
 		if ErrCode == http.StatusFound && alerts != nil {
 			// log.WithFields(log.Fields{"project_id": event.ProjectId,
 			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
@@ -830,6 +830,23 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 	updatedPropertiesOnlyJsonBlob, err := U.EncodeToPostgresJsonb(&updatedProperties)
 	if err == nil {
 		store.addEventDetailsToCache(projectId, &model.Event{EventNameId: event.EventNameId, Properties: *updatedPropertiesOnlyJsonBlob}, true)
+	}
+
+	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
+		//log.Info("EventTriggerAlerts match function trigger point.")
+		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
+		if ErrCode == http.StatusFound && alerts != nil {
+			// log.WithFields(log.Fields{"project_id": event.ProjectId,
+			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
+
+			for _, alert := range *alerts {
+				success := store.CacheEventTriggerAlert(&alert, event)
+				if !success {
+					log.WithFields(log.Fields{"project_id": event.ProjectId,
+						"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
+				}
+			}
+		}
 	}
 
 	// Log for analysis.
@@ -1241,6 +1258,15 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 	if len(userEvents) == 0 {
 		return 0, 0, false, 0, false, http.StatusNotModified
 	}
+
+	isV2Enabled := C.EnableUserLevelEventPullForAddSessionByProjectID(projectId)
+	if isV2Enabled {
+		eventWithSession, status := store.GetLastEventWithSessionByUser(projectId, userEvents[0].UserId, userEvents[0].Timestamp)
+		if status == http.StatusFound && eventWithSession != nil {
+			userEvents = model.PrependEvent(*eventWithSession, userEvents)
+		}
+	}
+
 	startTimestamp := userEvents[0].Timestamp
 
 	latestUserEvent := &userEvents[len(userEvents)-1]
@@ -1616,7 +1642,6 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 	}
 
 	if C.GetSessionBatchTransactionBatchSize() > 0 {
-
 		batchedUpdatedEventPropertiesParams := model.GetUpdateEventPropertiesParamsAsBatch(updateEventPropertiesParams,
 			C.GetSessionBatchTransactionBatchSize())
 		for batchIndex := range batchedUpdatedEventPropertiesParams {
@@ -2353,9 +2378,14 @@ func (store *MemSQL) GetLastEventWithSessionByUser(projectId int64, userId strin
 
 	var event model.Event
 
+	// Max window size by the inactivity period allowed for session continuation.
+	// We don't consider last event with session, which is older than the inactivity period.
+	startTimestamp := (firstEventTimestamp - model.NewUserSessionInactivityInSeconds) + 2
+
 	db := C.GetServices().Db
 	if err := db.Limit(1).Order("timestamp, created_at DESC").
-		Where("project_id = ? AND user_id = ? AND session_id IS NOT NULL AND timestamp < ?", projectId, userId, firstEventTimestamp).
+		Where("project_id = ? AND user_id = ? AND timestamp > ? AND timestamp < ? AND session_id IS NOT NULL",
+			projectId, userId, startTimestamp, firstEventTimestamp).
 		Find(&event).Error; err != nil {
 
 		if gorm.IsRecordNotFoundError(err) {
@@ -2430,21 +2460,12 @@ func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMapV2(projectId i
 	for i := range events {
 		if _, exists := userEventsMap[events[i].UserId]; !exists {
 			userEventsMap[events[i].UserId] = make([]model.Event, 0, 0)
-			eventWithSession, status := GetStore().GetLastEventWithSessionByUser(projectId, events[i].UserId, events[0].Timestamp)
-			if status == http.StatusBadRequest || status == http.StatusInternalServerError {
-				logCtx.WithField("user_id", events[i].UserId).Error("Failed to get latest user event with session")
-				continue
-			}
-
-			if status == http.StatusFound {
-				userEventsMap[events[i].UserId] = append(userEventsMap[events[i].UserId], *eventWithSession)
-			}
 		}
 
 		userEventsMap[events[i].UserId] = append(userEventsMap[events[i].UserId], events[i])
 	}
 
-	logCtx.WithFields(log.Fields{"no_of_users": len(userEventsMap), "user_events_map": userEventsMap}).Info("Got all events on get_all_events_as_user_map_v2.")
+	logCtx.WithFields(log.Fields{"no_of_users": len(userEventsMap)}).Info("Got all events on get_all_events_as_user_map_v2.")
 
 	return &userEventsMap, len(events), http.StatusFound
 }

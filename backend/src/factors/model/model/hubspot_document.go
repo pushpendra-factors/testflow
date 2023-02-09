@@ -864,7 +864,20 @@ func GetCurrentGroupIdAndColumnName(user *User) (string, string) {
 	if user.Group3ID != "" {
 		return user.Group3ID, "group_3_id"
 	}
-	return user.Group4ID, "group_4_id"
+	if user.Group4ID != "" {
+		return user.Group4ID, "group_4_id"
+	}
+	if user.Group5ID != "" {
+		return user.Group5ID, "group_5_id"
+	}
+	if user.Group6ID != "" {
+		return user.Group6ID, "group_6_id"
+	}
+	if user.Group7ID != "" {
+		return user.Group7ID, "group_7_id"
+	}
+
+	return user.Group8ID, "group_8_id"
 }
 
 func GetHubspotDocumentsListAsBatch(list []*HubspotDocument, batchSize int) [][]*HubspotDocument {

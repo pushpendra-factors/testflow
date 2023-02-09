@@ -13,11 +13,16 @@ import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import FunnelsScatterPlot from './FunnelsScatterPlot';
 import {
   CHART_TYPE_BARCHART,
+  CHART_TYPE_FUNNEL_CHART,
+  CHART_TYPE_HORIZONTAL_BAR_CHART,
   CHART_TYPE_METRIC_CHART,
-  MAX_ALLOWED_VISIBLE_PROPERTIES
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
+  METRIC_TYPES
 } from '../../../../utils/constants';
 import MetricChart from 'Components/MetricChart/MetricChart';
 import { generateColors } from 'Utils/dataFormatter';
+import HorizontalBarChart from 'Components/HorizontalBarChart';
+import ColumnChart from '../../../../components/ColumnChart/ColumnChart';
 
 const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 
@@ -77,7 +82,46 @@ const GroupedChart = forwardRef(
 
     let chart = null;
 
-    if (chartType === CHART_TYPE_BARCHART) {
+    if (chartType === CHART_TYPE_HORIZONTAL_BAR_CHART) {
+      chart = (
+        <div className='w-full'>
+          <HorizontalBarChart
+            categories={visibleProperties.map((v) => v.name)}
+            hideXAxis={true}
+            series={[
+              {
+                name: 'OG',
+                data: visibleProperties.map((v, index) => {
+                  return {
+                    y: parseInt(v.value.split('%')[0]),
+                    color: colors[index],
+                    metricType: METRIC_TYPES.percentType
+                  };
+                })
+              }
+            ]}
+          />
+        </div>
+      );
+    } else if (chartType === CHART_TYPE_BARCHART) {
+      chart = (
+        <div className='w-full'>
+          <ColumnChart
+            categories={visibleProperties.map((v) => v.name)}
+            multiColored
+            valueMetricType={METRIC_TYPES.percentType}
+            series={[
+              {
+                name: 'OG',
+                data: visibleProperties.map((v, index) =>
+                  parseInt(v.value.split('%')[0])
+                )
+              }
+            ]}
+          />
+        </div>
+      );
+    } else if (chartType === CHART_TYPE_FUNNEL_CHART) {
       chart = (
         <BarChart
           isWidgetModal={isWidgetModal}

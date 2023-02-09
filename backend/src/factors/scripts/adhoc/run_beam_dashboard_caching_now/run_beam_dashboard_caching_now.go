@@ -35,12 +35,6 @@ go run scripts/run_beam_dashboard_caching.go --project_id='2,3' --runner dataflo
 var (
 	env = flag.String("env", C.DEVELOPMENT, "Environment")
 
-	dbHost = flag.String("db_host", "localhost", "")
-	dbPort = flag.Int("db_port", 5432, "")
-	dbUser = flag.String("db_user", "autometa", "")
-	dbName = flag.String("db_name", "autometa", "")
-	dbPass = flag.String("db_pass", "@ut0me7a", "")
-
 	memSQLHost        = flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort        = flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser        = flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
@@ -103,14 +97,6 @@ func main() {
 	config := &C.Configuration{
 		AppName: appName,
 		Env:     *env,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-			AppName:  appName,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,

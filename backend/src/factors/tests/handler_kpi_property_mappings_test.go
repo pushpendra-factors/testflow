@@ -107,7 +107,6 @@ func TestPropertyMappingsForKPI(t *testing.T) {
 		Name:            "$country",
 		DataType:        "categorical",
 		Entity:          "user",
-		GroupByType:     "",
 	}
 	propertiesRaw2 := model.Property{
 		Category:        model.ProfileCategory,
@@ -116,7 +115,6 @@ func TestPropertyMappingsForKPI(t *testing.T) {
 		Name:            "country",
 		DataType:        "categorical",
 		Entity:          "user",
-		GroupByType:     "",
 	}
 	propertiesRaw3 := model.Property{
 		Category:        model.ChannelCategory,
@@ -125,7 +123,6 @@ func TestPropertyMappingsForKPI(t *testing.T) {
 		Name:            "campaign_name",
 		DataType:        "categorical",
 		Entity:          "",
-		GroupByType:     "",
 	}
 	propertiesRaw := []model.Property{propertiesRaw1, propertiesRaw2, propertiesRaw3}
 
@@ -337,7 +334,7 @@ func TestPropertyMappingsForKPI(t *testing.T) {
 		kpiQueryGroup.GlobalFilters = []model.KPIFilter{filter}
 
 		result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Equal(t, http.StatusInternalServerError, statusCode)
+		assert.Equal(t, http.StatusBadRequest, statusCode)
 		assert.Equal(t, []model.QueryResult{{}, {}}, result)
 
 		// Undoing the changes to query1 and query1Copy
@@ -419,9 +416,9 @@ func TestPropertyMappingsForKPI(t *testing.T) {
 		
 		result1, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, []string{propertyMappingName, derivedMetric1}, result1[0].Headers)
+		assert.Equal(t, []string{"datetime", propertyMappingName, derivedMetric1}, result1[0].Headers)
 		assert.Equal(t, 1, len(result1[0].Rows))
-		assert.Equal(t, []interface{}{"india", float64(1000)}, result1[0].Rows[0])
+		assert.Equal(t, []interface{}{"2023-01-18T00:00:00+00:00", "india", float64(1000)}, result1[0].Rows[0])
 		assert.Equal(t, []string{propertyMappingName, derivedMetric1}, result1[1].Headers)
 		assert.Equal(t, 1, len(result1[1].Rows))
 		assert.Equal(t, []interface{}{"india", float64(1000)}, result1[1].Rows[0])

@@ -268,74 +268,6 @@ func GetDateFilter(qP model.QueryProperty, propertyEntity string, property strin
 	return stmt, resultParams, nil
 }
 
-func getEventsFilterJoinStatement(projectID int64,
-	eventLevelProperties []model.QueryProperty, fromTimestamp int64) string {
-	logFields := log.Fields{
-		"project_id":             projectID,
-		"event_level_properties": eventLevelProperties,
-		"from_timestamp":         fromTimestamp,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	if len(eventLevelProperties) == 0 {
-		return ""
-	}
-
-	if !C.UseEventsFilterPropertiesOptimisedLogic(fromTimestamp) {
-		return ""
-	}
-
-	joinStmnt := " " + "LEFT JOIN event_properties_json ON events.id = event_properties_json.id AND events.user_id = event_properties_json.user_id"
-	joinStmnt = joinStmnt + " " + fmt.Sprintf("AND events.project_id=%d", projectID)
-	return joinStmnt
-}
-
-func getUsersFilterJoinStatement(projectID int64,
-	globalUserProperties []model.QueryProperty) string {
-	logFields := log.Fields{
-		"project_id":             projectID,
-		"global_user_properties": globalUserProperties,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	if len(globalUserProperties) == 0 {
-		return ""
-	}
-
-	if !C.UseUsersFilterPropertiesOptimisedLogic() {
-		return ""
-	}
-
-	joinStmnt := " " + "LEFT JOIN user_properties_json ON users.id = user_properties_json.id"
-	joinStmnt = joinStmnt + " " + fmt.Sprintf("AND users.project_id = %d", projectID)
-	return joinStmnt
-}
-
-// returns SQL query condition to address conditions only on events.properties
-func getFilterSQLStmtForEventProperties(projectID int64, properties []model.QueryProperty,
-	fromTimestamp int64) (rStmnt string, rParams []interface{}, joinStmnt string, err error) {
-	logFields := log.Fields{
-		"project_id":      projectID,
-		"properties":      properties,
-		"from_time_stamp": fromTimestamp,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	var filteredProperty []model.QueryProperty
-	for _, p := range properties {
-		if p.Entity == model.PropertyEntityEvent {
-			filteredProperty = append(filteredProperty, p)
-		}
-	}
-
-	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty, fromTimestamp)
-	if err != nil {
-		return "", nil, "", err
-	}
-
-	return wStmt, wParams, getEventsFilterJoinStatement(projectID, filteredProperty, fromTimestamp), nil
-}
-
 // returns SQL query condition to address conditions for Users.properties
 func getFilterSQLStmtForLatestUserProperties(projectID int64,
 	properties []model.QueryProperty, fromTimestamp int64) (
@@ -360,32 +292,6 @@ func getFilterSQLStmtForLatestUserProperties(projectID int64,
 	}
 
 	return wStmt, wParams, nil
-}
-
-// returns SQL query condition to address conditions only on user_properties.properties
-func getFilterSQLStmtForUserProperties(projectID int64,
-	properties []model.QueryProperty, fromTimestamp int64) (
-	rStmnt string, rParams []interface{}, joinStmnt string, err error) {
-	logFields := log.Fields{
-		"project_id":      projectID,
-		"properties":      properties,
-		"from_time_stamp": fromTimestamp,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	var filteredProperty []model.QueryProperty
-	for _, p := range properties {
-		if p.Entity == model.PropertyEntityUser {
-			filteredProperty = append(filteredProperty, p)
-		}
-	}
-
-	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty, fromTimestamp)
-	if err != nil {
-		return "", nil, "", err
-	}
-
-	return wStmt, wParams, getEventsFilterJoinStatement(projectID, filteredProperty, fromTimestamp), nil
 }
 
 // Alias for group by properties gk_1, gk_2.
@@ -414,23 +320,13 @@ func GetPropertyEntityFieldForFilter(entityName string, fromTimestamp int64) str
 	switch entityName {
 
 	case model.PropertyEntityUser:
-		if !C.UseEventsFilterPropertiesOptimisedLogic(fromTimestamp) {
-			return model.GetPropertyEntityFieldForFilter(entityName)
-		}
+		return model.GetPropertyEntityFieldForFilter(entityName)
 
-		return "event_properties_json.user_properties_json"
 	case model.PropertyEntityEvent:
-		if !C.UseEventsFilterPropertiesOptimisedLogic(fromTimestamp) {
-			return model.GetPropertyEntityFieldForFilter(entityName)
-		}
+		return model.GetPropertyEntityFieldForFilter(entityName)
 
-		return "event_properties_json.properties_json"
 	case model.PropertyEntityUserGlobal:
-		if !C.UseUsersFilterPropertiesOptimisedLogic() {
-			return model.GetPropertyEntityFieldForFilter(entityName)
-		}
-
-		return "user_properties_json.properties_json"
+		return model.GetPropertyEntityFieldForFilter(entityName)
 	}
 
 	return ""
@@ -727,10 +623,7 @@ func addFilterEventsWithPropsQuery(projectId int64, qStmnt *string, qParams *[]i
 		return errors.New("invalid select on events filter")
 	}
 
-	eventFilterJoinStmnt := ""
-	eventFilterJoinStmnt = getEventsFilterJoinStatement(projectId, qep.Properties, from)
-
-	rStmnt := "SELECT " + addSelecStmnt + " FROM events" + " " + eventFilterJoinStmnt + " " + addJoinStmnt
+	rStmnt := "SELECT " + addSelecStmnt + " FROM events" + " " + addJoinStmnt
 	var fromTimestamp string
 	if from > 0 {
 		fromTimestamp = "?"

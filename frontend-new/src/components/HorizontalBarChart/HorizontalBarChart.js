@@ -21,7 +21,8 @@ function HorizontalBarChart({
   height,
   width,
   cardSize,
-  comparisonApplied = false
+  comparisonApplied,
+  hideXAxis
 }) {
   const chartRef = useRef(null);
 
@@ -204,8 +205,9 @@ function HorizontalBarChart({
   return (
     <div
       ref={chartRef}
-      className={cx(styles.horizontalBarChart, {
-        [styles.comparisonApplied]: comparisonApplied
+      className={cx('w-full', styles.horizontalBarChart, {
+        [styles.comparisonApplied]: comparisonApplied,
+        [styles['no-x-axis']]: hideXAxis
       })}
     />
   );
@@ -229,7 +231,8 @@ HorizontalBarChart.propTypes = {
   comparisonApplied: PropTypes.bool,
   cardSize: PropTypes.number,
   height: PropTypes.number,
-  width: PropTypes.number
+  width: PropTypes.number,
+  hideXAxis: PropTypes.bool
 };
 
 HorizontalBarChart.defaultProps = {
@@ -238,5 +241,6 @@ HorizontalBarChart.defaultProps = {
   comparisonApplied: false,
   cardSize: 1,
   height: null,
-  width: null
+  width: null,
+  hideXAxis: false
 };

@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func selectSmartEventIDANDReferenceID(projectID uint64, eventNameID string, from, to int64) (string, []interface{}) {
+func selectSmartEventIDANDReferenceID(projectID int64, eventNameID string, from, to int64) (string, []interface{}) {
 	smartEventsStmnt := "select id as smart_event_id, uuid(properties ->> '$crm_reference_event_id') as reference_event_id " +
 		"from events where project_id = ? and timestamp between ? and ? and event_name_id = ? "
 	smartEventsParams := []interface{}{projectID, from, to, eventNameID}
@@ -21,7 +21,7 @@ func selectSmartEventIDANDReferenceID(projectID uint64, eventNameID string, from
 	return smartEventsStmnt, smartEventsParams
 }
 
-func selectSmartEventContactByReferenceID(projectID uint64, sourceName, docIDPropertyName string) (string, []interface{}) {
+func selectSmartEventContactByReferenceID(projectID int64, sourceName, docIDPropertyName string) (string, []interface{}) {
 	smartEventsReferenceContact := "select smart_event_id, reference_event_id, properties ->> ? " +
 		"as hubspot_contact_id from " + sourceName + " left join events on " + sourceName + ".reference_event_id = events.id and project_id = ?"
 	smartEventsReferenceContactParams := []interface{}{docIDPropertyName, projectID}
@@ -29,7 +29,7 @@ func selectSmartEventContactByReferenceID(projectID uint64, sourceName, docIDPro
 	return smartEventsReferenceContact, smartEventsReferenceContactParams
 }
 
-func selectContactDocumentBySyncIDAndContactID(projectID uint64, syncIDSource string, docType int) (string, []interface{}) {
+func selectContactDocumentBySyncIDAndContactID(projectID int64, syncIDSource string, docType int) (string, []interface{}) {
 	smartEventDocuments := "select id, timestamp, sync_id, value from hubspot_documents where project_id = ? and type = ? " +
 		"and id in ( select hubspot_contact_id from " + syncIDSource + " ) and sync_id in ( select " +
 		"reference_event_id :: text from " + syncIDSource + " ) "
@@ -62,7 +62,7 @@ func selectContactCreatedDocumentsProperty(sourceStep, contactUpdatedDocumentSou
 	return stmnt
 }
 
-func selectAllHubspotDocumentsByContactID(projectID uint64, sourceStep string, docType int) (string, []interface{}) {
+func selectAllHubspotDocumentsByContactID(projectID int64, sourceStep string, docType int) (string, []interface{}) {
 	allDocumentsBySmartEventContact := "select * from " + sourceStep + " left join hubspot_documents on " +
 		sourceStep + ".hubspot_contact_id = hubspot_documents.id and project_id = ? and type = ? " +
 		"where project_id = ? and type = ?"
@@ -80,7 +80,7 @@ func selectSmartEventPreviousPropetyValue(sourceStep string) string {
 	return stmnt
 }
 
-func getMemSQLQuery(projectID uint64, eventNameID string, from, to int64, propertyName string, docType int) (string, []interface{}) {
+func getMemSQLQuery(projectID int64, eventNameID string, from, to int64, propertyName string, docType int) (string, []interface{}) {
 	stmnt := `WITH smart_events AS (
 		select
 			id as smart_event_id,
@@ -372,7 +372,7 @@ select
 from
     overall_result
 */
-func GetSmartEventMetaDataQuery(projectID uint64, propertyName, eventNameID string, from, to int64) (string, []interface{}) {
+func GetSmartEventMetaDataQuery(projectID int64, propertyName, eventNameID string, from, to int64) (string, []interface{}) {
 	stmnt := ""
 	withParams := []interface{}{}
 	stmnt, params := selectSmartEventIDANDReferenceID(projectID, eventNameID, from, to)
@@ -458,12 +458,7 @@ func getSmartEventMetaData(queryStmnt string, queryParams []interface{}) (map[st
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
-	projectID := flag.Uint64("project_id", 0, "Project id.")
+	projectID := flag.Int64("project_id", 0, "Project id.")
 	from := flag.Int64("from", 0, "Project id.")
 	to := flag.Int64("to", 0, "Project id.")
 	eventNameID := flag.String("event_name_id", "", "Event name id.")
@@ -485,14 +480,7 @@ func main() {
 
 	appName := "hubspot_smart_event_validator"
 	config := &C.Configuration{
-		Env: *env,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-		},
+		Env:       *env,
 		SentryDSN: *sentryDSN,
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
@@ -606,7 +594,7 @@ func main() {
 
 }
 
-func deleteSmartEventsByIDs(projectID uint64, eventNameID string, IDs []string, batchSize int) int {
+func deleteSmartEventsByIDs(projectID int64, eventNameID string, IDs []string, batchSize int) int {
 	if eventNameID == "" || len(IDs) < 1 || projectID == 0 {
 		log.WithFields(log.Fields{"project_id": projectID, "event_name_id": eventNameID}).Error("Invalid parameters.")
 		return http.StatusBadRequest

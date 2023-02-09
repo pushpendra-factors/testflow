@@ -16,12 +16,6 @@ import (
 func main() {
 	env := flag.String("env", "development", "")
 
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
-
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
@@ -60,6 +54,8 @@ func main() {
 	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 
+	recordProcessLimit := flag.Int("record_process_limit", 0, "Adding limit for processing records") // By default, pull all records
+
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
@@ -78,14 +74,6 @@ func main() {
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-			AppName:  appName,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,
@@ -116,7 +104,7 @@ func main() {
 	err := C.InitDBWithMaxIdleAndMaxOpenConn(*config, 200, 100)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"env": *env,
-			"host": *dbHost, "port": *dbPort}).Panic("Failed to initialize DB.")
+			"host": *memSQLHost, "port": *memSQLPort}).Panic("Failed to initialize DB.")
 	}
 	db := C.GetServices().Db
 	defer db.Close()
@@ -143,7 +131,7 @@ func main() {
 		model.MarketoDocumentTypeAlias[model.MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP]: true,
 	}
 
-	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes, *recordProcessLimit)
 	if err != nil {
 		log.WithError(err).Error("Failed to create new crm enrichment config.")
 		anyFailure = true

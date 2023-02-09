@@ -102,12 +102,12 @@ const GLobalFilter = ({
                 refValue={refValue}
               ></GlobalFilterBlock>
             </div>
-           {/* {index !== orFilterIndex && (
+           {index !== orFilterIndex && (
              <div className={`mt-2`}>
              <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>
              </div>
-            )}        */}
-           {/* {index === orFilterIndex && (
+            )}       
+           {index === orFilterIndex && (
               <div key={'init'} className={`mt-2`}>
               <GlobalFilterBlock
                 activeProject={activeProject}
@@ -125,7 +125,7 @@ const GLobalFilter = ({
                 showOr = {true}
               ></GlobalFilterBlock>
               </div>              
-            )}   */}
+            )}  
             </div>     
         );
         index+=1;
@@ -149,7 +149,7 @@ const GLobalFilter = ({
                 refValue={refValue}
               ></GlobalFilterBlock>
             </div>
-          {/* <div key={index+1} className={`mt-2`}>
+          <div key={index+1} className={`mt-2`}>
             <GlobalFilterBlock
                 activeProject={activeProject}
                 index={index+1}
@@ -166,7 +166,7 @@ const GLobalFilter = ({
                 refValue={refValue}
                 showOr = {true}
               ></GlobalFilterBlock>
-          </div> */}
+          </div>
         </div>
       );
       index+=2;

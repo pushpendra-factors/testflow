@@ -232,6 +232,8 @@ type Model interface {
 	GetEventTypeFromDb(projectID int64, eventNames []string, limit int64) (map[string]string, error)
 	GetMostFrequentlyEventNamesByType(projectID int64, limit int, lastNDays int, typeOfEvent string) ([]string, error)
 	GetEventNamesOrderedByOccurenceAndRecency(projectID int64, limit int, lastNDays int) (map[string][]string, error)
+	GetDisplayNamesForEventProperties(projectId int64, properties map[string][]string, eventName string) map[string]string
+	GetEventPropertiesAndModifyResultsForNonExplain(projectId int64, eventName string) (map[string][]string, int)
 	GetPropertiesByEvent(projectID int64, eventName string, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertyValuesByEventProperty(projectID int64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
 	GetPropertiesForHubspotContacts(projectID int64, reqID string) []map[string]string
@@ -742,8 +744,8 @@ type Model interface {
 	CreateCRMProperties(crmProperty *model.CRMProperty) (int, error)
 	GetCRMUserByTypeAndAction(projectID int64, source U.CRMSource, id string, userType int, action model.CRMAction) (*model.CRMUser, int)
 	UpdateCRMUserAsSynced(projectID int64, source U.CRMSource, crmUser *model.CRMUser, userID, syncID string) (*model.CRMUser, int)
-	GetCRMUsersInOrderForSync(projectID int64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMUser, int)
-	GetCRMActivityInOrderForSync(projectID int64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMActivity, int)
+	GetCRMUsersInOrderForSync(projectID int64, source U.CRMSource, startTimestamp, endTimestamp int64, recordProcessLimit int) ([]model.CRMUser, int)
+	GetCRMActivityInOrderForSync(projectID int64, source U.CRMSource, startTimestamp, endTimestamp int64, recordProcessLimit int) ([]model.CRMActivity, int)
 	GetCRMActivityMinimumTimestampForSync(projectID int64, source U.CRMSource) (int64, int)
 	GetCRMUsersMinimumTimestampForSync(projectID int64, source U.CRMSource) (int64, int)
 	GetCRMPropertiesForSync(projectID int64) ([]model.CRMProperty, int)
@@ -779,7 +781,6 @@ type Model interface {
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
 	GetLeftPaneProperties(projectID int64, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{}
-	FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType string) ([]model.Profile, error)
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 
 	// segment
@@ -834,7 +835,7 @@ type Model interface {
 	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int)
 	CreateEventTriggerAlert(userID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string)
 	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
-	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb) (*[]model.EventTriggerAlert, int)
+	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, int)
 	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
 	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
 
@@ -851,6 +852,7 @@ type Model interface {
 	GetFeaturesForProject(projectID int64) (model.FeatureGate, error)
 	UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error)
 	GetFeatureStatusForProject(projectID int64, featureName string) (int, error)
+	CreateDefaultFeatureGatesConfigForProject(ProjectID int64) (int, error)
 
 	// Property Mapping
 	CreatePropertyMapping(propertyMapping model.PropertyMapping) (*model.PropertyMapping, string, int)

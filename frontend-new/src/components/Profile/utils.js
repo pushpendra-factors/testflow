@@ -1,11 +1,21 @@
 import MomentTz from '../MomentTz';
+import { formatDurationIntoString } from 'Utils/dataFormatter';
+import {
+  EVENT_QUERY_USER_TYPE,
+  PREDEFINED_DATES,
+  QUERY_TYPE_EVENT,
+  RevAvailableGroups,
+  ReverseProfileMapper,
+  TYPE_UNIQUE_USERS
+} from 'Utils/constants';
+import { getGlobalFilters } from 'Views/PathAnalysis/PathAnalysisReport/QueryBuilder/utils';
+import { getEventsWithProperties } from '../../Views/CoreQuery/utils';
+import { generateRandomKey } from 'Utils/global';
 import {
   operatorMap,
   reverseDateOperatorMap,
   reverseOperatorMap
-} from '../../Views/CoreQuery/utils';
-import { formatDurationIntoString } from 'Utils/dataFormatter';
-import { RevAvailableGroups, ReverseProfileMapper } from 'Utils/constants';
+} from 'Utils/operatorMapping';
 
 export const granularityOptions = [
   'Timestamp',
@@ -103,6 +113,53 @@ export const formatFiltersForPayload = (filters = []) => {
   return filterProps;
 };
 
+export const formatEventsFromSegment = (ewp) => {
+  const events = ewp?.map((e) => {
+    const filters = [];
+    let ref = -1;
+    let lastProp = '';
+    let lastOp = '';
+    e.pr.forEach((pr) => {
+      if (pr.lop === 'AND') {
+        ref += 1;
+        filters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref
+        });
+        lastProp = pr.pr;
+        lastOp = pr.op;
+      } else if (lastProp === pr.pr && lastOp === pr.op) {
+        filters[filters.length - 1].values.push(pr.va);
+      } else {
+        filters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref
+        });
+        lastProp = pr.pr;
+        lastOp = pr.op;
+      }
+    });
+    return {
+      alias: e.an,
+      label: e.na,
+      group: e.grpa,
+      filters,
+      key: generateRandomKey()
+    };
+  });
+  return events;
+};
+
 export const formatPayloadForFilters = (gp) => {
   const globalFilters = [];
 
@@ -196,14 +253,22 @@ export const getUniqueItemsByKeyAndSearchTerm = (activities, searchTerm) =>
   );
 
 export const propValueFormat = (key, value) => {
+  const durationKeys = [
+    'Time Spent on Site',
+    '$session_spent_time',
+    '$initial_page_load_time',
+    '$initial_page_spent_time',
+    '$latest_page_load_time'
+  ];
   if (
     key.includes('timestamp') ||
     key.includes('starttime') ||
-    key.includes('endtime')
+    key.includes('endtime') ||
+    key.toLowerCase().includes('jointime')
   ) {
-    return MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A');
+    return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
   }
-  if (key.includes('_time')) {
+  if (durationKeys.includes(key)) {
     return formatDurationIntoString(parseInt(value));
   }
   if (key.includes('durationmilliseconds')) {
@@ -446,3 +511,44 @@ export const iconColors = [
 ];
 
 export const ALPHANUMSTR = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+export const DefaultDateRangeForSegments = {
+  from: MomentTz().subtract(28, 'days').startOf('day'),
+  to: MomentTz().subtract(1, 'days').endOf('day'),
+  frequency: MomentTz().format('dddd') === 'Monday' ? 'hour' : 'date',
+  dateType:
+    MomentTz().format('dddd') === 'Sunday'
+      ? PREDEFINED_DATES.LAST_MONTH
+      : PREDEFINED_DATES.THIS_MONTH
+};
+
+export const getSegmentQuery = (queries, queryOptions, userType) => {
+  const query = {};
+  query.grpa = queryOptions?.group_analysis;
+  query.source = queryOptions?.source;
+  query.caller = queryOptions?.caller;
+  query.table_props = queryOptions?.table_props;
+  query.cl = QUERY_TYPE_EVENT;
+  query.ty = TYPE_UNIQUE_USERS;
+
+  const period = {};
+  if (queryOptions.date_range.from && queryOptions.date_range.to) {
+    period.from = MomentTz(queryOptions.date_range.from).utc().unix();
+    period.to = MomentTz(queryOptions.date_range.to).utc().unix();
+  } else {
+    period.from = MomentTz().startOf('week').utc().unix();
+    period.to =
+      MomentTz().format('dddd') !== 'Sunday'
+        ? MomentTz().subtract(1, 'day').utc().unix()
+        : MomentTz().utc().unix();
+  }
+  query.fr = period.from;
+  query.to = period.to;
+
+  query.ewp = getEventsWithProperties(queries);
+  query.gup = getGlobalFilters(queryOptions?.globalFilters);
+
+  query.ec = EVENT_QUERY_USER_TYPE[userType];
+  query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
+  return query;
+};

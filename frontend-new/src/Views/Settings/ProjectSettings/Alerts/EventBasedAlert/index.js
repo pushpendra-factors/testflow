@@ -35,7 +35,6 @@ import {
   enableSlackIntegration
 } from 'Reducers/global';
 import SelectChannels from '../SelectChannels';
-import FAFilterSelect from 'Components/FaFilterSelect';
 import {
   QUERY_TYPE_EVENT,
   INITIAL_SESSION_ANALYTICS_SEQ,
@@ -45,6 +44,7 @@ import { DefaultDateRangeFormat } from '../../../../CoreQuery/utils';
 import TextArea from 'antd/lib/input/TextArea';
 import EventGroupBlock from '../../../../../components/QueryComposer/EventGroupBlock';
 import useAutoFocus from 'hooks/useAutoFocus';
+import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 
 const { Option } = Select;
 
@@ -586,7 +586,7 @@ const EventBasedAlert = ({
             </Col>
           </Row>
           <Row className={'m-0'}>
-            <Col span={18}>
+            <Col span={24}>
               <Form.Item name='event_name' className={'m-0'}>
                 {queryList()}
               </Form.Item>
@@ -962,15 +962,11 @@ const EventBasedAlert = ({
               >
                 Filters
               </Text>
-              {viewFilter.map((filt, index) => (
-                <div key={index} className={'mt-2'}>
-                  <FAFilterSelect
-                    filter={filt}
-                    disabled={true}
-                    applyFilter={() => {}}
-                  ></FAFilterSelect>
-                </div>
-              ))}
+              <GLobalFilter
+                filters={viewFilter}
+                delFilter={false}
+                viewMode
+              />
             </Col>
           </Row>
         )}

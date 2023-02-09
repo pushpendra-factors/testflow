@@ -39,6 +39,10 @@ func TestGroupCreation(t *testing.T) {
 		"g2",
 		"g3",
 		"g4",
+		"g5",
+		"g6",
+		"g7",
+		"g8",
 	}
 
 	allowedGroupsMap := map[string]bool{
@@ -46,11 +50,15 @@ func TestGroupCreation(t *testing.T) {
 		"g2": true,
 		"g3": true,
 		"g4": true,
+		"g5": true,
+		"g6": true,
+		"g7": true,
+		"g8": true,
 	}
 
 	index := 2
 	for _, groupName := range allowedGroups {
-		if groupName == "g4" {
+		if groupName == "g8" {
 			continue
 		}
 
@@ -63,7 +71,7 @@ func TestGroupCreation(t *testing.T) {
 
 	index = 2
 	for _, groupName := range allowedGroups {
-		if groupName == "g4" {
+		if groupName == "g8" {
 			continue
 		}
 		group, status = store.GetStore().CreateGroup(project.ID, groupName, allowedGroupsMap)
@@ -76,8 +84,8 @@ func TestGroupCreation(t *testing.T) {
 		index++
 	}
 
-	// should fail, only 4 groups allowed
-	group, status = store.GetStore().CreateGroup(project.ID, "g4", allowedGroupsMap)
+	// should fail, only 8 groups allowed
+	group, status = store.GetStore().CreateGroup(project.ID, "g8", allowedGroupsMap)
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Nil(t, group)
 }
@@ -100,6 +108,22 @@ func assertUserGroupValueByColumnName(user *model.User, columnName string, value
 		return user.Group4ID == value
 	case "group_4_user_id":
 		return user.Group4UserID == value
+	case "group_5_id":
+		return user.Group5ID == value
+	case "group_5_user_id":
+		return user.Group5UserID == value
+	case "group_6_id":
+		return user.Group6ID == value
+	case "group_6_user_id":
+		return user.Group6UserID == value
+	case "group_7_id":
+		return user.Group7ID == value
+	case "group_7_user_id":
+		return user.Group7UserID == value
+	case "group_8_id":
+		return user.Group8ID == value
+	case "group_8_user_id":
+		return user.Group8UserID == value
 	default:
 		return false
 	}
@@ -114,6 +138,10 @@ func TestUserGroups(t *testing.T) {
 		"g2",
 		"g3",
 		"g4",
+		"g5",
+		"g6",
+		"g7",
+		"g8",
 	}
 
 	allowedGroupsMap := map[string]bool{
@@ -121,6 +149,10 @@ func TestUserGroups(t *testing.T) {
 		"g2": true,
 		"g3": true,
 		"g4": true,
+		"g5": true,
+		"g6": true,
+		"g7": true,
+		"g8": true,
 	}
 
 	index := 1
@@ -133,7 +165,7 @@ func TestUserGroups(t *testing.T) {
 	}
 
 	userIDs := make([]string, len(allowedGroups))
-	groupIDs := []string{"1", "2", "3", "4"}
+	groupIDs := []string{"1", "2", "3", "4", "5", "6", "7", "8"}
 
 	var groupProperties postgres.Jsonb
 	groupProperties.RawMessage = []byte(`{"property1": "value1", "property2": "value2"}`)

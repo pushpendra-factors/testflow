@@ -5,6 +5,7 @@ import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import { SVG } from '../../factorsComponents';
 import styles from './FunnelsConversionDurationBlock.module.scss';
 import FunnelsConversionDurationBlockContent from './FunnelsConversionDurationBlockContent';
+import { CORE_QUERY_INITIAL_STATE } from 'Views/CoreQuery/constants';
 
 const UnitsMapper = {
   D: 'Days',
@@ -22,15 +23,30 @@ export const FunnelsConversionDurationBlockComponent = ({
   const [open, setOpen] = useState(false);
 
   const handleApply = () => {
-    onChange({
-      funnelConversionDurationNumber: number,
-      funnelConversionDurationUnit: unit
-    });
+    if (number.trim().length === 0) {
+      onChange({
+        funnelConversionDurationNumber:
+          CORE_QUERY_INITIAL_STATE.funnelConversionDurationNumber,
+        funnelConversionDurationUnit:
+          CORE_QUERY_INITIAL_STATE.funnelConversionDurationUnit
+      });
+    } else {
+      onChange({
+        funnelConversionDurationNumber: number,
+        funnelConversionDurationUnit: unit
+      });
+    }
     setOpen(false);
   };
 
   const handleOpen = () => {
     setOpen(true);
+  };
+
+  const toggleOpen = (val) => {
+    if (val === false) {
+      setOpen(val);
+    }
   };
 
   useEffect(() => {
@@ -53,6 +69,7 @@ export const FunnelsConversionDurationBlockComponent = ({
       }
       trigger='click'
       visible={open}
+      onVisibleChange={toggleOpen}
     >
       <div
         className={cx(

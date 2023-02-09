@@ -26,9 +26,14 @@ import {
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
   QUERY_TYPE_PROFILE
-} from '../../../../utils/constants';
+} from 'Utils/constants';
 import { FILTER_TYPES, INITIAL_STATE } from '../../../CoreQuery/constants';
 import { isDateInMilliSeconds } from '../../../../utils/dataFormatter';
+import {
+  operatorMap,
+  reverseOperatorMap,
+  reverseDateOperatorMap
+} from 'Utils/operatorMapping';
 
 export const initialState = INITIAL_STATE;
 
@@ -37,49 +42,6 @@ export const labelsObj = {
   [TOTAL_USERS_CRITERIA]: 'User Count',
   [ACTIVE_USERS_CRITERIA]: 'User Count',
   [FREQUENCY_CRITERIA]: 'Count'
-};
-
-export const operatorMap = {
-  '=': 'equals',
-  '!=': 'notEqual',
-  contains: 'contains',
-  'does not contain': 'notContains',
-  '<': 'lesserThan',
-  '<=': 'lesserThanOrEqual',
-  '>': 'greaterThan',
-  '>=': 'greaterThanOrEqual',
-  between: 'between',
-  'not between': 'notInBetween',
-  'in the previous': 'inLast',
-  'not in the previous': 'notInLast',
-  'in the current': 'inCurrent',
-  'not in the current': 'notInCurrent',
-  before: 'before',
-  since: 'since'
-};
-
-export const reverseOperatorMap = {
-  equals: '=',
-  notEqual: '!=',
-  contains: 'contains',
-  notContains: 'does not contain',
-  lesserThan: '<',
-  lesserThanOrEqual: '<=',
-  greaterThan: '>',
-  greaterThanOrEqual: '>='
-};
-
-export const reverseDateOperatorMap = {
-  equals: '=',
-  notEqual: '!=',
-  between: 'between',
-  notInBetween: 'not between',
-  inLast: 'in the previous',
-  notInLast: 'not in the previous',
-  inCurrent: 'in the current',
-  notInCurrent: 'not in the current',
-  before: 'before',
-  since: 'since'
 };
 
 const getEventsWithProperties = (queries) => {
@@ -459,10 +421,9 @@ export const getProfileQuery = (
   return query;
 };
 
-const getEventsWithPropertiesKPI = (filters, category) => {
+export const getEventsWithPropertiesKPI = (filters, category) => {
   const filterProps = [];
   // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
-
   const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));
   filtersGroupedByRef.forEach((filtersGr) => {
     if (filtersGr.length === 1) {
@@ -470,7 +431,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
-            prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+            prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
             lOp: !index ? 'AND' : 'OR',
@@ -491,7 +452,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
-          prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+          prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: 'AND',
@@ -518,7 +479,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
-            prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+            prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
             lOp: !index ? 'AND' : 'OR',
@@ -539,7 +500,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
-          prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+          prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: 'AND',
@@ -565,7 +526,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val) => {
           filterProps.push({
-            prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+            prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
             lOp: 'OR',
@@ -586,7 +547,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
-          prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+          prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: 'OR',

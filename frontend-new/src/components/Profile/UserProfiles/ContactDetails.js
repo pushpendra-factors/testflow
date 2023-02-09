@@ -267,7 +267,7 @@ function ContactDetails({
       <div className='leftpane__props'>
         {listLeftPaneProps(userDetails.data.left_pane_props)}
       </div>
-      <div className='px-8 pb-8'>{renderAddNewProp()}</div>
+      <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       <div className='leftpane__groups'>
         <Text type='title' level={7} extraClass='m-0 my-2' color='grey'>
           Associated Groups:

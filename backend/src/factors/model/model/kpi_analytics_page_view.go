@@ -31,7 +31,6 @@ var KPIPropertiesForPageViews = []map[string]string{
 var KPIConfigForPageViews = map[string]interface{}{
 	"category":         EventCategory,
 	"display_category": PageViewsDisplayCategory,
-	"properties":       KPIPropertiesForPageViews,
 }
 
 func ValidateKPIPageView(kpiQuery KPIQuery) bool {

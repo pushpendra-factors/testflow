@@ -259,22 +259,88 @@ func matchFitlerValuesForNumerical(eventPropValue interface{}, isPresentEventPro
 }
 
 func matchFitlerValuesForDatetime(eventPropValue interface{}, isPresentEventPropValue bool, filterValues []OperatorValueTuple) bool {
+	/*
+	BeforeStr               = "before"
+	SinceStr                = "since"
+	BetweenStr              = "between"
+	NotInBetweenStr         = "notInBetween"
+	InCurrent               = "inCurrent"
+	NotInCurrent            = "notInCurrent"
+	InLastStr               = "inLast"
+	NotInLastStr            = "notInLast"
+	*/
 	results := make(map[int]bool)
 	propertyValue := fmt.Sprintf("%v", eventPropValue)
-	eventPropertyValue, err := strconv.ParseInt(propertyValue, 10, 64)
+	eventPropertyValueFloat, err := strconv.ParseFloat(propertyValue, 64)
+	eventPropertyValue  := int64(eventPropertyValueFloat) * 1000
 	if err != nil {
 		return false
 	}
 	for i, value := range filterValues {
-		if value.Operator == M.EqualsOpStr {
-			dateTimeFilter, err := M.DecodeDateTimePropertyValue(value.Value)
+		dateTimeFilter, err := M.DecodeDateTimePropertyValue(value.Value)
 			if err != nil {
 				return false
 			}
-			if eventPropertyValue >= dateTimeFilter.From && eventPropertyValue <= dateTimeFilter.To {
+		if value.Operator == M.BeforeStr {
+			if eventPropertyValue <= dateTimeFilter.To {
 				results[i] = true
 			} else {
 				results[i] = false
+			}
+		}
+		if value.Operator == M.SinceStr {
+			if eventPropertyValue >= dateTimeFilter.From {
+				results[i] = true
+			} else {
+				results[i] = false
+			}
+		}
+		if value.Operator == M.BetweenStr {
+			if eventPropertyValue >= dateTimeFilter.From  && eventPropertyValue <= dateTimeFilter.To{
+				results[i] = true
+			} else {
+				results[i] = false
+			}
+		}
+		if value.Operator == M.NotInBetweenStr {
+			if eventPropertyValue <= dateTimeFilter.From  && eventPropertyValue >= dateTimeFilter.To{
+				results[i] = true
+			} else {
+				results[i] = false
+			}
+		}
+		if value.Operator == M.InLastStr || value.Operator == M.NotInLastStr {
+			from, to, _ := U.GetDynamicPreviousRanges(dateTimeFilter.Granularity, dateTimeFilter.Number,  U.TimeZoneStringUTC)
+			if(value.Operator == M.InLastStr){
+				if eventPropertyValue >= from && eventPropertyValue <= to{
+					results[i] = true
+				} else {
+					results[i] = false
+				}
+			}
+			if(value.Operator == M.NotInLastStr){
+				if eventPropertyValue <= from && eventPropertyValue >= to {
+					results[i] = true
+				} else {
+					results[i] = false
+				}
+			}
+		}
+		if value.Operator == M.InCurrent || value.Operator == M.NotInCurrent {
+			from, to, _ := U.GetDynamicPreviousRanges(dateTimeFilter.Granularity, 0,  U.TimeZoneStringUTC)
+			if(value.Operator == M.InCurrent){
+				if eventPropertyValue >= from && eventPropertyValue <= to{
+					results[i] = true
+				} else {
+					results[i] = false
+				}
+			}
+			if(value.Operator == M.NotInCurrent){
+				if eventPropertyValue <= from && eventPropertyValue >= to {
+					results[i] = true
+				} else {
+					results[i] = false
+				}
 			}
 		}
 	}

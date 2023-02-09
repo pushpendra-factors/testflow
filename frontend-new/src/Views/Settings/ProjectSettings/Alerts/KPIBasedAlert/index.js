@@ -31,8 +31,8 @@ import {
   enableSlackIntegration
 } from 'Reducers/global';
 import SelectChannels from '../SelectChannels';
-import FAFilterSelect from 'Components/FaFilterSelect';
 import useAutoFocus from 'hooks/useAutoFocus';
+import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 
 const { Option } = Select;
 
@@ -602,7 +602,7 @@ const KPIBasedAlert = ({
             </Col>
           </Row>
           <Row className={'m-0'}>
-            <Col span={18}>
+            <Col span={24}>
               <Form.Item name='query_type' className={'m-0'}>
                 {queryList()}
               </Form.Item>
@@ -1034,15 +1034,11 @@ const KPIBasedAlert = ({
                 >
                   Filters
                 </Text>
-                {viewFilter.map((filt, index) => (
-                  <div key={index} className={'mt-2'}>
-                    <FAFilterSelect
-                      filter={filt}
-                      disabled={true}
-                      applyFilter={() => {}}
-                    ></FAFilterSelect>
-                  </div>
-                ))}
+                <GLobalFilter
+                  filters={viewFilter}
+                  delFilter={false}
+                  viewMode
+                />
               </Col>
             </Row>
           )}
@@ -1412,15 +1408,11 @@ const KPIBasedAlert = ({
               >
                 Filters
               </Text>
-              {viewFilter.map((filt, index) => (
-                <div key={index} className={'mt-2'}>
-                  <FAFilterSelect
-                    filter={filt}
-                    disabled={true}
-                    applyFilter={() => {}}
-                  ></FAFilterSelect>
-                </div>
-              ))}
+              <GLobalFilter
+                filters={viewFilter}
+                delFilter={false}
+                viewMode
+              />
             </Col>
           </Row>
         )}

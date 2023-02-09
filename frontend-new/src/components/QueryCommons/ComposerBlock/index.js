@@ -28,6 +28,8 @@ function ComposerBlock({
       'The primary user action which a campaign is expected to drive';
   } else if (blockTitle === 'CRITERIA') {
     tooltipContent = 'Pick an attribution model for your analysis';
+  } else if (blockTitle === 'FUNNEL CRITERIA') {
+    tooltipContent = 'Specify an advanced criteria such as conversion window';
   } else if (blockTitle === 'LINKED EVENTS') {
     tooltipContent =
       'Select events you expect to occur after the conversion goal you defined above.';

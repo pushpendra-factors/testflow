@@ -9,10 +9,11 @@ import (
 	"net/http"
 	"time"
 
+	E "factors/event_match"
+
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-	E "factors/event_match"
 )
 
 const (
@@ -255,7 +256,7 @@ func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([
 	return eventAlerts, http.StatusFound
 }
 
-func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId string, eventProps, userProps *postgres.Jsonb) (*[]model.EventTriggerAlert, int) {
+func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, int) {
 	logFields := log.Fields{
 		"project_id":       projectId,
 		"event_name":       eventNameId,
@@ -271,12 +272,15 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		return nil, errCode
 	}
 
-	var userPropMap, eventPropMap *map[string]interface{}
-	if(userProps != nil){
+	var userPropMap, eventPropMap, updatedEventProps *map[string]interface{}
+	if userProps != nil {
 		userPropMap, _ = U.DecodePostgresJsonb(userProps)
 	}
-	if(eventProps != nil){
+	if eventProps != nil {
 		eventPropMap, _ = U.DecodePostgresJsonb(eventProps)
+	}
+	if UpdatedEventProps != nil {
+		updatedEventProps, _ = U.DecodePostgresJsonb(UpdatedEventProps)
 	}
 
 	var matchedAlerts []model.EventTriggerAlert
@@ -288,7 +292,23 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 			return nil, http.StatusInternalServerError
 		}
 
-		if(E.EventMatchesFilterCriterionList(*userPropMap, *eventPropMap, E.MapFilterProperties(config.Filter))){
+		if(isUpdate == true){
+			if(len(*updatedEventProps) == 0){
+				continue
+			} else {
+				isPropertyInFilterUpdated := false
+				for _, fil := range config.Filter {
+					_, exists := (*updatedEventProps)[fil.Property]
+					if(fil.Entity == "event" && exists == true){
+						isPropertyInFilterUpdated = true
+					}
+				}
+				if(isPropertyInFilterUpdated == false){
+					continue
+				}
+			}
+		}
+		if E.EventMatchesFilterCriterionList(*userPropMap, *eventPropMap, E.MapFilterProperties(config.Filter)) {
 			matchedAlerts = append(matchedAlerts, alert)
 		}
 	}
@@ -307,25 +327,24 @@ func AddAlertToCache(alert *model.EventTriggerAlertConfig, event *model.Event, k
 	log.Info("Inside AddAlertToCache function.")
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-
-	messageProperties := make([]model.QueryGroupByProperty,0)
+	messageProperties := make([]model.QueryGroupByProperty, 0)
 	err := U.DecodePostgresJsonbToStructType(alert.MessageProperty, &messageProperties)
-	if(err != nil){
+	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Jsonb decoding to struct failure")
 		return http.StatusInternalServerError, err
 	}
 	var userPropMap, eventPropMap *map[string]interface{}
-	if(event.UserProperties != nil){
+	if event.UserProperties != nil {
 		userPropMap, _ = U.DecodePostgresJsonb(event.UserProperties)
 	}
-	if(len(event.Properties.RawMessage) != 0){
+	if len(event.Properties.RawMessage) != 0 {
 		eventPropMap, _ = U.DecodePostgresJsonb(&event.Properties)
 	}
 
 	propMap := make(U.PropertiesMap, 0)
 	for _, messageProperty := range messageProperties {
 		p := messageProperty.Property
-		if(messageProperty.Entity == "user"){
+		if messageProperty.Entity == "user" {
 			propMap[p] = (*userPropMap)[p]
 		} else {
 			propMap[p] = (*eventPropMap)[p]
@@ -449,8 +468,8 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 			return false
 		}
 	} else {
-		log.WithFields(log.Fields{"project_id": event.ProjectId,
-			"event_trigger_alert": alert}).Error("Alert was not sent for current EventTriggerAlert as daily AlertLimit has been reached.")
+		log.WithFields(log.Fields{"project_id": event.ProjectId, "event_trigger_alert": *alert}).
+			Info("Alert was not sent for current EventTriggerAlert as daily AlertLimit has been reached.")
 	}
 
 	return true

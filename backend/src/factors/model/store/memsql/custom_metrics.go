@@ -2,12 +2,13 @@ package memsql
 
 import (
 	C "factors/config"
-	U "factors/util"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -188,6 +189,9 @@ func (store *MemSQL) getCustomMetricByProjectIdNameAndQueryType(projectID int64,
 
 	var customMetric model.CustomMetric
 	err := db.Where("project_id = ? AND type_of_query = ? AND name = ?", projectID, queryType, name).Find(&customMetric).Error
+	if err == gorm.ErrRecordNotFound {
+		return customMetric, err.Error(), http.StatusNotFound
+	}
 	if err != nil {
 		logCtx.WithError(err).Warn("Failed while retrieving custom metrics.")
 		return customMetric, err.Error(), http.StatusInternalServerError

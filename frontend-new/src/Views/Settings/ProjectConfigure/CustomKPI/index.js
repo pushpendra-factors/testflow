@@ -28,16 +28,19 @@ import {
   getEventProperties
 } from 'Reducers/coreQuery/middleware';
 import _ from 'lodash';
-import GLobalFilter from './GlobalFilter';
+import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import { formatFilterDate } from '../../../../utils/dataFormatter';
 import styles from './index.module.scss';
 import {
-  reverseOperatorMap,
-  reverseDateOperatorMap,
   convertDateTimeObjectValuesToMilliSeconds,
   getKPIQuery,
-  DefaultDateRangeFormat
+  DefaultDateRangeFormat,
+  getEventsWithPropertiesKPI
 } from './utils';
+import {
+  reverseOperatorMap,
+  reverseDateOperatorMap
+} from 'Utils/operatorMapping';
 import { FILTER_TYPES } from '../../../CoreQuery/constants';
 import QueryBlock from './QueryBlock';
 import {
@@ -205,79 +208,6 @@ function CustomKPI({
     setEventFilterValues(opts);
   };
 
-  const operatorMap = {
-    '=': 'equals',
-    '!=': 'notEqual',
-    contains: 'contains',
-    'does not contain': 'notContains',
-    '<': 'lesserThan',
-    '<=': 'lesserThanOrEqual',
-    '>': 'greaterThan',
-    '>=': 'greaterThanOrEqual',
-    between: 'between',
-    'not between': 'notInBetween',
-    'in the previous': 'inLast',
-    'not in the previous': 'notInLast',
-    'in the current': 'inCurrent',
-    'not in the current': 'notInCurrent',
-    before: 'before',
-    since: 'since'
-  };
-
-  const getEventsWithPropertiesKPI = (filters, category = null) => {
-    const filterProps = [];
-    // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
-    filters.forEach((fil) => {
-      if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => {
-          filterProps.push({
-            prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
-            prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
-            co: operatorMap[fil.operator],
-            lOp: !index ? 'AND' : 'OR',
-            en:
-              category === 'channels' || category === 'custom_channels'
-                ? ''
-                : fil?.extra
-                ? fil?.extra[3]
-                : 'event',
-            objTy:
-              category === 'channels' || category === 'custom_channels'
-                ? fil?.extra
-                  ? fil?.extra[3]
-                  : 'event'
-                : '',
-            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
-          });
-        });
-      } else {
-        filterProps.push({
-          prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
-          prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
-          co: operatorMap[fil.operator],
-          lOp: 'AND',
-          en:
-            category === 'channels' || category === 'custom_channels'
-              ? ''
-              : fil?.extra
-              ? fil?.extra[3]
-              : 'event',
-          objTy:
-            category === 'channels' || category === 'custom_channels'
-              ? fil?.extra
-                ? fil?.extra[3]
-                : 'event'
-              : '',
-          va:
-            fil.props[1] === 'datetime'
-              ? formatFilterDate(fil.values)
-              : fil.values
-        });
-      }
-    });
-    return filterProps;
-  };
-
   const queryChange = (newEvent, index, changeType = 'add', flag = null) => {
     const queryupdated = [...queries];
     if (queryupdated[index]) {
@@ -378,7 +308,7 @@ function CustomKPI({
           agPr: KPIPropertyDetails?.name,
           agPrTy: KPIPropertyDetails?.data_type,
           fil: filterValues?.globalFilters
-            ? getEventsWithPropertiesKPI(filterValues?.globalFilters)
+            ? getEventsWithPropertiesKPI(filterValues?.globalFilters, '')
             : [],
           daFie: data.kpi_dateField
         }
@@ -411,7 +341,7 @@ function CustomKPI({
           agPr: EventPropertyDetails?.name,
           agPrTy: EventPropertyDetails?.data_type,
           fil: EventfilterValues?.globalFilters
-            ? getEventsWithPropertiesKPI(EventfilterValues?.globalFilters)
+            ? getEventsWithPropertiesKPI(EventfilterValues?.globalFilters, '')
             : [],
           daFie: '',
           evNm: data?.event,
@@ -549,28 +479,62 @@ function CustomKPI({
   }, [savedCustomKPI]);
 
   const getStateFromFilters = (rawFilters) => {
-    const filters = [];
+    const eventFilters = [];
 
+    let ref = -1,
+      lastProp = '',
+      lastOp = '';
     rawFilters.forEach((pr) => {
       if (pr.lOp === 'AND') {
-        const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
-
+        ref += 1;
+        const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
         const DNa = matchEventName(pr.prNa);
-
-        filters.push({
+        const isCamp =
+          pr?.ca === 'channels' || pr?.ca === 'custom_channels'
+            ? pr.objTy
+            : pr.en;
+        eventFilters.push({
           operator:
             pr.prDaTy === 'datetime'
               ? reverseDateOperatorMap[pr.co]
               : reverseOperatorMap[pr.co],
-          props: [DNa, pr.prDaTy, 'filter'],
-          values: pr.prDaTy === FILTER_TYPES.DATETIME ? [val] : val,
-          extra: [DNa, pr.prNa, pr.prDaTy]
+          props: [DNa, pr.prDaTy, isCamp],
+          values:
+            pr.prDaTy === FILTER_TYPES.DATETIME
+              ? convertDateTimeObjectValuesToMilliSeconds(val)
+              : val,
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+          ref
         });
-      } else if (pr.prDaTy === FILTER_TYPES.CATEGORICAL) {
-        filters[filters.length - 1].values.push(pr.va);
+        lastProp = pr.prNa;
+        lastOp = pr.co;
+      } else if (lastProp === pr.prNa && lastOp === pr.co) {
+        eventFilters[eventFilters.length - 1].values.push(pr.va);
+      } else {
+        const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
+        const DNa = matchEventName(pr.prNa);
+        const isCamp =
+          pr?.ca === 'channels' || pr?.ca === 'custom_channels'
+            ? pr.objTy
+            : pr.en;
+        eventFilters.push({
+          operator:
+            pr.prDaTy === 'datetime'
+              ? reverseDateOperatorMap[pr.co]
+              : reverseOperatorMap[pr.co],
+          props: [DNa, pr.prDaTy, isCamp],
+          values:
+            pr.prDaTy === FILTER_TYPES.DATETIME
+              ? convertDateTimeObjectValuesToMilliSeconds(val)
+              : val,
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+          ref
+        });
+        lastProp = pr.prNa;
+        lastOp = pr.co;
       }
     });
-    return filters;
+    return eventFilters;
   };
 
   const excludeEventsFromList = [
@@ -831,14 +795,10 @@ function CustomKPI({
               <Text type='title' level={7} extraClass='m-0 mt-6'>
                 Filter
               </Text>
-              {/* {getGlobalFilters(viewKPIDetails?.transformations?.fil)} */}
               <GLobalFilter
                 filters={getStateFromFilters(
                   viewKPIDetails?.transformations?.fil
                 )}
-                setGlobalFilters={setEventGlobalFiltersOption}
-                selKPICategory={selEventName}
-                DDKPIValues={EventfilterDDValues}
                 delFilter={false}
                 viewMode
               />
@@ -1172,10 +1132,6 @@ function CustomKPI({
                         <Row className='mt-8'>
                           <Col span={18}>
                             <div className='border-top--thin-2 border-bottom--thin-2 pt-5 pb-5'>
-                              {/* <Collapse defaultActiveKey={['1']} ghost expandIconPosition={'right'}>
-                                        <Panel header={<Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>FILTER BY</Text>} key="1">
-                                         */}
-
                               <Text
                                 type='title'
                                 level={7}
@@ -1193,10 +1149,8 @@ function CustomKPI({
                                 ]}
                                 setGlobalFilters={setGlobalFiltersOption}
                                 selKPICategory={selKPICategory}
-                                DDKPIValues={filterDDValues}
+                                KPIConfigProps={filterDDValues}
                               />
-                              {/* </Panel>
-                                    </Collapse> */}
                             </div>
                           </Col>
                         </Row>
@@ -1441,19 +1395,10 @@ function CustomKPI({
                           <Text type='title' level={7} extraClass='m-0 mt-6'>
                             Filter
                           </Text>
-                          {/* {getGlobalFilters(viewKPIDetails?.transformations?.fil)} */}
                           <GLobalFilter
                             filters={getStateFromFilters(
                               viewKPIDetails?.transformations?.fil
                             )}
-                            onFiltersLoad={[
-                              () => {
-                                getUserProperties(activeProject.id, null);
-                              }
-                            ]}
-                            setGlobalFilters={setGlobalFiltersOption}
-                            selKPICategory={selKPICategory}
-                            DDKPIValues={filterDDValues}
                             delFilter={false}
                             viewMode
                           />
@@ -1539,33 +1484,12 @@ function CustomKPI({
                                   >
                                     Filters
                                   </Text>
-                                  {getStateFromFilters(item.fil).map(
-                                    (filter, index) => (
-                                      <div key={index} className='mt-1'>
-                                        <Button
-                                          className='mr-2'
-                                          type='link'
-                                          disabled
-                                        >
-                                          {filter.extra[0]}
-                                        </Button>
-                                        <Button
-                                          className='mr-2'
-                                          type='link'
-                                          disabled
-                                        >
-                                          {filter.operator}
-                                        </Button>
-                                        <Button
-                                          className='mr-2'
-                                          type='link'
-                                          disabled
-                                        >
-                                          {filter.values[0]}
-                                        </Button>
-                                      </div>
-                                    )
-                                  )}
+
+                                  <GLobalFilter
+                                    filters={getStateFromFilters(item.fil)}
+                                    delFilter={false}
+                                    viewMode
+                                  />
                                 </Col>
                               </Row>
                             )}

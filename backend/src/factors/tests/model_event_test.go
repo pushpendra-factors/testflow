@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -57,8 +58,15 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.True(t, event.Timestamp != 0)
 	assert.Equal(t, event.Timestamp, event.PropertiesUpdatedTimestamp)
 	eventProperties, _ := U.DecodePostgresJsonb(&event.Properties)
-	assert.True(t, (*eventProperties)["$day_of_week"] != "" && (*eventProperties)["$day_of_week"] == time.Unix(event.Timestamp, 0).Weekday().String())
-	hr, _, _ := time.Unix(event.Timestamp, 0).Clock()
+	timezoneString := U.TimeZoneStringUTC
+	if C.IsIngestionTimezoneEnabled(event.ProjectId) {
+		var statusCode int
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(event.ProjectId)
+		assert.Equal(t, http.StatusFound, statusCode)
+	}
+	timeWithTimezone := U.ConvertTimeIn(time.Unix(event.Timestamp, 0), timezoneString)
+	assert.True(t, (*eventProperties)["$day_of_week"] != "" && (*eventProperties)["$day_of_week"] == timeWithTimezone.Weekday().String())
+	hr, _, _ := timeWithTimezone.Clock()
 	assert.True(t, (*eventProperties)["$hour_of_day"] != 0 && (*eventProperties)["$hour_of_day"] == float64(hr))
 	assert.True(t, (*eventProperties)["$timestamp"].(float64) != 0 && (*eventProperties)["$timestamp"].(float64) == float64(event.Timestamp))
 
@@ -87,10 +95,17 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.True(t, event.Timestamp != 0)
 	eventProperties, err = U.DecodePostgresJsonb(&event.Properties)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, (*eventProperties)["$day_of_week"], time.Unix(event.Timestamp, 0).Weekday().String())
+	timezoneString = U.TimeZoneStringUTC
+	if C.IsIngestionTimezoneEnabled(event.ProjectId) {
+		var statusCode int
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(event.ProjectId)
+		assert.Equal(t, http.StatusFound, statusCode)
+	}
+	timeWithTimezone = U.ConvertTimeIn(time.Unix(event.Timestamp, 0), timezoneString)
+	assert.True(t, (*eventProperties)["$day_of_week"] != "" && (*eventProperties)["$day_of_week"] == timeWithTimezone.Weekday().String())
+	hr, _, _ = timeWithTimezone.Clock()
+	assert.True(t, (*eventProperties)["$hour_of_day"] != 0 && (*eventProperties)["$hour_of_day"] == float64(hr))
 	assert.True(t, (*eventProperties)["$timestamp"].(float64) != 0 && (*eventProperties)["$timestamp"].(float64) == float64(event.Timestamp))
-	hr, _, _ = time.Unix(event.Timestamp, 0).Clock()
-	assert.Equal(t, (*eventProperties)["$hour_of_day"], float64(hr))
 
 	t.Run("DuplicateCustomerEventId", func(t *testing.T) {
 		custEventId := U.RandomString(8)
@@ -175,8 +190,16 @@ func TestWeekOfDay(t *testing.T) {
 	assert.True(t, event.Timestamp != 0)
 	assert.Equal(t, event.Timestamp, event.PropertiesUpdatedTimestamp)
 	eventProperties, _ := U.DecodePostgresJsonb(&event.Properties)
-	assert.True(t, (*eventProperties)["$day_of_week"] != "" && (*eventProperties)["$day_of_week"] == "Sunday")
-	assert.True(t, (*eventProperties)["$hour_of_day"] != 0 && (*eventProperties)["$hour_of_day"] == float64(4))
+	timezoneString := U.TimeZoneStringUTC
+	if C.IsIngestionTimezoneEnabled(event.ProjectId) {
+		var statusCode int
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(event.ProjectId)
+		assert.Equal(t, http.StatusFound, statusCode)
+	}
+	timeWithTimezone := U.ConvertTimeIn(time.Unix(event.Timestamp, 0), timezoneString)
+	assert.True(t, (*eventProperties)["$day_of_week"] != "" && (*eventProperties)["$day_of_week"] == timeWithTimezone.Weekday().String())
+	hr, _, _ := timeWithTimezone.Clock()
+	assert.True(t, (*eventProperties)["$hour_of_day"] != 0 && (*eventProperties)["$hour_of_day"] == float64(hr))
 }
 
 func createEventWithTimestampAndPrperties(t *testing.T, project *model.Project, user *model.User, timestamp int64, properties json.RawMessage) (*model.EventName, *model.Event) {
@@ -535,4 +558,19 @@ func TestGetEventByIdWithoutEventAndUserProperties(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, event.ID, eventID)
 	assert.Equal(t, newEvent.UserId, userID)
+}
+
+func TestPrependEvent(t *testing.T) {
+	e1 := model.Event{ID: "e1"}
+	e2 := model.Event{ID: "e2"}
+
+	events := make([]model.Event, 0, 0)
+	events = append(events, e1, e2)
+
+	e3 := model.Event{ID: "e3"}
+
+	events = model.PrependEvent(e3, events)
+	assert.Equal(t, "e3", events[0].ID)
+	assert.Equal(t, "e1", events[1].ID)
+	assert.Equal(t, "e2", events[2].ID)
 }

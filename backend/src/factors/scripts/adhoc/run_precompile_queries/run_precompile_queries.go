@@ -69,7 +69,7 @@ func getAllQueriesAsPostgresJsonb(queries []model.Queries) []postgres.Jsonb {
 }
 
 // Runs queries for 10 seconds timerange to compile and cache plans for consequtive runs.
-func runQueriesForCompilation(projectID uint64, queries []model.Queries, logCtx *log.Entry) {
+func runQueriesForCompilation(projectID int64, queries []model.Queries, logCtx *log.Entry) {
 	queriesJsonb := getAllQueriesAsPostgresJsonb(queries)
 
 	for qji := range queriesJsonb {
@@ -90,7 +90,7 @@ func runQueriesForCompilation(projectID uint64, queries []model.Queries, logCtx 
 			query.To = time.Now().Unix()
 			query.From = query.To - 10
 
-			_, statusCode, statusMsg := store.GetStore().Analyze(projectID, query)
+			_, statusCode, statusMsg := store.GetStore().Analyze(projectID, query, true, false)
 			if statusCode == http.StatusInternalServerError {
 				logCtx.WithField("message", statusMsg).Error("Failed running insights, events or funnel query.")
 				continue
@@ -107,7 +107,7 @@ func runQueriesForCompilation(projectID uint64, queries []model.Queries, logCtx 
 			query.To = time.Now().Unix()
 			query.From = query.To - 10
 
-			_, statusCode, statusMsg := store.GetStore().ExecuteProfilesQuery(projectID, query)
+			_, statusCode, statusMsg := store.GetStore().ExecuteProfilesQuery(projectID, query, true)
 			if statusCode == http.StatusInternalServerError {
 				logCtx.WithField("message", statusMsg).Error("Failed running profiles query.")
 				continue
@@ -124,11 +124,11 @@ func runQueriesForCompilation(projectID uint64, queries []model.Queries, logCtx 
 			query.To = time.Now().Unix()
 			query.From = query.To - 10
 
-			_, statusCode := store.GetStore().ExecuteChannelQuery(projectID, &query)
-			if statusCode == http.StatusInternalServerError {
-				logCtx.Error("Failed running channel query.")
-				continue
-			}
+			// _, statusCode := store.GetStore().ExecuteChannelQuery(projectID, &query)
+			// if statusCode == http.StatusInternalServerError {
+			// 	logCtx.Error("Failed running channel query.")
+			// 	continue
+			// }
 
 		case model.QueryClassChannelV1:
 			var query model.ChannelQueryV1

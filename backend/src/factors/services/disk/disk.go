@@ -221,15 +221,35 @@ func (dd *DiskDriver) GetUsersFilePathAndName(dateField string, projectId int64,
 }
 
 func (dd *DiskDriver) GetModelMetricsFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
 	modelType := U.GetModelType(startTimestamp, endTimestamp)
-	path := dd.GetProjectDataFileDir(projectId, startTimestamp, "", modelType)
-	return path, "metrics.txt"
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, "metrics", modelType)
+	pathArr := strings.Split(dd.baseDir, "/")
+	folderName := pathArr[len(pathArr)-1]
+	if folderName == "cloud_storage" {
+		fileName = "metrics.txt"
+	} else {
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("metrics_%s-%s.txt", dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
 }
 
 func (dd *DiskDriver) GetModelAlertsFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {
+	var fileName string
 	modelType := U.GetModelType(startTimestamp, endTimestamp)
-	path := dd.GetProjectDataFileDir(projectId, startTimestamp, "", modelType)
-	return path, "alerts.txt"
+	path := dd.GetProjectDataFileDir(projectId, startTimestamp, "alerts", modelType)
+	pathArr := strings.Split(dd.baseDir, "/")
+	folderName := pathArr[len(pathArr)-1]
+	if folderName == "cloud_storage" {
+		fileName = "alerts.txt"
+	} else {
+		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		fileName = fmt.Sprintf("alerts_%s-%s.txt", dateFormattedStart, dateFormattedEnd)
+	}
+	return path, fileName
 }
 
 func (dd *DiskDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp, endTimestamp int64) (string, string) {

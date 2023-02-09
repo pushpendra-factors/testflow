@@ -16,15 +16,9 @@ import (
 
 func main() {
 	envFlag := flag.String("env", C.DEVELOPMENT, "Environment. Could be development|staging|production.")
-	projectIDFlag := flag.Uint64("project_id", 0, "Project ID for the bigquery account")
+	projectIDFlag := flag.Int64("project_id", 0, "Project ID for the bigquery account")
 	queryFlag := flag.String("query", "", "Query to run on Bigquery")
 	outputFileFlag := flag.String("outf", "", "If the query result is to be written to a file")
-
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
@@ -48,14 +42,6 @@ func main() {
 	config := &C.Configuration{
 		AppName: appName,
 		Env:     *envFlag,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-			AppName:  appName,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,

@@ -133,7 +133,7 @@ func writeFileToGCP(projectId int64, modelId uint64, name string, fpath string,
 	} else {
 		path = writePath
 	}
-	mineLog.Infof("Reading file from (toGCP)   : %s ", fpath)
+	mineLog.Debugf("Reading file from (toGCP)   : %s ", fpath)
 	f, err := os.OpenFile(fpath, os.O_RDWR, 0666)
 	if err != nil {
 		return fmt.Errorf("unable to open file : %s :%v", fpath, err)
@@ -145,7 +145,7 @@ func writeFileToGCP(projectId int64, modelId uint64, name string, fpath string,
 		*bufio.Reader
 	}{0, bufio.NewReader(f)}
 
-	mineLog.Infof("Writing file to GCP : %s , %s ", path, name)
+	mineLog.Debugf("Writing file to GCP : %s , %s ", path, name)
 	err = (*cloudManager).Create(path, name, r)
 	if err != nil {
 		mineLog.Error("Failed to create event file to cloud.")
@@ -200,7 +200,7 @@ func countPatternController(beamStruct *merge.RunBeamConfig, projectId int64, mo
 	patternEnames := make([]PatterNamesIdx, 0)
 
 	numPatterns := len(patterns)
-	mineLog.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
+	mineLog.Debug(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
 	batchSize := beamStruct.NumWorker
 	numRoutines = int(math.Ceil(float64(numPatterns) / float64(batchSize)))
 
@@ -218,13 +218,13 @@ func countPatternController(beamStruct *merge.RunBeamConfig, projectId int64, mo
 
 	modEventsFile := fmt.Sprintf("events_modified_%d.txt", modelId)
 	modelpath := modelpathDir + modEventsFile
-	mineLog.Infof("model path of modified file:%s", modelpath)
+	mineLog.Debugf("model path of modified file:%s", modelpath)
 	cPatterns := make([]string, 0)
 	for i := 0; i < numRoutines; i++ {
 		// Each worker gets a slice of patterns to count.
 		low := int64(math.Min(float64(batchSize*i), float64(numPatterns)))
 		high := int64(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
-		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
+		mineLog.Debug(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
 
 		t, err := json.Marshal(CPatternsBeam{
 			projectId, modelId, low, high, filepathString, countOccurence, countsVersion, hmineSupport,
@@ -237,10 +237,10 @@ func countPatternController(beamStruct *merge.RunBeamConfig, projectId int64, mo
 	}
 
 	ptInputPath := filepath.Join(efTmpPath, "pinput", scopeName+".txt")
-	mineLog.Infof("File patterns name : %s", ptInputPath)
+	mineLog.Debugf("File patterns name : %s", ptInputPath)
 
 	pfFile, err := create(ptInputPath)
-	mineLog.Info(err)
+	mineLog.Debug(err)
 	if err != nil {
 		return "", fmt.Errorf("unable to create file :%v", ptInputPath)
 	}
@@ -300,12 +300,12 @@ func countPatternController(beamStruct *merge.RunBeamConfig, projectId int64, mo
 	configEncodedString := string(configJson)
 	efTmpPath = modelpathDir
 	if beam.Initialized() {
-		mineLog.Info("Initialized beam")
+		mineLog.Debug("Initialized beam")
 	} else {
 		mineLog.Fatal("Unable to init beam")
 	}
 	if s.IsValid() {
-		mineLog.Info("Scope is Valid")
+		mineLog.Debug("Scope is Valid")
 	} else {
 		mineLog.Fatal("Scope is not valid")
 	}
@@ -324,8 +324,8 @@ func countPatternController(beamStruct *merge.RunBeamConfig, projectId int64, mo
 		return "", err
 	}
 	patternsFpath := filepath.Join(modelpathDir, "patterns_part", scopeName)
-	mineLog.Infof("Patterns writtens to GCP : %s ", patternsFpath)
-	mineLog.Infof("completed counting patterns in beam")
+	mineLog.Debugf("Patterns writtens to GCP : %s ", patternsFpath)
+	mineLog.Debugf("completed counting patterns in beam")
 	return patternsFpath, nil
 }
 
@@ -339,7 +339,7 @@ func UserPropertiesHistogramController(beamStruct *merge.RunBeamConfig, projectI
 	var countsVersion int = cAlgoProps.Counting_version
 	var hmineSupport float32 = cAlgoProps.Hmine_support
 	numPatterns := len(patterns)
-	mineLog.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
+	mineLog.Debug(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
 	batchSize := beamStruct.NumWorker
 	numRoutines = int(math.Ceil(float64(numPatterns) / float64(batchSize)))
 
@@ -350,8 +350,8 @@ func UserPropertiesHistogramController(beamStruct *merge.RunBeamConfig, projectI
 
 	bucketName := (*cloudManager).GetBucketName()
 	modelpathDir := (*cloudManager).GetProjectModelDir(projectId, modelId)
-	mineLog.Infof("bucketName :%s", bucketName)
-	mineLog.Infof("model path :%s", modelpathDir)
+	mineLog.Debugf("bucketName :%s", bucketName)
+	mineLog.Debugf("model path :%s", modelpathDir)
 	modEventsFile := fmt.Sprintf("events_modified_%d.txt", modelId)
 
 	err := WritePatternsToGCP(projectId, modelId, scopeName, patterns, cloudManager, diskManager)
@@ -360,14 +360,14 @@ func UserPropertiesHistogramController(beamStruct *merge.RunBeamConfig, projectI
 	}
 
 	modelpath := modelpathDir + modEventsFile
-	mineLog.Infof("model path of modified file:%s", modelpath)
+	mineLog.Debugf("model path of modified file:%s", modelpath)
 
 	cPatterns := make([]string, 0)
 	for i := 0; i < numRoutines; i++ {
 		// Each worker gets a slice of patterns to count.
 		low := int64(math.Min(float64(batchSize*i), float64(numPatterns)))
 		high := int64(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
-		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
+		mineLog.Debug(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
 
 		t, err := json.Marshal(CPatternsBeam{
 			projectId, modelId, low, high, mod_events_path, countOccurence, countsVersion, hmineSupport,
@@ -380,10 +380,10 @@ func UserPropertiesHistogramController(beamStruct *merge.RunBeamConfig, projectI
 	}
 
 	ptInputPath := filepath.Join(efTmpPath, "pinput", scopeName+".txt")
-	mineLog.Infof("File patterns name : %s", ptInputPath)
+	mineLog.Debugf("File patterns name : %s", ptInputPath)
 
 	pfFile, err := create(ptInputPath)
-	mineLog.Info(err)
+	mineLog.Debug(err)
 	if err != nil {
 		return "", fmt.Errorf("unable to create file :%v", ptInputPath)
 	}
@@ -443,12 +443,12 @@ func UserPropertiesHistogramController(beamStruct *merge.RunBeamConfig, projectI
 	configEncodedString := string(configJson)
 	efTmpPath = modelpathDir
 	if beam.Initialized() {
-		mineLog.Info("Initialized beam")
+		mineLog.Debug("Initialized beam")
 	} else {
 		mineLog.Fatal("Unable to init beam")
 	}
 	if s.IsValid() {
-		mineLog.Info("Scope is Valid")
+		mineLog.Debug("Scope is Valid")
 	} else {
 		mineLog.Fatal("Scope is not valid")
 	}
@@ -467,8 +467,8 @@ func UserPropertiesHistogramController(beamStruct *merge.RunBeamConfig, projectI
 		return "", err
 	}
 	patternsFpath := filepath.Join(modelpathDir, "patterns_part", scopeName)
-	mineLog.Infof("Patterns writtens to GCP : %s ", patternsFpath)
-	mineLog.Infof("completed counting patterns in beam")
+	mineLog.Debugf("Patterns writtens to GCP : %s ", patternsFpath)
+	mineLog.Debugf("completed counting patterns in beam")
 	return patternsFpath, nil
 
 }
@@ -831,12 +831,12 @@ func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *fi
 		return []*P.Pattern{}, 0, fmt.Errorf(errorString)
 	}
 	if totalConsumedBytes >= maxTotalBytes {
-		mineLog.Info(fmt.Sprintf("No quota. totalConsumedBytes: %d, maxTotalBytes: %d",
+		mineLog.Debug(fmt.Sprintf("No quota. totalConsumedBytes: %d, maxTotalBytes: %d",
 			totalConsumedBytes, maxTotalBytes))
 		return []*P.Pattern{}, 0, nil
 	}
 
-	mineLog.Infof("Reading from part files Directory : %s", partFilesDir)
+	mineLog.Debugf("Reading from part files Directory : %s", partFilesDir)
 	listFiles := (*cloudManager).ListFiles(partFilesDir)
 	patterns := make([]*P.Pattern, 0)
 	trim_stage := 0
@@ -857,7 +857,7 @@ func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *fi
 		if err != nil {
 			log.WithFields(log.Fields{"file": partFileName, "fileSize": fileSize, "err": err}).Fatal("Couldn't get part file size")
 		}
-		mineLog.Infof("part file: %s, fileSize : %d", partFileName, fileSize)
+		mineLog.Debugf("part file: %s, fileSize : %d", partFileName, fileSize)
 		totalFileSize += fileSize
 	}
 
@@ -867,7 +867,7 @@ func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *fi
 		if !U.HasPrefixFromList(partFileName, []string{"part_"}) {
 			continue
 		}
-		mineLog.Infof("Reading part file : %s", partFileName)
+		mineLog.Debugf("Reading part file : %s", partFileName)
 		file, err := (*cloudManager).Get(partFilesDir, partFileName)
 		if err != nil {
 			return nil, 0, err
@@ -958,7 +958,7 @@ func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *fi
 		cumulativeBytes += pBytes
 	}
 
-	mineLog.Infof("Total number of patterns mined : %d", len(patterns))
+	mineLog.Debugf("Total number of patterns mined : %d", len(patterns))
 	return patterns, cumulativeBytes, nil
 }
 
@@ -1002,7 +1002,7 @@ func compressPattern(pattern *P.Pattern, maxBytesSize int64, trimMap map[int]int
 	pString := string(b)
 	patternTrimBytes := int64(len([]byte(pString)))
 	if patternTrimBytes > max_PATTERN_SIZE_IN_BYTES {
-		mineLog.Infof("pattern size exceeds max Pattern size :%v", pattern.EventNames)
+		mineLog.Debugf("pattern size exceeds max Pattern size :%v", pattern.EventNames)
 	}
 	return pattern, patternTrimBytes, nil
 }
@@ -1340,9 +1340,9 @@ func WritePatternsBlocksToGCP(projectId int64, modelId uint64, cloudManager *fil
 	modelpath, scopeName, filepathString, efTmpPath string) (string, error) {
 
 	ptInputPath := filepath.Join(efTmpPath, "pinput", scopeName+".txt")
-	mineLog.Infof("File patterns name : %s", ptInputPath)
+	mineLog.Debugf("File patterns name : %s", ptInputPath)
 	pfFile, err := create(ptInputPath)
-	mineLog.Info(err)
+	mineLog.Debug(err)
 	if err != nil {
 		return "", fmt.Errorf("unable to create file :%v", ptInputPath)
 	}
@@ -1350,7 +1350,7 @@ func WritePatternsBlocksToGCP(projectId int64, modelId uint64, cloudManager *fil
 		// Each worker gets a slice of patterns to count.
 		low := int64(math.Min(float64(batchSize*i), float64(numPatterns)))
 		high := int64(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
-		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
+		mineLog.Debug(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
 
 		t, err := json.Marshal(CPatternsBeam{
 			projectId, modelId, low, high,
@@ -1389,7 +1389,7 @@ func WritePatternsToGCP(project_id int64, model_id uint64, scope string, pattern
 	scope_path := filepath.Join(artifacts_path, scope, "patterns.txt")
 
 	pattern_file, err := create(scope_path)
-	mineLog.Info(err)
+	mineLog.Debug(err)
 	if err != nil {
 		return fmt.Errorf("unable to create file :%v", scope_path)
 	}
@@ -1465,6 +1465,8 @@ func ReadPatternsGCP(ctx context.Context, project_id int64, model_id uint64, sco
 }
 
 func GenLenOneV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+	// create patterns and set segment to 1in case to compute the properties using hmine
+
 	job_events_map := make(map[string]bool, 0)
 	patterns := make([]*P.Pattern, 0)
 
@@ -1473,17 +1475,22 @@ func GenLenOneV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, er
 	for _, e := range jb.Query.Rule.IncludedEvents {
 		job_events_map[e] = true
 	}
-	for k, _ := range job_events_map {
-		ev := make([]string, 0)
-		ev = append(ev, k)
-		p, err := P.NewPattern(ev, us)
+	for ename, _ := range job_events_map {
+		eventSlice := make([]string, 0)
+		eventSlice = append(eventSlice, ename)
+		p, err := P.NewPattern(eventSlice, us)
 		if err != nil {
 			return nil, err
 		}
 		p.Segment = 0
+		if strings.Compare(ename, jb.Query.StartEvent) == 0 || strings.Compare(ename, jb.Query.EndEvent) == 0 {
+			p.Segment = 1
+
+		}
 		patterns = append(patterns, p)
 
 	}
+
 	return patterns, nil
 }
 
@@ -1541,7 +1548,7 @@ func CreateFourLenEventsV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.P
 	}
 
 	for _, p := range patterns {
-		mineLog.Infof("four len patterns :%v", p.EventNames)
+		mineLog.Debugf("four len patterns :%v", p.EventNames)
 	}
 	return patterns, nil
 }

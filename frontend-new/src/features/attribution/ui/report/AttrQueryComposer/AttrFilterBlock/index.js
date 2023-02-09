@@ -6,11 +6,12 @@ import { Input, Button, Result } from 'antd';
 import MomentTz from 'Components/MomentTz';
 import { SVG, Text } from 'factorsComponents';
 import { DEFAULT_DATE_RANGE } from 'Components/QueryComposer/DateRangeSelector/utils';
+import { OPERATORS } from 'Utils/constants';
 
 const defaultOpProps = {
-  categorical: ['=', '!=', 'contains', 'does not contain'],
-  numerical: ['=', '!=', '<', '<=', '>', '>='],
-  datetime: ['=']
+  categorical: DEFAULT_OP_PROPS['categorical'],
+  numerical: DEFAULT_OP_PROPS['numerical'],
+  datetime: [OPERATORS['equalTo']]
 };
 
 import {
@@ -19,6 +20,7 @@ import {
   fetchChannelObjPropertyValues
 } from 'Reducers/coreQuery/services';
 import AttrFilterSelect from '../AttrFilterSelect';
+import { DEFAULT_OP_PROPS } from 'Utils/operatorMapping';
 
 export default function AttrFilterBlock({
   index,

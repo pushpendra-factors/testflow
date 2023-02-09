@@ -34,7 +34,10 @@ export const defaultSortProp = (queryOptions, attrQueries, data) => {
     'group_analysis',
     ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
   );
-  if (groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.HUBSPOT_DEALS) {
+  if (
+    groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.HUBSPOT_DEALS ||
+    groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.SALESFORCE_OPPORTUNITIES
+  ) {
     if (attrQueries.length > 0) {
       const firstQueryLabel = get(attrQueries[0], 'label', undefined);
       if (firstQueryLabel) {
@@ -82,7 +85,8 @@ const getBarLineChartSeriesKeys = ({
   attrQueries,
   groupAnalysis,
   currentEventIndex = 0,
-  headers
+  headers,
+  touchPoint
 }) => {
   if (
     groupAnalysis &&
@@ -103,6 +107,9 @@ const getBarLineChartSeriesKeys = ({
       }
     }
     return result;
+  }
+  if (isLandingPageOrAllPageViewSelected(touchPoint)) {
+    return ['Conversion'];
   }
   return ['Conversion', 'Cost Per Conversion'];
 };
@@ -129,7 +136,8 @@ export const getSingleTouchPointChartData = (
     attrQueries,
     groupAnalysis,
     currentEventIndex,
-    headers: keys(data[0])
+    headers: keys(data[0]),
+    touchPoint
   });
   const listDimensions = isLandingPageOrAllPageViewSelected(touchPoint)
     ? content_groups.slice()
@@ -158,19 +166,6 @@ export const getSingleTouchPointChartData = (
           : Number(row[[seriesKeys[0]]])
       ),
       color: CHART_COLOR_1
-    },
-    {
-      type: 'line',
-      yAxis: 1,
-      data: slicedTableData.map((row) =>
-        isComparisonApplied
-          ? Number(row[seriesKeys[1]]?.value)
-          : Number(row[seriesKeys[1]])
-      ),
-      color: CHART_COLOR_8,
-      marker: {
-        symbol: 'circle'
-      }
     }
   ];
   if (isComparisonApplied) {
@@ -182,27 +177,42 @@ export const getSingleTouchPointChartData = (
       ),
       color: CHART_COLOR_1
     });
+  }
+  if (seriesKeys[1]) {
     series.push({
       type: 'line',
       yAxis: 1,
       data: slicedTableData.map((row) =>
-        Number(row[seriesKeys[1]]?.compare_value)
+        isComparisonApplied
+          ? Number(row[seriesKeys[1]]?.value)
+          : Number(row[seriesKeys[1]])
       ),
       color: CHART_COLOR_8,
       marker: {
         symbol: 'circle'
-      },
-      dashStyle: 'dash'
+      }
     });
-    const temp = series[1];
-    series[1] = series[2];
-    series[2] = temp;
+    if (isComparisonApplied) {
+      series.push({
+        type: 'line',
+        yAxis: 1,
+        data: slicedTableData.map((row) =>
+          Number(row[seriesKeys[1]]?.compare_value)
+        ),
+        color: CHART_COLOR_8,
+        marker: {
+          symbol: 'circle'
+        },
+        dashStyle: 'dash'
+      });
+    }
   }
 
-  const legends = [
-    getLegendsLabel({ key: seriesKeys[0] }),
-    getLegendsLabel({ key: seriesKeys[1] })
-  ];
+  const legends = [getLegendsLabel({ key: seriesKeys[0] })];
+
+  if (seriesKeys[1]) {
+    legends.push(getLegendsLabel({ key: seriesKeys[1] }));
+  }
 
   return {
     categories,

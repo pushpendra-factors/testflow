@@ -5,7 +5,6 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -382,36 +381,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom,
 			qParams = append(qParams, linkedEventNameIDs...)
 			qParams = append(qParams, value...)
 
-			// add event filter
-			wStmtEvent, wParamsEvent, eventJoinStmnt, err := getFilterSQLStmtForEventProperties(
-				projectID, linkedEvent.Properties, queryFrom)
-			if err != nil {
-				return err, nil
-			}
-
-			if wStmtEvent != "" {
-				whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtEvent)
-				qParams = append(qParams, wParamsEvent...)
-			}
-
-			// add user filter
-			wStmtUser, wParamsUser, eventUserJoinStmnt, err := getFilterSQLStmtForUserProperties(projectID, linkedEvent.Properties, queryFrom)
-			if err != nil {
-				return err, nil
-			}
-
-			if wStmtUser != "" {
-				whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtUser)
-				qParams = append(qParams, wParamsUser...)
-			}
-
-			// JOIN events_properties_json table, if there is
-			// filter on event_properties or event_user_properties.
-			if eventJoinStmnt == "" {
-				eventJoinStmnt = eventUserJoinStmnt
-			}
-
-			queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
+			queryEventHits := selectEventHits + " " + whereEventHits
 
 			// fetch query results
 			rows, tx, err, reqID := store.ExecQueryWithContext(queryEventHits, qParams)

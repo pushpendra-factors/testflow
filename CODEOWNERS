@@ -1,0 +1,120 @@
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# They will be requested for review when someone opens a pull request.
+*       aravind@factors.ai dinesh@factors.ai
+
+
+# Below folders will require approval from one of the owners.
+/backend/src/factors/cache/redis/ dinesh@factors.ai janani@factors.ai
+/backend/src/factors/config/ dinesh@factors.ai janani@factors.ai
+/backend/src/factors/crm_enrichment/ maisa@factors.ai
+/backend/src/factors/data_service/ dinesh@factors.ai kartheek@factors.ai maisa@factors.ai
+/backend/src/factors/dd_attribution/ anil@factors.ai
+/backend/src/factors/default_data/ kartheek@factors.ai
+/backend/src/factors/delta/ anshul@factors.ai janani@factors.ai
+/backend/src/factors/event_match/ janani@factors.ai
+/backend/src/factors/explain/ anshul@factors.ai janani@factors.ai vinith@factors.ai
+/backend/src/factors/filestore/ janani@factors.ai
+/backend/src/factors/fivetran/ janani@factors.ai
+/backend/src/factors/fptree/ vinith@factors.ai
+/backend/src/factors/handlers/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
+/backend/src/factors/histogram/ vinith@factors.ai
+/backend/src/factors/integration/clear_bit/ anil@factors.ai
+/backend/src/factors/integration/hubspot/ maisa@factors.ai
+/backend/src/factors/integration/salesforce/ maisa@factors.ai
+/backend/src/factors/integration/segment/ dinesh@factors.ai
+/backend/src/factors/integration/six_signal/ anil@factors.ai
+/backend/src/factors/leadsquared/ janani@factors.ai
+/backend/src/factors/merge/ anshul@factors.ai vinith@factors.ai
+/backend/src/factors/metrics/ dinesh@factors.ai
+/backend/src/factors/middleware/ janani@factors.ai
+/backend/src/factors/migrations/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
+/backend/src/factors/model/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
+/backend/src/factors/pattern/ anshul@factors.ai janani@factors.ai vinith@factors.ai
+/backend/src/factors/pattern_client/ vinith@factors.ai
+/backend/src/factors/pattern_server/ vinith@factors.ai
+/backend/src/factors/pattern_server_wrapper/ vinith@factors.ai
+/backend/src/factors/predict/ vinith@factors.ai
+/backend/src/factors/pull/ anshul@factors.ai
+/backend/src/factors/quickchart/ sumit@factors.ai
+/backend/src/factors/scripts/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
+/backend/src/factors/sdk/ dinesh@factors.ai
+/backend/src/factors/services/ dinesh@factors.ai janani@factors.ai
+/backend/src/factors/session/ janani@factors.ai
+/backend/src/factors/slack_bot/ sumit@factors.ai
+/backend/src/factors/task/ janani@factors.ai maisa@factors.ai vinith@factors.ai
+/backend/src/factors/tests
+/backend/src/factors/util/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
+/backend/src/factors/vendor/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
+/backend/src/factors/vendor_custom/ dinesh@factors.ai
+/backend/src/factors/workers/ dinesh@factors.ai janani@factors.ai
+
+/devicedetector_data/ ashhar@factors.ai
+/email-templates/ baliga@factors.ai
+
+/frontend-new/ akhil@factors.ai baliga@factors.ai jitesh@factors.ai vikas@factors.ai
+/frontend-new/src/Views/AppLayout/ akhil@factors.ai baliga@factors.ai
+/frontend-new/src/Views/CoreQuery/ akhil@factors.ai baliga@factors.ai
+/frontend-new/src/Views/CoreQueryHome/ akhil@factors.ai baliga@factors.ai
+/frontend-new/src/Views/Dashboard/ jitesh@factors.ai
+/frontend-new/src/Views/DashboardTemplates/ akhil@factors.ai
+/frontend-new/src/Views/Factors/ baliga@factors.ai
+/frontend-new/src/Views/Pages/ baliga@factors.ai
+/frontend-new/src/Views/PathAnalysis/ baliga@factors.ai
+/frontend-new/src/Views/Settings/ baliga@factors.ai
+/frontend-new/src/Views/componentsLib/ baliga@factors.ai
+/frontend-new/src/components/AdBlockerDetector/ baliga@factors.ai
+/frontend-new/src/components/AppModal/ baliga@factors.ai
+/frontend-new/src/components/AttrQueryComposer/ akhil@factors.ai
+/frontend-new/src/components/AxisOptionsContainer/ jitesh@factors.ai
+/frontend-new/src/components/BarChart/ jitesh@factors.ai
+/frontend-new/src/components/CampQueryComposer/ jitesh@factors.ai
+/frontend-new/src/components/ChartTypeDropdown/ jitesh@factors.ai
+/frontend-new/src/components/ColumnChart/ jitesh@factors.ai
+/frontend-new/src/components/ComparisonDatePicker/ jitesh@factors.ai
+/frontend-new/src/components/ConfirmationModal/ baliga@factors.ai
+/frontend-new/src/components/ContentTabs/ jitesh@factors.ai
+/frontend-new/src/components/ControlledComponent/ jitesh@factors.ai
+/frontend-new/src/components/DataTable/ jitesh@factors.ai
+/frontend-new/src/components/DataTableFilters/ jitesh@factors.ai
+/frontend-new/src/components/DeleteQueryModal/ jitesh@factors.ai
+/frontend-new/src/components/FaDatepicker/ baliga@factors.ai
+/frontend-new/src/components/FaFilterSelect/ akhil@factors.ai
+/frontend-new/src/components/FaHeader/ vikas@factors.ai
+/frontend-new/src/components/FaPublicHeader/ deepak@factors.ai
+/frontend-new/src/components/FaSelect/ akhil@factors.ai
+/frontend-new/src/components/FaTimeline/ vikas@factors.ai
+/frontend-new/src/components/GranularityOptions/ jitesh@factors.ai
+/frontend-new/src/components/GroupedBarChart/ jitesh@factors.ai
+/frontend-new/src/components/HCBarLineChart/ jitesh@factors.ai
+/frontend-new/src/components/HCLineChart/ jitesh@factors.ai
+/frontend-new/src/components/HorizontalBarChart/ jitesh@factors.ai
+/frontend-new/src/components/HorizontalWindow/ baliga@factors.ai
+/frontend-new/src/components/Icons/ baliga@factors.ai
+/frontend-new/src/components/KPIComposer/ baliga@factors.ai
+/frontend-new/src/components/MetricChart/ jitesh@factors.ai
+/frontend-new/src/components/MomentTz/ baliga@factors.ai
+/frontend-new/src/components/NavigationBar/ vikas@factors.ai
+/frontend-new/src/components/NoDataChart/ baliga@factors.ai
+/frontend-new/src/components/NonClickableTableHeader/ jitesh@factors.ai
+/frontend-new/src/components/PivotTable/ jitesh@factors.ai
+/frontend-new/src/components/PivotTableControls/ jitesh@factors.ai
+/frontend-new/src/components/PrivateRoute/ akhil@factors.ai
+/frontend-new/src/components/Profile/ vikas@factors.ai
+/frontend-new/src/components/ProfileComposer/ vikas@factors.ai
+/frontend-new/src/components/ProjectModal/ vikas@factors.ai
+/frontend-new/src/components/QueryCommons/ComposerBlock/ akhil@factors.ai
+/frontend-new/src/components/QueryComposer/ akhil@factors.ai
+/frontend-new/src/components/SaveQuery/ jitesh@factors.ai
+/frontend-new/src/components/ScatterPlotChart/ jitesh@factors.ai
+/frontend-new/src/components/SearchBar/ akhil@factors.ai jitesh@factors.ai
+/frontend-new/src/components/SearchCheckList/ vikas@factors.ai
+/frontend-new/src/components/ShareToEmailModal/ baliga@factors.ai
+/frontend-new/src/components/ShareToSlackModal/ baliga@factors.ai
+/frontend-new/src/components/Sidebar/ baliga@factors.ai
+/frontend-new/src/components/SparkChartWithCount/ jitesh@factors.ai
+/frontend-new/src/components/SparkLineChart/ jitesh@factors.ai
+/frontend-new/src/components/StackedAreaChart/ jitesh@factors.ai
+/frontend-new/src/components/StackedBarChart/ jitesh@factors.ai
+/frontend-new/src/components/SuspenseLoaders/ jitesh@factors.ai
+/frontend-new/src/components/factorsComponents/ baliga@factors.ai

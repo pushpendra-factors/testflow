@@ -9,6 +9,7 @@ export const NAMED_QUERY = 'named_query';
 export const QUERY_TYPE_PROFILE = 'profiles';
 export const FONT_FAMILY =
   "'Inter','Work Sans', sans-serif, 'Helvetica Neue', Arial, 'Noto Sans'";
+export const QUERY_TYPE_SEGMENT = 'segments';
 
 export const ATTRIBUTION_METHODOLOGY = [
   {
@@ -59,6 +60,7 @@ export const CHART_TYPE_TABLE = 'table';
 export const CHART_TYPE_SCATTER_PLOT = 'scatterplotchart';
 export const CHART_TYPE_METRIC_CHART = 'metricchart';
 export const CHART_TYPE_PIVOT_CHART = 'pivotchart';
+export const CHART_TYPE_FUNNEL_CHART = 'funnelchart';
 export const BARCHART_TICK_LENGTH = 20;
 export const UNGROUPED_FUNNEL_TICK_LENGTH = 50;
 
@@ -162,7 +164,8 @@ export const presentationObj = {
   sp: CHART_TYPE_SCATTER_PLOT,
   hb: CHART_TYPE_HORIZONTAL_BAR_CHART,
   pi: CHART_TYPE_PIVOT_CHART,
-  mc: CHART_TYPE_METRIC_CHART
+  mc: CHART_TYPE_METRIC_CHART,
+  fc: CHART_TYPE_FUNNEL_CHART
 };
 
 export const apiChartAnnotations = {
@@ -175,11 +178,12 @@ export const apiChartAnnotations = {
   [CHART_TYPE_SCATTER_PLOT]: 'sp',
   [CHART_TYPE_HORIZONTAL_BAR_CHART]: 'hb',
   [CHART_TYPE_PIVOT_CHART]: 'pi',
-  [CHART_TYPE_METRIC_CHART]: 'mc'
+  [CHART_TYPE_METRIC_CHART]: 'mc',
+  [CHART_TYPE_FUNNEL_CHART]: 'fc'
 };
 
 export const MAX_ALLOWED_VISIBLE_PROPERTIES = 10;
-export const GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES = 6;
+export const GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES = 8;
 
 export const DASHBOARD_TYPES = {
   WEB: 'web',
@@ -442,8 +446,8 @@ export const DefaultChartTypes = {
     dual_touch_point: CHART_TYPE_BARCHART
   },
   [QUERY_TYPE_FUNNEL]: {
-    breakdown: CHART_TYPE_BARCHART,
-    no_breakdown: CHART_TYPE_BARCHART
+    breakdown: CHART_TYPE_FUNNEL_CHART,
+    no_breakdown: CHART_TYPE_FUNNEL_CHART
   },
   [QUERY_TYPE_PROFILE]: {
     no_breakdown: CHART_TYPE_HORIZONTAL_BAR_CHART,
@@ -586,8 +590,8 @@ export const ProfileMapper = {
   'All Deals': 'hubspot',
   'All Accounts': 'salesforce',
   'All Companies': 'hubspot',
-  Marketo: 'marketo',
-  LeadSquared: 'leadsquared'
+  'Marketo Person': 'marketo',
+  'LeadSquared Person': 'leadsquared'
 };
 
 export const ReverseProfileMapper = {
@@ -602,8 +606,8 @@ export const ReverseProfileMapper = {
     $salesforce_opportunity: 'All Opportunities',
     $salesforce_account: 'All Accounts'
   },
-  marketo: { users: 'Marketo' },
-  leadsquared: { users: 'LeadSquared' }
+  marketo: { users: 'Marketo Person' },
+  leadsquared: { users: 'LeadSquared Person' }
 };
 
 export const profileOptions = {
@@ -611,8 +615,8 @@ export const profileOptions = {
     ['Website Visitors'],
     ['Hubspot Contacts'],
     ['Salesforce Users'],
-    ['Marketo'],
-    ['LeadSquared']
+    ['Marketo Person'],
+    ['LeadSquared Person']
   ],
   $salesforce_opportunity: [['All Opportunities']],
   $hubspot_deal: [['All Deals']],
@@ -674,4 +678,27 @@ export const FunnelEventsConditionMap = {
 export const RevFunnelEventsConditionMap = {
   'This Order': 'any_given_event',
   'Any Order': 'funnel_any_given_event'
+};
+
+export const OPERATORS = {
+  equalTo: '=',
+  notEqualTo: '!=',
+  contain: 'contains',
+  doesNotContain: 'does not contain',
+  lesserThan: '<',
+  lesserThanOrEqual: '<=',
+  greaterThan: '>',
+  greaterThanOrEqual: '>=',
+  between: 'between',
+  notBetween: 'not between',
+  inThePrevious: 'in the previous',
+  notInThePrevious: 'not in the previous',
+  inTheLast: 'in the last',
+  notInTheLast: 'not in the last',
+  inTheCurrent: 'in the current',
+  notInTheCurrent: 'not in the current',
+  before: 'before',
+  since: 'since',
+  isKnown: 'is known',
+  isUnknown: 'is unknown'
 };

@@ -735,9 +735,9 @@ func ComputeAllUserPropertiesHistogram(projectID int64, scanner *bufio.Scanner, 
 		if err != nil {
 			log.Fatalf("unable to compute hmine user patterns to :%v", err)
 		}
-		log.Infof("num of properties from hmine usert info :%d", len(result_user.Fpts))
+		log.Debugf("num of properties from hmine usert info :%d", len(result_user.Fpts))
 		userRes := fp.ConvertHmineFptreeContainer(result_user)
-		log.Infof("computed user properties info num_trns:%d num_res:%d user_properties:%d", trans_size, result_size, len(userRes))
+		log.Debugf("computed user properties info num_trns:%d num_res:%d user_properties:%d", trans_size, result_size, len(userRes))
 		pattern.UserPropertiesPatterns = userRes
 		pattern.PatternVersion = 3
 
@@ -865,22 +865,22 @@ func CountPatterns(projectID int64, scanner *bufio.Scanner, patterns []*Pattern,
 
 				treePathEventRes := path.Join(hm.BasePathEventRes, pt.PropertiesBasePath)
 				topk_hmine := getHmineQuota()
-				trans_size, result_size_event, _, err := fp.CountAndWriteResultsToFile(treePathEvent, treePathEventRes, hmineSupport, 1, topk_hmine)
+				trans_size, _, _, err := fp.CountAndWriteResultsToFile(treePathEvent, treePathEventRes, hmineSupport, 1, topk_hmine)
 				if err != nil {
 					log.Fatal("unable to write hmmine event results file:%s", treePathEventRes)
 				}
-				log.Infof("%d computed hpatterns event :%d from %d transaction", idxPt, result_size_event, trans_size)
+				// log.Infof("%d computed hpatterns event :%d from %d transaction", idxPt, result_size_event, trans_size)
 
 				if trans_size != int(pt.numPropsEvent) {
 					log.Fatalf("number of transactions are not matching event :%d ,%d,%s", trans_size, pt.numPropsEvent, treePathEvent)
 				}
 				treePathUserRes := path.Join(hm.BasePathUserRes, pt.PropertiesBasePath)
-				trans_size, result_size_user, _, err := fp.CountAndWriteResultsToFile(treePathUser, treePathUserRes, hmineSupport, 1, topk_hmine)
+				trans_size, _, _, err = fp.CountAndWriteResultsToFile(treePathUser, treePathUserRes, hmineSupport, 1, topk_hmine)
 
 				if err != nil {
 					log.Fatalf("unable to write hmine user results to file:%v", err, treePathUserRes)
 				}
-				log.Infof("%d computed hpatterns user :%d from %d transaction", idxPt, result_size_user, trans_size)
+				// log.Infof("%d computed hpatterns user :%d from %d transaction", idxPt, result_size_user, trans_size)
 
 				if trans_size != int(pt.numPropsUser) {
 					log.Fatalf("number of transactions are not matching user :%d ,%d,%s", trans_size, pt.numPropsUser, treePathUser)
@@ -890,7 +890,7 @@ func CountPatterns(projectID int64, scanner *bufio.Scanner, patterns []*Pattern,
 				pt.UserProps = make([][]string, 0)
 				pt.PatternVersion = 3
 
-				if idxPt%100 == 0 {
+				if idxPt%1000 == 0 {
 					log.Infof("%d - pattern mined using hmine", idxPt)
 				}
 			} else {
@@ -991,7 +991,7 @@ func CountPatternsWithTS(projectID int64, eventsList []CounterEventFormat, numEv
 	}
 
 	for _, p := range uniqueEventPatterns {
-		if p.Segment == 1 {
+		if p.Segment == 1 && len(p.EventNames) > 2 {
 			log.Errorf("pattern is segment count one :%v", p.EventNames)
 		}
 		if err := p.CountForEvent(projectID, userId, userJoinTimestamp, shouldCountOccurence, ets, cAlgoProps); err != nil {
