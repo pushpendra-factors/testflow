@@ -170,6 +170,7 @@ const ExistingReportsModal = ({
           >
             {(item, index) => {
               const queryType = getQueryType(item.query);
+
               let svgName = '';
               Object.entries(queryTypeName).forEach(([k, v]) => {
                 if (queryType === k) {

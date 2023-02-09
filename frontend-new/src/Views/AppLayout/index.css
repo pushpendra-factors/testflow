@@ -1,0 +1,7 @@
+.modal-globalsearch{
+    border-radius: 12px;
+    
+}
+.modal-globalsearch .ant-modal-content{
+    border-radius: inherit !important;
+}

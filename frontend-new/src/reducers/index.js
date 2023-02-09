@@ -17,6 +17,8 @@ import timelines from './timelines';
 import dashboardTemplateReducer from './dashboard_templates';
 import dashboard_templates_modal_Reducer from './dashboard_templates_modal';
 import attributionReducer from '../features/attribution/state/reducer';
+import globalSearch from './globalSearch';
+import allRoutes from './allRoutes';
 
 const rootReducer = combineReducers({
   global: GlobalReducer,
@@ -36,7 +38,10 @@ const rootReducer = combineReducers({
   dashboardTemplates: dashboardTemplateReducer,
   dashboard_templates_Reducer: dashboard_templates_modal_Reducer,
   pathAnalysis,
-  attributionDashboard: attributionReducer
+  attributionDashboard: attributionReducer,
+  globalSearch: globalSearch,
+  allRoutes: allRoutes
+  
 });
 
 export default rootReducer;
