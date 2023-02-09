@@ -324,6 +324,7 @@ func InitAppRoutes(r *gin.Engine) {
 	// v1 KPI endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/config", responseWrapper(V1.GetKPIConfigHandler))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", responseWrapper(V1.GetKPIFilterValuesHandler))
+	authRouteGroup.GET("/:project_id/v1/kpi/:custom_event_kpi/properties", V1.GetPropertiesForCustomKPIEventBased)
 	// V1 Routes
 	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/v1/event_names/:type", V1.GetEventNamesByTypeHandler)
@@ -344,10 +345,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authCommonRouteGroup.POST("/dashboard_template/create", mid.FeatureMiddleware(), mid.SkipDemoProjectWriteAccess(), CreateTemplateHandler)
 
 	// property mapping
-	authRouteGroup.POST("/:project_id/kpi/property_mappings", responseWrapper(V1.CreatePropertyMapping))
-	authRouteGroup.GET("/:project_id/kpi/property_mappings", responseWrapper(V1.GetPropertyMappings))
-	authRouteGroup.DELETE("/:project_id/kpi/property_mappings/:id", responseWrapper(V1.DeletePropertyMapping))
-	authRouteGroup.POST("/:project_id/kpi/property_mappings/commom_properties", responseWrapper(V1.GetCommonPropertyMappings))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings", responseWrapper(V1.CreatePropertyMapping))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings", responseWrapper(V1.GetPropertyMappings))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings/:id", responseWrapper(V1.DeletePropertyMapping))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings/commom_properties", responseWrapper(V1.GetCommonPropertyMappings))
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

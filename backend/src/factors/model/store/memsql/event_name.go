@@ -17,6 +17,17 @@ import (
 	"factors/model/model"
 )
 
+var BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES = map[string]string{
+	"$hubspot_contact_created": "$hubspot_",
+	"$hubspot_contact_updated": "$hubspot_",
+	"$hubspot_company_":        "$hubspot_",
+	"$hubspot_deal_":           "$hubspot_",
+	"$sf_contact_":             "$salesforce_",
+	"$sf_lead_":                "$salesforce_",
+	"$sf_account_":             "$salesforce_",
+	"$sf_opportunity_":         "$salesforce_",
+}
+
 func satisfiesEventNameConstraints(eventName model.EventName) int {
 	logFields := log.Fields{
 		"event_name": eventName,
@@ -448,6 +459,51 @@ func (store *MemSQL) GetOrderedEventNamesFromDb(
 	return eventNames, nil
 }
 
+func (store *MemSQL) GetDisplayNamesForEventProperties(projectId int64, properties map[string][]string, eventName string) map[string]string {
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+
+	_, displayNames := store.GetDisplayNamesForAllEventProperties(projectId, eventName)
+	standardPropertiesAllEvent := U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES
+	displayNamesOp := make(map[string]string)
+	for property, displayName := range standardPropertiesAllEvent {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+	if eventName == U.EVENT_NAME_SESSION {
+		standardPropertiesSession := U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES
+		for property, displayName := range standardPropertiesSession {
+			displayNamesOp[property] = strings.Title(displayName)
+		}
+	}
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+
+	_, displayNames = store.GetDisplayNamesForObjectEntities(projectId)
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+	for _, props := range properties {
+		for _, prop := range props {
+			displayName := U.CreateVirtualDisplayName(prop)
+			_, exist := displayNamesOp[prop]
+			if !exist {
+				displayNamesOp[prop] = displayName
+			}
+		}
+	}
+	dupCheck := make(map[string]bool)
+	for _, name := range displayNamesOp {
+		_, exists := dupCheck[name]
+		if exists {
+			logCtx.Warning(fmt.Sprintf("Duplicate display name %s", name))
+		}
+		dupCheck[name] = true
+	}
+	return displayNamesOp
+}
+
 // GetPropertyValuesByEventProperty (Part of event_name and properties caching) This method iterates for
 // last n days to get all the top 'limit' property values for the given property/event
 // Picks all last 24 hours values and sorts the remaining by occurence and returns top 'limit' values
@@ -550,6 +606,54 @@ func getPropertyValuesByEventPropertyFromCache(projectID int64, eventName string
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
 	return cacheValue, nil
+}
+
+// We fetch properties from Cache and filter the required properties based on the eventName provided.
+ 
+func (store *MemSQL) GetEventPropertiesAndModifyResultsForNonExplain(projectId int64, eventName string) (map[string][]string, int) {
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+
+	properties := make(map[string][]string)
+	propertiesFromCache, err := store.GetPropertiesByEvent(projectId, eventName, 2500,
+		C.GetLookbackWindowForEventUserCache())
+	toBeFiltered := false
+	propertyPrefixToRemove := ""
+
+	// By default, hubspot or salesforce prefixed properties are not be added projects. If a project is given in input,
+	// EnableEventLevelEventProperties is true, hubspot or salesforce properties are to be added.
+	enableEventLevelEventProperties := C.EnableEventLevelEventProperties(projectId)
+	for eventPrefix, propertyPrefix := range BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES {
+		if strings.HasPrefix(eventName, eventPrefix) && !enableEventLevelEventProperties {
+			propertyPrefixToRemove = propertyPrefix
+			toBeFiltered = true
+			break
+		}
+	}
+	if toBeFiltered == true {
+		for category, props := range propertiesFromCache {
+			if properties[category] == nil {
+				properties[category] = make([]string, 0)
+			}
+			for _, property := range props {
+				if !strings.HasPrefix(property, propertyPrefixToRemove) {
+					properties[category] = append(properties[category], property)
+				}
+			}
+		}
+	} else {
+		properties = propertiesFromCache
+	}
+	if err != nil {
+		logCtx.WithError(err).Error("get properties by event")
+		return make(map[string][]string, 0), http.StatusInternalServerError
+	}
+	if len(properties) == 0 {
+		logCtx.WithError(err).Error(fmt.Sprintf("No event properties Returned - ProjectID - %v, EventName - %s", projectId, eventName))
+	}
+	return properties, http.StatusOK
 }
 
 // GetPropertiesByEvent (Part of event_name and properties caching) This method iterates for last n days to get all the

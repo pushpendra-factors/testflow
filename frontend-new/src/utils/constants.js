@@ -9,6 +9,7 @@ export const NAMED_QUERY = 'named_query';
 export const QUERY_TYPE_PROFILE = 'profiles';
 export const FONT_FAMILY =
   "'Inter','Work Sans', sans-serif, 'Helvetica Neue', Arial, 'Noto Sans'";
+export const QUERY_TYPE_SEGMENT = 'segments';
 
 export const ATTRIBUTION_METHODOLOGY = [
   {
@@ -586,8 +587,8 @@ export const ProfileMapper = {
   'All Deals': 'hubspot',
   'All Accounts': 'salesforce',
   'All Companies': 'hubspot',
-  Marketo: 'marketo',
-  LeadSquared: 'leadsquared'
+  'Marketo Person': 'marketo',
+  'LeadSquared Person': 'leadsquared'
 };
 
 export const ReverseProfileMapper = {
@@ -602,8 +603,8 @@ export const ReverseProfileMapper = {
     $salesforce_opportunity: 'All Opportunities',
     $salesforce_account: 'All Accounts'
   },
-  marketo: { users: 'Marketo' },
-  leadsquared: { users: 'LeadSquared' }
+  marketo: { users: 'Marketo Person' },
+  leadsquared: { users: 'LeadSquared Person' }
 };
 
 export const profileOptions = {
@@ -611,8 +612,8 @@ export const profileOptions = {
     ['Website Visitors'],
     ['Hubspot Contacts'],
     ['Salesforce Users'],
-    ['Marketo'],
-    ['LeadSquared']
+    ['Marketo Person'],
+    ['LeadSquared Person']
   ],
   $salesforce_opportunity: [['All Opportunities']],
   $hubspot_deal: [['All Deals']],
@@ -674,4 +675,27 @@ export const FunnelEventsConditionMap = {
 export const RevFunnelEventsConditionMap = {
   'This Order': 'any_given_event',
   'Any Order': 'funnel_any_given_event'
+};
+
+export const OPERATORS = {
+  equalTo: '=',
+  notEqualTo: '!=',
+  contain: 'contains',
+  doesNotContain: 'does not contain',
+  lesserThan: '<',
+  lesserThanOrEqual: '<=',
+  greaterThan: '>',
+  greaterThanOrEqual: '>=',
+  between: 'between',
+  notBetween: 'not between',
+  inThePrevious: 'in the previous',
+  notInThePrevious: 'not in the previous',
+  inTheLast: 'in the last',
+  notInTheLast: 'not in the last',
+  inTheCurrent: 'in the current',
+  notInTheCurrent: 'not in the current',
+  before: 'before',
+  since: 'since',
+  isKnown: 'is known',
+  isUnknown: 'is unknown'
 };

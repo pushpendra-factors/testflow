@@ -93,7 +93,7 @@ function GroupSelect2({
                   extraClass={'m-0 ml-2'}
                   weight={'bold'}
                 >
-                  {_.startCase(group.label)}
+                  {group.label}
                 </Text>
               </div>
             </div>
@@ -127,7 +127,7 @@ function GroupSelect2({
                             extraClass={'m-0'}
                             weight={'thin'}
                           >
-                            {textStartCase ? _.startCase(val[0]) : val[0]}
+                            {textStartCase ? val[0] : val[0]}
                           </Text>
                         </div>
                       );

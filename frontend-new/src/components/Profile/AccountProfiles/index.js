@@ -20,16 +20,19 @@ import FaSelect from '../../FaSelect';
 import {
   DEFAULT_TIMELINE_CONFIG,
   displayFilterOpts,
+  formatEventsFromSegment,
   formatFiltersForPayload,
   formatPayloadForFilters,
   formatSegmentsObjToGroupSelectObj,
-  getHost
+  getHost,
+  propValueFormat
 } from '../utils';
 import {
   getProfileAccounts,
   getProfileAccountDetails,
   createNewSegment,
-  getSavedSegments
+  getSavedSegments,
+  updateSegmentForId
 } from '../../../reducers/timelines/middleware';
 import {
   fetchProjectSettings,
@@ -40,6 +43,7 @@ import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from '../UserProfiles/SegmentModal';
+import EventsBlock from '../UserProfiles/EventsBlock';
 
 function AccountProfiles({
   activeProject,
@@ -53,17 +57,19 @@ function AccountProfiles({
   currentProjectSettings,
   getProfileAccounts,
   getProfileAccountDetails,
-  getGroupProperties
+  getGroupProperties,
+  updateSegmentForId
 }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isAccountDDVisible, setAccountDDVisible] = useState(false);
+  const [isGroupDDVisible, setGroupDDVisible] = useState(false);
   const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
   const [showSegmentModal, setShowSegmentModal] = useState(false);
   const [activeSegment, setActiveSegment] = useState({});
-  const [filterPayload, setFilterPayload] = useState({
+  const [accountPayload, setAccountPayload] = useState({
     source: 'All',
     filters: []
   });
+  const { groupPropNames } = useSelector((state) => state.coreQuery);
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
@@ -153,24 +159,44 @@ function AccountProfiles({
           ) || '-'
       }
     ];
-    currentProjectSettings?.timelines_config?.account_config?.table_props?.forEach(
-      (prop) => {
-        columns.push({
-          title: <div className={headerClassStr}>{PropTextFormat(prop)}</div>,
-          dataIndex: prop,
-          key: prop,
-          width: 350,
-          render: (item) => item || '-'
-        });
-      }
-    );
+    const tableProps = accountPayload.segment_id
+      ? activeSegment.query.table_props
+      : currentProjectSettings?.timelines_config?.account_config?.table_props;
+    tableProps?.forEach((prop) => {
+      const propDisplayName = groupPropNames[prop]
+        ? groupPropNames[prop]
+        : PropTextFormat(prop);
+      columns.push({
+        title: (
+          <Text
+            type='title'
+            level={7}
+            color='grey-2'
+            weight='bold'
+            className='m-0'
+            truncate
+          >
+            {propDisplayName}
+          </Text>
+        ),
+        dataIndex: prop,
+        key: prop,
+        width: 300,
+        render: (item) => (
+          <Text type='title' level={7} className='m-0' truncate>
+            {propValueFormat(prop, item) || '-'}
+          </Text>
+        )
+      });
+    });
     columns.push({
       title: <div className={headerClassStr}>Last Activity</div>,
       dataIndex: 'last_activity',
       key: 'last_activity',
-      width: 300,
+      width: 250,
       fixed: 'right',
-      render: (item) => MomentTz(item).format('DD MMMM YYYY, hh:mm:ss A')
+      align: 'right',
+      render: (item) => MomentTz(item).fromNow()
     });
     return columns;
   };
@@ -182,7 +208,11 @@ function AccountProfiles({
         ...row?.table_props
       };
     });
-    return tableData;
+    return tableData.sort(
+      (a, b) =>
+        parseInt((new Date(b.last_activity).getTime() / 1000).toFixed(0)) -
+        parseInt((new Date(a.last_activity).getTime() / 1000).toFixed(0))
+    );
   };
 
   const showModal = () => {
@@ -194,38 +224,38 @@ function AccountProfiles({
   };
 
   const onChange = (val) => {
-    if (val !== filterPayload.source) {
-      const opts = { ...filterPayload };
+    if (val !== accountPayload.source) {
+      const opts = { ...accountPayload };
       opts.source = val;
-      setFilterPayload(opts);
+      setAccountPayload(opts);
     }
-    setAccountDDVisible(false);
+    setGroupDDVisible(false);
   };
 
   const setFilters = (filters) => {
-    const opts = { ...filterPayload };
+    const opts = { ...accountPayload };
     opts.filters = filters;
-    setFilterPayload(opts);
+    setAccountPayload(opts);
   };
 
   const clearFilters = () => {
-    const opts = { ...filterPayload };
+    const opts = { ...accountPayload };
     opts.filters = [];
-    setFilterPayload(opts);
+    setAccountPayload(opts);
   };
 
   useEffect(() => {
-    const opts = { ...filterPayload };
-    opts.filters = formatFiltersForPayload(filterPayload.filters);
+    const opts = { ...accountPayload };
+    opts.filters = formatFiltersForPayload(accountPayload.filters);
     getProfileAccounts(activeProject.id, opts);
-  }, [activeProject, currentProjectSettings, filterPayload]);
+  }, [activeProject, currentProjectSettings, accountPayload, segments]);
 
-  const selectUsers = () => (
+  const selectGroup = () => (
     <div className='absolute top-0'>
-      {isAccountDDVisible ? (
+      {isGroupDDVisible ? (
         <FaSelect
           options={enabledGroups()}
-          onClickOutside={() => setAccountDDVisible(false)}
+          onClickOutside={() => setGroupDDVisible(false)}
           optionClick={(val) => onChange(val[1])}
         />
       ) : null}
@@ -241,13 +271,15 @@ function AccountProfiles({
         ? groupProperties.$salesforce_account
         : [])
     ];
-
-    const userPropsWithEnableKey = formatUserPropertiesToCheckList(
+    const tableProps = accountPayload.segment_id
+      ? activeSegment.query.table_props
+      : currentProjectSettings.timelines_config?.account_config?.table_props;
+    const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
       listProperties,
-      currentProjectSettings.timelines_config?.account_config?.table_props
+      tableProps
     );
-    setCheckListAccountProps(userPropsWithEnableKey);
-  }, [currentProjectSettings, groupProperties]);
+    setCheckListAccountProps(accountPropsWithEnableKey);
+  }, [currentProjectSettings, groupProperties, accountPayload]);
 
   const handlePropChange = (option) => {
     if (
@@ -272,13 +304,25 @@ function AccountProfiles({
   };
 
   const applyTableProps = () => {
-    const config = { ...tlConfig };
-    config.account_config.table_props = checkListAccountProps
-      .filter((item) => item.enabled === true)
-      .map((item) => item?.prop_name);
-    udpateProjectSettings(activeProject.id, {
-      timelines_config: { ...config }
-    });
+    if (accountPayload?.segment_id?.length) {
+      const query = { ...activeSegment.query };
+      query.table_props = checkListAccountProps
+        .filter((item) => item.enabled === true)
+        .map((item) => item?.prop_name);
+      updateSegmentForId(activeProject.id, accountPayload.segment_id, {
+        query: { ...query }
+      })
+        .then(() => getSavedSegments(activeProject.id))
+        .then(() => setActiveSegment({ ...activeSegment, query }));
+    } else {
+      const config = { ...tlConfig };
+      config.account_config.table_props = checkListAccountProps
+        .filter((item) => item.enabled === true)
+        .map((item) => item?.prop_name);
+      udpateProjectSettings(activeProject.id, {
+        timelines_config: { ...config }
+      });
+    }
     setShowPopOver(false);
   };
 
@@ -305,7 +349,7 @@ function AccountProfiles({
 
   const generateSegmentsList = () => {
     const segmentsList = [];
-    if (filterPayload.source === 'All') {
+    if (accountPayload.source === 'All') {
       Object.entries(segments)
         .filter((segment) =>
           ['$hubspot_company', '$salesforce_account'].includes(segment[0])
@@ -316,8 +360,8 @@ function AccountProfiles({
         });
     } else {
       const obj = formatSegmentsObjToGroupSelectObj(
-        filterPayload.source,
-        segments[filterPayload.source]
+        accountPayload.source,
+        segments[accountPayload.source]
       );
       segmentsList.push(obj);
     }
@@ -325,10 +369,10 @@ function AccountProfiles({
   };
 
   const onOptionClick = (_, data) => {
-    const opts = { ...filterPayload };
+    const opts = { ...accountPayload };
     opts.segment_id = data[1];
     setActiveSegment(data[2]);
-    setFilterPayload(opts);
+    setAccountPayload(opts);
     setSegmentDDVisible(false);
   };
 
@@ -356,12 +400,51 @@ function AccountProfiles({
   };
 
   const clearSegment = () => {
-    const opts = { ...filterPayload };
+    const opts = { ...accountPayload };
     opts.segment_id = '';
     setActiveSegment({});
-    setFilterPayload(opts);
+    setAccountPayload(opts);
     setSegmentDDVisible(false);
   };
+
+  const renderAdditionalActionsInSegment = () => (
+    <div className='mb-2'>
+      <Divider className='divider-margin' />
+      <div className='flex items-center flex-col'>
+        {accountPayload.segment_id && (
+          <Button
+            size='large'
+            type='text'
+            className='w-full mb-2'
+            onClick={clearSegment}
+            icon={<SVG name='remove' />}
+          >
+            Clear Segment
+          </Button>
+        )}
+        <Button
+          type='link'
+          size='large'
+          className='w-full'
+          icon={<SVG name='plus' color='purple' />}
+          onClick={() => setShowSegmentModal(true)}
+        >
+          Add New Segment
+        </Button>
+      </div>
+      <SegmentModal
+        profileType='account'
+        activeProject={activeProject}
+        type={accountPayload.source}
+        typeOptions={enabledGroups().filter((group) => group[1] !== 'All')}
+        visible={showSegmentModal}
+        segment={{}}
+        onSave={handleSaveSegment}
+        onCancel={() => setShowSegmentModal(false)}
+        caller={'account_profiles'}
+      />
+    </div>
+  );
 
   const selectSegment = () => (
     <div className='absolute top-8'>
@@ -372,146 +455,163 @@ function AccountProfiles({
           optionClick={onOptionClick}
           onClickOutside={() => setSegmentDDVisible(false)}
           allowEmpty
-          additionalActions={
-            <>
-              <Divider className='divider-margin' />
-              <div className='flex items-center'>
-                <Button
-                  type='link'
-                  size='large'
-                  className='w-full'
-                  icon={<SVG name='plus' color='purple' />}
-                  onClick={() => setShowSegmentModal(true)}
-                >
-                  Add New Segment
-                </Button>
-                {filterPayload.segment_id && (
-                  <Button
-                    type='primary'
-                    size='large'
-                    className='w-full ml-1'
-                    onClick={clearSegment}
-                    danger
-                  >
-                    Clear Segment
-                  </Button>
-                )}
-              </div>
-              <SegmentModal
-                profileType='account'
-                type={filterPayload.source}
-                typeOptions={enabledGroups().filter(
-                  (group) => group[1] !== 'All'
-                )}
-                visible={showSegmentModal}
-                segment={{}}
-                onSave={handleSaveSegment}
-                onCancel={() => setShowSegmentModal(false)}
-              />
-            </>
-          }
+          additionalActions={renderAdditionalActionsInSegment()}
         />
       ) : null}
     </div>
   );
 
-  const segmentInfo = () => {
-    const cardContent = [];
-    if (activeSegment.query) {
-      if (activeSegment.query.gup) {
-        const filters = formatPayloadForFilters(activeSegment.query.gup);
-        cardContent.push(
-          <div className='pointer-events-none mt-3'>
-            <PropertyFilter
-              mode='display'
-              filtersLimit={10}
-              profileType='account'
-              source={filterPayload.source}
-              filters={filters}
-            ></PropertyFilter>
-          </div>
-        );
-      }
-    }
-    return cardContent;
+  const eventsList = (listEvents) => {
+    const blockList = [];
+    listEvents.forEach((event, index) => {
+      blockList.push(
+        <div key={index} className='m-0 mr-2 mb-2'>
+          <EventsBlock
+            index={index + 1}
+            event={event}
+            queries={listEvents}
+            displayMode
+          />
+        </div>
+      );
+    });
+
+    return (
+      <div className='flex items-start'>
+        {blockList.length ? (
+          <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
+            Performed Events
+          </h2>
+        ) : null}
+        <div className='flex flex-wrap flex-col'>{blockList}</div>
+      </div>
+    );
   };
+
+  const filtersList = (filters) => {
+    return (
+      <div className='flex items-start'>
+        <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
+          Properties
+        </h2>
+        <div className='flex flex-wrap flex-col'>
+          <PropertyFilter
+            filtersLimit={10}
+            profileType='user'
+            source={accountPayload.source}
+            filters={filters}
+            displayMode
+          ></PropertyFilter>
+        </div>
+      </div>
+    );
+  };
+
+  const segmentInfo = () => {
+    if (activeSegment.query) {
+      return (
+        <div className='p-3'>
+          {activeSegment.query.ewp && activeSegment.query.ewp.length
+            ? eventsList(formatEventsFromSegment(activeSegment.query.ewp))
+            : null}
+          {activeSegment.query.gup && activeSegment.query.gup.length
+            ? filtersList(formatPayloadForFilters(activeSegment.query.gup))
+            : null}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderGroupSelectDD = () => (
+    <div className='relative mr-2'>
+      <Button
+        className='dropdown-btn'
+        type='text'
+        icon={<SVG name='user_friends' size={16} />}
+        onClick={() => setGroupDDVisible(!isGroupDDVisible)}
+      >
+        {displayFilterOpts[accountPayload.source]}
+        <SVG name='caretDown' size={16} />
+      </Button>
+      {selectGroup()}
+    </div>
+  );
+
+  const renderSegmentSelect = () => (
+    <div className='relative mr-2'>
+      <Popover
+        overlayClassName='fa-custom-popover'
+        placement='bottomLeft'
+        trigger={activeSegment.query ? 'hover' : ''}
+        content={segmentInfo}
+      >
+        <Button
+          className='dropdown-btn'
+          type='text'
+          onClick={() => setSegmentDDVisible(!isSegmentDDVisible)}
+        >
+          {Object.keys(activeSegment).length
+            ? activeSegment.name
+            : 'Select Segment'}
+          <SVG name='caretDown' size={16} />
+        </Button>
+      </Popover>
+      {selectSegment()}
+    </div>
+  );
+
+  const renderPropertyFilter = () => (
+    <div key={0} className='max-w-3xl'>
+      <PropertyFilter
+        profileType='account'
+        source={accountPayload.source}
+        filters={accountPayload.filters}
+        setFilters={setFilters}
+      />
+    </div>
+  );
+
+  const renderClearFilterButton = () => (
+    <Button
+      className='dropdown-btn'
+      type='text'
+      icon={<SVG name='times_circle' size={16} />}
+      onClick={clearFilters}
+    >
+      Clear Filters
+    </Button>
+  );
+  const renderTablePropsSelect = () => (
+    <Popover
+      overlayClassName='fa-activity--filter'
+      placement='bottomLeft'
+      visible={showPopOver}
+      onVisibleChange={(visible) => {
+        setShowPopOver(visible);
+      }}
+      onClick={() => {
+        setShowPopOver(true);
+      }}
+      trigger='click'
+      content={popoverContent}
+    >
+      <Button size='large' className='fa-btn--custom mx-2 relative'>
+        <SVG name='activity_filter' />
+      </Button>
+    </Popover>
+  );
 
   const renderActions = () => (
     <div className='flex justify-between items-start my-4'>
       <div className='flex justify-between'>
-        <div className='relative mr-2'>
-          <Button
-            className='dropdown-btn'
-            type='text'
-            icon={<SVG name='user_friends' size={16} />}
-            onClick={() => setAccountDDVisible(!isAccountDDVisible)}
-          >
-            {displayFilterOpts[filterPayload.source]}
-            <SVG name='caretDown' size={16} />
-          </Button>
-          {selectUsers()}
-        </div>
-        <div className='relative mr-2'>
-          <Popover
-            overlayClassName='fa-custom-popover'
-            placement='bottomLeft'
-            trigger={activeSegment.query ? 'hover' : ''}
-            content={segmentInfo}
-          >
-            <Button
-              className='dropdown-btn'
-              type='text'
-              onClick={() => setSegmentDDVisible(!isSegmentDDVisible)}
-            >
-              {Object.keys(activeSegment).length
-                ? activeSegment.name
-                : 'Select Segment'}
-              <SVG name='caretDown' size={16} />
-            </Button>
-          </Popover>
-          {selectSegment()}
-        </div>
-        <div key={0} className='max-w-3xl'>
-          <PropertyFilter
-            profileType='account'
-            source={filterPayload.source}
-            filters={filterPayload.filters}
-            setFilters={setFilters}
-          />
-        </div>
+        {renderGroupSelectDD()}
+        {renderSegmentSelect()}
+        {renderPropertyFilter()}
       </div>
       <div className='flex items-center justify-between'>
-        {filterPayload.filters.length ? (
-          <Button
-            className='dropdown-btn'
-            type='text'
-            icon={<SVG name='times_circle' size={16} />}
-            onClick={clearFilters}
-          >
-            Clear Filters
-          </Button>
-        ) : null}
-        <Popover
-          overlayClassName='fa-activity--filter'
-          placement='bottomLeft'
-          visible={showPopOver}
-          onVisibleChange={(visible) => {
-            setShowPopOver(visible);
-          }}
-          onClick={() => {
-            setShowPopOver(true);
-          }}
-          trigger='click'
-          content={popoverContent}
-        >
-          <Button
-            size='large'
-            className='fa-btn--custom mx-2 relative'
-            // type='text'
-          >
-            <SVG name='activity_filter' />
-          </Button>
-        </Popover>
+        {accountPayload.filters.length ? renderClearFilterButton() : null}
+        {renderTablePropsSelect()}
       </div>
     </div>
   );
@@ -538,7 +638,7 @@ function AccountProfiles({
         scroll={{
           x:
             currentProjectSettings?.timelines_config?.account_config
-              ?.table_props?.length * 350
+              ?.table_props?.length * 300
         }}
         footer={() => (
           <div className='text-right'>
@@ -582,9 +682,12 @@ function AccountProfiles({
       ) : accounts.data.length ? (
         renderTable()
       ) : (
-        <Text type='title' level={6} extraClass='mt-20 italic'>
-          There are currently no Accounts available for this project.
-        </Text>
+        <div className='ant-empty ant-empty-normal'>
+          <div className='ant-empty-image'>
+            <SVG name='nodata' size={150} />
+          </div>
+          <div className='ant-empty-description'>No Accounts Found</div>
+        </div>
       )}
       {renderAccountDetailsModal()}
     </div>
@@ -607,7 +710,8 @@ const mapDispatchToProps = (dispatch) =>
       getSavedSegments,
       getGroupProperties,
       fetchProjectSettings,
-      udpateProjectSettings
+      udpateProjectSettings,
+      updateSegmentForId
     },
     dispatch
   );

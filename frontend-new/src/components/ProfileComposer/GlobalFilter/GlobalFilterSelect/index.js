@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
-import { Button, InputNumber, Tooltip, Select, DatePicker,Input } from 'antd';
+import { Button, InputNumber, Tooltip, Select, DatePicker, Input } from 'antd';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from 'Components/FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import moment from 'moment';
-import { DEFAULT_OPERATOR_PROPS,dateTimeSelect } from 'Components/FaFilterSelect/utils';
-import { DISPLAY_PROP } from '../../../../utils/constants';
+import {
+  DEFAULT_OPERATOR_PROPS,
+  dateTimeSelect
+} from 'Components/FaFilterSelect/utils';
+import { DISPLAY_PROP, OPERATORS } from 'Utils/constants';
 import { toCapitalCase } from '../../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../../constants/tooltips.constans';
-
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -32,12 +34,12 @@ const GlobalFilterSelect = ({
   setValuesByProps,
   applyFilter,
   filter,
-  refValue,
+  refValue
 }) => {
   const [propState, setPropState] = useState({
     icon: '',
     name: '',
-    type: '',
+    type: ''
   });
 
   const [operatorState, setOperatorState] = useState('=');
@@ -55,7 +57,7 @@ const GlobalFilterSelect = ({
   const { userPropNames, groupPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
   );
-  const [dateOptionSelectOpen,setDateOptionSelectOpen]=useState(false);
+  const [dateOptionSelectOpen, setDateOptionSelectOpen] = useState(false);
 
   useEffect(() => {
     if (
@@ -97,6 +99,15 @@ const GlobalFilterSelect = ({
     }
   }, [updateState]);
 
+  useEffect(() => {
+    if (
+      operatorState?.[0] === OPERATORS['isKnown'] ||
+      operatorState?.[0] === OPERATORS['isUnknown']
+    ) {
+      valuesSelectSingle('$none');
+    }
+  }, [operatorState]);
+
   const setValues = () => {
     let values;
     if (filter.props[1] === 'datetime') {
@@ -136,7 +147,7 @@ const GlobalFilterSelect = ({
         props: [propState.name, propState.type, propState.icon],
         operator: operatorState,
         values: valuesState,
-        ref: refValue,
+        ref: refValue
       });
     }
   };
@@ -217,7 +228,7 @@ const GlobalFilterSelect = ({
     const rangeValue = {
       fr: startDate,
       to: endDate,
-      ovp: false,
+      ovp: false
     };
 
     setValuesState(JSON.stringify(rangeValue));
@@ -237,7 +248,7 @@ const GlobalFilterSelect = ({
       to: toVal,
       ovp: false,
       num: value['num'],
-      gran: value['gran'],
+      gran: value['gran']
     };
     // return (MomentTz(fromVal).format('MMM DD, YYYY') + ' - ' +
     //           MomentTz(toVal).format('MMM DD, YYYY'));
@@ -256,10 +267,10 @@ const GlobalFilterSelect = ({
   const renderPropSelect = () => {
     return (
       <div className={styles.filter__propContainer}>
-        <Tooltip 
+        <Tooltip
           title={renderGroupDisplayName(propState)}
           color={TOOLTIP_CONSTANTS.DARK}
-          >
+        >
           <Button
             icon={
               propState && propState.icon ? (
@@ -291,9 +302,10 @@ const GlobalFilterSelect = ({
   const renderOperatorSelector = () => {
     return (
       <div className={styles.filter__propContainer}>
-        <Tooltip 
+        <Tooltip
           title='Select an equator to define your filter rules.'
-          color={TOOLTIP_CONSTANTS.DARK}>
+          color={TOOLTIP_CONSTANTS.DARK}
+        >
           <Button
             className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
             type='link'
@@ -442,39 +454,19 @@ const GlobalFilterSelect = ({
           ></InputNumber>
 
           <Button
-          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          onClick={() => setDateOptionSelectOpen(true)}
+            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+            type='link'
+            onClick={() => setDateOptionSelectOpen(true)}
           >
-          {parsedValues['gran'] ? dateTimeSelect.get(parsedValues['gran']) : 'Select'}
+            {parsedValues['gran']
+              ? dateTimeSelect.get(parsedValues['gran'])
+              : 'Select'}
           </Button>
 
           {dateOptionSelectOpen && (
             <FaSelect
-              options={[['Days'],['Weeks'],['Months'],['Quarters']]}
+              options={[['Days'], ['Weeks'], ['Months'], ['Quarters']]}
               optionClick={(val) => setDeltaGran(dateTimeSelect.get(val[0]))}
-              onClickOutside={() => setDateOptionSelectOpen(false)}
-            ></FaSelect>
-          )}
-      </div>
-      );
-    }
-
-    if (currentPicker.includes(operator)) {
-      selectorComponent = (
-        <div className={`fa-filter-dateDeltaContainer`}>
-          <Button
-          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          onClick={() => setDateOptionSelectOpen(true)}
-          >
-          {parsedValues['gran'] ? toCapitalCase(parsedValues['gran']) : 'Select'}
-          </Button>
-
-          {dateOptionSelectOpen && (
-            <FaSelect
-              options={[['Week'],['Month'],['Quarter']]}
-              optionClick={(val) => setCurrentGran(val[0].toLowerCase())}
               onClickOutside={() => setDateOptionSelectOpen(false)}
             ></FaSelect>
           )}
@@ -482,6 +474,29 @@ const GlobalFilterSelect = ({
       );
     }
 
+    if (currentPicker.includes(operator)) {
+      selectorComponent = (
+        <div className={`fa-filter-dateDeltaContainer`}>
+          <Button
+            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+            type='link'
+            onClick={() => setDateOptionSelectOpen(true)}
+          >
+            {parsedValues['gran']
+              ? toCapitalCase(parsedValues['gran'])
+              : 'Select'}
+          </Button>
+
+          {dateOptionSelectOpen && (
+            <FaSelect
+              options={[['Week'], ['Month'], ['Quarter']]}
+              optionClick={(val) => setCurrentGran(val[0].toLowerCase())}
+              onClickOutside={() => setDateOptionSelectOpen(false)}
+            ></FaSelect>
+          )}
+        </div>
+      );
+    }
 
     if (datePicker.includes(operator)) {
       selectorComponent = (
@@ -521,7 +536,14 @@ const GlobalFilterSelect = ({
 
     selectionComponent = (
       <FaSelect
-        multiSelect={((isArray(operatorState) ? operatorState[0] : operatorState) === '!=' || (isArray(operatorState) ? operatorState[0] : operatorState) === 'does not contain') ? false : true}
+        multiSelect={
+          (isArray(operatorState) ? operatorState[0] : operatorState) ===
+            '!=' ||
+          (isArray(operatorState) ? operatorState[0] : operatorState) ===
+            'does not contain'
+            ? false
+            : true
+        }
         options={
           valueOpts && valueOpts[propState.name]?.length
             ? valueOpts[propState.name].map((op) => [op])
@@ -549,7 +571,7 @@ const GlobalFilterSelect = ({
       );
       const rang = {
         startDate: dateRange.from,
-        endDate: dateRange.to,
+        endDate: dateRange.to
       };
 
       selectionComponent = selectDateTimeSelector(
@@ -561,30 +583,33 @@ const GlobalFilterSelect = ({
     if (propState.type === 'numerical') {
       selectionComponent = (
         <div>
-        {containButton && (
-          <Button
-          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          onClick={() => setContainButton(false)}
-        >
-          {valuesState ? valuesState : 'Enter Value'}
-        </Button>)}
-        {!containButton &&
-        (<Input
-          type="number"
-          value={valuesState}
-          placeholder={'Enter Value'}
-          autoFocus={true}
-          onBlur={() => {
-            emitFilter()
-            setContainButton(true)}}
-          onPressEnter={()=>{
-            emitFilter()
-            setContainButton(true)}}
-          onChange={setNumericalValue}
-          className={`input-value filter-buttons-radius filter-buttons-margin`}
-        ></Input>)
-        }
+          {containButton && (
+            <Button
+              className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+              type='link'
+              onClick={() => setContainButton(false)}
+            >
+              {valuesState ? valuesState : 'Enter Value'}
+            </Button>
+          )}
+          {!containButton && (
+            <Input
+              type='number'
+              value={valuesState}
+              placeholder={'Enter Value'}
+              autoFocus={true}
+              onBlur={() => {
+                emitFilter();
+                setContainButton(true);
+              }}
+              onPressEnter={() => {
+                emitFilter();
+                setContainButton(true);
+              }}
+              onChange={setNumericalValue}
+              className={`input-value filter-buttons-radius filter-buttons-margin`}
+            ></Input>
+          )}
         </div>
       );
     }
@@ -604,8 +629,8 @@ const GlobalFilterSelect = ({
             color={TOOLTIP_CONSTANTS.DARK}
           >
             <Button
-                className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-                type='link'
+              className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+              type='link'
               onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
             >
               {valuesState && valuesState.length
@@ -630,7 +655,11 @@ const GlobalFilterSelect = ({
 
       {propState?.name ? renderOperatorSelector() : null}
 
-      {operatorState ? renderValuesSelector() : null}
+      {operatorState &&
+      operatorState?.[0] !== OPERATORS['isKnown'] &&
+      operatorState?.[0] !== OPERATORS['isUnknown']
+        ? renderValuesSelector()
+        : null}
     </div>
   );
 };

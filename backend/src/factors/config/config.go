@@ -2138,15 +2138,6 @@ func DisableDashboardQueryDBExecution() bool {
 	return configuration.DisableDashboardQueryDBExecution
 }
 
-func UseEventsFilterPropertiesOptimisedLogic(queryFromTimestamp int64) bool {
-	return configuration.EnableFilterOptimisation &&
-		(queryFromTimestamp >= configuration.FilterPropertiesStartTimestamp)
-}
-
-func UseUsersFilterPropertiesOptimisedLogic() bool {
-	return configuration.EnableFilterOptimisation
-}
-
 func IsDevBox() bool {
 	return configuration.DevBox
 }

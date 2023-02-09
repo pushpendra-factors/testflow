@@ -10,6 +10,7 @@ export const INITIAL_STATE = {
 };
 
 export const SET_NAVIGATED_FROM_DASHBOARD = 'SET_NAVIGATED_FROM_DASHBOARD';
+export const SET_NAVIGATED_FROM_ANALYSE = 'SET_NAVIGATED_FROM_ANALYSE';
 export const SET_COMPARISON_ENABLED = 'SET_COMPARISON_ENABLED';
 export const SET_COMPARISON_SUPPORTED = 'SET_COMPARISON_SUPPORTED';
 export const COMPARISON_DATA_LOADING = 'COMPARISON_DATA_LOADING';
@@ -58,13 +59,14 @@ export const CORE_QUERY_INITIAL_STATE = {
   comparison_supported: false,
   comparison_enabled: false,
   navigatedFromDashboard: false,
+  navigatedFromAnalyse: false,
   navigatedFromDashboardExistingReports: false,
   comparison_duration: null,
   chartTypes: DefaultChartTypes,
   savedQuerySettings: EMPTY_OBJECT,
   pivotConfig: DEFAULT_PIVOT_CONFIG,
   funnelTableConfig: DEFAULT_FUNNEL_TABLE_CONFIG,
-  funnelConversionDurationNumber: 90,
+  funnelConversionDurationNumber: '90',
   funnelConversionDurationUnit: 'D' // D/M/H ---> days/minutes/hours
 };
 

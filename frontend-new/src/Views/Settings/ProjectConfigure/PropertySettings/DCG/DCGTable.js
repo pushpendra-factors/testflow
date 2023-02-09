@@ -2,18 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 
 import { Text, SVG } from 'factorsComponents';
-import {
-  Modal, Col, Button, Tag, Table, Dropdown, Menu, message
-} from 'antd';
+import { Modal, Col, Button, Tag, Table, Dropdown, Menu, message } from 'antd';
 import { udpateProjectDetails } from 'Reducers/global';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import defaultRules from './defaultRules';
 import _ from 'lodash';
-import { DISPLAY_PROP } from '../../../../../utils/constants';
+import { DISPLAY_PROP } from 'Utils/constants';
 
 const { confirm } = Modal;
 
-const DCGTable = ({ activeProject, udpateProjectDetails, setShowModalVisible, setEditProperty, eventPropNames, enableEdit }) => {
+const DCGTable = ({
+  activeProject,
+  udpateProjectDetails,
+  setShowModalVisible,
+  setEditProperty,
+  eventPropNames,
+  enableEdit
+}) => {
   const [DCGData, setDCGData] = useState([]);
 
   const [tableLoading, setTableLoading] = useState(false);
@@ -24,34 +29,29 @@ const DCGTable = ({ activeProject, udpateProjectDetails, setShowModalVisible, se
 
     if (activeProject?.channel_group_rules) {
       ruleSet = activeProject?.channel_group_rules;
-    }
-    else {
+    } else {
       ruleSet = defaultRules;
     }
 
     // if (_.isEmpty(activeProject?.channel_group_rules)) {
-    //   ruleSet = defaultRules; 
+    //   ruleSet = defaultRules;
     // }
-
 
     if (ruleSet) {
       let DS = ruleSet?.map((item, index) => {
         return {
-          'key': index,
-          'channel': item.channel,
-          'conditions': item.conditions,
-          'actions': { index, item }
-        }
+          key: index,
+          channel: item.channel,
+          conditions: item.conditions,
+          actions: { index, item }
+        };
       });
       setDCGData(DS);
       setTableLoading(false);
-    }
-    else {
+    } else {
       setTableLoading(false);
     }
-
   }, [activeProject]);
-
 
   const reverseOperatorMap = {
     equal: '=',
@@ -62,7 +62,7 @@ const DCGTable = ({ activeProject, udpateProjectDetails, setShowModalVisible, se
     lesserThan: '<',
     lesserThanOrEqual: '<=',
     greaterThan: '>',
-    greaterThanOrEqual: '>=',
+    greaterThanOrEqual: '>='
   };
 
   const getBaseQueryfromResponse = (el) => {
@@ -72,22 +72,21 @@ const DCGTable = ({ activeProject, udpateProjectDetails, setShowModalVisible, se
         let conditionCamelCase = _.camelCase(item.condition);
         filters.push({
           operator: reverseOperatorMap[conditionCamelCase],
-          props: [item.property, "categorical", "event"],
-          values: [item.value],
+          props: [item.property, 'categorical', 'event'],
+          values: [item.value]
         });
       } else {
         filters[filters.length - 1].values.push(item.value);
       }
     });
 
-    return filters
-  }
+    return filters;
+  };
 
   const matchEventName = (item) => {
-    let findItem = eventPropNames?.[item]
-    return findItem ? findItem : item
-  }
-
+    let findItem = eventPropNames?.[item];
+    return findItem ? findItem : item;
+  };
 
   const renderRow = (data) => {
     if (data) {
@@ -129,7 +128,6 @@ const DCGTable = ({ activeProject, udpateProjectDetails, setShowModalVisible, se
     }
   };
   const columns = [
-
     {
       title: 'Channel',
       dataIndex: 'channel',
@@ -147,22 +145,22 @@ const DCGTable = ({ activeProject, udpateProjectDetails, setShowModalVisible, se
       dataIndex: 'actions',
       key: 'actions',
       render: (obj) => {
-        if(enableEdit){
-          return null
+        if (enableEdit) {
+          return null;
         }
-        return (<div className={`flex justify-end`}>
-          <Dropdown overlay={() => menu(obj)} trigger={['click']}>
-            <Button size={'large'} type="text" icon={<MoreOutlined />} />
-          </Dropdown>
-        </div>)
+        return (
+          <div className={`flex justify-end`}>
+            <Dropdown overlay={() => menu(obj)} trigger={['click']}>
+              <Button size={'large'} type='text' icon={<MoreOutlined />} />
+            </Dropdown>
+          </div>
+        );
       }
-      
     }
   ];
 
   const confirmRemove = (el) => {
-    // activeProject?.channel_group_rules?.filter(item => item !== value) 
-
+    // activeProject?.channel_group_rules?.filter(item => item !== value)
 
     confirm({
       title: 'Do you want to remove this channel group?',
@@ -170,31 +168,26 @@ const DCGTable = ({ activeProject, udpateProjectDetails, setShowModalVisible, se
       content: 'Please confirm to proceed',
       okText: 'Yes',
       onOk() {
-
-
-        let updatedArr = activeProject?.channel_group_rules?.filter((item, index) => {
-          if (index != el.index) {
-            return item
+        let updatedArr = activeProject?.channel_group_rules?.filter(
+          (item, index) => {
+            if (index != el.index) {
+              return item;
+            }
           }
-        });
+        );
 
-        udpateProjectDetails(activeProject.id, { channel_group_rules: updatedArr }).then(() => {
-          message.success('Channel group removed!');
-        }).catch((err) => {
-          console.log('err->', err);
-        });
-
-
+        udpateProjectDetails(activeProject.id, {
+          channel_group_rules: updatedArr
+        })
+          .then(() => {
+            message.success('Channel group removed!');
+          })
+          .catch((err) => {
+            console.log('err->', err);
+          });
       }
     });
-
-
-
-
-
-
-
-  }
+  };
 
   const EditProperty = (obj) => {
     let queryMap = getBaseQueryfromResponse(obj?.item?.conditions);
@@ -202,38 +195,40 @@ const DCGTable = ({ activeProject, udpateProjectDetails, setShowModalVisible, se
       index: obj?.index,
       channel: obj?.item?.channel,
       conditions: queryMap
-    }
+    };
     setEditProperty(finalData);
     setShowModalVisible(true);
-  }
+  };
 
   const menu = (obj) => {
     return (
       <Menu>
-        <Menu.Item key="0" onClick={() => EditProperty(obj)}>
+        <Menu.Item key='0' onClick={() => EditProperty(obj)}>
           <a>Edit Property</a>
         </Menu.Item>
-        <Menu.Item key="0" onClick={() => confirmRemove(obj)}>
+        <Menu.Item key='0' onClick={() => confirmRemove(obj)}>
           <a>Remove Property</a>
         </Menu.Item>
       </Menu>
     );
   };
 
-  return (<>
-    <Table className="fa-table--basic mt-4"
-      columns={columns}
-      dataSource={DCGData}
-      pagination={false}
-      loading={tableLoading}
-    />
-  </>
-  )
-}
+  return (
+    <>
+      <Table
+        className='fa-table--basic mt-4'
+        columns={columns}
+        dataSource={DCGData}
+        pagination={false}
+        loading={tableLoading}
+      />
+    </>
+  );
+};
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   eventPropNames: state.coreQuery.eventPropNames
 });
 
-export default connect(mapStateToProps, { udpateProjectDetails })(DCGTable)
+export default connect(mapStateToProps, { udpateProjectDetails })(DCGTable);

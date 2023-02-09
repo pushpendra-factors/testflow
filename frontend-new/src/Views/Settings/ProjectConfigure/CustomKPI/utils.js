@@ -26,9 +26,14 @@ import {
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
   QUERY_TYPE_PROFILE
-} from '../../../../utils/constants';
+} from 'Utils/constants';
 import { FILTER_TYPES, INITIAL_STATE } from '../../../CoreQuery/constants';
 import { isDateInMilliSeconds } from '../../../../utils/dataFormatter';
+import {
+  operatorMap,
+  reverseOperatorMap,
+  reverseDateOperatorMap
+} from 'Utils/operatorMapping';
 
 export const initialState = INITIAL_STATE;
 
@@ -37,49 +42,6 @@ export const labelsObj = {
   [TOTAL_USERS_CRITERIA]: 'User Count',
   [ACTIVE_USERS_CRITERIA]: 'User Count',
   [FREQUENCY_CRITERIA]: 'Count'
-};
-
-export const operatorMap = {
-  '=': 'equals',
-  '!=': 'notEqual',
-  contains: 'contains',
-  'does not contain': 'notContains',
-  '<': 'lesserThan',
-  '<=': 'lesserThanOrEqual',
-  '>': 'greaterThan',
-  '>=': 'greaterThanOrEqual',
-  between: 'between',
-  'not between': 'notInBetween',
-  'in the previous': 'inLast',
-  'not in the previous': 'notInLast',
-  'in the current': 'inCurrent',
-  'not in the current': 'notInCurrent',
-  before: 'before',
-  since: 'since'
-};
-
-export const reverseOperatorMap = {
-  equals: '=',
-  notEqual: '!=',
-  contains: 'contains',
-  notContains: 'does not contain',
-  lesserThan: '<',
-  lesserThanOrEqual: '<=',
-  greaterThan: '>',
-  greaterThanOrEqual: '>='
-};
-
-export const reverseDateOperatorMap = {
-  equals: '=',
-  notEqual: '!=',
-  between: 'between',
-  notInBetween: 'not between',
-  inLast: 'in the previous',
-  notInLast: 'not in the previous',
-  inCurrent: 'in the current',
-  notInCurrent: 'not in the current',
-  before: 'before',
-  since: 'since'
 };
 
 const getEventsWithProperties = (queries) => {

@@ -1,0 +1,20 @@
+.faheader {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 64px;
+  background-color: white;
+  border-bottom: 1px solid #e7e9ed;
+  z-index: 1000;
+}
+
+.logo {
+  padding: 0;
+  margin-left: 4rem;
+  &:hover,
+  &:focus {
+    background: #fff !important;
+  }
+}

@@ -32,12 +32,15 @@ import GLobalFilter from './GlobalFilter';
 import { formatFilterDate } from '../../../../utils/dataFormatter';
 import styles from './index.module.scss';
 import {
-  reverseOperatorMap,
-  reverseDateOperatorMap,
   convertDateTimeObjectValuesToMilliSeconds,
   getKPIQuery,
   DefaultDateRangeFormat
 } from './utils';
+import {
+  operatorMap,
+  reverseOperatorMap,
+  reverseDateOperatorMap
+} from 'Utils/operatorMapping';
 import { FILTER_TYPES } from '../../../CoreQuery/constants';
 import QueryBlock from './QueryBlock';
 import {
@@ -203,25 +206,6 @@ function CustomKPI({
     const opts = { ...queryOptions };
     opts.globalFilters = filters;
     setEventFilterValues(opts);
-  };
-
-  const operatorMap = {
-    '=': 'equals',
-    '!=': 'notEqual',
-    contains: 'contains',
-    'does not contain': 'notContains',
-    '<': 'lesserThan',
-    '<=': 'lesserThanOrEqual',
-    '>': 'greaterThan',
-    '>=': 'greaterThanOrEqual',
-    between: 'between',
-    'not between': 'notInBetween',
-    'in the previous': 'inLast',
-    'not in the previous': 'notInLast',
-    'in the current': 'inCurrent',
-    'not in the current': 'notInCurrent',
-    before: 'before',
-    since: 'since'
   };
 
   const getEventsWithPropertiesKPI = (filters, category = null) => {

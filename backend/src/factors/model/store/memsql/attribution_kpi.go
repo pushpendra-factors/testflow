@@ -368,7 +368,7 @@ func (store *MemSQL) FillKPIGroupUserData(projectID int64, query *model.Attribut
 		if err != nil {
 			return err
 		}
-		err = store.FillNormalUsersForKPIAccCompUser(projectID, accCompIds, _groupIDUserKey, kpiData, groupUserIDToKpiID, logCtx)
+		err = store.FillNormalUsersForKPIAccCompUser(projectID, accCompIds, _groupIDUserKey, kpiData, logCtx)
 	}
 
 	return err
@@ -416,7 +416,7 @@ func (store *MemSQL) FillKPIGroupUserDataV1(projectID int64, query *model.Attrib
 		if err != nil {
 			return err
 		}
-		err = store.FillNormalUsersForKPIAccCompUser(projectID, accCompIds, _groupIDUserKey, kpiData, groupUserIDToKpiID, logCtx)
+		err = store.FillNormalUsersForKPIAccCompUser(projectID, accCompIds, _groupIDUserKey, kpiData, logCtx)
 	}
 
 	return err
@@ -554,7 +554,7 @@ func (store *MemSQL) FillCompanyAccountIDs(projectID int64, kpiKeyGroupUserIDLis
 
 // FillNormalUsersForKPIAccCompUser fills all the users for given account in kpiData
 func (store *MemSQL) FillNormalUsersForKPIAccCompUser(projectID int64, kpiKeyGroupUserIDList []string, accountCompanyKey string,
-	kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
+	kpiData *map[string]model.KPIInfo, logCtx log.Entry) error {
 	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
 
 	if kpiKeyGroupUserIDList == nil || len(kpiKeyGroupUserIDList) == 0 {
@@ -616,7 +616,7 @@ func (store *MemSQL) FillNormalUsersForKPIAccCompUser(projectID int64, kpiKeyGro
 		logCtx.WithFields(logFields).Info("KPI-Attribution group set _kpiAccCompData FillNormalUsersForKPIAccCompUser")
 	}
 
-	// Fill the pulled kpiAccCompData users into actual kpiData for Deals/Opps for acc/comp level attribution
+	// Fill the pulled kpiAccCompData users into actual kpiData for Deals/Opportunities for acc/comp level attribution
 	for k, v := range *kpiData {
 		accCompID := v.KpiAccountCompanyGroupID
 		if _, exists := (_kpiAccCompData)[accCompID]; exists {
@@ -740,7 +740,7 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID int64, kpiData *map[
 	return nil
 }
 
-func (store *MemSQL) FireAttributionForKPI(projectID int64, query *model.AttributionQuery,
+func (store *MemSQL) FireAttributionForKPI(query *model.AttributionQuery,
 	sessions map[string]map[string]model.UserSessionData,
 	kpiData map[string]model.KPIInfo,
 	sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, bool, error) {
@@ -750,25 +750,14 @@ func (store *MemSQL) FireAttributionForKPI(projectID int64, query *model.Attribu
 	isCompare := false
 	var err error
 
-	// Default conversion for AttributionQueryTypeConversionBased.
-	conversionFrom := query.From
-	conversionTo := query.To
-	// Extend the campaign window for engagement based attribution.
-	if query.QueryType == model.AttributionQueryTypeEngagementBased {
-		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
-	}
 	var attributionData *map[string]*model.AttributionData
 	if query.AttributionMethodologyCompare != "" {
 		// Two AttributionMethodologies comparison
 		isCompare = true
-		attributionData, err = store.RunAttributionForMethodologyComparisonKpi(projectID,
-			conversionFrom, conversionTo, query, sessions, kpiData, sessionWT, logCtx)
+		attributionData, err = store.RunAttributionForMethodologyComparisonKpi(query, sessions, kpiData, sessionWT, logCtx)
 	} else {
 		// Single event attribution.
-		attributionData, err = store.runAttributionKPI(projectID,
-			conversionFrom, conversionTo,
-			query, sessions, kpiData, sessionWT, logCtx)
+		attributionData, err = store.runAttributionKPI(query, sessions, kpiData, sessionWT, logCtx)
 	}
 	return attributionData, isCompare, err
 }
@@ -784,31 +773,19 @@ func (store *MemSQL) FireAttributionForKPIV1(projectID int64, query *model.Attri
 	isCompare := false
 	var err error
 
-	// Default conversion for AttributionQueryTypeConversionBased.
-	conversionFrom := query.From
-	conversionTo := query.To
-	// Extend the campaign window for engagement based attribution.
-	if query.QueryType == model.AttributionQueryTypeEngagementBased {
-		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
-	}
 	var attributionData *map[string]*model.AttributionData
 	if query.AttributionMethodologyCompare != "" {
 		// Two AttributionMethodologies comparison
 		isCompare = true
-		attributionData, err = store.RunAttributionForMethodologyComparisonKpiV1(projectID,
-			conversionFrom, conversionTo, query, sessions, kpiData, sessionWT, logCtx)
+		attributionData, err = store.RunAttributionForMethodologyComparisonKpiV1(query, sessions, kpiData, sessionWT, logCtx)
 	} else {
 		// Single event attribution.
-		attributionData, err = store.runAttributionKPIV1(projectID,
-			conversionFrom, conversionTo,
-			query, sessions, kpiData, sessionWT, logCtx)
+		attributionData, err = store.runAttributionKPIV1(query, sessions, kpiData, sessionWT, logCtx)
 	}
 	return attributionData, isCompare, err
 }
 
-func (store *MemSQL) runAttributionKPI(projectID int64,
-	conversionFrom, conversionTo int64,
+func (store *MemSQL) runAttributionKPI(
 	query *model.AttributionQuery,
 	sessions map[string]map[string]model.UserSessionData,
 	kpiData map[string]model.KPIInfo,
@@ -842,8 +819,7 @@ func (store *MemSQL) runAttributionKPI(projectID int64,
 	return &attributionData, nil
 }
 
-func (store *MemSQL) runAttributionKPIV1(projectID int64,
-	conversionFrom, conversionTo int64,
+func (store *MemSQL) runAttributionKPIV1(
 	query *model.AttributionQueryV1,
 	sessions map[string]map[string]model.UserSessionData,
 	kpiData map[string]model.KPIInfo,
@@ -878,7 +854,7 @@ func (store *MemSQL) runAttributionKPIV1(projectID int64,
 }
 
 func updateSessionWT(sessionWT map[string][]float64, kpiData map[string]model.KPIInfo) {
-	for key, _ := range sessionWT {
+	for key := range sessionWT {
 		for _, value := range kpiData[key].KpiValuesList {
 			if !value.IsConverted {
 				//not converted then subtract from final result
@@ -890,8 +866,7 @@ func updateSessionWT(sessionWT map[string][]float64, kpiData map[string]model.KP
 	}
 }
 
-func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID int64,
-	conversionFrom, conversionTo int64, query *model.AttributionQuery,
+func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(query *model.AttributionQuery,
 	sessions map[string]map[string]model.UserSessionData,
 	kpiData map[string]model.KPIInfo,
 	sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
@@ -960,8 +935,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID int64,
 }
 
 //RunAttributionForMethodologyComparisonKpiV1 runs attribution for queries with compare model
-func (store *MemSQL) RunAttributionForMethodologyComparisonKpiV1(projectID int64,
-	conversionFrom, conversionTo int64, query *model.AttributionQueryV1,
+func (store *MemSQL) RunAttributionForMethodologyComparisonKpiV1(query *model.AttributionQueryV1,
 	sessions map[string]map[string]model.UserSessionData,
 	kpiData map[string]model.KPIInfo,
 	sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {

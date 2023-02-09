@@ -32,7 +32,7 @@ func MergeDataRowsHavingSameKeyKPI(rows [][]interface{}, keyIndex int, attributi
 			key = key + val
 		}
 		if _, exists := rowKeyMap[key]; exists {
-			rowKeyMap[key] = MergeTwoDataRowsKPI(rowKeyMap[key], row, keyIndex, attributionKey, analyzeType, conversionFunTypes)
+			rowKeyMap[key] = MergeTwoDataRowsKPI(rowKeyMap[key], row, keyIndex, analyzeType, conversionFunTypes)
 		} else {
 			rowKeyMap[key] = row
 		}
@@ -68,7 +68,7 @@ func MergeDataRowsHavingSameKeyKPIV1(rows [][]interface{}, keyIndex int, attribu
 			key = key + val
 		}
 		if _, exists := rowKeyMap[key]; exists {
-			rowKeyMap[key] = MergeTwoDataRowsKPIV1(rowKeyMap[key], row, keyIndex, attributionKey, conversionFunTypes)
+			rowKeyMap[key] = MergeTwoDataRowsKPIV1(rowKeyMap[key], row, keyIndex, conversionFunTypes)
 		} else {
 			rowKeyMap[key] = row
 		}
@@ -81,7 +81,7 @@ func MergeDataRowsHavingSameKeyKPIV1(rows [][]interface{}, keyIndex int, attribu
 }
 
 //MergeTwoDataRowsKPI adds values of two data rows for KPI attribution queries
-func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, attributionKey string, analyzeType string, conversionFunTypes []string) []interface{} {
+func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, analyzeType string, conversionFunTypes []string) []interface{} {
 
 	if analyzeType != AnalyzeTypeHSDeals && analyzeType != AnalyzeTypeSFOpportunities && analyzeType != AnalyzeTypeUserKPI {
 		log.WithFields(log.Fields{"AnalyzeType": analyzeType}).Error("KPI-Attribution invalid method call - analyzeType")
@@ -159,7 +159,7 @@ func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, a
 }
 
 //MergeTwoDataRowsKPIV1 adds values of two data rows for KPI attribution queries
-func MergeTwoDataRowsKPIV1(row1 []interface{}, row2 []interface{}, keyIndex int, attributionKey string, conversionFunTypes []string) []interface{} {
+func MergeTwoDataRowsKPIV1(row1 []interface{}, row2 []interface{}, keyIndex int, conversionFunTypes []string) []interface{} {
 
 	row1[keyIndex+1] = row1[keyIndex+1].(int64) + row2[keyIndex+1].(int64)     // Impressions.
 	row1[keyIndex+2] = row1[keyIndex+2].(int64) + row2[keyIndex+2].(int64)     // Clicks.

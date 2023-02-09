@@ -1,0 +1,31 @@
+.fa-six-signal-panel {
+  border: none;
+
+  .fa-six-signal-panel-item {
+    background-color: $fa-color--white !important;
+    border-color: $fa-color--mono-2;
+    .ant-collapse-header {
+      background-color: $fa-color--white !important;
+      padding: 0px !important;
+    }
+    .ant-collapse-content {
+      border: none !important;
+      padding: 0px !important;
+    }
+    .ant-collapse-content > .ant-collapse-content-box {
+      padding: 0px !important;
+    }
+    .ant-collapse-content-active {
+      .ant-collapse-content-box {
+        &:empty {
+          padding: 0px !important;
+        }
+      }
+    }
+    &.ant-collapse-item-disabled {
+      .ant-collapse-arrow {
+        display: none;
+      }
+    }
+  }
+}

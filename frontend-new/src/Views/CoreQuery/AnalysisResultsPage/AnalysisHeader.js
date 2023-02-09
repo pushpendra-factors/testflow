@@ -44,6 +44,7 @@ function AnalysisHeader({
 }) {
   const [hideIntercomState, setHideIntercomState] = useState(true);
   const [showSaveQueryModal, setShowSaveQueryModal] = useState(false);
+  const [showUpdateQuery, setShowUpdateQuery] = useState(false);
   const [visible, setVisible] = useState(false);
   const [helpMenu, setHelpMenu] = useState(false);
   const savedQueries = useSelector((state) =>
@@ -64,7 +65,7 @@ function AnalysisHeader({
 
   const history = useHistory();
   const {
-    coreQueryState: { navigatedFromDashboard }
+    coreQueryState: { navigatedFromDashboard, navigatedFromAnalyse }
   } = useContext(CoreQueryContext);
   const { metadata } = useSelector((state) => state.insights);
   const { active_insight: activeInsight } = useSelector(
@@ -105,7 +106,14 @@ function AnalysisHeader({
 
   const saveAndClose = () => {
     setVisible(false);
-    setShowSaveQueryModal(true);
+    if(navigatedFromDashboard?.id || navigatedFromAnalyse?.key) {
+      setShowUpdateQuery(true);
+      setTimeout(() => {
+        location?.state?.navigatedFromDashboardExistingReports || navigatedFromDashboard ? conditionalRouteBackCheck() : closeWithoutSave()
+      }, 1500);
+    } else {
+      setShowSaveQueryModal(true);
+    }
   };
 
   const closeWithoutSave = () => {
@@ -132,7 +140,8 @@ function AnalysisHeader({
       });
     }
   };
-  const handleCloseDashboardQuery = useCallback(() => {
+
+  const handleCloseFromLogo = useCallback(() => {
     if (!savedQueryId && requestQuery !== null) {
       Modal.confirm({
         title:
@@ -148,6 +157,14 @@ function AnalysisHeader({
           conditionalRouteBackCheck();
         }
       });
+    } else {
+      conditionalRouteBackCheck();
+    }
+  }, [history, navigatedFromDashboard, requestQuery, savedQueryId]);
+
+  const handleCloseDashboardQuery = useCallback(() => {
+    if (!savedQueryId && requestQuery !== null) {
+      setVisible(true);
     } else {
       conditionalRouteBackCheck();
     }
@@ -194,8 +211,8 @@ function AnalysisHeader({
       type='text'
       onClick={
         navigatedFromDashboard
-          ? handleCloseDashboardQuery
-          : handleCloseDashboardQuery
+          ? handleCloseFromLogo
+          : handleCloseFromLogo
       }
       icon={<SVG size={32} name='Brand' />}
     />
@@ -242,6 +259,7 @@ function AnalysisHeader({
       <SaveQuery
         showSaveQueryModal={showSaveQueryModal}
         setShowSaveQueryModal={setShowSaveQueryModal}
+        showUpdateQuery={showUpdateQuery}
         queryType={queryType}
         requestQuery={requestQuery}
         queryTitle={queryTitle}
@@ -368,13 +386,13 @@ function AnalysisHeader({
               className='mx-4 my-2'
               onClick={saveAndClose}
             >
-              Save and Close
+              {(navigatedFromDashboard?.id || navigatedFromAnalyse?.key) ? 'Save and Close': 'Save as New'}
             </Button>
             <Button
               type='default'
               style={{ width: '168px', height: '32px' }}
               className='mx-4 my-2'
-              onClick={closeWithoutSave}
+              onClick={() => location?.state?.navigatedFromDashboardExistingReports || navigatedFromDashboard ? conditionalRouteBackCheck() : closeWithoutSave()}
             >
               Close without saving
             </Button>

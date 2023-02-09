@@ -82,6 +82,7 @@ import AppModal from '../../components/AppModal';
 import userflow from 'userflow.js';
 import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
 import useAutoFocus from 'hooks/useAutoFocus';
+import { useHistory } from 'react-router-dom';
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -191,6 +192,7 @@ function CoreQuery({
   setQueryOptions,
   location,
   setNavigatedFromDashboard,
+  setNavigatedFromAnalyse,
   fetchWeeklyIngishts,
   activeProject,
   updateChartTypes,
@@ -235,6 +237,7 @@ function CoreQuery({
   const { projectSettingsV1 } = useSelector((state) => state.global);
   const { agent_details } = useSelector((state) => state.agent);
   const inputComponentRef = useAutoFocus(showSearch);
+  const history = useHistory();
 
   useEffect(() => {
     const getData = async () => {
@@ -250,6 +253,26 @@ function CoreQuery({
       setOverrideDate(true);
     }
   }, [dateFromTo]);
+
+  const pushDataToLocation = (data) => {
+    const stateWithNoFunctions = {};
+    for (const key of Object.keys(data)) {
+      if (key === "type" || key === 'date') {
+        // empty
+      } else {
+        stateWithNoFunctions[key] = data[key];
+      }
+    }
+
+    history.push({
+      pathname: '/analyse',
+      state: {
+        coreQuery: true,
+        navigatedFromAnalyse: stateWithNoFunctions
+      }
+    });
+  }
+
 
   const getFormattedRow = (q) => {
     const requestQuery = q.query;
@@ -322,6 +345,7 @@ function CoreQuery({
     event.preventDefault();
     getWeeklyIngishts(row);
     setQueryToState(getFormattedRow(row));
+    pushDataToLocation(getFormattedRow(row));
   }, []);
 
   const showEmailModal = useCallback((row, event) => {
@@ -666,10 +690,14 @@ function CoreQuery({
       setNavigatedFromDashboard(location.state.navigatedFromDashboard);
       location.state = undefined;
       window.history.replaceState(null, '');
+    } else if (location.state && location.state.coreQuery) {
+      setNavigatedFromAnalyse(location.state.navigatedFromAnalyse);
+      location.state = undefined;
+      window.history.replaceState(null, '');
     } else {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     }
-  }, [dispatch, location, setNavigatedFromDashboard, setQueryToState]);
+  }, [dispatch, location, setNavigatedFromDashboard, setNavigatedFromAnalyse, setQueryToState]);
 
   const data = queriesState.data
     .filter((q) => !(q.query && q.query.cl === QUERY_TYPE_WEB))
@@ -1154,6 +1182,7 @@ function CoreQuery({
                           onClick: () => {
                             getWeeklyIngishts(record);
                             setQueryToState(record);
+                            pushDataToLocation(record);
                           }
                         };
                       }}

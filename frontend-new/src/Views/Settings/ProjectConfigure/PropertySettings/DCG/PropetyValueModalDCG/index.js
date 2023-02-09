@@ -8,29 +8,7 @@ import { udpateProjectDetails } from 'Reducers/global';
 import defaultRules from '../defaultRules';
 import _ from 'lodash';
 import useAutoFocus from 'hooks/useAutoFocus';
-
-const operatorMap = {
-  '=': 'equals',
-  '!=': 'notEqual',
-  contains: 'contains',
-  'does not contain': 'notContains',
-  '<': 'lesserThan',
-  '<=': 'lesserThanOrEqual',
-  '>': 'greaterThan',
-  '>=': 'greaterThanOrEqual'
-};
-
-const reverseOperatorMap = {
-  equal: '=',
-  equals: '=',
-  notEqual: '!=',
-  contains: 'contains',
-  notContains: 'does not contain',
-  lesserThan: '<',
-  lesserThanOrEqual: '<=',
-  greaterThan: '>',
-  greaterThanOrEqual: '>='
-};
+import { operatorMap } from 'Utils/operatorMapping';
 
 const { Option, OptGroup } = Select;
 

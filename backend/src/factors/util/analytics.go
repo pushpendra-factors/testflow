@@ -13,7 +13,7 @@ func GetTimeFromTimestampStr(timestampStr string) time.Time {
 	return ts
 }
 
-func getTimezoneOffsetFromString(currentTime time.Time, timezone string) string {
+func GetTimezoneOffsetFromString(currentTime time.Time, timezone string) string {
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		return "+00:00"
@@ -30,7 +30,7 @@ func GetTimestampAsStrWithTimezoneGivenOffset(t time.Time, offset string) string
 // GetTimestampAsStrWithTimezone - Appends timezone doesn't converts.
 func GetTimestampAsStrWithTimezone(t time.Time, timezone string) string {
 	return fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d%s", t.Year(),
-		t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), getTimezoneOffsetFromString(t, timezone))
+		t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), GetTimezoneOffsetFromString(t, timezone))
 }
 
 // This relies on fact of above parse.
@@ -78,12 +78,17 @@ func GetAllDatesAndOffsetAsTimestamp(fromUnix int64, toUnix int64, timezone stri
 	toStr := GetTimestampAsStrWithTimezone(to, timezone)
 
 	for t, tStr := from, ""; tStr != toStr; {
-		tStr = GetTimestampAsStrWithTimezone(t, timezone)
-		rTimestamps = append(rTimestamps, t)
-		offset := fmt.Sprintf("%s", getTimezoneOffsetFromString(t.Add(4*time.Hour), timezone)) // + 4 hours to accomodate day light saving at 2:00.
+		offset := GetTimezoneOffsetFromString(t, timezone)
+		// In Daylight saving - Aus and month of April, Timestamp for gbt - month is 01-04-2022 + 10:00.
+		// But using following transformation we get 01-04-2022 + 11:00, which represents correct offset at that time.
+		currTimeStrFromOffset := GetTimestampAsStrWithTimezoneGivenOffset(t, offset)
+		currTimeFromOffset := GetTimeFromParseTimeStr(currTimeStrFromOffset)
+
+		tStr = GetTimestampAsStrWithTimezone(currTimeFromOffset, timezone)
+		rTimestamps = append(rTimestamps, currTimeFromOffset)
 		rTimezoneOffsets = append(rTimezoneOffsets, offset)
 
-		t = t.Add(28 * time.Hour)
+		t = t.Add(24 * time.Hour)
 		t, _ = GetTimeFromUnixTimestampWithZone(t.Unix(), timezone)
 		t = now.New(t).BeginningOfDay()
 	}
@@ -110,13 +115,16 @@ func GetAllQuartersAsTimestamp(fromUnix int64, toUnix int64, timezone string) ([
 
 	toStr := GetTimestampAsStrWithTimezone(to, timezone)
 	for t, tStr := from, ""; tStr != toStr; {
-		tStr = GetTimestampAsStrWithTimezone(t, timezone)
-		rTimestamps = append(rTimestamps, t)
-		offset := getTimezoneOffsetFromString(t.Add(4*time.Hour), timezone)
+		offset := GetTimezoneOffsetFromString(t, timezone)
+		currTimeStrFromOffset := GetTimestampAsStrWithTimezoneGivenOffset(t, offset)
+		currTimeFromOffset := GetTimeFromParseTimeStr(currTimeStrFromOffset)
+
+		tStr = GetTimestampAsStrWithTimezone(currTimeFromOffset, timezone)
+		rTimestamps = append(rTimestamps, currTimeFromOffset)
 		rTimezoneOffsets = append(rTimezoneOffsets, offset)
 
 		// get the some date in next quarter, here it is 120+10 i.e. 10day in next quarter
-		t = t.AddDate(0, 0, 130).Add(4 * time.Hour) // next quarter.
+		t = t.AddDate(0, 0, 130) // next quarter.
 		t, _ = GetTimeFromUnixTimestampWithZone(t.Unix(), timezone)
 		t = now.New(t).BeginningOfQuarter()
 	}
@@ -144,13 +152,18 @@ func GetAllMonthsAsTimestamp(fromUnix int64, toUnix int64, timezone string) ([]t
 
 	toStr := GetTimestampAsStrWithTimezone(to, timezone)
 	for t, tStr := from, ""; tStr != toStr; {
-		tStr = GetTimestampAsStrWithTimezone(t, timezone)
-		rTimestamps = append(rTimestamps, t)
-		offset := getTimezoneOffsetFromString(t.Add(4*time.Hour), timezone)
+		// In Daylight saving - Aus and month of April, Timestamp for gbt - month is 01-04-2022 + 10:00.
+		// But using following transformation we get 01-04-2022 + 11:00, which represents correct offset at that time.
+		offset := GetTimezoneOffsetFromString(t, timezone)
+		currTimeStrFromOffset := GetTimestampAsStrWithTimezoneGivenOffset(t, offset)
+		currTimeFromOffset := GetTimeFromParseTimeStr(currTimeStrFromOffset)
+
+		tStr = GetTimestampAsStrWithTimezone(currTimeFromOffset, timezone)
+		rTimestamps = append(rTimestamps, currTimeFromOffset)
 		rTimezoneOffsets = append(rTimezoneOffsets, offset)
 
 		// get the some date in next month, here it can be 4th, 5th, or 6th
-		t = t.AddDate(0, 0, 35).Add(4 * time.Hour) // next month.
+		t = t.AddDate(0, 0, 35) // next month.
 		t, _ = GetTimeFromUnixTimestampWithZone(t.Unix(), timezone)
 		t = now.New(t).BeginningOfMonth()
 	}
@@ -178,12 +191,15 @@ func GetAllWeeksAsTimestamp(fromUnix int64, toUnix int64, timezone string) ([]ti
 
 	toStr := GetTimestampAsStrWithTimezone(to, timezone)
 	for t, tStr := from, ""; tStr != toStr; {
-		tStr = GetTimestampAsStrWithTimezone(t, timezone)
-		rTimestamps = append(rTimestamps, t)
-		offset := getTimezoneOffsetFromString(t.Add(4*time.Hour), timezone)
+		offset := GetTimezoneOffsetFromString(t, timezone)
+		currTimeStrFromOffset := GetTimestampAsStrWithTimezoneGivenOffset(t, offset)
+		currTimeFromOffset := GetTimeFromParseTimeStr(currTimeStrFromOffset)
+
+		tStr = GetTimestampAsStrWithTimezone(currTimeFromOffset, timezone)
+		rTimestamps = append(rTimestamps, currTimeFromOffset)
 		rTimezoneOffsets = append(rTimezoneOffsets, offset)
 
-		t = t.AddDate(0, 0, 7).Add(4 * time.Hour) // next week.
+		t = t.AddDate(0, 0, 7) // next week.
 		t, _ = GetTimeFromUnixTimestampWithZone(t.Unix(), timezone)
 		t = now.New(t).BeginningOfWeek()
 	}
@@ -209,9 +225,12 @@ func GetAllHoursAsTimestamp(fromUnix int64, toUnix int64, timezone string) ([]ti
 
 	toStr := GetTimestampAsStrWithTimezone(to, timezone)
 	for t, tStr := from, ""; tStr != toStr; {
-		tStr = GetTimestampAsStrWithTimezone(t, timezone)
-		rTimestamps = append(rTimestamps, t)
-		offset := getTimezoneOffsetFromString(t, timezone)
+		offset := GetTimezoneOffsetFromString(t, timezone)
+		currTimeStrFromOffset := GetTimestampAsStrWithTimezoneGivenOffset(t, offset)
+		currTimeFromOffset := GetTimeFromParseTimeStr(currTimeStrFromOffset)
+
+		tStr = GetTimestampAsStrWithTimezone(currTimeFromOffset, timezone)
+		rTimestamps = append(rTimestamps, currTimeFromOffset)
 		rTimezoneOffsets = append(rTimezoneOffsets, offset)
 
 		t = t.Add(1 * time.Hour) // next hour.

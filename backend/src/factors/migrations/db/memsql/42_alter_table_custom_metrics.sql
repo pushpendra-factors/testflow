@@ -1,0 +1,1 @@
+ALTER TABLE custom_metrics ADD COLUMN display_result_as text;

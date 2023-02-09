@@ -108,6 +108,12 @@
     display: flex;
     align-items: flex-start;
 
+    &::-webkit-scrollbar {
+        background: transparent;
+        /* Chrome/Safari/Webkit */
+        width: 0px;
+    }
+
     .leftpane {
         position: sticky;
         top: 0;
@@ -135,11 +141,21 @@
 
         &__props {
             padding: 16px 0;
+            overflow-y: scroll;
+            max-height: 66%;
         }
 
         &__groups {
             padding: 8px 36px;
             border-top: 1px dashed #E7E9ED;
+        }
+
+        &__logo_attr {
+            width: 100%;
+            position: absolute;
+            bottom: 0;
+            padding: 16px 32px;
+            background-color: white;
         }
     }
 
@@ -148,6 +164,12 @@
         padding: 96px 36px 36px;
         border-left: 1px solid #E7E9ED;
         min-height: 100vh !important;
+
+        &::-webkit-scrollbar {
+            background: transparent;
+            /* Chrome/Safari/Webkit */
+            width: 0px;
+        }
     }
 }
 
@@ -223,7 +245,8 @@
 
         th {
             min-width: 175px;
-            padding: 9px 16px;
+            padding: 10px 16px;
+            padding-left: 24px;
             border-bottom: 1px solid #E7E9ED;
             vertical-align: top;
             background: #F5F6F8;
@@ -285,8 +308,8 @@
                             top: 40px;
                         }
 
-                        &.top-75 {
-                            top: 75px;
+                        &.top-64 {
+                            top: 64px;
                         }
                     }
                 }
@@ -470,6 +493,7 @@
     margin-bottom: 8px;
 
     .heading {
+        width: 80%;
         font-family: 'Inter';
         font-style: normal;
         font-weight: 600;
@@ -478,6 +502,7 @@
     }
 
     .heading-with-sub {
+        width: 80%;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
@@ -607,6 +632,7 @@
 }
 
 .fa-table--userlist {
+
     // table head
     .ant-table-thead {
         .ant-table-cell {
@@ -616,6 +642,7 @@
             color: $fa-color--mono-5;
         }
     }
+
     // table body
     .ant-table-tbody {
         .ant-table-row {
@@ -628,5 +655,27 @@
                 color: $fa-color--mono-6;
             }
         }
+    }
+}
+
+.line-height-8 {
+    line-height: 32px;
+}
+
+.static-button {
+    align-items: center;
+    background-color: #f5f6f8;
+    font-weight: bold;
+    font-size: 14px;
+    color: grey;
+    height: 32px;
+    border: none;
+    cursor: default;
+
+    &:focus,
+    &:hover,
+    &:active,
+    &:visited {
+        background-color: #f5f6f8;
     }
 }

@@ -28,7 +28,6 @@ var KPIPropertiesForFormSubmissions = []map[string]string{
 var KPIConfigForFormSubmissions = map[string]interface{}{
 	"category":         EventCategory,
 	"display_category": FormSubmissionsDisplayCategory,
-	"properties":       KPIPropertiesForFormSubmissions,
 }
 
 func ValidateKPIFormSubmissions(kpiQuery KPIQuery) bool {

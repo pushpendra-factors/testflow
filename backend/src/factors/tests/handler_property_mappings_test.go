@@ -37,7 +37,6 @@ func TestPropertyMappingHandler(t *testing.T) {
 		Name:            "$browser1",
 		DataType:        "categorical",
 		Entity:          "event",
-		GroupByType:     "",
 	}
 	propertiesRaw2 := model.Property{
 		Category:        "channels",
@@ -46,7 +45,6 @@ func TestPropertyMappingHandler(t *testing.T) {
 		Name:            "$browser2",
 		DataType:        "categorical",
 		Entity:          "event",
-		GroupByType:     "",
 	}
 	propertiesRaw3 := model.Property{
 		Category:        "events",
@@ -55,7 +53,6 @@ func TestPropertyMappingHandler(t *testing.T) {
 		Name:            "$browser3",
 		DataType:        "categorical",
 		Entity:          "event",
-		GroupByType:     "",
 	}
 	propertiesRaw4 := model.Property{
 		Category:        "events",
@@ -64,7 +61,6 @@ func TestPropertyMappingHandler(t *testing.T) {
 		Name:            "$browser4",
 		DataType:        "numerical",
 		Entity:          "event",
-		GroupByType:     "",
 	}
 	propertiesRaw5 := model.Property{
 		Category:        "profiles",
@@ -73,7 +69,6 @@ func TestPropertyMappingHandler(t *testing.T) {
 		Name:            "$browser4",
 		DataType:        "categorical",
 		Entity:          "user",
-		GroupByType:     "",
 	}
 	invalidProperty1 := model.Property{
 		Category:        "events",
@@ -82,7 +77,6 @@ func TestPropertyMappingHandler(t *testing.T) {
 		Name:            "$browser",
 		DataType:        "categorical",
 		Entity:          "event",
-		GroupByType:     "",
 	}
 
 	var firstPropertyMapping *model.PropertyMapping
@@ -255,7 +249,7 @@ func sendCreatePropertyMapping(r *gin.Engine, project_id int64, agent *model.Age
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	url := "/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/kpi/property_mappings"
+	url := "/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/v1/kpi/property_mappings"
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, url).
 		WithPostParams(payload).
 		WithCookie(&http.Cookie{
@@ -279,7 +273,7 @@ func sendGetPropertyMappings(r *gin.Engine, propject_id int64, agent *model.Agen
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	url := "/projects/" + strconv.FormatUint(uint64(propject_id), 10) + "/kpi/property_mappings"
+	url := "/projects/" + strconv.FormatUint(uint64(propject_id), 10) + "/v1/kpi/property_mappings"
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, url).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -302,7 +296,7 @@ func sendGetCommonPropertyMappings(r *gin.Engine, project_id int64, agent *model
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	url := "/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/kpi/property_mappings/commom_properties"
+	url := "/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/v1/kpi/property_mappings/commom_properties"
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, url).
 		WithPostParams(payload).
 		WithCookie(&http.Cookie{
@@ -326,7 +320,7 @@ func sendDeletePropertyMappings(r *gin.Engine, project_id int64, agent *model.Ag
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	url := "/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/kpi/property_mappings/" + id
+	url := "/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/v1/kpi/property_mappings/" + id
 	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, url).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),

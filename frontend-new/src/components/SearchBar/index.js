@@ -26,7 +26,7 @@ function SearchBar({ setQueryToState }) {
       // } else {
       history.push({
         pathname: '/analyse',
-        state: { query, global_search: true },
+        state: { query, global_search: true, navigatedFromDashboard: query},
       });
       // }
     },

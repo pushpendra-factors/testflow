@@ -38,7 +38,7 @@ func CreateCustomMetric(c *gin.Context) (interface{}, int, string, string, bool)
 	if err != nil {
 		var requestAsMap map[string]interface{}
 		c.BindJSON(&requestAsMap)
-		logCtx.Warnf("Decode failed on request to profiles struct. %v", requestAsMap)
+		logCtx.Warnf("Decode failed on request to Custom Metrics struct. %v", requestAsMap)
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during decode of custom metrics.", true
 	}
 
@@ -158,6 +158,7 @@ func GetCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool) {
 	reqID, projectID := getReqIDAndProjectID(c)
 	logCtx := log.WithField("reqID", reqID).WithField("projectID", projectID)
 	if projectID == 0 {
+		logCtx.Warn("GetCustomMetrics - Custom metrics projectID is not given.")
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Invalid project id provided.", true
 	}
 	customMetrics, errMsg, statusCode := store.GetStore().GetCustomMetricsByProjectId(projectID)
@@ -166,6 +167,68 @@ func GetCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool) {
 		return nil, statusCode, PROCESSING_FAILED, "Failed to get custom metrics", true
 	}
 	return customMetrics, http.StatusOK, "", "", false
+}
+
+// GetPropertiesForCustomKPIEventBased Test command.
+// curl -i -X GET http://localhost:8080/v1/:project_id/kpi/:custom_event_kpi/properties
+// GetPropertiesForCustomKPIEventBased godoc
+// @Summary To get properties for a given custom kpi event based.
+// @Tags CustomMetric
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param custom_event_kpi path string true "Custom KPI event based"
+// @Success 200 {string} json "map[string]string"
+// @Router v1/{project_id}/kpi/{custom_event_kpi}/properties [get]
+func GetPropertiesForCustomKPIEventBased(c *gin.Context) {
+
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectID,
+	})
+
+	customKPIEventBased := c.Params.ByName("custom_event_kpi")
+	if customKPIEventBased == "" {
+		logCtx.WithField("custom_event_kpi", customKPIEventBased).Error("null custom_event_kpi")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	customKPI, _, statusCode := store.GetStore().GetEventBasedCustomMetricByProjectIdName(projectID, customKPIEventBased)
+	if statusCode == http.StatusNotFound {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	if statusCode != http.StatusFound {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	eventName, err := customKPI.GetEventName()
+	if err != "" {
+		noProperties := make([]map[string]string, 0)
+		c.JSON(http.StatusOK, gin.H{"properties": noProperties})
+		return
+	}
+
+	propertiesFromCache, statusCode := store.GetStore().GetEventPropertiesAndModifyResultsForNonExplain(projectID, eventName)
+	if statusCode != http.StatusOK {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	displayNamesOp := store.GetStore().GetDisplayNamesForEventProperties(projectID, propertiesFromCache, eventName)
+
+	kpiConfig := model.TransformEventPropertiesToKPIConfigProperties(propertiesFromCache, displayNamesOp)
+	// Handling both error and NotFound.
+	if statusCode != http.StatusFound {
+		c.JSON(http.StatusOK, gin.H{"properties": kpiConfig})
+		return
+	}
 }
 
 // DeleteCustomMetrics godoc

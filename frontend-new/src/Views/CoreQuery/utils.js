@@ -1,4 +1,4 @@
-  import get from 'lodash/get';
+import get from 'lodash/get';
 import lowerCase from 'lodash/lowerCase';
 import startCase from 'lodash/startCase';
 
@@ -29,12 +29,18 @@ import {
   PREDEFINED_DATES,
   QUERY_TYPE_PROFILE,
   QUERY_OPTIONS_DEFAULT_VALUE
-} from '../../utils/constants';
+} from 'Utils/constants';
 import {
   CORE_QUERY_INITIAL_STATE,
   FILTER_TYPES,
   INITIAL_STATE
 } from './constants';
+
+import {
+  operatorMap,
+  reverseOperatorMap,
+  reverseDateOperatorMap
+} from 'Utils/operatorMapping';
 
 export const initialState = INITIAL_STATE;
 
@@ -47,50 +53,7 @@ export const labelsObj = {
   [FREQUENCY_CRITERIA]: 'Count'
 };
 
-export const operatorMap = {
-  '=': 'equals',
-  '!=': 'notEqual',
-  contains: 'contains',
-  'does not contain': 'notContains',
-  '<': 'lesserThan',
-  '<=': 'lesserThanOrEqual',
-  '>': 'greaterThan',
-  '>=': 'greaterThanOrEqual',
-  between: 'between',
-  'not between': 'notInBetween',
-  'in the previous': 'inLast',
-  'not in the previous': 'notInLast',
-  'in the current': 'inCurrent',
-  'not in the current': 'notInCurrent',
-  before: 'before',
-  since: 'since'
-};
-
-export const reverseOperatorMap = {
-  equals: '=',
-  notEqual: '!=',
-  contains: 'contains',
-  notContains: 'does not contain',
-  lesserThan: '<',
-  lesserThanOrEqual: '<=',
-  greaterThan: '>',
-  greaterThanOrEqual: '>='
-};
-
-export const reverseDateOperatorMap = {
-  equals: '=',
-  notEqual: '!=',
-  between: 'between',
-  notInBetween: 'not between',
-  inLast: 'in the previous',
-  notInLast: 'not in the previous',
-  inCurrent: 'in the current',
-  notInCurrent: 'not in the current',
-  before: 'before',
-  since: 'since'
-};
-
-const getEventsWithProperties = (queries) => {
+export const getEventsWithProperties = (queries) => {
   const ewps = [];
   queries.forEach((ev) => {
     const filterProps = [];
@@ -829,7 +792,10 @@ const mapQueriesByGroup = (queries) => {
     salesforce_opportunities: []
   };
   queries.forEach((query) => {
-    if (query.group !== 'hubspot_deals' || query.group !== 'salesforce_opportunities') {
+    if (
+      query.group !== 'hubspot_deals' ||
+      query.group !== 'salesforce_opportunities'
+    ) {
       group['user_kpi'].push(query);
     } else {
       group[query.group].push(query);
@@ -889,19 +855,17 @@ export const getKPIQueryAttributionV1 = (
 
   const period = {};
   if (dateRange?.from && dateRange?.to) {
-
-      period.from = MomentTz(dateRange.from).startOf('day').utc().unix();
-      period.to = MomentTz(dateRange.to).endOf('day').utc().unix();
-      period.frequency = 'second';
-    } else {
-      period.from = MomentTz().startOf('week').utc().unix();
-      period.to =
-        MomentTz().format('dddd') !== 'Sunday'
-          ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
-          : MomentTz().utc().unix();
-      period.frequency = 'second';
+    period.from = MomentTz(dateRange.from).startOf('day').utc().unix();
+    period.to = MomentTz(dateRange.to).endOf('day').utc().unix();
+    period.frequency = 'second';
+  } else {
+    period.from = MomentTz().startOf('week').utc().unix();
+    period.to =
+      MomentTz().format('dddd') !== 'Sunday'
+        ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+        : MomentTz().utc().unix();
+    period.frequency = 'second';
   }
-    
 
   Object.keys(kpiQueriesByGroup).forEach((groupKey) => {
     const kpiQuery = {
@@ -917,10 +881,10 @@ export const getKPIQueryAttributionV1 = (
       gFil: getEventsWithPropertiesKPI(
         queryOptions?.globalFilters,
         kpiQueriesByGroup[groupKey][0]?.category
-      ),
-    }
+      )
+    };
     kpiQuery.analyze_type = groupKey;
-    if(kpiQueriesByGroup[groupKey].length) {
+    if (kpiQueriesByGroup[groupKey].length) {
       kpiQueries.push(kpiQuery);
     }
   });

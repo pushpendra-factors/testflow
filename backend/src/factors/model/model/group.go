@@ -34,7 +34,7 @@ var AllowedGroupNames = map[string]bool{
 }
 
 // AllowedGroups total groups allowed per project
-var AllowedGroups = 4
+var AllowedGroups = 8
 
 func GetPropertiesByGroupCategoryCacheKeySortedSet(projectId int64, date string) (*cacheRedis.Key, error) {
 	prefix := "SS:GN:PC"

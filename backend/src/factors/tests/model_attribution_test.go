@@ -3742,7 +3742,6 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
 		float64(5), float64(5), float64(1), float64(5), float64(5), float64(1)}
 
-	logCtx := log.Entry{}
 	mergedRows = append(mergedRows, row3)
 	type args struct {
 		rows [][]interface{}
@@ -3757,7 +3756,7 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := model.MergeDataRowsHavingSameKey(tt.args.rows, 0, model.AttributionKeyCampaign, model.AnalyzeTypeUsers, nil, logCtx)
+			got := model.MergeDataRowsHavingSameKey(tt.args.rows, 0, model.AttributionKeyCampaign, model.AnalyzeTypeUsers, nil)
 			for rowNo, _ := range got {
 				for colNo, _ := range got[rowNo] {
 					if got[rowNo][colNo] != tt.want[rowNo][colNo] {
@@ -3825,7 +3824,7 @@ func TestAddGrandTotalRow(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			resultGot := model.AddGrandTotalRow(tt.args.headers, tt.args.rows, 0, model.AnalyzeTypeUsers, nil, tt.args.method, "")
+			resultGot := model.AddGrandTotalRow(tt.args.headers, tt.args.rows, 0, tt.args.method, "")
 			got := resultGot[0]
 			for colNo, _ := range got {
 				if got[colNo] != tt.want[colNo] {
