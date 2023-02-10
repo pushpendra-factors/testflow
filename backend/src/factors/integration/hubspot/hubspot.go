@@ -1291,7 +1291,7 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPR
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys) {
+		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 
@@ -1328,13 +1328,14 @@ func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]mo
 
 		// Check if rule is applicable & the record has changed property w.r.t filters
 		if rule.RuleType != model.TouchPointRuleTypeForms {
+			logCtx.Info("Rule Type is failing the OTP event creation.")
 			continue
 		}
 		if !filterCheckGeneral(rule, trackPayload, logCtx) {
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys) {
+		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 
@@ -1369,13 +1370,14 @@ func ApplyHSOfflineTouchPointRuleForEngagement(project *model.Project, otpRules 
 		}
 		// Check if rule is applicable & the record has changed property w.r.t filters
 		if !canCreateHSEngagementTouchPoint(engagementType, rule.RuleType) {
+			logCtx.Info("Rule Type is failing the OTP event creation.")
 			continue
 		}
 		if !filterCheckGeneral(rule, trackPayload, logCtx) {
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys) {
+		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 
@@ -1409,13 +1411,14 @@ func ApplyHSOfflineTouchPointRuleForContactList(project *model.Project, otpRules
 
 		// Check if rule is applicable & the record has changed property w.r.t filters
 		if rule.RuleType != model.TouchPointRuleTypeContactList {
+			logCtx.Info("Rule Type is failing the OTP event creation.")
 			continue
 		}
 		if !filterCheckGeneral(rule, trackPayload, logCtx) {
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys) {
+		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 		_, err1 := CreateTouchPointEventForLists(project, trackPayload, document, rule, otpUniqueKey)
@@ -1719,8 +1722,12 @@ func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SD
 }
 
 // Returns true or false if the otpKey (userID+ruleID+keyID) is not present in uniqueOTPEventKeys i.e. Unique OTP key.
-func isOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string) bool {
-	return U.StringValueIn(otpUniqueKey, *uniqueOTPEventKeys)
+func isOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string, logCtx *log.Entry) bool {
+	isUnique := !U.StringValueIn(otpUniqueKey, *uniqueOTPEventKeys)
+	if !isUnique {
+		logCtx.Error("The OTP Key is not unique.")
+	}
+	return isUnique
 }
 
 //Creates a unique key using ruleID, userID and engagementID as keyID for Engagements {Emails, Calls and Meetings}
@@ -1948,6 +1955,7 @@ func filterCheckGeneral(rule model.OTPRule, trackPayload *SDK.TrackPayload, logC
 		return true
 	}
 	// When neither filters matched nor (filters matched but values are same)
+	logCtx.Error("Filter check general is failing for offline touch point rule")
 	return false
 }
 

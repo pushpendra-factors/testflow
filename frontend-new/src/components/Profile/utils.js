@@ -261,21 +261,21 @@ export const propValueFormat = (key, value) => {
     '$latest_page_load_time'
   ];
   if (
+    NUM_AND_DATETIME_PROPS.datetime.includes(key) ||
     key.includes('timestamp') ||
     key.includes('starttime') ||
     key.includes('endtime') ||
     key.toLowerCase().includes('jointime')
   ) {
-    return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
-  }
-  if (durationKeys.includes(key)) {
-    return formatDurationIntoString(parseInt(value));
-  }
-  if (key.includes('durationmilliseconds')) {
-    return formatDurationIntoString(parseInt(value / 1000));
-  }
-  if (!isNaN(value)) {
-    return parseInt(value);
+    if (key.toLowerCase().includes('date'))
+      return MomentTz(value * 1000).format('DD MMM YYYY');
+    else return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
+  } else if (NUM_AND_DATETIME_PROPS.numerical.includes(key) || !isNaN(value)) {
+    if (key.toLowerCase().includes('time'))
+      return formatDurationIntoString(parseInt(value));
+    else if (key.includes('durationmilliseconds'))
+      return formatDurationIntoString(parseInt(value / 1000));
+    else if (!isNaN(value)) return parseInt(value);
   }
   return value;
 };
@@ -551,4 +551,147 @@ export const getSegmentQuery = (queries, queryOptions, userType) => {
   query.ec = EVENT_QUERY_USER_TYPE[userType];
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
   return query;
+};
+
+// Temp Solution
+export const NUM_AND_DATETIME_PROPS = {
+  datetime: [
+    '$joinTime',
+    '$hubspot_contact_hs_analytics_first_timestamp',
+    '$hubspot_contact_createdate',
+    '$hubspot_contact_lastmodifieddate',
+    '$hubspot_contact_hs_latest_source_timestamp',
+    '$hubspot_contact_hubspot_owner_assigneddate',
+    '$hubspot_contact_hs_lifecyclestage_lead_date',
+    '$hubspot_contact_hs_date_entered_lead',
+    '$hubspot_contact_notes_last_updated',
+    '$hubspot_contact_notes_last_contacted',
+    '$hubspot_contact_hs_lifecyclestage_marketingqualifiedlead_date',
+    '$hubspot_contact_hs_date_entered_marketingqualifiedlead',
+    '$hubspot_contact_hs_sa_first_engagement_date',
+    '$hubspot_contact_hs_last_sales_activity_date',
+    '$hubspot_contact_hs_date_exited_lead',
+    '$hubspot_contact_hs_last_sales_activity_timestamp',
+    '$hubspot_contact_hs_analytics_last_visit_timestamp',
+    '$hubspot_contact_first_conversion_date',
+    '$hubspot_contact_recent_conversion_date',
+    '$hubspot_contact_hs_analytics_last_timestamp',
+    '$hubspot_contact_hs_analytics_first_visit_timestamp',
+    '$hubspot_contact_notes_next_activity_date',
+    '$hubspot_contact_hs_latest_meeting_activity',
+    '$hubspot_contact_hs_sales_email_last_replied',
+    '$hubspot_contact_engagements_last_meeting_booked',
+    '$hubspot_contact_hs_sales_email_last_opened',
+    '$hubspot_contact_hs_lifecyclestage_salesqualifiedlead_date',
+    '$hubspot_contact_hs_date_entered_salesqualifiedlead',
+    '$hubspot_contact_hs_date_exited_marketingqualifiedlead',
+    '$hubspot_contact_first_deal_created_date',
+    '$hubspot_contact_hs_lifecyclestage_subscriber_date',
+    '$hubspot_contact_hs_date_entered_subscriber',
+    '$hubspot_contact_hs_sales_email_last_clicked',
+    '$hubspot_contact_hs_date_exited_subscriber',
+    '$hubspot_contact_hs_lifecyclestage_opportunity_date',
+    '$hubspot_contact_hs_date_entered_opportunity',
+    '$hubspot_contact_hs_date_exited_salesqualifiedlead',
+    '$hubspot_contact_hs_lifecyclestage_customer_date',
+    '$hubspot_contact_closedate',
+    '$hubspot_contact_hs_date_entered_customer',
+    '$hubspot_contact_recent_deal_close_date',
+    '$hubspot_contact_reconnect_date',
+    '$hubspot_company_hs_lastmodifieddate',
+    '$hubspot_company_createdate',
+    '$hubspot_company_hs_analytics_first_timestamp',
+    '$hubspot_company_hs_analytics_latest_source_timestamp',
+    '$hubspot_company_first_contact_createdate',
+    '$hubspot_company_notes_last_updated',
+    '$hubspot_company_notes_last_contacted',
+    '$hubspot_company_hs_last_sales_activity_date',
+    '$hubspot_company_hs_last_sales_activity_timestamp',
+    '$hubspot_company_hs_analytics_last_visit_timestamp',
+    '$hubspot_company_hs_analytics_last_timestamp',
+    '$hubspot_company_hs_analytics_first_visit_timestamp',
+    '$hubspot_company_notes_next_activity_date',
+    '$hubspot_company_recent_conversion_date',
+    '$hubspot_company_first_conversion_date',
+    '$hubspot_company_hs_latest_meeting_activity',
+    '$hubspot_company_hs_last_booked_meeting_date',
+    '$hubspot_company_hs_sales_email_last_replied',
+    '$hubspot_company_engagements_last_meeting_booked',
+    '$hubspot_company_first_deal_created_date',
+    '$hubspot_company_closedate',
+    '$hubspot_company_hubspot_owner_assigneddate',
+    '$hubspot_company_lfapp_latest_visit',
+    '$hubspot_company_recent_deal_close_date',
+    '$hubspot_company_hs_last_open_task_date',
+    '$hubspot_company_hs_last_logged_call_date'
+  ],
+  numerical: [
+    '$hour_of_first_event',
+    'Number of Sessions',
+    'Page Count',
+    'Time Spent on Site',
+    '$hubspot_contact_hs_analytics_num_visits',
+    '$hubspot_contact_num_conversion_events',
+    '$hubspot_contact_hs_object_id',
+    '$hubspot_contact_hs_analytics_revenue',
+    '$hubspot_contact_hs_analytics_average_page_views',
+    '$hubspot_contact_num_unique_conversion_events',
+    '$hubspot_contact_hs_analytics_num_event_completions',
+    '$hubspot_contact_hs_analytics_num_page_views',
+    '$hubspot_contact_associatedcompanyid',
+    '$hubspot_contact_hs_count_is_unworked',
+    '$hubspot_contact_hs_count_is_worked',
+    '$hubspot_contact_hs_sequences_actively_enrolled_count',
+    '$hubspot_contact_num_notes',
+    '$hubspot_contact_num_contacted_notes',
+    '$hubspot_contact_hs_time_in_lead',
+    '$hubspot_contact_hs_updated_by_user_id',
+    '$hubspot_contact_hs_time_in_marketingqualifiedlead',
+    '$hubspot_contact_hs_first_engagement_object_id',
+    '$hubspot_contact_hs_time_to_first_engagement',
+    '$hubspot_contact_hs_created_by_user_id',
+    '$hubspot_contact_hs_time_in_salesqualifiedlead',
+    '$hubspot_contact_num_associated_deals',
+    '$hubspot_contact_hs_time_in_subscriber',
+    '$session_spent_time',
+    '$page_count',
+    '$hubspot_contact_hs_time_in_opportunity',
+    '$hubspot_contact_days_to_close',
+    '$hubspot_contact_hs_time_in_customer',
+    '$initial_page_load_time',
+    '$latest_page_load_time',
+    '$screen_height',
+    '$initial_page_scroll_percent',
+    '$initial_page_spent_time',
+    '$screen_width',
+    '$hubspot_contact_recent_deal_amount',
+    '$hubspot_contact_total_revenue',
+    '$hubspot_contact_primary_contact',
+    '$hubspot_company_hs_num_contacts_with_buying_roles',
+    '$hubspot_company_hs_object_id',
+    '$hubspot_company_hs_num_open_deals',
+    '$hubspot_company_hs_num_child_companies',
+    '$hubspot_company_hs_num_blockers',
+    '$hubspot_company_hs_num_decision_makers',
+    '$hubspot_company_num_associated_contacts',
+    '$hubspot_company_hs_target_account_probability',
+    '$hubspot_company_hs_analytics_num_visits',
+    '$hubspot_company_hs_analytics_num_page_views',
+    '$hubspot_company_num_conversion_events',
+    '$hubspot_company_num_notes',
+    '$hubspot_company_num_contacted_notes',
+    '$hubspot_company_numberofemployees',
+    '$hubspot_company_annualrevenue',
+    '$hubspot_company_num_associated_deals',
+    '$hubspot_company_hs_total_deal_value',
+    '$hubspot_company_days_to_close',
+    '$hubspot_company_total_revenue',
+    '$hubspot_company_hs_updated_by_user_id',
+    '$hubspot_company_factors_app_project_id',
+    '$hubspot_company_mrr',
+    '$hubspot_company_number_of_customers',
+    '$hubspot_company_arpu',
+    '$hubspot_company_recent_deal_amount',
+    '$hubspot_company_hs_created_by_user_id'
+  ]
 };

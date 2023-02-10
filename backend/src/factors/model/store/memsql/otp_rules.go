@@ -92,11 +92,11 @@ func (store *MemSQL) GetUniqueKeyPropertyForOTPEventForLast3Months(projectID int
 	db := C.GetServices().Db
 
 	uniqueOTPEventKeys := make([]string, 0, 0)
-	var otpEventID string
+	var otpEvent model.EventName
 
 	//Fetching id when event name is offline touch point for the given projectID
 	err := db.Table("event_names").Select("id").
-		Where("name=? AND project_id=?", U.EVENT_NAME_OFFLINE_TOUCH_POINT, projectID).Find(&otpEventID).Error
+		Where("name=? AND project_id=?", U.EVENT_NAME_OFFLINE_TOUCH_POINT, projectID).Find(&otpEvent).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return uniqueOTPEventKeys, http.StatusNotFound
@@ -104,20 +104,32 @@ func (store *MemSQL) GetUniqueKeyPropertyForOTPEventForLast3Months(projectID int
 		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch id from event_names table for project")
 		return uniqueOTPEventKeys, http.StatusNotFound
 	}
+	otpEventID := otpEvent.ID
+
 	//Getting timestamp for the last 3 months
 	to := U.TimeNowUnix()
 	from := to - (93 * model.SecsInADay)
 
 	//Fetching properties with id fetched above for the given projectID for last 3 months
-	err1 := db.Table("events").Select("JSON_EXTRACT_STRING(properties,?)", U.EP_OTP_UNIQUE_KEY).
+	rows, err1 := db.Table("events").Select("JSON_EXTRACT_STRING(properties,?)", U.EP_OTP_UNIQUE_KEY).
 		Where("project_id=? AND event_name_id=? AND timestamp>=? AND timestamp<=?", projectID, otpEventID, from, to).
-		Order("created_at DESC").Find(&uniqueOTPEventKeys).Error
+		Order("created_at DESC").Rows()
 	if err1 != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return uniqueOTPEventKeys, http.StatusNotFound
 		}
 		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch event properties from events table for project")
 		return uniqueOTPEventKeys, http.StatusNotFound
+	}
+	for rows.Next() {
+		var otpUniqueKey string
+
+		err = rows.Scan(&otpUniqueKey)
+		if err != nil {
+			log.WithError(err).Error("Error while scanning row")
+			return uniqueOTPEventKeys, http.StatusNotFound
+		}
+		uniqueOTPEventKeys = append(uniqueOTPEventKeys, otpUniqueKey)
 	}
 	return uniqueOTPEventKeys, http.StatusFound
 }

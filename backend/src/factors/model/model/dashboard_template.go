@@ -24,7 +24,7 @@ const (
 	IntegrationFacebook            = "facebook"
 	IntegrationLinkedin            = "linkedin"
 	IntegrationGoogleSearchConsole = "google_search_console"
-	IntegrationBing                = "bing"
+	IntegrationBing                = "bingads"
 	IntegrationClearbit            = "clearbit"
 	IntegrationLeadsquared         = "leadsquared"
 	Integration6Signal             = "6signal"

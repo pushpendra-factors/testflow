@@ -291,6 +291,7 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.GET("/:project_id/v1/eventtriggeralert", responseWrapper(V1.GetEventTriggerAlertsByProjectHandler))
 	featuresGatesRouteGroup.POST("/:project_id/v1/eventtriggeralert", responseWrapper(V1.CreateEventTriggerAlertHandler))
 	featuresGatesRouteGroup.DELETE("/:project_id/v1/eventtriggeralert/:id", V1.DeleteEventTriggerAlertHandler)
+	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id", responseWrapper(V1.EditEventTriggerAlertHandler))
 
 	// Auth route group with authentication an authorization middleware.
 	authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)

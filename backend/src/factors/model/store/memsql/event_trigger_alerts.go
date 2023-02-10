@@ -7,6 +7,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	E "factors/event_match"
@@ -20,6 +21,7 @@ const (
 	ListLimit          = 1000
 	AlertCreationLimit = 100
 	SortedSetCacheKey  = "ETA:pid"
+	CoolDownPrefix     = "ETA:CoolDown"
 	oneDayInSeconds    = 24 * 60 * 60
 )
 
@@ -136,17 +138,16 @@ func (store *MemSQL) CreateEventTriggerAlert(userID string, projectID int64, ale
 	db := C.GetServices().Db
 
 	var alert model.EventTriggerAlert
+	transTime := gorm.NowFunc()
+	id := U.GetUUID()
 
 	if alertCreationLimitExceeded(projectID) {
 		return nil, http.StatusConflict, "Alerts limit reached"
 	}
 
-	if isDuplicateAlertTitle(projectID, alertConfig.Title) {
+	if isDuplicateAlertTitle(projectID, alertConfig.Title, id) {
 		return nil, http.StatusConflict, "Alert already exist"
 	}
-
-	transTime := gorm.NowFunc()
-	id := U.GetUUID()
 
 	trigger, err := U.EncodeStructTypeToPostgresJsonb(*alertConfig)
 	if err != nil {
@@ -190,7 +191,8 @@ func alertCreationLimitExceeded(projectID int64) bool {
 	}
 	return count > AlertCreationLimit
 }
-func isDuplicateAlertTitle(projectID int64, title string) bool {
+
+func isDuplicateAlertTitle(projectID int64, title, id string) bool {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"event_trigger_alert": title,
@@ -201,6 +203,7 @@ func isDuplicateAlertTitle(projectID int64, title string) bool {
 	var alerts []model.EventTriggerAlert
 	if err := db.Where("project_id = ?", projectID).
 		Where("is_deleted = ?", false).
+		Not("id = ?", id).
 		Where("title = ?", title).
 		Find(&alerts).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
@@ -238,7 +241,7 @@ func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([
 	}
 
 	if err := db.Where("project_id = ? AND is_deleted = 0", projectId).
-		Where("JSON_EXTRACT_STRING(event_trigger_alert, 'event') LIKE ?", fmt.Sprintf("%s", eventName.Name)).
+		Where("JSON_EXTRACT_STRING(event_trigger_alert, 'event') LIKE ?", eventName.Name).
 		Find(&eventAlerts).Error; err != nil {
 		log.WithFields(log.Fields{"projectId": projectId, "event": eventName.Name}).WithError(err).Error(
 			"filtering eventName failed on GetFilterEventNamesByEvent")
@@ -265,7 +268,6 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	log.Info("Inside Match function of event_trigger_alerts.")
 	alerts, errCode := store.GetEventTriggerAlertsByEvent(projectId, eventNameId)
 	if errCode != http.StatusFound || alerts == nil {
 		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
@@ -291,19 +293,18 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 			log.WithError(err).Error("Jsonb decoding to struct failure")
 			return nil, http.StatusInternalServerError
 		}
-
-		if(isUpdate == true){
-			if(len(*updatedEventProps) == 0){
+		if isUpdate {
+			if len(*updatedEventProps) == 0 {
 				continue
 			} else {
 				isPropertyInFilterUpdated := false
 				for _, fil := range config.Filter {
 					_, exists := (*updatedEventProps)[fil.Property]
-					if(fil.Entity == "event" && exists == true){
+					if fil.Entity == "event" && exists {
 						isPropertyInFilterUpdated = true
 					}
 				}
-				if(isPropertyInFilterUpdated == false){
+				if !isPropertyInFilterUpdated {
 					continue
 				}
 			}
@@ -319,50 +320,89 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	return &matchedAlerts, http.StatusFound
 }
 
-func AddAlertToCache(alert *model.EventTriggerAlertConfig, event *model.Event, key *cacheRedis.Key) (int, error) {
+func (store *MemSQL) getDisplayNamesForEP(projectId int64, eventName string) map[string]string {
+
+	_, displayNames := store.GetDisplayNamesForAllEventProperties(projectId, eventName)
+	standardPropertiesAllEvent := U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES
+	displayNamesOp := make(map[string]string)
+	for property, displayName := range standardPropertiesAllEvent {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+	if eventName == U.EVENT_NAME_SESSION {
+		standardPropertiesSession := U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES
+		for property, displayName := range standardPropertiesSession {
+			displayNamesOp[property] = strings.Title(displayName)
+		}
+	}
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+
+	_, displayNames = store.GetDisplayNamesForObjectEntities(projectId)
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+
+	dupCheck := make(map[string]bool)
+	for _, name := range displayNamesOp {
+		_, exists := dupCheck[name]
+		if exists {
+			log.Warning(fmt.Sprintf("Duplicate display name %s", name))
+		}
+		dupCheck[name] = true
+	}
+
+	return displayNamesOp
+}
+
+func (store *MemSQL) getDisplayNamesForUP(projectId int64) map[string]string {
+
+	_, displayNames := store.GetDisplayNamesForAllUserProperties(projectId)
+	standardProperties := U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES
+	displayNamesOp := make(map[string]string)
+	for property, displayName := range standardProperties {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+
+	_, displayNames = store.GetDisplayNamesForObjectEntities(projectId)
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+
+	dupCheck := make(map[string]bool)
+	for _, name := range displayNamesOp {
+		_, exists := dupCheck[name]
+		if exists {
+			log.Warningf(fmt.Sprintf("Duplicate display name %s", name))
+		}
+		dupCheck[name] = true
+	}
+
+	return displayNamesOp
+}
+
+func (store *MemSQL) AddAlertToCache(alert *model.EventTriggerAlertConfig, msgProps *U.PropertiesMap, key *cacheRedis.Key) (int, error) {
 	logFields := log.Fields{
 		"event_trigger_alert": alert,
 		"CacheKey":            key,
 	}
-	log.Info("Inside AddAlertToCache function.")
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	messageProperties := make([]model.QueryGroupByProperty, 0)
-	err := U.DecodePostgresJsonbToStructType(alert.MessageProperty, &messageProperties)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Error("Jsonb decoding to struct failure")
-		return http.StatusInternalServerError, err
-	}
-	var userPropMap, eventPropMap *map[string]interface{}
-	if event.UserProperties != nil {
-		userPropMap, _ = U.DecodePostgresJsonb(event.UserProperties)
-	}
-	if len(event.Properties.RawMessage) != 0 {
-		eventPropMap, _ = U.DecodePostgresJsonb(&event.Properties)
-	}
-
-	propMap := make(U.PropertiesMap, 0)
-	for _, messageProperty := range messageProperties {
-		p := messageProperty.Property
-		if messageProperty.Entity == "user" {
-			propMap[p] = (*userPropMap)[p]
-		} else {
-			propMap[p] = (*eventPropMap)[p]
-		}
-	}
 
 	message := model.EventTriggerAlertMessage{
 		Title:           alert.Title,
-		Event:           alert.Event,
-		MessageProperty: propMap,
+		Event:           U.CreateVirtualDisplayName(alert.Event),
+		MessageProperty: *msgProps,
 		Message:         alert.Message,
 	}
+
 	cachePackage := model.CachedEventTriggerAlert{
 		Message: message,
 	}
 
-	log.WithFields(logFields).Info("SetCacheForEventTriggerAlert function inside AddAlertToCache.")
-	err = model.SetCacheForEventTriggerAlert(key, &cachePackage)
+	err := model.SetCacheForEventTriggerAlert(key, &cachePackage)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("setting cache failed inside AddAlertToCache")
 		return http.StatusInternalServerError, err
@@ -381,20 +421,200 @@ func getSortedSetCacheKey(projectId int64) (*cacheRedis.Key, error) {
 	return key, err
 }
 
+func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{} {
+
+	var res interface{}
+	if exi {
+		if typ == "datetime" {
+			val, ok := value.(int64)
+			if !ok {
+				val = int64(value.(float64))
+			}
+			res = U.GetDateOnlyHyphenFormatFromTimestampZ(val)
+		} else {
+			res = U.GetPropertyValueAsString(value)
+		}
+	}
+
+	return res
+}
+
+func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, alert *model.EventTriggerAlertConfig) (U.PropertiesMap, map[string]interface{}, error) {
+	logFields := log.Fields{
+		"event_trigger_alert": *alert,
+		"event":               *event,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	messageProperties := make([]model.QueryGroupByProperty, 0)
+	if alert.MessageProperty != nil {
+		err := U.DecodePostgresJsonbToStructType(alert.MessageProperty, &messageProperties)
+		if err != nil {
+			log.WithError(err).Error("Jsonb decoding to struct failure")
+			return nil, nil, err
+		}
+	}
+
+	var userPropMap, eventPropMap *map[string]interface{}
+	var err error
+	if event.UserProperties != nil {
+		userPropMap, err = U.DecodePostgresJsonb(event.UserProperties)
+		if err != nil {
+			log.WithError(err).Error("Jsonb decoding to propMap failure")
+			return nil, nil, err
+		}
+	}
+	if &event.Properties != nil && len(event.Properties.RawMessage) != 0 {
+		eventPropMap, err = U.DecodePostgresJsonb(&event.Properties)
+		if err != nil {
+			log.WithError(err).Error("Jsonb decoding to propMap failure")
+			return nil, nil, err
+		}
+	}
+
+	displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, event.EventNameId)
+	//log.Info(fmt.Printf("%+v\n", displayNamesEP))
+
+	displayNamesUP := store.getDisplayNamesForUP(event.ProjectId)
+	//log.Info(fmt.Printf("%+v\n", displayNamesUP))
+
+	msgPropMap := make(U.PropertiesMap, 0)
+	for _, messageProperty := range messageProperties {
+		p := messageProperty.Property
+		if messageProperty.Entity == "user" {
+
+			displayName, exists := displayNamesUP[p]
+			if !exists {
+				displayName = U.CreateVirtualDisplayName(p)
+			}
+			propVal, exi := (*userPropMap)[p]
+			msgPropMap[displayName] = getDisplayLikePropValue(messageProperty.Type, exi, propVal)
+
+		} else if messageProperty.Entity == "event" {
+			displayName, exists := displayNamesEP[p]
+			if !exists {
+				displayName = U.CreateVirtualDisplayName(p)
+			}
+			propVal, exi := (*eventPropMap)[p]
+			msgPropMap[displayName] = getDisplayLikePropValue(messageProperty.Type, exi, propVal)
+		} else {
+			log.Warn("can not find the message property in user and event prop sets")
+		}
+	}
+
+	breakdownPropMap := make(map[string]interface{}, 0)
+	var breakdownProperties []model.QueryGroupByProperty
+	if alert.BreakdownProperties != nil {
+		err = U.DecodePostgresJsonbToStructType(alert.BreakdownProperties, &breakdownProperties)
+		if err != nil {
+			log.WithError(err).Error("breakdownProperty Jsonb decoding to queryGroupByProperty failure")
+			return nil, nil, err
+		}
+	}
+
+	for _, breakdownProperty := range breakdownProperties {
+		prop := breakdownProperty.Property
+		var value interface{}
+		uval, uexists := (*userPropMap)[prop]
+		eval, eexists := (*eventPropMap)[prop]
+
+		if uexists {
+			value = uval
+		} else if eexists {
+			value = eval
+		} else {
+			log.Warn("can not find the breakdown property in user and event prop sets")
+		}
+		breakdownPropMap[prop] = value
+	}
+	return msgPropMap, breakdownPropMap, nil
+}
+
+func getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(projectID int64, dontRepeatAlerts bool,
+	coolDownTime, unixtime int64, alertID string, breakdownProps *map[string]interface{}) (bool,
+	*cacheRedis.Key, cacheRedis.SortedSetKeyValueTuple, error) {
+
+	key, err := model.GetEventTriggerAlertCacheKey(projectID, unixtime, alertID, breakdownProps)
+	if err != nil {
+		log.WithError(err).Error("error while getting cache Key")
+		return false, nil, cacheRedis.SortedSetKeyValueTuple{}, err
+	}
+
+	check := true
+	if dontRepeatAlerts {
+		check, err = isCoolDownTimeExhausted(key, coolDownTime, unixtime)
+		if err != nil {
+			log.WithError(err).Error("error while getting coolDownTime diff")
+			return false, key, cacheRedis.SortedSetKeyValueTuple{}, nil
+		}
+	}
+
+	ssKey, err := getSortedSetCacheKey(projectID)
+	if err != nil {
+		log.WithError(err).Error("error while getting sorted set cache Key")
+		return false, key, cacheRedis.SortedSetKeyValueTuple{}, err
+	}
+
+	ssValue, err := key.Key()
+	if err != nil {
+		log.WithError(err).Error("error while converting cache Key to string")
+		return false, key, cacheRedis.SortedSetKeyValueTuple{}, err
+	}
+
+	sortedSetTuple := cacheRedis.SortedSetKeyValueTuple{
+		Key:   ssKey,
+		Value: ssValue,
+	}
+
+	return check, key, sortedSetTuple, nil
+}
+
+func isCoolDownTimeExhausted(key *cacheRedis.Key, coolDownTime, unixtime int64) (bool, error) {
+
+	suffix := strings.TrimRight(key.Suffix, fmt.Sprintf(":%d", unixtime))
+	cdKey, err := cacheRedis.NewKey(key.ProjectID, CoolDownPrefix, suffix)
+	if err != nil {
+		log.WithError(err).Error("error while getting redis key")
+		return false, err
+	}
+
+	count, err := cacheRedis.IncrPersistentBatch(cdKey)
+	if err != nil {
+		log.WithError(err).Error("error while getting redis key")
+		return false, err
+	}
+
+	if count[0] == 1 {
+		if coolDownTime == 0 {
+			coolDownTime = oneDayInSeconds
+		}
+		expire, err := cacheRedis.SetExpiryPersistent(cdKey, int(coolDownTime))
+		if err != nil || expire != 1 {
+			log.WithError(err).Error("cannot set expiry for redis key")
+		}
+	} else {
+		return false, nil
+	}
+	return true, nil
+}
+
 func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, event *model.Event) bool {
 
 	//Adding alert to cache
-	//If the counterKey is present, then
 	//INCR the counter key
+	//If the counterKey is present, continue
 	//Else set the counter key with one day of expiry
 	//If the counter key has count less than daily limit, then
 	//Get sorted set keys from where all the alert keys for a particular projectID are retrieved
-	//Get the alert and counter key as well
+	//Get the alert key as well
 	//Add the alert key to the sorted set and cache
 	//Else return
 
-	log.Info("Inside CacheEventTriggerAlert function.")
-	log.Info(fmt.Printf("%+v\n", *alert))
+	logFields := log.Fields{
+		"project_id":          alert.ProjectID,
+		"event_trigger_alert": *alert,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var eta model.EventTriggerAlertConfig
 	if err := U.DecodePostgresJsonbToStructType(alert.EventTriggerAlert, &eta); err != nil {
@@ -428,45 +648,42 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 	}
 
 	addToCache := true
-	if (eta.RepeatAlerts && count > 1) || (eta.Notifications && count > eta.AlertLimit) {
+	if eta.SetAlertLimit && count > eta.AlertLimit {
 		addToCache = false
 	}
 
 	if addToCache {
-		ssKey, err := getSortedSetCacheKey(event.ProjectId)
+		messageProps, breakdownProps, err := store.GetMessageAndBreakdownPropertiesMap(event, &eta)
 		if err != nil {
-			log.WithError(err).Error("error while getting sorted set cache Key")
+			log.WithError(err).Error("key and sortedTuple fetching error")
 			return false
 		}
 
-		key, err := model.GetEventTriggerAlertCacheKey(event.ProjectId, timestamp, alert.ID)
+		check, key, sortedSetTuple, err := getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(
+			event.ProjectId, eta.DontRepeatAlerts, eta.CoolDownTime, timestamp, alert.ID, &breakdownProps)
 		if err != nil {
-			log.WithError(err).Error("error while getting cache Key")
+			log.WithError(err).Error("key and sortedTuple fetching error")
 			return false
 		}
 
-		ssValue, err := key.Key()
-		if err != nil {
-			log.WithError(err).Error("error while getting cache Key to string")
-			return false
+		if !check {
+			log.WithFields(log.Fields{"project_id": event.ProjectId, "event_trigger_alert": alert}).
+				Info("Alert sending cancelled due to cool down timer")
+			return true
 		}
-
-		sortedSetTuple := cacheRedis.SortedSetKeyValueTuple{
-			Key:   ssKey,
-			Value: ssValue,
-		}
-
 		_, err = cacheRedis.ZincrPersistentBatch(true, sortedSetTuple)
 		if err != nil {
-			log.WithError(err).Error("error while getting INCR value")
+			log.WithError(err).Error("error while getting zincr")
+			return false
 		}
 
-		successCode, err := AddAlertToCache(&eta, event, key)
+		successCode, err := store.AddAlertToCache(&eta, &messageProps, key)
 		if err != nil || successCode != http.StatusCreated {
 			log.WithFields(log.Fields{"project_id": event.ProjectId,
 				"event_trigger_alert": alert, log.ErrorKey: err}).Error("Failed to send alert.")
 			return false
 		}
+
 	} else {
 		log.WithFields(log.Fields{"project_id": event.ProjectId, "event_trigger_alert": *alert}).
 			Info("Alert was not sent for current EventTriggerAlert as daily AlertLimit has been reached.")
@@ -481,13 +698,20 @@ func (store *MemSQL) UpdateEventTriggerAlertField(projectID int64, id string, fi
 		"event_trigger_alert_id": id,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if title, exist := field["title"]; exist {
+		if isDuplicateAlertTitle(projectID, title.(string), id) {
+			return http.StatusConflict, nil
+		}
+	}
+
 	var alert model.EventTriggerAlert
 
 	db := C.GetServices().Db
 	if err := db.Model(&alert).Where("id = ? AND project_id = ? AND is_deleted = 0", id, projectID).
-		Update(field).Error; err != nil {
-		log.WithFields(log.Fields{"projectId": projectID, "event_trigger_alert": id}).WithError(err).Error(
-			"Failed to fetch the required event trigger alert")
+		Updates(field).Error; err != nil {
+		log.WithFields(log.Fields{"projectId": projectID, "event_trigger_alert": id}).WithError(err).
+			Error("Failed to update event trigger alert")
 
 		return http.StatusInternalServerError, err
 	}
