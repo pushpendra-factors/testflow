@@ -4,14 +4,12 @@ import (
 	"flag"
 	"net/http"
 	"os"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
-	U "factors/util"
 )
 
 func main() {
@@ -82,15 +80,7 @@ func main() {
 
 	log.WithFields(log.Fields{"start_timestamp": *startTimestamp, "end_timestamp": *endTimestamp}).Info("Running for following time range.")
 
-	projectIDList := make([]int64, 0)
-	for _, projectID := range strings.Split(*projectIDs, ",") {
-		value, err := U.GetPropertyValueAsFloat64(projectID)
-		if err != nil {
-			log.WithError(err).Panic("Failed to convert project id.")
-		}
-
-		projectIDList = append(projectIDList, int64(value))
-	}
+	projectIDList := store.GetStore().GetProjectsToRunForIncludeExcludeString(*projectIDs, "")
 
 	log.WithFields(log.Fields{"project_ids": projectIDList}).Info("Running for following projects.")
 
@@ -117,6 +107,10 @@ func RunDissociateSession(projectID int64, startTimestamp, endTimestamp int64, w
 	}
 
 	sessionEvents, status := store.GetStore().GetEventsByEventNameIDANDTimeRange(projectID, sessionEventName.ID, startTimestamp, endTimestamp)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get session events for given range.")
+		return status
+	}
 
 	sessionAssociatedEvents, totalEvents := getSessionAssociatedEvents(projectID, sessionEvents)
 
