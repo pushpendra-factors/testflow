@@ -98,7 +98,7 @@ const FAFilterSelect = ({
       operatorState?.[0] === OPERATORS['isKnown'] ||
       operatorState?.[0] === OPERATORS['isUnknown']
     ) {
-      valuesSelectSingle('$none');
+      valuesSelectSingle(['$none']);
     }
   }, [operatorState]);
 

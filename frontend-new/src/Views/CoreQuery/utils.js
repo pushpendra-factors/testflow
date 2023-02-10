@@ -1616,7 +1616,7 @@ export const getAttributionQuery = (
   }
   if (linkedEvents.length) {
     query.query.lfe = linkedEvents.map((le) => {
-      const linkedEventFilters = getFilters(le.filters);
+      const linkedEventFilters = getFiltersWithoutOrProperty(le.filters);
       return {
         na: le.label,
         pr: linkedEventFilters
