@@ -1191,6 +1191,40 @@ func (store *MemSQL) associateSessionToEventsInBatch(projectId int64, userID str
 	return http.StatusAccepted
 }
 
+func (store *MemSQL) DissociateEventsFromSession(projectID int64, events []model.Event, sessionID string) int {
+	logFields := log.Fields{
+		"project_id":   projectID,
+		"total_events": len(events),
+		"session_id":   sessionID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || len(events) == 0 || sessionID == "" {
+		logCtx.Error("Invalid parameter.")
+		return http.StatusBadRequest
+	}
+
+	startTimestamp, endTimestamp := events[0].Timestamp, events[0].Timestamp
+	eventIDs := make([]string, 0)
+	for i := range events {
+		startTimestamp = U.Min(startTimestamp, events[i].Timestamp)
+		endTimestamp = U.Max(endTimestamp, events[i].Timestamp)
+		eventIDs = append(eventIDs, events[i].ID)
+	}
+
+	updateFields := map[string]interface{}{"session_id": nil}
+	db := C.GetServices().Db
+	if err := db.Model(&model.Event{}).Where("project_id = ? AND id in ( ? ) and session_id = ? AND timestamp BETWEEN ? AND ? ",
+		projectID, eventIDs, sessionID, startTimestamp, endTimestamp).Update(updateFields).Error; err != nil {
+		logCtx.Error("Failed to DissociateEventFromSession.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+
+}
+
 // AddSessionForUser - Wrapper for addSessionForUser to handle creating
 // new session for last event when new session conditions met.
 func (store *MemSQL) AddSessionForUser(projectId int64, userId string, userEvents []model.Event,
@@ -1988,6 +2022,44 @@ func (store *MemSQL) GetEventsByEventNameId(projectId int64, eventNameId string,
 	return events, http.StatusFound
 }
 
+func (store *MemSQL) GetEventsByEventNameIDANDTimeRange(projectID int64, eventNameID string,
+	startTimestamp int64, endTimestamp int64) ([]model.Event, int) {
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"event_name_id":   eventNameID,
+		"start_timestamp": startTimestamp,
+		"end_timestamp":   endTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || eventNameID == "" || startTimestamp == 0 || endTimestamp == 0 {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	var events []model.Event
+
+	db := C.GetServices().Db
+	if err := db.Order("timestamp").Where(
+		"project_id = ? AND event_name_id = ? AND timestamp BETWEEN ? AND ? ",
+		projectID, eventNameID, startTimestamp, endTimestamp).Find(&events).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get events by event name id in time range.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return events, http.StatusFound
+}
+
 // GetEventsWithoutPropertiesAndWithPropertiesByName - Use for getting properties with and without values
 // and use it for updating the events which doesn't have the values. User for fixing data for YourStory.
 func (store *MemSQL) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID int64, from,
@@ -2500,4 +2572,36 @@ func (store *MemSQL) GetUserIdFromEventId(projectID int64, id string, userId str
 		return "", "", http.StatusInternalServerError
 	}
 	return event.ID, event.UserId, http.StatusFound
+}
+
+func (store *MemSQL) GetEventsBySessionEvent(projectID int64, sessionEventID, userID string) ([]model.Event, int) {
+	logFields := log.Fields{
+		"project_id":       projectID,
+		"session_event_id": sessionEventID,
+		"user_id":          userID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || sessionEventID == "" || userID == "" {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var events []model.Event
+	if err := db.Where("project_id = ? AND session_id = ? AND user_id = ? ", projectID, sessionEventID, userID).Find(&events).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Getting user_id failed on GetUserIdFromEventById")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return nil, http.StatusNotFound
+	}
+	return events, http.StatusFound
 }

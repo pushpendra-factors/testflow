@@ -641,3 +641,9 @@ pack-adhoc-sensehq-count-touchpoints:
 upload-adhoc-sensehq-count-touchpoints: export IMAGE_NAME=adhoc-sensehq-count-touchpoints
 upload-adhoc-sensehq-count-touchpoints: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/adhoc-sensehq-count-touchpoints:$(TAG)
+
+pack-delete-sessions-job:
+	docker build -t us.gcr.io/factors-$(ENV)/delete-sessions-job:$(TAG) -f Dockerfile.delete_sessions_job .
+upload-delete-sessions-job: export IMAGE_NAME=delete-sessions-job
+upload-delete-sessions-job: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/delete-sessions-job:$(TAG)
