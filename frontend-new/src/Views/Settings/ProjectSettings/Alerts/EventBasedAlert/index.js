@@ -38,13 +38,15 @@ import SelectChannels from '../SelectChannels';
 import {
   QUERY_TYPE_EVENT,
   INITIAL_SESSION_ANALYTICS_SEQ,
-  QUERY_OPTIONS_DEFAULT_VALUE
+  QUERY_OPTIONS_DEFAULT_VALUE,
+  AvailableGroups
 } from 'Utils/constants';
 import { DefaultDateRangeFormat } from '../../../../CoreQuery/utils';
 import TextArea from 'antd/lib/input/TextArea';
 import EventGroupBlock from '../../../../../components/QueryComposer/EventGroupBlock';
 import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
+import _ from 'lodash';
 
 const { Option } = Select;
 
@@ -66,7 +68,13 @@ const EventBasedAlert = ({
   delGroupBy,
   getUserProperties,
   groupBy,
-  resetGroupBy
+  resetGroupBy,
+  eventProperties,
+  eventPropNames,
+  groupProperties,
+  groupPropNames,
+  userProperties,
+  userPropNames
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -75,6 +83,7 @@ const EventBasedAlert = ({
   const [notRepeat, setNotRepeat] = useState(false);
   const [notifications, setNotifications] = useState(false);
   const [alertLimit, setAlertLimit] = useState(5);
+  const [coolDownTime, setCoolDownTime] = useState(0.5);
   const [viewFilter, setViewFilter] = useState([]);
   const [channelOpts, setChannelOpts] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState([]);
@@ -98,6 +107,31 @@ const EventBasedAlert = ({
   });
 
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
+
+  const [breakdownOptions, setBreakdownOptions] = useState([]);
+  const [EventPropertyDetails, setEventPropertyDetails] = useState({});
+
+  useEffect(() => {
+    let DDCategory = [];
+    for (const key of Object.keys(eventProperties)) {
+      if (key === queries[0]?.label) {
+        DDCategory = _.union(eventProperties[queries[0]?.label], DDCategory);
+      }
+    }
+    if (AvailableGroups[queries[0]?.group]) {
+      for (const key of Object.keys(groupProperties)) {
+        if (key === AvailableGroups[queries[0]?.group]) {
+          DDCategory = _.union(
+            DDCategory,
+            groupProperties[AvailableGroups[queries[0]?.group]]
+          );
+        }
+      }
+    } else {
+      DDCategory = _.union(DDCategory, userProperties);
+    }
+    setBreakdownOptions(DDCategory);
+  }, [queries, eventProperties, groupProperties, userProperties]);
 
   const confirmRemove = (id) => {
     return deleteEventAlert(activeProject.id, id).then(
@@ -154,6 +188,7 @@ const EventBasedAlert = ({
           ) {
             deleteGroupByForEvent(newEvent, index);
             resetGroupBy();
+            setEventPropertyDetails({});
           }
           queryupdated[index] = newEvent;
         } else if (changeType === 'filters_updated') {
@@ -163,6 +198,7 @@ const EventBasedAlert = ({
           deleteGroupByForEvent(newEvent, index);
           resetGroupBy();
           queryupdated.splice(index, 1);
+          setEventPropertyDetails({});
         }
       } else {
         if (flag) {
@@ -234,6 +270,7 @@ const EventBasedAlert = ({
         event={queries?.[0]}
         setGroupState={pushGroupBy}
         closeDropDown={() => setGroupByDDVisible(false)}
+        hideText={true}
       />
     ) : null;
 
@@ -259,6 +296,7 @@ const EventBasedAlert = ({
                 delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
                 setGroupState={pushGroupBy}
                 closeDropDown={() => setGroupByDDVisible(false)}
+                hideText={true}
               />
             </div>
           );
@@ -300,6 +338,7 @@ const EventBasedAlert = ({
                 delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
                 setGroupState={pushGroupBy}
                 closeDropDown={() => setGroupByDDVisible(false)}
+                hideText={true}
               />
             </div>
           );
@@ -386,10 +425,27 @@ const EventBasedAlert = ({
     form.resetFields();
     setAlertState({ state: 'list', index: 0 });
     resetGroupBy();
+    setEventPropertyDetails({});
+    setBreakdownOptions([]);
   };
 
   const onFinish = (data) => {
     setLoading(true);
+
+    let breakDownProperties = [];
+    if (EventPropertyDetails?.name) {
+      const category = eventProperties[queries[0]?.label].filter(
+        (prop) => prop[1] === EventPropertyDetails?.name
+      );
+      breakDownProperties = [
+        {
+          eventName: queries?.[0].label,
+          property: EventPropertyDetails?.name,
+          prop_type: EventPropertyDetails?.data_type,
+          prop_category: category.length > 0 ? 'event' : 'user'
+        }
+      ];
+    }
 
     if (queries.length > 0 && saveSelectedChannel.length > 0) {
       let payload = {
@@ -412,6 +468,8 @@ const EventBasedAlert = ({
             : [],
         alert_limit: alertLimit,
         repeat_alerts: notRepeat,
+        cool_down_time: coolDownTime * 3600,
+        breakdown_properties: getGroupByFromProperties(breakDownProperties),
         slack: slackEnabled,
         slack_channels: saveSelectedChannel
       };
@@ -465,6 +523,10 @@ const EventBasedAlert = ({
 
   const handleAlertLimit = (value) => {
     setAlertLimit(value);
+  };
+
+  const handleCoolDownTimeChange = (value) => {
+    setCoolDownTime(value);
   };
 
   useEffect(() => {
@@ -593,85 +655,7 @@ const EventBasedAlert = ({
             </Col>
           </Row>
           <Row className={'mt-4'}>
-            <Col span={18}>
-              <Text
-                type={'title'}
-                level={7}
-                weight={'bold'}
-                color={'grey-2'}
-                extraClass={'m-0'}
-              >
-                Configure your notification
-              </Text>
-            </Col>
-          </Row>
-          <Row className={'mt-4'}>
-            <Col span={8} className={'ml-4'}>
-              <div>
-                <Text type={'title'} level={7} extraClass={'m-0 inline'}>
-                  Add a message
-                </Text>
-                <Popover
-                  placement='rightTop'
-                  overlayInnerStyle={{ width: '340px' }}
-                  title={null}
-                  content={
-                    <div className='m-0 m-2'>
-                      <p className='m-0 text-gray-900 text-base font-bold'>
-                        Your notification inside slack
-                      </p>
-                      <p className='m-0 mb-2 text-gray-700'>
-                        As events across your marketing activities happen, get
-                        alerts that motivate actions right inside Slack
-                      </p>
-                      <img
-                        className='m-0'
-                        src='../../../../../assets/icons/Slackmock.svg'
-                      ></img>
-                    </div>
-                  }
-                >
-                  <div className='inline ml-1'>
-                    <SVG
-                      name='InfoCircle'
-                      size={18}
-                      color='#8692A3'
-                      extraClass={'inline'}
-                    />
-                  </div>
-                </Popover>
-              </div>
-              <Form.Item name='message' className={'m-0'}>
-                <TextArea
-                  className={'fa-input'}
-                  placeholder={'Enter Message (max 300 characters)'}
-                  maxLength={300}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {queries.length > 0 && (
-            <Row className={'mt-4'}>
-              <Col span={12} className={'ml-4'}>
-                <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>
-                  Attach properties with this message
-                </Text>
-                <div>{groupByItems()}</div>
-                <Button
-                  type='text'
-                  style={{ color: '#8692A3' }}
-                  icon={<SVG name='plus' color='#8692A3' />}
-                  onClick={() => addGroupBy()}
-                >
-                  Add a Property
-                </Button>
-              </Col>
-            </Row>
-          )}
-
-          <Row className={'mt-4'}>
-            <Col span={8} className={'ml-4'}>
+            <Col span={10} className={'m-0'}>
               <Form.Item name='repeat_alerts' className={'m-0'}>
                 <Checkbox
                   defaultChecked={notRepeat}
@@ -679,32 +663,82 @@ const EventBasedAlert = ({
                 >
                   Do not repeat an alert more than once
                 </Checkbox>
-                <Popover
-                  placement='rightTop'
-                  overlayInnerStyle={{ width: '300px' }}
-                  title={null}
-                  content={
-                    <p className='m-0 m-2 text-gray-700'>
-                      Check this box if you only want a single alert when
-                      multiple events with the same filters occur
-                    </p>
-                  }
-                >
-                  <div className='inline ml-1'>
-                    <SVG
-                      name='InfoCircle'
-                      size={18}
-                      color='#8692A3'
-                      extraClass={'inline'}
-                    />
-                  </div>
-                </Popover>
+                <div className='inline -ml-2'>
+                  <Select
+                    bordered={false}
+                    size='small'
+                    className='m-0 inline'
+                    style={{
+                      width: 110
+                    }}
+                    defaultValue={0.5}
+                    onChange={handleCoolDownTimeChange}
+                  >
+                    <Option value={0.5}>0.5 hours</Option>
+                    <Option value={1}>1 hours</Option>
+                    <Option value={2}>2 hours</Option>
+                    <Option value={4}>4 hours</Option>
+                    <Option value={6}>6 hours</Option>
+                    <Option value={8}>8 hours</Option>
+                    <Option value={12}>12 hours</Option>
+                    <Option value={24}>24 hours</Option>
+                  </Select>
+                </div>
               </Form.Item>
             </Col>
           </Row>
 
-          <Row className={'mt-4'}>
-            <Col span={9} className={'ml-4'}>
+          <Row className={'m-0'}>
+            <Col span={16}>
+              <Form.Item name='event_property' className='m-0 inline'>
+                <Text
+                  type={'title'}
+                  level={7}
+                  color={'grey-2'}
+                  extraClass={'m-0 inline ml-10'}
+                >
+                  for the same value of
+                </Text>
+
+                <div className='inline ml-2'>
+                  <Select
+                    className='inline fa-select'
+                    style={{
+                      width: 200
+                    }}
+                    dropdownMatchSelectWidth={false}
+                    disabled={!queries[0]?.label}
+                    onChange={(value, details) => {
+                      setEventPropertyDetails(details);
+                    }}
+                    placeholder='Select Property'
+                    showSearch
+                    filterOption={(input, option) =>
+                      option.children
+                        .toLowerCase()
+                        .indexOf(input.toLowerCase()) >= 0
+                    }
+                  >
+                    {breakdownOptions?.map((item) => {
+                      return (
+                        <Option
+                          key={item[1]}
+                          value={item[0]}
+                          name={item[1]}
+                          data_type={item[2]}
+                        >
+                          {item[0]}
+                        </Option>
+                      );
+                    })}
+                  </Select>
+                </div>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row className={'mt-2'}>
+            <Col span={10} className={'m-0'}>
               <Form.Item name='notifications' className={'m-0'}>
                 <Checkbox
                   defaultChecked={notifications}
@@ -712,7 +746,7 @@ const EventBasedAlert = ({
                 >
                   Set limit for alerts per day to
                 </Checkbox>
-                <div className='inline'>
+                <div className='inline -ml-2'>
                   <Select
                     bordered={false}
                     size='small'
@@ -743,7 +777,7 @@ const EventBasedAlert = ({
                 color={'grey-2'}
                 extraClass={'m-0'}
               >
-                Delivery options
+                Destinations
               </Text>
             </Col>
           </Row>
@@ -878,6 +912,111 @@ const EventBasedAlert = ({
               </Row>
             </>
           )} */}
+
+          <Row className={'mt-4'}>
+            <Col span={18}>
+              <Text
+                type={'title'}
+                level={7}
+                weight={'bold'}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Configure your payload
+              </Text>
+            </Col>
+          </Row>
+          <Row className={'mt-4'}>
+            <Col span={8} className={'ml-4'}>
+              <div>
+                <Text type={'title'} level={7} extraClass={'m-0 inline'}>
+                  Add a message
+                </Text>
+                <Popover
+                  placement='rightTop'
+                  overlayInnerStyle={{ width: '340px' }}
+                  title={null}
+                  content={
+                    <div className='m-0 m-2'>
+                      <p className='m-0 text-gray-900 text-base font-bold'>
+                        Your notification inside slack
+                      </p>
+                      <p className='m-0 mb-2 text-gray-700'>
+                        As events across your marketing activities happen, get
+                        alerts that motivate actions right inside Slack
+                      </p>
+                      <img
+                        className='m-0'
+                        src='../../../../../assets/icons/Slackmock.svg'
+                      ></img>
+                    </div>
+                  }
+                >
+                  <div className='inline ml-1'>
+                    <SVG
+                      name='InfoCircle'
+                      size={18}
+                      color='#8692A3'
+                      extraClass={'inline'}
+                    />
+                  </div>
+                </Popover>
+              </div>
+              <Form.Item name='message' className={'m-0'}>
+                <TextArea
+                  className={'fa-input'}
+                  placeholder={'Enter Message (max 300 characters)'}
+                  maxLength={300}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {queries.length > 0 && (
+            <Row className={'mt-4'}>
+              <Col span={12} className={'ml-4'}>
+                <div>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    extraClass={'m-0 inline mb-1 mr-1'}
+                  >
+                    Attach properties for your payload
+                  </Text>
+                  <Popover
+                    placement='rightTop'
+                    overlayInnerStyle={{ width: '300px' }}
+                    title={null}
+                    content={
+                      <p className='m-0 m-2 text-gray-700'>
+                        In Slack, you’ll get these values on your channel. With
+                        a webhook, use these properties to power your own
+                        workflows.
+                      </p>
+                    }
+                  >
+                    <div className='inline'>
+                      <SVG
+                        name='InfoCircle'
+                        size={18}
+                        color='#8692A3'
+                        extraClass={'inline'}
+                      />
+                    </div>
+                  </Popover>
+                </div>
+                <div>{groupByItems()}</div>
+                <Button
+                  type='text'
+                  style={{ color: '#8692A3' }}
+                  icon={<SVG name='plus' color='#8692A3' />}
+                  onClick={() => addGroupBy()}
+                >
+                  Add a Property
+                </Button>
+              </Col>
+            </Row>
+          )}
         </Form>
       </>
     );
@@ -962,84 +1101,85 @@ const EventBasedAlert = ({
               >
                 Filters
               </Text>
-              <GLobalFilter
-                filters={viewFilter}
-                delFilter={false}
-                viewMode
-              />
+              <GLobalFilter filters={viewFilter} delFilter={false} viewMode />
             </Col>
           </Row>
         )}
-        <Row className={'mt-4'}>
-          <Col span={18}>
-            <Text
-              type={'title'}
-              level={7}
-              weight={'bold'}
-              color={'grey-2'}
-              extraClass={'m-0'}
-            >
-              Configure your notification
-            </Text>
-          </Col>
-        </Row>
-        <Row className={'mt-4'}>
-          <Col span={8} className={'ml-4'}>
-            <TextArea
-              disabled={true}
-              className={'fa-input'}
-              maxLength={300}
-              value={viewAlertDetails?.event_alert?.message}
-            />
-          </Col>
-        </Row>
-        {viewAlertDetails?.event_alert?.message_property?.length > 0 && (
-          <Row className={'mt-4'}>
-            <Col span={12} className={'ml-4'}>
-              <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>
-                Attach properties with this message
-              </Text>
-              <div>
-                {viewGroupByItems(
-                  viewAlertDetails?.event_alert?.message_property &&
-                    viewAlertDetails?.event_alert?.message_property.length &&
-                    viewAlertDetails?.event_alert?.message_property[0] &&
-                    getGroupByFromState(
-                      viewAlertDetails?.event_alert?.message_property
-                        .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-                        .filter(
-                          (gbp) =>
-                            gbp.ena === viewAlertDetails?.event_alert?.event &&
-                            gbp.eni === 1
-                        )
-                    )
-                )}
-              </div>
-            </Col>
-          </Row>
-        )}
-        <Row className={'mt-2 ml-4'}>
-          <Col span={8}>
+        <Row className={'mt-2'}>
+          <Col span={12}>
             <Checkbox
+              className='inline'
               disabled={true}
               checked={viewAlertDetails?.event_alert?.repeat_alerts}
             >
-              Do not repeat an alert more than once
+              Do not repeat alerts more than once within
             </Checkbox>
+            <div className='inline ml-1'>
+              <Input
+                disabled={true}
+                style={{
+                  width: 110
+                }}
+                className={'inline fa-input'}
+                value={
+                  viewAlertDetails?.event_alert?.cool_down_time / 3600 +
+                  ' hours'
+                }
+              />
+            </div>
           </Col>
         </Row>
-        <Row className={'mt-2 ml-4'}>
-          <Col span={8}>
+        <Row className={'m-0'}>
+          <Col span={16}>
+            <Form.Item name='event_property' className='m-0 inline'>
+              <Text
+                type={'title'}
+                level={7}
+                color={'grey-2'}
+                extraClass={'m-0 inline ml-10'}
+              >
+                for the same value of
+              </Text>
+              {viewAlertDetails?.event_alert?.breakdown_properties?.length >
+                0 && (
+                <div className='inline ml-2'>
+                  {viewGroupByItems(
+                    viewAlertDetails?.event_alert?.breakdown_properties &&
+                      viewAlertDetails?.event_alert?.breakdown_properties
+                        .length &&
+                      viewAlertDetails?.event_alert?.breakdown_properties[0] &&
+                      getGroupByFromState(
+                        viewAlertDetails?.event_alert?.breakdown_properties
+                          .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+                          .filter(
+                            (gbp) =>
+                              gbp.ena ===
+                                viewAlertDetails?.event_alert?.event &&
+                              gbp.eni === 1
+                          )
+                      )
+                  )}
+                </div>
+              )}
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row className={'mt-2'}>
+          <Col span={12}>
             <Checkbox
+              className='inline'
               disabled={true}
               checked={viewAlertDetails?.event_alert?.notifications}
             >
               Set limit for alerts per day to
             </Checkbox>
-            <div className='inline'>
+            <div className='inline ml-1'>
               <Input
                 disabled={true}
-                className={'fa-input'}
+                style={{
+                  width: 100
+                }}
+                className={'inline fa-input'}
                 value={viewAlertDetails?.event_alert?.alert_limit + ' alerts'}
               />
             </div>
@@ -1056,7 +1196,7 @@ const EventBasedAlert = ({
               color={'grey-2'}
               extraClass={'m-0'}
             >
-              Delivery options
+              Destinations
             </Text>
           </Col>
         </Row>
@@ -1098,6 +1238,58 @@ const EventBasedAlert = ({
               </Col>
             </Row>
           )}
+
+        <Row className={'mt-4'}>
+          <Col span={18}>
+            <Text
+              type={'title'}
+              level={7}
+              weight={'bold'}
+              color={'grey-2'}
+              extraClass={'m-0'}
+            >
+              Configure your payload
+            </Text>
+          </Col>
+        </Row>
+        <Row className={'mt-4'}>
+          <Col span={8} className={'ml-4'}>
+            <Text type={'title'} level={7} extraClass={'m-0'}>
+              Add a message
+            </Text>
+            <TextArea
+              disabled={true}
+              className={'fa-input'}
+              maxLength={300}
+              value={viewAlertDetails?.event_alert?.message}
+            />
+          </Col>
+        </Row>
+        {viewAlertDetails?.event_alert?.message_property?.length > 0 && (
+          <Row className={'mt-4'}>
+            <Col span={12} className={'ml-4'}>
+              <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>
+                Attach properties for your payload
+              </Text>
+              <div>
+                {viewGroupByItems(
+                  viewAlertDetails?.event_alert?.message_property &&
+                    viewAlertDetails?.event_alert?.message_property.length &&
+                    viewAlertDetails?.event_alert?.message_property[0] &&
+                    getGroupByFromState(
+                      viewAlertDetails?.event_alert?.message_property
+                        .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+                        .filter(
+                          (gbp) =>
+                            gbp.ena === viewAlertDetails?.event_alert?.event &&
+                            gbp.eni === 1
+                        )
+                    )
+                )}
+              </div>
+            </Col>
+          </Row>
+        )}
         <Row className={'mt-2'}>
           <Col span={24}>
             <div className={'border-top--thin-2 mt-2 mb-4'} />
@@ -1199,6 +1391,12 @@ const mapStateToProps = (state) => ({
   projectSettings: state.global.projectSettingsV1,
   groupBy: state.coreQuery.groupBy.event,
   groupByMagic: state.coreQuery.groupBy,
+  groupProperties: state.coreQuery.groupProperties,
+  eventProperties: state.coreQuery.eventProperties,
+  eventPropNames: state.coreQuery.eventPropNames,
+  groupPropNames: state.coreQuery.groupPropNames,
+  userProperties: state.coreQuery.userProperties,
+  userPropNames: state.coreQuery.userPropNames
 });
 
 export default connect(mapStateToProps, {
