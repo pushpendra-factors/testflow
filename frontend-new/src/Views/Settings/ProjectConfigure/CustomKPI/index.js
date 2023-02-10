@@ -10,7 +10,8 @@ import {
   Form,
   Table,
   Input,
-  notification
+  notification,
+  Checkbox
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { MoreOutlined } from '@ant-design/icons';
@@ -83,6 +84,7 @@ function CustomKPI({
   const [KPIFn, setKPIFn] = useState(false);
   const [viewMode, KPIviewMode] = useState(false);
   const [viewKPIDetails, setKPIDetails] = useState(false);
+  const [showAsPercentage, setShowAsPercentage] = useState(false);
 
   const [selEventName, setEventName] = useState(false);
   const [EventPropertyDetails, setEventPropertyDetails] = useState({});
@@ -326,6 +328,7 @@ function CustomKPI({
         name: data?.name,
         description: data?.description,
         type_of_query: 2,
+        display_result_as: showAsPercentage ? 'percentage_type' : '',
         transformations: {
           ...KPIquery
         }
@@ -1235,7 +1238,7 @@ function CustomKPI({
                           <Text
                             type='title'
                             level={7}
-                            color='grey'
+                            color='grey-2'
                             extraClass='m-0 pt-2 mr-3'
                           >
                             Formula:
@@ -1258,6 +1261,20 @@ function CustomKPI({
                               placeholder='please type the formula. Eg A/B, A+B, A-B, A*B'
                               bordered={false}
                             />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                      <Row className='m-0 ml-4 -mt-2 mb-3'>
+                        <Col span={14}>
+                          <Form.Item name='showAspercentage'>
+                            <Checkbox
+                              defaultChecked={showAsPercentage}
+                              onChange={(e) =>
+                                setShowAsPercentage(e.target.checked)
+                              }
+                            >
+                              Show as percentage
+                            </Checkbox>
                           </Form.Item>
                         </Col>
                       </Row>
@@ -1521,6 +1538,20 @@ function CustomKPI({
                             placeholder='Type your formula.  Eg A/B, A+B, A-B, A*B'
                             bordered={false}
                           />
+                        </Col>
+                      </Row>
+                      <Row className='m-0 ml-4 -mt-2 mb-3'>
+                        <Col span={14}>
+                          <Checkbox
+                            disabled={true}
+                            checked={
+                              viewKPIDetails?.display_result_as !== ''
+                                ? true
+                                : false
+                            }
+                          >
+                            Show as percentage
+                          </Checkbox>
                         </Col>
                       </Row>
                     </div>
