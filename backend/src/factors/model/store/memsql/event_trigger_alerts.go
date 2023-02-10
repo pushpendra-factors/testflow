@@ -268,7 +268,6 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	log.Info("Inside Match function of event_trigger_alerts.")
 	alerts, errCode := store.GetEventTriggerAlertsByEvent(projectId, eventNameId)
 	if errCode != http.StatusFound || alerts == nil {
 		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
@@ -294,18 +293,18 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 			log.WithError(err).Error("Jsonb decoding to struct failure")
 			return nil, http.StatusInternalServerError
 		}
-		if(isUpdate == true){
-			if(len(*updatedEventProps) == 0){
+		if isUpdate {
+			if len(*updatedEventProps) == 0 {
 				continue
 			} else {
 				isPropertyInFilterUpdated := false
 				for _, fil := range config.Filter {
 					_, exists := (*updatedEventProps)[fil.Property]
-					if(fil.Entity == "event" && exists == true){
+					if fil.Entity == "event" && exists {
 						isPropertyInFilterUpdated = true
 					}
 				}
-				if(isPropertyInFilterUpdated == false){
+				if !isPropertyInFilterUpdated {
 					continue
 				}
 			}
@@ -321,76 +320,75 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	return &matchedAlerts, http.StatusFound
 }
 
-// func (store *MemSQL) getDisplayNamesForEP(projectId int64, eventName string) map[string]string {
+func (store *MemSQL) getDisplayNamesForEP(projectId int64, eventName string) map[string]string {
 
-// 	_, displayNames := store.GetDisplayNamesForAllEventProperties(projectId, eventName)
-// 	standardPropertiesAllEvent := U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES
-// 	displayNamesOp := make(map[string]string)
-// 	for property, displayName := range standardPropertiesAllEvent {
-// 		displayNamesOp[property] = strings.Title(displayName)
-// 	}
-// 	if eventName == U.EVENT_NAME_SESSION {
-// 		standardPropertiesSession := U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES
-// 		for property, displayName := range standardPropertiesSession {
-// 			displayNamesOp[property] = strings.Title(displayName)
-// 		}
-// 	}
-// 	for property, displayName := range displayNames {
-// 		displayNamesOp[property] = strings.Title(displayName)
-// 	}
+	_, displayNames := store.GetDisplayNamesForAllEventProperties(projectId, eventName)
+	standardPropertiesAllEvent := U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES
+	displayNamesOp := make(map[string]string)
+	for property, displayName := range standardPropertiesAllEvent {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+	if eventName == U.EVENT_NAME_SESSION {
+		standardPropertiesSession := U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES
+		for property, displayName := range standardPropertiesSession {
+			displayNamesOp[property] = strings.Title(displayName)
+		}
+	}
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
 
-// 	_, displayNames = store.GetDisplayNamesForObjectEntities(projectId)
-// 	for property, displayName := range displayNames {
-// 		displayNamesOp[property] = strings.Title(displayName)
-// 	}
+	_, displayNames = store.GetDisplayNamesForObjectEntities(projectId)
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
 
-// 	dupCheck := make(map[string]bool)
-// 	for _, name := range displayNamesOp {
-// 		_, exists := dupCheck[name]
-// 		if exists {
-// 			log.Warning(fmt.Sprintf("Duplicate display name %s", name))
-// 		}
-// 		dupCheck[name] = true
-// 	}
+	dupCheck := make(map[string]bool)
+	for _, name := range displayNamesOp {
+		_, exists := dupCheck[name]
+		if exists {
+			log.Warning(fmt.Sprintf("Duplicate display name %s", name))
+		}
+		dupCheck[name] = true
+	}
 
-// 	return displayNamesOp
-// }
+	return displayNamesOp
+}
 
-// func (store *MemSQL) getDisplayNamesForUP(projectId int64) map[string]string {
+func (store *MemSQL) getDisplayNamesForUP(projectId int64) map[string]string {
 
-// 	_, displayNames := store.GetDisplayNamesForAllUserProperties(projectId)
-// 	standardProperties := U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES
-// 	displayNamesOp := make(map[string]string)
-// 	for property, displayName := range standardProperties {
-// 		displayNamesOp[property] = strings.Title(displayName)
-// 	}
-// 	for property, displayName := range displayNames {
-// 		displayNamesOp[property] = strings.Title(displayName)
-// 	}
+	_, displayNames := store.GetDisplayNamesForAllUserProperties(projectId)
+	standardProperties := U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES
+	displayNamesOp := make(map[string]string)
+	for property, displayName := range standardProperties {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
 
-// 	_, displayNames = store.GetDisplayNamesForObjectEntities(projectId)
-// 	for property, displayName := range displayNames {
-// 		displayNamesOp[property] = strings.Title(displayName)
-// 	}
+	_, displayNames = store.GetDisplayNamesForObjectEntities(projectId)
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
 
-// 	dupCheck := make(map[string]bool)
-// 	for _, name := range displayNamesOp {
-// 		_, exists := dupCheck[name]
-// 		if exists {
-// 			log.Warningf(fmt.Sprintf("Duplicate display name %s", name))
-// 		}
-// 		dupCheck[name] = true
-// 	}
+	dupCheck := make(map[string]bool)
+	for _, name := range displayNamesOp {
+		_, exists := dupCheck[name]
+		if exists {
+			log.Warningf(fmt.Sprintf("Duplicate display name %s", name))
+		}
+		dupCheck[name] = true
+	}
 
-// 	return displayNamesOp
-// }
+	return displayNamesOp
+}
 
 func (store *MemSQL) AddAlertToCache(alert *model.EventTriggerAlertConfig, msgProps *U.PropertiesMap, key *cacheRedis.Key) (int, error) {
 	logFields := log.Fields{
 		"event_trigger_alert": alert,
 		"CacheKey":            key,
 	}
-	log.Info("Inside AddAlertToCache function.")
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	message := model.EventTriggerAlertMessage{
@@ -404,7 +402,6 @@ func (store *MemSQL) AddAlertToCache(alert *model.EventTriggerAlertConfig, msgPr
 		Message: message,
 	}
 
-	log.WithFields(logFields).Info("SetCacheForEventTriggerAlert function inside AddAlertToCache.")
 	err := model.SetCacheForEventTriggerAlert(key, &cachePackage)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("setting cache failed inside AddAlertToCache")
@@ -422,6 +419,24 @@ func getSortedSetCacheKey(projectId int64) (*cacheRedis.Key, error) {
 		return nil, err
 	}
 	return key, err
+}
+
+func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{} {
+
+	var res interface{}
+	if exi {
+		if typ == "datetime" {
+			val, ok := value.(int64)
+			if !ok {
+				val = int64(value.(float64))
+			}
+			res = U.GetDateOnlyHyphenFormatFromTimestampZ(val)
+		} else {
+			res = U.GetPropertyValueAsString(value)
+		}
+	}
+
+	return res
 }
 
 func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, alert *model.EventTriggerAlertConfig) (U.PropertiesMap, map[string]interface{}, error) {
@@ -457,91 +472,31 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 		}
 	}
 
-	// displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, event.EventNameId)
+	displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, event.EventNameId)
 	//log.Info(fmt.Printf("%+v\n", displayNamesEP))
 
-	// displayNamesUP := store.getDisplayNamesForUP(event.ProjectId)
+	displayNamesUP := store.getDisplayNamesForUP(event.ProjectId)
 	//log.Info(fmt.Printf("%+v\n", displayNamesUP))
 
 	msgPropMap := make(U.PropertiesMap, 0)
 	for _, messageProperty := range messageProperties {
 		p := messageProperty.Property
 		if messageProperty.Entity == "user" {
-			// displayName, exists := displayNamesUP[p]
-			// if !exists {
-			// 	displayName = U.CreateVirtualDisplayName(p)
-			// }
-			// value, exi := (*userPropMap)[p]
-			// if exi && messageProperty.Type == "datetime" {
-			// 	val, ok := value.(int64)
-			// 	if !ok {
-			// 		val = int64(value.(float64))
-			// 	}
-			// 	var v interface{}
-			// 	if messageProperty.Granularity == "day" {
-			// 		v = time.Unix(val, 0).Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN)
-			// 	} else if messageProperty.Granularity == "hour" {
-			// 		v = time.Unix(val, 0).Hour()
-			// 	} else if messageProperty.Granularity == "week" {
-			// 		_, v = time.Unix(val, 0).ISOWeek()
-			// 	} else if messageProperty.Granularity == "month" {
-			// 		_, v, _ = time.Unix(val, 0).Date()
-			// 	} else {
-			// 		v = time.Unix(val, 0)
-			// 	}
-			// 	msgPropMap[displayName] = fmt.Sprintf("%v", v)
-			// } else if exi && messageProperty.Type == "numerical" {
-			// 	typ := reflect.TypeOf(value).Kind()
-			// 	val := ""
-			// 	if typ == reflect.Float32 || typ == reflect.Float64 {
-			// 		val = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", value), "0"), ".")
-			// 	} else {
-			// 		val = fmt.Sprintf("%v", value)
-			// 	}
-			// 	msgPropMap[displayName] = val
-			// } else {
-			// 	msgPropMap[displayName] = value
-			// }
-			value := (*userPropMap)[p]
-			msgPropMap[p] = value
+
+			displayName, exists := displayNamesUP[p]
+			if !exists {
+				displayName = U.CreateVirtualDisplayName(p)
+			}
+			propVal, exi := (*userPropMap)[p]
+			msgPropMap[displayName] = getDisplayLikePropValue(messageProperty.Type, exi, propVal)
+
 		} else if messageProperty.Entity == "event" {
-			// displayName, exists := displayNamesEP[p]
-			// if !exists {
-			// 	displayName = U.CreateVirtualDisplayName(p)
-			// }
-			// value, exi := (*eventPropMap)[p]
-			// if exi && messageProperty.Type == "datetime" {
-			// 	val, ok := value.(int64)
-			// 	if !ok {
-			// 		val = int64(value.(float64))
-			// 	}
-			// 	var v interface{}
-			// 	if messageProperty.Granularity == "day" {
-			// 		v = time.Unix(val, 0).Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN)
-			// 	} else if messageProperty.Granularity == "hour" {
-			// 		v = time.Unix(val, 0).Hour()
-			// 	} else if messageProperty.Granularity == "week" {
-			// 		_, v = time.Unix(val, 0).ISOWeek()
-			// 	} else if messageProperty.Granularity == "month" {
-			// 		_, v, _ = time.Unix(val, 0).Date()
-			// 	} else {
-			// 		v = time.Unix(val, 0)
-			// 	}
-			// 	msgPropMap[displayName] = fmt.Sprintf("%v", v)
-			// } else if exi && messageProperty.Type == "numerical" {
-			// 	typ := reflect.TypeOf(value).Kind()
-			// 	val := ""
-			// 	if typ == reflect.Float32 || typ == reflect.Float64 {
-			// 		val = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", value), "0"), ".")
-			// 	} else {
-			// 		val = fmt.Sprintf("%v", value)
-			// 	}
-			// 	msgPropMap[displayName] = val
-			// } else {
-			// 	msgPropMap[displayName] = value
-			// }
-			value := (*eventPropMap)[p]
-			msgPropMap[p] = value
+			displayName, exists := displayNamesEP[p]
+			if !exists {
+				displayName = U.CreateVirtualDisplayName(p)
+			}
+			propVal, exi := (*eventPropMap)[p]
+			msgPropMap[displayName] = getDisplayLikePropValue(messageProperty.Type, exi, propVal)
 		} else {
 			log.Warn("can not find the message property in user and event prop sets")
 		}
@@ -638,7 +593,6 @@ func isCoolDownTimeExhausted(key *cacheRedis.Key, coolDownTime, unixtime int64) 
 			log.WithError(err).Error("cannot set expiry for redis key")
 		}
 	} else {
-		log.Info("Cool Down time not exhausted")
 		return false, nil
 	}
 	return true, nil
@@ -656,7 +610,6 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 	//Add the alert key to the sorted set and cache
 	//Else return
 
-	log.Info(fmt.Printf("Inside CacheEventTriggerAlert function. Alert: %+v\n", *alert))
 	logFields := log.Fields{
 		"project_id":          alert.ProjectID,
 		"event_trigger_alert": *alert,
