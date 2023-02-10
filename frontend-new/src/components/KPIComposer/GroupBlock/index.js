@@ -177,7 +177,7 @@ function GroupBlock({
   const renderGroupDisplayName = (opt, index) => {
     let propertyName = ''; 
     if (opt?.property) {
-      propertyName = opt?.display_name ? _.startCase(opt.display_name) : _.startCase(opt.property);
+      propertyName = opt?.display_name ? opt.display_name : opt.property;
     }
     if (!opt.property) {
       propertyName = 'Select user property';

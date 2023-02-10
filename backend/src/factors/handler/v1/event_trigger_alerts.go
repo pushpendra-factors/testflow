@@ -55,6 +55,7 @@ func CreateEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, s
 
 	return obj.EventTriggerAlert, http.StatusCreated, "", "", false
 }
+
 func DeleteEventTriggerAlertHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
@@ -75,4 +76,44 @@ func DeleteEventTriggerAlertHandler(c *gin.Context) {
 	}
 
 	c.JSON(errCode, gin.H{"Status": "OK"})
+}
+
+func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Edit TriggerAlert failed. Invalid project."})
+		return nil, http.StatusBadRequest, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Edit failed. Invalid id provided."})
+		return nil, http.StatusBadRequest, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
+	}
+	userID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	errCode, errMsg := store.GetStore().DeleteEventTriggerAlert(projectID, id)
+	if errCode != http.StatusAccepted || errMsg != "" {
+		log.WithFields(log.Fields{"project_id": projectID}).Error("Cannot find any alert to update")
+		return nil, http.StatusBadRequest, "Cannot find any alert to update", "", true
+	}
+
+	var alert model.EventTriggerAlertConfig
+
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&alert); err != nil {
+		errMsg := "Edit TriggerAlert failed. Invalid JSON."
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
+	}
+
+	eta, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, projectID, &alert)
+	if errMsg != "" || errCode != http.StatusCreated || eta == nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Edit TriggerAlert failed while updating db"})
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
+	}
+
+	return alert, http.StatusAccepted, "", "", false
 }

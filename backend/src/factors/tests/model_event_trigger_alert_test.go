@@ -2,13 +2,19 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
+	H "factors/handler"
+	"factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,7 +34,8 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 	t.Run("CreateEventTriggerAlert:valid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 			}})
@@ -40,7 +47,8 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 	t.Run("GetAllEventTriggerAlerts:valid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 			}})
@@ -56,7 +64,8 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 	t.Run("CreateEventTriggerAlert:Title already present:Invalid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 			}})
@@ -65,7 +74,8 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 		assert.Empty(t, errMsg)
 
 		alert, errCode, errMsg = store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 			}})
@@ -89,7 +99,8 @@ func TestDeleteEventTriggerAlert(t *testing.T) {
 
 	rName1 := U.RandomString(5)
 	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
-		Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+		Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{},
+		DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 		Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 			{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 		}})
@@ -147,7 +158,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
 			}})
@@ -175,7 +187,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
 			}})
@@ -203,7 +216,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notEqual", LogicalOp: "AND", Value: "UK"},
 			}})
@@ -231,7 +245,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notEqual", LogicalOp: "AND", Value: "US"},
 			}})
@@ -259,7 +274,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "contains", LogicalOp: "AND", Value: "US"},
 			}})
@@ -287,7 +303,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "contains", LogicalOp: "AND", Value: "UK"},
 			}})
@@ -315,7 +332,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notContains", LogicalOp: "AND", Value: "US"},
 			}})
@@ -343,7 +361,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notContains", LogicalOp: "AND", Value: "asu"},
 			}})
@@ -371,7 +390,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
@@ -410,7 +430,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
@@ -440,7 +461,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notEqual", LogicalOp: "AND", Value: "US"},
@@ -479,7 +501,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notEqual", LogicalOp: "AND", Value: "US"},
@@ -511,7 +534,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "contains", LogicalOp: "AND", Value: "US"},
@@ -552,7 +576,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "contains", LogicalOp: "AND", Value: "US"},
@@ -582,7 +607,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notContains", LogicalOp: "AND", Value: "US"},
@@ -597,7 +623,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties,nil,  false)
+		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 
@@ -634,7 +660,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notContains", LogicalOp: "AND", Value: "US"},
@@ -656,7 +683,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "equals", LogicalOp: "AND", Value: "3000"},
@@ -694,7 +722,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "notEqual", LogicalOp: "AND", Value: "3000"},
@@ -732,7 +761,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "greaterThan", LogicalOp: "AND", Value: "3000"},
@@ -779,7 +809,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "lesserThan", LogicalOp: "AND", Value: "3000"},
@@ -826,7 +857,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "greaterThanOrEqual", LogicalOp: "AND", Value: "3000"},
@@ -873,7 +905,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "lesserThanOrEqual", LogicalOp: "AND", Value: "3000"},
@@ -920,7 +953,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 	// 	//Test for successful CreateAlert
 	// 	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-	// 		Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+	// 		Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+	// 		DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 	// 		Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 	// 		Filter: []model.QueryProperty{
 	// 			{Entity: "user", Type: "datetime", Property: "$first_seen", Operator: "equals", LogicalOp: "AND", Value: `{"fr":"12345678", "to":"67854321"}`},
@@ -958,7 +992,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		//Test for successful CreateAlert
 		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "user", Type: "categorical", Property: "$Salesforce_Industry", Operator: "contains", LogicalOp: "AND", Value: "tech"},
@@ -997,7 +1032,8 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 	// 	//Test for successful CreateAlert
 	// 	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
-	// 		Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, RepeatAlerts: true, AlertLimit: 5, Notifications: true,
+	// 		Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, DontRepeatAlerts: true, CoolDownTime: 1800,
+	// BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 	// 		Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 	// 		Filter: []model.QueryProperty{
 	// 			{Entity: "user", Type: "numerical", Property: "$clicks", Operator: "lessThan", LogicalOp: "OR", Value: "350"},
@@ -1026,4 +1062,97 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 	// 	assert.Nil(t, alerts1)
 	// })
 
+}
+
+func TestEditEventTriggerAlertHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, agent)
+
+	slackChannel := model.SlackChannel{
+		Name:      "channel1",
+		Id:        U.GetUUID(),
+		IsPrivate: false,
+	}
+	slackChannelJson, err := json.Marshal(slackChannel)
+	assert.NotNil(t, slackChannelJson)
+	assert.Nil(t, err)
+
+	messageProperty := []model.QueryGroupByProperty{
+		{
+			Entity:         "event",
+			Property:       "$page_title",
+			Type:           "categorical",
+			EventNameIndex: 1,
+		},
+		{
+			Entity:         "user",
+			Property:       "$country",
+			Type:           "categorical",
+			EventNameIndex: 2,
+		},
+	}
+	messagePropertyJson, err := json.Marshal(messageProperty)
+	assert.NotNil(t, messagePropertyJson)
+	assert.Nil(t, err)
+
+	rName1 := U.RandomString(5)
+
+	t.Run("EditEventTriggerAlert:Valid", func(t *testing.T) {
+		//Test for successful CreateAlert
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
+			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
+			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
+				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
+			}})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, alert)
+
+		query := &model.EventTriggerAlertConfig{
+			Title: "NewTitle", Event: rName1, Message: "Message Changed", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
+			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
+				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
+			}}
+		queryJson, err := json.Marshal(query)
+		assert.Nil(t, err)
+
+		w := sendEditEventTriggerAlertRequest(r, project.ID, alert.ID, agent, &postgres.Jsonb{RawMessage: queryJson})
+		assert.Equal(t, http.StatusAccepted, w.Code)
+		assert.NotNil(t, w)
+
+		alert0, errCode := store.GetStore().GetEventTriggerAlertByID(alert.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, alert0)
+		assert.Equal(t, "NewTitle", alert0.Title)
+
+		var eta model.EventTriggerAlertConfig
+		err = U.DecodePostgresJsonbToStructType(alert0.EventTriggerAlert, &eta)
+		assert.Nil(t, err)
+		assert.Equal(t, "Message Changed", eta.Message)
+	})
+}
+
+func sendEditEventTriggerAlertRequest(r *gin.Engine, projectId int64, id string, agent *model.Agent, query *postgres.Jsonb) *httptest.ResponseRecorder {
+
+	cookieData, _ := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/v1/eventtriggeralert/%s", projectId, id)).
+		WithPostParams(query).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, _ := rb.Build()
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
 }
