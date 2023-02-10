@@ -82,13 +82,13 @@ func main() {
 
 	projectIDList := store.GetStore().GetProjectsToRunForIncludeExcludeString(*projectIDs, "")
 
-	log.WithFields(log.Fields{"project_ids": projectIDList}).Info("Running for following projects.")
-
 	for i := range projectIDList {
+		log.WithFields(log.Fields{"project_id": projectIDList[i]}).Info("Running for project.")
+
 		status := RunDissociateSession(projectIDList[i], *startTimestamp, *endTimestamp, *wetRun)
 		if status != http.StatusOK {
-			log.WithFields(log.Fields{"project_id": projectIDList[i]}).Error("Failed to RunDissociateSession. Exiting.")
-			break
+			log.WithFields(log.Fields{"project_id": projectIDList[i], "status": status}).Error("Failed to RunDissociateSession. Exiting.")
+			continue
 		}
 	}
 }
