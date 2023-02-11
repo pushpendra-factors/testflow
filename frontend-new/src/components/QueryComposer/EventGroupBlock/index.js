@@ -21,7 +21,8 @@ function EventGroupBlock({
   groupPropNames,
   setGroupState,
   delGroupState,
-  closeDropDown
+  closeDropDown,
+  hideText = false  // added to hide the text from UI (Used in event based alerts)
 }) {
   const [filterOptions, setFilterOptions] = useState([
     {
@@ -222,7 +223,7 @@ function EventGroupBlock({
 
   return (
     <div className="flex items-center relative ml-10">
-      {grpIndex >= 1 ? (
+      {!hideText && (grpIndex >= 1 ? (
         <Text level={8} type="title" extraClass="m-0 mr-16" weight="thin">
           and
         </Text>
@@ -235,7 +236,7 @@ function EventGroupBlock({
         >
           Breakdown
         </Text>
-      )}
+      ))}
       {groupByEvent && groupByEvent.property ? (
         renderGroupContent()
       ) : (

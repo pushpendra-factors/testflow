@@ -5,25 +5,28 @@ import (
 	"errors"
 	cacheRedis "factors/cache/redis"
 	"fmt"
+	"sort"
 	"time"
+
+	U "factors/util"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-	U "factors/util"
 )
 
 const (
 	// DeliveryOptions
-	SLACK              = "slack"
-	WEBHOOK            = "webhook"
-	tableNameforAlerts = "ETA"
-	counterIndex       = "Counter"
-	cacheExpiry        = 0
-	cacheCounterExpiry = 24 * 60 * 60
+	SLACK               = "slack"
+	WEBHOOK             = "webhook"
+	prefixNameforAlerts = "ETA"
+	counterIndex        = "Counter"
+	cacheExpiry         = 0
+	cacheCounterExpiry  = 24 * 60 * 60
 
-	// cachekey structure = ETA:pid:<project_id>:<alert_id>:<UnixTime>
+	// cachekey structure = ETA:pid:<project_id>:<alert_id>:<prop>:<value>:....:<UnixTime>
 	// cacheCounterKey structure = ETA:Counter:pid:<project_id>:<alert_id>:<YYYYMMDD>
 	// sortedset key structure = ETA:pid:<project_id>
+	// coolDownKeyCounter structure = ETA:CoolDown:pid:<project_id>:<alert_id>:<prop>:<value>:....:<UnixTime>
 )
 
 type EventTriggerAlert struct {
@@ -39,18 +42,20 @@ type EventTriggerAlert struct {
 }
 
 type EventTriggerAlertConfig struct {
-	Title           string          `json:"title"`
-	Event           string          `json:"event"`
-	Filter          []QueryProperty `json:"filter"`
-	Message         string          `json:"message"`
-	MessageProperty *postgres.Jsonb `json:"message_property"`
-	RepeatAlerts    bool            `json:"repeat_alerts"`
-	AlertLimit      int64           `json:"alert_limit"`
-	Notifications   bool            `json:"notifications"`
-	Slack           bool            `json:"slack"`
-	SlackChannels   *postgres.Jsonb `json:"slack_channels"`
-	Webhook         bool            `json:"webhook"`
-	WebhookURL      string          `json:"url"`
+	Title               string          `json:"title"`
+	Event               string          `json:"event"`
+	Filter              []QueryProperty `json:"filter"`
+	Message             string          `json:"message"`
+	MessageProperty     *postgres.Jsonb `json:"message_property"`
+	DontRepeatAlerts    bool            `json:"repeat_alerts"`
+	CoolDownTime        int64           `json:"cool_down_time"`
+	BreakdownProperties *postgres.Jsonb `json:"breakdown_properties"`
+	SetAlertLimit       bool            `json:"notifications"`
+	AlertLimit          int64           `json:"alert_limit"`
+	Slack               bool            `json:"slack"`
+	SlackChannels       *postgres.Jsonb `json:"slack_channels"`
+	Webhook             bool            `json:"webhook"`
+	WebhookURL          string          `json:"url"`
 }
 
 type EventTriggerAlertInfo struct {
@@ -92,10 +97,21 @@ func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTrig
 	return err
 }
 
-func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string) (*cacheRedis.Key, error) {
+func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string, breakdownProps *map[string]interface{}) (*cacheRedis.Key, error) {
 
-	suffix := fmt.Sprintf("%s:%d", alertID, timestamp)
-	prefix := tableNameforAlerts
+	props := make([]string, 0, len(*breakdownProps))
+	for p := range *breakdownProps {
+		props = append(props, p)
+	}
+	sort.Strings(props)
+	suffix := alertID
+
+	for _, prop := range props {
+		suffix = fmt.Sprintf("%s:%s:%v", suffix, prop, (*breakdownProps)[prop])
+	}
+	suffix = fmt.Sprintf("%s:%d", suffix, timestamp)
+	log.Info(suffix)
+	prefix := prefixNameforAlerts
 
 	log.Info("Fetching redisKey, inside GetEventTriggerAlertCacheKey.")
 
@@ -111,7 +127,7 @@ func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string) (*
 func GetEventTriggerAlertCacheCounterKey(projectId int64, alertId, date string) (*cacheRedis.Key, error) {
 
 	suffix := fmt.Sprintf("%s:%s", alertId, date)
-	prefix := fmt.Sprintf("%s:%s", tableNameforAlerts, counterIndex)
+	prefix := fmt.Sprintf("%s:%s", prefixNameforAlerts, counterIndex)
 
 	log.Info("Fetching redisKey, inside GetEventTriggerAlertCacheKey.")
 

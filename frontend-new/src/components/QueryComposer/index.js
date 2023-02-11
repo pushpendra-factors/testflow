@@ -424,7 +424,7 @@ function QueryComposer({
       ) {
         return (
           <ComposerBlock
-            blockTitle='FUNNEL CRITERIA'
+            blockTitle={queryType === QUERY_TYPE_FUNNEL ? 'FUNNEL CRITERIA': 'CRITERIA'}
             isOpen={criterieaBlockOpen}
             showIcon
             onClick={() => {

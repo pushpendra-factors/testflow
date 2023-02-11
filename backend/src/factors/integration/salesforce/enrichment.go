@@ -1865,16 +1865,18 @@ func ApplySFOfflineTouchPointRuleForTasks(project *model.Project, otpRules *[]mo
 
 		//Check if rule type is sf_tasks
 		if rule.RuleType != model.TouchPointRuleTypeTasks {
+			logCtx.Info("Rule Type is failing the OTP event creation for SF Tasks.")
 			continue
 		}
 
 		// check if rule is applicable w.r.t filters
 		if !filterCheck(rule, trackPayload, logCtx) {
+			logCtx.Error("Filter check is failing for offline touch point rule for SF Tasks")
 			continue
 		}
 
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys) {
+		if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 
@@ -1907,16 +1909,18 @@ func ApplySFOfflineTouchPointRuleForEvents(project *model.Project, otpRules *[]m
 
 		//Check if rule type is sf_events
 		if rule.RuleType != model.TouchPointRuleTypeEvents {
+			logCtx.Info("Rule Type is failing the OTP event creation for SF Events.")
 			continue
 		}
 
 		// check if rule is applicable w.r.t filters
 		if !filterCheck(rule, trackPayload, logCtx) {
+			logCtx.Error("Filter check is failing for offline touch point rule for SF Events")
 			continue
 		}
 
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys) {
+		if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 
@@ -2147,8 +2151,12 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 }
 
 // Returns true or false if the otpKey (userID+ruleID+keyID) is not present in uniqueOTPEventKeys i.e. Unique OTP key.
-func isSalesforceOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string) bool {
-	return U.StringValueIn(otpUniqueKey, *uniqueOTPEventKeys)
+func isSalesforceOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string, logCtx *log.Entry) bool {
+	isUnique := !U.StringValueIn(otpUniqueKey, *uniqueOTPEventKeys)
+	if !isUnique {
+		logCtx.Error("The SF OTP Key is not unique.")
+	}
+	return isUnique
 }
 
 //Creates a unique key using ruleID, userID and salesforce task activity ID  as keyID for Salesforce Tasks.
