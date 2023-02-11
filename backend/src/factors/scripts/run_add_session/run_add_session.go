@@ -76,6 +76,8 @@ func main() {
 	eventTriggerEnabled := flag.Bool("event_trigger_enabled", false, "")
 	eventTriggerEnabledProjectIDs := flag.String("event_trigger_enabled_project_ids", "", "")
 
+	disableUpdateNextSessionTimestamp := flag.Int("disable_update_next_session_timestamp", 0, "Disable the update next session timestamp. Used for historical runs.")
+
 	flag.Parse()
 
 	if *env != "development" &&
@@ -130,9 +132,10 @@ func main() {
 		SessionBatchTransactionBatchSize:    *sessionBatchTransactionBatchSize,
 		IngestionTimezoneEnabledProjectIDs:  C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		EnableUserLevelEventPullForAddSessionByProjectID: *enableUserLevelEventPullForAddSessionByProjectID,
-		EventsPullMaxLimit:            *eventsPullMaxLimit,
-		EventTriggerEnabled:           *eventTriggerEnabled,
-		EventTriggerEnabledProjectIDs: *eventTriggerEnabledProjectIDs,
+		EventsPullMaxLimit:                *eventsPullMaxLimit,
+		EventTriggerEnabled:               *eventTriggerEnabled,
+		EventTriggerEnabledProjectIDs:     *eventTriggerEnabledProjectIDs,
+		DisableUpdateNextSessionTimestamp: *disableUpdateNextSessionTimestamp,
 	}
 
 	C.InitConf(config)

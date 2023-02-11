@@ -285,6 +285,7 @@ type Configuration struct {
 	EnableDBConnectionPool2                            bool
 	FormFillIdentificationAllowedProjects              string
 	EnableEventFiltersInSegments                       bool
+	DisableUpdateNextSessionTimestamp                  int
 }
 
 type Services struct {
