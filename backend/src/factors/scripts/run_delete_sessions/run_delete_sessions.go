@@ -8,7 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
-	"factors/model/model"
 	"factors/model/store"
 )
 
@@ -71,6 +70,8 @@ func main() {
 		log.Error("Failed to initialize DB.")
 		os.Exit(1)
 	}
+	// Log queries.
+	C.GetServices().Db.LogMode(true)
 
 	if !*wetRun {
 		log.Info("Running in dry run")
@@ -84,79 +85,24 @@ func main() {
 
 	for i := range projectIDList {
 		log.WithFields(log.Fields{"project_id": projectIDList[i]}).Info("Running for project.")
-
-		status := RunDissociateSession(projectIDList[i], *startTimestamp, *endTimestamp, *wetRun)
-		if status != http.StatusOK {
-			log.WithFields(log.Fields{"project_id": projectIDList[i], "status": status}).Error("Failed to RunDissociateSession. Exiting.")
-			continue
-		}
+		RunDeleteSession(projectIDList[i], *startTimestamp, *endTimestamp, *wetRun)
 	}
 }
 
-func RunDissociateSession(projectID int64, startTimestamp, endTimestamp int64, wetRun bool) int {
+func RunDeleteSession(projectID int64, startTimestamp, endTimestamp int64, wetRun bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "start_timestamp": startTimestamp, "end_timestamp": endTimestamp, "wet_run": wetRun})
 	if projectID == 0 || startTimestamp == 0 || endTimestamp == 0 {
 		logCtx.Error("Invalid parameters.")
-		return http.StatusBadRequest
+		return
 	}
 
-	sessionEventName, status := store.GetStore().GetSessionEventName(projectID)
-	if status != http.StatusFound {
-		logCtx.Error("Failed to get event name.")
-		return http.StatusInternalServerError
+	sessionsDeleted, associationsRemoved, status := store.GetStore().DeleteSessionsAndAssociationForTimerange(projectID, startTimestamp, endTimestamp)
+	logCtx = logCtx.WithFields(log.Fields{"sessions_deleted": sessionsDeleted, "associations_removed": associationsRemoved, "status": status})
+
+	if status != http.StatusAccepted {
+		logCtx.Error("Failure on deleting sessions.")
+		return
 	}
 
-	sessionEvents, status := store.GetStore().GetEventsByEventNameIDANDTimeRange(projectID, sessionEventName.ID, startTimestamp, endTimestamp)
-	if status != http.StatusFound {
-		logCtx.Error("Failed to get session events for given range.")
-		return status
-	}
-
-	sessionAssociatedEvents, totalEvents := getSessionAssociatedEvents(projectID, sessionEvents)
-
-	logCtx.WithFields(log.Fields{"total_session_events": len(sessionEvents), "total_events_associated_with_session": totalEvents}).Info("Total session events.")
-
-	for sessionID, events := range sessionAssociatedEvents {
-		logCtx := logCtx.WithFields(log.Fields{"session_id": sessionID, "total_events": len(events)})
-		if !wetRun {
-			for i := range events {
-				logCtx.WithFields(log.Fields{"event_id": events[i].ID}).Info("Event session id will be removed.")
-			}
-			continue
-		}
-
-		status := store.GetStore().DissociateEventsFromSession(projectID, events, sessionID)
-		if status != http.StatusAccepted {
-			logCtx.Error("Failed to dissociate session from events.")
-			return http.StatusInternalServerError
-		}
-
-		// delete session event
-		status = store.GetStore().DeleteEventByIDs(projectID, sessionEventName.ID, []string{sessionID})
-		if status != http.StatusAccepted {
-			logCtx.Error("Failed to delete session event.")
-			continue
-		}
-
-		logCtx.Info("Removed session association from events.")
-	}
-
-	return http.StatusOK
-}
-
-func getSessionAssociatedEvents(projectID int64, sessionEvents []model.Event) (map[string][]model.Event, int) {
-	sessionAssociatedEvents := make(map[string][]model.Event)
-	totalEvents := 0
-	for i := range sessionEvents {
-		events, status := store.GetStore().GetEventsBySessionEvent(projectID, sessionEvents[i].ID, sessionEvents[i].UserId)
-		if status != http.StatusFound {
-			log.WithFields(log.Fields{"project_id": projectID, "session_event_id": sessionEvents[i].ID, "session_event_user_id": sessionEvents[i].UserId}).
-				Error("Failed to get events from given session id. Skip processing current session id.")
-			continue
-		}
-		sessionAssociatedEvents[sessionEvents[i].ID] = events
-		totalEvents += len(events)
-	}
-
-	return sessionAssociatedEvents, totalEvents
+	logCtx.Error("Deleted sessions.")
 }

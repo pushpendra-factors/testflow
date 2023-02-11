@@ -2,7 +2,7 @@ FROM golang:1.14-alpine AS builder
 
 WORKDIR /go/src/factors
 ADD /factors .
-RUN go build -o $GOPATH/bin/deletesessions $GOPATH/src/factors/migrations/scripts/run_delete_sessions/run_delete_sessions.go
+RUN go build -o $GOPATH/bin/deletesessions $GOPATH/src/factors/scripts/run_delete_sessions/run_delete_sessions.go
 
 # Create stripped down version without go and source code
 FROM alpine:3.7

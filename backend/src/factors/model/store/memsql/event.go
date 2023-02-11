@@ -2605,3 +2605,28 @@ func (store *MemSQL) GetEventsBySessionEvent(projectID int64, sessionEventID, us
 	}
 	return events, http.StatusFound
 }
+
+func (store *MemSQL) DeleteSessionsAndAssociationForTimerange(projectID, startTimestamp, endTimestamp int64) (int64, int64, int) {
+
+	logCtx := log.WithField("project_id", projectID)
+
+	db := C.GetServices().Db
+	delSessionsSQL := "DELETE FROM events WHERE project_id=? AND event_name_id=(SELECT id FROM event_names WHERE project_id=? AND name=? LIMIT 1) AND timestamp BETWEEN ? AND ?"
+	delSessionExec := db.Exec(delSessionsSQL, projectID, projectID, U.EVENT_NAME_SESSION, startTimestamp, endTimestamp)
+	if delSessionExec.Error != nil {
+		logCtx.WithError(delSessionExec.Error).Error("Failed to delete session events.")
+		return 0, 0, http.StatusInternalServerError
+	}
+	db.Close()
+
+	db = C.GetServices().Db
+	removeAssociationsSQL := "UPDATE events SET session_id=NULL WHERE project_id=? AND timestamp between ? AND ? AND session_id IS NOT NULL"
+	removeAssociationsExec := db.Raw(removeAssociationsSQL, projectID, startTimestamp, endTimestamp)
+	if removeAssociationsExec.Error != nil {
+		logCtx.WithError(removeAssociationsExec.Error).Error("Failed to delete session associations.")
+		return delSessionExec.RowsAffected, 0, http.StatusInternalServerError
+	}
+	db.Close()
+
+	return delSessionExec.RowsAffected, removeAssociationsExec.RowsAffected, http.StatusAccepted
+}
