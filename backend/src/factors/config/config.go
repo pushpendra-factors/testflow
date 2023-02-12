@@ -285,6 +285,8 @@ type Configuration struct {
 	FormFillIdentificationAllowedProjects              string
 	EnableEventFiltersInSegments                       bool
 	EnableDebuggingForIP                               bool
+	TeamsAppClientID                                   string
+	TeamsAppClientSecret                               string
 }
 
 type Services struct {
@@ -2432,4 +2434,11 @@ func IsEnabledFeatureGates() bool {
 
 func IsEnableDebuggingForIP() bool {
 	return configuration.EnableDebuggingForIP
+}
+
+func GetTeamsClientID() string {
+	return configuration.TeamsAppClientID
+}
+func GetTeamsClientSecret() string {
+	return configuration.TeamsAppClientSecret
 }

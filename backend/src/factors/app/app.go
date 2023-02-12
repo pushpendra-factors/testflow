@@ -205,6 +205,8 @@ func main() {
 	enableEventFiltersInSegments := flag.Bool("enable_event_filters_in_segments", false, "Enables adding event filters in segment query")
 	enableDebuggingForIP := flag.Bool("enable_debugging_for_ip", false, "Enables log for $ip and other properties added by $ip")
 	enableFeatureGates := flag.Bool("enable_feature_gates", false, "Enable Feature Gates")
+	teamsAppClientID := flag.String("teams_app_client_id", "", "")
+	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -369,6 +371,8 @@ func main() {
 		EnableFeatureGates:                             *enableFeatureGates,
 		EnableDBConnectionPool2:                        *enableDBConnectionPool2,
 		EnableDebuggingForIP:                           *enableDebuggingForIP,
+		TeamsAppClientID:                               *teamsAppClientID,
+		TeamsAppClientSecret:                           *teamsAppClientSecret,
 	}
 	C.InitConf(config)
 
