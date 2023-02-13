@@ -112,6 +112,9 @@ func InitAppRoutes(r *gin.Engine) {
 	shareRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
 	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
+	//Six Signal Report
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/sixsignal", responseWrapper(GetSixSignalReportHandler))
+
 	// Dashboard endpoints
 	featuresGatesRouteGroup.GET("/:project_id/dashboards", stringifyWrapper(GetDashboardsHandler))
 	featuresGatesRouteGroup.POST("/:project_id/dashboards", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateDashboardHandler))

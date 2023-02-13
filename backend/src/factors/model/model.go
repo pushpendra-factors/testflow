@@ -202,6 +202,9 @@ type Model interface {
 	RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID int64, enableOptimisedFilter bool) (model.ResultGroup, int)
 	ExecuteProfilesQuery(projectID int64, query model.ProfileQuery, enableOptimisedFilter bool) (*model.QueryResult, int, string)
 
+	//six_signal
+	RunSixSignalGroupQuery(queriesOriginal []model.SixSignalQuery, projectId int64) (model.SixSignalResultGroup, int)
+
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
 	CreateOrGetUserCreatedEventName(eventName *model.EventName) (*model.EventName, int)
