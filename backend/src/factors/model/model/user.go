@@ -132,6 +132,8 @@ const (
 	UserSourceSalesforceString = "salesforce"
 	UserSourceMarketo          = "marketo"
 	UserSourceLeadSquared      = U.CRM_SOURCE_NAME_LEADSQUARED
+	UserSourceSixSignalString  = "6signal"
+	UserSourceSixSignal        = 8
 )
 
 var UserSourceMap = map[string]int{
@@ -140,6 +142,7 @@ var UserSourceMap = map[string]int{
 	UserSourceSalesforceString: 3,
 	UserSourceMarketo:          6,
 	UserSourceLeadSquared:      7,
+	UserSourceSixSignalString:  UserSourceSixSignal,
 }
 
 var UserSourceCRM = map[string]int{
@@ -154,6 +157,7 @@ var GroupUserSource = map[string]int{
 	U.GROUP_NAME_SALESFORCE_OPPORTUNITY: UserSourceSalesforce,
 	U.GROUP_NAME_HUBSPOT_COMPANY:        UserSourceHubspot,
 	U.GROUP_NAME_HUBSPOT_DEAL:           UserSourceHubspot,
+	U.GROUP_NAME_SIX_SIGNAL:             UserSourceSixSignal,
 }
 
 const USERS = "users"
@@ -899,7 +903,7 @@ func GetSourceUserPropertyOverwritePropertySuffix(source string, objectType stri
 }
 
 // SetUserGroupFieldByColumnName update user struct field by gorm column name. If value already set then it won't update the value
-func SetUserGroupFieldByColumnName(user *User, columnName, value string) (bool, bool, error) {
+func SetUserGroupFieldByColumnName(user *User, columnName, value string, overwrite bool) (bool, bool, error) {
 
 	if user == nil || columnName == "" || value == "" {
 		return false, false, errors.New("invalid parameters")
@@ -935,7 +939,7 @@ func SetUserGroupFieldByColumnName(user *User, columnName, value string) (bool, 
 					return false, false, errors.New("duplicate tag found")
 				}
 
-				if currValue == "" { // don't overwrite if already set
+				if currValue == "" || (overwrite && currValue != value) { // don't overwrite if already set
 
 					if !field.CanSet() {
 						return false, false, errors.New("cannot update field")
@@ -956,9 +960,26 @@ func SetUserGroupFieldByColumnName(user *User, columnName, value string) (bool, 
 	return processed, updated, nil
 }
 
-func GetUserGroupID(user *User) (string, error) {
-	if !(*user.IsGroupUser) {
+func GetGroupUserGroupID(user *User, groupIndex int) (string, error) {
+	if user.IsGroupUser == nil || !(*user.IsGroupUser) {
 		return "", errors.New("not a group user")
+	}
+	groupID, err := GetUserGroupID(user, groupIndex)
+	if err != nil {
+		return "", err
+	}
+	if groupID == "" {
+		return "", errors.New("failed to get group id for user")
+	}
+	return groupID, nil
+}
+
+// GetUserGroupID return group_<index>_id by group index
+func GetUserGroupID(user *User, groupIndex int) (string, error) {
+
+	groupID := ""
+	if groupIndex != 0 {
+		groupID = fmt.Sprintf("group_%d_id", groupIndex)
 	}
 
 	refUserVal := reflect.ValueOf(user)
@@ -968,6 +989,10 @@ func GetUserGroupID(user *User) (string, error) {
 	for i := 0; i < refUserVal.Elem().NumField(); i++ {
 		refField := refUserTyp.Field(i)
 		if tagName := refField.Tag.Get("json"); strings.HasPrefix(tagName, "group_") {
+			if groupID != "" && groupID != tagName {
+				continue
+			}
+
 			field := refUserVal.Elem().Field(i)
 			if field.Kind() != reflect.String {
 				continue
@@ -985,10 +1010,6 @@ func GetUserGroupID(user *User) (string, error) {
 
 	}
 
-	if value == "" {
-		return "", errors.New("failed to get group id for user")
-	}
-
 	return value, nil
 }
 
@@ -998,4 +1019,26 @@ func IsValidUserSource(source string) bool {
 	} else {
 		return false
 	}
+}
+
+func GetUserSourceByName(source string) int {
+	return UserSourceMap[source]
+}
+
+func GetUserSourceName(source int) string {
+	for name := range UserSourceMap {
+		if UserSourceMap[name] == source {
+			return name
+		}
+	}
+
+	return ""
+}
+
+func GetGroupUserSourceByGroupName(groupName string) int {
+	return GroupUserSource[groupName]
+}
+
+func GetGroupUserSourceNameByGroupName(groupName string) string {
+	return GetUserSourceName(GroupUserSource[groupName])
 }

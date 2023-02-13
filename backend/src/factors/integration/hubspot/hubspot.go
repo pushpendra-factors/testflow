@@ -2243,7 +2243,7 @@ func syncCompany(projectID int64, document *model.HubspotDocument) int {
 
 				if C.IsAllowedHubspotGroupsByProjectID(projectID) {
 					logCtx.Info("Updating user company group user id.")
-					_, status = store.GetStore().UpdateUserGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID)
+					_, status = store.GetStore().UpdateUserGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID, false)
 					if status != http.StatusAccepted && status != http.StatusNotModified {
 						logCtx.Error("Failed to update user group id.")
 					}
@@ -2455,7 +2455,7 @@ func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.Hubs
 	createdEventName, updatedEventName := getGroupEventName(document.Type)
 	if document.Action == model.HubspotDocumentActionCreated {
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
-			enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.SmartCRMEventSourceHubspot)
+			enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.UserSourceHubspotString)
 
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update hubspot created group properties.")
@@ -2484,7 +2484,7 @@ func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.Hubs
 		groupUser := getGroupUserID(createdDocument)
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID,
 			groupUser, enProperties, getEventTimestamp(createdDocument.Timestamp), getEventTimestamp(document.Timestamp),
-			model.SmartCRMEventSourceHubspot)
+			model.UserSourceHubspotString)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update hubspot updated group properties.")
 			return "", "", http.StatusInternalServerError
@@ -2630,7 +2630,7 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 				continue
 			}
 
-			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_HUBSPOT_DEAL, "", dealGroupUserID)
+			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_HUBSPOT_DEAL, "", dealGroupUserID, false)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				logCtx.WithFields(log.Fields{"contact_id": documents[i].ID, "deal_group_user_id": dealGroupUserID, "err_code": status}).
 					Error("Failed to update contact user group for hubspot deal.")

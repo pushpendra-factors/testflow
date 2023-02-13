@@ -334,9 +334,9 @@ func TestAnalyticsFunnelGroupUserQuery(t *testing.T) {
 		}
 
 		// associate normal users to group
-		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID, groupName, groupID, groupUserID)
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID, groupName, groupID, groupUserID, false)
 		assert.Equal(t, http.StatusAccepted, status)
-		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID1, groupName, groupID, groupUserID)
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID1, groupName, groupID, groupUserID, false)
 		assert.Equal(t, http.StatusAccepted, status)
 
 		// fire funnel query
@@ -439,9 +439,9 @@ func TestAnalyticsUniqueUsersQueryWithGroupEvent(t *testing.T) {
 		}
 
 		// Associate normal users to group
-		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID, groupName, groupID, groupUserID)
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID, groupName, groupID, groupUserID, false)
 		assert.Equal(t, http.StatusAccepted, status)
-		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID1, groupName, groupID, groupUserID)
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID1, groupName, groupID, groupUserID, false)
 		assert.Equal(t, http.StatusAccepted, status)
 
 		// Non-group user with same customer_user_id
@@ -3593,7 +3593,7 @@ func TestAnalyticsFunnelGroupQuery(t *testing.T) {
 			Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
 		assert.Equal(t, http.StatusCreated, errCode)
 		hubspotContactUser = append(hubspotContactUser, userID)
-		_, status = store.GetStore().UpdateUserGroup(project.ID, userID, model.GROUP_NAME_HUBSPOT_COMPANY, group1ID, groupUserIDMap[group1ID])
+		_, status = store.GetStore().UpdateUserGroup(project.ID, userID, model.GROUP_NAME_HUBSPOT_COMPANY, group1ID, groupUserIDMap[group1ID], false)
 		assert.Equal(t, http.StatusAccepted, status)
 	}
 

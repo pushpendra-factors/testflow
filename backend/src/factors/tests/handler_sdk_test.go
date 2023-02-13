@@ -81,6 +81,159 @@ func Test6SignalEnrichmentInSDKTrackHandler(t *testing.T) {
 
 }
 
+func TestSDK6SignalGroup(t *testing.T) {
+
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// check group not exist
+	_, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL)
+	assert.Equal(t, http.StatusNotFound, status)
+
+	userPropertiesMap := U.PropertiesMap{
+		U.UP_CITY:                      "city1",
+		U.UP_LATEST_PAGE_URL:           "www.abc.com",
+		U.SIX_SIGNAL_ZIP:               "1234",
+		U.SIX_SIGNAL_NAICS_DESCRIPTION: "abc",
+		U.SIX_SIGNAL_EMPLOYEE_COUNT:    10,
+		U.SIX_SIGNAL_COUNTRY:           "country",
+		U.SIX_SIGNAL_ADDRESS:           "Address1",
+		U.SIX_SIGNAL_CITY:              "city",
+		U.SIX_SIGNAL_EMPLOYEE_RANGE:    "1-20",
+		U.SIX_SIGNAL_INDUSTRY:          "industry",
+		U.SIX_SIGNAL_SIC:               "123",
+		U.SIX_SIGNAL_REVENUE_RANGE:     "1-10K",
+		U.SIX_SIGNAL_COUNTRY_ISO_CODE:  "123",
+		U.SIX_SIGNAL_PHONE:             "987654321",
+		U.SIX_SIGNAL_DOMAIN:            "abc.com",
+		U.SIX_SIGNAL_NAME:              "abc",
+		U.SIX_SIGNAL_STATE:             "state",
+		U.SIX_SIGNAL_REGION:            "region",
+		U.SIX_SIGNAL_NAICS:             "1234",
+		U.SIX_SIGNAL_ANNUAL_REVENUE:    "10K",
+		U.SIX_SIGNAL_SIC_DESCRIPTION:   "description",
+	}
+	userPropertiesEn, err := json.Marshal(userPropertiesMap)
+	assert.Nil(t, err)
+	userPropertiesJsonb := &postgres.Jsonb{userPropertiesEn}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, createdUserID, userPropertiesJsonb, time.Now().Unix())
+	assert.Equal(t, http.StatusAccepted, status)
+
+	groupProperties := U.FilterPropertiesByKeysByPrefix(&userPropertiesMap, U.SIX_SIGNAL_PROPERTIES_PREFIX)
+	assert.Len(t, *groupProperties, 19) // only 6signal properties
+	assert.Equal(t, "1234", (*groupProperties)[U.SIX_SIGNAL_ZIP])
+	assert.Equal(t, "abc", (*groupProperties)[U.SIX_SIGNAL_NAICS_DESCRIPTION])
+	assert.Equal(t, 10, (*groupProperties)[U.SIX_SIGNAL_EMPLOYEE_COUNT])
+	assert.Equal(t, "country", (*groupProperties)[U.SIX_SIGNAL_COUNTRY])
+	assert.Equal(t, "Address1", (*groupProperties)[U.SIX_SIGNAL_ADDRESS])
+	assert.Equal(t, "city", (*groupProperties)[U.SIX_SIGNAL_CITY])
+	assert.Equal(t, "1-20", (*groupProperties)[U.SIX_SIGNAL_EMPLOYEE_RANGE])
+	assert.Equal(t, "industry", (*groupProperties)[U.SIX_SIGNAL_INDUSTRY])
+	assert.Equal(t, "123", (*groupProperties)[U.SIX_SIGNAL_SIC])
+	assert.Equal(t, "1-10K", (*groupProperties)[U.SIX_SIGNAL_REVENUE_RANGE])
+	assert.Equal(t, "123", (*groupProperties)[U.SIX_SIGNAL_COUNTRY_ISO_CODE])
+	assert.Equal(t, "987654321", (*groupProperties)[U.SIX_SIGNAL_PHONE])
+	assert.Equal(t, "abc.com", (*groupProperties)[U.SIX_SIGNAL_DOMAIN])
+	assert.Equal(t, "abc", (*groupProperties)[U.SIX_SIGNAL_NAME])
+	assert.Equal(t, "state", (*groupProperties)[U.SIX_SIGNAL_STATE])
+	assert.Equal(t, "region", (*groupProperties)[U.SIX_SIGNAL_REGION])
+	assert.Equal(t, "1234", (*groupProperties)[U.SIX_SIGNAL_NAICS])
+	assert.Equal(t, "10K", (*groupProperties)[U.SIX_SIGNAL_ANNUAL_REVENUE])
+	assert.Equal(t, "description", (*groupProperties)[U.SIX_SIGNAL_SIC_DESCRIPTION])
+
+	status = SDK.TrackUserGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	assert.Equal(t, http.StatusOK, status)
+	group, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 1, group.ID)
+	groupUser1, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abc.com", groupUser1.Group1ID) // only 6signal group used
+	user, status := store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser1.ID, user.Group1UserID)
+	assert.Equal(t, groupUser1.Group1ID, user.Group1ID)
+
+	// track again should not create new group user
+	status = SDK.TrackUserGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	assert.Equal(t, http.StatusOK, status)
+	groupUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abc.com", groupUser1.Group1ID)
+	user, status = store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser1.ID, user.Group1UserID)
+	assert.Equal(t, groupUser1.Group1ID, user.Group1ID)
+
+	// track again shouldn't create new group or new association
+	// should only update group properties
+	(*groupProperties)[U.SIX_SIGNAL_ZIP] = "1235"
+	status = SDK.TrackUserGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	assert.Equal(t, http.StatusOK, status)
+	groupUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abc.com", groupUser1.Group1ID)
+	propertiesMap := make(map[string]interface{})
+	err = json.Unmarshal(groupUser1.Properties.RawMessage, &propertiesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, "1235", propertiesMap[U.SIX_SIGNAL_ZIP])
+	user, status = store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser1.ID, user.Group1UserID)
+	assert.Equal(t, groupUser1.Group1ID, user.Group1ID)
+
+	// same company with a new user shouldn't create new group user
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	status = SDK.TrackUserGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, createdUserID2)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser1.ID, user.Group1UserID)
+	assert.Equal(t, groupUser1.Group1ID, user.Group1ID)
+
+	// company2 with same user should create or update group user and associate with current user
+	(*groupProperties)[U.SIX_SIGNAL_DOMAIN] = "abc2.com"
+	createdUserID2, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	status = SDK.TrackUserGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	assert.Equal(t, http.StatusOK, status)
+	groupUser2, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc2.com")
+	assert.Equal(t, http.StatusFound, status) // new group user created
+	user, status = store.GetStore().GetUser(project.ID, createdUserID2)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser2.ID, user.Group1UserID) // existing assocation overwriten
+	assert.Equal(t, groupUser2.Group1ID, user.Group1ID)
+}
+
+func TestGetUserGroupID(t *testing.T) {
+	user := &model.User{
+		Group1ID: "group1",
+		Group2ID: "group2",
+		Group3ID: "group3",
+	}
+	groupID, err := model.GetUserGroupID(user, 1)
+	assert.Nil(t, err)
+	assert.Equal(t, "group1", groupID)
+	groupID, err = model.GetUserGroupID(user, 2)
+	assert.Nil(t, err)
+	assert.Equal(t, "group2", groupID)
+	groupID, err = model.GetUserGroupID(user, 3)
+	assert.Nil(t, err)
+	assert.Equal(t, "group3", groupID)
+
+	// group user method check
+	groupID, err = model.GetGroupUserGroupID(user, 1)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", groupID)
+}
+
 // TestClearbitEnrichmentInSDKTrackHanler tests clearbit enrichment in track call.
 func TestClearbitEnrichmentInSDKTrackHanler(t *testing.T) {
 

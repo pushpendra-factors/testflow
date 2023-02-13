@@ -64,6 +64,7 @@ func main() {
 	formFillIdentifyAllowedProjectIDs := flag.String("form_fill_identify_allowed_projects", "", "Form fill identification allowed project ids.")
 	eventTriggerEnabled := flag.Bool("event_trigger_enabled", false, "")
 	eventTriggerEnabledProjectIDs := flag.String("event_trigger_enabled_project_ids", "", "")
+	enableSixSignalGroupByProjectID := flag.String("enable_six_signal_group_by_project_id", "", "")
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -113,6 +114,7 @@ func main() {
 		FormFillIdentificationAllowedProjects:              *formFillIdentifyAllowedProjectIDs,
 		EventTriggerEnabled:                                *eventTriggerEnabled,
 		EventTriggerEnabledProjectIDs:                      *eventTriggerEnabledProjectIDs,
+		EnableSixSignalGroupByProjectID:                    *enableSixSignalGroupByProjectID,
 	}
 	C.InitConf(config)
 

@@ -1651,7 +1651,7 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 		return "", errors.New("invalid parameters")
 	}
 
-	if source != model.SmartCRMEventSourceHubspot && source != model.SmartCRMEventSourceSalesforce {
+	if source != model.UserSourceHubspotString && source != model.UserSourceSalesforceString && source != model.UserSourceSixSignalString {
 		logCtx.Error("Invalid source.")
 		return "", errors.New("invalid source")
 	}
@@ -1696,12 +1696,7 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 		return groupUserID, nil
 	}
 
-	var requestSource int
-	if source == model.SmartCRMEventSourceHubspot {
-		requestSource = model.UserSourceHubspot
-	} else {
-		requestSource = model.UserSourceSalesforce
-	}
+	requestSource := model.GetUserSourceByName(source)
 
 	isGroupUser := true
 	userID, status := store.CreateGroupUser(&model.User{

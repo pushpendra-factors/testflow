@@ -555,7 +555,7 @@ type Model interface {
 	UpdateIdentifyOverwriteUserPropertiesMeta(projectID int64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error
 	GetSelectedUsersByCustomerUserID(projectID int64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int)
 	CreateGroupUser(user *model.User, groupName, groupID string) (string, int)
-	UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string) (*model.User, int)
+	UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string, overwrite bool) (*model.User, int)
 	UpdateUserGroupProperties(projectID int64, userID string, newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int)
 	GetPropertiesUpdatedTimestampOfUser(projectId int64, id string) (int64, int)
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
@@ -666,7 +666,9 @@ type Model interface {
 
 	//Group
 	CreateGroup(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
+	CreateOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
 	GetGroup(projectID int64, groupName string) (*model.Group, int)
+	GetGroupUserByGroupID(projectID int64, groupName string, groupID string) (*model.User, int)
 	CreateOrUpdateGroupPropertiesBySource(projectID int64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
 	GetGroups(projectID int64) ([]model.Group, int)

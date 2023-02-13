@@ -2502,7 +2502,7 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 
 	if groupID != "" {
 		groupIndex := fmt.Sprintf("group_%d_id", group.ID)
-		processed, _, err := model.SetUserGroupFieldByColumnName(groupUser, groupIndex, groupID)
+		processed, _, err := model.SetUserGroupFieldByColumnName(groupUser, groupIndex, groupID, false)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed process group id on group user.")
 			return "", http.StatusInternalServerError
@@ -2520,7 +2520,7 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 	return store.CreateUser(groupUser)
 }
 
-func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string) (*model.User, int) {
+func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string, overwrite bool) (*model.User, int) {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"user_id":       userID,
@@ -2559,7 +2559,7 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 	var IDUpdated, userIDUpdated, processed bool
 	var err error
 	if groupID != "" {
-		processed, IDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupIndex, groupID)
+		processed, IDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupIndex, groupID, overwrite)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update user by group id.")
 			return nil, http.StatusInternalServerError
@@ -2570,7 +2570,7 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 		}
 	}
 
-	processed, userIDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupUserIndex, groupUserID)
+	processed, userIDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupUserIndex, groupUserID, overwrite)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update user by group id.")
 		return nil, http.StatusInternalServerError
