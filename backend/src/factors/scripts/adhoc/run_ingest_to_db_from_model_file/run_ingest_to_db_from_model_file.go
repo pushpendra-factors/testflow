@@ -52,12 +52,6 @@ go run run_ingest_to_db_from_model_file.go --mode=ingest --file_path=<eventsFile
 func main() {
 
 	env := flag.String("env", C.DEVELOPMENT, "")
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
-
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
@@ -88,13 +82,6 @@ func main() {
 	config := &C.Configuration{
 		Env:     *env,
 		AppName: appName,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,
@@ -335,7 +322,7 @@ func testData(startTime int64, endTime int64, projectId int64, shouldCountOccure
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, errCode, _ := store.GetStore().Analyze(projectId, query, true)
+	result, errCode, _ := store.GetStore().Analyze(projectId, query, true, true)
 	if errCode != http.StatusOK {
 		return errors.New("failed to analyze query")
 	}
@@ -351,7 +338,7 @@ func testData(startTime int64, endTime int64, projectId int64, shouldCountOccure
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, errCode, _ = store.GetStore().Analyze(projectId, query, true)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query, true, false)
 	if errCode != http.StatusOK {
 		return errors.New("failed to analyze query")
 	}
@@ -367,7 +354,7 @@ func testData(startTime int64, endTime int64, projectId int64, shouldCountOccure
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, errCode, _ = store.GetStore().Analyze(projectId, query, true)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query, true, false)
 	if errCode != http.StatusOK {
 		return errors.New("failed to analyze query")
 	}
@@ -386,7 +373,7 @@ func testData(startTime int64, endTime int64, projectId int64, shouldCountOccure
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, errCode, _ = store.GetStore().Analyze(projectId, query, true)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query, true, false)
 	if errCode != http.StatusOK {
 		return errors.New("failed to analyze query")
 	}
@@ -410,7 +397,7 @@ func testData(startTime int64, endTime int64, projectId int64, shouldCountOccure
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, errCode, _ = store.GetStore().Analyze(projectId, query, true)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query, true, false)
 	if errCode != http.StatusOK {
 		return errors.New("failed to analyze query")
 	}
@@ -520,7 +507,7 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId int64, s
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, _, _ := store.GetStore().Analyze(projectId, query, true)
+	result, _, _ := store.GetStore().Analyze(projectId, query, true, false)
 	log.Info(fmt.Sprintf("PATTERN RESULT \nperUserCount:%d\n", perUserCount))
 	log.Info(fmt.Sprintf("\nQuery Result\nperUserCount:%d\n", result.Rows[0][0]))
 
@@ -547,7 +534,7 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId int64, s
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, _, _ = store.GetStore().Analyze(projectId, query, true)
+	result, _, _ = store.GetStore().Analyze(projectId, query, true, false)
 	log.Info(fmt.Sprintf("PATTERN RESULT \nperUserCount:%d\n", perUserCount))
 	log.Info(fmt.Sprintf("\nQuery Result\nnperUserCount:%d\n", result.Rows[0][3]))
 	return nil

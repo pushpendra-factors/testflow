@@ -87,11 +87,6 @@ func overrideLastSyncTimestampIfRequired(overrideSyncTimestamp int64, syncInfo m
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
@@ -168,14 +163,6 @@ func main() {
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-			AppName:  appName,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,
@@ -229,7 +216,7 @@ func main() {
 	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"env": *env,
-			"host": *dbHost, "port": *dbPort}).Panic("Failed to initialize DB.")
+			"host": *memSQLHost, "port": *memSQLPort}).Panic("Failed to initialize DB.")
 		os.Exit(0)
 	}
 

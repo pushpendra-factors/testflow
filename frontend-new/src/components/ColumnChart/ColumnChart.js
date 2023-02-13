@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, memo } from 'react';
+import React, { useCallback, useEffect, memo, useMemo } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import cx from 'classnames';
 import Highcharts from 'highcharts';
@@ -7,48 +7,108 @@ import styles from './columnChart.module.scss';
 import { Number as NumFormat, Text } from '../factorsComponents';
 import {
   BAR_CHART_XAXIS_TICK_LENGTH,
-  FONT_FAMILY
+  FONT_FAMILY,
+  METRIC_TYPES
 } from '../../utils/constants';
 import { CHART_COLOR_1 } from '../../constants/color.constants';
+import { COLOR_CLASSNAMES } from '../../constants/charts.constants';
+import { generateColors } from '../../utils/dataFormatter';
+
+const defaultColors = generateColors(10);
 
 function ColumnChart({
   series,
   categories,
   chartId,
   comparisonApplied,
-  cardSize
+  cardSize,
+  multiColored,
+  colors,
+  valueMetricType,
+  height
 }) {
   useEffect(() => {
     if (comparisonApplied) {
-      Highcharts.setOptions({
-        defs: {
-          stripes: {
-            tagName: 'pattern',
-            id: 'columnChartStripes',
-            patternUnits: 'userSpaceOnUse',
-            width: 4,
-            height: 4,
-            children: [
-              {
-                tagName: 'rect', // Solid background
-                x: 0,
-                y: 0,
-                width: 4,
-                height: 4,
-                fill: CHART_COLOR_1
-              },
-              {
-                tagName: 'path',
-                d: 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2',
-                stroke: '#fff',
-                strokeWidth: '1px'
-              }
-            ]
+      if (multiColored) {
+        const stripes = colors.reduce((prev, curr, currIndex) => {
+          return {
+            ...prev,
+            [`color_${currIndex}_stripes`]: {
+              tagName: 'pattern',
+              id: `stripes-${COLOR_CLASSNAMES[curr]}`,
+              patternUnits: 'userSpaceOnUse',
+              width: 4,
+              height: 4,
+              children: [
+                {
+                  tagName: 'rect', // Solid background
+                  x: 0,
+                  y: 0,
+                  width: 4,
+                  height: 4,
+                  fill: curr
+                },
+                {
+                  tagName: 'path',
+                  d: 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2',
+                  stroke: '#fff',
+                  strokeWidth: '1px'
+                }
+              ]
+            }
+          };
+        }, {});
+        Highcharts.setOptions({
+          defs: stripes
+        });
+      } else {
+        Highcharts.setOptions({
+          defs: {
+            stripes: {
+              tagName: 'pattern',
+              id: 'columnChartStripes',
+              patternUnits: 'userSpaceOnUse',
+              width: 4,
+              height: 4,
+              children: [
+                {
+                  tagName: 'rect', // Solid background
+                  x: 0,
+                  y: 0,
+                  width: 4,
+                  height: 4,
+                  fill: CHART_COLOR_1
+                },
+                {
+                  tagName: 'path',
+                  d: 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2',
+                  stroke: '#fff',
+                  strokeWidth: '1px'
+                }
+              ]
+            }
           }
-        }
-      });
+        });
+      }
     }
-  }, [comparisonApplied]);
+  }, [comparisonApplied, multiColored, colors]);
+
+  const updatedSeries = useMemo(() => {
+    if (!multiColored) {
+      return series;
+    }
+    return series.map((s) => {
+      return {
+        ...s,
+        data: s.data.map((d, index) => {
+          return {
+            y: d,
+            className: COLOR_CLASSNAMES[colors[index]]
+          };
+        })
+      };
+    });
+  }, [series, multiColored, colors]);
 
   const drawChart = useCallback(() => {
     Highcharts.chart(chartId, {
@@ -58,7 +118,8 @@ function ColumnChart({
         styledMode: comparisonApplied,
         style: {
           fontFamily: FONT_FAMILY
-        }
+        },
+        height
       },
       legend: {
         enabled: false
@@ -100,7 +161,13 @@ function ColumnChart({
             formatter() {
               const self = this;
               return ReactDOMServer.renderToString(
-                <NumFormat number={self.point.y} className='bar-chart-label' />
+                <>
+                  <NumFormat
+                    number={self.point.y}
+                    className='bar-chart-label'
+                  />
+                  {valueMetricType === METRIC_TYPES.percentType ? '%' : ''}
+                </>
               );
             }
           },
@@ -117,7 +184,7 @@ function ColumnChart({
         formatter() {
           const self = this;
           return ReactDOMServer.renderToString(
-            <div className='flex flex-col row-gap-2 bannat'>
+            <div className='flex flex-col row-gap-2'>
               <Text
                 extraClass={styles.infoText}
                 type='title'
@@ -130,6 +197,7 @@ function ColumnChart({
                 <div className='flex items-center col-gap-1'>
                   <Text weight='bold' type='title' color='grey-6' level={5}>
                     <NumFormat number={self.point.y} />
+                    {valueMetricType === METRIC_TYPES.percentType ? '%' : ''}
                   </Text>
                 </div>
               </div>
@@ -137,9 +205,17 @@ function ColumnChart({
           );
         }
       },
-      series
+      series: updatedSeries
     });
-  }, [categories, series]);
+  }, [
+    cardSize,
+    categories,
+    chartId,
+    comparisonApplied,
+    updatedSeries,
+    valueMetricType,
+    height
+  ]);
 
   useEffect(() => {
     drawChart();
@@ -147,8 +223,10 @@ function ColumnChart({
 
   return (
     <div
-      className={cx(styles.columnChart, {
-        [styles.comparisonApplied]: comparisonApplied
+      className={cx('w-full', styles.columnChart, {
+        [styles.comparisonApplied]: comparisonApplied && !multiColored,
+        [styles.multiColoredComparisonApplied]:
+          comparisonApplied && multiColored
       })}
       id={chartId}
     />
@@ -161,13 +239,16 @@ ColumnChart.propTypes = {
   categories: PropTypes.arrayOf(PropTypes.string),
   series: PropTypes.arrayOf(
     PropTypes.shape({
-      data: PropTypes.arrayOf(PropTypes.number),
-      color: PropTypes.string
+      data: PropTypes.arrayOf(PropTypes.number)
     })
   ),
   chartId: PropTypes.string,
   comparisonApplied: PropTypes.bool,
-  cardSize: PropTypes.number
+  cardSize: PropTypes.number,
+  multiColored: PropTypes.bool,
+  colors: PropTypes.arrayOf(PropTypes.string),
+  valueMetricType: PropTypes.string,
+  height: PropTypes.number
 };
 
 ColumnChart.defaultProps = {
@@ -175,5 +256,9 @@ ColumnChart.defaultProps = {
   series: [],
   chartId: 'columnChartContainer',
   comparisonApplied: false,
-  cardSize: 1
+  cardSize: 1,
+  multiColored: false,
+  colors: defaultColors,
+  valueMetricType: null,
+  height: null
 };

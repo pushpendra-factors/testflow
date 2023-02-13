@@ -253,11 +253,19 @@ export const getUniqueItemsByKeyAndSearchTerm = (activities, searchTerm) =>
   );
 
 export const propValueFormat = (key, value) => {
+  const durationKeys = [
+    'Time Spent on Site',
+    '$session_spent_time',
+    '$initial_page_load_time',
+    '$initial_page_spent_time',
+    '$latest_page_load_time'
+  ];
   if (
     NUM_AND_DATETIME_PROPS.datetime.includes(key) ||
     key.includes('timestamp') ||
     key.includes('starttime') ||
-    key.includes('endtime')
+    key.includes('endtime') ||
+    key.toLowerCase().includes('jointime')
   ) {
     if (key.toLowerCase().includes('date'))
       return MomentTz(value * 1000).format('DD MMM YYYY');

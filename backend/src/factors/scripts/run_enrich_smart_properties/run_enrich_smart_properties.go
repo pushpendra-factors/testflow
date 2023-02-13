@@ -15,11 +15,6 @@ import (
 
 func main() {
 	env := flag.String("env", "development", "")
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
 	dryRunSmartProperties := flag.Bool("dry_run_smart_properties", false, "Dry run mode for smart properties job")
 	projectIDs := flag.String("project_ids", "", "Projects for which the smart properties are to be populated")
 
@@ -52,14 +47,6 @@ func main() {
 	config := &C.Configuration{
 		AppName: appName,
 		Env:     *env,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-			AppName:  appName,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,

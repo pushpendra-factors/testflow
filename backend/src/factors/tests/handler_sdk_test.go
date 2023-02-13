@@ -788,6 +788,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 			"$qp_utm_campaign": "campaign1",
 		},
 		RequestSource: model.UserSourceWeb,
+		ClientIP:      "10.10.0.15",
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
@@ -799,6 +800,14 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	assert.Nil(t, err)
 	// Latest user properties state should contain latest campaign as "campaign1".
 	assert.Equal(t, "campaign1", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
+	event, errCode := store.GetStore().GetEventById(project.ID, response.EventId, "")
+	assert.Equal(t, http.StatusFound, errCode)
+	responseEventPropertiesBytes, err := event.Properties.Value()
+	assert.Nil(t, err)
+	var responseEventProperties map[string]interface{}
+	json.Unmarshal(responseEventPropertiesBytes.([]byte), &responseEventProperties)
+	// Client ip should not be added in event properties
+	assert.Nil(t, responseEventProperties[U.EP_INTERNAL_IP])
 	userID := response.UserId
 
 	timestamp = timestamp + 10000
@@ -814,7 +823,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	_, errCode = store.GetStore().GetEvent(project.ID, userID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
 
-	event, errCode := store.GetStore().GetEvent(project.ID, userID, response.EventId)
+	event, errCode = store.GetStore().GetEvent(project.ID, userID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	user, errCode = store.GetStore().GetUser(project.ID, userID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -2410,6 +2419,7 @@ func TestSDKAMPTrackByToken(t *testing.T) {
 		SourceURL:     "https://example.com/a/b",
 		Timestamp:     timestamp,
 		RequestSource: model.UserSourceWeb,
+		ClientIP:      "10.10.0.1",
 	}
 	errCode, response := SDK.AMPTrackByToken(project.Token, request)
 	assert.Equal(t, http.StatusOK, errCode)
@@ -2417,6 +2427,11 @@ func TestSDKAMPTrackByToken(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	// AMP Tracked event should use the given timestamp.
 	assert.Equal(t, timestamp, event.Timestamp)
+	responseEventPropertiesBytes, err := event.Properties.Value()
+	assert.Nil(t, err)
+	var responseEventProperties map[string]interface{}
+	json.Unmarshal(responseEventPropertiesBytes.([]byte), &responseEventProperties)
+	assert.Nil(t, responseEventProperties["$ip"])
 }
 
 func TestSDKUpdateEventProperties(t *testing.T) {

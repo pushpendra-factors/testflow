@@ -10,12 +10,18 @@ import {
   DASHBOARD_WIDGET_SECTION,
   DASHBOARD_WIDGET_SCATTERPLOT_CHART_HEIGHT,
   CHART_TYPE_TABLE,
-  CHART_TYPE_METRIC_CHART
+  CHART_TYPE_METRIC_CHART,
+  CHART_TYPE_FUNNEL_CHART,
+  METRIC_TYPES,
+  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  CHART_TYPE_HORIZONTAL_BAR_CHART
 } from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
 import FunnelsScatterPlot from '../../CoreQuery/FunnelsResultPage/GroupedChart/FunnelsScatterPlot';
 import MetricChart from 'Components/MetricChart/MetricChart';
 import { generateColors } from 'Utils/dataFormatter';
+import ColumnChart from '../../../components/ColumnChart/ColumnChart';
+import HorizontalBarChart from '../../../components/HorizontalBarChart';
 
 const cardSizeToMetricCount = {
   0: 2,
@@ -65,7 +71,7 @@ function GroupedChart({
 
   let chartContent = null;
 
-  if (chartType === CHART_TYPE_BARCHART) {
+  if (chartType === CHART_TYPE_FUNNEL_CHART) {
     chartContent = (
       <Chart
         groups={visibleProperties}
@@ -76,6 +82,44 @@ function GroupedChart({
         section={section}
         cardSize={unit.cardSize}
         durations={resultState.data.meta}
+      />
+    );
+  } else if (chartType === CHART_TYPE_BARCHART) {
+    chartContent = (
+      <ColumnChart
+        categories={visibleProperties.map((v) => v.name)}
+        multiColored
+        valueMetricType={METRIC_TYPES.percentType}
+        height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
+        cardSize={unit.cardSize}
+        series={[
+          {
+            name: 'OG',
+            data: visibleProperties.map((v, index) =>
+              parseInt(v.value.split('%')[0])
+            )
+          }
+        ]}
+      />
+    );
+  } else if (chartType === CHART_TYPE_HORIZONTAL_BAR_CHART) {
+    chartContent = (
+      <HorizontalBarChart
+        height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
+        categories={visibleProperties.slice(0, 5).map((v) => v.name)}
+        hideXAxis={true}
+        series={[
+          {
+            name: 'OG',
+            data: visibleProperties.slice(0, 5).map((v, index) => {
+              return {
+                y: parseInt(v.value.split('%')[0]),
+                color: colors[index],
+                metricType: METRIC_TYPES.percentType
+              };
+            })
+          }
+        ]}
       />
     );
   } else if (chartType === CHART_TYPE_SCATTER_PLOT) {

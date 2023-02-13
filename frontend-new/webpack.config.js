@@ -83,6 +83,19 @@ module.exports = {
         use: ['babel-loader']
       },
       {
+        test: /\.(ts|tsx)$/,
+        use: [
+          'babel-loader',
+          {
+            loader: 'ts-loader',
+            options: {
+              transpileOnly: true
+            }
+          }
+        ],
+        exclude: /node_modules/
+      },
+      {
         test: cssRegex,
         exclude: cssModuleRegex,
         use: getStyleLoaders({
@@ -120,7 +133,7 @@ module.exports = {
     ]
   },
   resolve: {
-    extensions: ['*', '.js', '.jsx'],
+    extensions: ['*', '.ts', '.tsx', '.js', '.jsx'],
     alias: {
       ...webpackDirAlias
     }

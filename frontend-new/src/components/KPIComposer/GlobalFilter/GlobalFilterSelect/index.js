@@ -30,7 +30,8 @@ const GlobalFilterSelect = ({
   setValuesByProps,
   applyFilter,
   filter,
-  refValue
+  refValue,
+  viewMode = false,
 }) => {
   const rangePicker = ['=', '!='];
   const customRangePicker = ['between', 'not between'];
@@ -251,6 +252,7 @@ const GlobalFilterSelect = ({
             className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
             type='link'
             onClick={() => setPropSelectOpen(!propSelectOpen)}
+            disabled={viewMode}
           >
             {renderDisplayName(propState)}
           </Button>
@@ -283,6 +285,7 @@ const GlobalFilterSelect = ({
             className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
             type='link'
             onClick={() => setOperSelectOpen(true)}
+            disabled={viewMode}
           >
             {operatorState ? operatorState : 'Select Operator'}
           </Button>
@@ -393,6 +396,7 @@ const GlobalFilterSelect = ({
           monthPicker
           placement='topRight'
           range={rang}
+          disabled={viewMode}
           onSelect={(rng) => onDateSelect(rng)}
           className={'filter-buttons-margin filter-buttons-radius'}
         />
@@ -402,6 +406,7 @@ const GlobalFilterSelect = ({
     if (customRangePicker.includes(operator)) {
       selectorComponent = (
         <FaDatepicker
+          disabled={viewMode}
           customPicker
           placement='topRight'
           range={rang}
@@ -418,6 +423,7 @@ const GlobalFilterSelect = ({
             value={parsedValues['num']}
             min={1}
             max={999}
+            disabled={viewMode}
             onChange={setDeltaNumber}
             placeholder={'number'}
             controls={false}
@@ -425,9 +431,10 @@ const GlobalFilterSelect = ({
           ></InputNumber>
 
           <Button
-            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-            type='link'
-            onClick={() => setDateOptionSelectOpen(true)}
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+          type='link'
+          disabled={viewMode}
+          onClick={() => setDateOptionSelectOpen(true)}
           >
             {parsedValues['gran']
               ? dateTimeSelect.get(parsedValues['gran'])
@@ -449,9 +456,10 @@ const GlobalFilterSelect = ({
       selectorComponent = (
         <div className={`fa-filter-dateDeltaContainer`}>
           <Button
-            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-            type='link'
-            onClick={() => setDateOptionSelectOpen(true)}
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+          type='link'
+          disabled={viewMode}
+          onClick={() => setDateOptionSelectOpen(true)}
           >
             {parsedValues['gran']
               ? toCapitalCase(parsedValues['gran'])
@@ -473,6 +481,7 @@ const GlobalFilterSelect = ({
       selectorComponent = (
         <DatePicker
           // disabledDate={(d) => !d || d.isAfter(MomentTz())}
+          disabled={viewMode}
           autoFocus={false}
           className={`fa-date-picker`}
           open={showDatePicker}
@@ -554,33 +563,32 @@ const GlobalFilterSelect = ({
     if (propState.type === 'numerical') {
       selectionComponent = (
         <div>
-          {containButton && (
-            <Button
-              className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-              type='link'
-              onClick={() => setContainButton(false)}
-            >
-              {valuesState ? valuesState : 'Enter Value'}
-            </Button>
-          )}
-          {!containButton && (
-            <Input
-              type='number'
-              value={valuesState}
-              placeholder={'Enter Value'}
-              autoFocus={true}
-              onBlur={() => {
-                emitFilter();
-                setContainButton(true);
-              }}
-              onPressEnter={() => {
-                emitFilter();
-                setContainButton(true);
-              }}
-              onChange={setNumericalValue}
-              className={`input-value filter-buttons-radius filter-buttons-margin`}
-            ></Input>
-          )}
+        {containButton && (
+          <Button
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+          type='link'
+          onClick={() => setContainButton(false)}
+          disabled={viewMode}
+        >
+          {valuesState ? valuesState : 'Enter Value'}
+        </Button>)}
+        {!containButton &&
+        (<Input
+          type="number"
+          disabled={viewMode}
+          value={valuesState}
+          placeholder={'Enter Value'}
+          autoFocus={true}
+          onBlur={() => {
+            emitFilter()
+            setContainButton(true)}}
+          onPressEnter={()=>{
+            emitFilter()
+            setContainButton(true)}}
+          onChange={setNumericalValue}
+          className={`input-value filter-buttons-radius filter-buttons-margin`}
+        ></Input>)
+        }
         </div>
       );
     }
@@ -603,6 +611,7 @@ const GlobalFilterSelect = ({
               className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
               type='link'
               onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
+              disabled={viewMode}
             >
               {valuesState && valuesState.length
                 ? valuesState

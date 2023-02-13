@@ -68,8 +68,7 @@ const SDKAssetsURL = "https://app.factors.ai/assets/factors.js"
 
 // Datastore specific constants.
 const (
-	DatastoreTypePostgres = "postgres"
-	DatastoreTypeMemSQL   = "memsql"
+	DatastoreTypeMemSQL = "memsql"
 )
 
 // MemSQLDefaultDBParams Default connection params for Postgres.
@@ -285,6 +284,7 @@ type Configuration struct {
 	EnableDBConnectionPool2                            bool
 	FormFillIdentificationAllowedProjects              string
 	EnableEventFiltersInSegments                       bool
+	EnableDebuggingForIP                               bool
 }
 
 type Services struct {
@@ -742,54 +742,11 @@ func InitEtcd(EtcdEndpoints []string) error {
 
 func InitDBWithMaxIdleAndMaxOpenConn(config Configuration,
 	maxOpenConns, maxIdleConns int) error {
-	if UseMemSQLDatabaseStore() {
-		if IsDBConnectionPool2Enabled() {
-			InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQL2Info, maxOpenConns, maxIdleConns, true)
-		}
-
-		return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQLInfo, maxOpenConns, maxIdleConns, false)
-	}
-	return InitPostgresDBWithMaxIdleAndMaxOpenConn(config.DBInfo, maxOpenConns, maxIdleConns)
-}
-
-func InitPostgresDBWithMaxIdleAndMaxOpenConn(dbConf DBConf,
-	maxOpenConns, maxIdleConns int) error {
-	if services == nil {
-		services = &Services{}
+	if IsDBConnectionPool2Enabled() {
+		InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQL2Info, maxOpenConns, maxIdleConns, true)
 	}
 
-	db, err := gorm.Open("postgres",
-		fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=disable application_name=%s",
-			dbConf.Host,
-			dbConf.Port,
-			dbConf.User,
-			dbConf.Name,
-			dbConf.Password,
-			dbConf.AppName,
-		))
-	// Connection Pooling and Logging.
-	db.DB().SetMaxOpenConns(maxOpenConns)
-	db.DB().SetMaxIdleConns(maxIdleConns)
-	if IsDevelopment() {
-		db.LogMode(true)
-	} else {
-		db.LogMode(false)
-	}
-
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed Db Initialization")
-		return err
-	}
-	log.Info("Db Service initialized")
-
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-
-	services.Db = db
-	configuration.DBInfo = dbConf
-	services.DBContext = &ctx
-	services.DBContextCancel = &cancel
-	return nil
+	return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQLInfo, maxOpenConns, maxIdleConns, false)
 }
 
 func GetMemSQLDSNString(dbConf *DBConf) string {
@@ -977,10 +934,7 @@ func UseMemSQLDatabaseStore() bool {
 
 // GetPrimaryDatastore Returns memsql only if set in config. Defaults to postgres.
 func GetPrimaryDatastore() string {
-	if GetConfig().PrimaryDatastore == DatastoreTypeMemSQL {
-		return DatastoreTypeMemSQL
-	}
-	return DatastoreTypePostgres
+	return DatastoreTypeMemSQL
 }
 
 func IsDatastoreMemSQL() bool {
@@ -2474,4 +2428,8 @@ func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
 
 func IsEnabledFeatureGates() bool {
 	return configuration.EnableFeatureGates
+}
+
+func IsEnableDebuggingForIP() bool {
+	return configuration.EnableDebuggingForIP
 }

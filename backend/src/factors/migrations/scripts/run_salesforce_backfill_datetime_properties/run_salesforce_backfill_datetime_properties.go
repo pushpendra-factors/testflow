@@ -22,12 +22,6 @@ import (
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
-
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
@@ -42,7 +36,7 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
-	projectID := flag.Uint64("project_id", 0, "Project Id.")
+	projectID := flag.Int64("project_id", 0, "Project Id.")
 	eventNameIDstr := flag.String("event_name_id", "", "Event name Id.")
 	from := flag.Int64("start_timestamp", 0, "Staring timestamp from events search.")
 	to := flag.Int64("end_timestamp", 0, "Ending timestamp from events search. End timestamp will be excluded")
@@ -72,14 +66,6 @@ func main() {
 	config := &C.Configuration{
 		AppName: taskID,
 		Env:     *env,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-			AppName:  taskID,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,
@@ -138,7 +124,7 @@ func main() {
 }
 
 // GetEventsBetweenRangeByEventNameIDs return events between range by event_name_id. End time is not inclusive
-func GetEventsBetweenRangeByEventNameIDs(projectID uint64, eventNameID []string, from, to int64) ([]model.Event, int) {
+func GetEventsBetweenRangeByEventNameIDs(projectID int64, eventNameID []string, from, to int64) ([]model.Event, int) {
 	db := C.GetServices().Db
 
 	var events []model.Event
@@ -156,7 +142,7 @@ func GetEventsBetweenRangeByEventNameIDs(projectID uint64, eventNameID []string,
 	return events, http.StatusFound
 }
 
-func beginBackFillDateTimePropertiesByEventNameID(projectID uint64, eventNameIDs []string, from, to int64, wetRun bool) (map[string]bool, map[string]int, error) {
+func beginBackFillDateTimePropertiesByEventNameID(projectID int64, eventNameIDs []string, from, to int64, wetRun bool) (map[string]bool, map[string]int, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name_ids": eventNameIDs, "from": from, "to": to})
 	if projectID == 0 || len(eventNameIDs) < 1 || from == 0 || to == 0 {
 		logCtx.Error("Missing fields.")
@@ -258,7 +244,7 @@ func updateDatetimePropertiesToUnix(properties *map[string]interface{}, datetime
 	return properties, &propertiesUpdateList, isUpdateRequired, nil
 }
 
-func updateEventPropertiesIfRequired(projectID uint64, eventID, eventUserID string, eventProperties *map[string]interface{}, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, error) {
+func updateEventPropertiesIfRequired(projectID int64, eventID, eventUserID string, eventProperties *map[string]interface{}, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_id": eventID, "event_properties": eventProperties})
 
@@ -289,7 +275,7 @@ func updateEventPropertiesIfRequired(projectID uint64, eventID, eventUserID stri
 
 }
 
-func updateEventUserPropertiesIfRequired(projectID uint64, eventID, eventUserID string, eventUserProperties *map[string]interface{}, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, error) {
+func updateEventUserPropertiesIfRequired(projectID int64, eventID, eventUserID string, eventUserProperties *map[string]interface{}, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_id": eventID, "event_user_properties": eventUserProperties})
 
@@ -319,7 +305,7 @@ func updateEventUserPropertiesIfRequired(projectID uint64, eventID, eventUserID 
 
 }
 
-func backfillEventIfRequired(projectID uint64, userID string, eventID string, properties *postgres.Jsonb, userProperties *postgres.Jsonb, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, *map[string]bool, error) {
+func backfillEventIfRequired(projectID int64, userID string, eventID string, properties *postgres.Jsonb, userProperties *postgres.Jsonb, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, *map[string]bool, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "event_id": eventID, "datetime_properties": datetimeProperties})
 	if projectID == 0 || userID == "" || eventID == "" || properties == nil {
 		return nil, nil, errors.New("missing required field")
@@ -365,7 +351,7 @@ func backfillEventIfRequired(projectID uint64, userID string, eventID string, pr
 	return eventPropertiesUpdateList, eventUserPropertiesUpdateList, nil
 }
 
-func updateEventPropertiesAndEventUserProperties(projectID uint64, event *model.Event, datetimeProperties *map[string]bool, wetRun bool) (map[string]bool, map[string]bool, error) {
+func updateEventPropertiesAndEventUserProperties(projectID int64, event *model.Event, datetimeProperties *map[string]bool, wetRun bool) (map[string]bool, map[string]bool, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "datetime_properties": datetimeProperties, "event_id": event.ID})
 	if projectID == 0 || event == nil || datetimeProperties == nil || len(*datetimeProperties) < 1 {
 		logCtx.Error("Missing required fields.")
@@ -395,7 +381,7 @@ func updateEventPropertiesAndEventUserProperties(projectID uint64, event *model.
 	return allEventPropertiesUpdateList, allEventUserPropertiesUpdateList, nil
 }
 
-func updateLatesUserPropeties(projectID uint64, userID string, datetimeProperties *map[string]bool, wetRun bool) (map[string]bool, error) {
+func updateLatesUserPropeties(projectID int64, userID string, datetimeProperties *map[string]bool, wetRun bool) (map[string]bool, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID})
 
 	if projectID == 0 || userID == "" {

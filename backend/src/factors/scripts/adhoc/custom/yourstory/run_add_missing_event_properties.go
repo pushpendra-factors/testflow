@@ -64,7 +64,7 @@ func isNonMetaPageEventName(eventName string) bool {
 }
 
 func addEventPropertiesByName(
-	projectID uint64,
+	projectID int64,
 	propertiesByName *map[string]U.PropertiesMap,
 	eventsWithoutProperties []model.EventWithProperties,
 ) (int, int) {
@@ -158,11 +158,6 @@ func addEventPropertiesByName(
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
@@ -173,7 +168,7 @@ func main() {
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	dryRun := flag.Bool("dry_run", false, "")
 
-	projectID := flag.Uint64("project_id", 398, "Yourstory project_id.")
+	projectID := flag.Int64("project_id", 398, "Yourstory project_id.")
 	customEndTimestamp := flag.Int64("custom_end_timestamp", 0, "Custom end timestamp.")
 	maxLookbackDays := flag.Int64("max_lookback_days", 1, "Fix properties for last given days. Default 1.")
 
@@ -198,14 +193,6 @@ func main() {
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-			AppName:  taskID,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,

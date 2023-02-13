@@ -86,7 +86,7 @@ func main() {
 	db := C.GetServices().Db
 	failures := make([]interface{}, 0)
 
-	savedQueries, statusCode := getSavedQueries(uint64(*projectIDFlag))
+	savedQueries, statusCode := getSavedQueries(int64(*projectIDFlag))
 	if statusCode != http.StatusFound {
 		log.WithField("statusCode", statusCode).Warn("Failed in getting saved queries.")
 		C.PingHealthcheckForFailure(C.HealthcheckSavedQueriesTimezoneChangePingID, "Failed while getting Saved queries.")
@@ -121,7 +121,7 @@ func main() {
 	log.WithField("Count of successfully saved - savedQueries.", count).Warn("Count of saved Queries.")
 }
 
-func getSavedQueries(projectID uint64) ([]model.Queries, int) {
+func getSavedQueries(projectID int64) ([]model.Queries, int) {
 	storeSelected := store.GetStore()
 	return storeSelected.GetAllNonConvertedQueries(projectID)
 }

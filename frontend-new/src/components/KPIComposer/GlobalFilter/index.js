@@ -15,6 +15,7 @@ const GLobalFilter = ({
   onFiltersLoad = [],
   KPIConfigProps,
   selectedMainCategory,
+  viewMode = false,
 }) => {
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
   const activeProject = useSelector((state) => state.global.active_project);
@@ -88,11 +89,12 @@ const GLobalFilter = ({
                 filterProps={filterProps}
                 propsConstants={['user']}
                 refValue={refValue}
+                viewMode={viewMode}
               ></GlobalFilterBlock>
             </div>
            {index !== orFilterIndex && (
              <div className={`mt-2`}>
-             <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>
+             {!viewMode && <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>}
              </div>
             )}       
            {index === orFilterIndex && (
@@ -111,6 +113,7 @@ const GLobalFilter = ({
                 selectedMainCategory={selectedMainCategory}
                 refValue={refValue}
                 showOr = {true}
+                viewMode={viewMode}
               ></GlobalFilterBlock>
               </div>              
             )}  
@@ -135,6 +138,7 @@ const GLobalFilter = ({
                 selectedMainCategory={selectedMainCategory}
                 propsConstants={['user']}
                 refValue={refValue}
+                viewMode={viewMode}
               ></GlobalFilterBlock>
             </div>
           <div key={index+1} className={`mt-2`}>
@@ -153,6 +157,7 @@ const GLobalFilter = ({
                 selectedMainCategory={selectedMainCategory}
                 refValue={refValue}
                 showOr = {true}
+                viewMode={viewMode}
               ></GlobalFilterBlock>
           </div>
         </div>
@@ -177,11 +182,12 @@ const GLobalFilter = ({
             closeFilter={closeFilter}
             selectedMainCategory={selectedMainCategory}
             refValue={lastRef+1}
+            viewMode={viewMode}
           ></GlobalFilterBlock>
         </div>
       );
     } else {
-      filtrs.push(
+      !viewMode && filtrs.push(
         <div key={filtrs.length} className={`flex mt-2`}>
           <Button
             className={`fa-button--truncate`}

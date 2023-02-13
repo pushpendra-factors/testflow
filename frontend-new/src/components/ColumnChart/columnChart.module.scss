@@ -41,4 +41,13 @@
       fill: #82aee0;
     }
   }
+
+  &.multiColoredComparisonApplied {
+    @for $i from 0 through 9 {
+      :global(.highcharts-series-1 .charts-color-class-#{$i}) {
+        fill: url(#stripes-charts-color-class-#{$i}) !important;
+      }
+    }
+  }
+
 }

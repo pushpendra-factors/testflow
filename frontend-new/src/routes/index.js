@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Route, Switch, Redirect } from 'react-router-dom';
 import lazyWithRetry from 'Utils/lazyWithRetry';
 import PrivateRoute from 'Components/PrivateRoute';
@@ -7,6 +7,8 @@ import { WhiteListedAccounts } from 'Routes/constants';
 import { featureLock } from './feature';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import SetupAssist from 'Views/Settings/SetupAssist';
+import { useDispatch } from 'react-redux';
+import { UPDATE_ALL_ROUTES } from 'Reducers/types';
 const PathAnalysis = lazyWithRetry(() => import('../Views/PathAnalysis'));
 const PathAnalysisReport = lazyWithRetry(() =>
   import('../Views/PathAnalysis/PathAnalysisReport')
@@ -58,6 +60,33 @@ export const AppLayoutRoutes = ({
   active_project,
   currentProjectSettings
 }) => {
+  const dispatch = useDispatch();
+  useEffect(() => {
+    if (currentProjectSettings.is_path_analysis_enabled) {
+      let allRoutes = [];
+      allRoutes.push('/path-analysis');
+      allRoutes.push('/path-analysis/insights');
+      dispatch({ type: UPDATE_ALL_ROUTES, payload: allRoutes });
+    }
+  }, [currentProjectSettings.is_path_analysis_enabled]);
+
+  useEffect(() => {
+    if (featureLock(activeAgent)) {
+      let allRoutes = [];
+      allRoutes.push('/reports/6_signal');
+      allRoutes.push(ATTRIBUTION_ROUTES.base);
+
+      dispatch({ type: UPDATE_ALL_ROUTES, payload: allRoutes });
+    }
+  }, [activeAgent]);
+  useEffect(() => {
+    let allRoutes = [];
+    for (let obj of Object.keys(APP_LAYOUT_ROUTES)) {
+      allRoutes.push(APP_LAYOUT_ROUTES[obj].path);
+    }
+
+    dispatch({ type: UPDATE_ALL_ROUTES, payload: allRoutes });
+  }, []);
   return (
     <Switch>
       {renderRoutes(APP_LAYOUT_ROUTES)}
