@@ -546,7 +546,6 @@ function CoreQuery({
     [updateLocalReducer]
   );
 
-
   const setNavigatedFromAnalyse = useCallback(
     (payload) => {
       updateLocalReducer(SET_NAVIGATED_FROM_ANALYSE, payload);
@@ -650,11 +649,16 @@ function CoreQuery({
     (isQuerySaved) => {
       // use cache urls when user expands the dashboard widget
       if (isQuerySaved && coreQueryState.navigatedFromDashboard) {
-        return {
-          id: coreQueryState.navigatedFromDashboard.dashboard_id,
-          unit_id: coreQueryState.navigatedFromDashboard.id,
-          refresh: false
-        };
+        if (
+          coreQueryState?.navigatedFromDashboard?.dashboard_id &&
+          coreQueryState?.navigatedFromDashboard?.id
+        ) {
+          return {
+            id: coreQueryState.navigatedFromDashboard.dashboard_id,
+            unit_id: coreQueryState.navigatedFromDashboard.id,
+            refresh: false
+          };
+        }
       }
       return null;
     },
