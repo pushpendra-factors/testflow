@@ -272,7 +272,7 @@ func (store *MemSQL) DeleteSmartPropertyByRuleID(projectID int64, ruleID string)
 			return 0, 0, http.StatusAccepted
 		}
 		errString := fmt.Sprintf("Failed to delete smart properties for project %d and rule %s", projectID, ruleID)
-		log.WithField("error string", err).Error(errString)
+		log.WithError(err).WithField("error string", err).Error(errString)
 		return 0, 0, http.StatusInternalServerError
 	}
 	recordsEvaluated := 0

@@ -365,7 +365,7 @@ func (store *MemSQL) CreateSalesforceDocumentInBatches(projectID int64, TypeAlia
 
 		status = store.CreateBatchedSalesforceDocument(projectID, processDocuments)
 		if status != http.StatusOK {
-			logCtx.WithFields(log.Fields{"batch_documents": batchedDocuments[i]}).
+			logCtx.WithFields(log.Fields{"batch_documents": batchedDocuments[i], "err_code": status}).
 				Error("Failed to insert batch of salesforce document.")
 			return status
 		}

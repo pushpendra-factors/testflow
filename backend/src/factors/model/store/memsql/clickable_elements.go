@@ -51,10 +51,10 @@ func (store *MemSQL) UpsertCountAndCheckEnabledClickableElement(projectId int64,
 		status, err := store.CreateClickableElement(projectId, reqPayload)
 		return false, status, err
 	} else if getErr == http.StatusBadRequest {
-		logCtx.Error("Invalid parameters.")
+		logCtx.WithField("err_code", getErr).Error("Invalid parameters.")
 		return false, http.StatusBadRequest, errors.New("Update click failed. Invalid parameters.")
 	} else if getErr == http.StatusInternalServerError {
-		logCtx.Error("Getting clickable element failed.")
+		logCtx.WithField("err_code", getErr).Error("Getting clickable element failed.")
 		return false, http.StatusInternalServerError,
 			errors.New("Update clickable element failed. Getting clickable element failed.")
 	}
@@ -65,7 +65,7 @@ func (store *MemSQL) UpsertCountAndCheckEnabledClickableElement(projectId int64,
 		Update(map[string]interface{}{"click_count": element.ClickCount + 1}).
 		Error; err != nil {
 
-		logCtx.WithField("err", err).Error("Failed to increment click.")
+		logCtx.WithError(err).WithField("err", err).Error("Failed to increment click.")
 
 		// If enabled log and return positive, to avoid confusion.
 		//click increment is secondary for enabled elements.
@@ -95,7 +95,7 @@ func (store *MemSQL) CreateClickableElement(projectId int64, click *model.Captur
 
 	elementAttributes, err := U.EncodeStructTypeToPostgresJsonb(click.ElementAttributes)
 	if err != nil {
-		logCtx.Error("Cannot convert struct to json.")
+		logCtx.WithError(err).Error("Cannot convert struct to json.")
 		return http.StatusInternalServerError,
 			errors.New("Failed to create a clickable element. Cannot convert struct to json.")
 	}

@@ -1235,14 +1235,14 @@ func (store *MemSQL) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId i
 	userRows, err := db.Raw("SELECT id, join_timestamp FROM users WHERE project_id = ?", projectId).Rows()
 	defer userRows.Close()
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("SQL Query failed.")
+		log.WithError(err).Error("SQL Query failed.")
 		return err
 	}
 	for userRows.Next() {
 		var userId string
 		var joinTimestamp int64
 		if err = userRows.Scan(&userId, &joinTimestamp); err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
+			log.WithError(err).Error("SQL Parse failed.")
 			return err
 		}
 		type Result struct {
@@ -1442,7 +1442,7 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID int64
 	if useSourcePropertyOverwrite {
 		overwriteProperties, err = model.CheckForCRMUserPropertiesOverwrite(source, objectType, newPropertiesMap, currentPropertiesMap)
 		if err != nil {
-			logCtx.WithField("error", err.Error()).Error("Failed to get overwriteProperties flag value.")
+			logCtx.WithError(err).Error("Failed to get overwriteProperties flag value.")
 		}
 	}
 
@@ -1486,7 +1486,7 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID int64
 	store.UpdateCacheForUserProperties(userID, projectID, mergedPropertiesMap, false)
 	mergedPropertiesJSON, err := U.EncodeToPostgresJsonb(&mergedPropertiesMap)
 	if err != nil {
-		logCtx.Error("Failed to marshal new properties merged to current user properties.")
+		logCtx.WithError(err).Error("Failed to marshal new properties merged to current user properties.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -1523,7 +1523,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 		return &user.Properties, http.StatusNotModified
 	}
 	if errCode != http.StatusOK {
-		logCtx.Error("Failed merging current properties with new properties on update_properties v2.")
+		logCtx.WithField("err_code", errCode).Error("Failed merging current properties with new properties on update_properties v2.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -1539,7 +1539,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 
 	users, errCode := store.getUsersForMergingPropertiesByCustomerUserID(projectID, user.CustomerUserId, user)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get user by customer_user_id for merging user properties.")
+		logCtx.WithField("err_code", errCode).Error("Failed to get user by customer_user_id for merging user properties.")
 		return &user.Properties, http.StatusInternalServerError
 	}
 
@@ -1569,7 +1569,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 		// skipping user properties merge by customer user_id.
 		userPropertiesMap, err := U.DecodePostgresJsonb(&users[i].Properties)
 		if err != nil {
-			logCtx.WithField("user_id", users[i].ID).Error("Failed to decode existing user_properties.")
+			logCtx.WithError(err).WithField("user_id", users[i].ID).Error("Failed to decode existing user_properties.")
 			continue
 		}
 
@@ -1621,7 +1621,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 		errCode = store.OverwriteUserPropertiesByID(projectID, user.ID,
 			mergedPropertiesAfterSkipJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-			logCtx.WithField("user_id", user.ID).Error("Failed to update merged user properties on user.")
+			logCtx.WithField("err_code", errCode).WithField("user_id", user.ID).Error("Failed to update merged user properties on user.")
 			hasFailure = true
 		}
 	}
@@ -1692,7 +1692,7 @@ func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(batchedOverwriteUserProp
 		status := store.overwriteUserPropertiesByIDWithTransaction(projectID, userID, userProperties,
 			withUpdateTimestamp, updateTimestamps, source, dbTx)
 		if status != http.StatusAccepted {
-			log.WithFields(log.Fields{"overwrite_user_properties_by_id_params": batchedOverwriteUserPropertiesByIDParams[i]}).
+			log.WithFields(log.Fields{"overwrite_user_properties_by_id_params": batchedOverwriteUserPropertiesByIDParams[i], "err_code": status}).
 				Error("Failed to overwrite user properties in batch using OverwriteUserPropertiesByIDInBatch.")
 			hasFailure = true
 		}
@@ -1749,7 +1749,7 @@ func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID int64,
 
 	currentPropertiesUpdatedTimestamp, status := store.GetPropertiesUpdatedTimestampOfUser(projectID, id)
 	if status != http.StatusFound {
-		logCtx.WithField("status", status).Error("Failed to get propertiesUpdatedTimestamp for the user.")
+		logCtx.WithField("errr_code", status).Error("Failed to get propertiesUpdatedTimestamp for the user.")
 		return http.StatusBadRequest
 	}
 
@@ -1929,7 +1929,7 @@ func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID 
 
 	existingUserProperties, errCode := store.GetUserPropertiesByUserID(projectID, userID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get latest user properties on fill form submitted properties.")
+		logCtx.WithField("err_code", errCode).Error("Failed to get latest user properties on fill form submitted properties.")
 		return "", nil, http.StatusInternalServerError
 	}
 
@@ -1938,7 +1938,7 @@ func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID 
 
 	userProperties, err := U.DecodePostgresJsonb(existingUserProperties)
 	if err != nil {
-		logCtx.Error("Failed to decoding latest user properties on fill form submitted properties.")
+		logCtx.WithError(err).Error("Failed to decoding latest user properties on fill form submitted properties.")
 	}
 
 	formPropertyEmail := U.GetPropertyValueAsString((*formSubmitProperties)[U.UP_EMAIL])
@@ -2482,11 +2482,11 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 	group, status := store.GetGroup(user.ProjectId, groupName)
 	if status != http.StatusFound {
 		if status == http.StatusNotFound {
-			logCtx.Error("Group is missing on CreateGroupUser.")
+			logCtx.WithField("err_code", status).Error("Group is missing on CreateGroupUser.")
 			return "", http.StatusBadRequest
 		}
 
-		logCtx.Error("Failed to get group on CreateGroupUser.")
+		logCtx.WithField("err_code", status).Error("Failed to get group on CreateGroupUser.")
 		return "", http.StatusInternalServerError
 	}
 
@@ -2533,11 +2533,11 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 	group, status := store.GetGroup(projectID, groupName)
 	if status != http.StatusFound {
 		if status == http.StatusNotFound {
-			logCtx.Error("Group is missing on UpdateUserGroup.")
+			logCtx.WithField("err_code", status).Error("Group is missing on UpdateUserGroup.")
 			return nil, http.StatusBadRequest
 		}
 
-		logCtx.Error("Failed to get group on UpdateUserGroup.")
+		logCtx.WithField("err_code", status).Error("Failed to get group on UpdateUserGroup.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -2545,7 +2545,7 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 	groupUserIndex := fmt.Sprintf("group_%d_user_id", group.ID)
 	user, status := store.GetUserWithoutProperties(projectID, userID)
 	if status != http.StatusFound {
-		logCtx.Error("Failed to get user for group association.")
+		logCtx.WithField("err_code", status).Error("Failed to get user for group association.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -2607,7 +2607,7 @@ func (store *MemSQL) UpdateUserGroupProperties(projectID int64, userID string,
 
 	user, errCode := store.GetUser(projectID, userID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get user on UpdateUserGroupProperties.")
+		logCtx.WithField("err_code", errCode).Error("Failed to get user on UpdateUserGroupProperties.")
 		return nil, http.StatusInternalServerError
 	}
 

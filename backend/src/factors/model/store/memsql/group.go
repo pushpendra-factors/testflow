@@ -39,7 +39,7 @@ func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroup
 			return nil, http.StatusConflict
 		}
 
-		logCtx.Error("Failed to get existing groups.")
+		logCtx.WithField("err_code", status).Error("Failed to get existing groups.")
 		return nil, http.StatusInternalServerError
 	}
 

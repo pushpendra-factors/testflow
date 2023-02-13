@@ -123,7 +123,7 @@ func (store *MemSQL) GetPropertiesForHubspotCompanies(projectID int64, reqID str
 	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricSectionDisplayCategory(model.HubspotCompaniesDisplayCategory), 2500,
 		C.GetLookbackWindowForEventUserCache())
 	if status != http.StatusFound {
-		logCtx.Error("Failed to get hubspot company properties. Internal error")
+		logCtx.WithField("err_code", status).Error("Failed to get hubspot company properties. Internal error")
 		return make([]map[string]string, 0)
 	}
 
@@ -162,7 +162,7 @@ func (store *MemSQL) GetPropertiesForHubspotDeals(projectID int64, reqID string)
 	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricSectionDisplayCategory(model.HubspotDealsDisplayCategory), 2500,
 		C.GetLookbackWindowForEventUserCache())
 	if status != http.StatusFound {
-		logCtx.Error("Failed to get hubspot deal properties. Internal error")
+		logCtx.WithField("err_code", status).Error("Failed to get hubspot deal properties. Internal error")
 		return make([]map[string]string, 0)
 	}
 

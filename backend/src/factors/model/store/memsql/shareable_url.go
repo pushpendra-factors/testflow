@@ -257,7 +257,7 @@ func (store *MemSQL) RevokeShareableURLsWithShareString(projectID int64, shareSt
 
 	errCode := store.updateShareableURL(whereFields, updateFields)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotFound {
-		logCtx.Error("RevokeShareableURLsWithShareString Failed")
+		logCtx.WithField("err_code", errCode).Error("RevokeShareableURLsWithShareString Failed")
 		return errCode, "Failed to revoke shareable urls"
 	}
 
@@ -265,7 +265,7 @@ func (store *MemSQL) RevokeShareableURLsWithShareString(projectID int64, shareSt
 	shareableURLs = append(shareableURLs, shareString)
 	errCode = store.UpdateQueryIDsWithNewIDs(projectID, shareableURLs)
 	if errCode == http.StatusPartialContent {
-		logCtx.Error("Failed to reset share string of the query")
+		logCtx.WithField("err_code", errCode).Error("Failed to reset share string of the query")
 		return http.StatusPartialContent, "Failed to reset share string of the query"
 	}
 	return http.StatusAccepted, ""
@@ -295,13 +295,13 @@ func (store *MemSQL) RevokeShareableURLsWithProjectID(projectId int64) (int, str
 
 	errCode := store.updateShareableURL(whereFields, updateFields)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotFound {
-		logCtx.Error("Fail to revoke shareable urls")
+		logCtx.WithField("err_code", errCode).Error("Fail to revoke shareable urls")
 		return errCode, "Failed to revoke shareable urls"
 	}
 
 	errCode = store.UpdateQueryIDsWithNewIDs(projectId, shareableURLs)
 	if errCode == http.StatusPartialContent {
-		logCtx.Error("Some queries were not reset")
+		logCtx.WithField("err_code", errCode).Error("Some queries were not reset")
 		return http.StatusPartialContent, "Some share strings were not reset"
 	}
 

@@ -111,7 +111,7 @@ func (store *MemSQL) CreateOrUpdateCRMSettingHubspotEnrich(projectID int64, isHe
 	_, status := store.GetCRMSetting(projectID)
 	if status != http.StatusFound {
 		if status != http.StatusNotFound {
-			logCtx.Error("Failed to get crm settings on CreateOrUpdateCRMSettingHubspotEnrich.")
+			logCtx.WithField("err_code", status).Error("Failed to get crm settings on CreateOrUpdateCRMSettingHubspotEnrich.")
 			return status
 		}
 

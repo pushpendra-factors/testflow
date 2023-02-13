@@ -103,7 +103,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		// Check for Enabled Groups
 		groups, errCode := store.GetGroups(projectID)
 		if errCode != http.StatusFound {
-			log.WithField("status", errCode).Error("Failed to get groups while adding group info.")
+			log.WithField("err_code", errCode).Error("Failed to get groups while adding group info.")
 		}
 		groupNameIDMap := make(map[string]int)
 		if len(groups) > 0 {
@@ -177,7 +177,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	db := C.GetServices().Db
 	err := db.Raw(runQueryString).Scan(&minMax).Error
 	if err != nil {
-		log.WithFields(logFields).WithField("status", err).Error("min and max updated_at couldn't be defined.")
+		log.WithError(err).WithFields(logFields).WithField("status", err).Error("min and max updated_at couldn't be defined.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -201,14 +201,14 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	var profiles []model.Profile
 	err = db.Raw(runQueryString, filterParams...).Scan(&profiles).Error
 	if err != nil {
-		log.WithFields(logFields).WithField("status", err).Error("Failed to get profile users.")
+		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to get profile users.")
 		return nil, http.StatusInternalServerError
 	}
 
 	// Get Table Content
 	returnData, err := FormatProfilesStruct(profiles, profileType, tableProps)
 	if err != nil {
-		log.WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
+		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
 		return nil, http.StatusInternalServerError
 	}
 	return returnData, http.StatusFound
@@ -319,7 +319,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		Limit(1).
 		Find(&uniqueUser).Error
 	if err != nil {
-		log.WithFields(logFields).WithField("status", err).Error("Failed to get contact details.")
+		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to get contact details.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -549,7 +549,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 
 	groups, errCode := store.GetGroups(projectID)
 	if errCode != http.StatusFound {
-		log.WithField("status", errCode).Error("Failed to get groups.")
+		log.WithField("err_code", errCode).Error("Failed to get groups.")
 	}
 	var groupUserString string
 	groupNameIDMap := make(map[string]int)
@@ -570,7 +570,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 	var accountDetails model.AccountDetails
 	err := db.Table("users").Select("properties").Where("project_id=? AND id=?", projectID, id).Limit(1).Find(&accountDetails).Error
 	if err != nil {
-		log.WithFields(logFields).WithField("status", err).Error("Failed to get account properties.")
+		log.WithError(err).WithFields(logFields).Error("Failed to get account properties.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -601,7 +601,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 	accountDetails.LeftPaneProps = store.GetLeftPaneProperties(projectID, model.PROFILE_TYPE_ACCOUNT, propertiesDecoded)
 	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
 	if err != nil {
-		log.WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+		log.WithError(err).Error("Failed to fetch timelines_config from project_settings.")
 	}
 	additionalProp := timelinesConfig.AccountConfig.UserProp
 	selectStrAdditionalProp := ""
@@ -707,7 +707,7 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, segment *model
 
 	result, errCode, errMsg := store.Analyze(projectId, *segmentQuery, C.EnableOptimisedFilterOnEventUserQuery(), false)
 	if errCode != http.StatusOK {
-		logCtx.Error("Failed at building query. ", errMsg)
+		logCtx.WithField("err_code", errCode).Error("Failed at building query. ", errMsg)
 		return nil, errCode, nil
 	}
 
@@ -727,7 +727,7 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, segment *model
 			reflectProps := reflect.ValueOf(profile[3])
 			props := make(map[string]interface{}, 0)
 			if err := json.Unmarshal([]byte(reflectProps.String()), &props); err != nil {
-				logCtx.Error("Failed at unmarshalling props. ")
+				logCtx.WithError(err).Error("Failed at unmarshalling props. ")
 				return nil, http.StatusInternalServerError, nil
 			}
 			row.Properties, err = U.EncodeToPostgresJsonb(&props)
@@ -746,7 +746,7 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, segment *model
 			reflectProps := reflect.ValueOf(profile[2])
 			props := make(map[string]interface{}, 0)
 			if err := json.Unmarshal([]byte(reflectProps.String()), &props); err != nil {
-				logCtx.Error("Failed at unmarshalling props.")
+				logCtx.WithError(err).Error("Failed at unmarshalling props.")
 				return nil, http.StatusInternalServerError, nil
 			}
 			row.Properties, err = U.EncodeToPostgresJsonb(&props)

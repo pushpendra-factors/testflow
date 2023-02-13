@@ -13,9 +13,9 @@ import (
 
 func (store *MemSQL) RegisterTaskDependency(taskId uint64, dependentTaskId uint64, offset int) (int, string) {
 	logFields := log.Fields{
-		"task_id": taskId,
+		"task_id":           taskId,
 		"dependent_task_id": dependentTaskId,
-		"offset": offset,
+		"offset":            offset,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -63,7 +63,7 @@ func (store *MemSQL) RegisterTaskDependency(taskId uint64, dependentTaskId uint6
 		return http.StatusConflict, "TaskName-Dependency already exist"
 	}
 	if err := db.Create(&taskDependencyDetails).Error; err != nil {
-		logCtx.Error(err.Error())
+		logCtx.WithError(err).Error("Failure in RegisterTaskDependency")
 		return http.StatusConflict, err.Error()
 	}
 	return http.StatusCreated, ""
@@ -71,7 +71,7 @@ func (store *MemSQL) RegisterTaskDependency(taskId uint64, dependentTaskId uint6
 
 func (store *MemSQL) DeregisterTaskDependency(taskId uint64, dependentTaskId uint64) (int, string) {
 	logFields := log.Fields{
-		"task_id": taskId,
+		"task_id":           taskId,
 		"dependent_task_id": dependentTaskId,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -102,7 +102,6 @@ func (store *MemSQL) DeregisterTaskDependency(taskId uint64, dependentTaskId uin
 func (store *MemSQL) GetAllDependentTasks(taskID uint64) ([]model.TaskExecutionDependencyDetails, int, string) {
 	logFields := log.Fields{
 		"task_id": taskID,
-
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -120,7 +119,7 @@ func (store *MemSQL) GetAllDependentTasks(taskID uint64) ([]model.TaskExecutionD
 
 	if err := db.Where(taskNameFilter).Find(&taskDeltas).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			logCtx.Error("record with this task id is not found")
+			logCtx.WithError(err).Error("record with this task id is not found")
 			return taskDeltas, http.StatusNotFound, "record with this taskID is not found"
 		}
 		logCtx.Error(err.Error())
@@ -131,7 +130,7 @@ func (store *MemSQL) GetAllDependentTasks(taskID uint64) ([]model.TaskExecutionD
 
 func (store *MemSQL) IsDependencyCircular(taskId, dependentTaskId uint64) bool {
 	logFields := log.Fields{
-		"task_id": taskId,
+		"task_id":           taskId,
 		"dependent_task_id": dependentTaskId,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

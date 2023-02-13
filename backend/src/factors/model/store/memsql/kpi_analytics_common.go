@@ -19,17 +19,17 @@ import (
 // Get internal kpi query group of derived kpis and store them in GBT and NonGBT maps using buildInternalQueryGroupForDerivedKPIs
 // buildInternalQueryGroupForDerivedKPIs fetches the derived kpi transformation, stores it as a KPIQueryGroup and adds the filters and group bys of the derived query to each query of this group
 
-// ExecuteKPIQueriesAndGetResultsAsMap: 
+// ExecuteKPIQueriesAndGetResultsAsMap:
 //		- Run each query using runSingleKPIQuery:
 //			- Non derived execution (ExecuteNonDerivedKPIQuery)
 //				- Resolve property mappings used in the query by resolvePropertyMappingFiltersAndGroupBysToInternalProperties
 //				- Based on category execute query
 //				- replaceInternalPropertyHeadersWithPropertyMappingHeaders reverts result headers to property mappings
-//				- Compute hashstring 
+//				- Compute hashstring
 //				- Return results and hashstring
 //			- Derived execution (ExecuteDerivedKPIQuery)
 //				- Get internal query group using the maps created at buildInternalQueryGroupForDerivedKPIs
-//				- Execute each query as non derived using ExecuteNonDerivedKPIQuery to get results and hashstring to create a mapOfInternalQueryToResult 
+//				- Execute each query as non derived using ExecuteNonDerivedKPIQuery to get results and hashstring to create a mapOfInternalQueryToResult
 //				- Compute hashstring for derived query
 //				- Return mapOfInternalQueryToResult and hashstring
 //			- Add results to various maps (GBT NonGBT GBTDerived NonGBTDerived) with hashstring as key
@@ -151,7 +151,7 @@ func (store *MemSQL) fetchPropertyMappingsForKPIQueryGroupGlobals(kpiQueryGroup 
 			if _, ok := mapOfPropertyMappingNameToDisplayCategoryToProperty[groupBy.PropertyName]; !ok {
 				displayCategoryToPropertiesMap, errMsg, statusCode := store.GetDisplayCategoryToPropertiesByProjectIDAndPropertyMappingName(projectID, groupBy.PropertyName)
 				if statusCode != http.StatusOK {
-					log.WithField("project_id", projectID).Error("Failed while retrieving Property Mapping Error: ", errMsg)
+					log.WithField("project_id", projectID).WithField("err_code", statusCode).Error("Failed while retrieving Property Mapping Error: ", errMsg)
 					return mapOfPropertyMappingNameToDisplayCategoryToProperty, statusCode
 				}
 				mapOfPropertyMappingNameToDisplayCategoryToProperty[groupBy.PropertyName] = displayCategoryToPropertiesMap
@@ -171,13 +171,13 @@ func (store *MemSQL) buildInternalQueryGroupForDerivedKPIs(kpiQueryGroup model.K
 
 			derivedMetric, errMsg, statusCode := store.GetDerivedCustomMetricByProjectIdName(projectID, query.Metrics[0])
 			if statusCode != http.StatusFound {
-				log.WithField("project_id", projectID).Error("Failed while retrieving derived metric: ", errMsg)
+				log.WithField("project_id", projectID).WithField("err_code", statusCode).Error("Failed while retrieving derived metric: ", errMsg)
 				return externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries, http.StatusInternalServerError
 			}
 
 			err := U.DecodePostgresJsonbToStructType(derivedMetric.Transformations, &internalKPIQueryGroup)
 			if err != nil {
-				log.WithField("project_id", projectID).Error("Failed while decoding transformations: ", err)
+				log.WithError(err).WithField("project_id", projectID).Error("Failed while decoding transformations: ", err)
 				return externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries, http.StatusInternalServerError
 			}
 
@@ -199,7 +199,7 @@ func (store *MemSQL) buildInternalQueryGroupForDerivedKPIs(kpiQueryGroup model.K
 
 			hashCode, err := query.GetQueryCacheHashString()
 			if err != nil {
-				log.WithField("project_id", projectID).Error("Failed while generating hashcode for derived query: ", err)
+				log.WithError(err).WithField("project_id", projectID).Error("Failed while generating hashcode for derived query: ", err)
 				return externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries, http.StatusInternalServerError
 			}
 			if query.GroupByTimestamp == "" {
@@ -290,7 +290,7 @@ func (store *MemSQL) runSingleKPIQuery(projectID int64, reqID string, kpiQueryGr
 		internalQueryToQueryResult, statusCode, derivedKPIHashCode, errMsg = store.ExecuteDerivedKPIQuery(projectID, reqID, query, externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries, mapOfPropertyMappingNameToDisplayCategoryToProperty, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		finalStatus.CheckAndSetStatus(statusCode)
 		if statusCode != http.StatusOK {
-			log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error(errMsg)
+			log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("err_code", statusCode).WithField("query", query).Error(errMsg)
 
 		} else {
 			if query.GroupByTimestamp == "" {
@@ -304,7 +304,8 @@ func (store *MemSQL) runSingleKPIQuery(projectID int64, reqID string, kpiQueryGr
 		result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedKPIQuery(projectID, reqID, query, mapOfPropertyMappingNameToDisplayCategoryToProperty, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		finalStatus.CheckAndSetStatus(statusCode)
 		if statusCode != http.StatusOK {
-			log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).WithField("result", result).Error(errMsg)
+			log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).
+				WithField("result", result).WithField("err_code", statusCode).Error(errMsg)
 		} else {
 			if query.GroupByTimestamp == "" {
 				mapOfNonGBTKPINormalQueryToResults[hashCode] = result
@@ -395,7 +396,6 @@ func (store *MemSQL) ExecuteNonDerivedKPIQuery(projectID int64, reqID string,
 	return updatedResult, statusCode, hashCode, ""
 }
 
-
 // If property mapping is used in filters or group by, it will be resolved to the internal property
 // In case of property mappings in group by, headers of results will be internal property names.
 // Hence we need to maintain a map of internal property name to property mapping name.
@@ -430,7 +430,7 @@ func transformPropertyMappingFiltersAndGroupBysToInternalProperties(query model.
 			tempQuery.GroupBy[index].Entity = internalPropertyForCurrentCategory.Entity
 			tempQuery.GroupBy[index].ObjectType = internalPropertyForCurrentCategory.ObjectType
 			tempQuery.GroupBy[index].PropertyDataType = internalPropertyForCurrentCategory.DataType
-			internalToExternalGroupByHeadersForPropertyMappings[index + indexIncrement] = groupby.PropertyName
+			internalToExternalGroupByHeadersForPropertyMappings[index+indexIncrement] = groupby.PropertyName
 		}
 	}
 	return tempQuery, internalToExternalGroupByHeadersForPropertyMappings, http.StatusOK, ""

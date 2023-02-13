@@ -839,13 +839,13 @@ func (store *MemSQL) GetLatestMetaForCustomAdsForGivenDays(projectID int64, sour
 
 	to, err := strconv.ParseUint(time.Now().Format("20060102"), 10, 64)
 	if err != nil {
-		log.Error("Failed to parse to timestamp")
+		log.WithError(err).Error("Failed to parse to timestamp")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
 	from, err := strconv.ParseUint(time.Now().AddDate(0, 0, -days).Format("20060102"), 10, 64)
 	if err != nil {
-		log.Error("Failed to parse from timestamp")
+		log.WithError(err).Error("Failed to parse from timestamp")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	query := customadsAdGroupMetadataFetchQueryStr
@@ -859,7 +859,7 @@ func (store *MemSQL) GetLatestMetaForCustomAdsForGivenDays(projectID int64, sour
 	U.LogExecutionTimeWithQueryRequestID(startExecTime1, queryID1, &logFields)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for custom ads", days)
-		log.WithField("error string", err).Error(errString)
+		log.WithError(err).WithField("error string", err).Error(errString)
 		U.CloseReadQuery(rows1, tx1)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
@@ -882,7 +882,7 @@ func (store *MemSQL) GetLatestMetaForCustomAdsForGivenDays(projectID int64, sour
 	U.LogExecutionTimeWithQueryRequestID(startExecTime2, queryID2, &logFields)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for customads", days)
-		log.WithField("error string", err).Error(errString)
+		log.WithError(err).WithField("error string", err).Error(errString)
 		U.CloseReadQuery(rows2, tx2)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}

@@ -159,7 +159,7 @@ func (store *MemSQL) updateDashboardUnitPresentation(unit *model.DashboardUnit) 
 	logCtx := log.WithFields(logFields)
 	queryInfo, errC := store.GetQueryWithQueryId(unit.ProjectID, unit.QueryId)
 	if errC != http.StatusFound {
-		logCtx.Errorf("Failed to fetch query from query_id %d", unit.QueryId)
+		logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", unit.QueryId)
 	}
 	// request is received from new UI updating Presentation
 	settings := make(map[string]string)
@@ -722,7 +722,7 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit,
 
 		queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
 		if errC != http.StatusFound {
-			logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+			logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
 			continue
 		}
 
@@ -1021,7 +1021,7 @@ func (store *MemSQL) cacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	errCode, errMsg, report := store.CacheDashboardUnitForDateRange(cachePayload, enableFilterOpt)
 	reportCollector.Store(model.GetCachingUnitReportUniqueKey(report), report)
 	if errCode != http.StatusOK {
-		logCtx.Errorf("Error while running query %s", errMsg)
+		logCtx.WithField("err_code", errCode).Errorf("Error while running query %s", errMsg)
 		return
 	}
 	logCtx.Info("Completed caching for Dashboard unit")
@@ -1057,7 +1057,7 @@ func (store *MemSQL) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectID
 		for _, dashboardUnit := range dashboardUnits {
 			queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
 			if errC != http.StatusFound {
-				logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+				logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
 				continue
 			}
 

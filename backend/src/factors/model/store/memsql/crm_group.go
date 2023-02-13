@@ -94,7 +94,7 @@ func (store *MemSQL) CreateCRMGroup(crmGroup *model.CRMGroup) (int, error) {
 
 	status, err := isExistCRMGroupByID(crmGroup.ProjectID, crmGroup.Source, crmGroup.Type, crmGroup.ID)
 	if status == http.StatusInternalServerError {
-		logCtx.WithError(err).Error("Failed to check existing crm group.")
+		logCtx.WithError(err).WithField("err_code", status).Error("Failed to check existing crm group.")
 		return http.StatusInternalServerError, err
 	}
 

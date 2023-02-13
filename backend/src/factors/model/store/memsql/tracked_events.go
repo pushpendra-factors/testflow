@@ -54,7 +54,7 @@ func (store *MemSQL) CreateFactorsTrackedEvent(ProjectID int64, EventName string
 
 	eventData, err := store.GetEventName(EventName, ProjectID)
 	if err != http.StatusFound {
-		logCtx.Error("Get Event details failed")
+		logCtx.WithField("err_code", err).Error("Get Event details failed")
 		return 0, http.StatusNotFound // Janani: return error
 	}
 	existingFactorsTrackedEvent, dbErr := store.GetFactorsTrackedEvent(eventData.ID, ProjectID)

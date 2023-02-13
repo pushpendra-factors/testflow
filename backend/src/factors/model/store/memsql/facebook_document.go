@@ -271,9 +271,9 @@ func (store *MemSQL) CreateFacebookDocument(projectID int64, document *model.Fac
 	}
 	document.Type = docType
 
-	campaignIDValue, adSetID, adID, error := getFacebookHierarchyColumnsByType(docType, document.Value)
-	if error != nil {
-		logCtx.Error("Invalid docType alias.")
+	campaignIDValue, adSetID, adID, err := getFacebookHierarchyColumnsByType(docType, document.Value)
+	if err != nil {
+		logCtx.WithError(err).Error("Invalid docType alias.")
 		return http.StatusBadRequest
 	}
 	document.CampaignID = campaignIDValue
@@ -289,7 +289,7 @@ func (store *MemSQL) CreateFacebookDocument(projectID int64, document *model.Fac
 	}
 
 	db := C.GetServices().Db
-	err := db.Create(&document).Error
+	err = db.Create(&document).Error
 	if err != nil {
 		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).WithField("id", document.ID).WithField("platform", document.Platform).Error(
@@ -453,7 +453,7 @@ func (store *MemSQL) GetFacebookSQLQueryAndParametersForFilterValues(projectID i
 	}
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("failed to fetch Project Setting in facebook filter values.")
+		logCtx.WithField("err_code", errCode).Error("failed to fetch Project Setting in facebook filter values.")
 		return "", make([]interface{}, 0, 0), http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
@@ -504,7 +504,7 @@ func (store *MemSQL) getFacebookFilterValuesByType(projectID int64, docType int,
 	logCtx := log.WithFields(logFields)
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("failed to fetch project setting in facebook filter values.")
+		logCtx.WithField("err_code", errCode).Error("failed to fetch project setting in facebook filter values.")
 		return []interface{}{}, http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
@@ -1322,7 +1322,7 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID int64, days 
 
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		log.Error("Failed to get project settings")
+		log.WithField("err_code", errCode).Error("Failed to get project settings")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	if projectSetting.IntFacebookAdAccount == "" {
@@ -1333,13 +1333,13 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID int64, days 
 
 	to, err := strconv.ParseUint(time.Now().Format("20060102"), 10, 64)
 	if err != nil {
-		log.Error("Failed to parse to timestamp")
+		log.WithError(err).Error("Failed to parse to timestamp")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
 	from, err := strconv.ParseUint(time.Now().AddDate(0, 0, -days).Format("20060102"), 10, 64)
 	if err != nil {
-		log.Error("Failed to parse from timestamp")
+		log.WithError(err).Error("Failed to parse from timestamp")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	query := facebookAdGroupMetadataFetchQueryStr
@@ -1351,7 +1351,7 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID int64, days 
 	rows1, tx1, err, queryID1 := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
-		log.WithField("error string", err).Error(errString)
+		log.WithError(err).WithField("error string", err).Error(errString)
 		U.CloseReadQuery(rows1, tx1)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
@@ -1371,7 +1371,7 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID int64, days 
 	rows2, tx2, err, queryID2 := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for facebook", days)
-		log.WithField("error string", err).Error(errString)
+		log.WithError(err).WithField("error string", err).Error(errString)
 		U.CloseReadQuery(rows2, tx2)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}

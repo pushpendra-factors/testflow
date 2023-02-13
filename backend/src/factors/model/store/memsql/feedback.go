@@ -56,7 +56,7 @@ func (store *MemSQL) GetRecordsFromFeedback(projectID int64, agentUUID string) (
 	db := C.GetServices().Db
 	var records []model.Feedback
 	if err := db.Where("project_id = ?", projectID).Where("created_by = (?) AND feature = (?)", agentUUID, weeklyInsights).Find(&records).Error; err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failure in GetRecordsFromFeedback")
 		return nil, err
 	}
 	return records, nil
