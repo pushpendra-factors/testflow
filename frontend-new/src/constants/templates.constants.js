@@ -38,7 +38,7 @@ export class Integration_Checks {
     this.linkedin = integration.int_linkedin_agent_uuid;
     this.facebook = integration.int_facebook_user_id;
     this.marketo = marketo.status;
-
+    this['6signal'] = integration?.int_client_six_signal_key;
     // Other Integrations
     this.segment = integration.int_segment;
   }
@@ -107,6 +107,14 @@ const ThumbnailAssetsWithName = [
   {
     name: 'webkpisandoverview',
     image: TEMPLATES_HOSTCDN + 'Thumbnail_WebKPIsAndOverview.png'
+  },
+  {
+    name: 'landingpageengagement',
+    image: TEMPLATES_HOSTCDN + 'Thumbnail_LandingPageEngagement.png'
+  },
+  {
+    name: 'websitevisitoridentification',
+    image: TEMPLATES_HOSTCDN + 'Thumbnail_WebsiteVisitorIdentification.png'
   }
 ];
 
