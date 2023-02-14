@@ -57,7 +57,7 @@ const FAFilterSelect = ({
   const [eventFilterInfo, seteventFilterInfo] = useState(null);
   const [dateOptionSelectOpen, setDateOptionSelectOpen] = useState(false);
   const [containButton, setContainButton] = useState(true);
-  const { userPropNames, eventPropNames } = useSelector(
+  const { userPropNames, eventPropNames, groupPropNames } = useSelector(
     (state) => state.coreQuery
   );
   useEffect(() => {
@@ -210,6 +210,12 @@ const FAFilterSelect = ({
     //           MomentTz(toVal).format('MMM DD, YYYY'));
   };
 
+  const matchEventName = (item) => {
+    let findItem =
+      eventPropNames?.[item] || userPropNames?.[item] || groupPropNames?.[item];
+    return findItem ? findItem : item;
+  };
+
   const renderGroupDisplayName = (propState) => {
     // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
     let propertyName = '';
@@ -220,7 +226,7 @@ const FAFilterSelect = ({
     //   propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
     // }
 
-    propertyName = propState?.name;
+    propertyName = matchEventName(propState?.name);
 
     if (!propState.name) {
       propertyName = 'Select Property';
