@@ -45,6 +45,15 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) (
 		}
 		resultGroup.Query = requestPayload
 
+		//Adding cache meta to the result group
+		meta := model.CacheMeta{
+			Timezone:       string(timezone),
+			From:           from,
+			To:             to,
+			LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		}
+		resultGroup.CacheMeta = meta
+
 		logCtx.WithFields(log.Fields{"result": resultGroup}).Info("Printing the resultGroup")
 
 		fromDate := U.GetDateOnlyFromTimestampZ(from)

@@ -19,15 +19,13 @@ type SixSignalQuery struct {
 }
 
 type SixSignalResultGroup struct {
-	Results     []SixSignalQueryResult `json:"result_group"`
-	Query       interface{}            `json:"query"` // GroupQuery for which the result group is fetched
-	IsShareable bool                   `json:"is_shareable"`
-	CacheMeta   interface{}            `json:"cache_meta"` //cache info
+	Results   []SixSignalQueryResult `json:"result_group"`
+	Query     interface{}            `json:"query"`
+	CacheMeta interface{}            `json:"cache_meta"`
 }
 
 type SixSignalQueryResult struct {
-	Headers   []string        `json:"headers"`
-	Rows      [][]interface{} `json:"rows"`
-	Query     interface{}     `json:"query"`      //query for which the result is fetched
-	CacheMeta interface{}     `json:"cache_meta"` //cache info will be added to this
+	Headers []string        `json:"headers"`
+	Rows    [][]interface{} `json:"rows"`
+	Query   interface{}     `json:"query"`
 }
