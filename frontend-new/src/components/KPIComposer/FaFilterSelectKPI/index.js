@@ -44,7 +44,7 @@ const FAFilterSelect = ({
   const currentPicker = ['in the current', 'not in the current'];
   const datePicker = ['before', 'since'];
 
-  const [operatorState, setOperatorState] = useState('=');
+  const [operatorState, setOperatorState] = useState('equals');
   const [valuesState, setValuesState] = useState(null);
 
   const [propSelectOpen, setPropSelectOpen] = useState(true);
@@ -143,10 +143,11 @@ const FAFilterSelect = ({
     let prop = [label, ...val];
     setPropState({ icon: prop[0], name: prop[1], type: prop[3], extra: val });
     setPropSelectOpen(false);
-    setOperatorState(prop[3] === 'datetime' ? 'between' : '=');
+    setOperatorState(prop[3] === 'datetime' ? 'between' : 'equals');
     setValuesState(null);
     setValuesByProps([...val]);
     seteventFilterInfo(val);
+    setValuesSelectionOpen(true);
   };
   const valuesSelect = (val) => {
     setValuesState(val.map((vl) => JSON.parse(vl)[0]));

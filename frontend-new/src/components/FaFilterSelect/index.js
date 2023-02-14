@@ -44,7 +44,7 @@ const FAFilterSelect = ({
     type: ''
   });
 
-  const [operatorState, setOperatorState] = useState('=');
+  const [operatorState, setOperatorState] = useState('equals');
   const [valuesState, setValuesState] = useState(null);
 
   const [propSelectOpen, setPropSelectOpen] = useState(true);
@@ -175,9 +175,10 @@ const FAFilterSelect = ({
   const propSelect = (prop) => {
     setPropState({ icon: prop[3], name: prop[1], type: prop[2] });
     setPropSelectOpen(false);
-    setOperatorState(prop[2] === 'datetime' ? 'between' : '=');
+    setOperatorState(prop[2] === 'datetime' ? 'between' : 'equals');
     setValuesState(null);
     setValuesByProps(prop);
+    setValuesSelectionOpen(true);
   };
 
   const valuesSelect = (val) => {

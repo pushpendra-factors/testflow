@@ -681,8 +681,8 @@ export const RevFunnelEventsConditionMap = {
 };
 
 export const OPERATORS = {
-  equalTo: '=',
-  notEqualTo: '!=',
+  equalTo: 'equals',
+  notEqualTo: 'not equals',
   contain: 'contains',
   doesNotContain: 'does not contain',
   lesserThan: '<',
