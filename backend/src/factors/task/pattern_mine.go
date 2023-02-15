@@ -7,8 +7,11 @@ import (
 	"factors/filestore"
 	"factors/merge"
 	"factors/model/model"
+	M "factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
+	PW "factors/pattern_service_wrapper"
+
 	patternStore "factors/pattern_server/store"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
@@ -2069,6 +2072,14 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 
 	}
 
+	if cAlgoProps.Counting_version == 4 {
+		mineLog.Infof("compute results and set in cache ")
+		_, err = ComputeResultAndCache(projectId, modelId, cAlgoProps.Job)
+		if err != nil {
+			mineLog.Infof("Unable to compute and cache results")
+		}
+	}
+
 	localEventsFilePath := filepath.Join(efTmpPath, efTmpName)
 	err = deleteFile(localEventsFilePath)
 	if err != nil {
@@ -3293,4 +3304,45 @@ func checkProperties(filterString string, ev P.CounterEventFormat, ru model.Fact
 
 	return false
 
+}
+
+func Compute_result_string(projectId int64, modelId uint64, qr M.ExplainV2Query) (string, error) {
+	var err error
+	var startConstraints *P.EventConstraints
+	var endConstraints *P.EventConstraints
+
+	startEvent := qr.Query.StartEvent
+	endEvent := qr.Query.EndEvent
+	reqID := ""
+	patternMode := ""
+	debugParams := make(map[string]string)
+
+	in_en := make(map[string]bool)
+	in_epr := make(map[string]bool)
+	in_upr := make(map[string]bool)
+
+	ps, err := PW.NewPatternServiceWrapperV2(reqID, projectId, modelId)
+	if err != nil {
+		mineLog.Info("unable to initialize pattern service wrapper v2: %v", err)
+		return "", err
+	}
+
+	results, err, debugData := PW.FactorV1(reqID,
+		projectId, startEvent, startConstraints,
+		endEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, patternMode, debugParams, in_en, in_epr, in_upr)
+	if err != nil {
+		mineLog.Errorf("Unable to compute results string")
+		return "", err
+	}
+	mineLog.Infof("Debug data :%v", debugData)
+
+	result_byte, err := json.Marshal(results)
+	if err != nil {
+		mineLog.Errorf("Unable to marshal results string:%v", err)
+		return "", err
+	}
+	result_string := string(result_byte)
+	mineLog.Infof("Results : %s", result_string)
+
+	return result_string, nil
 }

@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	PS "factors/pattern_server/store"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func GetAllPatternsV2(reqId string, projectId int64, modelId uint64, startEvent, endEvent string) ([]*P.Pattern, error) {
@@ -149,6 +151,7 @@ func getModelEventInfoFromFileManager(fm filestore.FileManager, projectId int64,
 
 func getExplainV2FromFileManager(fm filestore.FileManager, projectId int64, modelId uint64, chunkId string) ([]*PS.PatternWithMeta, error) {
 	path, fName := fm.GetExplainV2ModelPath(modelId, projectId)
+	log.Infof("opening path:%s,%s", path, fName)
 	patternsReader, err := fm.Get(path, fName)
 	if err != nil {
 		return nil, err

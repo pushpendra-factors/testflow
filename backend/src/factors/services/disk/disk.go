@@ -458,12 +458,12 @@ func (dd *DiskDriver) GetPathAnalysisTempFilePathAndName(id string, projectId in
 }
 
 func (dd *DiskDriver) GetExplainV2Dir(id uint64, projectId int64) string {
-	return fmt.Sprintf("%s/projects/%v/explain/models/%v/", dd.baseDir, projectId, id)
+	path := fmt.Sprintf("%s/projects/%v/explain/models/%v/", dd.baseDir, projectId, id)
+	return path
 }
 
 func (dd *DiskDriver) GetExplainV2ModelPath(id uint64, projectId int64) (string, string) {
 	path := dd.GetExplainV2Dir(id, projectId)
 	chunksPath := pb.Join(path, "chunks")
-	log.Infof("Getting chunks models model (disk) :%s", chunksPath)
 	return chunksPath, "chunk_1.txt"
 }
