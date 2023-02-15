@@ -6,13 +6,11 @@ import (
 	V1 "factors/handler/v1"
 	mid "factors/middleware"
 	"factors/model/model"
-	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"time"
 )
 
 func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string, bool) {
@@ -39,6 +37,7 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 
 	var commonQueryFrom int64
 	var commonQueryTo int64
+	var timezoneString U.TimeZoneString
 	if len(requestPayload.Queries) == 0 {
 		logCtx.Error("Query failed. Empty query group.")
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Empty query group.", true
@@ -46,28 +45,30 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 		// all group queries are run for same time duration, used in dashboard unit caching
 		commonQueryFrom = requestPayload.Queries[0].From
 		commonQueryTo = requestPayload.Queries[0].To
+		timezoneString = requestPayload.Queries[0].Timezone
 	}
 
-	var timezoneString U.TimeZoneString
-	var statusCode int
-	if requestPayload.Queries[0].Timezone != "" {
-		_, errCode := time.LoadLocation(string(requestPayload.Queries[0].Timezone))
-		if errCode != nil {
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
+	/*
+		var timezoneString U.TimeZoneString
+		var statusCode int
+		if requestPayload.Queries[0].Timezone != "" {
+			_, errCode := time.LoadLocation(string(requestPayload.Queries[0].Timezone))
+			if errCode != nil {
+				return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
+			}
+			timezoneString = requestPayload.Queries[0].Timezone
+		} else {
+			timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+			if statusCode != http.StatusFound {
+				logCtx.Error("Query failed. Failed to get Timezone.")
+				return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Failed to get Timezone.", true
+			}
+			// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
 		}
-		timezoneString = U.TimeZoneString(requestPayload.Queries[0].Timezone)
-	} else {
-		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
-		if statusCode != http.StatusFound {
-			logCtx.Error("Query failed. Failed to get Timezone.")
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Failed to get Timezone.", true
-		}
-		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
-	}
-	requestPayload.SetTimeZone(timezoneString)
+		requestPayload.SetTimeZone(timezoneString)*/
 
-	fromDate := U.GetDateOnlyFromTimestampZ(commonQueryFrom)
-	toDate := U.GetDateOnlyFromTimestampZ(commonQueryTo)
+	fromDate := U.GetDateOnlyFormatFromTimestampAndTimezone(commonQueryFrom, timezoneString)
+	toDate := U.GetDateOnlyFormatFromTimestampAndTimezone(commonQueryTo, timezoneString)
 	folderName := fmt.Sprintf("%v-%v", fromDate, toDate)
 	logCtx.WithFields(log.Fields{"folder name": folderName}).Info("Folder name for reading the result")
 

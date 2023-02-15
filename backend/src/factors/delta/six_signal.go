@@ -56,8 +56,8 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) (
 
 		logCtx.WithFields(log.Fields{"result": resultGroup}).Info("Printing the resultGroup")
 
-		fromDate := U.GetDateOnlyFromTimestampZ(from)
-		toDate := U.GetDateOnlyFromTimestampZ(to)
+		fromDate := U.GetDateOnlyFormatFromTimestampAndTimezone(from, timezone)
+		toDate := U.GetDateOnlyFormatFromTimestampAndTimezone(to, timezone)
 		folderName := fmt.Sprintf("%v-%v", fromDate, toDate)
 		logCtx.WithFields(log.Fields{"folder name": folderName}).Info("Folder name for saving the result")
 
@@ -108,12 +108,14 @@ func WriteSixSignalResultsToCloud(diskManager *serviceDisk.DiskDriver, cloudMana
 		result[i] = events
 	}
 	logCtx.Info("Result after Unmarshal in WriteResultsToCloud: ", result)
+
 	path, _ = (*cloudManager).GetSixSignalAnalysisTempFilePathAndName(queryId, projectId)
 	resultJson, err := json.Marshal(result)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal result Info.")
 		return err
 	}
+
 	err = (*cloudManager).Create(path, "result.txt", bytes.NewReader(resultJson))
 	if err != nil {
 		log.WithError(err).Error("writeEventInfoFile Failed to write to cloud")
@@ -124,18 +126,18 @@ func WriteSixSignalResultsToCloud(diskManager *serviceDisk.DiskDriver, cloudMana
 
 func GetSixSignalAnalysisData(projectId int64, id string) map[int]model.SixSignalResultGroup {
 	path, _ := C.GetCloudManager(projectId).GetSixSignalAnalysisTempFilePathAndName(id, projectId)
-	fmt.Println(path)
+	log.Info("Path for reading the file from cloud: ", path)
 	reader, err := C.GetCloudManager(projectId).Get(path, "result.txt")
 	if err != nil {
 		fmt.Println(err.Error())
-		log.WithError(err).Error("Error reading file")
+		log.WithError(err).Error("Error reading file from Cloud Manager for projectid: ", projectId)
 		return nil
 	}
 	result := make(map[int]model.SixSignalResultGroup)
 	data, err := ioutil.ReadAll(reader)
 	if err != nil {
 		fmt.Println(err.Error())
-		log.WithError(err).Error("Error reading file")
+		log.WithError(err).Error("Error reading file from ioutil for projectid: ", projectId)
 		return nil
 	}
 	err = json.Unmarshal(data, &result)

@@ -88,6 +88,7 @@ func main() {
 	}
 	// Get All the Projects for which the path analysis has pending items
 	configs := make(map[string]interface{})
+
 	// Init cloud manager.
 	var cloudManagerTmp filestore.FileManager
 	if *env == "development" {
@@ -98,6 +99,7 @@ func main() {
 			log.WithField("error", err).Fatal("Failed to init cloud manager for tmp.")
 		}
 	}
+
 	configs["tmpCloudManager"] = &cloudManagerTmp
 	if *useBucketV2 {
 		var archiveCloudManager filestore.FileManager
