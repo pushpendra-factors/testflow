@@ -18,11 +18,11 @@ const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 const { Option } = Select;
 
-const rangePicker = ['=', '!='];
-const customRangePicker = ['between', 'not between'];
-const deltaPicker = ['in the previous', 'not in the previous'];
-const currentPicker = ['in the current', 'not in the current'];
-const datePicker = ['before', 'since'];
+const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
+const customRangePicker = [OPERATORS['between'], OPERATORS['notBetween']];
+const deltaPicker = [OPERATORS['inThePrevious'], OPERATORS['notInThePrevious']];
+const currentPicker = [OPERATORS['inTheCurrent'], OPERATORS['notInTheCurrent']];
+const datePicker = [OPERATORS['before'], OPERATORS['since']];
 
 const GlobalFilterSelect = ({
   propOpts = [],
@@ -38,7 +38,7 @@ const GlobalFilterSelect = ({
     type: ''
   });
 
-  const [operatorState, setOperatorState] = useState('=');
+  const [operatorState, setOperatorState] = useState(OPERATORS['equalTo']);
   const [valuesState, setValuesState] = useState(null);
 
   const [propSelectOpen, setPropSelectOpen] = useState(false);
@@ -187,7 +187,9 @@ const GlobalFilterSelect = ({
     let prop = [label, ...val];
     setPropState({ icon: prop[0], name: prop[1], type: prop[3], extra: val });
     setPropSelectOpen(false);
-    setOperatorState(prop[3] === 'datetime' ? 'between' : 'equals');
+    setOperatorState(
+      prop[3] === 'datetime' ? OPERATORS['between'] : OPERATORS['equalTo']
+    );
     setValuesState(null);
     setValuesByProps([...val]);
     seteventFilterInfo(val);

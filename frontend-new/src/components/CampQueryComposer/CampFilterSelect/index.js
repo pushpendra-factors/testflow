@@ -32,7 +32,7 @@ const CampFilterSelect = ({
     type: ''
   });
 
-  const [operatorState, setOperatorState] = useState('=');
+  const [operatorState, setOperatorState] = useState(OPERATORS['equalTo']);
   const [valuesState, setValuesState] = useState(null);
 
   const [propSelectOpen, setPropSelectOpen] = useState(false);
@@ -120,7 +120,7 @@ const CampFilterSelect = ({
   const propSelect = (prop) => {
     setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
     setPropSelectOpen(false);
-    setOperatorState('equals');
+    setOperatorState(OPERATORS['equalTo']);
     setValuesState(null);
     setValuesByProps(prop);
     setValuesSelectionOpen(true);

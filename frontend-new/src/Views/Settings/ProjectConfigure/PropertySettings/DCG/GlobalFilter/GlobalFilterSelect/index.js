@@ -32,7 +32,7 @@ const GlobalFilterSelect = ({
     type: ''
   });
 
-  const [operatorState, setOperatorState] = useState('=');
+  const [operatorState, setOperatorState] = useState(OPERATORS['equalTo']);
   const [valuesState, setValuesState] = useState(null);
 
   const [propSelectOpen, setPropSelectOpen] = useState(false);
@@ -143,7 +143,7 @@ const GlobalFilterSelect = ({
   const propSelect = (prop) => {
     setPropState({ icon: prop[3], name: prop[1], type: prop[2] });
     setPropSelectOpen(false);
-    setOperatorState('equals');
+    setOperatorState(OPERATORS['equalTo']);
     setValuesState(null);
     setValuesByProps(prop);
     setValuesSelectionOpen(true);
