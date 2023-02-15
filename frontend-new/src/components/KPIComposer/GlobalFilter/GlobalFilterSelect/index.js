@@ -31,7 +31,7 @@ const GlobalFilterSelect = ({
   applyFilter,
   filter,
   refValue,
-  viewMode = false,
+  viewMode = false
 }) => {
   const rangePicker = ['=', '!='];
   const customRangePicker = ['between', 'not between'];
@@ -163,10 +163,11 @@ const GlobalFilterSelect = ({
     let prop = [label, ...val];
     setPropState({ icon: prop[0], name: prop[1], type: prop[3], extra: val });
     setPropSelectOpen(false);
-    setOperatorState(prop[3] === 'datetime' ? 'between' : '=');
+    setOperatorState(prop[3] === 'datetime' ? 'between' : 'equals');
     setValuesState(null);
     setValuesByProps([...val]);
     seteventFilterInfo(val);
+    setValuesSelectionOpen(true);
   };
 
   const valuesSelect = (val) => {
@@ -431,10 +432,10 @@ const GlobalFilterSelect = ({
           ></InputNumber>
 
           <Button
-          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          disabled={viewMode}
-          onClick={() => setDateOptionSelectOpen(true)}
+            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+            type='link'
+            disabled={viewMode}
+            onClick={() => setDateOptionSelectOpen(true)}
           >
             {parsedValues['gran']
               ? dateTimeSelect.get(parsedValues['gran'])
@@ -456,10 +457,10 @@ const GlobalFilterSelect = ({
       selectorComponent = (
         <div className={`fa-filter-dateDeltaContainer`}>
           <Button
-          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          disabled={viewMode}
-          onClick={() => setDateOptionSelectOpen(true)}
+            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+            type='link'
+            disabled={viewMode}
+            onClick={() => setDateOptionSelectOpen(true)}
           >
             {parsedValues['gran']
               ? toCapitalCase(parsedValues['gran'])
@@ -563,32 +564,35 @@ const GlobalFilterSelect = ({
     if (propState.type === 'numerical') {
       selectionComponent = (
         <div>
-        {containButton && (
-          <Button
-          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          onClick={() => setContainButton(false)}
-          disabled={viewMode}
-        >
-          {valuesState ? valuesState : 'Enter Value'}
-        </Button>)}
-        {!containButton &&
-        (<Input
-          type="number"
-          disabled={viewMode}
-          value={valuesState}
-          placeholder={'Enter Value'}
-          autoFocus={true}
-          onBlur={() => {
-            emitFilter()
-            setContainButton(true)}}
-          onPressEnter={()=>{
-            emitFilter()
-            setContainButton(true)}}
-          onChange={setNumericalValue}
-          className={`input-value filter-buttons-radius filter-buttons-margin`}
-        ></Input>)
-        }
+          {containButton && (
+            <Button
+              className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+              type='link'
+              onClick={() => setContainButton(false)}
+              disabled={viewMode}
+            >
+              {valuesState ? valuesState : 'Enter Value'}
+            </Button>
+          )}
+          {!containButton && (
+            <Input
+              type='number'
+              disabled={viewMode}
+              value={valuesState}
+              placeholder={'Enter Value'}
+              autoFocus={true}
+              onBlur={() => {
+                emitFilter();
+                setContainButton(true);
+              }}
+              onPressEnter={() => {
+                emitFilter();
+                setContainButton(true);
+              }}
+              onChange={setNumericalValue}
+              className={`input-value filter-buttons-radius filter-buttons-margin`}
+            ></Input>
+          )}
         </div>
       );
     }

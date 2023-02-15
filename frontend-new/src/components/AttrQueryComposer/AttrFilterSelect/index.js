@@ -122,9 +122,10 @@ const AttrFilterSelect = ({
   const propSelect = (prop) => {
     setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
     setPropSelectOpen(false);
-    setOperatorState('=');
+    setOperatorState('equals');
     setValuesState(null);
     setValuesByProps(prop);
+    setValuesSelectionOpen(true);
   };
 
   const valuesSelect = (val) => {

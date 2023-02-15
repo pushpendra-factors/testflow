@@ -187,10 +187,11 @@ const GlobalFilterSelect = ({
     let prop = [label, ...val];
     setPropState({ icon: prop[0], name: prop[1], type: prop[3], extra: val });
     setPropSelectOpen(false);
-    setOperatorState(prop[3] === 'datetime' ? 'between' : '=');
+    setOperatorState(prop[3] === 'datetime' ? 'between' : 'equals');
     setValuesState(null);
     setValuesByProps([...val]);
     seteventFilterInfo(val);
+    setValuesSelectionOpen(true);
   };
 
   const valuesSelect = (val) => {

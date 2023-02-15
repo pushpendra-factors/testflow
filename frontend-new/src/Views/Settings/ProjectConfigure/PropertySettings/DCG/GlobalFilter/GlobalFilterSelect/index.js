@@ -143,9 +143,10 @@ const GlobalFilterSelect = ({
   const propSelect = (prop) => {
     setPropState({ icon: prop[3], name: prop[1], type: prop[2] });
     setPropSelectOpen(false);
-    setOperatorState('=');
+    setOperatorState('equals');
     setValuesState(null);
     setValuesByProps(prop);
+    setValuesSelectionOpen(true);
   };
 
   const valuesSelect = (val) => {
