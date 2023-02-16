@@ -285,6 +285,7 @@ type Configuration struct {
 	FormFillIdentificationAllowedProjects              string
 	EnableEventFiltersInSegments                       bool
 	EnableDebuggingForIP                               bool
+	DisableUpdateNextSessionTimestamp                  int
 }
 
 type Services struct {

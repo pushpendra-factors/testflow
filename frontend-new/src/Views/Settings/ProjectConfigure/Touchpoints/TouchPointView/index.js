@@ -25,7 +25,8 @@ import {
   RULE_TYPE_HS_LISTS,
   RULE_TYPE_HS_MEETINGS,
   SEARCHSOURCE,
-  Extra_PROP_SHOW_OPTIONS
+  Extra_PROP_SHOW_OPTIONS,
+  RULE_TYPE_SF_CONTACT
 } from '../utils';
 
 const TouchpointView = ({
@@ -819,6 +820,8 @@ const TouchpointView = ({
     };
     if (tchType === '2') {
       touchPointObj['rule_type'] = tchRuleType;
+    } else if (tchType === '3') {
+      touchPointObj['rule_type'] = RULE_TYPE_SF_CONTACT;
     }
     onSave(touchPointObj);
   };

@@ -6,6 +6,7 @@ import (
 )
 
 // Common/Util methods - to both adwords, facebook and all channels.
+// Similar method is found in KPI_analytics_linkedin.
 func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperties []ChannelObjectAndProperties) []map[string]string {
 	var resultantPropertiesConfig []map[string]string
 	var tempPropertyConfig map[string]string

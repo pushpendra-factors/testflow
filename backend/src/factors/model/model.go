@@ -296,6 +296,11 @@ type Model interface {
 	GetLastEventWithSessionByUser(projectId int64, userId string, firstEventTimestamp int64) (*model.Event, int)
 	GetAllEventsForSessionCreationAsUserEventsMapV2(projectID int64, sessionEventNameId string, startTimestamp int64, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetUserIdFromEventId(projectID int64, id string, userID string) (string, string, int)
+	GetEventsBySessionEvent(projectID int64, sessionEventID, userID string) ([]model.Event, int)
+	DissociateEventsFromSession(projectID int64, events []model.Event, sessionID string) int
+	DeleteSessionsAndAssociationForTimerange(projectID, startTimestamp, endTimestamp int64) (int64, int64, int)
+	GetEventsByEventNameIDANDTimeRange(projectID int64, eventNameID string,
+		startTimestamp int64, endTimestamp int64) ([]model.Event, int)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)

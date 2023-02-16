@@ -174,10 +174,16 @@ function GroupBlock({
     );
   };
 
+  const matchEventName = (item) => {
+    let findItem =
+      eventPropNames?.[item] || userPropNames?.[item];
+    return findItem ? findItem : item;
+  };
+
   const renderGroupDisplayName = (opt, index) => {
     let propertyName = ''; 
     if (opt?.property) {
-      propertyName = opt?.display_name ? opt.display_name : opt.property;
+      propertyName = opt?.display_name ? opt.display_name : matchEventName(opt.property);
     }
     if (!opt.property) {
       propertyName = 'Select user property';

@@ -18,11 +18,6 @@ var KPIPropertiesForFormSubmissions = []map[string]string{
 	MapOfKPIPropertyNameToData[U.UP_COUNTRY][EventEntity],
 	MapOfKPIPropertyNameToData[U.UP_REGION][EventEntity],
 	MapOfKPIPropertyNameToData[U.UP_CITY][EventEntity],
-	MapOfKPIPropertyNameToData[U.UP_DEVICE_TYPE][UserEntity],
-	MapOfKPIPropertyNameToData[U.UP_DEVICE_BRAND][UserEntity],
-	MapOfKPIPropertyNameToData[U.UP_DEVICE_MODEL][UserEntity],
-	MapOfKPIPropertyNameToData[U.UP_DEVICE_NAME][UserEntity],
-	MapOfKPIPropertyNameToData[U.UP_PLATFORM][UserEntity],
 }
 
 var KPIConfigForFormSubmissions = map[string]interface{}{
