@@ -480,3 +480,13 @@ func (gcsd *GCSDriver) GetExplainV2ModelPath(id uint64, projectId int64) (string
 	log.Infof("Getting explain model from (gcp): %s", chunksPath)
 	return chunksPath, "chunk_1.txt"
 }
+
+func (gcsd *GCSDriver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) string {
+	path := gcsd.GetProjectDir(projectId)
+	return fmt.Sprintf("%ssixSignal/%v/", path, id)
+}
+
+func (gcsd *GCSDriver) GetSixSignalAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
+	path := gcsd.GetSixSignalAnalysisTempFileDir(id, projectId)
+	return path, "results.txt"
+}

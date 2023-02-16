@@ -357,3 +357,13 @@ func (sd *S3Driver) GetExplainV2ModelPath(id uint64, projectId int64) (string, s
 	chunksPath := pb.Join(path, "chunks")
 	return chunksPath, "chunk_1.txt"
 }
+
+func (sd *S3Driver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) string {
+	path := sd.GetProjectDir(projectId)
+	return fmt.Sprintf("%ssixSignal/%v/", path, id)
+}
+
+func (sd *S3Driver) GetSixSignalAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
+	path := sd.GetSixSignalAnalysisTempFileDir(id, projectId)
+	return path, "results.txt"
+}

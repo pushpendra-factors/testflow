@@ -5,7 +5,7 @@ import {
   SearchOutlined,
   VerticalRightOutlined
 } from '@ant-design/icons';
-import { Button, Input } from 'antd';
+import { Button, Divider, Input } from 'antd';
 import styles from './index.module.scss';
 import React, { useEffect, useState } from 'react';
 import { SVG, Text } from 'Components/factorsComponents';
@@ -21,6 +21,7 @@ import {
   QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE
 } from 'Utils/constants';
+import useAutoFocus from 'hooks/useAutoFocus';
 
 const itemHeight = 47;
 const ContainerHeight = 443;
@@ -321,10 +322,16 @@ const Part2GlobalSearch = ({
     </React.Fragment>
   );
 };
-const SearchResults = ({ searchString }) => {
+const SearchResults = ({ searchString, openSavedReports }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [finalResults, setFinalResults] = useState([]);
   const allRoutes = useSelector((state) => state.allRoutes.data);
+  const queries = useSelector((state) => state.queries.data);
+  const [filteredQueries, setFilteredQueries] = useState([]);
+  const [showMore, setShowMore] = useState({
+    savedReports: false,
+    pages: false
+  });
   const dispatch = useDispatch();
   const history = useHistory();
   const SEARCH_TYPES = {
@@ -354,7 +361,12 @@ const SearchResults = ({ searchString }) => {
     let x = eachRoute.split('/')[1]?.trim();
     return ommitRoutes.has(x);
   };
+
   useEffect(() => {
+    setShowMore({
+      savedReports: false,
+      pages: false
+    });
     let ss = searchString.trim();
     if (ss.length > 0 && ss[0] === ' ') {
       ss = ss.slice(1, searchString.length);
@@ -370,7 +382,15 @@ const SearchResults = ({ searchString }) => {
 
     if (filtered.sort) filtered = filtered.sort();
     setFinalResults(Array.from(new Set(filtered)));
-  }, [searchString, searchResults]);
+
+    filtered = queries.filter((eachQuery, eachI) => {
+      if (eachQuery?.title?.toLowerCase()?.includes(ss?.toLowerCase()))
+        return true;
+      else return false;
+    });
+
+    setFilteredQueries(filtered);
+  }, [searchString, searchResults, queries]);
   useEffect(() => {
     let filteredResults =
       allRoutes &&
@@ -421,38 +441,159 @@ const SearchResults = ({ searchString }) => {
     history.push(path);
     dispatch({ type: TOGGLE_GLOBAL_SEARCH });
   };
+  const checkIsEmptyResult = () => {
+    if (filteredQueries.length === 0 && finalResults.length === 0) return true;
+    else return false;
+  };
   return (
     <div className={styles['searchresults-container']}>
       <div className={styles['searchresults-container-result-item-container']}>
-        {Array.isArray(finalResults) &&
-          finalResults?.map((eachRoute, eachIndex) => {
-            return (
-              <React.Fragment key={eachIndex}>
+        {filteredQueries && filteredQueries?.length > 0 ? (
+          <div className={styles['searchresults-category-container']}>
+            <div className={styles['searchresults-category-container-title']}>
+              Saved Reports
+            </div>
+            <div className={styles['searchresults-category-container-results']}>
+              {filteredQueries
+                ?.slice(
+                  0,
+                  showMore.savedReports
+                    ? filteredQueries?.length
+                    : Math.min(filteredQueries.length, 5)
+                )
+                .map((eachQuery, eachIndex) => {
+                  return (
+                    <React.Fragment key={eachQuery?.id}>
+                      <div
+                        tabIndex={0}
+                        onClick={() => openSavedReports(eachQuery)}
+                        className={
+                          styles[
+                            'searchresults-category-container-results-item'
+                          ]
+                        }
+                      >
+                        <div className={styles['item-container']}>
+                          <span className={styles['item-title']}>
+                            {eachQuery.title}
+                          </span>
+                          <span className={styles['item-goto-type']}>
+                            Open This Report
+                          </span>
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+              {showMore.savedReports === false &&
+              filteredQueries &&
+              filteredQueries.length > 5 ? (
                 <div
-                  className={styles['searchresults-container-result-item']}
-                  onClick={() => moveToRoute(eachRoute)}
-                  onKeyUp={(e) =>
-                    e.key === 'Enter' ? moveToRoute(eachRoute) : ''
-                  }
+                  className={styles['globalSearchShowBtn']}
                   tabIndex={0}
+                  onClick={() => {
+                    setShowMore((prev) => {
+                      return { ...prev, savedReports: !prev.savedReports };
+                    });
+                  }}
                 >
-                  <SVG
-                    name={SEARCH_TYPES[getSearchType(eachRoute)]}
-                    size={20}
-                    color={'blue'}
-                  />
-                  <Text
-                    level={6}
-                    type={'paragraph'}
-                    weight={'normal'}
-                    color='#0E2647'
-                  >
-                    {eachRoute !== '/' ? renderRoute(eachRoute) : 'Dashboard'}
-                  </Text>
+                  Show More
                 </div>
-              </React.Fragment>
-            );
-          })}
+              ) : (
+                ''
+              )}
+            </div>
+          </div>
+        ) : (
+          ''
+        )}
+        {Array.isArray(finalResults) && finalResults?.length > 0 ? (
+          <React.Fragment>
+            <div className={styles['searchresults-category-container']}>
+              <div className={styles['searchresults-category-container-title']}>
+                Pages
+              </div>
+              <div
+                className={styles['searchresults-category-container-results']}
+              >
+                {Array.isArray(finalResults) && (
+                  <>
+                    {finalResults
+                      ?.slice(
+                        0,
+                        showMore.pages
+                          ? finalResults?.length
+                          : Math.min(finalResults.length, 5)
+                      )
+                      .map((eachRoute, eachIndex) => {
+                        return (
+                          <React.Fragment key={eachIndex}>
+                            <div
+                              className={
+                                styles[
+                                  'searchresults-category-container-results-item'
+                                ]
+                              }
+                              onClick={() => moveToRoute(eachRoute)}
+                              onKeyUp={(e) =>
+                                e.key === 'Enter' ? moveToRoute(eachRoute) : ''
+                              }
+                              tabIndex={0}
+                            >
+                              <SVG
+                                name={SEARCH_TYPES[getSearchType(eachRoute)]}
+                                size={20}
+                                color={'blue'}
+                              />
+                              <div className={styles['item-container']}>
+                                <span className={styles['item-title']}>
+                                  <Text
+                                    level={6}
+                                    type={'paragraph'}
+                                    weight={'normal'}
+                                    color='#0E2647'
+                                  >
+                                    {eachRoute !== '/'
+                                      ? renderRoute(eachRoute)?.toLowerCase()
+                                      : 'Dashboard'}
+                                  </Text>
+                                </span>
+                                <span className={styles['item-goto-type']}>
+                                  Jump to
+                                </span>
+                              </div>
+                            </div>
+                          </React.Fragment>
+                        );
+                      })}
+
+                    {showMore.pages === false &&
+                    finalResults &&
+                    finalResults.length > 5 ? (
+                      <div
+                        className={styles['globalSearchShowBtn']}
+                        tabIndex={0}
+                        onClick={() => {
+                          setShowMore((prev) => {
+                            return { ...prev, pages: !prev.pages };
+                          });
+                        }}
+                      >
+                        Show More
+                      </div>
+                    ) : (
+                      ''
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </React.Fragment>
+        ) : (
+          ''
+        )}
+
+        {checkIsEmptyResult() ? <div> No Results Found</div> : ''}
       </div>
     </div>
   );
@@ -532,6 +673,18 @@ const GlobalSearch = () => {
   const [searchString, setSearchString] = useState('');
   const queries = useSelector((state) => state.queries.data);
   const [step2Type, setStep2Type] = useState(null);
+  const { visible } = useSelector((state) => state.globalSearch);
+  let inputComponentRef = null;
+  useEffect(() => {
+    console.log(inputComponentRef, visible);
+    if (visible === true) {
+      inputComponentRef?.focus();
+    }
+    if (visible === false) {
+      setStep(1);
+      setStep2Content([]);
+    }
+  }, [visible]);
   const showAllCreateNew = () => {
     setStep(2);
     setStep2Type(1);
@@ -590,6 +743,9 @@ const GlobalSearch = () => {
             color: '#B7BEC8',
             boxShadow: 'none'
           }}
+          ref={(tempRef) => {
+            inputComponentRef = tempRef;
+          }}
         />
         <div style={{ padding: '0 5px' }}>
           <SVG name='command' width='32px' height='32px' />
@@ -599,7 +755,10 @@ const GlobalSearch = () => {
         </div>
       </div>
       {searchString.length !== 0 ? (
-        <SearchResults searchString={searchString} />
+        <SearchResults
+          searchString={searchString}
+          openSavedReports={openSavedReports}
+        />
       ) : step === 1 ? (
         <Part1GlobalSearch
           items={items}

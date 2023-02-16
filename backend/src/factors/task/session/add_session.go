@@ -128,12 +128,14 @@ func addSessionByProjectId(projectId int64, maxLookbackTimestamp, startTimestamp
 		}
 	}
 
-	// Update next sessions start timestamp with min of last session
-	// added event timestamp across all users for the project.
-	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(
-		projectId, minOfSessionAddedLastEventTimestamp)
-	if errCode != http.StatusAccepted {
-		return status, http.StatusInternalServerError
+	if C.GetConfig().DisableUpdateNextSessionTimestamp == 0 {
+		// Update next sessions start timestamp with min of last session
+		// added event timestamp across all users for the project.
+		errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(
+			projectId, minOfSessionAddedLastEventTimestamp)
+		if errCode != http.StatusAccepted {
+			return status, http.StatusInternalServerError
+		}
 	}
 
 	if status.NoOfSessionsCreated == 0 {

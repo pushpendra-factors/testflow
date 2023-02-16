@@ -33,7 +33,7 @@ const AttrFilterSelect = ({
     type: ''
   });
 
-  const [operatorState, setOperatorState] = useState('=');
+  const [operatorState, setOperatorState] = useState(OPERATORS['equalTo']);
   const [valuesState, setValuesState] = useState(null);
 
   const [propSelectOpen, setPropSelectOpen] = useState(true);
@@ -122,9 +122,10 @@ const AttrFilterSelect = ({
   const propSelect = (prop) => {
     setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
     setPropSelectOpen(false);
-    setOperatorState('=');
+    setOperatorState(OPERATORS['equalTo']);
     setValuesState(null);
     setValuesByProps(prop);
+    setValuesSelectionOpen(true);
   };
 
   const valuesSelect = (val) => {
