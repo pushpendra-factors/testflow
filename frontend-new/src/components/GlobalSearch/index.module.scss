@@ -117,7 +117,9 @@
               background-color: #f6f6f7;
             }
 
-            &:hover .item-goto-type {
+            &:hover .item-goto-type,
+            &:focus .item-goto-type,
+            &:focus-visible .item-goto-type {
               user-select: none;
               visibility: visible;
             }
@@ -175,4 +177,9 @@
       }
     }
   }
+}
+
+.boxStyles {
+  color: #3e516c;
+  background: #f8f8fc;
 }
