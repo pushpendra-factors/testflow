@@ -30,12 +30,6 @@ var KPIPropertiesForWebsiteSessions = []map[string]string{
 	MapOfKPIPropertyNameToData[U.SP_SPENT_TIME][EventEntity],
 	MapOfKPIPropertyNameToData[U.SP_INITIAL_PAGE_LOAD_TIME][EventEntity],
 	MapOfKPIPropertyNameToData[U.SP_INITIAL_PAGE_SCROLL_PERCENT][EventEntity],
-
-	MapOfKPIPropertyNameToData[U.UP_DEVICE_TYPE][UserEntity],
-	MapOfKPIPropertyNameToData[U.UP_DEVICE_BRAND][UserEntity],
-	MapOfKPIPropertyNameToData[U.UP_DEVICE_MODEL][UserEntity],
-	MapOfKPIPropertyNameToData[U.UP_DEVICE_NAME][UserEntity],
-	MapOfKPIPropertyNameToData[U.UP_PLATFORM][UserEntity],
 }
 
 var KPIConfigForWebsiteSessions = map[string]interface{}{
