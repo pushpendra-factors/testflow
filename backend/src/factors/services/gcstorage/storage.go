@@ -62,6 +62,22 @@ func (gcsd *GCSDriver) Create(dir, fileName string, reader io.Reader) error {
 	return err
 }
 
+func (gcsd *GCSDriver) GetWriter(dir, fileName string) (io.WriteCloser, error) {
+	ctx := context.Background()
+	if !strings.HasSuffix(dir, separator) {
+		// Append / to the end if not present.
+		dir = dir + separator
+	}
+	obj := gcsd.client.Bucket(gcsd.BucketName).Object(dir + fileName)
+
+	writer := struct {
+		ReadFrom int // to "disable" ReadFrom method
+		*storage.Writer
+	}{0, obj.NewWriter(ctx)}
+
+	return writer, nil
+}
+
 func (gcsd *GCSDriver) Get(dir, fileName string) (io.ReadCloser, error) {
 	ctx := context.Background()
 	if !strings.HasSuffix(dir, separator) {

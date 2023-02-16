@@ -1,6 +1,7 @@
 package delta
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	C "factors/config"
@@ -23,8 +24,9 @@ import (
 
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
 	E "factors/event_match"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -93,9 +95,6 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			}
 		}
 		log.Info("Processing Query ID: ", query.ID, " query: ", actualQuery)
-		var err error
-		cfTmpPath, cfTmpName := diskManager.GetEventsGroupFilePathAndName(projectId, actualQuery.StartTimestamp, actualQuery.EndTimestamp, groupId)
-		localFilePath := cfTmpPath + cfTmpName
 		log.Info("Starting cloud events file get")
 		// "projects/2251799829000005/", "events.txt"
 		cfCloudPath, cfCloudName := (*sortedCloudManager).GetEventsGroupFilePathAndName(projectId, actualQuery.StartTimestamp, actualQuery.EndTimestamp, groupId)
@@ -104,17 +103,10 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			log.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
 				"eventFileName": cfCloudName}).Error("Failed downloading  file from cloud.")
 		}
-		log.Info("creating local events file. path: ", cfTmpPath, " name: ", cfTmpName)
-		err = diskManager.Create(cfTmpPath, cfTmpName, eReader)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err, "eventFilePath": cfTmpPath,
-				"eventFileName": cfTmpName}).Error("Failed creating file from cloud.")
-		}
-		log.Info("Getting scanner localpath: ", localFilePath)
-		scanner, err := T.OpenEventFileAndGetScanner(localFilePath)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("Failed opening file and getting scanner.")
-		}
+		scanner := bufio.NewScanner(eReader)
+		const maxCapacity = 30 * 1024 * 1024
+		buf := make([]byte, maxCapacity)
+		scanner.Buffer(buf, maxCapacity)
 		pathanalysisTempPath, pathanalysisTempName := diskManager.GetPathAnalysisTempFilePathAndName(query.ID, projectId)
 		log.Info("creating path analysis temp file. Path: ", pathanalysisTempPath, " Name: ", pathanalysisTempName)
 		if err := os.MkdirAll(pathanalysisTempPath, os.ModePerm); err != nil {

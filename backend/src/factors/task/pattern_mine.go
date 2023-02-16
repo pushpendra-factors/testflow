@@ -1052,7 +1052,7 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 	return nil
 }
 
-func buildPropertiesInfoFromInput(cloudManager *filestore.FileManager, projectId int64, modelId uint64, eventNames []string, filepath string) (*P.UserAndEventsInfo, map[string]P.PropertiesCount, error) {
+func buildPropertiesInfoFromInput(sortedCloudManager, modelCloudManager *filestore.FileManager, projectId int64, modelId uint64, eventNames []string, efCloudPath, efCloudName string) (*P.UserAndEventsInfo, map[string]P.PropertiesCount, error) {
 	userAndEventsInfo := P.NewUserAndEventsInfo()
 	eMap := *userAndEventsInfo.EventPropertiesInfoMap
 	for _, eventName := range eventNames {
@@ -1063,20 +1063,26 @@ func buildPropertiesInfoFromInput(cloudManager *filestore.FileManager, projectId
 		}
 	}
 
-	scanner, err := OpenEventFileAndGetScanner(filepath)
+	eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
 	if err != nil {
-		return nil, nil, err
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+			"eventFileName": efCloudName}).Error("Failed getting events reader from cloud.")
+		return userAndEventsInfo, nil, err
 	}
+	scanner := bufio.NewScanner(eReader)
+	const maxCapacity = 30 * 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
 
-	fileDir, fileName := (*cloudManager).GetModelEventPropertiesFilePathAndName(projectId, modelId)
-	epCount, err := P.GetPropertiesMapFromFile(cloudManager, fileDir, fileName)
+	fileDir, fileName := (*modelCloudManager).GetModelEventPropertiesFilePathAndName(projectId, modelId)
+	epCount, err := P.GetPropertiesMapFromFile(modelCloudManager, fileDir, fileName)
 	if err != nil {
 		log.Error("Error reading event properties from File")
 		return userAndEventsInfo, nil, err
 	}
 
-	fileDir, fileName = (*cloudManager).GetModelUserPropertiesFilePathAndName(projectId, modelId)
-	upCount, err := P.GetPropertiesMapFromFile(cloudManager, fileDir, fileName)
+	fileDir, fileName = (*modelCloudManager).GetModelUserPropertiesFilePathAndName(projectId, modelId)
+	upCount, err := P.GetPropertiesMapFromFile(modelCloudManager, fileDir, fileName)
 	if err != nil {
 		log.Error("Error reading user properties from File")
 		return userAndEventsInfo, nil, err
@@ -1359,7 +1365,7 @@ func FilterTopEvents(eventsMap map[string]int, limitCount int, eventclass string
 	return eventsList
 }
 
-func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *filestore.FileManager,
+func rewriteEventsFile(efCloudPath, efCloudName string, tmpPath string, sortedCloudManager, modelCloudManager *filestore.FileManager,
 	userAndEventsInfo *P.UserAndEventsInfo, projectId int64, modelId uint64, cAlgoProps P.CountAlgoProperties) (CampaignEventLists, error) {
 	// read events file , filter and create properties based on userProp and eventsProp
 	// create encoded events based on $session and campaign eventName
@@ -1384,39 +1390,41 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *f
 
 	log.Infof("Filters applied :%v", cAlgoProps.Job.Query)
 
-	fileDir, fileName = (*cloudManager).GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId)
-	upCatg, err = P.GetPropertiesCategoricalMapFromFile(cloudManager, fileDir, fileName)
+	fileDir, fileName = (*modelCloudManager).GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId)
+	upCatg, err = P.GetPropertiesCategoricalMapFromFile(modelCloudManager, fileDir, fileName)
 	if err != nil {
 		mineLog.Error("Error reading type of user properties from File")
 		return CampaignEventLists{}, err
 	}
 
-	fileDir, fileName = (*cloudManager).GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId)
-	epCatg, err = P.GetPropertiesCategoricalMapFromFile(cloudManager, fileDir, fileName)
+	fileDir, fileName = (*modelCloudManager).GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId)
+	epCatg, err = P.GetPropertiesCategoricalMapFromFile(modelCloudManager, fileDir, fileName)
 	if err != nil {
 		mineLog.Error("Error reading type of event properties from File")
 		return CampaignEventLists{}, err
 	}
 
 	var smartEvents CampaignEventLists
-	mineLog.WithField("path", tmpEventsFilePath).Info("Read Events from file to create encoded events")
-	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
+	mineLog.WithField("path", efCloudPath+efCloudName).Info("Read Events from file to create encoded events")
+	eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
 	if err != nil {
-		log.Error("Unable to open events File")
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+			"eventFileName": efCloudName}).Error("Failed getting events reader from cloud.")
 		return CampaignEventLists{}, err
 	}
+	scanner := bufio.NewScanner(eReader)
+	const maxCapacity = 30 * 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
 
 	mineLog.WithField("path", tmpPath).Info("Create a temp file to save and read events")
 	file, err := os.Create(tmpPath)
 	if err != nil {
+		log.Error("Unable to create temp File")
 		return CampaignEventLists{}, fmt.Errorf("unable to create a tmp file :%v", err)
 	}
 	defer file.Close()
 
-	if err != nil {
-		log.Error("Unable to create temp File")
-		return CampaignEventLists{}, err
-	}
 	campEventsMap := make(map[string]int)
 	mediumEventsMap := make(map[string]int)
 	sourceEventsMap := make(map[string]int)
@@ -1578,12 +1586,6 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *f
 	smartEvents.ReferrerList = FilterTopEvents(referrerEventsMap, -1, "Referrer")
 	smartEvents.AdgroupList = FilterTopEvents(AdgroupEventsMap, -1, "AdGroup")
 
-	err = os.Remove(tmpEventsFilePath)
-	mineLog.WithField("path", tmpEventsFilePath).Info("Remove tmpEvents File")
-	if err != nil {
-		mineLog.WithField("path", tmpEventsFilePath).Error("unable to remove File", err)
-		return CampaignEventLists{}, err
-	}
 	mineLog.Debugf("number of user prop deleted:%d", delUser)
 	mineLog.Debugf("number of event prop deleted:%d", delEvent)
 	return smartEvents, nil
@@ -1624,21 +1626,28 @@ func writeEncodedEvent(eventName string, property string, propertyName string, p
 	return nil
 }
 
-func GetEventNamesAndType(tmpEventsFilePath string, cloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int) ([]string, map[string]string, map[string]int, error) {
-	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
+func GetEventNamesAndType(efCloudPath, efCloudName string, sortedCloudManager, modelCloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int) ([]string, map[string]string, map[string]int, error) {
+	eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
 	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+			"eventFileName": efCloudName}).Error("Failed getting events reader from cloud.")
 		return nil, nil, nil, err
 	}
-	eventNames, eventsCount, err := GetEventNamesFromFile(scanner, cloudManager, projectId, modelId, countsVersion)
+	scanner := bufio.NewScanner(eReader)
+	const maxCapacity = 30 * 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
+
+	eventNames, eventsCount, err := GetEventNamesFromFile(scanner, modelCloudManager, projectId, modelId, countsVersion)
 	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": tmpEventsFilePath}).Error("Failed to read event names from file")
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath + efCloudName}).Error("Failed to read event names from file")
 		return nil, nil, nil, err
 	}
 	mineLog.WithField("tmpEventsFilePath",
-		tmpEventsFilePath).Info("Unique EventNames", eventNames)
+		efCloudPath+efCloudName).Info("Unique EventNames", eventNames)
 
 	mineLog.WithField("tmpEventsFilePath",
-		tmpEventsFilePath).Info("Building user and event properties info and writing it to file.")
+		efCloudPath+efCloudName).Info("Building user and event properties info and writing it to file.")
 	eventNamesWithType, err := store.GetStore().GetEventTypeFromDb(projectId, eventNames, 100000)
 
 	mineLog.WithField("Event Names and type",
@@ -1736,15 +1745,19 @@ func buildWhiteListProperties(projectId int64, allProperty map[string]P.Properti
 	return upFilteredMap, epFilteredMap
 }
 
-func buildEventsFileOnProperties(tmpEventsFilePath string, efTmpPath string, efTmpName string, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, projectId int64,
-	modelId uint64, eReader io.Reader, userAndEventsInfo *P.UserAndEventsInfo, campaignLimitCount int, cAlgoProps P.CountAlgoProperties) (CampaignEventLists, error) {
+func buildEventsFileOnProperties(efCloudPath, efCloudName string, efTmpPath, efTmpName string, sortedCloudManager, modelCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, projectId int64,
+	modelId uint64, userAndEventsInfo *P.UserAndEventsInfo, campaignLimitCount int, cAlgoProps P.CountAlgoProperties) (CampaignEventLists, error) {
 	// Rewrites the events file restricting the properties to only whitelisted properties.
 	//  Also returns list special campaign events created during rewrite.
 	var err error
-	efPath := efTmpPath + "tmpevents_" + efTmpName
-	smartEvents, err := rewriteEventsFile(tmpEventsFilePath, efPath, cloudManager, userAndEventsInfo, projectId, modelId, cAlgoProps)
+	err = os.MkdirAll(efTmpPath, 0755)
 	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err, "tmpEventsFilePath": tmpEventsFilePath}).Error("Failed to filter disabled properties")
+		return CampaignEventLists{}, fmt.Errorf("unable to create directories for tmp file :%v", err)
+	}
+	efPath := efTmpPath + "tmpevents_" + efTmpName
+	smartEvents, err := rewriteEventsFile(efCloudPath, efCloudName, efPath, sortedCloudManager, modelCloudManager, userAndEventsInfo, projectId, modelId, cAlgoProps)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err, "eventsFilePath": efCloudPath + efCloudName}).Error("Failed to filter disabled properties")
 		return CampaignEventLists{}, err
 	}
 	r, _ := os.Open(efPath)
@@ -1822,20 +1835,6 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 	// download events file from cloud to local
 	efCloudPath, efCloudName := (*sortedCloudManager).GetEventsFilePathAndName(projectId, startTime, endTime)
 	efTmpPath, efTmpName := diskManager.GetEventsFilePathAndName(projectId, startTime, endTime)
-	mineLog.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
-		"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
-	eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
-	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
-		return 0, err
-	}
-	err = diskManager.Create(efTmpPath, efTmpName, eReader)
-	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
-		return 0, err
-	}
 	tmpChunksDir := diskManager.GetPatternChunksDir(projectId, modelId)
 	if err := serviceDisk.MkdirAll(tmpChunksDir); err != nil {
 		mineLog.WithFields(log.Fields{"chunkDir": tmpChunksDir, "error": err}).Error("Unable to create chunks directory.")
@@ -1843,7 +1842,6 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 	}
 
 	tmpEventsFilepath := efTmpPath + efTmpName
-	mineLog.Debug("Successfuly downloaded events file from cloud.", tmpEventsFilepath, efTmpPath, efTmpName)
 
 	basePathUserProps := path.Join("/", "tmp", "fptree", "userProps")
 	basePathEventProps := path.Join("/", "tmp", "fptree", "eventProps")
@@ -1856,7 +1854,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 		log.Fatal("unable to create temp event directory")
 	}
 
-	eventNames, eventNamesWithType, events_count_v2, err := GetEventNamesAndType(tmpEventsFilepath, modelCloudManager, projectId, modelId, countsVersion)
+	eventNames, eventNamesWithType, events_count_v2, err := GetEventNamesAndType(efCloudPath, efCloudName, sortedCloudManager, modelCloudManager, projectId, modelId, countsVersion)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get eventName and event type.")
 		return 0, err
@@ -1873,7 +1871,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 	}
 
 	mineLog.Debugf("job details :%v", cAlgoProps.Job)
-	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(modelCloudManager, projectId, modelId, eventNames, tmpEventsFilepath)
+	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(sortedCloudManager, modelCloudManager, projectId, modelId, eventNames, efCloudPath, efCloudName)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		return 0, err
@@ -1906,8 +1904,8 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 	mineLog.Debug("Number of User Properties: ", len(userPropList))
 	mineLog.Debug("Number of Event Properties: ", len(eventPropList))
 
-	campaignAnalyticsSorted, err := buildEventsFileOnProperties(tmpEventsFilepath, efTmpPath, efTmpName, modelCloudManager, diskManager, projectId,
-		modelId, eReader, userAndEventsInfo, campaignLimitCount, cAlgoProps)
+	campaignAnalyticsSorted, err := buildEventsFileOnProperties(efCloudPath, efCloudName, efTmpPath, efTmpName, sortedCloudManager, modelCloudManager, diskManager, projectId,
+		modelId, userAndEventsInfo, campaignLimitCount, cAlgoProps)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events data.")
 		return 0, err

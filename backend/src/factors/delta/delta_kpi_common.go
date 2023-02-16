@@ -208,7 +208,11 @@ func getFractionValueForRate(globalFrac *Fraction, featInfoMap map[string]map[st
 
 func checkValSatisfiesFilterCondition(filter M.KPIFilter, eventVal interface{}) (bool, error) {
 	if filter.PropertyDataType == U.PropertyTypeCategorical {
-		eventVal := eventVal.(string)
+		eventVal, err := getStringValueFromInterface(eventVal)
+		if err != nil {
+			log.Error("failed getting interface value")
+			return false, err
+		}
 		if filter.Condition == M.EqualsOpStr {
 			if eventVal != filter.Value {
 				return false, nil
@@ -229,7 +233,11 @@ func checkValSatisfiesFilterCondition(filter M.KPIFilter, eventVal interface{}) 
 			return false, fmt.Errorf("unknown filter condition - %s", filter.Condition)
 		}
 	} else if filter.PropertyDataType == U.PropertyTypeNumerical {
-		eventVal := eventVal.(float64)
+		eventVal, err := getFloatValueFromInterface(eventVal)
+		if err != nil {
+			log.Error("failed getting interface value")
+			return false, err
+		}
 		filterVal, err := strconv.ParseFloat(filter.Value, 64)
 		if err != nil {
 			log.WithError(err).Error("error Decoding Float64 filter value")
@@ -263,7 +271,11 @@ func checkValSatisfiesFilterCondition(filter M.KPIFilter, eventVal interface{}) 
 			return false, fmt.Errorf("unknown filter condition - %s", filter.Condition)
 		}
 	} else if filter.PropertyDataType == U.PropertyTypeDateTime {
-		eventVal := eventVal.(float64)
+		eventVal, err := getFloatValueFromInterface(eventVal)
+		if err != nil {
+			log.Error("failed getting interface value")
+			return false, err
+		}
 
 		dateTimeFilter, err := M.DecodeDateTimePropertyValue(filter.Value)
 		if err != nil {

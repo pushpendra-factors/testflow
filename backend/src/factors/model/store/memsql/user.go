@@ -2765,10 +2765,10 @@ func (store *MemSQL) PullUsersRowsForWIV2(projectID int64, startTime, endTime in
 		whereGroupStmt = "(is_group_user=0 OR is_group_user IS NULL)"
 	}
 	rawQuery := fmt.Sprintf("SELECT COALESCE(customer_user_id, id) AS user_id, properties,ISNULL(customer_user_id) AS is_anonymous, join_timestamp AS join_timestamp, "+
-		"COALESCE(JSON_EXTRACT_STRING(properties, '%s'),0) AS timestamp FROM users "+
+		"COALESCE(CASE WHEN UNIX_TIMESTAMP(JSON_EXTRACT_STRING(properties, '%s'))>0 THEN UNIX_TIMESTAMP(JSON_EXTRACT_STRING(properties, '%s')) ELSE JSON_EXTRACT_STRING(properties, '%s') END,0) AS timestamp FROM users "+
 		"WHERE %s AND project_id=%d AND source=%d AND UNIX_TIMESTAMP(created_at) BETWEEN %d AND %d AND updated_at<NOW() AND timestamp>0 "+
 		"LIMIT %d",
-		dateField, whereGroupStmt, projectID, source, startTime, endTime, model.UsersPullLimit+1)
+		dateField, dateField, dateField, whereGroupStmt, projectID, source, startTime, endTime, model.UsersPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err

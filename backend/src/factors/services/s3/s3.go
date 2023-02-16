@@ -52,6 +52,10 @@ func (sd *S3Driver) Create(dir, fileName string, reader io.Reader) error {
 	return nil
 }
 
+func (sd *S3Driver) GetWriter(dir, fileName string) (io.WriteCloser, error) {
+	return nil, nil
+}
+
 func (sd *S3Driver) Get(dir, fileName string) (io.ReadCloser, error) {
 	input := s3.GetObjectInput{
 		Bucket: aws.String(sd.BucketName),
@@ -133,7 +137,7 @@ func (sd *S3Driver) GetEventsGroupFilePathAndName(projectId int64, startTimestam
 }
 
 func (sd *S3Driver) GetChannelFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64) (string, string) {
-	path := sd.GetProjectDataFileDir(projectId, startTimestamp, "ad_reports")
+	path := sd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeAdReport)
 	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
 	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
 	fileName := fmt.Sprintf("%s_%s-%s.txt", channel, dateFormattedStart, dateFormattedEnd)

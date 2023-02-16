@@ -6,6 +6,7 @@ import (
 
 type FileManager interface {
 	Create(dir, fileName string, reader io.Reader) error
+	GetWriter(dir, fileName string) (io.WriteCloser, error)
 	Get(path, fileName string) (io.ReadCloser, error)
 	// Remove(path, filename string) error
 	GetObjectSize(dir, fileName string) (int64, error)

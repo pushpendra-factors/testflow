@@ -73,7 +73,7 @@ func writeSortedFileToGCP(ctx context.Context, projectId int64, startTime, endTi
 	lastName := strings.Split(tmpOutputFile.Name(), "/")
 
 	if len(lastName) > 0 {
-		cName := lastName[len(lastName)-1]
+		cName = lastName[len(lastName)-1]
 		cNameArr := strings.Split(cName, "_")
 		cName = strings.Join(cNameArr[:len(cNameArr)-1], "_")
 		err = (*cloudManager).Create(cDir, cName, tmpOutputFile)

@@ -56,6 +56,24 @@ func (dd *DiskDriver) Create(path, fileName string, reader io.Reader) error {
 	return err
 }
 
+func (dd *DiskDriver) GetWriter(path, fileName string) (io.WriteCloser, error) {
+	err := MkdirAll(path)
+	if err != nil {
+		log.WithError(err).Errorln("Failed to create dir")
+		return nil, err
+	}
+
+	if !strings.HasSuffix(path, separator) {
+		// Append / to the end if not present.
+		path = path + separator
+	}
+	file, err := os.Create(path + fileName)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
 // Get opens a file in read only mode.
 // Caller should take care of closing the returned io.ReadCloser.
 func (dd *DiskDriver) Get(path, fileName string) (io.ReadCloser, error) {
