@@ -36,8 +36,10 @@ import {
   DefaultDateRangeFormat,
   getAttributionQuery,
   isComparisonEnabled,
-  getAttributionStateFromRequestQuery
 } from 'Views/CoreQuery/utils';
+
+import { getAttributionStateFromRequestQuery } from 'Attribution/utils';
+
 import {
   getAttributionsData,
   getAttributionsDataV1
@@ -315,7 +317,7 @@ function CoreQuery({
   );
 
   const runAttributionQuery = useCallback(
-    async (isQuerySaved, durationObj, isCompareQuery, v1 = false) => {
+    async (isQuerySaved, durationObj, isCompareQuery, v1 = true) => {
       try {
         if (!durationObj) {
           durationObj = attr_dateRange;
