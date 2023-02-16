@@ -197,16 +197,22 @@ func TestSDK6SignalGroup(t *testing.T) {
 	assert.Equal(t, groupUser1.ID, user.Group1UserID)
 	assert.Equal(t, groupUser1.Group1ID, user.Group1ID)
 
-	// company2 with same user should create or update group user and associate with current user
+	// new company2 with existing user should create or update group user and associate with current user
 	(*groupProperties)[U.SIX_SIGNAL_DOMAIN] = "abc2.com"
-	createdUserID2, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
-		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
 	status = SDK.TrackUserGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
 	assert.Equal(t, http.StatusOK, status)
 	groupUser2, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc2.com")
 	assert.Equal(t, http.StatusFound, status) // new group user created
 	user, status = store.GetStore().GetUser(project.ID, createdUserID2)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser2.ID, user.Group1UserID) // existing assocation overwriten
+	assert.Equal(t, groupUser2.Group1ID, user.Group1ID)
+
+	// existing company2 with existing user who is already associated with another group should update association with existing user
+	(*groupProperties)[U.SIX_SIGNAL_DOMAIN] = "abc2.com"
+	status = SDK.TrackUserGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, createdUserID)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, groupUser2.ID, user.Group1UserID) // existing assocation overwriten
 	assert.Equal(t, groupUser2.Group1ID, user.Group1ID)
