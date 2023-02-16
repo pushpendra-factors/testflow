@@ -684,7 +684,7 @@ func TransformEventPropertiesToKPIConfigProperties(properties map[string][]strin
 			}
 			tempKPIConfigProperty = map[string]string{
 				"name":         propertyName,
-				"display_name": displayName,
+				"display_name": strings.Title(displayName),
 				"data_type":    dataType,
 				"entity":       EventEntity,
 			}
@@ -710,7 +710,7 @@ func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string,
 				}
 				tempKPIConfigProperty = map[string]string{
 					"name":         propertyName,
-					"display_name": displayName,
+					"display_name": strings.Title(displayName),
 					"data_type":    dataType,
 					"entity":       UserEntity,
 				}
