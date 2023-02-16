@@ -5,6 +5,7 @@ import { SVG, Text } from 'factorsComponents';
 import { CaretDownOutlined, CaretUpOutlined } from '@ant-design/icons';
 import _ from 'lodash';
 import useAutoFocus from '../../../hooks/useAutoFocus';
+import { useSelector } from 'react-redux';
 
 function GroupSelect2({
   groupedProperties,
@@ -20,6 +21,10 @@ function GroupSelect2({
   const [searchTerm, setSearchTerm] = useState('');
   const [showFull, setShowFull] = useState([]);
   const inputComponentRef = useAutoFocus();
+
+  const { userPropNames, eventPropNames, groupPropNames } = useSelector(
+    (state) => state.coreQuery
+  );
 
   useEffect(() => {
     const groupColState = Object.assign({}, groupCollapseState);
@@ -70,6 +75,12 @@ function GroupSelect2({
     setShowFull(showMoreState);
   };
 
+  const matchEventName = (item) => {
+    let findItem =
+      eventPropNames?.[item] || userPropNames?.[item] || groupPropNames?.[item];
+    return findItem ? findItem : item;
+  };
+
   const renderOptions = (options) => {
     const renderGroupedOptions = [];
     options?.forEach((group, grpIndex) => {
@@ -93,7 +104,7 @@ function GroupSelect2({
                   extraClass={'m-0 ml-2'}
                   weight={'bold'}
                 >
-                  {group.label}
+                  {_.startCase(group.label)}
                 </Text>
               </div>
             </div>
@@ -127,7 +138,7 @@ function GroupSelect2({
                             extraClass={'m-0'}
                             weight={'thin'}
                           >
-                            {textStartCase ? val[0] : val[0]}
+                            {textStartCase ? matchEventName(val[0]) : val[0]}
                           </Text>
                         </div>
                       );

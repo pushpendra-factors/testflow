@@ -467,3 +467,13 @@ func (dd *DiskDriver) GetExplainV2ModelPath(id uint64, projectId int64) (string,
 	chunksPath := pb.Join(path, "chunks")
 	return chunksPath, "chunk_1.txt"
 }
+
+func (dd *DiskDriver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) string {
+	path := dd.GetProjectDir(projectId)
+	return fmt.Sprintf("%ssixSignal/%v/", path, id)
+}
+
+func (dd *DiskDriver) GetSixSignalAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
+	path := dd.GetSixSignalAnalysisTempFileDir(id, projectId)
+	return path, "results.txt"
+}

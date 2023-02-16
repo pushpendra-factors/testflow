@@ -90,7 +90,7 @@ const Touchpoints = ({
     }
   }, [activeProject, tabNo]);
 
-  const setSalesforceContactData = () => {
+  const setSalesforceContactData = (data = []) => {
     const touchpointObjs = data.length
       ? [
           ...data
@@ -452,7 +452,7 @@ const Touchpoints = ({
                 columns={columns}
                 dataSource={touchPointsData}
                 pagination={false}
-                loading={false}
+                loading={touchPointState.loading}
               />
             </div>
           </TabPane>

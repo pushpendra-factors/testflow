@@ -22,7 +22,6 @@ function PrivateRoute({ component: Component, ...restOfProps }) {
       pageName = capitalize(initialPaths[n - 1]);
     }
     document.title = pageName + ' - FactorsAI';
-    console.log(location);
   }, [location]);
   return (
     <Route

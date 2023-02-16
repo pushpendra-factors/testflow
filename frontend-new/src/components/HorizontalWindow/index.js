@@ -7,7 +7,7 @@ import { FallBackImage } from 'Constants/templates.constants';
 export const HorizontalWindowItem = ({ title, image, onClick }) => {
   return (
     <div className={styles.windowItem} onClick={onClick}>
-      <img src={image != null ? image : FallBackImage} />
+      <img src={image != null ? image : FallBackImage} alt={title} />
       <div>{title}</div>
     </div>
   );
@@ -41,7 +41,7 @@ const HorizontalWindow = ({ windowTemplates, onWindowClick }) => {
     for (let i = 0; i < odd; i++) {
       oddarr.push(windowTemplates[3 * windowLength + i]);
     }
-    elements.push(oddarr);
+    if (oddarr.length > 0) elements.push(oddarr);
     setAllItems(elements);
   }, [windowTemplates]);
   const onLeftBtn = () => {

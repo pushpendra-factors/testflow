@@ -135,17 +135,14 @@ const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, factors_model
 
   const getInsights = (data) => {
     
-    console.log('get insights-->>',data)
-
-    SetfetchingIngishts(true);  
-
+    SetfetchingIngishts(true);   
     let payload = {
       ...data?.query,
       rule: JSON.parse(data?.rq)
     }
 
     fetchExplainGoalInsights(activeProject?.id, data?.id, payload).then(()=>{
-      history.push('/explain/insights');
+      history.push('/explainV2/insights');
       SetfetchingIngishts(false) 
     }).catch((err) => {
       console.log("fetchExplainGoalInsights catch", err);

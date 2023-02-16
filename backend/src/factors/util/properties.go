@@ -1668,6 +1668,8 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"page_url":                                "Page URL",
 }
 
+// GetStandardUserPropertiesBasedOnIntegration is using this.
+// Separate logic for integration based properties is there.
 var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_PLATFORM:                         "Platform",
 	UP_BROWSER:                          "Browser",

@@ -27,7 +27,7 @@ function PropertyFilter({
   const [propState, setPropState] = useState({});
   const [propSelectOpen, setPropSelectOpen] = useState(false);
 
-  const [operatorState, setOperatorState] = useState('equals');
+  const [operatorState, setOperatorState] = useState(OPERATORS['equalTo']);
   const [operSelectOpen, setOperSelectOpen] = useState(false);
 
   const [valueState, setValueState] = useState('');
@@ -47,7 +47,7 @@ function PropertyFilter({
       category: prop[1]
     });
     setPropSelectOpen(false);
-    setOperatorState('equals');
+    setOperatorState(OPERATORS['equalTo']);
     setValueState('');
   };
 

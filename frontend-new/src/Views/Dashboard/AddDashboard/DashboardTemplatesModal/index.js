@@ -342,7 +342,7 @@ let Step2DashboardTemplateModal = ({
       bingAds,
       marketo
     );
-    let keyname = template.title.toLowerCase().replace(/\s/g, '');
+    // let keyname = template.title.toLowerCase().replace(/\s/g, '');
     let integrationResults = integrationChecks.checkRequirements(
       template.required_integrations
     );
