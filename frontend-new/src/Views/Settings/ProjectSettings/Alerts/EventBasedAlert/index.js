@@ -432,7 +432,7 @@ const EventBasedAlert = ({
   const onFinish = (data) => {
     setLoading(true);
 
-    let breakDownProperties;
+    let breakDownProperties = [];
     if (queries.length > 0 && EventPropertyDetails?.name) {
       const category = eventProperties[queries[0]?.label].filter(
         (prop) => prop[1] === EventPropertyDetails?.name
