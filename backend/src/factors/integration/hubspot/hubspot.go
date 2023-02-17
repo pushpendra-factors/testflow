@@ -285,10 +285,13 @@ func syncContactFormSubmissions(project *model.Project, otpRules *[]model.OTPRul
 			return
 		}
 		logCtx.WithFields(log.Fields{"ProjectID": project.ID, "Payload": payload}).Info("Invoking method ApplyHSOfflineTouchPointRuleForForms")
-		err = ApplyHSOfflineTouchPointRuleForForms(project, otpRules, uniqueOTPEventKeys, payload, document, eventTimestamp)
-		if err != nil {
-			// log and continue
-			logCtx.WithField("EventID", trackResponse.EventId).WithField("userID", trackResponse.UserId).Info("failed creating hubspot offline touch point for form submission")
+
+		if !C.IsProjectIDSkippedForOtp(project.ID) {
+			err = ApplyHSOfflineTouchPointRuleForForms(project, otpRules, uniqueOTPEventKeys, payload, document, eventTimestamp)
+			if err != nil {
+				// log and continue
+				logCtx.WithField("EventID", trackResponse.EventId).WithField("userID", trackResponse.UserId).Info("failed creating hubspot offline touch point for form submission")
+			}
 		}
 
 	}
@@ -1228,7 +1231,7 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 			Warn("Different customer user id seen on sync contact")
 	}
 
-	if document.Action == model.HubspotDocumentActionUpdated {
+	if document.Action == model.HubspotDocumentActionUpdated && !C.IsProjectIDSkippedForOtp(project.ID) {
 		err = ApplyHSOfflineTouchPointRule(project, otpRules, uniqueOTPEventKeys, trackPayload, document, defaultSmartEventTimestamp)
 		if err != nil {
 			// log and continue
@@ -3051,11 +3054,13 @@ func syncEngagements(project *model.Project, otpRules *[]model.OTPRule, uniqueOT
 			return http.StatusInternalServerError
 		}
 
-		err = ApplyHSOfflineTouchPointRuleForEngagement(project, otpRules, uniqueOTPEventKeys, payload, document, engagement, engagementTypeStr)
-		if err != nil {
-			// log and continue
-			logCtx.WithField("TrackPayload", payload).WithField("userID", userId).Info("failed " +
-				"creating engagement hubspot offline touch point")
+		if !C.IsProjectIDSkippedForOtp(project.ID) {
+			err = ApplyHSOfflineTouchPointRuleForEngagement(project, otpRules, uniqueOTPEventKeys, payload, document, engagement, engagementTypeStr)
+			if err != nil {
+				// log and continue
+				logCtx.WithField("TrackPayload", payload).WithField("userID", userId).Info("failed " +
+					"creating engagement hubspot offline touch point")
+			}
 		}
 
 	}
@@ -3215,12 +3220,13 @@ func syncContactListV2(project *model.Project, otpRules *[]model.OTPRule, unique
 		return http.StatusInternalServerError
 	}
 
-	err = ApplyHSOfflineTouchPointRuleForContactList(project, otpRules, uniqueOTPEventKeys, request, document)
-	if err != nil {
-		// log and continue
-		logCtx.WithField("EventID", response.EventId).WithField("userID", response.UserId).Info("failed creating hubspot offline touch point for contact list")
+	if !C.IsProjectIDSkippedForOtp(project.ID) {
+		err = ApplyHSOfflineTouchPointRuleForContactList(project, otpRules, uniqueOTPEventKeys, request, document)
+		if err != nil {
+			// log and continue
+			logCtx.WithField("EventID", response.EventId).WithField("userID", response.UserId).Info("failed creating hubspot offline touch point for contact list")
+		}
 	}
-
 	errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
 		project.ID, document.ID, model.HubspotDocumentTypeContactList, "", document.Timestamp, document.Action, contact_document.UserId, "")
 	if errCode != http.StatusAccepted {
