@@ -57,6 +57,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
 	useBucketV2 := configs["useBucketV2"].(bool)
 
+	finalStatus := make(map[string]interface{})
 	queries, _ := store.GetStore().GetAllSavedPathAnalysisEntityByProject(projectId)
 	for _, query := range queries {
 
@@ -70,20 +71,25 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		if actualQuery.Group != "" && actualQuery.Group != "users" {
 			eventNamesObj, eventnameerr := store.GetStore().GetEventName(actualQuery.Event.Label, projectId)
 			if eventnameerr != http.StatusFound {
-				log.Fatal(eventnameerr)
+				finalStatus["err"] = "Failed to get event name"
+				log.Error("Failed to get event name")
+				return finalStatus , false
 			}
 			groupNameFromDb, _ := store.GetStore().IsGroupEventName(projectId, actualQuery.Event.Label, eventNamesObj.ID)
 			if groupNameFromDb != "" {
 				if actualQuery.Group != groupNameFromDb {
+					finalStatus["err"] = "group names mismatch"
 					log.Error("group names mismatch", actualQuery.Group, groupNameFromDb)
-					log.Fatal("group names mismatch")
+					return finalStatus , false
 				} else {
 					groupId = int(0)
 				}
 			} else {
 				groupDetails, groupErr := store.GetStore().GetGroup(projectId, actualQuery.Group)
 				if groupErr != http.StatusFound {
-					log.Fatal(groupErr)
+					finalStatus["err"] = "Failed to get group details"
+					log.Error("Failed to get group details")
+					return finalStatus , false
 				}
 				groupId = groupDetails.ID
 			}
@@ -91,7 +97,9 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		if useBucketV2 {
 			if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", actualQuery.StartTimestamp, actualQuery.EndTimestamp,
 				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId); err != nil {
-				log.Error("Failed creating events file")
+					finalStatus["err"] = "Failed creating events file"
+					log.Error("Failed creating events file")
+					return finalStatus , false
 			}
 		}
 		log.Info("Processing Query ID: ", query.ID, " query: ", actualQuery)
@@ -102,6 +110,8 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
 				"eventFileName": cfCloudName}).Error("Failed downloading  file from cloud.")
+			finalStatus["err"] = "Failed downloading  file from cloud."
+			return finalStatus , false
 		}
 		scanner := bufio.NewScanner(eReader)
 		const maxCapacity = 30 * 1024 * 1024
@@ -110,7 +120,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		pathanalysisTempPath, pathanalysisTempName := diskManager.GetPathAnalysisTempFilePathAndName(query.ID, projectId)
 		log.Info("creating path analysis temp file. Path: ", pathanalysisTempPath, " Name: ", pathanalysisTempName)
 		if err := os.MkdirAll(pathanalysisTempPath, os.ModePerm); err != nil {
-			log.Fatal(err)
+			log.WithError(err).Error("Failed creating path analysis file")
 		}
 		currentFile, err := os.Create(pathanalysisTempPath + pathanalysisTempName)
 		if err != nil {

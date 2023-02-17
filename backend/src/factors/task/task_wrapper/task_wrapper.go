@@ -53,6 +53,9 @@ func TaskFunc(JobName string, lookback int, f func(map[string]interface{}) (map[
 				}
 			}()
 			status, isSuccess := f(configs)
+			if(status != nil){
+				finalStatus = status
+			}
 			finalStatus[deltaString] = status
 			finalStatus["Status"+deltaString] = isSuccess
 			if isSuccess == false {
@@ -122,6 +125,9 @@ func TaskFuncWithProjectId(JobName string, lookback int, projectIds []int64, f f
 					}
 				}()
 				status, isSuccess := f(projectId, configs)
+				if(status != nil){
+					finalStatus = status
+				}
 				finalStatus[deltaString] = status
 				finalStatus["Status"+deltaString] = isSuccess
 				if isSuccess == false {

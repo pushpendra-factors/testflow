@@ -305,12 +305,12 @@ func (store *MemSQL) UpdateAlert(projectID int64, alertID string, alert model.Al
 	updatedFields := map[string]interface{}{
 		"alert_name":          alert.AlertName,
 		"alert_configuration": alert.AlertConfiguration,
-		"alert_description":   alert.AlertDescription,
-		"updated_at":          time.Now().UTC(),
+		//	"alert_description":   alert.AlertDescription,
+		"updated_at": time.Now().UTC(),
 	}
 	alert.ID = alertID
 	// validating alert config
-	isValid, status, errMsg := store.validateAlertBody(projectID, alert)
+	isValid, status, errMsg := store.validateAlertBody(projectID, alert, true)
 	if !isValid {
 		return model.Alert{}, status, errMsg
 	}
@@ -352,7 +352,7 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 		CreatedAt:          time.Now().UTC(),
 		UpdatedAt:          time.Now().UTC(),
 	}
-	isValid, status, errMsg := store.validateAlertBody(projectID, alertRecord)
+	isValid, status, errMsg := store.validateAlertBody(projectID, alertRecord, false)
 	if !isValid {
 		return model.Alert{}, status, errMsg
 	}
@@ -367,7 +367,7 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 
 }
 
-func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool, int, string) {
+func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert, skipDescription bool) (bool, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"alert":      alert,
@@ -376,10 +376,6 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 
 	var alertDescription model.AlertDescription
 	var alertConfiguration model.AlertConfiguration
-	err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
-	if err != nil {
-		return false, http.StatusInternalServerError, "failed to decode jsonb to alert description"
-	}
 	// validations
 	// - Check for valid operator
 	// - Check if the KPI/Metric is valid TODO
@@ -390,11 +386,7 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 	if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
 		skipValidation = true
 	}
-	if alertDescription.Name == "" && alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
-		logCtx.Error("Invalid alert name")
-		return false, http.StatusBadRequest, "Invalid alert name"
-	}
-	err = U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
+	err := U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
 	if err != nil {
 		return false, http.StatusInternalServerError, "failed to decode jsonb to alert configuration"
 	}
@@ -418,6 +410,18 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to create alert")
 		return false, http.StatusBadRequest, err.Error()
+	}
+	if skipDescription {
+		return true, http.StatusOK, ""
+	}
+	err = U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
+	if err != nil {
+		return false, http.StatusInternalServerError, "failed to decode jsonb to alert description"
+	}
+	
+	if alertDescription.Name == "" && alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
+		logCtx.Error("Invalid alert name")
+		return false, http.StatusBadRequest, "Invalid alert name"
 	}
 
 	if !skipValidation {

@@ -52,7 +52,8 @@ const MapNametToLocation = {
   attribution: '/attribution',
   configure: '/configure',
   settings: '/settings',
-  setup_assist: '/welcome'
+  setup_assist: '/welcome', 
+  PathAnalysis: '/path-analysis'
 };
 
 function SiderMenu({
@@ -189,7 +190,7 @@ function SiderMenu({
     if (location.pathname === MapNametToLocation[name]) {
       color = 'purple';
     }
-    if (name == 'profile' || name == 'configure' || name == 'settings') {
+    if (name == 'profile' || name == 'configure' || name == 'settings' || name == 'PathAnalysis') {
       if (location.pathname.includes(MapNametToLocation[name])) {
         color = 'purple';
       }

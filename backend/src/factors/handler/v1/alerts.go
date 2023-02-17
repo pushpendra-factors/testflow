@@ -71,7 +71,7 @@ func EditAlertHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	editAlertPayload.CreatedBy = U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	alert, errCode, errMsg := store.GetStore().UpdateAlert(projectID, alertID, editAlertPayload)
 	if errCode != http.StatusAccepted {
-		log.WithFields(log.Fields{"document": alert, "err-message": errMsg}).Error("Failed to insertalert on create create alert handler.")
+		log.WithFields(log.Fields{"document": alert, "err-message": errMsg}).Error("Failed to insert alert on create create alert handler.")
 		return nil, errCode, PROCESSING_FAILED, errMsg, true
 	}
 

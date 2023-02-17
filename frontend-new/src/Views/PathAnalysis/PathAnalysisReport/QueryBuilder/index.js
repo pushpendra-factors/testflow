@@ -60,7 +60,7 @@ const QueryBuilder = ({
       return query 
     }
     else return null
-  }
+  } 
  
   const buildPathAnalysisQuery = (data) => {
 
@@ -100,9 +100,14 @@ const QueryBuilder = ({
       setRepetativeStep(activeQuery?.avoid_repeated_events)
       setPathCondition(`${activeQuery?.event_type}`)
       setPathStepCount(`${activeQuery?.steps}`)
-      setExcludeEvents(`${activeQuery?.include_events ? 'true' : 'false'}`)
+      setExcludeEvents(`${activeQuery?.include_events ? 'false' : 'true'}`)
 
-      setSingleQueries([activeQuery?.event]);
+      let eventFromState = {
+        ...activeQuery?.event,
+        //adding filters key for filters to work
+        filters: activeQuery?.event?.filter ? getGlobalFiltersfromSavedState(activeQuery?.event?.filter) : null
+      } 
+      setSingleQueries([eventFromState]);
       setMultipleQueries(activeQuery?.include_events ? (activeQuery?.include_events ? activeQuery?.include_events : []) : (activeQuery?.exclude_events ? activeQuery?.exclude_events : []));
 
       let defaultDate = {

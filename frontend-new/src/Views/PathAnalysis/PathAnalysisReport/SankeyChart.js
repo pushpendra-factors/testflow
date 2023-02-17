@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Highcharts from 'highcharts'; 
 import * as highchartsSankey from 'highcharts/modules/sankey';
-import { Timeline} from 'antd'; 
+import { Timeline, Empty} from 'antd'; 
 import ReactDOMServer from 'react-dom/server'; 
+import _ from 'lodash';
 
 const StepArraowGenerator = (activeQuery) => {
     let eventName = activeQuery?.event?.label;
@@ -264,7 +265,10 @@ function Sankey({
     });
 
     useEffect(() => {
-        drawChart();
+        if (chartData && !_.isEmpty(chartData))
+        {
+            drawChart();
+        }
       }, [reverseChart, chartData ]);
 
     return (
@@ -279,7 +283,9 @@ function Sankey({
                             options={options}
                         /> */}
 
+                        {(chartData && _.isEmpty(chartData)) ?  <Empty /> : 
                     <div className='fa-sankey-container' id="fa-sankey-container" />
+                        }
 
 
                     </div> 

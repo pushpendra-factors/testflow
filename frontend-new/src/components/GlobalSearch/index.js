@@ -25,7 +25,35 @@ import useAutoFocus from 'hooks/useAutoFocus';
 
 const itemHeight = 47;
 const ContainerHeight = 443;
-
+const NoResults = () => {
+  const history = useHistory();
+  return (
+    <div>
+      <div className='search-list pb-2' data-testid='no-data'>
+        <div className={'p-4 flex '}>
+          <Text
+            type={'title'}
+            level={7}
+            weight={'bold'}
+            align={'center'}
+            extraClass={'m-0 ml-1'}
+          >
+            No Matches.
+          </Text>
+          <Text
+            type={'title'}
+            color={'grey'}
+            level={7}
+            align={'center'}
+            extraClass={'m-0 ml-1'}
+          >
+            What kind of analysis are you looking for?
+          </Text>
+        </div>
+      </div>
+    </div>
+  );
+};
 const Part1GlobalSearch = ({
   items,
   setStep,
@@ -82,8 +110,8 @@ const Part1GlobalSearch = ({
           </div>
           <span
             className={styles['globalSearchShowBtn']}
-            onClick={showAllCreateNew}
-            onKeyUp={(e) => (e.key === 'Enter' ? showAllCreateNew() : '')}
+            onClick={() => showAllCreateNew(1)}
+            onKeyUp={(e) => (e.key === 'Enter' ? showAllCreateNew(1) : '')}
             tabIndex={0}
           >
             Show all
@@ -143,8 +171,8 @@ const Part1GlobalSearch = ({
                   })}
                 </div>{' '}
                 <span
-                  onClick={showAllReports}
-                  onKeyUp={(e) => (e.key === 'Enter' ? showAllReports() : '')}
+                  onClick={() => showAllReports(2)}
+                  onKeyUp={(e) => (e.key === 'Enter' ? showAllReports(2) : '')}
                   className={styles['globalSearchShowBtn']}
                   tabIndex={0}
                 >
@@ -175,10 +203,14 @@ const Part2GlobalSearch = ({
   data,
   moveBackStep1,
   step2Type,
-  openSavedReports
+  openSavedReports,
+  searchType,
+  setSearchType,
+  searchString,
+  setSearchString
 }) => {
-  const [state, setState] = useState({});
   const [type, setType] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
   const history = useHistory();
   const dispatch = useDispatch();
 
@@ -186,12 +218,40 @@ const Part2GlobalSearch = ({
     setType(step2Type);
   }, [step2Type]);
   useEffect(() => {
-    setState(data);
+    setSearchResults(data);
   }, [data]);
   const moveToPath = (tpath) => {
     dispatch({ type: TOGGLE_GLOBAL_SEARCH });
     history.push({ pathname: tpath });
   };
+  useEffect(() => {
+    // on mount
+
+    setSearchResults(data);
+    return () => {
+      // on unmount
+      setSearchType(0);
+      setSearchString('');
+    };
+  }, []);
+  useEffect(() => {
+    if (searchType === 1) {
+      let key = searchString?.toLowerCase();
+      let filteredResults = data?.filter((eachItem) => {
+        if (eachItem.fullName.toLowerCase().includes(key)) return true;
+        if (eachItem.description.toLowerCase().includes(key)) return true;
+        return false;
+      });
+      setSearchResults(filteredResults);
+    } else if (searchType === 2) {
+      let key = searchString?.toLowerCase();
+      let filteredResults = data?.filter((eachItem) => {
+        if (eachItem.title.toLowerCase().includes(key)) return true;
+        return false;
+      });
+      setSearchResults(filteredResults);
+    }
+  }, [searchString, searchType, data]);
 
   return (
     <React.Fragment>
@@ -207,16 +267,11 @@ const Part2GlobalSearch = ({
                 onKeyUp={(e) => (e.key === 'Enter' ? moveBackStep1() : '')}
               />
             </div>{' '}
-            {state.title}
+            Create New Report
           </div>
           <div className={styles['globalsearch-item-list']}>
-            <VirtualList
-              data={state.data}
-              height={ContainerHeight}
-              itemHeight={itemHeight}
-              itemKey='id'
-            >
-              {(eachItem, eachIndex) => {
+            {searchResults && searchResults?.length > 0 ? (
+              searchResults.map((eachItem, eachIndex) => {
                 return (
                   <div
                     key={eachItem.fullName + eachIndex}
@@ -245,8 +300,10 @@ const Part2GlobalSearch = ({
                     </div>
                   </div>
                 );
-              }}
-            </VirtualList>
+              })
+            ) : (
+              <NoResults />
+            )}
           </div>
         </div>
       ) : (
@@ -267,53 +324,57 @@ const Part2GlobalSearch = ({
             Recent reports/Dashboards
           </div>
           <div className={styles['globalsearch-item-list']}>
-            <VirtualList
-              data={state}
-              height={ContainerHeight}
-              itemHeight={itemHeight}
-              itemKey='id'
-            >
-              {(eachItem, eachIndex) => {
-                const queryType = getQueryType(eachItem.query);
-                const queryTypeName = {
-                  events: 'events_cq',
-                  funnel: 'funnels_cq',
-                  channel_v1: 'campaigns_cq',
-                  attribution: 'attributions_cq',
-                  profiles: 'profiles_cq',
-                  kpi: 'KPI_cq'
-                };
-                let svgName = '';
-                Object.entries(queryTypeName).forEach(([k, v]) => {
-                  if (queryType === k) {
-                    svgName = v;
-                  }
-                });
-                return (
-                  <div
-                    key={eachItem?.id + eachIndex}
-                    className={styles['globalsearch-item-list-item']}
-                    tabIndex={0}
-                    onClick={() => openSavedReports(eachItem)}
-                    onKeyUp={(e) => {
-                      if (e.key === 'Enter') {
-                        openSavedReports(eachItem);
-                      }
-                    }}
-                  >
-                    <SVG name={svgName} size={20} color='blue' />
-                    {/* <Text
+            {searchResults && searchResults.length > 0 ? (
+              <VirtualList
+                data={searchResults}
+                height={ContainerHeight}
+                itemHeight={itemHeight}
+                itemKey='id'
+              >
+                {(eachItem, eachIndex) => {
+                  const queryType = getQueryType(eachItem.query);
+                  const queryTypeName = {
+                    events: 'events_cq',
+                    funnel: 'funnels_cq',
+                    channel_v1: 'campaigns_cq',
+                    attribution: 'attributions_cq',
+                    profiles: 'profiles_cq',
+                    kpi: 'KPI_cq'
+                  };
+                  let svgName = '';
+                  Object.entries(queryTypeName).forEach(([k, v]) => {
+                    if (queryType === k) {
+                      svgName = v;
+                    }
+                  });
+                  return (
+                    <div
+                      key={eachItem?.id + eachIndex}
+                      className={styles['globalsearch-item-list-item']}
+                      tabIndex={0}
+                      onClick={() => openSavedReports(eachItem)}
+                      onKeyUp={(e) => {
+                        if (e.key === 'Enter') {
+                          openSavedReports(eachItem);
+                        }
+                      }}
+                    >
+                      <SVG name={svgName} size={20} color='blue' />
+                      {/* <Text
                         level={6}
                         type={'paragraph'}
                         weight={'normal'}
                         color='#0E2647'
                       > */}
-                    {eachItem.title}
-                    {/* </Text> */}
-                  </div>
-                );
-              }}
-            </VirtualList>
+                      {eachItem.title}
+                      {/* </Text> */}
+                    </div>
+                  );
+                }}
+              </VirtualList>
+            ) : (
+              <NoResults />
+            )}
           </div>
         </div>
       ) : (
@@ -467,6 +528,9 @@ const SearchResults = ({ searchString, openSavedReports }) => {
                       <div
                         tabIndex={0}
                         onClick={() => openSavedReports(eachQuery)}
+                        onKeyUp={(e) =>
+                          e.key === 'Enter' ? openSavedReports(eachQuery) : ''
+                        }
                         className={
                           styles[
                             'searchresults-category-container-results-item'
@@ -627,7 +691,7 @@ const GlobalSearch = () => {
         {
           name: 'Attribution',
           fullName: 'Attribution Report',
-          description: 'Track and chart events',
+          description: 'Identify channels that are working',
           icon: <SVG name={`Attributions_cq`} size={20} color={'blue'} />,
           path: '/analyse/' + QUERY_TYPE_ATTRIBUTION
         },
@@ -641,21 +705,21 @@ const GlobalSearch = () => {
         {
           name: 'Path Analysis',
           fullName: 'Path Analysis Report',
-          description: 'Track and chart events',
+          description: 'See winning and influential paths',
           icon: <SVG name={`PathAnalysis`} size={20} color={'blue'} />,
           path: '/path-analysis'
         },
         {
           name: 'Explain',
           fullName: 'Explain',
-          description: 'Track and chart events',
+          description: 'Use AI to explain your marketing efforts ',
           icon: <SVG name={`Explain`} size={20} color={'blue'} />,
           path: '/explain'
         },
         {
           name: 'Website visitors identification',
           fullName: 'Website visitors identification',
-          description: 'Track and chart events',
+          description: 'See visiting and high-intent accounts',
           icon: <SVG name={`Funnel_cq`} size={20} color={'blue'} />,
           path: '/'
         }
@@ -674,21 +738,24 @@ const GlobalSearch = () => {
   const queries = useSelector((state) => state.queries.data);
   const [step2Type, setStep2Type] = useState(null);
   const { visible } = useSelector((state) => state.globalSearch);
-  let inputComponentRef = null;
+  const [searchType, setSearchType] = useState(0); // 0 for Normal Search, 1 for Search Across New Query Builders, 2 for Search Across Saved Reports Only
+  let inputComponentRef = useAutoFocus(visible);
   useEffect(() => {
-    console.log(inputComponentRef, visible);
     if (visible === true) {
-      inputComponentRef?.focus();
+      // inputComponentRef?.focus();
+      // inputComponentRef?.input.focus();
     }
     if (visible === false) {
       setStep(1);
       setStep2Content([]);
+      setSearchString('');
+      setSearchType(0);
     }
   }, [visible]);
-  const showAllCreateNew = () => {
-    setStep(2);
+  const showAllCreateNew = (value) => {
+    setSearchType(1);
     setStep2Type(1);
-    setStep2Content(items.create);
+    setStep2Content(items.create.data);
   };
 
   const openSavedReports = (query) => {
@@ -698,20 +765,20 @@ const GlobalSearch = () => {
       state: { query, global_search: true, navigatedFromDashboard: query }
     });
   };
-  const showAllReports = () => {
-    setStep(2);
+  const showAllReports = (value) => {
+    setSearchType(2);
     setStep2Type(2);
     setStep2Content(queries);
   };
   const moveBackStep1 = () => {
-    setStep(1);
+    setSearchType(0);
     setStep2Content([]);
   };
   const onChangeInput = (e) => {
     setSearchString(e.target.value);
   };
   const moveToStep2 = (value) => {
-    setStep(2);
+    setSearchType(value);
   };
   useEffect(() => {
     if (step == 2) {
@@ -733,6 +800,7 @@ const GlobalSearch = () => {
       >
         <Input
           onChange={onChangeInput}
+          value={searchString}
           className={styles['input-globalSearch']}
           placeholder='Search or jump to'
           prefix={<SearchOutlined style={{ color: '#B7BEC8' }} />}
@@ -743,9 +811,7 @@ const GlobalSearch = () => {
             color: '#B7BEC8',
             boxShadow: 'none'
           }}
-          ref={(tempRef) => {
-            inputComponentRef = tempRef;
-          }}
+          ref={inputComponentRef}
         />
         <div style={{ padding: '0 5px' }}>
           <SVG name='command' width='32px' height='32px' />
@@ -754,12 +820,16 @@ const GlobalSearch = () => {
           <SVG name='letterk' width='32px' height='32px' />
         </div>
       </div>
-      {searchString.length !== 0 ? (
+      {searchString.length > 0 && searchType === 0 ? (
         <SearchResults
           searchString={searchString}
           openSavedReports={openSavedReports}
+          searchType={searchType}
         />
-      ) : step === 1 ? (
+      ) : (
+        ''
+      )}
+      {searchString.length === 0 && searchType === 0 ? (
         <Part1GlobalSearch
           items={items}
           setStep={moveToStep2}
@@ -768,13 +838,22 @@ const GlobalSearch = () => {
           openSavedReports={openSavedReports}
         />
       ) : (
+        ''
+      )}
+      {searchType !== 0 ? (
         <Part2GlobalSearch
           openSavedReports={openSavedReports}
           moveBackStep1={moveBackStep1}
           setStep={setStep}
           data={step2Content}
           step2Type={step2Type}
+          searchType={searchType}
+          setSearchType={setSearchType}
+          searchString={searchString}
+          setSearchString={setSearchString}
         />
+      ) : (
+        ''
       )}
     </div>
   );
