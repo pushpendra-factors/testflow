@@ -56,13 +56,13 @@ else{
         {fetchingIngishts ? <Spin size={'large'} className={'fa-page-loader'} /> :
           <>
 
-            <HeaderContents activeQuery={activeQuery} />
+            <HeaderContents activeQuery={activeQuery?.query} />
             <div className={'fa-container'}>
               <div className={'mt-24'}> 
                 <QueryBuilder 
                 collapse={collapse}
                 setCollapse={setCollapse}
-                activeQuery={activeQuery}
+                activeQuery={activeQuery?.query}
                 />
                 {activeInsights && <div id={'fa-report-container'}>
                   <Sankey activeQuery={activeQuery} sankeyData={activeInsights} />
