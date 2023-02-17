@@ -643,7 +643,8 @@ export const getTableColumns = (
   ) {
     attrQueryEvents = attrQueries.map((q) => {
       const lbl = q.label;
-      let attrQueryHeaders = headers.filter((h) => h.startsWith(lbl));
+      const metric = q.metric;
+      let attrQueryHeaders = headers.filter((h) => h.startsWith(lbl) || h.startsWith(metric));
       if (!attribution_method_compare) {
         attrQueryHeaders = attrQueryHeaders.filter(
           (hd) => hd.search('(compare)') < 0
@@ -1071,8 +1072,9 @@ export const getTableData = (
       ) {
         attrQueries.forEach((q) => {
           const lbl = q.label;
+          const metric = q.metric;
           headers.forEach((head, i) => {
-            if (head.startsWith(`${lbl} - `)) {
+            if (head.startsWith(`${lbl} - `) || head.startsWith(`${metric} - `)) {
               resultantRow[head] = !comparisonData
                 ? formatCount(row[i], 1)
                 : {

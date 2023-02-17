@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Highcharts from 'highcharts'; 
 import * as highchartsSankey from 'highcharts/modules/sankey';
-import { Timeline, Empty} from 'antd'; 
+import { Timeline, Empty, Button} from 'antd'; 
 import ReactDOMServer from 'react-dom/server'; 
 import _ from 'lodash';
+import { SVG, Text } from 'factorsComponents'; 
+import { useHistory } from 'react-router-dom';
 
 const StepArraowGenerator = (activeQuery) => {
-    let eventName = activeQuery?.event?.label;
+    let eventName = activeQuery?.query?.event?.label;
     let count = Number(activeQuery?.steps)
-    let isReverse = activeQuery?.event_type == "startswith" ? true : false;
+    let isReverse = activeQuery?.query?.event_type == "startswith" ? true : false;
 
     let url = StripUrl(eventName);
     let finalUrl = truncateString(url, 25);
@@ -24,6 +26,21 @@ const StepArraowGenerator = (activeQuery) => {
         </div>
     )
 }
+
+const DataBuildMessage = () => {
+
+    const history = useHistory();
+    const routeChange = (url) => {
+      history.push(url);
+    };
+
+    return <div className='flex flex-col items-center justify-center mt-20'>
+        <img style={{maxWidth: '200px',height: 'auto' }} src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/report-building.png' />
+        <Text type={'title'} weight={'bold'} extraClass={'mt-4'} level={6}>Your report is being built</Text>
+        <Text type={'title'} weight={'thin'} level={7}>This might take a while.</Text> 
+    </div>
+}
+
 
 const truncateString = (str, num) => {
     if (str.length <= num) {
@@ -68,7 +85,7 @@ function Sankey({
     const [reverseChart, setReverseChart] = useState(true);
 
     useEffect(() => {
-        let isReverse = activeQuery?.event_type == "startswith" ? false : true
+        let isReverse = activeQuery?.query?.event_type == "startswith" ? false : true
         setReverseChart(isReverse)
         setChartData(transformDataFn(sankeyData, isReverse)) 
     }, [activeQuery, sankeyData])
@@ -257,6 +274,8 @@ function Sankey({
         ],
     };
 
+
+
  
     const drawChart = useCallback(() => { 
         Highcharts.chart("fa-sankey-container", {
@@ -283,7 +302,7 @@ function Sankey({
                             options={options}
                         /> */}
 
-                        {(chartData && _.isEmpty(chartData)) ?  <Empty /> : 
+                        {(chartData && _.isEmpty(chartData)) ?  (activeQuery?.status == 'building' || activeQuery?.status == 'saved') ? <DataBuildMessage /> : <Empty /> : 
                     <div className='fa-sankey-container' id="fa-sankey-container" />
                         }
 
