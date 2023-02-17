@@ -74,7 +74,8 @@ const EventBasedAlert = ({
   groupProperties,
   groupPropNames,
   userProperties,
-  userPropNames
+  userPropNames,
+  eventNames
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -322,8 +323,7 @@ const EventBasedAlert = ({
         .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
         .filter(
           (gbp) =>
-            gbp.eventName === viewAlertDetails?.event_alert?.event &&
-            gbp.eventIndex === 1
+            gbp.eventName === viewAlertDetails?.event_alert?.event
         )
         .forEach((gbp, gbpIndex) => {
           const { groupByIndex, ...orgGbp } = gbp;
@@ -433,7 +433,7 @@ const EventBasedAlert = ({
     setLoading(true);
 
     let breakDownProperties = [];
-    if (EventPropertyDetails?.name) {
+    if (queries.length > 0 && EventPropertyDetails?.name) {
       const category = eventProperties[queries[0]?.label].filter(
         (prop) => prop[1] === EventPropertyDetails?.name
       );
@@ -494,11 +494,20 @@ const EventBasedAlert = ({
         });
     } else {
       setLoading(false);
-      notification.error({
-        message: 'Error',
-        description:
-          'Please select KPI and atleast one delivery option to send alert.'
-      });
+      if(queries.length === 0) {
+        notification.error({
+          message: 'Error',
+          description:
+            'Please select Event to send alert.'
+        });
+      }
+      if(saveSelectedChannel.length === 0) {
+        notification.error({
+          message: 'Error',
+          description:
+            'Please select atleast one delivery option to send alert.'
+        });
+      }
     }
   };
 
@@ -655,13 +664,13 @@ const EventBasedAlert = ({
             </Col>
           </Row>
           <Row className={'mt-4'}>
-            <Col span={10} className={'m-0'}>
+            <Col span={16} className={'m-0'}>
               <Form.Item name='repeat_alerts' className={'m-0'}>
                 <Checkbox
                   defaultChecked={notRepeat}
                   onChange={(e) => setNotRepeat(e.target.checked)}
                 >
-                  Do not repeat an alert more than once
+                  Do not repeat alerts more than once within
                 </Checkbox>
                 <div className='inline -ml-2'>
                   <Select
@@ -738,7 +747,7 @@ const EventBasedAlert = ({
           </Row>
 
           <Row className={'mt-2'}>
-            <Col span={10} className={'m-0'}>
+            <Col span={16} className={'m-0'}>
               <Form.Item name='notifications' className={'m-0'}>
                 <Checkbox
                   defaultChecked={notifications}
@@ -832,7 +841,7 @@ const EventBasedAlert = ({
                       color={'grey-2'}
                       extraClass={'m-0 mt-2 ml-2'}
                     >
-                      Selected Channels
+                      {saveSelectedChannel.length > 1 ? 'Select Channels' : 'Select Channel'}
                     </Text>
                     {saveSelectedChannel.map((channel, index) => (
                       <div key={index}>
@@ -856,7 +865,7 @@ const EventBasedAlert = ({
                       type={'link'}
                       onClick={() => setShowSelectChannelsModal(true)}
                     >
-                      Select Channels
+                      {saveSelectedChannel.length > 1 ? 'Select Channels' : 'Select Channel'}
                     </Button>
                   </Col>
                 </Row>
@@ -867,7 +876,7 @@ const EventBasedAlert = ({
                       type={'link'}
                       onClick={() => setShowSelectChannelsModal(true)}
                     >
-                      Manage Channels
+                      {saveSelectedChannel.length > 1 ? 'Manage Channels' : 'Manage Channel'}
                     </Button>
                   </Col>
                 </Row>
@@ -1085,7 +1094,7 @@ const EventBasedAlert = ({
         <Row className={'m-0 mt-2'}>
           <Col>
             <Button className={`mr-2`} type='link' disabled={true}>
-              {viewAlertDetails?.event_alert?.event}
+              {eventNames[viewAlertDetails?.event_alert?.event] ? eventNames[viewAlertDetails?.event_alert?.event] : viewAlertDetails?.event_alert?.event}
             </Button>
           </Col>
         </Row>
@@ -1106,7 +1115,7 @@ const EventBasedAlert = ({
           </Row>
         )}
         <Row className={'mt-2'}>
-          <Col span={12}>
+          <Col span={16}>
             <Checkbox
               className='inline'
               disabled={true}
@@ -1122,7 +1131,7 @@ const EventBasedAlert = ({
                 }}
                 className={'inline fa-input'}
                 value={
-                  viewAlertDetails?.event_alert?.cool_down_time / 3600 +
+                  (viewAlertDetails?.event_alert?.cool_down_time / 3600) +
                   ' hours'
                 }
               />
@@ -1130,13 +1139,12 @@ const EventBasedAlert = ({
           </Col>
         </Row>
         <Row className={'m-0'}>
-          <Col span={16}>
-            <Form.Item name='event_property' className='m-0 inline'>
+          <Col span={20}>
               <Text
                 type={'title'}
                 level={7}
                 color={'grey-2'}
-                extraClass={'m-0 inline ml-10'}
+                extraClass={'inline m-0 ml-10'}
               >
                 for the same value of
               </Text>
@@ -1154,18 +1162,16 @@ const EventBasedAlert = ({
                           .filter(
                             (gbp) =>
                               gbp.ena ===
-                                viewAlertDetails?.event_alert?.event &&
-                              gbp.eni === 1
+                                viewAlertDetails?.event_alert?.event
                           )
                       )
                   )}
                 </div>
               )}
-            </Form.Item>
           </Col>
         </Row>
         <Row className={'mt-2'}>
-          <Col span={12}>
+          <Col span={16}>
             <Checkbox
               className='inline'
               disabled={true}
@@ -1221,7 +1227,7 @@ const EventBasedAlert = ({
                   color={'grey-2'}
                   extraClass={'m-0 mt-2 ml-2'}
                 >
-                  Selected Channels
+                  {viewSelectedChannels.length > 1 ? 'Selected Channels' : 'Selected Channel'}
                 </Text>
                 {viewSelectedChannels.map((channel, index) => (
                   <div key={index}>
@@ -1396,7 +1402,8 @@ const mapStateToProps = (state) => ({
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
   userProperties: state.coreQuery.userProperties,
-  userPropNames: state.coreQuery.userPropNames
+  userPropNames: state.coreQuery.userPropNames,
+  eventNames: state.coreQuery.eventNames
 });
 
 export default connect(mapStateToProps, {

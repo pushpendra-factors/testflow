@@ -45,7 +45,7 @@ import { fetchTemplates } from '../../reducers/dashboard_templates/services';
 import { AppLayoutRoutes } from 'Routes';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import GlobalSearch from 'Components/GlobalSearch';
-import "./index.css"
+import './index.css';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -75,13 +75,15 @@ function AppLayout({
 
   const activeAgent = agentState?.agent_details?.email;
 
-  const isVisibleGlobalSearch = useSelector(state=>state.globalSearch.visible)
+  const isVisibleGlobalSearch = useSelector(
+    (state) => state.globalSearch.visible
+  );
 
-  const onKeyDown = (e)=>{
-    if(e.metaKey && e.keyCode == 75){
-      dispatch({type: TOGGLE_GLOBAL_SEARCH})
+  const onKeyDown = (e) => {
+    if (e.metaKey && e.keyCode == 75) {
+      dispatch({ type: TOGGLE_GLOBAL_SEARCH });
     }
-  }
+  };
   const asyncCallOnLoad = useCallback(async () => {
     try {
       if (isAgentLoggedIn) await fetchProjects();
@@ -90,14 +92,14 @@ function AppLayout({
       console.log(err);
     }
   }, [fetchProjects, isAgentLoggedIn]);
-  useEffect(()=>{
+  useEffect(() => {
     // on Mount of Component
     document.onkeydown = onKeyDown;
-    return ()=>{
+    return () => {
       // on Unmount of Component
-      document.onkeydown = null
-    }
-  },[])
+      document.onkeydown = null;
+    };
+  }, []);
   useEffect(() => {
     asyncCallOnLoad();
   }, [asyncCallOnLoad]);
@@ -190,16 +192,19 @@ function AppLayout({
                 </Suspense>
               </Content>
             </Layout>
-            <Modal 
+            <Modal
               zIndex={2000}
-              keyboard={true} 
-              visible={isVisibleGlobalSearch} 
-              footer={null} 
-              closable={false} 
-              onCancel={()=>{dispatch({type: TOGGLE_GLOBAL_SEARCH})}}
-              bodyStyle={{padding: 0}}
+              keyboard={true}
+              visible={isVisibleGlobalSearch}
+              footer={null}
+              closable={false}
+              onCancel={() => {
+                dispatch({ type: TOGGLE_GLOBAL_SEARCH });
+              }}
+              bodyStyle={{ padding: 0 }}
               width={'40vw'}
-              className="modal-globalsearch">
+              className='modal-globalsearch'
+            >
               <GlobalSearch />
             </Modal>
           </ErrorBoundary>
