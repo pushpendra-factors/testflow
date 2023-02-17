@@ -14,7 +14,8 @@ import {
   QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
   CHART_TYPE_PIVOT_CHART,
-  CHART_TYPE_METRIC_CHART
+  CHART_TYPE_METRIC_CHART,
+  CHART_TYPE_FUNNEL_CHART
 } from './constants';
 
 export const isPivotSupported = ({ queryType }) => {
@@ -101,8 +102,16 @@ export const getChartTypeMenuItems = (
   if (queryType === QUERY_TYPE_FUNNEL && breakdownLength) {
     menuItems = [
       {
+        key: CHART_TYPE_FUNNEL_CHART,
+        name: 'Funnels'
+      },
+      {
         key: CHART_TYPE_BARCHART,
-        name: 'Columns'
+        name: 'Column'
+      },
+      {
+        key: CHART_TYPE_HORIZONTAL_BAR_CHART,
+        name: 'Bars'
       },
       {
         key: CHART_TYPE_METRIC_CHART,
@@ -117,8 +126,8 @@ export const getChartTypeMenuItems = (
   if (queryType === QUERY_TYPE_FUNNEL && !breakdownLength) {
     menuItems = [
       {
-        key: CHART_TYPE_BARCHART,
-        name: 'Columns'
+        key: CHART_TYPE_FUNNEL_CHART,
+        name: 'Funnels'
       },
       {
         key: CHART_TYPE_METRIC_CHART,

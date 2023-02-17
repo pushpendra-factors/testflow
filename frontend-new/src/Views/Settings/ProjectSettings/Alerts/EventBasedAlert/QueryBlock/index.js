@@ -294,10 +294,10 @@ function QueryBlock({
                   refValue={refValue}
                 />
               </div>
-              {/* {ind !== orFilterIndex && (
+              {ind !== orFilterIndex && (
                 <ORButton index={ind} setOrFilterIndex={setOrFilterIndex} />
-              )} */}
-              {/* {ind === orFilterIndex && (
+              )}
+              {ind === orFilterIndex && (
                 <div key='init'>
                   <EventFilterWrapper
                     filterProps={filterProps}
@@ -310,7 +310,7 @@ function QueryBlock({
                     showOr
                   />
                 </div>
-              )} */}
+              )}
             </div>
           );
           ind += 1;
@@ -330,7 +330,7 @@ function QueryBlock({
                   refValue={refValue}
                 />
               </div>
-              {/* <div key={ind + 1}>
+              <div key={ind + 1}>
                 <EventFilterWrapper
                   index={ind + 1}
                   filter={filtersGr[1]}
@@ -343,7 +343,7 @@ function QueryBlock({
                   refValue={refValue}
                   showOr
                 />
-              </div> */}
+              </div>
             </div>
           );
           ind += 2;

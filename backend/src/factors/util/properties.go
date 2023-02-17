@@ -3310,7 +3310,9 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 					validatedProperties[propertyKey] = sPhoneNo
 				}
 			} else {
-				validatedProperties[propertyKey] = v
+				if k != EP_INTERNAL_IP {
+					validatedProperties[propertyKey] = v
+				}
 			}
 		}
 	}

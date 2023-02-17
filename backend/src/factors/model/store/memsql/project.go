@@ -288,6 +288,12 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		}
 	}
 
+	status, err := store.CreateDefaultFeatureGatesConfigForProject(projectID)
+	if status != http.StatusCreated {
+		logCtx.Error("Create default feature gates failed on create project dependencies for project ID ", projectID)
+		return errCode
+	}
+
 	return http.StatusCreated
 }
 

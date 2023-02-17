@@ -30,13 +30,20 @@ const GlobalFilterSelect = ({
   setValuesByProps,
   applyFilter,
   filter,
-  refValue
+  refValue,
+  viewMode = false
 }) => {
-  const rangePicker = ['=', '!='];
-  const customRangePicker = ['between', 'not between'];
-  const deltaPicker = ['in the previous', 'not in the previous'];
-  const currentPicker = ['in the current', 'not in the current'];
-  const datePicker = ['before', 'since'];
+  const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
+  const customRangePicker = [OPERATORS['between'], OPERATORS['notBetween']];
+  const deltaPicker = [
+    OPERATORS['inThePrevious'],
+    OPERATORS['notInThePrevious']
+  ];
+  const currentPicker = [
+    OPERATORS['inTheCurrent'],
+    OPERATORS['notInTheCurrent']
+  ];
+  const datePicker = [OPERATORS['before'], OPERATORS['since']];
 
   const [propState, setPropState] = useState({
     icon: '',
@@ -44,7 +51,7 @@ const GlobalFilterSelect = ({
     type: ''
   });
 
-  const [operatorState, setOperatorState] = useState('between');
+  const [operatorState, setOperatorState] = useState(OPERATORS['between']);
   const [valuesState, setValuesState] = useState(null);
 
   const [propSelectOpen, setPropSelectOpen] = useState(true);
@@ -162,10 +169,13 @@ const GlobalFilterSelect = ({
     let prop = [label, ...val];
     setPropState({ icon: prop[0], name: prop[1], type: prop[3], extra: val });
     setPropSelectOpen(false);
-    setOperatorState(prop[3] === 'datetime' ? 'between' : '=');
+    setOperatorState(
+      prop[3] === 'datetime' ? OPERATORS['between'] : OPERATORS['equalTo']
+    );
     setValuesState(null);
     setValuesByProps([...val]);
     seteventFilterInfo(val);
+    setValuesSelectionOpen(true);
   };
 
   const valuesSelect = (val) => {
@@ -251,6 +261,7 @@ const GlobalFilterSelect = ({
             className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
             type='link'
             onClick={() => setPropSelectOpen(!propSelectOpen)}
+            disabled={viewMode}
           >
             {renderDisplayName(propState)}
           </Button>
@@ -283,6 +294,7 @@ const GlobalFilterSelect = ({
             className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
             type='link'
             onClick={() => setOperSelectOpen(true)}
+            disabled={viewMode}
           >
             {operatorState ? operatorState : 'Select Operator'}
           </Button>
@@ -393,6 +405,7 @@ const GlobalFilterSelect = ({
           monthPicker
           placement='topRight'
           range={rang}
+          disabled={viewMode}
           onSelect={(rng) => onDateSelect(rng)}
           className={'filter-buttons-margin filter-buttons-radius'}
         />
@@ -402,6 +415,7 @@ const GlobalFilterSelect = ({
     if (customRangePicker.includes(operator)) {
       selectorComponent = (
         <FaDatepicker
+          disabled={viewMode}
           customPicker
           placement='topRight'
           range={rang}
@@ -418,6 +432,7 @@ const GlobalFilterSelect = ({
             value={parsedValues['num']}
             min={1}
             max={999}
+            disabled={viewMode}
             onChange={setDeltaNumber}
             placeholder={'number'}
             controls={false}
@@ -427,6 +442,7 @@ const GlobalFilterSelect = ({
           <Button
             className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
             type='link'
+            disabled={viewMode}
             onClick={() => setDateOptionSelectOpen(true)}
           >
             {parsedValues['gran']
@@ -451,6 +467,7 @@ const GlobalFilterSelect = ({
           <Button
             className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
             type='link'
+            disabled={viewMode}
             onClick={() => setDateOptionSelectOpen(true)}
           >
             {parsedValues['gran']
@@ -473,6 +490,7 @@ const GlobalFilterSelect = ({
       selectorComponent = (
         <DatePicker
           // disabledDate={(d) => !d || d.isAfter(MomentTz())}
+          disabled={viewMode}
           autoFocus={false}
           className={`fa-date-picker`}
           open={showDatePicker}
@@ -559,6 +577,7 @@ const GlobalFilterSelect = ({
               className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
               type='link'
               onClick={() => setContainButton(false)}
+              disabled={viewMode}
             >
               {valuesState ? valuesState : 'Enter Value'}
             </Button>
@@ -566,6 +585,7 @@ const GlobalFilterSelect = ({
           {!containButton && (
             <Input
               type='number'
+              disabled={viewMode}
               value={valuesState}
               placeholder={'Enter Value'}
               autoFocus={true}
@@ -603,6 +623,7 @@ const GlobalFilterSelect = ({
               className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
               type='link'
               onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
+              disabled={viewMode}
             >
               {valuesState && valuesState.length
                 ? valuesState

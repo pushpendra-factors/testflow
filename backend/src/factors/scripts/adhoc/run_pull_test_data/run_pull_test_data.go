@@ -74,7 +74,7 @@ var jobMap = map[string][]string{
 }
 var userIDMap = make(map[string]bool)
 var eventNameIDMap = make(map[uint64]bool)
-var dashboardIDMap = make(map[uint64]bool)
+var dashboardIDMap = make(map[int64]bool)
 var folderName string
 
 func main() {
@@ -443,7 +443,7 @@ func getIDString(tableName string) string {
 		str += "'0000' )"
 	} else if tableName == "dashboards" {
 		for id := range dashboardIDMap {
-			str += strconv.FormatUint(id, 10) + ", "
+			str += strconv.FormatInt(id, 10) + ", "
 		}
 		str += "000000 )"
 	}

@@ -60,6 +60,7 @@ export const CHART_TYPE_TABLE = 'table';
 export const CHART_TYPE_SCATTER_PLOT = 'scatterplotchart';
 export const CHART_TYPE_METRIC_CHART = 'metricchart';
 export const CHART_TYPE_PIVOT_CHART = 'pivotchart';
+export const CHART_TYPE_FUNNEL_CHART = 'funnelchart';
 export const BARCHART_TICK_LENGTH = 20;
 export const UNGROUPED_FUNNEL_TICK_LENGTH = 50;
 
@@ -163,7 +164,8 @@ export const presentationObj = {
   sp: CHART_TYPE_SCATTER_PLOT,
   hb: CHART_TYPE_HORIZONTAL_BAR_CHART,
   pi: CHART_TYPE_PIVOT_CHART,
-  mc: CHART_TYPE_METRIC_CHART
+  mc: CHART_TYPE_METRIC_CHART,
+  fc: CHART_TYPE_FUNNEL_CHART
 };
 
 export const apiChartAnnotations = {
@@ -176,11 +178,12 @@ export const apiChartAnnotations = {
   [CHART_TYPE_SCATTER_PLOT]: 'sp',
   [CHART_TYPE_HORIZONTAL_BAR_CHART]: 'hb',
   [CHART_TYPE_PIVOT_CHART]: 'pi',
-  [CHART_TYPE_METRIC_CHART]: 'mc'
+  [CHART_TYPE_METRIC_CHART]: 'mc',
+  [CHART_TYPE_FUNNEL_CHART]: 'fc'
 };
 
 export const MAX_ALLOWED_VISIBLE_PROPERTIES = 10;
-export const GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES = 6;
+export const GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES = 8;
 
 export const DASHBOARD_TYPES = {
   WEB: 'web',
@@ -443,8 +446,8 @@ export const DefaultChartTypes = {
     dual_touch_point: CHART_TYPE_BARCHART
   },
   [QUERY_TYPE_FUNNEL]: {
-    breakdown: CHART_TYPE_BARCHART,
-    no_breakdown: CHART_TYPE_BARCHART
+    breakdown: CHART_TYPE_FUNNEL_CHART,
+    no_breakdown: CHART_TYPE_FUNNEL_CHART
   },
   [QUERY_TYPE_PROFILE]: {
     no_breakdown: CHART_TYPE_HORIZONTAL_BAR_CHART,
@@ -678,8 +681,8 @@ export const RevFunnelEventsConditionMap = {
 };
 
 export const OPERATORS = {
-  equalTo: '=',
-  notEqualTo: '!=',
+  equalTo: 'equals',
+  notEqualTo: 'not equals',
   contain: 'contains',
   doesNotContain: 'does not contain',
   lesserThan: '<',

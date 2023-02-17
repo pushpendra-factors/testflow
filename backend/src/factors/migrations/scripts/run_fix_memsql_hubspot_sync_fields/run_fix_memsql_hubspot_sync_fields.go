@@ -82,7 +82,7 @@ func main() {
 	}
 }
 
-func UpdateDocumentSyncDetails(projectID uint64, id string, docType int, syncId string,
+func UpdateDocumentSyncDetails(projectID int64, id string, docType int, syncId string,
 	timestamp int64, action int, userID string) int {
 
 	updates := map[string]interface{}{
@@ -110,7 +110,7 @@ func UpdateDocumentSyncDetails(projectID uint64, id string, docType int, syncId 
 }
 
 func GetSyncIdAndUserIdOfHubspotContactCreatedEventUsingUpdatedDocumentID(
-	projectID uint64, id string) (string, string, error) {
+	projectID int64, id string) (string, string, error) {
 
 	logCtx := log.WithField("project_id", projectID).WithField("id", id)
 
@@ -151,7 +151,7 @@ func GetSyncIdAndUserIdOfHubspotContactCreatedEventUsingUpdatedDocumentID(
 	return id, userId, nil
 }
 
-func GetHubspotContactCreatedEvent(projectID uint64, userID string) (string, error) {
+func GetHubspotContactCreatedEvent(projectID int64, userID string) (string, error) {
 	var event model.Event
 
 	db := C.GetServices().Db

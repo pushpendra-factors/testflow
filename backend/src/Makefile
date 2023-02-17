@@ -350,6 +350,13 @@ upload-beam-dashboard-caching-now: export IMAGE_NAME=beam-dashboard-caching-job-
 upload-beam-dashboard-caching-now: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/beam-dashboard-caching-job-now:$(TAG)
 
+pack-sixsignal-report:
+	docker build -t us.gcr.io/factors-$(ENV)/sixsignal-report-job:$(TAG) -f Dockerfile.sixsignal_report_job .
+
+upload-sixsignal-report: export IMAGE_NAME=sixsignal-report-job
+upload-sixsignal-report: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/sixsignal-report-job:$(TAG)
+
 pack-beam-add-session:
 	docker build -t us.gcr.io/factors-$(ENV)/beam-add-session-job:$(TAG) -f Dockerfile.beam_add_session_job .
 

@@ -16,12 +16,6 @@ func main() {
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory.")
 
-	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
-	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
-	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
-	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
-	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
-
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
@@ -44,13 +38,6 @@ func main() {
 	config := &C.Configuration{
 		AppName: appName,
 		Env:     *env,
-		DBInfo: C.DBConf{
-			Host:     *dbHost,
-			Port:     *dbPort,
-			User:     *dbUser,
-			Name:     *dbName,
-			Password: *dbPass,
-		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,

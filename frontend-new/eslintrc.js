@@ -12,7 +12,6 @@ module.exports = {
     'airbnb',
     'prettier'
   ],
-  overrides: [],
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module'
@@ -37,5 +36,26 @@ module.exports = {
       },
       alias: eslintDirAlias
     }
-  }
+  },
+  overrides: [
+    {
+      files: ['**/*.{ts,tsx}'],
+      parser: '@typescript-eslint/parser',
+      extends: ['plugin:@typescript-eslint/recommended'],
+      rules: {
+        'react/prop-types': 'off',
+        'react/jsx-filename-extension': [
+          2,
+          {
+            extensions: ['.jsx', '.tsx']
+          }
+        ],
+        ...{
+          'no-use-before-define': 'off',
+          '@typescript-eslint/no-use-before-define': ['error'],
+          'react/require-default-props': 'off'
+        }
+      }
+    }
+  ]
 };

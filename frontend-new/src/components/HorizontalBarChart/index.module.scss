@@ -1,6 +1,12 @@
 @import '../../styles/abstracts/variables';
 
 .horizontalBarChart {
+  &.no-x-axis {
+    :global(.highcharts-axis-line) {
+      display: none;
+    }
+  }
+
   .infoText {
     font-size: 14px;
     line-height: 20px;

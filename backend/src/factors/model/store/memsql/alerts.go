@@ -305,37 +305,17 @@ func (store *MemSQL) UpdateAlert(projectID int64, alertID string, alert model.Al
 	updatedFields := map[string]interface{}{
 		"alert_name":          alert.AlertName,
 		"alert_configuration": alert.AlertConfiguration,
-		"updated_at":          time.Now().UTC(),
+		//	"alert_description":   alert.AlertDescription,
+		"updated_at": time.Now().UTC(),
 	}
+	alert.ID = alertID
 	// validating alert config
-	var alertConfiguration model.AlertConfiguration
-	err := U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
-	if err != nil {
-		return model.Alert{}, http.StatusInternalServerError, "failed to decode jsonb to alert configuration"
-	}
-	if !alertConfiguration.IsEmailEnabled && !alertConfiguration.IsSlackEnabled {
-		log.WithFields(logFields).Error("Select at least one notification method")
-		return model.Alert{}, http.StatusBadRequest, "Select at least one notification method"
-	}
-	if alertConfiguration.IsEmailEnabled && len(alertConfiguration.Emails) == 0 {
-		log.WithFields(logFields).Error("empty email list")
-		return model.Alert{}, http.StatusBadRequest, "empty email list"
-	}
-	isSlackIntegrated, errCode := store.IsSlackIntegratedForProject(projectID, alert.CreatedBy)
-	if errCode != http.StatusOK {
-		return model.Alert{}, errCode, "failed to check slack integration"
-	}
-	if alertConfiguration.IsSlackEnabled && !isSlackIntegrated {
-		log.WithFields(logFields).Error("Slack integration is not enabled for this project")
-		return model.Alert{}, http.StatusBadRequest, "Slack integration is not enabled for this project"
-	}
-	_, err = store.checkIfDuplicateAlertNameExists(projectID, alert.AlertName, alertID)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Error("Failed to update alerts, already exists with name ", alert.AlertName)
-		return model.Alert{}, http.StatusBadRequest, err.Error()
+	isValid, status, errMsg := store.validateAlertBody(projectID, alert, true)
+	if !isValid {
+		return model.Alert{}, status, errMsg
 	}
 	db := C.GetServices().Db
-	err = db.Table("alerts").Where("project_id = ? AND id = ?", projectID, alertID).Updates(updatedFields).Error
+	err := db.Table("alerts").Where("project_id = ? AND id = ?", projectID, alertID).Updates(updatedFields).Error
 	if err != nil {
 		log.WithFields(logFields).WithError(err).WithField("project_id", projectID).Error(
 			"Failed to update rule object.")
@@ -359,70 +339,6 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
-	var alertDescription model.AlertDescription
-	var alertConfiguration model.AlertConfiguration
-	err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
-	if err != nil {
-		return model.Alert{}, http.StatusInternalServerError, "failed to decode jsonb to alert description"
-	}
-	// validations
-	// - Check for valid operator
-	// - Check if the KPI/Metric is valid TODO
-	// - Check if the date range is valid for both type 1 and type 2
-	// skip validations for saved query report sharing i.e type 3
-	skipValidation := false
-
-	if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
-		skipValidation = true
-	}
-	if alertDescription.Name == "" && alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
-		logCtx.Error("Invalid alert name")
-		return model.Alert{}, http.StatusBadRequest, "Invalid alert name"
-	}
-	err = U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
-	if err != nil {
-		return model.Alert{}, http.StatusInternalServerError, "failed to decode jsonb to alert configuration"
-	}
-	if !alertConfiguration.IsEmailEnabled && !alertConfiguration.IsSlackEnabled {
-		logCtx.Error("Select at least one notification method")
-		return model.Alert{}, http.StatusBadRequest, "Select at least one notification method"
-	}
-	if alertConfiguration.IsEmailEnabled && len(alertConfiguration.Emails) == 0 {
-		logCtx.Error("empty email list")
-		return model.Alert{}, http.StatusBadRequest, "empty email list"
-	}
-	isSlackIntegrated, errCode := store.IsSlackIntegratedForProject(projectID, alert.CreatedBy)
-	if errCode != http.StatusOK {
-		return model.Alert{}, errCode, "failed to check slack integration"
-	}
-	if alertConfiguration.IsSlackEnabled && !isSlackIntegrated {
-		logCtx.Error("Slack integration is not enabled for this project")
-		return model.Alert{}, http.StatusBadRequest, "Slack integration is not enabled for this project"
-	}
-	_, err = store.checkIfDuplicateAlertNameExists(projectID, alert.AlertName, "")
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to create alert")
-		return model.Alert{}, http.StatusBadRequest, err.Error()
-	}
-
-	if !skipValidation {
-		if !store.isValidOperator(alertDescription.Operator) {
-			return model.Alert{}, http.StatusBadRequest, "Invalid Operator for Alert"
-		}
-	}
-	if alert.AlertType == model.ALERT_TYPE_SINGLE_RANGE {
-		if !store.isValidDateRange(alertDescription.DateRange) {
-			return model.Alert{}, http.StatusBadRequest, "Invalid Date Range"
-		}
-	} else if alert.AlertType == model.ALERT_TYPE_MULTI_RANGE {
-		if !store.isValidDateRangeAndComparedTo(alertDescription.DateRange, alertDescription.ComparedTo) {
-			return model.Alert{}, http.StatusBadRequest, "Invalid Date Range"
-		}
-	} else {
-		if alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
-			return model.Alert{}, http.StatusBadRequest, "Invalid Alert Type"
-		}
-	}
 	alertRecord := model.Alert{
 		ID:                 U.GetUUID(),
 		ProjectID:          projectID,
@@ -436,8 +352,12 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 		CreatedAt:          time.Now().UTC(),
 		UpdatedAt:          time.Now().UTC(),
 	}
+	isValid, status, errMsg := store.validateAlertBody(projectID, alertRecord, false)
+	if !isValid {
+		return model.Alert{}, status, errMsg
+	}
 	db := C.GetServices().Db
-	err = db.Create(&alertRecord).Error
+	err := db.Create(&alertRecord).Error
 	if err != nil {
 		logCtx.WithError(err).WithField("project_id", alertRecord.ProjectID).Error(
 			"Failed to insert alert record.")
@@ -445,6 +365,84 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 	}
 	return alertRecord, http.StatusCreated, ""
 
+}
+
+func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert, skipDescription bool) (bool, int, string) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"alert":      alert,
+	}
+	logCtx := log.WithFields(logFields)
+
+	var alertDescription model.AlertDescription
+	var alertConfiguration model.AlertConfiguration
+	// validations
+	// - Check for valid operator
+	// - Check if the KPI/Metric is valid TODO
+	// - Check if the date range is valid for both type 1 and type 2
+	// skip validations for saved query report sharing i.e type 3
+	skipValidation := false
+
+	if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
+		skipValidation = true
+	}
+	err := U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
+	if err != nil {
+		return false, http.StatusInternalServerError, "failed to decode jsonb to alert configuration"
+	}
+	if !alertConfiguration.IsEmailEnabled && !alertConfiguration.IsSlackEnabled {
+		logCtx.Error("Select at least one notification method")
+		return false, http.StatusBadRequest, "Select at least one notification method"
+	}
+	if alertConfiguration.IsEmailEnabled && len(alertConfiguration.Emails) == 0 {
+		logCtx.Error("empty email list")
+		return false, http.StatusBadRequest, "empty email list"
+	}
+	isSlackIntegrated, errCode := store.IsSlackIntegratedForProject(projectID, alert.CreatedBy)
+	if errCode != http.StatusOK {
+		return false, errCode, "failed to check slack integration"
+	}
+	if alertConfiguration.IsSlackEnabled && !isSlackIntegrated {
+		logCtx.Error("Slack integration is not enabled for this project")
+		return false, http.StatusBadRequest, "Slack integration is not enabled for this project"
+	}
+	_, err = store.checkIfDuplicateAlertNameExists(projectID, alert.AlertName, alert.ID)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to create alert")
+		return false, http.StatusBadRequest, err.Error()
+	}
+	if skipDescription {
+		return true, http.StatusOK, ""
+	}
+	err = U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
+	if err != nil {
+		return false, http.StatusInternalServerError, "failed to decode jsonb to alert description"
+	}
+	
+	if alertDescription.Name == "" && alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
+		logCtx.Error("Invalid alert name")
+		return false, http.StatusBadRequest, "Invalid alert name"
+	}
+
+	if !skipValidation {
+		if !store.isValidOperator(alertDescription.Operator) {
+			return false, http.StatusBadRequest, "Invalid Operator for Alert"
+		}
+	}
+	if alert.AlertType == model.ALERT_TYPE_SINGLE_RANGE {
+		if !store.isValidDateRange(alertDescription.DateRange) {
+			return false, http.StatusBadRequest, "Invalid Date Range"
+		}
+	} else if alert.AlertType == model.ALERT_TYPE_MULTI_RANGE {
+		if !store.isValidDateRangeAndComparedTo(alertDescription.DateRange, alertDescription.ComparedTo) {
+			return false, http.StatusBadRequest, "Invalid Date Range"
+		}
+	} else {
+		if alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
+			return false, http.StatusBadRequest, "Invalid Alert Type"
+		}
+	}
+	return true, http.StatusOK, ""
 }
 func (store *MemSQL) checkIfDuplicateAlertNameExists(projectID int64, alertName string, alertID string) (allowed bool, err error) {
 	alerts, status := store.GetAllAlerts(projectID, true)
