@@ -50,6 +50,7 @@ import {
 import AppModal from '../AppModal';
 import { SVG, Text } from '../factorsComponents';
 import { useHistory } from 'react-router-dom';
+import _ from 'lodash';
 
 function SaveQuery({
   requestQuery,
@@ -96,6 +97,7 @@ function SaveQuery({
 
   const {
     attributionMetrics,
+    setNavigatedFromAnalyse,
     coreQueryState: { chartTypes, pivotConfig, navigatedFromDashboard, navigatedFromAnalyse }
   } = useContext(CoreQueryContext);
 
@@ -333,6 +335,7 @@ function SaveQuery({
           queryId = res.data.id;
 
           dispatch({ type: QUERY_CREATED, payload: res.data });
+          setNavigatedFromAnalyse(res?.data);
           // setQuerySaved({ name: title, id: res.data.id });
 
           // if(queryType === QUERY_TYPE_EVENT && res?.data?.id_text) {
@@ -502,7 +505,7 @@ function SaveQuery({
       };
 
       const reqBody = {
-        title: (navigatedData?.query?.title || navigatedData?.title),
+        title: (queryGettingUpdated?.query?.title || queryGettingUpdated?.title),
         query: query,
         settings: updatedSettings
       };
@@ -513,12 +516,12 @@ function SaveQuery({
         type: QUERY_UPDATED,
         queryId: (navigatedData?.query_id || navigatedData?.key || navigatedData?.id),
         payload: {
-          title: (navigatedData?.query?.title || navigatedData?.title),
+          title: (queryGettingUpdated?.query?.title || queryGettingUpdated?.title),
           query,
           settings: updatedSettings
         }
       });
-      setQuerySaved({ name: (navigatedData?.query?.title || navigatedData?.title), id: (navigatedData?.query_id || navigatedData?.key || navigatedData?.id) });
+      setQuerySaved({ name: (queryGettingUpdated?.query?.title || queryGettingUpdated?.title), id: (navigatedData?.query_id || navigatedData?.key || navigatedData?.id) });
 
       notification.success({
         message: 'Report Saved Successfully',
