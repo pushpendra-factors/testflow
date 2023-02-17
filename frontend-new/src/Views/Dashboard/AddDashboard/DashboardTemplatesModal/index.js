@@ -243,7 +243,8 @@ let Step1DashboardTemplateModal = ({
                           width: '300px',
                           cursor: 'pointer',
                           borderRadius: '2.6792px',
-                          margin: '10px 0px'
+                          margin: '10px 0px',
+                          textAlign: 'left'
                         }}
                         onClick={() => handleTemplate(eachIndex)}
                       >
