@@ -82,7 +82,7 @@ import { getSavedPivotConfig } from 'Views/CoreQuery/coreQuery.helpers';
 import { getChartChangedKey } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import _ from 'lodash';
 import AttributionHeader from './AttributionHeader';
-import ReportContent from 'Views/CoreQuery/AnalysisResultsPage/ReportContent';
+import ReportContent from './ReportContent';
 import useQuery from 'hooks/useQuery';
 import { Button, notification, Spin } from 'antd';
 import WeeklyInsights from 'Views/CoreQuery/WeeklyInsights';
@@ -128,7 +128,8 @@ function CoreQuery({
   const [queryOptions, setQueryOptions] = useState({
     ...QUERY_OPTIONS_DEFAULT_VALUE,
     session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
-    date_range: { ...DefaultDateRangeFormat }
+    date_range: { ...DefaultDateRangeFormat },
+    group_analysis: 'all'
   });
   const [attributionsState, setAttributionsState] = useState({
     eventGoal: {},
@@ -754,7 +755,7 @@ function CoreQuery({
 
       setQueryOptions((currData) => ({
         ...currData,
-        group_analysis: record.query.query.analyze_type
+        group_analysis: 'all'
       }));
       updateSavedQuerySettings(record.settings || {});
       setSavedReportLoaded({

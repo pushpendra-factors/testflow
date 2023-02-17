@@ -212,7 +212,8 @@ func main() {
 	log.Info(status)
 	if status["err"] != nil {
 		C.PingHealthcheckForFailure(healthcheckPingID, status)
+	} else {
+		C.PingHealthcheckForSuccess(healthcheckPingID, status)
 	}
-	C.PingHealthcheckForSuccess(healthcheckPingID, status)
 
 }

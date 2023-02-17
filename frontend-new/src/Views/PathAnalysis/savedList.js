@@ -44,7 +44,7 @@ const SavedGoals = ({ savedQuery, setShowReport, SetfetchingIngishts,setActiveIn
 
   const getInsights = (data) => { 
     SetfetchingIngishts(true);
-    setActiveInsightQuery(data?.query)
+    setActiveInsightQuery(data);
     const getData = async () => {
       await fetchPathAnalysisInsights(activeProject?.id, data?.id);
     };
@@ -79,9 +79,10 @@ const SavedGoals = ({ savedQuery, setShowReport, SetfetchingIngishts,setActiveIn
       key: 'data',
       width: '350px',
       render: (data) => <Text type={'title'} level={7} truncate={true}
-      extraClass={`${(data?.status == 'saved' || data?.status == 'building') ? "" : "cursor-pointer"} m-0`} 
-      onClick={(data?.status == 'saved' || data?.status == 'building') ? "" : () => getInsights(data)}
-      // onClick={() => getInsights(data)}
+      // extraClass={`${(data?.status == 'saved' || data?.status == 'building') ? "" : "cursor-pointer"} m-0`} 
+      // onClick={(data?.status == 'saved' || data?.status == 'building') ? "" : () => getInsights(data)}
+      extraClass={`cursor-pointer m-0`} 
+      onClick={() => getInsights(data)}
       >{data?.title}</Text>
     },
     {
