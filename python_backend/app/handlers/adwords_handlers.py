@@ -18,6 +18,13 @@ STATUS_FAILURE = "failure"
 REFRESH_TOKEN_FAILURE = "refresh token failure"
 
 
+class DefaultHandler(BaseHandler):
+    @gen.coroutine
+    def get(self):
+        self.set_status(200)
+        self.finish({"status": "I'm ok."})
+        return
+
 class OAuthRedirectHandler(BaseHandler):
 
     @gen.coroutine
