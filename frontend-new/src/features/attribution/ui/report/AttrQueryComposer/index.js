@@ -59,8 +59,6 @@ const AttrQueryComposer = ({
 
   const { attrQueries } = useSelector((state) => state.attributionDashboard);
 
-  const [queries, setQueries] = useState(attrQueries);
-
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -115,7 +113,7 @@ const AttrQueryComposer = ({
   };
 
   const setToQueries = (val, index) => {
-    const qs = [...queries];
+    const qs = [...attrQueries];
     if (qs[index]) {
       qs[index] = val;
     } else {
@@ -125,13 +123,11 @@ const AttrQueryComposer = ({
       type: SET_ATTR_QUERIES,
       payload: qs
     });
-    setQueries(qs);
     setGoalEvent({ filters: [] });
   };
 
   const delQuery = (index) => {
-    const qs = [...queries].filter((v, i) => i != index);
-    setQueries(qs);
+    const qs = [...attrQueries].filter((v, i) => i != index);
     dispatch({
       type: SET_ATTR_QUERIES,
       payload: qs
@@ -139,30 +135,29 @@ const AttrQueryComposer = ({
   };
 
   const renderConversionBlock = () => {
-    
-      const qs = queries.map((query, index) => {
-        return (
-          <ConversionGoalBlock
-            eventGoal={query}
-            eventGoalChange={(val) => setToQueries(val, index)}
-            delEvent={() => delQuery(index)}
-            group_analysis={'all'}
-            showDerivedKPI={false}
-          ></ConversionGoalBlock>
-        );
-      });
+    const qs = attrQueries.map((query, index) => {
+      return (
+        <ConversionGoalBlock
+          eventGoal={query}
+          eventGoalChange={(val) => setToQueries(val, index)}
+          delEvent={() => delQuery(index)}
+          group_analysis={'all'}
+          showDerivedKPI={false}
+        ></ConversionGoalBlock>
+      );
+    });
 
-      if (qs.length < 5) {
-        qs.push(
-          <ConversionGoalBlock
-            eventGoalChange={(val) => setToQueries(val, -1)}
-            group_analysis={'all'}
-            showDerivedKPI={false}
-          ></ConversionGoalBlock>
-        );
-      }
+    if (qs.length < 5) {
+      qs.push(
+        <ConversionGoalBlock
+          eventGoalChange={(val) => setToQueries(val, -1)}
+          group_analysis={'all'}
+          showDerivedKPI={false}
+        ></ConversionGoalBlock>
+      );
+    }
 
-      return qs;
+    return qs;
   };
 
   const renderMarkTouchpointBlock = () => {
@@ -211,7 +206,7 @@ const AttrQueryComposer = ({
   const footer = () => {
     if (
       (!eventGoal || !eventGoal?.label?.length) &&
-      (!queries || !queries.length)
+      (!attrQueries || !attrQueries.length)
     ) {
       return null;
     }
@@ -288,15 +283,13 @@ const AttrQueryComposer = ({
           {renderConversionBlock()}
         </ComposerBlock>
 
-        {eventGoal?.label?.length || queries.length ? (
-          <div
-            className={`no-padding-l no-padding-r`}
-          >
+        {eventGoal?.label?.length || attrQueries.length ? (
+          <div className={`no-padding-l no-padding-r`}>
             {renderMarkTouchpointBlock()}
           </div>
         ) : null}
 
-        {eventGoal?.label?.length || queries.length ? (
+        {eventGoal?.label?.length || attrQueries.length ? (
           <ComposerBlock
             blockTitle={'Attribution Model'}
             isOpen={criteriablockOpen}
@@ -308,8 +301,7 @@ const AttrQueryComposer = ({
           </ComposerBlock>
         ) : null}
 
-
-        {eventGoal?.label?.length || queries.length ? footer() : null}
+        {eventGoal?.label?.length || attrQueries.length ? footer() : null}
       </div>
     );
   } catch (err) {
