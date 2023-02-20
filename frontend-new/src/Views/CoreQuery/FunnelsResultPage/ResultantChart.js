@@ -50,7 +50,7 @@ function ResultantChartComponent({
         isWidgetModal={isWidgetModal}
         arrayMapper={arrayMapper}
         section={section}
-        ref={renderedCompRef}
+        renderedCompRef={renderedCompRef}
         chartType={chartType}
         tableConfig={tableConfig}
         tableConfigPopoverContent={tableConfigPopoverContent}
