@@ -125,9 +125,9 @@ func WriteSixSignalResultsToCloud(diskManager *serviceDisk.DiskDriver, cloudMana
 }
 
 func GetSixSignalAnalysisData(projectId int64, id string) map[int]model.SixSignalResultGroup {
-	path, _ := C.GetCloudManager(projectId).GetSixSignalAnalysisTempFilePathAndName(id, projectId)
-	log.Info("Path for reading the file from cloud: ", path)
-	reader, err := C.GetCloudManager(projectId).Get(path, "result.txt")
+	path, _ := C.GetCloudManager(projectId, false).GetSixSignalAnalysisTempFilePathAndName(id, projectId)
+	fmt.Println(path)
+	reader, err := C.GetCloudManager(projectId, false).Get(path, "result.txt")
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file from Cloud Manager for projectid: ", projectId)

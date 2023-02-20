@@ -486,6 +486,9 @@ func (dd *DiskDriver) GetExplainV2ModelPath(id uint64, projectId int64) (string,
 	return chunksPath, "chunk_1.txt"
 }
 
+func (dd *DiskDriver) GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string){
+	return fmt.Sprintf("%s/projects/%v/list/%v/", dd.baseDir, projectID, reference), "list.txt"
+}
 func (dd *DiskDriver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) string {
 	path := dd.GetProjectDir(projectId)
 	return fmt.Sprintf("%ssixSignal/%v/", path, id)

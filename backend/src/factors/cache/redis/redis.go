@@ -174,6 +174,44 @@ func set(key *Key, value string, expiryInSecs float64, persistent bool) error {
 	return err
 }
 
+func ZAddPersistent(key *Key, value string, expiryInSecs float64) error {
+	return zadd(key, value, expiryInSecs, true)
+}
+
+func ZAdd(key *Key, value string, expiryInSecs float64) error {
+	return zadd(key, value, expiryInSecs, false)
+}
+
+func zadd(key *Key, value string, expiryInSecs float64, persistent bool) error {
+	if key == nil {
+		return ErrorInvalidKey
+	}
+
+	if value == "" {
+		return errors.New("empty cache key value")
+	}
+
+	cKey, err := key.Key()
+	if err != nil {
+		return err
+	}
+
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	_, err = redisConn.Do("ZADD", cKey, 1, value)
+	if expiryInSecs != 0 {
+		redisConn.Do("EXPIRE", cKey, int64(expiryInSecs))
+	}
+
+	return err
+}
+
 // GetIfExistsPersistent - Check if the cache key exists, if not return null
 // Get value if the cache key exists
 func GetIfExistsPersistent(key *Key) (string, bool, error) {
@@ -718,6 +756,34 @@ func zcard(key *Key, persistent bool) (int64, error) {
 	defer redisConn.Close()
 
 	return redis.Int64(redisConn.Do("ZCARD", cKey))
+}
+
+func ZScore(key *Key, member string) (int64, error) {
+	return zscore(key, member, false)
+}
+func ZScorePersistent(key *Key, member string) (int64, error) {
+	return zscore(key, member,  true)
+}
+func zscore(key *Key, member string, persistent bool) (int64, error) {
+	if key == nil {
+		return 0, ErrorInvalidKey
+	}
+
+	cKey, err := key.Key()
+	if err != nil {
+		return 0, err
+	}
+
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	result, err := redisConn.Do("ZSCORE", cKey, member)
+	return redis.Int64(result, err)
 }
 
 func ZrangeWithScores(OnlyPrefixKey bool, key *Key) (map[string]string, error) {

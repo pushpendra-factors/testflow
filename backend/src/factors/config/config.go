@@ -276,8 +276,6 @@ type Configuration struct {
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
-	EventTriggerEnabled                                bool
-	EventTriggerEnabledProjectIDs                      string
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
@@ -2095,7 +2093,10 @@ func GetAppName(defaultAppName, overrideAppName string) string {
 	return defaultAppName
 }
 
-func GetCloudManager(projectId int64) filestore.FileManager {
+func GetCloudManager(projectId int64, skipProjectIdDependency bool) filestore.FileManager {
+	if(skipProjectIdDependency){
+		return configuration.NewCloudManager
+	}
 	if U.ContainsInt64InArray(configuration.ProjectIdsV2, projectId) {
 		return configuration.NewCloudManager
 	}
@@ -2396,21 +2397,7 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	}
 
 	return true
-}
-
-func IsEventTriggerEnabled() bool {
-	return configuration.EventTriggerEnabled
-}
-
-func IsProjectIDEventTriggerEnabledProjectID(id int64) bool {
-	list := GetTokensFromStringListAsUint64(configuration.EventTriggerEnabledProjectIDs)
-	for _, i := range list {
-		if i == id {
-			return true
-		}
-	}
-	return false
-}
+}	
 
 func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
 	if configuration.IncreaseKPILimitForProjectIDs == "" {

@@ -64,6 +64,9 @@ type FileManager interface {
 	GetExplainV2Dir(id uint64, projectId int64) string
 	GetExplainV2ModelPath(id uint64, projectId int64) (string, string)
 
+	GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string)
+
 	GetSixSignalAnalysisTempFileDir(id string, projectId int64) string
 	GetSixSignalAnalysisTempFilePathAndName(id string, projectId int64) (string, string)
+
 }

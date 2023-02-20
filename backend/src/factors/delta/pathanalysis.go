@@ -200,7 +200,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				}
 			}
 			if actualQuery.EventType == M.STARTSWITH {
-				if E.EventMatchesCriterion(event.EventName, event.UserProperties, event.EventProperties, queryCriteria) { // check if a particular event matches the request criteria
+				if E.EventMatchesCriterion(projectId, event.EventName, event.UserProperties, event.EventProperties, queryCriteria) { // check if a particular event matches the request criteria
 					matched = true
 				}
 				if matched == true {
@@ -219,7 +219,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 					finalEvents = RemoveFromArray(finalEvents, event.EventName)
 				}
 				finalEvents = EnqueueWithSize(finalEvents, event.EventName, actualQuery.NumberOfSteps+1)
-				if E.EventMatchesCriterion(event.EventName, event.UserProperties, event.EventProperties, queryCriteria) { // check if a particular event matches the request criteria
+				if E.EventMatchesCriterion(projectId, event.EventName, event.UserProperties, event.EventProperties, queryCriteria) { // check if a particular event matches the request criteria
 					matched = true
 				}
 				// Check this has to be the last event or the first event
@@ -441,9 +441,9 @@ func RemoveFromArray(events []string, key string) []string {
 }
 
 func GetPathAnalysisData(projectId int64, id string) map[int]map[string]int {
-	path, _ := C.GetCloudManager(projectId).GetPathAnalysisTempFilePathAndName(id, projectId)
+	path, _ := C.GetCloudManager(projectId, false).GetPathAnalysisTempFilePathAndName(id, projectId)
 	fmt.Println(path)
-	reader, err := C.GetCloudManager(projectId).Get(path, "result.txt")
+	reader, err := C.GetCloudManager(projectId, false).Get(path, "result.txt")
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")

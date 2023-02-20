@@ -771,12 +771,12 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 	}
 	path, file := "", ""
 	if mailerRun == true {
-		path, file = C.GetCloudManager(projectId).GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue, true)
+		path, file = C.GetCloudManager(projectId, false).GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue, true)
 	} else {
-		path, file = C.GetCloudManager(projectId).GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue, false)
+		path, file = C.GetCloudManager(projectId, false).GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue, false)
 	}
 	fmt.Println("path/file:", path, file)
-	reader, err := C.GetCloudManager(projectId).Get(path, file)
+	reader, err := C.GetCloudManager(projectId, false).Get(path, file)
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")
@@ -1279,9 +1279,9 @@ func CheckPercentageChange(overall, week float64) bool {
 
 func GetPropertiesFromFile(projectId int64) map[string]bool {
 	propertiesFromFile := make(map[string]bool)
-	path, file := C.GetCloudManager(projectId).GetWIPropertiesPathAndName(projectId)
+	path, file := C.GetCloudManager(projectId, false).GetWIPropertiesPathAndName(projectId)
 	fmt.Println("path/file:", path, file)
-	reader, err := C.GetCloudManager(projectId).Get(path, file)
+	reader, err := C.GetCloudManager(projectId, false).Get(path, file)
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")

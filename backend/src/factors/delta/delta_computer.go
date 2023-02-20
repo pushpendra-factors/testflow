@@ -78,7 +78,7 @@ func updateCriteriaResult(event P.CounterEventFormat, criteria E.EventsCriteria,
 		return true
 	}
 	for i, eventCriterion := range criteria.EventCriterionList {
-		if E.EventMatchesCriterion(event.EventName, event.UserProperties, event.EventProperties, eventCriterion) {
+		if E.EventMatchesCriterion(0, event.EventName, event.UserProperties, event.EventProperties, eventCriterion) {
 			(*criteriaResult).criterionResultList[i].matchId = (*criteriaResult).numCriterionMatched
 			(*criteriaResult).numCriterionMatched++
 			(*criteriaResult).anyFlag = true
@@ -124,7 +124,7 @@ func updateCriteriaResultEventOccurence(event P.CounterEventFormat, criteria E.E
 		return true
 	}
 	for i, eventCriterion := range criteria.EventCriterionList {
-		if E.EventMatchesCriterion(event.EventName, event.UserProperties, event.EventProperties, eventCriterion) {
+		if E.EventMatchesCriterion(0, event.EventName, event.UserProperties, event.EventProperties, eventCriterion) {
 			(*criteriaResult).criterionResultList[i].matchId = (*criteriaResult).numCriterionMatched
 			(*criteriaResult).numCriterionMatched++
 			(*criteriaResult).anyFlag = true

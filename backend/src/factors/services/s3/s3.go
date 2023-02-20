@@ -358,6 +358,9 @@ func (sd *S3Driver) GetExplainV2ModelPath(id uint64, projectId int64) (string, s
 	return chunksPath, "chunk_1.txt"
 }
 
+func (sd *S3Driver) GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string){
+	return fmt.Sprintf("projects/%v/list/%v/", projectID, reference), "list.txt"
+}
 func (sd *S3Driver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) string {
 	path := sd.GetProjectDir(projectId)
 	return fmt.Sprintf("%ssixSignal/%v/", path, id)
