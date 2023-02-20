@@ -37,7 +37,7 @@ function AttributionsResult({
       attr_dimensions={attrDimensions}
       content_groups={contentGroups}
       currMetricsValue={currMetricsValue}
-      ref={renderedCompRef}
+      renderedCompRef={renderedCompRef}
       chartType={chartType}
       queryOptions={queryOptions}
       attrQueries={attrQueries}

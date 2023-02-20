@@ -63,7 +63,7 @@ const AttributionsChart = ({
   attrQueries,
   queryOptions
 }) => {
-  const { attributionMetrics } = useContext(DashboardContext);
+  const { attributionMetrics, tableFilters } = useContext(DashboardContext);
   const displayedAttributionMetrics = useMemo(
     () => getResultantMetrics(touchpoint, attributionMetrics),
     [touchpoint, attributionMetrics]
@@ -144,7 +144,8 @@ const AttributionsChart = ({
       content_groups,
       undefined,
       queryOptions,
-      attrQueries
+      attrQueries,
+      tableFilters
     );
     setTableData(tableData);
     setVisibleIndices(
@@ -169,7 +170,8 @@ const AttributionsChart = ({
     sorter,
     touchpoint,
     queryOptions,
-    attrQueries
+    attrQueries,
+    tableFilters
   ]);
 
   useEffect(() => {

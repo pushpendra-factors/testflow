@@ -66,10 +66,11 @@ function WidgetCard({
   const [attributionMetrics, setAttributionMetrics] = useState([
     ...ATTRIBUTION_METRICS
   ]);
+  const [tableFilters, setTableFilters] = useState({});
 
   const savedQuery = useMemo(
     () => _.find(savedQueries, (sq) => sq.id === unit.query_id),
-    [savedQueries]
+    [savedQueries, unit?.query_id]
   );
 
   const durationWithSavedFrequency = useMemo(() => {
@@ -115,7 +116,7 @@ function WidgetCard({
       location.state = undefined;
       window.history.replaceState(null, '');
     }
-  }, [location.state, unit.id]);
+  }, [location, unit.id]);
 
   const getData = useCallback(
     async (refresh = false) => {
@@ -320,12 +321,13 @@ function WidgetCard({
       }
     },
     [
-      activeProject.id,
       unit.query,
       unit.id,
       unit.dashboard_id,
       durationWithSavedFrequency,
-      onDataLoadSuccess
+      activeProject.id,
+      onDataLoadSuccess,
+      setOldestRefreshTime
     ]
   );
 
@@ -343,18 +345,19 @@ function WidgetCard({
   }, [dashboardRefreshState.widgetIdGettingFetched, unit.id, getData]);
 
   useEffect(() => {
-    if (
-      unit.query &&
-      unit.query.settings &&
-      unit.query.settings.attributionMetrics
-    ) {
-      setAttributionMetrics(
-        getSavedAttributionMetrics(
-          JSON.parse(unit.query.settings.attributionMetrics)
-        )
-      );
+    if (unit?.query?.settings != null) {
+      if (unit.query.settings.attributionMetrics != null) {
+        setAttributionMetrics(
+          getSavedAttributionMetrics(
+            JSON.parse(unit.query.settings.attributionMetrics)
+          )
+        );
+      }
+      if (unit.query.settings.tableFilters != null) {
+        setTableFilters(JSON.parse(unit.query.settings.tableFilters));
+      }
     }
-  }, [unit.query.settings]);
+  }, [unit?.query?.settings]);
 
   const handleDelete = useCallback(() => {
     showDeleteWidgetModal(unit);
@@ -455,8 +458,13 @@ function WidgetCard({
   ]);
 
   const contextValue = useMemo(
-    () => ({ attributionMetrics, setAttributionMetrics, handleEditQuery }),
-    [attributionMetrics, setAttributionMetrics, handleEditQuery]
+    () => ({
+      attributionMetrics,
+      tableFilters,
+      setAttributionMetrics,
+      handleEditQuery
+    }),
+    [attributionMetrics, tableFilters, handleEditQuery]
   );
 
   return (

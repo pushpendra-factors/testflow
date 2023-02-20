@@ -5,9 +5,11 @@ import React, {
   useReducer,
   useState
 } from 'react';
-import { Button, Col, message, Modal, notification, Row } from 'antd';
-import { saveQuery, updateQuery } from 'Reducers/coreQuery/services';
+import { Button, Col, message, notification, Row } from 'antd';
+import { useHistory } from 'react-router-dom';
 import { useSelector, useDispatch, connect } from 'react-redux';
+import _ from 'lodash';
+import { saveQuery, updateQuery } from 'Reducers/coreQuery/services';
 import { isStringLengthValid } from 'Utils/global';
 import { QUERY_CREATED, QUERY_UPDATED } from 'Reducers/types';
 import { saveQueryToDashboard } from 'Reducers/dashboard/services';
@@ -49,8 +51,6 @@ import {
 } from '../../reducers/global';
 import AppModal from '../AppModal';
 import { SVG, Text } from '../factorsComponents';
-import { useHistory } from 'react-router-dom';
-import _ from 'lodash';
 
 function SaveQuery({
   requestQuery,
@@ -98,7 +98,13 @@ function SaveQuery({
   const {
     attributionMetrics,
     setNavigatedFromAnalyse,
-    coreQueryState: { chartTypes, pivotConfig, navigatedFromDashboard, navigatedFromAnalyse }
+    coreQueryState: {
+      chartTypes,
+      pivotConfig,
+      navigatedFromDashboard,
+      navigatedFromAnalyse,
+      attributionTableFilters
+    }
   } = useContext(CoreQueryContext);
 
   const [saveQueryState, localDispatch] = useReducer(
@@ -154,7 +160,7 @@ function SaveQuery({
     toggleModal();
     updateLocalReducer({ type: SET_ACTIVE_ACTION, payload: ACTION_TYPES.SAVE });
     setShowSaveQueryModal(false);
-  }, [updateLocalReducer, toggleModal]);
+  }, [toggleModal, updateLocalReducer, setShowSaveQueryModal]);
 
   const handleEditClick = useCallback(() => {
     toggleModal();
@@ -185,7 +191,7 @@ function SaveQuery({
         duration: 5
       });
     }
-  }, [dispatch, active_project, savedQueryId]);
+  }, [updateLocalReducer, active_project.id, savedQueryId, toggleDeleteModal, setQuerySaved, dispatch, history]);
 
   const handleAddToDashboard = useCallback(
     async ({ selectedDashboards, dashboardPresentation, onSuccess }) => {
@@ -262,7 +268,7 @@ function SaveQuery({
         });
       }
     },
-    [savedQueryId, active_project, updateLocalReducer, queryTitle, savedQueries]
+    [updateLocalReducer, savedQueries, queryTitle, active_project.id, savedQueryId, dispatch]
   );
 
   const handleSave = useCallback(
@@ -315,6 +321,7 @@ function SaveQuery({
 
         if (queryType === QUERY_TYPE_ATTRIBUTION) {
           querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
+          querySettings.tableFilters = JSON.stringify(attributionTableFilters);
         }
 
         let queryId;
@@ -443,32 +450,16 @@ function SaveQuery({
         });
       }
     },
-    [
-      active_project.id,
-      requestQuery,
-      dispatch,
-      queryType,
-      setQuerySaved,
-      attributionMetrics,
-      getCurrentSorter,
-      savedQueryId,
-      updateLocalReducer,
-      activeAction,
-      chartTypes,
-      breakdown,
-      attributionsState,
-      campaignState,
-      user_type
-    ]
+    [updateLocalReducer, queryType, requestQuery, user_type, getCurrentSorter, chartTypes, breakdown, attributionsState.models, campaignState.group_by, activeAction, setQuerySaved, savedQueryId, active_project.id, active_project.name, dispatch, pivotConfig, attributionMetrics, attributionTableFilters, setNavigatedFromAnalyse, savedQueries]
   );
 
   const handleUpdateClick = useCallback(async () => {
     try {
       let navigatedData;
-      if(navigatedFromDashboard) {
+      if (navigatedFromDashboard) {
         navigatedData = navigatedFromDashboard;
       }
-      if(navigatedFromAnalyse){
+      if (navigatedFromAnalyse) {
         navigatedData = navigatedFromAnalyse;
       }
       const query = getQuery({ queryType, requestQuery, user_type });
@@ -493,10 +484,13 @@ function SaveQuery({
 
       if (queryType === QUERY_TYPE_ATTRIBUTION) {
         querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
+        querySettings.tableFilters = JSON.stringify(attributionTableFilters);
       }
 
       const queryGettingUpdated = savedQueries.find(
-        (elem) => elem.id === (navigatedData?.query_id || navigatedData?.key || navigatedData?.id)
+        (elem) =>
+          elem.id ===
+          (navigatedData?.query_id || navigatedData?.key || navigatedData?.id)
       );
 
       const updatedSettings = {
@@ -505,23 +499,32 @@ function SaveQuery({
       };
 
       const reqBody = {
-        title: (queryGettingUpdated?.query?.title || queryGettingUpdated?.title),
+        title: queryGettingUpdated?.query?.title || queryGettingUpdated?.title,
         query: query,
         settings: updatedSettings
       };
 
-      await updateQuery(active_project.id, (navigatedData?.query_id || navigatedData?.key || navigatedData?.id), reqBody);
+      await updateQuery(
+        active_project.id,
+        navigatedData?.query_id || navigatedData?.key || navigatedData?.id,
+        reqBody
+      );
 
       dispatch({
         type: QUERY_UPDATED,
-        queryId: (navigatedData?.query_id || navigatedData?.key || navigatedData?.id),
+        queryId:
+          navigatedData?.query_id || navigatedData?.key || navigatedData?.id,
         payload: {
-          title: (queryGettingUpdated?.query?.title || queryGettingUpdated?.title),
+          title:
+            queryGettingUpdated?.query?.title || queryGettingUpdated?.title,
           query,
           settings: updatedSettings
         }
       });
-      setQuerySaved({ name: (queryGettingUpdated?.query?.title || queryGettingUpdated?.title), id: (navigatedData?.query_id || navigatedData?.key || navigatedData?.id) });
+      setQuerySaved({
+        name: queryGettingUpdated?.query?.title || queryGettingUpdated?.title,
+        id: navigatedData?.query_id || navigatedData?.key || navigatedData?.id
+      });
 
       notification.success({
         message: 'Report Saved Successfully',
@@ -537,28 +540,12 @@ function SaveQuery({
         duration: 5
       });
     }
-  }, [
-    active_project.id,
-    requestQuery,
-    dispatch,
-    queryType,
-    setQuerySaved,
-    attributionMetrics,
-    getCurrentSorter,
-    navigatedFromDashboard?.id,
-    navigatedFromAnalyse?.key,
-    activeAction,
-    chartTypes,
-    breakdown,
-    attributionsState,
-    campaignState,
-    user_type
-  ]);
+  }, [navigatedFromDashboard, navigatedFromAnalyse, queryType, requestQuery, user_type, getCurrentSorter, chartTypes, breakdown, attributionsState.models, campaignState.group_by, savedQueries, active_project.id, dispatch, setQuerySaved, pivotConfig, attributionMetrics, attributionTableFilters]);
 
   const onConnectSlack = () => {
     enableSlackIntegration(active_project.id)
       .then((r) => {
-        if (r.status == 200) {
+        if (r.status === 200) {
           window.open(r.data.redirectURL, '_blank');
           setShowShareToSlackModal(false);
         }
@@ -576,7 +563,7 @@ function SaveQuery({
     if (projectSettingsV1?.int_slack) {
       fetchSlackChannels(active_project.id);
     }
-  }, [active_project, projectSettingsV1?.int_slack, showShareToSlackModal]);
+  }, [active_project, fetchProjectSettingsV1, fetchSlackChannels, projectSettingsV1?.int_slack, showShareToSlackModal]);
 
   useEffect(() => {
     if (slack?.length > 0) {
@@ -619,7 +606,7 @@ function SaveQuery({
       // "query_id": savedQueryId,
       alert_description: {
         message: data?.message,
-        date_range: frequency == 'send_now' ? '' : frequency,
+        date_range: frequency === 'send_now' ? '' : frequency,
         subject: data?.subject
       },
       alert_configuration: {
@@ -687,7 +674,7 @@ function SaveQuery({
       // "query_id": savedQueryId,
       alert_description: {
         message: data?.message,
-        date_range: frequency == 'send_now' ? '' : frequency,
+        date_range: frequency === 'send_now' ? '' : frequency,
         subject: data?.subject
       },
       alert_configuration: {
