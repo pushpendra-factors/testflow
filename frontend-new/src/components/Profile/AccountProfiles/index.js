@@ -442,6 +442,9 @@ function AccountProfiles({
         onSave={handleSaveSegment}
         onCancel={() => setShowSegmentModal(false)}
         caller={'account_profiles'}
+        tableProps={
+          currentProjectSettings.timelines_config?.account_config?.table_props
+        }
       />
     </div>
   );
