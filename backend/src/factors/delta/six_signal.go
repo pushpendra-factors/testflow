@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	C "factors/config"
-	"factors/filestore"
 	"factors/model/model"
 	"factors/model/store"
 	serviceDisk "factors/services/disk"
@@ -20,7 +19,6 @@ import (
 func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
-	modelCloudManager := configs["modelCloudManager"].(*filestore.FileManager)
 
 	for _, projectId := range projectIdArray {
 
@@ -80,13 +78,13 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) (
 		_, err = resultFile.Write(pBytes)
 		logCtx.Info("ResultFile in SIxSignalAnalysis: ", resultFile)
 
-		WriteSixSignalResultsToCloud(diskManager, modelCloudManager, folderName, projectId, logCtx)
+		WriteSixSignalResultsToCloud(diskManager, folderName, projectId, logCtx)
 	}
 	return nil, true
 
 }
 
-func WriteSixSignalResultsToCloud(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, queryId string, projectId int64, logCtx *log.Entry) error {
+func WriteSixSignalResultsToCloud(diskManager *serviceDisk.DiskDriver, queryId string, projectId int64, logCtx *log.Entry) error {
 
 	path, _ := diskManager.GetSixSignalAnalysisTempFilePathAndName(queryId, projectId)
 	resultLocalPath := path + "results.txt"
@@ -109,14 +107,15 @@ func WriteSixSignalResultsToCloud(diskManager *serviceDisk.DiskDriver, cloudMana
 	}
 	logCtx.Info("Result after Unmarshal in WriteResultsToCloud: ", result)
 
-	path, _ = (*cloudManager).GetSixSignalAnalysisTempFilePathAndName(queryId, projectId)
+	cloudManager := C.GetCloudManager(projectId, true)
+	path, _ = cloudManager.GetSixSignalAnalysisTempFilePathAndName(queryId, projectId)
 	resultJson, err := json.Marshal(result)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal result Info.")
 		return err
 	}
 
-	err = (*cloudManager).Create(path, "result.txt", bytes.NewReader(resultJson))
+	err = cloudManager.Create(path, "result.txt", bytes.NewReader(resultJson))
 	if err != nil {
 		log.WithError(err).Error("writeEventInfoFile Failed to write to cloud")
 		return err
@@ -125,9 +124,11 @@ func WriteSixSignalResultsToCloud(diskManager *serviceDisk.DiskDriver, cloudMana
 }
 
 func GetSixSignalAnalysisData(projectId int64, id string) map[int]model.SixSignalResultGroup {
-	path, _ := C.GetCloudManager(projectId, false).GetSixSignalAnalysisTempFilePathAndName(id, projectId)
+
+	cloudManager := C.GetCloudManager(projectId, true)
+	path, _ := cloudManager.GetSixSignalAnalysisTempFilePathAndName(id, projectId)
 	fmt.Println(path)
-	reader, err := C.GetCloudManager(projectId, false).Get(path, "result.txt")
+	reader, err := cloudManager.Get(path, "result.txt")
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file from Cloud Manager for projectid: ", projectId)
