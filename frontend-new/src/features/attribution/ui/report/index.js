@@ -35,7 +35,7 @@ import {
   getKPIQueryAttributionV1,
   DefaultDateRangeFormat,
   getAttributionQuery,
-  isComparisonEnabled,
+  isComparisonEnabled
 } from 'Views/CoreQuery/utils';
 
 import { getAttributionStateFromRequestQuery } from 'Attribution/utils';
@@ -713,11 +713,10 @@ function CoreQuery({
         }).toString()}`
       });
     }
-  }, [querySaved]);
+  }, [querySaved, history, queryId]);
 
   useEffect(() => {
     const handleQueryIdChange = () => {
-      if (queryId && querySaved.id == queryId) return;
       const record = savedQueries.find((sq) => sq.id === queryId);
       if (
         !record ||
@@ -766,7 +765,7 @@ function CoreQuery({
       });
     };
     if (queryId && !QueriesLoading) handleQueryIdChange();
-  }, [queryId, savedQueries, querySaved, QueriesLoading]);
+  }, [queryId, savedQueries, QueriesLoading]);
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
@@ -792,13 +791,13 @@ function CoreQuery({
       });
       setSavedReportLoaded(false);
     }
-  }, [savedReportLoaded]);
+  }, [savedReportLoaded, runAttributionQuery]);
 
   useEffect(() => {
     if (location?.state?.navigatedFromDashboard)
       setNavigatedFromDashboard(location.state.navigatedFromDashboard);
-    if(location?.state?.navigatedFromAnalyse)
-    setNavigatedFromAnalyse(location.state.navigatedFromAnalyse)
+    if (location?.state?.navigatedFromAnalyse)
+      setNavigatedFromAnalyse(location.state.navigatedFromAnalyse);
   }, [location, setNavigatedFromDashboard, setNavigatedFromAnalyse]);
 
   if (queryId && QueriesLoading)
@@ -889,7 +888,7 @@ function CoreQuery({
                     campaignState={campaignState}
                     savedQueryId={savedQueryId}
                     handleChartTypeChange={handleChartTypeChange}
-                    queryOptions={{ ...queryOptions, group_analysis: 'all' }}
+                    queryOptions={queryOptions}
                     resultState={resultState}
                     queries={appliedQueries}
                     handleDurationChange={handleDurationChange}

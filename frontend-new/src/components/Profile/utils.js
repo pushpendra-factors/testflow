@@ -546,7 +546,7 @@ export const getSegmentQuery = (queries, queryOptions, userType) => {
   query.to = period.to;
 
   query.ewp = getEventsWithProperties(queries);
-  query.gup = getGlobalFilters(queryOptions?.globalFilters);
+  query.gup = formatFiltersForPayload(queryOptions?.globalFilters);
 
   query.ec = EVENT_QUERY_USER_TYPE[userType];
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';

@@ -983,8 +983,14 @@ func (store *MemSQL) runAttributionUnit(projectID int64, queryOriginal *model.At
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
 	var r *model.QueryResult
 	var err error
+	var result Result
 	r, err = store.WrapperForExecuteAttributionQueryV0(projectID, queryOriginal, debugQueryKey)
-	result := Result{res: r, err: err, errMsg: "", lastComputedAt: U.TimeNowUnix()}
+	if err != nil {
+		result = Result{res: r, err: err, errMsg: "", lastComputedAt: U.TimeNowUnix(), errCode: http.StatusInternalServerError}
+	} else {
+		result = Result{res: r, err: err, errMsg: "", lastComputedAt: U.TimeNowUnix(), errCode: http.StatusOK}
+	}
+
 	c <- result
 }
 
