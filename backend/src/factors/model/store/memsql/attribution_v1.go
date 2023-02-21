@@ -1806,6 +1806,29 @@ func (store *MemSQL) GetConvertedUsersWithFilterV1(projectID int64, goalEventNam
 	qParams := []interface{}{projectID, conversionFrom, conversionTo}
 	qParams = append(qParams, conversionEventNameIDs...)
 
+	// add event filter
+	wStmtEvent, wParamsEvent, _, err := getFilterSQLStmtForEventProperties(
+		projectID, goalEventProperties, conversionFrom) // query.ConversionEvent.Properties)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if wStmtEvent != "" {
+		whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtEvent)
+		qParams = append(qParams, wParamsEvent...)
+	}
+
+	// add user filter
+	wStmtUser, wParamsUser, _, err := getFilterSQLStmtForUserProperties(projectID,
+		goalEventProperties, conversionFrom) // query.ConversionEvent.Properties)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if wStmtUser != "" {
+		whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtUser)
+		qParams = append(qParams, wParamsUser...)
+	}
+
 	queryEventHits := selectEventHits + " " + whereEventHits
 
 	// fetch query results

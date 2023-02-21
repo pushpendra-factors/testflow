@@ -5,6 +5,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -380,6 +381,29 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom,
 			qParams := []interface{}{projectID, projectID, queryFrom, queryTo}
 			qParams = append(qParams, linkedEventNameIDs...)
 			qParams = append(qParams, value...)
+
+			// add event filter
+			wStmtEvent, wParamsEvent, _, err := getFilterSQLStmtForEventProperties(
+				projectID, linkedEvent.Properties, queryFrom)
+			if err != nil {
+				return err, nil
+			}
+
+			if wStmtEvent != "" {
+				whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtEvent)
+				qParams = append(qParams, wParamsEvent...)
+			}
+
+			// add user filter
+			wStmtUser, wParamsUser, _, err := getFilterSQLStmtForUserProperties(projectID, linkedEvent.Properties, queryFrom)
+			if err != nil {
+				return err, nil
+			}
+
+			if wStmtUser != "" {
+				whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtUser)
+				qParams = append(qParams, wParamsUser...)
+			}
 
 			queryEventHits := selectEventHits + " " + whereEventHits
 
