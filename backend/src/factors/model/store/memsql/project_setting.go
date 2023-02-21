@@ -83,6 +83,27 @@ func (store *MemSQL) GetProjectSetting(projectId int64) (*model.ProjectSetting, 
 	return &projectSetting, http.StatusFound
 }
 
+func (store *MemSQL) IsClearbitIntegratedByProjectID(projectID int64) (bool, int) {
+	db := C.GetServices().Db
+	logFields := log.Fields{ "project_id": projectID }
+	logCtx := log.WithFields(logFields)
+
+	if valid := isValidProjectScope(projectID); !valid {
+		return false, http.StatusBadRequest
+	}
+
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id = ?", projectID).Find(&projectSetting).Error; err != nil {
+		logCtx.WithError(err).Error("Getting project_setting failed - clearbit integration check")
+
+		if gorm.IsRecordNotFoundError(err) {
+			return false, http.StatusNotFound
+		}
+		return false, http.StatusInternalServerError
+	}
+	return *projectSetting.IntClearBit, http.StatusFound
+}
+
 func (store *MemSQL) GetClearbitKeyFromProjectSetting(projectId int64) (string, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
@@ -107,6 +128,29 @@ func (store *MemSQL) GetClearbitKeyFromProjectSetting(projectId int64) (string, 
 	}
 
 	return projectSetting.ClearbitKey, http.StatusFound
+}
+
+// The integration to 6signal is made by either of 2 ways - 6 signal by 6signal or Factors Deanonimisation
+// on integration page of factors.
+func (store *MemSQL) IsSixSignalIntegratedByEitherWay(projectID int64) (bool, int) {
+	db := C.GetServices().Db
+	logFields := log.Fields{ "project_id": projectID }
+	logCtx := log.WithFields(logFields)
+
+	if valid := isValidProjectScope(projectID); !valid {
+		return false, http.StatusBadRequest
+	}
+
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id = ?", projectID).Find(&projectSetting).Error; err != nil {
+		logCtx.WithError(err).Error("Getting project_setting failed - 6 signal integration check")
+
+		if gorm.IsRecordNotFoundError(err) {
+			return false, http.StatusNotFound
+		}
+		return false, http.StatusInternalServerError
+	}
+	return *projectSetting.IntClientSixSignalKey || *projectSetting.IntFactorsSixSignalKey, http.StatusFound
 }
 
 func (store *MemSQL) GetClient6SignalKeyFromProjectSetting(projectId int64) (string, int) {

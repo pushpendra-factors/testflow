@@ -364,6 +364,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 		r.GET("/sdk/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
+	r.GET("/", SDKStatusHandler) // Default handler for probes.
 	r.GET(ROUTE_SDK_ROOT+"/service/status", SDKStatusHandler)
 	r.POST(ROUTE_SDK_ROOT+"/service/error", SDKErrorHandler)
 

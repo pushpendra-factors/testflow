@@ -25,6 +25,7 @@ import useAutoFocus from 'hooks/useAutoFocus';
 
 const itemHeight = 47;
 const ContainerHeight = 443;
+
 const NoResults = () => {
   const history = useHistory();
   return (
@@ -70,8 +71,12 @@ const Part1GlobalSearch = ({
     return () => {};
   }, []);
 
-  const moveToPath = (tpath) => {
+  const moveToPath = (tpath, e) => {
     dispatch({ type: TOGGLE_GLOBAL_SEARCH });
+    if (e.metaKey === true) {
+      window.open(tpath);
+      return;
+    }
     history.push({ pathname: tpath });
   };
   return (
@@ -93,10 +98,15 @@ const Part1GlobalSearch = ({
                 <div
                   key={eachIndex}
                   className={styles['create-new-items-container']}
-                  onClick={() => moveToPath(eachItem.path)}
-                  onKeyUp={(e) =>
-                    e.key === 'Enter' ? moveToPath(eachItem.path) : ''
-                  }
+                  onClick={(e) => {
+                    if (eachItem.disabled !== true)
+                      moveToPath(eachItem.path, eachIndex);
+                  }}
+                  onKeyDown={(e) => {
+                    if (eachItem.disabled !== true && e.key === 'Enter') {
+                      moveToPath(eachItem.path, e);
+                    }
+                  }}
                 >
                   <div className={styles['create-new-items']} tabIndex={0}>
                     <div className={styles['create-new-item-icon']}>
@@ -125,7 +135,7 @@ const Part1GlobalSearch = ({
               style={{ padding: '0 10px' }}
             >
               <Text color='grey' level={6} type={'title'} weight={'bold'}>
-                Recent reports/Dashboards
+                All Reports
               </Text>
             </div>
             {queriesLoading === false ? (
@@ -153,8 +163,8 @@ const Part1GlobalSearch = ({
                         key={eachIndex}
                         className={styles['reports-new-items-container']}
                         onClick={() => openSavedReports(eachItem)}
-                        onKeyUp={(e) =>
-                          e.key == 'Enter' ? openSavedReports(eachItem) : ''
+                        onKeDown={(e) =>
+                          e.key === 'Enter' ? openSavedReports(eachItem) : ''
                         }
                       >
                         <div
@@ -220,8 +230,12 @@ const Part2GlobalSearch = ({
   useEffect(() => {
     setSearchResults(data);
   }, [data]);
-  const moveToPath = (tpath) => {
+  const moveToPath = (tpath, e) => {
     dispatch({ type: TOGGLE_GLOBAL_SEARCH });
+    if (e.metaKey === true) {
+      window.open(tpath, '_blank');
+      return;
+    }
     history.push({ pathname: tpath });
   };
   useEffect(() => {
@@ -276,10 +290,15 @@ const Part2GlobalSearch = ({
                   <div
                     key={eachItem.fullName + eachIndex}
                     className={styles['globalsearch-item-list-item']}
-                    onClick={() => moveToPath(eachItem.path)}
-                    onKeyUp={(e) =>
-                      e.key === 'Enter' ? moveToPath(eachItem.path) : ''
-                    }
+                    onClick={(e) => {
+                      if (eachItem.disabled !== true)
+                        moveToPath(eachItem.path, eachIndex);
+                    }}
+                    onKeyDown={(e) => {
+                      if (eachItem.disabled !== true && e.key === 'Enter') {
+                        moveToPath(eachItem.path, e);
+                      }
+                    }}
                     tabIndex={0}
                   >
                     {eachItem.icon}
@@ -321,7 +340,7 @@ const Part2GlobalSearch = ({
                 onKeyUp={(e) => (e.key === 'Enter' ? moveBackStep1() : '')}
               />
             </div>{' '}
-            Recent reports/Dashboards
+            All Reports
           </div>
           <div className={styles['globalsearch-item-list']}>
             {searchResults && searchResults.length > 0 ? (
@@ -512,7 +531,7 @@ const SearchResults = ({ searchString, openSavedReports }) => {
         {filteredQueries && filteredQueries?.length > 0 ? (
           <div className={styles['searchresults-category-container']}>
             <div className={styles['searchresults-category-container-title']}>
-              Saved Reports
+              All Reports
             </div>
             <div className={styles['searchresults-category-container-results']}>
               {filteredQueries
@@ -541,9 +560,7 @@ const SearchResults = ({ searchString, openSavedReports }) => {
                           <span className={styles['item-title']}>
                             {eachQuery.title}
                           </span>
-                          <span className={styles['item-goto-type']}>
-                            Open This Report
-                          </span>
+                          <span className={styles['item-goto-type']}>Open</span>
                         </div>
                       </div>
                     </React.Fragment>
@@ -657,7 +674,11 @@ const SearchResults = ({ searchString, openSavedReports }) => {
           ''
         )}
 
-        {checkIsEmptyResult() ? <div> No Results Found</div> : ''}
+        {checkIsEmptyResult() ? (
+          <div style={{ padding: '0 20px' }}> No Results Found</div>
+        ) : (
+          ''
+        )}
       </div>
     </div>
   );
@@ -719,14 +740,21 @@ const GlobalSearch = () => {
         {
           name: 'Website visitors identification',
           fullName: 'Website visitors identification',
-          description: 'See visiting and high-intent accounts',
-          icon: <SVG name={`Funnel_cq`} size={20} color={'blue'} />,
-          path: '/'
+          description: 'Coming Soon', // See visiting and high-intent accounts
+          icon: (
+            <SVG
+              name={`WebsiteVisitorsIdentification`}
+              size={20}
+              color={'blue'}
+            />
+          ),
+          path: '/',
+          disabled: true
         }
       ]
     },
     reports: {
-      title: 'Recent reports/Dashboards',
+      title: 'All Reports',
       data: []
     }
   };
@@ -802,7 +830,7 @@ const GlobalSearch = () => {
           onChange={onChangeInput}
           value={searchString}
           className={styles['input-globalSearch']}
-          placeholder='Search or jump to'
+          placeholder='Search or create new reports'
           prefix={<SearchOutlined style={{ color: '#B7BEC8' }} />}
           style={{
             borderRadius: '12px',
