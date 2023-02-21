@@ -386,7 +386,9 @@ type Model interface {
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
+	IsClearbitIntegratedByProjectID(projectID int64) (bool, int)
 	GetClearbitKeyFromProjectSetting(projectId int64) (string, int)
+	IsSixSignalIntegratedByEitherWay(projectID int64) (bool, int)
 	GetClient6SignalKeyFromProjectSetting(projectId int64) (string, int)
 	GetFactors6SignalKeyFromProjectSetting(projectId int64) (string, int)
 	GetIntegrationBitsFromProjectSetting(projectId int64) (string, int)

@@ -5,6 +5,7 @@ import { generateUngroupedChartsData } from '../../CoreQuery/FunnelsResultPage/u
 import Chart from '../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
 import {
+  CHART_TYPE_BARCHART,
   CHART_TYPE_FUNNEL_CHART,
   CHART_TYPE_METRIC_CHART,
   CHART_TYPE_TABLE,
@@ -36,7 +37,10 @@ function UngroupedChart({
 
   let chartContent = null;
 
-  if (chartType === CHART_TYPE_FUNNEL_CHART) {
+  if (
+    chartType === CHART_TYPE_FUNNEL_CHART ||
+    chartType === CHART_TYPE_BARCHART
+  ) {
     chartContent = (
       <Chart
         title={unit.id}

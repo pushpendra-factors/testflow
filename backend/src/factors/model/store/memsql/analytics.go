@@ -268,6 +268,57 @@ func GetDateFilter(qP model.QueryProperty, propertyEntity string, property strin
 	return stmt, resultParams, nil
 }
 
+// returns SQL query condition to address conditions only on user_properties.properties
+func getFilterSQLStmtForUserProperties(projectID int64,
+	properties []model.QueryProperty, fromTimestamp int64) (
+	rStmnt string, rParams []interface{}, joinStmnt string, err error) {
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"properties":      properties,
+		"from_time_stamp": fromTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var filteredProperty []model.QueryProperty
+	for _, p := range properties {
+		if p.Entity == model.PropertyEntityUser {
+			filteredProperty = append(filteredProperty, p)
+		}
+	}
+
+	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty, fromTimestamp)
+	if err != nil {
+		return "", nil, "", err
+	}
+
+	return wStmt, wParams, "", nil
+}
+
+// returns SQL query condition to address conditions only on events.properties
+func getFilterSQLStmtForEventProperties(projectID int64, properties []model.QueryProperty,
+	fromTimestamp int64) (rStmnt string, rParams []interface{}, joinStmnt string, err error) {
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"properties":      properties,
+		"from_time_stamp": fromTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var filteredProperty []model.QueryProperty
+	for _, p := range properties {
+		if p.Entity == model.PropertyEntityEvent {
+			filteredProperty = append(filteredProperty, p)
+		}
+	}
+
+	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty, fromTimestamp)
+	if err != nil {
+		return "", nil, "", err
+	}
+
+	return wStmt, wParams, "", nil
+}
+
 // returns SQL query condition to address conditions for Users.properties
 func getFilterSQLStmtForLatestUserProperties(projectID int64,
 	properties []model.QueryProperty, fromTimestamp int64) (
