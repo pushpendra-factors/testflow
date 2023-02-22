@@ -77,6 +77,7 @@ func main() {
 	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
+	enableDebuggingForIP := flag.Bool("enable_debugging_for_ip", false, "Enables log for $ip and other properties added by $ip")
 
 	flag.Parse()
 
@@ -116,8 +117,9 @@ func main() {
 		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
 		SentryDSN:               *sentryDSN,
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
-		ClearbitEnabled:  *clearbitEnabled,
-		SixSignalEnabled: *sixSignalEnabled,
+		ClearbitEnabled:      *clearbitEnabled,
+		SixSignalEnabled:     *sixSignalEnabled,
+		EnableDebuggingForIP: *enableDebuggingForIP,
 	}
 	C.InitConf(config)
 

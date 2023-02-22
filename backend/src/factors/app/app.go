@@ -203,7 +203,6 @@ func main() {
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
 	enableEventFiltersInSegments := flag.Bool("enable_event_filters_in_segments", false, "Enables adding event filters in segment query")
-	enableDebuggingForIP := flag.Bool("enable_debugging_for_ip", false, "Enables log for $ip and other properties added by $ip")
 	enableFeatureGates := flag.Bool("enable_feature_gates", false, "Enable Feature Gates")
 	flag.Parse()
 
@@ -368,7 +367,6 @@ func main() {
 		EnableEventFiltersInSegments:                   *enableEventFiltersInSegments,
 		EnableFeatureGates:                             *enableFeatureGates,
 		EnableDBConnectionPool2:                        *enableDBConnectionPool2,
-		EnableDebuggingForIP:                           *enableDebuggingForIP,
 	}
 	C.InitConf(config)
 
