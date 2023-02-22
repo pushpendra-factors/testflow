@@ -21,7 +21,7 @@ import {
 } from '../../../utils/constants';
 import FaSelect from '../../FaSelect';
 import { getUserProperties } from '../../../reducers/coreQuery/middleware';
-import PropertyFilter from './PropertyFilter';
+import PropertyFilter from '../MyComponents/PropertyFilter';
 import MomentTz from '../../MomentTz';
 import {
   fetchDemoProject,
@@ -39,6 +39,7 @@ import {
   formatFiltersForPayload,
   formatPayloadForFilters,
   formatSegmentsObjToGroupSelectObj,
+  getPropType,
   iconColors,
   propValueFormat
 } from '../utils';
@@ -55,7 +56,7 @@ import SegmentModal from './SegmentModal';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
-import EventsBlock from './EventsBlock';
+import EventsBlock from '../MyComponents/EventsBlock';
 
 function UserProfiles({
   activeProject,
@@ -129,12 +130,22 @@ function UserProfiles({
   }, [activeProject]);
 
   useEffect(() => {
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+  }, [activeProject]);
+
+  useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
     fetchProjectSettings(activeProject.id);
     if (_.isEmpty(dashboards?.data)) {
       fetchBingAdsIntegration(activeProject?.id);
       fetchMarketoIntegration(activeProject?.id);
     }
+  }, [activeProject]);
+
+  useEffect(() => {
+    getUserProperties(activeProject.id);
   }, [activeProject]);
 
   const isIntegrationEnabled =
@@ -157,10 +168,6 @@ function UserProfiles({
     integration?.int_rudderstack;
 
   useEffect(() => {
-    getUserProperties(activeProject.id);
-  }, [activeProject]);
-
-  useEffect(() => {
     const tableProps = timelinePayload.segment_id
       ? activeSegment.query.table_props
       : currentProjectSettings.timelines_config?.user_config?.table_props;
@@ -169,13 +176,7 @@ function UserProfiles({
       tableProps
     );
     setCheckListUserProps(userPropsWithEnableKey);
-  }, [currentProjectSettings, userProperties, timelinePayload]);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-  }, [activeProject]);
+  }, [currentProjectSettings, userProperties, activeSegment, timelinePayload]);
 
   useEffect(() => {
     getSavedSegments(activeProject.id);
@@ -231,6 +232,7 @@ function UserProfiles({
       const propDisplayName = userPropNames[prop]
         ? userPropNames[prop]
         : PropTextFormat(prop);
+      const propType = getPropType(userProperties, prop);
       columns.push({
         title: (
           <Text
@@ -247,9 +249,9 @@ function UserProfiles({
         dataIndex: prop,
         key: prop,
         width: 300,
-        render: (item) => (
+        render: (value) => (
           <Text type='title' level={7} className='m-0' truncate>
-            {propValueFormat(prop, item) || '-'}
+            {value ? propValueFormat(prop, value, propType) : '-'}
           </Text>
         )
       });
@@ -521,7 +523,7 @@ function UserProfiles({
     } else {
       notification.error({
         message: 'Error',
-        description: 'Maximum Table Properties Selection Reached.',
+        description: 'Maximum of 8 Table Properties Selection Allowed.',
         duration: 2
       });
     }
@@ -708,6 +710,7 @@ function UserProfiles({
       <ContactDetails user={activeUser} onCancel={handleCancel} />
     </Modal>
   );
+
   if (loading) {
     return (
       <div className='flex justify-center items-center w-full h-64'>

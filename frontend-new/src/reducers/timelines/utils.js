@@ -31,6 +31,7 @@ export const formatAccountTimeline = (data, config) => {
     name: data.name,
     host: data.host_name,
     left_pane_props: data.left_pane_props,
+    milestones: data.milestones,
     account_users: [],
     account_events: []
   };
@@ -67,6 +68,7 @@ export const formatUsersTimeline = (data, config) => {
     title: !data.is_anonymous ? data.name || data.user_id : 'Unidentified User',
     subtitle: data.company || data.user_id,
     left_pane_props: data.left_pane_props,
+    milestones: data.milestones,
     group_infos: data.group_infos,
     user_activities: []
   };

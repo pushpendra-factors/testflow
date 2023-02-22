@@ -317,12 +317,8 @@ function EventsBlock({
                 }
               >
                 {!event ? (
-                  <Button
-                    type='text'
-                    onClick={() => setDDVisible(true)}
-                    icon={<SVG name='plus' color='grey' />}
-                  >
-                    {queries.length ? 'Add another event' : 'Add First Event'}
+                  <Button type='text' onClick={() => setDDVisible(true)}>
+                    Select Event
                   </Button>
                 ) : (
                   <Button

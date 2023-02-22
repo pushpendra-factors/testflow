@@ -335,7 +335,13 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		uniqueUser.Company = fmt.Sprintf("%s", company)
 	}
 
-	uniqueUser.LeftPaneProps = store.GetLeftPaneProperties(projectID, model.PROFILE_TYPE_USER, propertiesDecoded)
+	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
+	if err != nil {
+		log.WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+	}
+
+	uniqueUser.LeftPaneProps = GetLeftPanePropertiesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
+	uniqueUser.Milestones = GetMilestonesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
 	activities, _ := store.GetUserActivitiesAndSessionCount(projectID, identity, userId)
 	uniqueUser.UserActivity = activities
 	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
@@ -445,13 +451,13 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			if icon, exists := model.EVENT_ICONS_MAP[userActivity.EventName]; exists {
 				userActivity.Icon = icon
 			} else if strings.Contains(userActivity.EventName, "hubspot_") || strings.Contains(userActivity.EventName, "hs_") {
-				userActivity.Icon = "hubspot_ads"
+				userActivity.Icon = "hubspot"
 			} else if strings.Contains(userActivity.EventName, "salesforce_") || strings.Contains(userActivity.EventName, "sf_") {
-				userActivity.Icon = "salesforce_ads"
+				userActivity.Icon = "salesforce"
 			}
 			// Default Icon
 			if userActivity.Icon == "" {
-				userActivity.Icon = "calendar_star"
+				userActivity.Icon = "calendar-star"
 			}
 
 			// Filtered Properties
@@ -598,11 +604,14 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 		}
 	}
 
-	accountDetails.LeftPaneProps = store.GetLeftPaneProperties(projectID, model.PROFILE_TYPE_ACCOUNT, propertiesDecoded)
 	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch timelines_config from project_settings.")
 	}
+
+	accountDetails.LeftPaneProps = GetLeftPanePropertiesFromConfig(timelinesConfig, model.PROFILE_TYPE_ACCOUNT, propertiesDecoded)
+	accountDetails.Milestones = GetMilestonesFromConfig(timelinesConfig, model.PROFILE_TYPE_ACCOUNT, propertiesDecoded)
+
 	additionalProp := timelinesConfig.AccountConfig.UserProp
 	selectStrAdditionalProp := ""
 	if additionalProp != "" {
@@ -657,19 +666,9 @@ func FormatTimeToString(time time.Time) string {
 	return time.Format("2006-01-02 15:04:05.000000")
 }
 
-func (store *MemSQL) GetLeftPaneProperties(projectID int64, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{} {
-	logFields := log.Fields{
-		"project_id":   projectID,
-		"profile_type": profileType,
-	}
+func GetLeftPanePropertiesFromConfig(timelinesConfig model.TimelinesConfig, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{} {
 
 	filteredProperties := make(map[string]interface{})
-
-	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
-	if err != nil {
-		log.WithFields(logFields).WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
-		return filteredProperties
-	}
 	var leftPaneProps []string
 
 	if profileType == model.PROFILE_TYPE_USER {
@@ -678,6 +677,24 @@ func (store *MemSQL) GetLeftPaneProperties(projectID int64, profileType string, 
 		leftPaneProps = timelinesConfig.AccountConfig.LeftpaneProps
 	}
 	for _, prop := range leftPaneProps {
+		if value, exists := (*propertiesDecoded)[prop]; exists {
+			filteredProperties[prop] = value
+		}
+	}
+	return filteredProperties
+}
+
+func GetMilestonesFromConfig(timelinesConfig model.TimelinesConfig, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{} {
+
+	filteredProperties := make(map[string]interface{})
+	var milestones []string
+
+	if profileType == model.PROFILE_TYPE_USER {
+		milestones = timelinesConfig.UserConfig.Milestones
+	} else if profileType == model.PROFILE_TYPE_ACCOUNT {
+		milestones = timelinesConfig.AccountConfig.Milestones
+	}
+	for _, prop := range milestones {
 		if value, exists := (*propertiesDecoded)[prop]; exists {
 			filteredProperties[prop] = value
 		}
