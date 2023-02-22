@@ -124,6 +124,8 @@ function CoreQuery({
   const [loading, setLoading] = useState(false);
   const renderedCompRef = useRef(null);
   const [queryOpen, setQueryOpen] = useState(true);
+  //for tracking if for cetain queryId data is loaded or not
+  const [queryDataLoaded, setQueryDataLoaded] = useState('');
 
   const [queryOptions, setQueryOptions] = useState({
     ...QUERY_OPTIONS_DEFAULT_VALUE,
@@ -713,11 +715,22 @@ function CoreQuery({
         }).toString()}`
       });
     }
-  }, [querySaved, history, queryId]);
+    if (queryId) {
+      if (querySaved && querySaved.id !== queryId) {
+        history.push({
+          pathname: ATTRIBUTION_ROUTES.report,
+          search: `?${new URLSearchParams({
+            queryId: querySaved.id
+          }).toString()}`
+        });
+      }
+    }
+  }, [querySaved, queryId]);
 
   useEffect(() => {
     const handleQueryIdChange = () => {
-      const record = savedQueries.find((sq) => sq.id === queryId);
+      if (queryDataLoaded === queryId || querySaved.id == queryId) return;
+      const record = savedQueries.find((sq) => sq.id == queryId);
       if (
         !record ||
         !record?.query?.cl ||
@@ -728,7 +741,7 @@ function CoreQuery({
           duration: 5
         });
         history.replace({
-          pathname: ATTRIBUTION_ROUTES.report
+          pathname: ATTRIBUTION_ROUTES.reports
         });
         return;
       }
@@ -763,9 +776,10 @@ function CoreQuery({
         settings: record.settings,
         query_id: record.key || record.id
       });
+      setQueryDataLoaded(queryId);
     };
     if (queryId && !QueriesLoading) handleQueryIdChange();
-  }, [queryId, savedQueries, QueriesLoading]);
+  }, [queryId, savedQueries, QueriesLoading, querySaved]);
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);

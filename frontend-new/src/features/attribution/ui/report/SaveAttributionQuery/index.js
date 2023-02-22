@@ -1,5 +1,11 @@
-import React, { useCallback, useState, useContext, useMemo } from 'react';
-import { Button, notification } from 'antd';
+import React, {
+  useCallback,
+  useState,
+  useContext,
+  useMemo,
+  useEffect
+} from 'react';
+import { Button, notification, Tooltip } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import { BUTTON_TYPES } from 'Constants/buttons.constants';
 import SaveQueryModal from './SaveQueryModal';
@@ -23,6 +29,7 @@ import DeleteQueryModal from 'Components/DeleteQueryModal/index';
 import { deleteReport } from 'Reducers/coreQuery/services';
 import { getErrorMessage } from 'Utils/dataFormatter';
 import { saveAttributionQuery } from 'Attribution/state/services';
+import useQuery from 'hooks/useQuery';
 import {
   ATTRIBUTION_DASHBOARD_UNIT_ADDED,
   ATTRIBUTION_QUERY_CREATED,
@@ -38,13 +45,16 @@ const SaveAttributionQuery = ({
   breakdown,
   attributionsState,
   setQuerySaved,
-  queryTitle
+  queryTitle,
+  showSaveOrUpdateModal
 }) => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [options, setOptions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeAction, setActiveAction] = useState(null);
+  const routerQuery = useQuery();
+  const paramQueryId = routerQuery.get('queryId');
   const dispatch = useDispatch();
   const { active_project } = useSelector((state) => state.global);
   const savedQueries = useSelector((state) =>
@@ -142,6 +152,7 @@ const SaveAttributionQuery = ({
         };
 
         await updateQuery(active_project.id, savedQueryId, reqBody);
+        queryId = savedQueryId;
 
         dispatch({
           type: ATTRIBUTION_QUERY_UPDATED,
@@ -151,7 +162,6 @@ const SaveAttributionQuery = ({
             settings: updatedSettings
           }
         });
-        queryId = savedQueryId;
       }
 
       setQuerySaved({ name: title, id: queryId });
@@ -193,7 +203,7 @@ const SaveAttributionQuery = ({
       });
       setLoading(false);
       toggleDeleteModal();
-      setQuerySaved(null);
+      setQuerySaved(false);
       dispatch({ type: ATTRIBUTION_QUERY_DELETED, payload: savedQueryId });
       notification.success({
         message: 'Report Deleted Successfully',
@@ -213,6 +223,68 @@ const SaveAttributionQuery = ({
   const handleSaveClick = () => {
     setShowSaveModal(true);
     setActiveAction(ACTION_TYPES.SAVE);
+  };
+
+  const handleUpdateClick = async () => {
+    try {
+      const oldQuery = savedQueries.find((elem) => elem.id === paramQueryId);
+      const startOfWeek = MomentTz().startOf('week').utc().unix();
+      const todayNow = MomentTz().utc().unix();
+      setLoading(true);
+      const query = {
+        ...requestQuery,
+        query: {
+          ...requestQuery.query,
+          from: startOfWeek,
+          to: todayNow
+        }
+      };
+
+      const querySettings = {
+        ...getCurrentSorter(),
+        chart:
+          apiChartAnnotations[
+            getChartType({
+              queryType,
+              chartTypes,
+              breakdown,
+              attributionModels: attributionsState.models,
+              campaignGroupBy: null
+            })
+          ]
+      };
+
+      querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
+
+      const updatedSettings = {
+        ...oldQuery.settings,
+        ...querySettings
+      };
+
+      const reqBody = {
+        title: oldQuery.title,
+        query,
+        settings: updatedSettings
+      };
+
+      await updateQuery(active_project.id, paramQueryId, reqBody);
+      dispatch({
+        type: ATTRIBUTION_QUERY_UPDATED,
+        queryId: paramQueryId,
+        payload: {
+          title: oldQuery.title,
+          settings: updatedSettings,
+          query
+        }
+      });
+      setQuerySaved({ name: oldQuery.title, id: paramQueryId, isSaved: true });
+      notification.success({
+        message: 'Report Saved Successfully',
+        duration: 5
+      });
+    } catch (error) {
+      console.error('Error in updating report ---', error);
+    }
   };
 
   const handleEditClick = () => {
@@ -249,18 +321,51 @@ const SaveAttributionQuery = ({
     setShowDeleteModal((val) => !val);
   };
 
+  useEffect(() => {
+    if (showSaveOrUpdateModal) {
+      if (showSaveOrUpdateModal?.save) {
+        handleSaveClick();
+      } else if (showSaveOrUpdateModal?.update) {
+        handleUpdateClick();
+      }
+    }
+  }, [showSaveOrUpdateModal]);
+
   return (
     <div className='flex gap-x-2 items-center'>
-      <ControlledComponent controller={!savedQueryId}>
+      {paramQueryId && !savedQueryId && (
+        <Tooltip placement='bottom' title='Save as New'>
+          <Button
+            onClick={handleSaveClick}
+            size='large'
+            type='text'
+            icon={<SVG name={'pluscopy'} />}
+          ></Button>
+        </Tooltip>
+      )}
+      {savedQueryId ? (
+        <Tooltip placement='bottom' title={'No changes to be saved'}>
+          <Button
+            onClick={handleSaveClick}
+            disabled={savedQueryId}
+            type={BUTTON_TYPES.PRIMARY}
+            size={'large'}
+            icon={<SVG name={'save'} size={20} color={'white'} />}
+          >
+            {'Save'}
+          </Button>
+        </Tooltip>
+      ) : (
         <Button
-          onClick={handleSaveClick}
+          onClick={paramQueryId ? handleUpdateClick : handleSaveClick}
           type={BUTTON_TYPES.PRIMARY}
           size={'large'}
+          disabled={savedQueryId}
           icon={<SVG name={'save'} size={20} color={'white'} />}
         >
           {'Save'}
         </Button>
-      </ControlledComponent>
+      )}
       <ControlledComponent controller={!!savedQueryId}>
         <div className={'relative'}>
           <Button
