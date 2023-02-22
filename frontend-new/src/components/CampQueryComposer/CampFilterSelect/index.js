@@ -56,7 +56,10 @@ const CampFilterSelect = ({
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
         filter.values?.[0] === '$none'
       ) {
-        if (filter.operator === OPERATORS['equalTo'])
+        if (
+          filter.operator === OPERATORS['equalTo'] ||
+          filter.operator?.[0] === OPERATORS['equalTo']
+        )
           setOperatorState(OPERATORS['isUnknown']);
         else setOperatorState(OPERATORS['isKnown']);
       } else {
@@ -79,6 +82,8 @@ const CampFilterSelect = ({
 
   useEffect(() => {
     if (
+      operatorState === OPERATORS['isKnown'] ||
+      operatorState === OPERATORS['isUnknown'] ||
       operatorState?.[0] === OPERATORS['isKnown'] ||
       operatorState?.[0] === OPERATORS['isUnknown']
     ) {
@@ -269,9 +274,9 @@ const CampFilterSelect = ({
       <FaSelect
         multiSelect={
           (isArray(operatorState) ? operatorState[0] : operatorState) ===
-            '!=' ||
+            OPERATORS['notEqualTo'] ||
           (isArray(operatorState) ? operatorState[0] : operatorState) ===
-            'does not contain'
+            OPERATORS['doesNotContain']
             ? false
             : true
         }
