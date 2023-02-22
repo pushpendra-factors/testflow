@@ -37,7 +37,7 @@ const CONFIG = {
     factors_sdk_token: 'dummy'
   },
   production: {
-    backend_host: 'https://api-prod.factors.ai',
+    backend_host: 'https://api.factors.ai',
     sdk_asset_url: 'https://app.factors.ai/assets/v1/factors.js',
     android_sdk_asset_url:
       'https://storage.googleapis.com/factors-production-v2/sdk/android/sdk-production-v0.1.aar',
