@@ -4,10 +4,10 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { SVG } from 'Components/factorsComponents';
 import styles from './index.module.scss';
-import { getGroupProperties } from 'Reducers/coreQuery/middleware';
+import { getEventProperties } from 'Reducers/coreQuery/middleware';
 import EventFilterWrapper from 'Components/QueryComposer/EventFilterWrapper';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
-import { AvailableGroups, RevAvailableGroups } from 'Utils/constants';
+import { RevAvailableGroups } from 'Utils/constants';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 
@@ -16,14 +16,11 @@ function EventsBlock({
   event,
   closeEvent,
   eventChange,
-  queries,
   eventOptions,
   eventNames,
   activeProject,
-  userProperties,
   eventProperties,
-  groupProperties,
-  getGroupProperties,
+  getEventProperties,
   groupAnalysis,
   displayMode
 }) {
@@ -35,9 +32,7 @@ function EventsBlock({
   }, [displayMode]);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
   const [filterProps, setFilterProperties] = useState({
-    event: [],
-    user: [],
-    group: []
+    event: []
   });
   const [showGroups, setShowGroups] = useState([]);
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
@@ -73,26 +68,19 @@ function EventsBlock({
     if (!event || event === undefined) {
       return;
     }
-    if (AvailableGroups[event.group] && !displayMode) {
-      getGroupProperties(activeProject.id, AvailableGroups[event.group]);
+    if (!eventProperties[event.label] && !displayMode) {
+      getEventProperties(activeProject.id, event.label);
     }
-  }, [event, displayMode]);
+  }, [activeProject?.id, event, eventProperties, displayMode]);
 
   useEffect(() => {
     if (!event || event === undefined) {
       return;
     }
     const assignFilterProps = { ...filterProps };
-    if (AvailableGroups[event.group]) {
-      assignFilterProps.group = groupProperties[AvailableGroups[event.group]];
-      assignFilterProps.user = [];
-    } else {
-      assignFilterProps.user = userProperties;
-      assignFilterProps.group = [];
-    }
     assignFilterProps.event = eventProperties[event.label] || [];
     setFilterProperties(assignFilterProps);
-  }, [eventProperties, groupProperties, userProperties, event]);
+  }, [eventProperties, event]);
 
   const deleteItem = () => {
     eventChange(event, index - 1, 'delete');
@@ -366,11 +354,6 @@ const mapStateToProps = (state) => ({
 });
 
 const mapDispatchToProps = (dispatch) =>
-  bindActionCreators(
-    {
-      getGroupProperties
-    },
-    dispatch
-  );
+  bindActionCreators({ getEventProperties }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(EventsBlock);
