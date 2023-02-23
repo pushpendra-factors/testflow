@@ -46,7 +46,7 @@ func getAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEv
 			continue
 		}
 
-		scanner, err := GetChannelFileScanner(channel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, true, beamConfig, useBucketV2)
+		scanner, err := GetChannelFileScanner(channel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
 		if err != nil {
 			log.WithError(err).Error("failed getting " + channel + " file scanner for all channel kpi")
 			continue

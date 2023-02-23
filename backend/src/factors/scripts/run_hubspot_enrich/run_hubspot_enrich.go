@@ -41,6 +41,7 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 
 	projectIDList := flag.String("project_ids", "*", "List of project_id to run for.")
+	skippedProjectIDListForOtp := flag.String("project_ids", "*", "List of project_id to skip otp job.")
 	disabledProjectIDList := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
 	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
 
@@ -105,6 +106,7 @@ func main() {
 		DryRunCRMSmartEvent:                           *dryRunSmartEvent,
 		CacheSortedSet:                                *cacheSortedSet,
 		AllowedHubspotGroupsByProjectIDs:              *enableHubspotGroupsByProjectID,
+		SkippedProjectIDListForOtp:                    C.GetTokensFromStringListAsUint64(*skippedProjectIDListForOtp),
 		UseSourcePropertyOverwriteByProjectIDs:        *useSourcePropertyOverwriteByProjectID,
 		CaptureSourceInUsersTable:                     *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:          *restrictReusingUsersByCustomerUserId,

@@ -301,7 +301,7 @@ func (store *MemSQL) CreateLinkedinDocument(projectID int64, document *model.Lin
 
 	campaignGroupID, campaignID, creativeID, err := getLinkedinHierarchyColumnsByType(docType, document.Value)
 	if err != nil {
-		logCtx.Error("Invalid docType alias.")
+		logCtx.WithError(err).Error("Invalid docType alias.")
 		return http.StatusBadRequest
 	}
 	document.CampaignGroupID = campaignGroupID
@@ -338,7 +338,7 @@ func addColumnInformationForLinkedinDocuments(linkedinDocuments []model.Linkedin
 	for index, document := range linkedinDocuments {
 		campaignGroupID, campaignID, creativeID, err := getLinkedinHierarchyColumnsByType(document.Type, document.Value)
 		if err != nil {
-			log.WithField("document", linkedinDocuments[index]).Error("Invalid docType alias.")
+			log.WithError(err).WithField("document", linkedinDocuments[index]).Error("Invalid docType alias.")
 			return linkedinDocuments, http.StatusBadRequest
 		}
 		addColumnInformationForLinkedinDocument(&linkedinDocuments[index], campaignGroupID, campaignID, creativeID)
@@ -528,7 +528,7 @@ func (store *MemSQL) getLinkedinFilterValuesByType(projectID int64, docType int,
 	logCtx := log.WithFields(logFields)
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to fetch Project Setting in linkedin filter values.")
+		logCtx.WithField("err_code", errCode).Error("Failed to fetch Project Setting in linkedin filter values.")
 		return []interface{}{}, http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntLinkedinAdAccount
@@ -563,7 +563,7 @@ func (store *MemSQL) GetLinkedinSQLQueryAndParametersForFilterValues(projectID i
 	}
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("failed to fetch Project Setting in linkedin filter values.")
+		logCtx.WithField("err_code", errCode).Error("failed to fetch Project Setting in linkedin filter values.")
 		return "", make([]interface{}, 0, 0), http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntLinkedinAdAccount
@@ -1337,7 +1337,7 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID int64, days 
 
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		log.Error("Failed to get project settings")
+		log.WithField("err_code", errCode).Error("Failed to get project settings")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	if projectSetting.IntLinkedinAdAccount == "" {
@@ -1348,13 +1348,13 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID int64, days 
 
 	to, err := strconv.ParseUint(time.Now().Format("20060102"), 10, 64)
 	if err != nil {
-		log.Error("Failed to parse to timestamp")
+		log.WithError(err).Error("Failed to parse to timestamp")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
 	from, err := strconv.ParseUint(time.Now().AddDate(0, 0, -days).Format("20060102"), 10, 64)
 	if err != nil {
-		log.Error("Failed to parse from timestamp")
+		log.WithError(err).Error("Failed to parse from timestamp")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
@@ -1368,7 +1368,7 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID int64, days 
 	rows1, tx1, err, queryID1 := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
-		log.WithField("error string", err).Error(errString)
+		log.WithError(err).WithField("error string", err).Error(errString)
 		U.CloseReadQuery(rows1, tx1)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
@@ -1390,7 +1390,7 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID int64, days 
 	rows2, tx2, err, queryID2 := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for Linkedin", days)
-		log.WithField("error string", err).Error(errString)
+		log.WithError(err).WithField("error string", err).Error(errString)
 		U.CloseReadQuery(rows2, tx2)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}

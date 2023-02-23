@@ -56,6 +56,24 @@ func (dd *DiskDriver) Create(path, fileName string, reader io.Reader) error {
 	return err
 }
 
+func (dd *DiskDriver) GetWriter(path, fileName string) (io.WriteCloser, error) {
+	err := MkdirAll(path)
+	if err != nil {
+		log.WithError(err).Errorln("Failed to create dir")
+		return nil, err
+	}
+
+	if !strings.HasSuffix(path, separator) {
+		// Append / to the end if not present.
+		path = path + separator
+	}
+	file, err := os.Create(path + fileName)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
 // Get opens a file in read only mode.
 // Caller should take care of closing the returned io.ReadCloser.
 func (dd *DiskDriver) Get(path, fileName string) (io.ReadCloser, error) {
@@ -458,16 +476,19 @@ func (dd *DiskDriver) GetPathAnalysisTempFilePathAndName(id string, projectId in
 }
 
 func (dd *DiskDriver) GetExplainV2Dir(id uint64, projectId int64) string {
-	return fmt.Sprintf("%s/projects/%v/explain/models/%v/", dd.baseDir, projectId, id)
+	path := fmt.Sprintf("%s/projects/%v/explain/models/%v/", dd.baseDir, projectId, id)
+	return path
 }
 
 func (dd *DiskDriver) GetExplainV2ModelPath(id uint64, projectId int64) (string, string) {
 	path := dd.GetExplainV2Dir(id, projectId)
 	chunksPath := pb.Join(path, "chunks")
-	log.Infof("Getting chunks models model (disk) :%s", chunksPath)
 	return chunksPath, "chunk_1.txt"
 }
 
+func (dd *DiskDriver) GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string){
+	return fmt.Sprintf("%s/projects/%v/list/%v/", dd.baseDir, projectID, reference), "list.txt"
+}
 func (dd *DiskDriver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) string {
 	path := dd.GetProjectDir(projectId)
 	return fmt.Sprintf("%ssixSignal/%v/", path, id)

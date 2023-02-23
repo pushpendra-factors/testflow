@@ -14,7 +14,7 @@ import { bindActionCreators } from 'redux';
 import { Text, SVG } from '../../factorsComponents';
 import MomentTz from '../../MomentTz';
 import AccountDetails from './AccountDetails';
-import PropertyFilter from '../UserProfiles/PropertyFilter';
+import PropertyFilter from '../MyComponents/PropertyFilter';
 import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import {
@@ -25,6 +25,7 @@ import {
   formatPayloadForFilters,
   formatSegmentsObjToGroupSelectObj,
   getHost,
+  getPropType,
   propValueFormat
 } from '../utils';
 import {
@@ -43,7 +44,7 @@ import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from '../UserProfiles/SegmentModal';
-import EventsBlock from '../UserProfiles/EventsBlock';
+import EventsBlock from '../MyComponents/EventsBlock';
 
 function AccountProfiles({
   activeProject,
@@ -60,25 +61,27 @@ function AccountProfiles({
   getGroupProperties,
   updateSegmentForId
 }) {
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isGroupDDVisible, setGroupDDVisible] = useState(false);
-  const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
-  const [showSegmentModal, setShowSegmentModal] = useState(false);
-  const [activeSegment, setActiveSegment] = useState({});
-  const [accountPayload, setAccountPayload] = useState({
-    source: 'All',
-    filters: []
-  });
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
   const groupState = useSelector((state) => state.groups);
   const groupOpts = groupState?.data;
+
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isGroupDDVisible, setGroupDDVisible] = useState(false);
+  const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
+  const [showSegmentModal, setShowSegmentModal] = useState(false);
+  const [activeSegment, setActiveSegment] = useState({});
+  const [listProperties, setListProperties] = useState([]);
   const [activeModalKey, setActiveModalKey] = useState('');
   const [showPopOver, setShowPopOver] = useState(false);
   const [checkListAccountProps, setCheckListAccountProps] = useState([]);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
+  const [accountPayload, setAccountPayload] = useState({
+    source: 'All',
+    filters: []
+  });
 
   useEffect(() => {
     if (currentProjectSettings?.timelines_config) {
@@ -112,17 +115,40 @@ function AccountProfiles({
   };
 
   useEffect(() => {
+    fetchProjectSettings(activeProject.id);
+    getSavedSegments(activeProject.id);
     getGroupProperties(activeProject.id, '$hubspot_company');
     getGroupProperties(activeProject.id, '$salesforce_account');
   }, [activeProject.id]);
 
   useEffect(() => {
-    fetchProjectSettings(activeProject.id);
-  }, [activeProject]);
+    const opts = { ...accountPayload };
+    opts.filters = formatFiltersForPayload(accountPayload.filters);
+    getProfileAccounts(activeProject.id, opts);
+  }, [activeProject, currentProjectSettings, accountPayload, segments]);
 
   useEffect(() => {
-    getSavedSegments(activeProject.id);
-  }, [activeProject]);
+    const mergeGroupedProps = [
+      ...(groupProperties.$hubspot_company
+        ? groupProperties.$hubspot_company
+        : []),
+      ...(groupProperties.$salesforce_account
+        ? groupProperties.$salesforce_account
+        : [])
+    ];
+    setListProperties(mergeGroupedProps);
+  }, [groupProperties]);
+
+  useEffect(() => {
+    const tableProps = accountPayload.segment_id
+      ? activeSegment.query.table_props
+      : currentProjectSettings.timelines_config?.account_config?.table_props;
+    const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
+      listProperties,
+      tableProps
+    );
+    setCheckListAccountProps(accountPropsWithEnableKey);
+  }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
 
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
@@ -166,6 +192,7 @@ function AccountProfiles({
       const propDisplayName = groupPropNames[prop]
         ? groupPropNames[prop]
         : PropTextFormat(prop);
+      const propType = getPropType(listProperties, prop);
       columns.push({
         title: (
           <Text
@@ -182,9 +209,9 @@ function AccountProfiles({
         dataIndex: prop,
         key: prop,
         width: 300,
-        render: (item) => (
+        render: (value) => (
           <Text type='title' level={7} className='m-0' truncate>
-            {propValueFormat(prop, item) || '-'}
+            {value ? propValueFormat(prop, value, propType) : '-'}
           </Text>
         )
       });
@@ -244,12 +271,6 @@ function AccountProfiles({
     setAccountPayload(opts);
   };
 
-  useEffect(() => {
-    const opts = { ...accountPayload };
-    opts.filters = formatFiltersForPayload(accountPayload.filters);
-    getProfileAccounts(activeProject.id, opts);
-  }, [activeProject, currentProjectSettings, accountPayload, segments]);
-
   const selectGroup = () => (
     <div className='absolute top-0'>
       {isGroupDDVisible ? (
@@ -261,25 +282,6 @@ function AccountProfiles({
       ) : null}
     </div>
   );
-
-  useEffect(() => {
-    const listProperties = [
-      ...(groupProperties.$hubspot_company
-        ? groupProperties.$hubspot_company
-        : []),
-      ...(groupProperties.$salesforce_account
-        ? groupProperties.$salesforce_account
-        : [])
-    ];
-    const tableProps = accountPayload.segment_id
-      ? activeSegment.query.table_props
-      : currentProjectSettings.timelines_config?.account_config?.table_props;
-    const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
-      listProperties,
-      tableProps
-    );
-    setCheckListAccountProps(accountPropsWithEnableKey);
-  }, [currentProjectSettings, groupProperties, accountPayload]);
 
   const handlePropChange = (option) => {
     if (

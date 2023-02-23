@@ -1,29 +1,39 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Spin } from 'antd';
 import _ from 'lodash';
 import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
-import { SVG } from '../factorsComponents';
-import InfoCard from './InfoCard';
+import { SVG } from '../../../factorsComponents';
+import InfoCard from '../../MyComponents/InfoCard';
 import {
   eventIconsColorMap,
   getEventCategory,
   getIconForCategory,
   groups,
-  hoverEvents
-} from '../Profile/utils';
+  hoverEvents,
+  iconMap,
+  timestampToString
+} from '../../utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
 
-function FaTimeline({
+function UserTimelineBirdview({
   activities = [],
+  milestones,
   granularity,
   collapse,
   setCollapse,
   loading,
-  eventNamesMap
+  eventNamesMap,
+  listProperties
 }) {
   const [showAll, setShowAll] = useState([]);
 
   const groupedActivities = _.groupBy(activities, groups[granularity]);
+  const formattedMilestones = useMemo(() => {
+    return Object.entries(milestones || {}).map(([key, value]) => [
+      key,
+      timestampToString[granularity](value)
+    ]);
+  }, [milestones, granularity]);
 
   useEffect(() => {
     if (collapse !== undefined) {
@@ -53,10 +63,14 @@ function FaTimeline({
         }`
       }}
     >
-      <SVG
-        name={event.icon || 'calendar_star'}
-        size={16}
-        color={eventIconsColorMap[event.icon || 'calendar_star'].iconColor}
+      <img
+        src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${
+          iconMap[event.icon] ? iconMap[event.icon] : event.icon
+        }.svg`}
+        alt=''
+        height={16}
+        width={16}
+        loading='lazy'
       />
     </div>
   );
@@ -83,12 +97,17 @@ function FaTimeline({
           properties={event?.properties || {}}
           trigger={hoverConditionals ? 'hover' : []}
           icon={
-            <SVG
-              name={icon}
-              size={24}
-              color={icon === 'events_cq' ? 'blue' : null}
+            <img
+              src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${
+                iconMap[icon] ? iconMap[icon] : icon
+              }.svg`}
+              alt=''
+              height={24}
+              width={24}
+              loading='lazy'
             />
           }
+          listProperties={listProperties}
         >
           <div className='inline-flex gap--6 items-center'>
             <div className='event-name--sm'>{eventName}</div>
@@ -130,20 +149,32 @@ function FaTimeline({
           <thead>
             <tr>
               <th scope='col'>Date and Time</th>
-              <th scope='col'></th>
+              <th scope='col' />
             </tr>
           </thead>
           <tbody>
             {Object.entries(data).map(([timestamp, events], index) => {
               const eventsList = showAll[index] ? events : events.slice(0, 1);
+              const milestones = formattedMilestones.filter(
+                (milestone) => milestone[1] === timestamp
+              );
               return (
                 <tr>
                   <td>
-                    <div className='top-40'>{timestamp}</div>
+                    <div className='timestamp top-40'>{timestamp}</div>
+                    {milestones.length ? (
+                      <div className='milestone-section'>
+                        {milestones.map((milestone) => (
+                          <div className='green-stripe'>
+                            <div className='text'>{milestone[0]}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </td>
                   <td className='bg-gradient--120px'>
                     <div
-                      className={`timeline-events single-user--padding ${
+                      className={`timeline-events user-pad ${
                         !showAll[index]
                           ? 'timeline-events--collapsed'
                           : 'timeline-events--expanded'
@@ -159,6 +190,13 @@ function FaTimeline({
                         setShowAllIndex(index, !showAll[index])
                       )}
                     </div>
+                    {milestones.length ? (
+                      <div className='milestone-section'>
+                        {milestones.map((milestone) => (
+                          <div className={`green-stripe opaque`} />
+                        ))}
+                      </div>
+                    ) : null}
                   </td>
                 </tr>
               );
@@ -174,4 +212,4 @@ function FaTimeline({
     renderTimeline(groupedActivities)
   );
 }
-export default FaTimeline;
+export default UserTimelineBirdview;

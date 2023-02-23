@@ -68,8 +68,6 @@ func main() {
 	enableUserLevelEventPullForAddSessionByProjectID := flag.String("enable_user_level_pull", "", "List of projectIds where user level event pull is enabled for AddSession job")
 	eventsPullMaxLimit := flag.Int("max_limit_for_events_pull", 50000, "Maximum limit for pulling events in V2") // Default is 50000
 	batchRangeInSeconds := flag.Int64("batch_range_in_seconds", 0, "Batch size for Add Session job")
-	eventTriggerEnabled := flag.Bool("event_trigger_enabled", false, "")
-	eventTriggerEnabledProjectIDs := flag.String("event_trigger_enabled_project_ids", "", "")
 
 	disableUpdateNextSessionTimestamp := flag.Int("disable_update_next_session_timestamp", 0, "Disable the update next session timestamp. Used for historical runs.")
 
@@ -119,9 +117,7 @@ func main() {
 		SessionBatchTransactionBatchSize:    *sessionBatchTransactionBatchSize,
 		IngestionTimezoneEnabledProjectIDs:  C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		EnableUserLevelEventPullForAddSessionByProjectID: *enableUserLevelEventPullForAddSessionByProjectID,
-		EventsPullMaxLimit:                *eventsPullMaxLimit,
-		EventTriggerEnabled:               *eventTriggerEnabled,
-		EventTriggerEnabledProjectIDs:     *eventTriggerEnabledProjectIDs,
+		EventsPullMaxLimit:            *eventsPullMaxLimit,
 		DisableUpdateNextSessionTimestamp: *disableUpdateNextSessionTimestamp,
 	}
 

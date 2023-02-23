@@ -1,5 +1,5 @@
 import MomentTz from '../MomentTz';
-import { formatDurationIntoString } from 'Utils/dataFormatter';
+import { formatDurationIntoString, PropTextFormat } from 'Utils/dataFormatter';
 import {
   EVENT_QUERY_USER_TYPE,
   PREDEFINED_DATES,
@@ -252,32 +252,40 @@ export const getUniqueItemsByKeyAndSearchTerm = (activities, searchTerm) =>
       value.display_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-export const propValueFormat = (key, value) => {
-  const durationKeys = [
-    'Time Spent on Site',
-    '$session_spent_time',
-    '$initial_page_load_time',
-    '$initial_page_spent_time',
-    '$latest_page_load_time'
-  ];
-  if (
-    NUM_AND_DATETIME_PROPS.datetime.includes(key) ||
-    key.includes('timestamp') ||
-    key.includes('starttime') ||
-    key.includes('endtime') ||
-    key.toLowerCase().includes('jointime')
-  ) {
-    if (key.toLowerCase().includes('date'))
-      return MomentTz(value * 1000).format('DD MMM YYYY');
-    else return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
-  } else if (NUM_AND_DATETIME_PROPS.numerical.includes(key) || !isNaN(value)) {
-    if (key.toLowerCase().includes('time'))
-      return formatDurationIntoString(parseInt(value));
-    else if (key.includes('durationmilliseconds'))
-      return formatDurationIntoString(parseInt(value / 1000));
-    else if (!isNaN(value)) return parseInt(value);
+export const getPropType = (propsList, searchProp) => {
+  let propType = 'categorical';
+  propsList.forEach((propArr) => {
+    if (propArr[1] === searchProp) {
+      propType = propArr[2];
+    }
+  });
+  return propType;
+};
+
+export const propValueFormat = (searchKey, value, type) => {
+  if (typeof value === 'string' && value.startsWith('$')) {
+    return PropTextFormat(value);
   }
-  return value;
+  switch (type) {
+    case 'datetime':
+      if (searchKey.toLowerCase().includes('date'))
+        return MomentTz(value * 1000).format('DD MMM YYYY');
+      else return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
+    case 'numerical':
+      if (searchKey.toLowerCase().includes('time'))
+        return formatDurationIntoString(parseInt(value));
+      else if (searchKey.includes('durationmilliseconds'))
+        return formatDurationIntoString(parseInt(value / 1000));
+      else return parseInt(value);
+    case 'categorical':
+      if (searchKey.includes('timestamp'))
+        return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
+      else if (searchKey.endsWith('time'))
+        return formatDurationIntoString(parseInt(value));
+      else return value;
+    default:
+      return value;
+  }
 };
 
 export const formatSegmentsObjToGroupSelectObj = (group, vals) => {
@@ -317,13 +325,13 @@ export const getEventCategory = (event, eventNamesMap) => {
 
 export const getIconForCategory = (category) => {
   if (category.toLowerCase().includes('hubspot')) {
-    return 'hubspot_ads';
+    return 'hubspot';
   }
   if (category.toLowerCase().includes('salesforce')) {
-    return 'salesforce_ads';
+    return 'salesforce';
   }
   if (category.toLowerCase().includes('leadsquared')) {
-    return 'leadSquared';
+    return 'leadsquared';
   }
   if (category.toLowerCase().includes('marketo')) {
     return 'marketo';
@@ -331,7 +339,7 @@ export const getIconForCategory = (category) => {
   if (category === 'website') {
     return 'globe';
   }
-  return 'events_cq';
+  return 'events_blue';
 };
 
 export const convertSVGtoURL = (svg = '') => {
@@ -396,12 +404,6 @@ export const singleTimelineIconSVGs = {
   </svg>`,
   leadSquared: `<svg width="20" height="20" viewBox="-3 -3 50 50" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="6.77518" width="36.5474" height="36.4496" rx="1" fill="#329AFB"></rect><rect x="6" y="25" width="18.2737" height="18.2248" rx="0.5" fill="white"></rect><path d="M6.4 43.2248H23.3062C23.6628 43.2248 23.8411 42.7934 23.5886 42.5416L6.68246 25.6806C6.43032 25.4292 6 25.6078 6 25.9639V42.8248C6 43.0457 6.17909 43.2248 6.4 43.2248Z" fill="#09283D"></path></svg>`,
   marketo: `<svg width="20" height="20" viewBox="-2 -2 50 50" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M41.1165 11.414L31.4995 6.18604V43.814L41.1165 36.154V11.414ZM27.0185 11.75V35.596L19.2745 38.979V9.46004L27.0185 11.75ZM8.91154 13.37L8.88354 34.73L14.8105 33.164V14.32L8.91154 13.37Z" fill="#5C4C9F"></path></svg>`,
-  globe: `<svg width="25" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path fill-rule="evenodd" clip-rule="evenodd" d="M18.7732 16.7878C17.3975 18.4448 15.322 19.5 13 19.5C8.85786 19.5 5.5 16.1421 5.5 12C5.5 11.312 5.59265 10.6456 5.76614 10.0126L8.04209 11.2108L10.0025 9.86292L13.0003 10.3731L11.6519 6.79408L10.0025 6.79408L9.05041 5.623C10.1974 4.91108 11.5507 4.5 13 4.5C14.6185 4.5 16.1173 5.01268 17.3428 5.8845L14.4833 8.34023L16.9424 10.6701L14.4833 11.8407L15.9536 13.381L18.4041 12.8209L18.7732 16.7878ZM23 12C23 17.5228 18.5228 22 13 22C7.47715 22 3 17.5228 3 12C3 6.47715 7.47715 2 13 2C18.5228 2 23 6.47715 23 12ZM9.4304 15.4646L7.34814 14.6612V13.0853L9.07713 10.8702L10.5 12.6437L11.704 13.0853L13.0227 14.6612L11.704 16.6083V18.8105L10.6649 18.4089L9.4304 15.4646Z" fill="#8692A3"/>
-  </svg>
-  `,
-  events_cq: `<svg width="20" height="20" viewBox="-4 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M41.5407 25.6651C42.4479 25.6651 43.2417 24.9847 43.2417 24.0775C43.2417 23.1703 42.4479 22.3765 41.5407 22.3765H35.7574C34.8502 22.3765 34.0564 23.1703 34.0564 24.0775C34.0564 24.8713 34.8502 25.6651 35.7574 25.6651H41.5407Z" fill="#1E89FF"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M26.4589 19.4282L8.99554 24.9847C7.63476 25.4383 7.40796 27.3661 8.54194 28.0464L13.6449 31.2216L5.48019 39.4997C4.57301 40.4068 4.57301 41.7676 5.48019 42.5614C6.27398 43.3552 7.63476 43.4686 8.54194 42.5614L16.7066 34.2833L19.8818 39.3863C20.6755 40.6336 22.4899 40.4068 22.9435 39.0461L28.6134 21.5828C28.9536 20.222 27.7062 18.9746 26.4589 19.4282Z" fill="#1E89FF"></path><path d="M37.572 12.7377C38.2524 12.0573 38.2524 11.0367 37.572 10.4698C36.8916 9.78937 35.871 9.78937 35.304 10.4698L31.1083 14.5521C30.5413 15.2325 30.5413 16.2531 31.1083 16.8201C31.7887 17.5004 32.8092 17.5004 33.3762 16.8201L37.572 12.7377Z" fill="#1E89FF"></path><path d="M25.5518 6.38756C25.5518 5.48038 24.8715 4.79999 23.9643 4.79999C23.0571 4.79999 22.3767 5.48038 22.3767 6.38756V12.2843C22.3767 13.1915 23.0571 13.8718 23.9643 13.8718C24.8715 13.8718 25.5518 13.1915 25.5518 12.2843V6.38756Z" fill="#1E89FF"></path></svg>
-  `,
   envelope: `<svg width="24" height="24" viewBox="-12 -12 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M39.9909 10.65H10.0097C8.06377 10.65 6.55029 12.2356 6.55029 14.1094V34.8656C6.55029 36.8115 8.06377 38.325 10.0097 38.325H39.9909C41.8647 38.325 43.4503 36.8115 43.4503 34.8656V14.1094C43.4503 12.2356 41.8647 10.65 39.9909 10.65ZM39.9909 14.1094V17.0643C38.3333 18.4336 35.7388 20.4516 30.2614 24.7758C29.0362 25.7127 26.6579 28.019 25.0003 27.9469C23.2706 28.019 20.8923 25.7127 19.6671 24.7758C14.1897 20.4516 11.5952 18.4336 10.0097 17.0643V14.1094H39.9909ZM10.0097 34.8656V21.5326C11.5952 22.8299 13.9735 24.7037 17.505 27.5145C19.0905 28.7397 21.9013 31.4783 25.0003 31.4063C28.0272 31.4783 30.7659 28.7397 32.4235 27.5145C35.955 24.7037 38.3333 22.8299 39.9909 21.5326V34.8656H10.0097Z" fill="#FF7875"/>
   </svg>`,
@@ -499,6 +501,16 @@ export const eventIconsColorMap = {
   }
 };
 
+export const iconMap = {
+  calendar_star: 'calendar-star',
+  events_cq: 'events_blue',
+  hand_pointer: 'hand-pointer',
+  HandshakeOutlined: 'handshake',
+  hubspot_ads: 'hubspot',
+  salesforce_ads: 'salesforce',
+  list_check: 'listcheck'
+};
+
 export const iconColors = [
   '#85A5FF',
   '#B37FEB',
@@ -553,145 +565,35 @@ export const getSegmentQuery = (queries, queryOptions, userType) => {
   return query;
 };
 
-// Temp Solution
-export const NUM_AND_DATETIME_PROPS = {
-  datetime: [
-    '$joinTime',
-    '$hubspot_contact_hs_analytics_first_timestamp',
-    '$hubspot_contact_createdate',
-    '$hubspot_contact_lastmodifieddate',
-    '$hubspot_contact_hs_latest_source_timestamp',
-    '$hubspot_contact_hubspot_owner_assigneddate',
-    '$hubspot_contact_hs_lifecyclestage_lead_date',
-    '$hubspot_contact_hs_date_entered_lead',
-    '$hubspot_contact_notes_last_updated',
-    '$hubspot_contact_notes_last_contacted',
-    '$hubspot_contact_hs_lifecyclestage_marketingqualifiedlead_date',
-    '$hubspot_contact_hs_date_entered_marketingqualifiedlead',
-    '$hubspot_contact_hs_sa_first_engagement_date',
-    '$hubspot_contact_hs_last_sales_activity_date',
-    '$hubspot_contact_hs_date_exited_lead',
-    '$hubspot_contact_hs_last_sales_activity_timestamp',
-    '$hubspot_contact_hs_analytics_last_visit_timestamp',
-    '$hubspot_contact_first_conversion_date',
-    '$hubspot_contact_recent_conversion_date',
-    '$hubspot_contact_hs_analytics_last_timestamp',
-    '$hubspot_contact_hs_analytics_first_visit_timestamp',
-    '$hubspot_contact_notes_next_activity_date',
-    '$hubspot_contact_hs_latest_meeting_activity',
-    '$hubspot_contact_hs_sales_email_last_replied',
-    '$hubspot_contact_engagements_last_meeting_booked',
-    '$hubspot_contact_hs_sales_email_last_opened',
-    '$hubspot_contact_hs_lifecyclestage_salesqualifiedlead_date',
-    '$hubspot_contact_hs_date_entered_salesqualifiedlead',
-    '$hubspot_contact_hs_date_exited_marketingqualifiedlead',
-    '$hubspot_contact_first_deal_created_date',
-    '$hubspot_contact_hs_lifecyclestage_subscriber_date',
-    '$hubspot_contact_hs_date_entered_subscriber',
-    '$hubspot_contact_hs_sales_email_last_clicked',
-    '$hubspot_contact_hs_date_exited_subscriber',
-    '$hubspot_contact_hs_lifecyclestage_opportunity_date',
-    '$hubspot_contact_hs_date_entered_opportunity',
-    '$hubspot_contact_hs_date_exited_salesqualifiedlead',
-    '$hubspot_contact_hs_lifecyclestage_customer_date',
-    '$hubspot_contact_closedate',
-    '$hubspot_contact_hs_date_entered_customer',
-    '$hubspot_contact_recent_deal_close_date',
-    '$hubspot_contact_reconnect_date',
-    '$hubspot_company_hs_lastmodifieddate',
-    '$hubspot_company_createdate',
-    '$hubspot_company_hs_analytics_first_timestamp',
-    '$hubspot_company_hs_analytics_latest_source_timestamp',
-    '$hubspot_company_first_contact_createdate',
-    '$hubspot_company_notes_last_updated',
-    '$hubspot_company_notes_last_contacted',
-    '$hubspot_company_hs_last_sales_activity_date',
-    '$hubspot_company_hs_last_sales_activity_timestamp',
-    '$hubspot_company_hs_analytics_last_visit_timestamp',
-    '$hubspot_company_hs_analytics_last_timestamp',
-    '$hubspot_company_hs_analytics_first_visit_timestamp',
-    '$hubspot_company_notes_next_activity_date',
-    '$hubspot_company_recent_conversion_date',
-    '$hubspot_company_first_conversion_date',
-    '$hubspot_company_hs_latest_meeting_activity',
-    '$hubspot_company_hs_last_booked_meeting_date',
-    '$hubspot_company_hs_sales_email_last_replied',
-    '$hubspot_company_engagements_last_meeting_booked',
-    '$hubspot_company_first_deal_created_date',
-    '$hubspot_company_closedate',
-    '$hubspot_company_hubspot_owner_assigneddate',
-    '$hubspot_company_lfapp_latest_visit',
-    '$hubspot_company_recent_deal_close_date',
-    '$hubspot_company_hs_last_open_task_date',
-    '$hubspot_company_hs_last_logged_call_date'
-  ],
-  numerical: [
-    '$hour_of_first_event',
-    'Number of Sessions',
-    'Page Count',
-    'Time Spent on Site',
-    '$hubspot_contact_hs_analytics_num_visits',
-    '$hubspot_contact_num_conversion_events',
-    '$hubspot_contact_hs_object_id',
-    '$hubspot_contact_hs_analytics_revenue',
-    '$hubspot_contact_hs_analytics_average_page_views',
-    '$hubspot_contact_num_unique_conversion_events',
-    '$hubspot_contact_hs_analytics_num_event_completions',
-    '$hubspot_contact_hs_analytics_num_page_views',
-    '$hubspot_contact_associatedcompanyid',
-    '$hubspot_contact_hs_count_is_unworked',
-    '$hubspot_contact_hs_count_is_worked',
-    '$hubspot_contact_hs_sequences_actively_enrolled_count',
-    '$hubspot_contact_num_notes',
-    '$hubspot_contact_num_contacted_notes',
-    '$hubspot_contact_hs_time_in_lead',
-    '$hubspot_contact_hs_updated_by_user_id',
-    '$hubspot_contact_hs_time_in_marketingqualifiedlead',
-    '$hubspot_contact_hs_first_engagement_object_id',
-    '$hubspot_contact_hs_time_to_first_engagement',
-    '$hubspot_contact_hs_created_by_user_id',
-    '$hubspot_contact_hs_time_in_salesqualifiedlead',
-    '$hubspot_contact_num_associated_deals',
-    '$hubspot_contact_hs_time_in_subscriber',
-    '$session_spent_time',
-    '$page_count',
-    '$hubspot_contact_hs_time_in_opportunity',
-    '$hubspot_contact_days_to_close',
-    '$hubspot_contact_hs_time_in_customer',
-    '$initial_page_load_time',
-    '$latest_page_load_time',
-    '$screen_height',
-    '$initial_page_scroll_percent',
-    '$initial_page_spent_time',
-    '$screen_width',
-    '$hubspot_contact_recent_deal_amount',
-    '$hubspot_contact_total_revenue',
-    '$hubspot_contact_primary_contact',
-    '$hubspot_company_hs_num_contacts_with_buying_roles',
-    '$hubspot_company_hs_object_id',
-    '$hubspot_company_hs_num_open_deals',
-    '$hubspot_company_hs_num_child_companies',
-    '$hubspot_company_hs_num_blockers',
-    '$hubspot_company_hs_num_decision_makers',
-    '$hubspot_company_num_associated_contacts',
-    '$hubspot_company_hs_target_account_probability',
-    '$hubspot_company_hs_analytics_num_visits',
-    '$hubspot_company_hs_analytics_num_page_views',
-    '$hubspot_company_num_conversion_events',
-    '$hubspot_company_num_notes',
-    '$hubspot_company_num_contacted_notes',
-    '$hubspot_company_numberofemployees',
-    '$hubspot_company_annualrevenue',
-    '$hubspot_company_num_associated_deals',
-    '$hubspot_company_hs_total_deal_value',
-    '$hubspot_company_days_to_close',
-    '$hubspot_company_total_revenue',
-    '$hubspot_company_hs_updated_by_user_id',
-    '$hubspot_company_factors_app_project_id',
-    '$hubspot_company_mrr',
-    '$hubspot_company_number_of_customers',
-    '$hubspot_company_arpu',
-    '$hubspot_company_recent_deal_amount',
-    '$hubspot_company_hs_created_by_user_id'
-  ]
+export const timestampToString = {
+  Timestamp: (item) => MomentTz(item * 1000).format('DD MMM YYYY, hh:mm:ss A'),
+  Hourly: (item) =>
+    `${MomentTz(item * 1000)
+      .startOf('hour')
+      .format('hh A')} - ${MomentTz(item.timestamp * 1000)
+      .add(1, 'hour')
+      .startOf('hour')
+      .format('hh A')} ${MomentTz(item.timestamp * 1000)
+      .startOf('hour')
+      .format('DD MMM YYYY')}`,
+  Daily: (item) =>
+    MomentTz(item * 1000)
+      .startOf('day')
+      .format('DD MMM YYYY'),
+
+  Weekly: (item) =>
+    `${MomentTz(item * 1000)
+      .startOf('week')
+      .format('DD MMM YYYY')} - ${MomentTz(item.timestamp * 1000)
+      .endOf('week')
+      .format('DD MMM YYYY')}`,
+  Monthly: (item) =>
+    MomentTz(item * 1000)
+      .startOf('month')
+      .format('MMM YYYY')
+};
+
+export const getElemenetHeight = (elem) => {
+  const divElement = document.getElementById(elem);
+  return divElement.offsetHeight;
 };

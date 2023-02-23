@@ -16,9 +16,9 @@ import {
 import FaSelect from 'Components/FaSelect';
 import { compareFilters, generateRandomKey } from 'Utils/global';
 import { useSelector } from 'react-redux';
-import PropFilterBlock from './PropertyFilter/PropFilterBlock';
+import PropFilterBlock from '../MyComponents/PropertyFilter/PropFilterBlock';
 import { deleteGroupByForEvent } from 'Reducers/coreQuery/middleware';
-import EventsBlock from './EventsBlock';
+import EventsBlock from '../MyComponents/EventsBlock';
 
 function SegmentModal({
   profileType,

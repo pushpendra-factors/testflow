@@ -561,7 +561,7 @@ func (store *MemSQL) delAllProjectSettingsCacheForProject(projectId int64) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	project, errCode := store.GetProject(projectId)
 	if errCode != http.StatusFound {
-		log.Error("Failed to get project on delAllProjectSettingsCacheKeys.")
+		log.WithField("err_code", errCode).Error("Failed to get project on delAllProjectSettingsCacheKeys.")
 	}
 
 	// delete all project setting cache keys by respective
@@ -676,7 +676,7 @@ func (store *MemSQL) GetIntAdwordsRefreshTokenForProject(projectId int64) (strin
 
 	agent, errCode := store.GetAgentByUUID(*settings.IntAdwordsEnabledAgentUUID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Adwords enabled agent not found on agents table.")
+		logCtx.WithField("err_code", errCode).Error("Adwords enabled agent not found on agents table.")
 		return "", errCode
 	}
 
@@ -707,7 +707,7 @@ func (store *MemSQL) GetIntGoogleOrganicRefreshTokenForProject(projectId int64) 
 
 	agent, errCode := store.GetAgentByUUID(*settings.IntGoogleOrganicEnabledAgentUUID)
 	if errCode != http.StatusFound {
-		logCtx.Error("GoogleOrganic enabled agent not found on agents table.")
+		logCtx.WithField("err_code", errCode).Error("GoogleOrganic enabled agent not found on agents table.")
 		return "", errCode
 	}
 

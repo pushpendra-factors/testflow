@@ -31,7 +31,11 @@ function MetricChart({
   ) : null;
 
   return (
-    <div className={cx('flex flex-col items-center justify-center row-gap-4 w-full')}>
+    <div
+      className={cx(
+        'flex flex-col items-center justify-center row-gap-4 w-full'
+      )}
+    >
       <Tooltip title={headerTitle}>
         <div className={'flex items-center col-gap-1 justify-center w-full'}>
           <LegendsCircle color={iconColor} />

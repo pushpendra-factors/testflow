@@ -4,7 +4,6 @@ import {
   fetchProfileUsers,
   fetchProfileUserDetails,
   createSegment,
-  getSegments,
   fetchSegments,
   updateSegment
 } from '.';

@@ -112,7 +112,7 @@ func (store *MemSQL) GetAllSegments(projectId int64) (map[string][]model.Segment
 	var segments []model.Segment
 	err := db.Table("segments").Where("project_id = ?", projectId).Find(&segments).Error
 	if err != nil {
-		logCtx.Error("Failed while getting all segments by ProjectId.")
+		logCtx.WithError(err).Error("Failed while getting all segments by ProjectId.")
 		return nil, http.StatusInternalServerError
 	}
 	allSegmentsMap := make(map[string][]model.Segment, 0)

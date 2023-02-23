@@ -180,6 +180,7 @@ type Configuration struct {
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsWeeklyInsights  []int64
 	CustomerEnabledProjectsLastComputed    []int64
+	SkippedProjectIDListForOtp             []int64
 	DemoProjectIds                         []string
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
@@ -275,8 +276,6 @@ type Configuration struct {
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
-	EventTriggerEnabled                                bool
-	EventTriggerEnabledProjectIDs                      string
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
@@ -284,6 +283,7 @@ type Configuration struct {
 	EnableDBConnectionPool2                            bool
 	FormFillIdentificationAllowedProjects              string
 	EnableEventFiltersInSegments                       bool
+	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
 	DisableUpdateNextSessionTimestamp                  int
 }
@@ -1793,6 +1793,16 @@ func GetSkipAttributionDashboardCaching() int {
 	return configuration.SkipAttributionDashboardCaching
 }
 
+func IsProjectIDSkippedForOtp(projectId int64) bool {
+	skip := false
+	for _, id := range configuration.SkippedProjectIDListForOtp {
+		if id == projectId {
+			skip = true
+		}
+	}
+	return skip
+}
+
 func GetSDKRequestQueueAllowedTokens() []string {
 	return configuration.SDKRequestQueueProjectTokens
 }
@@ -2083,7 +2093,10 @@ func GetAppName(defaultAppName, overrideAppName string) string {
 	return defaultAppName
 }
 
-func GetCloudManager(projectId int64) filestore.FileManager {
+func GetCloudManager(projectId int64, skipProjectIdDependency bool) filestore.FileManager {
+	if(skipProjectIdDependency){
+		return configuration.NewCloudManager
+	}
 	if U.ContainsInt64InArray(configuration.ProjectIdsV2, projectId) {
 		return configuration.NewCloudManager
 	}
@@ -2384,21 +2397,7 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	}
 
 	return true
-}
-
-func IsEventTriggerEnabled() bool {
-	return configuration.EventTriggerEnabled
-}
-
-func IsProjectIDEventTriggerEnabledProjectID(id int64) bool {
-	list := GetTokensFromStringListAsUint64(configuration.EventTriggerEnabledProjectIDs)
-	for _, i := range list {
-		if i == id {
-			return true
-		}
-	}
-	return false
-}
+}	
 
 func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
 	if configuration.IncreaseKPILimitForProjectIDs == "" {
@@ -2430,6 +2429,14 @@ func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
 
 func IsEnabledFeatureGates() bool {
 	return configuration.EnableFeatureGates
+}
+
+func EnableSixSignalGroupByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSixSignalGroupByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
 }
 
 func IsEnableDebuggingForIP() bool {

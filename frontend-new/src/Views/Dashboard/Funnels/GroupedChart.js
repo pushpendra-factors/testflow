@@ -168,6 +168,7 @@ function GroupedChart({
         resultData={resultState.data}
         sorter={sorter}
         setSorter={setSorter}
+        isBreakdownApplied={true}
       />
     );
   }

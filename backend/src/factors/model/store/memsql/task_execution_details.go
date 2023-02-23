@@ -59,14 +59,14 @@ func (store *MemSQL) GetAllProcessedIntervalsFromStartDate(taskID uint64, projec
 		if err := db.Where(
 			"task_id = ? AND delta >= ? AND delta <= ? AND is_completed = true",
 			taskID, startDelta, endDelta).Find(&taskExecutionDetails).Error; err != nil {
-			logCtx.Error(err.Error())
+			logCtx.WithError(err).Error("Failure in GetAllProcessedIntervalsFromStartDate")
 			return deltas, http.StatusInternalServerError, err.Error()
 		}
 	} else {
 		if err := db.Where(
 			"task_id = ? AND delta >= ? AND delta <= ? AND is_completed = true AND project_id = ?",
 			taskID, startDelta, endDelta, projectId).Find(&taskExecutionDetails).Error; err != nil {
-			logCtx.Error(err.Error())
+			logCtx.WithError(err).Error("Failure in GetAllProcessedIntervalsFromStartDate")
 			return deltas, http.StatusInternalServerError, err.Error()
 		}
 	}
@@ -117,14 +117,14 @@ func (store *MemSQL) GetAllProcessedIntervals(taskID uint64, projectId int64, lo
 		if err := db.Where(
 			"task_id = ? AND delta >= ? AND delta <= ? AND is_completed = true",
 			taskID, startDelta, endDelta).Find(&taskExecutionDetails).Error; err != nil {
-			logCtx.Error(err.Error())
+			logCtx.WithError(err).Error("Failure in GetAllProcessedIntervals")
 			return deltas, http.StatusInternalServerError, err.Error()
 		}
 	} else {
 		if err := db.Where(
 			"task_id = ? AND delta >= ? AND delta <= ? AND is_completed = true AND project_id = ?",
 			taskID, startDelta, endDelta, projectId).Find(&taskExecutionDetails).Error; err != nil {
-			logCtx.Error(err.Error())
+			logCtx.WithError(err).Error("Failure in GetAllProcessedIntervals")
 			return deltas, http.StatusInternalServerError, err.Error()
 		}
 	}
@@ -176,14 +176,14 @@ func (store *MemSQL) GetAllInProgressIntervals(taskID uint64, projectId int64, l
 		if err := db.Where(
 			"task_id = ? AND delta >= ? AND delta <= ? AND is_completed = false",
 			taskID, startDelta, endDelta).Find(&taskExecutionDetails).Error; err != nil {
-			logCtx.Error(err.Error())
+			logCtx.WithError(err).Error("Failure in GetAllInProgressIntervals")
 			return deltas, http.StatusInternalServerError, err.Error()
 		}
 	} else {
 		if err := db.Where(
 			"task_id = ? AND delta >= ? AND delta <= ? AND is_completed = false AND project_id = ?",
 			taskID, startDelta, endDelta, projectId).Find(&taskExecutionDetails).Error; err != nil {
-			logCtx.Error(err.Error())
+			logCtx.WithError(err).Error("Failure in GetAllInProgressIntervals")
 			return deltas, http.StatusInternalServerError, err.Error()
 		}
 	}
@@ -245,7 +245,7 @@ func (store *MemSQL) InsertTaskBeginRecord(taskId uint64, projectId int64, delta
 		return http.StatusConflict, "Trying to insert duplicate record"
 	}
 	if err := db.Create(&taskExecDetails).Error; err != nil {
-		logCtx.Error(err.Error())
+		logCtx.WithError(err).Error("Failure in InsertTaskBeginRecord")
 		return http.StatusConflict, err.Error()
 
 	}
@@ -363,7 +363,7 @@ func (store *MemSQL) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays i
 
 	taskDetails, errCode, status := store.GetTaskDetailsById(taskID)
 	if errCode != 200 {
-		logCtx.Error(status)
+		logCtx.WithField("err_code", errCode).Error(status)
 		return deltas, http.StatusInternalServerError, status
 	}
 	skipEndIndex := taskDetails.SkipEndIndex

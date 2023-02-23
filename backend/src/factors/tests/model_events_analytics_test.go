@@ -3439,17 +3439,6 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeEventsOccurrence,
 			EventsCondition: model.EventCondEachGivenEvent,
-			GlobalUserProperties: []model.QueryProperty {
-				{
-					Entity: "user_g",
-					Type: "datetime",
-					Property: "$custom_time",
-					Operator: "equals",
-					Value: "{\"fr\":1675621800,\"to\":1675967399,\"ovp\":false,\"num\":0,\"gran\":\"\"}",
-					// Value: "$none",
-					LogicalOp: "AND",
-				},
-			},
 			GroupByProperties: []model.QueryGroupByProperty{
 				model.QueryGroupByProperty{
 					Entity:      model.PropertyEntityUser,
@@ -3473,6 +3462,51 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 			}
 		}
 	})
+	t.Run("TestCoalUniqueUsersCountGroupByWeekTimeGroup", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + (30 * 24 * 60 * 60),
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name: "s4",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+			GroupByProperties: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:      model.PropertyEntityUser,
+					Property:    "$custom_time",
+					Type:        U.PropertyTypeDateTime,
+					EventName:   "present",
+					Granularity: "week",
+				},
+			},
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		assert.Equal(t, "$custom_time", result.Headers[2])
+		// Grouping starts from sunday
+		assert.Equal(t, "2021-05-30T00:00:00+00:00", result.Rows[0][2].(string))
+	})	
 }
 
 func TestEventAnalyticsGroupsBreakdownByLatestUserProperty(t *testing.T) {
@@ -3511,7 +3545,7 @@ func TestEventAnalyticsGroupsBreakdownByLatestUserProperty(t *testing.T) {
 		Properties:     postgres.Jsonb{[]byte(`{"a":1}`)},
 	})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().UpdateUserGroup(project.ID, userID1, groupName, "1", groupUserID1)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userID1, groupName, "1", groupUserID1, false)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	_, status = store.GetStore().CreateUser(&model.User{
@@ -3528,7 +3562,7 @@ func TestEventAnalyticsGroupsBreakdownByLatestUserProperty(t *testing.T) {
 		Properties:     postgres.Jsonb{[]byte(`{"a":2}`)},
 	})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().UpdateUserGroup(project.ID, userID3, groupName, "3", groupUserID2)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userID3, groupName, "3", groupUserID2, false)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 

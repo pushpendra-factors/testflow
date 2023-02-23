@@ -46,7 +46,7 @@ func (store *MemSQL) GetHubspotFormEvents(projectID int64, userId string, timest
 
 	eventName, status := store.GetEventName(U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION, projectID)
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-		log.Error("Failed to get event name")
+		log.WithField("err_code", status).Error("Failed to get event name")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -439,23 +439,22 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		&model.CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
 
 	t1 := time.Now()
-	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
-		//log.Info("EventTriggerAlerts match function trigger point.")
-		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties, nil, false)
-		if ErrCode == http.StatusFound && alerts != nil {
-			// log.WithFields(log.Fields{"project_id": event.ProjectId,
-			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
+	//log.Info("EventTriggerAlerts match function trigger point.")
+	alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties, nil, false)
+	if ErrCode == http.StatusFound && alerts != nil {
+		// log.WithFields(log.Fields{"project_id": event.ProjectId,
+		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
 
-			for _, alert := range *alerts {
-				success := store.CacheEventTriggerAlert(&alert, event)
-				if !success {
-					log.WithFields(log.Fields{"project_id": event.ProjectId,
-						"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
-				}
+		for _, alert := range *alerts {
+			success := store.CacheEventTriggerAlert(&alert, event)
+			if !success {
+				log.WithFields(log.Fields{"project_id": event.ProjectId,
+					"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
 			}
 		}
-		log.Info("Control past EventTrigger block: ", time.Since(t1))
 	}
+	log.Info("Control past EventTrigger block: ", time.Since(t1))
+	
 	return event, http.StatusCreated
 }
 
@@ -832,19 +831,17 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 		store.addEventDetailsToCache(projectId, &model.Event{EventNameId: event.EventNameId, Properties: *updatedPropertiesOnlyJsonBlob}, true)
 	}
 
-	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
-		//log.Info("EventTriggerAlerts match function trigger point.")
-		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
-		if ErrCode == http.StatusFound && alerts != nil {
-			// log.WithFields(log.Fields{"project_id": event.ProjectId,
-			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
+	//log.Info("EventTriggerAlerts match function trigger point.")
+	alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
+	if ErrCode == http.StatusFound && alerts != nil {
+		// log.WithFields(log.Fields{"project_id": event.ProjectId,
+		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
 
-			for _, alert := range *alerts {
-				success := store.CacheEventTriggerAlert(&alert, event)
-				if !success {
-					log.WithFields(log.Fields{"project_id": event.ProjectId,
-						"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
-				}
+		for _, alert := range *alerts {
+			success := store.CacheEventTriggerAlert(&alert, event)
+			if !success {
+				log.WithFields(log.Fields{"project_id": event.ProjectId,
+					"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
 			}
 		}
 	}
@@ -1320,7 +1317,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 	project, errCode := store.GetProject(projectId)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get project on addSessionForUser")
+		logCtx.WithField("err_code", errCode).Error("Failed to get project on addSessionForUser")
 		return 0, 0, false, 0, false, http.StatusNotModified
 	}
 
@@ -1462,7 +1459,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 				if !isEmptyUserProperties {
 					userPropertiesDecoded, err := U.DecodePostgresJsonb(firstEvent.UserProperties)
 					if err != nil {
-						logCtx.WithField("user_properties", firstEvent.UserProperties).
+						logCtx.WithError(err).WithField("user_properties", firstEvent.UserProperties).
 							Error("Failed to decode user properties of first event on session.")
 						return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
 							isLastEventToBeProcessed, http.StatusInternalServerError
@@ -1475,7 +1472,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 				firstEventPropertiesDecoded, err := U.DecodePostgresJsonb(&firstEvent.Properties)
 				if err != nil {
-					logCtx.Error("Failed to decode event properties of first event on session.")
+					logCtx.WithError(err).Error("Failed to decode event properties of first event on session.")
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
 						isLastEventToBeProcessed, http.StatusInternalServerError
 				}
@@ -1483,7 +1480,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 				sessionEventCount, errCode := store.GetEventCountOfUserByEventName(projectId, userId, sessionEventNameId)
 				if errCode == http.StatusInternalServerError {
-					logCtx.Error("Failed to get session event count for user.")
+					logCtx.WithField("err_code", errCode).Error("Failed to get session event count for user.")
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 						0, isLastEventToBeProcessed, errCode
 				}
@@ -1519,7 +1516,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 				})
 
 				if errCode != http.StatusCreated {
-					logCtx.Error("Failed to create session event.")
+					logCtx.WithField("err_code", errCode).Error("Failed to create session event.")
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 						0, isLastEventToBeProcessed, errCode
 				}
@@ -1535,14 +1532,14 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 			errCode := store.associateSessionToEventsInBatch(projectId, userId,
 				eventsOfSession, sessionEvent.ID, 100, sessionEventNameId)
 			if errCode == http.StatusInternalServerError {
-				logCtx.Error("Failed to associate session to events.")
+				logCtx.WithField("err_code", errCode).Error("Failed to associate session to events.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 					0, isLastEventToBeProcessed, errCode
 			}
 
 			lastEventProperties, err := U.DecodePostgresJsonb(&events[sessionEndIndex].Properties)
 			if err != nil {
-				logCtx.Error("Failed to decode properties of last event of session.")
+				logCtx.WithError(err).Error("Failed to decode properties of last event of session.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
 					isLastEventToBeProcessed, http.StatusInternalServerError
 			}
@@ -1568,7 +1565,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 					onlyThisSessionPageSpentTime, errCode = getPageCountAndTimeSpentForContinuedSession(
 					projectId, userId, sessionEvent, events[sessionStartIndex:sessionEndIndex+1])
 				if errCode == http.StatusInternalServerError {
-					logCtx.Error("Failed to get page count and spent time of session on add session.")
+					logCtx.WithField("err_code", errCode).Error("Failed to get page count and spent time of session on add session.")
 				}
 			} else {
 				// events from sessionStartIndex till i.
@@ -1585,7 +1582,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 			}
 			sessionEventProps, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
 			if err != nil {
-				logCtx.Error("Failed to decode session event properties for adding channel property on add session")
+				logCtx.WithError(err).Error("Failed to decode session event properties for adding channel property on add session")
 			} else {
 				channel, errString := model.GetChannelGroup(*project, *sessionEventProps)
 				if errString != "" {
@@ -1632,7 +1629,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 					sessionEvent.UserId, &sessionPropertiesMap, sessionEvent.Timestamp+1,
 					newSessionEventUserPropertiesJsonb)
 				if errCode == http.StatusInternalServerError {
-					logCtx.Error("Failed updating session event properties on add session.")
+					logCtx.WithField("err_code", errCode).Error("Failed updating session event properties on add session.")
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 						0, isLastEventToBeProcessed, errCode
 				}
@@ -2206,7 +2203,7 @@ func (store *MemSQL) GetUnusedSessionIDsForJob(projectID int64, startTimestamp, 
 
 	sessionEventName, errCode := store.GetSessionEventName(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get session event_name.")
+		logCtx.WithField("err_code", errCode).Error("Failed to get session event_name.")
 		return unusedSessions, http.StatusInternalServerError
 	}
 

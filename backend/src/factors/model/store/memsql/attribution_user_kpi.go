@@ -5,8 +5,9 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // ExecuteUserKPIForAttribution Executes the KPI sub-query for Attribution
@@ -96,7 +97,7 @@ func (store *MemSQL) RunUserKPIGroupQuery(projectID int64, query *model.Attribut
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("UserKPI-Attribution result received")
 		if statusCode != http.StatusOK {
-			logCtx.Error("failed to get userKPI result for attribution query")
+			logCtx.WithField("err_code", statusCode).Error("failed to get userKPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
 				return errors.New("failed to get userKPI result for attribution query - StatusPartialContent"), nil
 			}
@@ -133,7 +134,7 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("UserKPI-Attribution result received")
 		if statusCode != http.StatusOK {
-			logCtx.Error("failed to get userKPI result for attribution query")
+			logCtx.WithField("err_code", statusCode).Error("failed to get userKPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
 				return errors.New("failed to get userKPI result for attribution query - StatusPartialContent"), nil
 			}

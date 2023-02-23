@@ -28,7 +28,7 @@ func (store *MemSQL) GetEventNameFromEventNameId(eventNameId string, projectId i
 	queryStr := "SELECT * FROM event_names WHERE id = ? AND project_id = ?"
 	err := db.Raw(queryStr, eventNameId, projectId).Scan(&eventName).Error
 	if err != nil {
-		log.Error("Failed to get event_name from event_name_id")
+		log.WithError(err).Error("Failed to get event_name from event_name_id")
 		return nil, err
 	}
 	return &eventName, nil

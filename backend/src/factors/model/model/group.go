@@ -24,6 +24,7 @@ const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
 const GROUP_NAME_HUBSPOT_DEAL = "$hubspot_deal"
 const GROUP_NAME_SALESFORCE_ACCOUNT = "$salesforce_account"
 const GROUP_NAME_SALESFORCE_OPPORTUNITY = "$salesforce_opportunity"
+const GROUP_NAME_SIX_SIGNAL = "$6signal"
 
 // AllowedGroupNames list of allowed group names
 var AllowedGroupNames = map[string]bool{
@@ -31,6 +32,15 @@ var AllowedGroupNames = map[string]bool{
 	GROUP_NAME_HUBSPOT_DEAL:           true,
 	GROUP_NAME_SALESFORCE_ACCOUNT:     true,
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: true,
+	GROUP_NAME_SIX_SIGNAL:             true,
+}
+
+var GroupsGroupIDPropertyKey = map[string]string{
+	GROUP_NAME_SIX_SIGNAL: U.SIX_SIGNAL_DOMAIN,
+}
+
+func GetGroupsGroupIDPropertyKey(groupName string) string {
+	return GroupsGroupIDPropertyKey[groupName]
 }
 
 // AllowedGroups total groups allowed per project
@@ -123,4 +133,8 @@ func GetPropertyValuesByGroupPropertyFromCache(projectID int64, groupName string
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
 	return cacheValue, nil
+}
+
+func IsAllowedGroupName(name string) bool {
+	return AllowedGroupNames[name]
 }

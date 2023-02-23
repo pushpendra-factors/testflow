@@ -120,7 +120,7 @@ func (store *MemSQL) CreateCRMActivity(crmActivity *model.CRMActivity) (int, err
 			return http.StatusConflict, nil
 		}
 
-		logCtx.WithError(err).Error("Failed to check for existing activity.")
+		logCtx.WithError(err).WithField("err_code", status).Error("Failed to check for existing activity.")
 		return status, err
 	}
 

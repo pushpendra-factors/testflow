@@ -67,6 +67,9 @@ func main() {
 		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to pull.FileType map
 	projectIdFlag := flag.String("project_ids", "",
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
+	splitRangeProjectIdFlag := flag.String("split_range_project_ids", "",
+		"Optional: Project Id. A comma separated list of project Ids where query range is spli nto multiple parts and supports '*' for all projects. ex: 1,2,6,9")
+	noOfSplits := flag.Int("number_splits", 1, "number of parts to split the range into for db query")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	projectsFromDB := flag.Bool("projects_from_db", false, "")
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -162,13 +165,16 @@ func main() {
 	if *projectsFromDB {
 		wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
 		explain_projects, _ := store.GetStore().GetAllExplainEnabledProjects()
+		path_analysis_projects, _ := store.GetStore().GetAllPathAnalysisEnabledProjects()
 		for _, id := range wi_projects {
 			projectIdsToRun[id] = true
 		}
 		for _, id := range explain_projects {
 			projectIdsToRun[id] = true
 		}
-
+		for _, id := range path_analysis_projects {
+			projectIdsToRun[id] = true
+		}
 	} else {
 		var allProjects bool
 		allProjects, projectIdsToRun, _ = C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
@@ -186,6 +192,24 @@ func main() {
 	projectIdsArray := make([]int64, 0)
 	for projectId := range projectIdsToRun {
 		projectIdsArray = append(projectIdsArray, projectId)
+	}
+
+	splitRangeProjectIdsMap := make(map[int64]bool, 0)
+	var allProjects bool
+	allProjects, splitRangeProjectIdsMap, _ = C.GetProjectsFromListWithAllProjectSupport(*splitRangeProjectIdFlag, "")
+	if allProjects {
+		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
+		if errCode != http.StatusFound {
+			log.Fatal("Failed to get all projects and project_ids set to '*'.")
+		}
+		for _, projectID := range projectIDs {
+			splitRangeProjectIdsMap[projectID] = true
+		}
+	}
+
+	splitRangeProjectIds := make([]int64, 0)
+	for projectId, _ := range splitRangeProjectIdsMap {
+		splitRangeProjectIds = append(splitRangeProjectIds, projectId)
 	}
 
 	configs := make(map[string]interface{})
@@ -225,9 +249,9 @@ func main() {
 	}
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
-
-	configs["diskManager"] = diskManager
 	configs["hardPull"] = hardPull
+	configs["splitRangeProjectIds"] = splitRangeProjectIds
+	configs["noOfSplits"] = *noOfSplits
 
 	C.PingHealthcheckForStart(healthcheckPingID)
 
@@ -266,6 +290,7 @@ func main() {
 			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Data Daily run success.")
 		}
 	} else {
+		configs["diskManager"] = diskManager
 		configs["beamConfig"] = &beamConfig
 		fileTypesMapOnlyEvents := make(map[int64]bool)
 		fileTypesMapOnlyEvents[1] = true

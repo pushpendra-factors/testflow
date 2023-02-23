@@ -417,8 +417,8 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 
 	var timelinesConfig model.TimelinesConfig
 
-	propsToShow := []string{"$email", "$page_count", "$user_id", "$name", "$session_spent_time"}
-	timelinesConfig.UserConfig.LeftpaneProps = propsToShow
+	timelinesConfig.UserConfig.LeftpaneProps = []string{"$email", "$page_count", "$user_id", "$name", "$session_spent_time"}
+	timelinesConfig.UserConfig.Milestones = []string{"$milesone_1", "$milesone_2", "$milesone_3"}
 
 	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
 	assert.Nil(t, err)
@@ -434,6 +434,11 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		"$session_count":      8,
 		"$session_spent_time": 500,
 		"$page_count":         10,
+		"$milesone_1":         U.UnixTimeBeforeDuration(1 * time.Hour),
+		"$milesone_2":         U.UnixTimeBeforeDuration(2 * time.Hour),
+		"$milesone_3":         U.UnixTimeBeforeDuration(3 * time.Hour),
+		"$milesone_4":         U.UnixTimeBeforeDuration(4 * time.Hour),
+		"$milesone_5":         U.UnixTimeBeforeDuration(5 * time.Hour),
 	}
 	propertiesJSON, err := json.Marshal(props)
 	if err != nil {
@@ -801,6 +806,9 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 			for i, property := range resp.LeftPaneProps {
 				assert.Equal(t, (*userPropsDecoded)[i], property)
 			}
+			for i, property := range resp.Milestones {
+				assert.Equal(t, (*userPropsDecoded)[i], property)
+			}
 			return true
 		})
 		assert.NotNil(t, resp.GroupInfos)
@@ -1140,9 +1148,9 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 	var timelinesConfig model.TimelinesConfig
 
-	propsToShow := []string{"$hubspot_company_industry", "$hubspot_company_country"}
-	timelinesConfig.AccountConfig.LeftpaneProps = propsToShow
+	timelinesConfig.AccountConfig.LeftpaneProps = []string{"$hubspot_company_industry", "$hubspot_company_country"}
 	timelinesConfig.AccountConfig.UserProp = "$hubspot_contact_jobtitle"
+	timelinesConfig.UserConfig.Milestones = []string{"$milesone_1", "$milesone_2", "$milesone_3"}
 
 	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
 	assert.Nil(t, err)
@@ -1163,6 +1171,11 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		U.GP_SALESFORCE_ACCOUNT_INDUSTRY:          "Freshworks-SF",
 		U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES:    "",
 		U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES: "",
+		"$milesone_1":                             U.UnixTimeBeforeDuration(1 * time.Hour),
+		"$milesone_2":                             U.UnixTimeBeforeDuration(2 * time.Hour),
+		"$milesone_3":                             U.UnixTimeBeforeDuration(3 * time.Hour),
+		"$milesone_4":                             U.UnixTimeBeforeDuration(4 * time.Hour),
+		"$milesone_5":                             U.UnixTimeBeforeDuration(5 * time.Hour),
 	}
 	propertiesJSON, err := json.Marshal(props)
 	if err != nil {
@@ -1517,6 +1530,9 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.NotNil(t, resp.LeftPaneProps)
 		assert.Condition(t, func() bool {
 			for i, property := range resp.LeftPaneProps {
+				assert.Equal(t, props[i], property)
+			}
+			for i, property := range resp.Milestones {
 				assert.Equal(t, props[i], property)
 			}
 			return true

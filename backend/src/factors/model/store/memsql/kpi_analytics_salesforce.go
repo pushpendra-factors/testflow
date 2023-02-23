@@ -126,7 +126,7 @@ func (store *MemSQL) GetPropertiesForSalesforceOpportunities(projectID int64, re
 	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricSectionDisplayCategory(model.SalesforceOpportunitiesDisplayCategory), 2500,
 		C.GetLookbackWindowForEventUserCache())
 	if status != http.StatusFound {
-		logCtx.Error("Failed to get salesforce opportunities properties. Internal error")
+		logCtx.WithField("err_code", status).Error("Failed to get salesforce opportunities properties. Internal error")
 		return make([]map[string]string, 0)
 	}
 
@@ -164,7 +164,7 @@ func (store *MemSQL) GetPropertiesForSalesforceAccounts(projectID int64, reqID s
 	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricSectionDisplayCategory(model.SalesforceAccountsDisplayCategory), 2500,
 		C.GetLookbackWindowForEventUserCache())
 	if status != http.StatusFound {
-		logCtx.Error("Failed to get salesforce account properties. Internal error")
+		logCtx.WithField("err_code", status).Error("Failed to get salesforce account properties. Internal error")
 		return make([]map[string]string, 0)
 	}
 

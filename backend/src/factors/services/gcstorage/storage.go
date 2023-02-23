@@ -62,6 +62,22 @@ func (gcsd *GCSDriver) Create(dir, fileName string, reader io.Reader) error {
 	return err
 }
 
+func (gcsd *GCSDriver) GetWriter(dir, fileName string) (io.WriteCloser, error) {
+	ctx := context.Background()
+	if !strings.HasSuffix(dir, separator) {
+		// Append / to the end if not present.
+		dir = dir + separator
+	}
+	obj := gcsd.client.Bucket(gcsd.BucketName).Object(dir + fileName)
+
+	writer := struct {
+		ReadFrom int // to "disable" ReadFrom method
+		*storage.Writer
+	}{0, obj.NewWriter(ctx)}
+
+	return writer, nil
+}
+
 func (gcsd *GCSDriver) Get(dir, fileName string) (io.ReadCloser, error) {
 	ctx := context.Background()
 	if !strings.HasSuffix(dir, separator) {
@@ -465,6 +481,9 @@ func (gcsd *GCSDriver) GetExplainV2ModelPath(id uint64, projectId int64) (string
 	return chunksPath, "chunk_1.txt"
 }
 
+func (gcsd *GCSDriver) GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string){
+	return fmt.Sprintf("projects/%v/list/%v/", projectID, reference), "list.txt"
+}
 func (gcsd *GCSDriver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) string {
 	path := gcsd.GetProjectDir(projectId)
 	return fmt.Sprintf("%ssixSignal/%v/", path, id)

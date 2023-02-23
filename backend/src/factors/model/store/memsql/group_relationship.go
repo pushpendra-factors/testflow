@@ -89,7 +89,7 @@ func (store *MemSQL) GetGroupRelationshipByUserID(projectID int64, leftGroupUser
 			return nil, http.StatusNotFound
 		}
 
-		logCtx.Error("Failed to get group_relationship for left_group_user_id.")
+		logCtx.WithError(err).Error("Failed to get group_relationship for left_group_user_id.")
 		return nil, http.StatusInternalServerError
 	}
 

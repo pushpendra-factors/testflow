@@ -130,13 +130,13 @@ func (store *MemSQL) CreatePropertyDetails(projectID int64, eventName, propertyK
 		if isUserProperty {
 			status = store.updatePropertyDetails(projectID, "", propertyDetail.Key, propertyDetail.Type, propertyDetail.Entity, propertyType)
 			if status != http.StatusAccepted {
-				logCtx.Error("Failed to update property details.")
+				logCtx.WithField("err_code", status).Error("Failed to update property details.")
 				return http.StatusInternalServerError
 			}
 		} else {
 			status = store.updatePropertyDetails(projectID, *propertyDetail.EventNameID, propertyDetail.Key, propertyDetail.Type, propertyDetail.Entity, propertyType)
 			if status != http.StatusAccepted {
-				logCtx.Error("Failed to update property details.")
+				logCtx.WithField("err_code", status).Error("Failed to update property details.")
 				return http.StatusInternalServerError
 			}
 		}
@@ -147,7 +147,7 @@ func (store *MemSQL) CreatePropertyDetails(projectID int64, eventName, propertyK
 	if !isUserProperty {
 		event, status := store.GetEventName(eventName, projectID)
 		if status != http.StatusFound {
-			logCtx.Error("Failed to get event name.")
+			logCtx.WithField("err_code", status).Error("Failed to get event name.")
 			return http.StatusBadRequest
 		}
 		configuredProperties.EventNameID = &event.ID
@@ -462,7 +462,7 @@ func (store *MemSQL) getPropertyDetailsForSmartEventName(projectID int64, eventN
 			return nil, status
 		}
 
-		logCtx.Error("Failed to get event name on smart event property details.")
+		logCtx.WithField("err_code", status).Error("Failed to get event name on smart event property details.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -523,7 +523,7 @@ func (store *MemSQL) GetAllPropertyDetailsByProjectID(projectID int64, eventName
 				return nil, status
 			}
 
-			logCtx.Error("Failed to get event name on property details")
+			logCtx.WithField("err_code", status).Error("Failed to get event name on property details")
 			return nil, http.StatusInternalServerError
 		}
 

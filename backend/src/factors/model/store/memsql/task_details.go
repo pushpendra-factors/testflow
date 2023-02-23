@@ -17,9 +17,9 @@ import (
 
 func (store *MemSQL) RegisterTaskWithDefaultConfiguration(taskName string, source string, frequency int, isProjectEnabled bool) (uint64, int, string) {
 	logFields := log.Fields{
-		"task_name": taskName,
-		"source": source,
-		"frequency": frequency,
+		"task_name":          taskName,
+		"source":             source,
+		"frequency":          frequency,
 		"is_project_enabled": isProjectEnabled,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -28,14 +28,14 @@ func (store *MemSQL) RegisterTaskWithDefaultConfiguration(taskName string, sourc
 
 func (store *MemSQL) RegisterTask(taskName string, source string, frequency int, isProjectEnabled bool, frequencyInterval int, skipStartIndex int, skipEndIndex int, recurrence bool, offsetStartMinutes int) (uint64, int, string) {
 	logFields := log.Fields{
-		"task_name": taskName,
-		"source": source,
-		"frequency": frequency,
-		"is_project_enabled": isProjectEnabled,
-		"frequency_interval": frequencyInterval,
-		"skip_start_index": skipStartIndex,
-		"skip_end_index": skipEndIndex,
-		"recurrence": recurrence,
+		"task_name":            taskName,
+		"source":               source,
+		"frequency":            frequency,
+		"is_project_enabled":   isProjectEnabled,
+		"frequency_interval":   frequencyInterval,
+		"skip_start_index":     skipStartIndex,
+		"skip_end_index":       skipEndIndex,
+		"recurrence":           recurrence,
 		"offset_start_minutes": offsetStartMinutes,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -113,7 +113,7 @@ func (store *MemSQL) RegisterTask(taskName string, source string, frequency int,
 	}
 
 	if err := db.Create(&taskDetails).Error; err != nil {
-		logCtx.Error(err.Error())
+		logCtx.WithError(err).Error("Failure in RegisterTask")
 		return 0, http.StatusConflict, err.Error()
 
 	}
@@ -122,11 +122,11 @@ func (store *MemSQL) RegisterTask(taskName string, source string, frequency int,
 
 func isValidFrequency(frequency, frequencyInterval, skipStartIndex int, skipEndIndex int, offsetStart int) bool {
 	logFields := log.Fields{
-		"frequency": frequency,
+		"frequency":          frequency,
 		"frequency_interval": frequencyInterval,
-		"skip_start_index": skipStartIndex,
-		"skip_end_index": skipEndIndex,
-		"offset_start": offsetStart,
+		"skip_start_index":   skipStartIndex,
+		"skip_end_index":     skipEndIndex,
+		"offset_start":       offsetStart,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if frequency == model.Hourly {
@@ -200,7 +200,7 @@ func (store *MemSQL) GetTaskDetailsByName(taskName string) (model.TaskDetails, i
 			logCtx.Error("record with this task name is not found")
 			return taskDetails, http.StatusNotFound, "record with this task name is not found"
 		}
-		logCtx.Error(err.Error())
+		logCtx.WithError(err).Error("Failure in GetTaskDetailsByName")
 		return taskDetails, http.StatusInternalServerError, err.Error()
 	}
 	return taskDetails, http.StatusOK, ""
@@ -231,7 +231,7 @@ func (store *MemSQL) GetTaskDetailsById(taskID uint64) (model.TaskDetails, int, 
 			logCtx.Error("record with this task id is not found")
 			return taskDetails, http.StatusNotFound, "record with this taskID is not found"
 		}
-		logCtx.Error(err.Error())
+		logCtx.WithError(err).Error("Failure in GetTaskDetailsById")
 		return taskDetails, http.StatusInternalServerError, err.Error()
 	}
 	return taskDetails, http.StatusOK, ""
