@@ -90,7 +90,7 @@ func (store *MemSQL) DeleteTeamsIntegration(projectID int64, agentUUID string) e
 		return err
 	}
 	if err != nil && err.Error() == "Empty jsonb object" {
-		return errors.New("No slack auth token found")
+		return errors.New("No teams auth token found")
 	}
 	var newToken model.TeamsAuthTokens
 	newToken = make(map[int64]model.TeamsAccessTokens)
