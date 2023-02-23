@@ -168,6 +168,7 @@ function ContactDetails({
       )
     );
   };
+  
   const controlsPopover = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane

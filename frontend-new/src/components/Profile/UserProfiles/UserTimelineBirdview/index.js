@@ -14,6 +14,7 @@ import {
   timestampToString
 } from '../../utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import { useSelector } from 'react-redux';
 
 function UserTimelineBirdview({
   activities = [],
@@ -26,6 +27,7 @@ function UserTimelineBirdview({
   listProperties
 }) {
   const [showAll, setShowAll] = useState([]);
+  const { userPropNames } = useSelector((state) => state.coreQuery);
 
   const groupedActivities = _.groupBy(activities, groups[granularity]);
   const formattedMilestones = useMemo(() => {
@@ -166,13 +168,21 @@ function UserTimelineBirdview({
                       <div className='milestone-section'>
                         {milestones.map((milestone) => (
                           <div className='green-stripe'>
-                            <div className='text'>{milestone[0]}</div>
+                            <div className='text'>
+                              {userPropNames[milestone[0]]
+                                ? userPropNames[milestone[0]]
+                                : milestone[0]}
+                            </div>
                           </div>
                         ))}
                       </div>
                     ) : null}
                   </td>
-                  <td className='bg-gradient--120px'>
+                  <td
+                    className={`bg-gradient--120px pb-${
+                      milestones.length * 10
+                    }`}
+                  >
                     <div
                       className={`timeline-events user-pad ${
                         !showAll[index]

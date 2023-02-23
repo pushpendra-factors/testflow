@@ -459,7 +459,7 @@ export const eventIconsColorMap = {
     bgColor: '#FFF4F4',
     borderColor: '#FFDEDE'
   },
-  HandshakeOutlined: {
+  handshake: {
     iconColor: '#85A5FF',
     bgColor: '#EFF3FF',
     borderColor: '#D3DEFF'
@@ -469,22 +469,22 @@ export const eventIconsColorMap = {
     bgColor: '#F0FFE7',
     borderColor: '#D5F4C1'
   },
-  list_check: {
+  'list-check': {
     iconColor: '#5CDBD3',
     bgColor: '#EBFFFE',
     borderColor: '#C6F6F4'
   },
-  hand_pointer: {
+  'hand-pointer': {
     iconColor: '#FAAD14',
     bgColor: '#FFF3DB',
     borderColor: '#FBE5BA'
   },
-  hubspot_ads: {
+  hubspot: {
     iconColor: '#FF7A59',
     bgColor: '#FFE8E2',
     borderColor: '#FED0C5'
   },
-  salesforce_ads: {
+  salesforce: {
     iconColor: '#00A1E0',
     bgColor: '#E8F8FF',
     borderColor: '#CDF0FF'
@@ -494,7 +494,7 @@ export const eventIconsColorMap = {
     bgColor: '#FFF0F7',
     borderColor: '#FFD9EB'
   },
-  calendar_star: {
+  'calendar-star': {
     iconColor: '#B37FEB',
     bgColor: '#F6EDFF',
     borderColor: '#E9D4FF'
@@ -570,10 +570,10 @@ export const timestampToString = {
   Hourly: (item) =>
     `${MomentTz(item * 1000)
       .startOf('hour')
-      .format('hh A')} - ${MomentTz(item.timestamp * 1000)
+      .format('hh A')} - ${MomentTz(item * 1000)
       .add(1, 'hour')
       .startOf('hour')
-      .format('hh A')} ${MomentTz(item.timestamp * 1000)
+      .format('hh A')} ${MomentTz(item * 1000)
       .startOf('hour')
       .format('DD MMM YYYY')}`,
   Daily: (item) =>
@@ -584,7 +584,7 @@ export const timestampToString = {
   Weekly: (item) =>
     `${MomentTz(item * 1000)
       .startOf('week')
-      .format('DD MMM YYYY')} - ${MomentTz(item.timestamp * 1000)
+      .format('DD MMM YYYY')} - ${MomentTz(item * 1000)
       .endOf('week')
       .format('DD MMM YYYY')}`,
   Monthly: (item) =>
