@@ -604,7 +604,7 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 		}
 
 		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"attributionData": attributionData, "sessions": sessions}).Info("Done FireAttributionV1. Attribution debug AnalyzeTypeUsers.")
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("Done FireAttributionV1. Attribution debug AnalyzeTypeUsers.")
 		}
 		queryStartTime = time.Now().UTC().Unix()
 		if C.GetAttributionDebug() == 1 {

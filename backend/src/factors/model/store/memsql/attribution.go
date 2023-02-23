@@ -79,6 +79,11 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Fetch marketing report took time")
 	}
+	if C.GetAttributionDebug() == 1 && projectID == 12384898978000017 {
+		log.WithFields(log.Fields{"Attribution": "Debug",
+			"AdwordsCampaignIDData":  marketingReports.AdwordsCampaignIDData,
+			"AdwordsCampaignKeyData": marketingReports.AdwordsCampaignKeyData}).Info("FetchMarketingReports in ExecuteAttributionQueryV0")
+	}
 	queryStartTime = time.Now().UTC().Unix()
 
 	if err != nil {
@@ -130,7 +135,6 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		log.WithFields(log.Fields{"KPIAttribution": "Debug",
 			"kpiData":                       kpiData,
 			"coalUserIdConversionTimestamp": coalUserIdConversionTimestamp,
-			"userInfo":                      userInfo,
 			"usersIDsToAttribute":           usersIDsToAttribute}).Info("Attributable users list - ConvertedUsers")
 	}
 
