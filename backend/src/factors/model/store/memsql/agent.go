@@ -464,3 +464,30 @@ func (store *MemSQL) IsSlackIntegratedForProject(projectID int64, agentUUID stri
 	}
 	return false, http.StatusOK
 }
+func (store *MemSQL) IsTeamsIntegratedForProject(projectID int64, agentUUID string) (bool, int) {
+	agent, errCode := store.GetAgentByUUID(agentUUID)
+	if errCode != http.StatusFound {
+		return false, errCode
+	}
+	if agent.TeamsAccessTokens == nil {
+		return false, http.StatusOK
+	}
+	var authToken model.TeamsAuthTokens
+	isEmpty := U.IsEmptyPostgresJsonb(agent.TeamsAccessTokens)
+	if isEmpty {
+		return false, http.StatusOK
+	}
+	err := U.DecodePostgresJsonbToStructType(agent.TeamsAccessTokens, &authToken)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode teams auth tokens")
+		return false, http.StatusInternalServerError
+	}
+	if TeamsAccessTokens, ok := authToken[projectID]; ok {
+		// check if this is a valid token
+		if TeamsAccessTokens.AccessToken != "" && TeamsAccessTokens.RefreshToken != "" {
+			return true, http.StatusOK
+		}
+
+	}
+	return false, http.StatusOK
+}

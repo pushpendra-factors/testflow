@@ -75,6 +75,8 @@ func (store *MemSQL) GetTeamsAuthTokens(projectID int64, agentUUID string) (mode
 	return token[projectID], nil
 
 }
+// TODO : add func for using refresh token to obtain new access token.
+
 func (store *MemSQL) DeleteTeamsIntegration(projectID int64, agentUUID string) error {
 	db := C.GetServices().Db
 	var agent model.Agent
