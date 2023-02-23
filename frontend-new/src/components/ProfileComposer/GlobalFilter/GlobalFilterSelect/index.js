@@ -90,7 +90,10 @@ const GlobalFilterSelect = ({
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
         filter.values?.[0] === '$none'
       ) {
-        if (filter.operator === OPERATORS['equalTo'])
+        if (
+          filter.operator === OPERATORS['equalTo'] ||
+          filter.operator?.[0] === OPERATORS['equalTo']
+        )
           setOperatorState(OPERATORS['isUnknown']);
         else setOperatorState(OPERATORS['isKnown']);
       } else {
@@ -113,6 +116,8 @@ const GlobalFilterSelect = ({
 
   useEffect(() => {
     if (
+      operatorState === OPERATORS['isKnown'] ||
+      operatorState === OPERATORS['isUnknown'] ||
       operatorState?.[0] === OPERATORS['isKnown'] ||
       operatorState?.[0] === OPERATORS['isUnknown']
     ) {
@@ -406,12 +411,12 @@ const GlobalFilterSelect = ({
     const operatorSt = isArray(operatorState)
       ? operatorState[0]
       : operatorState;
-    if (operatorSt === 'before') {
+    if (operatorSt === OPERATORS['before']) {
       dateT = MomentTz(val).startOf('day');
       dateValue['to'] = dateT.toDate().getTime();
     }
 
-    if (operatorSt === 'since') {
+    if (operatorSt === OPERATORS['since']) {
       dateT = MomentTz(val).startOf('day');
       dateValue['fr'] = dateT.toDate().getTime();
     }
@@ -524,7 +529,7 @@ const GlobalFilterSelect = ({
             setShowDatePicker(!showDatePicker);
           }}
           value={
-            operator === 'before'
+            operator === OPERATORS['before']
               ? moment(parsedValues['to'])
               : moment(
                   parsedValues['from']
@@ -553,9 +558,9 @@ const GlobalFilterSelect = ({
       <FaSelect
         multiSelect={
           (isArray(operatorState) ? operatorState[0] : operatorState) ===
-            '!=' ||
+            OPERATORS['notEqualTo'] ||
           (isArray(operatorState) ? operatorState[0] : operatorState) ===
-            'does not contain'
+            OPERATORS['doesNotContain']
             ? false
             : true
         }
