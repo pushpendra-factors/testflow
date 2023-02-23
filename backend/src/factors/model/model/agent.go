@@ -42,6 +42,7 @@ type Agent struct {
 	Value             *postgres.Jsonb `json:"value"`
 	SlackAccessTokens *postgres.Jsonb `json:"slack_access_tokens"`
 	LastLoggedOut     int64           `json:"last_logged_out"`
+	TeamsAccessTokens *postgres.Jsonb `json:"teams_access_tokens"`
 }
 type CreateAgentParams struct {
 	Agent    *Agent
@@ -102,6 +103,12 @@ type SlackAuthTokens map[int64]SlackAccessTokens
 type SlackAccessTokens struct {
 	BotAccessToken  string `json:"bot_access_token"`
 	UserAccessToken string `json:"user_access_token"`
+}
+
+type TeamsAuthTokens map[int64]TeamsAccessTokens
+type TeamsAccessTokens struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func Firstname(firstName string) Option {

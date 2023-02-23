@@ -710,9 +710,6 @@ type Model interface {
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
 
 	// alerts
-	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
-	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
-	DeleteSlackIntegration(projectID int64, agentUUID string) error
 	GetAlertById(id string, projectID int64) (model.Alert, int)
 	GetAllAlerts(projectID int64, excludeSavedQueries bool) ([]model.Alert, int)
 	DeleteAlert(id string, projectID int64) (int, string)
@@ -862,4 +859,14 @@ type Model interface {
 	GetPropertyMappingsByProjectId(projectID int64) ([]*model.PropertyMapping, string, int)
 	GetPropertyMappingsByProjectIdAndSectionBitMap(projectID int64, sectionBitMap int64) ([]*model.PropertyMapping, string, int)
 	DeletePropertyMappingByID(projectID int64, id string) int
+
+	// Slack
+	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
+	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
+	DeleteSlackIntegration(projectID int64, agentUUID string) error
+
+	// MS Teams
+	SetAuthTokenforTeamsIntegration(projectID int64, agentUUID string, authTokens model.TeamsAccessTokens) error
+	GetTeamsAuthTokens(projectID int64, agentUUID string) (model.TeamsAccessTokens, error)
+	DeleteTeamsIntegration(projectID int64, agentUUID string) error
 }

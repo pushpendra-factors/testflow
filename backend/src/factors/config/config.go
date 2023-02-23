@@ -285,6 +285,7 @@ type Configuration struct {
 	FormFillIdentificationAllowedProjects              string
 	EnableEventFiltersInSegments                       bool
 	EnableDebuggingForIP                               bool
+	TeamsAppTenantID                                   string
 	TeamsAppClientID                                   string
 	TeamsAppClientSecret                               string
 }
@@ -2439,6 +2440,11 @@ func IsEnableDebuggingForIP() bool {
 func GetTeamsClientID() string {
 	return configuration.TeamsAppClientID
 }
+
 func GetTeamsClientSecret() string {
 	return configuration.TeamsAppClientSecret
+}
+
+func GetTeamsTenantID() string {
+	return configuration.TeamsAppTenantID
 }
