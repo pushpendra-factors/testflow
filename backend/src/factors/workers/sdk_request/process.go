@@ -62,8 +62,7 @@ func main() {
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	formFillIdentifyAllowedProjectIDs := flag.String("form_fill_identify_allowed_projects", "", "Form fill identification allowed project ids.")
-	eventTriggerEnabled := flag.Bool("event_trigger_enabled", false, "")
-	eventTriggerEnabledProjectIDs := flag.String("event_trigger_enabled_project_ids", "", "")
+	enableSixSignalGroupByProjectID := flag.String("enable_six_signal_group_by_project_id", "", "")
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -111,8 +110,7 @@ func main() {
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
 		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		FormFillIdentificationAllowedProjects:              *formFillIdentifyAllowedProjectIDs,
-		EventTriggerEnabled:                                *eventTriggerEnabled,
-		EventTriggerEnabledProjectIDs:                      *eventTriggerEnabledProjectIDs,
+		EnableSixSignalGroupByProjectID:                    *enableSixSignalGroupByProjectID,
 	}
 	C.InitConf(config)
 

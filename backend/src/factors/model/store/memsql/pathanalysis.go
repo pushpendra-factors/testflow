@@ -201,7 +201,7 @@ func (store *MemSQL) addCreatedByNameInPathAnalysis(obj []model.PathAnalysis) (m
 
 	agents, errCode := store.GetAgentsByUUIDs(agentUUIDs)
 	if errCode != http.StatusFound {
-		log.WithFields(logFields).Error("could not get agents for given agentUUIDs")
+		log.WithFields(logFields).WithField("err_code", errCode).Error("could not get agents for given agentUUIDs")
 		return nil, errCode
 	}
 

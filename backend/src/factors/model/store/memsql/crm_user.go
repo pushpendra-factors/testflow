@@ -101,7 +101,7 @@ func (store *MemSQL) CreateCRMUser(crmUser *model.CRMUser) (int, error) {
 
 	status, err := isExistCRMUserByID(crmUser.ProjectID, crmUser.Source, crmUser.Type, crmUser.ID)
 	if status == http.StatusInternalServerError {
-		logCtx.WithError(err).Error("Failed to check existing user document.")
+		logCtx.WithError(err).WithField("err_code", status).Error("Failed to check existing user document.")
 		return http.StatusInternalServerError, err
 	}
 

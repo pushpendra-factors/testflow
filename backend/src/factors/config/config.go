@@ -180,6 +180,7 @@ type Configuration struct {
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsWeeklyInsights  []int64
 	CustomerEnabledProjectsLastComputed    []int64
+	SkippedProjectIDListForOtp             []int64
 	DemoProjectIds                         []string
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
@@ -275,8 +276,6 @@ type Configuration struct {
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
-	EventTriggerEnabled                                bool
-	EventTriggerEnabledProjectIDs                      string
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
@@ -284,7 +283,9 @@ type Configuration struct {
 	EnableDBConnectionPool2                            bool
 	FormFillIdentificationAllowedProjects              string
 	EnableEventFiltersInSegments                       bool
+	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
+	DisableUpdateNextSessionTimestamp                  int
 }
 
 type Services struct {
@@ -343,6 +344,7 @@ const (
 	HealthcheckPathAnalysisPingID               = "9f71b930-9233-4e58-9935-5de0434d8fa8"
 	HealthCheckPreBuiltCustomKPIPingID          = "9e5ac799-e15f-4f44-86b0-4be88379f486"
 	HealthCheckAnalyzeJobPingID                 = "3d1bd82d-e036-4433-a794-1042a7f29976"
+	HealthCheckSixSignalReportPingID            = "2508c4c3-b941-40bb-8f2b-a59e4bedf3e5"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
@@ -1791,6 +1793,16 @@ func GetSkipAttributionDashboardCaching() int {
 	return configuration.SkipAttributionDashboardCaching
 }
 
+func IsProjectIDSkippedForOtp(projectId int64) bool {
+	skip := false
+	for _, id := range configuration.SkippedProjectIDListForOtp {
+		if id == projectId {
+			skip = true
+		}
+	}
+	return skip
+}
+
 func GetSDKRequestQueueAllowedTokens() []string {
 	return configuration.SDKRequestQueueProjectTokens
 }
@@ -2081,7 +2093,10 @@ func GetAppName(defaultAppName, overrideAppName string) string {
 	return defaultAppName
 }
 
-func GetCloudManager(projectId int64) filestore.FileManager {
+func GetCloudManager(projectId int64, skipProjectIdDependency bool) filestore.FileManager {
+	if(skipProjectIdDependency){
+		return configuration.NewCloudManager
+	}
 	if U.ContainsInt64InArray(configuration.ProjectIdsV2, projectId) {
 		return configuration.NewCloudManager
 	}
@@ -2382,21 +2397,7 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	}
 
 	return true
-}
-
-func IsEventTriggerEnabled() bool {
-	return configuration.EventTriggerEnabled
-}
-
-func IsProjectIDEventTriggerEnabledProjectID(id int64) bool {
-	list := GetTokensFromStringListAsUint64(configuration.EventTriggerEnabledProjectIDs)
-	for _, i := range list {
-		if i == id {
-			return true
-		}
-	}
-	return false
-}
+}	
 
 func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
 	if configuration.IncreaseKPILimitForProjectIDs == "" {
@@ -2428,6 +2429,14 @@ func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
 
 func IsEnabledFeatureGates() bool {
 	return configuration.EnableFeatureGates
+}
+
+func EnableSixSignalGroupByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSixSignalGroupByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
 }
 
 func IsEnableDebuggingForIP() bool {

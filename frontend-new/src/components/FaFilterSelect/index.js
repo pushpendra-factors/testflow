@@ -21,11 +21,11 @@ const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 const { Option } = Select;
 
-const rangePicker = ['=', '!='];
-const customRangePicker = ['between', 'not between'];
-const deltaPicker = ['in the previous', 'not in the previous'];
-const currentPicker = ['in the current', 'not in the current'];
-const datePicker = ['before', 'since'];
+const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
+const customRangePicker = [OPERATORS['between'], OPERATORS['notBetween']];
+const deltaPicker = [OPERATORS['inThePrevious'], OPERATORS['notInThePrevious']];
+const currentPicker = [OPERATORS['inTheCurrent'], OPERATORS['notInTheCurrent']];
+const datePicker = [OPERATORS['before'], OPERATORS['since']];
 
 const FAFilterSelect = ({
   displayMode,
@@ -44,7 +44,7 @@ const FAFilterSelect = ({
     type: ''
   });
 
-  const [operatorState, setOperatorState] = useState('=');
+  const [operatorState, setOperatorState] = useState(OPERATORS['equalTo']);
   const [valuesState, setValuesState] = useState(null);
 
   const [propSelectOpen, setPropSelectOpen] = useState(true);
@@ -80,6 +80,8 @@ const FAFilterSelect = ({
 
   useEffect(() => {
     if (
+      operatorState === OPERATORS['isKnown'] ||
+      operatorState === OPERATORS['isUnknown'] ||
       operatorState?.[0] === OPERATORS['isKnown'] ||
       operatorState?.[0] === OPERATORS['isUnknown']
     ) {
@@ -101,7 +103,10 @@ const FAFilterSelect = ({
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
         filter.values?.[0] === '$none'
       ) {
-        if (filter.operator === OPERATORS['equalTo'])
+        if (
+          filter.operator === OPERATORS['equalTo'] ||
+          filter.operator?.[0] === OPERATORS['equalTo']
+        )
           setOperatorState(OPERATORS['isUnknown']);
         else setOperatorState(OPERATORS['isKnown']);
       } else {
@@ -175,9 +180,12 @@ const FAFilterSelect = ({
   const propSelect = (prop) => {
     setPropState({ icon: prop[3], name: prop[1], type: prop[2] });
     setPropSelectOpen(false);
-    setOperatorState(prop[2] === 'datetime' ? 'between' : '=');
+    setOperatorState(
+      prop[2] === 'datetime' ? OPERATORS['between'] : OPERATORS['equalTo']
+    );
     setValuesState(null);
     setValuesByProps(prop);
+    setValuesSelectionOpen(true);
   };
 
   const valuesSelect = (val) => {
@@ -411,12 +419,12 @@ const FAFilterSelect = ({
     const operatorSt = isArray(operatorState)
       ? operatorState[0]
       : operatorState;
-    if (operatorSt === 'before') {
+    if (operatorSt === OPERATORS['before']) {
       dateT = MomentTz(val).startOf('day');
       dateValue['to'] = dateT.toDate().getTime();
     }
 
-    if (operatorSt === 'since') {
+    if (operatorSt === OPERATORS['since']) {
       dateT = MomentTz(val).startOf('day');
       dateValue['fr'] = dateT.toDate().getTime();
     }
@@ -541,7 +549,7 @@ const FAFilterSelect = ({
             setShowDatePicker(!showDatePicker);
           }}
           value={
-            operator === 'before'
+            operator === OPERATORS['before']
               ? moment(parsedValues['to'])
               : moment(
                   parsedValues['from']
@@ -570,9 +578,9 @@ const FAFilterSelect = ({
         <FaSelect
           multiSelect={
             (isArray(operatorState) ? operatorState[0] : operatorState) ===
-              '!=' ||
+              OPERATORS['notEqualTo'] ||
             (isArray(operatorState) ? operatorState[0] : operatorState) ===
-              'does not contain'
+              OPERATORS['doesNotContain']
               ? false
               : true
           }

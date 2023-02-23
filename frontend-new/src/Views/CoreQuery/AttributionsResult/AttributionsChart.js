@@ -5,7 +5,8 @@ import React, {
   useCallback,
   useEffect,
   forwardRef,
-  useImperativeHandle
+  useImperativeHandle,
+  memo
 } from 'react';
 import get from 'lodash/get';
 import { useSelector } from 'react-redux';
@@ -43,7 +44,7 @@ const nodata = (
   </div>
 );
 
-const AttributionsChart = forwardRef(
+const AttributionsChartComponent = forwardRef(
   (
     {
       data,
@@ -59,20 +60,17 @@ const AttributionsChart = forwardRef(
       content_groups,
       chartType,
       queryOptions,
-      attrQueries = []
+      attrQueries = [],
+      comparison_data,
+      comparison_duration,
+      savedQuerySettings,
+      attributionMetrics,
+      appliedFilters,
+      setAttributionMetrics,
+      updateCoreQueryReducer
     },
     ref
   ) => {
-    const {
-      coreQueryState: {
-        comparison_data,
-        comparison_duration,
-        savedQuerySettings
-      },
-      attributionMetrics,
-      setAttributionMetrics
-    } = useContext(CoreQueryContext);
-
     const { eventNames } = useSelector((state) => state.coreQuery);
 
     const [aggregateData, setAggregateData] = useState({
@@ -82,7 +80,6 @@ const AttributionsChart = forwardRef(
     const [dualTouchpointChartData, setDualTouchpointChartData] = useState([]);
     const [searchText, setSearchText] = useState('');
     const [filters, setFilters] = useState([]);
-    const [appliedFilters, setAppliedFilters] = useState({});
     const [filtersVisible, setFiltersVisibility] = useState(false);
     const [columns, setColumns] = useState([]);
     const [tableData, setTableData] = useState([]);
@@ -150,10 +147,13 @@ const AttributionsChart = forwardRef(
       [displayedAttributionMetrics, handleMetricsVisibilityChange]
     );
 
-    const handleApplyFilters = useCallback((filters) => {
-      setAppliedFilters(filters);
-      setFiltersVisibility(false);
-    }, []);
+    const handleApplyFilters = useCallback(
+      (filters) => {
+        updateCoreQueryReducer({ attributionTableFilters: filters });
+        setFiltersVisibility(false);
+      },
+      [updateCoreQueryReducer]
+    );
 
     useEffect(() => {
       setColumns(
@@ -416,7 +416,9 @@ const AttributionsChart = forwardRef(
             searchText={searchText}
             setSearchText={setSearchText}
             metricsOptionsPopover={
-              isLandingPageOrAllPageViewSelected(touchpoint) ? null : metricsOptionsPopover
+              isLandingPageOrAllPageViewSelected(touchpoint)
+                ? null
+                : metricsOptionsPopover
             }
             filters={filters}
             filtersVisible={filtersVisible}
@@ -429,5 +431,36 @@ const AttributionsChart = forwardRef(
     );
   }
 );
+
+const AttributionsChartMemoized = memo(AttributionsChartComponent);
+
+const AttributionsChart = (props) => {
+  const { renderedCompRef, ...rest } = props;
+  const {
+    coreQueryState: {
+      comparison_data,
+      comparison_duration,
+      savedQuerySettings,
+      attributionTableFilters
+    },
+    attributionMetrics,
+    setAttributionMetrics,
+    updateCoreQueryReducer
+  } = useContext(CoreQueryContext);
+
+  return (
+    <AttributionsChartMemoized
+      setAttributionMetrics={setAttributionMetrics}
+      attributionMetrics={attributionMetrics}
+      savedQuerySettings={savedQuerySettings}
+      comparison_data={comparison_data}
+      comparison_duration={comparison_duration}
+      updateCoreQueryReducer={updateCoreQueryReducer}
+      appliedFilters={attributionTableFilters}
+      ref={renderedCompRef}
+      {...rest}
+    />
+  );
+};
 
 export default AttributionsChart;

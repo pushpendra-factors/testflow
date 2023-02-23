@@ -78,7 +78,7 @@ func (store *MemSQL) GetDisplayCategoryToPropertiesByProjectIDAndPropertyMapping
 
 	propertyMapping, errStr, errCode := store.GetPropertyMappingByProjectIDAndName(projectID, name)
 	if errCode != http.StatusOK {
-		logCtx.WithField("project_id", projectID).Error("Failed while retrieving Property Mapping")
+		logCtx.WithField("project_id", projectID).WithField("err_code", errCode).Error("Failed while retrieving Property Mapping")
 		return nil, errStr, errCode
 	}
 

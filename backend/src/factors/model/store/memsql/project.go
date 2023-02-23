@@ -260,7 +260,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	}
 	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
 	if err != nil {
-		logCtx.Error("Default Timelines Config Encode Failed.")
+		logCtx.WithError(err).Error("Default Timelines Config Encode Failed.")
 	}
 
 	_, errCode := store.createProjectSetting(&model.ProjectSetting{
@@ -276,14 +276,14 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		TimelinesConfig:      tlConfigEncoded,
 	})
 	if errCode != http.StatusCreated {
-		logCtx.Error("Create project settings failed on create project dependencies.")
+		logCtx.WithField("err_code", errCode).Error("Create project settings failed on create project dependencies.")
 		return errCode
 	}
 
 	if ENABLE_DEFAULT_WEB_ANALYTICS {
 		errCode = store.createDefaultDashboardsForProject(projectID, agentUUID)
 		if errCode != http.StatusCreated {
-			logCtx.Error("Create default dashboards failed on create project dependencies.")
+			logCtx.WithField("err_code", errCode).Error("Create default dashboards failed on create project dependencies.")
 			return errCode
 		}
 	}
@@ -590,7 +590,7 @@ func (store *MemSQL) GetTimezoneForProject(projectID int64) (U.TimeZoneString, i
 	} else {
 		_, errCode := time.LoadLocation(string(project.TimeZone))
 		if errCode != nil {
-			log.WithField("projectId", project.ID).Error("This project has been given with wrong timezone")
+			log.WithField("projectId", project.ID).WithField("err_code", errCode).Error("This project has been given with wrong timezone")
 			return "", http.StatusNotFound
 		}
 		return U.TimeZoneString(project.TimeZone), statusCode
@@ -617,7 +617,7 @@ func (store *MemSQL) GetTimezoneByIDWithCache(projectID int64) (U.TimeZoneString
 
 	_, errCode2 := time.LoadLocation(string(resTimezone))
 	if errCode2 != nil {
-		log.WithField("projectId", projectID).Error("This project has been given with wrong timezone")
+		log.WithField("projectId", projectID).WithField("err_code", errCode2).Error("This project has been given with wrong timezone")
 		return "", http.StatusNotFound
 	}
 	return resTimezone, statusCode

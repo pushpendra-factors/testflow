@@ -6,12 +6,11 @@ import (
 	"factors/filestore"
 	M "factors/model/model"
 	"factors/model/store"
-	serviceDisk "factors/services/disk"
 	U "factors/util"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -26,7 +25,7 @@ type CounterUserFormat struct {
 }
 
 // get all profile type custom metrics and get their datefields, pull users data for each datefield
-func PullUsersDataForCustomMetrics(projectId int64, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, hardPull *bool, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
+func PullUsersDataForCustomMetrics(projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, hardPull *bool, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
 
 	filesCreated := 0
 	totalRowsCount := 0
@@ -96,7 +95,7 @@ func PullUsersDataForCustomMetrics(projectId int64, cloudManager *filestore.File
 			status["users-"+dateField+"-error"] = "Unknown object type"
 			continue
 		}
-		if err, ok := pullDataForUsers(projectId, cloudManager, diskManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, dateField, source, group, status, logCtx); !ok {
+		if err, ok := pullDataForUsers(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, dateField, source, group, status, logCtx); !ok {
 			return err, false
 		} else {
 			totalRowsCount += status["users-RowsCount"].(int)
@@ -119,16 +118,16 @@ func PullUsersDataForCustomMetrics(projectId int64, cloudManager *filestore.File
 }
 
 // pull users data for given datefield into files, and upload each local file to its proper cloud location
-func pullDataForUsers(projectId int64, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64,
+func pullDataForUsers(projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64,
 	dateField string, source int, group int, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
 
 	logCtx.Infof("Pulling users for %s", dateField)
 
 	// Writing users data to tmp file before upload.
-	_, fName := diskManager.GetDailyUsersArchiveFilePathAndName(dateField, projectId, 0, startTimestamp, endTimestamp)
+	_, cName := (*cloudManager).GetDailyUsersArchiveFilePathAndName(dateField, projectId, 0, startTimestamp, endTimestamp)
 	startAt := time.Now().UnixNano()
 
-	count, filePaths, err := pullUsersData(dateField, source, group, projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, fName, diskManager, startTimestamp, endTimestamp)
+	count, err := pullUsersData(dateField, source, group, projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, endTimestamp)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Pull users failed for" + dateField + ". Pull and write failed.")
 		status["users-"+dateField+"-error"] = err.Error()
@@ -145,46 +144,20 @@ func pullDataForUsers(projectId int64, cloudManager *filestore.FileManager, disk
 		return err, true
 	}
 
-	_, cName := (*cloudManager).GetDailyUsersArchiveFilePathAndName(dateField, projectId, 0, startTimestamp, endTimestamp)
-	for timestamp, path := range filePaths {
-		tmpOutputFile, err := os.Open(path)
-		if err != nil {
-			logCtx.WithField("error", err).Error("Failed to pull " + dateField + ". Write to tmp failed.")
-			status["users-"+dateField+"-error"] = "Failed to pull " + dateField + ". Write to tmp failed."
-			return err, false
-		}
-
-		cDir, _ := (*cloudManager).GetDailyUsersArchiveFilePathAndName(dateField, projectId, timestamp, 0, 0)
-
-		err = (*cloudManager).Create(cDir, cName, tmpOutputFile)
-		if err != nil {
-			logCtx.WithField("error", err).Errorf("Failed to pull %s. Upload failed.", dateField)
-			status["users-"+dateField+"-error"] = "Failed to pull " + dateField + ". Upload failed."
-			return err, false
-		}
-
-		err = os.Remove(path)
-		if err != nil {
-			logCtx.Errorf("unable to delete file")
-			return err, false
-		}
-	}
-
 	return nil, true
 }
 
 // pull user rows from db and generate local files w.r.t timestamp and return map with (key,value) as (timestamp,path)
-func pullUsersData(dateField string, source int, group int, projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, diskManager *serviceDisk.DiskDriver, startTimestamp, endTimestamp int64) (int, map[int64]string, error) {
+func pullUsersData(dateField string, source int, group int, projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64) (int, error) {
 
 	rows, tx, err := store.GetStore().PullUsersRowsForWIV2(projectID, startTimeTimezone, endTimeTimezone, dateField, source, group)
 	if err != nil {
 		log.WithError(err).Error("SQL Query failed.")
-		return 0, nil, err
+		return 0, err
 	}
 	defer U.CloseReadQuery(rows, tx)
 
-	var fileMap = make(map[int64]*os.File)
-	var pathMap = make(map[int64]string)
+	var writerMap = make(map[int64]*io.WriteCloser)
 	rowCount := 0
 	for rows.Next() {
 		var id string
@@ -194,25 +167,21 @@ func pullUsersData(dateField string, source int, group int, projectID int64, sta
 		var timestamp int
 		if err = rows.Scan(&id, &properties, &is_anonymous, &join_timestamp, &timestamp); err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
-			return 0, nil, err
+			return 0, err
 		}
 
 		daysFromStart := int64(math.Floor(float64(int64(timestamp)-startTimeTimezone) / float64(U.Per_day_epoch)))
 		fileTimestamp := startTimestamp + daysFromStart*U.Per_day_epoch
-		file, ok := fileMap[fileTimestamp]
+		writer, ok := writerMap[fileTimestamp]
 		if !ok {
-			fPath, _ := diskManager.GetDailyUsersArchiveFilePathAndName(dateField, projectID, fileTimestamp, 0, 0)
-			serviceDisk.MkdirAll(fPath) // create dir if not exist.
-			tmpEventsFile := fPath + fileName
-			fileNew, err := os.Create(tmpEventsFile)
+			cPath, _ := (*cloudManager).GetDailyUsersArchiveFilePathAndName(dateField, projectID, fileTimestamp, 0, 0)
+			cloudWriter, err := (*cloudManager).GetWriter(cPath, fileName)
 			if err != nil {
-				log.WithFields(log.Fields{"file": fileName, "err": err}).Error("Unable to create file.")
-				return 0, nil, err
+				log.WithFields(log.Fields{"file": fileName, "err": err}).Error("Unable to get cloud file writer")
+				return 0, err
 			}
-			defer file.Close()
-			pathMap[fileTimestamp] = tmpEventsFile
-			fileMap[fileTimestamp] = fileNew
-			file = fileNew
+			writerMap[fileTimestamp] = &cloudWriter
+			writer = &cloudWriter
 		}
 
 		var propsMap map[string]interface{}
@@ -220,12 +189,12 @@ func pullUsersData(dateField string, source int, group int, projectID int64, sta
 			propsBytes, err := properties.Value()
 			if err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal properties")
-				return 0, nil, err
+				return 0, err
 			}
 			err = json.Unmarshal(propsBytes.([]byte), &propsMap)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal properties")
-				return 0, nil, err
+				return 0, err
 			}
 		} else {
 			log.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil properties")
@@ -241,22 +210,30 @@ func pullUsersData(dateField string, source int, group int, projectID int64, sta
 		lineBytes, err := json.Marshal(user)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("Unable to marshal user.")
-			return 0, nil, err
+			return 0, err
 		}
 		line := string(lineBytes)
-		if _, err := file.WriteString(fmt.Sprintf("%s\n", line)); err != nil {
+		if _, err := io.WriteString(*writer, fmt.Sprintf("%s\n", line)); err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-			return 0, nil, err
+			return 0, err
 		}
 		rowCount++
 	}
 
-	if rowCount > M.EventsPullLimit {
+	if rowCount > M.UsersPullLimit {
 		// Todo(Dinesh): notify
-		return rowCount, pathMap, fmt.Errorf("events count has exceeded the %d limit", M.EventsPullLimit)
+		return rowCount, fmt.Errorf("users count has exceeded the %d limit", M.UsersPullLimit)
 	}
 
-	return rowCount, pathMap, nil
+	for _, writer := range writerMap {
+		err := (*writer).Close()
+		if err != nil {
+			log.WithError(err).Error("Error closing writer")
+			return 0, err
+		}
+	}
+
+	return rowCount, nil
 }
 
 // check if users file for given dateField has been generated already for given start and end timestamp, in dataTimestamp's day and

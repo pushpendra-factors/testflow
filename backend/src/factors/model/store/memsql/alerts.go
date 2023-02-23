@@ -20,13 +20,13 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID int64, agentUUID 
 	db := C.GetServices().Db
 	_, errCode := store.GetProjectAgentMapping(projectID, agentUUID)
 	if errCode != http.StatusFound {
-		log.Error("Project agent mapping not found.")
+		log.WithField("err_code", errCode).Error("Project agent mapping not found.")
 		return errors.New("Project agent mapping not found.")
 	}
 	var agent model.Agent
 	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failure in SetAuthTokenforSlackIntegration")
 		return err
 	}
 	var token model.SlackAuthTokens
@@ -35,7 +35,7 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID int64, agentUUID 
 	} else {
 		err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
 		if err != nil {
-			log.Error(err)
+			log.WithError(err).Error("Failure in SetAuthTokenforSlackIntegration")
 			return err
 		}
 	}
@@ -43,13 +43,13 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID int64, agentUUID 
 	// convert token to json
 	TokenJson, err := U.EncodeStructTypeToPostgresJsonb(token)
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failure in SetAuthTokenforSlackIntegration")
 		return err
 	}
 	// update the db
 	err = db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_access_tokens", TokenJson).Error
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failure in SetAuthTokenforSlackIntegration")
 		return err
 	}
 	return nil
@@ -59,7 +59,7 @@ func (store *MemSQL) GetSlackAuthToken(projectID int64, agentUUID string) (model
 	var agent model.Agent
 	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failure in GetSlackAuthToken")
 		return model.SlackAccessTokens{}, err
 	}
 	var token model.SlackAuthTokens
@@ -70,7 +70,7 @@ func (store *MemSQL) GetSlackAuthToken(projectID int64, agentUUID string) (model
 
 	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
 	if err != nil && err.Error() != "Empty jsonb object" {
-		log.Error(err)
+		log.WithError(err).Error("Failure in GetSlackAuthToken")
 		return model.SlackAccessTokens{}, err
 	}
 	if err != nil && err.Error() == "Empty jsonb object" {
@@ -87,13 +87,13 @@ func (store *MemSQL) DeleteSlackIntegration(projectID int64, agentUUID string) e
 	var agent model.Agent
 	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failure in DeleteSlackIntegration")
 		return err
 	}
 	var token model.SlackAuthTokens
 	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
 	if err != nil && err.Error() != "Empty jsonb object" {
-		log.Error(err)
+		log.WithError(err).Error("Failure in DeleteSlackIntegration")
 		return err
 	}
 	if err != nil && err.Error() == "Empty jsonb object" {
@@ -108,13 +108,13 @@ func (store *MemSQL) DeleteSlackIntegration(projectID int64, agentUUID string) e
 	}
 	TokenJson, err := U.EncodeStructTypeToPostgresJsonb(newToken)
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failure in DeleteSlackIntegration")
 		return err
 	}
 	// update the db
 	err = db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_access_tokens", TokenJson).Error
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failure in DeleteSlackIntegration")
 		return err
 	}
 	return nil
@@ -197,7 +197,7 @@ func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOf
 		} else if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
 			query, status := store.GetQueryWithQueryId(alert.ProjectID, alert.QueryID)
 			if status != http.StatusFound {
-				log.Error("Query not found for id ", alert.QueryID)
+				log.WithField("err_code", status).Error("Query not found for id ", alert.QueryID)
 				continue
 			}
 			class, errMsg := store.GetQueryClassFromQueries(*query)
@@ -247,7 +247,7 @@ func (store *MemSQL) GetAlertNamesByProjectIdTypeAndNameAndPropertyMappingName(p
 		} else if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
 			query, status := store.GetQueryWithQueryId(alert.ProjectID, alert.QueryID)
 			if status != http.StatusFound {
-				log.Error("Query not found for id ", alert.QueryID)
+				log.WithField("err_code", status).Error("Query not found for id ", alert.QueryID)
 				continue
 			}
 			class, errMsg := store.GetQueryClassFromQueries(*query)
@@ -292,7 +292,7 @@ func (store *MemSQL) DeleteAlert(id string, projectID int64) (int, string) {
 	db := C.GetServices().Db
 	err := db.Table("alerts").Where("project_id = ? AND id = ?", projectID, id).Updates(map[string]interface{}{"is_deleted": true, "updated_at": time.Now().UTC()}).Error
 	if err != nil {
-		log.WithField("project_id", projectID).Error(err)
+		log.WithError(err).WithField("project_id", projectID).Error(err)
 		return http.StatusInternalServerError, err.Error()
 	}
 	return http.StatusAccepted, ""
@@ -305,12 +305,12 @@ func (store *MemSQL) UpdateAlert(projectID int64, alertID string, alert model.Al
 	updatedFields := map[string]interface{}{
 		"alert_name":          alert.AlertName,
 		"alert_configuration": alert.AlertConfiguration,
-		"alert_description":   alert.AlertDescription,
-		"updated_at":          time.Now().UTC(),
+		//	"alert_description":   alert.AlertDescription,
+		"updated_at": time.Now().UTC(),
 	}
 	alert.ID = alertID
 	// validating alert config
-	isValid, status, errMsg := store.validateAlertBody(projectID, alert)
+	isValid, status, errMsg := store.validateAlertBody(projectID, alert, true)
 	if !isValid {
 		return model.Alert{}, status, errMsg
 	}
@@ -327,7 +327,7 @@ func (store *MemSQL) UpdateAlertStatus(lastAlertSent bool) (int, string) {
 	db := C.GetServices().Db
 	err := db.Table("alerts").Where("id = ?", lastAlertSent).Updates(map[string]interface{}{"last_alert_sent": lastAlertSent, "updated_at": time.Now().UTC()}).Error
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failure in UpdateAlertStatus")
 		return http.StatusInternalServerError, err.Error()
 	}
 	return http.StatusAccepted, ""
@@ -352,7 +352,7 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 		CreatedAt:          time.Now().UTC(),
 		UpdatedAt:          time.Now().UTC(),
 	}
-	isValid, status, errMsg := store.validateAlertBody(projectID, alertRecord)
+	isValid, status, errMsg := store.validateAlertBody(projectID, alertRecord, false)
 	if !isValid {
 		return model.Alert{}, status, errMsg
 	}
@@ -367,7 +367,7 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 
 }
 
-func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool, int, string) {
+func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert, skipDescription bool) (bool, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"alert":      alert,
@@ -376,10 +376,6 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 
 	var alertDescription model.AlertDescription
 	var alertConfiguration model.AlertConfiguration
-	err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
-	if err != nil {
-		return false, http.StatusInternalServerError, "failed to decode jsonb to alert description"
-	}
 	// validations
 	// - Check for valid operator
 	// - Check if the KPI/Metric is valid TODO
@@ -390,11 +386,7 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 	if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
 		skipValidation = true
 	}
-	if alertDescription.Name == "" && alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
-		logCtx.Error("Invalid alert name")
-		return false, http.StatusBadRequest, "Invalid alert name"
-	}
-	err = U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
+	err := U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
 	if err != nil {
 		return false, http.StatusInternalServerError, "failed to decode jsonb to alert configuration"
 	}
@@ -418,6 +410,18 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to create alert")
 		return false, http.StatusBadRequest, err.Error()
+	}
+	if skipDescription {
+		return true, http.StatusOK, ""
+	}
+	err = U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
+	if err != nil {
+		return false, http.StatusInternalServerError, "failed to decode jsonb to alert description"
+	}
+	
+	if alertDescription.Name == "" && alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
+		logCtx.Error("Invalid alert name")
+		return false, http.StatusBadRequest, "Invalid alert name"
 	}
 
 	if !skipValidation {

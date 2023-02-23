@@ -53,9 +53,13 @@ func TaskFunc(JobName string, lookback int, f func(map[string]interface{}) (map[
 				}
 			}()
 			status, isSuccess := f(configs)
+			if(status != nil){
+				finalStatus = status
+			}
 			finalStatus[deltaString] = status
 			finalStatus["Status"+deltaString] = isSuccess
 			if isSuccess == false {
+				finalStatus["err"] = "Failed"
 				log.WithFields(log.Fields{"delta": delta}).Info("processing failed")
 				// Report Error here
 				store.GetStore().DeleteTaskEndRecord(taskDetails.TaskID, 0, delta)
@@ -122,9 +126,13 @@ func TaskFuncWithProjectId(JobName string, lookback int, projectIds []int64, f f
 					}
 				}()
 				status, isSuccess := f(projectId, configs)
+				if(status != nil){
+					finalStatus = status
+				}
 				finalStatus[deltaString] = status
 				finalStatus["Status"+deltaString] = isSuccess
 				if isSuccess == false {
+					finalStatus["err"] = "Failed"
 					log.WithFields(log.Fields{"delta": delta, "projectId": projectId}).Info("processing failed")
 					// Report Error here
 					store.GetStore().DeleteTaskEndRecord(taskDetails.TaskID, projectId, delta)

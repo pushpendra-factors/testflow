@@ -6,6 +6,7 @@ import (
 
 type FileManager interface {
 	Create(dir, fileName string, reader io.Reader) error
+	GetWriter(dir, fileName string) (io.WriteCloser, error)
 	Get(path, fileName string) (io.ReadCloser, error)
 	// Remove(path, filename string) error
 	GetObjectSize(dir, fileName string) (int64, error)
@@ -62,4 +63,10 @@ type FileManager interface {
 
 	GetExplainV2Dir(id uint64, projectId int64) string
 	GetExplainV2ModelPath(id uint64, projectId int64) (string, string)
+
+	GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string)
+
+	GetSixSignalAnalysisTempFileDir(id string, projectId int64) string
+	GetSixSignalAnalysisTempFilePathAndName(id string, projectId int64) (string, string)
+
 }

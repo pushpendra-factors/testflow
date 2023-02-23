@@ -111,7 +111,8 @@ import {
   DEFAULT_PIVOT_CONFIG,
   UPDATE_FUNNEL_TABLE_CONFIG,
   UPDATE_CORE_QUERY_REDUCER,
-  SET_NAVIGATED_FROM_ANALYSE
+  SET_NAVIGATED_FROM_ANALYSE,
+  DEFAULT_ATTRIBUTION_TABLE_FILTERS
 } from './constants';
 import {
   getValidGranularityOptions,
@@ -546,7 +547,6 @@ function CoreQuery({
     [updateLocalReducer]
   );
 
-
   const setNavigatedFromAnalyse = useCallback(
     (payload) => {
       updateLocalReducer(SET_NAVIGATED_FROM_ANALYSE, payload);
@@ -573,6 +573,10 @@ function CoreQuery({
         // setNavigatedFromDashboard(false);
         updateSavedQuerySettings(EMPTY_OBJECT);
         setAttributionMetrics([...ATTRIBUTION_METRICS]);
+        // reset attribution table filters
+        updateCoreQueryReducer({
+          attributionTableFilters: DEFAULT_ATTRIBUTION_TABLE_FILTERS
+        });
       } else if (queryType !== QUERY_TYPE_CAMPAIGN) {
         const selectedReport = savedQueries.find(
           (elem) => elem.id === isQuerySaved.id
@@ -630,31 +634,23 @@ function CoreQuery({
         updateAppliedBreakdown();
       }
     },
-    [
-      dispatch,
-      queryType,
-      queriesA,
-      groupBy,
-      models,
-      updatePivotConfig,
-      setNavigatedFromDashboard,
-      updateSavedQuerySettings,
-      savedQueries,
-      updateChartTypes,
-      updateAppliedBreakdown,
-      profileQueries
-    ]
+    [dispatch, queryType, queriesA, groupBy, models, updatePivotConfig, updateSavedQuerySettings, updateCoreQueryReducer, savedQueries, updateChartTypes, updateAppliedBreakdown, profileQueries]
   );
 
   const getDashboardConfigs = useCallback(
     (isQuerySaved) => {
       // use cache urls when user expands the dashboard widget
       if (isQuerySaved && coreQueryState.navigatedFromDashboard) {
-        return {
-          id: coreQueryState.navigatedFromDashboard.dashboard_id,
-          unit_id: coreQueryState.navigatedFromDashboard.id,
-          refresh: false
-        };
+        if (
+          coreQueryState?.navigatedFromDashboard?.dashboard_id &&
+          coreQueryState?.navigatedFromDashboard?.id
+        ) {
+          return {
+            id: coreQueryState.navigatedFromDashboard.dashboard_id,
+            unit_id: coreQueryState.navigatedFromDashboard.id,
+            refresh: false
+          };
+        }
       }
       return null;
     },

@@ -112,6 +112,9 @@ func InitAppRoutes(r *gin.Engine) {
 	shareRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
 	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
+	//Six Signal Report
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/sixsignal", responseWrapper(GetSixSignalReportHandler))
+
 	// Dashboard endpoints
 	featuresGatesRouteGroup.GET("/:project_id/dashboards", stringifyWrapper(GetDashboardsHandler))
 	featuresGatesRouteGroup.POST("/:project_id/dashboards", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateDashboardHandler))
@@ -293,6 +296,9 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.DELETE("/:project_id/v1/eventtriggeralert/:id", V1.DeleteEventTriggerAlertHandler)
 	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id", responseWrapper(V1.EditEventTriggerAlertHandler))
 
+	// Upload
+	featuresGatesRouteGroup.POST("/:project_id/uploadlist", V1.UploadListForFilters)
+
 	// Auth route group with authentication an authorization middleware.
 	authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	authRouteGroup.Use(mid.SetLoggedInAgent())
@@ -358,6 +364,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 		r.GET("/sdk/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
+	r.GET("/", SDKStatusHandler) // Default handler for probes.
 	r.GET(ROUTE_SDK_ROOT+"/service/status", SDKStatusHandler)
 	r.POST(ROUTE_SDK_ROOT+"/service/error", SDKErrorHandler)
 

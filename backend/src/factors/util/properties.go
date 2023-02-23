@@ -312,6 +312,7 @@ const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
 const GROUP_NAME_HUBSPOT_DEAL = "$hubspot_deal"
 const GROUP_NAME_SALESFORCE_ACCOUNT = "$salesforce_account"
 const GROUP_NAME_SALESFORCE_OPPORTUNITY = "$salesforce_opportunity"
+const GROUP_NAME_SIX_SIGNAL = "$6signal"
 
 var GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING = map[string]string{
 	GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED:        GROUP_NAME_HUBSPOT_COMPANY,
@@ -1667,6 +1668,8 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"page_url":                                "Page URL",
 }
 
+// GetStandardUserPropertiesBasedOnIntegration is using this.
+// Separate logic for integration based properties is there.
 var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_PLATFORM:                         "Platform",
 	UP_BROWSER:                          "Browser",
@@ -3127,6 +3130,23 @@ func FilterGroupUserPropertiesKeysByPrefix(propertyKeys []string) []string {
 		filteredPropertiesKeys = append(filteredPropertiesKeys, key)
 	}
 	return filteredPropertiesKeys
+}
+
+func FilterPropertiesByKeysByPrefix(properties *PropertiesMap, prefix string) *PropertiesMap {
+	if properties == nil {
+		return nil
+	}
+
+	filteredProperties := make(PropertiesMap)
+	for key := range *properties {
+		if !strings.HasPrefix(key, prefix) {
+			continue
+		}
+
+		filteredProperties[key] = (*properties)[key]
+	}
+
+	return &filteredProperties
 }
 
 // isValidProperty - Validate property type.

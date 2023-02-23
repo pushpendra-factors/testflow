@@ -75,7 +75,10 @@ func getModelChunkCacheKey(projectId int64, modelId uint64, chunkId string) stri
 	return fmt.Sprintf("%s%s%s", "chunk_", IdSeparator, GetChunkKey(projectId, modelId, chunkId))
 }
 
-func (ps *PatternStore) GetCloudManager(projectId int64) filestore.FileManager {
+func (ps *PatternStore) GetCloudManager(projectId int64, skipProjectIdDependency bool) filestore.FileManager {
+	if(skipProjectIdDependency){
+		return ps.newCloudFileManager	
+	}
 	if U.ContainsInt64InArray(ps.projectIdsV2, projectId) {
 		return ps.newCloudFileManager
 	}
@@ -172,11 +175,11 @@ func (ps *PatternStore) getModelEventInfoFromCloud(projectId int64, modelId uint
 		"mid": modelId,
 	}).Debugln("[PatternStore] getModelEventInfoFromCloud")
 
-	return getModelEventInfoFromFileManager(ps.GetCloudManager(projectId), projectId, modelId)
+	return getModelEventInfoFromFileManager(ps.GetCloudManager(projectId, false), projectId, modelId)
 }
 
 func (ps *PatternStore) PutModelEventInfoInCloud(projectId int64, modelId uint64, eventInfo pattern.UserAndEventsInfo) error {
-	return putModelEventInfoToFileManager(ps.GetCloudManager(projectId), projectId, modelId, eventInfo)
+	return putModelEventInfoToFileManager(ps.GetCloudManager(projectId, false), projectId, modelId, eventInfo)
 }
 
 func (ps *PatternStore) GetModelEventInfo(projectId int64, modelId uint64) (pattern.UserAndEventsInfo, error) {
@@ -243,7 +246,7 @@ func (ps *PatternStore) getPatternsWithMetaFromCloud(projectId int64, modelId ui
 		"cid": chunkId,
 	}).Debugln("[PatternStore] getPatternsFromCloud")
 
-	return getPatternsFromFileManager(ps.GetCloudManager(projectId), projectId, modelId, chunkId)
+	return getPatternsFromFileManager(ps.GetCloudManager(projectId, false), projectId, modelId, chunkId)
 }
 
 func (ps *PatternStore) PutPatternsWithMetaInCloud(projectId int64, modelId uint64, chunkId string, patterns []*PatternWithMeta) error {
@@ -258,7 +261,7 @@ func (ps *PatternStore) PutPatternsWithMetaInCloud(projectId int64, modelId uint
 		return err
 	}
 
-	cloudManager := ps.GetCloudManager(projectId)
+	cloudManager := ps.GetCloudManager(projectId, false)
 
 	path, fName := cloudManager.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
 

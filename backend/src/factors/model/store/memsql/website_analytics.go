@@ -139,7 +139,7 @@ func (store *MemSQL) GetWebAnalyticsQueriesFromDashboardUnits(projectID int64) (
 
 	dashboardUnits, errCode := store.GetDashboardUnitsForProjectID(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get web analytics queries from dashboard units.")
+		logCtx.WithField("err_code", errCode).Error("Failed to get web analytics queries from dashboard units.")
 		return 0, nil, http.StatusInternalServerError
 	}
 
@@ -273,7 +273,7 @@ func (store *MemSQL) addWebAnalyticsDefaultDashboardUnits(projectId int64,
 			})
 		if errCode != http.StatusCreated {
 			log.WithFields(log.Fields{"dashboardId": dashboardId,
-				"project_id": projectId}).Error(errMsg)
+				"project_id": projectId, "err_code": errCode}).Error(errMsg)
 			return http.StatusInternalServerError
 		}
 
@@ -286,7 +286,7 @@ func (store *MemSQL) addWebAnalyticsDefaultDashboardUnits(projectId int64,
 			}, model.DashboardClassWebsiteAnalytics)
 
 		if errCode != http.StatusCreated {
-			logCtx.WithField("err_msg", errMsg).WithField("query_name", queryName).
+			logCtx.WithField("err_msg", errMsg).WithField("query_name", queryName).WithField("err_code", errCode).
 				Error("Failed to add web analytics dashboard unit.")
 			hasFailure = true
 		}
@@ -313,7 +313,7 @@ func (store *MemSQL) CreateWebAnalyticsDefaultDashboardWithUnits(projectId int64
 		Class: model.DashboardClassWebsiteAnalytics,
 	})
 	if errCode != http.StatusCreated {
-		logCtx.Error("Failed to create web analytics default dashboard.")
+		logCtx.WithField("err_code", errCode).Error("Failed to create web analytics default dashboard.")
 		return errCode
 	}
 
@@ -1213,7 +1213,7 @@ func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId int64, queries *model.
 
 	sessionEventName, errCode := store.GetSessionEventName(projectId)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get session event name on execute_web_analytics_query.")
+		logCtx.WithField("err_code", errCode).Error("Failed to get session event name on execute_web_analytics_query.")
 		return queryResult, http.StatusInternalServerError
 	}
 

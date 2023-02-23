@@ -202,6 +202,9 @@ type Model interface {
 	RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID int64, enableOptimisedFilter bool) (model.ResultGroup, int)
 	ExecuteProfilesQuery(projectID int64, query model.ProfileQuery, enableOptimisedFilter bool) (*model.QueryResult, int, string)
 
+	//six_signal
+	RunSixSignalGroupQuery(queriesOriginal []model.SixSignalQuery, projectId int64) (model.SixSignalResultGroup, int)
+
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
 	CreateOrGetUserCreatedEventName(eventName *model.EventName) (*model.EventName, int)
@@ -293,6 +296,11 @@ type Model interface {
 	GetLastEventWithSessionByUser(projectId int64, userId string, firstEventTimestamp int64) (*model.Event, int)
 	GetAllEventsForSessionCreationAsUserEventsMapV2(projectID int64, sessionEventNameId string, startTimestamp int64, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetUserIdFromEventId(projectID int64, id string, userID string) (string, string, int)
+	GetEventsBySessionEvent(projectID int64, sessionEventID, userID string) ([]model.Event, int)
+	DissociateEventsFromSession(projectID int64, events []model.Event, sessionID string) int
+	DeleteSessionsAndAssociationForTimerange(projectID, startTimestamp, endTimestamp int64) (int64, int64, int)
+	GetEventsByEventNameIDANDTimeRange(projectID int64, eventNameID string,
+		startTimestamp int64, endTimestamp int64) ([]model.Event, int)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -378,7 +386,9 @@ type Model interface {
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
+	IsClearbitIntegratedByProjectID(projectID int64) (bool, int)
 	GetClearbitKeyFromProjectSetting(projectId int64) (string, int)
+	IsSixSignalIntegratedByEitherWay(projectID int64) (bool, int)
 	GetClient6SignalKeyFromProjectSetting(projectId int64) (string, int)
 	GetFactors6SignalKeyFromProjectSetting(projectId int64) (string, int)
 	GetIntegrationBitsFromProjectSetting(projectId int64) (string, int)
@@ -555,7 +565,7 @@ type Model interface {
 	UpdateIdentifyOverwriteUserPropertiesMeta(projectID int64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error
 	GetSelectedUsersByCustomerUserID(projectID int64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int)
 	CreateGroupUser(user *model.User, groupName, groupID string) (string, int)
-	UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string) (*model.User, int)
+	UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string, overwrite bool) (*model.User, int)
 	UpdateUserGroupProperties(projectID int64, userID string, newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int)
 	GetPropertiesUpdatedTimestampOfUser(projectId int64, id string) (int64, int)
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
@@ -666,7 +676,9 @@ type Model interface {
 
 	//Group
 	CreateGroup(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
+	CreateOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
 	GetGroup(projectID int64, groupName string) (*model.Group, int)
+	GetGroupUserByGroupID(projectID int64, groupName string, groupID string) (*model.User, int)
 	CreateOrUpdateGroupPropertiesBySource(projectID int64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
 	GetGroups(projectID int64) ([]model.Group, int)
@@ -780,7 +792,6 @@ type Model interface {
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
-	GetLeftPaneProperties(projectID int64, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{}
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 
 	// segment

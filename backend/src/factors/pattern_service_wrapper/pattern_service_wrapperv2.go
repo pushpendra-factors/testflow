@@ -6,6 +6,7 @@ import (
 	PC "factors/pattern_client"
 	U "factors/util"
 	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -80,7 +81,7 @@ func (pw *PatternServiceWrapperV2) GetPattern(reqId string, eventNames []string)
 	if pattern, found = pw.pMap[eventsHash]; !found {
 		// Fetch from server.
 		patterns, err := PC.GetPatternsV2(reqId, pw.projectId, pw.modelId, [][]string{eventNames})
-		if err == nil && len(patterns) == 1 && P.EventArrayToString(patterns[0].EventNames) == eventsHash {
+		if err == nil && len(patterns) == 1 && strings.Compare(P.EventArrayToString(patterns[0].EventNames), eventsHash) == 0 {
 			pattern = patterns[0]
 			// Add it to cache.
 			pw.pMap[eventsHash] = pattern

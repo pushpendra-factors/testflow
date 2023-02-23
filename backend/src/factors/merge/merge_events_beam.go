@@ -12,7 +12,7 @@ import (
 	serviceGCS "factors/services/gcstorage"
 	U "factors/util"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
 	"path"
@@ -159,7 +159,7 @@ func Pull_events_beam_controller(projectId int64, cloud_dir, cloud_file string,
 func SortUsersExecutor(beamStruct *RunBeamConfig, cPatternsString []string) error {
 
 	s := beamStruct.Scp
-	s = s.Scope("pull_events")
+	s = s.Scope("merge_events")
 
 	ctx := beamStruct.Ctx
 	p := beamStruct.Pipe
@@ -293,49 +293,73 @@ func downloadAndSortEventsFile(ctx context.Context, projectId int64, cloudManage
 		beamlog.Errorf(ctx, "unable to close events file from gcp :%v", err)
 	}
 
-	eventsTmpFile, err := ioutil.TempFile("", fmt.Sprintf("%d_events_", lowNum))
-	if err != nil {
-		return fmt.Errorf("unable to create tmp file :%v", err)
-	} else {
-		beamlog.Infof(ctx, "events file created :%s", eventsTmpFile.Name())
-	}
+	cDir, cName := GetSortedFilePathAndName(*cloudManager, U.DataTypeEvent, "", projectId, startTime, endTime, sortOnGroup)
+	cDir = path.Join(cDir, "parts/"+strings.Replace(cName, ".txt", "", 1))
+	cName = fmt.Sprintf("%d_events", lowNum)
 
-	err = sortEventsWithUserIds(ctx, userIdEventsMap, eventsTmpFile)
+	cloudWriter, err := (*cloudManager).GetWriter(cDir, cName)
 	if err != nil {
+		beamlog.Error(ctx, "error getting cloud writer")
 		return err
 	}
-
-	err = eventsTmpFile.Close()
+	err = WriteSortedEventsWithUserIds(ctx, userIdEventsMap, &cloudWriter)
 	if err != nil {
-		beamlog.Error(ctx, "unable to close sorted events file")
-	}
-	err = writeSortedFileToGCP(ctx, projectId, startTime, endTime, eventsTmpFile.Name(), cloudManager, U.DataTypeEvent, "", sortOnGroup)
-	if err != nil {
-		beamlog.Error(ctx, "Failed to write sorted events to gcp:%v", err)
-
-	}
-	err = os.Remove(eventsTmpFile.Name())
-	if err != nil {
+		log.WithError(err).Error("error sorting events and writing")
 		return err
 	}
-	beamlog.Infof(ctx, "Deleted tmp events File :%s", eventsTmpFile.Name())
+	err = cloudWriter.Close()
+	if err != nil {
+		log.WithError(err).Error("error closing cloud writer")
+		return err
+	}
+	return nil
+}
+
+// sort the list of events for each uid based on EventTimestamp (ascending)
+func WriteSortedEventsWithUserIds(ctx context.Context, userIdMap map[string][]*P.CounterEventFormat, cloudWriter *io.WriteCloser) error {
+
+	beamlog.Debugf(ctx, "sort events :%d", len(userIdMap))
+
+	for _, eventList := range userIdMap {
+
+		sort.Slice(eventList[:], func(i, j int) bool {
+			return eventList[i].EventTimestamp < eventList[j].EventTimestamp
+		})
+
+		for _, el := range eventList {
+
+			eventBytes, err := json.Marshal(el)
+			if err != nil {
+				log.WithFields(log.Fields{"err": err}).Error("Unable to marshal event.")
+				return err
+			}
+			eString := string(eventBytes)
+			eString = eString + "\n"
+			_, err = io.WriteString(*cloudWriter, eString)
+			if err != nil {
+				log.Errorf("unable to write event to tmp file :%v ", eString)
+				return err
+			}
+
+		}
+	}
 
 	return nil
 }
 
 // merge all sorted part files to create one sorted file
-func ReadAndMergeEventPartFiles(projectId int64, cloudDir string, local_dir string, fileName string,
-	tmpCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver) (int64, error) {
+func ReadAndMergeEventPartFiles(projectId int64, partsDir string, sortedDir string, sortedName string,
+	tmpCloudManager, sortedCloudManager *filestore.FileManager) (int64, error) {
 	var countLines int64
-	local_sorted_file := path.Join(local_dir, fileName)
-	eventsTmpFile, err := os.OpenFile(local_sorted_file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	cloudWriter, err := (*sortedCloudManager).GetWriter(sortedDir, sortedName)
 	if err != nil {
-		log.Errorf("unable to open local sorted file:%s", local_sorted_file)
+		fmt.Println(err.Error())
+		log.WithError(err).Error("Error getting gcp writer")
 		return 0, err
 	}
 
 	log.Infof("Merging partFiles:%d", projectId)
-	partFilesDir := path.Join(cloudDir, "parts/"+strings.Replace(fileName, ".txt", "", 1))
+	partFilesDir := path.Join(partsDir, "parts/"+strings.Replace(sortedName, ".txt", "", 1))
 	listFiles := (*tmpCloudManager).ListFiles(partFilesDir)
 	for _, partFileFullName := range listFiles {
 		partFNamelist := strings.Split(partFileFullName, "/")
@@ -355,7 +379,7 @@ func ReadAndMergeEventPartFiles(projectId int64, cloudDir string, local_dir stri
 		for scanner.Scan() {
 			line := scanner.Text()
 
-			_, err = eventsTmpFile.WriteString(line + "\n")
+			_, err = io.WriteString(cloudWriter, line+"\n")
 			if err != nil {
 				log.Errorf("Unable to write to file :%v", err)
 				return 0, err
@@ -363,39 +387,7 @@ func ReadAndMergeEventPartFiles(projectId int64, cloudDir string, local_dir stri
 			countLines += 1
 		}
 	}
-	defer eventsTmpFile.Close()
+	err = cloudWriter.Close()
 
-	return countLines, nil
-}
-
-// sort the list of events for each uid based on EventTimestamp (ascending)
-func sortEventsWithUserIds(ctx context.Context, userIdMap map[string][]*P.CounterEventFormat, eventsTmpFile *os.File) error {
-
-	beamlog.Debugf(ctx, "sort events :%d", len(userIdMap))
-
-	for _, eventList := range userIdMap {
-
-		sort.Slice(eventList[:], func(i, j int) bool {
-			return eventList[i].EventTimestamp < eventList[j].EventTimestamp
-		})
-
-		for _, el := range eventList {
-
-			eventBytes, err := json.Marshal(el)
-			if err != nil {
-				log.WithFields(log.Fields{"err": err}).Error("Unable to marshal event.")
-				return err
-			}
-			eString := string(eventBytes)
-			eString = eString + "\n"
-			_, err = eventsTmpFile.WriteString(eString)
-			if err != nil {
-				log.Errorf("unable to write event to tmp file :%v ", eString)
-				return err
-			}
-
-		}
-	}
-
-	return nil
+	return countLines, err
 }

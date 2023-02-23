@@ -35,9 +35,11 @@ import {
   getKPIQueryAttributionV1,
   DefaultDateRangeFormat,
   getAttributionQuery,
-  isComparisonEnabled,
-  getAttributionStateFromRequestQuery
+  isComparisonEnabled
 } from 'Views/CoreQuery/utils';
+
+import { getAttributionStateFromRequestQuery } from 'Attribution/utils';
+
 import {
   getAttributionsData,
   getAttributionsDataV1
@@ -80,7 +82,7 @@ import { getSavedPivotConfig } from 'Views/CoreQuery/coreQuery.helpers';
 import { getChartChangedKey } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import _ from 'lodash';
 import AttributionHeader from './AttributionHeader';
-import ReportContent from 'Views/CoreQuery/AnalysisResultsPage/ReportContent';
+import ReportContent from './ReportContent';
 import useQuery from 'hooks/useQuery';
 import { Button, notification, Spin } from 'antd';
 import WeeklyInsights from 'Views/CoreQuery/WeeklyInsights';
@@ -122,11 +124,14 @@ function CoreQuery({
   const [loading, setLoading] = useState(false);
   const renderedCompRef = useRef(null);
   const [queryOpen, setQueryOpen] = useState(true);
+  //for tracking if for cetain queryId data is loaded or not
+  const [queryDataLoaded, setQueryDataLoaded] = useState('');
 
   const [queryOptions, setQueryOptions] = useState({
     ...QUERY_OPTIONS_DEFAULT_VALUE,
     session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
-    date_range: { ...DefaultDateRangeFormat }
+    date_range: { ...DefaultDateRangeFormat },
+    group_analysis: 'all'
   });
   const [attributionsState, setAttributionsState] = useState({
     eventGoal: {},
@@ -315,7 +320,7 @@ function CoreQuery({
   );
 
   const runAttributionQuery = useCallback(
-    async (isQuerySaved, durationObj, isCompareQuery, v1 = false) => {
+    async (isQuerySaved, durationObj, isCompareQuery, v1 = true) => {
       try {
         if (!durationObj) {
           durationObj = attr_dateRange;
@@ -710,12 +715,22 @@ function CoreQuery({
         }).toString()}`
       });
     }
-  }, [querySaved]);
+    if (queryId) {
+      if (querySaved && querySaved.id !== queryId) {
+        history.push({
+          pathname: ATTRIBUTION_ROUTES.report,
+          search: `?${new URLSearchParams({
+            queryId: querySaved.id
+          }).toString()}`
+        });
+      }
+    }
+  }, [querySaved, queryId]);
 
   useEffect(() => {
     const handleQueryIdChange = () => {
-      if (queryId && querySaved.id == queryId) return;
-      const record = savedQueries.find((sq) => sq.id === queryId);
+      if (queryDataLoaded === queryId || querySaved.id == queryId) return;
+      const record = savedQueries.find((sq) => sq.id == queryId);
       if (
         !record ||
         !record?.query?.cl ||
@@ -726,7 +741,7 @@ function CoreQuery({
           duration: 5
         });
         history.replace({
-          pathname: ATTRIBUTION_ROUTES.report
+          pathname: ATTRIBUTION_ROUTES.reports
         });
         return;
       }
@@ -752,7 +767,7 @@ function CoreQuery({
 
       setQueryOptions((currData) => ({
         ...currData,
-        group_analysis: record.query.query.analyze_type
+        group_analysis: 'all'
       }));
       updateSavedQuerySettings(record.settings || {});
       setSavedReportLoaded({
@@ -761,9 +776,10 @@ function CoreQuery({
         settings: record.settings,
         query_id: record.key || record.id
       });
+      setQueryDataLoaded(queryId);
     };
     if (queryId && !QueriesLoading) handleQueryIdChange();
-  }, [queryId, savedQueries, querySaved, QueriesLoading]);
+  }, [queryId, savedQueries, QueriesLoading, querySaved]);
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
@@ -789,13 +805,13 @@ function CoreQuery({
       });
       setSavedReportLoaded(false);
     }
-  }, [savedReportLoaded]);
+  }, [savedReportLoaded, runAttributionQuery]);
 
   useEffect(() => {
     if (location?.state?.navigatedFromDashboard)
       setNavigatedFromDashboard(location.state.navigatedFromDashboard);
-    if(location?.state?.navigatedFromAnalyse)
-    setNavigatedFromAnalyse(location.state.navigatedFromAnalyse)
+    if (location?.state?.navigatedFromAnalyse)
+      setNavigatedFromAnalyse(location.state.navigatedFromAnalyse);
   }, [location, setNavigatedFromDashboard, setNavigatedFromAnalyse]);
 
   if (queryId && QueriesLoading)
@@ -886,7 +902,7 @@ function CoreQuery({
                     campaignState={campaignState}
                     savedQueryId={savedQueryId}
                     handleChartTypeChange={handleChartTypeChange}
-                    queryOptions={{ ...queryOptions, group_analysis: 'all' }}
+                    queryOptions={queryOptions}
                     resultState={resultState}
                     queries={appliedQueries}
                     handleDurationChange={handleDurationChange}

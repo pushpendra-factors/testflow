@@ -522,7 +522,7 @@ func enrichContact(projectID int64, document *model.SalesforceDocument, salesfor
 		}
 
 		if groupUserID, exist := pendingOpportunityAssociatedRecords[document.ID]; exist {
-			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID)
+			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID, false)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				logCtx.Error("Failed associating contact user with group opportunity.")
 			}
@@ -891,7 +891,7 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 	var groupUserID string
 	if document.Action == model.SalesforceDocumentCreated {
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
-			enProperties, createdTimestamp, lastModifiedTimestamp, model.SmartCRMEventSourceSalesforce)
+			enProperties, createdTimestamp, lastModifiedTimestamp, model.UserSourceSalesforceString)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update salesforce group.")
 			return "", http.StatusInternalServerError, ""
@@ -921,7 +921,7 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 		createdDocument := documents[0]
 
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, createdDocument.GroupUserID,
-			enProperties, createdTimestamp, lastModifiedTimestamp, model.SmartCRMEventSourceSalesforce)
+			enProperties, createdTimestamp, lastModifiedTimestamp, model.UserSourceSalesforceString)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update salesforce group properties.")
 			return "", http.StatusInternalServerError, ""
@@ -1125,7 +1125,7 @@ func enrichOpportunityContactRoles(projectID int64, document *model.SalesforceDo
 			}
 
 			contactUserID := documents[0].UserID
-			_, status = store.GetStore().UpdateUserGroup(projectID, contactUserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID)
+			_, status = store.GetStore().UpdateUserGroup(projectID, contactUserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID, false)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				log.WithFields(log.Fields{"project_id": projectID, "user_id": contactUserID, "group_user_id": groupUserID}).
 					Error("Failed to update salesforce user group id for opportunity contact roles.")
@@ -1175,13 +1175,13 @@ func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string
 		return http.StatusInternalServerError
 	}
 
-	groupID, err := model.GetUserGroupID(groupUser)
+	groupID, err := model.GetGroupUserGroupID(groupUser, 0)
 	if err != nil {
 		log.WithError(err).Error("Failed to get group user group id.")
 		return http.StatusInternalServerError
 	}
 
-	_, status = store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_ACCOUNT, groupID, groupUserID)
+	_, status = store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_ACCOUNT, groupID, groupUserID, false)
 	if status != http.StatusAccepted && status != http.StatusNotModified {
 		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "group_user_id": groupUserID, "group_id": groupID}).
 			Error("Failed to update salesforce user group id.")
@@ -1251,7 +1251,7 @@ func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforce
 		}
 
 		if groupUserID, exist := pendingOpportunityAssociatedRecords[document.ID]; exist {
-			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID)
+			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID, false)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				logCtx.Error("Failed associating contact user with group opportunity.")
 			}
@@ -2501,7 +2501,7 @@ func associateGroupUserOpportunitytoUser(projectID int64, oppLeadIds, oppContact
 				continue
 			}
 
-			_, status = store.GetStore().UpdateUserGroup(projectID, createdDocument.UserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", OpportunityGroupUserID)
+			_, status = store.GetStore().UpdateUserGroup(projectID, createdDocument.UserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", OpportunityGroupUserID, false)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				logCtx.Error("Failed associating user with group opportunity.")
 			}

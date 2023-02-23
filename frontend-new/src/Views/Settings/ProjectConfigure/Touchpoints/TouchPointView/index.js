@@ -25,7 +25,8 @@ import {
   RULE_TYPE_HS_LISTS,
   RULE_TYPE_HS_MEETINGS,
   SEARCHSOURCE,
-  Extra_PROP_SHOW_OPTIONS
+  Extra_PROP_SHOW_OPTIONS,
+  RULE_TYPE_SF_CONTACT
 } from '../utils';
 
 const TouchpointView = ({
@@ -271,41 +272,51 @@ const TouchpointView = ({
     if (newFilterStates) {
       newFilterStates.forEach((filter, index) => {
         filterRows.push(
-          <Row className={`mt-2`}>
-            <FaFilterSelect
-              filter={filter}
-              propOpts={filterDropDownOptions.props}
-              operatorOpts={filterDropDownOptions.operator}
-              valueOpts={dropDownValues}
-              applyFilter={(filt) => applyFilter(filt, index)}
-              setValuesByProps={setValuesByProps}
-            ></FaFilterSelect>
+          <div className={`mt-2 flex items-center relative `}>
+            <div className={`relative flex`}>
+              <FaFilterSelect
+                filter={filter}
+                propOpts={filterDropDownOptions.props}
+                operatorOpts={filterDropDownOptions.operator}
+                valueOpts={dropDownValues}
+                applyFilter={(filt) => applyFilter(filt, index)}
+                setValuesByProps={setValuesByProps}
+              ></FaFilterSelect>
+            </div>
             <Button
-              className={`ml-2`}
-              icon={<SVG name={'remove'} />}
+              type='text'
+              className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
               onClick={() => closeFilter(index)}
-            ></Button>
-          </Row>
+              size={'small'}
+            >
+              <SVG name={'remove'} />
+            </Button>
+          </div>
         );
       });
     }
 
     filterRows.push(
-      <Row className={`mt-2`}>
+      <div className={`mt-2 flex items-center relative `}>
         {filterDD ? (
           <>
-            <FaFilterSelect
-              propOpts={filterDropDownOptions.props}
-              operatorOpts={filterDropDownOptions.operator}
-              valueOpts={dropDownValues}
-              applyFilter={(filt) => applyFilter(filt, -1)}
-              setValuesByProps={setValuesByProps}
-            ></FaFilterSelect>
+            <div className={`relative flex`}>
+              <FaFilterSelect
+                propOpts={filterDropDownOptions.props}
+                operatorOpts={filterDropDownOptions.operator}
+                valueOpts={dropDownValues}
+                applyFilter={(filt) => applyFilter(filt, -1)}
+                setValuesByProps={setValuesByProps}
+              ></FaFilterSelect>
+            </div>
             <Button
-              className={`ml-2`}
-              icon={<SVG name={'remove'} />}
+              type='text'
+              className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
               onClick={() => setFilterDD(false)}
-            ></Button>
+              size={'small'}
+            >
+              <SVG name={'remove'} />
+            </Button>
           </>
         ) : (
           <Button
@@ -317,7 +328,7 @@ const TouchpointView = ({
             {'Add Filter'}
           </Button>
         )}
-      </Row>
+      </div>
     );
 
     return filterRows;
@@ -819,6 +830,8 @@ const TouchpointView = ({
     };
     if (tchType === '2') {
       touchPointObj['rule_type'] = tchRuleType;
+    } else if (tchType === '3') {
+      touchPointObj['rule_type'] = RULE_TYPE_SF_CONTACT;
     }
     onSave(touchPointObj);
   };

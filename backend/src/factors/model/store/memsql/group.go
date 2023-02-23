@@ -5,6 +5,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -39,7 +40,7 @@ func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroup
 			return nil, http.StatusConflict
 		}
 
-		logCtx.Error("Failed to get existing groups.")
+		logCtx.WithField("err_code", status).Error("Failed to get existing groups.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -77,6 +78,27 @@ func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroup
 	}
 
 	return &group, http.StatusCreated
+}
+
+func (store *MemSQL) CreateOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"group_name": groupName,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	group, status := store.GetGroup(projectID, groupName)
+	if status != http.StatusFound {
+		group, status = store.CreateGroup(projectID, groupName, allowedGroupNames)
+		if status != http.StatusCreated && status != http.StatusConflict {
+			logCtx.Error("Failed to create or get group.")
+		}
+
+		return group, status
+	}
+
+	return group, http.StatusFound
 }
 
 func (store *MemSQL) GetGroups(projectId int64) ([]model.Group, int) {
@@ -245,4 +267,50 @@ func (store *MemSQL) GetPropertyValuesByGroupProperty(projectID int64, groupName
 		}
 	}
 	return valueStrings, nil
+}
+
+func (store *MemSQL) GetGroupUserByGroupID(projectID int64, groupName string, groupID string) (*model.User, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"group_name": groupName,
+		"group_id":   groupID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupName == "" || groupID == "" {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	group, status := store.GetGroup(projectID, groupName)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get group on GetGroupUserByGroupID.")
+		return nil, http.StatusInternalServerError
+	}
+
+	source := model.GetGroupUserSourceByGroupName(groupName)
+
+	whereStmnt := fmt.Sprintf("project_id = ? AND group_%d_id = ? AND source = ?", group.ID)
+	whereParams := []interface{}{projectID, groupID, source}
+
+	db := C.GetServices().Db
+	groupUser := model.User{}
+	if err := db.Model(&model.User{}).
+		Where(whereStmnt, whereParams...).
+		Find(&groupUser).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get group.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if groupUser.ID == "" {
+		return nil, http.StatusNotFound
+	}
+
+	return &groupUser, http.StatusFound
 }

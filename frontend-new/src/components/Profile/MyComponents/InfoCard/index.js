@@ -3,9 +3,10 @@ import { Popover } from 'antd';
 import { Text } from 'Components/factorsComponents';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import {
+  getPropType,
   propValueFormat,
   TimelineHoverPropDisplayNames
-} from '../../Profile/utils';
+} from '../../utils';
 
 function InfoCard({
   title,
@@ -14,7 +15,8 @@ function InfoCard({
   eventName,
   properties = {},
   trigger,
-  children
+  children,
+  listProperties
 }) {
   const popoverContent = () => (
     <div className='fa-popupcard'>
@@ -26,11 +28,12 @@ function InfoCard({
           </div>
         ) : (
           <div className='heading'>{PropTextFormat(eventSource)}</div>
-        )}{' '}
-        <div className='icon'>{icon}</div>
+        )}
+        <div className='source-icon'>{icon}</div>
       </div>
 
       {Object.entries(properties).map(([key, value]) => {
+        const propType = getPropType(listProperties, key)
         if (key === '$is_page_view' && value === true)
           return (
             <div className='flex justify-between py-2'>
@@ -79,7 +82,7 @@ function InfoCard({
               truncate
               charLimit={40}
             >
-              {propValueFormat(key, value) || '-'}
+              {propValueFormat(key, value, propType) || '-'}
             </Text>
           </div>
         );

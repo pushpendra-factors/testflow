@@ -3506,7 +3506,7 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 		assert.Equal(t, "$custom_time", result.Headers[2])
 		// Grouping starts from sunday
 		assert.Equal(t, "2021-05-30T00:00:00+00:00", result.Rows[0][2].(string))
-	})
+	})	
 }
 
 func TestEventAnalyticsGroupsBreakdownByLatestUserProperty(t *testing.T) {
@@ -3545,7 +3545,7 @@ func TestEventAnalyticsGroupsBreakdownByLatestUserProperty(t *testing.T) {
 		Properties:     postgres.Jsonb{[]byte(`{"a":1}`)},
 	})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().UpdateUserGroup(project.ID, userID1, groupName, "1", groupUserID1)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userID1, groupName, "1", groupUserID1, false)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	_, status = store.GetStore().CreateUser(&model.User{
@@ -3562,7 +3562,7 @@ func TestEventAnalyticsGroupsBreakdownByLatestUserProperty(t *testing.T) {
 		Properties:     postgres.Jsonb{[]byte(`{"a":2}`)},
 	})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().UpdateUserGroup(project.ID, userID3, groupName, "3", groupUserID2)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userID3, groupName, "3", groupUserID2, false)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 

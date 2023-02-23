@@ -27,7 +27,8 @@ function FunnelsResultTable({
   sorter,
   setSorter,
   tableConfig,
-  tableConfigPopoverContent
+  tableConfigPopoverContent,
+  isBreakdownApplied = false
 }) {
   const [columns, setColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
@@ -56,7 +57,7 @@ function FunnelsResultTable({
         sorter,
         handleSorting,
         arrayMapper,
-        comparisonChartData,
+        comparisonChartData != null,
         resultData,
         userPropNames,
         eventPropertiesDisplayNames,
@@ -90,7 +91,7 @@ function FunnelsResultTable({
         comparisonChartData,
         durationObj,
         comparison_duration,
-        resultData
+        isBreakdownApplied
       )
     );
   }, [
@@ -105,12 +106,12 @@ function FunnelsResultTable({
     comparisonChartData,
     durationObj,
     comparison_duration,
-    resultData
+    isBreakdownApplied
   ]);
 
   const getCSVData = () => {
     try {
-      if (!comparisonChartData) {
+      if (!comparisonChartData || isBreakdownApplied) {
         return {
           fileName: `${reportTitle}.csv`,
           data: tableData.map(

@@ -11,7 +11,7 @@ const CONFIG = {
     linkedin_client_id: '861ix78kpo39ge',
     firstTimeDashboardTemplates: {
       webanalytics: '3de1776a-2b06-4223-adf3-a57012833ec5',
-      allpaidmarketing: 'c3caa37c-afaa-4bc1-bf1a-b69f3e377b3e',
+      allpaidmarketing: 'bf10934c-0128-4c1c-8948-772387c95502',
       hubspotinsights: '215d866d-129c-415a-a728-592672604cfa'
     }
   },
@@ -25,7 +25,7 @@ const CONFIG = {
     linkedin_client_id: '861ix78kpo39ge',
     firstTimeDashboardTemplates: {
       webanalytics: '3de1776a-2b06-4223-adf3-a57012833ec5',
-      allpaidmarketing: 'c3caa37c-afaa-4bc1-bf1a-b69f3e377b3e',
+      allpaidmarketing: 'bf10934c-0128-4c1c-8948-772387c95502',
       hubspotinsights: '215d866d-129c-415a-a728-592672604cfa'
     }
   },
@@ -46,7 +46,7 @@ const CONFIG = {
     linkedin_client_id: '861ix78kpo39ge',
     firstTimeDashboardTemplates: {
       webanalytics: '6d966a20-07a6-46db-b2d4-1b1d4d7fb8ec',
-      allpaidmarketing: '43caefad-fa5b-4791-aa23-03d6f8f3ab6e',
+      allpaidmarketing: 'f8785bee-6d7d-4a03-8744-a2d31ce4dd9e',
       hubspotinsights: '71a9e6e6-a370-49ff-a701-9b5f4f273b6a'
     }
   }

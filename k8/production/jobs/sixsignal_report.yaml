@@ -36,18 +36,13 @@ spec:
             - --memsql_name
             - $(MEMSQL_DB)
             - --memsql_user
-            - $(MEMSQL_HEAVY_USER)
+            - $(MEMSQL_USER)
             - --memsql_pass
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
             - --project_ids
             - "399"
-            - --weekly_enabled
-            - --lookback
-            - "13"
-            - --k
-            - "100"
             envFrom:
             - configMapRef:
                 name: config-env

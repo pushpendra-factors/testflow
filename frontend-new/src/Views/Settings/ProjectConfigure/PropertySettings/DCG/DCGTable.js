@@ -8,6 +8,7 @@ import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import defaultRules from './defaultRules';
 import _ from 'lodash';
 import { DISPLAY_PROP } from 'Utils/constants';
+import { reverseOperatorMap } from 'Utils/operatorMapping';
 
 const { confirm } = Modal;
 
@@ -52,18 +53,6 @@ const DCGTable = ({
       setTableLoading(false);
     }
   }, [activeProject]);
-
-  const reverseOperatorMap = {
-    equal: '=',
-    equals: '=',
-    notEqual: '!=',
-    contains: 'contains',
-    notContains: 'does not contain',
-    lesserThan: '<',
-    lesserThanOrEqual: '<=',
-    greaterThan: '>',
-    greaterThanOrEqual: '>='
-  };
 
   const getBaseQueryfromResponse = (el) => {
     const filters = [];

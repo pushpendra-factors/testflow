@@ -16,9 +16,9 @@ import {
 import FaSelect from 'Components/FaSelect';
 import { compareFilters, generateRandomKey } from 'Utils/global';
 import { useSelector } from 'react-redux';
-import PropFilterBlock from './PropertyFilter/PropFilterBlock';
+import PropFilterBlock from '../MyComponents/PropertyFilter/PropFilterBlock';
 import { deleteGroupByForEvent } from 'Reducers/coreQuery/middleware';
-import EventsBlock from './EventsBlock';
+import EventsBlock from '../MyComponents/EventsBlock';
 
 function SegmentModal({
   profileType,
@@ -260,16 +260,14 @@ function SegmentModal({
     const filtersSorted = [...opts.globalFilters];
     filtersSorted.sort(compareFilters);
     const fltrs = filtersSorted.map((f, i) => (i === id ? filter : f));
-    opts.globalFilters = fltrs;
-    setQueryOptions(opts);
+    setFilters(fltrs);
   };
 
   const addFilter = (filter) => {
     const opts = { ...queryOptions };
     const fltrs = [...opts.globalFilters];
     fltrs.push(filter);
-    opts.globalFilters = fltrs;
-    setQueryOptions(opts);
+    setFilters(fltrs);
   };
 
   const removeFilters = (index) => {
@@ -277,8 +275,7 @@ function SegmentModal({
     const filtersSorted = [...opts.globalFilters];
     filtersSorted.sort(compareFilters);
     const fltrs = filtersSorted.filter((f, i) => i !== index);
-    opts.globalFilters = fltrs;
-    setQueryOptions(opts);
+    setFilters(fltrs);
   };
 
   const closeFilter = () => setFilterDDVisible(false);
@@ -342,14 +339,22 @@ function SegmentModal({
     setConditionDDVisible(false);
   };
 
+  const generateConditionOpts = () => {
+    const options = [];
+    if (listEvents.length < 3) {
+      options.push(['Performed Events', 'event']);
+    }
+    if (queryOptions.globalFilters.length < 3) {
+      options.push(['With Properties', 'filter']);
+    }
+    return options;
+  };
+
   const selectCondition = () => (
     <div className='absolute top-0'>
       {isConditionDDVisible ? (
         <FaSelect
-          options={[
-            ['Performed Events', 'event'],
-            ['With Properties', 'filter']
-          ]}
+          options={generateConditionOpts()}
           onClickOutside={() => setConditionDDVisible(false)}
           optionClick={(val) => setActions(val)}
         />
@@ -383,19 +388,25 @@ function SegmentModal({
           {selectUsers()}
         </div>
       </div>
-      <div className='px-8 py-6 border-with-radius--small'>
-        {eventsList()}
-        {filterList()}
-        <div className={`relative ${listEvents.length > 1 ? 'mb-4' : ''}`}>
-          <Button
-            type='text'
-            icon={<SVG name='plus' size={16} />}
-            onClick={() => setConditionDDVisible(!isConditionDDVisible)}
-          >
-            Add Condition
-          </Button>
-          {selectCondition()}
+      <div className='px-8 py-4 border-with-radius--small'>
+        <div className='flex flex-col py-2'>
+          {eventsList()}
+          {filterList()}
+          {listEvents.length > 2 &&
+          queryOptions.globalFilters.length > 2 ? null : (
+            <div className={`relative ${listEvents.length > 1 ? 'mb-4' : ''}`}>
+              <Button
+                type='text'
+                icon={<SVG name='plus' size={16} />}
+                onClick={() => setConditionDDVisible(!isConditionDDVisible)}
+              >
+                Add Condition
+              </Button>
+              {selectCondition()}
+            </div>
+          )}
         </div>
+
         {listEvents.length > 1 ? (
           <div style={{ borderTop: '2px solid #DBDBDB' }}>
             {selectCriteria()}

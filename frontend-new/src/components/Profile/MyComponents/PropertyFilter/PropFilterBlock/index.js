@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'antd';
-import { SVG } from '../../../../factorsComponents';
+import { SVG, Text } from '../../../../factorsComponents';
 import {
   fetchUserPropertyValues,
   fetchGroupPropertyValues
@@ -200,7 +200,17 @@ export default function PropFilterBlock({
 
   return (
     <div className={`flex items-center relative`}>
-      <div className={`relative flex`}>
+      <div className={`relative flex items-center`}>
+        {index >= 1 ? (
+          <Text
+            level={8}
+            type={'title'}
+            extraClass={`m-0 mx-4`}
+            weight={'thin'}
+          >
+            and
+          </Text>
+        ) : null}
         {filter ? renderFilterContent() : filterSelComp()}
       </div>
       {delFilter && !displayMode && (

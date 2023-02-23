@@ -13,6 +13,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"encoding/json"
+	"bytes"
 )
 
 var FORCED_EVENT_NAMES = map[int64][]string{
@@ -149,4 +151,30 @@ func GetEventNamesByTypeHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"event_names": eventNames})
+}
+
+func UploadListForFilters(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	fileReference := U.GetUUID()
+	result := make([]string, 0 )
+
+	path, file := C.GetCloudManager(projectId, false).GetListReferenceFileNameAndPathFromCloud(projectId, fileReference)
+	resultJson, err := json.Marshal(result)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal result Info.")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	err = C.GetCloudManager(projectId, false).Create(path, file, bytes.NewReader(resultJson))
+	if err != nil {
+		log.WithError(err).Error("list File Failed to write to cloud")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"file_reference": fileReference})
 }

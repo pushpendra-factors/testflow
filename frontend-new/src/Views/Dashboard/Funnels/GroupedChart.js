@@ -96,7 +96,7 @@ function GroupedChart({
           {
             name: 'OG',
             data: visibleProperties.map((v, index) =>
-              parseInt(v.value.split('%')[0])
+              Number(v.value.split('%')[0])
             )
           }
         ]}
@@ -113,7 +113,7 @@ function GroupedChart({
             name: 'OG',
             data: visibleProperties.slice(0, 5).map((v, index) => {
               return {
-                y: parseInt(v.value.split('%')[0]),
+                y: Number(v.value.split('%')[0]),
                 color: colors[index],
                 metricType: METRIC_TYPES.percentType
               };
@@ -168,6 +168,7 @@ function GroupedChart({
         resultData={resultState.data}
         sorter={sorter}
         setSorter={setSorter}
+        isBreakdownApplied={true}
       />
     );
   }

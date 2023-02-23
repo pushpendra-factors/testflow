@@ -1,6 +1,7 @@
 from app.handlers import adwords_handlers, v1_adwords_handlers, v1_gsc_handlers
 
 ROUTES = [
+    (r"/", adwords_handlers.DefaultHandler),
     (r"/adwords/auth/redirect", adwords_handlers.OAuthRedirectHandler),
     (r"/adwords/auth/callback", adwords_handlers.OAuthCallbackHandler),
     (r"/adwords/get_customer_accounts", adwords_handlers.GetCustomerAccountsHandler),

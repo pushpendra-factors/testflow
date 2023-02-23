@@ -190,7 +190,7 @@ export const getClickableTitleSorter = (
 ) => {
   const sorter = isArray(currentSorter) ? currentSorter : [currentSorter];
   const sorterPropIndex = sorter.findIndex(
-    (elem) => elem.key === sorterProp.key
+    (elem) => elem?.key === sorterProp?.key
   );
 
   let titleText;
