@@ -111,7 +111,6 @@ const Alerts = ({
         >
           <a>View</a>
         </Menu.Item>
-        {tabNo === '1' && 
         <Menu.Item
           key='1'
           onClick={() => {
@@ -120,7 +119,7 @@ const Alerts = ({
           }}
         >
           <a>Edit</a>
-        </Menu.Item>}
+        </Menu.Item>
         <Menu.Item
           key='2'
           onClick={() => {
