@@ -274,8 +274,8 @@ function runPostInitProcess(_this, trackOnInit) {
         return _this.autoClearbitRevealCapture(_this, _this.getConfig("int_clear_bit"));
     })
     .catch(function(err) {
-        logger.errorLine(err);
-        return Promise.reject(err.stack + " during get_settings on init.");
+        logger.debug(err);
+        return Promise.resolve(err.stack + " during get_settings on init.");
     });
 }
 
