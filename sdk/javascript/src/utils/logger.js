@@ -6,7 +6,7 @@ function error(message) {
     console.error(message);
 }
 
-function debug(message, trace=true) {
+function debug(message, trace=false) {
     if (window.FACTORS_DEBUG == true) {
         if (trace) console.trace("%c"+message, 'color: red');
         else console.log(message);
