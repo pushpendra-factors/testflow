@@ -34,7 +34,7 @@ function DataTable({
   const [searchBar, toggleSearchBar] = useToggle(false);
   const history = useHistory();
   let isDashboardWidget = !isWidgetModal;
-  if (history.location.pathname.includes('/analyse')) {
+  if (history.location.pathname.includes('/analyse') || history.location.pathname.includes('/report')) {
     isDashboardWidget = false;
   }
   const handleSearchTextChange = useCallback(

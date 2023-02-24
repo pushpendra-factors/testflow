@@ -17,6 +17,7 @@ import {
 import { SVG, Text } from '../../../factorsComponents';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
+import { useSelector } from 'react-redux';
 
 function AccountTimelineBirdView({
   timelineEvents = [],
@@ -30,6 +31,7 @@ function AccountTimelineBirdView({
   listProperties
 }) {
   const [formattedData, setFormattedData] = useState({});
+  const { groupPropNames } = useSelector((state) => state.coreQuery);
 
   useEffect(() => {
     const data = eventsFormattedForGranularity(
@@ -61,6 +63,8 @@ function AccountTimelineBirdView({
       timestampToString[granularity](value)
     ]);
   }, [milestones, granularity]);
+
+  console.log(formattedMilestones)
 
   const renderIcon = (event) => (
     <div
@@ -150,7 +154,13 @@ function AccountTimelineBirdView({
       <div className='milestone-section'>
         {milestonesList.map((milestone) => (
           <div className={`green-stripe ${showText ? '' : 'opaque'}`}>
-            {showText ? <div className='text'>{milestone[0]}</div> : null}
+            {showText ? (
+              <div className='text'>
+                {groupPropNames[milestone[0]]
+                  ? groupPropNames[milestone[0]]
+                  : milestone[0]}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -269,7 +279,7 @@ function AccountTimelineBirdView({
                             }
                           )}
                         </div>
-                        {renderMilestoneStrip(milestones,false)}
+                        {renderMilestoneStrip(milestones, false)}
                       </td>
                     );
                   })}

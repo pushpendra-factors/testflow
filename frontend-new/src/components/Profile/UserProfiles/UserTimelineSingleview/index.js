@@ -53,7 +53,7 @@ function AccountTimelineSingleView({
                     </div>
                   ) : null} */}
                 </td>
-                <td className={`bg-none pb-${milestones.length * 10}`}>
+                <td className={`bg-none pb-${milestones.length * 0}`}>
                   <div class='user-timeline--events'>
                     {events.map((event) => {
                       const category = getEventCategory(event, eventNamesMap);

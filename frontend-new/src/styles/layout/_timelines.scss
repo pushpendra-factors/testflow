@@ -354,7 +354,20 @@
         font-size: 14px;
         line-height: 36px;
         color: #5ACA89;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
+        transition: all 0.2s;
+
+        &:hover {
+            transform: scale(1.02, 1);
+            background: #F1F9F4;
+            overflow: visible;
+            text-overflow: unset;
+            width: fit-content;
+            height: auto;
+        }
+
     }
 }
 
