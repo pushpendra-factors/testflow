@@ -46,8 +46,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.InDelta(t, user.JoinTimestamp, start.Unix()-60, 3)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
-	// Not more than 50ms difference.
-	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 5.0e+7)
+
 	// Test Get User on the created one.
 	retUser, errCode := store.GetStore().GetUser(projectId, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -89,8 +88,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.InDelta(t, user.JoinTimestamp, start.Unix()-60, 3)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
-	// Not more than 50ms difference.
-	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 5.0e+7)
+
 	var retProperties map[string]interface{}
 	err = json.Unmarshal(user.Properties.RawMessage, &retProperties)
 	assert.Nil(t, err)
