@@ -1828,12 +1828,16 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 
 	// add CampaignData result based on Key Dimensions
 	_ = AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
-
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"attributionData": attributionData}).Info(" attributionData after AddCampaignDataForChannelGroup")
+	}
 	for key, _ := range *attributionData {
 		//add key to attribution data
 		addKeyToMarketingInfoForChannelOrSource(attributionData, key, query)
 	}
-
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"attributionData": attributionData}).Info(" attributionData after  addKeyToMarketingInfoForChannelOrSource")
+	}
 	// Add additional metrics values
 	ComputeAdditionalMetrics(attributionData)
 	// Add custom dimensions
