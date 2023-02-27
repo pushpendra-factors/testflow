@@ -2396,7 +2396,7 @@ func TrackUserGroup(projectID int64, userID string, groupName string, groupPrope
 	}
 
 	_, status = store.GetStore().UpdateUserGroup(projectID, userID, groupName, groupID, groupUserID, true)
-	if status != http.StatusAccepted {
+	if status != http.StatusAccepted && status != http.StatusNotModified {
 		logCtx.WithError(err).Error("Failed to update user association with group user on TrackUserGroup.")
 		return http.StatusInternalServerError
 	}

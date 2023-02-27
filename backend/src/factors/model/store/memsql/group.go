@@ -291,7 +291,7 @@ func (store *MemSQL) GetGroupUserByGroupID(projectID int64, groupName string, gr
 
 	source := model.GetGroupUserSourceByGroupName(groupName)
 
-	whereStmnt := fmt.Sprintf("project_id = ? AND group_%d_id = ? AND source = ?", group.ID)
+	whereStmnt := fmt.Sprintf("project_id = ? AND group_%d_id = ? AND source = ? AND is_group_user = true ", group.ID)
 	whereParams := []interface{}{projectID, groupID, source}
 
 	db := C.GetServices().Db
