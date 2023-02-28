@@ -47,21 +47,27 @@ function PropertyFilter({
   }, [filters]);
 
   const delFilter = (index) => {
-    const filtersSorted = [...filters];
-    filtersSorted.sort(compareFilters);
-    const fltrs = filtersSorted.filter((f, i) => i !== index);
-    setFilters(fltrs);
+    if (!displayMode) {
+      const filtersSorted = [...filters];
+      filtersSorted.sort(compareFilters);
+      const fltrs = filtersSorted.filter((f, i) => i !== index);
+      setFilters(fltrs);
+    }
   };
   const editFilter = (id, filter) => {
-    const filtersSorted = [...filters];
-    filtersSorted.sort(compareFilters);
-    const fltrs = filtersSorted.map((f, i) => (i === id ? filter : f));
-    setFilters(fltrs);
+    if (!displayMode) {
+      const filtersSorted = [...filters];
+      filtersSorted.sort(compareFilters);
+      const fltrs = filtersSorted.map((f, i) => (i === id ? filter : f));
+      setFilters(fltrs);
+    }
   };
   const addFilter = (filter) => {
-    const fltrs = [...filters];
-    fltrs.push(filter);
-    setFilters(fltrs);
+    if (!displayMode) {
+      const fltrs = [...filters];
+      fltrs.push(filter);
+      setFilters(fltrs);
+    }
   };
   const closeFilter = () => {
     setFilterDD(false);
