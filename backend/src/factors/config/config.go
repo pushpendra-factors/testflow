@@ -286,6 +286,7 @@ type Configuration struct {
 	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
 	DisableUpdateNextSessionTimestamp                  int
+	EnableSyncReferenceFieldsByProjectID               string
 }
 
 type Services struct {
@@ -2094,7 +2095,7 @@ func GetAppName(defaultAppName, overrideAppName string) string {
 }
 
 func GetCloudManager(projectId int64, skipProjectIdDependency bool) filestore.FileManager {
-	if(skipProjectIdDependency){
+	if skipProjectIdDependency {
 		return configuration.NewCloudManager
 	}
 	if U.ContainsInt64InArray(configuration.ProjectIdsV2, projectId) {
@@ -2397,7 +2398,7 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	}
 
 	return true
-}	
+}
 
 func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
 	if configuration.IncreaseKPILimitForProjectIDs == "" {
@@ -2441,4 +2442,13 @@ func EnableSixSignalGroupByProjectID(projectID int64) bool {
 
 func IsEnableDebuggingForIP() bool {
 	return configuration.EnableDebuggingForIP
+}
+
+func AllowSyncReferenceFields(projectId int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSyncReferenceFieldsByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return projectIDsMap[projectId]
 }

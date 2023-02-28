@@ -629,6 +629,12 @@ type Model interface {
 	GetDisplayNamesForObjectEntities(projectID int64) (int, map[string]string)
 	CreateOrUpdateDisplayName(projectID int64, eventName, propertyName, displayName, tag string) int
 
+	// display name_labels
+	CreateOrUpdateDisplayNameLabel(projectID int64, source, key, value, label string) int
+	CreateDisplayNameLabel(projectID int64, source, propertyKey, value, label string) (int, error)
+	GetDisplayNameLabel(projectID int64, source, propertyKey, value string) (*model.DisplayNameLabel, int, error)
+	GetDisplayNameLabelsByProjectIdAndSource(projectID int64, source string) ([]model.DisplayNameLabel, int)
+
 	// task and task-execution
 	RegisterTaskWithDefaultConfiguration(taskName string, source string, frequency int, isProjectEnabled bool) (uint64, int, string)
 	RegisterTask(taskName string, source string, frequency int, isProjectEnabled bool, frequencyInterval int, skipStartIndex int, skipEndIndex int, recurrence bool, offsetStartMinutes int) (uint64, int, string)
