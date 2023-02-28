@@ -272,6 +272,7 @@ const EventBasedAlert = ({
         setGroupState={pushGroupBy}
         closeDropDown={() => setGroupByDDVisible(false)}
         hideText={true}
+        posTop={true}
       />
     ) : null;
 
@@ -298,6 +299,7 @@ const EventBasedAlert = ({
                 setGroupState={pushGroupBy}
                 closeDropDown={() => setGroupByDDVisible(false)}
                 hideText={true}
+                posTop={true}
               />
             </div>
           );
@@ -1014,7 +1016,7 @@ const EventBasedAlert = ({
                     </div>
                   </Popover>
                 </div>
-                <div>{groupByItems()}</div>
+                <div className='fa--query_block_section borderless no-padding mt-0'>{groupByItems()}</div>
                 <Button
                   type='text'
                   style={{ color: '#8692A3' }}
@@ -1277,7 +1279,7 @@ const EventBasedAlert = ({
               <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>
                 Attach properties for your payload
               </Text>
-              <div>
+              <div className='fa--query_block_section borderless no-padding mt-0'>
                 {viewGroupByItems(
                   viewAlertDetails?.event_alert?.message_property &&
                     viewAlertDetails?.event_alert?.message_property.length &&
