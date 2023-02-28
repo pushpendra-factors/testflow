@@ -493,7 +493,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
 
     if (Cache.getFactorsCache(Cache.trackPageOnSPA)) {
         setInterval(function(){
-            if (Cache.getFactorsCache(Cache.currentPageURLEventName) != getAutoTrackURL()) {
+            if (Cache.getFactorsCache(Cache.currentPageURLEventName) && Cache.getFactorsCache(Cache.currentPageURLEventName) != getAutoTrackURL()) {
                 _this.track(
                     getAutoTrackURL(), 
                     Properties.getFromQueryParams(window.location), 
