@@ -28,6 +28,12 @@ type UpdateShareableURLParams struct {
 
 func validateCreateShareableURLRequest(params *model.ShareableURL, projectID int64, agentUUID string) (bool, string) {
 
+	logCtx := log.WithFields(log.Fields{
+		"project_id":    projectID,
+		"agentUUID":     agentUUID,
+		"shareableURLs": params,
+	})
+
 	if params.EntityID == 0 {
 		return false, "Invalid entity id."
 	}
@@ -40,8 +46,9 @@ func validateCreateShareableURLRequest(params *model.ShareableURL, projectID int
 		return false, "Invalid share type."
 	}
 
-	if params.EntityType == model.ShareableURLEntityTypeQuery {
+	if params.EntityType == model.ShareableURLEntityTypeQuery || params.EntityType == model.ShareableURLEntityTypeSixSignal {
 		query, err := store.GetStore().GetQueryWithQueryId(projectID, params.EntityID)
+		logCtx.Info("Query fetched : ", query)
 		if err != http.StatusFound {
 			return false, "Invalid query id."
 		}
@@ -60,6 +67,7 @@ func validateCreateShareableURLRequest(params *model.ShareableURL, projectID int
 	} else if params.EntityType == model.ShareableURLEntityTypeTemplate {
 
 	}
+	logCtx.Info("Shareable URls is valid: ", params)
 	return true, ""
 }
 

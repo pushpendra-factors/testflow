@@ -206,6 +206,16 @@ func (store *MemSQL) GetQueryWithQueryId(projectID int64, queryID int64) (*model
 	return store.getQueryWithQueryID(projectID, queryID, model.QueryTypeAllQueries)
 }
 
+//GetSixSignalQueryWithQueryID Get query by query id of type SixSignalQuery
+func (store *MemSQL) GetSixSignalQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query_id":   queryID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	return store.getQueryWithQueryID(projectID, queryID, model.QueryTypeSixSignalQuery)
+}
+
 func (store *MemSQL) GetQueryWithQueryIdString(projectID int64, queryIDString string) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id":      projectID,
