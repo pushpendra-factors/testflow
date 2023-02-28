@@ -202,16 +202,16 @@ function AccountTimelineBirdView({
                   <div className='top-64'>{timestamp}</div>
                 </td>
                 {timelineUsers.map((user) => {
-                  if (!allEvents[user.title])
+                  if (!allEvents[user.userId])
                     return <td className='bg-gradient--44px' />;
-                  const eventsList = allEvents[user.title].collapsed
-                    ? allEvents[user.title].events.slice(0, 1)
-                    : allEvents[user.title].events;
+                  const eventsList = allEvents[user.userId].collapsed
+                    ? allEvents[user.userId].events.slice(0, 1)
+                    : allEvents[user.userId].events;
                   return (
                     <td className='bg-gradient--44px'>
                       <div
                         className={`timeline-events multi-user--padding  ${
-                          allEvents[user.title].collapsed
+                          allEvents[user.userId].collapsed
                             ? 'timeline-events--collapsed'
                             : 'timeline-events--expanded'
                         }`}
@@ -223,15 +223,15 @@ function AccountTimelineBirdView({
                           </div>
                         ))}
                         {renderAdditionalDiv(
-                          allEvents[user.title].events.length,
-                          allEvents[user.title].collapsed,
+                          allEvents[user.userId].events.length,
+                          allEvents[user.userId].collapsed,
                           () => {
                             setFormattedData(
                               toggleCellCollapse(
                                 formattedData,
                                 timestamp,
-                                user.title,
-                                !allEvents[user.title].collapsed
+                                user.userId,
+                                !allEvents[user.userId].collapsed
                               )
                             );
                             setCollapseAll(undefined);

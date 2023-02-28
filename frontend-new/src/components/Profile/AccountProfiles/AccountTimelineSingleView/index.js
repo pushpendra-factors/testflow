@@ -61,9 +61,9 @@ function AccountTimelineSingleView({
                 <td className='bg-none pt-6'>
                   {Object.entries(allEvents).map(([user, data]) => {
                     const currentUser = timelineUsers.find(
-                      (obj) => obj.title === user
+                      (obj) => obj.userId === user
                     );
-                    const isAnonymous = currentUser.isAnonymous;
+                    const isAnonymous = currentUser?.isAnonymous;
                     return (
                       <div>
                         <div className='timeline-user-card'>
@@ -81,7 +81,7 @@ function AccountTimelineSingleView({
                                   backgroundColor: `${
                                     iconColors[
                                       ALPHANUMSTR.indexOf(
-                                        user.charAt(0).toUpperCase()
+                                        currentUser?.title.charAt(0).toUpperCase()
                                       ) % 8
                                     ]
                                   }`,
@@ -91,7 +91,7 @@ function AccountTimelineSingleView({
                                 {user.charAt(0).toUpperCase()}
                               </Avatar>
                             )}
-                            <h2 className='m-0'>{user}</h2>
+                            <h2 className='m-0'>{currentUser?.title}</h2>
                           </div>
                         </div>
                         <div class='user-timeline__events'>
