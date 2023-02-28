@@ -327,6 +327,7 @@ func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID int64) (*cacheRed
 		return nil, err
 	}
 	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To, U.TimeZoneString(q.Query.Timezone))
+	log.WithFields(log.Fields{"projectId": projectID}).Info("Attribution GetQueryCacheRedisKey project_id debug 1 ")
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 

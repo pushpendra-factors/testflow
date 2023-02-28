@@ -31,9 +31,8 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	}
 
 	logCtx := log.WithFields(logFields)
-	if C.GetAttributionDebug() == 1 {
-		logCtx.Info("Hitting ExecuteAttributionQueryV0")
-	}
+	logCtx.Info("Hitting ExecuteAttributionQueryV0")
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
