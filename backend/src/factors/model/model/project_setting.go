@@ -11,6 +11,7 @@ type ProjectSetting struct {
 	// Used project_id as primary key also, becase of 1-1 relationship.
 	ProjectId         int64           `gorm:"primary_key:true" json:"project_id,omitempty"`
 	AttributionConfig *postgres.Jsonb `json:"attribution_config"`
+	SixSignalConfig   *postgres.Jsonb `json:"six_signal_config"`
 	TimelinesConfig   *postgres.Jsonb `json:"timelines_config"`
 
 	// Using pointers to avoid update by default value.
@@ -119,6 +120,59 @@ type ProjectSetting struct {
   "pre_compute_enabled": false
 }
 */
+
+/*
+{
+  "api_limit": 60,
+  "country_include": [
+    {
+      "value": "India",
+      "type": "equals"
+    },
+    {
+      "value": "USA",
+      "type": "equals"
+    },
+    {
+      "value": "Nepal",
+      "type": "notEqual"
+    },
+    {
+      "value": "SriLanka",
+      "type": "notEqual"
+    }
+  ],
+  "country_exclude": [],
+  "pages_include": [
+    {
+      "value": "https://www.factors.ai/",
+      "type": "equals"
+    },
+    {
+      "value": "demo",
+      "type": "contains"
+    },
+    {
+      "value": "https://www.factors.ai/terms",
+      "type": "notEqual"
+    }
+  ],
+  "pages_exclude": []
+}
+*/
+
+type SixSignalConfig struct {
+	APILimit       int               `json:"api_limit"`
+	CountryInclude []SixSignalFilter `json:"country_include"`
+	CountryExclude []SixSignalFilter `json:"country_exclude"`
+	PagesInclude   []SixSignalFilter `json:"pages_include"`
+	PagesExclude   []SixSignalFilter `json:"pages_exclude"`
+}
+
+type SixSignalFilter struct {
+	Value string `json:"value"`
+	Type  string `json:"type"`
+}
 
 type TimelinesConfig struct {
 	DisabledEvents []string      `json:"disabled_events"`
