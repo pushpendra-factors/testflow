@@ -30,6 +30,7 @@ const (
 	ShareableURLEntityTypeQuery int = iota + 1
 	ShareableURLEntityTypeTemplate
 	ShareableURLEntityTypeDashboard
+	ShareableURLEntityTypeSixSignal
 )
 
 var ValidShareTypes = map[int]bool{
@@ -40,4 +41,5 @@ var ValidShareEntityTypes = map[int]bool{
 	ShareableURLEntityTypeQuery:     true,
 	ShareableURLEntityTypeTemplate:  true,
 	ShareableURLEntityTypeDashboard: true,
+	ShareableURLEntityTypeSixSignal: true,
 }

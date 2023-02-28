@@ -50,4 +50,5 @@ const (
 	QueryTypeDashboardQuery     = 1
 	QueryTypeSavedQuery         = 2
 	QueryTypeAttributionV1Query = 3
+	QueryTypeSixSignalQuery     = 4
 )
