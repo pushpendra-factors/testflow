@@ -212,7 +212,7 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 	return response, http.StatusCreated, "Shareable Query creation successful", false
 }
 
-//isReportShared
+//isReportShared checks if the report has been already made public
 func isReportShared(projectID int64, idText string) (bool, string) {
 
 	share, err := store.GetStore().GetShareableURLWithShareStringWithLargestScope(projectID, idText, model.ShareableURLEntityTypeSixSignal)
