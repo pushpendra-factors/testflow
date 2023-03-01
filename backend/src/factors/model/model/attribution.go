@@ -3588,8 +3588,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	userIdMap := make(map[string]bool)
-	reports.CampaignSourceMapping = make(map[string]string)
-	reports.CampaignChannelGroupMapping = make(map[string]string)
 
 	type MissingCollection struct {
 		AttributionKey string

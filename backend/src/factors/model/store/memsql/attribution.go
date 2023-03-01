@@ -526,6 +526,8 @@ func (store *MemSQL) getAllThePages(projectId int64, sessionEventNameId string, 
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
+	reports.CampaignSourceMapping = make(map[string]string)
+	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
