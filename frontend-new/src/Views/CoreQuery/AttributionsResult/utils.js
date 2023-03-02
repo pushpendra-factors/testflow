@@ -781,7 +781,7 @@ export const getTableColumns = (
   }
 
   let linkedEventsColumns = [];
-  if (linkedEvents.length) {
+  if (linkedEvents?.length) {
     linkedEventsColumns = linkedEvents.map((le) => {
       const linkedEventsChildren = [
         getEventColumnConfig({
