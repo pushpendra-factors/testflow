@@ -36,9 +36,13 @@ function AccountTimelineSingleView({
         </thead>
         <tbody>
           {Object.entries(data).map(([timestamp, events], index) => {
-            const milestones = formattedMilestones.filter(
-              (milestone) => milestone[1] === timestamp
+            const timelineEvents = events.filter(
+              (event) => event.event_type !== 'milestone'
             );
+            const milestones = events.filter(
+              (event) => event.event_type === 'milestone'
+            );
+            if (milestones && !timelineEvents.length) return null;
             return (
               <tr>
                 <td>
@@ -55,12 +59,12 @@ function AccountTimelineSingleView({
                 </td>
                 <td className={`bg-none pb-${milestones.length * 0}`}>
                   <div class='user-timeline--events'>
-                    {events.map((event) => {
+                    {timelineEvents.map((event) => {
                       const category = getEventCategory(event, eventNamesMap);
                       const sourceIcon = getIconForCategory(category);
                       const eventIcon = event.icon
                         ? event.icon
-                        : 'calendar_star';
+                        : 'calendar-star';
                       return (
                         <EventInfoCard
                           event={event}

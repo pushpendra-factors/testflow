@@ -387,8 +387,8 @@ function AccountDetails({
       </div>
       <div className='leftpane__props'>
         {listLeftPaneProps(accountDetails.data.left_pane_props)}
+        <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       </div>
-      <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       <div className='leftpane__logo_attr'>
         <a
           className='font-size--small'

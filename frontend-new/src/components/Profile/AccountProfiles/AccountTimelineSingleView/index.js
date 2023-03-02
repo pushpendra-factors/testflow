@@ -92,6 +92,7 @@ function AccountTimelineSingleView({
                     const currentUser = timelineUsers.find(
                       (obj) => obj.title === user
                     );
+                    if (!currentUser) return null;
                     return (
                       <div className='relative'>
                         <div className='user-card--wrapper'>
@@ -109,7 +110,7 @@ function AccountTimelineSingleView({
                             const sourceIcon = getIconForCategory(category);
                             const eventIcon = event.icon
                               ? event.icon
-                              : 'calendar_star';
+                              : 'calendar-star';
                             return (
                               <EventInfoCard
                                 event={event}

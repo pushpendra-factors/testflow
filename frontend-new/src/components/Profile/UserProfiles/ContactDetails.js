@@ -168,7 +168,7 @@ function ContactDetails({
       )
     );
   };
-  
+
   const controlsPopover = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
@@ -354,19 +354,20 @@ function ContactDetails({
           )}
         </div>
       </div>
+
       <div className='leftpane__props'>
         {listLeftPaneProps(userDetails.data.left_pane_props)}
-      </div>
-      <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
-      <div className='leftpane__groups'>
-        <Text type='title' level={7} extraClass='m-0 my-2' color='grey'>
-          Associated Groups:
-        </Text>
-        {userDetails?.data?.group_infos?.map((group) => (
-          <Text type='title' level={7} extraClass='m-0 mb-2'>
-            {group.group_name}
+        <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
+        <div className='leftpane__props__groups'>
+          <Text type='title' level={7} extraClass='m-0 my-2' color='grey'>
+            Associated Groups:
           </Text>
-        )) || '-'}
+          {userDetails?.data?.group_infos?.map((group) => (
+            <Text type='title' level={7} extraClass='m-0 mb-2'>
+              {group.group_name}
+            </Text>
+          )) || '-'}
+        </div>
       </div>
     </div>
   );

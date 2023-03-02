@@ -10,8 +10,6 @@ import {
   getIconForCategory,
   hoverEvents,
   iconColors,
-  iconMap,
-  timestampToString,
   toggleCellCollapse
 } from '../../utils';
 import { SVG, Text } from '../../../factorsComponents';
@@ -57,38 +55,26 @@ function AccountTimelineBirdView({
     setFormattedData(data);
   }, [collapseAll]);
 
-  const formattedMilestones = useMemo(() => {
-    return Object.entries(milestones || {}).map(([key, value]) => [
-      key,
-      timestampToString[granularity](value)
-    ]);
-  }, [milestones, granularity]);
-
-  console.log(formattedMilestones)
-
-  const renderIcon = (event) => (
-    <div
-      className='icon'
-      style={{
-        '--border-color': `${
-          eventIconsColorMap[event.icon || 'calendar_star'].borderColor
-        }`,
-        '--bg-color': `${
-          eventIconsColorMap[event.icon || 'calendar_star'].bgColor
-        }`
-      }}
-    >
-      <img
-        src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${
-          iconMap[event.icon] ? iconMap[event.icon] : event.icon
-        }.svg`}
-        alt=''
-        height={16}
-        width={16}
-        loading='lazy'
-      />
-    </div>
-  );
+  const renderIcon = (event) => {
+    const eventIcon = eventIconsColorMap[event.icon] ? event.icon : 'calendar-star';
+    return (
+      <div
+        className='icon'
+        style={{
+          '--border-color': `${eventIconsColorMap[eventIcon]?.borderColor}`,
+          '--bg-color': `${eventIconsColorMap[eventIcon]?.bgColor}`
+        }}
+      >
+        <img
+          src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
+          alt=''
+          height={16}
+          width={16}
+          loading='lazy'
+        />
+      </div>
+    );
+  };
 
   const renderInfoCard = (event) => {
     const eventName =
@@ -112,9 +98,7 @@ function AccountTimelineBirdView({
           trigger={hoverConditionals ? 'hover' : []}
           icon={
             <img
-              src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${
-                iconMap[icon] ? iconMap[icon] : icon
-              }.svg`}
+              src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${icon}.svg`}
               alt=''
               height={24}
               width={24}
@@ -149,16 +133,16 @@ function AccountTimelineBirdView({
       )
     ) : null;
 
-  const renderMilestoneStrip = (milestonesList, showText = false) =>
-    milestonesList.length ? (
+  const renderMilestoneStrip = (milestones, showText = false) =>
+    milestones.events.length ? (
       <div className='milestone-section'>
-        {milestonesList.map((milestone) => (
+        {milestones.events.map((milestone) => (
           <div className={`green-stripe ${showText ? '' : 'opaque'}`}>
             {showText ? (
               <div className='text'>
-                {groupPropNames[milestone[0]]
-                  ? groupPropNames[milestone[0]]
-                  : milestone[0]}
+                {groupPropNames[milestone.event_name]
+                  ? groupPropNames[milestone.event_name]
+                  : milestone.event_name}
               </div>
             ) : null}
           </div>
@@ -225,20 +209,20 @@ function AccountTimelineBirdView({
         <tbody>
           {Object.entries(formattedData).map(
             ([timestamp, allEvents], index) => {
-              const milestones = formattedMilestones.filter(
-                (milestone) => milestone[1] === timestamp
-              );
+              const milestones = allEvents?.milestone;
               return (
                 <tr>
-                  <td>
+                  <td className={`pb-${milestones?.events?.length * 8}`}>
                     <div className='timestamp top-64'>{timestamp}</div>
-                    {renderMilestoneStrip(milestones, true)}
+                    {milestones ? renderMilestoneStrip(milestones, true) : null}
                   </td>
                   {timelineUsers.map((user) => {
                     if (!allEvents[user.title])
                       return (
                         <td className='bg-gradient--44px'>
-                          {renderMilestoneStrip(milestones, false)}
+                          {milestones
+                            ? renderMilestoneStrip(milestones, false)
+                            : null}
                         </td>
                       );
                     const eventsList = allEvents[user.title].collapsed
@@ -247,7 +231,7 @@ function AccountTimelineBirdView({
                     return (
                       <td
                         className={`bg-gradient--44px pb-${
-                          milestones.length * 10
+                          milestones?.events?.length * 10
                         }`}
                       >
                         <div
@@ -279,7 +263,9 @@ function AccountTimelineBirdView({
                             }
                           )}
                         </div>
-                        {renderMilestoneStrip(milestones, false)}
+                        {milestones
+                          ? renderMilestoneStrip(milestones, false)
+                          : null}
                       </td>
                     );
                   })}
