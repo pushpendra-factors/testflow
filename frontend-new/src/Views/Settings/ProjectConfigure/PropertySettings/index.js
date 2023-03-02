@@ -18,6 +18,8 @@ import { MoreOutlined } from '@ant-design/icons';
 import {
   fetchSmartProperties,
   deleteSmartProperty,
+  fetchPropertyMappings,
+  addPropertyMapping
 } from 'Reducers/settings/middleware';
 import SmartProperties from './SmartProperties';
 import DCG from './DCG';
@@ -25,6 +27,9 @@ import DCGTable from './DCG/DCGTable';
 import PropetyValueModalDCG from './DCG/PropetyValueModalDCG';
 
 import ConfirmationModal from '../../../../components/ConfirmationModal';
+import SavedPropertyMapping from './PropertyMappingKPI/savedProperties';
+import PropertyMappingKPI from './PropertyMappingKPI';
+
 
 const { TabPane } = Tabs;
 
@@ -35,6 +40,8 @@ function Properties({
   deleteSmartProperty,
   agents,
   currentAgent,
+  fetchPropertyMappings,
+  addPropertyMapping
 }) {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [showPropertyForm, setShowPropertyForm] = useState(false);
@@ -48,6 +55,8 @@ function Properties({
 
   const [tableLoading, setTableLoading] = useState(false);
   const [enableEdit, setEnableEdit] = useState(false);
+
+  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     setEnableEdit(false);
@@ -69,6 +78,9 @@ function Properties({
       fetchSmartProperties(activeProject.id).then(() => {
         setTableLoading(false);
       });
+      fetchPropertyMappings(activeProject.id).then(() => {
+        setTableLoading(false);
+      }); 
     }
   }, [activeProject]);
 
@@ -97,7 +109,7 @@ function Properties({
       dataIndex: 'type',
       key: 'type',
       render: (text) => (
-        <span className={'capitalize'}>{text.replace('_', ' ')}</span>
+        <span className={'capitalize'}>{text ? text.replace('_', ' ') : ""}</span>
       ),
     },
     {
@@ -189,6 +201,19 @@ function Properties({
                   Add New
                 </Button>
               )}
+
+              {tabNo == 3 && (
+                <Button
+                  size={'large'}
+                  onClick={() => { 
+                    setShowForm(true);
+                  }}
+                >
+                  <SVG name={'plus'} extraClass={'mr-2'} size={16} />
+                  Add New
+                </Button>
+              )}
+
               {
                 tabNo == 2 && (
                   <>
@@ -241,6 +266,9 @@ function Properties({
                     enableEdit={enableEdit}
                   />
                 </TabPane>
+                <TabPane tab='Property Mapping' key='3'>
+                  <SavedPropertyMapping />
+                </TabPane>
               </Tabs>
             </div>
           </Col>
@@ -290,6 +318,20 @@ function Properties({
                 {/* {!showPropertyForm ? renderSmartPropertyTable() : renderSmartPropertyDetail()} */}
               </>
             )}
+            {tabNo == 3 && (
+              <>
+              {!showForm && <>
+              {renderSmartPropertyTable()}
+
+              </>}
+              
+              {showForm && <PropertyMappingKPI 
+                setShowForm={setShowForm} 
+                setTabNo={setTabNo}
+               />}
+
+              </>
+            )}
             <ConfirmationModal
               visible={deleteWidgetModal ? true : false}
               confirmationText='Do you really want to remove this property?'
@@ -317,4 +359,6 @@ const mapStateToProps = (state) => ({
 export default connect(mapStateToProps, {
   fetchSmartProperties,
   deleteSmartProperty,
+  fetchPropertyMappings,
+  addPropertyMapping
 })(Properties);

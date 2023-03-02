@@ -4,6 +4,7 @@ import {
     fetchSmartPropertyConfigAction, 
     fetchClickableElementsAction, 
     toggleClickableElementAction,
+    fetchPropertyMappingsAction,
 } from './actions';
 import {
     getSmartProperties, 
@@ -13,6 +14,9 @@ import {
     removeSmartProperty,
     getClickableElements,
     enableOrDisableClickableElement,
+    getPropertyMapping,
+    createPropertyMapping,
+    deletePropertyMapping
 } from './services';
 
 
@@ -24,6 +28,19 @@ export const fetchSmartProperties = (projectId) => {
             resolve(dispatch(fetchSmartPropertiesAction(options)));
           }).catch((err) => {
             resolve(dispatch(fetchSmartPropertiesAction([])));
+          });
+      });
+    };
+  };
+
+export const fetchPropertyMappings = (projectId) => {
+    return (dispatch) => {
+      return new Promise((resolve, reject) => {
+        getPropertyMapping(dispatch, projectId).then((response) => {
+            const options = [...response.data];
+            resolve(dispatch(fetchPropertyMappingsAction(options)));
+          }).catch((err) => {
+            resolve(dispatch(fetchPropertyMappingsAction([])));
           });
       });
     };
@@ -47,6 +64,31 @@ export const addSmartProperty = (projectId, smartProperty) => {
     return (dispatch) => {
         return new Promise((resolve, reject) => {
             createSmartProperty(dispatch, projectId, smartProperty).then((res) => {
+                resolve(res);
+            }).catch((err) => {
+                reject(err);
+                // resolve(dispatch(fetchSmartPropertyConfigAction({})));
+            })
+        })
+    }
+}
+
+export const addPropertyMapping = (projectId, property) => {
+    return (dispatch) => {
+        return new Promise((resolve, reject) => {
+          createPropertyMapping(dispatch, projectId, property).then((res) => {
+                resolve(res);
+            }).catch((err) => {
+                reject(err);
+                // resolve(dispatch(fetchSmartPropertyConfigAction({})));
+            })
+        })
+    }
+}
+export const removePropertyMapping = (projectId, propertyId) => {
+    return (dispatch) => {
+        return new Promise((resolve, reject) => {
+          deletePropertyMapping(dispatch, projectId, propertyId).then((res) => {
                 resolve(res);
             }).catch((err) => {
                 reject(err);

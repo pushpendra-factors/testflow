@@ -16,25 +16,33 @@ const GLobalFilter = ({
   KPIConfigProps,
   selectedMainCategory,
   viewMode = false,
+  propertyMaps,
+  isSameKPIGrp
 }) => {
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
   const activeProject = useSelector((state) => state.global.active_project);
 
   const [filterProps, setFilterProperties] = useState({});
   const [filterDD, setFilterDD] = useState(false);
-  const [orFilterIndex, setOrFilterIndex] = useState(-1);
-
-  useEffect(() => {
-    const props = Object.assign({}, filterProps);
-    props['user'] = KPIConfigProps ? KPIConfigProps : [];
-    setFilterProperties(props);
-  }, [KPIConfigProps]);
-
-  useEffect(() => {
-    if (onFiltersLoad.length) {
-      onFiltersLoad.forEach((fn) => fn());
+  const [orFilterIndex, setOrFilterIndex] = useState(-1); 
+  
+  useEffect(() => { 
+    let commonProperties = [];
+    if(propertyMaps){
+      commonProperties = propertyMaps?.map((item)=>{
+        return [item?.display_name, item?.name, item?.data_type, "propMap"]
+      })
     }
-  }, [filters]);
+    const props = Object.assign({}, filterProps);
+    props['user'] = !isSameKPIGrp ? commonProperties : (KPIConfigProps ? KPIConfigProps : []);
+    setFilterProperties(props);
+  }, [KPIConfigProps, propertyMaps, isSameKPIGrp]);
+
+  // useEffect(() => {
+  //   if (onFiltersLoad.length) {
+  //     onFiltersLoad.forEach((fn) => fn());
+  //   }
+  // }, [filters]);
 
   const delFilter = (index) => {
     const filtersSorted = [...filters];
@@ -56,26 +64,27 @@ const GLobalFilter = ({
   const closeFilter = () => {
     setFilterDD(false);
     setOrFilterIndex(-1);
-  };
-
+  }; 
+ 
   if (filterProps) {
     const filtrs = [];
     let index = 0;
     let lastRef = 0;
     if(filters?.length){
-    const group = groupFilters(filters, 'ref');
-    const filtersGroupedByRef = Object.values(group);
-    const refValues = Object.keys(group);
-    lastRef = parseInt(refValues[refValues.length-1]);
-
-    filtersGroupedByRef.forEach((filtersGr)=>{
-      const refValue = filtersGr[0].ref;
-      if(filtersGr.length == 1){
-        const filt = filtersGr[0];
+      const group = groupFilters(filters, 'ref');
+      const filtersGroupedByRef = Object.values(group);
+      const refValues = Object.keys(group);
+      lastRef = parseInt(refValues[refValues.length-1]);
+      
+      filtersGroupedByRef.forEach((filtersGr)=>{
+        const refValue = filtersGr[0].ref;
+        if(filtersGr.length == 1){
+          const filt = filtersGr[0]; 
         filtrs.push(
           <div className={'fa--query_block--filters flex flex-row'}>
             <div key={index} className={`mt-2`}>
               <GlobalFilterBlock
+                isSameKPIGrp={isSameKPIGrp}
                 activeProject={activeProject}
                 index={index}
                 filterType={'analytics'}
@@ -100,6 +109,7 @@ const GLobalFilter = ({
            {index === orFilterIndex && (
               <div key={'init'} className={`mt-2`}>
               <GlobalFilterBlock
+                isSameKPIGrp={isSameKPIGrp}
                 activeProject={activeProject}
                 blockType={'global'}
                 filterType={'analytics'}
@@ -125,6 +135,7 @@ const GLobalFilter = ({
         <div className={'fa--query_block--filters flex flex-row'}>
           <div key={index} className={`mt-2`}>
               <GlobalFilterBlock
+                isSameKPIGrp={isSameKPIGrp}
                 activeProject={activeProject}
                 index={index}
                 filterType={'analytics'}
@@ -143,6 +154,7 @@ const GLobalFilter = ({
             </div>
           <div key={index+1} className={`mt-2`}>
             <GlobalFilterBlock
+              isSameKPIGrp={isSameKPIGrp}
                 activeProject={activeProject}
                 index={index+1}
                 filterType={'analytics'}
@@ -170,6 +182,7 @@ const GLobalFilter = ({
       filtrs.push(
         <div key={filtrs.length} className={`mt-2`}>
           <GlobalFilterBlock
+            isSameKPIGrp={isSameKPIGrp}
             activeProject={activeProject}
             blockType={'global'}
             filterType={'analytics'}
