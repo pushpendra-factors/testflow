@@ -272,7 +272,7 @@ function QueryBlock({
     setMoreOptions(false);
   };
   const getMenu = (filterOptions) => (
-    <Menu style={{ minWidth: '200px', padding: '10px' }}>
+    <Menu style={{ minWidth: '150px', padding: '10px' }}>
       {filterOptions.map((eachFilter, eachIndex) => {
         return (
           <Menu.Item
@@ -283,8 +283,8 @@ function QueryBlock({
                 style={{ marginRight: '10px' }}
               ></SVG>
             }
-            style={{ display: 'flex', padding: '10px', margin: '5px' }}
-            key={eachIndex}
+            style={{ display: 'flex' }}
+            key='0'
             onClick={() => setAdditionalactions(eachFilter)}
           >
             <span style={{ paddingLeft: '5px' }}>{eachFilter[0]}</span>
@@ -520,9 +520,7 @@ function QueryBlock({
     );
   }
 
-  let KPIFilterOptions = [
-    [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
-  ];
+  let KPIFilterOptions = [];
   return (
     <div
       className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}
@@ -597,7 +595,7 @@ function QueryBlock({
               <Button
                 type='text'
                 size={'large'}
-                className={`fa-btn--custom mr-1 btn-total-round ml-2`}
+                className={`fa-btn--custom mr-1 btn-total-round`}
               >
                 <SVG name='more' />
               </Button>
