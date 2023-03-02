@@ -70,7 +70,7 @@ func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, 
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, "Query failed. Invalid project.", true
 	}
 
-	queryID := c.Params.ByName("query_id")
+	queryID := c.Query("query_id")
 
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectId,
