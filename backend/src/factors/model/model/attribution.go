@@ -327,6 +327,7 @@ func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID int64) (*cacheRed
 		return nil, err
 	}
 	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To, U.TimeZoneString(q.Query.Timezone))
+	log.WithFields(log.Fields{"projectId": projectID}).Info("Attribution GetQueryCacheRedisKey project_id debug 1 ")
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
@@ -1828,12 +1829,16 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 
 	// add CampaignData result based on Key Dimensions
 	_ = AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
-
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"attributionData": attributionData}).Info(" attributionData after AddCampaignDataForChannelGroup")
+	}
 	for key, _ := range *attributionData {
 		//add key to attribution data
 		addKeyToMarketingInfoForChannelOrSource(attributionData, key, query)
 	}
-
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"attributionData": attributionData}).Info(" attributionData after  addKeyToMarketingInfoForChannelOrSource")
+	}
 	// Add additional metrics values
 	ComputeAdditionalMetrics(attributionData)
 	// Add custom dimensions
@@ -3583,8 +3588,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	userIdMap := make(map[string]bool)
-	reports.CampaignSourceMapping = make(map[string]string)
-	reports.CampaignChannelGroupMapping = make(map[string]string)
 
 	type MissingCollection struct {
 		AttributionKey string

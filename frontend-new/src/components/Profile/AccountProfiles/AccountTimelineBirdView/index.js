@@ -1,5 +1,5 @@
 import { Avatar, Spin } from 'antd';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CaretRightOutlined, CaretUpOutlined } from '@ant-design/icons';
 import InfoCard from '../../MyComponents/InfoCard';
 import {
@@ -56,7 +56,9 @@ function AccountTimelineBirdView({
   }, [collapseAll]);
 
   const renderIcon = (event) => {
-    const eventIcon = eventIconsColorMap[event.icon] ? event.icon : 'calendar-star';
+    const eventIcon = eventIconsColorMap[event.icon]
+      ? event.icon
+      : 'calendar-star';
     return (
       <div
         className='icon'
@@ -217,7 +219,7 @@ function AccountTimelineBirdView({
                     {milestones ? renderMilestoneStrip(milestones, true) : null}
                   </td>
                   {timelineUsers.map((user) => {
-                    if (!allEvents[user.title])
+                    if (!allEvents[user.userId])
                       return (
                         <td className='bg-gradient--44px'>
                           {milestones
@@ -225,9 +227,9 @@ function AccountTimelineBirdView({
                             : null}
                         </td>
                       );
-                    const eventsList = allEvents[user.title].collapsed
-                      ? allEvents[user.title].events.slice(0, 1)
-                      : allEvents[user.title].events;
+                    const eventsList = allEvents[user.userId].collapsed
+                      ? allEvents[user.userId].events.slice(0, 1)
+                      : allEvents[user.userId].events;
                     return (
                       <td
                         className={`bg-gradient--44px pb-${
@@ -236,7 +238,7 @@ function AccountTimelineBirdView({
                       >
                         <div
                           className={`timeline-events account-pad ${
-                            allEvents[user.title].collapsed
+                            allEvents[user.userId].collapsed
                               ? 'timeline-events--collapsed'
                               : 'timeline-events--expanded'
                           }`}
@@ -248,15 +250,15 @@ function AccountTimelineBirdView({
                             </div>
                           ))}
                           {renderAdditionalDiv(
-                            allEvents[user.title].events.length,
-                            allEvents[user.title].collapsed,
+                            allEvents[user.userId].events.length,
+                            allEvents[user.userId].collapsed,
                             () => {
                               setFormattedData(
                                 toggleCellCollapse(
                                   formattedData,
                                   timestamp,
-                                  user.title,
-                                  !allEvents[user.title].collapsed
+                                  user.userId,
+                                  !allEvents[user.userId].collapsed
                                 )
                               );
                               setCollapseAll(undefined);
