@@ -83,6 +83,7 @@ const AttributionsChartComponent = forwardRef(
     const [filtersVisible, setFiltersVisibility] = useState(false);
     const [columns, setColumns] = useState([]);
     const [tableData, setTableData] = useState([]);
+    const [unfilteredTableData, setUnfilteredTableData] = useState([]);
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
@@ -198,7 +199,7 @@ const AttributionsChartComponent = forwardRef(
     ]);
 
     useEffect(() => {
-      const tableData = getTableData(
+      const { tableData, unfilteredTableData } = getTableData(
         data,
         event,
         searchText,
@@ -215,6 +216,7 @@ const AttributionsChartComponent = forwardRef(
         appliedFilters
       );
       setTableData(tableData);
+      setUnfilteredTableData(unfilteredTableData);
       setVisibleIndices(
         tableData
           .slice(
@@ -309,12 +311,12 @@ const AttributionsChartComponent = forwardRef(
         columns
       });
 
-      if (tableData.length && computeFilterOptions) {
+      if (unfilteredTableData.length && computeFilterOptions) {
         const tableFilterOptions = getTableFilterOptions({
           contentGroups: content_groups,
           attrDimensions: attr_dimensions,
           touchpoint,
-          tableData,
+          tableData: unfilteredTableData,
           attributionMetrics,
           columns
         });
@@ -325,7 +327,7 @@ const AttributionsChartComponent = forwardRef(
       content_groups,
       attr_dimensions,
       touchpoint,
-      tableData,
+      unfilteredTableData,
       attributionMetrics,
       filters
     ]);
