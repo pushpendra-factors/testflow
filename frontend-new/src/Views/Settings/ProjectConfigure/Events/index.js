@@ -79,10 +79,10 @@ function Events({
   };
 
   const confirmRemove = (values) => {
-    removeSmartEvents(values?.project_id, values?.id)
+    removeSmartEvents(activeProject?.id, values?.id)
       .then(() => {
         message.success('Custom Event removed!');
-        fetchSmartEvents(values?.project_id);
+        fetchSmartEvents(activeProject?.id);
       })
       .catch((err) => {
         message.error(err?.data?.error);

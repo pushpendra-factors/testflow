@@ -31,9 +31,8 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	}
 
 	logCtx := log.WithFields(logFields)
-	if C.GetAttributionDebug() == 1 {
-		logCtx.Info("Hitting ExecuteAttributionQueryV0")
-	}
+	logCtx.Info("Hitting ExecuteAttributionQueryV0")
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
@@ -155,6 +154,12 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 
 	if query.AnalyzeType == model.AnalyzeTypeUserKPI {
 		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "sessions": userData}).Info("UserKPI Attribution sessions")
+	}
+
+	if C.GetAttributionDebug() == 1 && projectID == 12384898978000017 {
+		log.WithFields(log.Fields{"Attribution": "Debug",
+			"CampaignChannelGroupMapping": marketingReports.CampaignChannelGroupMapping,
+			"sessions":                    userData}).Info("CampaignChannelGroupMapping after PullSessions")
 	}
 
 	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
@@ -521,6 +526,8 @@ func (store *MemSQL) getAllThePages(projectId int64, sessionEventNameId string, 
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
+	reports.CampaignSourceMapping = make(map[string]string)
+	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)

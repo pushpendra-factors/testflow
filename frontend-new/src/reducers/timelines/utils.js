@@ -19,7 +19,7 @@ export const getAccountActivitiesWithEnableKeyConfig = (
       if (disabledEvents?.includes(activity.display_name)) {
         isEnabled = false;
       }
-      return { ...activity, user: user.user_name, enabled: isEnabled };
+      return { ...activity, user: user.user_id, enabled: isEnabled };
     });
     timelineArray.push(...newOpts);
   });
@@ -47,6 +47,7 @@ export const formatAccountTimeline = (data, config) => {
     .map((user) => ({
       title: user.user_name,
       subtitle: user.additional_prop,
+      userId: user.user_id,
       isAnonymous: user.is_anonymous
     }));
   returnData.account_events = getAccountActivitiesWithEnableKeyConfig(

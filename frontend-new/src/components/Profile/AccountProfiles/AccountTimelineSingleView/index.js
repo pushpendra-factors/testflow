@@ -90,7 +90,7 @@ function AccountTimelineSingleView({
                 <td className={`bg-none pt-6 pb-${milestones.length * 0}`}>
                   {Object.entries(allEvents).map(([user, data]) => {
                     const currentUser = timelineUsers.find(
-                      (obj) => obj.title === user
+                      (obj) => obj.userId === user
                     );
                     if (!currentUser) return null;
                     return (
