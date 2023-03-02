@@ -164,7 +164,7 @@ func createKpiInsights(diskManager *serviceDisk.DiskDriver, archiveCloudManager,
 			return err
 		}
 
-		err = writeWpiPath(projectId, Period(periodCodesWithWeekNMinus1[1]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager, mailerRun)
+		err = writeWpiPath(projectId, periodCodesWithWeekNMinus1[1], queryId, topK, bytes.NewReader(wpiBytes), *cloudManager, mailerRun)
 		if err != nil {
 			log.WithError(err).Error("write WPI error - ", err)
 			return err
@@ -176,7 +176,7 @@ func createKpiInsights(diskManager *serviceDisk.DiskDriver, archiveCloudManager,
 			log.WithError(err).Error("failed to marshal wpi1 Info.")
 			return err
 		}
-		err = writeWpiPath(projectId, Period(periodCodesWithWeekNMinus1[0]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager, mailerRun)
+		err = writeWpiPath(projectId, periodCodesWithWeekNMinus1[0], queryId, topK, bytes.NewReader(wpiBytes), *cloudManager, mailerRun)
 		if err != nil {
 			log.WithError(err).Error("write WPI error - ", err)
 			return err
@@ -186,7 +186,7 @@ func createKpiInsights(diskManager *serviceDisk.DiskDriver, archiveCloudManager,
 	//get insights between the weeks
 	var crossPeriodInsightsList []*CrossPeriodInsightsKpi
 	periodPair := PeriodPair{First: periodCodesWithWeekNMinus1[0], Second: periodCodesWithWeekNMinus1[1]}
-	if len(newInsightsList) > 0 && len(oldInsightsList) > 0 || (skipWpi && skipWpi2) {
+	if len(newInsightsList) > 0 && len(oldInsightsList) > 0 {
 		crossPeriodInsightsList, err = computeCrossPeriodKpiInsights(periodPair, newInsightsList, oldInsightsList)
 		if err != nil {
 			log.WithError(err).Error("compute cpi for kpi error - ", err)
@@ -219,7 +219,7 @@ func getMetricEvaluated(spectrum, category string, metric string, eventOrChannel
 	var err error
 	var scanner *bufio.Scanner
 	if spectrum == "events" {
-		if scanner, err = GetEventFileScanner(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, true, beamConfig, useBucketV2); err != nil {
+		if scanner, err = GetEventFileScanner(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2); err != nil {
 			log.WithError(err).Error("failed getting event file scanner")
 			return nil, err
 		}
@@ -228,7 +228,7 @@ func getMetricEvaluated(spectrum, category string, metric string, eventOrChannel
 		if category == M.AllChannelsDisplayCategory {
 			insights, err = getAllChannelMetricsInfo(metric, propFilter, propsToEval, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
 		} else {
-			if scanner, err = GetChannelFileScanner(eventOrChannel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, true, beamConfig, useBucketV2); err != nil {
+			if scanner, err = GetChannelFileScanner(eventOrChannel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2); err != nil {
 				log.WithError(err).Error("failed getting " + eventOrChannel + " file scanner")
 				return nil, err
 			}
@@ -246,6 +246,9 @@ func getMetricEvaluated(spectrum, category string, metric string, eventOrChannel
 // compute cross period using within period infos
 func computeCrossPeriodKpiInsights(periodPair PeriodPair, newInsightsList, oldInsightsList []*WithinPeriodInsightsKpi) ([]*CrossPeriodInsightsKpi, error) {
 	crossPeriodInsightsList := make([]*CrossPeriodInsightsKpi, 0)
+	if len(newInsightsList) != len(oldInsightsList) {
+		return nil, fmt.Errorf("error computeCrossPeriodKpiInsights: both lists should have same length")
+	}
 	for i := range newInsightsList {
 		var crossPeriodInsights CpiMetricInfo
 		newInsights := newInsightsList[i]

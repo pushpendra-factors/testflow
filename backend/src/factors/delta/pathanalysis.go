@@ -1,6 +1,7 @@
 package delta
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	C "factors/config"
@@ -23,13 +24,29 @@ import (
 
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
 	E "factors/event_match"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
 	NO_OF_EVENTS_AT_EACH_LEVEL = 5
 )
+
+func toCountEvent(eventDetails P.CounterEventFormat, nameFilter string, filters []M.QueryProperty) (bool, error) {
+	var propFilter = make([]M.KPIFilter, 0)
+	for _, filter := range filters {
+		var kpiFilter M.KPIFilter
+		kpiFilter.Entity = filter.Entity
+		kpiFilter.Condition = filter.Operator
+		kpiFilter.LogicalOp = filter.LogicalOp
+		kpiFilter.PropertyName = filter.Property
+		kpiFilter.PropertyDataType = filter.Type
+		kpiFilter.Value = filter.Value
+		propFilter = append(propFilter, kpiFilter)
+	}
+	return isEventToBeCounted(eventDetails, nameFilter, propFilter)
+}
 
 func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
@@ -57,6 +74,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 
 	finalStatus := make(map[string]interface{})
 	queries, _ := store.GetStore().GetAllSavedPathAnalysisEntityByProject(projectId)
+	queryCountMap := make(map[string]int)
 	for _, query := range queries {
 
 		store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.BUILDING)
@@ -71,14 +89,14 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			if eventnameerr != http.StatusFound {
 				finalStatus["err"] = "Failed to get event name"
 				log.Error("Failed to get event name")
-				return finalStatus , false
+				return finalStatus, false
 			}
 			groupNameFromDb, _ := store.GetStore().IsGroupEventName(projectId, actualQuery.Event.Label, eventNamesObj.ID)
 			if groupNameFromDb != "" {
 				if actualQuery.Group != groupNameFromDb {
 					finalStatus["err"] = "group names mismatch"
 					log.Error("group names mismatch", actualQuery.Group, groupNameFromDb)
-					return finalStatus , false
+					return finalStatus, false
 				} else {
 					groupId = int(0)
 				}
@@ -87,48 +105,44 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				if groupErr != http.StatusFound {
 					finalStatus["err"] = "Failed to get group details"
 					log.Error("Failed to get group details")
-					return finalStatus , false
+					return finalStatus, false
 				}
 				groupId = groupDetails.ID
 			}
 		}
+		startTimestampInProjectTimezone := actualQuery.StartTimestamp
+		endTimestampInProjectTimezone := actualQuery.EndTimestamp
+		projectDetails, _ := store.GetStore().GetProject(projectId)
+		startTimestamp := startTimestampInProjectTimezone
+		endTimestamp := endTimestampInProjectTimezone
+		if projectDetails.TimeZone != "" {
+			offset := U.FindOffsetInUTC(U.TimeZoneString(projectDetails.TimeZone))
+			startTimestamp = startTimestampInProjectTimezone + int64(offset)
+			endTimestamp = endTimestampInProjectTimezone + int64(offset)
+		}
 		if useBucketV2 {
-			if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", actualQuery.StartTimestamp, actualQuery.EndTimestamp,
+			if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp,
 				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId); err != nil {
-					finalStatus["err"] = "Failed creating events file"
-					log.Error("Failed creating events file")
-					return finalStatus , false
+				finalStatus["err"] = "Failed creating events file"
+				log.Error("Failed creating events file")
+				return finalStatus, false
 			}
 		}
 		log.Info("Processing Query ID: ", query.ID, " query: ", actualQuery)
-		var err error
-		cfTmpPath, cfTmpName := diskManager.GetEventsGroupFilePathAndName(projectId, actualQuery.StartTimestamp, actualQuery.EndTimestamp, groupId)
-		localFilePath := cfTmpPath + cfTmpName
 		log.Info("Starting cloud events file get")
 		// "projects/2251799829000005/", "events.txt"
-		cfCloudPath, cfCloudName := (*sortedCloudManager).GetEventsGroupFilePathAndName(projectId, actualQuery.StartTimestamp, actualQuery.EndTimestamp, groupId)
+		cfCloudPath, cfCloudName := (*sortedCloudManager).GetEventsGroupFilePathAndName(projectId, startTimestamp, endTimestamp, groupId)
 		eReader, err := (*sortedCloudManager).Get(cfCloudPath, cfCloudName)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
 				"eventFileName": cfCloudName}).Error("Failed downloading  file from cloud.")
 			finalStatus["err"] = "Failed downloading  file from cloud."
-			return finalStatus , false
+			return finalStatus, false
 		}
-		log.Info("creating local events file. path: ", cfTmpPath, " name: ", cfTmpName)
-		err = diskManager.Create(cfTmpPath, cfTmpName, eReader)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err, "eventFilePath": cfTmpPath,
-				"eventFileName": cfTmpName}).Error("Failed creating file from cloud.")
-			finalStatus["err"] = "Failed creating file from cloud."
-			return finalStatus , false
-		}
-		log.Info("Getting scanner localpath: ", localFilePath)
-		scanner, err := T.OpenEventFileAndGetScanner(localFilePath)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("Failed opening file and getting scanner.")
-			finalStatus["err"] = "Failed opening file and getting scanner."
-			return finalStatus , false
-		}
+		scanner := bufio.NewScanner(eReader)
+		const maxCapacity = 30 * 1024 * 1024
+		buf := make([]byte, maxCapacity)
+		scanner.Buffer(buf, maxCapacity)
 		pathanalysisTempPath, pathanalysisTempName := diskManager.GetPathAnalysisTempFilePathAndName(query.ID, projectId)
 		log.Info("creating path analysis temp file. Path: ", pathanalysisTempPath, " Name: ", pathanalysisTempName)
 		if err := os.MkdirAll(pathanalysisTempPath, os.ModePerm); err != nil {
@@ -155,6 +169,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		prevId := ""
 		matched := false
 		lineNo := 0
+		queryCount := 0
 		for scanner.Scan() {
 			txtline := scanner.Text()
 			lineNo++
@@ -165,6 +180,11 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			err := json.Unmarshal([]byte(txtline), &event) // TODO: Add error check.
 			if err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("Failed unmarshaling file")
+			}
+			if ok, err := toCountEvent(event, actualQuery.Event.Label, append(actualQuery.Filter, actualQuery.Event.Filter...)); err != nil {
+				log.WithError(err).Error("error counting")
+			} else if ok {
+				queryCount++
 			}
 			currentId := event.UserId
 			if groupId == 1 {
@@ -212,7 +232,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				}
 			}
 			if actualQuery.EventType == M.STARTSWITH {
-				if E.EventMatchesCriterion(event.EventName, event.UserProperties, event.EventProperties, queryCriteria) { // check if a particular event matches the request criteria
+				if E.EventMatchesCriterion(projectId, event.EventName, event.UserProperties, event.EventProperties, queryCriteria) { // check if a particular event matches the request criteria
 					matched = true
 				}
 				if matched == true {
@@ -231,7 +251,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 					finalEvents = RemoveFromArray(finalEvents, event.EventName)
 				}
 				finalEvents = EnqueueWithSize(finalEvents, event.EventName, actualQuery.NumberOfSteps+1)
-				if E.EventMatchesCriterion(event.EventName, event.UserProperties, event.EventProperties, queryCriteria) { // check if a particular event matches the request criteria
+				if E.EventMatchesCriterion(projectId, event.EventName, event.UserProperties, event.EventProperties, queryCriteria) { // check if a particular event matches the request criteria
 					matched = true
 				}
 				// Check this has to be the last event or the first event
@@ -240,6 +260,12 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				}
 			}
 		}
+		err = eReader.Close()
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("Failed closing events reader.")
+		}
+		queryCountMap[query.Title] = queryCount
+		log.Infof("queryCount: %d", queryCount)
 		scanner, err = T.OpenEventFileAndGetScanner(pathanalysisTempPath + pathanalysisTempName)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("Failed opening file and getting scanner of patterns file.")
@@ -363,6 +389,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		WriteResultsToCloud(diskManager, modelCloudManager, query.ID, projectId)
 		store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.ACTIVE)
 	}
+	log.Infof("queryCountMap: %v, projectID; %d", queryCountMap, projectId)
 	return nil, true
 }
 
@@ -453,9 +480,9 @@ func RemoveFromArray(events []string, key string) []string {
 }
 
 func GetPathAnalysisData(projectId int64, id string) map[int]map[string]int {
-	path, _ := C.GetCloudManager(projectId).GetPathAnalysisTempFilePathAndName(id, projectId)
+	path, _ := C.GetCloudManager(projectId, false).GetPathAnalysisTempFilePathAndName(id, projectId)
 	fmt.Println(path)
-	reader, err := C.GetCloudManager(projectId).Get(path, "result.txt")
+	reader, err := C.GetCloudManager(projectId, false).Get(path, "result.txt")
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")

@@ -147,6 +147,7 @@ const (
 	NotInPrevious           = "notInPrevious"
 	StartsWith              = "startsWith"
 	EndsWith                = "endsWith"
+	InList 					= "inList"
 )
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
@@ -164,8 +165,9 @@ const (
 	DateRangePreset2MinInSeconds  int64  = 2 * 60
 	DateRangePreset30MinInSeconds int64  = 30 * 60
 
-	QueryCachePlaceholderExpirySeconds   float64 = 2 * 60 * 60 // 2 Hours.
-	QueryCacheMutableResultExpirySeconds float64 = 10 * 60     // 10 Minutes.
+	QueryCachePlaceholderExpirySeconds   float64 = 2 * 60 * 60       // 2 Hours.
+	QueryCacheMutableResultExpirySeconds float64 = 10 * 60           // 10 Minutes.
+	QueryCacheMutableResultMonth         float64 = 24 * 60 * 60 * 30 // 1 Month (30 days).
 
 	QueryCacheRequestInvalidatedCacheHeader string = "Invalidate-Cache"
 	QueryFunnelV2                           string = "Funnel-V2"

@@ -12,7 +12,7 @@ import (
 	serviceGCS "factors/services/gcstorage"
 	U "factors/util"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
 	"path"
@@ -106,7 +106,6 @@ func getDoctypeFromFile(channel string, ctx context.Context, projectId int64, cl
 	beamlog.Infof(ctx, "processing docType :%d,%d", projectId, docType)
 
 	return docType, nil
-
 }
 
 // read unsorted channel file from cloud, pass some docTypes to a worker, workers sort ad reports for the alloted docType and upload sorted part files
@@ -161,7 +160,7 @@ func Pull_channel_beam_controller(projectId int64, channel string, cloud_dir, cl
 func SortDoctypesExecutor(beamStruct *RunBeamConfig, cPatternsString []string) error {
 
 	s := beamStruct.Scp
-	s = s.Scope("pull_events")
+	s = s.Scope("merge_ad_reports")
 
 	ctx := beamStruct.Ctx
 	p := beamStruct.Pipe
@@ -288,64 +287,57 @@ func downloadAndSortChannelFile(channel string, ctx context.Context, projectId i
 		beamlog.Errorf(ctx, "unable to close events file from gcp :%v", err)
 	}
 
-	eventsTmpFile, err := ioutil.TempFile("", fmt.Sprintf("%d_%s_", docType, channel))
-	if err != nil {
-		return fmt.Errorf("unable to create tmp file :%v", err)
-	} else {
-		beamlog.Infof(ctx, "events file created :%s", eventsTmpFile.Name())
-	}
+	cDir, cName := GetSortedFilePathAndName(*cloudManager, U.DataTypeAdReport, channel, projectId, startTime, endTime, 0)
+	cDir = path.Join(cDir, "parts/"+strings.Replace(cName, ".txt", "", 1))
+	cName = fmt.Sprintf("%d_reports", docType)
 
-	err = sortAdReportsWithDoctype(ctx, adReports, eventsTmpFile)
+	cloudWriter, err := (*cloudManager).GetWriter(cDir, cName)
 	if err != nil {
+		beamlog.Error(ctx, "Failed to pull events. Upload failed.")
 		return err
 	}
 
-	err = eventsTmpFile.Close()
+	err = WriteSortedAdReportsWithDoctype(ctx, adReports, &cloudWriter)
 	if err != nil {
-		beamlog.Error(ctx, "unable to close sorted events file")
-	}
-	err = writeSortedFileToGCP(ctx, projectId, startTime, endTime, eventsTmpFile.Name(), cloudManager, U.DataTypeAdReport, channel, 0)
-	if err != nil {
-		beamlog.Error(ctx, "Failed to write sorted events to gcp:%v", err)
-
-	}
-	err = os.Remove(eventsTmpFile.Name())
-	if err != nil {
+		beamlog.Error(ctx, "error sorting ad reports and writing: ", err)
 		return err
 	}
-	beamlog.Infof(ctx, "Deleted tmp events File :%s", eventsTmpFile.Name())
+	err = cloudWriter.Close()
+	if err != nil {
+		log.WithError(err).Error("error closing cloud writer")
+		return err
+	}
 
 	return nil
 }
 
 // merge all sorted part files to create one sorted file
-func ReadAndMergeChannelPartFiles(projectId int64, cloudDir string,
-	local_dir string, fileName string, tmpCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver) (int64, error) {
+func ReadAndMergeChannelPartFiles(projectId int64, partsDir string, sortedDir string, sortedName string,
+	tmpCloudManager, sortedCloudManager *filestore.FileManager) (int64, error) {
 	var countLines int64
-	local_sorted_file := path.Join(local_dir, fileName)
-	eventsTmpFile, err := os.OpenFile(local_sorted_file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	cloudWriter, err := (*sortedCloudManager).GetWriter(sortedDir, sortedName)
 	if err != nil {
-		log.Errorf("unable to open local sorted file:%s", local_sorted_file)
+		fmt.Println(err.Error())
+		log.WithError(err).Error("Error reading file")
 		return 0, err
 	}
 
 	log.Infof("Merging partFiles:%d", projectId)
-	partFilesDir := path.Join(cloudDir, "parts/"+strings.Replace(fileName, ".txt", "", 1))
+	partFilesDir := path.Join(partsDir, "parts/"+strings.Replace(sortedName, ".txt", "", 1))
 	listFiles := (*tmpCloudManager).ListFiles(partFilesDir)
 	fileNames := make([]string, 0)
 	for _, partFileFullName := range listFiles {
 		partFNamelist := strings.Split(partFileFullName, "/")
 		partFileName := partFNamelist[len(partFNamelist)-1]
 		fileNames = append(fileNames, partFileName)
-		sort.Slice(fileNames, func(i, j int) bool {
-			fileNameArr := strings.SplitN(fileNames[i], "_", 2)
-			docType_i, _ := strconv.ParseInt(fileNameArr[0], 10, 64)
-			fileNameArr = strings.SplitN(fileNames[j], "_", 2)
-			docType_j, _ := strconv.ParseInt(fileNameArr[0], 10, 64)
-			return docType_i <= docType_j
-		})
 	}
+	sort.Slice(fileNames, func(i, j int) bool {
+		fileNameArr := strings.SplitN(fileNames[i], "_", 2)
+		docType_i, _ := strconv.ParseInt(fileNameArr[0], 10, 64)
+		fileNameArr = strings.SplitN(fileNames[j], "_", 2)
+		docType_j, _ := strconv.ParseInt(fileNameArr[0], 10, 64)
+		return docType_i <= docType_j
+	})
 
 	for _, partFileName := range fileNames {
 
@@ -363,7 +355,7 @@ func ReadAndMergeChannelPartFiles(projectId int64, cloudDir string,
 		for scanner.Scan() {
 			line := scanner.Text()
 
-			_, err = eventsTmpFile.WriteString(line + "\n")
+			_, err = io.WriteString(cloudWriter, line+"\n")
 			if err != nil {
 				log.Errorf("Unable to write to file :%v", err)
 				return 0, err
@@ -371,13 +363,13 @@ func ReadAndMergeChannelPartFiles(projectId int64, cloudDir string,
 			countLines += 1
 		}
 	}
-	defer eventsTmpFile.Close()
+	err = cloudWriter.Close()
 
-	return countLines, nil
+	return countLines, err
 }
 
 // sort the given ad reports based on Timestamp (ascending)
-func sortAdReportsWithDoctype(ctx context.Context, adReports []*pull.CounterCampaignFormat, eventsTmpFile *os.File) error {
+func WriteSortedAdReportsWithDoctype(ctx context.Context, adReports []*pull.CounterCampaignFormat, cloudWriter *io.WriteCloser) error {
 
 	beamlog.Debugf(ctx, "sort ad reports :%d", len(adReports))
 
@@ -394,7 +386,7 @@ func sortAdReportsWithDoctype(ctx context.Context, adReports []*pull.CounterCamp
 		}
 		eString := string(docBytes)
 		eString = eString + "\n"
-		_, err = eventsTmpFile.WriteString(eString)
+		_, err = io.WriteString(*cloudWriter, eString)
 		if err != nil {
 			log.Errorf("unable to write event to tmp file :%v ", eString)
 			return err

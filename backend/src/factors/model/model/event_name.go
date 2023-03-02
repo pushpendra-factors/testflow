@@ -786,6 +786,12 @@ func GetPropertiesByEventCategoryRollUpCacheKey(projectId int64, event_name stri
 	prefix := "RollUp:EN:PC"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, event_name), date)
 }
+
+func GetListCacheKey(projectId int64, keyReference string)(*cacheRedis.Key, error) {
+	prefix := "LIST"
+	return cacheRedis.NewKey(projectId, prefix, keyReference)
+}
+
 func GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(projectId int64, date string) (*cacheRedis.Key, error) {
 	prefix := "RollUp:EN"
 	return cacheRedis.NewKey(projectId, prefix, date)

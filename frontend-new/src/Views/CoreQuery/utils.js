@@ -1903,8 +1903,7 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
 
 export const isComparisonEnabled = (queryType, events, groupBy, models) => {
   if (queryType === QUERY_TYPE_FUNNEL) {
-    const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
-    return newAppliedBreakdown.length === 0;
+    return true;
   }
 
   if (queryType === QUERY_TYPE_EVENT) {

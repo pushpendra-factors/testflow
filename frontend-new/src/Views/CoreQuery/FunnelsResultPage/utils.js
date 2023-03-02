@@ -26,6 +26,7 @@ import {
 } from '../../../utils/constants';
 import NonClickableTableHeader from '../../../components/NonClickableTableHeader';
 import ControlledComponent from 'Components/ControlledComponent';
+import { getCompareGroupsByName } from './GroupedChart/groupedChart.helpers';
 
 const windowSize = {
   w: window.outerWidth,
@@ -215,14 +216,14 @@ const compareSkeleton = (val1, val2) => (
 );
 
 const RenderTotalConversion = (d, breakdown, isComparisonApplied) => {
-  if (breakdown.length || !isComparisonApplied) {
+  if (!isComparisonApplied) {
     return `${d}%`;
   }
-  return compareSkeleton(`${d.conversion}%`, `${d.comparsion_conversion}%`);
+  return compareSkeleton(`${d.conversion}%`, `${d.comparison_conversion}%`);
 };
 
 const RenderConversionTime = (d, breakdown, isComparisonApplied) => {
-  if (breakdown.length || !isComparisonApplied) {
+  if (!isComparisonApplied) {
     return d;
   }
   return compareSkeleton(d.overallDuration, d.comparisonOverallDuration);
@@ -418,7 +419,7 @@ export const getTableColumns = (
           />
         ),
         render: (d) =>
-          isBreakdownApplied || !isComparisonApplied ? (
+          !isComparisonApplied ? (
             <>
               <NumFormat number={d} />%
             </>
@@ -480,7 +481,7 @@ export const getTableColumns = (
         />
       ),
       render: (d) =>
-        isBreakdownApplied || !isComparisonApplied ? (
+        !isComparisonApplied ? (
           <NumFormat shortHand number={d} />
         ) : (
           compareSkeleton(
@@ -519,9 +520,7 @@ export const getTableColumns = (
           />
         ),
         render: (d) =>
-          isBreakdownApplied || !isComparisonApplied
-            ? d
-            : compareSkeleton(d.time, d.compare_time)
+          !isComparisonApplied ? d : compareSkeleton(d.time, d.compare_time)
       });
     }
     queryColumn.children = [...percentCol, ...timeCol, countCol];
@@ -550,12 +549,8 @@ export const getTableData = (
   comparisonChartData,
   durationObj,
   comparison_duration,
-  resultData
+  isBreakdownApplied
 ) => {
-  console.log('funnels getTableData');
-  const breakdown = resultData?.meta?.query?.gbp;
-  const isBreakdownApplied =
-    !!breakdown && Array.isArray(breakdown) && breakdown.length > 0;
   if (!isBreakdownApplied) {
     const queryData = {};
     const overallDuration = getOverAllDuration(durations);
@@ -605,7 +600,7 @@ export const getTableData = (
       }
     });
     const conversion = data[data.length - 1].value;
-    const comparsion_conversion =
+    const comparison_conversion =
       comparisonChartData &&
       comparisonChartData[comparisonChartData.length - 1].value;
     return [
@@ -615,7 +610,7 @@ export const getTableData = (
           ? { durationObj, comparison_duration }
           : 'All',
         Conversion: comparisonChartData
-          ? { conversion, comparsion_conversion }
+          ? { conversion, comparison_conversion }
           : conversion,
         'Conversion Time': comparisonChartData
           ? { overallDuration, comparisonOverallDuration }
@@ -624,25 +619,83 @@ export const getTableData = (
       }
     ];
   }
+
+  const isComparisonApplied = comparisonChartData != null;
+
+  const compareGroupsByName = getCompareGroupsByName({
+    compareGroups: comparisonChartData
+  });
+
   const appliedGroups = groups.map((group) => {
+    const compareGroup = compareGroupsByName[group.name];
     const eventPercentages = arrayMapper.reduce(
       (agg, currentItem, currentIndex) => {
         const prevItem = arrayMapper[currentIndex - 1];
+        const percentageValue = !currentIndex
+          ? 100
+          : calculatePercentage(
+              group[`${currentItem.displayName}-${currentIndex}-count`],
+              group[`${prevItem.displayName}-${currentIndex - 1}-count`]
+            );
+        const comparePercentageValue = !currentIndex
+          ? 100
+          : compareGroup != null
+          ? calculatePercentage(
+              compareGroup[`${currentItem.displayName}-${currentIndex}-count`],
+              compareGroup[`${prevItem.displayName}-${currentIndex - 1}-count`]
+            )
+          : 0;
         return {
           ...agg,
-          [`${currentItem.displayName}-${currentIndex}-percent`]: !currentIndex
-            ? 100
-            : calculatePercentage(
-                group[`${currentItem.displayName}-${currentIndex}-count`],
-                group[`${prevItem.displayName}-${currentIndex - 1}-count`]
-              )
+          // if comparison is applied, we have to pass both count and compare_count, time and compare_time, percent and compare_percent
+          ...(isComparisonApplied && {
+            [`${currentItem.displayName}-${currentIndex}-count`]: {
+              count: group[`${currentItem.displayName}-${currentIndex}-count`],
+              compare_count:
+                compareGroup != null
+                  ? compareGroup[
+                      `${currentItem.displayName}-${currentIndex}-count`
+                    ]
+                  : 0
+            },
+            ...(currentIndex < queries.length - 1 && {
+              [`time[${currentIndex}-${currentIndex + 1}]`]: {
+                time: group[`time[${currentIndex}-${currentIndex + 1}]`],
+                compare_time:
+                  compareGroup != null
+                    ? compareGroup[`time[${currentIndex}-${currentIndex + 1}]`]
+                    : '0s'
+              }
+            })
+          }),
+          [`${currentItem.displayName}-${currentIndex}-percent`]:
+            isComparisonApplied
+              ? {
+                  percent: percentageValue,
+                  compare_percent: comparePercentageValue
+                }
+              : percentageValue
         };
       },
       {}
     );
+
     return {
       ...group,
-      ...eventPercentages
+      ...eventPercentages,
+      // if comparison is applied, we have to pass both conversion and comparison_conversion, overallDuration and comparisonOverallDuration
+      ...(isComparisonApplied && {
+        Conversion: {
+          conversion: group.Conversion,
+          comparison_conversion:
+            compareGroup != null ? compareGroup.Conversion : '0'
+        },
+        'Conversion Time': {
+          overallDuration: group['Conversion Time'],
+          comparisonOverallDuration:
+            compareGroup != null ? compareGroup['Conversion Time'] : 'N/A'
+        }
+      })
     };
   });
   const filteredGroups = appliedGroups.filter(

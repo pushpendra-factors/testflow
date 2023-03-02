@@ -15,8 +15,8 @@ import (
 )
 
 func GetChunksMetaData(projectId int64, modelId uint64) (metadata []T.ChunkMetaData, errmsg error) {
-	path, name := C.GetCloudManager(projectId).GetChunksMetaDataFilePathAndName(projectId, modelId)
-	reader, err := C.GetCloudManager(projectId).Get(path, name)
+	path, name := C.GetCloudManager(projectId, false).GetChunksMetaDataFilePathAndName(projectId, modelId)
+	reader, err := C.GetCloudManager(projectId, false).Get(path, name)
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error retrieving file from cloud")
@@ -31,9 +31,9 @@ func GetChunksMetaData(projectId int64, modelId uint64) (metadata []T.ChunkMetaD
 		})
 		if len(modelMetadata) > 0 {
 			latestModelID := modelMetadata[0].ModelId
-			path, name := C.GetCloudManager(projectId).GetChunksMetaDataFilePathAndName(projectId, latestModelID)
+			path, name := C.GetCloudManager(projectId, false).GetChunksMetaDataFilePathAndName(projectId, latestModelID)
 			fmt.Println(path)
-			reader, err = C.GetCloudManager(projectId).Get(path, name)
+			reader, err = C.GetCloudManager(projectId, false).Get(path, name)
 			if err != nil {
 				log.WithError(err).Error("Error retreiving file from cloud")
 				return nil, err

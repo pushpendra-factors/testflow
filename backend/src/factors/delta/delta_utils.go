@@ -15,14 +15,14 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	E "factors/event_match"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var TARGET_BEFORE_BASE_ERROR error = errors.New("LOGICAL ERROR: User hits target but misses base. It's recommended to change your base criteria")
 
 // This is an enumerated list with values And or Or.
-
 
 type Fraction struct {
 	Numerator   float64
@@ -33,6 +33,7 @@ type MetricInfo struct {
 	Global   float64
 	Features map[string]map[string]float64
 }
+
 // type EventCriterionMatchResult struct {
 // 	event P.CounterEventFormat
 // 	op    BooleanOperator
@@ -93,13 +94,13 @@ type CriterionResult struct {
 
 // Query abstracts the concept of a delta-query, consisting of one base, and a list of target criteria.
 type Query struct {
-	Id     int64          `json:"id"`
+	Id     int64            `json:"id"`
 	Base   E.EventsCriteria `json:"base"`
 	Target E.EventsCriteria `json:"target"`
 }
 
 type MultiFunnelQuery struct {
-	Id           int64            `json:"id"`
+	Id           int64              `json:"id"`
 	Base         E.EventsCriteria   `json:"base"`
 	Intermediate []E.EventsCriteria `json:"intermediate"`
 	Target       E.EventsCriteria   `json:"target"`
@@ -322,11 +323,12 @@ func FormatAsJSON(item interface{}) string {
 
 func ReadFromJSONFile(filename string, targetStructPointer interface{}) error {
 	jsonFile, err := os.Open(filename)
-	fmt.Println(filename)
 	if err != nil {
 		log.WithError(err).Error("Cannot read JSON file " + filename)
 		return err
 	}
+	defer jsonFile.Close()
+	fmt.Println(filename)
 	byteValue, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
 		log.WithError(err).Error("Contents of JSON file " + filename + " could not be parsed.")
@@ -481,7 +483,7 @@ func getFloatValueFromInterface(inter interface{}) (float64, error) {
 		return float64(val), nil
 	}
 
-	return 0, fmt.Errorf("interface type unknown - cant convert to float")
+	return 0, fmt.Errorf("interface type unknown - cant convert to float: %v", inter)
 }
 
 func getStringValueFromInterface(inter interface{}) (string, error) {
@@ -495,8 +497,10 @@ func getStringValueFromInterface(inter interface{}) (string, error) {
 		return val, nil
 	case int:
 		return fmt.Sprintf("%d", val), nil
+	case bool:
+		return fmt.Sprintf("%t", val), nil
 	}
-	return "", fmt.Errorf("interface type unknown - cant convert to string")
+	return "", fmt.Errorf("interface type unknown - cant convert to string: %v", inter)
 }
 
 func performOperation(operation string, val1 float64, val2 float64) (float64, error) {

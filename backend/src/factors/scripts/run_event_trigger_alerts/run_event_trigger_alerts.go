@@ -36,9 +36,6 @@ func main() {
 
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
-	eventTriggerEnabled := flag.Bool("event_trigger_enabled", false, "")
-	eventTriggerEnabledProjectIDs := flag.String("event_trigger_enabled_project_ids", "", "")
-
 	flag.Parse()
 
 	if *env != "development" &&
@@ -67,8 +64,6 @@ func main() {
 		RedisHostPersistent:           *redisHostPersistent,
 		RedisPortPersistent:           *redisPortPersistent,
 		SentryDSN:                     *sentryDSN,
-		EventTriggerEnabled:           *eventTriggerEnabled,
-		EventTriggerEnabledProjectIDs: *eventTriggerEnabledProjectIDs,
 	}
 
 	C.InitConf(config)
@@ -85,7 +80,7 @@ func main() {
 	defer db.Close()
 
 	conf := make(map[string]interface{})
-	projectIDs := C.GetTokensFromStringListAsUint64(config.EventTriggerEnabledProjectIDs)
+	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 	for _, projectID := range projectIDs {
 		status, success := EventTriggerAlertsSender(projectID, conf)
 		log.Info(status)

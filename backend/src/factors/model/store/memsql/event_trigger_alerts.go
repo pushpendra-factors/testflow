@@ -9,12 +9,13 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
+	"io/ioutil"
 	E "factors/event_match"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
+	"encoding/json"
 )
 
 const (
@@ -147,6 +148,41 @@ func (store *MemSQL) CreateEventTriggerAlert(userID string, projectID int64, ale
 
 	if isDuplicateAlertTitle(projectID, alertConfig.Title, id) {
 		return nil, http.StatusConflict, "Alert already exist"
+	}
+
+	for _, filter := range (*alertConfig).Filter {
+		if(filter.Operator == model.InList){
+			// Get the cloud file that is there for the reference value
+			path, file := C.GetCloudManager(projectID, true).GetListReferenceFileNameAndPathFromCloud(projectID, filter.Value)
+			reader, err := C.GetCloudManager(projectID, true).Get(path, file)
+			if(err != nil){
+				log.WithFields(logFields).WithError(err).Error("List File Missing")
+				return nil, http.StatusInternalServerError, "List File Missing"
+			}
+			valuesInFile := make([]string, 0)
+			data, err := ioutil.ReadAll(reader)
+			if(err != nil){
+				log.WithFields(logFields).WithError(err).Error("File reader failed")
+				return nil, http.StatusInternalServerError, "File reader failed"
+			}
+			err = json.Unmarshal(data, &valuesInFile)
+			if(err != nil){
+				log.WithFields(logFields).WithError(err).Error("list data unmarshall failed")
+				return nil, http.StatusInternalServerError, "list data unmarshall failed"
+			}
+			cacheKeyList, err := model.GetListCacheKey(projectID, filter.Value)
+			if(err != nil){
+				log.WithFields(logFields).WithError(err).Error("get cache key failed")
+				return nil, http.StatusInternalServerError, "get cache key failed"
+			}
+			for _, value := range valuesInFile {
+				err = cacheRedis.ZAddPersistent(cacheKeyList, value, 0)
+				if(err != nil){
+					log.WithFields(logFields).WithError(err).Error("failed to add new values to sorted set")
+					return nil, http.StatusInternalServerError, "failed to add new values to sorted set"
+				}
+			}
+		}
 	}
 
 	trigger, err := U.EncodeStructTypeToPostgresJsonb(*alertConfig)
@@ -309,7 +345,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 				}
 			}
 		}
-		if E.EventMatchesFilterCriterionList(*userPropMap, *eventPropMap, E.MapFilterProperties(config.Filter)) {
+		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, E.MapFilterProperties(config.Filter)) {
 			matchedAlerts = append(matchedAlerts, alert)
 		}
 	}

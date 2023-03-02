@@ -11,8 +11,8 @@ const CONFIG = {
     linkedin_client_id: '861ix78kpo39ge',
     firstTimeDashboardTemplates: {
       webanalytics: '3de1776a-2b06-4223-adf3-a57012833ec5',
-      allpaidmarketing: 'bf10934c-0128-4c1c-8948-772387c95502',
-      hubspotinsights: '215d866d-129c-415a-a728-592672604cfa'
+      websitevisitoridentification: 'e742427d-f4d7-4a7f-842f-97bb3cde22f6',
+      allpaidmarketing: '215d866d-129c-415a-a728-592672604cfa'
     }
   },
   staging: {
@@ -25,8 +25,8 @@ const CONFIG = {
     linkedin_client_id: '861ix78kpo39ge',
     firstTimeDashboardTemplates: {
       webanalytics: '3de1776a-2b06-4223-adf3-a57012833ec5',
-      allpaidmarketing: 'bf10934c-0128-4c1c-8948-772387c95502',
-      hubspotinsights: '215d866d-129c-415a-a728-592672604cfa'
+      websitevisitoridentification: 'e742427d-f4d7-4a7f-842f-97bb3cde22f6',
+      allpaidmarketing: 'bf10934c-0128-4c1c-8948-772387c95502'
     }
   },
   test: {
@@ -46,8 +46,8 @@ const CONFIG = {
     linkedin_client_id: '861ix78kpo39ge',
     firstTimeDashboardTemplates: {
       webanalytics: '6d966a20-07a6-46db-b2d4-1b1d4d7fb8ec',
-      allpaidmarketing: 'f8785bee-6d7d-4a03-8744-a2d31ce4dd9e',
-      hubspotinsights: '71a9e6e6-a370-49ff-a701-9b5f4f273b6a'
+      websitevisitoridentification: 'edf25a5c-b6f3-4622-b0d5-82bed9aecc36',
+      allpaidmarketing: 'f8785bee-6d7d-4a03-8744-a2d31ce4dd9e'
     }
   }
 };

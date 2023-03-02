@@ -3,10 +3,12 @@ import React, {
   useState,
   useContext,
   forwardRef,
-  useImperativeHandle
+  useImperativeHandle,
+  memo,
+  useMemo
 } from 'react';
 import { formatData, getVisibleData } from '../utils';
-import BarChart from './Chart';
+import FunnelChart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
 import NoDataChart from '../../../../components/NoDataChart';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
@@ -23,35 +25,38 @@ import MetricChart from 'Components/MetricChart/MetricChart';
 import { generateColors } from 'Utils/dataFormatter';
 import HorizontalBarChart from 'Components/HorizontalBarChart';
 import ColumnChart from '../../../../components/ColumnChart/ColumnChart';
+import { EMPTY_ARRAY } from 'Utils/global';
+import {
+  getColumChartSeries,
+  getCompareGroupsByName,
+  getHorizontalBarChartSeries,
+  getValueFromPercentString
+} from './groupedChart.helpers';
 
 const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 
-const GroupedChart = forwardRef(
+const GroupedChartComponent = forwardRef(
   (
     {
       resultState,
       queries,
       breakdown,
-      isWidgetModal,
       arrayMapper,
       section,
       chartType,
       tableConfig,
-      tableConfigPopoverContent
+      tableConfigPopoverContent,
+      savedQuerySettings,
+      comparisonData
     },
     ref
   ) => {
-    const {
-      coreQueryState: { savedQuerySettings }
-    } = useContext(CoreQueryContext);
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
-        : []
+        : EMPTY_ARRAY
     );
-    const [eventsData, setEventsData] = useState([]);
-    const [groups, setGroups] = useState([]);
 
     useImperativeHandle(ref, () => {
       return {
@@ -59,18 +64,48 @@ const GroupedChart = forwardRef(
       };
     });
 
-    useEffect(() => {
+    const { groups, eventsData } = useMemo(() => {
       const { groups: appliedGroups, events } = formatData(
         resultState.data,
         arrayMapper
       );
-      setGroups(appliedGroups);
-      setEventsData(events);
-    }, [resultState.data, arrayMapper]);
+      return { groups: appliedGroups, eventsData: events };
+    }, [arrayMapper, resultState.data]);
+
+    const { compareGroups } = useMemo(() => {
+      if (comparisonData.data == null) {
+        return { compareGroups: null };
+      }
+      const { groups: appliedGroups } = formatData(
+        comparisonData.data,
+        arrayMapper
+      );
+      return { compareGroups: appliedGroups };
+    }, [arrayMapper, comparisonData.data]);
 
     useEffect(() => {
       setVisibleProperties(getVisibleData(groups, sorter));
     }, [groups, sorter]);
+
+    const horizontalBarChartSeries = useMemo(() => {
+      return getHorizontalBarChartSeries({
+        visibleProperties,
+        chartType,
+        compareGroups
+      });
+    }, [visibleProperties, compareGroups, chartType]);
+
+    const columnChartSeries = useMemo(() => {
+      return getColumChartSeries({
+        visibleProperties,
+        chartType,
+        compareGroups
+      });
+    }, [visibleProperties, compareGroups, chartType]);
+
+    const chartCategories = useMemo(() => {
+      return visibleProperties.map((v) => v.name);
+    }, [visibleProperties]);
 
     if (!visibleProperties.length) {
       return (
@@ -86,20 +121,10 @@ const GroupedChart = forwardRef(
       chart = (
         <div className='w-full'>
           <HorizontalBarChart
-            categories={visibleProperties.map((v) => v.name)}
+            categories={chartCategories}
             hideXAxis={true}
-            series={[
-              {
-                name: 'OG',
-                data: visibleProperties.map((v, index) => {
-                  return {
-                    y: Number(v.value.split('%')[0]),
-                    color: colors[index],
-                    metricType: METRIC_TYPES.percentType
-                  };
-                })
-              }
-            ]}
+            series={horizontalBarChartSeries}
+            comparisonApplied={comparisonData.data != null}
           />
         </div>
       );
@@ -107,24 +132,17 @@ const GroupedChart = forwardRef(
       chart = (
         <div className='w-full'>
           <ColumnChart
-            categories={visibleProperties.map((v) => v.name)}
+            categories={chartCategories}
             multiColored
             valueMetricType={METRIC_TYPES.percentType}
-            series={[
-              {
-                name: 'OG',
-                data: visibleProperties.map((v, index) =>
-                  Number(v.value.split('%')[0])
-                )
-              }
-            ]}
+            comparisonApplied={comparisonData.data != null}
+            series={columnChartSeries}
           />
         </div>
       );
     } else if (chartType === CHART_TYPE_FUNNEL_CHART) {
       chart = (
-        <BarChart
-          isWidgetModal={isWidgetModal}
+        <FunnelChart
           groups={visibleProperties}
           eventsData={eventsData}
           arrayMapper={arrayMapper}
@@ -133,16 +151,26 @@ const GroupedChart = forwardRef(
         />
       );
     } else if (chartType === CHART_TYPE_METRIC_CHART) {
+      const compareGroupsByName =
+        compareGroups != null ? getCompareGroupsByName({ compareGroups }) : {};
       chart = (
         <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12'>
           {visibleProperties.map((elem, index) => {
+            const compareGroup = compareGroupsByName[elem.name];
+            const value = getValueFromPercentString(elem.value);
+            const compareValue =
+              compareGroup != null
+                ? getValueFromPercentString(compareGroup.value)
+                : 0;
             return (
               <MetricChart
                 key={colors[index]}
-                value={elem.value}
+                value={value}
                 iconColor={colors[index]}
                 headerTitle={elem.name}
                 valueType='percentage'
+                compareValue={compareValue}
+                showComparison={compareGroups != null}
               />
             );
           })}
@@ -177,6 +205,8 @@ const GroupedChart = forwardRef(
             setSorter={setSorter}
             tableConfig={tableConfig}
             tableConfigPopoverContent={tableConfigPopoverContent}
+            comparisonChartData={compareGroups}
+            isBreakdownApplied={true}
           />
         </div>
       </div>
@@ -184,4 +214,22 @@ const GroupedChart = forwardRef(
   }
 );
 
-export default GroupedChart;
+const GroupedChartMemoized = memo(GroupedChartComponent);
+
+function GroupedChart(props) {
+  const { renderedCompRef, ...rest } = props;
+  const {
+    coreQueryState: { savedQuerySettings, comparison_data: comparisonData }
+  } = useContext(CoreQueryContext);
+
+  return (
+    <GroupedChartMemoized
+      ref={renderedCompRef}
+      savedQuerySettings={savedQuerySettings}
+      comparisonData={comparisonData}
+      {...rest}
+    />
+  );
+}
+
+export default memo(GroupedChart);

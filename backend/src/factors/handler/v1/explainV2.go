@@ -6,6 +6,8 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
+	T "factors/task"
+
 	PW "factors/pattern_service_wrapper"
 	U "factors/util"
 	"fmt"
@@ -75,6 +77,7 @@ func GetFactorsHandlerV2(c *gin.Context) {
 
 	model_id := entity.ModelID
 	log.Infof("inside get factors handler project id :%d : model_id:%d", projectId, model_id)
+
 	patternMode := c.Query("pattern_mode")
 	if model_id == 0 {
 		if err != nil {
@@ -273,6 +276,35 @@ func PostFactorsHandlerV2(c *gin.Context) {
 	}
 
 	params, in_en, in_epr, in_upr := MapRule(ipParams.Rule)
+
+	result, err := T.GetResultCache(projectId, modelId)
+	if err != nil {
+		log.Errorf("unable to get result from cache :%d,%d", projectId, modelId)
+	}
+	if result != "" {
+		var ex PW.ExplainV2Goals
+		var results PW.Factors
+		err := json.Unmarshal([]byte(result), &results)
+		if err != nil {
+			log.Errorf("Unable to unmarshall result string")
+		}
+
+		results.Type = inputType
+		results.GoalRule = params
+		ex.GoalRule = results.GoalRule
+		ex.Insights = results.Insights
+		ex.GoalUserCount = results.GoalUserCount
+		ex.TotalUsersCount = results.TotalUsersCount
+		ex.OverallPercentage = results.OverallPercentage
+		ex.OverallMultiplier = results.OverallMultiplier
+		ex.Type = results.Type
+		ex.StartTimestamp = entityv2.StartTimestamp
+		ex.EndTimestamp = entityv2.EndTimestamp
+
+		c.JSON(http.StatusOK, ex)
+		return
+	}
+
 	ps, err := PW.NewPatternServiceWrapperV2(reqID, projectId, modelId)
 	if err != nil {
 		logCtx.WithError(err).Error("Pattern Service initialization failed.")
@@ -335,6 +367,8 @@ func PostFactorsHandlerV2(c *gin.Context) {
 		return
 	} else {
 		var ex PW.ExplainV2Goals
+		expiry := model.QueryCacheMutableResultMonth
+
 		if patternMode != "" {
 			c.JSON(http.StatusOK, debugData)
 		}
@@ -349,6 +383,16 @@ func PostFactorsHandlerV2(c *gin.Context) {
 		ex.Type = results.Type
 		ex.StartTimestamp = entityv2.StartTimestamp
 		ex.EndTimestamp = entityv2.EndTimestamp
+
+		result_byte, err := json.Marshal(results)
+		if err != nil {
+			log.Errorf("Unable to marshal results string:%v", err)
+		}
+		result_string := string(result_byte)
+		err = T.SetResultCache(projectId, modelId, expiry, result_string)
+		if err != nil {
+			log.Errorf("Unable to cache expv2 results:%d,%d", projectId, modelId)
+		}
 
 		c.JSON(http.StatusOK, ex)
 		return
@@ -409,6 +453,22 @@ func DeleteSavedExplainV2EntityHandler(c *gin.Context) {
 	if id == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Delete failed. Invalid id provided."})
 		return
+	}
+
+	m, errCode := GetEntityforJob(projectID, id)
+	if errCode != http.StatusFound {
+		log.Errorf("Unable to get entity to remove from cache :%d,%s", projectID, id)
+	}
+	res, err := T.GetResultCache(projectID, m.ModelID)
+	if err != nil {
+		log.Errorf("Unable to get result to remove from cache :%d,%s", projectID, id)
+
+	}
+	if res != "" {
+		val, err := T.RemoveCachedKey(projectID, m.ModelID)
+		if !val || err != nil {
+			log.Errorf("Unable to delete model from cache:%d,%d", projectID, m.ModelID)
+		}
 	}
 
 	errCode, errMsg := store.GetStore().DeleteExplainV2Entity(projectID, id)

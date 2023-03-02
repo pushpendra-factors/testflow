@@ -203,7 +203,7 @@ func (store *MemSQL) CreateOrGetCRMSmartEventFilterEventName(projectID int64, ev
 
 			updatedEventName, status := store.updateCRMSmartEventFilter(projectID, dupEventName.ID, updateEventName.Type, updateEventName, filterExpr)
 			if status != http.StatusAccepted {
-				logCtx.Error("Failed to update deleted smart event filter.")
+				logCtx.WithField("err_code", status).Error("Failed to update deleted smart event filter.")
 				return nil, http.StatusInternalServerError
 			}
 
@@ -225,7 +225,7 @@ func (store *MemSQL) CreateOrGetCRMSmartEventFilterEventName(projectID int64, ev
 
 	_, status := store.CreateOrGetEventName(eventName)
 	if status != http.StatusCreated {
-		logCtx.Error("Failed to CreateOrGetCRMSmartEventFilterEventName.")
+		logCtx.WithField("err_code", status).Error("Failed to CreateOrGetCRMSmartEventFilterEventName.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -1623,7 +1623,7 @@ func (store *MemSQL) GetEventNameIDFromEventName(eventName string, projectId int
 	queryStr := "SELECT * FROM event_names WHERE name = ? AND project_id = ?"
 	err := db.Raw(queryStr, eventName, projectId).Scan(&event_name).Error
 	if err != nil {
-		log.Error("Failed to get event_id from event_name")
+		log.WithError(err).Error("Failed to get event_id from event_name")
 		return nil, err
 	}
 	return &event_name, nil

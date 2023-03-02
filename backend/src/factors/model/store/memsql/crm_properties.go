@@ -101,7 +101,7 @@ func (store *MemSQL) CreateCRMProperties(crmProperty *model.CRMProperty) (int, e
 
 	status, err := isCurrentPropertyTypeORLabel(crmProperty.ProjectID, crmProperty)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to check for current property type.")
+		logCtx.WithError(err).WithField("err_code", status).Error("Failed to check for current property type.")
 		return http.StatusInternalServerError, err
 	}
 

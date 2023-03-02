@@ -260,7 +260,7 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
 		err = rows.Err()
 		if err != nil {
 			// Error from DB is captured eg: timeout error
-			logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in GetCoalesceIDFromUserIDs")
+			logCtx.WithError(err).WithFields(log.Fields{"err": err}).Error("Error in executing query in GetCoalesceIDFromUserIDs")
 			return nil, nil, err
 		}
 		U.CloseReadQuery(rows, tx)
@@ -318,7 +318,7 @@ func (store *MemSQL) getEventInformation(projectId int64,
 	}
 	eventNames, errCode := store.GetEventNamesByNames(projectId, names)
 	if errCode != http.StatusFound {
-		logCtx.Error("failed to find event names")
+		logCtx.WithField("err_code", errCode).Error("failed to find event names")
 		return "", nil, errors.New("failed to find event names")
 	}
 	// this is one to many mapping

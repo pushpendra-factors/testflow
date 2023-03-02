@@ -37,7 +37,7 @@ func getCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval [
 	newPropFilter := append(propFilter, transformation.Filters...)
 
 	//get file scanner
-	scanner, err := GetUserFileScanner(transformation.DateField, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, true, beamConfig, useBucketV2)
+	scanner, err := GetUserFileScanner(transformation.DateField, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
 	if err != nil {
 		log.WithError(err).Error("failed getting " + transformation.DateField + " file scanner for custom kpi")
 		return nil, err
@@ -267,7 +267,7 @@ func addTopKPropKeys(finalProps map[string]bool, datefield string, projectId int
 	//get counts map in proper format to use in functions built for events wi
 	var propsPerWeek = make(Level3CatRatioDist)
 	{
-		scanner, err := GetUserFileScanner(datefield, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, true, beamConfig, useBucketV2)
+		scanner, err := GetUserFileScanner(datefield, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
 		if err != nil {
 			log.WithError(err).Error("failed getting " + datefield + " file scanner for custom kpi")
 			return err

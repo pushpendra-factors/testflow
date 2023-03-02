@@ -5,10 +5,11 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 // CreateQueryAndSaveToDashboard Executes the following steps:
@@ -38,7 +39,7 @@ func (store *MemSQL) CreateQueryAndSaveToDashboard(projectID int64, queryInfo *m
 	}
 	dashboard, errCode := store.GetOrCreateAttributionV1Dashboard(projectID, queryInfo.CreatedBy)
 	if errCode != http.StatusFound {
-		log.Error("Failed to get dashboard.")
+		log.WithField("err_code", errCode).Error("Failed to get dashboard.")
 		return nil, errCode, "Failed to get attribution V1 dashboard."
 
 	}
@@ -89,7 +90,7 @@ func (store *MemSQL) GetOrCreateAttributionV1Dashboard(projectId int64, agentUUI
 	}
 
 	if errCode == http.StatusInternalServerError {
-		log.Error("Failed to find attribution dashboard")
+		log.WithField("err_code", errCode).Error("Failed to find attribution dashboard")
 		return nil, http.StatusInternalServerError
 	}
 

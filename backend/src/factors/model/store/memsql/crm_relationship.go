@@ -113,7 +113,7 @@ func (store *MemSQL) CreateCRMRelationship(crmRelationship *model.CRMRelationshi
 			return http.StatusConflict, nil
 		}
 
-		logCtx.WithError(err).Error("Failed check for existing relationship.")
+		logCtx.WithError(err).WithField("err_code", status).Error("Failed check for existing relationship.")
 		return status, err
 	}
 

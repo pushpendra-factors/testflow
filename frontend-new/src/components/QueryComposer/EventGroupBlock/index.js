@@ -22,7 +22,8 @@ function EventGroupBlock({
   setGroupState,
   delGroupState,
   closeDropDown,
-  hideText = false  // added to hide the text from UI (Used in event based alerts)
+  hideText = false,  // added to hide the text from UI (Used in event based alerts)
+  posTop = false,   // used to open the drop down at the top( Event based alerts)
 }) {
   const [filterOptions, setFilterOptions] = useState([
     {
@@ -182,7 +183,7 @@ function EventGroupBlock({
             {propName}
           </Button>
         </Tooltip>
-        <div className={styles.group_block__event_selector}>
+        <div className={`${styles.group_block__event_selector} ${posTop && styles.group_block__select_ct}`}>
           <GroupSelect2
             groupedProperties={filterOptions}
             placeholder="Select Property"
@@ -211,7 +212,7 @@ function EventGroupBlock({
   };
 
   const renderGroupBySelect = () => (
-    <div className={styles.group_block__event_selector}>
+    <div className={`${styles.group_block__event_selector} ${posTop && styles.group_block__select_ct}`}>
       <GroupSelect2
         groupedProperties={filterOptions}
         placeholder="Select Property"

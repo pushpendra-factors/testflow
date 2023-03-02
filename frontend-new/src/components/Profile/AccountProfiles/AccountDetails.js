@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Dropdown, Menu, Popover, Tabs } from 'antd';
+import { Button, Dropdown, Menu, notification, Popover, Tabs } from 'antd';
 import { bindActionCreators } from 'redux';
-import { connect } from 'react-redux';
+import { connect, useSelector } from 'react-redux';
 import { Text, SVG } from '../../factorsComponents';
 import AccountTimelineBirdView from './AccountTimelineBirdView';
-import { DEFAULT_TIMELINE_CONFIG, getHost, granularityOptions } from '../utils';
+import {
+  DEFAULT_TIMELINE_CONFIG,
+  getHost,
+  getPropType,
+  granularityOptions
+} from '../utils';
 import {
   udpateProjectSettings,
   fetchProjectSettings
@@ -15,9 +20,10 @@ import {
   getActivitiesWithEnableKeyConfig
 } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
-import LeftPanePropBlock from '../LeftPanePropBlock';
+import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import AccountTimelineSingleView from './AccountTimelineSingleView';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function AccountDetails({
   accountId,
@@ -36,10 +42,24 @@ function AccountDetails({
   const [collapseAll, setCollapseAll] = useState(true);
   const [activities, setActivities] = useState([]);
   const [checkListUserProps, setCheckListUserProps] = useState([]);
+  const [listProperties, setListProperties] = useState([]);
   const [checkListMilestones, setCheckListMilestones] = useState([]);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
+
+  const { groupPropNames } = useSelector((state) => state.coreQuery);
+
+  useEffect(() => {
+    const lsitDatetimeProperties = listProperties.filter(
+      (item) => item[2] === 'datetime'
+    );
+    const propsWithEnableKey = formatUserPropertiesToCheckList(
+      lsitDatetimeProperties,
+      currentProjectSettings.timelines_config?.account_config?.milestones
+    );
+    setCheckListMilestones(propsWithEnableKey);
+  }, [currentProjectSettings, listProperties]);
 
   useEffect(() => {
     if (currentProjectSettings?.timelines_config) {
@@ -70,6 +90,18 @@ function AccountDetails({
     );
     setActivities(listActivities);
   }, [currentProjectSettings, accountDetails]);
+
+  useEffect(() => {
+    const mergeGroupedProps = [
+      ...(groupProperties.$hubspot_company
+        ? groupProperties.$hubspot_company
+        : []),
+      ...(groupProperties.$salesforce_account
+        ? groupProperties.$salesforce_account
+        : [])
+    ];
+    setListProperties(mergeGroupedProps);
+  }, [groupProperties]);
 
   useEffect(() => {
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
@@ -113,6 +145,44 @@ function AccountDetails({
     });
   };
 
+  const handleMilestonesChange = (option) => {
+    if (
+      option.enabled ||
+      checkListMilestones.filter((item) => item.enabled === true).length < 5
+    ) {
+      const checkListProps = [...checkListMilestones];
+      const optIndex = checkListProps.findIndex(
+        (obj) => obj.prop_name === option.prop_name
+      );
+      checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
+      setCheckListMilestones(
+        checkListProps.sort((a, b) => b.enabled - a.enabled)
+      );
+    } else {
+      notification.error({
+        message: 'Error',
+        description: 'Maximum of 5 Milestones Selection Reached.',
+        duration: 2
+      });
+    }
+  };
+
+  const applyMilestones = () => {
+    const timelinesConfig = { ...tlConfig };
+    timelinesConfig.account_config.milestones = checkListMilestones
+      .filter((item) => item.enabled === true)
+      .map((item) => item?.prop_name);
+    udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...timelinesConfig }
+    }).then(() =>
+      getProfileAccountDetails(
+        activeProject.id,
+        accountId,
+        currentProjectSettings?.timelines_config
+      )
+    );
+  };
+
   const controlsPopover = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <TabPane
@@ -139,6 +209,20 @@ function AccountDetails({
           onChange={handlePropChange}
         />
       </TabPane>
+      <Tabs.TabPane
+        tab={<span className='fa-activity-filter--tabname'>Milestones</span>}
+        key='milestones'
+      >
+        <SearchCheckList
+          placeholder='Select Upto 5 Milestones'
+          mapArray={checkListMilestones}
+          titleKey='display_name'
+          checkedKey='enabled'
+          onChange={handleMilestonesChange}
+          showApply
+          onApply={applyMilestones}
+        />
+      </Tabs.TabPane>
     </Tabs>
   );
 
@@ -220,13 +304,18 @@ function AccountDetails({
     const showProps =
       currentProjectSettings?.timelines_config?.account_config
         ?.leftpane_props || [];
-
     showProps.forEach((prop, index) => {
+      const propType = getPropType(listProperties, prop);
+      const propDisplayName = groupPropNames[prop]
+        ? groupPropNames[prop]
+        : PropTextFormat(prop);
       const value = props[prop] || '-';
       propsList.push(
         <div key={index}>
           <LeftPanePropBlock
             property={prop}
+            type={propType}
+            displayName={propDisplayName}
             value={value}
             onDelete={onDelete}
           />
@@ -240,14 +329,7 @@ function AccountDetails({
     const groupProps = [
       { label: 'Account Properties', icon: 'users', values: [] }
     ];
-    groupProps[0].values = [
-      ...(groupProperties.$hubspot_company
-        ? groupProperties.$hubspot_company
-        : []),
-      ...(groupProperties.$salesforce_account
-        ? groupProperties.$salesforce_account
-        : [])
-    ];
+    groupProps[0].values = listProperties;
     return groupProps;
   };
 
@@ -256,7 +338,7 @@ function AccountDetails({
       <div className='relative'>
         <GroupSelect2
           groupedProperties={generateAccountProps()}
-          placeholder='Select Event'
+          placeholder='Select Property'
           optionClick={handleOptionClick}
           onClickOutside={() => setPropSelectOpen(false)}
         />
@@ -305,8 +387,8 @@ function AccountDetails({
       </div>
       <div className='leftpane__props'>
         {listLeftPaneProps(accountDetails.data.left_pane_props)}
+        <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       </div>
-      <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       <div className='leftpane__logo_attr'>
         <a
           className='font-size--small'
@@ -325,8 +407,10 @@ function AccountDetails({
         activities?.filter((activity) => activity.enabled === true) || []
       }
       timelineUsers={accountDetails.data?.account_users || []}
+      milestones={accountDetails.data?.milestones}
       loading={accountDetails?.isLoading}
       eventNamesMap={eventNamesMap}
+      listProperties={[...listProperties, ...userProperties]}
     />
   );
 
@@ -377,11 +461,13 @@ function AccountDetails({
           activities?.filter((activity) => activity.enabled === true) || []
         }
         timelineUsers={accountDetails.data?.account_users || []}
+        milestones={accountDetails.data?.milestones}
         collapseAll={collapseAll}
         setCollapseAll={setCollapseAll}
         granularity={granularity}
         loading={accountDetails?.isLoading}
         eventNamesMap={eventNamesMap}
+        listProperties={[...listProperties, ...userProperties]}
       />
     </div>
   );

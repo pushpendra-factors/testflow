@@ -136,7 +136,7 @@ const getQueryLabelConversions = (query, headers, result) => {
     }
   }
   return result;
-}
+};
 
 const getLegendsLabel = ({ key }) => {
   if (key === 'Conversion') {
@@ -644,7 +644,9 @@ export const getTableColumns = (
     attrQueryEvents = attrQueries.map((q) => {
       const lbl = q.label;
       const metric = q.metric;
-      let attrQueryHeaders = headers.filter((h) => h.startsWith(lbl) || h.startsWith(metric));
+      let attrQueryHeaders = headers.filter(
+        (h) => h.startsWith(lbl) || h.startsWith(metric)
+      );
       if (!attribution_method_compare) {
         attrQueryHeaders = attrQueryHeaders.filter(
           (hd) => hd.search('(compare)') < 0
@@ -1074,7 +1076,10 @@ export const getTableData = (
           const lbl = q.label;
           const metric = q.metric;
           headers.forEach((head, i) => {
-            if (head.startsWith(`${lbl} - `) || head.startsWith(`${metric} - `)) {
+            if (
+              head.startsWith(`${lbl} - `) ||
+              head.startsWith(`${metric} - `)
+            ) {
               resultantRow[head] = !comparisonData
                 ? formatCount(row[i], 1)
                 : {
@@ -1146,7 +1151,10 @@ export const getTableData = (
       return row[touchPoint].toLowerCase().includes(searchText.toLowerCase());
     });
   const filteredResults = applyAdvancedFilters(result, appliedFilters);
-  return SortResults(filteredResults, currentSorter);
+  return {
+    tableData: SortResults(filteredResults, currentSorter),
+    unfilteredTableData: result
+  };
 };
 
 export const getScatterPlotChartData = (

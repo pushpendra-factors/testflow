@@ -257,7 +257,7 @@ function CoreQuery({
   const pushDataToLocation = (data) => {
     const stateWithNoFunctions = {};
     for (const key of Object.keys(data)) {
-      if (key === "type" || key === 'date') {
+      if (key === 'type' || key === 'date') {
         // empty
       } else {
         stateWithNoFunctions[key] = data[key];
@@ -271,8 +271,7 @@ function CoreQuery({
         navigatedFromAnalyse: stateWithNoFunctions
       }
     });
-  }
-
+  };
 
   const getFormattedRow = (q) => {
     const requestQuery = q.query;
@@ -331,7 +330,7 @@ function CoreQuery({
     dispatch(deleteQuery(queryDetails));
     setActiveRow(null);
     showDeleteModal(false);
-  }, [activeRow]);
+  }, [activeProject?.id, activeRow, dispatch]);
 
   const handleDelete = useCallback((row, event) => {
     event.stopPropagation();
@@ -598,6 +597,11 @@ function CoreQuery({
               )
             );
           }
+          if (record.settings && record.settings.tableFilters) {
+            updateCoreQueryReducer({
+              attributionTableFilters: JSON.parse(record.settings.tableFilters)
+            });
+          }
           delete usefulQuery.queryType;
           dispatch({ type: INITIALIZE_MTA_STATE, payload: usefulQuery });
           setQueryOptions((currData) => {
@@ -640,7 +644,23 @@ function CoreQuery({
         console.log(err);
       }
     },
-    [updateEventFunnelsState, attr_dimensions, content_groups, kpiConfig]
+    [
+      updateSavedQuerySettings,
+      setQueryType,
+      setClickedSavedReport,
+      activeProject?.id,
+      activeProject?.name,
+      dispatch,
+      updateEventFunnelsState,
+      kpiConfig,
+      updateKPIQueryState,
+      attr_dimensions,
+      content_groups,
+      setQueryOptions,
+      setAttributionMetrics,
+      updateCoreQueryReducer,
+      updateProfileQueryState
+    ]
   );
 
   const getMenu = (row) => {
@@ -697,7 +717,13 @@ function CoreQuery({
     } else {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     }
-  }, [dispatch, location, setNavigatedFromDashboard, setNavigatedFromAnalyse, setQueryToState]);
+  }, [
+    dispatch,
+    location,
+    setNavigatedFromDashboard,
+    setNavigatedFromAnalyse,
+    setQueryToState
+  ]);
 
   const data = queriesState.data
     .filter((q) => !(q.query && q.query.cl === QUERY_TYPE_WEB))
