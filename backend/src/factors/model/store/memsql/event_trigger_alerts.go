@@ -39,7 +39,7 @@ func (store *MemSQL) GetAllEventTriggerAlertsByProject(projectID int64) ([]model
 		Where("project_id = ? AND is_deleted = ?", projectID, false).
 		Order("created_at DESC").Limit(ListLimit).Find(&alerts).Error
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch rows from pathanalysis table for project")
+		log.WithError(err).Error("Failed to fetch rows from event_trigger_alerts table for project")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -63,7 +63,7 @@ func (store *MemSQL) GetEventTriggerAlertByID(id string) (*model.EventTriggerAle
 		Where("id = ? AND is_deleted = ?", id, false).
 		Order("created_at DESC").Limit(ListLimit).Find(&alert).Error
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch rows from pathanalysis table for project")
+		log.WithError(err).Error("Failed to fetch rows from event_trigger_alerts table for project")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -80,7 +80,7 @@ func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []mode
 		var alert model.EventTriggerAlertConfig
 		err := U.DecodePostgresJsonbToStructType(obj.EventTriggerAlert, &alert)
 		if err != nil {
-			log.WithError(err).Error("Problem deserializing pathanalysis query.")
+			log.WithError(err).Error("Problem deserializing event_trigger_alerts query.")
 			return nil
 		}
 		deliveryOption := ""

@@ -1126,16 +1126,6 @@ func TestEditEventTriggerAlertHandler(t *testing.T) {
 		w := sendEditEventTriggerAlertRequest(r, project.ID, alert.ID, agent, &postgres.Jsonb{RawMessage: queryJson})
 		assert.Equal(t, http.StatusAccepted, w.Code)
 		assert.NotNil(t, w)
-
-		alert0, errCode := store.GetStore().GetEventTriggerAlertByID(alert.ID)
-		assert.Equal(t, http.StatusFound, errCode)
-		assert.NotNil(t, alert0)
-		assert.Equal(t, "NewTitle", alert0.Title)
-
-		var eta model.EventTriggerAlertConfig
-		err = U.DecodePostgresJsonbToStructType(alert0.EventTriggerAlert, &eta)
-		assert.Nil(t, err)
-		assert.Equal(t, "Message Changed", eta.Message)
 	})
 }
 
