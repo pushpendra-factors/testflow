@@ -458,6 +458,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     integration_bits varchar(32) DEFAULT '00000000000000000000000000000000',
     project_currency varchar(10),
     is_path_analysis_enabled boolean,
+    filter_ips JSON,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)

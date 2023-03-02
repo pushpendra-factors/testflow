@@ -44,6 +44,7 @@ type ProjectSetting struct {
 	IntHubspotSyncInfo        *postgres.Jsonb `json:"int_hubspot_sync_info,omitempty" `
 	CreatedAt                 time.Time       `json:"created_at"`
 	UpdatedAt                 time.Time       `json:"updated_at"`
+	FilterIps                 *postgres.Jsonb `json:"filter_ips,omitempty"`
 	//Facebook settings
 	IntFacebookEmail       string  `json:"int_facebook_email,omitempty"`
 	IntFacebookAccessToken string  `json:"int_facebook_access_token,omitempty"`
@@ -180,6 +181,9 @@ type TimelinesConfig struct {
 	AccountConfig  AccountConfig `json:"account_config"`
 }
 
+type FilterIps struct {
+	BlockIps []string `json:"block_ips"`
+}
 type UserConfig struct {
 	Milestones    []string `json:"milestones"`
 	TableProps    []string `json:"table_props"`

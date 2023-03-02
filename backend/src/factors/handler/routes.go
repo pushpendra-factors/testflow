@@ -381,6 +381,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 
 	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
 	sdkRouteGroup.Use(mid.SetScopeProjectToken())
+	sdkRouteGroup.Use(mid.IsBlockedIPByProject())
 
 	// DEPRECATED: Kept for backward compatibility.
 	// Used on only on old npm installations. JS_SDK uses /get_info.

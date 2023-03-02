@@ -161,6 +161,7 @@ type Configuration struct {
 	SegmentRequestQueueProjectTokens               []string
 	UseDefaultProjectSettingForSDK                 bool
 	BlockedSDKRequestProjectTokens                 []string
+	BlockedIPProjectIDs                            string
 	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
 	CacheLookUpRangeProjects                map[int64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
 	LookbackWindowForEventUserCache         int
@@ -1892,6 +1893,28 @@ func IsBlockedSDKRequestProjectToken(projectToken string) bool {
 	}
 
 	return U.StringValueIn(projectToken, configuration.BlockedSDKRequestProjectTokens)
+}
+
+// IsIPBlockingFeatureEnabled - Enables the feature of blocking
+// IP for a project, based on given project_id and list of block_ip_project_ids.
+func IsIPBlockingFeatureEnabled(projectID int64) bool {
+	if configuration.BlockedIPProjectIDs == "" {
+		return false
+	}
+
+	if configuration.BlockedIPProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.BlockedIPProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
 }
 
 // PingHealthcheckForSuccess Ping healthchecks.io for cron success.
