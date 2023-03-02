@@ -197,6 +197,18 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 			log.Info(fmt.Sprintf("Synced property details for project %d", settings.ProjectId))
 		}
 
+		if C.AllowSyncReferenceFields(settings.ProjectId) {
+			log.Info(fmt.Sprintf("Starting sync reference fields for project %d", settings.ProjectId))
+			allowedDocTypes := U.GetKeysofStringMapAsArray(*model.GetHubspotAllowedObjects(settings.ProjectId))
+
+			failure := IntHubspot.SyncReferenceField(settings.ProjectId, settings.APIKey, settings.RefreshToken, allowedDocTypes, projectsMaxCreatedAt[settings.ProjectId])
+			if failure {
+				anyFailure = true
+			}
+
+			log.Info(fmt.Sprintf("Synced reference fields for project %d", settings.ProjectId))
+		}
+
 		projectIDs = append(projectIDs, settings.ProjectId)
 		hubspotProjectSettingsMap[settings.ProjectId] = &hubspotEnabledProjectSettings[i]
 	}

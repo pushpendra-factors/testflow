@@ -526,7 +526,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// should contain all event names along with $session.
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Most Recent"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 27)
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 36) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Website Session")
 
 	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "$session", DisplayName: "Test1"}, agent, project.ID)
@@ -553,7 +553,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// should contain all event names along with $session.
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Most Recent"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 27)
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 36) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Test1")
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$hubspot_contact_created"], "Test2")
 
@@ -578,13 +578,19 @@ func TestGetEventNamesHandler(t *testing.T) {
 
 	t.Run("DisplayNames title-case check", func(t *testing.T) {
 		assert := assert.New(t)
-		for _, value := range eventNamesWithDisplayNames.DisplayNames {
-			temp := strings.Title(value)
-			assert.Equal(value, temp)
+		for event, displayName := range eventNamesWithDisplayNames.DisplayNames {
+			if strings.HasPrefix(event, "$") { // Only if event is prefixed with $, displayName is capitalized
+				assert.Equal(displayName, strings.Title(displayName))
+			} else {
+				assert.Equal(displayName, displayName)
+			}
 		}
-		for _, value := range properties.DisplayNames {
-			temp := strings.Title(value)
-			assert.Equal(value, temp)
+		for property, displayName := range properties.DisplayNames {
+			if strings.HasPrefix(property, "$") { // Only if property is prefixed with $, displayName is capitalized
+				assert.Equal(displayName, strings.Title(displayName))
+			} else {
+				assert.Equal(displayName, displayName)
+			}
 		}
 	})
 }

@@ -87,7 +87,7 @@ function AccountTimelineSingleView({
                     </div>
                   ) : null} */}
                 </td>
-                <td className={`bg-none pt-6 pb-${milestones.length * 10}`}>
+                <td className={`bg-none pt-6 pb-${milestones.length * 0}`}>
                   {Object.entries(allEvents).map(([user, data]) => {
                     const currentUser = timelineUsers.find(
                       (obj) => obj.title === user

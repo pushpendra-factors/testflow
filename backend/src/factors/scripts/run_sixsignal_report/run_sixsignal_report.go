@@ -10,15 +10,13 @@ import (
 	U "factors/util"
 	"flag"
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
-	tmpBucketNameFlag := flag.String("bucket_name_tmp", "/usr/local/var/factors/cloud_storage_tmp", "--bucket_name=/usr/local/var/factors/cloud_storage_tmp pass bucket name for tmp artifacts")
-	archiveBucketNameFlag := flag.String("archive_bucket_name", "/usr/local/var/factors/cloud_storage_archive", "--bucket_name=/usr/local/var/factors/cloud_storage_archive pass archive bucket name")
-	sortedBucketNameFlag := flag.String("sorted_bucket_name", "/usr/local/var/factors/cloud_storage_sorted", "--bucket_name=/usr/local/var/factors/cloud_storage_sorted pass sorted bucket name")
 	modelBucketNameFlag := flag.String("model_bucket_name", "/usr/local/var/factors/cloud_storage_models", "--bucket_name=/usr/local/var/factors/cloud_storage_models pass models bucket name")
 	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
 	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
@@ -89,43 +87,17 @@ func main() {
 	// Get All the Projects for which the path analysis has pending items
 	configs := make(map[string]interface{})
 
-	// Init cloud manager.
-	var cloudManagerTmp filestore.FileManager
-	if *env == "development" {
-		cloudManagerTmp = serviceDisk.New(*tmpBucketNameFlag)
-	} else {
-		cloudManagerTmp, err = serviceGCS.New(*tmpBucketNameFlag)
-		if err != nil {
-			log.WithField("error", err).Fatal("Failed to init cloud manager for tmp.")
-		}
-	}
-
-	configs["tmpCloudManager"] = &cloudManagerTmp
 	if *useBucketV2 {
-		var archiveCloudManager filestore.FileManager
-		var sortedCloudManager filestore.FileManager
 		var modelCloudManager filestore.FileManager
 		if *env == "development" {
 			modelCloudManager = serviceDisk.New(*modelBucketNameFlag)
-			archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
-			sortedCloudManager = serviceDisk.New(*sortedBucketNameFlag)
 		} else {
 			modelCloudManager, err = serviceGCS.New(*modelBucketNameFlag)
 			if err != nil {
 				log.WithField("error", err).Fatal("Failed to init cloud manager.")
 			}
-			archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init archive cloud manager")
-			}
-			sortedCloudManager, err = serviceGCS.New(*sortedBucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init sorted data cloud manager")
-			}
 		}
 		configs["modelCloudManager"] = &modelCloudManager
-		configs["archiveCloudManager"] = &archiveCloudManager
-		configs["sortedCloudManager"] = &sortedCloudManager
 	} else {
 		var cloudManager filestore.FileManager
 		if *env == "development" {
@@ -137,8 +109,6 @@ func main() {
 			}
 		}
 		configs["modelCloudManager"] = &cloudManager
-		configs["archiveCloudManager"] = &cloudManager
-		configs["sortedCloudManager"] = &cloudManager
 	}
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 	configs["diskManager"] = diskManager

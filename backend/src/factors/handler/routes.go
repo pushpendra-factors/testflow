@@ -113,7 +113,11 @@ func InitAppRoutes(r *gin.Engine) {
 	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
 	//Six Signal Report
-	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/sixsignal", responseWrapper(GetSixSignalReportHandler))
+	shareSixSignalRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
+	shareSixSignalRouteGroup.Use(mid.ValidateAccessToSharedEntity(model.ShareableURLEntityTypeSixSignal))
+	shareSixSignalRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/sixsignal", responseWrapper(GetSixSignalReportHandler))
+	shareSixSignalRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/sixsignal/publicreport", responseWrapper(GetSixSignalPublicReportHandler))
+	featuresGatesRouteGroup.POST("/:project_id/sixsignal/share", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateSixSignalShareableURLHandler))
 
 	// Dashboard endpoints
 	featuresGatesRouteGroup.GET("/:project_id/dashboards", stringifyWrapper(GetDashboardsHandler))
@@ -377,6 +381,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 
 	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
 	sdkRouteGroup.Use(mid.SetScopeProjectToken())
+	sdkRouteGroup.Use(mid.IsBlockedIPByProject())
 
 	// DEPRECATED: Kept for backward compatibility.
 	// Used on only on old npm installations. JS_SDK uses /get_info.

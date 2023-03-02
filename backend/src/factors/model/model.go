@@ -449,6 +449,7 @@ type Model interface {
 	CreateQuery(projectID int64, query *model.Queries) (*model.Queries, int, string)
 	GetALLQueriesWithProjectId(projectID int64) ([]model.Queries, int)
 	GetDashboardQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
+	GetSixSignalQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
 	GetDashboardUnitForQueryID(projectID int64, queryID int64) []model.DashboardUnit
 	GetSavedQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
 	GetQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
@@ -628,6 +629,12 @@ type Model interface {
 	GetDisplayNamesForAllUserProperties(projectID int64) (int, map[string]string)
 	GetDisplayNamesForObjectEntities(projectID int64) (int, map[string]string)
 	CreateOrUpdateDisplayName(projectID int64, eventName, propertyName, displayName, tag string) int
+
+	// display name_labels
+	CreateOrUpdateDisplayNameLabel(projectID int64, source, key, value, label string) int
+	CreateDisplayNameLabel(projectID int64, source, propertyKey, value, label string) (int, error)
+	GetDisplayNameLabel(projectID int64, source, propertyKey, value string) (*model.DisplayNameLabel, int, error)
+	GetDisplayNameLabelsByProjectIdAndSource(projectID int64, source string) ([]model.DisplayNameLabel, int)
 
 	// task and task-execution
 	RegisterTaskWithDefaultConfiguration(taskName string, source string, frequency int, isProjectEnabled bool) (uint64, int, string)

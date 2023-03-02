@@ -458,6 +458,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     integration_bits varchar(32) DEFAULT '00000000000000000000000000000000',
     project_currency varchar(10),
     is_path_analysis_enabled boolean,
+    filter_ips JSON,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
@@ -1305,4 +1306,18 @@ CREATE TABLE IF NOT EXISTS property_mappings (
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
     UNIQUE KEY unique_property_mappings_project_id_name_idx(project_id, name) USING HASH
+);
+
+CREATE TABLE IF NOT EXISTS display_name_labels (
+    project_id bigint NOT NULL,
+    id text NOT NULL,
+    source text NOT NULL,
+    property_key text NOT NULL,
+    value text NOT NULL,
+    label text,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    KEY (project_id, source, property_key, value, id) USING CLUSTERED COLUMNSTORE,
+    SHARD KEY (project_id, source, id),
+    UNIQUE KEY(project_id, source, id, property_key, value) USING HASH
 );

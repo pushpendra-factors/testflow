@@ -1048,7 +1048,11 @@ export function deleteAlert(projectId, id) {
 export function editAlert(projectId, payload, id) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      put(dispatch, host + 'projects/' + projectId + '/v1/alerts/' + id, payload)
+      put(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/alerts/' + id,
+        payload
+      )
         .then((res) => {
           resolve(res);
         })
@@ -1195,7 +1199,6 @@ export function disableLeadSquaredIntegration(projectId) {
   };
 }
 
-
 export function createEventAlert(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
@@ -1218,7 +1221,11 @@ export function createEventAlert(projectId, payload) {
 export function fetchEventAlerts(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects/' + projectId + '/v1/eventtriggeralert', {})
+      get(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert',
+        {}
+      )
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'FETCH_EVENT_ALERTS', payload: r.data });
@@ -1237,9 +1244,31 @@ export function fetchEventAlerts(projectId) {
 export function deleteEventAlert(projectId, id) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      del(dispatch, host + 'projects/' + projectId + '/v1/eventtriggeralert/' + id)
+      del(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert/' + id
+      )
         .then((res) => {
           resolve(res);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function editEventAlert(projectId, payload, id) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert/' + id,
+        payload
+      )
+        .then((r) => {
+          dispatch({ type: 'EDIT_EVENT_ALERT', payload: r.data });
+          resolve(r);
         })
         .catch((err) => {
           reject(err);

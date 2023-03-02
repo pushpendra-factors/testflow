@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Dropdown, Menu, Popover, Tabs } from 'antd';
+import { Button, Dropdown, Menu, notification, Popover, Tabs } from 'antd';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector } from 'react-redux';
 import { Text, SVG } from '../../factorsComponents';
@@ -49,6 +49,17 @@ function AccountDetails({
   const { TabPane } = Tabs;
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
+
+  useEffect(() => {
+    const lsitDatetimeProperties = listProperties.filter(
+      (item) => item[2] === 'datetime'
+    );
+    const propsWithEnableKey = formatUserPropertiesToCheckList(
+      lsitDatetimeProperties,
+      currentProjectSettings.timelines_config?.account_config?.milestones
+    );
+    setCheckListMilestones(propsWithEnableKey);
+  }, [currentProjectSettings, listProperties]);
 
   useEffect(() => {
     if (currentProjectSettings?.timelines_config) {
@@ -134,6 +145,44 @@ function AccountDetails({
     });
   };
 
+  const handleMilestonesChange = (option) => {
+    if (
+      option.enabled ||
+      checkListMilestones.filter((item) => item.enabled === true).length < 5
+    ) {
+      const checkListProps = [...checkListMilestones];
+      const optIndex = checkListProps.findIndex(
+        (obj) => obj.prop_name === option.prop_name
+      );
+      checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
+      setCheckListMilestones(
+        checkListProps.sort((a, b) => b.enabled - a.enabled)
+      );
+    } else {
+      notification.error({
+        message: 'Error',
+        description: 'Maximum of 5 Milestones Selection Reached.',
+        duration: 2
+      });
+    }
+  };
+
+  const applyMilestones = () => {
+    const timelinesConfig = { ...tlConfig };
+    timelinesConfig.account_config.milestones = checkListMilestones
+      .filter((item) => item.enabled === true)
+      .map((item) => item?.prop_name);
+    udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...timelinesConfig }
+    }).then(() =>
+      getProfileAccountDetails(
+        activeProject.id,
+        accountId,
+        currentProjectSettings?.timelines_config
+      )
+    );
+  };
+
   const controlsPopover = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <TabPane
@@ -160,6 +209,20 @@ function AccountDetails({
           onChange={handlePropChange}
         />
       </TabPane>
+      <Tabs.TabPane
+        tab={<span className='fa-activity-filter--tabname'>Milestones</span>}
+        key='milestones'
+      >
+        <SearchCheckList
+          placeholder='Select Upto 5 Milestones'
+          mapArray={checkListMilestones}
+          titleKey='display_name'
+          checkedKey='enabled'
+          onChange={handleMilestonesChange}
+          showApply
+          onApply={applyMilestones}
+        />
+      </Tabs.TabPane>
     </Tabs>
   );
 
