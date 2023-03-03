@@ -11,7 +11,7 @@ import GlobalFilter from '../GlobalFilter';
 import { getUserProperties } from '../../../reducers/coreQuery/middleware';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { areKpisInSameGroup } from '../../../utils/kpiQueryComposer.helpers';
+import { areKpisInSameGroup } from '../../../utils/kpiQueryComposer.helpers'; 
 
 const GlobalFilterBlock = ({
   queryType,
@@ -23,39 +23,35 @@ const GlobalFilterBlock = ({
   KPIConfigProps,
   setQueryOptions,
   DefaultQueryOptsVal,
-  getUserProperties
+  getUserProperties, 
+  propertyMaps
 }) => {
   const [filterBlockOpen, setFilterBlockOpen] = useState(true);
   const isSameKPIGrp = useMemo(() => {
     return areKpisInSameGroup({ kpis: queries });
   }, [queries]);
 
-  useEffect(() => {
-    if (
-      ((!isSameKPIGrp && isArray(queries) && queries.length > 1) ||
-        isEmpty(queries)) &&
-      !isEqual(
-        get(queryOptions, 'globalFilters', []),
-        get(DefaultQueryOptsVal, 'globalFilters', [])
-      )
-    ) {
-      // we will not show global filters when kpis selected are from different groups. hence we reset global filters
-      setQueryOptions((currState) => {
-        return {
-          ...currState,
-          globalFilters: DefaultQueryOptsVal.globalFilters
-        };
-      });
-    }
-  }, [
-    isSameKPIGrp,
-    queries,
-    queryOptions,
-    DefaultQueryOptsVal,
-    setQueryOptions
-  ]);
+  // useEffect(() => {
+  //   if (
+  //     ((!isSameKPIGrp && isArray(queries) && queries.length > 1) ||
+  //       isEmpty(queries)) &&
+  //     !isEqual(
+  //       get(queryOptions, 'globalFilters', []),
+  //       get(DefaultQueryOptsVal, 'globalFilters', [])
+  //     )
+  //   ) {
+  //     // we will not show global filters when kpis selected are from different groups. hence we reset global filters
+  //     setQueryOptions((currState) => {
+  //       return {
+  //         ...currState,
+  //         globalFilters: DefaultQueryOptsVal.globalFilters
+  //       };
+  //     });
+  //   }
+  // }, []); 
+   
 
-  if (!isSameKPIGrp || isEmpty(queries)) {
+  if (isEmpty(queries)) {
     return null;
   }
 
@@ -64,7 +60,7 @@ const GlobalFilterBlock = ({
   }
   if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
     return null;
-  }
+  } 
 
   return (
     <ComposerBlock
@@ -85,6 +81,8 @@ const GlobalFilterBlock = ({
           ]}
           selectedMainCategory={selectedMainCategory}
           KPIConfigProps={KPIConfigProps}
+          propertyMaps={propertyMaps}
+          isSameKPIGrp={isSameKPIGrp}
         ></GlobalFilter>
       </div>
     </ComposerBlock>
@@ -92,13 +90,14 @@ const GlobalFilterBlock = ({
 };
 
 const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project
+  activeProject: state.global.active_project,
+  propertyMaps: state.kpi.kpi_property_mapping,
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      getUserProperties
+      getUserProperties,
     },
     dispatch
   );

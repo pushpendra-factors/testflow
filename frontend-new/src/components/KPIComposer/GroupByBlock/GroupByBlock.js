@@ -6,7 +6,9 @@ import isArray from 'lodash/isArray';
 import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 import ComposerBlock from '../../QueryCommons/ComposerBlock';
 import GroupBlock from '../GroupBlock';
-import { areKpisInSameGroup } from '../../../utils/kpiQueryComposer.helpers';
+import { areKpisInSameGroup } from '../../../utils/kpiQueryComposer.helpers'; 
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 
 const GroupByBlock = ({
   queryType,
@@ -14,25 +16,34 @@ const GroupByBlock = ({
   selectedMainCategory,
   KPIConfigProps,
   groupBy,
-  resetGroupByAction
+  resetGroupByAction, 
+  activeProject,
+  propertyMaps
 }) => {
   const [groupBlockOpen, setGroupBlockOpen] = useState(true);
   const isSameKPIGrp = useMemo(() => {
     return areKpisInSameGroup({ kpis: queries });
   }, [queries]);
 
-  useEffect(() => {
-    if (
-      ((!isSameKPIGrp && isArray(queries) && queries.length > 1) ||
-        isEmpty(queries)) &&
-      !isEmpty(groupBy?.global)
-    ) {
-      // we will not show global breakdown when kpis selected are from different groups
-      resetGroupByAction();
-    }
-  }, [isSameKPIGrp, queries, groupBy, resetGroupByAction]);
+  // useEffect(() => {
+  //   if (
+  //     ((!isSameKPIGrp && isArray(queries) && queries.length > 1) ||
+  //       isEmpty(queries)) &&
+  //     !isEmpty(groupBy?.global)
+  //   ) {
+  //     // we will not show global breakdown when kpis selected are from different groups
+  //     resetGroupByAction();
+  //   }
+  // }, [isSameKPIGrp, queries, groupBy, resetGroupByAction]);
 
-  if (!isSameKPIGrp || isEmpty(queries)) {
+  // useEffect(() => { 
+  //     // we will not show global breakdown when kpis selected are from different groups
+  //     if (!isEmpty(queries)) { 
+  //       resetGroupByAction();  
+  //     }
+  // }, [queries]); 
+  
+  if (isEmpty(queries)) {
     return null;
   }
 
@@ -57,10 +68,20 @@ const GroupByBlock = ({
           events={queries}
           selectedMainCategory={selectedMainCategory}
           KPIConfigProps={KPIConfigProps}
+          isSameKPIGrp={isSameKPIGrp}
+          propertyMaps={propertyMaps}
         />
       </div>
     </ComposerBlock>
   );
 };
 
-export default memo(GroupByBlock);
+
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project,
+  propertyMaps: state.kpi.kpi_property_mapping,
+});
+ 
+export default memo(
+  connect(mapStateToProps, null)(GroupByBlock)
+);
