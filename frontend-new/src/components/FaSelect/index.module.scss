@@ -4,7 +4,22 @@
 
     display: flex;
     flex-direction: column;
-    top: 32px;
+
+    &_placement_bottom {
+      top: 32px;
+    }
+
+    &_placement_top {
+      bottom: 32px;
+    }
+
+    &_right_0 {
+      right: 0;
+    }
+
+    &_left_0 {
+      left: 0;
+    }
 
     &__content {
       display: flex;
@@ -12,16 +27,6 @@
       max-height: 250px;
       overflow-y: auto;
     }
-  }
-
-  &__select_rt {
-    @extend .dropdown__select;
-    right: 0;
-  }
-
-  &__select_lt {
-    @extend .dropdown__select;
-    left: 0;
   }
 
   &__hd_overlay {

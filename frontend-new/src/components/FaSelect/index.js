@@ -22,7 +22,8 @@ function FaSelect({
   children,
   extraClass = '',
   disabled = false,
-  showIcon = true
+  showIcon = true,
+  placement = 'bottom'
 }) {
   const [optClickArr, setOptClickArr] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -312,14 +313,21 @@ function FaSelect({
   return (
     <>
       <div
-        className={`${extraClass} ${
-          posRight ? styles.dropdown__select_rt : styles.dropdown__select_lt
-        } fa-select ${
+        className={`${extraClass}  ${styles.dropdown__select}
+          ${
+            posRight
+              ? styles.dropdown__select_right_0
+              : styles.dropdown__select_left_0
+          } fa-select ${
           posRight ? `fa-select--group-select-sm` : `fa-select--group-select`
         } ${
           allowSearch
             ? `fa-select--group-select-sm`
             : `fa-select--group-select-mini`
+        } ${
+          placement === 'top'
+            ? styles.dropdown__select_placement_top
+            : styles.dropdown__select_placement_bottom
         }`}
       >
         {allowSearch && renderSearchInput()}
