@@ -336,8 +336,8 @@ func GetStringKeyFromCacheRedisKey(Key *cacheRedis.Key) string {
 	return fmt.Sprintf("pid:%d:puid:%s:%s:%s", Key.ProjectID, Key.ProjectUID, Key.Prefix, Key.Suffix)
 }
 
-func (q *AttributionQueryUnit) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Query.From, q.Query.To, q.Query.Timezone)
+func (q *AttributionQueryUnit) GetQueryCacheExpiry(projectID int64) float64 {
+	return getQueryCacheResultExpiry(projectID, q.Query.From, q.Query.To, q.Query.Timezone)
 }
 
 func (q *AttributionQueryUnit) TransformDateTypeFilters() error {

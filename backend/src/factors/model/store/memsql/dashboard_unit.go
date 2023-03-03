@@ -469,7 +469,7 @@ func (store *MemSQL) UpdateDashboardUnit(projectId int64, agentUUID string,
 
 // CacheDashboardUnitsForProjects Runs for all the projectIDs passed as comma separated.
 func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string,
-	numRoutines int, reportCollector *sync.Map, enableFilterOpt bool) {
+	numRoutines int, reportCollector *sync.Map, enableFilterOpt bool, startTimeForCache int64) {
 
 	logFields := log.Fields{
 		"string_projects_ids": stringProjectsIDs,
@@ -567,11 +567,11 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 				}
 			}
 			log.WithFields(log.Fields{"project_id": projectID, "total_units": len(filterDashboardUnits), "accessed_units": len(validDashboardUnitIDs)}).Info("Project Report - last 14 days")
-			unitsCount = store.CacheDashboardUnitsForProjectID(projectID, validDashboardUnitIDs, validDashboardUnitQueryClass, numRoutines, reportCollector, enableFilterOpt)
+			unitsCount = store.CacheDashboardUnitsForProjectID(projectID, validDashboardUnitIDs, validDashboardUnitQueryClass, numRoutines, reportCollector, enableFilterOpt, startTimeForCache)
 
 		} else {
 			log.WithFields(log.Fields{"project_id": projectID, "total_units": len(filterDashboardUnits), "accessed_units": len(filterDashboardUnits)}).Info("Project Report - normal run")
-			unitsCount = store.CacheDashboardUnitsForProjectID(projectID, filterDashboardUnits, filterDashboardUnitQueryClass, numRoutines, reportCollector, enableFilterOpt)
+			unitsCount = store.CacheDashboardUnitsForProjectID(projectID, filterDashboardUnits, filterDashboardUnitQueryClass, numRoutines, reportCollector, enableFilterOpt, startTimeForCache)
 		}
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)
@@ -582,7 +582,7 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 
 // CacheDashboardUnitsForProjectID Caches all the dashboard units for the given `projectID`.
 func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID int64, dashboardUnits []model.DashboardUnit,
-	dashboardUnitQueryClass []string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool) int {
+	dashboardUnitQueryClass []string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool, startTimeForCache int64) int {
 	logFields := log.Fields{
 		"project_id":         projectID,
 		"num_routines":       numRoutines,
@@ -604,13 +604,13 @@ func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID int64, dashboardU
 	for i := range dashboardUnits {
 		count++
 		if C.GetIsRunningForMemsql() == 0 {
-			go store.CacheDashboardUnit(dashboardUnits[i], &waitGroup, reportCollector, dashboardUnitQueryClass[i], enableFilterOpt)
+			go store.CacheDashboardUnit(dashboardUnits[i], &waitGroup, reportCollector, dashboardUnitQueryClass[i], enableFilterOpt, startTimeForCache)
 			if count%numRoutines == 0 {
 				waitGroup.Wait()
 				waitGroup.Add(U.MinInt(len(dashboardUnits)-count, numRoutines))
 			}
 		} else {
-			store.CacheDashboardUnit(dashboardUnits[i], &waitGroup, reportCollector, dashboardUnitQueryClass[i], enableFilterOpt)
+			store.CacheDashboardUnit(dashboardUnits[i], &waitGroup, reportCollector, dashboardUnitQueryClass[i], enableFilterOpt, startTimeForCache)
 		}
 	}
 	if C.GetIsRunningForMemsql() == 0 {
@@ -686,7 +686,7 @@ func (store *MemSQL) GetQueryClassFromQueries(query model.Queries) (queryClass, 
 
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit,
-	waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool) {
+	waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool, startTimeForCache int64) {
 
 	logFields := log.Fields{
 		"dashboard_unit":   dashboardUnit,
@@ -710,7 +710,20 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit,
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 		return
 	}
+
+	// 1607755924 is Saturday, 12 December 2020 06:52:04! Kept it randomly to avoid running job if date range is not right
+	if startTimeForCache != -1 && startTimeForCache > 1607755924 {
+		store.RunCachingToBackFillRanges(dashboardUnit, startTimeForCache, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
+	} else {
+		store.RunEverydayCaching(dashboardUnit, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
+	}
+
+}
+
+func (store *MemSQL) RunEverydayCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString, logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool) {
+
 	var unitWaitGroup sync.WaitGroup
+
 	for preset, rangeFunction := range U.QueryDateRangePresets {
 
 		fr, t, errCode := rangeFunction(timezoneString)
@@ -784,6 +797,86 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit,
 	}
 }
 
+func (store *MemSQL) RunCachingToBackFillRanges(dashboardUnit model.DashboardUnit, startTimeForCache int64, timezoneString U.TimeZoneString, logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool) {
+
+	var unitWaitGroup sync.WaitGroup
+
+	// get from and to for all the time ranges!
+	monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
+	weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
+
+	allRange := append(monthRange, weeksRange...)
+
+	for _, queryRange := range allRange {
+
+		from := queryRange.From
+		to := queryRange.To
+
+		queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+		if errC != http.StatusFound {
+			logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+			continue
+		}
+
+		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
+		baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
+		if err != nil {
+			errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
+
+		projectSettingsJSON, statusCodeProjectSettings := store.GetProjectSetting(dashboardUnit.ProjectID)
+		var cacheSettings model.CacheSettings
+
+		if projectSettingsJSON == nil || statusCodeProjectSettings != http.StatusFound {
+			log.WithField("projectID", dashboardUnit.ProjectID).WithField("statusCodeProjectSettings",
+				statusCodeProjectSettings).Warn("errored in fetching project Settings")
+			continue
+		}
+
+		if projectSettingsJSON.CacheSettings != nil && !U.IsEmptyPostgresJsonb(projectSettingsJSON.CacheSettings) {
+			err = json.Unmarshal(projectSettingsJSON.CacheSettings.RawMessage, &cacheSettings)
+		}
+
+		if err != nil {
+			continue
+		}
+
+		// Filtering queries on type and range for attribution query
+		allowedPreset := cacheSettings.AttributionCachePresets
+		shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, "", from, to,
+			C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[""])
+		if !shouldCache {
+			continue
+		}
+
+		baseQuery.SetQueryDateRange(from, to)
+		baseQuery.SetTimeZone(timezoneString)
+		baseQuery.SetDefaultGroupByTimestamp()
+		err = baseQuery.TransformDateTypeFilters()
+		if err != nil {
+			errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
+		cachePayload := model.DashboardUnitCachePayload{
+			DashboardUnit: dashboardUnit,
+			BaseQuery:     baseQuery,
+			Preset:        "",
+		}
+		if C.GetIsRunningForMemsql() == 0 {
+			unitWaitGroup.Add(1)
+			go store.cacheDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
+		} else {
+			store.cacheDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
+		}
+	}
+	if C.GetIsRunningForMemsql() == 0 {
+		unitWaitGroup.Wait()
+	}
+}
+
 // CacheDashboardUnitForDateRange To cache a dashboard unit for the given range.
 func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,
 	enableFilterOpt bool) (int, string, model.CachingUnitReport) {
@@ -820,7 +913,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	}
 
 	logCtx := log.WithFields(logFields).WithFields(log.Fields{"PreUnitReport": unitReport})
-	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, preset, timezoneString, false) {
+	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, timezoneString, false) {
 		return http.StatusOK, "", unitReport
 	}
 	logCtx.Info("Starting to cache unit for date range")

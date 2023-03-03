@@ -36,7 +36,8 @@ export const defaultSortProp = (queryOptions, attrQueries, data) => {
   );
   if (
     groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.HUBSPOT_DEALS ||
-    groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.SALESFORCE_OPPORTUNITIES
+    groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.SALESFORCE_OPPORTUNITIES ||
+    groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.ALL
   ) {
     if (attrQueries.length > 0) {
       const firstQueryLabel = get(attrQueries[0], 'label', undefined);
@@ -783,7 +784,7 @@ export const getTableColumns = (
   }
 
   let linkedEventsColumns = [];
-  if (linkedEvents.length) {
+  if (linkedEvents?.length) {
     linkedEventsColumns = linkedEvents.map((le) => {
       const linkedEventsChildren = [
         getEventColumnConfig({

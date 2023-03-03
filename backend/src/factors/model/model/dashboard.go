@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
+	C "factors/config"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -204,7 +205,7 @@ func SetCacheResultByDashboardIdAndUnitIdWithPreset(result interface{}, projectI
 		return
 	}
 
-	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
+	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(projectId, from, to, timezoneString))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return
@@ -250,7 +251,7 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId int64, d
 		return
 	}
 
-	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
+	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(projectId, from, to, timezoneString))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return
@@ -348,7 +349,13 @@ func SetDashboardCacheAnalytics(projectId int64, dashboardId int64, unitId int64
 }
 
 // ShouldRefreshDashboardUnit Whether to force refresh dashboard unit irrespective of the cache and expiry.
-func ShouldRefreshDashboardUnit(projectID int64, dashboardID, dashboardUnitID int64, from, to int64, preset string, timezoneString U.TimeZoneString, isWebAnalytics bool) bool {
+func ShouldRefreshDashboardUnit(projectID int64, dashboardID, dashboardUnitID int64, from, to int64, timezoneString U.TimeZoneString, isWebAnalytics bool) bool {
+
+	// since all the ranges are pre-defined & back dated, skip all checks for Longer Expiry
+	if C.IsProjectAllowedForLongerExpiry(projectID) {
+		return true
+	}
+
 	// If today's range or last 30 minutes window, refresh on every trigger.
 	if U.IsStartOfTodaysRangeIn(from, timezoneString) || U.Is30MinutesTimeRange(from, to) {
 		return true

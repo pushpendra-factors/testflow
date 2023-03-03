@@ -39,25 +39,22 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 	}
 
-	var commonQueryFrom int64
-	var commonQueryTo int64
-	var timezoneString U.TimeZoneString
 	if len(requestPayload.Queries) == 0 {
 		logCtx.Error("Query failed. Empty query group.")
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Empty query group.", true
-	} else {
-		// all group queries are run for same time duration, used in dashboard unit caching
-		commonQueryFrom = requestPayload.Queries[0].From
-		commonQueryTo = requestPayload.Queries[0].To
-		timezoneString = requestPayload.Queries[0].Timezone
 	}
 
-	fromDate := U.GetDateOnlyFormatFromTimestampAndTimezone(commonQueryFrom, timezoneString)
-	toDate := U.GetDateOnlyFormatFromTimestampAndTimezone(commonQueryTo, timezoneString)
-	folderName := fmt.Sprintf("%v-%v", fromDate, toDate)
+	folderName := getFolderName(requestPayload.Queries[0])
 	logCtx.WithFields(log.Fields{"folder name": folderName}).Info("Folder name for reading the result")
 
 	result := delta.GetSixSignalAnalysisData(projectId, folderName)
+	if result == nil {
+		logCtx.Error("Report is not present for this date range")
+		return nil, http.StatusBadRequest, "", "Report is not present for this date range", true
+	} else if len(result[0].Results[0].Rows) == 0 {
+		logCtx.Warn("Data is not present for this date range")
+		return nil, http.StatusNotFound, "", "Data is not present for this date range", true
+	}
 	return result, http.StatusOK, "", "", false
 }
 
@@ -96,16 +93,17 @@ func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, 
 		return nil, http.StatusNotFound, "", "Failed to unmarshal query", true
 	}
 
-	commonQueryFrom := sixSignalQuery.From
-	commonQueryTo := sixSignalQuery.To
-	timezoneString := sixSignalQuery.Timezone
-
-	fromDate := U.GetDateOnlyFormatFromTimestampAndTimezone(commonQueryFrom, timezoneString)
-	toDate := U.GetDateOnlyFormatFromTimestampAndTimezone(commonQueryTo, timezoneString)
-	folderName := fmt.Sprintf("%v-%v", fromDate, toDate)
+	folderName := getFolderName(sixSignalQuery)
 	logCtx.WithFields(log.Fields{"folder name": folderName}).Info("Folder name for reading the result")
 
 	result := delta.GetSixSignalAnalysisData(projectId, folderName)
+	if result == nil {
+		logCtx.Error("Report is not present for this date range")
+		return nil, http.StatusBadRequest, "", "Report is not present for this date range", true
+	} else if len(result[0].Results[0].Rows) == 0 {
+		logCtx.Warn("Data is not present for this date range")
+		return nil, http.StatusNotFound, "", "Data is not present for this date range", true
+	}
 	return result, http.StatusOK, "", "", false
 
 }
@@ -144,6 +142,15 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 		logCtx.Error("Cannot Unmarshal SixSignalQueryGroup json in CreateSixSignalShareableURLHandler with error: ", err1)
 		return nil, http.StatusBadRequest, "Cannot Unmarshal SixSignalQueryGroup json in CreateSixSignalShareableURLHandler", true
 	}
+
+	//Checking if report is present for this date range
+	folderName := getFolderName(sixSignalQuery)
+	result := delta.GetSixSignalAnalysisData(projectID, folderName)
+	if result == nil {
+		logCtx.Error("Report is not present for this date range")
+		return nil, http.StatusBadRequest, "Report is not present for this date range", true
+	}
+
 	data := fmt.Sprintf("%d%s%d%d", projectID, sixSignalQuery.Timezone, sixSignalQuery.From, sixSignalQuery.To)
 
 	queryRequest := &model.Queries{
@@ -225,4 +232,16 @@ func isReportShared(projectID int64, idText string) (bool, string) {
 	}
 	return false, "Shareable url doesn't exist"
 
+}
+
+//getFolderName generate folder name using from, to and timezone from sixsignal query
+func getFolderName(query model.SixSignalQuery) string {
+	commonQueryFrom := query.From
+	commonQueryTo := query.To
+	timezoneString := query.Timezone
+
+	fromDate := U.GetDateOnlyFormatFromTimestampAndTimezone(commonQueryFrom, timezoneString)
+	toDate := U.GetDateOnlyFormatFromTimestampAndTimezone(commonQueryTo, timezoneString)
+	folderName := fmt.Sprintf("%v-%v", fromDate, toDate)
+	return folderName
 }

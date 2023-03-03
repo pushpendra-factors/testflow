@@ -238,8 +238,8 @@ func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheRedisKey(projectID int64)
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
-func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.From, q.To, q.Timezone)
+func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheExpiry(projectID int64) float64 {
+	return getQueryCacheResultExpiry(projectID, q.From, q.To, q.Timezone)
 }
 
 func (q *DashboardUnitsWebAnalyticsQuery) TransformDateTypeFilters() error {
@@ -350,7 +350,7 @@ func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
 		return
 	}
 
-	err = cacheRedis.SetPersistent(cacheKey, string(dashboardCacheResultJSON), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
+	err = cacheRedis.SetPersistent(cacheKey, string(dashboardCacheResultJSON), U.GetDashboardCacheResultExpiryInSeconds(projectID, from, to, timezoneString))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return
