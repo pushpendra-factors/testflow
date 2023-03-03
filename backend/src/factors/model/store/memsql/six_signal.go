@@ -149,9 +149,10 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 		"JSON_EXTRACT_BIGINT(events.properties,?) AS time_spent, " +
 		"JSON_EXTRACT_BIGINT(events.user_properties,?) AS page_count, " +
 		caseSelectStmntUserProperties + "AS country, " +
-		caseSelectStmntUserProperties + "AS industry" +
-		caseSelectStmntUserProperties + "AS emp_range" +
-		caseSelectStmntUserProperties + "AS revenue_range" +
+		caseSelectStmntUserProperties + "AS industry, " +
+		caseSelectStmntUserProperties + "AS emp_range, " +
+		caseSelectStmntUserProperties + "AS revenue_range, " +
+		caseSelectStmntUserProperties + "AS domain, " +
 		caseSelectStmntEventProperties + "AS channel " +
 		"FROM events "
 
@@ -163,12 +164,13 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 		U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY,
 		U.SIX_SIGNAL_EMPLOYEE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_EMPLOYEE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_EMPLOYEE_RANGE,
 		U.SIX_SIGNAL_REVENUE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_REVENUE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_REVENUE_RANGE,
+		U.SIX_SIGNAL_DOMAIN, model.PropertyValueNone, U.SIX_SIGNAL_DOMAIN, model.PropertyValueNone, U.SIX_SIGNAL_DOMAIN,
 		U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 		projectID, query.From, query.To, projectID)
 
-	selectStmnt := "SELECT t1.company, t2.country, t2.industry, t2.emp_range, t2.revenue_range, t1.time_spent, t2.page_count, t2.channel " + "FROM "
+	selectStmnt := "SELECT t1.company, t2.country, t2.industry, t2.emp_range, t2.revenue_range, t1.time_spent, t2.page_count, t2.domain, t2.channel " + "FROM "
 
-	qStmnt = selectStmnt + "( " + maxSessionTimeStmnt + ") AS t1 " + "JOIN " + "( " + sixSignalPropertiesStmnt + " ) AS t2 " +
+	qStmnt = selectStmnt + "( " + maxSessionTimeStmnt + " ) AS t1 " + " JOIN " + "( " + sixSignalPropertiesStmnt + " ) AS t2 " +
 		"ON t1.company=t2.company " +
 		"AND t1.time_spent=t2.time_spent " +
 		"ORDER BY t2.page_count DESC; "
