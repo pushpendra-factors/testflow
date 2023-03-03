@@ -33,12 +33,7 @@ function SegmentModal({
   tableProps,
   caller
 }) {
-  const [isEventDDVisible, setEventDDVisible] = useState(false);
-  const [isUserDDVisible, setUserDDVisible] = useState(false);
-  const [isConditionDDVisible, setConditionDDVisible] = useState(false);
-  const [isFilterDDVisible, setFilterDDVisible] = useState(false);
-  const [isCritDDVisible, setCritDDVisible] = useState(false);
-  const [segmentPayload, setSegmentPayload] = useState({
+  const DEFAULT_SEGMENT_PAYLOAD = {
     name: '',
     description: '',
     query: {},
@@ -48,16 +43,26 @@ function SegmentModal({
           ? 'web'
           : '$hubspot_company'
         : type
-  });
-  const [listEvents, setListEvents] = useState([]);
-  const [queryOptions, setQueryOptions] = useState({
+  };
+
+  const DEFAULT_SEGMENT_QUERY_OPTIONS = {
     ...QUERY_OPTIONS_DEFAULT_VALUE,
     caller: caller,
     group_analysis: profileType === 'user' ? 'users' : '$hubspot_company',
     source: type,
     date_range: { ...DefaultDateRangeForSegments },
     table_props: tableProps
-  });
+  };
+  const [isEventDDVisible, setEventDDVisible] = useState(false);
+  const [isUserDDVisible, setUserDDVisible] = useState(false);
+  const [isConditionDDVisible, setConditionDDVisible] = useState(false);
+  const [isFilterDDVisible, setFilterDDVisible] = useState(false);
+  const [isCritDDVisible, setCritDDVisible] = useState(false);
+  const [segmentPayload, setSegmentPayload] = useState(DEFAULT_SEGMENT_PAYLOAD);
+  const [listEvents, setListEvents] = useState([]);
+  const [queryOptions, setQueryOptions] = useState(
+    DEFAULT_SEGMENT_QUERY_OPTIONS
+  );
   const [criteria, setCriteria] = useState('any');
   const [filterProperties, setFilterProperties] = useState({
     user: [],
@@ -98,6 +103,13 @@ function SegmentModal({
     const payload = { ...segmentPayload };
     payload.description = e.target.value;
     setSegmentPayload(payload);
+  };
+
+  const handleClickCancel = () => {
+    onCancel();
+    setListEvents([]);
+    setSegmentPayload(DEFAULT_SEGMENT_PAYLOAD);
+    setQueryOptions(DEFAULT_SEGMENT_QUERY_OPTIONS);
   };
 
   const setSegmentType = (val) => {
@@ -198,13 +210,11 @@ function SegmentModal({
     [listEvents, deleteGroupByForEvent]
   );
 
-  // const deleteEmptyEvent = ()
-
   const eventsList = () => {
     const blockList = [];
     listEvents.forEach((event, index) => {
       blockList.push(
-        <div key={index} className='m-0 mr-2 mb-2'>
+        <div key={index}>
           <EventsBlock
             index={index + 1}
             queryType={QUERY_TYPE_SEGMENT}
@@ -221,7 +231,7 @@ function SegmentModal({
     if (listEvents.length < 3) {
       if (isEventDDVisible) {
         blockList.push(
-          <div key={blockList.length} className='m-0 mr-2 mb-2'>
+          <div key={blockList.length}>
             <EventsBlock
               queryType={QUERY_TYPE_SEGMENT}
               index={listEvents.length + 1}
@@ -230,23 +240,18 @@ function SegmentModal({
               closeEvent={closeEvent}
               groupBy={queryOptions.groupBy}
               groupAnalysis={queryOptions.group_analysis}
-              caller={'segment'}
             />
           </div>
         );
       }
     }
 
-    return (
-      <div className='flex items-start'>
-        {blockList.length ? (
-          <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
-            Performed Events
-          </h2>
-        ) : null}
-        <div className='flex flex-wrap flex-col'>{blockList}</div>
+    return blockList.length ? (
+      <div className='segment-query_block'>
+        <h2 className='title'>Performed Events</h2>
+        <div className='content'>{blockList}</div>
       </div>
-    );
+    ) : null;
   };
 
   const setFilters = (filters) => {
@@ -286,7 +291,7 @@ function SegmentModal({
       const list = [];
       queryOptions.globalFilters.forEach((filter, id) => {
         list.push(
-          <div key={id} className='m-0 mr-2 mb-2'>
+          <div key={id}>
             <PropFilterBlock
               activeProject={activeProject}
               index={id}
@@ -295,6 +300,12 @@ function SegmentModal({
               insertFilter={(val) => editFilter(id, val)}
               closeFilter={closeFilter}
               filterProps={filterProperties}
+              propsDDPos='top'
+              propsDDHeight={344}
+              operatorDDPos='top'
+              operatorDDHeight={344}
+              valuesDDPos='top'
+              valuesDDHeight={344}
             />
           </div>
         );
@@ -302,7 +313,7 @@ function SegmentModal({
       if (queryOptions.globalFilters.length < 3) {
         if (isFilterDDVisible) {
           list.push(
-            <div key={list.length} className='m-0 mr-2 mb-2'>
+            <div key={list.length}>
               <PropFilterBlock
                 activeProject={activeProject}
                 index={list.length}
@@ -310,22 +321,24 @@ function SegmentModal({
                 insertFilter={addFilter}
                 closeFilter={closeFilter}
                 filterProps={filterProperties}
+                propsDDPos='top'
+                propsDDHeight={344}
+                operatorDDPos='top'
+                operatorDDHeight={344}
+                valuesDDPos='top'
+                valuesDDHeight={344}
               />
             </div>
           );
         }
       }
 
-      return (
-        <div className='flex items-start'>
-          {list.length ? (
-            <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
-              With Properties
-            </h2>
-          ) : null}
-          <div className='flex flex-wrap flex-col'>{list}</div>
+      return list.length ? (
+        <div className='segment-query_block'>
+          <h2 className='title'>With Properties</h2>
+          <div className='content'>{list}</div>
         </div>
-      );
+      ) : null;
     }
     return null;
   };
@@ -351,12 +364,13 @@ function SegmentModal({
   };
 
   const selectCondition = () => (
-    <div className='absolute top-0'>
+    <div className='absolute bottom-0'>
       {isConditionDDVisible ? (
         <FaSelect
           options={generateConditionOpts()}
           onClickOutside={() => setConditionDDVisible(false)}
           optionClick={(val) => setActions(val)}
+          placement='top'
         />
       ) : null}
     </div>
@@ -388,13 +402,20 @@ function SegmentModal({
           {selectUsers()}
         </div>
       </div>
-      <div className='px-8 py-4 border-with-radius--small'>
-        <div className='flex flex-col py-2'>
+      <div className='segment-query_container'>
+        <div className='segment-query_section'>
           {eventsList()}
           {filterList()}
-          {listEvents.length > 2 &&
-          queryOptions.globalFilters.length > 2 ? null : (
-            <div className={`relative ${listEvents.length > 1 ? 'mb-4' : ''}`}>
+          {(listEvents.length > 2 && queryOptions.globalFilters.length > 2) ||
+          isEventDDVisible ||
+          isFilterDDVisible ? null : (
+            <div
+              className={`relative ${
+                listEvents.length || queryOptions.globalFilters.length
+                  ? 'mt-2 ml-4'
+                  : ''
+              }`}
+            >
               <Button
                 type='text'
                 icon={<SVG name='plus' size={16} />}
@@ -439,16 +460,17 @@ function SegmentModal({
               setCritDDVisible(false);
             }}
             onClickOutside={() => setCritDDVisible(false)}
-          ></FaSelect>
+            placement='top'
+          />
         )}
       </div>
     </div>
   );
 
   const renderModalFooter = () => (
-    <div className={`p-6 flex flex-row-reverse justify-between`}>
+    <div className={`segment-modal_footer`}>
       <div>
-        <Button className='mr-1' type='default' onClick={() => onCancel()}>
+        <Button className='mr-1' type='default' onClick={handleClickCancel}>
           Cancel
         </Button>
         <Button
@@ -480,10 +502,12 @@ function SegmentModal({
       className={'fa-modal--regular p-6'}
       closable={false}
     >
-      {renderModalHeader()}
-      {renderNameSection()}
-      {renderDescSection()}
-      {renderQuerySection()}
+      <div className='segment-modal'>
+        {renderModalHeader()}
+        {renderNameSection()}
+        {renderDescSection()}
+        {renderQuerySection()}
+      </div>
       {renderModalFooter()}
     </Modal>
   );

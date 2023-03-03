@@ -17,7 +17,13 @@ export default function PropFilterBlock({
   filter,
   deleteFilter,
   insertFilter,
-  closeFilter
+  closeFilter,
+  propsDDPos,
+  propsDDHeight,
+  operatorDDPos,
+  operatorDDHeight,
+  valuesDDPos,
+  valuesDDHeight
 }) {
   const [newFilterState, setNewFilterState] = useState({
     props: [],
@@ -70,7 +76,14 @@ export default function PropFilterBlock({
         applyFilter={applyFilter}
         setValuesByProps={setValuesByProps}
         filter={filter}
-      ></FAFilterSelect>
+        caller='profiles'
+        propsDDPos={propsDDPos}
+        propsDDHeight={propsDDHeight}
+        operatorDDPos={operatorDDPos}
+        operatorDDHeight={operatorDDHeight}
+        valuesDDPos={valuesDDPos}
+        valuesDDHeight={valuesDDHeight}
+      />
     );
   };
 
@@ -194,7 +207,14 @@ export default function PropFilterBlock({
         valueOpts={dropDownValues}
         applyFilter={applyFilter}
         setValuesByProps={setValuesByProps}
-      ></FAFilterSelect>
+        caller='profiles'
+        propsDDPos={propsDDPos}
+        propsDDHeight={propsDDHeight}
+        operatorDDPos={operatorDDPos}
+        operatorDDHeight={operatorDDHeight}
+        valuesDDPos={valuesDDPos}
+        valuesDDHeight={valuesDDHeight}
+      />
     );
   };
 
@@ -205,7 +225,7 @@ export default function PropFilterBlock({
           <Text
             level={8}
             type={'title'}
-            extraClass={`m-0 mx-4`}
+            extraClass={`m-0 mx-3`}
             weight={'thin'}
           >
             and
