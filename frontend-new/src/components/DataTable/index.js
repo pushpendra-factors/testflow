@@ -26,7 +26,8 @@ function DataTable({
   setFiltersVisibility,
   filters,
   appliedFilters,
-  setAppliedFilters
+  setAppliedFilters,
+  breakupHeading
 }) {
   const componentRef = useRef(null);
   const downloadBtnRef = useRef(null);
@@ -67,9 +68,9 @@ function DataTable({
   }, [handleDocumentClick]);
   const handlePageSizeChange = (...args) => {
     setPageSize(args[1]);
-  }; 
+  };
   return (
-    <div ref={componentRef} className="data-table">
+    <div ref={componentRef} className='data-table'>
       <ControlledComponent controller={!isDashboardWidget && renderSearch}>
         <SearchBar
           searchText={searchText}
@@ -83,6 +84,7 @@ function DataTable({
           setAppliedFilters={setAppliedFilters}
           filtersVisible={filtersVisible}
           setFiltersVisibility={setFiltersVisibility}
+          breakupHeading={breakupHeading}
         />
       </ControlledComponent>
       <Table
@@ -97,7 +99,7 @@ function DataTable({
             : false
         }
         bordered={true}
-        rowKey="index"
+        rowKey='index'
         rowSelection={!isDashboardWidget ? rowSelection : null}
         columns={columns}
         dataSource={isDashboardWidget ? tableData.slice(0, 6) : tableData}

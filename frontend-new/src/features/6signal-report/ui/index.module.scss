@@ -1,18 +1,3 @@
-.drawerStyle {
-  height: calc(100% - 64px);
-  top: 64px;
-}
-
-.divider {
-  margin: 12px 0px;
-}
-
-.engagedContainer {
-  background: #f5f6f8;
-  border-radius: 5px;
-  padding: 2px 8px;
-}
-
 .mixChartContainer {
   display: flex;
   justify-content: center;
@@ -21,4 +6,30 @@
   width: 64px;
   height: 64px;
   border-radius: 10px;
+}
+
+.filter {
+  display: flex;
+  position: relative;
+
+  &__propContainer {
+    position: relative;
+  }
+
+  &__event_selector {
+    position: relative;
+
+    &__btn {
+      position: relative;
+    }
+
+    .ant-select-selector {
+      border-radius: 12px;
+    }
+  }
+}
+
+.customButton {
+  background-color: #fff;
+  border-color: #b7bec8;
 }
