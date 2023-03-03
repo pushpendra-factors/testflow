@@ -350,7 +350,7 @@ func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
 		return
 	}
 
-	err = cacheRedis.SetPersistent(cacheKey, string(dashboardCacheResultJSON), U.GetDashboardCacheResultExpiryInSeconds(projectID, from, to, timezoneString))
+	err = cacheRedis.SetPersistent(cacheKey, string(dashboardCacheResultJSON), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return

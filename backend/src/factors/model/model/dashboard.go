@@ -205,7 +205,23 @@ func SetCacheResultByDashboardIdAndUnitIdWithPreset(result interface{}, projectI
 		return
 	}
 
-	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(projectId, from, to, timezoneString))
+	expiryInSecs := float64(0)
+	if C.IsProjectAllowedForLongerExpiry(projectId) {
+		// Approx 3 months for any query less than 3 months
+		if to-from < (15 * U.SECONDS_IN_A_DAY) {
+			expiryInSecs = float64(92 * U.SECONDS_IN_A_DAY)
+		}
+		// Approx 1 year for any query more than a month
+		if to-from > (27 * U.SECONDS_IN_A_DAY) {
+			expiryInSecs = float64(365 * U.SECONDS_IN_A_DAY)
+		}
+		// for anything between 15
+		expiryInSecs = float64(U.CacheExpiryDefaultInSeconds)
+	} else {
+		expiryInSecs = U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString)
+	}
+
+	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), expiryInSecs)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return
@@ -251,7 +267,7 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId int64, d
 		return
 	}
 
-	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(projectId, from, to, timezoneString))
+	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return
