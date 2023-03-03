@@ -78,28 +78,28 @@ func TestGetDashboardCacheResultExpiryInSeconds(t *testing.T) {
 	// Set 'to' as end of day yesterday, 'from' as 7 days before that. Since 'to' is yesterday, it is mutable range.
 	to := U.GetBeginningOfDayTimestampIn(U.TimeNowZ().Unix(), U.TimeZoneStringIST) - 1
 	from := to - 7*U.SECONDS_IN_A_DAY + 1
-	expiry := U.GetDashboardCacheResultExpiryInSeconds(0, from, to, U.TimeZoneStringIST)
+	expiry := U.GetDashboardCacheResultExpiryInSeconds(from, to, U.TimeZoneStringIST)
 	assert.Equal(t, float64(U.CacheExpiryDashboardMutableDataInSeconds), expiry)
 
 	// Even when from is monthly range, it is mutable since to is yesterday.
 	from = to - 30*U.SECONDS_IN_A_DAY + 1
-	expiry = U.GetDashboardCacheResultExpiryInSeconds(0, from, to, U.TimeZoneStringIST)
+	expiry = U.GetDashboardCacheResultExpiryInSeconds(from, to, U.TimeZoneStringIST)
 	assert.Equal(t, float64(U.CacheExpiryDashboardMutableDataInSeconds), expiry)
 
 	// When older than buffer (2) days, expiry should be of weekly range and 0 for monthly range.
 	to = to - 2*U.SECONDS_IN_A_DAY
 	from = to - 7*U.SECONDS_IN_A_DAY + 1
-	expiry = U.GetDashboardCacheResultExpiryInSeconds(0, from, to, U.TimeZoneStringIST)
+	expiry = U.GetDashboardCacheResultExpiryInSeconds(from, to, U.TimeZoneStringIST)
 	assert.Equal(t, float64(U.CacheExpiryWeeklyRangeInSeconds), expiry)
 
 	from = to - 30*U.SECONDS_IN_A_DAY + 1
-	expiry = U.GetDashboardCacheResultExpiryInSeconds(0, from, to, U.TimeZoneStringIST)
+	expiry = U.GetDashboardCacheResultExpiryInSeconds(from, to, U.TimeZoneStringIST)
 	assert.Equal(t, float64(0), expiry)
 
 	// When to is anytime from today, it should return small Today's expiry.
 	from = U.GetBeginningOfDayTimestampIn(U.TimeNowZ().Unix(), U.TimeZoneStringIST)
 	to = U.TimeNowIn(U.TimeZoneStringIST).Unix()
-	expiry = U.GetDashboardCacheResultExpiryInSeconds(0, from, to, U.TimeZoneStringIST)
+	expiry = U.GetDashboardCacheResultExpiryInSeconds(from, to, U.TimeZoneStringIST)
 	assert.Equal(t, float64(U.CacheExpiryDashboardTodaysDataInSeconds), expiry)
 }
 

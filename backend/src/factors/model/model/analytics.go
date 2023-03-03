@@ -147,7 +147,7 @@ const (
 	NotInPrevious           = "notInPrevious"
 	StartsWith              = "startsWith"
 	EndsWith                = "endsWith"
-	InList 					= "inList"
+	InList                  = "inList"
 )
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
@@ -669,7 +669,19 @@ func getQueryCacheResultExpiry(projectID, from, to int64, timezone string) float
 	if to-from == DateRangePreset2MinInSeconds || to-from == DateRangePreset30MinInSeconds {
 		return QueryCacheMutableResultExpirySeconds
 	}
-	return U.GetQueryCacheResultExpiryInSeconds(projectID, from, to, timezoneString)
+	if C.IsProjectAllowedForLongerExpiry(projectID) {
+		// Approx 1 months for any query less than 3 months
+		if to-from < (15 * U.SECONDS_IN_A_DAY) {
+			return float64(31 * U.SECONDS_IN_A_DAY)
+		}
+		// Approx 3 months for any query more than a month
+		if to-from > (27 * U.SECONDS_IN_A_DAY) {
+			return float64(93 * U.SECONDS_IN_A_DAY)
+		}
+		// for anything between 15 to 1 month - 31 days
+		return float64(U.CacheExpiryDefaultInSeconds)
+	}
+	return U.GetQueryCacheResultExpiryInSeconds(from, to, timezoneString)
 }
 
 type QueryResult struct {
