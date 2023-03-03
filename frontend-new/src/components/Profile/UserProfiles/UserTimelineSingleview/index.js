@@ -1,6 +1,7 @@
 import { Spin } from 'antd';
 import React, { useMemo } from 'react';
 import {
+  eventIconsColorMap,
   getEventCategory,
   getIconForCategory,
   groups,
@@ -18,12 +19,6 @@ function AccountTimelineSingleView({
   listProperties
 }) {
   const groupedActivities = _.groupBy(activities, groups['Daily']);
-  const formattedMilestones = useMemo(() => {
-    return Object.entries(milestones || {}).map(([key, value]) => [
-      key,
-      timestampToString['Daily'](value)
-    ]);
-  }, [milestones]);
 
   const SingleTimelineViewTable = ({ data = [] }) => (
     <div className='table-scroll'>
@@ -43,22 +38,13 @@ function AccountTimelineSingleView({
               <tr>
                 <td>
                   <div className='timestamp top-40'>{timestamp}</div>
-                  {/* {milestones.length ? (
-                    <div className='milestone-section'>
-                      {milestones.map((milestone) => (
-                        <div className='green-stripe'>
-                          <div className='text'>{milestone[0]}</div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null} */}
                 </td>
                 <td className={`bg-none pb-${milestones.length * 0}`}>
                   <div class='user-timeline--events'>
                     {events.map((event) => {
                       const category = getEventCategory(event, eventNamesMap);
                       const sourceIcon = getIconForCategory(category);
-                      const eventIcon = event.icon
+                      const eventIcon = eventIconsColorMap[event.icon]
                         ? event.icon
                         : 'calendar_star';
                       return (
@@ -71,13 +57,6 @@ function AccountTimelineSingleView({
                       );
                     })}
                   </div>
-                  {/* {milestones.length ? (
-                    <div className='milestone-section'>
-                      {milestones.map((milestone) => (
-                        <div className={`green-stripe opaque`} />
-                      ))}
-                    </div>
-                  ) : null} */}
                 </td>
               </tr>
             );

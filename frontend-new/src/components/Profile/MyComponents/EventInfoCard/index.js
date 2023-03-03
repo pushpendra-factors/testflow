@@ -10,12 +10,7 @@ import {
 import React from 'react';
 import { PropTextFormat } from 'Utils/dataFormatter';
 
-const EventInfoCard = ({
-  event,
-  eventIcon,
-  sourceIcon,
-  listProperties
-}) => (
+const EventInfoCard = ({ event, eventIcon, sourceIcon, listProperties }) => (
   <div className='timeline-event__container'>
     <div className='timestamp'>
       {MomentTz(event?.timestamp * 1000).format('hh:mm A')}
@@ -28,9 +23,7 @@ const EventInfoCard = ({
       }}
     >
       <img
-        src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${
-          iconMap[eventIcon] ? iconMap[eventIcon] : eventIcon
-        }.svg`}
+        src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
         alt=''
         height={20}
         width={20}
