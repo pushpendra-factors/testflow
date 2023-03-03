@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import styles from './index.module.scss';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Input, Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { CaretDownOutlined, CaretUpOutlined } from '@ant-design/icons';
@@ -14,20 +13,38 @@ function GroupSelect2({
   extraClass,
   allowEmpty = false,
   iconColor = 'purple',
+  placement = 'bottom',
+  height = 576,
   additionalActions
 }) {
-  const [groupCollapseState, setGroupCollapseState] = useState({});
+  const [groupCollapseState, setGroupCollapseState] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showFull, setShowFull] = useState([]);
+  const [showAll, setShowAll] = useState([]);
   const inputComponentRef = useAutoFocus();
 
-  useEffect(() => {
-    const groupColState = Object.assign({}, groupCollapseState);
-    Object.keys(groupedProperties)?.forEach((index) => {
-      groupColState[index] = true;
-    });
-    setGroupCollapseState(groupColState);
+  const groupedProps = useMemo(() => {
+    return groupedProperties?.filter((group) => group?.values?.length > 0);
   }, [groupedProperties]);
+
+  useEffect(() => {
+    const flag = searchTerm.length ? false : true;
+    const groupColState = new Array(groupedProps.length).fill(flag);
+    groupColState[0] = false;
+    if (groupColState.length === 2) groupColState[1] = false;
+    setGroupCollapseState(groupColState);
+  }, [groupedProps, searchTerm]);
+
+  const collapseGroup = (index) => {
+    const groupColState = [...groupCollapseState];
+    groupColState[index] = !groupColState[index];
+    setGroupCollapseState(groupColState);
+  };
+
+  const setShowMoreIndex = (ind, flag) => {
+    const showMoreState = [...showAll];
+    showMoreState[ind] = flag;
+    setShowAll(showMoreState);
+  };
 
   const onInputSearch = (userInput) => {
     setSearchTerm(userInput.currentTarget.value);
@@ -36,19 +53,15 @@ function GroupSelect2({
   const renderEmptyOpt = () => {
     if (!searchTerm.length) return null;
     return (
-      <div key={0} className={`fa-select-group-select--content`}>
-        <div
-          className={styles.dropdown__filter_select__option_group_container_sec}
-        >
+      <div key={0} className={`group`}>
+        <div className={`group__options`}>
           <div
-            className={`fa-select-group-select--options`}
+            className={`option flex items-center`}
             onClick={() => optionClick('', [searchTerm])}
           >
-            <div>
-              <Text level={7} type={'title'} extraClass={'mr-2'}>
-                Select:
-              </Text>
-            </div>
+            <Text level={7} type={'title'} extraClass={'m-0 mr-2'}>
+              Select:
+            </Text>
             <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
               '{searchTerm}'
             </Text>
@@ -66,113 +79,106 @@ function GroupSelect2({
     return grp;
   };
 
-  const setShowMoreIndex = (ind, flag) => {
-    const showMoreState = [...showFull];
-    showMoreState[ind] = flag;
-    setShowFull(showMoreState);
+  const getIcon = (icon) => {
+    const checkIcon = icon?.toLowerCase().split(' ').join('_');
+    if (checkIcon?.includes('salesforce')) {
+      return 'salesforce_ads';
+    }
+    if (checkIcon?.includes('hubspot')) {
+      return 'hubspot_ads';
+    }
+    if (checkIcon?.includes('marketo')) {
+      return 'marketo';
+    }
+    if (checkIcon?.includes('leadsquared')) {
+      return 'leadSquared';
+    }
+    return icon;
   };
 
   const renderOptions = (options) => {
     const renderGroupedOptions = [];
+    if (allowEmpty) {
+      renderGroupedOptions.push(renderEmptyOpt());
+    }
     options?.forEach((group, grpIndex) => {
-      const collState = groupCollapseState[grpIndex] || searchTerm.length > 0;
-
-      let hasSearchTerm = false;
       const valuesOptions = [];
 
-      const getIcon = (icon) => {
-        const checkIcon = icon?.toLowerCase().split(' ').join('_');
-        if (checkIcon?.includes('salesforce')) {
-          return 'salesforce_ads';
-        }
-        if (checkIcon?.includes('hubspot')) {
-          return 'hubspot_ads';
-        }
-        if (checkIcon?.includes('marketo')) {
-          return 'marketo';
-        }
-        if (checkIcon?.includes('leadsquared')) {
-          return 'leadSquared';
-        }
-        return icon;
-      };
+      const groupValues = group?.values?.filter((val) =>
+        val[0]?.toLowerCase()?.includes(searchTerm.toLowerCase())
+      );
 
       const groupItem = (
-        <div key={group.label} className={`fa-select-group-select--content`}>
-          {
-            <div
-              className={'fa-select-group-select--option-group cursor-default'}
-            >
-              <div>
-                <SVG
-                  name={getIcon(group?.icon)}
-                  color={iconColor}
-                  extraClass={'self-center'}
-                ></SVG>
-                <Text
-                  level={8}
-                  type={'title'}
-                  extraClass={'m-0 ml-2'}
-                  weight={'bold'}
-                >
-                  {getGroupLabel(group.label)}
-                </Text>
-              </div>
-            </div>
-          }
-
+        <div key={group.label} className={`group`}>
           <div
-            className={
-              styles.dropdown__filter_select__option_group_container_sec
-            }
+            className={'group__header'}
+            onClick={() => collapseGroup(grpIndex)}
           >
-            {collState
+            <div>
+              <SVG
+                name={getIcon(group?.icon)}
+                color={iconColor}
+                extraClass={'self-center'}
+              ></SVG>
+              <Text
+                level={8}
+                type={'title'}
+                extraClass={'m-0 ml-2'}
+                weight={'bold'}
+              >
+                {`${getGroupLabel(group.label)} (${groupValues?.length})`}
+              </Text>
+            </div>
+            <SVG
+              color={'grey'}
+              name={!groupCollapseState[grpIndex] ? 'minus' : 'plus'}
+              extraClass={'self-center'}
+            ></SVG>
+          </div>
+
+          <div className={`group__options`}>
+            {!groupCollapseState[grpIndex]
               ? (() => {
-                  group?.values?.forEach((val, i) => {
-                    if (
-                      val[0].toLowerCase().includes(searchTerm.toLowerCase())
-                    ) {
-                      hasSearchTerm = true;
-                      valuesOptions.push(
-                        <div
-                          key={i}
-                          title={val[0]}
-                          className={`fa-select-group-select--options`}
-                          onClick={() =>
-                            optionClick(
-                              group.label ? group.label : group.icon,
-                              val,
-                              group.category
-                            )
-                          }
+                  groupValues?.forEach((val, i) =>
+                    valuesOptions.push(
+                      <div
+                        key={i}
+                        title={val[0]}
+                        className={`option`}
+                        onClick={() =>
+                          optionClick(
+                            group.label ? group.label : group.icon,
+                            val,
+                            group.category
+                          )
+                        }
+                      >
+                        {searchTerm.length > 0}
+                        <Text
+                          level={7}
+                          type={'title'}
+                          extraClass={'m-0 truncate'}
+                          weight={'thin'}
                         >
-                          {searchTerm.length > 0}
-                          <Text
-                            level={7}
-                            type={'title'}
-                            extraClass={'m-0 truncate'}
-                            weight={'thin'}
-                          >
-                            <HighlightSearchText
-                              text={val[0]}
-                              highlight={searchTerm}
-                            />
-                          </Text>
-                        </div>
-                      );
-                    }
-                  });
-                  return showFull[grpIndex]
+                          <HighlightSearchText
+                            text={val[0]}
+                            highlight={searchTerm}
+                          />
+                        </Text>
+                      </div>
+                    )
+                  );
+                  return showAll[grpIndex]
                     ? valuesOptions
                     : valuesOptions.slice(0, 5);
                 })()
               : null}
           </div>
 
-          {valuesOptions.length > 5 && collState ? (
-            !showFull[grpIndex] ? (
+          {valuesOptions.length > 5 && !groupCollapseState[grpIndex] ? (
+            !showAll[grpIndex] ? (
               <Button
-                className={styles.dropdown__filter_select__showhide}
+                className={`show-hide-btn`}
                 type='text'
                 onClick={() => {
                   setShowMoreIndex(grpIndex, true);
@@ -183,7 +189,7 @@ function GroupSelect2({
               </Button>
             ) : (
               <Button
-                className={styles.dropdown__filter_select__showhide}
+                className={`show-hide-btn`}
                 type='text'
                 onClick={() => {
                   setShowMoreIndex(grpIndex, false);
@@ -196,20 +202,20 @@ function GroupSelect2({
           ) : null}
         </div>
       );
-      hasSearchTerm && renderGroupedOptions.push(groupItem);
+      groupValues?.length
+        ? renderGroupedOptions.push(groupItem)
+        : renderGroupedOptions.push(null);
     });
-    if (allowEmpty) {
-      renderGroupedOptions.push(renderEmptyOpt());
-    }
     return renderGroupedOptions;
   };
 
   return (
     <>
       <div
-        className={`${styles.dropdown__filter_select} fa-select fa-select--group-select ${extraClass}`}
+        style={{ '--height-var': `${height}px` }}
+        className={`group-select height-full placement-${placement}`}
       >
-        <div className={styles.dropdown__filter_select__input}>
+        <div className={`group-select__input`}>
           <Input
             placeholder={placeholder}
             onKeyUp={onInputSearch}
@@ -217,15 +223,15 @@ function GroupSelect2({
             ref={inputComponentRef}
           />
         </div>
-        <div className={styles.dropdown__filter_select__content}>
-          {renderOptions(groupedProperties)}
+        <div className={`group-select__content`}>
+          {renderOptions(groupedProps)}
         </div>
-        <div className={styles.dropdown__filter_select__additionalAction}>
+        <div className={`group-select__additionalAction`}>
           {additionalActions}
         </div>
       </div>
       <div
-        className={styles.dropdown__hd_overlay}
+        className={`group-select__hd_overlay`}
         onClick={onClickOutside}
       ></div>
     </>
