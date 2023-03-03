@@ -99,8 +99,8 @@ func (q *AttributionQueryUnitV1) GetQueryCacheRedisKey(projectID int64) (*cacheR
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
-func (q *AttributionQueryUnitV1) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Query.From, q.Query.To, q.Query.Timezone)
+func (q *AttributionQueryUnitV1) GetQueryCacheExpiry(projectID int64) float64 {
+	return getQueryCacheResultExpiry(projectID, q.Query.From, q.Query.To, q.Query.Timezone)
 }
 
 func (q *AttributionQueryUnitV1) CheckIfNameIsPresent(nameOfQuery string) bool {

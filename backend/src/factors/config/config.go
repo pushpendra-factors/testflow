@@ -286,6 +286,8 @@ type Configuration struct {
 	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
 	DisableUpdateNextSessionTimestamp                  int
+	StartTimestampForWeekMonth                         int64
+	CacheForLongerExpiryProjects                       string
 }
 
 type Services struct {
@@ -2441,4 +2443,12 @@ func EnableSixSignalGroupByProjectID(projectID int64) bool {
 
 func IsEnableDebuggingForIP() bool {
 	return configuration.EnableDebuggingForIP
+}
+
+func GetStartTimestampForWeekMonth() int64 {
+	return configuration.StartTimestampForWeekMonth
+}
+
+func IsProjectAllowedForLongerExpiry(projectId int64) bool {
+	return isProjectOnProjectsList(configuration.CacheForLongerExpiryProjects, projectId)
 }

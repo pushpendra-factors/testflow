@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	C "factors/config"
 	"factors/filestore"
 	"fmt"
 	"math"
@@ -921,9 +922,23 @@ func IsItreeCampaignEvent(eventName string) bool {
 }
 
 // GetDashboardCacheResultExpiryInSeconds Returns expiry for cache based on query date range.
-func GetDashboardCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZoneString) float64 {
+func GetDashboardCacheResultExpiryInSeconds(projectID, from, to int64, timezoneString TimeZoneString) float64 {
 	toStartOfDay := GetBeginningOfDayTimestampIn(to, timezoneString)
 	nowStartOfDay := GetBeginningOfDayTimestampIn(TimeNowZ().Unix(), timezoneString)
+
+	if C.IsProjectAllowedForLongerExpiry(projectID) {
+		// Approx 3 months for any query less than 3 months
+		if to-from < (15 * SECONDS_IN_A_DAY) {
+			return float64(92 * SECONDS_IN_A_DAY)
+		}
+		// Approx 1 year for any query more than a month
+		if to-from > (27 * SECONDS_IN_A_DAY) {
+			return float64(365 * SECONDS_IN_A_DAY)
+		}
+		// for anything between 15
+		return float64(CacheExpiryDefaultInSeconds)
+	}
+
 	if Is30MinutesTimeRange(from, to) {
 		return float64(CacheExpiryDashboard30MinutesInSeconds)
 	} else if to >= nowStartOfDay {
@@ -945,9 +960,22 @@ func GetDashboardCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZ
 }
 
 // GetQueryCacheResultExpiryInSeconds Returns expiry for cache based on query date range.
-func GetQueryCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZoneString) float64 {
+func GetQueryCacheResultExpiryInSeconds(projectId, from, to int64, timezoneString TimeZoneString) float64 {
 	toStartOfDay := GetBeginningOfDayTimestampIn(to, timezoneString)
 	nowStartOfDay := GetBeginningOfDayTimestampIn(TimeNowZ().Unix(), timezoneString)
+
+	if C.IsProjectAllowedForLongerExpiry(projectId) {
+		// Approx 1 months for any query less than 3 months
+		if to-from < (15 * SECONDS_IN_A_DAY) {
+			return float64(31 * SECONDS_IN_A_DAY)
+		}
+		// Approx 3 months for any query more than a month
+		if to-from > (27 * SECONDS_IN_A_DAY) {
+			return float64(93 * SECONDS_IN_A_DAY)
+		}
+		// for anything between 15 to 1 month - 31 days
+		return float64(CacheExpiryDefaultInSeconds)
+	}
 	if to >= nowStartOfDay {
 		// End date is in today's range. Keep small expiry.
 		return float64(CacheExpiryQueryTodaysDataInSeconds)
