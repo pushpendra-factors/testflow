@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from lib.utils.json import JsonUtil
+from lib.utils.time import TimeUtil
 
 import scripts
 from lib.adwords.oauth_service.fetch_service import FetchService
@@ -28,16 +29,17 @@ class ServicesFetch(BaseJob):
     TRANSFORM_MAP_V01 = []
 
     def __init__(self, next_info):
-        next_info["extract_load_timestamps"] = [next_info.get("next_timestamp")]
+        start_timestamp = next_info.get("next_timestamp")
+        end_timestamp = next_info.get("next_timestamp_end")
+        next_info["extract_load_timestamps"] = TimeUtil.get_timestamp_range(start_timestamp, end_timestamp)
         super().__init__(next_info)
         # Usage - 1.Extract from system into in memory. 2. Message passing for extract-load task.
         self._rows = None
 
-
     def extract_task(self):
         if self.PROCESS_JOB:
             # Extract Phase
-            self.log_status_of_job("extract", "started")
+            self.log_status_of_job("extract", "started", self._next_timestamp)
             records_metric, latency_metric = 0, 0
             start_time = datetime.now()
         
@@ -64,13 +66,13 @@ class ServicesFetch(BaseJob):
             end_time = datetime.now()
             latency_metric = (end_time - start_time).total_seconds()
             self.update_to_file_metrics(EXTRACT, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
-            self.log_status_of_job("extract", "completed")
+            self.log_status_of_job("extract", "completed", self._next_timestamp)
         return
 
     def transform_and_load_task(self, ran_extract):
         if self.PROCESS_JOB:
             for timestamp in self._extract_load_timestamps:
-                self.log_status_of_job("load", "started")
+                self.log_status_of_job("load", "started", timestamp)
                 start_time = datetime.now()
                 rows, self.current_version = self.read_for_load(ran_extract, timestamp)
                 end_time = datetime.now()
@@ -90,13 +92,13 @@ class ServicesFetch(BaseJob):
 
                 load_response = self.add_records(rows, timestamp)
                 if load_response is None or not load_response.ok:
-                    self.log_status_of_job("load", "not completed")
+                    self.log_status_of_job("load", "not completed", timestamp)
                     return
 
                 end_time = datetime.now()
                 latency_metric = (end_time - start_time).total_seconds()
                 self.update_to_file_metrics(LOAD, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
-                self.log_status_of_job("load", "completed")
+                self.log_status_of_job("load", "completed", timestamp)
                 return
     
     def transform_entities(self, rows):
