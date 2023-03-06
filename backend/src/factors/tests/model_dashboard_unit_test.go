@@ -886,7 +886,7 @@ func TestEventsFunnelKPICacheDashboardUnits(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, 3, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
@@ -1049,7 +1049,7 @@ func TestAttributionCacheDashboardUnits(t *testing.T) {
 		dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = baseQuery
 	}
 	var reportCollector sync.Map
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, 1, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
@@ -1158,7 +1158,7 @@ func TestInValidationCacheDashboardUnits(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
 		from, to, errCode := rangeFunction(timezoneString)
@@ -1243,7 +1243,7 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
 		from, to, errCode := rangeFunction(timezoneString)
@@ -1345,7 +1345,7 @@ func TestEventsFunnelKPICacheDashboardUnitsForHardRefresh(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]uint64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, 3, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
@@ -1448,7 +1448,7 @@ func TestAttributionCacheDashboardUnitsForHardRefresh(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]uint64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, 1, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
@@ -1672,7 +1672,7 @@ func TestEventsDateTypeFiltersQueryDashboardUnit(t *testing.T) {
 	dashboardQueryClassList = append(dashboardQueryClassList, query1.GetClass())
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	result := struct {
 		Cache  bool              `json:"cache"`
 		Result model.QueryResult `json:"result"`
