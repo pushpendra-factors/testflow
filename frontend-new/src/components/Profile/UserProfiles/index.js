@@ -219,7 +219,7 @@ function UserProfiles({
               </Avatar>
             )}
             <span className='ml-2 truncate'>
-              {identity.isAnonymous ? 'Unidentified User' : identity.id}
+              {identity.isAnonymous ? 'New User' : identity.id}
             </span>
           </div>
         )
