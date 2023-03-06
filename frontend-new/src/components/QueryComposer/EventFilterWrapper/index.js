@@ -41,7 +41,13 @@ export default function EventFilterWrapper({
   closeFilter,
   showOr,
   filterPrefix = 'Filter by',
-  caller
+  caller,
+  propsDDPos,
+  propsDDHeight,
+  operatorDDPos,
+  operatorDDHeight,
+  valuesDDPos,
+  valuesDDHeight
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -122,7 +128,14 @@ export default function EventFilterWrapper({
         setValuesByProps={setValuesByProps}
         filter={filter}
         refValue={refValue}
-      ></FAFilterSelect>
+        caller={caller}
+        propsDDPos={propsDDPos}
+        propsDDHeight={propsDDHeight}
+        operatorDDPos={operatorDDPos}
+        operatorDDHeight={operatorDDHeight}
+        valuesDDPos={valuesDDPos}
+        valuesDDHeight={valuesDDHeight}
+      />
     );
   };
 
@@ -699,7 +712,14 @@ export default function EventFilterWrapper({
           applyFilter={applyFilter}
           refValue={refValue}
           setValuesByProps={setValuesByProps}
-        ></FAFilterSelect>
+          caller={caller}
+          propsDDPos={propsDDPos}
+          propsDDHeight={propsDDHeight}
+          operatorDDPos={operatorDDPos}
+          operatorDDHeight={operatorDDHeight}
+          valuesDDPos={valuesDDPos}
+          valuesDDHeight={valuesDDHeight}
+        />
       </>
     );
   };
@@ -715,7 +735,7 @@ export default function EventFilterWrapper({
           <Text
             level={8}
             type={'title'}
-            extraClass={`m-0 ${caller === 'profiles' ? 'mx-4' : 'mr-16 ml-10'}`}
+            extraClass={`m-0 ${caller === 'profiles' ? 'mx-3' : 'mr-16 ml-10'}`}
             weight={'thin'}
           >
             and
@@ -725,7 +745,7 @@ export default function EventFilterWrapper({
             level={8}
             type={'title'}
             extraClass={`whitespace-no-wrap m-0 ${
-              caller === 'profiles' ? 'mx-4' : 'mx-10'
+              caller === 'profiles' ? 'mx-3' : 'mx-10'
             }`}
             weight={'thin'}
           >
@@ -736,7 +756,7 @@ export default function EventFilterWrapper({
         <Text
           level={8}
           type={'title'}
-          extraClass={`m-0 ${caller === 'profiles' ? 'mx-4' : 'mx-2'}`}
+          extraClass={`m-0 ${caller === 'profiles' ? 'mx-3' : 'mx-2'}`}
           weight={'thin'}
         >
           or

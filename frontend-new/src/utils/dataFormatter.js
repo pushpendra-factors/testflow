@@ -43,8 +43,8 @@ export const numberWithCommas = (x) =>
   x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 export const setDisplayName = (nameMap, key) => {
-  return nameMap[key]? nameMap[key] : key;
-}
+  return nameMap[key] ? nameMap[key] : key;
+};
 
 export const calculatePercentage = (numerator, denominator, precision = 1) => {
   if (!denominator) {
@@ -638,8 +638,6 @@ export const PropTextFormat = (prop = 'users') => {
     formatText[i] = word.charAt(0).toUpperCase() + word.substring(1);
   });
   return formatText.join(' ');
-
-  return prop;
 };
 
 export function HighlightSearchText({ text = '', highlight = '' }) {

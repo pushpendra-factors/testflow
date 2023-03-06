@@ -99,6 +99,8 @@ function EventsBlock({
             setDDVisible(false);
             closeEvent();
           }}
+          placement='top'
+          height={336}
           allowEmpty
         />
       </div>
@@ -151,7 +153,13 @@ function EventsBlock({
       insertFilter={insertFilters}
       closeFilter={closeFilter}
       refValue={ind}
-      caller={'profiles'}
+      caller='profiles'
+      propsDDPos='top'
+      propsDDHeight={344}
+      operatorDDPos='top'
+      operatorDDHeight={344}
+      valuesDDPos='top'
+      valuesDDHeight={344}
     />
   );
 
@@ -209,7 +217,13 @@ function EventsBlock({
                     insertFilter={insertFilters}
                     closeFilter={closeFilter}
                     refValue={refValue}
-                    caller={'profiles'}
+                    caller='profiles'
+                    propsDDPos='top'
+                    propsDDHeight={344}
+                    operatorDDPos='top'
+                    operatorDDHeight={344}
+                    valuesDDPos='top'
+                    valuesDDHeight={344}
                   />
                 </div>
                 {ind !== orFilterIndex && !displayMode && (
@@ -228,7 +242,13 @@ function EventsBlock({
                     closeFilter={closeFilter}
                     refValue={refValue}
                     showOr
-                    caller={'profiles'}
+                    caller='profiles'
+                    propsDDPos='top'
+                    propsDDHeight={344}
+                    operatorDDPos='top'
+                    operatorDDHeight={344}
+                    valuesDDPos='top'
+                    valuesDDHeight={344}
                   />
                 </div>
               )}
@@ -250,7 +270,13 @@ function EventsBlock({
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   refValue={refValue}
-                  caller={'profiles'}
+                  caller='profiles'
+                  propsDDPos='top'
+                  propsDDHeight={344}
+                  operatorDDPos='top'
+                  operatorDDHeight={344}
+                  valuesDDPos='top'
+                  valuesDDHeight={344}
                 />
               </div>
               <div key={ind + 1}>
@@ -266,7 +292,13 @@ function EventsBlock({
                   closeFilter={closeFilter}
                   refValue={refValue}
                   showOr
-                  caller={'profiles'}
+                  caller='profiles'
+                  propsDDPos='top'
+                  propsDDHeight={344}
+                  operatorDDPos='top'
+                  operatorDDHeight={344}
+                  valuesDDPos='top'
+                  valuesDDHeight={344}
                 />
               </div>
             </div>
@@ -296,7 +328,7 @@ function EventsBlock({
       >
         <div className='flex items-center'>
           <div className={`flex items-center`}>
-            <div className='relative ml-2'>
+            <div className='relative'>
               <Tooltip
                 title={
                   eventNames[event?.label]
@@ -305,7 +337,11 @@ function EventsBlock({
                 }
               >
                 {!event ? (
-                  <Button type='text' onClick={() => setDDVisible(true)}>
+                  <Button
+                    className='btn-total-round'
+                    type='link'
+                    onClick={() => setDDVisible(true)}
+                  >
                     Select Event
                   </Button>
                 ) : (
@@ -331,11 +367,7 @@ function EventsBlock({
                 {selectEvents()}
               </Tooltip>
             </div>
-            {event && !displayMode ? (
-              <div className={styles.query_block__additional_actions}>
-                {additionalActions()}
-              </div>
-            ) : null}
+            {event && !displayMode ? additionalActions() : null}
           </div>
         </div>
       </div>
