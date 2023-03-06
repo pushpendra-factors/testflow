@@ -179,16 +179,18 @@ func main() {
 			}
 		}
 		{
-			var allProjects bool
-			allProjects, projectIdsToRun, _ = C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+			allProjects, projectIdsFromList, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
 			if allProjects {
 				projectIDs, errCode := store.GetStore().GetAllProjectIDs()
 				if errCode != http.StatusFound {
 					log.Fatal("Failed to get all projects and project_ids set to '*'.")
 				}
 				for _, projectID := range projectIDs {
-					projectIdsToRun[projectID] = true
+					projectIdsFromList[projectID] = true
 				}
+			}
+			for projectId, _ := range projectIdsFromList {
+				projectIdsToRun[projectId] = true
 			}
 		}
 		for projectId := range projectIdsToRun {
