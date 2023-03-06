@@ -319,7 +319,7 @@ function ContactDetails({
 
   const renderLeftPane = () => (
     <div className='leftpane'>
-      <div className='leftpane__user'>
+      <div className='user'>
         {user.identity.isAnonymous ? (
           <SVG
             name={`TrackedUser${user.identity.id.match(/\d/g)[0]}`}
@@ -328,7 +328,7 @@ function ContactDetails({
         ) : (
           <Avatar
             size={96}
-            className='leftpane__user__avatar'
+            className='avatar'
             style={{
               backgroundColor: `${
                 iconColors[
@@ -354,11 +354,10 @@ function ContactDetails({
           )}
         </div>
       </div>
-
-      <div className='leftpane__props'>
+      <div className='props'>
         {listLeftPaneProps(userDetails.data.left_pane_props)}
         <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
-        <div className='leftpane__props__groups'>
+        <div className='groups'>
           <Text type='title' level={7} extraClass='m-0 my-2' color='grey'>
             Associated Groups:
           </Text>

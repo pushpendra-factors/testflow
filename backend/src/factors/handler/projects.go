@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"	
 
 	C "factors/config"
 
@@ -135,6 +136,11 @@ func EditProjectHandler(c *gin.Context) {
 	project, status := store.GetStore().GetProject(projectID)
 	if status != http.StatusFound {
 		c.AbortWithStatus(errCode)
+		return
+	}
+	_, err = time.LoadLocation(projectEditDetails.TimeZone)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid Timezone sent."})
 		return
 	}
 	if project.TimeZone != "Asia/Kolkata" && projectEditDetails.TimeZone != "" {

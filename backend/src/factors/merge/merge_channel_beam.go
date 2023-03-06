@@ -185,7 +185,7 @@ func SortDoctypesExecutor(beamStruct *RunBeamConfig, cPatternsString []string) e
 	beam.ParDo0(s, &SortAdDoFn{Config: config}, cPatternsPcolReshuffled)
 	err := beamx.Run(ctx, p)
 	if err != nil {
-		log.Fatalf("unable to run beam pipeline :  %s", err)
+		log.Errorf("unable to run beam pipeline :  %s", err)
 		return err
 	}
 	return nil

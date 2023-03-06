@@ -9,6 +9,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -85,7 +86,7 @@ func (store *MemSQL) GetProjectSetting(projectId int64) (*model.ProjectSetting, 
 
 func (store *MemSQL) IsClearbitIntegratedByProjectID(projectID int64) (bool, int) {
 	db := C.GetServices().Db
-	logFields := log.Fields{ "project_id": projectID }
+	logFields := log.Fields{"project_id": projectID}
 	logCtx := log.WithFields(logFields)
 
 	if valid := isValidProjectScope(projectID); !valid {
@@ -134,7 +135,7 @@ func (store *MemSQL) GetClearbitKeyFromProjectSetting(projectId int64) (string, 
 // on integration page of factors.
 func (store *MemSQL) IsSixSignalIntegratedByEitherWay(projectID int64) (bool, int) {
 	db := C.GetServices().Db
-	logFields := log.Fields{ "project_id": projectID }
+	logFields := log.Fields{"project_id": projectID}
 	logCtx := log.WithFields(logFields)
 
 	if valid := isValidProjectScope(projectID); !valid {
@@ -632,6 +633,22 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 		}
 	}
 
+	// validate ip
+	if settings.FilterIps != nil {
+		var filterIps model.FilterIps
+		err := U.DecodePostgresJsonbToStructType(settings.FilterIps, &filterIps)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectId, "setting": settings}).WithError(
+				err).Error("Failed decoding json. Aborting.")
+			return nil, http.StatusInternalServerError
+		}
+		if !IsValidIP(filterIps) {
+			log.WithFields(log.Fields{"project_id": projectId, "filter_ips": filterIps}).
+				Error("Invalid IP Address entered. Aborting")
+			return nil, http.StatusBadRequest
+		}
+	}
+
 	var updatedProjectSetting model.ProjectSetting
 	if err := db.Model(&updatedProjectSetting).Where("project_id = ?",
 		projectId).Updates(settings).Error; err != nil {
@@ -648,6 +665,28 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 	store.delAllProjectSettingsCacheForProject(projectId)
 
 	return &updatedProjectSetting, http.StatusAccepted
+}
+
+func IsValidIP(filterIps model.FilterIps) bool {
+	for _, ip := range filterIps.BlockIps {
+		ip = strings.TrimSpace(ip)
+		if net.ParseIP(ip) == nil {
+			return false
+		}
+	}
+	return true
+}
+
+func IsBlockedIP(checkString0 string, checkString1 string, filterIps model.FilterIps) bool {
+	checkString0 = strings.TrimSpace(checkString0)
+	checkString1 = strings.TrimSpace(checkString1)
+	for _, blockedIP := range filterIps.BlockIps {
+		ip := strings.TrimSpace(blockedIP)
+		if checkString0 == ip || checkString1 == ip {
+			return true
+		}
+	}
+	return false
 }
 
 func (store *MemSQL) IsPSettingsIntShopifyEnabled(projectId int64) bool {

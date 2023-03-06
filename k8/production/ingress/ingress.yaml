@@ -1,0 +1,147 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gce-ingress
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "gce-lb-ext-ip"
+    networking.gke.io/managed-certificates: "api-factors"
+spec:
+  defaultBackend:
+    service:
+      name: sdkserver-service
+      port:
+        number: 80
+  rules:
+  - host: sdkapi.factors.ai
+    http:
+      paths:
+      - backend:
+          service:
+            name: sdkserver-service
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: sdkserver-service
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: api.factors.ai
+    http:
+      paths:
+      - backend:
+          service:
+            name: pythonappserver-service
+            port:
+              number: 80
+        path: /adwords
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: pythonappserver-service
+            port:
+              number: 80
+        path: /adwords/*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: pythonappserver-service
+            port:
+              number: 80
+        path: /google_organic
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: pythonappserver-service
+            port:
+              number: 80
+        path: /google_organic/*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: sdkserver-service
+            port:
+              number: 80
+        path: /sdk
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: sdkserver-service
+            port:
+              number: 80
+        path: /sdk/*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: sdkserver-service
+            port:
+              number: 80
+        path: /integrations/segment
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: sdkserver-service
+            port:
+              number: 80
+        path: /integrations/segment/*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: sdkserver-service
+            port:
+              number: 80
+        path: /integrations/segment_platform
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: sdkserver-service
+            port:
+              number: 80
+        path: /integrations/segment_platform/*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: sdkserver-service
+            port:
+              number: 80
+        path: /integrations/rudderstack_platform
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: sdkserver-service
+            port:
+              number: 80
+        path: /integrations/rudderstack_platform/*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: appserver-memsql-service
+            port:
+              number: 80
+        path: /mql
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: appserver-memsql-service
+            port:
+              number: 80
+        path: /mql/*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: appserver-memsql-service
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: appserver-memsql-service
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific

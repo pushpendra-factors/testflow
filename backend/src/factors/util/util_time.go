@@ -3,6 +3,7 @@ package util
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -30,7 +31,7 @@ func GetDateOnlyHyphenFormatFromTimestampZ(timestamp int64) string {
 	return time.Unix(timestamp, 0).UTC().Format(DATETIME_FORMAT_YYYYMMDD_HYPHEN)
 }
 
-//Returns date in YYYYMMDD format for a given timestamp and timezone
+// Returns date in YYYYMMDD format for a given timestamp and timezone
 func GetDateOnlyFormatFromTimestampAndTimezone(timestamp int64, timezone TimeZoneString) string {
 	in := GetTimeLocationFor(timezone)
 	return time.Unix(timestamp, 0).In(in).Format(DATETIME_FORMAT_YYYYMMDD)
@@ -478,6 +479,19 @@ func GetBeginningDayTimestampFromDateString(date string) (int64, error) {
 		return 0, err
 	}
 	return time.Date(int(startYear), time.Month(startMonth), int(startDay), 0, 0, 0, 0, time.FixedZone("UTC", 0)).Unix(), nil
+}
+
+func GetTimestampInSecs(timestamp int) int {
+	digitsCount := 0
+	{
+		timestampTmp := timestamp
+		for timestampTmp > 0 {
+			timestampTmp = timestampTmp / 10
+			digitsCount++
+		}
+	}
+	reqTimestamp := int(float64(timestamp) * math.Pow(10, float64(10-digitsCount)))
+	return reqTimestamp
 }
 
 func startDateOfMonth(year int, month time.Month) time.Time {

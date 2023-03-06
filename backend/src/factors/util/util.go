@@ -635,6 +635,15 @@ func GetKeysMapAsArray(keys map[string]bool) []string {
 	return keysArray
 }
 
+func GetKeysofStringMapAsArray(keys map[string]string) []string {
+	keysArray := make([]string, 0)
+	for key := range keys {
+		keysArray = append(keysArray, key)
+	}
+
+	return keysArray
+}
+
 func GetKeysOfInt64StringMap(m *map[int64]string) []int64 {
 	if m == nil {
 		return []int64{}

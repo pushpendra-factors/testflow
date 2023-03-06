@@ -166,7 +166,7 @@ function AccountProfiles({
           (
             <div className='flex items-center'>
               <img
-                src={`https://logo.clearbit.com/${getHost(item.host)}`}
+                src={`https://logo.uplead.com/${getHost(item.host)}`}
                 onError={(e) => {
                   if (
                     e.target.src !==
@@ -482,24 +482,32 @@ function AccountProfiles({
     });
 
     return (
-      <div className='flex items-start'>
+      <div className='segment-query_block'>
         {blockList.length ? (
-          <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
+          <h2
+            className={`title ${
+              activeSegment?.query?.gup?.length ? '' : 'width-unset'
+            }`}
+          >
             Performed Events
           </h2>
         ) : null}
-        <div className='flex flex-wrap flex-col'>{blockList}</div>
+        <div className='content'>{blockList}</div>
       </div>
     );
   };
 
   const filtersList = (filters) => {
     return (
-      <div className='flex items-start'>
-        <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
+      <div className='segment-query_block'>
+        <h2
+          className={`title ${
+            activeSegment?.query?.ewp?.length ? '' : 'width-unset'
+          }`}
+        >
           Properties
         </h2>
-        <div className='flex flex-wrap flex-col'>
+        <div className='content'>
           <PropertyFilter
             filtersLimit={10}
             profileType='user'
@@ -550,6 +558,7 @@ function AccountProfiles({
         placement='bottomLeft'
         trigger={activeSegment.query ? 'hover' : ''}
         content={segmentInfo}
+        mouseEnterDelay={0.5}
       >
         <Button
           className='dropdown-btn'
@@ -649,10 +658,10 @@ function AccountProfiles({
           <div className='text-right'>
             <a
               className='font-size--small'
-              href='https://clearbit.com'
+              href='https://www.uplead.com'
               target='_blank'
             >
-              Logos provided by Clearbit
+              Logos provided by UpLead
             </a>
           </div>
         )}

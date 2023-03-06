@@ -11,6 +11,7 @@ type ProjectSetting struct {
 	// Used project_id as primary key also, becase of 1-1 relationship.
 	ProjectId         int64           `gorm:"primary_key:true" json:"project_id,omitempty"`
 	AttributionConfig *postgres.Jsonb `json:"attribution_config"`
+	SixSignalConfig   *postgres.Jsonb `json:"six_signal_config"`
 	TimelinesConfig   *postgres.Jsonb `json:"timelines_config"`
 
 	// Using pointers to avoid update by default value.
@@ -43,6 +44,7 @@ type ProjectSetting struct {
 	IntHubspotSyncInfo        *postgres.Jsonb `json:"int_hubspot_sync_info,omitempty" `
 	CreatedAt                 time.Time       `json:"created_at"`
 	UpdatedAt                 time.Time       `json:"updated_at"`
+	FilterIps                 *postgres.Jsonb `json:"filter_ips,omitempty"`
 	//Facebook settings
 	IntFacebookEmail       string  `json:"int_facebook_email,omitempty"`
 	IntFacebookAccessToken string  `json:"int_facebook_access_token,omitempty"`
@@ -120,12 +122,68 @@ type ProjectSetting struct {
 }
 */
 
+/*
+{
+  "api_limit": 60,
+  "country_include": [
+    {
+      "value": "India",
+      "type": "equals"
+    },
+    {
+      "value": "USA",
+      "type": "equals"
+    },
+    {
+      "value": "Nepal",
+      "type": "notEqual"
+    },
+    {
+      "value": "SriLanka",
+      "type": "notEqual"
+    }
+  ],
+  "country_exclude": [],
+  "pages_include": [
+    {
+      "value": "https://www.factors.ai/",
+      "type": "equals"
+    },
+    {
+      "value": "demo",
+      "type": "contains"
+    },
+    {
+      "value": "https://www.factors.ai/terms",
+      "type": "notEqual"
+    }
+  ],
+  "pages_exclude": []
+}
+*/
+
+type SixSignalConfig struct {
+	APILimit       int               `json:"api_limit"`
+	CountryInclude []SixSignalFilter `json:"country_include"`
+	CountryExclude []SixSignalFilter `json:"country_exclude"`
+	PagesInclude   []SixSignalFilter `json:"pages_include"`
+	PagesExclude   []SixSignalFilter `json:"pages_exclude"`
+}
+
+type SixSignalFilter struct {
+	Value string `json:"value"`
+	Type  string `json:"type"`
+}
+
 type TimelinesConfig struct {
 	DisabledEvents []string      `json:"disabled_events"`
 	UserConfig     UserConfig    `json:"user_config"`
 	AccountConfig  AccountConfig `json:"account_config"`
 }
 
+type FilterIps struct {
+	BlockIps []string `json:"block_ips"`
+}
 type UserConfig struct {
 	Milestones    []string `json:"milestones"`
 	TableProps    []string `json:"table_props"`

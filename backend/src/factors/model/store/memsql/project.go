@@ -263,6 +263,14 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		logCtx.WithError(err).Error("Default Timelines Config Encode Failed.")
 	}
 
+	//default filter_ips
+	filterIps := model.FilterIps{
+		BlockIps: []string{},
+	}
+	filtersIpsEncoded, err := U.EncodeStructTypeToPostgresJsonb(filterIps)
+	if err != nil {
+		logCtx.WithError(err).Error("Default Filter IPs Encode Failed.")
+	}
 	_, errCode := store.createProjectSetting(&model.ProjectSetting{
 		ProjectId:            projectID,
 		AutoTrack:            &defaultAutoTrackState,
@@ -274,6 +282,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		IntegrationBits:      model.DEFAULT_STRING_WITH_ZEROES_32BIT,
 		AutoClickCapture:     &model.AutoClickCaptureDefault,
 		TimelinesConfig:      tlConfigEncoded,
+		FilterIps:            filtersIpsEncoded,
 	})
 	if errCode != http.StatusCreated {
 		logCtx.WithField("err_code", errCode).Error("Create project settings failed on create project dependencies.")

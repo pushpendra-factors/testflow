@@ -161,6 +161,7 @@ type Configuration struct {
 	SegmentRequestQueueProjectTokens               []string
 	UseDefaultProjectSettingForSDK                 bool
 	BlockedSDKRequestProjectTokens                 []string
+	BlockedIPProjectIDs                            string
 	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
 	CacheLookUpRangeProjects                map[int64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
 	LookbackWindowForEventUserCache         int
@@ -286,6 +287,7 @@ type Configuration struct {
 	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
 	DisableUpdateNextSessionTimestamp                  int
+	EnableSyncReferenceFieldsByProjectID               string
 	StartTimestampForWeekMonth                         int64
 	CacheForLongerExpiryProjects                       string
 }
@@ -1895,6 +1897,28 @@ func IsBlockedSDKRequestProjectToken(projectToken string) bool {
 	return U.StringValueIn(projectToken, configuration.BlockedSDKRequestProjectTokens)
 }
 
+// IsIPBlockingFeatureEnabled - Enables the feature of blocking
+// IP for a project, based on given project_id and list of block_ip_project_ids.
+func IsIPBlockingFeatureEnabled(projectID int64) bool {
+	if configuration.BlockedIPProjectIDs == "" {
+		return false
+	}
+
+	if configuration.BlockedIPProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.BlockedIPProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
 // PingHealthcheckForSuccess Ping healthchecks.io for cron success.
 func PingHealthcheckForSuccess(healthcheckID string, message interface{}) {
 	log.Info("Job successful with message ", message)
@@ -2096,7 +2120,7 @@ func GetAppName(defaultAppName, overrideAppName string) string {
 }
 
 func GetCloudManager(projectId int64, skipProjectIdDependency bool) filestore.FileManager {
-	if(skipProjectIdDependency){
+	if skipProjectIdDependency {
 		return configuration.NewCloudManager
 	}
 	if U.ContainsInt64InArray(configuration.ProjectIdsV2, projectId) {
@@ -2399,7 +2423,7 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	}
 
 	return true
-}	
+}
 
 func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
 	if configuration.IncreaseKPILimitForProjectIDs == "" {
@@ -2443,6 +2467,15 @@ func EnableSixSignalGroupByProjectID(projectID int64) bool {
 
 func IsEnableDebuggingForIP() bool {
 	return configuration.EnableDebuggingForIP
+}
+
+func AllowSyncReferenceFields(projectId int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSyncReferenceFieldsByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return projectIDsMap[projectId]
 }
 
 func GetStartTimestampForWeekMonth() int64 {

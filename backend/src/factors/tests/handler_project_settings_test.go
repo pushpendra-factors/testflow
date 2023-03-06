@@ -6,6 +6,7 @@ import (
 	H "factors/handler"
 	"factors/handler/helpers"
 	"factors/model/model"
+	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -239,6 +241,33 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 		assert.NotNil(t, jsonRespMap["auto_track_spa_page_view"])
 	})
 
+	//Test updating filter_ips
+	t.Run("UpdateFilterIps", func(t *testing.T) {
+		// updating with invalid ip
+		filterIps := model.FilterIps{
+			BlockIps: []string{"192.168.000.354", "10.40.210.253", "2001:0db8:85a3:0000:0000:8a2e:0370:7334"},
+		}
+		filtersIpsEncoded, err := U.EncodeStructTypeToPostgresJsonb(filterIps)
+		assert.Nil(t, err)
+		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{"filter_ips": filtersIpsEncoded})
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		// updating with valid ip
+		filterIps = model.FilterIps{
+			BlockIps: []string{"192.168.000.254", "10.40.210.253", "2001:0db8:85a3:0000:0000:8a2e:0370:7334"},
+		}
+		filtersIpsEncoded1, err := U.EncodeStructTypeToPostgresJsonb(filterIps)
+		assert.Nil(t, err)
+		w = sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{"filter_ips": filtersIpsEncoded1})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		w = sendGetProjectSettingsReq(r, project.ID, agent)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var jsonResponseMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &jsonResponseMap)
+		assert.NotEmpty(t, jsonResponseMap["filter_ips"])
+	})
 }
 
 func TestUpdateHubspotProjectSettings(t *testing.T) {

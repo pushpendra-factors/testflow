@@ -35,16 +35,17 @@ function GlobalFilterBlock({
   fetchKPIFilterValues,
   selectedMainCategory,
   showOr,
-  viewMode = false
+  viewMode = false,
+  isSameKPIGrp
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(''); 
   const [newFilterState, setNewFilterState] = useState({
     props: [],
     operator: '',
     values: [],
-  });
+  }); 
 
   const [dropDownValues, setDropDownValues] = useState({});
   const [selectedRngState, setSelectedRngState] = useState([
@@ -65,32 +66,46 @@ function GlobalFilterBlock({
       },
     ],
     operator: operatorProps,
-  });
-
+  });  
+  
   useEffect(() => {
     if (filter) {
-      setValuesByProps(filter.props);
-      setNewFilterState(filter);
-
-      if (filter && filter?.extra) { 
+      setValuesByProps(filter.props); 
+      setNewFilterState(filter); 
+      
+      
+      if (filter && filter?.extra) {
         let filterData = {}; 
-        if (selectedMainCategory?.category == 'channels' || selectedMainCategory?.category == 'custom_channels') {
-          filterData = {
-            category: selectedMainCategory?.category, 
-            object_type: filter?.extra[3] ? filter?.extra[3] : selectedMainCategory?.group,
-            property_name: filter?.extra[1],
-            display_category: selectedMainCategory?.group,
-            entity: 'event',
+        if(!isSameKPIGrp){
+          filterData = { 
+            "category": "",
+            "display_category": "",
+            "object_type": "",
+            "property_name": filter?.extra[1],
+            "entity": "",
+            "me": "",
+            "is_property_mapping": true
           };
-        } else {
-          filterData = {
-            category: selectedMainCategory?.category,
-            object_type: selectedMainCategory?.group, // depreciated! object_type to display_category key change
-            display_category: selectedMainCategory?.group, // object_type to display_category key change
-            property_name: filter?.extra[1],
-            entity: filter?.extra[3] ? filter?.extra[3] : filter?.extra[2],
-          };
-        } 
+        }
+        else{
+          if (selectedMainCategory?.category == 'channels' || selectedMainCategory?.category == 'custom_channels') {
+            filterData = {
+              category: selectedMainCategory?.category, 
+              object_type: filter?.extra[3] ? filter?.extra[3] : selectedMainCategory?.group,
+              property_name: filter?.extra[1],
+              display_category: selectedMainCategory?.group,
+              entity: 'event',
+            };
+          } else {
+            filterData = {
+              category: selectedMainCategory?.category,
+              object_type: selectedMainCategory?.group, // depreciated! object_type to display_category key change
+              display_category: selectedMainCategory?.group, // object_type to display_category key change
+              property_name: filter?.extra[1],
+              entity: filter?.extra[3] ? filter?.extra[3] : filter?.extra[2],
+            };
+          }  
+        }
 
         
         fetchKPIFilterValues(activeProject.id, filterData)
@@ -108,7 +123,7 @@ function GlobalFilterBlock({
 
 
     }
-  }, [filter]);
+  }, [filter, isSameKPIGrp]);
 
   useEffect(() => {
     const filterDD = Object.assign({}, filterDropDownOptions);
@@ -578,28 +593,41 @@ function GlobalFilterBlock({
     } else {
       return props[index];
     }
-  };
+  }; 
 
   const setValuesByProps = (props) => { 
-    if (props) {
-      let filterData = {}; 
+    if (props && props.length>3) {
+      let filterData = {};    
 
-      if (selectedMainCategory?.category == 'channels' || selectedMainCategory?.category == 'custom_channels') {
-        filterData = {
-          category: selectedMainCategory?.category,
-          object_type: props[3] ? props[3] : selectedMainCategory?.group,
-          property_name: props[1],
-          display_category: selectedMainCategory?.group,
-          entity: 'event',
+      if(!isSameKPIGrp){
+        filterData = { 
+          "category": "",
+          "display_category": "",
+          "object_type": "",
+          "property_name": props[1],
+          "entity": "",
+          "me": "",
+          "is_property_mapping": true
         };
-      } else {
-        filterData = {
-          category: selectedMainCategory?.category,
-          object_type: selectedMainCategory?.group, // depreciated! object_type to display_category key change
-          display_category: selectedMainCategory?.group, // object_type to display_category key change
-          property_name: props[1],
-          entity: props[3] ? props[3] : props[2],
-        };
+      }
+      else{
+        if (selectedMainCategory?.category == 'channels' || selectedMainCategory?.category == 'custom_channels') {
+          filterData = {
+            category: selectedMainCategory?.category,
+            object_type: props[3] ? props[3] : selectedMainCategory?.group,
+            property_name: props[1],
+            display_category: selectedMainCategory?.group,
+            entity: 'event',
+          };
+        } else {
+          filterData = {
+            category: selectedMainCategory?.category,
+            object_type: selectedMainCategory?.group, // depreciated! object_type to display_category key change
+            display_category: selectedMainCategory?.group, // object_type to display_category key change
+            property_name: props[1],
+            entity: props[3] ? props[3] : props[2],
+          };
+        } 
       }
 
       fetchKPIFilterValues(activeProject.id, filterData)

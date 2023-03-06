@@ -92,12 +92,6 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 	}
 	userID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	errCode, errMsg := store.GetStore().DeleteEventTriggerAlert(projectID, id)
-	if errCode != http.StatusAccepted || errMsg != "" {
-		log.WithFields(log.Fields{"project_id": projectID}).Error("Cannot find any alert to update")
-		return nil, http.StatusBadRequest, "Cannot find any alert to update", "", true
-	}
-
 	var alert model.EventTriggerAlertConfig
 
 	r := c.Request
@@ -115,5 +109,10 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
 	}
 
+	errCode, errMsg = store.GetStore().DeleteEventTriggerAlert(projectID, id)
+	if errCode != http.StatusAccepted || errMsg != "" {
+		log.WithFields(log.Fields{"project_id": projectID}).Error("Cannot find any alert to update")
+		return nil, http.StatusBadRequest, "Cannot find any alert to update", "", true
+	}
 	return alert, http.StatusAccepted, "", "", false
 }

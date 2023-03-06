@@ -5,6 +5,8 @@ import { Input, Button, Spin } from 'antd';
 import { DISPLAY_PROP } from '../../utils/constants';
 import useAutoFocus from '../../hooks/useAutoFocus';
 import { generateRandomKey } from 'Utils/global';
+import isEqual from 'lodash/isEqual';
+import sortBy from 'lodash/sortBy';
 
 function FaSelect({
   options,
@@ -20,7 +22,8 @@ function FaSelect({
   children,
   extraClass = '',
   disabled = false,
-  showIcon = true
+  showIcon = true,
+  placement = 'bottom'
 }) {
   const [optClickArr, setOptClickArr] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +37,13 @@ function FaSelect({
       setOptClickArr(arr);
     }
   }, [selectedOpts]);
+
+  const checkSelectedAndOptClickEquality = () => {
+    const parsedArray = optClickArr
+      .map((arr) => JSON.parse(arr)?.[0])
+      .filter((v) => !!v);
+    return isEqual(sortBy(selectedOpts), sortBy(parsedArray));
+  };
 
   const optClick = (clickFunc, option) => {
     if (!multiSelect) {
@@ -110,21 +120,18 @@ function FaSelect({
 
       options.forEach((op, index) => {
         isSelected = isSelectedCheck(op);
-        let st = searchTerm.toLowerCase()
+        let st = searchTerm.toLowerCase();
         // Regex to detect https/http is there or not as a protocol
-        let testURLRegex = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$/
-        if(testURLRegex.test(st) > 0){
-          st = st.split('://')[1]
+        let testURLRegex =
+          /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$/;
+        if (testURLRegex.test(st) > 0) {
+          st = st.split('://')[1];
         }
-        st = st.replace(/\/$/,"")
+        st = st.replace(/\/$/, '');
 
-        
         if (
           op[0].toLowerCase().includes(st) ||
-          (op[0] === '$none' &&
-            DISPLAY_PROP[op[0]]
-              .toLowerCase()
-              .includes(st))
+          (op[0] === '$none' && DISPLAY_PROP[op[0]].toLowerCase().includes(st))
         ) {
           rendOpts.push(
             <div
@@ -156,46 +163,44 @@ function FaSelect({
         }
       });
     } else {
-
-      multiSelect && selectedOpts.forEach((op, index) => {
-        let is = isSelectedCheck([op])
-         if(!is){
+      multiSelect &&
+        selectedOpts.forEach((op, index) => {
+          let is = isSelectedCheck([op]);
+          if (!is) {
             return;
-           }
-        rendOpts.push(
-          <div
-            key={op ? op : generateRandomKey()}
-            title={DISPLAY_PROP[op] ? DISPLAY_PROP[op] : op}
-            className={`${
-              allowSearch
-                ? 'fa-select-group-select--options'
-                : 'fa-select--options'
-            } ${styles.fa_selected}`}
-            onClick={() => optClick(() => optionClick([op]), [op])}
-          >
-         
-            <span className={`ml-1 ${styles.optText}`}>
-              {DISPLAY_PROP[op] ? DISPLAY_PROP[op] : op}
-            </span>
-        
+          }
+          rendOpts.push(
+            <div
+              key={op ? op : generateRandomKey()}
+              title={DISPLAY_PROP[op] ? DISPLAY_PROP[op] : op}
+              className={`${
+                allowSearch
+                  ? 'fa-select-group-select--options'
+                  : 'fa-select--options'
+              } ${styles.fa_selected}`}
+              onClick={() => optClick(() => optionClick([op]), [op])}
+            >
+              <span className={`ml-1 ${styles.optText}`}>
+                {DISPLAY_PROP[op] ? DISPLAY_PROP[op] : op}
+              </span>
+
               <SVG
                 name='checkmark'
                 extraClass={'self-center'}
                 size={17}
                 color={'purple'}
               />
-         
-          </div>
-        );
-      });
+            </div>
+          );
+        });
       options.forEach((op, index) => {
         isSelected = isSelectedCheck(op);
-        
+
         let is = selectedOpts.includes(op[0]) && isSelected;
-        if(is) return;
+        if (is) return;
         rendOpts.push(
           <div
-            key={op? op[0] : generateRandomKey()}
+            key={op ? op[0] : generateRandomKey()}
             title={DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
             style={{
               color: op[2] === 'disabled' ? '#B7BEC8' : '#0E2647',
@@ -232,8 +237,6 @@ function FaSelect({
           </div>
         );
       });
-
-
     }
 
     if (delOption) {
@@ -272,7 +275,7 @@ function FaSelect({
           className={`fa-select--buttons ${styles.dropdown__apply_opt} p `}
         >
           <Button
-            disabled={!optClickArr.length}
+            disabled={checkSelectedAndOptClickEquality()}
             type='primary'
             onClick={applyClick}
             className={'w-full'}
@@ -296,7 +299,7 @@ function FaSelect({
         className={`${styles.selectInput} fa-filter-select fa-search-select`}
       >
         <Input
-          style={{overflow:"hidden"}}
+          style={{ overflow: 'hidden' }}
           prefix={<SVG name={'search'} />}
           size='large'
           placeholder={'Search'}
@@ -310,14 +313,21 @@ function FaSelect({
   return (
     <>
       <div
-        className={`${extraClass} ${
-          posRight ? styles.dropdown__select_rt : styles.dropdown__select_lt
-        } fa-select ${
+        className={`${extraClass}  ${styles.dropdown__select}
+          ${
+            posRight
+              ? styles.dropdown__select_right_0
+              : styles.dropdown__select_left_0
+          } fa-select ${
           posRight ? `fa-select--group-select-sm` : `fa-select--group-select`
         } ${
           allowSearch
             ? `fa-select--group-select-sm`
             : `fa-select--group-select-mini`
+        } ${
+          placement === 'top'
+            ? styles.dropdown__select_placement_top
+            : styles.dropdown__select_placement_bottom
         }`}
       >
         {allowSearch && renderSearchInput()}

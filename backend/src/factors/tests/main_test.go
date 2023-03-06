@@ -120,6 +120,7 @@ func TestMain(m *testing.M) {
 		EventsPullMaxLimit:                                 50000,
 		FormFillIdentificationAllowedProjects:              "*",
 		EnableDBConnectionPool2:                            *enableDBConnectionPool2,
+		EnableSyncReferenceFieldsByProjectID:               "*",
 	}
 	C.InitConf(config)
 
