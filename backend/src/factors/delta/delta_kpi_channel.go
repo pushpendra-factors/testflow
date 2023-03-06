@@ -44,7 +44,7 @@ func getCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanne
 	for _, filter := range propFilter {
 		name, err := getFilterPropertyReportName(channel)(filter.PropertyName, filter.ObjectType)
 		if err != nil {
-			return nil, err
+			return &wpi, err
 		}
 		filter.PropertyName = name
 		newPropFilter = append(newPropFilter, filter)
@@ -55,7 +55,7 @@ func getCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanne
 	var propsToEvalPerQuery []string
 	queryLevel, err := getQueryLevel(newPropFilter)
 	if err != nil {
-		return nil, err
+		return &wpi, err
 	}
 	for _, prop := range propsToEval {
 		propWithLevel := strings.SplitN(prop, "#", 2)
@@ -84,11 +84,11 @@ func getCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanne
 	} else {
 		err := fmt.Errorf("error metric calculation info not available for %s", metric)
 		log.WithError(err).Error("error GetCampaignMetricsInfo")
-		return nil, err
+		return &wpi, err
 	}
 	if info, scale, err := GetCampaignMetric(scanner, newPropFilter, propsToEvalPerQuery, queryLevel, metricToCalcinfo[metric], docTypeAlias, requiredDocTypes, infoMap); err != nil {
 		log.WithError(err).Error("error GetCampaignMetricsInfo for kpi " + metric)
-		return nil, err
+		return &wpi, err
 	} else {
 		for key, valMap := range info.Features {
 			newKey, _ := getPropertyFilterName(channel)(key)
