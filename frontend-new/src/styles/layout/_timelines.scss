@@ -120,10 +120,12 @@
     .leftpane {
         width: 20%;
         min-width: 300px;
-        height: 100vh;
+        min-height: 100vh;
+        max-height: 100%;
         background: #FFFFFF;
         padding: 36px 0 0;
         z-index: 15;
+        border-right: 1px solid #E7E9ED;
 
         .user {
             position: sticky;
@@ -167,8 +169,6 @@
     .timeline-view {
         width: 80%;
         padding: 96px 36px 36px;
-        border-left: 1px solid #E7E9ED;
-        min-height: 100vh !important;
 
         -ms-overflow-style: none;
         scrollbar-width: none;

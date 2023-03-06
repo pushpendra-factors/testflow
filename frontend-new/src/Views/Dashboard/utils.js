@@ -5,7 +5,8 @@ import {
   getAttributionsData,
   getCampaignsData,
   getProfileData,
-  getKPIData
+  getKPIData,
+  getAttributionsDataV1
 } from '../../reducers/coreQuery/services';
 import {
   QUERY_TYPE_ATTRIBUTION,
@@ -39,7 +40,10 @@ const formatFilters = (pr) => {
   });
 };
 
-export const getValidGranularityForSavedQueryWithSavedGranularity = ({ durationObj, savedFrequency }) => {
+export const getValidGranularityForSavedQueryWithSavedGranularity = ({
+  durationObj,
+  savedFrequency
+}) => {
   // its possible that user may have saved gbt as hour but if the duration selected is more than 1 day we should not use gbt as hour
   if (!savedFrequency) {
     return 'date';
@@ -48,8 +52,13 @@ export const getValidGranularityForSavedQueryWithSavedGranularity = ({ durationO
     const fr = MomentTz(durationObj.from).startOf('day').utc().unix();
     const to = MomentTz(durationObj.to).endOf('day').utc().unix();
     const daysDiff = MomentTz(to * 1000).diff(fr * 1000, 'days');
-    const validGranularityOptions = getValidGranularityOptionsFromDaysDiff({ daysDiff });
-    const gbt = validGranularityOptions.indexOf(savedFrequency) > -1 ? savedFrequency : validGranularityOptions[0];
+    const validGranularityOptions = getValidGranularityOptionsFromDaysDiff({
+      daysDiff
+    });
+    const gbt =
+      validGranularityOptions.indexOf(savedFrequency) > -1
+        ? savedFrequency
+        : validGranularityOptions[0];
     return gbt;
   }
   return 'date';
@@ -61,7 +70,8 @@ export const getDataFromServer = (
   dashboardId,
   durationObj,
   refresh,
-  activeProjectId
+  activeProjectId,
+  v1 = false
 ) => {
   if (query.query.query_group) {
     const isCampaignQuery =
@@ -159,14 +169,14 @@ export const getDataFromServer = (
         }
       };
     }
-    
+
     // synchronising from and to when the query has kpi query group for hubspot and salesforce group type
-    if(attributionQuery?.query?.kpi_query_group){
-      const fr = attributionQuery.query.from
-      const to = attributionQuery.query.to
+    if (attributionQuery?.query?.kpi_query_group) {
+      const fr = attributionQuery.query.from;
+      const to = attributionQuery.query.to;
       attributionQuery = {
         ...attributionQuery,
-        query:{
+        query: {
           ...attributionQuery.query,
           kpi_query_group: {
             ...attributionQuery.query.kpi_query_group,
@@ -179,20 +189,50 @@ export const getDataFromServer = (
               };
             })
           }
-        },
-      }
+        }
+      };
+    } else if (attributionQuery?.query?.kpi_queries?.length) {
+      const fr = attributionQuery.query.from;
+      const to = attributionQuery.query.to;
+      attributionQuery.query.kpi_queries = attributionQuery.query.kpi_queries.map((kpiQ, index) => {
+        return {
+          ...kpiQ,
+          kpi_query_group: {
+            ...attributionQuery.query.kpi_queries[index].kpi_query_group,
+            qG: attributionQuery.query.kpi_queries[index].kpi_query_group.qG.map((q) => {
+              return {
+                ...q,
+                fr,
+                to,
+                gbt: q.gbt ? durationObj.frequency : ''
+              };
+            })
+          }
+        };
+      })
     }
 
-    return getAttributionsData(
-      activeProjectId,
-      attributionQuery,
-      {
-        refresh,
-        unit_id: unitId,
-        id: dashboardId
-      },
-      false
-    );
+    return v1
+      ? getAttributionsDataV1(
+          activeProjectId,
+          attributionQuery,
+          {
+            refresh,
+            unit_id: unitId,
+            id: dashboardId
+          },
+          false
+        )
+      : getAttributionsData(
+          activeProjectId,
+          attributionQuery,
+          {
+            refresh,
+            unit_id: unitId,
+            id: dashboardId
+          },
+          false
+        );
   } else if (query.query.cl && query.query.cl === QUERY_TYPE_PROFILE) {
     const profileQuery = query.query;
     return getProfileData(

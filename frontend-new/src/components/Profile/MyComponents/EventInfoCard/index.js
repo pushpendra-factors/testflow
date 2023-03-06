@@ -3,7 +3,6 @@ import MomentTz from 'Components/MomentTz';
 import {
   eventIconsColorMap,
   getPropType,
-  iconMap,
   propValueFormat,
   TimelineHoverPropDisplayNames
 } from 'Components/Profile/utils';
@@ -18,8 +17,8 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, listProperties }) => (
     <div
       className='event-icon'
       style={{
-        '--border-color': `${eventIconsColorMap[eventIcon].borderColor}`,
-        '--bg-color': `${eventIconsColorMap[eventIcon].bgColor}`
+        '--border-color': `${eventIconsColorMap[eventIcon]?.borderColor}`,
+        '--bg-color': `${eventIconsColorMap[eventIcon]?.bgColor}`
       }}
     >
       <img
@@ -42,9 +41,7 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, listProperties }) => (
         )}
         <div className='source-icon'>
           <img
-            src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${
-              iconMap[sourceIcon] ? iconMap[sourceIcon] : sourceIcon
-            }.svg`}
+            src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${sourceIcon}.svg`}
             alt=''
             height={24}
             width={24}

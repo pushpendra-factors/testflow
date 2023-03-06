@@ -97,6 +97,7 @@ function ReportContent({
   useEffect(() => {
     if (queryType === QUERY_TYPE_EVENT && breakdownType !== EACH_USER_TYPE) {
       setChartTypeMenuItems([]);
+      return;
     }
     setChartTypeMenuItems(
       getChartTypeMenuItems(

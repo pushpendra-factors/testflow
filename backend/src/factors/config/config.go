@@ -288,6 +288,8 @@ type Configuration struct {
 	EnableDebuggingForIP                               bool
 	DisableUpdateNextSessionTimestamp                  int
 	EnableSyncReferenceFieldsByProjectID               string
+	StartTimestampForWeekMonth                         int64
+	CacheForLongerExpiryProjects                       string
 }
 
 type Services struct {
@@ -2474,4 +2476,12 @@ func AllowSyncReferenceFields(projectId int64) bool {
 	}
 
 	return projectIDsMap[projectId]
+}
+
+func GetStartTimestampForWeekMonth() int64 {
+	return configuration.StartTimestampForWeekMonth
+}
+
+func IsProjectAllowedForLongerExpiry(projectId int64) bool {
+	return isProjectOnProjectsList(configuration.CacheForLongerExpiryProjects, projectId)
 }

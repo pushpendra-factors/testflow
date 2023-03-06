@@ -130,12 +130,12 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 
 	eventNameID := " SELECT id FROM event_names WHERE project_id=? AND name='$session' "
 
-	maxSessionTimeQuery := "SELECT JSON_EXTRACT_STRING(events.user_properties,?) AS Company, " +
-		"MAX(JSON_EXTRACT_BIGINT(events.properties,?)) AS Time_Spent FROM events "
+	maxSessionTimeQuery := "SELECT JSON_EXTRACT_STRING(events.user_properties,?) AS company, " +
+		"MAX(JSON_EXTRACT_BIGINT(events.properties,?)) AS time_spent FROM events "
 
 	maxSessionTimeStmnt := maxSessionTimeQuery + "WHERE project_id=? AND timestamp >= ? AND timestamp <= ? " +
-		" AND events.event_name_id IN ( " + eventNameID + " ) " + " AND Company IS NOT NULL " +
-		" GROUP BY Company "
+		" AND events.event_name_id IN ( " + eventNameID + " ) " + " AND company IS NOT NULL " +
+		" GROUP BY company "
 
 	qParams = append(qParams, U.SIX_SIGNAL_NAME, U.SP_SPENT_TIME, projectID, query.From, query.To, projectID)
 
@@ -145,13 +145,15 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 	caseSelectStmntUserProperties := "CASE WHEN JSON_EXTRACT_STRING(events.user_properties, ?) IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(events.user_properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(events.user_properties, ?) END "
 
-	sixSignalPropertiesQuery := "SELECT JSON_EXTRACT_STRING(events.user_properties,?) AS Company, " +
-		"JSON_EXTRACT_BIGINT(events.properties,?) AS Time_Spent, " +
-		"JSON_EXTRACT_BIGINT(events.user_properties,?) AS Page_Count, " +
-		caseSelectStmntUserProperties + "AS Country, " +
-		caseSelectStmntUserProperties + "AS Page_Seen, " +
-		caseSelectStmntEventProperties + "AS Campaign, " +
-		caseSelectStmntEventProperties + "AS Channel " +
+	sixSignalPropertiesQuery := "SELECT JSON_EXTRACT_STRING(events.user_properties,?) AS company, " +
+		"JSON_EXTRACT_BIGINT(events.properties,?) AS time_spent, " +
+		"JSON_EXTRACT_BIGINT(events.user_properties,?) AS page_count, " +
+		caseSelectStmntUserProperties + "AS country, " +
+		caseSelectStmntUserProperties + "AS industry, " +
+		caseSelectStmntUserProperties + "AS emp_range, " +
+		caseSelectStmntUserProperties + "AS revenue_range, " +
+		caseSelectStmntUserProperties + "AS domain, " +
+		caseSelectStmntEventProperties + "AS channel " +
 		"FROM events "
 
 	sixSignalPropertiesStmnt := sixSignalPropertiesQuery + " WHERE project_id=? AND timestamp >= ? AND timestamp <= ?" +
@@ -159,17 +161,19 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 
 	qParams = append(qParams, U.SIX_SIGNAL_NAME, U.SP_SPENT_TIME, U.UP_PAGE_COUNT,
 		U.SIX_SIGNAL_COUNTRY, model.PropertyValueNone, U.SIX_SIGNAL_COUNTRY, model.PropertyValueNone, U.SIX_SIGNAL_COUNTRY,
-		U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL,
-		U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN,
+		U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY,
+		U.SIX_SIGNAL_EMPLOYEE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_EMPLOYEE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_EMPLOYEE_RANGE,
+		U.SIX_SIGNAL_REVENUE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_REVENUE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_REVENUE_RANGE,
+		U.SIX_SIGNAL_DOMAIN, model.PropertyValueNone, U.SIX_SIGNAL_DOMAIN, model.PropertyValueNone, U.SIX_SIGNAL_DOMAIN,
 		U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 		projectID, query.From, query.To, projectID)
 
-	selectStmnt := "SELECT t1.Company, t2.Country, t2.Page_Seen, t2.Campaign, t1.Time_Spent, t2.Page_Count, t2.Channel " + "FROM "
+	selectStmnt := "SELECT t1.company, t2.country, t2.industry, t2.emp_range, t2.revenue_range, t1.time_spent, t2.page_count, t2.domain, t2.channel " + "FROM "
 
-	qStmnt = selectStmnt + "( " + maxSessionTimeStmnt + ") AS t1 " + "JOIN " + "( " + sixSignalPropertiesStmnt + " ) AS t2 " +
-		"ON t1.Company=t2.Company " +
-		"AND t1.Time_Spent=t2.Time_Spent " +
-		"ORDER BY t2.Page_Count DESC; "
+	qStmnt = selectStmnt + "( " + maxSessionTimeStmnt + " ) AS t1 " + " JOIN " + "( " + sixSignalPropertiesStmnt + " ) AS t2 " +
+		"ON t1.company=t2.company " +
+		"AND t1.time_spent=t2.time_spent " +
+		"ORDER BY t2.page_count DESC; "
 
 	log.WithFields(log.Fields{"SixSignalQuery": qStmnt, "Query parameters": qParams}).Info("Six Signal Query Statement and Parameters")
 

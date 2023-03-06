@@ -596,6 +596,8 @@ function CoreQuery({
                 JSON.parse(record.settings.attributionMetrics)
               )
             );
+          }
+          if (record.settings && record.settings.tableFilters) {
             updateCoreQueryReducer({
               attributionTableFilters: JSON.parse(record.settings.tableFilters)
             });

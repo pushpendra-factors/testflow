@@ -96,7 +96,7 @@ function AttributionChart({
   }, []);
 
   useEffect(() => {
-    const tableData = getTableData(
+    const { tableData } = getTableData(
       data,
       event,
       searchText,

@@ -166,9 +166,12 @@ function requestWithLocalStorage(method, url, headers, data) {
             if (shouldUseLocalStorage) removeLocalStorage(uid);
 
             var _response = response;
-            return _response.json()
+            return  _response.json()
                 .then(function(responseJSON) {
-                    if (!_response.ok) return Promise.reject("Failed to fetch "+ url +" with status "+ _response.status);
+                    if (!_response.ok) {
+                        logger.debug(_response);
+                        return Promise.resolve(_response);
+                    }
                     return { status: _response.status, body: responseJSON };
                 })
         })
@@ -177,8 +180,9 @@ function requestWithLocalStorage(method, url, headers, data) {
             // else keep it on localstorage for next time processing.
             if (shouldUseLocalStorage && !isFetchAbortedError(e)) removeLocalStorage(uid);
             
+            logger.debug(e);
             // Forward error to next catch.
-            return Promise.reject(e);
+            return Promise.resolve(e);
         });
 }
 

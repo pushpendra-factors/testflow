@@ -188,11 +188,16 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	H.SleepIfHeaderSet(c)
 	QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
+	log.WithFields(log.Fields{"projectId": projectId,
+		"QueryKey": QueryKey}).Info("AttributionHandler project_id debug 1 ")
+
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
+	log.WithFields(log.Fields{"projectId": projectId}).Info("AttributionHandler project_id debug 2 ")
 	var result *model.QueryResult
 	result, err = store.GetStore().ExecuteAttributionQueryV0(projectId, requestPayload.Query, debugQueryKey,
 		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 
+	log.WithFields(log.Fields{"projectId": projectId}).Info("AttributionHandler project_id debug 3 ")
 	if err != nil {
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
 		logCtx.WithError(err).Error("Failed to process query from DB")
