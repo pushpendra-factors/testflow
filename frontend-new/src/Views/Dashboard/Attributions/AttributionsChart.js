@@ -131,7 +131,7 @@ const AttributionsChart = ({
   ]);
 
   useEffect(() => {
-    const tableData = getTableData(
+    const {tableData} = getTableData(
       data,
       event,
       searchText,

@@ -274,8 +274,8 @@ function runPostInitProcess(_this, trackOnInit) {
         return _this.autoClearbitRevealCapture(_this, _this.getConfig("int_clear_bit"));
     })
     .catch(function(err) {
-        logger.errorLine(err);
-        return Promise.reject(err.stack + " during get_settings on init.");
+        logger.debug(err);
+        return Promise.resolve(err.stack + " during get_settings on init.");
     });
 }
 
@@ -344,7 +344,7 @@ App.prototype.updateEventProperties = function(eventId, properties={}) {
         return Promise.reject("No eventId provided for update.");
     
     if (Object.keys(properties).length == 0)
-        logger.debug("No properties given to update event.");
+        logger.debug("No properties given to update event.", false);
         
     var payload = { event_id: eventId, properties: properties };
     
@@ -390,7 +390,7 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs,
         logger.debug("Updating page properties : " + JSON.stringify(properties), false);
         var eventId = Cache.getFactorsCache(Cache.currentPageTrackEventId);
         var payload = { event_id: eventId, properties: properties };
-        this.client.updateEventProperties(updatePayloadWithUserIdFromCookie(payload));
+        this.client.updateEventProperties(updatePayloadWithUserIdFromCookie(payload)).catch(logger.debug);
     } else {
         logger.debug("No change on page properties, skipping update for : " + JSON.stringify(lastPageProperties), false);
     }
@@ -493,7 +493,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
 
     if (Cache.getFactorsCache(Cache.trackPageOnSPA)) {
         setInterval(function(){
-            if (Cache.getFactorsCache(Cache.currentPageURLEventName) != getAutoTrackURL()) {
+            if (Cache.getFactorsCache(Cache.currentPageURLEventName) && Cache.getFactorsCache(Cache.currentPageURLEventName) != getAutoTrackURL()) {
                 _this.track(
                     getAutoTrackURL(), 
                     Properties.getFromQueryParams(window.location), 
@@ -955,9 +955,9 @@ App.prototype.handleError = function(error) {
     var client = new APIClient('', '');
     client.sendError(payload); 
 
-    logger.errorLine(error);
+    logger.debug(error);
 
-    return Promise ? Promise.reject(error) : error;
+    return Promise ? Promise.resolve(error) : error;
 }
 
 module.exports = exports = App;

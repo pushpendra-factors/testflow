@@ -80,7 +80,7 @@ class MetricsController:
             cls.etl_stats["failures"][message][doc_type].add(project_id)
         elif status == STATUS_FAILED:
 
-            if "invalid_grant" in message.lower() or "PERMISSION_DENIED".lower() in mesage.lower():
+            if "invalid_grant" in message.lower() or "PERMISSION_DENIED".lower() in message.lower():
                 cls.etl_stats["token_failures"].setdefault(message, set())
                 cls.etl_stats["token_failures"][message].add(project_id)
             else:

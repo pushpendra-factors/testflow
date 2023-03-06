@@ -11,7 +11,8 @@ import {
   notification,
   Checkbox,
   Modal,
-  Popover
+  Popover,
+  Tooltip
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import {
@@ -27,7 +28,9 @@ import {
   setGroupBy,
   delGroupBy,
   getUserProperties,
-  resetGroupBy
+  resetGroupBy,
+  getGroupProperties,
+  getEventProperties
 } from 'Reducers/coreQuery/middleware';
 import { getEventsWithProperties, getStateFromFiltersEvent } from '../utils';
 import {
@@ -77,7 +80,9 @@ const EventBasedAlert = ({
   groupPropNames,
   userProperties,
   userPropNames,
-  eventNames
+  eventNames,
+  getGroupProperties,
+  getEventProperties
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -150,6 +155,27 @@ const EventBasedAlert = ({
     viewAlertDetails,
     alertState
   ]);
+
+  const matchEventName = (item) => {
+    let findItem =
+      eventPropNames?.[item] || userPropNames?.[item] || groupPropNames?.[item];
+    return findItem ? findItem : item;
+  };
+
+  useEffect(() => {
+    if (viewAlertDetails?.event_alert?.event) {
+      getGroupProperties(
+        activeProject.id,
+        AvailableGroups[viewAlertDetails?.event_alert?.event]
+      );
+    }
+    if (viewAlertDetails?.event_alert?.event) {
+      getEventProperties(
+        activeProject.id,
+        viewAlertDetails?.event_alert?.event
+      );
+    }
+  }, [viewAlertDetails?.event_alert?.event]);
 
   const confirmRemove = (id) => {
     return deleteEventAlert(activeProject.id, id).then(
@@ -312,6 +338,7 @@ const EventBasedAlert = ({
         setGroupState={pushGroupBy}
         closeDropDown={() => setGroupByDDVisible(false)}
         hideText={true}
+        posTop={true}
       />
     ) : null;
 
@@ -338,6 +365,7 @@ const EventBasedAlert = ({
                 setGroupState={pushGroupBy}
                 closeDropDown={() => setGroupByDDVisible(false)}
                 hideText={true}
+                posTop={true}
               />
             </div>
           );
@@ -624,6 +652,25 @@ const EventBasedAlert = ({
     setShowSelectChannelsModal(false);
   };
 
+  const propOption = (item) => {
+    return (
+      <Tooltip title={item} placement={'right'}>
+        <div style={{ width: '210px' }}>
+          <div
+            style={{
+              maxWidth: '200px',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {item}
+          </div>
+        </div>{' '}
+      </Tooltip>
+    );
+  };
+
   const renderEventForm = () => {
     return (
       <>
@@ -770,7 +817,7 @@ const EventBasedAlert = ({
                     style={{
                       width: 200
                     }}
-                    dropdownMatchSelectWidth={false}
+                    // dropdownMatchSelectWidth={false}
                     disabled={!queries[0]?.label}
                     onChange={(value, details) => {
                       setEventPropertyDetails(details);
@@ -778,9 +825,8 @@ const EventBasedAlert = ({
                     placeholder='Select Property'
                     showSearch
                     filterOption={(input, option) =>
-                      option.children
-                        .toLowerCase()
-                        .indexOf(input.toLowerCase()) >= 0
+                      option.value.toLowerCase().indexOf(input.toLowerCase()) >=
+                      0
                     }
                   >
                     {breakdownOptions?.map((item) => {
@@ -791,7 +837,7 @@ const EventBasedAlert = ({
                           name={item[1]}
                           data_type={item[2]}
                         >
-                          {item[0]}
+                          {propOption(item[0])}
                         </Option>
                       );
                     })}
@@ -1075,7 +1121,9 @@ const EventBasedAlert = ({
                     </div>
                   </Popover>
                 </div>
-                <div>{groupByItems()}</div>
+                <div className='fa--query_block_section borderless no-padding mt-0'>
+                  {groupByItems()}
+                </div>
                 <Button
                   type='text'
                   style={{ color: '#8692A3' }}
@@ -1675,7 +1723,7 @@ const EventBasedAlert = ({
             </div>
           </Col>
         </Row>
-        <Row className={'m-0'}>
+        <Row className={'m-0 my-2'}>
           <Col span={20}>
             <Text
               type={'title'}
@@ -1685,25 +1733,32 @@ const EventBasedAlert = ({
             >
               for the same value of
             </Text>
-            {viewAlertDetails?.event_alert?.breakdown_properties?.length >
-              0 && (
-              <div className='inline ml-2'>
-                {viewGroupByItems(
-                  viewAlertDetails?.event_alert?.breakdown_properties &&
-                    viewAlertDetails?.event_alert?.breakdown_properties
-                      .length &&
-                    viewAlertDetails?.event_alert?.breakdown_properties[0] &&
-                    getGroupByFromState(
-                      viewAlertDetails?.event_alert?.breakdown_properties
-                        .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-                        .filter(
-                          (gbp) =>
-                            gbp.ena === viewAlertDetails?.event_alert?.event
-                        )
+            <div className='inline ml-2'>
+              <Select
+                disabled={true}
+                style={{
+                  width: 200
+                }}
+                showArrow={false}
+                className={'inline fa-select'}
+                value={
+                  viewAlertDetails?.event_alert?.breakdown_properties?.[0]?.pr
+                }
+              >
+                <Option
+                  value={
+                    viewAlertDetails?.event_alert?.breakdown_properties?.[0]?.pr
+                  }
+                >
+                  {propOption(
+                    matchEventName(
+                      viewAlertDetails?.event_alert?.breakdown_properties?.[0]
+                        ?.pr
                     )
-                )}
-              </div>
-            )}
+                  )}
+                </Option>
+              </Select>
+            </div>
           </Col>
         </Row>
         <Row className={'mt-2'}>
@@ -1815,7 +1870,7 @@ const EventBasedAlert = ({
               <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>
                 Attach properties for your payload
               </Text>
-              <div>
+              <div className='fa--query_block_section borderless no-padding mt-0'>
                 {viewGroupByItems(
                   viewAlertDetails?.event_alert?.message_property &&
                     viewAlertDetails?.event_alert?.message_property.length &&
@@ -1957,5 +2012,7 @@ export default connect(mapStateToProps, {
   setGroupBy,
   delGroupBy,
   getUserProperties,
-  resetGroupBy
+  resetGroupBy,
+  getGroupProperties,
+  getEventProperties
 })(EventBasedAlert);

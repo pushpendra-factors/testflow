@@ -179,8 +179,8 @@ func (q *ChannelQueryUnit) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.K
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
-func (q *ChannelQueryUnit) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Query.From, q.Query.To, q.Query.Timezone)
+func (q *ChannelQueryUnit) GetQueryCacheExpiry(projectID int64) float64 {
+	return getQueryCacheResultExpiry(projectID, q.Query.From, q.Query.To, q.Query.Timezone)
 }
 
 func (q *ChannelQueryUnit) TransformDateTypeFilters() error {
@@ -271,8 +271,8 @@ func (q *ChannelGroupQueryV1) GetQueryCacheRedisKey(projectID int64) (*cacheRedi
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
-func (q *ChannelGroupQueryV1) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Queries[0].From, q.Queries[0].To, q.Queries[0].Timezone)
+func (q *ChannelGroupQueryV1) GetQueryCacheExpiry(projectID int64) float64 {
+	return getQueryCacheResultExpiry(projectID, q.Queries[0].From, q.Queries[0].To, q.Queries[0].Timezone)
 }
 
 func (q *ChannelGroupQueryV1) TransformDateTypeFilters() error {

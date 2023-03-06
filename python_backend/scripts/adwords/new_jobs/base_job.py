@@ -65,9 +65,9 @@ class BaseJob:
         self.update_to_file_metrics(LOAD, RECORDS_COUNT, self._project_id, self._doc_type, len(records))
         return response
 
-    def log_status_of_job(self, job_type, status):
+    def log_status_of_job(self, job_type, status, timestamp):
         log.warning("%s %s of job for Project Id: %s, Timestamp: %d, Doc Type: %s", status, job_type, self._project_id,
-                    self._next_timestamp, self._doc_type)
+                    timestamp, self._doc_type)
 
     @staticmethod
     def update_to_in_memory_metrics(task, metric_type, project_id, doc_type, value):

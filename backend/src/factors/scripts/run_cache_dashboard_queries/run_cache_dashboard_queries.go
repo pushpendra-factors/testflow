@@ -23,6 +23,9 @@ func main() {
 	numRoutinesForWebAnalyticsFlag := flag.Int("num_routines_for_web_analytics", 1,
 		"No.of routines to use for web analytics dashboard caching.")
 
+	cacheForLongerExpiryProjects := flag.String("cache_for_longer_expiry_projects", "", "Comma separated project ids to run for. * to run for all")
+	startTimestampForWeekMonth := flag.Int64("start_timestamp_week_month", -1,
+		"Start timestamp of caching week/month")
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
@@ -133,6 +136,8 @@ func main() {
 		EnableOptimisedFilterOnEventUserQuery: *enableOptimisedFilterOnEventUserQuery != 0,
 		CustomerEnabledProjectsLastComputed:   C.GetTokensFromStringListAsUint64(*customerEnabledProjectsLastComputed),
 		IncreaseKPILimitForProjectIDs:         *IncreaseKPILimitForProjectIDs,
+		StartTimestampForWeekMonth:            *startTimestampForWeekMonth,
+		CacheForLongerExpiryProjects:          *cacheForLongerExpiryProjects,
 	}
 
 	C.InitConf(config)
@@ -162,9 +167,9 @@ func main() {
 	if *onlyWebAnalytics == 0 {
 		if C.GetIsRunningForMemsql() == 0 {
 			waitGroup.Add(1)
-			go cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
+			go cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup, *startTimestampForWeekMonth)
 		} else {
-			cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
+			cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup, *startTimestampForWeekMonth)
 		}
 	}
 	if *skipWebAnalytics == 0 {
@@ -230,13 +235,13 @@ func main() {
 
 }
 
-func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup) {
+func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup, startTimeForCache int64) {
 
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()
 	}
 	startTime := util.TimeNowUnix()
-	store.GetStore().CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, numRoutines, reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	store.GetStore().CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, numRoutines, reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), startTimeForCache)
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	reportCollector.Store("all", timeTakenString)
 }

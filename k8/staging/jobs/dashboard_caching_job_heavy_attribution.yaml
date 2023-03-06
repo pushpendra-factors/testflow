@@ -2,8 +2,8 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: preemptible-high-mem
-  name: dashboard-caching-job-memsql-attribution
+    nodePool: factors-staging-node-pool
+  name: dashboard-caching-job-heavy-attribution
 spec:
   schedule: "0 1/6 * * *" # In UTC. Every 6 hours.
   concurrencyPolicy: Forbid
@@ -15,13 +15,13 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: preemptible-high-mem
+            nodePool: factors-staging-node-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: preemptible-high-mem
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
-            - name: dashboard-caching-job-memsql-attribution
-              image: us.gcr.io/factors-production/dashboard-caching-job:v001
+            - name: dashboard-caching-job-heavy-attribution
+              image: us.gcr.io/factors-staging/dashboard-caching-job:v001
               imagePullPolicy: IfNotPresent
               args:
                 - --env
@@ -56,6 +56,10 @@ spec:
                 - $(GCP_PROJECT_ID)
                 - --gcp_project_location
                 - $(GCP_PROJECT_LOCATION)
+                - --start_timestamp_week_month
+                - "-1"
+                - --cache_for_longer_expiry_projects
+                - "576"
                 - --project_id
                 - '*'
                 - --exclude_project_id
@@ -71,9 +75,9 @@ spec:
                 - --skip_attribution
                 - "0"
                 - --healthcheck_ping_id
-                - 31cba5e8-e703-4995-adc3-9f699eb19b0d
+                - 7cad512b-3c1a-422e-94d0-75419d9c9f65
                 - --app_name
-                - dashboard-caching-job-memsql-attribution
+                - dashboard-caching-job-heavy-attribution
                 - --skip_event_name_step_by_project_id
                 - '*'
                 - --skip_user_join_in_event_query_by_project_id

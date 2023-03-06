@@ -131,7 +131,8 @@ function WidgetCard({ unit, durationObj, showDeleteWidgetModal }) {
           unit.dashboard_id,
           durationWithSavedFrequency,
           refresh,
-          activeProject.id
+          activeProject.id,
+          true
         );
         if (!hasComponentUnmounted.current) {
           // onDataLoadSuccess({ unitId: unit.id });
