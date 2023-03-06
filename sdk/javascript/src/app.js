@@ -52,12 +52,18 @@ function getAutoTrackURL() {
     return window.location.host + window.location.pathname + util.getCleanHash(window.location.hash);
 }
 
-function addCurrentPageAutoTrackEventIdToStore(eventId, eventNamePageURL, originalPageURL) {
+function setCurrentPageAttributesToStore(eventId, eventNamePageURL, originalPageURL) {
     if (!eventId || eventId == "") return;
 
     Cache.setFactorsCache(Cache.currentPageOriginalURL, originalPageURL);
     Cache.setFactorsCache(Cache.currentPageURLEventName, eventNamePageURL);
     Cache.setFactorsCache(Cache.currentPageTrackEventId, eventId);
+
+    // Set all fields related to timer.
+    Cache.setFactorsCache(Cache.startOfPageSpentTime, util.getCurrentUnixTimestampInMs());
+    Cache.setFactorsCache(Cache.lastPageProperties, {});
+    setLastActivityTime();
+    setPrevActivityTime(0);
 }
 
 function setLastActivityTime() {
@@ -327,7 +333,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
                     return response;
                 }
 
-                if (auto) addCurrentPageAutoTrackEventIdToStore(response.body.event_id, eventName, originalPageURL);
+                if (auto) setCurrentPageAttributesToStore(response.body.event_id, eventName, originalPageURL);
                 if (afterCallback) afterCallback(response.body.event_id);
             }            
 
@@ -351,8 +357,9 @@ App.prototype.updateEventProperties = function(eventId, properties={}) {
     return this.client.updateEventProperties(updatePayloadWithUserIdFromCookie(payload));
 }
 
-App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs, 
-    lastPageProperties, defaultPageSpentTimeInMs=0) {
+App.prototype.updatePagePropertiesIfChanged = function(defaultPageSpentTimeInMs=0) {
+
+    let lastPageProperties = Cache.getFactorsCache(Cache.lastPageProperties);
 
     let lastPageSpentTimeInMs = lastPageProperties && lastPageProperties[Properties.PAGE_SPENT_TIME] ? 
         lastPageProperties[Properties.PAGE_SPENT_TIME] : 0;
@@ -360,6 +367,7 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs,
     let lastPageScrollPercentage = lastPageProperties && lastPageProperties[Properties.PAGE_SCROLL_PERCENT] ?
         lastPageProperties[Properties.PAGE_SCROLL_PERCENT] : 0;
 
+    var pageLandingTimeInMs = Cache.getFactorsCache(Cache.startOfPageSpentTime);
     var pageSpentTimeInMs = getCurrentPageSpentTimeInMs(pageLandingTimeInMs, lastPageSpentTimeInMs);
     var pageScrollPercentage = Properties.getPageScrollPercent();
 
@@ -395,10 +403,10 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs,
         logger.debug("No change on page properties, skipping update for : " + JSON.stringify(lastPageProperties), false);
     }
 
-    return {
+    Cache.setFactorsCache(Cache.lastPageProperties, {
         [Properties.PAGE_SCROLL_PERCENT]: pageScrollPercentage, 
         [Properties.PAGE_SPENT_TIME]: pageSpentTimeInMs
-    };
+    });
 }
 
 function isPageAutoTracked() {
@@ -424,17 +432,13 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
 
     this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true, afterCallback);
 
-    var lastPageProperties = {};
-    var startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
-
     // Todo: Use curried function to remove multiple set timeouts.
     // update page properties after 5s and 10s with default value.
     var fiveSecondsInMs = 5000;
     clearTimeoutByPeriod(fiveSecondsInMs);
     var timoutId5thSecond = setTimeout(function() {
         logger.debug("Triggered properties update after 5s.", false);
-        lastPageProperties = _this.updatePagePropertiesIfChanged(
-            startOfPageSpentTime, lastPageProperties, fiveSecondsInMs);
+        _this.updatePagePropertiesIfChanged(fiveSecondsInMs);
     }, fiveSecondsInMs);
     setLastTimeoutIdByPeriod(fiveSecondsInMs, timoutId5thSecond);
 
@@ -442,8 +446,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
     clearTimeoutByPeriod(tenSecondsInMs);
     var timoutId10thSecond = setTimeout(function() {
         logger.debug("Triggered properties update after 10s.", false);
-        lastPageProperties = _this.updatePagePropertiesIfChanged(
-            startOfPageSpentTime, lastPageProperties, tenSecondsInMs);
+        _this.updatePagePropertiesIfChanged(tenSecondsInMs);
     }, tenSecondsInMs);
     setLastTimeoutIdByPeriod(tenSecondsInMs, timoutId10thSecond);
 
@@ -454,16 +457,14 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
 
     // update page properties every 20s.
     var pollerId = setInterval(function() {
-        lastPageProperties = _this.updatePagePropertiesIfChanged(
-            startOfPageSpentTime, lastPageProperties);
+        _this.updatePagePropertiesIfChanged();
     }, 20000);
     
     Cache.setFactorsCache(Cache.lastPollerId, pollerId);
 
     // update page properties before leaving the page.
     window.addEventListener("beforeunload", function() {
-        lastPageProperties = _this.updatePagePropertiesIfChanged(
-            startOfPageSpentTime, lastPageProperties);
+        _this.updatePagePropertiesIfChanged();
         return;
     });
 
@@ -481,11 +482,9 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
             logger.debug("Triggered window.onpopstate goto: "+window.location.href+", prev: "+prevLocation);
             if (prevLocation !== window.location.href) {
                 // should be called before next page track.
-                lastPageProperties = _this.updatePagePropertiesIfChanged(
-                    startOfPageSpentTime, lastPageProperties);
+                _this.updatePagePropertiesIfChanged();
                 
                 _this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true, afterCallback);
-                startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
                 prevLocation = window.location.href; 
             }
         })

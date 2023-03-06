@@ -30,4 +30,6 @@ module.exports = {
     trackPageOnSPA: "trackPageOnSPA",
     prevActivityTime: "prevActivityTime",
     lastActivityTime: "lastActivityTime",
+    startOfPageSpentTime: "startOfPageSpentTime",
+    lastPageProperties: "lastPageProperties",
 }
