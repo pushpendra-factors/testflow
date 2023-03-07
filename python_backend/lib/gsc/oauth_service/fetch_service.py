@@ -26,7 +26,7 @@ class FetchService:
         authorization_url = "https://www.googleapis.com/oauth2/v4/token"
         r = self.handle_request_with_retries(authorization_url, params)
         if r.ok:
-                access_token = r.json()['access_token']
+            access_token = r.json()['access_token']
         credentials = AccessTokenCredentials(access_token=access_token, user_agent=GSC_CLIENT_USER_AGENT)
         http = httplib2.Http()
         http = credentials.authorize(http)
