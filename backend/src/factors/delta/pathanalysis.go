@@ -77,6 +77,11 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 	queryCountMap := make(map[string]int)
 	for _, query := range queries {
 
+		timeNow := U.TimeNowZ().Unix()
+		lastUpdated := query.UpdatedAt.Unix()
+		if((lastUpdated + 14400 )> timeNow){
+			continue
+		}
 		store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.BUILDING)
 		var actualQuery M.PathAnalysisQuery
 		U.DecodePostgresJsonbToStructType(query.PathAnalysisQuery, &actualQuery)
@@ -87,6 +92,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		if actualQuery.Group != "" && actualQuery.Group != "users" {
 			eventNamesObj, eventnameerr := store.GetStore().GetEventName(actualQuery.Event.Label, projectId)
 			if eventnameerr != http.StatusFound {
+				store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
 				finalStatus["err"] = "Failed to get event name"
 				log.Error("Failed to get event name")
 				return finalStatus, false
@@ -94,6 +100,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			groupNameFromDb, _ := store.GetStore().IsGroupEventName(projectId, actualQuery.Event.Label, eventNamesObj.ID)
 			if groupNameFromDb != "" {
 				if actualQuery.Group != groupNameFromDb {
+					store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
 					finalStatus["err"] = "group names mismatch"
 					log.Error("group names mismatch", actualQuery.Group, groupNameFromDb)
 					return finalStatus, false
@@ -103,6 +110,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			} else {
 				groupDetails, groupErr := store.GetStore().GetGroup(projectId, actualQuery.Group)
 				if groupErr != http.StatusFound {
+					store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
 					finalStatus["err"] = "Failed to get group details"
 					log.Error("Failed to get group details")
 					return finalStatus, false
@@ -123,6 +131,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		if useBucketV2 {
 			if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp,
 				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId); err != nil {
+				store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
 				finalStatus["err"] = "Failed creating events file"
 				log.Error("Failed creating events file")
 				return finalStatus, false
@@ -134,6 +143,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		cfCloudPath, cfCloudName := (*sortedCloudManager).GetEventsGroupFilePathAndName(projectId, startTimestamp, endTimestamp, groupId)
 		eReader, err := (*sortedCloudManager).Get(cfCloudPath, cfCloudName)
 		if err != nil {
+			store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
 			log.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
 				"eventFileName": cfCloudName}).Error("Failed downloading  file from cloud.")
 			finalStatus["err"] = "Failed downloading  file from cloud."
