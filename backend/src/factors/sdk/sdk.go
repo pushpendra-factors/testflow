@@ -857,7 +857,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			// logCtx.Info("6Signal cache hit")
 		} else {
 			// logCtx.Info("6Signal cache miss")
-			go six_signal.ExecuteSixSignalEnrich(projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
 
 			select {
 			case ok := <-execute6SignalStatusChannel:
@@ -881,7 +881,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			// logCtx.Info("6Signal cache hit")
 		} else {
 			// logCtx.Info("6Signal cache miss")
-			go six_signal.ExecuteSixSignalEnrich(projectSettings.Factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
 
 			select {
 			case ok := <-execute6SignalStatusChannel:
@@ -889,10 +889,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 					six_signal.SetSixSignalCacheResult(projectId, UserId, clientIP)
 					// Total hit counts
 					six_signal.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
-					// Total counts having valid domain name i.e. SIX_SIGNAL_DOMAIN
-					if (*userProperties)[util.SIX_SIGNAL_DOMAIN] != "" {
-						six_signal.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
-					}
+
 					// logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("SetSixSignalCacheResult using Factors key")
 
 				} else {
@@ -1521,7 +1518,7 @@ func AddUserProperties(projectId int64,
 			sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
 
 			if !sixSignalExists {
-				go six_signal.ExecuteSixSignalEnrich(ClientSixSignalKey, validProperties, request.ClientIP, statusChannel)
+				go six_signal.ExecuteSixSignalEnrich(projectId, ClientSixSignalKey, validProperties, request.ClientIP, statusChannel)
 
 				select {
 				case ok := <-statusChannel:
@@ -1539,7 +1536,7 @@ func AddUserProperties(projectId int64,
 			sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
 
 			if !sixSignalExists {
-				go six_signal.ExecuteSixSignalEnrich(FactorsSixSignalKey, validProperties, request.ClientIP, statusChannel)
+				go six_signal.ExecuteSixSignalEnrich(projectId, FactorsSixSignalKey, validProperties, request.ClientIP, statusChannel)
 
 				select {
 				case ok := <-statusChannel:
@@ -1547,10 +1544,6 @@ func AddUserProperties(projectId int64,
 						six_signal.SetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
 						// Total hit counts
 						six_signal.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
-						// Total counts having valid domain name i.e. SIX_SIGNAL_DOMAIN
-						if (*validProperties)[util.SIX_SIGNAL_DOMAIN] != "" {
-							six_signal.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
-						}
 
 					} else {
 						logCtx.Warn("ExecuteSixSignal failed in AddUserProperties")

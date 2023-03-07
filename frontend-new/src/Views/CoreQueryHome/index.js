@@ -634,6 +634,7 @@ function CoreQuery({
 
         // Factors VIEW_QUERY tracking
         factorsai.track('VIEW_QUERY', {
+          email_id: agent_details?.email,
           query_type: equivalentQuery?.queryType,
           saved_query_id: record?.key || record?.id,
           query_title: record?.title,

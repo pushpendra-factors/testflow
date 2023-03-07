@@ -33,15 +33,15 @@ type response struct {
 	} `json:"company"`
 }
 
-func ExecuteSixSignalEnrich(sixSignalKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int) {
-	err := enrichUsingSixSignal(sixSignalKey, properties, clientIP)
+func ExecuteSixSignalEnrich(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int) {
+	err := enrichUsingSixSignal(projectId, sixSignalKey, properties, clientIP)
 
 	if err != nil {
 		statusChannel <- 0
 	}
 	statusChannel <- 1
 }
-func enrichUsingSixSignal(sixSignalKey string, properties *util.PropertiesMap, clientIP string) error {
+func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string) error {
 	if clientIP == "" {
 		return errors.New("invalid IP, failed adding user properties")
 	}
@@ -145,6 +145,7 @@ func enrichUsingSixSignal(sixSignalKey string, properties *util.PropertiesMap, c
 	if domain := result.Company.Domain; domain != "" {
 		if c, ok := (*properties)[util.SIX_SIGNAL_DOMAIN]; !ok || c == "" {
 			(*properties)[util.SIX_SIGNAL_DOMAIN] = domain
+			SetSixSignalAPICountCacheResult(projectId, util.TimeZoneStringIST)
 		}
 	}
 

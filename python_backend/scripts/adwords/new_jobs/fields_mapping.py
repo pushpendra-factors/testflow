@@ -247,6 +247,7 @@ class FieldsMapping:
         '16': "VIDEO_RESPONSIVE",
         '17': "VIDEO_EFFICIENT_REACH",
         '18': "SMART_CAMPAIGN_ADS",
+        '19': "TRAVEL_ADS",
     }
 
     SERVICE_SERVING_STATUS_MAPPING = {
@@ -282,7 +283,8 @@ class FieldsMapping:
         '9': "SMART",
         '10': "PERFORMANCE_MAX ",
         '11': "LOCAL_SERVICES ",
-        '12': "DISCOVERY"
+        '12': "DISCOVERY",
+        '13': "TRAVEL",
     }
 
     SERVICE_ADVERTISING_CHANNEL_SUB_TYPE_MAPPING = {
@@ -305,6 +307,8 @@ class FieldsMapping:
         '16': "SMART_CAMPAIGN",
         '17': "VIDEO_SEQUENCE",
         '18': "APP_CAMPAIGN_FOR_PRE_REGISTRATION",
+        '19': "SERVICE_ADVERTISING_CHANNEL_SUB_TYPE_MAPPING",
+        '20': "TRAVEL_ACTIVITIES",
     }
 
     SERVICE_CAMPAIGN_TRIAL_TYPE_MAPPING = {
@@ -347,7 +351,8 @@ class FieldsMapping:
         '33': "APP_PRE_REGISTRATION_AD",
         '34': "IN_FEED_VIDEO_AD",
         '35': "DISCOVERY_MULTI_ASSET_AD",
-        '36': "DISCOVERY_CAROUSEL_AD"
+        '36': "DISCOVERY_CAROUSEL_AD",
+        '37': "TRAVEL_ADS",
     }
 
     @staticmethod
