@@ -230,6 +230,7 @@ const SixSignalReport = () => {
         }
       } catch (error) {
         console.error('Error in fetching data', error);
+        setLoading(false);
       }
     };
     if (active_project && active_project?.id && dateSelected) fetchData();
