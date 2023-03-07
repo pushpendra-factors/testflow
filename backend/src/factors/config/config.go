@@ -179,7 +179,6 @@ type Configuration struct {
 	blacklistedProjectIDPropertyTypeFromDB string
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
-	CustomerEnabledProjectsWeeklyInsights  []int64
 	CustomerEnabledProjectsLastComputed    []int64
 	SkippedProjectIDListForOtp             []int64
 	DemoProjectIds                         []string
@@ -2040,20 +2039,6 @@ func GetUUIdsFromStringListAsString(stringList string) []string {
 	}
 
 	return stringTokens
-}
-
-func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId int64) bool {
-	for _, id := range configuration.CustomerEnabledProjectsWeeklyInsights {
-		if id == projectId {
-			return true
-		}
-	}
-	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
-		if uuid == loggedInUUID {
-			return true
-		}
-	}
-	return false
 }
 
 func IsLastComputedWhitelisted(projectId int64) bool {
