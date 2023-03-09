@@ -123,7 +123,8 @@ func main() {
 	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
 	useSourcePropertyOverwriteByProjectID := flag.String("use_source_property_overwrite_by_project_id", "", "")
 
-	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	overrideEnrichHealthcheckPingID := flag.String("enrich_healthcheck_ping_id", "", "Override default enrich healthcheck ping id.")
+	overrideSyncHealthcheckPingID := flag.String("sync_healthcheck_ping_id", "", "Override default sync healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	enableSalesforceGroupsByProjectIDs := flag.String("salesforce_groups_by_project_ids", "", "Enable salesforce groups by projects.")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
@@ -145,11 +146,14 @@ func main() {
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
-	defaultHealthcheckPingID := C.HealthcheckSalesforceEnrichPingID
-	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
+	defaultEnrichHealthcheckPingID := C.HealthcheckSalesforceEnrichPingID
+	enrichHealthcheckPingID := C.GetHealthcheckPingID(defaultEnrichHealthcheckPingID, *overrideEnrichHealthcheckPingID)
+	defaultSyncHealthcheckPingID := C.HealthcheckSalesforceSyncPingID
+	syncHealthcheckPingID := C.GetHealthcheckPingID(defaultSyncHealthcheckPingID, *overrideSyncHealthcheckPingID)
 	appName := C.GetAppName(defaultAppName, *overrideAppName)
 
-	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
+	defer C.PingHealthcheckForPanic(appName, *env, enrichHealthcheckPingID)
+	defer C.PingHealthcheckForPanic(appName, *env, syncHealthcheckPingID)
 
 	if *env != "development" && *env != "staging" && *env != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
@@ -271,6 +275,13 @@ func main() {
 
 			propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailSync...)
 		}
+		if anyFailure {
+			C.PingHealthcheckForFailure(syncHealthcheckPingID, syncStatus)
+			return
+		}
+
+		C.PingHealthcheckForSuccess(syncHealthcheckPingID, syncStatus)
+		log.WithFields(log.Fields{"syncStatus": syncStatus}).Info("Sync Job completed.")
 	}
 
 	var jobStatus salesforceJobStatus
@@ -322,16 +333,15 @@ func main() {
 		if enrichStatus.HasFailure {
 			anyFailure = true
 		}
+		jobStatus.SyncStatus = syncStatus
+		jobStatus.PropertyDetailStatus = propertyDetailSyncStatus
+
+		if anyFailure {
+			C.PingHealthcheckForFailure(enrichHealthcheckPingID, jobStatus)
+			return
+		}
+
+		C.PingHealthcheckForSuccess(enrichHealthcheckPingID, jobStatus)
+		log.WithFields(log.Fields{"jobStatus": jobStatus}).Info("Job completed.")
 	}
-
-	jobStatus.SyncStatus = syncStatus
-	jobStatus.PropertyDetailStatus = propertyDetailSyncStatus
-
-	if anyFailure {
-		C.PingHealthcheckForFailure(healthcheckPingID, jobStatus)
-		return
-	}
-
-	C.PingHealthcheckForSuccess(healthcheckPingID, jobStatus)
-	log.WithFields(log.Fields{"jobStatus": jobStatus}).Info("Job completed.")
 }
