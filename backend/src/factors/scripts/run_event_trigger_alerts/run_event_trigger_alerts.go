@@ -14,6 +14,7 @@ import (
 	"time"
 
 	slack "factors/slack_bot/handler"
+
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -91,7 +92,6 @@ func main() {
 }
 
 func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
-	log.Info("Inside task manager")
 
 	prefix := fmt.Sprintf("ETA:pid:%d", projectID)
 	ssKey, err := cacheRedis.NewKeyWithOnlyPrefix(prefix)
@@ -105,7 +105,6 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 		return nil, false
 	}
 
-	log.Info(fmt.Printf("%+v\n", allKeys))
 	status := make(map[string]interface{})
 
 	for key := range allKeys {
@@ -169,7 +168,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 
 	msg := alert.Message
 	if alertConfiguration.Slack {
-		log.Info(fmt.Printf("Message to be sent: %s", msg))
+		// log.Info(fmt.Printf("Message to be sent: %s", msg))
 		log.Info(fmt.Printf("%+v\n", alertConfiguration))
 		sendSuccess = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.CreatedBy, msg, alertConfiguration.SlackChannels)
 	}
@@ -199,12 +198,10 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 		return false
 	}
 
-	log.Info("Inside sendSlackAlert function")
-
 	wetRun := true
 	if wetRun {
 		for _, channel := range slackChannels {
-			log.Info("Sending alert for slack channel ", channel)
+			// log.Info("Sending alert for slack channel ", channel)
 
 			status, err := slack.SendSlackAlert(projectID, getSlackMsgBlock(msg), agentUUID, channel)
 			if err != nil || !status {
@@ -240,9 +237,27 @@ func returnSlackMessage(actualmsg string) string {
 }
 
 func getPropsBlock(propMap U.PropertiesMap) string {
+
 	var propBlock string
-	for key, prop := range propMap {
-		if(prop == ""){
+	for i := 0; i < len(propMap); i++ {
+		pp := propMap[fmt.Sprintf("%d", i)]
+		var mp model.MessagePropMapStruct
+		if pp != nil {
+			trans, ok := pp.(map[string]interface{})
+			if !ok {
+				log.Warn("cannot convert interface to map[string]interface{} type")
+				continue
+			}
+			err := U.DecodeInterfaceMapToStructType(trans, &mp)
+			if err != nil {
+				log.Warn("cannot convert interface map to struct type")
+				continue
+			}
+		}
+
+		key := mp.DisplayName
+		prop := mp.PropValue
+		if prop == "" {
 			prop = "<nil>"
 		}
 		propBlock += fmt.Sprintf(
