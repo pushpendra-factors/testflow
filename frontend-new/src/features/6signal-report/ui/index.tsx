@@ -152,6 +152,7 @@ const SixSignalReport = () => {
         description: error?.data?.error || 'Something went wrong',
         duration: 5
       });
+      setLoadingShareData(false);
     }
   };
 
@@ -183,7 +184,9 @@ const SixSignalReport = () => {
             setData(res?.data?.[1]);
             const _query = res?.data?.[1].query?.six_signal_query_group?.[0];
             if (_query.fr && _query.to) {
-              setDateSelected(getFormattedRange(_query.fr, _query.to));
+              setDateSelected(
+                getFormattedRange(_query.fr, _query.to, _query.tz)
+              );
             }
           }
         }
@@ -195,6 +198,7 @@ const SixSignalReport = () => {
           duration: 5
         });
         setLoading(false);
+        setData(null);
       }
     };
     if (paramQueryId && paramProjectId) fetchPublicData();
@@ -231,6 +235,7 @@ const SixSignalReport = () => {
       } catch (error) {
         console.error('Error in fetching data', error);
         setLoading(false);
+        setData(null);
       }
     };
     if (active_project && active_project?.id && dateSelected) fetchData();

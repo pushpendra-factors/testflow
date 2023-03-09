@@ -1,12 +1,16 @@
 import { Filters } from './types';
 
-export const CHANNEL_KEY = 'Channel';
-export const CAMPAIGN_KEY = 'Campaign';
-export const SESSION_SPENT_TIME = 'Time_Spent';
-export const PAGE_COUNT_KEY = 'Page_Count';
-export const PAGE_URL_KEY = 'Page_Seen';
-export const COUNTRY_KEY = 'Country';
-export const COMPANY_KEY = 'Company';
+export const CHANNEL_KEY = 'channel';
+export const CAMPAIGN_KEY = 'campaign';
+export const SESSION_SPENT_TIME = 'time_spent';
+export const PAGE_COUNT_KEY = 'page_count';
+export const PAGE_URL_KEY = 'page_seen';
+export const COUNTRY_KEY = 'country';
+export const COMPANY_KEY = 'company';
+export const INDUSTRY_KEY = 'industry';
+export const EMP_RANGE_KEY = 'emp_range';
+export const REVENUE_RANGE_KEY = 'revenue_range';
+export const DOMAIN_KEY = 'domain';
 export const KEY_LABELS = {
   [COMPANY_KEY]: 'Company Name',
   [COUNTRY_KEY]: 'Country',
@@ -14,8 +18,21 @@ export const KEY_LABELS = {
   [CAMPAIGN_KEY]: 'Campaign',
   [SESSION_SPENT_TIME]: 'Time spent',
   [PAGE_COUNT_KEY]: 'Pages viewed',
-  [CHANNEL_KEY]: 'Channel'
+  [CHANNEL_KEY]: 'Channel',
+  [INDUSTRY_KEY]: 'Industry',
+  [EMP_RANGE_KEY]: 'Employee Range',
+  [REVENUE_RANGE_KEY]: 'Revenue Range'
 };
+
+export const DEFAULT_COLUMNS = [
+  COMPANY_KEY,
+  CHANNEL_KEY,
+  COUNTRY_KEY,
+  INDUSTRY_KEY,
+  REVENUE_RANGE_KEY,
+  EMP_RANGE_KEY,
+  PAGE_COUNT_KEY
+];
 
 export const CHANNEL_QUICK_FILTERS: Filters[] = [
   {

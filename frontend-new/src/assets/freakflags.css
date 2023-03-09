@@ -7,7 +7,7 @@ For complete information visit: www.freakflagsprite.com
 ******************************************************/
 
 .fflag {
-  background-image: url(https://s3.amazonaws.com/www.factors.ai/assets/img/product/countryFlagSprite.png);
+  background-image: url(./flags/countryFlagSprite.png);
   background-repeat: no-repeat;
   background-size: 100% 49494%;
   display: inline-block;
