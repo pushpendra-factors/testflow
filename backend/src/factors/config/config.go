@@ -324,6 +324,7 @@ const (
 	HealthcheckCleanupEventUserCachePingID      = "85e21b5c-5503-4172-af40-de918741a4d1"
 	HealthcheckDashboardCachingPingID           = "72e5eadc-b46e-45ca-ba78-29819532307d"
 	HealthcheckHubspotEnrichPingID              = "6f522e60-6bf8-4aea-99fe-f5a1c68a00e7"
+	HealthcheckOTPHubspotPingID                 = "c937adf4-a54d-4ee8-8ec9-3e5ed8a83e42"
 	HealthcheckMonitoringJobPingID              = "18db44be-c193-4f11-84e5-5ff144e272e9"
 	HealthcheckSalesforceEnrichPingID           = "e56175aa-3407-4595-bb94-d8325952b224"
 	HealthcheckYourstoryAddPropertiesPingID     = "acf7faab-c56f-415e-aa10-ca2aa9246172"
