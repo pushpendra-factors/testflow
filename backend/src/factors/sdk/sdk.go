@@ -2349,40 +2349,24 @@ func TrackUserGroup(projectID int64, userID string, groupName string, groupPrope
 	}
 
 	groupIDPropertyKey := model.GetGroupsGroupIDPropertyKey(groupName)
-	groupID := U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKey])
+	groupID := U.GetDomainGroupDomainName(U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKey]))
 
 	if groupID == "" {
 		logCtx.Warning("No group id. Skip processing user group.")
 		return http.StatusNotImplemented
 	}
 
-	propertiesMap := map[string]interface{}(*groupProperties)
-	groupUser, status := store.GetStore().GetGroupUserByGroupID(projectID, groupName, groupID)
-	if status != http.StatusNotFound {
-		if status != http.StatusFound {
-			logCtx.Error("Failed to check for exisitng group user on TrackUserGroup.")
-			return http.StatusInternalServerError
-		}
-
-		source := model.GetGroupUserSourceNameByGroupName(groupName)
-		_, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, groupUser.ID, &propertiesMap, U.TimeNowUnix(), U.TimeNowUnix(), source)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to create or update group user on TrackUserGroup.")
-			return http.StatusInternalServerError
-		}
-
-		// overwrite user group
-		_, status = store.GetStore().UpdateUserGroup(projectID, userID, groupName, groupID, groupUser.ID, true)
-		if status != http.StatusAccepted && status != http.StatusNotModified {
-			logCtx.Error("Failed to update user group user association on TrackUserGroup.")
-			return http.StatusInternalServerError
-		}
-
-		return http.StatusOK
+	groupUserID, status := store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, U.TimeNowUnix(),
+		model.GetGroupUserSourceByGroupName(groupName))
+	if status != http.StatusFound && status != http.StatusCreated {
+		logCtx.Warning("Failed to CreateOrGetGroupUserID on TrackUserGroup.")
+		return http.StatusInternalServerError
 	}
 
+	propertiesMap := map[string]interface{}(*groupProperties)
 	source := model.GetGroupUserSourceNameByGroupName(groupName)
-	groupUserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "", &propertiesMap, U.TimeNowUnix(), U.TimeNowUnix(), source)
+	groupUserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, groupUserID,
+		&propertiesMap, U.TimeNowUnix(), U.TimeNowUnix(), source)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to create or update group user on TrackUserGroup.")
 		return http.StatusInternalServerError
