@@ -141,6 +141,7 @@ func main() {
 	allowSalesforceActivityEventByProjectID := flag.String("allowed_salesforce_activity_events_by_project_ids", "", "Allowed project id for salesforce activity - event")
 	disallowSalesforceActivityTaskByProjectID := flag.String("disallowed_salesforce_activity_tasks_by_project_ids", "", "Disallowed project id for salesforce activity - task")
 	disallowSalesforceActivityEventByProjectID := flag.String("disallowed_salesforce_activity_events_by_project_ids", "", "Disallowed project id for salesforce activity - event")
+	allowedSalesforceSyncDocTypes := flag.String("allowed_salesforce_doc_types_for_sync", "*", "")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -200,6 +201,7 @@ func main() {
 		AllowedSalesforceActivityEventsByProjectIDs:        *allowSalesforceActivityEventByProjectID,
 		DisallowedSalesforceActivityTasksByProjectIDs:      *disallowSalesforceActivityTaskByProjectID,
 		DisallowedSalesforceActivityEventsByProjectIDs:     *disallowSalesforceActivityEventByProjectID,
+		AllowedSalesforceSyncDocTypes:                      *allowedSalesforceSyncDocTypes,
 	}
 
 	C.InitConf(config)
