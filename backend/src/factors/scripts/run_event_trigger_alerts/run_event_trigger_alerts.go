@@ -61,10 +61,10 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:              *primaryDatastore,
-		RedisHostPersistent:           *redisHostPersistent,
-		RedisPortPersistent:           *redisPortPersistent,
-		SentryDSN:                     *sentryDSN,
+		PrimaryDatastore:    *primaryDatastore,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
+		SentryDSN:           *sentryDSN,
 	}
 
 	C.InitConf(config)
@@ -295,20 +295,11 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 		},
 		%s
 		{
-			"type": "actions",
-			"elements": [
-				{
-					"type": "button",
-					"text": {
-						"type": "plain_text",
-						"text": "Know more",
-						"emoji": true
-					},
-					"value": "click_me_123",
-					"url": "https://app.factors.ai/profiles/people",
-					"action_id": "button-action"
-				}
-			]
+			"type": "section",
+						"text": {
+							"type": "mrkdwn",
+							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
+						}
 		}
 	]`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock)
 
