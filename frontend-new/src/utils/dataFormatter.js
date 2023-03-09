@@ -178,6 +178,51 @@ export const SortWeekFormattedData = (arr, key, order) => {
   return result;
 };
 
+export const SortRangeData = (arr, key, order) => {
+  const result = [...arr];
+  result.sort((a, b) => {
+    const val1 = getRangeNumericValue(a[key]);
+    const val2 = getRangeNumericValue(b[key]);
+    if (order === 'ascend') {
+      return val1 >= val2 ? 1 : -1;
+    }
+    if (order === 'descend') {
+      return val1 <= val2 ? 1 : -1;
+    }
+    return 0;
+  });
+  return result;
+};
+
+export const getNumericValueFromString = (value) => {
+  if (!value) return 0;
+  let extractedNumber = Number(value?.replace(/[,$a-zA-Z+]/g, ''));
+  if (!extractedNumber || isNaN(extractedNumber)) return 0;
+  // incresing number if there is M(million) present
+  if (value?.includes('M')) {
+    extractedNumber = extractedNumber * 1000000;
+  }
+  // incresing number if there is B(billion) present
+  if (value?.includes('B')) {
+    extractedNumber = extractedNumber * 1000000000;
+  }
+  // incresing number + is present for eg. 10000+
+  if (value?.includes('+')) {
+    extractedNumber += 1;
+  }
+  return extractedNumber;
+};
+
+export const getRangeNumericValue = (val) => {
+  if (!val) return 0;
+  const values = val?.split('-');
+  //giving priorty to higher range item
+  if (values?.length === 2) {
+    return getNumericValueFromString(values[1]);
+  }
+  return getNumericValueFromString(val);
+};
+
 export const getClickableTitleSorter = (
   title,
   sorterProp,
@@ -511,6 +556,8 @@ export const SortByKey = (result, currentSorter) => {
       );
     } else if (currentSorter.type === 'duration') {
       return SortDataByDuration(result, currentSorter.key, currentSorter.order);
+    } else if (currentSorter.type === 'rangeNumeric') {
+      return SortRangeData(result, currentSorter.key, currentSorter.order);
     } else {
       return SortData(result, currentSorter.key, currentSorter.order);
     }

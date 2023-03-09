@@ -14,18 +14,22 @@ import {
   CHANNEL_QUICK_FILTERS,
   COMPANY_KEY,
   CAMPAIGN_KEY,
-  SHARE_QUERY_PARAMS
+  SHARE_QUERY_PARAMS,
+  DEFAULT_COLUMNS,
+  EMP_RANGE_KEY,
+  REVENUE_RANGE_KEY
 } from './const';
 import { ResultGroup, StringObject, WeekStartEnd, ShareApiData } from './types';
-import moment from 'moment';
+import momentTz from 'moment-timezone';
+import { intersection } from 'lodash';
 
 export const generateFirstAndLastDayOfLastWeeks = (
   n: number = 5
 ): WeekStartEnd[] => {
-  const today = MomentTz();
+  const lastWeek = MomentTz().subtract(7, 'd');
   let dateArray: WeekStartEnd[] = [];
   for (let i = 0; i < n; i++) {
-    const day = MomentTz(today).subtract(7 * i, 'd');
+    const day = MomentTz(lastWeek).subtract(7 * i, 'd');
     const weekStart = day.clone().startOf('week');
     const weekEnd = day.clone().endOf('week');
     const formattedRangeOption = `${weekStart.format(
@@ -44,9 +48,14 @@ export const generateFirstAndLastDayOfLastWeeks = (
   return dateArray;
 };
 
-export const getFormattedRange = (from: number, to: number) => {
-  const fromDay = moment(from);
-  const toDay = moment(to);
+export const getFormattedRange = (
+  from: number,
+  to: number,
+  timezone: string = 'Asia/Kolkata'
+) => {
+  const fromDay = momentTz.unix(from).tz(timezone);
+  const toDay = momentTz.unix(to).tz(timezone);
+
   return `${fromDay.format('MMM D, Y')} - ${toDay.format('MMM D, Y')}`;
 };
 
@@ -87,13 +96,22 @@ export const parseResultGroupResponse = ({
   };
 };
 
+export const getSortType = (header: string) => {
+  if (header === SESSION_SPENT_TIME || header === PAGE_COUNT_KEY) {
+    return 'numerical';
+  } else if (header === EMP_RANGE_KEY || header === REVENUE_RANGE_KEY) {
+    return 'rangeNumeric';
+  }
+  return 'categorical';
+};
+
 export const getTableColumuns = (
   data: ResultGroup,
   sorter: any,
   handleSorting: (sorter: string) => void
 ) => {
   const { headers } = data;
-  const tColumns = headers
+  const tColumns = intersection(DEFAULT_COLUMNS, headers)
     .map((header, i) => {
       let returnObj = {
         key: i,
@@ -103,11 +121,7 @@ export const getTableColumuns = (
           KEY_LABELS?.[header] || header,
           {
             key: header,
-            type:
-              checkStringEquality(header, SESSION_SPENT_TIME) ||
-              checkStringEquality(header, PAGE_COUNT_KEY)
-                ? 'numerical'
-                : 'categorical',
+            type: getSortType(header),
             subtype: null
           },
           sorter,
@@ -135,46 +149,10 @@ export const getTableColumuns = (
             `${d} ${Number(d) > 1 ? 'Pages' : 'Page'}`
           );
       }
-      if (header === CHANNEL_KEY) {
-        return null;
-      }
-      // if (i === headers?.length - 1) {
-      //   // @ts-ignore
-      //   returnObj.render = (
-      //     d // @ts-ignore
-      //   ) => React.createElement(LastCell, { text: d }, null);
-      // }
 
       return returnObj;
     })
     .filter((d) => !!d);
-
-  // if (tColumns.length > 1) {
-  //   // @ts-ignore
-  //   tColumns[tColumns.length - 2].colSpan = 1;
-  // }
-
-  // tColumns.push({
-  //   title: getClickableTitleSorter(
-  //     // @ts-ignore
-  //     '',
-  //     {
-  //       key: '',
-  //       type: 'numerical',
-  //       subtype: null
-  //     },
-  //     sorter,
-  //     handleSorting,
-  //     'left',
-  //     'center',
-  //     'px-6 py-3'
-  //   ),
-  //   dataIndex: 'action',
-  //   render: (
-  //     d // @ts-ignore
-  //   ) => React.createElement(LastCell, { text: '' }, null),
-  //   colSpan: 0
-  // });
 
   return tColumns;
 };
@@ -223,7 +201,7 @@ export const getTableData = (
 };
 
 export const getDefaultTableColumns = () => {
-  return Object.keys(KEY_LABELS).map((key, index) => {
+  return DEFAULT_COLUMNS.map((key, index) => {
     return {
       index,
       dataIndex: KEY_LABELS[key],

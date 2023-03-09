@@ -3,7 +3,7 @@ import DataTable from 'Components/DataTable';
 import useAgentInfo from 'hooks/useAgentInfo';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useHistory } from 'react-router-dom';
-import { KEY_LABELS, SESSION_SPENT_TIME } from '../../../const';
+import { KEY_LABELS, PAGE_COUNT_KEY } from '../../../const';
 import { ReportTableProps, StringObject } from '../../../types';
 import {
   getDefaultTableColumns,
@@ -24,7 +24,7 @@ const ReportTable = ({
   // const [visibleHeaders,setVisibleHeaders]= useState(data.headers);
   const [sorter, setSorter] = useState([
     {
-      key: SESSION_SPENT_TIME,
+      key: PAGE_COUNT_KEY,
       type: 'numerical',
       subtype: null,
       order: 'descend'
