@@ -6,7 +6,6 @@ import (
 	"factors/merge"
 	"factors/pattern"
 	"factors/pull"
-	taskWrapper "factors/task/task_wrapper"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/apache/beam/sdks/go/pkg/beam"
 	log "github.com/sirupsen/logrus"
+	"factors/model/store"
 )
 
 func registerStructs() {
@@ -61,7 +61,6 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
-	lookback := flag.Int("lookback", 1, "lookback_for_delta lookup")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -195,15 +194,13 @@ func main() {
 	configs["beamConfig"] = &beamConfig
 	configs["hardPull"] = *hardPull
 	configs["sortOnGroup"] = *sortOnGroup
-	var taskName string
-	if *useBucketV2 {
-		taskName = "PathAnalysisV2"
-	} else {
-		taskName = "PathAnalysis"
+
+	var result bool
+	status := make(map[string]interface{})
+	for _, projectId := range projectIDs {
+		status, result = D.PathAnalysis(projectId, configs)
 	}
-	status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIDs, D.PathAnalysis, configs)
-	log.Info(status)
-	if status["err"] != nil {
+	if result == false {
 		C.PingHealthcheckForFailure(healthcheckPingID, status)
 	} else {
 		C.PingHealthcheckForSuccess(healthcheckPingID, status)
