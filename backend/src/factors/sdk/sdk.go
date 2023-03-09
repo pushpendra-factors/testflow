@@ -2358,7 +2358,7 @@ func TrackUserGroup(projectID int64, userID string, groupName string, groupPrope
 
 	groupUserID, status := store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, U.TimeNowUnix(),
 		model.GetGroupUserSourceByGroupName(groupName))
-	if status != http.StatusFound && status != http.StatusCreated {
+	if status != http.StatusFound && status != http.StatusCreated && status != http.StatusConflict {
 		logCtx.Warning("Failed to CreateOrGetGroupUserID on TrackUserGroup.")
 		return http.StatusInternalServerError
 	}
