@@ -102,6 +102,7 @@ function EventsBlock({
           placement='top'
           height={336}
           allowEmpty
+          useCollapseView
         />
       </div>
     ) : null;

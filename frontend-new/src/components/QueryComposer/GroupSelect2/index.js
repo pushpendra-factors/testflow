@@ -15,7 +15,8 @@ function GroupSelect2({
   iconColor = 'purple',
   placement = 'bottom',
   height = 576,
-  additionalActions
+  additionalActions,
+  useCollapseView
 }) {
   const [groupCollapseState, setGroupCollapseState] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,17 +28,18 @@ function GroupSelect2({
   }, [groupedProperties]);
 
   useEffect(() => {
-    const flag = searchTerm.length ? false : true;
+    const flag = searchTerm.length || !useCollapseView ? false : true;
     const groupColState = new Array(groupedProps.length).fill(flag);
-    groupColState[0] = false;
-    if (groupColState.length === 2) groupColState[1] = false;
     setGroupCollapseState(groupColState);
   }, [groupedProps, searchTerm]);
 
   const collapseGroup = (index) => {
     const groupColState = [...groupCollapseState];
     groupColState[index] = !groupColState[index];
+    const showMoreState = [...showAll];
+    showMoreState[index] = false;
     setGroupCollapseState(groupColState);
+    setShowAll(showMoreState);
   };
 
   const setShowMoreIndex = (ind, flag) => {
@@ -111,8 +113,8 @@ function GroupSelect2({
       const groupItem = (
         <div key={group.label} className={`group`}>
           <div
-            className={'group__header'}
-            onClick={() => collapseGroup(grpIndex)}
+            className={`group__header ${useCollapseView ? 'cursor-pointer': 'cursor-default'}`}
+            onClick={() => (useCollapseView ? collapseGroup(grpIndex) : null)}
           >
             <div>
               <SVG
@@ -129,11 +131,13 @@ function GroupSelect2({
                 {`${getGroupLabel(group.label)} (${groupValues?.length})`}
               </Text>
             </div>
-            <SVG
-              color={'grey'}
-              name={!groupCollapseState[grpIndex] ? 'minus' : 'plus'}
-              extraClass={'self-center'}
-            ></SVG>
+            {useCollapseView ? (
+              <SVG
+                color={'grey'}
+                name={!groupCollapseState[grpIndex] ? 'minus' : 'plus'}
+                extraClass={'self-center'}
+              ></SVG>
+            ) : null}
           </div>
 
           <div className={`group__options`}>
