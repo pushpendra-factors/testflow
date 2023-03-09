@@ -3,7 +3,6 @@ package redis
 import (
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 
@@ -48,7 +47,6 @@ func NewKey(projectId int64, prefix string, suffix string) (*Key, error) {
 	if prefix == "" {
 		return nil, ErrorInvalidPrefix
 	}
-	log.WithFields(log.Fields{"projectId": projectId}).Info("Attribution NewKey project_id debug 1 ")
 	return &Key{ProjectID: projectId, Prefix: prefix, Suffix: suffix}, nil
 }
 
@@ -763,7 +761,7 @@ func ZScore(key *Key, member string) (int64, error) {
 	return zscore(key, member, false)
 }
 func ZScorePersistent(key *Key, member string) (int64, error) {
-	return zscore(key, member,  true)
+	return zscore(key, member, true)
 }
 func zscore(key *Key, member string, persistent bool) (int64, error) {
 	if key == nil {

@@ -290,6 +290,7 @@ type Configuration struct {
 	EnableSyncReferenceFieldsByProjectID               string
 	StartTimestampForWeekMonth                         int64
 	CacheForLongerExpiryProjects                       string
+	AllowedSalesforceSyncDocTypes                      string
 }
 
 type Services struct {
@@ -2485,4 +2486,18 @@ func GetStartTimestampForWeekMonth() int64 {
 
 func IsProjectAllowedForLongerExpiry(projectId int64) bool {
 	return isProjectOnProjectsList(configuration.CacheForLongerExpiryProjects, projectId)
+}
+
+func IsSalesforceDocTypeEnabledForSync(docType string) bool {
+	allowedSalesforceDocTypesForSync := GetConfig().AllowedSalesforceSyncDocTypes
+	if allowedSalesforceDocTypesForSync == "" {
+		return false
+	}
+
+	if allowedSalesforceDocTypesForSync == "*" {
+		return true
+	}
+
+	allowedDocTypes := strings.Split(allowedSalesforceDocTypesForSync, ",")
+	return U.StringValueIn(docType, allowedDocTypes)
 }

@@ -254,7 +254,7 @@ func isDuplicateAlertTitle(projectID int64, title, id string) bool {
 	return false
 }
 
-func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([]model.EventTriggerAlert, int) {
+func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([]model.EventTriggerAlert, model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"prefix":     id,
@@ -270,10 +270,10 @@ func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([
 		log.WithFields(log.Fields{"projectId": projectId, "id": id}).WithError(err).Error(
 			"event_name not found")
 		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
+			return nil, model.EventName{}, http.StatusNotFound
 		}
 
-		return nil, http.StatusInternalServerError
+		return nil, model.EventName{}, http.StatusInternalServerError
 	}
 
 	if err := db.Where("project_id = ? AND is_deleted = 0", projectId).
@@ -282,20 +282,20 @@ func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([
 		log.WithFields(log.Fields{"projectId": projectId, "event": eventName.Name}).WithError(err).Error(
 			"filtering eventName failed on GetFilterEventNamesByEvent")
 		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
+			return nil, eventName, http.StatusNotFound
 		}
 
-		return nil, http.StatusInternalServerError
+		return nil, eventName, http.StatusInternalServerError
 	}
 
 	if len(eventAlerts) == 0 {
-		return nil, http.StatusNotFound
+		return nil, eventName, http.StatusNotFound
 	}
 
-	return eventAlerts, http.StatusFound
+	return eventAlerts, eventName, http.StatusFound
 }
 
-func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, int) {
+func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int) {
 	logFields := log.Fields{
 		"project_id":       projectId,
 		"event_name":       eventNameId,
@@ -304,10 +304,10 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	alerts, errCode := store.GetEventTriggerAlertsByEvent(projectId, eventNameId)
+	alerts, eventName, errCode := store.GetEventTriggerAlertsByEvent(projectId, eventNameId)
 	if errCode != http.StatusFound || alerts == nil {
 		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
-		return nil, errCode
+		return nil, nil, errCode
 	}
 
 	var userPropMap, eventPropMap, updatedEventProps *map[string]interface{}
@@ -327,7 +327,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		err := U.DecodePostgresJsonbToStructType(alert.EventTriggerAlert, &config)
 		if err != nil {
 			log.WithError(err).Error("Jsonb decoding to struct failure")
-			return nil, http.StatusInternalServerError
+			return nil, nil, http.StatusInternalServerError
 		}
 		if isUpdate {
 			if len(*updatedEventProps) == 0 {
@@ -351,9 +351,9 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	}
 	if len(matchedAlerts) == 0 {
 		log.WithFields(logFields).Info("Match function did not find anything in event_trigger_alerts")
-		return nil, http.StatusNotFound
+		return nil, nil, http.StatusNotFound
 	}
-	return &matchedAlerts, http.StatusFound
+	return &matchedAlerts, &eventName, http.StatusFound
 }
 
 func (store *MemSQL) getDisplayNamesForEP(projectId int64, eventName string) map[string]string {
@@ -475,7 +475,7 @@ func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{
 	return res
 }
 
-func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, alert *model.EventTriggerAlertConfig) (U.PropertiesMap, map[string]interface{}, error) {
+func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, alert *model.EventTriggerAlertConfig, eventName *model.EventName) (U.PropertiesMap, map[string]interface{}, error) {
 	logFields := log.Fields{
 		"event_trigger_alert": *alert,
 		"event":               *event,
@@ -508,14 +508,14 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 		}
 	}
 
-	displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, event.EventNameId)
+	displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, eventName.Name)
 	//log.Info(fmt.Printf("%+v\n", displayNamesEP))
 
 	displayNamesUP := store.getDisplayNamesForUP(event.ProjectId)
 	//log.Info(fmt.Printf("%+v\n", displayNamesUP))
 
 	msgPropMap := make(U.PropertiesMap, 0)
-	for _, messageProperty := range messageProperties {
+	for idx, messageProperty := range messageProperties {
 		p := messageProperty.Property
 		if messageProperty.Entity == "user" {
 
@@ -524,7 +524,10 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 				displayName = U.CreateVirtualDisplayName(p)
 			}
 			propVal, exi := (*userPropMap)[p]
-			msgPropMap[displayName] = getDisplayLikePropValue(messageProperty.Type, exi, propVal)
+			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
+				DisplayName : displayName,
+				PropValue: getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+			} 
 
 		} else if messageProperty.Entity == "event" {
 			displayName, exists := displayNamesEP[p]
@@ -532,7 +535,10 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 				displayName = U.CreateVirtualDisplayName(p)
 			}
 			propVal, exi := (*eventPropMap)[p]
-			msgPropMap[displayName] = getDisplayLikePropValue(messageProperty.Type, exi, propVal)
+			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
+				DisplayName : displayName,
+				PropValue: getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+			} 
 		} else {
 			log.Warn("can not find the message property in user and event prop sets")
 		}
@@ -634,7 +640,7 @@ func isCoolDownTimeExhausted(key *cacheRedis.Key, coolDownTime, unixtime int64) 
 	return true, nil
 }
 
-func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, event *model.Event) bool {
+func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, event *model.Event, eventName *model.EventName) bool {
 
 	//Adding alert to cache
 	//INCR the counter key
@@ -689,7 +695,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 	}
 
 	if addToCache {
-		messageProps, breakdownProps, err := store.GetMessageAndBreakdownPropertiesMap(event, &eta)
+		messageProps, breakdownProps, err := store.GetMessageAndBreakdownPropertiesMap(event, &eta, eventName)
 		if err != nil {
 			log.WithError(err).Error("key and sortedTuple fetching error")
 			return false
