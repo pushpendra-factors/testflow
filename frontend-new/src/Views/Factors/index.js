@@ -84,7 +84,7 @@ const Factors = ({
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
-  activeAgent
+  currentProjectSettings
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [fetchingIngishts, SetfetchingIngishts] = useState(false);
@@ -376,7 +376,7 @@ const Factors = ({
                     </Row>
 
     </Tabs.TabPane> 
-    { whiteListedAccounts.includes(activeAgent) &&
+    { currentProjectSettings?.is_explain_enabled &&
     <Tabs.TabPane tab={<Text type={'title'} level={5} extraClass={'m-0'}>Explain 2.0 <Tag className={'m-0'}>BETA</Tag> </Text>} key="2">
       {/* Tab 2 - explain 2.0 */}
     <ExplainCards />
@@ -421,7 +421,7 @@ const mapStateToProps = (state) => {
     goals: state.factors.goals,
     agents: state.agent.agents,
     factors_models: state.factors.factors_models,
-    activeAgent: state.agent?.agent_details?.email,
+    currentProjectSettings: state.global?.currentProjectSettings,
   };
 };
 export default connect(mapStateToProps, {

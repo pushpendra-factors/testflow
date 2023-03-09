@@ -2,12 +2,10 @@ package main
 
 import (
 	C "factors/config"
-	T "factors/task/hubspot_enrich"
+	HubspotEnrich "factors/task/hubspot_enrich"
 	"flag"
 	"fmt"
 	"time"
-
-	taskWrapper "factors/task/task_wrapper"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -55,8 +53,6 @@ func main() {
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideHubspotProjectDistributerHealthcheckPingID := flag.String("project_distributer_healthcheck_ping_id", "", "Override default project distributer healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
-	projectDistributerAppName := flag.String("project_distributer_app_name", "hubspot_project_distributer", "Override default app_name for project distributer.")
-	taskManagementLookback := flag.Int("task_management_lookback", 1, "")
 	enableHubspotGroupsByProjectID := flag.String("enable_hubspot_groups_by_project_id", "", "Enable hubspot groups for projects.")
 	useSourcePropertyOverwriteByProjectID := flag.String("use_source_property_overwrite_by_project_id", "", "")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
@@ -81,8 +77,8 @@ func main() {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
 	}
 
-	defaultAppName := "hubspot_enrich_job"
-	defaultHealthcheckPingID := C.HealthcheckHubspotEnrichPingID
+	defaultAppName := "otp_hubspot_job"
+	defaultHealthcheckPingID := C.HealthcheckOTPHubspotPingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	appName := C.GetAppName(defaultAppName, *overrideAppName)
 
@@ -170,10 +166,11 @@ func main() {
 	configsDistributer["override_healthcheck_ping_id"] = *overrideHubspotProjectDistributerHealthcheckPingID
 	configsDistributer["light_projects_count_threshold"] = *lightProjectsCountThreshold
 
-	// distributer should only run on light job
-	if !(*enrichHeavy) {
-		taskWrapper.TaskFunc(*projectDistributerAppName, *taskManagementLookback, T.RunHubspotProjectDistributer, configsDistributer)
-	}
+	var notifyMessage string
 
-	taskWrapper.TaskFunc(appName, *taskManagementLookback, T.RunHubspotEnrich, configsEnrich)
+	HubspotEnrich.RunOTPHubspotForProjects(configsEnrich)
+
+	notifyMessage = fmt.Sprintf("enrichment for otp hubspot successful for %s - %s projects.", *projectIDList, *disabledProjectIDList)
+
+	C.PingHealthcheckForSuccess(healthcheckPingID, notifyMessage)
 }

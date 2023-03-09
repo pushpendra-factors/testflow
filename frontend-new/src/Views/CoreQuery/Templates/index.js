@@ -12,7 +12,8 @@ const TemplatesModal = ({
   templatesModalVisible,
   setTemplatesModalVisible,
   fetchTemplateConfig,
-  activeProject
+  activeProject,
+  currentAgent
 }) => {
 
   const history = useHistory();
@@ -23,7 +24,7 @@ const TemplatesModal = ({
   const ChooseTemplate = (templateID) => { 
 
     //Factors RUN_QUERY tracking
-    factorsai.track('RUN-QUERY',{'query_type': 'template', 'templateID': templateID, project_id: activeProject?.id, project_name: activeProject?.name});
+    factorsai.track('RUN-QUERY',{'query_type': 'template', 'templateID': templateID, email_id: currentAgent?.email, project_id: activeProject?.id, project_name: activeProject?.name});
 
     fetchTemplateConfig(activeProject.id, templateID).then(() => {
       routeChange('/templates');
@@ -128,6 +129,7 @@ const TemplatesModal = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
+  currentAgent: state.agent.agent_details,
 });
 
 

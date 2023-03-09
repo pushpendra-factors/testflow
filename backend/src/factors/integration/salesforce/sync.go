@@ -1539,6 +1539,10 @@ func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]
 	var allObjectStatus []ObjectStatus
 
 	for docType, timestamp := range lastSyncInfo {
+		if !C.IsSalesforceDocTypeEnabledForSync(docType) {
+			continue
+		}
+
 		var syncAll bool
 		if timestamp == 0 {
 			timestamp = getStartTimestamp(docType)

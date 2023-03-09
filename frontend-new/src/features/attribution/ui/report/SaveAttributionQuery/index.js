@@ -60,6 +60,7 @@ const SaveAttributionQuery = ({
   const savedQueries = useSelector((state) =>
     get(state, 'attributionDashboard.attributionQueries.data', EMPTY_ARRAY)
   );
+  const { agent_details } = useSelector((state) => state.agent);
 
   const toggleSaveModalVisibility = useCallback(() => {
     setShowSaveModal((flag) => !flag);
@@ -167,6 +168,7 @@ const SaveAttributionQuery = ({
       setQuerySaved({ name: title, id: queryId });
       // Factors SAVE_QUERY EDIT_QUERY tracking
       factorsai.track(activeAction, {
+        email_id: agent_details?.email,
         query_type: queryType,
         saved_query_id: savedQueryId,
         query_title: title,

@@ -141,7 +141,8 @@ function CoreQuery({
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
-  fetchKPIConfig
+  fetchKPIConfig,
+  currentAgent
 }) {
   const { query_id, query_type } = useParams();
 
@@ -729,6 +730,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_EVENT,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -845,6 +847,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_FUNNEL,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -968,6 +971,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_ATTRIBUTION,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -1086,6 +1090,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_KPI,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -1174,6 +1179,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_CAMPAIGN,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -1242,6 +1248,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_PROFILE,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -2182,7 +2189,8 @@ function CoreQuery({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   KPI_config: state.kpi?.config,
-  existingQueries: state.queries
+  existingQueries: state.queries,
+  currentAgent: state.agent.agent_details,
 });
 
 const mapDispatchToProps = (dispatch) =>

@@ -78,11 +78,7 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Fetch marketing report took time")
 	}
-	if C.GetAttributionDebug() == 1 && projectID == 12384898978000017 {
-		log.WithFields(log.Fields{"Attribution": "Debug",
-			"AdwordsCampaignIDData":  marketingReports.AdwordsCampaignIDData,
-			"AdwordsCampaignKeyData": marketingReports.AdwordsCampaignKeyData}).Info("FetchMarketingReports in ExecuteAttributionQueryV0")
-	}
+
 	queryStartTime = time.Now().UTC().Unix()
 
 	if err != nil {
@@ -154,12 +150,6 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 
 	if query.AnalyzeType == model.AnalyzeTypeUserKPI {
 		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "sessions": userData}).Info("UserKPI Attribution sessions")
-	}
-
-	if C.GetAttributionDebug() == 1 && projectID == 12384898978000017 {
-		log.WithFields(log.Fields{"Attribution": "Debug",
-			"CampaignChannelGroupMapping": marketingReports.CampaignChannelGroupMapping,
-			"sessions":                    userData}).Info("CampaignChannelGroupMapping after PullSessions")
 	}
 
 	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
