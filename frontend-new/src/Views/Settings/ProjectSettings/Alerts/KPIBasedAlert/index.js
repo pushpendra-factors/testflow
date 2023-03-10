@@ -289,9 +289,13 @@ const KPIBasedAlert = ({
         slackChannels = { ...slackChannels, [key]: value };
       }
     }
+
+    const arr = slackChannels[agent_details?.uuid]; // access array with key
+    const size = arr?.length;
     if (
       queries.length > 0 &&
-      (emails.length > 0 || Object.keys(slackChannels).length > 0)
+      (emailEnabled || slackEnabled) &&
+      (emails.length > 0 || size > 0)
     ) {
       let payload = {
         alert_name: data?.alert_name,
@@ -370,7 +374,7 @@ const KPIBasedAlert = ({
           description: 'Please select KPI to send alert.'
         });
       }
-      if (emails.length === 0 || Object.keys(slackChannels).length === 0) {
+      if (emails.length === 0 || size === 0) {
         notification.error({
           message: 'Error',
           description:
@@ -564,7 +568,20 @@ const KPIBasedAlert = ({
               <Form.Item
                 name='alert_name'
                 className={'m-0'}
-                rules={[{ required: true, message: 'Please enter alert name' }]}
+                rules={[
+                  { required: true, message: 'Please enter alert name' },
+                  {
+                    validator: (_, value) => {
+                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
+                      if (!value || regex.test(value)) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
+                      );
+                    }
+                  }
+                ]}
               >
                 <Input
                   className={'fa-input'}
@@ -967,7 +984,20 @@ const KPIBasedAlert = ({
                 name='alert_name'
                 className={'m-0'}
                 initialValue={viewAlertDetails?.alert_name}
-                rules={[{ required: true, message: 'Please enter alert name' }]}
+                rules={[
+                  { required: true, message: 'Please enter alert name' },
+                  {
+                    validator: (_, value) => {
+                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
+                      if (!value || regex.test(value)) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
+                      );
+                    }
+                  }
+                ]}
               >
                 <Input
                   className={'fa-input'}
