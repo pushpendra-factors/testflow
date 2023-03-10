@@ -81,15 +81,13 @@ const EnrichCountries = ({
             // tagRender={(props) => renderOption(props.value)}
             options={countryOptions}
           ></Select>
-          {index !== 0 && (
-            <Button
-              size='middle'
-              shape='circle'
-              type='text'
-              onClick={() => handleDeleteClick(index)}
-              icon={<MinusCircleOutlined style={{ color: '#8692A3' }} />}
-            />
-          )}
+          <Button
+            size='middle'
+            shape='circle'
+            type='text'
+            onClick={() => handleDeleteClick(index)}
+            icon={<MinusCircleOutlined style={{ color: '#8692A3' }} />}
+          />
         </div>
       );
     });
@@ -227,7 +225,7 @@ const EnrichCountries = ({
             <Button onClick={handleCancel}>Cancel</Button>
             <Button
               type='primary'
-              disabled={!enrichType}
+              disabled={!enrichType || !data.length}
               onClick={handleSaveClick}
             >
               Save changes
