@@ -793,7 +793,7 @@ const mapQueriesByGroup = (queries) => {
   };
   queries.forEach((query) => {
     if (
-      query.group !== 'hubspot_deals' ||
+      query.group !== 'hubspot_deals' &&
       query.group !== 'salesforce_opportunities'
     ) {
       group['user_kpi'].push(query);

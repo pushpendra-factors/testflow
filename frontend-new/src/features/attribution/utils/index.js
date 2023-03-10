@@ -82,7 +82,7 @@ export const getAttributionStateFromRequestQuery = (
   let ref = -1;
   let lastProp = '';
   let lastOp = '';
-  const queryState = requestQuery.kpi_queries.map((kpiQ) => {
+  requestQuery.kpi_queries?.forEach((kpiQ) => {
     const qState = getKPIStateFromRequestQuery(kpiQ.kpi_query_group, kpiConfig);
     attrQueries.push(...qState.events);
     setFiltersFromRequestQuery(kpiQ, filters, ref, lastProp, lastOp);
