@@ -114,6 +114,7 @@ function ProjectDropdown({
   const history = useHistory();
 
   const queries = useSelector((state) => state.queries);
+  const { agent_details } = useSelector((state) => state.agent);
 
   useEffect(() => {
     fetchDemoProject()
@@ -153,6 +154,7 @@ function ProjectDropdown({
   useEffect(() => {
     if (activeDashboard) {
       factorsai.track('VIEW_DASHBOARD', {
+        email_id: agent_details?.email,
         dashboard_name: activeDashboard?.name,
         dashboard_type: activeDashboard?.type,
         dashboard_id: activeDashboard?.id,

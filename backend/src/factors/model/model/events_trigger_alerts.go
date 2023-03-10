@@ -76,6 +76,11 @@ type EventTriggerAlertMessage struct {
 	Message         string
 }
 
+type MessagePropMapStruct struct {
+	DisplayName string
+	PropValue interface{}
+}
+
 func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTriggerAlert) error {
 	if cacheETA == nil {
 		log.Error("Nil cache event on setCacheUserLastEventTriggerAlert")

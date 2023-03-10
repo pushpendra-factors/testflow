@@ -2,6 +2,7 @@ package memsql
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
@@ -598,6 +599,17 @@ func getUserIDBySegementAnonymousID(segAnonID string) string {
 	return "seg" + "-" + segAnonID
 }
 
+func getDomainUserIDByDomainGroupIndexANDDomainName(domainGroupIndex int, domainName string) string {
+	if domainGroupIndex == 0 || domainName == "" {
+		return ""
+	}
+
+	key := fmt.Sprintf("%d-%s", domainGroupIndex, domainName)
+
+	enKey := base64.StdEncoding.EncodeToString([]byte(key))
+	return "dom-" + enKey
+}
+
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
 func (store *MemSQL) CreateOrGetSegmentUser(projectId int64, segAnonId, custUserId string,
@@ -699,6 +711,57 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId int64, segAnonId, custUser
 
 	// provided and fetched c_uid are same.
 	return user, http.StatusOK
+}
+
+// CreateOrGetDomainGroupUser creates or get domain group user by group name and domain name
+func (store *MemSQL) CreateOrGetDomainGroupUser(projectID int64, groupName string, domainName string,
+	requestTimestamp int64, requestSource int) (string, int) {
+	logFields := log.Fields{
+		"project_id":        projectID,
+		"group_name":        groupName,
+		"domain_name":       domainName,
+		"request_timestamp": requestTimestamp,
+		"request_source":    requestSource,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupName == "" || domainName == "" {
+		logCtx.Error("Invalid parameters.")
+		return "", http.StatusBadRequest
+	}
+
+	user, status := store.GetGroupUserByGroupID(projectID, groupName, domainName)
+	if status != http.StatusFound && status != http.StatusNotFound {
+		logCtx.Error("Failed to check for exisistence of group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	if status == http.StatusFound {
+		return user.ID, http.StatusFound
+	}
+
+	group, status := store.GetGroup(projectID, groupName)
+	if status != http.StatusFound && status != http.StatusNotFound {
+		logCtx.Error("Failed to get on create group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	isGroupUser := true
+	userID, status := store.CreateGroupUser(&model.User{
+		ID:            getDomainUserIDByDomainGroupIndexANDDomainName(group.ID, domainName),
+		ProjectId:     projectID,
+		IsGroupUser:   &isGroupUser,
+		JoinTimestamp: requestTimestamp,
+		Source:        &requestSource,
+	}, groupName, domainName)
+	if status != http.StatusCreated && status != http.StatusConflict {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create domain group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	return userID, status
 }
 
 func (store *MemSQL) GetUserIDByAMPUserID(projectId int64, ampUserId string) (string, int) {
@@ -2498,6 +2561,10 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 		PropertiesUpdatedTimestamp: user.PropertiesUpdatedTimestamp,
 		JoinTimestamp:              user.JoinTimestamp,
 		Source:                     user.Source,
+	}
+
+	if user.ID != "" {
+		groupUser.ID = user.ID
 	}
 
 	if groupID != "" {

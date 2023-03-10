@@ -46,7 +46,7 @@ const CONFIG = {
     linkedin_client_id: '861ix78kpo39ge',
     firstTimeDashboardTemplates: {
       webanalytics: '6d966a20-07a6-46db-b2d4-1b1d4d7fb8ec',
-      websitevisitoridentification: 'edf25a5c-b6f3-4622-b0d5-82bed9aecc36',
+      websitevisitoridentification: 'b60283bc-ade3-4c12-afd1-f8a85618df91',
       allpaidmarketing: 'f8785bee-6d7d-4a03-8744-a2d31ce4dd9e'
     }
   }

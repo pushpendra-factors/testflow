@@ -289,6 +289,7 @@ type Configuration struct {
 	EnableSyncReferenceFieldsByProjectID               string
 	StartTimestampForWeekMonth                         int64
 	CacheForLongerExpiryProjects                       string
+	AllowedSalesforceSyncDocTypes                      string
 }
 
 type Services struct {
@@ -323,8 +324,10 @@ const (
 	HealthcheckCleanupEventUserCachePingID      = "85e21b5c-5503-4172-af40-de918741a4d1"
 	HealthcheckDashboardCachingPingID           = "72e5eadc-b46e-45ca-ba78-29819532307d"
 	HealthcheckHubspotEnrichPingID              = "6f522e60-6bf8-4aea-99fe-f5a1c68a00e7"
+	HealthcheckOTPHubspotPingID                 = "c937adf4-a54d-4ee8-8ec9-3e5ed8a83e42"
 	HealthcheckMonitoringJobPingID              = "18db44be-c193-4f11-84e5-5ff144e272e9"
 	HealthcheckSalesforceEnrichPingID           = "e56175aa-3407-4595-bb94-d8325952b224"
+	HealthcheckSalesforceSyncPingID             = "c5434535-ea40-42b8-8e1f-243ccf88fef3"
 	HealthcheckYourstoryAddPropertiesPingID     = "acf7faab-c56f-415e-aa10-ca2aa9246172"
 	HealthCheckSmartPropertiesPingID            = "ead84671-b84c-481b-bfa5-59403d626652"
 	HealthCheckSmartPropertiesDupPingID         = "d2b55241-52d8-4cc5-a49c-5b57f6a96642"
@@ -2469,4 +2472,18 @@ func GetStartTimestampForWeekMonth() int64 {
 
 func IsProjectAllowedForLongerExpiry(projectId int64) bool {
 	return isProjectOnProjectsList(configuration.CacheForLongerExpiryProjects, projectId)
+}
+
+func IsSalesforceDocTypeEnabledForSync(docType string) bool {
+	allowedSalesforceDocTypesForSync := GetConfig().AllowedSalesforceSyncDocTypes
+	if allowedSalesforceDocTypesForSync == "" {
+		return false
+	}
+
+	if allowedSalesforceDocTypesForSync == "*" {
+		return true
+	}
+
+	allowedDocTypes := strings.Split(allowedSalesforceDocTypesForSync, ",")
+	return U.StringValueIn(docType, allowedDocTypes)
 }
