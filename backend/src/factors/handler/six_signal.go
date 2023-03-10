@@ -50,10 +50,10 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 	result := delta.GetSixSignalAnalysisData(projectId, folderName)
 	if result == nil {
 		logCtx.Error("Report is not present for this date range")
-		return nil, http.StatusBadRequest, "", "Report is not present for this date range", true
+		return result, http.StatusBadRequest, "", "Report is not present for this date range", true
 	} else if len(result[1].Results[0].Rows) == 0 {
 		logCtx.Warn("Data is not present for this date range")
-		return nil, http.StatusNotFound, "", "Data is not present for this date range", true
+		return result, http.StatusNotFound, "", "Data is not present for this date range", true
 	}
 	return result, http.StatusOK, "", "", false
 }
@@ -99,10 +99,10 @@ func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, 
 	result := delta.GetSixSignalAnalysisData(projectId, folderName)
 	if result == nil {
 		logCtx.Error("Report is not present for this date range")
-		return nil, http.StatusBadRequest, "", "Report is not present for this date range", true
+		return result, http.StatusBadRequest, "", "Report is not present for this date range", true
 	} else if len(result[1].Results[0].Rows) == 0 {
 		logCtx.Warn("Data is not present for this date range")
-		return nil, http.StatusNotFound, "", "Data is not present for this date range", true
+		return result, http.StatusNotFound, "", "Data is not present for this date range", true
 	}
 	return result, http.StatusOK, "", "", false
 
