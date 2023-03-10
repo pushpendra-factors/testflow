@@ -196,14 +196,21 @@ func main() {
 	configs["sortOnGroup"] = *sortOnGroup
 
 	var result bool
-	status := make(map[string]interface{})
+	finalStatus := make(map[int64]interface{})
 	for _, projectId := range projectIDs {
+		status := make(map[string]interface{})
 		status, result = D.PathAnalysis(projectId, configs)
+		if(len(status) > 0){
+			finalStatus[projectId] = status
+		}
+		if(result == false){
+			break
+		}
 	}
 	if result == false {
-		C.PingHealthcheckForFailure(healthcheckPingID, status)
+		C.PingHealthcheckForFailure(healthcheckPingID, finalStatus)
 	} else {
-		C.PingHealthcheckForSuccess(healthcheckPingID, status)
+		C.PingHealthcheckForSuccess(healthcheckPingID, finalStatus)
 	}
 
 }

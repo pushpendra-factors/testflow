@@ -73,15 +73,17 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 	useBucketV2 := configs["useBucketV2"].(bool)
 
 	finalStatus := make(map[string]interface{})
+	processedQueries := make([]string,0)
 	queries, _ := store.GetStore().GetAllSavedPathAnalysisEntityByProject(projectId)
 	queryCountMap := make(map[string]int)
 	for _, query := range queries {
 
 		timeNow := U.TimeNowZ().Unix()
-		lastUpdated := query.UpdatedAt.Unix()
-		if((lastUpdated + 14400 )> timeNow){
-			continue
-		}
+        lastUpdated := query.UpdatedAt.Unix()
+        lastCreated := query.CreatedAt.Unix()
+        if  (lastUpdated - lastCreated > 3600)&& ((lastUpdated + 14400) > timeNow) {
+            continue
+        }
 		store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.BUILDING)
 		var actualQuery M.PathAnalysisQuery
 		U.DecodePostgresJsonbToStructType(query.PathAnalysisQuery, &actualQuery)
@@ -93,7 +95,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			eventNamesObj, eventnameerr := store.GetStore().GetEventName(actualQuery.Event.Label, projectId)
 			if eventnameerr != http.StatusFound {
 				store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
-				finalStatus["err"] = "Failed to get event name"
+				finalStatus[query.ID] = "Failed to get event name"
 				log.Error("Failed to get event name")
 				return finalStatus, false
 			}
@@ -101,7 +103,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			if groupNameFromDb != "" {
 				if actualQuery.Group != groupNameFromDb {
 					store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
-					finalStatus["err"] = "group names mismatch"
+					finalStatus[query.ID] = "group names mismatch"
 					log.Error("group names mismatch", actualQuery.Group, groupNameFromDb)
 					return finalStatus, false
 				} else {
@@ -111,7 +113,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				groupDetails, groupErr := store.GetStore().GetGroup(projectId, actualQuery.Group)
 				if groupErr != http.StatusFound {
 					store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
-					finalStatus["err"] = "Failed to get group details"
+					finalStatus[query.ID] = "Failed to get group details"
 					log.Error("Failed to get group details")
 					return finalStatus, false
 				}
@@ -132,7 +134,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp,
 				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId); err != nil {
 				store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
-				finalStatus["err"] = "Failed creating events file"
+				finalStatus[query.ID] = "Failed creating events file"
 				log.Error("Failed creating events file")
 				return finalStatus, false
 			}
@@ -146,7 +148,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
 			log.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
 				"eventFileName": cfCloudName}).Error("Failed downloading  file from cloud.")
-			finalStatus["err"] = "Failed downloading  file from cloud."
+			finalStatus[query.ID] = "Failed downloading  file from cloud."
 			return finalStatus, false
 		}
 		scanner := bufio.NewScanner(eReader)
@@ -397,10 +399,14 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			_, err = resultFile.Write(pBytes)
 		}
 		WriteResultsToCloud(diskManager, modelCloudManager, query.ID, projectId)
+		processedQueries = append(processedQueries, query.ID)
+		if(len(processedQueries) > 0){
+			finalStatus["PROCESSED QUERIES"] = processedQueries
+		}
 		store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.ACTIVE)
 	}
 	log.Infof("queryCountMap: %v, projectID; %d", queryCountMap, projectId)
-	return nil, true
+	return finalStatus, true
 }
 
 func WriteResultsToCloud(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, query_id string, project_id int64) error {
