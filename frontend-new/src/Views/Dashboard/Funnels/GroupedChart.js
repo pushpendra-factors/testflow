@@ -92,6 +92,7 @@ function GroupedChart({
         valueMetricType={METRIC_TYPES.percentType}
         height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
         cardSize={unit.cardSize}
+        chartId={`funnel${unit.id}`}
         series={[
           {
             name: 'OG',
