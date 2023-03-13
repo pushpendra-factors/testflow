@@ -83,6 +83,7 @@ import userflow from 'userflow.js';
 import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { useHistory } from 'react-router-dom';
+import moment from 'moment';
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -367,7 +368,10 @@ function CoreQuery({
       const newDateRange = getDashboardDateRange();
       const dashboardDateRange = {
         ...newDateRange,
-        frequency: equivalentQuery.dateRange.frequency
+        frequency:
+          moment(newDateRange.to).diff(newDateRange.from, 'days') <= 1
+            ? 'hour'
+            : equivalentQuery.dateRange.frequency
       };
       dispatch({
         type: INITIALIZE_GROUPBY,

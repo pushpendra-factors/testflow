@@ -212,7 +212,7 @@ const PivotTableComponent = (props) => {
       userPropNames,
       queryType
     });
-  }, [breakdown, eventPropertiesDisplayNames, userPropNames]);
+  }, [breakdown, eventPropertiesDisplayNames, queryType, userPropNames]);
 
   return (
     <div className={styles.pivotTable}>
