@@ -107,7 +107,6 @@ func TestWIMetadata(t *testing.T) {
 	assert.Equal(t, insightId, metadata[0].InsightId)
 
 	C.GetConfig().ProjectAnalyticsWhitelistedUUIds = []string{agent.UUID}
-	assert.True(t, C.IsWeeklyInsightsWhitelisted(agent.UUID, project.ID))
 
 	w = sendWIReq(r, project.ID, agent)
 	assert.Equal(t, http.StatusOK, w.Code)

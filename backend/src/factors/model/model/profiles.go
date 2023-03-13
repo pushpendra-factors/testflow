@@ -62,7 +62,7 @@ func (q *ProfileQueryGroup) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
-func (q *ProfileQueryGroup) GetQueryCacheExpiry() float64 {
+func (q *ProfileQueryGroup) GetQueryCacheExpiry(projectID int64) float64 {
 	return 86400
 }
 

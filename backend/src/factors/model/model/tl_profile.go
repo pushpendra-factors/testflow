@@ -64,7 +64,7 @@ type AccountDetails struct {
 }
 
 type UserTimeline struct {
-	UserId         string         `json:"-"`
+	UserId         string         `json:"user_id"`
 	IsAnonymous    bool           `json:"is_anonymous"`
 	UserName       string         `json:"user_name"`
 	AdditionalProp string         `json:"additional_prop"`
@@ -104,6 +104,6 @@ var EVENT_ICONS_MAP = map[string]string{
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED: "handshake",
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED:    "phone",
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED:    "phone",
-	U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:    "list-check",
+	U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:    "listcheck",
 	U.EVENT_NAME_FORM_SUBMITTED:                     "hand-pointer",
 }

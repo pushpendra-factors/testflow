@@ -231,10 +231,10 @@ func SortUnsortedEventsFile(tmpCloudManager, sortedCloudManager *filestore.FileM
 		return err
 	}
 	sort.Slice(eventsList, func(i, j int) bool {
-		if getAptId(eventsList[i], sortOnGroup) == getAptId(eventsList[i], sortOnGroup) {
+		if getAptId(eventsList[i], sortOnGroup) == getAptId(eventsList[j], sortOnGroup) {
 			return eventsList[i].EventTimestamp < eventsList[j].EventTimestamp
 		}
-		return getAptId(eventsList[i], sortOnGroup) < getAptId(eventsList[i], sortOnGroup)
+		return getAptId(eventsList[i], sortOnGroup) < getAptId(eventsList[j], sortOnGroup)
 	})
 	cloudWriter, err := (*sortedCloudManager).GetWriter(sortedDir, sortedName)
 	if err != nil {

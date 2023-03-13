@@ -113,7 +113,7 @@ const InsightsSettings = ({
               /></span>
               <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Explain Insights</Text>
             </div>
-            <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Build Explain Insights for this project.</Text>
+            <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>{`Build Explain (v2.0) Insights for this project.`}</Text>
           </Col>
           <Col span={20}>
             <div span={24} className={'flex flex-start items-center mt-2'}>

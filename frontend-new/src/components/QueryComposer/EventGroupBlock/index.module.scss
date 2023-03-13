@@ -23,6 +23,11 @@
     }
   }
 
+  &__select_ct {
+    @extend .group_block__event_selector;
+    top: -500px;
+  }
+
   &__remove {
     position: absolute;
     left: -12px;

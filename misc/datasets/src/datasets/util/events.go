@@ -269,7 +269,7 @@ func isAutoTrackedEvent(eventProperties *postgres.Jsonb) bool {
 	return pageRawUrlExists || pageRawUrl2Exists || pageRawUrl3Exists || pageRawUrl4Exists || rawUrlExists || rawUrl2Exists
 }
 
-func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool { 
+func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool {
 	strJson := string((*jsonb).RawMessage)
 	return strJson == "" || strJson == "null"
 }
@@ -296,7 +296,7 @@ func EncodeToPostgresJsonb(sourceMap *map[string]interface{}) (*postgres.Jsonb, 
 	return &postgres.Jsonb{sourceJsonBytes}, nil
 }
 
-func renameProperties(src *map[string]interface{}, 
+func renameProperties(src *map[string]interface{},
 	renameMap *map[string]string) *map[string]interface{} {
 
 	dest := make(map[string]interface{}, 0)
@@ -312,7 +312,7 @@ func renameProperties(src *map[string]interface{},
 }
 
 func convEventAsTrackable(eventJson string, clientUserIdToUserIdMap *map[string]string,
-	apiHost string, apiToken string, eventPropertiesRenameMap, 
+	apiHost string, apiToken string, eventPropertiesRenameMap,
 	userPropertiesRenameMap *map[string]string) (*TrackableEvent, error) {
 
 	var event Event
@@ -333,7 +333,7 @@ func convEventAsTrackable(eventJson string, clientUserIdToUserIdMap *map[string]
 		eventProperties, err = EncodeToPostgresJsonb(eventPropertiesRenamed)
 		if err != nil {
 			log.WithError(err).Error("Failed to marshal event properties after rename.")
-			return nil, err 
+			return nil, err
 		}
 	} else {
 		eventProperties = event.Properties

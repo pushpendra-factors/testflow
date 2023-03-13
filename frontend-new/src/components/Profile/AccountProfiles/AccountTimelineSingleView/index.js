@@ -2,6 +2,7 @@ import { Avatar, Spin } from 'antd';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ALPHANUMSTR,
+  eventIconsColorMap,
   eventsFormattedForGranularity,
   getEventCategory,
   getIconForCategory,
@@ -90,8 +91,9 @@ function AccountTimelineSingleView({
                 <td className={`bg-none pt-6 pb-${milestones.length * 0}`}>
                   {Object.entries(allEvents).map(([user, data]) => {
                     const currentUser = timelineUsers.find(
-                      (obj) => obj.title === user
+                      (obj) => obj.userId === user
                     );
+                    if (!currentUser) return null;
                     return (
                       <div className='relative'>
                         <div className='user-card--wrapper'>
@@ -107,9 +109,9 @@ function AccountTimelineSingleView({
                               eventNamesMap
                             );
                             const sourceIcon = getIconForCategory(category);
-                            const eventIcon = event.icon
+                            const eventIcon = eventIconsColorMap[event.icon]
                               ? event.icon
-                              : 'calendar_star';
+                              : 'calendar-star';
                             return (
                               <EventInfoCard
                                 event={event}

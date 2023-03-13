@@ -933,6 +933,7 @@ func IsItreeCampaignEvent(eventName string) bool {
 func GetDashboardCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZoneString) float64 {
 	toStartOfDay := GetBeginningOfDayTimestampIn(to, timezoneString)
 	nowStartOfDay := GetBeginningOfDayTimestampIn(TimeNowZ().Unix(), timezoneString)
+
 	if Is30MinutesTimeRange(from, to) {
 		return float64(CacheExpiryDashboard30MinutesInSeconds)
 	} else if to >= nowStartOfDay {
@@ -957,6 +958,7 @@ func GetDashboardCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZ
 func GetQueryCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZoneString) float64 {
 	toStartOfDay := GetBeginningOfDayTimestampIn(to, timezoneString)
 	nowStartOfDay := GetBeginningOfDayTimestampIn(TimeNowZ().Unix(), timezoneString)
+
 	if to >= nowStartOfDay {
 		// End date is in today's range. Keep small expiry.
 		return float64(CacheExpiryQueryTodaysDataInSeconds)

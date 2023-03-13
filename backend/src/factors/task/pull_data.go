@@ -51,7 +51,7 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 	}
 
 	if endTimestampInProjectTimezone > U.TimeNowUnix() {
-		status["error"] = "invalid end timestamp"
+		status["error"] = "invalid end timestamp (project timezone)"
 		return status, false
 	}
 

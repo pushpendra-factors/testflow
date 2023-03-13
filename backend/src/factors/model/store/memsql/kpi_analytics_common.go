@@ -369,11 +369,11 @@ func (store *MemSQL) ExecuteNonDerivedKPIQuery(projectID int64, reqID string,
 
 	result := make([]model.QueryResult, 0)
 	statusCode := http.StatusOK
-	hashCode := ""
+	hashCode, _ := query.GetQueryCacheHashString()
 
 	tempQuery, internalToExternalGroupByHeadersForPropertyMappings, statusCode, errMsg := transformPropertyMappingFiltersAndGroupBysToInternalProperties(query, mapOfPropertyMappingNameToDisplayCategoryToProperty)
 	if statusCode != http.StatusOK {
-		return result, statusCode, hashCode, errMsg
+		return result, statusCode, "", errMsg
 	}
 
 	if tempQuery.Category == model.ProfileCategory {
@@ -381,7 +381,7 @@ func (store *MemSQL) ExecuteNonDerivedKPIQuery(projectID int64, reqID string,
 			result, statusCode = store.ExecuteKPIQueryForProfiles(projectID, reqID,
 				tempQuery, enableOptimisedFilterOnProfileQuery)
 		} else {
-			result = make([]model.QueryResult, 1)
+			return make([]model.QueryResult, 1), http.StatusOK, hashCode, ""
 		}
 	} else if tempQuery.Category == model.ChannelCategory || tempQuery.Category == model.CustomChannelCategory {
 		result, statusCode = store.ExecuteKPIQueryForChannels(projectID, reqID, tempQuery)
@@ -389,10 +389,11 @@ func (store *MemSQL) ExecuteNonDerivedKPIQuery(projectID int64, reqID string,
 		result, statusCode = store.ExecuteKPIQueryForEvents(projectID, reqID, tempQuery, enableOptimisedFilterOnEventUserQuery)
 	}
 
+	if statusCode != http.StatusOK {
+		return result, statusCode, hashCode, ""
+	}
+
 	updatedResult := replaceInternalPropertyHeadersWithPropertyMappingHeaders(result, internalToExternalGroupByHeadersForPropertyMappings)
-
-	hashCode, _ = query.GetQueryCacheHashString()
-
 	return updatedResult, statusCode, hashCode, ""
 }
 

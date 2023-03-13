@@ -3,19 +3,13 @@ import MomentTz from 'Components/MomentTz';
 import {
   eventIconsColorMap,
   getPropType,
-  iconMap,
   propValueFormat,
   TimelineHoverPropDisplayNames
 } from 'Components/Profile/utils';
 import React from 'react';
 import { PropTextFormat } from 'Utils/dataFormatter';
 
-const EventInfoCard = ({
-  event,
-  eventIcon,
-  sourceIcon,
-  listProperties
-}) => (
+const EventInfoCard = ({ event, eventIcon, sourceIcon, listProperties }) => (
   <div className='timeline-event__container'>
     <div className='timestamp'>
       {MomentTz(event?.timestamp * 1000).format('hh:mm A')}
@@ -23,14 +17,12 @@ const EventInfoCard = ({
     <div
       className='event-icon'
       style={{
-        '--border-color': `${eventIconsColorMap[eventIcon].borderColor}`,
-        '--bg-color': `${eventIconsColorMap[eventIcon].bgColor}`
+        '--border-color': `${eventIconsColorMap[eventIcon]?.borderColor}`,
+        '--bg-color': `${eventIconsColorMap[eventIcon]?.bgColor}`
       }}
     >
       <img
-        src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${
-          iconMap[eventIcon] ? iconMap[eventIcon] : eventIcon
-        }.svg`}
+        src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
         alt=''
         height={20}
         width={20}
@@ -49,9 +41,7 @@ const EventInfoCard = ({
         )}
         <div className='source-icon'>
           <img
-            src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${
-              iconMap[sourceIcon] ? iconMap[sourceIcon] : sourceIcon
-            }.svg`}
+            src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${sourceIcon}.svg`}
             alt=''
             height={24}
             width={24}

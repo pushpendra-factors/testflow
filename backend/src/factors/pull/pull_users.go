@@ -170,6 +170,8 @@ func pullUsersData(dateField string, source int, group int, projectID int64, sta
 			return 0, err
 		}
 
+		timestamp = U.GetTimestampInSecs(timestamp)
+
 		daysFromStart := int64(math.Floor(float64(int64(timestamp)-startTimeTimezone) / float64(U.Per_day_epoch)))
 		fileTimestamp := startTimestamp + daysFromStart*U.Per_day_epoch
 		writer, ok := writerMap[fileTimestamp]

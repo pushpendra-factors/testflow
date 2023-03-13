@@ -52,12 +52,18 @@ function getAutoTrackURL() {
     return window.location.host + window.location.pathname + util.getCleanHash(window.location.hash);
 }
 
-function addCurrentPageAutoTrackEventIdToStore(eventId, eventNamePageURL, originalPageURL) {
+function setCurrentPageAttributesToStore(eventId, eventNamePageURL, originalPageURL) {
     if (!eventId || eventId == "") return;
 
     Cache.setFactorsCache(Cache.currentPageOriginalURL, originalPageURL);
     Cache.setFactorsCache(Cache.currentPageURLEventName, eventNamePageURL);
     Cache.setFactorsCache(Cache.currentPageTrackEventId, eventId);
+
+    // Set all fields related to timer.
+    Cache.setFactorsCache(Cache.startOfPageSpentTime, util.getCurrentUnixTimestampInMs());
+    Cache.setFactorsCache(Cache.lastPageProperties, {});
+    setLastActivityTime();
+    setPrevActivityTime(0);
 }
 
 function setLastActivityTime() {
@@ -274,8 +280,8 @@ function runPostInitProcess(_this, trackOnInit) {
         return _this.autoClearbitRevealCapture(_this, _this.getConfig("int_clear_bit"));
     })
     .catch(function(err) {
-        logger.errorLine(err);
-        return Promise.reject(err.stack + " during get_settings on init.");
+        logger.debug(err);
+        return Promise.resolve(err.stack + " during get_settings on init.");
     });
 }
 
@@ -327,7 +333,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
                     return response;
                 }
 
-                if (auto) addCurrentPageAutoTrackEventIdToStore(response.body.event_id, eventName, originalPageURL);
+                if (auto) setCurrentPageAttributesToStore(response.body.event_id, eventName, originalPageURL);
                 if (afterCallback) afterCallback(response.body.event_id);
             }            
 
@@ -344,15 +350,16 @@ App.prototype.updateEventProperties = function(eventId, properties={}) {
         return Promise.reject("No eventId provided for update.");
     
     if (Object.keys(properties).length == 0)
-        logger.debug("No properties given to update event.");
+        logger.debug("No properties given to update event.", false);
         
     var payload = { event_id: eventId, properties: properties };
     
     return this.client.updateEventProperties(updatePayloadWithUserIdFromCookie(payload));
 }
 
-App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs, 
-    lastPageProperties, defaultPageSpentTimeInMs=0) {
+App.prototype.updatePagePropertiesIfChanged = function(defaultPageSpentTimeInMs=0) {
+
+    let lastPageProperties = Cache.getFactorsCache(Cache.lastPageProperties);
 
     let lastPageSpentTimeInMs = lastPageProperties && lastPageProperties[Properties.PAGE_SPENT_TIME] ? 
         lastPageProperties[Properties.PAGE_SPENT_TIME] : 0;
@@ -360,6 +367,7 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs,
     let lastPageScrollPercentage = lastPageProperties && lastPageProperties[Properties.PAGE_SCROLL_PERCENT] ?
         lastPageProperties[Properties.PAGE_SCROLL_PERCENT] : 0;
 
+    var pageLandingTimeInMs = Cache.getFactorsCache(Cache.startOfPageSpentTime);
     var pageSpentTimeInMs = getCurrentPageSpentTimeInMs(pageLandingTimeInMs, lastPageSpentTimeInMs);
     var pageScrollPercentage = Properties.getPageScrollPercent();
 
@@ -390,15 +398,15 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs,
         logger.debug("Updating page properties : " + JSON.stringify(properties), false);
         var eventId = Cache.getFactorsCache(Cache.currentPageTrackEventId);
         var payload = { event_id: eventId, properties: properties };
-        this.client.updateEventProperties(updatePayloadWithUserIdFromCookie(payload));
+        this.client.updateEventProperties(updatePayloadWithUserIdFromCookie(payload)).catch(logger.debug);
     } else {
         logger.debug("No change on page properties, skipping update for : " + JSON.stringify(lastPageProperties), false);
     }
 
-    return {
+    Cache.setFactorsCache(Cache.lastPageProperties, {
         [Properties.PAGE_SCROLL_PERCENT]: pageScrollPercentage, 
         [Properties.PAGE_SPENT_TIME]: pageSpentTimeInMs
-    };
+    });
 }
 
 function isPageAutoTracked() {
@@ -424,17 +432,13 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
 
     this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true, afterCallback);
 
-    var lastPageProperties = {};
-    var startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
-
     // Todo: Use curried function to remove multiple set timeouts.
     // update page properties after 5s and 10s with default value.
     var fiveSecondsInMs = 5000;
     clearTimeoutByPeriod(fiveSecondsInMs);
     var timoutId5thSecond = setTimeout(function() {
         logger.debug("Triggered properties update after 5s.", false);
-        lastPageProperties = _this.updatePagePropertiesIfChanged(
-            startOfPageSpentTime, lastPageProperties, fiveSecondsInMs);
+        _this.updatePagePropertiesIfChanged(fiveSecondsInMs);
     }, fiveSecondsInMs);
     setLastTimeoutIdByPeriod(fiveSecondsInMs, timoutId5thSecond);
 
@@ -442,8 +446,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
     clearTimeoutByPeriod(tenSecondsInMs);
     var timoutId10thSecond = setTimeout(function() {
         logger.debug("Triggered properties update after 10s.", false);
-        lastPageProperties = _this.updatePagePropertiesIfChanged(
-            startOfPageSpentTime, lastPageProperties, tenSecondsInMs);
+        _this.updatePagePropertiesIfChanged(tenSecondsInMs);
     }, tenSecondsInMs);
     setLastTimeoutIdByPeriod(tenSecondsInMs, timoutId10thSecond);
 
@@ -454,16 +457,14 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
 
     // update page properties every 20s.
     var pollerId = setInterval(function() {
-        lastPageProperties = _this.updatePagePropertiesIfChanged(
-            startOfPageSpentTime, lastPageProperties);
+        _this.updatePagePropertiesIfChanged();
     }, 20000);
     
     Cache.setFactorsCache(Cache.lastPollerId, pollerId);
 
     // update page properties before leaving the page.
     window.addEventListener("beforeunload", function() {
-        lastPageProperties = _this.updatePagePropertiesIfChanged(
-            startOfPageSpentTime, lastPageProperties);
+        _this.updatePagePropertiesIfChanged();
         return;
     });
 
@@ -481,11 +482,9 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
             logger.debug("Triggered window.onpopstate goto: "+window.location.href+", prev: "+prevLocation);
             if (prevLocation !== window.location.href) {
                 // should be called before next page track.
-                lastPageProperties = _this.updatePagePropertiesIfChanged(
-                    startOfPageSpentTime, lastPageProperties);
+                _this.updatePagePropertiesIfChanged();
                 
                 _this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true, afterCallback);
-                startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
                 prevLocation = window.location.href; 
             }
         })
@@ -493,7 +492,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
 
     if (Cache.getFactorsCache(Cache.trackPageOnSPA)) {
         setInterval(function(){
-            if (Cache.getFactorsCache(Cache.currentPageURLEventName) != getAutoTrackURL()) {
+            if (Cache.getFactorsCache(Cache.currentPageURLEventName) && Cache.getFactorsCache(Cache.currentPageURLEventName) != getAutoTrackURL()) {
                 _this.track(
                     getAutoTrackURL(), 
                     Properties.getFromQueryParams(window.location), 
@@ -955,9 +954,9 @@ App.prototype.handleError = function(error) {
     var client = new APIClient('', '');
     client.sendError(payload); 
 
-    logger.errorLine(error);
+    logger.debug(error);
 
-    return Promise ? Promise.reject(error) : error;
+    return Promise ? Promise.resolve(error) : error;
 }
 
 module.exports = exports = App;

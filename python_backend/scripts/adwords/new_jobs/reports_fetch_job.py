@@ -70,7 +70,7 @@ class ReportsFetch(BaseJob):
 
 
     def extract_task(self):
-        self.log_status_of_job("extract", "started")
+        self.log_status_of_job("extract", "started", self._next_timestamp)
         records_metric, latency_metric = 0, 0
         start_time = datetime.now()
         str_timestamp = str(self._next_timestamp)
@@ -108,7 +108,7 @@ class ReportsFetch(BaseJob):
         end_time = datetime.now()
         latency_metric = (end_time - start_time).total_seconds()
         self.update_to_file_metrics(EXTRACT, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
-        self.log_status_of_job("extract", "completed")
+        self.log_status_of_job("extract", "completed", self._next_timestamp)
         return
 
     def get_payload(self, rows, version):
@@ -180,7 +180,7 @@ class ReportsFetch(BaseJob):
     def transform_and_load_task(self, ran_extract):
         for timestamp in self._extract_load_timestamps:
             # Extract Phase
-            self.log_status_of_job("load", "started")
+            self.log_status_of_job("load", "started", timestamp)
             start_time = datetime.now()
             rows, version = self.read_for_load(ran_extract, timestamp)
             end_time = datetime.now()
@@ -202,13 +202,13 @@ class ReportsFetch(BaseJob):
 
             load_response = self.add_records(transformed_rows, timestamp)
             if load_response is None or not load_response.ok:
-                self.log_status_of_job("load", "not completed")
+                self.log_status_of_job("load", "not completed", timestamp)
                 return
 
             end_time = datetime.now()
             latency_metric = (end_time - start_time).total_seconds()
             self.update_to_file_metrics(LOAD, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
-            self.log_status_of_job("load", "completed")
+            self.log_status_of_job("load", "completed", timestamp)
             return
 
     def write_after_extract(self, rows_string):

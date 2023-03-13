@@ -153,6 +153,7 @@ func TestSDK6SignalGroup(t *testing.T) {
 	groupUser1, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, "abc.com", groupUser1.Group1ID) // only 6signal group used
+	assert.Equal(t, "dom-MS1hYmMuY29t", groupUser1.ID)
 	user, status := store.GetStore().GetUser(project.ID, createdUserID)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, groupUser1.ID, user.Group1UserID)
@@ -177,6 +178,7 @@ func TestSDK6SignalGroup(t *testing.T) {
 	groupUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, "abc.com", groupUser1.Group1ID)
+	assert.Equal(t, "dom-MS1hYmMuY29t", groupUser1.ID)
 	propertiesMap := make(map[string]interface{})
 	err = json.Unmarshal(groupUser1.Properties.RawMessage, &propertiesMap)
 	assert.Nil(t, err)
@@ -203,6 +205,7 @@ func TestSDK6SignalGroup(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	groupUser2, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc2.com")
 	assert.Equal(t, http.StatusFound, status) // new group user created
+	assert.Equal(t, "dom-MS1hYmMyLmNvbQ==", groupUser2.ID)
 	user, status = store.GetStore().GetUser(project.ID, createdUserID2)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, groupUser2.ID, user.Group1UserID) // existing assocation overwriten
@@ -216,6 +219,27 @@ func TestSDK6SignalGroup(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, groupUser2.ID, user.Group1UserID) // existing assocation overwriten
 	assert.Equal(t, groupUser2.Group1ID, user.Group1ID)
+}
+
+func TestGetDomainGroupDomainName(t *testing.T) {
+	expectedDomainNames := map[string]string{
+		"www.abc.com":         "abc.com",
+		"www.ABC.com":         "abc.com",
+		"http://www.abc.com":  "abc.com",
+		"http://www.abc.com/": "abc.com",
+		"http://abc.com/":     "abc.com",
+		"https://abc.com/":    "abc.com",
+		"abc.com":             "abc.com",
+		"www.abc.co.in":       "abc.co.in",
+		"www.abc.aero":        "abc.aero",
+		"abc.cargo.aero":      "abc.cargo.aero",
+		"www.abc.cargo.aero":  "abc.cargo.aero",
+		"www.abc.xya":         "www.abc.xya", // if not found return as it is
+	}
+	for rawDomain := range expectedDomainNames {
+		assert.Equal(t, expectedDomainNames[rawDomain], U.GetDomainGroupDomainName(rawDomain))
+	}
+
 }
 
 func TestGetUserGroupID(t *testing.T) {

@@ -31,9 +31,8 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	}
 
 	logCtx := log.WithFields(logFields)
-	if C.GetAttributionDebug() == 1 {
-		logCtx.Info("Hitting ExecuteAttributionQueryV0")
-	}
+	logCtx.Info("Hitting ExecuteAttributionQueryV0")
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
@@ -79,11 +78,7 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Fetch marketing report took time")
 	}
-	if C.GetAttributionDebug() == 1 && projectID == 12384898978000017 {
-		log.WithFields(log.Fields{"Attribution": "Debug",
-			"AdwordsCampaignIDData":  marketingReports.AdwordsCampaignIDData,
-			"AdwordsCampaignKeyData": marketingReports.AdwordsCampaignKeyData}).Info("FetchMarketingReports in ExecuteAttributionQueryV0")
-	}
+
 	queryStartTime = time.Now().UTC().Unix()
 
 	if err != nil {
@@ -521,6 +516,8 @@ func (store *MemSQL) getAllThePages(projectId int64, sessionEventNameId string, 
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
+	reports.CampaignSourceMapping = make(map[string]string)
+	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)

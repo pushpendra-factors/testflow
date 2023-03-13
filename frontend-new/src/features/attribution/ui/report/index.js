@@ -97,7 +97,8 @@ function CoreQuery({
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
   initializeAttributionState,
-  location
+  location,
+  currentAgent
 }) {
   const { data: savedQueries, loading: QueriesLoading } = useSelector(
     (state) => state.attributionDashboard.attributionQueries
@@ -389,6 +390,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_ATTRIBUTION,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -935,7 +937,8 @@ function CoreQuery({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  KPI_config: state.kpi?.config
+  KPI_config: state.kpi?.config,
+  currentAgent: state.agent.agent_details,
 });
 
 const mapDispatchToProps = (dispatch) =>

@@ -324,6 +324,13 @@ func computeCrossPeriodKpiInsights(periodPair PeriodPair, newInsightsList, oldIn
 		oldScale := *(*oldInsights).ScaleInfo
 		newScale := *(*newInsights).ScaleInfo
 
+		if oldScale.Features == nil {
+			oldScale.Features = make(map[string]map[string]float64)
+		}
+		if newScale.Features == nil {
+			newScale.Features = make(map[string]map[string]float64)
+		}
+
 		//global
 		first = oldScale.Global
 		second = newScale.Global

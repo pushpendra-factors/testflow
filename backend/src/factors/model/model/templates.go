@@ -73,8 +73,8 @@ func (q *TemplateQuery) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key,
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
-func (q *TemplateQuery) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.From, q.To, string(q.Timezone))
+func (q *TemplateQuery) GetQueryCacheExpiry(projectID int64) float64 {
+	return getQueryCacheResultExpiry(projectID, q.From, q.To, string(q.Timezone))
 }
 
 func (q *TemplateQuery) TransformDateTypeFilters() error {

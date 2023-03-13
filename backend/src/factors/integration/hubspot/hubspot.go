@@ -1458,7 +1458,7 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPR
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+		if !IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 
@@ -1502,7 +1502,7 @@ func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]mo
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+		if !IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 
@@ -1544,7 +1544,7 @@ func ApplyHSOfflineTouchPointRuleForEngagement(project *model.Project, otpRules 
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+		if !IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 
@@ -1585,7 +1585,7 @@ func ApplyHSOfflineTouchPointRuleForContactList(project *model.Project, otpRules
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+		if !IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 		_, err1 := CreateTouchPointEventForLists(project, trackPayload, document, rule, otpUniqueKey)
@@ -1889,7 +1889,7 @@ func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SD
 }
 
 // Returns true or false if the otpKey (userID+ruleID+keyID) is not present in uniqueOTPEventKeys i.e. Unique OTP key.
-func isOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string, logCtx *log.Entry) bool {
+func IsOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string, logCtx *log.Entry) bool {
 	isUnique := !U.StringValueIn(otpUniqueKey, *uniqueOTPEventKeys)
 	if !isUnique {
 		logCtx.Warn("The OTP Key is not unique.")

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Spin } from 'antd';
 import _ from 'lodash';
 import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
@@ -9,9 +9,7 @@ import {
   getEventCategory,
   getIconForCategory,
   groups,
-  hoverEvents,
-  iconMap,
-  timestampToString
+  hoverEvents
 } from '../../utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { useSelector } from 'react-redux';
@@ -30,12 +28,6 @@ function UserTimelineBirdview({
   const { userPropNames } = useSelector((state) => state.coreQuery);
 
   const groupedActivities = _.groupBy(activities, groups[granularity]);
-  const formattedMilestones = useMemo(() => {
-    return Object.entries(milestones || {}).map(([key, value]) => [
-      key,
-      timestampToString[granularity](value)
-    ]);
-  }, [milestones, granularity]);
 
   useEffect(() => {
     if (collapse !== undefined) {
@@ -53,29 +45,28 @@ function UserTimelineBirdview({
     setShowAll(showAllState);
   };
 
-  const renderIcon = (event) => (
-    <div
-      className='icon'
-      style={{
-        '--border-color': `${
-          eventIconsColorMap[event.icon || 'calendar_star'].borderColor
-        }`,
-        '--bg-color': `${
-          eventIconsColorMap[event.icon || 'calendar_star'].bgColor
-        }`
-      }}
-    >
-      <img
-        src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${
-          iconMap[event.icon] ? iconMap[event.icon] : event.icon
-        }.svg`}
-        alt=''
-        height={16}
-        width={16}
-        loading='lazy'
-      />
-    </div>
-  );
+  const renderIcon = (event) => {
+    const eventIcon = eventIconsColorMap[event.icon]
+      ? event.icon
+      : 'calendar-star';
+    return (
+      <div
+        className='icon'
+        style={{
+          '--border-color': `${eventIconsColorMap[eventIcon]?.borderColor}`,
+          '--bg-color': `${eventIconsColorMap[eventIcon]?.bgColor}`
+        }}
+      >
+        <img
+          src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
+          alt=''
+          height={16}
+          width={16}
+          loading='lazy'
+        />
+      </div>
+    );
+  };
 
   const renderInfoCard = (event) => {
     const eventName =
@@ -100,9 +91,7 @@ function UserTimelineBirdview({
           trigger={hoverConditionals ? 'hover' : []}
           icon={
             <img
-              src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${
-                iconMap[icon] ? iconMap[icon] : icon
-              }.svg`}
+              src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${icon}.svg`}
               alt=''
               height={24}
               width={24}
@@ -156,22 +145,27 @@ function UserTimelineBirdview({
           </thead>
           <tbody>
             {Object.entries(data).map(([timestamp, events], index) => {
-              const eventsList = showAll[index] ? events : events.slice(0, 1);
-              const milestones = formattedMilestones.filter(
-                (milestone) => milestone[1] === timestamp
+              const timelineEvents = events.filter(
+                (event) => event.event_type !== 'milestone'
+              );
+              const eventsList = showAll[index]
+                ? timelineEvents
+                : timelineEvents.slice(0, 1);
+              const milestones = events.filter(
+                (event) => event.event_type === 'milestone'
               );
               return (
                 <tr>
-                  <td>
+                  <td className={`pb-${milestones?.length * 8}`}>
                     <div className='timestamp top-40'>{timestamp}</div>
                     {milestones.length ? (
                       <div className='milestone-section'>
                         {milestones.map((milestone) => (
                           <div className='green-stripe'>
                             <div className='text'>
-                              {userPropNames[milestone[0]]
-                                ? userPropNames[milestone[0]]
-                                : milestone[0]}
+                              {userPropNames[milestone.event_name]
+                                ? userPropNames[milestone.event_name]
+                                : milestone.event_name}
                             </div>
                           </div>
                         ))}
@@ -196,8 +190,10 @@ function UserTimelineBirdview({
                           {renderInfoCard(event)}
                         </div>
                       ))}
-                      {renderAdditionalDiv(events.length, !showAll[index], () =>
-                        setShowAllIndex(index, !showAll[index])
+                      {renderAdditionalDiv(
+                        timelineEvents.length,
+                        !showAll[index],
+                        () => setShowAllIndex(index, !showAll[index])
                       )}
                     </div>
                     {milestones.length ? (

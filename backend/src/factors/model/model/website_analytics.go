@@ -238,8 +238,8 @@ func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheRedisKey(projectID int64)
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
-func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.From, q.To, q.Timezone)
+func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheExpiry(projectID int64) float64 {
+	return getQueryCacheResultExpiry(projectID, q.From, q.To, q.Timezone)
 }
 
 func (q *DashboardUnitsWebAnalyticsQuery) TransformDateTypeFilters() error {

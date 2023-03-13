@@ -20,13 +20,15 @@ import (
 // get within period insights for a week for custom kpi
 func getCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2 bool) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
+	wpi.MetricInfo = &MetricInfo{}
+	wpi.ScaleInfo = &MetricInfo{}
 	var transformation M.CustomMetricTransformation
 
 	//get custom metric details from db
 	customMetric, errStr, getStatus := store.GetStore().GetProfileCustomMetricByProjectIdName(projectId, metric)
 	if getStatus != http.StatusFound {
 		log.WithField("error", errStr).Error("Get custom metrics failed. Not a profile custom metric.")
-		return nil, fmt.Errorf("%s", errStr)
+		return &wpi, fmt.Errorf("%s", errStr)
 	}
 	err1 := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &transformation)
 	if err1 != nil {
@@ -40,7 +42,7 @@ func getCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval [
 	scanner, err := GetUserFileScanner(transformation.DateField, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
 	if err != nil {
 		log.WithError(err).Error("failed getting " + transformation.DateField + " file scanner for custom kpi")
-		return nil, err
+		return &wpi, err
 	}
 
 	//get proper function (complex for avg, simple for unique,sum)
@@ -52,7 +54,7 @@ func getCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval [
 	}
 	if info, scale, err := GetCustomMetric(scanner, newPropFilter, propsToEval, transformation.AggregateFunction, transformation.AggregateProperty); err != nil {
 		log.WithError(err).Error("error GetCustomMetric for kpi " + metric)
-		return nil, err
+		return &wpi, err
 	} else {
 		wpi.MetricInfo = info
 		wpi.ScaleInfo = scale

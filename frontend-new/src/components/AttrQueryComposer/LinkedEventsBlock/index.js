@@ -230,6 +230,7 @@ const LinkedEventsBlock = ({
                 onEventSelect(val[1] ? val[1] : val[0])
               }
               onClickOutside={() => setSelectVisible(false)}
+              useCollapseView
             ></GroupSelect2>
           </div>
         ) : null}

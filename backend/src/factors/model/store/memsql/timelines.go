@@ -437,7 +437,9 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
 				emailSubject := "No Subject"
 				if subject, exists := (*properties)[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT]; exists {
-					emailSubject = fmt.Sprintf("%s", subject)
+					if !(subject == nil || subject == "") {
+						emailSubject = fmt.Sprintf("%s", subject)
+					}
 				}
 				userActivity.AliasName = fmt.Sprintf("%s: %s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TYPE], emailSubject)
 			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||

@@ -412,6 +412,7 @@ function SaveQuery({
         setQuerySaved({ name: title, id: queryId });
         // Factors SAVE_QUERY EDIT_QUERY tracking
         factorsai.track(activeAction, {
+          email_id: agent_details?.email,
           query_type: queryType,
           saved_query_id: savedQueryId,
           query_title: title,

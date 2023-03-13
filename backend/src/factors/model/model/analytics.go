@@ -147,7 +147,7 @@ const (
 	NotInPrevious           = "notInPrevious"
 	StartsWith              = "startsWith"
 	EndsWith                = "endsWith"
-	InList 					= "inList"
+	InList                  = "inList"
 )
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
@@ -202,7 +202,7 @@ type BaseQuery interface {
 	// Query cache related helper methods.
 	GetQueryCacheHashString() (string, error)
 	GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error)
-	GetQueryCacheExpiry() float64
+	GetQueryCacheExpiry(projectID int64) float64
 	TransformDateTypeFilters() error
 	ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error
 	CheckIfNameIsPresent(nameOfQuery string) bool
@@ -285,8 +285,8 @@ func (q *Query) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) 
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
-func (q *Query) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.From, q.To, q.Timezone)
+func (q *Query) GetQueryCacheExpiry(projectID int64) float64 {
+	return getQueryCacheResultExpiry(projectID, q.From, q.To, q.Timezone)
 }
 
 func (query *Query) GetGroupByTimestamp() string {
@@ -574,8 +574,8 @@ func (q *QueryGroup) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, er
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
-func (q *QueryGroup) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Queries[0].From, q.Queries[0].To, q.Queries[0].Timezone)
+func (q *QueryGroup) GetQueryCacheExpiry(projectID int64) float64 {
+	return getQueryCacheResultExpiry(projectID, q.Queries[0].From, q.Queries[0].To, q.Queries[0].Timezone)
 }
 
 func (q *QueryGroup) TransformDateTypeFilters() error {
@@ -663,11 +663,23 @@ func getQueryCacheRedisKeySuffix(hashString string, from, to int64, timezoneStri
 	return fmt.Sprintf("%s:from:%d:to:%d", hashString, from, to)
 }
 
-func getQueryCacheResultExpiry(from, to int64, timezone string) float64 {
+func getQueryCacheResultExpiry(projectID, from, to int64, timezone string) float64 {
 	var timezoneString U.TimeZoneString
 	timezoneString = U.TimeZoneString(timezone)
 	if to-from == DateRangePreset2MinInSeconds || to-from == DateRangePreset30MinInSeconds {
 		return QueryCacheMutableResultExpirySeconds
+	}
+	if C.IsProjectAllowedForLongerExpiry(projectID) {
+		// Approx 1 months for any query less than 3 months
+		if to-from < (15 * U.SECONDS_IN_A_DAY) {
+			return float64(31 * U.SECONDS_IN_A_DAY)
+		}
+		// Approx 3 months for any query more than a month
+		if to-from > (27 * U.SECONDS_IN_A_DAY) {
+			return float64(93 * U.SECONDS_IN_A_DAY)
+		}
+		// for anything between 15 to 1 month - 31 days
+		return float64(U.CacheExpiryDefaultInSeconds)
 	}
 	return U.GetQueryCacheResultExpiryInSeconds(from, to, timezoneString)
 }
@@ -849,7 +861,7 @@ func SetQueryCacheResult(projectID int64, query BaseQuery, queryResult interface
 	if err != nil {
 		return
 	}
-	cacheRedis.SetPersistent(cacheKey, string(queryResultString), query.GetQueryCacheExpiry())
+	cacheRedis.SetPersistent(cacheKey, string(queryResultString), query.GetQueryCacheExpiry(projectID))
 }
 
 // DeleteQueryCacheKey Delete a query cache key on error.

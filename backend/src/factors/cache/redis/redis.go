@@ -47,7 +47,6 @@ func NewKey(projectId int64, prefix string, suffix string) (*Key, error) {
 	if prefix == "" {
 		return nil, ErrorInvalidPrefix
 	}
-
 	return &Key{ProjectID: projectId, Prefix: prefix, Suffix: suffix}, nil
 }
 
@@ -762,7 +761,7 @@ func ZScore(key *Key, member string) (int64, error) {
 	return zscore(key, member, false)
 }
 func ZScorePersistent(key *Key, member string) (int64, error) {
-	return zscore(key, member,  true)
+	return zscore(key, member, true)
 }
 func zscore(key *Key, member string, persistent bool) (int64, error) {
 	if key == nil {
