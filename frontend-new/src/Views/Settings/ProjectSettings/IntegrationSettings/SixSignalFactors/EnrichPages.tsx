@@ -182,7 +182,7 @@ const EnrichPages = ({
     if (data) {
       setData(data);
     }
-  }, [sixSignalConfig]);
+  }, [sixSignalConfig, mode]);
 
   return (
     <div>
