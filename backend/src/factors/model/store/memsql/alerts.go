@@ -406,6 +406,20 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 		logCtx.Error("Slack integration is not enabled for this project")
 		return false, http.StatusBadRequest, "Slack integration is not enabled for this project"
 	}
+	if alertConfiguration.IsSlackEnabled {
+
+		slackChannels := make(map[string][]model.SlackChannel)
+		err = U.DecodePostgresJsonbToStructType(alertConfiguration.SlackChannelsAndUserGroups, &slackChannels)
+		if err != nil {
+			log.WithError(err).Error("failed to decode slack channels")
+			return false, http.StatusBadRequest, "failed to decode slack channels"
+		}
+
+		if len(slackChannels[alert.CreatedBy]) == 0 {
+			log.WithError(err).Error("Empty Slack Channel List")
+			return false, http.StatusBadRequest, "Empty Slack Channel List"
+		}
+	}
 	_, err = store.checkIfDuplicateAlertNameExists(projectID, alert.AlertName, alert.ID)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to create alert")

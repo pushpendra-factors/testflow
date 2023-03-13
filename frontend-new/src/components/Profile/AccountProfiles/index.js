@@ -459,7 +459,6 @@ function AccountProfiles({
           placeholder='Search Segments'
           optionClick={onOptionClick}
           onClickOutside={() => setSegmentDDVisible(false)}
-          allowEmpty
           additionalActions={renderAdditionalActionsInSegment()}
         />
       ) : null}
