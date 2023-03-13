@@ -81,7 +81,7 @@ const Welcome = ({currentAgent, activeProject, getHubspotContact, fetchDemoProje
                     </Col>
                   </Row>
                 </div>
-                <div className={`${styles.first}`} onClick={switchProject}>
+                <div className={`${styles.first}`} onClick={() => switchProject}>
                   <Row>
                     <Col className={`${styles.img}`}>
                       <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/file.svg' />
