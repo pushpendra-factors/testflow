@@ -23,6 +23,7 @@ func main() {
 	numRoutinesForWebAnalyticsFlag := flag.Int("num_routines_for_web_analytics", 1,
 		"No.of routines to use for web analytics dashboard caching.")
 
+	cacheOnlyDashboards := flag.String("cache_only_dashboards", "*", "Comma separated dashboard ids to run for. * to run for all")
 	cacheForLongerExpiryProjects := flag.String("cache_for_longer_expiry_projects", "", "Comma separated project ids to run for. * to run for all")
 	startTimestampForWeekMonth := flag.Int64("start_timestamp_week_month", -1,
 		"Start timestamp of caching week/month")
@@ -138,6 +139,7 @@ func main() {
 		IncreaseKPILimitForProjectIDs:         *IncreaseKPILimitForProjectIDs,
 		StartTimestampForWeekMonth:            *startTimestampForWeekMonth,
 		CacheForLongerExpiryProjects:          *cacheForLongerExpiryProjects,
+		CacheOnlyDashboards:                   *cacheOnlyDashboards,
 	}
 
 	C.InitConf(config)

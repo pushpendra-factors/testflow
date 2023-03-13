@@ -110,7 +110,7 @@ const ExpalinBeforeIntegration = ({currentAgent, setActiveProject, fetchDemoProj
                                         size={"middle"}
                                         className={"ml-6 mb-4"}
                                         loading={loading}
-                                        onClick={switchProject}
+                                        onClick={() => switchProject}
                                     >
                                         {/* <SVG name={"PlayButton"} size={25} /> */}
                                         View Demo Project
