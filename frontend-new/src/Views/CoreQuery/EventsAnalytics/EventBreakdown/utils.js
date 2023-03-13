@@ -12,12 +12,14 @@ import {
   DISPLAY_PROP
 } from '../../../../utils/constants';
 
-export const getDefaultSortProp = () => ({
-  key: 'User Count',
-  type: 'numerical',
-  subtype: null,
-  order: 'descend'
-});
+export const getDefaultSortProp = () => [
+  {
+    key: 'User Count',
+    type: 'numerical',
+    subtype: null,
+    order: 'descend'
+  }
+];
 
 export const getVisibleData = (aggregateData, sorter) => {
   const result = SortResults(aggregateData, sorter).slice(

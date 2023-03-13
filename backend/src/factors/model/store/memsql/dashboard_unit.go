@@ -928,9 +928,17 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 		analyticsQuery := baseQuery.(*model.Query)
 		unitReport.Query = analyticsQuery
 
+		hashCode1, _ := analyticsQuery.GetQueryCacheHashString()
 		channel := make(chan Result)
 
+		// log.WithField("projectID", projectID).WithField("analyticsQuery", analyticsQuery).WithField("hashCode", hashCode).Warn("Before running Funnel or analytics query.")
+		beforeRunningAnalyticsQuery := *analyticsQuery
 		go store.runFunnelAndInsightsUnit(projectID, *analyticsQuery, channel, enableFilterOpt)
+		hashCode2, _ := analyticsQuery.GetQueryCacheHashString()
+		if hashCode2 != hashCode1 {
+			log.WithField("projectID", projectID).WithField("analyticsQuery", analyticsQuery).WithField("beforeRunningAnalyticsQuery", beforeRunningAnalyticsQuery).
+				WithField("hashCode1", hashCode1).WithField("hashCode2", hashCode2).Warn("Query is being modified.")
+		}
 
 		select {
 		case response := <-channel:
@@ -998,8 +1006,20 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	} else if baseQuery.GetClass() == model.QueryClassEvents {
 		groupQuery := baseQuery.(*model.QueryGroup)
 		unitReport.Query = groupQuery
+		hashCode1, _ := groupQuery.GetQueryCacheHashString()
+		QueryiesBeforeRunning := groupQuery.Queries
+
+		// log.WithField("projectID", projectID).WithField("groupQuery", groupQuery).WithField("hashCode", hashCode).Warn("Before analytics v1 query.")
 		result, errCode = store.RunEventsGroupQuery(groupQuery.Queries, projectID, C.EnableOptimisedFilterOnEventUserQuery())
-	} else if baseQuery.GetClass() == model.QueryClassKPI {
+		hashCode2, _ := groupQuery.GetQueryCacheHashString()
+		// log.WithField("projectID", projectID).WithField("groupQuery", groupQuery).WithField("hashCode", hashCode).Warn("After analytics v1 query.")
+		if hashCode2 != hashCode1 {
+			log.WithField("projectID", projectID).
+			WithField("groupQuery", groupQuery).WithField("QueryiesBeforeRunning", QueryiesBeforeRunning).
+				WithField("hashCode1", hashCode1).WithField("hashCode2", hashCode2).Warn("Events Query is being modified.")
+		}
+
+		} else if baseQuery.GetClass() == model.QueryClassKPI {
 		groupQuery := baseQuery.(*model.KPIQueryGroup)
 		unitReport.Query = groupQuery
 		result, errCode = store.ExecuteKPIQueryGroup(projectID, "", *groupQuery, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())

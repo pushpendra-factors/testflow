@@ -53,7 +53,7 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 		return result, http.StatusBadRequest, "", "Report is not present for this date range", true
 	} else if len(result[1].Results[0].Rows) == 0 {
 		logCtx.Warn("Data is not present for this date range")
-		return result, http.StatusOK, "", "Data is not present for this date range", true
+		return result, http.StatusOK, "", "Data is not present for this date range", false
 	}
 	return result, http.StatusOK, "", "", false
 }
@@ -102,7 +102,7 @@ func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, 
 		return result, http.StatusBadRequest, "", "Report is not present for this date range", true
 	} else if len(result[1].Results[0].Rows) == 0 {
 		logCtx.Warn("Data is not present for this date range")
-		return result, http.StatusOK, "", "Data is not present for this date range", true
+		return result, http.StatusOK, "", "Data is not present for this date range", false
 	}
 	return result, http.StatusOK, "", "", false
 
