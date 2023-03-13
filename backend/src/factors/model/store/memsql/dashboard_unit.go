@@ -509,6 +509,10 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 		filterDashboardUnitQueryClass := make([]string, 0)
 		for _, dashboardUnit := range dashboardUnits {
 
+			// skip caching the dashboard if not in the list
+			if !C.IsDashboardAllowedForCaching(dashboardUnit.DashboardId) {
+				continue
+			}
 			queryClass, queryInfo, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 			if errMsg != "" {
 				log.WithFields(logFields).Error("failed to get query class")
@@ -1015,11 +1019,11 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 		// log.WithField("projectID", projectID).WithField("groupQuery", groupQuery).WithField("hashCode", hashCode).Warn("After analytics v1 query.")
 		if hashCode2 != hashCode1 {
 			log.WithField("projectID", projectID).
-			WithField("groupQuery", groupQuery).WithField("QueryiesBeforeRunning", QueryiesBeforeRunning).
+				WithField("groupQuery", groupQuery).WithField("QueryiesBeforeRunning", QueryiesBeforeRunning).
 				WithField("hashCode1", hashCode1).WithField("hashCode2", hashCode2).Warn("Events Query is being modified.")
 		}
 
-		} else if baseQuery.GetClass() == model.QueryClassKPI {
+	} else if baseQuery.GetClass() == model.QueryClassKPI {
 		groupQuery := baseQuery.(*model.KPIQueryGroup)
 		unitReport.Query = groupQuery
 		result, errCode = store.ExecuteKPIQueryGroup(projectID, "", *groupQuery, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())

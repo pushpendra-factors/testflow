@@ -288,6 +288,7 @@ type Configuration struct {
 	DisableUpdateNextSessionTimestamp                  int
 	StartTimestampForWeekMonth                         int64
 	CacheForLongerExpiryProjects                       string
+	CacheOnlyDashboards                                string
 	AllowedSalesforceSyncDocTypes                      string
 }
 
@@ -1981,6 +1982,18 @@ func isProjectOnProjectsList(configProjectIDList string, projectID int64) bool {
 	return exists
 }
 
+func isIDOnIDList(configIDList string, projectID int64) bool {
+	allDs, allowedIDsMap, _ := GetProjectsFromListWithAllProjectSupport(
+		configIDList, "")
+
+	if allDs {
+		return true
+	}
+
+	_, exists := allowedIDsMap[projectID]
+	return exists
+}
+
 func IsFormFillIdentificationAllowedForProject(projectID int64) bool {
 	return isProjectOnProjectsList(configuration.FormFillIdentificationAllowedProjects, projectID)
 }
@@ -2453,6 +2466,10 @@ func GetStartTimestampForWeekMonth() int64 {
 
 func IsProjectAllowedForLongerExpiry(projectId int64) bool {
 	return isProjectOnProjectsList(configuration.CacheForLongerExpiryProjects, projectId)
+}
+
+func IsDashboardAllowedForCaching(dashboardID int64) bool {
+	return isIDOnIDList(configuration.CacheOnlyDashboards, dashboardID)
 }
 
 func IsSalesforceDocTypeEnabledForSync(docType string) bool {
