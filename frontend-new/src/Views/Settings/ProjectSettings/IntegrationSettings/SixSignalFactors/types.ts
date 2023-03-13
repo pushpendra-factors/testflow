@@ -1,3 +1,5 @@
+import { ReactNode } from 'react';
+
 export type FeatureModes = 'view' | 'edit' | 'configure';
 export type EnrichTypes = 'include' | 'exclude';
 export type EnrichPageUrlType = 'contains' | 'equals';
@@ -18,4 +20,9 @@ export interface SixSignalConfigType {
   country_exclude?: EnrichCountryData[];
   pages_include?: EnrichPageData[];
   pages_exclude?: EnrichPageData[];
+}
+
+export interface CountryLabel {
+  value: string;
+  label: ReactNode;
 }
