@@ -429,7 +429,7 @@ export function udpateProjectSettings(projectId, payload) {
           dispatch({
             type: 'UPDATE_PROJECT_SETTINGS_FULFILLED',
             payload: {
-              updatedSettings: payload
+              updatedSettings: response.data
             }
           });
           resolve(response);

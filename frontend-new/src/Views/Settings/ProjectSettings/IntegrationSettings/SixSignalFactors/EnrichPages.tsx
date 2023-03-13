@@ -35,7 +35,7 @@ const EnrichPages = ({
     key: keyof EnrichPageData
   ) => {
     const updatedObj = {
-      [key]: value?.trim()
+      [key]: value
     };
     setErrors(null);
     setErrorType('');
@@ -121,7 +121,6 @@ const EnrichPages = ({
         if (currentData.type === 'contains') {
           if (typeof currentData.value !== 'string' || !currentData.value) {
             errorIndexes.push(i);
-            errorMessage = 'Please enter a valid value';
           }
         }
         if (currentData.type === 'equals') {
@@ -249,7 +248,7 @@ const EnrichPages = ({
             <Button onClick={handleCancel}>Cancel</Button>
             <Button
               type='primary'
-              disabled={!enrichType || !!errorType || !data.length}
+              disabled={!enrichType || !!errorType}
               onClick={handleSaveClick}
             >
               Save changes

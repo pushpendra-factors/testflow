@@ -139,10 +139,7 @@ const EventBasedAlert = ({
       DDCategory = _.union(DDCategory, userProperties);
     }
     setBreakdownOptions(DDCategory);
-    if (
-      alertState?.state === 'edit' &&
-      !(EventPropertyDetails?.name || EventPropertyDetails?.[0])
-    ) {
+    if (alertState?.state === 'edit' && !(EventPropertyDetails?.name || EventPropertyDetails?.[0])) {
       let property = DDCategory.filter(
         (data) =>
           data[1] ===
@@ -501,26 +498,21 @@ const EventBasedAlert = ({
     setLoading(true);
 
     let breakDownProperties = [];
-    if (
-      queries.length > 0 &&
-      (EventPropertyDetails?.name || EventPropertyDetails?.[1])
-    ) {
+    if (queries.length > 0 && (EventPropertyDetails?.name || EventPropertyDetails?.[1])) {
       const category = eventProperties[queries[0]?.label].filter(
-        (prop) =>
-          prop[1] === (EventPropertyDetails?.name || EventPropertyDetails?.[1])
+        (prop) => prop[1] === (EventPropertyDetails?.name || EventPropertyDetails?.[1])
       );
       breakDownProperties = [
         {
           eventName: queries?.[0].label,
-          property: EventPropertyDetails?.name || EventPropertyDetails?.[1],
-          prop_type:
-            EventPropertyDetails?.data_type || EventPropertyDetails?.[2],
+          property: (EventPropertyDetails?.name || EventPropertyDetails?.[1]),
+          prop_type: (EventPropertyDetails?.data_type || EventPropertyDetails?.[2]),
           prop_category: category.length > 0 ? 'event' : 'user'
         }
       ];
     }
 
-    if (queries.length > 0 && slackEnabled && saveSelectedChannel.length > 0) {
+    if (queries.length > 0 && saveSelectedChannel.length > 0) {
       let payload = {
         title: data?.alert_name,
         event: queries[0]?.label,
@@ -590,13 +582,6 @@ const EventBasedAlert = ({
         notification.error({
           message: 'Error',
           description: 'Please select Event to send alert.'
-        });
-      }
-      if (!slackEnabled) {
-        notification.error({
-          message: 'Error',
-          description:
-            'Please select atleast one delivery option to send alert.'
         });
       }
       if (saveSelectedChannel.length === 0) {
@@ -750,20 +735,7 @@ const EventBasedAlert = ({
               <Form.Item
                 name='alert_name'
                 className={'m-0'}
-                rules={[
-                  { required: true, message: 'Please enter alert name' },
-                  {
-                    validator: (_, value) => {
-                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
-                      if (!value || regex.test(value)) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(
-                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
-                      );
-                    }
-                  }
-                ]}
+                rules={[{ required: true, message: 'Please enter alert name' }]}
               >
                 <Input
                   className={'fa-input'}
@@ -1233,20 +1205,7 @@ const EventBasedAlert = ({
                 name='alert_name'
                 className={'m-0'}
                 initialValue={viewAlertDetails?.title}
-                rules={[
-                  { required: true, message: 'Please enter alert name' },
-                  {
-                    validator: (_, value) => {
-                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
-                      if (!value || regex.test(value)) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(
-                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
-                      );
-                    }
-                  }
-                ]}
+                rules={[{ required: true, message: 'Please enter alert name' }]}
               >
                 <Input
                   className={'fa-input'}

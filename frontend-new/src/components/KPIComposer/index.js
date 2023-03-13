@@ -31,7 +31,7 @@ import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 import GlobalFilterBlock from './GlobalFilterBlock';
 import GroupByBlock from './GroupByBlock';
 import { areKpisInSameGroup } from 'Utils/kpiQueryComposer.helpers'; 
-import _ from 'lodash';
+import isEmpty from 'lodash/isEmpty';
 import { getKPIPropertyMappings } from 'Reducers/kpi'
 
 function KPIComposer({
@@ -54,7 +54,6 @@ function KPIComposer({
   const [criteriaBlockOpen, setCriteriaBlockOpen] = useState(true);
   const [eventBlockOpen, setEventBlockOpen] = useState(true);
   const { groupBy } = useSelector((state) => state.coreQuery);
-  const [sameGrpState, setSameGrpState] = useState(null);
 
   const DefaultQueryOptsVal = {
     ...QUERY_OPTIONS_DEFAULT_VALUE,
@@ -116,9 +115,7 @@ function KPIComposer({
 
   useEffect(() => {
     // Filters gets reset when ever query groups are changed
-    setSameGrpState(isSameKPIGrp);
-    if(!isSameKPIGrp && !_.isEmpty(queries) ){
-      
+    if(!isSameKPIGrp && !isEmpty(queries) ){
 
       //fetch common properties if different group
       if(queries.length > 1 && !isSameKPIGrp){
@@ -133,18 +130,8 @@ function KPIComposer({
           return null;
         }) 
       }
-    }
-    // if(_.isEmpty(queries)){
-    //   setQueryOptions((currState) => {
-    //     return {
-    //       ...currState,
-    //       globalFilters: DefaultQueryOptsVal.globalFilters
-    //     };
-    //   });  
-    //   resetGroupByAction(); 
-    // }
-    if(!_.isNull(sameGrpState)){
-    if(sameGrpState != isSameKPIGrp){
+    } 
+    if(isEmpty(queries) || !isSameKPIGrp){
       setQueryOptions((currState) => {
         return {
           ...currState,
@@ -153,9 +140,10 @@ function KPIComposer({
       });  
       resetGroupByAction(); 
     }
-  }
+        
 }, [
-  isSameKPIGrp
+  isSameKPIGrp,
+  queries
 ]);
  
 

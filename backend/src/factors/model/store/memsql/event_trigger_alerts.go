@@ -128,7 +128,7 @@ func (store *MemSQL) DeleteEventTriggerAlert(projectID int64, id string) (int, s
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string) {
+func (store *MemSQL) CreateEventTriggerAlert(userID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"event_trigger_alert": alertConfig,
@@ -142,16 +142,11 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	transTime := gorm.NowFunc()
 	id := U.GetUUID()
 
-	isValidAlertBody, errCode, errMsg := store.isValidEventTriggerAlertBody(projectID, userID, alertConfig)
-	if !isValidAlertBody {
-		return nil, errCode, errMsg
-	}
-
 	if alertCreationLimitExceeded(projectID) {
 		return nil, http.StatusConflict, "Alerts limit reached"
 	}
 
-	if isDuplicateAlertTitle(projectID, alertConfig.Title, oldID) {
+	if isDuplicateAlertTitle(projectID, alertConfig.Title, id) {
 		return nil, http.StatusConflict, "Alert already exist"
 	}
 
@@ -213,31 +208,6 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	}
 
 	return &alert, http.StatusCreated, ""
-}
-
-func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID string, alert *model.EventTriggerAlertConfig) (bool, int, string) {
-
-	if alert.Title == "" {
-		return false, http.StatusBadRequest, "title can not be empty"
-	}
-	if alert.Event == "" {
-		return false, http.StatusBadRequest, "event can not be empty"
-	}
-	if !alert.Slack && !alert.Webhook {
-		return false, http.StatusBadRequest, "Choose atleast one delivery option"
-	}
-	if alert.Slack && (alert.SlackChannels == nil || U.IsEmptyPostgresJsonb(alert.SlackChannels)) {
-		return false, http.StatusBadRequest, "Slack channel not selected"
-	}
-	isSlackIntegrated, errCode := store.IsSlackIntegratedForProject(projectID, agentID)
-	if errCode != http.StatusOK {
-		log.WithFields(log.Fields{"agentUUID": agentID, "event_trigger_alert": alert}).Error("failed to check slack integration")
-		return false, errCode, "failed to check slack integration"
-	}
-	if alert.Slack && !isSlackIntegrated {
-		return false, http.StatusBadRequest, "Slack integration is not enabled for this project"
-	}
-	return true, http.StatusOK, ""
 }
 
 func alertCreationLimitExceeded(projectID int64) bool {

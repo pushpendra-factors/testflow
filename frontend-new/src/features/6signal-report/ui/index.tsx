@@ -278,8 +278,7 @@ const SixSignalReport = () => {
                     See which key accounts are engaging with your marketing.
                     Take action and close more deals.
                   </Text>
-                  {/* To do: uncomment the below line when learn more link is available */}
-                  {/* <Link
+                  <Link
                     className='flex items-center font-semibold gap-2'
                     style={{ color: `#1d89ff` }}
                     target='_blank'
@@ -296,7 +295,7 @@ const SixSignalReport = () => {
                     >
                       Learn more
                     </Text>
-                  </Link> */}
+                  </Link>
                 </div>
               </div>
             </div>

@@ -204,7 +204,7 @@ export const getDefaultTableColumns = () => {
   return DEFAULT_COLUMNS.map((key, index) => {
     return {
       index,
-      dataIndex: key,
+      dataIndex: KEY_LABELS[key],
       title: getClickableTitleSorter(
         // @ts-ignore
         KEY_LABELS?.[key] || key,
