@@ -15,17 +15,20 @@ class AdwordsSyncUtil:
         sync_doc_type = last_sync.get("doc_type_alias")
         first_run = (sync_last_timestamp == 0)
         next_sync_infos = []
+        is_input_timerange_given = False
 
         if AdwordsSyncUtil.non_historical_doc_type(sync_doc_type):
             next_timestamp = None
             next_timestamp_end = None
             if input_last_timestamp is not None:
                 next_timestamp = SyncUtil.get_next_start_time(input_last_timestamp)
+                is_input_timerange_given = True
             else:
                 next_timestamp = SyncUtil.get_next_start_time(sync_last_timestamp)
 
             if input_to_timestamp is not None:
                 next_timestamp_end = input_to_timestamp
+                is_input_timerange_given = True
             else:
                 next_timestamp_end = TimeUtil.get_timestamp_from_datetime(datetime.utcnow())
 
@@ -50,7 +53,7 @@ class AdwordsSyncUtil:
                 next_sync_info['first_run'] = first_run
                 next_sync_infos.append(next_sync_info)
 
-        return next_sync_infos
+        return next_sync_infos, is_input_timerange_given
 
     @staticmethod
     def doesnt_contains_historical_data(last_timestamp, doc_type):
