@@ -32,6 +32,8 @@ import {
 
 
 
+const validateRegex = /^[a-zA-Z0-9_]{1,}$/;
+
 
 const PropertyMappingForm = ({
   KPI_config,
@@ -120,7 +122,11 @@ const PropertyMappingForm = ({
               <Form.Item
                 name='name'
                 rules={[
-                  { required: true, message: 'Please input display name.' }
+                  { 
+                    // required: true,  
+                    message: 'Please input Display name (Only letters, numbers, and underscores are allowed)',
+                    pattern: validateRegex
+                   }
                 ]}
               >
                 <Input

@@ -91,7 +91,7 @@ function QueryBlock({
     newEvent.objType = value[2];
     newEvent.entity = value[4];
     newEvent.group = group;
-    newEvent.qt = qt;
+    newEvent.qt = value[3];
     if (category) {
       newEvent.category = category;
     }

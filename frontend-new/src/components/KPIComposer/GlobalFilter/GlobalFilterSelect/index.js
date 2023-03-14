@@ -150,6 +150,7 @@ const GlobalFilterSelect = ({
     setOperSelectOpen(false);
   };
 
+
   const renderDisplayName = (propState) => {
     // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
     let propertyName = '';
@@ -159,14 +160,16 @@ const GlobalFilterSelect = ({
     // if(propState.name && propState.icon === 'event') {
     //   propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
     // }
-
-    propertyName = _.startCase(propState?.name);
+    
+    propertyName = eventPropNames[propState?.name] ? eventPropNames[propState?.name] : propState?.name;
+    // propertyName = _.startCase(propState?.name);
 
     if (!propState.name) {
       propertyName = 'Select Property';
     }
     return propertyName;
-  };
+  }; 
+
 
   const propSelect = (label, val, cat) => {
     let prop = [label, ...val];

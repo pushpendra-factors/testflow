@@ -74,8 +74,6 @@ const SavedProperties = ({
     );
   };
 
-  console.log('KPI_config values', KPI_config)
-
   const columns = [
     {
       title: 'Diplay name',
