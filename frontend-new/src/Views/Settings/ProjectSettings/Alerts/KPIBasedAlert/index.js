@@ -390,6 +390,14 @@ const KPIBasedAlert = ({
             'Empty Slack Channel List'
         });
       }
+
+      if (emailEnabled && emails.length === 0) {
+        notification.error({
+          message: 'Error',
+          description:
+            'Empty Email List'
+        });
+      }
     }
   };
 
