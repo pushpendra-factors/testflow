@@ -9,6 +9,7 @@ import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import SetupAssist from 'Views/Settings/SetupAssist';
 import { useDispatch } from 'react-redux';
 import { UPDATE_ALL_ROUTES } from 'Reducers/types';
+import OnBoard from 'Views/Settings/SetupAssist/Welcome/OnboardFlow';
 const PathAnalysis = lazyWithRetry(() => import('../Views/PathAnalysis'));
 const PathAnalysisReport = lazyWithRetry(() =>
   import('../Views/PathAnalysis/PathAnalysisReport')
@@ -90,7 +91,6 @@ export const AppLayoutRoutes = ({
   return (
     <Switch>
       {renderRoutes(APP_LAYOUT_ROUTES)}
-
       {/* Additional Conditional routes  */}
       {featureLock(activeAgent) ? (
         <PrivateRoute
@@ -99,7 +99,6 @@ export const AppLayoutRoutes = ({
           component={Attribution}
         />
       ) : null}
-
       {featureLock(activeAgent) ? (
         <Route
           path='/reports/6_signal'
@@ -107,7 +106,6 @@ export const AppLayoutRoutes = ({
           component={SixSignalReport}
         />
       ) : null}
-
       {currentProjectSettings?.is_path_analysis_enabled && (
         <>
           <PrivateRoute
@@ -124,7 +122,6 @@ export const AppLayoutRoutes = ({
           />
         </>
       )}
-
       {!demoProjectId.includes(active_project?.id) ? (
         <PrivateRoute path='/project-setup' component={SetupAssist} />
       ) : (

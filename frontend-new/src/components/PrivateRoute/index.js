@@ -6,7 +6,7 @@ import { Redirect, Route, useLocation } from 'react-router-dom';
   This function is to Capitalize first string
 */
 function capitalize(string) {
-  return string[0].toUpperCase() + string.slice(1).toLowerCase();
+  return string[0]?.toUpperCase() + string?.slice(1)?.toLowerCase();
 }
 function PrivateRoute({ component: Component, ...restOfProps }) {
   const { isLoggedIn } = useSelector((state) => state.agent);

@@ -19,6 +19,7 @@ import UserProfiles from 'Components/Profile/UserProfiles';
 import AccountProfiles from 'Components/Profile/AccountProfiles';
 import Touchpoints from 'Views/Settings/ProjectConfigure/Touchpoints';
 import AppLayout from 'Views/AppLayout';
+import OnBoard from 'Views/Settings/SetupAssist/Welcome/OnboardFlow';
 
 const Login = lazyWithRetry(() => import('../Views/Pages/Login'));
 const ForgotPassword = lazyWithRetry(() =>

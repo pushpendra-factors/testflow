@@ -1,0 +1,35 @@
+.onBoardContainer {
+  padding: 20px 110px;
+}
+
+.horizontalCard {
+  padding: 15px 0;
+  .horizontalCardContent {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    .horizontalCardLeft {
+      display: flex;
+    }
+  }
+
+  .cardExtension {
+    padding: 0px 0px;
+    .eachExtension {
+      padding: 10px;
+      display: flex;
+      flex-wrap: nowrap;
+
+      input {
+        margin: 0 10px;
+      }
+    }
+  }
+
+  .btn {
+    border-color: #dedede;
+    &:hover {
+      border-color: #8c8c8c;
+    }
+  }
+}
