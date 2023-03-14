@@ -7,14 +7,16 @@ import {
 
 export const getGlobalFilters = (globalFilters = []) => {
   const filterProps = [];
-  const filtersGroupedByRef = Object.values(groupFilters(globalFilters, 'ref'));
+  
+  const filtersGroupedByRef = Object.values(groupFilters(globalFilters, 'ref')); 
+
   filtersGroupedByRef.forEach((filtersGr) => {
     if (filtersGr.length === 1) {
       const fil = filtersGr[0];
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
-            en: 'user_g',
+            en: fil.props[2],
             lop: !index ? 'AND' : 'OR',
             op: operatorMap[fil.operator],
             pr: fil.props[0],
@@ -24,7 +26,7 @@ export const getGlobalFilters = (globalFilters = []) => {
         });
       } else {
         filterProps.push({
-          en: 'user_g',
+          en: fil.props[2],
           lop: 'AND',
           op: operatorMap[fil.operator],
           pr: fil.props[0],
@@ -37,7 +39,7 @@ export const getGlobalFilters = (globalFilters = []) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
-            en: 'user_g',
+            en: fil.props[2],
             lop: !index ? 'AND' : 'OR',
             op: operatorMap[fil.operator],
             pr: fil.props[0],
@@ -47,7 +49,7 @@ export const getGlobalFilters = (globalFilters = []) => {
         });
       } else {
         filterProps.push({
-          en: 'user_g',
+          en: fil.props[2],
           lop: 'AND',
           op: operatorMap[fil.operator],
           pr: fil.props[0],
@@ -59,7 +61,7 @@ export const getGlobalFilters = (globalFilters = []) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val) => {
           filterProps.push({
-            en: 'user_g',
+            en: fil.props[2],
             lop: 'OR',
             op: operatorMap[fil.operator],
             pr: fil.props[0],
@@ -69,7 +71,7 @@ export const getGlobalFilters = (globalFilters = []) => {
         });
       } else {
         filterProps.push({
-          en: 'user_g',
+          en: fil.props[2],
           lop: 'OR',
           op: operatorMap[fil.operator],
           pr: fil.props[0],
