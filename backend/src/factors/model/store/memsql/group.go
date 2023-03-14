@@ -81,6 +81,18 @@ func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroup
 }
 
 func (store *MemSQL) CreateOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {
+	if groupName == model.GROUP_NAME_DOMAINS {
+		return nil, http.StatusBadRequest
+	}
+	return store.createOrGetGroupByName(projectID, groupName, allowedGroupNames)
+}
+
+func (store *MemSQL) CreateOrGetDomainsGroup(projectID int64) (*model.Group, int) {
+
+	return store.createOrGetGroupByName(projectID, model.GROUP_NAME_DOMAINS, map[string]bool{model.GROUP_NAME_DOMAINS: true})
+}
+
+func (store *MemSQL) createOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"group_name": groupName,

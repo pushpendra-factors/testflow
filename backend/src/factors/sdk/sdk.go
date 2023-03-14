@@ -679,7 +679,7 @@ func Track(projectId int64, request *TrackPayload,
 		if C.EnableSixSignalGroupByProjectID(projectId) {
 			groupProperties := U.FilterPropertiesByKeysByPrefix(userProperties, U.SIX_SIGNAL_PROPERTIES_PREFIX)
 			if groupProperties != nil && len(*groupProperties) > 0 {
-				status := TrackUserGroup(projectId, request.UserId, U.GROUP_NAME_SIX_SIGNAL, groupProperties)
+				status := TrackUserAccountGroup(projectId, request.UserId, U.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
 				if status != http.StatusOK && status != http.StatusNotModified && status != http.StatusNotImplemented {
 					logCtx.Error("Failed to TrackUserGroup.")
 				}
@@ -2435,7 +2435,55 @@ func FillUserAgentUserProperties(userProperties *U.PropertiesMap, userAgentStr s
 	return nil
 }
 
-func TrackUserGroup(projectID int64, userID string, groupName string, groupProperties *U.PropertiesMap) (status int) {
+// TrackGroupWithDomain tracks groups which will also get associated with domains group
+func TrackGroupWithDomain(projectID int64, groupName, domainName string, properties U.PropertiesMap, timestamp int64) (string, int) {
+	logFields := log.Fields{"project_id": projectID, "domain_name": domainName, "group_name": groupName, "properties": properties}
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || groupName == "" || domainName == "" || timestamp == 0 {
+		logCtx.Error("Invalid parameters.")
+		return "", http.StatusBadRequest
+	}
+
+	if !model.IsAllowedAccountGroupNames(groupName) {
+		logCtx.Error("Invalid account group name.")
+		return "", http.StatusBadRequest
+	}
+
+	_, status := store.GetStore().CreateOrGetGroupByName(projectID, groupName, model.AllowedGroupNames)
+	if status != http.StatusFound && status != http.StatusCreated {
+		logCtx.Error("Failed to CreateOrGetGroupByName on TrackGroupWithDomain.")
+		return "", http.StatusInternalServerError
+	}
+
+	groupID := U.GetDomainGroupDomainName(domainName)
+	groupUserID, status := store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, timestamp, model.GetGroupUserSourceByGroupName(groupName))
+	if status != http.StatusCreated && status != http.StatusFound {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for  group user by group id.")
+		return "", http.StatusInternalServerError
+	}
+
+	propertiesMap := map[string]interface{}(properties)
+	source := model.GetGroupUserSourceNameByGroupName(groupName)
+
+	_, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, groupUserID, &propertiesMap, timestamp, timestamp, source)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to create or update group user on TrackUserGroup.")
+		return "", http.StatusInternalServerError
+	}
+
+	if C.IsAllowedDomainsGroupByProjectID(projectID) {
+		status = TrackDomainsGroup(projectID, groupUserID, groupName, domainName, nil, timestamp)
+		if status != http.StatusOK {
+			logCtx.Error("Failed to TrackDomainsGroup.")
+			return "", http.StatusInternalServerError
+		}
+	}
+
+	return groupUserID, http.StatusOK
+}
+
+// TrackUserAccountGroup to used only within Track call
+func TrackUserAccountGroup(projectID int64, userID string, groupName string, groupProperties *U.PropertiesMap, timestamp int64) (status int) {
 	logFields := log.Fields{"project_id": projectID, "group_name": groupName, "user_id": userID, "properties": groupProperties}
 	logCtx := log.WithFields(logFields)
 	defer func(startTime time.Time) {
@@ -2451,17 +2499,6 @@ func TrackUserGroup(projectID int64, userID string, groupName string, groupPrope
 		return http.StatusBadRequest
 	}
 
-	if !model.IsAllowedGroupName(groupName) {
-		logCtx.Error("invalid group name.")
-		return http.StatusBadRequest
-	}
-
-	_, status = store.GetStore().CreateOrGetGroupByName(projectID, groupName, model.AllowedGroupNames)
-	if status != http.StatusFound && status != http.StatusCreated {
-		logCtx.Error("Failed to CreateOrGetGroup.")
-		return http.StatusInternalServerError
-	}
-
 	groupIDPropertyKey := model.GetGroupsGroupIDPropertyKey(groupName)
 	groupID := U.GetDomainGroupDomainName(U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKey]))
 
@@ -2470,25 +2507,77 @@ func TrackUserGroup(projectID int64, userID string, groupName string, groupPrope
 		return http.StatusNotImplemented
 	}
 
-	groupUserID, status := store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, U.TimeNowUnix(),
-		model.GetGroupUserSourceByGroupName(groupName))
-	if status != http.StatusFound && status != http.StatusCreated && status != http.StatusConflict {
-		logCtx.Warning("Failed to CreateOrGetGroupUserID on TrackUserGroup.")
-		return http.StatusInternalServerError
-	}
-
-	propertiesMap := map[string]interface{}(*groupProperties)
-	source := model.GetGroupUserSourceNameByGroupName(groupName)
-	groupUserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, groupUserID,
-		&propertiesMap, U.TimeNowUnix(), U.TimeNowUnix(), source)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to create or update group user on TrackUserGroup.")
+	groupUserID, status := TrackGroupWithDomain(projectID, groupName, groupID, *groupProperties, timestamp)
+	if status != http.StatusOK {
+		logCtx.Error("Failed to track TrackUserGroup.")
 		return http.StatusInternalServerError
 	}
 
 	_, status = store.GetStore().UpdateUserGroup(projectID, userID, groupName, groupID, groupUserID, true)
 	if status != http.StatusAccepted && status != http.StatusNotModified {
-		logCtx.WithError(err).Error("Failed to update user association with group user on TrackUserGroup.")
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to update user association with group user on TrackUserGroup.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
+// TrackDomainsGroup track $domains/All accounts group. Either group user id or domain name is required
+func TrackDomainsGroup(projectID int64, groupUserID string, groupName string, domainName string, properties U.PropertiesMap, timestamp int64) int {
+	logFields := log.Fields{"project_id": projectID,
+		"domain_name": domainName, "domain_properties": properties, "timestamp": timestamp}
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupName == "" || timestamp == 0 {
+		logCtx.Error("Invalid parameters.")
+		return http.StatusBadRequest
+	}
+
+	if !model.IsAllowedGroupForDomainsGroup(groupName) {
+		logCtx.Error("Group not allowed for domains group.")
+		return http.StatusBadRequest
+	}
+
+	if groupUserID == "" && domainName == "" {
+		logCtx.Error("Group user id and domain name empty.")
+		return http.StatusBadRequest
+	}
+
+	_, status := store.GetStore().CreateOrGetDomainsGroup(projectID)
+	if status != http.StatusFound && status != http.StatusCreated {
+		logCtx.Error("Failed to CreateOrGetDomainsGroup.")
+		return http.StatusInternalServerError
+	}
+
+	groupID := U.GetDomainGroupDomainName(domainName)
+	if groupUserID == "" {
+		groupUserID, status = store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, timestamp,
+			model.GetGroupUserSourceByGroupName(groupName))
+		if status != http.StatusFound && status != http.StatusCreated {
+			logCtx.Warning("Failed to CreateOrGetGroupUserID on TrackDomainsGroup.")
+			return http.StatusInternalServerError
+		}
+	}
+
+	domainsGroupUserID, status := store.GetStore().CreateOrGetDomainGroupUser(projectID, model.GROUP_NAME_DOMAINS, groupID, timestamp,
+		model.GetGroupUserSourceByGroupName(model.GROUP_NAME_DOMAINS))
+	if status != http.StatusFound && status != http.StatusCreated {
+		logCtx.Warning("Failed to CreateOrGetDomainGroupUser on TrackDomainsGroup.")
+		return http.StatusInternalServerError
+	}
+
+	propertiesMap := map[string]interface{}(properties)
+	source := model.GetGroupUserSourceNameByGroupName(model.GROUP_NAME_DOMAINS)
+	_, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, model.GROUP_NAME_DOMAINS, groupID, domainsGroupUserID,
+		&propertiesMap, U.TimeNowUnix(), U.TimeNowUnix(), source)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to create or update domains group.")
+		return http.StatusInternalServerError
+	}
+
+	_, status = store.GetStore().UpdateGroupUserDomainsGroup(projectID, groupUserID, groupName, domainsGroupUserID, groupID, true)
+	if status != http.StatusAccepted && status != http.StatusNotModified {
+		logCtx.WithError(err).Error("Failed to update group user association with domains group user.")
 		return http.StatusInternalServerError
 	}
 

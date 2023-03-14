@@ -686,6 +686,7 @@ type Model interface {
 	//Group
 	CreateGroup(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
 	CreateOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
+	CreateOrGetDomainsGroup(projectID int64) (*model.Group, int)
 	GetGroup(projectID int64, groupName string) (*model.Group, int)
 	GetGroupUserByGroupID(projectID int64, groupName string, groupID string) (*model.User, int)
 	CreateOrUpdateGroupPropertiesBySource(projectID int64, groupName string, groupID, groupUserID string,
@@ -694,6 +695,7 @@ type Model interface {
 	GetPropertiesByGroup(projectID int64, groupName string, limit int, lastNDays int) (map[string][]string, int)
 	GetPropertyValuesByGroupProperty(projectID int64, groupName string, propertyName string, limit int, lastNDays int) ([]string, error)
 	IsGroupEventName(projectID int64, eventName, eventNameID string) (string, int)
+	UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainGroupID string, overwrite bool) (*model.User, int)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID int64, channelName string) (int, error)

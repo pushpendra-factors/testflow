@@ -10,6 +10,7 @@ import (
 	"time"
 
 	C "factors/config"
+	"factors/sdk"
 	SDK "factors/sdk"
 	"factors/util"
 	U "factors/util"
@@ -422,6 +423,17 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, groupAccountUserID, document.Type,
 			properties, prevProperties, lastModifiedTimestamp, false)
+	}
+
+	if C.IsAllowedDomainsGroupByProjectID(projectID) {
+		accountWebsite := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+			model.SalesforceDocumentTypeNameAccount, "website")])
+		if accountWebsite != "" {
+			status := sdk.TrackDomainsGroup(projectID, groupAccountUserID, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountWebsite, nil, lastModifiedTimestamp)
+			if status != http.StatusOK {
+				logCtx.Error("Failed to TrackDomainsGroup in account enrichment.")
+			}
+		}
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, "", groupAccountUserID, true)
@@ -1175,7 +1187,15 @@ func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string
 		return http.StatusInternalServerError
 	}
 
-	groupID, err := model.GetGroupUserGroupID(groupUser, 0)
+	group, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_SALESFORCE_ACCOUNT)
+	if status != http.StatusFound {
+		log.WithFields(log.Fields{"project_id": projectID, "account_id": accountID, "user_id": userID}).
+			Error("Failed to get group on updateSalesforceUserAccountGroups.")
+		return http.StatusInternalServerError
+	}
+
+	// use group id, to avoid conflict with all accounts group id
+	groupID, err := model.GetGroupUserGroupID(groupUser, group.ID)
 	if err != nil {
 		log.WithError(err).Error("Failed to get group user group id.")
 		return http.StatusInternalServerError
