@@ -170,7 +170,7 @@ const HorizontalCard = ({
                             padding: '0 10px'
                           }}
                         >
-                          ✅
+                          <SVG name='greentick' />
                         </span>
                       ) : (
                         <Button
@@ -217,6 +217,7 @@ const HorizontalCard = ({
                 <div style={{ padding: '10px 0' }}>
                   <Space direction='horizontal'>
                     <Button
+                      size='large'
                       className={styles['btn']}
                       onClick={() => {
                         setIsModalRequestAccess(true);

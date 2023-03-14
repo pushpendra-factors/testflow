@@ -1,5 +1,5 @@
 import { ArrowLeftOutlined, ArrowRightOutlined } from '@ant-design/icons';
-import { Button, Row } from 'antd';
+import { Button, Row, Tooltip } from 'antd';
 import { SVG } from 'Components/factorsComponents';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -40,6 +40,10 @@ const AdditionalMenu = (
   const dispatch = useDispatch();
   const handleCloseDrawer = useCallback(() => {
     dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
+    // history.push('/welcome');
+  }, []);
+  const handleDoneDrawer = useCallback(() => {
+    dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
     history.push('/');
   }, []);
   const { int_client_six_signal_key, int_factors_six_signal_key } = useSelector(
@@ -56,7 +60,7 @@ const AdditionalMenu = (
     }
     return false;
   };
-
+  let isEnabled = !isNextBtnEnabled();
   return (
     <div className={styles['additionalMenu']}>
       {currentStep > 1 && currentStep !== null ? (
@@ -74,32 +78,42 @@ const AdditionalMenu = (
       ) : (
         ''
       )}
-
-      <Button
-        className={styles['btn']}
-        disabled={!isNextBtnEnabled()}
-        onClick={
-          currentStep && currentStep >= 1 && currentStep < 3
-            ? () => {
-                dispatch({ type: NEXT_STEP_ONBOARD_FLOW });
-                // setCurrentStep((prev) => prev + 1);
-                // history.push(
-                //   '/visitoridentification/' + Number(currentStep + 1)
-                // );
-              }
-            : handleCloseDrawer
+      <Tooltip
+        placement='bottom'
+        title={
+          isEnabled && currentStep === 1
+            ? 'You have to verify the SDK to continue'
+            : isEnabled && currentStep === 2
+            ? "You have to enable yours or request Factor's 6Signal API Keys"
+            : ''
         }
-        type='primary'
       >
-        {currentStep && currentStep >= 1 && currentStep < 3 ? (
-          <>
-            {' '}
-            Next <ArrowRightOutlined />
-          </>
-        ) : (
-          'Done'
-        )}
-      </Button>
+        <Button
+          className={styles['btn']}
+          disabled={isEnabled}
+          onClick={
+            currentStep && currentStep >= 1 && currentStep < 3
+              ? () => {
+                  dispatch({ type: NEXT_STEP_ONBOARD_FLOW });
+                  // setCurrentStep((prev) => prev + 1);
+                  // history.push(
+                  //   '/visitoridentification/' + Number(currentStep + 1)
+                  // );
+                }
+              : handleDoneDrawer
+          }
+          type='primary'
+        >
+          {currentStep && currentStep >= 1 && currentStep < 3 ? (
+            <>
+              {' '}
+              Next <ArrowRightOutlined />
+            </>
+          ) : (
+            'Done'
+          )}
+        </Button>
+      </Tooltip>
 
       <div className={styles['closebtnc'] + ' ' + styles['btn']}>
         <Button onClick={handleCloseDrawer}>Close</Button>

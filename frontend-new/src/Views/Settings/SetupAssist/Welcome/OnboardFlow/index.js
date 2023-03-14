@@ -1,7 +1,6 @@
 import { Modal } from 'antd';
 import { SVG } from 'Components/factorsComponents';
 import React, { useEffect, useState } from 'react';
-import { Button } from 'react-cmdk/dist/components/ListItem';
 import { useSelector } from 'react-redux';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
 import OnBoard1 from './OnBoard1';
