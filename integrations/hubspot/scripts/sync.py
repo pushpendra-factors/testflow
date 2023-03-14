@@ -1442,9 +1442,12 @@ def sync(project_id, refresh_token, api_key, doc_type, sync_all, last_sync_times
             raise Exception("invalid doc_type "+ doc_type)
 
     except Exception as e:
-        response["status"] = "failed"
-        response["message"] = "Failed with exception: " + str(e)
-        return response
+        if str(e) == "Same offset for consecutive pages on sync_contacts":
+            response["message"] = str(e)
+        else:    
+            response["status"] = "failed"
+            response["message"] = "Failed with exception: " + str(e)
+            return response
 
     response["status"] = "success"
     response["timestamp"]= max_timestamp
