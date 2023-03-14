@@ -32,7 +32,7 @@ import {
 
 
 
-const validateRegex = /^[a-zA-Z0-9_]{1,}$/;
+const validateRegex = /^[a-zA-Z0-9_ ]{1,}$/;
 
 
 const PropertyMappingForm = ({
