@@ -120,8 +120,8 @@ func (store *MemSQL) GetGroups(projectId int64) ([]model.Group, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	if projectId < 1 {
-		logCtx.Error("Invalid parameters.")
+	if projectId == 0 {
+		logCtx.Error("Invalid project_id.")
 		return nil, http.StatusBadRequest
 	}
 
@@ -132,10 +132,9 @@ func (store *MemSQL) GetGroups(projectId int64) ([]model.Group, int) {
 		log.WithField("project_id", projectId).WithError(err).Error("Failed to get groups.")
 		return groups, http.StatusInternalServerError
 	}
-
 	return groups, http.StatusFound
-
 }
+
 func (store *MemSQL) GetGroup(projectID int64, groupName string) (*model.Group, int) {
 	logFields := log.Fields{
 		"project_id": projectID,

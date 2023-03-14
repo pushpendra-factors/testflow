@@ -7,13 +7,12 @@ import {
   QUERY_DELETED,
   QUERIES_LOADING_STOPPED,
   INITIALIZE_TOUCHPOINT_DIMENSIONS,
-  GROUPS_LOADING,
-  GROUPS_LOADED,
-  GROUPS_LOADING_FAILED,
   INITIALIZE_CONTENT_GROUPS,
   EVENT_DISPLAY_NAMES_LOADING,
   EVENT_DISPLAY_NAMES_ERROR,
-  EVENT_DISPLAY_NAMES_LOADED
+  EVENT_DISPLAY_NAMES_LOADED,
+  FETCH_GROUPS_FULFILLED,
+  FETCH_GROUPS_REJECTED
 } from '../types';
 import { getErrorMessage } from '../../utils/dataFormatter';
 // import { SAVED_QUERIES } from '../../utils/SampleResponse';
@@ -187,17 +186,18 @@ export const fetchQueries = (projectId) => async (dispatch) => {
   }
 };
 
-export const fetchGroups = (projectId) => async (dispatch) => {
-  try {
-    dispatch({ type: GROUPS_LOADING });
-    const url = `${host}projects/${projectId}/groups`;
-    const res = await get(null, url);
-    dispatch({ type: GROUPS_LOADED, payload: res.data });
-  } catch (err) {
-    console.log(err);
-    dispatch({ type: GROUPS_LOADING_FAILED });
-  }
-};
+export const fetchGroups =
+  (projectId, isAccount = '') =>
+  async (dispatch) => {
+    try {
+      const url = `${host}projects/${projectId}/groups?is_account=${isAccount}`;
+      const res = await get(null, url);
+      dispatch({ type: FETCH_GROUPS_FULFILLED, payload: res.data });
+    } catch (err) {
+      console.log(err);
+      dispatch({ type: FETCH_GROUPS_REJECTED });
+    }
+  };
 
 export const getAttributionsData = (
   projectId,

@@ -16,11 +16,11 @@ import {
   fetchGroupPropertyValues,
 } from 'Reducers/coreQuery/services';
 import FAFilterSelect from 'Components/FaFilterSelect';
-import { AvailableGroups } from 'Utils/constants';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 export default function EventFilterWrapper({
+  eventGroup,
   index,
   refValue,
   blockType = 'event',
@@ -231,7 +231,7 @@ export default function EventFilterWrapper({
         if (!dropDownValues[newFilterState.props[0]]) {
           fetchGroupPropertyValues(
             activeProject.id,
-            AvailableGroups[event.group],
+            eventGroup[1],
             newFilterState.props[0]
           )
             .then((res) => {
@@ -661,7 +661,7 @@ export default function EventFilterWrapper({
         if (!dropDownValues[props[0]]) {
           fetchGroupPropertyValues(
             activeProject.id,
-            AvailableGroups[event.group],
+            eventGroup[1],
             props[1]
           )
             .then((res) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Button, DatePicker, Tooltip } from 'antd';
@@ -6,7 +6,7 @@ import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import ProfileBlock from './ProfileBlock';
 import GroupBlock from './GroupBlock';
-import { QUERY_TYPE_PROFILE, RevAvailableGroups } from '../../utils/constants';
+import { QUERY_TYPE_PROFILE } from '../../utils/constants';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
 import {
   fetchEventNames,
@@ -18,6 +18,7 @@ import MomentTz from 'Components/MomentTz';
 import FaSelect from '../FaSelect';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
+import { fetchGroups } from 'Reducers/coreQuery/services';
 
 function ProfileComposer({
   queries,
@@ -25,10 +26,12 @@ function ProfileComposer({
   runProfileQuery,
   eventChange,
   queryType,
+  fetchGroups,
   fetchEventNames,
   getUserProperties,
   getGroupProperties,
   activeProject,
+  groupOpts,
   queryOptions,
   setQueryOptions,
   collapse = false,
@@ -40,20 +43,19 @@ function ProfileComposer({
   const [profileBlockOpen, setProfileBlockOpen] = useState(true);
   const [filterBlockOpen, setFilterBlockOpen] = useState(true);
   const [groupBlockOpen, setGroupBlockOpen] = useState(true);
-
   const dispatch = useDispatch();
-  const groupState = useSelector((state) => state.groups);
 
-  const groupOpts = groupState?.data;
+  useEffect(() => {
+    fetchGroups(activeProject.id, false);
+  }, [activeProject]);
 
-  const enabledGroups = () => {
+  const groupsList = useMemo(() => {
     let groups = [['Users', 'users']];
     groupOpts?.forEach((elem) => {
-      const formatName = RevAvailableGroups[elem.name];
-      groups.push([formatName, elem.name]);
+      groups.push([elem.display_name, elem.group_name]);
     });
     return groups;
-  };
+  }, [groupOpts]);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -105,7 +107,7 @@ function ProfileComposer({
         {isDDVisible ? (
           <FaSelect
             extraClass={`${styles.groupsection_dropdown_menu}`}
-            options={enabledGroups()}
+            options={groupsList}
             onClickOutside={() => setDDVisible(false)}
             optionClick={(val) => onChange(val[1])}
           ></FaSelect>
@@ -143,9 +145,12 @@ function ProfileComposer({
                     weight={'bold'}
                     extraClass={`m-0 mr-1`}
                   >
-                    {queryOptions.group_analysis === 'users'
-                      ? 'Users'
-                      : RevAvailableGroups[queryOptions.group_analysis]}
+                    {
+                      groupsList?.find(
+                        ([_, groupName]) =>
+                          groupName === queryOptions?.group_analysis
+                      )?.[0]
+                    }
                   </Text>
                   <SVG name='caretDown' />
                 </div>
@@ -388,12 +393,14 @@ function ProfileComposer({
 }
 
 const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project
+  activeProject: state.global.active_project,
+  groupOpts: state.groups.data
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
+      fetchGroups,
       fetchEventNames,
       getUserProperties,
       getGroupProperties

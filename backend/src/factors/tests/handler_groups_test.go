@@ -22,12 +22,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendGetGroupsRequest(projectId int64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+func sendGetGroupsRequest(projectId int64, isAccount string, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/groups", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/groups?is_account=%s", projectId, isAccount)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -51,21 +51,65 @@ func TestAPIGroupsHandler(t *testing.T) {
 	assert.NotNil(t, project)
 	assert.NotNil(t, agent)
 
-	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.NotNil(t, group1)
-	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
-	assert.NotNil(t, group2)
-	assert.Equal(t, http.StatusCreated, status)
+	isAccountCaseList := []string{"true", "false", ""}
 
-	t.Run("GetGroups", func(t *testing.T) {
-		w := sendGetGroupsRequest(project.ID, agent, r)
+	// No Groups
+	for _, isAccount := range isAccountCaseList {
+		w := sendGetGroupsRequest(project.ID, isAccount, agent, r)
 		assert.Equal(t, http.StatusFound, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		groupsList := make([]model.Group, 0)
 		json.Unmarshal(jsonResponse, &groupsList)
-		assert.Equal(t, 2, len(groupsList))
-	})
+		assert.Equal(t, 0, len(groupsList))
+	}
+
+	// 2 Groups - 1 isAccount
+	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group1)
+	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_DEAL, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group2)
+	for _, isAccount := range isAccountCaseList {
+		w := sendGetGroupsRequest(project.ID, isAccount, agent, r)
+		assert.Equal(t, http.StatusFound, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		groupsList := make([]model.Group, 0)
+		json.Unmarshal(jsonResponse, &groupsList)
+		NoOfGroups := 2
+		if isAccount == "true" || isAccount == "false" {
+			NoOfGroups = 1
+		}
+		assert.Equal(t, NoOfGroups, len(groupsList))
+	}
+
+	// +3 Groups - +2 isAccount
+	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group3)
+	group4, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group4)
+	group5, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group5)
+
+	for _, isAccount := range isAccountCaseList {
+		w := sendGetGroupsRequest(project.ID, isAccount, agent, r)
+		assert.Equal(t, http.StatusFound, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		groupsList := make([]model.Group, 0)
+		json.Unmarshal(jsonResponse, &groupsList)
+		NoOfGroups := 5
+		if isAccount == "true" {
+			NoOfGroups = 3
+		}
+		if isAccount == "false" {
+			NoOfGroups = 2
+		}
+		assert.Equal(t, NoOfGroups, len(groupsList))
+	}
+
 }
 
 func TestAPIGroupPropertiesAndValuesHandler(t *testing.T) {

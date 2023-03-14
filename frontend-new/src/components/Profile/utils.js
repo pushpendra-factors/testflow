@@ -4,11 +4,9 @@ import {
   EVENT_QUERY_USER_TYPE,
   PREDEFINED_DATES,
   QUERY_TYPE_EVENT,
-  RevAvailableGroups,
   ReverseProfileMapper,
   TYPE_UNIQUE_USERS
 } from 'Utils/constants';
-import { getGlobalFilters } from 'Views/PathAnalysis/PathAnalysisReport/QueryBuilder/utils';
 import { getEventsWithProperties } from '../../Views/CoreQuery/utils';
 import { generateRandomKey } from 'Utils/global';
 import {
@@ -293,9 +291,7 @@ export const propValueFormat = (searchKey, value, type) => {
 export const formatSegmentsObjToGroupSelectObj = (group, vals) => {
   const obj = {
     label:
-      ReverseProfileMapper[group]?.users ||
-      RevAvailableGroups[group] ||
-      'Others',
+      ReverseProfileMapper[group]?.users || PropTextFormat(group) || 'Others',
     icon: '',
     values: []
   };

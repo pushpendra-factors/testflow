@@ -1496,6 +1496,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_HUBSPOT_DEAL:           "Hubspot Deals",
 	GROUP_NAME_SALESFORCE_ACCOUNT:     "Salesforce Accounts",
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
+	GROUP_NAME_SIX_SIGNAL:             "Six Signal Domains",
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{

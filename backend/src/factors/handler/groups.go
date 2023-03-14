@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	C "factors/config"
 	mid "factors/middleware"
+	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
@@ -25,17 +26,57 @@ import (
 // @Router /{project_id}/groups [get]
 func GetGroupsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
 	if projectId == 0 {
+		logCtx.Error("invalid project_id.")
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get groups failed. Invalid project."})
 		return
 	}
+	isAccount := c.Query("is_account")
+	logCtx = log.WithFields(log.Fields{
+		"projectId": projectId,
+		"isAccount": isAccount,
+	})
+	// isAccount : true, false, ""
 	groups, errCode := store.GetStore().GetGroups(projectId)
 	if errCode != http.StatusFound {
+		logCtx.Error("Get groups failed.")
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get groups failed."})
 		return
 	}
 
-	c.JSON(http.StatusFound, groups)
+	// isAccount : true, false, ""
+	var filteredGroups []model.Group
+	if isAccount == "true" {
+		for _, group := range groups {
+			if model.GroupIsAccountMap[group.Name] {
+				filteredGroups = append(filteredGroups, group)
+			}
+		}
+	} else if isAccount == "false" {
+		for _, group := range groups {
+			if !model.GroupIsAccountMap[group.Name] {
+				filteredGroups = append(filteredGroups, group)
+			}
+		}
+	} else {
+		filteredGroups = groups
+	}
+
+	var response []map[string]string
+	for _, group := range filteredGroups {
+		resp := make(map[string]string)
+		resp["group_name"] = group.Name
+		if value, exists := U.STANDARD_GROUP_DISPLAY_NAMES[group.Name]; exists {
+			resp["display_name"] = value
+		} else {
+			resp["display_name"] = group.Name
+		}
+		response = append(response, resp)
+	}
+	c.JSON(http.StatusFound, response)
 }
 
 // GetGroupPropertiesHandler curl -i -X GET http://localhost:8080/projects/1/groups/zzxxzzz==/properties

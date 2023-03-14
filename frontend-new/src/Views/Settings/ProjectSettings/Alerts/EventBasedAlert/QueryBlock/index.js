@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -14,17 +14,13 @@ import {
 import EventFilterWrapper from 'Components/QueryComposer/EventFilterWrapper';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import EventGroupBlock from 'Components/QueryComposer/EventGroupBlock';
-import {
-  QUERY_TYPE_FUNNEL,
-  AvailableGroups,
-  RevAvailableGroups
-} from 'Utils/constants';
 import AliasModal from 'Components/QueryComposer/AliasModal';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 
 function QueryBlock({
+  availableGroups,
   index,
   event,
   eventChange,
@@ -54,19 +50,25 @@ function QueryBlock({
   });
   const [showGroups, setShowGroups] = useState([]);
 
+  const eventGroup = useMemo(() => {
+    const group =
+      availableGroups.find((group) => group[1] === event.group) || [];
+    return group;
+  }, [availableGroups, event]);
+
   useEffect(() => {
-    const groupsArray = Object.values(RevAvailableGroups);
-    const options = [...eventOptions];
     let showOpts = [];
     if (groupAnalysis === 'users') {
-      // showOpts = options.filter((item) => !groupsArray.includes(item?.label));
-      showOpts = [...options];
+      showOpts = [...eventOptions];
     } else {
-      const groupOpts = options.filter(
-        (item) => item.label === RevAvailableGroups[groupAnalysis]
-      );
-      const userOpts = options.filter(
-        (item) => !groupsArray.includes(item?.label)
+      const groupOpts = eventOptions?.filter((item) => {
+        const [groupDisplayName] =
+          availableGroups.find((group) => group[1] === event.group) || [];
+        return item.label === groupDisplayName;
+      });
+      const groupNamesList = availableGroups.map((item) => item[1]);
+      const userOpts = eventOptions?.filter(
+        (item) => !groupNamesList.includes(item?.label)
       );
       showOpts = groupOpts.concat(userOpts);
     }
@@ -105,8 +107,8 @@ function QueryBlock({
     if (!event || event === undefined) {
       return;
     }
-    if (AvailableGroups[event.group]) {
-      getGroupProperties(activeProject.id, AvailableGroups[event.group]);
+    if (eventGroup) {
+      getGroupProperties(activeProject.id, eventGroup[1]);
     }
   }, [event]);
 
@@ -123,8 +125,8 @@ function QueryBlock({
       return;
     }
     const assignFilterProps = { ...filterProps };
-    if (AvailableGroups[event.group]) {
-      assignFilterProps.group = groupProperties[AvailableGroups[event.group]];
+    if (eventGroup) {
+      assignFilterProps.group = groupProperties[eventGroup[1]];
       assignFilterProps.user = [];
     } else {
       assignFilterProps.user = userProperties;
@@ -242,15 +244,15 @@ function QueryBlock({
   const additionalActions = () => (
     <div className='fa--query_block--actions-cols flex'>
       <div className='relative'>
-          <Button
-            type='text'
-            style={{color: '#8692A3'}}
-            onClick={() => setAdditionalactions(['Filter By', 'filter'])}
-            className='-ml-2'
-            icon={<SVG name='plus' color='#8692A3' />}
-          >
-            Add a filter
-          </Button>
+        <Button
+          type='text'
+          style={{ color: '#8692A3' }}
+          onClick={() => setAdditionalactions(['Filter By', 'filter'])}
+          className='-ml-2'
+          icon={<SVG name='plus' color='#8692A3' />}
+        >
+          Add a filter
+        </Button>
 
         <AliasModal
           visible={isModalVisible}
@@ -471,10 +473,8 @@ function QueryBlock({
           </div>
         </div>
       </div>
-            {eventFilters()}
-          <div className={'mt-2'}>
-            {additionalActions()}
-          </div>
+      {eventFilters()}
+      <div className={'mt-2'}>{additionalActions()}</div>
       {/* {groupByItems()} */}
     </div>
   );
