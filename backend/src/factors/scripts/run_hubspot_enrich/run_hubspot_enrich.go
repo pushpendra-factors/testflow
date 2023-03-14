@@ -122,11 +122,8 @@ func main() {
 		AllowHubspotPastEventsEnrichmentByProjectID:        *allowHubspotPastEventsEnrichmentByProjectID,
 		AllowHubspotContactListInsertByProjectID:           *allowHubspotContactListInsertByProjectID,
 		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
-<<<<<<< HEAD
 		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
-=======
 		EnableSyncReferenceFieldsByProjectID:               *enableSyncReferenceFieldsByProjectID,
->>>>>>> master
 	}
 
 	C.InitConf(config)
