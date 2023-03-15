@@ -1,5 +1,7 @@
 import { Button, message } from 'antd';
+import { SVG } from 'Components/factorsComponents';
 import React from 'react';
+import styles from './index.module.scss';
 const CodeBlock = ({
   codeContent,
   preClassName = '',
@@ -12,17 +14,20 @@ const CodeBlock = ({
       <pre className={preClassName} {...preProps}>
         <div style={{ position: 'absolute', right: '8px' }}>
           <Button
-            type='primary'
-            size='small'
+            className={styles['btn']}
             onClick={() => {
               navigator?.clipboard?.writeText(codeContent);
               message.success({
                 content: 'copied',
-                style: { display: 'flex', justifyContent: 'center', margin: '0 auto' }
+                style: {
+                  display: 'flex',
+                  justifyContent: 'center',
+                  margin: '0 auto'
+                }
               });
             }}
           >
-            Copy Code
+            <SVG name='copycode' />
           </Button>
         </div>
         <code className={codeClassName} {...codeProps}>

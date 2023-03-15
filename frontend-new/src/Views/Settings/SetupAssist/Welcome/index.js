@@ -15,17 +15,28 @@ import FaHeader from '../../../../components/FaHeader';
 import OnBoard from './OnboardFlow';
 import { TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL } from 'Reducers/types';
 
-const EachWelcomeCard = ({ onClick, title, description, img }) => {
+const EachWelcomeCard = ({ onClick, title, description, type }) => {
   return (
     <div
       className={`${styles.first} ml-2 mr-2 ${styles['eachWelcomeCard']}`}
       onClick={onClick}
     >
-      <Row>
-        <Col className={`${styles.img}`}>
-          <img src={img} />
+      <Row
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          flexWrap: 'initial',
+          flexDirection: 'column'
+        }}
+      >
+        <Col className={styles['img']}>
+          {type === 1 ? (
+            <SVG name='onboardtarget' />
+          ) : (
+            <SVG name='onboardsearch' />
+          )}
         </Col>
-        <Col justify={'center'} span={24} className={'mt-24'}>
+        <Col justify={'center'} span={24} className={'mt-12'}>
           <Text
             type={'title'}
             level={5}
@@ -128,14 +139,14 @@ const Welcome = ({
                 <EachWelcomeCard
                   title='Analytics and Attribution'
                   description='Make data-driven decisions and optimize marketing strategies'
-                  img='https://s3.amazonaws.com/www.factors.ai/assets/img/product/file.svg'
+                  type={1}
                   onClick={handleRoute}
                 />
               </Link>
               <EachWelcomeCard
                 title='Website visitor identification'
                 description='Identify anonymous users and track high intent accounts'
-                img='https://s3.amazonaws.com/www.factors.ai/assets/img/product/file.svg'
+                type={2}
                 onClick={handleRoute1}
               />
 

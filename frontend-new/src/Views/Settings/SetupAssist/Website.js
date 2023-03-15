@@ -198,56 +198,6 @@ function IntegrationSettings({
             </Col>
           </Row>
           <JavascriptSDK />
-
-          <Col span={24} className={'mb-4'}>
-            {loading ? (
-              <div className='flex justify-center items-center w-full'>
-                <Spin />
-              </div>
-            ) : (
-              <>
-                {sdkCheck ? (
-                  <Row justify={'space-between'}>
-                    <Col span={20}>
-                      <SVG name={'CheckCircle'} extraClass={'inline'} />
-                      <Text
-                        type={'title'}
-                        level={6}
-                        color={'grey-2'}
-                        extraClass={'m-0 ml-2 inline'}
-                      >
-                        Verified. Your script is up and running.
-                      </Text>
-                    </Col>
-                    <Col>
-                      <Button
-                        type={'text'}
-                        size={'small'}
-                        style={{ color: '#1890FF' }}
-                        onClick={onSDKcheck}
-                      >
-                        Verify again
-                      </Button>
-                    </Col>
-                  </Row>
-                ) : (
-                  <div>
-                    <Text type={'title'} level={6} extraClass={'m-0 ml-2 mr-1'}>
-                      SDK not detected yet. Have you added the code?{' '}
-                      <Button
-                        type={'default'}
-                        size={'small'}
-                        onClick={onSDKcheck}
-                      >
-                        Verify it now
-                      </Button>
-                    </Text>
-                  </div>
-                )}
-              </>
-            )}
-          </Col>
-
           <Text
             type={'title'}
             level={5}
@@ -258,7 +208,6 @@ function IntegrationSettings({
           >
             OR
           </Text>
-
           <Row
             gutter={[24, 24]}
             justify={'space-between'}
@@ -291,7 +240,6 @@ function IntegrationSettings({
               )}
             </Col>
           </Row>
-
           {/* <Row gutter={[24, 24]} justify={'space-between'} className={'pt-8 pb-2 mt-0 '}>
           <Col span={17}>
             <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Connect with your website data</Text>

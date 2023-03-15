@@ -1,6 +1,6 @@
 export const defaultState = {
   steps: {
-    step1: true,
+    step1: false,
     step2: false,
     step3: true // not mandatory
   },
