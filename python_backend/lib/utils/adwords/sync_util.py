@@ -41,8 +41,10 @@ class AdwordsSyncUtil:
         else:
             next_timestamps = []
             if input_last_timestamp is not None and input_to_timestamp is not None:
+                is_input_timerange_given = True
                 next_timestamps = SyncUtil.get_next_timestamps(input_last_timestamp, input_to_timestamp)
             elif input_last_timestamp is not None and input_to_timestamp is None:
+                is_input_timerange_given = True
                 next_timestamps = SyncUtil.get_next_timestamps(input_last_timestamp)
             else:
                 next_timestamps = SyncUtil.get_next_timestamps(sync_last_timestamp)
