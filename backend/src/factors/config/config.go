@@ -161,6 +161,7 @@ type Configuration struct {
 	SegmentRequestQueueProjectTokens               []string
 	UseDefaultProjectSettingForSDK                 bool
 	BlockedSDKRequestProjectTokens                 []string
+	BlockedIPProjectIDs                            string
 	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
 	CacheLookUpRangeProjects                map[int64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
 	LookbackWindowForEventUserCache         int
@@ -286,6 +287,7 @@ type Configuration struct {
 	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
 	DisableUpdateNextSessionTimestamp                  int
+	EnableSyncReferenceFieldsByProjectID               string
 	StartTimestampForWeekMonth                         int64
 	CacheForLongerExpiryProjects                       string
 	CacheOnlyDashboards                                string
@@ -324,6 +326,7 @@ const (
 	HealthcheckCleanupEventUserCachePingID      = "85e21b5c-5503-4172-af40-de918741a4d1"
 	HealthcheckDashboardCachingPingID           = "72e5eadc-b46e-45ca-ba78-29819532307d"
 	HealthcheckHubspotEnrichPingID              = "6f522e60-6bf8-4aea-99fe-f5a1c68a00e7"
+	HealthcheckOTPHubspotPingID                 = "c937adf4-a54d-4ee8-8ec9-3e5ed8a83e42"
 	HealthcheckMonitoringJobPingID              = "18db44be-c193-4f11-84e5-5ff144e272e9"
 	HealthcheckSalesforceEnrichPingID           = "e56175aa-3407-4595-bb94-d8325952b224"
 	HealthcheckSalesforceSyncPingID             = "c5434535-ea40-42b8-8e1f-243ccf88fef3"
@@ -1898,6 +1901,28 @@ func IsBlockedSDKRequestProjectToken(projectToken string) bool {
 	return U.StringValueIn(projectToken, configuration.BlockedSDKRequestProjectTokens)
 }
 
+// IsIPBlockingFeatureEnabled - Enables the feature of blocking
+// IP for a project, based on given project_id and list of block_ip_project_ids.
+func IsIPBlockingFeatureEnabled(projectID int64) bool {
+	if configuration.BlockedIPProjectIDs == "" {
+		return false
+	}
+
+	if configuration.BlockedIPProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.BlockedIPProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
 // PingHealthcheckForSuccess Ping healthchecks.io for cron success.
 func PingHealthcheckForSuccess(healthcheckID string, message interface{}) {
 	log.Info("Job successful with message ", message)
@@ -2458,6 +2483,15 @@ func EnableSixSignalGroupByProjectID(projectID int64) bool {
 
 func IsEnableDebuggingForIP() bool {
 	return configuration.EnableDebuggingForIP
+}
+
+func AllowSyncReferenceFields(projectId int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSyncReferenceFieldsByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return projectIDsMap[projectId]
 }
 
 func GetStartTimestampForWeekMonth() int64 {

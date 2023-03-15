@@ -161,55 +161,61 @@ func main() {
 		fileTypesMap[i] = true
 	}
 
-	projectIdsToRun := make(map[int64]bool)
-	if *projectsFromDB {
-		wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
-		explain_projects, _ := store.GetStore().GetAllExplainEnabledProjects()
-		path_analysis_projects, _ := store.GetStore().GetAllPathAnalysisEnabledProjects()
-		for _, id := range wi_projects {
-			projectIdsToRun[id] = true
+	projectIdsArray := make([]int64, 0)
+	{
+		projectIdsToRun := make(map[int64]bool)
+		if *projectsFromDB {
+			wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
+			explain_projects, _ := store.GetStore().GetAllExplainEnabledProjects()
+			path_analysis_projects, _ := store.GetStore().GetAllPathAnalysisEnabledProjects()
+			for _, id := range wi_projects {
+				projectIdsToRun[id] = true
+			}
+			for _, id := range explain_projects {
+				projectIdsToRun[id] = true
+			}
+			for _, id := range path_analysis_projects {
+				projectIdsToRun[id] = true
+			}
 		}
-		for _, id := range explain_projects {
-			projectIdsToRun[id] = true
+		{
+			allProjects, projectIdsFromList, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+			if allProjects {
+				projectIDs, errCode := store.GetStore().GetAllProjectIDs()
+				if errCode != http.StatusFound {
+					log.Fatal("Failed to get all projects and project_ids set to '*'.")
+				}
+				for _, projectID := range projectIDs {
+					projectIdsFromList[projectID] = true
+				}
+			}
+			for projectId, _ := range projectIdsFromList {
+				projectIdsToRun[projectId] = true
+			}
 		}
-		for _, id := range path_analysis_projects {
-			projectIdsToRun[id] = true
+		for projectId := range projectIdsToRun {
+			projectIdsArray = append(projectIdsArray, projectId)
 		}
-	} else {
+	}
+
+	splitRangeProjectIds := make([]int64, 0)
+	{
+		splitRangeProjectIdsMap := make(map[int64]bool, 0)
 		var allProjects bool
-		allProjects, projectIdsToRun, _ = C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+		allProjects, splitRangeProjectIdsMap, _ = C.GetProjectsFromListWithAllProjectSupport(*splitRangeProjectIdFlag, "")
 		if allProjects {
 			projectIDs, errCode := store.GetStore().GetAllProjectIDs()
 			if errCode != http.StatusFound {
 				log.Fatal("Failed to get all projects and project_ids set to '*'.")
 			}
 			for _, projectID := range projectIDs {
-				projectIdsToRun[projectID] = true
+				splitRangeProjectIdsMap[projectID] = true
 			}
 		}
-	}
 
-	projectIdsArray := make([]int64, 0)
-	for projectId := range projectIdsToRun {
-		projectIdsArray = append(projectIdsArray, projectId)
-	}
-
-	splitRangeProjectIdsMap := make(map[int64]bool, 0)
-	var allProjects bool
-	allProjects, splitRangeProjectIdsMap, _ = C.GetProjectsFromListWithAllProjectSupport(*splitRangeProjectIdFlag, "")
-	if allProjects {
-		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
-		if errCode != http.StatusFound {
-			log.Fatal("Failed to get all projects and project_ids set to '*'.")
+		for projectId, _ := range splitRangeProjectIdsMap {
+			splitRangeProjectIds = append(splitRangeProjectIds, projectId)
 		}
-		for _, projectID := range projectIDs {
-			splitRangeProjectIdsMap[projectID] = true
-		}
-	}
-
-	splitRangeProjectIds := make([]int64, 0)
-	for projectId, _ := range splitRangeProjectIdsMap {
-		splitRangeProjectIds = append(splitRangeProjectIds, projectId)
 	}
 
 	configs := make(map[string]interface{})
@@ -256,14 +262,14 @@ func main() {
 	C.PingHealthcheckForStart(healthcheckPingID)
 
 	if *useBucketV2 {
+		var statusEvents map[string]interface{}
 		if U.ContainsInt64InArray(fileTypes, 1) {
 			fileTypesMapOnlyEvents := make(map[int64]bool)
 			fileTypesMapOnlyEvents[1] = true
 			configs["fileTypes"] = fileTypesMapOnlyEvents
-			status := taskWrapper.TaskFuncWithProjectId("PullEventsDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
-			log.Info(status)
+			statusEvents = taskWrapper.TaskFuncWithProjectId("PullEventsDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
 			var isSuccess bool = true
-			for reason, message := range status {
+			for reason, message := range statusEvents {
 				if message == false {
 					C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events daily failure")
 					isSuccess = false
@@ -277,7 +283,6 @@ func main() {
 
 		configs["fileTypes"] = fileTypesMap
 		status := taskWrapper.TaskFuncWithProjectId("PullDataDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
-		log.Info(status)
 		isSuccess := true
 		for reason, message := range status {
 			if message == false {
@@ -289,6 +294,8 @@ func main() {
 		if isSuccess {
 			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Data Daily run success.")
 		}
+		log.Info("events only: ", statusEvents)
+		log.Info("all data: ", status)
 	} else {
 		configs["diskManager"] = diskManager
 		configs["beamConfig"] = &beamConfig

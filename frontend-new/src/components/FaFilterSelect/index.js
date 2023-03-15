@@ -36,7 +36,14 @@ const FAFilterSelect = ({
   applyFilter,
   filter,
   disabled = false,
-  refValue
+  refValue,
+  caller,
+  propsDDPos,
+  propsDDHeight,
+  operatorDDPos,
+  operatorDDHeight,
+  valuesDDPos,
+  valuesDDHeight
 }) => {
   const [propState, setPropState] = useState({
     icon: '',
@@ -316,7 +323,9 @@ const FAFilterSelect = ({
               placeholder='Select Property'
               optionClick={(group, val) => propSelect([...val, group])}
               onClickOutside={() => setPropSelectOpen(false)}
-            ></GroupSelect2>
+              placement={propsDDPos}
+              height={propsDDHeight}
+            />
           </div>
         )}
       </div>
@@ -348,7 +357,8 @@ const FAFilterSelect = ({
             options={operatorOpts[propState.type].map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
-          ></FaSelect>
+            placement={operatorDDPos}
+          />
         )}
       </div>
     );
@@ -503,7 +513,8 @@ const FAFilterSelect = ({
               options={[['Days'], ['Weeks'], ['Months'], ['Quarters']]}
               optionClick={(val) => setDeltaGran(dateTimeSelect.get(val[0]))}
               onClickOutside={() => setDateOptionSelectOpen(false)}
-            ></FaSelect>
+              placement={valuesDDPos}
+            />
           )}
         </div>
       );
@@ -531,7 +542,8 @@ const FAFilterSelect = ({
               options={[['Week'], ['Month'], ['Quarter']]}
               optionClick={(val) => setCurrentGran(val[0].toLowerCase())}
               onClickOutside={() => setDateOptionSelectOpen(false)}
-            ></FaSelect>
+              placement={valuesDDPos}
+            />
           )}
         </div>
       );
@@ -594,7 +606,8 @@ const FAFilterSelect = ({
           onClickOutside={() => setValuesSelectionOpen(false)}
           selectedOpts={valuesState ? valuesState : []}
           allowSearch={true}
-        ></FaSelect>
+          placement={valuesDDPos}
+        />
       );
     }
 
@@ -683,6 +696,8 @@ const FAFilterSelect = ({
             >
               <Button
                 className={`fa-button--truncate ${
+                  caller === 'profiles' ? 'fa-button--truncate-sm' : ''
+                }  ${
                   displayMode
                     ? 'btn-right-round static-button'
                     : 'filter-buttons-radius'

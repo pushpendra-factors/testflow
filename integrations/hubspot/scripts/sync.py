@@ -37,6 +37,7 @@ parser.add_option("--hubspot_app_secret", dest="hubspot_app_secret", help="App s
 parser.add_option("--enable_contact_list_sync_by_project_id", dest="enable_contact_list_sync_by_project_id", help="", default="")
 parser.add_option("--allowed_doc_types_sync", dest="allowed_doc_types_sync", help="", default="*")
 parser.add_option("--use_sync_contact_list_v2", dest="use_sync_contact_list_v2",action="store_true", help="", default=False)
+parser.add_option("--enable_owner_sync_by_project_id", dest="enable_owner_sync_by_project_id", help="", default="")
 
 APP_NAME = "hubspot_sync"
 PAGE_SIZE = 100
@@ -1240,6 +1241,28 @@ def sync_form_submissions(project_id, refresh_token, api_key):
     create_all_form_submissions_documents_with_buffer([],False)
 
 
+def sync_owners(project_id, refresh_token, api_key):
+    url = "https://api.hubapi.com/owners/v2/owners?"
+    get_url = url
+
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
+
+    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
+    create_all_owners_documents_with_buffer = get_create_all_documents_with_buffer(project_id, "owner", buffer_size)
+
+    count = 0
+    log.warning("Downloading owners for project_id %d from url %s.", project_id, get_url)
+    r = hubspot_request_handler(project_id, get_url)
+    if not r.ok:
+        log.error("Failure response %d from hubspot on sync_owners", r.status_code)
+        return
+    docs = json.loads(r.text)
+
+    create_all_owners_documents_with_buffer(docs, False)
+    count = count + len(docs)
+    log.warning("Downloaded and created %d owners. total %d.", len(docs), count)
+
+
 def get_sync_info(sync_first_time = False):
     uri = "/data_service/hubspot/documents/sync_info?is_first_time="
     if sync_first_time == True:
@@ -1358,6 +1381,14 @@ def allow_contact_list_sync_by_project_id(project_id):
         return True
     return str(project_id) in allowed_projects
 
+def allow_owner_sync_by_project_id(project_id):
+    if not options.enable_owner_sync_by_project_id:
+        return False
+    all_projects, allowed_projects,_ = get_allowed_list_with_all_element_support(options.enable_owner_sync_by_project_id)
+    if all_projects:
+        return True
+    return str(project_id) in allowed_projects
+
 def allowed_doc_types_sync(doc_type):
     all_doc_typ, allowed_doc_types,_ = get_allowed_list_with_all_element_support(options.allowed_doc_types_sync)
     if all_doc_typ:
@@ -1397,6 +1428,8 @@ def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False
 
             if doc_type == "contact_list" and not allow_contact_list_sync_by_project_id(project_id):
                 continue
+            if doc_type == "owner" and not allow_owner_sync_by_project_id(project_id):
+                continue
             
             next_sync = {}
             next_sync["project_id"] = int(project_id)
@@ -1434,6 +1467,8 @@ def sync(project_id, refresh_token, api_key, doc_type, sync_all, last_sync_times
             sync_forms(project_id, refresh_token, api_key)
         elif doc_type == "form_submission":
             sync_form_submissions(project_id, refresh_token, api_key)
+        elif doc_type == "owner":
+            sync_owners(project_id, refresh_token, api_key)
         elif doc_type == "deleted_contacts":
             response["deleted_contacts_api_calls"] = get_deleted_contacts(project_id, refresh_token, api_key)
         elif doc_type == "engagement":

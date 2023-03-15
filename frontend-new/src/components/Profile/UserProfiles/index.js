@@ -439,7 +439,6 @@ function UserProfiles({
           placeholder='Search Segments'
           optionClick={onOptionClick}
           onClickOutside={() => setSegmentDDVisible(false)}
-          allowEmpty
           additionalActions={renderAdditionalActionsInSegment()}
         />
       ) : null}
@@ -463,24 +462,32 @@ function UserProfiles({
     });
 
     return (
-      <div className='flex items-start'>
+      <div className='segment-query_block'>
         {blockList.length ? (
-          <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
+          <h2
+            className={`title ${
+              activeSegment?.query?.gup?.length ? '' : 'width-unset'
+            }`}
+          >
             Performed Events
           </h2>
         ) : null}
-        <div className='flex flex-wrap flex-col'>{blockList}</div>
+        <div className='content'>{blockList}</div>
       </div>
     );
   };
 
   const filtersList = (filters) => {
     return (
-      <div className='flex items-start'>
-        <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
-          Properties
+      <div className='segment-query_block'>
+        <h2
+          className={`title ${
+            activeSegment?.query?.ewp?.length ? '' : 'width-unset'
+          }`}
+        >
+          With Properties
         </h2>
-        <div className='flex flex-wrap flex-col'>
+        <div className='content'>
           <PropertyFilter
             filtersLimit={10}
             profileType='user'
@@ -595,6 +602,7 @@ function UserProfiles({
         placement='bottomLeft'
         trigger={activeSegment.query ? 'hover' : ''}
         content={segmentInfo}
+        mouseEnterDelay={0.5}
       >
         <Button
           className='dropdown-btn'

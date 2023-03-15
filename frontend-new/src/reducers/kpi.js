@@ -20,6 +20,9 @@ export default function reducer(state = inititalState, action) {
     case 'FETCH_CUSTOM_KPI_CONFIG_FULFILLED': {
       return { ...state, custom_kpi_config: action.payload };
     }
+    case 'FETCH_KPI_PROPERTYMAPPING_FULFILLED': {
+      return { ...state, kpi_property_mapping: action.payload };
+    }
     case 'FETCH_SAVED_CUSTOM_KPI_FULFILLED': {
       return { ...state, saved_custom_kpi: action.payload };
     }
@@ -186,6 +189,29 @@ export function fetchPageUrls(projectID) {
         })
         .catch((err) => {
           dispatch({ type: 'FETCH_KPI_PAGEURLS_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function getKPIPropertyMappings(projectID, data) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(
+        dispatch,
+        host + 'projects/' + projectID + `/v1/kpi/property_mappings/commom_properties`,
+        data
+      )
+        .then((response) => {
+          dispatch({
+            type: 'FETCH_KPI_PROPERTYMAPPING_FULFILLED',
+            payload: response.data,
+          });
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_KPI_PROPERTYMAPPING_REJECTED', payload: err });
           reject(err);
         });
     });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Radio } from 'antd';
+import { QuickFilterProps } from '../../../types';
 
 const QuickFilter = ({
   filters,
@@ -20,12 +21,6 @@ const QuickFilter = ({
       </Radio.Group>
     </div>
   );
-};
-
-type QuickFilterProps = {
-  filters: { id: string; label: string }[];
-  onFilterChange: (id: string) => void;
-  selectedFilter?: string;
 };
 
 export default QuickFilter;

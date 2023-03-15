@@ -268,9 +268,6 @@ export const getPropType = (propsList, searchProp) => {
 };
 
 export const propValueFormat = (searchKey, value, type) => {
-  if (typeof value === 'string' && value.startsWith('$')) {
-    return PropTextFormat(value);
-  }
   switch (type) {
     case 'datetime':
       if (searchKey.toLowerCase().includes('date'))

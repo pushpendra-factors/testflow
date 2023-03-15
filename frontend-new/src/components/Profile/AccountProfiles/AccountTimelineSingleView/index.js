@@ -2,6 +2,7 @@ import { Avatar, Spin } from 'antd';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ALPHANUMSTR,
+  eventIconsColorMap,
   eventsFormattedForGranularity,
   getEventCategory,
   getIconForCategory,
@@ -108,7 +109,7 @@ function AccountTimelineSingleView({
                               eventNamesMap
                             );
                             const sourceIcon = getIconForCategory(category);
-                            const eventIcon = event.icon
+                            const eventIcon = eventIconsColorMap[event.icon]
                               ? event.icon
                               : 'calendar-star';
                             return (

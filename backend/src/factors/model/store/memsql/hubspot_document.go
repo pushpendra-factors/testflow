@@ -98,6 +98,8 @@ func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 		idKey = "id"
 	case model.HubspotDocumentTypeContactList:
 		idKey = "listId"
+	case model.HubspotDocumentTypeOwner:
+		idKey = "ownerId"
 	default:
 		idKey = "guid"
 	}
@@ -595,7 +597,8 @@ func (store *MemSQL) getHubspotDocumentsForInsertion(projectId int64, documents 
 func allowedHubspotDocTypeForBatchInsert(docType int) bool {
 	return docType == model.HubspotDocumentTypeContact || docType == model.HubspotDocumentTypeCompany ||
 		docType == model.HubspotDocumentTypeEngagement || docType == model.HubspotDocumentTypeForm ||
-		docType == model.HubspotDocumentTypeFormSubmission || docType == model.HubspotDocumentTypeDeal || docType == model.HubspotDocumentTypeContactList
+		docType == model.HubspotDocumentTypeFormSubmission || docType == model.HubspotDocumentTypeDeal ||
+		docType == model.HubspotDocumentTypeContactList || docType == model.HubspotDocumentTypeOwner
 }
 
 func (store *MemSQL) CreateHubspotDocumentInBatch(projectID int64, docType int, documents []*model.HubspotDocument, batchSize int) int {
@@ -1005,6 +1008,10 @@ func (store *MemSQL) GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, 
 				continue
 			}
 
+			if !C.AllowSyncReferenceFields(ps.ProjectId) && typ == model.HubspotDocumentTypeNameOwner {
+				continue
+			}
+
 			if _, exist := enabledProjectLastSync[ps.ProjectId]; !exist {
 				enabledProjectLastSync[ps.ProjectId] = make(map[string]int64)
 			}
@@ -1103,6 +1110,10 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 				continue
 			}
 
+			if !C.AllowSyncReferenceFields(ps.ProjectId) && typ == model.HubspotDocumentTypeNameOwner {
+				continue
+			}
+
 			_, typExists := enabledProjectLastSync[ps.ProjectId][typ]
 			if !typExists {
 				// last sync timestamp as zero as type not synced before.
@@ -1155,8 +1166,15 @@ func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId int64, typ int, 
 	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND created_at < ? ",
 		projectId, typ, maxCreatedAtFmt).Find(&documents).Error
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
-		return nil, http.StatusInternalServerError
+		if !gorm.IsRecordNotFoundError(err) {
+			logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
+			return nil, http.StatusInternalServerError
+		}
+		return nil, http.StatusNotFound
+	}
+
+	if len(documents) == 0 {
+		return nil, http.StatusNotFound
 	}
 
 	return documents, http.StatusFound

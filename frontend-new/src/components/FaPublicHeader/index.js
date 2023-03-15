@@ -10,9 +10,6 @@ function FaPublicHeader(props) {
   const { Header } = Layout;
   const history = useHistory();
   const { isLoggedIn } = useAgentInfo();
-  const handleShareClick = () => {
-    props.showDrawer();
-  };
 
   return (
     <Header className={`${styles.faheader}`}>
@@ -30,35 +27,37 @@ function FaPublicHeader(props) {
         </Button>
       </div>
       <div className='w-3/4 flex justify-end gap-2 items-center'>
-        <Tooltip placement='bottom' title='Share'>
-          <Button
-            onClick={handleShareClick}
-            size='large'
-            type='primary'
-            icon={<SVG name={'link'} color='#fff' />}
-          >
-            Share
-          </Button>
-        </Tooltip>
-        <ControlledComponent controller={!isLoggedIn}>
-          <Button onClick={() => history.push('/login')} size='large'>
-            Login
-          </Button>
+        <ControlledComponent controller={isLoggedIn}>
+          <Tooltip placement='bottom' title='Share'>
+            <Button
+              onClick={props?.handleShareClick}
+              size='large'
+              type='primary'
+              icon={<SVG name={'link'} color='#fff' />}
+            >
+              Share
+            </Button>
+          </Tooltip>
         </ControlledComponent>
 
-        <Button
-          size='large'
-          type='text'
-          icon={<SVG name={'threedot'} />}
-          onClick={() => console.log('tripple dots click')}
-        ></Button>
-        <Divider type='vertical' style={{ height: '1.5rem' }} />
-        <Button
-          onClick={() => history.push('/login')}
-          size='large'
-          icon={<SVG name={'Remove'} color='#8692A3' />}
-          type='text'
-        ></Button>
+        <ControlledComponent controller={!isLoggedIn}>
+          <Button
+            onClick={() => history.push('/login')}
+            size='large'
+            className='mr-2'
+          >
+            Go to Factors
+          </Button>
+        </ControlledComponent>
+        <ControlledComponent controller={isLoggedIn}>
+          <Divider type='vertical' style={{ height: '1.5rem' }} />
+          <Button
+            onClick={() => history.push('/')}
+            size='large'
+            icon={<SVG name={'Remove'} color='#8692A3' />}
+            type='text'
+          ></Button>
+        </ControlledComponent>
       </div>
     </Header>
   );

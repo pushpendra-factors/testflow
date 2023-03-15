@@ -168,6 +168,14 @@ upload-hubspot-enrich: export IMAGE_NAME=hubspot-enrich-job
 upload-hubspot-enrich: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG)
 
+pack-otp-hubspot:
+	docker build -t us.gcr.io/factors-$(ENV)/otp-hubspot-job:$(TAG) -f Dockerfile.otp_hubspot_job .
+
+upload-otp-hubspot: export IMAGE_NAME=otp-hubspot-job
+upload-otp-hubspot: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/otp-hubspot-job:$(TAG)
+
+
 pack-marketo-enrich:
 	docker build -t us.gcr.io/factors-$(ENV)/marketo-enrich-job:$(TAG) -f Dockerfile.marketo_enrich_job .
 

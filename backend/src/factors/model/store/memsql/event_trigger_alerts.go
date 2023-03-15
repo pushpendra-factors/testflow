@@ -39,7 +39,7 @@ func (store *MemSQL) GetAllEventTriggerAlertsByProject(projectID int64) ([]model
 		Where("project_id = ? AND is_deleted = ?", projectID, false).
 		Order("created_at DESC").Limit(ListLimit).Find(&alerts).Error
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch rows from pathanalysis table for project")
+		log.WithError(err).Error("Failed to fetch rows from event_trigger_alerts table for project")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -63,7 +63,7 @@ func (store *MemSQL) GetEventTriggerAlertByID(id string) (*model.EventTriggerAle
 		Where("id = ? AND is_deleted = ?", id, false).
 		Order("created_at DESC").Limit(ListLimit).Find(&alert).Error
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch rows from pathanalysis table for project")
+		log.WithError(err).Error("Failed to fetch rows from event_trigger_alerts table for project")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -80,7 +80,7 @@ func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []mode
 		var alert model.EventTriggerAlertConfig
 		err := U.DecodePostgresJsonbToStructType(obj.EventTriggerAlert, &alert)
 		if err != nil {
-			log.WithError(err).Error("Problem deserializing pathanalysis query.")
+			log.WithError(err).Error("Problem deserializing event_trigger_alerts query.")
 			return nil
 		}
 		deliveryOption := ""
@@ -128,7 +128,7 @@ func (store *MemSQL) DeleteEventTriggerAlert(projectID int64, id string) (int, s
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) CreateEventTriggerAlert(userID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string) {
+func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"event_trigger_alert": alertConfig,
@@ -142,11 +142,16 @@ func (store *MemSQL) CreateEventTriggerAlert(userID string, projectID int64, ale
 	transTime := gorm.NowFunc()
 	id := U.GetUUID()
 
+	isValidAlertBody, errCode, errMsg := store.isValidEventTriggerAlertBody(projectID, userID, alertConfig)
+	if !isValidAlertBody {
+		return nil, errCode, errMsg
+	}
+
 	if alertCreationLimitExceeded(projectID) {
 		return nil, http.StatusConflict, "Alerts limit reached"
 	}
 
-	if isDuplicateAlertTitle(projectID, alertConfig.Title, id) {
+	if isDuplicateAlertTitle(projectID, alertConfig.Title, oldID) {
 		return nil, http.StatusConflict, "Alert already exist"
 	}
 
@@ -208,6 +213,31 @@ func (store *MemSQL) CreateEventTriggerAlert(userID string, projectID int64, ale
 	}
 
 	return &alert, http.StatusCreated, ""
+}
+
+func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID string, alert *model.EventTriggerAlertConfig) (bool, int, string) {
+
+	if alert.Title == "" {
+		return false, http.StatusBadRequest, "title can not be empty"
+	}
+	if alert.Event == "" {
+		return false, http.StatusBadRequest, "event can not be empty"
+	}
+	if !alert.Slack && !alert.Webhook {
+		return false, http.StatusBadRequest, "Choose atleast one delivery option"
+	}
+	if alert.Slack && (alert.SlackChannels == nil || U.IsEmptyPostgresJsonb(alert.SlackChannels)) {
+		return false, http.StatusBadRequest, "Slack channel not selected"
+	}
+	isSlackIntegrated, errCode := store.IsSlackIntegratedForProject(projectID, agentID)
+	if errCode != http.StatusOK {
+		log.WithFields(log.Fields{"agentUUID": agentID, "event_trigger_alert": alert}).Error("failed to check slack integration")
+		return false, errCode, "failed to check slack integration"
+	}
+	if alert.Slack && !isSlackIntegrated {
+		return false, http.StatusBadRequest, "Slack integration is not enabled for this project"
+	}
+	return true, http.StatusOK, ""
 }
 
 func alertCreationLimitExceeded(projectID int64) bool {

@@ -423,6 +423,7 @@ const ConversionGoalBlock = ({
               onEventSelect(val, group, category)
             }
             onClickOutside={() => setSelectVisible(false)}
+            useCollapseView
           ></GroupSelect2>
         ) : null}
       </div>

@@ -515,25 +515,27 @@ func IsEmptyPropertyValue(propertyValue interface{}) bool {
 	}
 }
 
-func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string) error {
+func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string) (error, string) {
 	geo := config.GetServices().GeoLocation
 
+	country := ""
 	// ClientIP unavailable.
 	if clientIP == "" {
-		return fmt.Errorf("invalid IP, failed adding geolocation properties")
+		return fmt.Errorf("invalid IP, failed adding geolocation properties"), country
 	}
 
 	city, err := geo.City(net.ParseIP(clientIP))
 	if err != nil {
 		log.WithFields(log.Fields{"clientIP": clientIP}).WithError(err).Error(
 			"Failed to get city information from geodb")
-		return err
+		return err, country
 	}
 
 	// Using en -> english name.
 	if countryName, ok := city.Country.Names["en"]; ok && countryName != "" {
 		if c, ok := (*properties)[util.UP_COUNTRY]; !ok || c == "" {
 			(*properties)[util.UP_COUNTRY] = countryName
+			country = countryName
 		}
 	}
 
@@ -554,7 +556,7 @@ func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string)
 		}
 	}
 
-	return nil
+	return nil, country
 }
 
 // GetDecodedUserPropertiesIdentifierMetaObject gets the identifier meta data from the user properties

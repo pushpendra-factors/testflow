@@ -41,7 +41,8 @@ const MenuItems = {
   Pages: 'Pages',
   Alerts: 'Alerts',
   Insights: 'Build Insights',
-  Sharing: 'Sharing'
+  Sharing: 'Sharing',
+  visitorIdentification: 'Visitor Identification'
 };
 
 const MapNametToLocation = {
@@ -52,7 +53,7 @@ const MapNametToLocation = {
   attribution: '/attribution',
   configure: '/configure',
   settings: '/settings',
-  setup_assist: '/welcome', 
+  setup_assist: '/welcome',
   PathAnalysis: '/path-analysis'
 };
 
@@ -148,6 +149,8 @@ function SiderMenu({
       );
     } else if (title === 'profile') {
       const items = ['People', 'Accounts'];
+      if (whiteListedAccounts.includes(activeAgent))
+        items.push('visitorIdentification');
       return (
         <div className={styles.popover_content}>
           {items.map((item) => {
@@ -155,7 +158,11 @@ function SiderMenu({
               <NavLink
                 activeStyle={{ color: '#1890ff' }}
                 exact
-                to={`/profiles/${item.toLowerCase()}`}
+                to={
+                  item !== 'visitorIdentification'
+                    ? `/profiles/${item.toLowerCase()}`
+                    : '/reports/6_signal'
+                }
                 onClick={() => setShowPopOverSettings(false)}
               >
                 {MenuItems[item]}
@@ -190,7 +197,12 @@ function SiderMenu({
     if (location.pathname === MapNametToLocation[name]) {
       color = 'purple';
     }
-    if (name == 'profile' || name == 'configure' || name == 'settings' || name == 'PathAnalysis') {
+    if (
+      name == 'profile' ||
+      name == 'configure' ||
+      name == 'settings' ||
+      name == 'PathAnalysis'
+    ) {
       if (location.pathname.includes(MapNametToLocation[name])) {
         color = 'purple';
       }
@@ -279,11 +291,11 @@ function SiderMenu({
             icon={setIcon('PathAnalysis')}
           >
             <b>Path Analysis</b>
-          </Menu.Item> 
+          </Menu.Item>
         </>
       )}
       {whiteListedAccounts.includes(activeAgent) && (
-        <> 
+        <>
           <Menu.Item
             className={styles.menuitems}
             key='/attribution'
@@ -423,7 +435,7 @@ function SiderMenu({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   activeAgent: state.agent?.agent_details?.email,
-  currentProjectSettings: state.global.currentProjectSettings,
+  currentProjectSettings: state.global.currentProjectSettings
 });
 export default connect(mapStateToProps, {
   fetchSmartEvents,

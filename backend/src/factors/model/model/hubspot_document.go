@@ -71,6 +71,8 @@ const (
 	HubspotDocumentTypeNameEngagement     = "engagement"
 	HubspotDocumentTypeContactList        = 7
 	HubspotDocumentTypeNameContactList    = "contact_list"
+	HubspotDocumentTypeOwner              = 8
+	HubspotDocumentTypeNameOwner          = "owner"
 
 	HubspotDateTimeLayout   = "2006-01-02T15:04:05.000Z"
 	HubspotDataTypeDate     = "date"
@@ -212,6 +214,7 @@ var HubspotDocumentTypeAlias = map[string]int{
 	HubspotDocumentTypeNameFormSubmission: HubspotDocumentTypeFormSubmission,
 	HubspotDocumentTypeNameEngagement:     HubspotDocumentTypeEngagement,
 	HubspotDocumentTypeNameContactList:    HubspotDocumentTypeContactList,
+	HubspotDocumentTypeNameOwner:          HubspotDocumentTypeOwner,
 }
 
 // GetHubspotTypeByAlias gets document type by document alias
@@ -403,7 +406,7 @@ func GetHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error
 
 	// direct values.
 	var updatedAtKey string
-	if document.Type == HubspotDocumentTypeForm {
+	if document.Type == HubspotDocumentTypeForm || document.Type == HubspotDocumentTypeOwner {
 		updatedAtKey = "updatedAt"
 	} else if document.Type == HubspotDocumentTypeFormSubmission {
 		updatedAtKey = "submittedAt"
@@ -526,7 +529,7 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 	var createdAtKey string
 	if document.Type == HubspotDocumentTypeContact {
 		createdAtKey = "createdate"
-	} else if document.Type == HubspotDocumentTypeForm {
+	} else if document.Type == HubspotDocumentTypeForm || document.Type == HubspotDocumentTypeOwner {
 		createdAtKey = "createdAt"
 	} else if document.Type == HubspotDocumentTypeFormSubmission {
 		createdAtKey = "submittedAt"

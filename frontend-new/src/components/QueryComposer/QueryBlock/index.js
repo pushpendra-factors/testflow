@@ -144,6 +144,7 @@ function QueryBlock({
           }
           onClickOutside={() => setDDVisible(false)}
           allowEmpty
+          useCollapseView
         />
       </div>
     ) : null;

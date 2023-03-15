@@ -363,11 +363,9 @@ function AccountDetails({
 
   const renderLeftPane = () => (
     <div className='leftpane'>
-      <div className='leftpane__user'>
+      <div className='user'>
         <img
-          src={`https://logo.clearbit.com/${getHost(
-            accountDetails?.data?.host
-          )}`}
+          src={`https://logo.uplead.com/${getHost(accountDetails?.data?.host)}`}
           onError={(e) => {
             if (
               e.target.src !==
@@ -385,17 +383,17 @@ function AccountDetails({
           {accountDetails?.data?.name}
         </Text>
       </div>
-      <div className='leftpane__props'>
+      <div className='props'>
         {listLeftPaneProps(accountDetails.data.left_pane_props)}
         <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       </div>
-      <div className='leftpane__logo_attr'>
+      <div className='logo_attr'>
         <a
           className='font-size--small'
-          href='https://clearbit.com'
+          href='https://www.uplead.com'
           target='_blank'
         >
-          Brand Logo provided by Clearbit
+          Brand Logo provided by UpLead
         </a>
       </div>
     </div>

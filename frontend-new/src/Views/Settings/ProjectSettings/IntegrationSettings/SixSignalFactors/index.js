@@ -7,6 +7,8 @@ import { Text, FaErrorComp, FaErrorLog, SVG } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
 import { sendSlackNotification } from '../../../../../utils/slack';
+import ConnectedScreen from './ConnectedScreen';
+import useAgentInfo from 'hooks/useAgentInfo';
 
 function SixSignalFactorsIntegration({
   fetchProjectSettings,
@@ -21,6 +23,7 @@ function SixSignalFactorsIntegration({
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const { email: userEmail } = useAgentInfo();
 
   useEffect(() => {
     if (currentProjectSettings?.int_factors_six_signal_key) {
@@ -73,7 +76,8 @@ function SixSignalFactorsIntegration({
         setLoading(true);
         udpateProjectSettings(activeProject.id, {
           factors6_signal_key: '',
-          int_factors_six_signal_key: false
+          int_factors_six_signal_key: false,
+          six_signal_config: {}
         })
           .then(() => {
             setLoading(false);
@@ -201,23 +205,31 @@ function SixSignalFactorsIntegration({
           </Form>
         </div>
       </Modal>
-      {currentProjectSettings?.int_factors_six_signal_key && (
-        <div className='mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'>
-          <Text type='title' level={6} weight='bold' extraClass='m-0'>
-            Connected Account
-          </Text>
-          <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
-            API Key
-          </Text>
-          <Input
-            size='large'
-            disabled
-            placeholder='API Key'
-            value={currentProjectSettings?.factors6_signal_key}
-            style={{ width: '400px' }}
+
+      {currentProjectSettings?.int_factors_six_signal_key &&
+        userEmail === 'solutions@factors.ai' && (
+          <ConnectedScreen
+            apiKey={currentProjectSettings?.factors6_signal_key}
           />
-        </div>
-      )}
+        )}
+      {currentProjectSettings?.int_factors_six_signal_key &&
+        userEmail !== 'solutions@factors.ai' && (
+          <div className='mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'>
+            <Text type='title' level={6} weight='bold' extraClass='m-0'>
+              Connected Account
+            </Text>
+            <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
+              API Key
+            </Text>
+            <Input
+              size='large'
+              disabled
+              placeholder='API Key'
+              value={currentProjectSettings?.factors6_signal_key}
+              style={{ width: '400px' }}
+            />
+          </div>
+        )}
       <div className='mt-4 flex' data-tour='step-11'>
         {currentProjectSettings?.int_factors_six_signal_key ? (
           <Button loading={loading} onClick={() => onDisconnect()}>
