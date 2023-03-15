@@ -206,3 +206,122 @@ func TestAPIGroupPropertiesAndValuesHandler(t *testing.T) {
 	assert.Contains(t, propertyValues, "value1")
 	assert.Contains(t, propertyValues, "existingPropertyNewValue1")
 }
+
+func buildGroupPropertyValuesRequest(projectId int64, groupName, propertyName string, label bool, cookieData string) (*http.Request, error) {
+	groupNameEncoded := b64.StdEncoding.EncodeToString([]byte(b64.StdEncoding.EncodeToString([]byte(groupName))))
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/groups/%s/properties/%s/values?label=%t", projectId, groupNameEncoded, propertyName, label)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+func sendGetGroupPropertyValues(projectId int64, groupName string, propertyName string, label bool, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	req, err := buildGroupPropertyValuesRequest(projectId, groupName, propertyName, label, cookieData)
+	if err != nil {
+		log.WithError(err).Error("Error getting groupName property values.")
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestGroupPropertyValuesHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	configs := make(map[string]interface{})
+	configs["eventsLimit"] = 10
+	configs["propertiesLimit"] = 10
+	configs["valuesLimit"] = 10
+	event_user_cache.DoCleanUpSortedSet(configs)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	group, status := store.GetStore().CreateGroup(project.ID, "g1", map[string]bool{"g1": true})
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group)
+	assert.Equal(t, 1, group.ID)
+
+	var properties map[string]interface{} = map[string]interface{}{"$hubspot_deal_dealtype": "newbusiness", "$hubspot_company_hubspot_owner_id": "66"}
+	userID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, "g1", "1", "",
+		&properties, U.TimeNowUnix(), U.TimeNowUnix(), model.SmartCRMEventSourceHubspot)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", userID)
+
+	configs = make(map[string]interface{})
+	configs["rollupLookback"] = 10
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	C.GetConfig().LookbackWindowForEventUserCache = 10
+
+	status = store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_deal_dealtype", "newbusiness", "New Business")
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_deal_dealtype", "existingbusiness", "ExistingBusiness")
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_company_hubspot_owner_id", "66", "Blog Api Test")
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Returns []string when label not set
+	w := sendGetGroupPropertyValues(project.ID, "g1", "$hubspot_deal_dealtype", false, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var propertyValues []string
+	jsonResponse, err := ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	json.Unmarshal(jsonResponse, &propertyValues)
+	assert.Equal(t, 1, len(propertyValues))
+	assert.Contains(t, propertyValues, "newbusiness")
+	assert.Equal(t, "newbusiness", propertyValues[0])
+
+	w = sendGetGroupPropertyValues(project.ID, "g1", "$hubspot_company_hubspot_owner_id", false, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	jsonResponse, err = ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	json.Unmarshal(jsonResponse, &propertyValues)
+	assert.Equal(t, 1, len(propertyValues))
+	assert.Contains(t, propertyValues, "66")
+	assert.Equal(t, "66", propertyValues[0])
+
+	// Returns map when label is set
+	w = sendGetGroupPropertyValues(project.ID, "g1", "$hubspot_deal_dealtype", true, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	propertyValueLabelMap := make(map[string]string, 0)
+	jsonResponse, err = ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	json.Unmarshal(jsonResponse, &propertyValueLabelMap)
+	assert.Equal(t, 2, len(propertyValueLabelMap))
+
+	assert.Contains(t, propertyValueLabelMap, "newbusiness")
+	assert.Contains(t, propertyValueLabelMap, "existingbusiness")
+	assert.Equal(t, propertyValueLabelMap["newbusiness"], "New Business")
+	assert.Equal(t, propertyValueLabelMap["existingbusiness"], "ExistingBusiness")
+
+	w = sendGetGroupPropertyValues(project.ID, "g1", "$hubspot_company_hubspot_owner_id", true, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	propertyValueLabelMap = make(map[string]string, 0)
+	jsonResponse, err = ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	json.Unmarshal(jsonResponse, &propertyValueLabelMap)
+	assert.Equal(t, 1, len(propertyValueLabelMap))
+
+	assert.Contains(t, propertyValueLabelMap, "66")
+	assert.Equal(t, propertyValueLabelMap["66"], "Blog Api Test")
+}

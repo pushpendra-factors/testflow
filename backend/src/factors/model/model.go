@@ -633,10 +633,11 @@ type Model interface {
 	CreateOrUpdateDisplayName(projectID int64, eventName, propertyName, displayName, tag string) int
 
 	// display name_labels
-	CreateOrUpdateDisplayNameLabel(projectID int64, source, key, value, label string) int
+	CreateOrUpdateDisplayNameLabel(projectID int64, source, propertyKey, value, label string) int
 	CreateDisplayNameLabel(projectID int64, source, propertyKey, value, label string) (int, error)
 	GetDisplayNameLabel(projectID int64, source, propertyKey, value string) (*model.DisplayNameLabel, int, error)
 	GetDisplayNameLabelsByProjectIdAndSource(projectID int64, source string) ([]model.DisplayNameLabel, int)
+	GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID int64, source, propertyKey string) (map[string]string, error)
 
 	// task and task-execution
 	RegisterTaskWithDefaultConfiguration(taskName string, source string, frequency int, isProjectEnabled bool) (uint64, int, string)

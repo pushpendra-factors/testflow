@@ -899,3 +899,148 @@ func TestDisabledEventUserProperties(t *testing.T) {
 	// disabled on event-level and global user_properties dropdown.
 	assert.Equal(t, "", properties.DisplayNames[U.UP_SESSION_COUNT])
 }
+
+func buildEventPropertyValuesRequest(projectId int64, eventName, propertyName string, label bool, cookieData string) (*http.Request, error) {
+	eventNameEncoded := b64.StdEncoding.EncodeToString([]byte(b64.StdEncoding.EncodeToString([]byte(eventName))))
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/event_names/%s/properties/%s/values?label=%t", projectId, eventNameEncoded, propertyName, label)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+func sendGetEventPropertyValues(projectId int64, eventName string, propertyName string, label bool, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	req, err := buildEventPropertyValuesRequest(projectId, eventName, propertyName, label, cookieData)
+	if err != nil {
+		log.WithError(err).Error("Error getting event properties.")
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestEventPropertyValuesHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	configs := make(map[string]interface{})
+	configs["eventsLimit"] = 10
+	configs["propertiesLimit"] = 10
+	configs["valuesLimit"] = 10
+	event_user_cache.DoCleanUpSortedSet(configs)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	// create new hubspot document
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  	"firstname": { "value": "%s" },
+		  	"lastname": { "value": "%s" },
+		  	"lastmodifieddate": { "value": "%d" },
+			"company_risk_profile": { "value": "%s" }
+		},
+		"identity-profiles": [
+			{
+				"vid": %d,
+				"identities": [
+					{
+					  "type": "EMAIL",
+					  "value": "%s"
+					},
+					{
+						"type": "LEAD_GUID",
+						"value": "%s"
+					}
+				]
+			}
+		]
+	}`
+
+	documentID := 1
+	createdDate := time.Now().Unix()
+	updatedTime := createdDate*1000 + 100
+	cuid := U.RandomString(10)
+	jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdDate*1000, "Sample", "Test", updatedTime, "blocked", documentID, cuid, "123-456")
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{json.RawMessage(jsonContact)},
+	}
+
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// execute sync job
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	configs = make(map[string]interface{})
+	configs["rollupLookback"] = 10
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	C.GetConfig().LookbackWindowForEventUserCache = 10
+
+	status = store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_company_risk_profile", "blocked", "Blocked")
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_company_risk_profile", "safe", "Safe")
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_company_risk_profile", "low_risk", "Low Risk")
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_company_risk_profile", "medium_risk", "Medium Risk")
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_company_risk_profile", "high_risk", "high Risk")
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Returns []string when label not set
+	w := sendGetEventPropertyValues(project.ID, U.EVENT_NAME_HUBSPOT_CONTACT_CREATED, "$hubspot_contact_company_risk_profile", false, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var propertyValues []string
+	jsonResponse, err := ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	json.Unmarshal(jsonResponse, &propertyValues)
+	assert.Equal(t, 1, len(propertyValues))
+	assert.Contains(t, propertyValues, "blocked")
+	assert.Equal(t, "blocked", propertyValues[0])
+
+	// Returns map when label is set
+	w = sendGetEventPropertyValues(project.ID, U.EVENT_NAME_HUBSPOT_CONTACT_CREATED, "$hubspot_contact_company_risk_profile", true, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	propertyValueLabelMap := make(map[string]string, 0)
+	jsonResponse, err = ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	json.Unmarshal(jsonResponse, &propertyValueLabelMap)
+	assert.Equal(t, 5, len(propertyValueLabelMap))
+
+	assert.Contains(t, propertyValueLabelMap, "blocked")
+	assert.Contains(t, propertyValueLabelMap, "safe")
+	assert.Contains(t, propertyValueLabelMap, "low_risk")
+	assert.Contains(t, propertyValueLabelMap, "medium_risk")
+	assert.Contains(t, propertyValueLabelMap, "high_risk")
+	assert.Equal(t, propertyValueLabelMap["blocked"], "Blocked")
+	assert.Equal(t, propertyValueLabelMap["safe"], "Safe")
+	assert.Equal(t, propertyValueLabelMap["low_risk"], "Low Risk")
+	assert.Equal(t, propertyValueLabelMap["medium_risk"], "Medium Risk")
+	assert.Equal(t, propertyValueLabelMap["high_risk"], "high Risk")
+}

@@ -233,12 +233,33 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 	propertyValues, err := store.GetStore().GetPropertyValuesByGroupProperty(projectId, groupName,
 		propertyName, 2500, C.GetLookbackWindowForEventUserCache())
 	if err != nil {
-		logCtx.WithError(err).Error("get properties values by event property")
+		logCtx.WithError(err).Error("get properties values by group property")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	if len(propertyValues) == 0 {
 		logCtx.WithError(err).Error("No property values returned.")
+	}
+
+	label := c.Query("label")
+	if label == "true" {
+		propertyValueLabel, err, isSourceEmpty := getPropertyValueLabel(projectId, propertyName, propertyValues)
+		if err != nil {
+			logCtx.WithError(err).Error("get group properties labels and values by property name")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		if isSourceEmpty {
+			logCtx.WithField("property_name", propertyName).Warning("source is empty")
+		}
+
+		if len(propertyValueLabel) == 0 {
+			logCtx.WithField("property_name", propertyName).Error("No group property value labels returned")
+		}
+
+		c.JSON(http.StatusOK, propertyValueLabel)
+		return
 	}
 
 	c.JSON(http.StatusOK, propertyValues)

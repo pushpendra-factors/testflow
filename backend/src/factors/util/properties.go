@@ -3266,7 +3266,7 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 	for k, v := range *properties {
 		if err := isPropertyTypeValid(v); err == nil {
 			if strings.HasPrefix(k, NAME_PREFIX) &&
-				!isAllowedCRMPropertyPrefix(k) &&
+				!IsAllowedCRMPropertyPrefix(k) &&
 				!isSDKAllowedUserProperty(&k) {
 
 				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
@@ -3292,7 +3292,7 @@ func isCRMSmartEventPropertyKey(key *string) bool {
 	return true
 }
 
-func isAllowedCRMPropertyPrefix(name string) bool {
+func IsAllowedCRMPropertyPrefix(name string) bool {
 	for prefix := range AllowedCRMPropertyPrefix {
 		if strings.HasPrefix(name, prefix) {
 			return true
@@ -3310,7 +3310,7 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 			// with selected prefixes starting with $ and default properties.
 			if strings.HasPrefix(k, NAME_PREFIX) &&
 				!strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) &&
-				!isAllowedCRMPropertyPrefix(k) &&
+				!IsAllowedCRMPropertyPrefix(k) &&
 				!isCRMSmartEventPropertyKey(&k) &&
 				!isSDKAllowedEventProperty(&k) {
 				propertyKey = fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)
