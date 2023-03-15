@@ -11,6 +11,7 @@ const Cache = require("./cache");
 const { isLocalStorageAvailable } = require("./utils/util");
 const { processAllLocalStorageBacklogRequests } = require("./utils/request");
 const properties = require("./properties");
+const { lastActivityTime, getFactorsCache } = require("./cache");
 
 const SDK_NOT_INIT_ERROR = new Error("Factors SDK is not initialized.");
 const SDK_NO_USER_ERROR = new Error("No user.");
@@ -59,24 +60,38 @@ function setCurrentPageAttributesToStore(eventId, eventNamePageURL, originalPage
     Cache.setFactorsCache(Cache.currentPageURLEventName, eventNamePageURL);
     Cache.setFactorsCache(Cache.currentPageTrackEventId, eventId);
 
-    // Set all fields related to timer.
-    Cache.setFactorsCache(Cache.startOfPageSpentTime, util.getCurrentUnixTimestampInMs());
+    // Reset all fields related to timer.
     Cache.setFactorsCache(Cache.lastPageProperties, {});
-    setLastActivityTime();
-    setPrevActivityTime(0);
+    Cache.setFactorsCache(Cache.lastActivityTime, 0);
+    Cache.setFactorsCache(Cache.currentPageSpentTimeInMs, 0);
 }
 
 function setLastActivityTime() {
-    Cache.setFactorsCache(Cache.lastActivityTime, util.getCurrentUnixTimestampInMs());
+    var currentTime = util.getCurrentUnixTimestampInMs();
+
+    var lastActivityTime = getLastActivityTime();
+    if (lastActivityTime == 0) {
+        Cache.setFactorsCache(Cache.lastActivityTime, currentTime);
+        return
+    }
+
+    // The gap between last activity and current activity cannot be more than 
+    // 100ms as the activity captured is continious.
+    // Anything higher won't be considered as continious.
+    if ((currentTime - lastActivityTime) < 100) {
+        var diff = currentTime - lastActivityTime;
+        var spentTimeInMs = getCurrentPageSpentTimeInMs();
+        var newSpentTimeInMs = spentTimeInMs + diff;
+        Cache.setFactorsCache(Cache.currentPageSpentTimeInMs, newSpentTimeInMs);
+        logger.debug("Page spent time: " + newSpentTimeInMs + "ms");
+    }
+
+    Cache.setFactorsCache(Cache.lastActivityTime, currentTime);
 }
 
 function getLastActivityTime() {
     var lastActivityTime = Cache.getFactorsCache(Cache.lastActivityTime);
     return lastActivityTime ? lastActivityTime : 0;
-}
-
-function setPrevActivityTime(t) {
-    Cache.setFactorsCache(Cache.prevActivityTime, t ? t : 0)
 }
 
 function isObject(obj) {
@@ -136,32 +151,9 @@ function clearTimeoutByPeriod(timeoutInPeriod) {
     logger.debug("Cleared timeout of "+timeoutInPeriod+"ms :"+lastTimeoutId, false);
 }
 
-
-function getPrevActivityTime() {
-    var prevActivityTime = Cache.getFactorsCache(Cache.prevActivityTime);
-    return prevActivityTime ? prevActivityTime : 0;
-}
-
-function getCurrentPageSpentTimeInMs(pageLandingTimeInMs, lastSpentTimeInMs) {
-    var prevActivityTime = getPrevActivityTime();
-    if (prevActivityTime == 0) prevActivityTime = pageLandingTimeInMs;
-
-    var lastActivityTime = getLastActivityTime();
-    if (lastActivityTime == 0) return 0;
-
-    // init with last spent time.
-    var totalSpentTimeInMs = lastSpentTimeInMs;
-    
-    // Add to total spent time only if diff is lesser than
-    // inactivity threshold (5 mins).
-    var diffTimeInMs = lastActivityTime - prevActivityTime;
-    if (diffTimeInMs < 300000) {
-        totalSpentTimeInMs = totalSpentTimeInMs + diffTimeInMs;
-    }
-
-    setPrevActivityTime(lastActivityTime);
-
-    return totalSpentTimeInMs;
+function getCurrentPageSpentTimeInMs() {
+    var currentPageSpentTimeInMs = Cache.getFactorsCache(Cache.currentPageSpentTimeInMs);
+    return currentPageSpentTimeInMs ? currentPageSpentTimeInMs : 0;
 }
 
 /**
@@ -367,8 +359,7 @@ App.prototype.updatePagePropertiesIfChanged = function(defaultPageSpentTimeInMs=
     let lastPageScrollPercentage = lastPageProperties && lastPageProperties[Properties.PAGE_SCROLL_PERCENT] ?
         lastPageProperties[Properties.PAGE_SCROLL_PERCENT] : 0;
 
-    var pageLandingTimeInMs = Cache.getFactorsCache(Cache.startOfPageSpentTime);
-    var pageSpentTimeInMs = getCurrentPageSpentTimeInMs(pageLandingTimeInMs, lastPageSpentTimeInMs);
+    var pageSpentTimeInMs = getCurrentPageSpentTimeInMs();
     var pageScrollPercentage = Properties.getPageScrollPercent();
 
     if (pageSpentTimeInMs == 0 && defaultPageSpentTimeInMs > 0) {
