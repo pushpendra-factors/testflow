@@ -56,10 +56,12 @@ const EnrichCountries = ({
         {isFlagAvailable && (
           <div className={`fflag fflag-${getCountryCode(country)} ff-md`}></div>
         )}
-        <Text type={'paragraph'} mini>
-          {' '}
-          {country}
-        </Text>
+        <div className='flex-1 whitespace-nowrap overflow-hidden text-ellipsis'>
+          <Text type={'paragraph'} mini ellipsis>
+            {' '}
+            {country}
+          </Text>
+        </div>
       </div>
     );
   };
@@ -76,7 +78,8 @@ const EnrichCountries = ({
           <Select
             style={{
               borderRadius: 6,
-              width: 180
+              width: 'fix-content',
+              minWidth: 215
             }}
             className={style.countrySelectContainer}
             labelInValue
