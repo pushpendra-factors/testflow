@@ -555,13 +555,6 @@ function CustomKPI({
     'Opportunity Updated'
   ];
 
-  const whiteListedAccounts = [
-    'junaid@factors.ai',
-    'solutions@factors.ai',
-    'parveenr@factors.ai',
-    'sonali@factors.ai'
-  ];
-
   function renderEventBasedKPIForm() {
     return (
       <div>
@@ -970,9 +963,7 @@ function CustomKPI({
                       >
                         <Option value='default'>Default</Option>
                         <Option value='derived_kpi'>Derived KPI</Option>
-                        {whiteListedAccounts.includes(currentAgent?.email) && (
-                          <Option value='event_based'>Event Based</Option>
-                        )}
+                        <Option value='event_based'>Event Based</Option>
                       </Select>
                     </Form.Item>
                   </Col>
