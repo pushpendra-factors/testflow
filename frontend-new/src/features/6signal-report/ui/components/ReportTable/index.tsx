@@ -78,6 +78,9 @@ const ReportTable = ({
       const tColumns = getTableColumuns(data, sorter, handleSorting);
 
       if (tColumns) setColumns(tColumns);
+    } else if (!data) {
+      setTableData([]);
+      setColumns(getDefaultTableColumns());
     }
   }, [
     data,

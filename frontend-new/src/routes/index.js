@@ -3,7 +3,6 @@ import { Route, Switch, Redirect } from 'react-router-dom';
 import lazyWithRetry from 'Utils/lazyWithRetry';
 import PrivateRoute from 'Components/PrivateRoute';
 import { APP_LAYOUT_ROUTES, APP_ROUTES } from './constants';
-import { WhiteListedAccounts } from 'Routes/constants';
 import { featureLock } from './feature';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import SetupAssist from 'Views/Settings/SetupAssist';
@@ -14,16 +13,15 @@ const PathAnalysisReport = lazyWithRetry(() =>
   import('../Views/PathAnalysis/PathAnalysisReport')
 );
 const Attribution = lazyWithRetry(() => import('../features/attribution/ui'));
-const SixSignalReport = lazyWithRetry(() =>
-  import('../features/6signal-report/ui')
-);
 
 const renderRoutes = (routesObj) => {
   return Object.keys(routesObj)
     .map((routeName) => {
       const route = routesObj[routeName];
+
       if (!route) return null;
       const { Component, exact = false, path, Private } = route;
+
       if (!Component || !path) return null;
 
       if (Private) {
@@ -97,14 +95,6 @@ export const AppLayoutRoutes = ({
           path={ATTRIBUTION_ROUTES.base}
           name='attribution'
           component={Attribution}
-        />
-      ) : null}
-
-      {featureLock(activeAgent) ? (
-        <Route
-          path='/reports/6_signal'
-          name='6-signal-report'
-          component={SixSignalReport}
         />
       ) : null}
 

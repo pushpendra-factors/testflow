@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, notification } from 'antd';
+import { Button, Modal, notification } from 'antd';
 import { connect, ConnectedProps, useSelector } from 'react-redux';
 import { Text, SVG } from 'Components/factorsComponents';
 import EnrichPages from './EnrichPages';
@@ -23,30 +23,40 @@ const EnrichFeature = ({
   const active_project = useSelector((state) => state.global.active_project);
 
   const handleDelete = async () => {
-    try {
-      if (!active_project?.id) return '';
-      let updatedSixSignalConfig: SixSignalConfigType = {
-        ...six_signal_config
-      };
-      if (type === 'country') {
-        updatedSixSignalConfig.country_exclude = undefined;
-        updatedSixSignalConfig.country_include = undefined;
-      } else if (type === 'page') {
-        updatedSixSignalConfig.pages_exclude = undefined;
-        updatedSixSignalConfig.pages_include = undefined;
-      }
-      await udpateProjectSettings(active_project?.id, {
-        six_signal_config: updatedSixSignalConfig
-      });
-      setMode('configure');
-      notification.success({
-        message: 'Success',
-        description: `Successfully updated settings`,
-        duration: 3
-      });
-    } catch (error) {
-      console.error('Error in deleting settings', error);
-    }
+    Modal.confirm({
+      title: 'Are you sure you want to delete this Rule?',
+      content:
+        'You are about to delete this Rule. Factors will no longer filter 6 signal data as per this Rule.',
+      okText: 'Delete',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          if (!active_project?.id) return '';
+          let updatedSixSignalConfig: SixSignalConfigType = {
+            ...six_signal_config
+          };
+          if (type === 'country') {
+            updatedSixSignalConfig.country_exclude = undefined;
+            updatedSixSignalConfig.country_include = undefined;
+          } else if (type === 'page') {
+            updatedSixSignalConfig.pages_exclude = undefined;
+            updatedSixSignalConfig.pages_include = undefined;
+          }
+          await udpateProjectSettings(active_project?.id, {
+            six_signal_config: updatedSixSignalConfig
+          });
+          setMode('configure');
+          notification.success({
+            message: 'Success',
+            description: `Successfully updated settings`,
+            duration: 3
+          });
+        } catch (error) {
+          console.error('Error in deleting settings', error);
+        }
+      },
+      onCancel: () => {}
+    });
   };
 
   useEffect(() => {
