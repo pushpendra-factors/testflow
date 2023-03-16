@@ -144,7 +144,6 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
 		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
-	logDifferenceIfAny(hash1, hash2, query, "Query change - 01")
 
 	logCtx := log.WithFields(logFields)
 
