@@ -1,23 +1,15 @@
-import {
-  GROUPS_LOADING,
-  GROUPS_LOADING_FAILED,
-  GROUPS_LOADED,
-} from './types';
+import { FETCH_GROUPS_FULFILLED, FETCH_GROUPS_REJECTED } from './types';
 
 const inititalState = {
-  loading: false,
-  error: false,
-  data: [],
+  data: []
 };
 
 export default function (state = inititalState, action) {
   switch (action.type) {
-    case GROUPS_LOADING:
-      return { ...state, loading: true };
-    case GROUPS_LOADING_FAILED:
-      return { ...inititalState, error: true };
-    case GROUPS_LOADED:
+    case FETCH_GROUPS_FULFILLED:
       return { ...inititalState, data: action.payload };
+    case FETCH_GROUPS_REJECTED:
+      return { ...inititalState, data: [] };
     default:
       return state;
   }

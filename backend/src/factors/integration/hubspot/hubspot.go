@@ -2753,6 +2753,18 @@ func syncGroupCompany(projectID int64, document *model.HubspotDocument, enProper
 		return "", "", errors.New("failed to update company group properties")
 	}
 
+	if C.IsAllowedDomainsGroupByProjectID(projectID) {
+		accountWebsite := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+			model.HubspotDocumentTypeNameCompany, "website")])
+		if accountWebsite != "" {
+			status := sdk.TrackDomainsGroup(projectID, companyUserID, model.GROUP_NAME_HUBSPOT_COMPANY, accountWebsite, nil, document.Timestamp)
+			if status != http.StatusOK {
+				log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID, "timestamp": document.Timestamp}).
+					Error("Failed to TrackDomainsGroup in hubspot company enrichment.")
+			}
+		}
+	}
+
 	return companyUserID, companyGroupID, nil
 }
 

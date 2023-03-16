@@ -1,28 +1,33 @@
 .first {
-    margin-top: 20px;
-    width: 248px;
-    height: 335px;
-    border-radius: 8px;
-    background: #F5F6F8;
-    &:hover {
-        cursor: pointer;
-    }
+  margin-top: 20px;
+  width: 248px;
+  height: 335px;
+  border-radius: 8px;
+  background: #f5f6f8;
+  &:hover {
+    cursor: pointer;
+  }
 }
 
 .img {
-    // position: absolute;
-    width: 109px;
-    height: 109px;
-    left: 80px;
-    top: 79.9px;
-    // z-index: -5;
+  // position: absolute;
+  // width: 109px;
+  // height: 109px;
+  // left: 80px;
+  // top: 79.9px;
+  height: 136px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: end;
+  // z-index: -5;
 }
 
 .video_responsive {
-    overflow: hidden;
-    padding-bottom: 56.25%;
-    position: relative;
-    height: 0;
+  overflow: hidden;
+  padding-bottom: 56.25%;
+  position: relative;
+  height: 0;
 }
 
 .video_responsive iframe {
@@ -31,4 +36,23 @@
   height: 100%;
   width: 100%;
   position: absolute;
+}
+
+.playvideobtn {
+  transition-duration: 200ms;
+  &:hover,
+  &:active,
+  &:focus,
+  &:focus-visible {
+    background-color: #00000000 !important;
+    transform: scale(1.2);
+  }
+}
+
+.eachWelcomeCard {
+  padding: 10px;
+  background-color: #e6f7ff;
+  & * {
+    user-select: none;
+  }
 }

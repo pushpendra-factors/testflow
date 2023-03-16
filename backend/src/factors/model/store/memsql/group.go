@@ -81,6 +81,18 @@ func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroup
 }
 
 func (store *MemSQL) CreateOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {
+	if groupName == model.GROUP_NAME_DOMAINS {
+		return nil, http.StatusBadRequest
+	}
+	return store.createOrGetGroupByName(projectID, groupName, allowedGroupNames)
+}
+
+func (store *MemSQL) CreateOrGetDomainsGroup(projectID int64) (*model.Group, int) {
+
+	return store.createOrGetGroupByName(projectID, model.GROUP_NAME_DOMAINS, map[string]bool{model.GROUP_NAME_DOMAINS: true})
+}
+
+func (store *MemSQL) createOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"group_name": groupName,
@@ -108,8 +120,8 @@ func (store *MemSQL) GetGroups(projectId int64) ([]model.Group, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	if projectId < 1 {
-		logCtx.Error("Invalid parameters.")
+	if projectId == 0 {
+		logCtx.Error("Invalid project_id.")
 		return nil, http.StatusBadRequest
 	}
 
@@ -120,10 +132,9 @@ func (store *MemSQL) GetGroups(projectId int64) ([]model.Group, int) {
 		log.WithField("project_id", projectId).WithError(err).Error("Failed to get groups.")
 		return groups, http.StatusInternalServerError
 	}
-
 	return groups, http.StatusFound
-
 }
+
 func (store *MemSQL) GetGroup(projectID int64, groupName string) (*model.Group, int) {
 	logFields := log.Fields{
 		"project_id": projectID,

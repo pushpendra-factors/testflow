@@ -99,8 +99,8 @@ class ServicesFetch(BaseJob):
                 latency_metric = (end_time - start_time).total_seconds()
                 self.update_to_file_metrics(LOAD, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
                 self.log_status_of_job("load", "completed", timestamp)
-                return
-    
+        return
+
     def transform_entities(self, rows):
         transformed_rows = []
         for row in rows:

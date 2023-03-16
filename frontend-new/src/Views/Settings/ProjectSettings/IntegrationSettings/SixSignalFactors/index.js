@@ -76,7 +76,8 @@ function SixSignalFactorsIntegration({
         setLoading(true);
         udpateProjectSettings(activeProject.id, {
           factors6_signal_key: '',
-          int_factors_six_signal_key: false
+          int_factors_six_signal_key: false,
+          six_signal_config: {}
         })
           .then(() => {
             setLoading(false);

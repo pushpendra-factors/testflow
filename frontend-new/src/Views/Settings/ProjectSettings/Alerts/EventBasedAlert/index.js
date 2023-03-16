@@ -42,8 +42,7 @@ import SelectChannels from '../SelectChannels';
 import {
   QUERY_TYPE_EVENT,
   INITIAL_SESSION_ANALYTICS_SEQ,
-  QUERY_OPTIONS_DEFAULT_VALUE,
-  AvailableGroups
+  QUERY_OPTIONS_DEFAULT_VALUE
 } from 'Utils/constants';
 import { DefaultDateRangeFormat } from '../../../../CoreQuery/utils';
 import TextArea from 'antd/lib/input/TextArea';
@@ -51,6 +50,7 @@ import EventGroupBlock from '../../../../../components/QueryComposer/EventGroupB
 import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import _ from 'lodash';
+import { fetchGroups } from 'Reducers/coreQuery/services';
 
 const { Option } = Select;
 
@@ -82,7 +82,9 @@ const EventBasedAlert = ({
   userPropNames,
   eventNames,
   getGroupProperties,
-  getEventProperties
+  getEventProperties,
+  fetchGroups,
+  groupOpts
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -114,6 +116,10 @@ const EventBasedAlert = ({
     date_range: { ...DefaultDateRangeFormat }
   });
 
+  useEffect(() => {
+    fetchGroups(activeProject.id);
+  }, [activeProject]);
+
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
   const [breakdownOptions, setBreakdownOptions] = useState([]);
@@ -121,25 +127,27 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     let DDCategory = [];
+    const { group_name } =
+      groupOpts.find((group) => group?.group_name === queries[0]?.group) || [];
     for (const key of Object.keys(eventProperties)) {
       if (key === queries[0]?.label) {
         DDCategory = _.union(eventProperties[queries[0]?.label], DDCategory);
       }
     }
-    if (AvailableGroups[queries[0]?.group]) {
+    if (group_name) {
       for (const key of Object.keys(groupProperties)) {
-        if (key === AvailableGroups[queries[0]?.group]) {
-          DDCategory = _.union(
-            DDCategory,
-            groupProperties[AvailableGroups[queries[0]?.group]]
-          );
+        if (key === group_name) {
+          DDCategory = _.union(DDCategory, groupProperties[group_name]);
         }
       }
     } else {
       DDCategory = _.union(DDCategory, userProperties);
     }
     setBreakdownOptions(DDCategory);
-    if (alertState?.state === 'edit' && !(EventPropertyDetails?.name || EventPropertyDetails?.[0])) {
+    if (
+      alertState?.state === 'edit' &&
+      !(EventPropertyDetails?.name || EventPropertyDetails?.[0])
+    ) {
       let property = DDCategory.filter(
         (data) =>
           data[1] ===
@@ -163,11 +171,12 @@ const EventBasedAlert = ({
   };
 
   useEffect(() => {
+    const { group_name } =
+      groupOpts.find(
+        (group) => group?.group_name === viewAlertDetails?.event_alert?.event
+      ) || [];
     if (viewAlertDetails?.event_alert?.event) {
-      getGroupProperties(
-        activeProject.id,
-        AvailableGroups[viewAlertDetails?.event_alert?.event]
-      );
+      getGroupProperties(activeProject.id, group_name);
     }
     if (viewAlertDetails?.event_alert?.event) {
       getEventProperties(
@@ -498,21 +507,26 @@ const EventBasedAlert = ({
     setLoading(true);
 
     let breakDownProperties = [];
-    if (queries.length > 0 && (EventPropertyDetails?.name || EventPropertyDetails?.[1])) {
+    if (
+      queries.length > 0 &&
+      (EventPropertyDetails?.name || EventPropertyDetails?.[1])
+    ) {
       const category = eventProperties[queries[0]?.label].filter(
-        (prop) => prop[1] === (EventPropertyDetails?.name || EventPropertyDetails?.[1])
+        (prop) =>
+          prop[1] === (EventPropertyDetails?.name || EventPropertyDetails?.[1])
       );
       breakDownProperties = [
         {
           eventName: queries?.[0].label,
-          property: (EventPropertyDetails?.name || EventPropertyDetails?.[1]),
-          prop_type: (EventPropertyDetails?.data_type || EventPropertyDetails?.[2]),
+          property: EventPropertyDetails?.name || EventPropertyDetails?.[1],
+          prop_type:
+            EventPropertyDetails?.data_type || EventPropertyDetails?.[2],
           prop_category: category.length > 0 ? 'event' : 'user'
         }
       ];
     }
 
-    if (queries.length > 0 && saveSelectedChannel.length > 0) {
+    if (queries.length > 0 && slackEnabled && saveSelectedChannel.length > 0) {
       let payload = {
         title: data?.alert_name,
         event: queries[0]?.label,
@@ -582,6 +596,13 @@ const EventBasedAlert = ({
         notification.error({
           message: 'Error',
           description: 'Please select Event to send alert.'
+        });
+      }
+      if (!slackEnabled) {
+        notification.error({
+          message: 'Error',
+          description:
+            'Please select atleast one delivery option to send alert.'
         });
       }
       if (saveSelectedChannel.length === 0) {
@@ -735,7 +756,20 @@ const EventBasedAlert = ({
               <Form.Item
                 name='alert_name'
                 className={'m-0'}
-                rules={[{ required: true, message: 'Please enter alert name' }]}
+                rules={[
+                  { required: true, message: 'Please enter alert name' },
+                  {
+                    validator: (_, value) => {
+                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
+                      if (!value || regex.test(value)) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
+                      );
+                    }
+                  }
+                ]}
               >
                 <Input
                   className={'fa-input'}
@@ -1205,7 +1239,20 @@ const EventBasedAlert = ({
                 name='alert_name'
                 className={'m-0'}
                 initialValue={viewAlertDetails?.title}
-                rules={[{ required: true, message: 'Please enter alert name' }]}
+                rules={[
+                  { required: true, message: 'Please enter alert name' },
+                  {
+                    validator: (_, value) => {
+                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
+                      if (!value || regex.test(value)) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
+                      );
+                    }
+                  }
+                ]}
               >
                 <Input
                   className={'fa-input'}
@@ -1998,7 +2045,8 @@ const mapStateToProps = (state) => ({
   groupPropNames: state.coreQuery.groupPropNames,
   userProperties: state.coreQuery.userProperties,
   userPropNames: state.coreQuery.userPropNames,
-  eventNames: state.coreQuery.eventNames
+  eventNames: state.coreQuery.eventNames,
+  groupOpts: state.groups.data
 });
 
 export default connect(mapStateToProps, {
@@ -2014,5 +2062,6 @@ export default connect(mapStateToProps, {
   getUserProperties,
   resetGroupBy,
   getGroupProperties,
-  getEventProperties
+  getEventProperties,
+  fetchGroups
 })(EventBasedAlert);

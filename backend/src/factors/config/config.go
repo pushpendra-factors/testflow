@@ -285,6 +285,7 @@ type Configuration struct {
 	EnableEventFiltersInSegments                       bool
 	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
+	EnableDomainsGroupByProjectID                      string
 	DisableUpdateNextSessionTimestamp                  int
 	EnableSyncReferenceFieldsByProjectID               string
 	StartTimestampForWeekMonth                         int64
@@ -2457,13 +2458,20 @@ func IsEnableDebuggingForIP() bool {
 	return configuration.EnableDebuggingForIP
 }
 
-func AllowSyncReferenceFields(projectId int64) bool {
-	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSyncReferenceFieldsByProjectID, "")
+func IsAllowedDomainsGroupByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDomainsGroupByProjectID, "")
 	if allProjects {
 		return true
 	}
+	return allowedProjectIDs[projectID]
+}
 
-	return projectIDsMap[projectId]
+func AllowSyncReferenceFields(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSyncReferenceFieldsByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
 }
 
 func GetStartTimestampForWeekMonth() int64 {

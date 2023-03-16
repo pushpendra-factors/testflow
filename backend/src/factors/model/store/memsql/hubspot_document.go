@@ -1668,7 +1668,8 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 		return "", errors.New("invalid parameters")
 	}
 
-	if source != model.UserSourceHubspotString && source != model.UserSourceSalesforceString && source != model.UserSourceSixSignalString {
+	if source != model.UserSourceHubspotString && source != model.UserSourceSalesforceString &&
+		source != model.UserSourceSixSignalString && source != model.UserSourceDomainsString {
 		logCtx.Error("Invalid source.")
 		return "", errors.New("invalid source")
 	}

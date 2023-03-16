@@ -6,24 +6,11 @@ import {
   Form,
   Button,
   Input,
-  Select,
-  Table,
-  notification,
-  Dropdown,
-  Menu,
   message
 } from 'antd';
-import { MoreOutlined } from '@ant-design/icons';
-import { Text, SVG } from 'factorsComponents';
-import {
-  QUERY_TYPE_FUNNEL,
-  QUERY_TYPE_EVENT,
-  FunnelEventsConditionMap,
-  RevFunnelEventsConditionMap,
-  RevAvailableGroups
-} from 'Utils/constants';
+import { Text } from 'factorsComponents';
 import QueryBlock from './QueryBlock';
-import { getKPIqueryGroup, getPropertiesDetails } from './utils';
+import { getPropertiesDetails } from './utils';
 
 import {
   fetchPropertyMappings,

@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { connect, ConnectedProps } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import {
   FeatureModes,
   EnrichTypes,
   SixSignalConfigType,
-  EnrichCountryData
+  EnrichCountryData,
+  CountryLabel
 } from './types';
 
 import { Button, notification, Radio, Select, Tooltip } from 'antd';
@@ -25,22 +26,26 @@ const EnrichCountries = ({
   udpateProjectSettings
 }: EnrichCountriesProps) => {
   const [enrichType, setEnrichType] = useState<EnrichTypes | null>(null);
-  const [countryOptions, setCountryOptions] = useState<
-    { value: string; label: React.ReactNode }[]
-  >([]);
-  const [data, setData] = useState<string[]>([]);
+  const [countryOptions, setCountryOptions] = useState<CountryLabel[]>([]);
+  const [data, setData] = useState<CountryLabel[]>([]);
+  const countriesSet = useRef(false);
   const { active_project } = useSelector((state) => state.global);
 
   const handleAddNew = () => {
-    if (countryOptions && countryOptions?.length > 0)
-      setData([...data, countryOptions[0]?.value]);
+    if (countryOptions && countryOptions?.length > 0) {
+      const countryOption = countryOptions[0];
+      setData([
+        ...data,
+        { value: countryOption.value, label: countryOption.label }
+      ]);
+    }
   };
 
   const handleDeleteClick = (index: number) => {
     setData([...data.slice(0, index), ...data.slice(index + 1)]);
   };
 
-  const handleSelectChange = (value: string, index: number) => {
+  const handleSelectChange = (value: CountryLabel, index: number) => {
     setData([...data.slice(0, index), value, ...data.slice(index + 1)]);
   };
 
@@ -77,19 +82,18 @@ const EnrichCountries = ({
             labelInValue
             value={country}
             showSearch
-            onChange={(value) => handleSelectChange(value, index)}
-            // tagRender={(props) => renderOption(props.value)}
+            onSelect={(labelInValue: CountryLabel) =>
+              handleSelectChange(labelInValue, index)
+            }
             options={countryOptions}
           ></Select>
-          {index !== 0 && (
-            <Button
-              size='middle'
-              shape='circle'
-              type='text'
-              onClick={() => handleDeleteClick(index)}
-              icon={<MinusCircleOutlined style={{ color: '#8692A3' }} />}
-            />
-          )}
+          <Button
+            size='middle'
+            shape='circle'
+            type='text'
+            onClick={() => handleDeleteClick(index)}
+            icon={<MinusCircleOutlined style={{ color: '#8692A3' }} />}
+          />
         </div>
       );
     });
@@ -111,10 +115,20 @@ const EnrichCountries = ({
       if (sixSignalConfig) state = { ...sixSignalConfig };
       const updatedData: EnrichCountryData[] = data.map((d) => {
         return {
-          value: d,
+          value: d.value,
           type: 'equals'
         };
       });
+      if (
+        new Set(updatedData?.map((d) => d.value)).size !== updatedData.length
+      ) {
+        notification.error({
+          message: 'Error',
+          description: `Please remove duplicate countries`,
+          duration: 3
+        });
+        return;
+      }
       if (enrichType === 'include') {
         state.country_include = updatedData;
         state.country_exclude = undefined;
@@ -154,9 +168,16 @@ const EnrichCountries = ({
       _data = sixSignalConfig?.country_include;
     }
     if (_data) {
-      setData(_data.map((d) => d.value));
+      const selectedValues = _data.map((d) => {
+        return {
+          value: d?.value,
+          label: renderOption(d?.value)
+        };
+      });
+      setData(selectedValues);
+      countriesSet.current = true;
     }
-  }, [sixSignalConfig]);
+  }, [sixSignalConfig, mode]);
 
   useEffect(() => {
     //fetching country list
@@ -172,8 +193,12 @@ const EnrichCountries = ({
           label: renderOption(country)
         }));
         setCountryOptions(countryListWithLabels);
-        if (!data?.length && res?.data?.[0]) {
-          setData([res?.data?.[0]]);
+        if (!countriesSet.current) {
+          const firstCountry = res.data[0];
+          if (firstCountry)
+            setData([
+              { value: firstCountry, label: renderOption(firstCountry) }
+            ]);
         }
       }
     };
@@ -227,7 +252,7 @@ const EnrichCountries = ({
             <Button onClick={handleCancel}>Cancel</Button>
             <Button
               type='primary'
-              disabled={!enrichType}
+              disabled={!enrichType || !data.length}
               onClick={handleSaveClick}
             >
               Save changes
@@ -253,7 +278,7 @@ const EnrichCountries = ({
                     i !== 0 ? 'mt-3' : ''
                   }`}
                 >
-                  {renderOption(d)}
+                  {renderOption(d?.value)}
                 </div>
               ))}
             </div>

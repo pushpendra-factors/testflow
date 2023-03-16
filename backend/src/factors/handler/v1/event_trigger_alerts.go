@@ -46,8 +46,8 @@ func CreateEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, s
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error(errMsg)
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
-
-	obj, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, projectID, &alert)
+	oldID := ""
+	obj, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, oldID, projectID, &alert)
 	if errCode != http.StatusCreated {
 		log.WithFields(log.Fields{"document": alert, "err-message": errMsg}).Error("Failed to create alert in handler.")
 		return nil, errCode, PROCESSING_FAILED, errMsg, true
@@ -103,7 +103,7 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 
-	eta, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, projectID, &alert)
+	eta, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, id, projectID, &alert)
 	if errMsg != "" || errCode != http.StatusCreated || eta == nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Edit TriggerAlert failed while updating db"})
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
@@ -114,5 +114,6 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 		log.WithFields(log.Fields{"project_id": projectID}).Error("Cannot find any alert to update")
 		return nil, http.StatusBadRequest, "Cannot find any alert to update", "", true
 	}
+
 	return alert, http.StatusAccepted, "", "", false
 }

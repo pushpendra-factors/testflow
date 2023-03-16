@@ -35,7 +35,7 @@ const EnrichPages = ({
     key: keyof EnrichPageData
   ) => {
     const updatedObj = {
-      [key]: value
+      [key]: value?.trim()
     };
     setErrors(null);
     setErrorType('');
@@ -121,6 +121,7 @@ const EnrichPages = ({
         if (currentData.type === 'contains') {
           if (typeof currentData.value !== 'string' || !currentData.value) {
             errorIndexes.push(i);
+            errorMessage = 'Please enter a valid value';
           }
         }
         if (currentData.type === 'equals') {
@@ -181,7 +182,7 @@ const EnrichPages = ({
     if (data) {
       setData(data);
     }
-  }, [sixSignalConfig]);
+  }, [sixSignalConfig, mode]);
 
   return (
     <div>
@@ -248,7 +249,7 @@ const EnrichPages = ({
             <Button onClick={handleCancel}>Cancel</Button>
             <Button
               type='primary'
-              disabled={!enrichType || !!errorType}
+              disabled={!enrichType || !!errorType || !data.length}
               onClick={handleSaveClick}
             >
               Save changes

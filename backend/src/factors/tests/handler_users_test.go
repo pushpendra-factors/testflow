@@ -5,8 +5,11 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
+	IntHubspot "factors/integration/hubspot"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/task/event_user_cache"
+	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -115,4 +118,131 @@ func assertUserMapsWithOffset(t *testing.T, expectedUsers []model.User, actualUs
 		assert.NotNil(t, actualUser.CreatedAt)
 		assert.NotNil(t, actualUser.UpdatedAt)
 	}
+}
+
+func buildUserPropertyValuesRequest(projectId int64, propertyName string, label bool, cookieData string) (*http.Request, error) {
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/user_properties/%s/values?label=%t", projectId, propertyName, label)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+func sendGetUserPropertyValues(projectId int64, propertyName string, label bool, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	req, err := buildUserPropertyValuesRequest(projectId, propertyName, label, cookieData)
+	if err != nil {
+		log.WithError(err).Error("Error getting event properties.")
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestUserPropertyValuesHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	configs := make(map[string]interface{})
+	configs["eventsLimit"] = 10
+	configs["propertiesLimit"] = 10
+	configs["valuesLimit"] = 10
+	event_user_cache.DoCleanUpSortedSet(configs)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  	"firstname": { "value": "%s" },
+		  	"lastname": { "value": "%s" },
+		  	"lastmodifieddate": { "value": "%d" },
+			"hs_analytics_source": { "value": "REFERRALS" }
+		},
+		"identity-profiles": [
+			{
+				"vid": %d,
+				"identities": [
+					{
+					  "type": "EMAIL",
+					  "value": "%s"
+					},
+					{
+						"type": "LEAD_GUID",
+						"value": "%s"
+					}
+				]
+			}
+		]
+	}`
+
+	documentID := 1
+	createdDate := time.Now().Unix()
+	updatedTime := createdDate*1000 + 100
+	cuid := U.RandomString(10)
+	jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdDate*1000, "Sample", "Test", updatedTime, documentID, cuid, "123-456")
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{json.RawMessage(jsonContact)},
+	}
+
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// execute sync job
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	configs = make(map[string]interface{})
+	configs["rollupLookback"] = 10
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	C.GetConfig().LookbackWindowForEventUserCache = 10
+
+	status = store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_hs_analytics_source", "REFERRALS", "Referral")
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_hs_analytics_source", "DIRECT_TRAFFIC", "Direct Traffic")
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Returns []string when label not set
+	w := sendGetUserPropertyValues(project.ID, "$hubspot_contact_hs_analytics_source", false, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var propertyValues []string
+	jsonResponse, err := ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	json.Unmarshal(jsonResponse, &propertyValues)
+	assert.Equal(t, 1, len(propertyValues))
+	assert.Equal(t, "REFERRALS", propertyValues[0])
+
+	// Returns map when label is set
+	w = sendGetUserPropertyValues(project.ID, "$hubspot_contact_hs_analytics_source", true, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	propertyValueLabelMap := make(map[string]string, 0)
+	jsonResponse, err = ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	json.Unmarshal(jsonResponse, &propertyValueLabelMap)
+	assert.Equal(t, 2, len(propertyValueLabelMap))
+
+	assert.Contains(t, propertyValueLabelMap, "REFERRALS")
+	assert.Contains(t, propertyValueLabelMap, "DIRECT_TRAFFIC")
+	assert.Equal(t, propertyValueLabelMap["REFERRALS"], "Referral")
+	assert.Equal(t, propertyValueLabelMap["DIRECT_TRAFFIC"], "Direct Traffic")
 }

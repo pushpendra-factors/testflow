@@ -7,6 +7,7 @@ export const isCountryFlagAvailable = (counrtyName: string): boolean => {
 };
 
 export const getCountryCode = (countryName: string): string | null => {
+  if (!countryName || typeof countryName !== 'string') return null;
   const countryCode = COUNTRY_LIST.find((country) =>
     country.name.includes(countryName.toLowerCase())
   );
