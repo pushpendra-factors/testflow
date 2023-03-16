@@ -112,7 +112,8 @@ import {
   UPDATE_FUNNEL_TABLE_CONFIG,
   UPDATE_CORE_QUERY_REDUCER,
   SET_NAVIGATED_FROM_ANALYSE,
-  DEFAULT_ATTRIBUTION_TABLE_FILTERS
+  DEFAULT_ATTRIBUTION_TABLE_FILTERS,
+  COMPARISON_DATA_ERROR
 } from './constants';
 import {
   getValidGranularityOptions,
@@ -635,7 +636,20 @@ function CoreQuery({
         updateAppliedBreakdown();
       }
     },
-    [dispatch, queryType, queriesA, groupBy, models, updatePivotConfig, updateSavedQuerySettings, updateCoreQueryReducer, savedQueries, updateChartTypes, updateAppliedBreakdown, profileQueries]
+    [
+      dispatch,
+      queryType,
+      queriesA,
+      groupBy,
+      models,
+      updatePivotConfig,
+      updateSavedQuerySettings,
+      updateCoreQueryReducer,
+      savedQueries,
+      updateChartTypes,
+      updateAppliedBreakdown,
+      profileQueries
+    ]
   );
 
   const getDashboardConfigs = useCallback(
@@ -1007,25 +1021,33 @@ function CoreQuery({
         if (apiCallStatus.required) {
           if (!isCompareQuery) {
             setLoading(true);
-          }
-          const res = await getAttributionsData(
-            activeProject.id,
-            query,
-            getDashboardConfigs(isQuerySaved),
-            true
-          );
-          if (isCompareQuery) {
-            updateLocalReducer(
-              COMPARISON_DATA_FETCHED,
-              res.data.result || res.data
+            const res = await getAttributionsData(
+              activeProject.id,
+              query,
+              getDashboardConfigs(isQuerySaved),
+              true
             );
-          } else {
             setLoading(false);
             updateResultState({
               ...initialState,
               data: res.data.result || res.data,
               apiCallStatus
             });
+          } else {
+            try {
+              const res = await getAttributionsData(
+                activeProject.id,
+                query,
+                getDashboardConfigs(isQuerySaved),
+                true
+              );
+              updateLocalReducer(
+                COMPARISON_DATA_FETCHED,
+                res.data.result || res.data
+              );
+            } catch (err) {
+              updateLocalReducer(COMPARISON_DATA_ERROR);
+            }
           }
         } else {
           updateResultState({
@@ -2190,7 +2212,7 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   KPI_config: state.kpi?.config,
   existingQueries: state.queries,
-  currentAgent: state.agent.agent_details,
+  currentAgent: state.agent.agent_details
 });
 
 const mapDispatchToProps = (dispatch) =>
