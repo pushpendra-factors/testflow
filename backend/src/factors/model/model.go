@@ -885,4 +885,8 @@ type Model interface {
 	GetPropertyMappingsByProjectId(projectID int64) ([]*model.PropertyMapping, string, int)
 	GetPropertyMappingsByProjectIdAndSectionBitMap(projectID int64, sectionBitMap int64) ([]*model.PropertyMapping, string, int)
 	DeletePropertyMappingByID(projectID int64, id string) int
+
+	// Currency
+	CreateCurrencyDetails(currency string, date int64, value float64) (error)
+	GetCurrencyDetails(currency string, date int64) ([]model.Currency, error)
 }
