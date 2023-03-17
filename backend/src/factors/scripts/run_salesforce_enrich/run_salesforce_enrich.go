@@ -282,6 +282,8 @@ func main() {
 			C.PingHealthcheckForSuccess(syncHealthcheckPingID, syncStatus)
 			log.WithFields(log.Fields{"syncStatus": syncStatus}).Info("Sync Job completed.")
 		}
+
+		C.PingHealthcheckForSuccess(C.HealthcheckSalesforceSyncAlwaysSuccessPingID, nil)
 	}
 
 	var jobStatus salesforceJobStatus

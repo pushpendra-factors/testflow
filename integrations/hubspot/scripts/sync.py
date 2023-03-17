@@ -45,6 +45,7 @@ DOC_TYPES = [ "contact", "company", "deal", "form", "form_submission", "contact_
 
 METRIC_TYPE_INCR = "incr"
 HEALTHCHECK_PING_ID = "87137001-b18b-474c-8bc5-63324baff2a8"
+HEALTHCHECK_RUN_PING_ID = "745d16bc-542b-4b16-a029-05ca2c66ed8f"
 
 API_RATE_LIMIT_TEN_SECONDLY_ROLLING = "TEN_SECONDLY_ROLLING"
 API_RATE_LIMIT_DAILY = "DAILY"
@@ -1653,6 +1654,8 @@ def hubspot_sync(configs):
             ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload, endpoint="/fail")
         else:
             ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
+    
+    ping_healthcheck(options.env, HEALTHCHECK_RUN_PING_ID, {})
 
     return None, True
 
