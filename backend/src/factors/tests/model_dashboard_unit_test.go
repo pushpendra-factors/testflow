@@ -1097,7 +1097,7 @@ func TestAttributionCacheDashboardUnits(t *testing.T) {
 	}
 }
 
-func TestInValidationCacheDashboardUnits(t *testing.T) {
+func TestEventsQueryInValidationCacheDashboardUnits(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
@@ -1585,7 +1585,7 @@ func TestCacheDashboardUnitsForLastComputed1(t *testing.T) {
 
 // Testing by taking lastMonth into consideration.
 // Cache for lastMonth should be filled with data And normal query without lastXDays should return some values. but with lastXDays, it should return 0.
-func TestEventsDateTypeFiltersQueryDashboardUnit(t *testing.T) {
+func TestEventQueryDateTypeFiltersQueryDashboardUnit(t *testing.T) {
 	r := gin.Default()
 	H.InitSDKServiceRoutes(r)
 	H.InitAppRoutes(r)
