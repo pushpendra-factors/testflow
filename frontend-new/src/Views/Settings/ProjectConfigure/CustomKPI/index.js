@@ -1144,6 +1144,7 @@ function CustomKPI({
                                 setGlobalFilters={setGlobalFiltersOption}
                                 selectedMainCategory={{group: selKPICategory, category: 'events'}}
                                 KPIConfigProps={filterDDValues}
+                                isSameKPIGrp={true} // To avoid common properties in filter
                               />
                             </div>
                           </Col>
