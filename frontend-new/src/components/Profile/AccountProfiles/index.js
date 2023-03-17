@@ -220,7 +220,6 @@ function AccountProfiles({
       dataIndex: 'last_activity',
       key: 'last_activity',
       width: 250,
-      fixed: 'right',
       align: 'right',
       render: (item) => MomentTz(item).fromNow()
     });

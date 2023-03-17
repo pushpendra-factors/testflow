@@ -60,9 +60,9 @@ export const hoverEvents = [
   '$hubspot_form_submission',
   '$hubspot_engagement_email',
   '$hubspot_engagement_meeting_created',
-  '$hubspot_engagement_meeting_updated',
   '$hubspot_engagement_call_created',
-  '$hubspot_engagement_call_updated'
+  'sf_task_created',
+  '$sf_event_created'
 ];
 
 export const TimelineHoverPropDisplayNames = {
