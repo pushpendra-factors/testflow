@@ -335,8 +335,8 @@ func GetStringKeyFromCacheRedisKey(Key *cacheRedis.Key) string {
 	return fmt.Sprintf("pid:%d:puid:%s:%s:%s", Key.ProjectID, Key.ProjectUID, Key.Prefix, Key.Suffix)
 }
 
-func (q *AttributionQueryUnit) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Query.From, q.Query.To, q.Query.Timezone)
+func (q *AttributionQueryUnit) GetQueryCacheExpiry(projectID int64) float64 {
+	return getQueryCacheResultExpiry(projectID, q.Query.From, q.Query.To, q.Query.Timezone)
 }
 
 func (q *AttributionQueryUnit) TransformDateTypeFilters() error {
@@ -1828,12 +1828,16 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 
 	// add CampaignData result based on Key Dimensions
 	_ = AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
-
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"attributionData": attributionData}).Info(" attributionData after AddCampaignDataForChannelGroup")
+	}
 	for key, _ := range *attributionData {
 		//add key to attribution data
 		addKeyToMarketingInfoForChannelOrSource(attributionData, key, query)
 	}
-
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"attributionData": attributionData}).Info(" attributionData after  addKeyToMarketingInfoForChannelOrSource")
+	}
 	// Add additional metrics values
 	ComputeAdditionalMetrics(attributionData)
 	// Add custom dimensions
@@ -3583,8 +3587,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	userIdMap := make(map[string]bool)
-	reports.CampaignSourceMapping = make(map[string]string)
-	reports.CampaignChannelGroupMapping = make(map[string]string)
 
 	type MissingCollection struct {
 		AttributionKey string

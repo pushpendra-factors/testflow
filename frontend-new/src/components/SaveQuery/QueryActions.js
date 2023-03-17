@@ -206,7 +206,7 @@ const QueryActionsComponent = ({
         {getHelpMenu()}
       </div>
 
-      {((navigatedFromDashboard?.id || navigatedFromAnalyse?.key) && !savedQueryId) && (
+      {((navigatedFromDashboard?.id || navigatedFromAnalyse?.key || navigatedFromAnalyse?.id) && !savedQueryId) && (
         <Tooltip placement='bottom' title='Save as New'>
           <Button
             onClick={handleSaveClick}
@@ -221,7 +221,7 @@ const QueryActionsComponent = ({
         <Tooltip placement='bottom' title={'No changes to be saved'}>
           <Button
             onClick={
-              navigatedFromDashboard?.id || navigatedFromAnalyse?.key
+              navigatedFromDashboard?.id || navigatedFromAnalyse?.key || navigatedFromAnalyse?.id
                 ? handleUpdateClick
                 : handleSaveClick
             }
@@ -236,7 +236,7 @@ const QueryActionsComponent = ({
       ) : (
         <Button
           onClick={
-            navigatedFromDashboard?.id || navigatedFromAnalyse?.key
+            navigatedFromDashboard?.id || navigatedFromAnalyse?.key || navigatedFromAnalyse?.id
               ? handleUpdateClick
               : handleSaveClick
           }

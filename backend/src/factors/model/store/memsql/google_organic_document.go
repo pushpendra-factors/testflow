@@ -90,7 +90,7 @@ func (store *MemSQL) GetGoogleOrganicFilterValues(projectID int64, requestFilter
 	logCtx := log.WithFields(logFields)
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to fetch Project Setting in searcch console filter values.")
+		logCtx.WithField("err_code", errCode).Error("Failed to fetch Project Setting in searcch console filter values.")
 		return []interface{}{}, http.StatusInternalServerError
 	}
 	urlPrefix := projectSetting.IntGoogleOrganicURLPrefixes
@@ -335,7 +335,7 @@ func validateGoogleOrganicDocuments(googleOrganicDocuments []model.GoogleOrganic
 	for index := range googleOrganicDocuments {
 		status := validateGoogleOrganicDocument(&googleOrganicDocuments[index])
 		if status != http.StatusOK {
-			log.WithField("index", index).Error("Failed in this index")
+			log.WithField("index", index).WithField("err_code", status).Error("Failed in this index")
 			return status
 		}
 	}
@@ -365,7 +365,7 @@ func addColumnInformationForGoogleOrganicDocuments(googleOrganicDocuments []mode
 	for index := range googleOrganicDocuments {
 		status := addColumnInformationForGoogleOrganicDocument(&googleOrganicDocuments[index])
 		if status != http.StatusOK {
-			log.WithField("index", index).Error("Failed in this index")
+			log.WithField("index", index).WithField("err_code", status).Error("Failed in this index")
 			return googleOrganicDocuments, status
 		}
 	}

@@ -2,6 +2,7 @@ package memsql
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
@@ -598,6 +599,17 @@ func getUserIDBySegementAnonymousID(segAnonID string) string {
 	return "seg" + "-" + segAnonID
 }
 
+func getDomainUserIDByDomainGroupIndexANDDomainName(domainGroupIndex int, domainName string) string {
+	if domainGroupIndex == 0 || domainName == "" {
+		return ""
+	}
+
+	key := fmt.Sprintf("%d-%s", domainGroupIndex, domainName)
+
+	enKey := base64.StdEncoding.EncodeToString([]byte(key))
+	return "dom-" + enKey
+}
+
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
 func (store *MemSQL) CreateOrGetSegmentUser(projectId int64, segAnonId, custUserId string,
@@ -699,6 +711,57 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId int64, segAnonId, custUser
 
 	// provided and fetched c_uid are same.
 	return user, http.StatusOK
+}
+
+// CreateOrGetDomainGroupUser creates or get domain group user by group name and domain name
+func (store *MemSQL) CreateOrGetDomainGroupUser(projectID int64, groupName string, domainName string,
+	requestTimestamp int64, requestSource int) (string, int) {
+	logFields := log.Fields{
+		"project_id":        projectID,
+		"group_name":        groupName,
+		"domain_name":       domainName,
+		"request_timestamp": requestTimestamp,
+		"request_source":    requestSource,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupName == "" || domainName == "" {
+		logCtx.Error("Invalid parameters.")
+		return "", http.StatusBadRequest
+	}
+
+	user, status := store.GetGroupUserByGroupID(projectID, groupName, domainName)
+	if status != http.StatusFound && status != http.StatusNotFound {
+		logCtx.Error("Failed to check for exisistence of group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	if status == http.StatusFound {
+		return user.ID, http.StatusFound
+	}
+
+	group, status := store.GetGroup(projectID, groupName)
+	if status != http.StatusFound && status != http.StatusNotFound {
+		logCtx.Error("Failed to get on create group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	isGroupUser := true
+	userID, status := store.CreateGroupUser(&model.User{
+		ID:            getDomainUserIDByDomainGroupIndexANDDomainName(group.ID, domainName),
+		ProjectId:     projectID,
+		IsGroupUser:   &isGroupUser,
+		JoinTimestamp: requestTimestamp,
+		Source:        &requestSource,
+	}, groupName, domainName)
+	if status != http.StatusCreated && status != http.StatusConflict {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create domain group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	return userID, status
 }
 
 func (store *MemSQL) GetUserIDByAMPUserID(projectId int64, ampUserId string) (string, int) {
@@ -1235,14 +1298,14 @@ func (store *MemSQL) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId i
 	userRows, err := db.Raw("SELECT id, join_timestamp FROM users WHERE project_id = ?", projectId).Rows()
 	defer userRows.Close()
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("SQL Query failed.")
+		log.WithError(err).Error("SQL Query failed.")
 		return err
 	}
 	for userRows.Next() {
 		var userId string
 		var joinTimestamp int64
 		if err = userRows.Scan(&userId, &joinTimestamp); err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
+			log.WithError(err).Error("SQL Parse failed.")
 			return err
 		}
 		type Result struct {
@@ -1442,7 +1505,7 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID int64
 	if useSourcePropertyOverwrite {
 		overwriteProperties, err = model.CheckForCRMUserPropertiesOverwrite(source, objectType, newPropertiesMap, currentPropertiesMap)
 		if err != nil {
-			logCtx.WithField("error", err.Error()).Error("Failed to get overwriteProperties flag value.")
+			logCtx.WithError(err).Error("Failed to get overwriteProperties flag value.")
 		}
 	}
 
@@ -1486,7 +1549,7 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID int64
 	store.UpdateCacheForUserProperties(userID, projectID, mergedPropertiesMap, false)
 	mergedPropertiesJSON, err := U.EncodeToPostgresJsonb(&mergedPropertiesMap)
 	if err != nil {
-		logCtx.Error("Failed to marshal new properties merged to current user properties.")
+		logCtx.WithError(err).Error("Failed to marshal new properties merged to current user properties.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -1523,7 +1586,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 		return &user.Properties, http.StatusNotModified
 	}
 	if errCode != http.StatusOK {
-		logCtx.Error("Failed merging current properties with new properties on update_properties v2.")
+		logCtx.WithField("err_code", errCode).Error("Failed merging current properties with new properties on update_properties v2.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -1539,7 +1602,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 
 	users, errCode := store.getUsersForMergingPropertiesByCustomerUserID(projectID, user.CustomerUserId, user)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get user by customer_user_id for merging user properties.")
+		logCtx.WithField("err_code", errCode).Error("Failed to get user by customer_user_id for merging user properties.")
 		return &user.Properties, http.StatusInternalServerError
 	}
 
@@ -1569,7 +1632,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 		// skipping user properties merge by customer user_id.
 		userPropertiesMap, err := U.DecodePostgresJsonb(&users[i].Properties)
 		if err != nil {
-			logCtx.WithField("user_id", users[i].ID).Error("Failed to decode existing user_properties.")
+			logCtx.WithError(err).WithField("user_id", users[i].ID).Error("Failed to decode existing user_properties.")
 			continue
 		}
 
@@ -1621,7 +1684,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 		errCode = store.OverwriteUserPropertiesByID(projectID, user.ID,
 			mergedPropertiesAfterSkipJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-			logCtx.WithField("user_id", user.ID).Error("Failed to update merged user properties on user.")
+			logCtx.WithField("err_code", errCode).WithField("user_id", user.ID).Error("Failed to update merged user properties on user.")
 			hasFailure = true
 		}
 	}
@@ -1692,7 +1755,7 @@ func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(batchedOverwriteUserProp
 		status := store.overwriteUserPropertiesByIDWithTransaction(projectID, userID, userProperties,
 			withUpdateTimestamp, updateTimestamps, source, dbTx)
 		if status != http.StatusAccepted {
-			log.WithFields(log.Fields{"overwrite_user_properties_by_id_params": batchedOverwriteUserPropertiesByIDParams[i]}).
+			log.WithFields(log.Fields{"overwrite_user_properties_by_id_params": batchedOverwriteUserPropertiesByIDParams[i], "err_code": status}).
 				Error("Failed to overwrite user properties in batch using OverwriteUserPropertiesByIDInBatch.")
 			hasFailure = true
 		}
@@ -1749,7 +1812,7 @@ func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID int64,
 
 	currentPropertiesUpdatedTimestamp, status := store.GetPropertiesUpdatedTimestampOfUser(projectID, id)
 	if status != http.StatusFound {
-		logCtx.WithField("status", status).Error("Failed to get propertiesUpdatedTimestamp for the user.")
+		logCtx.WithField("errr_code", status).Error("Failed to get propertiesUpdatedTimestamp for the user.")
 		return http.StatusBadRequest
 	}
 
@@ -1929,7 +1992,7 @@ func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID 
 
 	existingUserProperties, errCode := store.GetUserPropertiesByUserID(projectID, userID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get latest user properties on fill form submitted properties.")
+		logCtx.WithField("err_code", errCode).Error("Failed to get latest user properties on fill form submitted properties.")
 		return "", nil, http.StatusInternalServerError
 	}
 
@@ -1938,7 +2001,7 @@ func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID 
 
 	userProperties, err := U.DecodePostgresJsonb(existingUserProperties)
 	if err != nil {
-		logCtx.Error("Failed to decoding latest user properties on fill form submitted properties.")
+		logCtx.WithError(err).Error("Failed to decoding latest user properties on fill form submitted properties.")
 	}
 
 	formPropertyEmail := U.GetPropertyValueAsString((*formSubmitProperties)[U.UP_EMAIL])
@@ -2482,11 +2545,11 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 	group, status := store.GetGroup(user.ProjectId, groupName)
 	if status != http.StatusFound {
 		if status == http.StatusNotFound {
-			logCtx.Error("Group is missing on CreateGroupUser.")
+			logCtx.WithField("err_code", status).Error("Group is missing on CreateGroupUser.")
 			return "", http.StatusBadRequest
 		}
 
-		logCtx.Error("Failed to get group on CreateGroupUser.")
+		logCtx.WithField("err_code", status).Error("Failed to get group on CreateGroupUser.")
 		return "", http.StatusInternalServerError
 	}
 
@@ -2500,9 +2563,13 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 		Source:                     user.Source,
 	}
 
+	if user.ID != "" {
+		groupUser.ID = user.ID
+	}
+
 	if groupID != "" {
 		groupIndex := fmt.Sprintf("group_%d_id", group.ID)
-		processed, _, err := model.SetUserGroupFieldByColumnName(groupUser, groupIndex, groupID)
+		processed, _, err := model.SetUserGroupFieldByColumnName(groupUser, groupIndex, groupID, false)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed process group id on group user.")
 			return "", http.StatusInternalServerError
@@ -2520,7 +2587,7 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 	return store.CreateUser(groupUser)
 }
 
-func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string) (*model.User, int) {
+func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string, overwrite bool) (*model.User, int) {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"user_id":       userID,
@@ -2530,22 +2597,30 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
+	if projectID == 0 || userID == "" || groupName == "" || groupUserID == "" {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	if groupName == model.GROUP_NAME_DOMAINS {
+		logCtx.Error("domains group not allowed.")
+		return nil, http.StatusBadRequest
+	}
+
 	group, status := store.GetGroup(projectID, groupName)
 	if status != http.StatusFound {
 		if status == http.StatusNotFound {
-			logCtx.Error("Group is missing on UpdateUserGroup.")
+			logCtx.WithField("err_code", status).Error("Group is missing on UpdateUserGroup.")
 			return nil, http.StatusBadRequest
 		}
 
-		logCtx.Error("Failed to get group on UpdateUserGroup.")
+		logCtx.WithField("err_code", status).Error("Failed to get group on UpdateUserGroup.")
 		return nil, http.StatusInternalServerError
 	}
 
-	groupIndex := fmt.Sprintf("group_%d_id", group.ID)
-	groupUserIndex := fmt.Sprintf("group_%d_user_id", group.ID)
 	user, status := store.GetUserWithoutProperties(projectID, userID)
 	if status != http.StatusFound {
-		logCtx.Error("Failed to get user for group association.")
+		logCtx.WithField("err_code", status).Error("Failed to get user for group association.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -2556,10 +2631,35 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 
 	isGroupUser := false
 	user.IsGroupUser = &isGroupUser
+	return store.updateUserGroup(projectID, user, userID, group.ID, groupID, groupUserID, overwrite)
+}
+
+func (store *MemSQL) updateUserGroup(projectID int64, user *model.User, userID string, groupIndex int, groupID, groupUserID string, overwrite bool) (*model.User, int) {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"group_index":   groupIndex,
+		"group_id":      groupID,
+		"group_user_id": groupUserID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || user == nil || groupIndex == 0 || groupUserID == "" {
+		logCtx.Error("Invalid parameters on updateUserGroup.")
+		return nil, http.StatusBadRequest
+	}
+	logFields["user_id"] = user.ID
+
+	if user.IsGroupUser == nil {
+		logCtx.Error("Missing user.")
+		return nil, http.StatusBadRequest
+	}
+
 	var IDUpdated, userIDUpdated, processed bool
 	var err error
 	if groupID != "" {
-		processed, IDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupIndex, groupID)
+		groupIndexColumn := fmt.Sprintf("group_%d_id", groupIndex)
+		processed, IDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupIndexColumn, groupID, overwrite)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update user by group id.")
 			return nil, http.StatusInternalServerError
@@ -2570,7 +2670,8 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 		}
 	}
 
-	processed, userIDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupUserIndex, groupUserID)
+	groupUserIndexColumn := fmt.Sprintf("group_%d_user_id", groupIndex)
+	processed, userIDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupUserIndexColumn, groupUserID, overwrite)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update user by group id.")
 		return nil, http.StatusInternalServerError
@@ -2587,6 +2688,49 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 	user.ProjectId = 0
 	user.ID = ""
 	return store.UpdateUser(projectID, userID, user, user.PropertiesUpdatedTimestamp)
+}
+
+func (store *MemSQL) UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainsGroupID string, overwrite bool) (*model.User, int) {
+	logFields := log.Fields{
+		"project_id":            projectID,
+		"group_user_id":         groupUserID,
+		"domains_user_id":       domainsUserID,
+		"group_user_group_name": groupUserGroupName,
+		"domains_group_id":      domainsGroupID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupUserID == "" || groupUserGroupName == "" || domainsGroupID == "" || domainsUserID == "" {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	group, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if status != http.StatusFound {
+		if status == http.StatusNotFound {
+			logCtx.WithField("err_code", status).Error("domains group not found.")
+			return nil, http.StatusBadRequest
+		}
+
+		logCtx.WithField("err_code", status).Error("Failed to get domains group.")
+		return nil, http.StatusInternalServerError
+	}
+
+	user, status := store.GetUserWithoutProperties(projectID, groupUserID)
+	if status != http.StatusFound {
+		logCtx.WithField("err_code", status).Error("Failed to get user for group association.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if user.IsGroupUser == nil || *user.IsGroupUser == false {
+		logCtx.Error("Cannot update non group user.")
+		return nil, http.StatusBadRequest
+	}
+
+	isGroupUser := true
+	user.IsGroupUser = &isGroupUser
+	return store.updateUserGroup(projectID, user, groupUserID, group.ID, domainsGroupID, domainsUserID, overwrite)
 }
 
 func (store *MemSQL) UpdateUserGroupProperties(projectID int64, userID string,
@@ -2607,7 +2751,7 @@ func (store *MemSQL) UpdateUserGroupProperties(projectID int64, userID string,
 
 	user, errCode := store.GetUser(projectID, userID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get user on UpdateUserGroupProperties.")
+		logCtx.WithField("err_code", errCode).Error("Failed to get user on UpdateUserGroupProperties.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -2765,10 +2909,10 @@ func (store *MemSQL) PullUsersRowsForWIV2(projectID int64, startTime, endTime in
 		whereGroupStmt = "(is_group_user=0 OR is_group_user IS NULL)"
 	}
 	rawQuery := fmt.Sprintf("SELECT COALESCE(customer_user_id, id) AS user_id, properties,ISNULL(customer_user_id) AS is_anonymous, join_timestamp AS join_timestamp, "+
-		"COALESCE(JSON_EXTRACT_STRING(properties, '%s'),0) AS timestamp FROM users "+
+		"COALESCE(CASE WHEN UNIX_TIMESTAMP(JSON_EXTRACT_STRING(properties, '%s'))>0 THEN UNIX_TIMESTAMP(JSON_EXTRACT_STRING(properties, '%s')) ELSE JSON_EXTRACT_STRING(properties, '%s') END,0) AS timestamp FROM users "+
 		"WHERE %s AND project_id=%d AND source=%d AND UNIX_TIMESTAMP(created_at) BETWEEN %d AND %d AND updated_at<NOW() AND timestamp>0 "+
 		"LIMIT %d",
-		dateField, whereGroupStmt, projectID, source, startTime, endTime, model.UsersPullLimit+1)
+		dateField, dateField, dateField, whereGroupStmt, projectID, source, startTime, endTime, model.UsersPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err

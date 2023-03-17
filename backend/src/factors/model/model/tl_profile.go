@@ -22,6 +22,7 @@ type ContactDetails struct {
 	IsAnonymous   bool                   `json:"is_anonymous"`
 	Properties    *postgres.Jsonb        `json:"-"`
 	LeftPaneProps map[string]interface{} `json:"left_pane_props"`
+	Milestones    map[string]interface{} `json:"milestones"`
 	Name          string                 `json:"name,omitempty"`
 	Company       string                 `json:"company"`
 	Group1        bool                   `gorm:"default:false;column:group_1" json:"-"`
@@ -58,11 +59,12 @@ type AccountDetails struct {
 	HostName        string                 `json:"host_name"`
 	Name            string                 `json:"name"`
 	LeftPaneProps   map[string]interface{} `json:"left_pane_props"`
+	Milestones      map[string]interface{} `json:"milestones"`
 	AccountTimeline []UserTimeline         `json:"account_timeline"`
 }
 
 type UserTimeline struct {
-	UserId         string         `json:"-"`
+	UserId         string         `json:"user_id"`
 	IsAnonymous    bool           `json:"is_anonymous"`
 	UserName       string         `json:"user_name"`
 	AdditionalProp string         `json:"additional_prop"`
@@ -98,10 +100,10 @@ var PAGE_VIEW_HOVERPROPS_LIST = []string{U.EP_IS_PAGE_VIEW, U.EP_PAGE_SPENT_TIME
 var EVENT_ICONS_MAP = map[string]string{
 	U.EVENT_NAME_SESSION:                            "brand",
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL:           "envelope",
-	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED: "HandshakeOutlined",
-	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED: "HandshakeOutlined",
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED: "handshake",
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED: "handshake",
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED:    "phone",
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED:    "phone",
-	U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:    "list_check",
-	U.EVENT_NAME_FORM_SUBMITTED:                     "hand_pointer",
+	U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:    "listcheck",
+	U.EVENT_NAME_FORM_SUBMITTED:                     "hand-pointer",
 }

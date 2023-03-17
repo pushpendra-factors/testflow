@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -170,6 +171,13 @@ func RandomStringForSharableQuery(n int) string {
 	newResult := result[:randIndex] + timestampstr + result[randIndex:]
 	return newResult
 }
+
+func HashKeyUsingSha256Checksum(data string) string {
+	sum := sha256.Sum256([]byte(data))
+	encryptData := fmt.Sprintf("%x", sum)
+	return encryptData
+}
+
 func RandomNumericString(n int) string {
 	rand.Seed(time.Now().UnixNano())
 
@@ -627,6 +635,15 @@ func GetKeysMapAsArray(keys map[string]bool) []string {
 	return keysArray
 }
 
+func GetKeysofStringMapAsArray(keys map[string]string) []string {
+	keysArray := make([]string, 0)
+	for key := range keys {
+		keysArray = append(keysArray, key)
+	}
+
+	return keysArray
+}
+
 func GetKeysOfInt64StringMap(m *map[int64]string) []int64 {
 	if m == nil {
 		return []int64{}
@@ -916,6 +933,7 @@ func IsItreeCampaignEvent(eventName string) bool {
 func GetDashboardCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZoneString) float64 {
 	toStartOfDay := GetBeginningOfDayTimestampIn(to, timezoneString)
 	nowStartOfDay := GetBeginningOfDayTimestampIn(TimeNowZ().Unix(), timezoneString)
+
 	if Is30MinutesTimeRange(from, to) {
 		return float64(CacheExpiryDashboard30MinutesInSeconds)
 	} else if to >= nowStartOfDay {
@@ -940,6 +958,7 @@ func GetDashboardCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZ
 func GetQueryCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZoneString) float64 {
 	toStartOfDay := GetBeginningOfDayTimestampIn(to, timezoneString)
 	nowStartOfDay := GetBeginningOfDayTimestampIn(TimeNowZ().Unix(), timezoneString)
+
 	if to >= nowStartOfDay {
 		// End date is in today's range. Keep small expiry.
 		return float64(CacheExpiryQueryTodaysDataInSeconds)

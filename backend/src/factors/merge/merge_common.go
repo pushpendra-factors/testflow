@@ -9,8 +9,7 @@ import (
 	serviceDisk "factors/services/disk"
 	U "factors/util"
 	"fmt"
-	"os"
-	"path"
+	"io"
 	"sort"
 	"strings"
 
@@ -45,14 +44,11 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 		fileNamePrefix = channelOrDatefield
 	}
 
-	sorted_dir, sorted_name := GetSortedFilePathAndName(diskManager, dataType, channelOrDatefield, projectId, startTimestamp, endTimestamp, sortOnGroup)
-	sortedFilePath := sorted_dir + sorted_name
-	unsortedFileName := "unsorted_" + sorted_name
-	unsortedFileDir := sorted_dir
-	unsortedFilePath := unsortedFileDir + unsortedFileName
+	unsorted_cloud_dir, _ := GetSortedFilePathAndName(*tmpCloudManager, dataType, channelOrDatefield, projectId, startTimestamp, endTimestamp, sortOnGroup)
+	unsortedCloudName := "unsorted_" + cloud_name
 
 	useBeam := beamConfig.RunOnBeam
-	userIdsMap, linesCount, err := ReadAndMergeDailyFiles(projectId, dataType, fileNamePrefix, unsortedFileName, startTimestamp, endTimestamp, sorted_dir, archiveCloudManager, diskManager, useBeam, sortOnGroup)
+	userIdsMap, linesCount, err := ReadAndMergeDailyFiles(projectId, dataType, fileNamePrefix, unsorted_cloud_dir, unsortedCloudName, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, useBeam, sortOnGroup)
 	if err != nil {
 		return err
 	}
@@ -61,26 +57,14 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 	}
 	log.Info("merged")
 
-	if useBeam && (dataType == U.DataTypeEvent || dataType == U.DataTypeAdReport) {
-		file, err := diskManager.Get(unsortedFileDir, unsortedFileName)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		unsorted_cloud_dir, _ := GetSortedFilePathAndName(*tmpCloudManager, dataType, channelOrDatefield, projectId, startTimestamp, endTimestamp, sortOnGroup)
-		unsortedCloudName := "unsorted_" + cloud_name
-		err = (*tmpCloudManager).Create(unsorted_cloud_dir, unsortedCloudName, file)
-		if err != nil {
-			log.Error("Failed to create file to cloud.")
-			return err
-		}
-		log.Info("uploaded")
-
-		err = os.Remove(unsortedFilePath)
-		if err != nil {
-			return err
-		}
+	fileSize, err := (*tmpCloudManager).GetObjectSize(unsorted_cloud_dir, unsortedCloudName)
+	if err != nil {
+		log.Error("Failed to get file size.")
+		return err
+	}
+	log.Infof("merged file size: %d", fileSize)
+	var minSizeForBeam int64 = 500 * 1024 * 1024
+	if (fileSize > minSizeForBeam && useBeam) && (dataType == U.DataTypeEvent || dataType == U.DataTypeAdReport) {
 		batch_size := beamConfig.NumWorker
 		var numLines int64
 		if dataType == U.DataTypeEvent {
@@ -90,19 +74,19 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 				return err
 			}
 
-			numLines, err = ReadAndMergeEventPartFiles(projectId, cloud_dir, sorted_dir, sorted_name, tmpCloudManager, diskManager)
+			numLines, err = ReadAndMergeEventPartFiles(projectId, unsorted_cloud_dir, cloud_dir, cloud_name, tmpCloudManager, cloudManager)
 			if err != nil {
 				log.Errorf("unable to read part files and merge :%v", err)
 				return err
 			}
 		} else if dataType == U.DataTypeAdReport {
-			err = Pull_channel_beam_controller(projectId, channelOrDatefield, cloud_dir, unsortedCloudName, batch_size, userIdsMap,
+			err = Pull_channel_beam_controller(projectId, channelOrDatefield, unsorted_cloud_dir, unsortedCloudName, batch_size, userIdsMap,
 				beamConfig, tmpCloudManager, diskManager, startTimestamp, endTimestamp)
 			if err != nil {
 				return err
 			}
 
-			numLines, err = ReadAndMergeChannelPartFiles(projectId, cloud_dir, sorted_dir, sorted_name, tmpCloudManager, diskManager)
+			numLines, err = ReadAndMergeChannelPartFiles(projectId, unsorted_cloud_dir, cloud_dir, cloud_name, tmpCloudManager, cloudManager)
 			if err != nil {
 				log.Errorf("unable to read part files and merge :%v", err)
 				return err
@@ -110,29 +94,12 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 		}
 		log.Info("numLines: ", numLines)
 	} else {
-		if err := SortUnsortedFile(dataType, unsortedFilePath, sortedFilePath, sortOnGroup); err != nil {
+		if err := SortUnsortedFile(tmpCloudManager, cloudManager, dataType, unsorted_cloud_dir, unsortedCloudName, cloud_dir, cloud_name, sortOnGroup); err != nil {
 			return err
 		}
 	}
 	log.Info("sorted")
 
-	file, err := os.Open(sortedFilePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	err = (*cloudManager).Create(cloud_dir, cloud_name, file)
-	if err != nil {
-		log.Error("Failed to create file to cloud.")
-		return err
-	}
-	log.Info("uploaded")
-
-	err = os.Remove(sortedFilePath)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -148,23 +115,21 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 // sortOnGroup - decides which id to get for events dataType(0:uid, i:group_i_id),
 // fileNamePrefix - all daily files only with this prefix are read (give "events" for events, channel name for ad_reports and dateField for users),
 // getIdMap - whether to generate userIdMap
-func ReadAndMergeDailyFiles(projectId int64, dataType, fileNamePrefix string, unsortedFileName string, startTimestamp, endTimestamp int64,
-	local_dir string, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, getIdMap bool, sortOnGroup int) (map[string]int, int64, error) {
+func ReadAndMergeDailyFiles(projectId int64, dataType, fileNamePrefix string, unsortedDir, unsortedFileName string, startTimestamp, endTimestamp int64,
+	archiveCloudManager, tmpCloudManager *filestore.FileManager, getIdMap bool, sortOnGroup int) (map[string]int, int64, error) {
 	userIdMap := make(map[string]int)
 	var countLines int64
-	local_merged_file := path.Join(local_dir, unsortedFileName)
-	serviceDisk.MkdirAll(local_dir)
-	tmpFile, err := os.OpenFile(local_merged_file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	cloudWriter, err := (*tmpCloudManager).GetWriter(unsortedDir, unsortedFileName)
 	if err != nil {
-		log.Errorf("unable to open local sorted file:%s", local_merged_file)
+		log.Errorf("unable to get writer for file:%s", unsortedDir+unsortedFileName)
 		return userIdMap, 0, err
 	}
 
 	log.Infof("Merging dailyFiles:%d", projectId)
 	timestamp := startTimestamp
 	for timestamp <= endTimestamp {
-		partFilesDir, _ := GetDailyArchiveFilePathAndName(*cloudManager, dataType, fileNamePrefix, projectId, timestamp, 0, 0)
-		listFiles := (*cloudManager).ListFiles(partFilesDir)
+		partFilesDir, _ := GetDailyArchiveFilePathAndName(*archiveCloudManager, dataType, fileNamePrefix, projectId, timestamp, 0, 0)
+		listFiles := (*archiveCloudManager).ListFiles(partFilesDir)
 		for _, partFileFullName := range listFiles {
 			partFNamelist := strings.Split(partFileFullName, "/")
 			partFileName := partFNamelist[len(partFNamelist)-1]
@@ -173,7 +138,7 @@ func ReadAndMergeDailyFiles(projectId int64, dataType, fileNamePrefix string, un
 			}
 
 			log.Infof("Reading daily file :%s, %s", partFilesDir, partFileName)
-			file, err := (*cloudManager).Get(partFilesDir, partFileName)
+			file, err := (*archiveCloudManager).Get(partFilesDir, partFileName)
 			if err != nil {
 				return userIdMap, 0, err
 			}
@@ -219,7 +184,7 @@ func ReadAndMergeDailyFiles(projectId int64, dataType, fileNamePrefix string, un
 					}
 				}
 
-				_, err = tmpFile.WriteString(line + "\n")
+				_, err = io.WriteString(cloudWriter, line+"\n")
 				if err != nil {
 					log.Errorf("Unable to write to file :%v", err)
 					return userIdMap, countLines, err
@@ -229,24 +194,23 @@ func ReadAndMergeDailyFiles(projectId int64, dataType, fileNamePrefix string, un
 		}
 		timestamp += U.Per_day_epoch
 	}
-	defer tmpFile.Close()
+	err = cloudWriter.Close()
 
-	return userIdMap, countLines, nil
+	return userIdMap, countLines, err
 }
 
 // read events file locally from filePath, sort events based on [sortOnGroup,timestamp] (sortOnGroup - 0:uid, i:group_i_id) and
 // create sorted local file at sortedFilePath
-func SortUnsortedEventsFile(filePath string, sortedFilePath string, sortOnGroup int) error {
+func SortUnsortedEventsFile(tmpCloudManager, sortedCloudManager *filestore.FileManager, unsortedDir, unsortedName string, sortedDir, sortedName string, sortOnGroup int) error {
 
-	file, err := os.Open(filePath)
+	reader, err := (*tmpCloudManager).Get(unsortedDir, unsortedName)
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")
 		return err
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(reader)
 	const maxCapacity = 30 * 1024 * 1024
 	buf := make([]byte, maxCapacity)
 	scanner.Buffer(buf, maxCapacity)
@@ -262,22 +226,22 @@ func SortUnsortedEventsFile(filePath string, sortedFilePath string, sortOnGroup 
 		}
 		eventsList = append(eventsList, rawEvent)
 	}
-	err = os.Remove(filePath)
+	err = reader.Close()
 	if err != nil {
 		return err
 	}
 	sort.Slice(eventsList, func(i, j int) bool {
-		if getAptId(eventsList[i], sortOnGroup) == getAptId(eventsList[i], sortOnGroup) {
+		if getAptId(eventsList[i], sortOnGroup) == getAptId(eventsList[j], sortOnGroup) {
 			return eventsList[i].EventTimestamp < eventsList[j].EventTimestamp
 		}
-		return getAptId(eventsList[i], sortOnGroup) < getAptId(eventsList[i], sortOnGroup)
+		return getAptId(eventsList[i], sortOnGroup) < getAptId(eventsList[j], sortOnGroup)
 	})
-	file, err = os.Create(sortedFilePath)
+	cloudWriter, err := (*sortedCloudManager).GetWriter(sortedDir, sortedName)
 	if err != nil {
-		fmt.Printf("There was an error decoding the json. err = %s", err)
+		fmt.Println(err.Error())
+		log.WithError(err).Error("Error reading file")
 		return err
 	}
-	defer file.Close()
 
 	for _, event := range eventsList {
 		jsonBytes, err := json.Marshal(event)
@@ -286,30 +250,30 @@ func SortUnsortedEventsFile(filePath string, sortedFilePath string, sortOnGroup 
 			log.WithError(err).Error("Error marshalling")
 			return err
 		}
-		_, err = file.WriteString(fmt.Sprintf("%s\n", jsonBytes))
+		_, err = io.WriteString(cloudWriter, fmt.Sprintf("%s\n", jsonBytes))
 		if err != nil {
 			fmt.Println(err.Error())
 			log.WithError(err).Error("Error writing")
 			return err
 		}
 	}
+	err = cloudWriter.Close()
 
 	return err
 }
 
 // read channel file locally from filePath, sort reports based on [docType,timestamp] and
 // create sorted local file at sortedFilePath
-func SortUnsortedChannelFile(filePath string, sortedFilePath string) error {
+func SortUnsortedChannelFile(tmpCloudManager, sortedCloudManager *filestore.FileManager, unsortedDir, unsortedName string, sortedDir, sortedName string) error {
 
-	file, err := os.Open(filePath)
+	reader, err := (*tmpCloudManager).Get(unsortedDir, unsortedName)
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")
 		return err
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(reader)
 	const maxCapacity = 30 * 1024 * 1024
 	buf := make([]byte, maxCapacity)
 	scanner.Buffer(buf, maxCapacity)
@@ -318,20 +282,21 @@ func SortUnsortedChannelFile(filePath string, sortedFilePath string) error {
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		var rawEvent *pull.CounterCampaignFormat
-		err := json.Unmarshal([]byte(line), &rawEvent)
+		var docReport *pull.CounterCampaignFormat
+		err := json.Unmarshal([]byte(line), &docReport)
 		if err != nil {
 			return err
 		}
-		if _, ok := docsList[rawEvent.Doctype]; !ok {
-			docsList[rawEvent.Doctype] = make([]*pull.CounterCampaignFormat, 0)
+		if _, ok := docsList[docReport.Doctype]; !ok {
+			docsList[docReport.Doctype] = make([]*pull.CounterCampaignFormat, 0)
 		}
-		docsList[rawEvent.Doctype] = append(docsList[rawEvent.Doctype], rawEvent)
+		docsList[docReport.Doctype] = append(docsList[docReport.Doctype], docReport)
 	}
-	err = os.Remove(filePath)
+	err = reader.Close()
 	if err != nil {
 		return err
 	}
+
 	docTypes := make([]int, 0)
 	for docType, docList := range docsList {
 		docTypes = append(docTypes, docType)
@@ -342,22 +307,24 @@ func SortUnsortedChannelFile(filePath string, sortedFilePath string) error {
 	sort.Slice(docTypes, func(i, j int) bool {
 		return docTypes[i] < docTypes[j]
 	})
-	file, err = os.Create(sortedFilePath)
+
+	cloudWriter, err := (*sortedCloudManager).GetWriter(sortedDir, sortedName)
 	if err != nil {
-		fmt.Printf("There was an error decoding the json. err = %s", err)
+		fmt.Println(err.Error())
+		log.WithError(err).Error("Error reading file")
 		return err
 	}
-	defer file.Close()
 
 	for _, docType := range docTypes {
-		for _, doc := range docsList[docType] {
+		docs := docsList[docType]
+		for _, doc := range docs {
 			jsonBytes, err := json.Marshal(doc)
 			if err != nil {
 				fmt.Println(err.Error())
 				log.WithError(err).Error("Error marshalling")
 				return err
 			}
-			_, err = file.WriteString(fmt.Sprintf("%s\n", jsonBytes))
+			_, err = io.WriteString(cloudWriter, fmt.Sprintf("%s\n", jsonBytes))
 			if err != nil {
 				fmt.Println(err.Error())
 				log.WithError(err).Error("Error writing")
@@ -365,23 +332,23 @@ func SortUnsortedChannelFile(filePath string, sortedFilePath string) error {
 			}
 		}
 	}
+	err = cloudWriter.Close()
 
 	return err
 }
 
 // read users file locally from filePath, group all users with same id and set JoinTimestamp as the least of all JoinTimestamps,
 // sort users based on JoinTimestamp and create sorted local file at sortedFilePath
-func SortUnsortedUsersFile(filePath string, sortedFilePath string) error {
+func SortUnsortedUsersFile(tmpCloudManager, sortedCloudManager *filestore.FileManager, unsortedDir, unsortedName string, sortedDir, sortedName string) error {
 
-	file, err := os.Open(filePath)
+	reader, err := (*tmpCloudManager).Get(unsortedDir, unsortedName)
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")
 		return err
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(reader)
 	const maxCapacity = 30 * 1024 * 1024
 	buf := make([]byte, maxCapacity)
 	scanner.Buffer(buf, maxCapacity)
@@ -410,20 +377,20 @@ func SortUnsortedUsersFile(filePath string, sortedFilePath string) error {
 			delete(uniqueUsersJoints, user.Id)
 		}
 	}
-
-	err = os.Remove(filePath)
+	err = reader.Close()
 	if err != nil {
 		return err
 	}
+
 	sort.Slice(uniqueUsersList, func(i, j int) bool {
 		return uniqueUsersList[i].JoinTimestamp < uniqueUsersList[j].JoinTimestamp
 	})
-	file, err = os.Create(sortedFilePath)
+	cloudWriter, err := (*sortedCloudManager).GetWriter(sortedDir, sortedName)
 	if err != nil {
-		fmt.Printf("There was an error decoding the json. err = %s", err)
+		fmt.Println(err.Error())
+		log.WithError(err).Error("Error reading file")
 		return err
 	}
-	defer file.Close()
 
 	for _, user := range uniqueUsersList {
 		jsonBytes, err := json.Marshal(user)
@@ -432,13 +399,14 @@ func SortUnsortedUsersFile(filePath string, sortedFilePath string) error {
 			log.WithError(err).Error("Error marshalling")
 			return err
 		}
-		_, err = file.WriteString(fmt.Sprintf("%s\n", jsonBytes))
+		_, err = io.WriteString(cloudWriter, fmt.Sprintf("%s\n", jsonBytes))
 		if err != nil {
 			fmt.Println(err.Error())
 			log.WithError(err).Error("Error writing")
 			return err
 		}
 	}
+	err = cloudWriter.Close()
 
 	return err
 }
@@ -464,14 +432,14 @@ func getAptId(event *P.CounterEventFormat, num int) string {
 // sort file in unsortedFilePath based on dataType and created sorted file at sortedFilePath
 //
 // sortOnGroup - (0:uid, i:group_i_id) for events dataType
-func SortUnsortedFile(dataType string, unsortedFilePath, sortedFilePath string, sortOnGroup int) error {
+func SortUnsortedFile(tmpCloudManager, sortedCloudManager *filestore.FileManager, dataType string, unsortedFileDir, unsortedFileName, sortedFileDir, sortedFileName string, sortOnGroup int) error {
 	var err error
-	if dataType == "events" {
-		err = SortUnsortedEventsFile(unsortedFilePath, sortedFilePath, sortOnGroup)
-	} else if dataType == "ad_reports" {
-		err = SortUnsortedChannelFile(unsortedFilePath, sortedFilePath)
-	} else if dataType == "users" {
-		err = SortUnsortedUsersFile(unsortedFilePath, sortedFilePath)
+	if dataType == U.DataTypeEvent {
+		err = SortUnsortedEventsFile(tmpCloudManager, sortedCloudManager, unsortedFileDir, unsortedFileName, sortedFileDir, sortedFileName, sortOnGroup)
+	} else if dataType == U.DataTypeAdReport {
+		err = SortUnsortedChannelFile(tmpCloudManager, sortedCloudManager, unsortedFileDir, unsortedFileName, sortedFileDir, sortedFileName)
+	} else if dataType == U.DataTypeUser {
+		err = SortUnsortedUsersFile(tmpCloudManager, sortedCloudManager, unsortedFileDir, unsortedFileName, sortedFileDir, sortedFileName)
 	} else {
 		err = fmt.Errorf("wrong dataType: %s", dataType)
 	}

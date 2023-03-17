@@ -26,7 +26,7 @@ func (store *MemSQL) GetKPIConfigsForLinkedin(projectID int64, reqID string, inc
 	}
 	config := model.KpiLinkedinConfig
 	linkedinObjectsAndProperties := store.buildObjectAndPropertiesForLinkedin(projectID, model.ObjectsForLinkedin)
-	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(linkedinObjectsAndProperties)
+	config["properties"] = model.TransformLinkedinChannelsPropertiesConfigToKpiPropertiesConfig(linkedinObjectsAndProperties)
 
 	rMetrics := model.GetKPIMetricsForLinkedin()
 	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.LinkedinDisplayCategory, includeDerivedKPIs)...)

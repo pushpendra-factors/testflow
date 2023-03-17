@@ -9,6 +9,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -83,6 +84,27 @@ func (store *MemSQL) GetProjectSetting(projectId int64) (*model.ProjectSetting, 
 	return &projectSetting, http.StatusFound
 }
 
+func (store *MemSQL) IsClearbitIntegratedByProjectID(projectID int64) (bool, int) {
+	db := C.GetServices().Db
+	logFields := log.Fields{"project_id": projectID}
+	logCtx := log.WithFields(logFields)
+
+	if valid := isValidProjectScope(projectID); !valid {
+		return false, http.StatusBadRequest
+	}
+
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id = ?", projectID).Find(&projectSetting).Error; err != nil {
+		logCtx.WithError(err).Error("Getting project_setting failed - clearbit integration check")
+
+		if gorm.IsRecordNotFoundError(err) {
+			return false, http.StatusNotFound
+		}
+		return false, http.StatusInternalServerError
+	}
+	return *projectSetting.IntClearBit, http.StatusFound
+}
+
 func (store *MemSQL) GetClearbitKeyFromProjectSetting(projectId int64) (string, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
@@ -107,6 +129,29 @@ func (store *MemSQL) GetClearbitKeyFromProjectSetting(projectId int64) (string, 
 	}
 
 	return projectSetting.ClearbitKey, http.StatusFound
+}
+
+// The integration to 6signal is made by either of 2 ways - 6 signal by 6signal or Factors Deanonimisation
+// on integration page of factors.
+func (store *MemSQL) IsSixSignalIntegratedByEitherWay(projectID int64) (bool, int) {
+	db := C.GetServices().Db
+	logFields := log.Fields{"project_id": projectID}
+	logCtx := log.WithFields(logFields)
+
+	if valid := isValidProjectScope(projectID); !valid {
+		return false, http.StatusBadRequest
+	}
+
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id = ?", projectID).Find(&projectSetting).Error; err != nil {
+		logCtx.WithError(err).Error("Getting project_setting failed - 6 signal integration check")
+
+		if gorm.IsRecordNotFoundError(err) {
+			return false, http.StatusNotFound
+		}
+		return false, http.StatusInternalServerError
+	}
+	return *projectSetting.IntClientSixSignalKey || *projectSetting.IntFactorsSixSignalKey, http.StatusFound
 }
 
 func (store *MemSQL) GetClient6SignalKeyFromProjectSetting(projectId int64) (string, int) {
@@ -517,7 +562,7 @@ func (store *MemSQL) delAllProjectSettingsCacheForProject(projectId int64) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	project, errCode := store.GetProject(projectId)
 	if errCode != http.StatusFound {
-		log.Error("Failed to get project on delAllProjectSettingsCacheKeys.")
+		log.WithField("err_code", errCode).Error("Failed to get project on delAllProjectSettingsCacheKeys.")
 	}
 
 	// delete all project setting cache keys by respective
@@ -588,6 +633,22 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 		}
 	}
 
+	// validate ip
+	if settings.FilterIps != nil {
+		var filterIps model.FilterIps
+		err := U.DecodePostgresJsonbToStructType(settings.FilterIps, &filterIps)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectId, "setting": settings}).WithError(
+				err).Error("Failed decoding json. Aborting.")
+			return nil, http.StatusInternalServerError
+		}
+		if !IsValidIP(filterIps) {
+			log.WithFields(log.Fields{"project_id": projectId, "filter_ips": filterIps}).
+				Error("Invalid IP Address entered. Aborting")
+			return nil, http.StatusBadRequest
+		}
+	}
+
 	var updatedProjectSetting model.ProjectSetting
 	if err := db.Model(&updatedProjectSetting).Where("project_id = ?",
 		projectId).Updates(settings).Error; err != nil {
@@ -604,6 +665,28 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 	store.delAllProjectSettingsCacheForProject(projectId)
 
 	return &updatedProjectSetting, http.StatusAccepted
+}
+
+func IsValidIP(filterIps model.FilterIps) bool {
+	for _, ip := range filterIps.BlockIps {
+		ip = strings.TrimSpace(ip)
+		if net.ParseIP(ip) == nil {
+			return false
+		}
+	}
+	return true
+}
+
+func IsBlockedIP(checkString0 string, checkString1 string, filterIps model.FilterIps) bool {
+	checkString0 = strings.TrimSpace(checkString0)
+	checkString1 = strings.TrimSpace(checkString1)
+	for _, blockedIP := range filterIps.BlockIps {
+		ip := strings.TrimSpace(blockedIP)
+		if checkString0 == ip || checkString1 == ip {
+			return true
+		}
+	}
+	return false
 }
 
 func (store *MemSQL) IsPSettingsIntShopifyEnabled(projectId int64) bool {
@@ -632,7 +715,7 @@ func (store *MemSQL) GetIntAdwordsRefreshTokenForProject(projectId int64) (strin
 
 	agent, errCode := store.GetAgentByUUID(*settings.IntAdwordsEnabledAgentUUID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Adwords enabled agent not found on agents table.")
+		logCtx.WithField("err_code", errCode).Error("Adwords enabled agent not found on agents table.")
 		return "", errCode
 	}
 
@@ -663,7 +746,7 @@ func (store *MemSQL) GetIntGoogleOrganicRefreshTokenForProject(projectId int64) 
 
 	agent, errCode := store.GetAgentByUUID(*settings.IntGoogleOrganicEnabledAgentUUID)
 	if errCode != http.StatusFound {
-		logCtx.Error("GoogleOrganic enabled agent not found on agents table.")
+		logCtx.WithField("err_code", errCode).Error("GoogleOrganic enabled agent not found on agents table.")
 		return "", errCode
 	}
 

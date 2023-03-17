@@ -67,6 +67,9 @@ func main() {
 		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to pull.FileType map
 	projectIdFlag := flag.String("project_ids", "",
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
+	splitRangeProjectIdFlag := flag.String("split_range_project_ids", "",
+		"Optional: Project Id. A comma separated list of project Ids where query range is spli nto multiple parts and supports '*' for all projects. ex: 1,2,6,9")
+	noOfSplits := flag.Int("number_splits", 1, "number of parts to split the range into for db query")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	projectsFromDB := flag.Bool("projects_from_db", false, "")
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -158,34 +161,61 @@ func main() {
 		fileTypesMap[i] = true
 	}
 
-	projectIdsToRun := make(map[int64]bool)
-	if *projectsFromDB {
-		wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
-		explain_projects, _ := store.GetStore().GetAllExplainEnabledProjects()
-		for _, id := range wi_projects {
-			projectIdsToRun[id] = true
+	projectIdsArray := make([]int64, 0)
+	{
+		projectIdsToRun := make(map[int64]bool)
+		if *projectsFromDB {
+			wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
+			explain_projects, _ := store.GetStore().GetAllExplainEnabledProjects()
+			path_analysis_projects, _ := store.GetStore().GetAllPathAnalysisEnabledProjects()
+			for _, id := range wi_projects {
+				projectIdsToRun[id] = true
+			}
+			for _, id := range explain_projects {
+				projectIdsToRun[id] = true
+			}
+			for _, id := range path_analysis_projects {
+				projectIdsToRun[id] = true
+			}
 		}
-		for _, id := range explain_projects {
-			projectIdsToRun[id] = true
+		{
+			allProjects, projectIdsFromList, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+			if allProjects {
+				projectIDs, errCode := store.GetStore().GetAllProjectIDs()
+				if errCode != http.StatusFound {
+					log.Fatal("Failed to get all projects and project_ids set to '*'.")
+				}
+				for _, projectID := range projectIDs {
+					projectIdsFromList[projectID] = true
+				}
+			}
+			for projectId, _ := range projectIdsFromList {
+				projectIdsToRun[projectId] = true
+			}
 		}
+		for projectId := range projectIdsToRun {
+			projectIdsArray = append(projectIdsArray, projectId)
+		}
+	}
 
-	} else {
+	splitRangeProjectIds := make([]int64, 0)
+	{
+		splitRangeProjectIdsMap := make(map[int64]bool, 0)
 		var allProjects bool
-		allProjects, projectIdsToRun, _ = C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+		allProjects, splitRangeProjectIdsMap, _ = C.GetProjectsFromListWithAllProjectSupport(*splitRangeProjectIdFlag, "")
 		if allProjects {
 			projectIDs, errCode := store.GetStore().GetAllProjectIDs()
 			if errCode != http.StatusFound {
 				log.Fatal("Failed to get all projects and project_ids set to '*'.")
 			}
 			for _, projectID := range projectIDs {
-				projectIdsToRun[projectID] = true
+				splitRangeProjectIdsMap[projectID] = true
 			}
 		}
-	}
 
-	projectIdsArray := make([]int64, 0)
-	for projectId := range projectIdsToRun {
-		projectIdsArray = append(projectIdsArray, projectId)
+		for projectId, _ := range splitRangeProjectIdsMap {
+			splitRangeProjectIds = append(splitRangeProjectIds, projectId)
+		}
 	}
 
 	configs := make(map[string]interface{})
@@ -225,21 +255,21 @@ func main() {
 	}
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
-
-	configs["diskManager"] = diskManager
 	configs["hardPull"] = hardPull
+	configs["splitRangeProjectIds"] = splitRangeProjectIds
+	configs["noOfSplits"] = *noOfSplits
 
 	C.PingHealthcheckForStart(healthcheckPingID)
 
 	if *useBucketV2 {
+		var statusEvents map[string]interface{}
 		if U.ContainsInt64InArray(fileTypes, 1) {
 			fileTypesMapOnlyEvents := make(map[int64]bool)
 			fileTypesMapOnlyEvents[1] = true
 			configs["fileTypes"] = fileTypesMapOnlyEvents
-			status := taskWrapper.TaskFuncWithProjectId("PullEventsDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
-			log.Info(status)
+			statusEvents = taskWrapper.TaskFuncWithProjectId("PullEventsDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
 			var isSuccess bool = true
-			for reason, message := range status {
+			for reason, message := range statusEvents {
 				if message == false {
 					C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events daily failure")
 					isSuccess = false
@@ -253,7 +283,6 @@ func main() {
 
 		configs["fileTypes"] = fileTypesMap
 		status := taskWrapper.TaskFuncWithProjectId("PullDataDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
-		log.Info(status)
 		isSuccess := true
 		for reason, message := range status {
 			if message == false {
@@ -265,7 +294,10 @@ func main() {
 		if isSuccess {
 			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Data Daily run success.")
 		}
+		log.Info("events only: ", statusEvents)
+		log.Info("all data: ", status)
 	} else {
+		configs["diskManager"] = diskManager
 		configs["beamConfig"] = &beamConfig
 		fileTypesMapOnlyEvents := make(map[int64]bool)
 		fileTypesMapOnlyEvents[1] = true

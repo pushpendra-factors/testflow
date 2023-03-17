@@ -37,6 +37,8 @@ func getMetricToCalcInfoMap(queryEvent string) map[string]EventMetricCalculation
 
 func getEventMetricsInfo(metric string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
+	wpi.MetricInfo = &MetricInfo{}
+	wpi.ScaleInfo = &MetricInfo{}
 
 	var page string
 
@@ -62,7 +64,7 @@ func getEventMetricsInfo(metric string, queryEvent string, scanner *bufio.Scanne
 	}
 	if info, scale, err := GetEventMetric(queryEvent, page, scanner, propFilter, propsToEval, metricCalcInfo.PropsInfo, metricCalcInfo.useUnique); err != nil {
 		log.WithError(err).Error("error GetEventMetric")
-		return nil, err
+		return &wpi, err
 	} else {
 		wpi.MetricInfo = info
 		wpi.ScaleInfo = scale

@@ -184,7 +184,7 @@ func (store *MemSQL) isEventObjectValid(event string, eventFilters []model.KeyVa
 	logCtx := log.WithFields(logFields)
 	eventData, err := store.GetEventName(event, ProjectID)
 	if err != http.StatusFound {
-		logCtx.Error("Get Event details failed")
+		logCtx.WithField("err_code", err).Error("Get Event details failed")
 		return false, "event doesnt exist"
 	}
 	existingFactorsTrackedEvent, dbErr := store.GetFactorsTrackedEvent(eventData.ID, ProjectID)
@@ -279,7 +279,7 @@ func (store *MemSQL) isUserPropertiesValid(ProjectID int64, UserProperties []str
 		}
 		exitingFactorsTrackedUserProperty, dbErr := store.GetFactorsTrackedUserProperty(userProperty, ProjectID)
 		if dbErr != nil {
-			logCtx.Error("User Property not tracked")
+			logCtx.WithError(dbErr).Error("User Property not tracked")
 			return false, "user property not tracked"
 		}
 		if exitingFactorsTrackedUserProperty.IsActive != true {

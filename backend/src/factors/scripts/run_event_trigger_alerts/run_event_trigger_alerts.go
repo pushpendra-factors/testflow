@@ -14,6 +14,7 @@ import (
 	"time"
 
 	slack "factors/slack_bot/handler"
+
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -35,9 +36,6 @@ func main() {
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
-
-	eventTriggerEnabled := flag.Bool("event_trigger_enabled", false, "")
-	eventTriggerEnabledProjectIDs := flag.String("event_trigger_enabled_project_ids", "", "")
 
 	flag.Parse()
 
@@ -63,12 +61,10 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:              *primaryDatastore,
-		RedisHostPersistent:           *redisHostPersistent,
-		RedisPortPersistent:           *redisPortPersistent,
-		SentryDSN:                     *sentryDSN,
-		EventTriggerEnabled:           *eventTriggerEnabled,
-		EventTriggerEnabledProjectIDs: *eventTriggerEnabledProjectIDs,
+		PrimaryDatastore:    *primaryDatastore,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
+		SentryDSN:           *sentryDSN,
 	}
 
 	C.InitConf(config)
@@ -85,7 +81,7 @@ func main() {
 	defer db.Close()
 
 	conf := make(map[string]interface{})
-	projectIDs := C.GetTokensFromStringListAsUint64(config.EventTriggerEnabledProjectIDs)
+	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 	for _, projectID := range projectIDs {
 		status, success := EventTriggerAlertsSender(projectID, conf)
 		log.Info(status)
@@ -96,7 +92,6 @@ func main() {
 }
 
 func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
-	log.Info("Inside task manager")
 
 	prefix := fmt.Sprintf("ETA:pid:%d", projectID)
 	ssKey, err := cacheRedis.NewKeyWithOnlyPrefix(prefix)
@@ -110,7 +105,6 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 		return nil, false
 	}
 
-	log.Info(fmt.Printf("%+v\n", allKeys))
 	status := make(map[string]interface{})
 
 	for key := range allKeys {
@@ -174,7 +168,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 
 	msg := alert.Message
 	if alertConfiguration.Slack {
-		log.Info(fmt.Printf("Message to be sent: %s", msg))
+		// log.Info(fmt.Printf("Message to be sent: %s", msg))
 		log.Info(fmt.Printf("%+v\n", alertConfiguration))
 		sendSuccess = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.CreatedBy, msg, alertConfiguration.SlackChannels)
 	}
@@ -204,12 +198,10 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 		return false
 	}
 
-	log.Info("Inside sendSlackAlert function")
-
 	wetRun := true
 	if wetRun {
 		for _, channel := range slackChannels {
-			log.Info("Sending alert for slack channel ", channel)
+			// log.Info("Sending alert for slack channel ", channel)
 
 			status, err := slack.SendSlackAlert(projectID, getSlackMsgBlock(msg), agentUUID, channel)
 			if err != nil || !status {
@@ -245,9 +237,27 @@ func returnSlackMessage(actualmsg string) string {
 }
 
 func getPropsBlock(propMap U.PropertiesMap) string {
+
 	var propBlock string
-	for key, prop := range propMap {
-		if(prop == ""){
+	for i := 0; i < len(propMap); i++ {
+		pp := propMap[fmt.Sprintf("%d", i)]
+		var mp model.MessagePropMapStruct
+		if pp != nil {
+			trans, ok := pp.(map[string]interface{})
+			if !ok {
+				log.Warn("cannot convert interface to map[string]interface{} type")
+				continue
+			}
+			err := U.DecodeInterfaceMapToStructType(trans, &mp)
+			if err != nil {
+				log.Warn("cannot convert interface map to struct type")
+				continue
+			}
+		}
+
+		key := mp.DisplayName
+		prop := mp.PropValue
+		if prop == "" {
 			prop = "<nil>"
 		}
 		propBlock += fmt.Sprintf(
@@ -285,20 +295,11 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 		},
 		%s
 		{
-			"type": "actions",
-			"elements": [
-				{
-					"type": "button",
-					"text": {
-						"type": "plain_text",
-						"text": "Know more",
-						"emoji": true
-					},
-					"value": "click_me_123",
-					"url": "https://app.factors.ai/profiles/people",
-					"action_id": "button-action"
-				}
-			]
+			"type": "section",
+						"text": {
+							"type": "mrkdwn",
+							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
+						}
 		}
 	]`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock)
 

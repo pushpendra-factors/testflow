@@ -32,7 +32,7 @@ const GlobalFilterSelect = ({
     type: ''
   });
 
-  const [operatorState, setOperatorState] = useState('=');
+  const [operatorState, setOperatorState] = useState(OPERATORS['equalTo']);
   const [valuesState, setValuesState] = useState(null);
 
   const [propSelectOpen, setPropSelectOpen] = useState(false);
@@ -57,7 +57,10 @@ const GlobalFilterSelect = ({
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
         filter.values?.[0] === '$none'
       ) {
-        if (filter.operator === OPERATORS['equalTo'])
+        if (
+          filter.operator === OPERATORS['equalTo'] ||
+          filter.operator?.[0] === OPERATORS['equalTo']
+        )
           setOperatorState(OPERATORS['isUnknown']);
         else setOperatorState(OPERATORS['isKnown']);
       } else {
@@ -80,6 +83,8 @@ const GlobalFilterSelect = ({
 
   useEffect(() => {
     if (
+      operatorState === OPERATORS['isKnown'] ||
+      operatorState === OPERATORS['isUnknown'] ||
       operatorState?.[0] === OPERATORS['isKnown'] ||
       operatorState?.[0] === OPERATORS['isUnknown']
     ) {
@@ -143,9 +148,10 @@ const GlobalFilterSelect = ({
   const propSelect = (prop) => {
     setPropState({ icon: prop[3], name: prop[1], type: prop[2] });
     setPropSelectOpen(false);
-    setOperatorState('=');
+    setOperatorState(OPERATORS['equalTo']);
     setValuesState(null);
     setValuesByProps(prop);
+    setValuesSelectionOpen(true);
   };
 
   const valuesSelect = (val) => {
@@ -286,9 +292,9 @@ const GlobalFilterSelect = ({
       <FaSelect
         multiSelect={
           (isArray(operatorState) ? operatorState[0] : operatorState) ===
-            '!=' ||
+            OPERATORS['notEqualTo'] ||
           (isArray(operatorState) ? operatorState[0] : operatorState) ===
-            'does not contain'
+            OPERATORS['doesNotContain']
             ? false
             : true
         }

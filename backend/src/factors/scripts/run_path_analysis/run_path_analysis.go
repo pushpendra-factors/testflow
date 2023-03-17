@@ -6,7 +6,6 @@ import (
 	"factors/merge"
 	"factors/pattern"
 	"factors/pull"
-	taskWrapper "factors/task/task_wrapper"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/apache/beam/sdks/go/pkg/beam"
 	log "github.com/sirupsen/logrus"
+	"factors/model/store"
 )
 
 func registerStructs() {
@@ -61,16 +61,12 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
-	lookback := flag.Int("lookback", 1, "lookback_for_delta lookup")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
-
-	projectIdFlag := flag.String("project_ids", "",
-		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -136,11 +132,7 @@ func main() {
 	defer db.Close()
 	//Initialized configs
 
-	_, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
-	projectIdsArray := make([]int64, 0)
-	for projectId := range projectIdsToRun {
-		projectIdsArray = append(projectIdsArray, projectId)
-	}
+	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 	
 	// Get All the Projects for which the path analysis has pending items
 	configs := make(map[string]interface{})
@@ -202,17 +194,23 @@ func main() {
 	configs["beamConfig"] = &beamConfig
 	configs["hardPull"] = *hardPull
 	configs["sortOnGroup"] = *sortOnGroup
-	var taskName string
-	if *useBucketV2 {
-		taskName = "PathAnalysisV2"
+
+	var result bool
+	finalStatus := make(map[int64]interface{})
+	for _, projectId := range projectIDs {
+		status := make(map[string]interface{})
+		status, result = D.PathAnalysis(projectId, configs)
+		if(len(status) > 0){
+			finalStatus[projectId] = status
+		}
+		if(result == false){
+			break
+		}
+	}
+	if result == false {
+		C.PingHealthcheckForFailure(healthcheckPingID, finalStatus)
 	} else {
-		taskName = "PathAnalysis"
+		C.PingHealthcheckForSuccess(healthcheckPingID, finalStatus)
 	}
-	status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, D.PathAnalysis, configs)
-	log.Info(status)
-	if status["err"] != nil {
-		C.PingHealthcheckForFailure(healthcheckPingID, status)
-	}
-	C.PingHealthcheckForSuccess(healthcheckPingID, status)
 
 }

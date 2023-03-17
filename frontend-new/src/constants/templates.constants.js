@@ -31,14 +31,14 @@ export class Integration_Checks {
     // Now Checking Other Integrations
     this.adwords = !!integration.int_adwords_enabled_agent_uuid;
     this.bingads = bingAds.accounts;
-    this.googlesearchconsole =
+    this.google_search_console =
       integration.int_google_organic_url_prefixes &&
-      integration.int_google_organic_url_prefixes != '';
+      integration.int_google_organic_url_prefixes !== '';
     this.hubspot = integration.int_hubspot;
     this.linkedin = integration.int_linkedin_agent_uuid;
     this.facebook = integration.int_facebook_user_id;
     this.marketo = marketo.status;
-
+    this['6signal'] = integration?.int_client_six_signal_key;
     // Other Integrations
     this.segment = integration.int_segment;
   }
@@ -107,6 +107,14 @@ const ThumbnailAssetsWithName = [
   {
     name: 'webkpisandoverview',
     image: TEMPLATES_HOSTCDN + 'Thumbnail_WebKPIsAndOverview.png'
+  },
+  {
+    name: 'landingpageengagement',
+    image: TEMPLATES_HOSTCDN + 'Thumbnail_LandingPageEngagement.png'
+  },
+  {
+    name: 'websitevisitoridentification',
+    image: TEMPLATES_HOSTCDN + 'Thumbnail_WebsiteVisitorIdentification.png'
   }
 ];
 

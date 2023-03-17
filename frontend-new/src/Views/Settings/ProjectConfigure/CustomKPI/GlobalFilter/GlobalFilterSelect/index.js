@@ -18,11 +18,11 @@ const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 const { Option } = Select;
 
-const rangePicker = ['=', '!='];
-const customRangePicker = ['between', 'not between'];
-const deltaPicker = ['in the previous', 'not in the previous'];
-const currentPicker = ['in the current', 'not in the current'];
-const datePicker = ['before', 'since'];
+const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
+const customRangePicker = [OPERATORS['between'], OPERATORS['notBetween']];
+const deltaPicker = [OPERATORS['inThePrevious'], OPERATORS['notInThePrevious']];
+const currentPicker = [OPERATORS['inTheCurrent'], OPERATORS['notInTheCurrent']];
+const datePicker = [OPERATORS['before'], OPERATORS['since']];
 
 const GlobalFilterSelect = ({
   propOpts = [],
@@ -38,7 +38,7 @@ const GlobalFilterSelect = ({
     type: ''
   });
 
-  const [operatorState, setOperatorState] = useState('=');
+  const [operatorState, setOperatorState] = useState(OPERATORS['equalTo']);
   const [valuesState, setValuesState] = useState(null);
 
   const [propSelectOpen, setPropSelectOpen] = useState(false);
@@ -85,7 +85,10 @@ const GlobalFilterSelect = ({
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
         filter.values?.[0] === '$none'
       ) {
-        if (filter.operator === OPERATORS['equalTo'])
+        if (
+          filter.operator === OPERATORS['equalTo'] ||
+          filter.operator?.[0] === OPERATORS['equalTo']
+        )
           setOperatorState(OPERATORS['isUnknown']);
         else setOperatorState(OPERATORS['isKnown']);
       } else {
@@ -108,6 +111,8 @@ const GlobalFilterSelect = ({
 
   useEffect(() => {
     if (
+      operatorState === OPERATORS['isKnown'] ||
+      operatorState === OPERATORS['isUnknown'] ||
       operatorState?.[0] === OPERATORS['isKnown'] ||
       operatorState?.[0] === OPERATORS['isUnknown']
     ) {
@@ -187,10 +192,13 @@ const GlobalFilterSelect = ({
     let prop = [label, ...val];
     setPropState({ icon: prop[0], name: prop[1], type: prop[3], extra: val });
     setPropSelectOpen(false);
-    setOperatorState(prop[3] === 'datetime' ? 'between' : '=');
+    setOperatorState(
+      prop[3] === 'datetime' ? OPERATORS['between'] : OPERATORS['equalTo']
+    );
     setValuesState(null);
     setValuesByProps([...val]);
     seteventFilterInfo(val);
+    setValuesSelectionOpen(true);
   };
 
   const valuesSelect = (val) => {
@@ -377,12 +385,12 @@ const GlobalFilterSelect = ({
     const operatorSt = isArray(operatorState)
       ? operatorState[0]
       : operatorState;
-    if (operatorSt === 'before') {
+    if (operatorSt === OPERATORS['before']) {
       dateT = MomentTz(val).startOf('day');
       dateValue['to'] = dateT.toDate().getTime();
     }
 
-    if (operatorSt === 'since') {
+    if (operatorSt === OPERATORS['since']) {
       dateT = MomentTz(val).startOf('day');
       dateValue['fr'] = dateT.toDate().getTime();
     }
@@ -494,7 +502,7 @@ const GlobalFilterSelect = ({
             setShowDatePicker(!showDatePicker);
           }}
           value={
-            operator === 'before'
+            operator === OPERATORS['before']
               ? moment(parsedValues['to'])
               : moment(
                   parsedValues['from']
@@ -522,9 +530,9 @@ const GlobalFilterSelect = ({
       <FaSelect
         multiSelect={
           (isArray(operatorState) ? operatorState[0] : operatorState) ===
-            '!=' ||
+            OPERATORS['notEqualTo'] ||
           (isArray(operatorState) ? operatorState[0] : operatorState) ===
-            'does not contain'
+            OPERATORS['doesNotContain']
             ? false
             : true
         }

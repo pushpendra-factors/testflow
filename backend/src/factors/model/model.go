@@ -170,9 +170,9 @@ type Model interface {
 	DeleteDashboardUnit(projectID int64, agentUUID string, dashboardId int64, id int64) int
 	DeleteMultipleDashboardUnits(projectID int64, agentUUID string, dashboardID int64, dashboardUnitIDs []int64) (int, string)
 	UpdateDashboardUnit(projectId int64, agentUUID string, dashboardId int64, id int64, unit *model.DashboardUnit) (*model.DashboardUnit, int)
-	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool)
-	CacheDashboardUnitsForProjectID(projectID int64, dashboardUnits []model.DashboardUnit, queryClasses []string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool) int
-	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool)
+	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool, startTimeForCache int64)
+	CacheDashboardUnitsForProjectID(projectID int64, dashboardUnits []model.DashboardUnit, queryClasses []string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool, startTimeCache int64) int
+	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool, startCacheTime int64)
 	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string)
 	GetQueryAndClassFromQueryIdString(queryIdString string, projectId int64) (queryClass string, queryInfo *model.Queries, errMsg string)
@@ -201,6 +201,9 @@ type Model interface {
 	// Profile
 	RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID int64, enableOptimisedFilter bool) (model.ResultGroup, int)
 	ExecuteProfilesQuery(projectID int64, query model.ProfileQuery, enableOptimisedFilter bool) (*model.QueryResult, int, string)
+
+	//six_signal
+	RunSixSignalGroupQuery(queriesOriginal []model.SixSignalQuery, projectId int64) (model.SixSignalResultGroup, int)
 
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
@@ -293,6 +296,11 @@ type Model interface {
 	GetLastEventWithSessionByUser(projectId int64, userId string, firstEventTimestamp int64) (*model.Event, int)
 	GetAllEventsForSessionCreationAsUserEventsMapV2(projectID int64, sessionEventNameId string, startTimestamp int64, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetUserIdFromEventId(projectID int64, id string, userID string) (string, string, int)
+	GetEventsBySessionEvent(projectID int64, sessionEventID, userID string) ([]model.Event, int)
+	DissociateEventsFromSession(projectID int64, events []model.Event, sessionID string) int
+	DeleteSessionsAndAssociationForTimerange(projectID, startTimestamp, endTimestamp int64) (int64, int64, int)
+	GetEventsByEventNameIDANDTimeRange(projectID int64, eventNameID string,
+		startTimestamp int64, endTimestamp int64) ([]model.Event, int)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -378,7 +386,9 @@ type Model interface {
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
+	IsClearbitIntegratedByProjectID(projectID int64) (bool, int)
 	GetClearbitKeyFromProjectSetting(projectId int64) (string, int)
+	IsSixSignalIntegratedByEitherWay(projectID int64) (bool, int)
 	GetClient6SignalKeyFromProjectSetting(projectId int64) (string, int)
 	GetFactors6SignalKeyFromProjectSetting(projectId int64) (string, int)
 	GetIntegrationBitsFromProjectSetting(projectId int64) (string, int)
@@ -439,6 +449,7 @@ type Model interface {
 	CreateQuery(projectID int64, query *model.Queries) (*model.Queries, int, string)
 	GetALLQueriesWithProjectId(projectID int64) ([]model.Queries, int)
 	GetDashboardQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
+	GetSixSignalQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
 	GetDashboardUnitForQueryID(projectID int64, queryID int64) []model.DashboardUnit
 	GetSavedQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
 	GetQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
@@ -525,6 +536,8 @@ type Model interface {
 	// user
 	CreateUser(user *model.User) (string, int)
 	CreateOrGetAMPUser(projectID int64, ampUserId string, timestamp int64, requestSource int) (string, int)
+	CreateOrGetDomainGroupUser(projectID int64, groupName string, domainName string,
+		requestTimestamp int64, requestSource int) (string, int)
 	CreateOrGetSegmentUser(projectID int64, segAnonId, custUserId string, requestTimestamp int64, requestSource int) (*model.User, int)
 	GetUserPropertiesByUserID(projectID int64, id string) (*postgres.Jsonb, int)
 	GetUser(projectID int64, id string) (*model.User, int)
@@ -555,7 +568,7 @@ type Model interface {
 	UpdateIdentifyOverwriteUserPropertiesMeta(projectID int64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error
 	GetSelectedUsersByCustomerUserID(projectID int64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int)
 	CreateGroupUser(user *model.User, groupName, groupID string) (string, int)
-	UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string) (*model.User, int)
+	UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string, overwrite bool) (*model.User, int)
 	UpdateUserGroupProperties(projectID int64, userID string, newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int)
 	GetPropertiesUpdatedTimestampOfUser(projectId int64, id string) (int64, int)
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
@@ -619,6 +632,13 @@ type Model interface {
 	GetDisplayNamesForObjectEntities(projectID int64) (int, map[string]string)
 	CreateOrUpdateDisplayName(projectID int64, eventName, propertyName, displayName, tag string) int
 
+	// display name_labels
+	CreateOrUpdateDisplayNameLabel(projectID int64, source, propertyKey, value, label string) int
+	CreateDisplayNameLabel(projectID int64, source, propertyKey, value, label string) (int, error)
+	GetDisplayNameLabel(projectID int64, source, propertyKey, value string) (*model.DisplayNameLabel, int, error)
+	GetDisplayNameLabelsByProjectIdAndSource(projectID int64, source string) ([]model.DisplayNameLabel, int)
+	GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID int64, source, propertyKey string) (map[string]string, error)
+
 	// task and task-execution
 	RegisterTaskWithDefaultConfiguration(taskName string, source string, frequency int, isProjectEnabled bool) (uint64, int, string)
 	RegisterTask(taskName string, source string, frequency int, isProjectEnabled bool, frequencyInterval int, skipStartIndex int, skipEndIndex int, recurrence bool, offsetStartMinutes int) (uint64, int, string)
@@ -666,13 +686,17 @@ type Model interface {
 
 	//Group
 	CreateGroup(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
+	CreateOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
+	CreateOrGetDomainsGroup(projectID int64) (*model.Group, int)
 	GetGroup(projectID int64, groupName string) (*model.Group, int)
+	GetGroupUserByGroupID(projectID int64, groupName string, groupID string) (*model.User, int)
 	CreateOrUpdateGroupPropertiesBySource(projectID int64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
 	GetGroups(projectID int64) ([]model.Group, int)
 	GetPropertiesByGroup(projectID int64, groupName string, limit int, lastNDays int) (map[string][]string, int)
 	GetPropertyValuesByGroupProperty(projectID int64, groupName string, propertyName string, limit int, lastNDays int) ([]string, error)
 	IsGroupEventName(projectID int64, eventName, eventNameID string) (string, int)
+	UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainGroupID string, overwrite bool) (*model.User, int)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID int64, channelName string) (int, error)
@@ -777,7 +801,6 @@ type Model interface {
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
-	GetLeftPaneProperties(projectID int64, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{}
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 
 	// segment
@@ -830,9 +853,9 @@ type Model interface {
 
 	// Event Trigger Alerts
 	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int)
-	CreateEventTriggerAlert(userID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string)
+	CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string)
 	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
-	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, int)
+	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)
 	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
 	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
 
@@ -869,4 +892,7 @@ type Model interface {
 	SetAuthTokenforTeamsIntegration(projectID int64, agentUUID string, authTokens model.TeamsAccessTokens) error
 	GetTeamsAuthTokens(projectID int64, agentUUID string) (model.TeamsAccessTokens, error)
 	DeleteTeamsIntegration(projectID int64, agentUUID string) error
+	// Currency
+	CreateCurrencyDetails(currency string, date int64, value float64) (error)
+	GetCurrencyDetails(currency string, date int64) ([]model.Currency, error)
 }

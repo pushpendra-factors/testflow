@@ -604,7 +604,7 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 		}
 
 		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"attributionData": attributionData, "sessions": sessions}).Info("Done FireAttributionV1. Attribution debug AnalyzeTypeUsers.")
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("Done FireAttributionV1. Attribution debug AnalyzeTypeUsers.")
 		}
 		queryStartTime = time.Now().UTC().Unix()
 		if C.GetAttributionDebug() == 1 {
@@ -1260,6 +1260,8 @@ func (store *MemSQL) getAllThePagesV1(projectId int64, sessionEventNameId string
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
+	reports.CampaignSourceMapping = make(map[string]string)
+	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -1363,6 +1365,8 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
+	reports.CampaignSourceMapping = make(map[string]string)
+	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -1461,6 +1465,8 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
+	reports.CampaignSourceMapping = make(map[string]string)
+	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -1559,6 +1565,8 @@ func (store *MemSQL) getAllTheSessionsAttributionKPI(projectId int64, sessionEve
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
+	reports.CampaignSourceMapping = make(map[string]string)
+	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -1805,6 +1813,29 @@ func (store *MemSQL) GetConvertedUsersWithFilterV1(projectID int64, goalEventNam
 		" timestamp <=? AND events.event_name_id IN (" + placeHolder + ") "
 	qParams := []interface{}{projectID, conversionFrom, conversionTo}
 	qParams = append(qParams, conversionEventNameIDs...)
+
+	// add event filter
+	wStmtEvent, wParamsEvent, _, err := getFilterSQLStmtForEventProperties(
+		projectID, goalEventProperties, conversionFrom) // query.ConversionEvent.Properties)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if wStmtEvent != "" {
+		whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtEvent)
+		qParams = append(qParams, wParamsEvent...)
+	}
+
+	// add user filter
+	wStmtUser, wParamsUser, _, err := getFilterSQLStmtForUserProperties(projectID,
+		goalEventProperties, conversionFrom) // query.ConversionEvent.Properties)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if wStmtUser != "" {
+		whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtUser)
+		qParams = append(qParams, wParamsUser...)
+	}
 
 	queryEventHits := selectEventHits + " " + whereEventHits
 

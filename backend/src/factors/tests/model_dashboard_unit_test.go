@@ -886,7 +886,7 @@ func TestEventsFunnelKPICacheDashboardUnits(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, 3, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
@@ -954,68 +954,59 @@ func TestAttributionCacheDashboardUnits(t *testing.T) {
 	})
 
 	timezonestring := U.TimeZoneString(project.TimeZone)
+	timestamp := time.Now().UTC().Unix()
 
-	for _, rangeFunction := range U.QueryDateRangePresets {
+	// Creating 6 users and sessions to ensure that we get non nil result for current week, last week, current month and last month
 
-		from, _, _ := rangeFunction(timezonestring)
+	createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp + timestamp - 32*U.SECONDS_IN_A_DAY, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID1)
+	assert.Equal(t, http.StatusCreated, errCode1)
+	createdUserID2, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp + timestamp - 31*U.SECONDS_IN_A_DAY, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID2)
+	assert.Equal(t, http.StatusCreated, errCode1)
+	createdUserID3, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp + timestamp - 30*U.SECONDS_IN_A_DAY, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID3)
+	assert.Equal(t, http.StatusCreated, errCode1)
+	createdUserID4, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp + timestamp - 8*U.SECONDS_IN_A_DAY, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID4)
+	assert.Equal(t, http.StatusCreated, errCode1)
+	createdUserID5, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp + timestamp - 7*U.SECONDS_IN_A_DAY, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID5)
+	assert.Equal(t, http.StatusCreated, errCode1)
+	createdUserID6, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp - 1*U.SECONDS_IN_A_DAY, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID6)
+	assert.Equal(t, http.StatusCreated, errCode1)
 
-		// Creating 3 users
-		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-			JoinTimestamp: from - U.SECONDS_IN_A_DAY/100, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-		assert.NotNil(t, createdUserID1)
-		assert.Equal(t, http.StatusCreated, errCode1)
-		errCode1 = createEventWithSession(project.ID, "event1", createdUserID1,
-			from-U.SECONDS_IN_A_DAY/100, "111111", "", "", "", "", "")
-		assert.Equal(t, http.StatusCreated, errCode1)
-
-		createdUserID2, errCode2 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-			JoinTimestamp: from - U.SECONDS_IN_A_DAY/100, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-		assert.NotNil(t, createdUserID2)
-		assert.Equal(t, http.StatusCreated, errCode2)
-		errCode2 = createEventWithSession(project.ID, "event1", createdUserID2,
-			from-U.SECONDS_IN_A_DAY/100, "111111", "", "", "", "", "")
-		assert.Equal(t, http.StatusCreated, errCode2)
-
-		createdUserID3, errCode3 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-			JoinTimestamp: from - U.SECONDS_IN_A_DAY/100, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-		assert.NotNil(t, createdUserID3)
-		assert.Equal(t, http.StatusCreated, errCode3)
-		// Events with +1 Days
-		errCode3 = createEventWithSession(project.ID, "event1", createdUserID3,
-			from-U.SECONDS_IN_A_DAY/100, "111111", "", "", "", "", "")
-		assert.Equal(t, http.StatusCreated, errCode3)
-	}
-
-	for _, rangeFunction := range U.QueryDateRangePresets {
-
-		_, to, _ := rangeFunction(timezonestring)
-
-		// Creating 3 users
-		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-			JoinTimestamp: to - U.SECONDS_IN_A_DAY, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-		assert.NotNil(t, createdUserID1)
-		assert.Equal(t, http.StatusCreated, errCode1)
-		errCode1 = createEventWithSession(project.ID, "event1", createdUserID1,
-			to-U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
-		assert.Equal(t, http.StatusCreated, errCode1)
-
-		createdUserID2, errCode2 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-			JoinTimestamp: to - U.SECONDS_IN_A_DAY, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-		assert.NotNil(t, createdUserID2)
-		assert.Equal(t, http.StatusCreated, errCode2)
-		errCode2 = createEventWithSession(project.ID, "event1", createdUserID2,
-			to-U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
-		assert.Equal(t, http.StatusCreated, errCode2)
-
-		createdUserID3, errCode3 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-			JoinTimestamp: to - U.SECONDS_IN_A_DAY, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-		assert.NotNil(t, createdUserID3)
-		assert.Equal(t, http.StatusCreated, errCode3)
-		// Events with +1 Days
-		errCode3 = createEventWithSession(project.ID, "event1", createdUserID3,
-			to-U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
-		assert.Equal(t, http.StatusCreated, errCode3)
-	}
+	assert.Equal(t, http.StatusCreated, errCode1)
+	errCode1 = createEventWithSession(project.ID, "event1", createdUserID1,
+		timestamp-32*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, errCode1)
+	assert.Equal(t, http.StatusCreated, errCode1)
+	errCode1 = createEventWithSession(project.ID, "event1", createdUserID2,
+		timestamp-31*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, errCode1)
+	assert.Equal(t, http.StatusCreated, errCode1)
+	errCode1 = createEventWithSession(project.ID, "event1", createdUserID3,
+		timestamp-30*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, errCode1)
+	assert.Equal(t, http.StatusCreated, errCode1)
+	errCode1 = createEventWithSession(project.ID, "event1", createdUserID4,
+		timestamp-8*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, errCode1)
+	assert.Equal(t, http.StatusCreated, errCode1)
+	errCode1 = createEventWithSession(project.ID, "event1", createdUserID5,
+		timestamp-7*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, errCode1)
+	assert.Equal(t, http.StatusCreated, errCode1)
+	errCode1 = createEventWithSession(project.ID, "event1", createdUserID6,
+		timestamp-1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, errCode1)
 
 	dashboardName := U.RandomString(5)
 	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: dashboardName, Type: model.DashboardTypeProjectVisible})
@@ -1058,13 +1049,12 @@ func TestAttributionCacheDashboardUnits(t *testing.T) {
 		dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = baseQuery
 	}
 	var reportCollector sync.Map
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, 1, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
 
-		if rangeString == "LAST_MONTH" || rangeString == "TODAY" || rangeString == "YESTERDAY" || rangeString == "CURRENT_MONTH" || rangeString == "LAST_WEEK" {
-			// rangeString == "CURRENT_WEEK"
+		if rangeString == "TODAY" || rangeString == "YESTERDAY" {
 			continue
 		}
 		from, to, errCode1 := rangeFunction(timezonestring)
@@ -1081,10 +1071,7 @@ func TestAttributionCacheDashboardUnits(t *testing.T) {
 			// Refresh is sent as false. Must return all presets range from cache.
 			w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, rangeString, query, false, true)
 			assert.NotNil(t, w)
-			if http.StatusInternalServerError == w.Code {
-				// todo fix this "error":"no customer user IDs found, exiting"
-				continue
-			}
+
 			assert.Equal(t, http.StatusOK, w.Code)
 			var result map[string]interface{}
 			json.Unmarshal([]byte(w.Body.String()), &result)
@@ -1094,10 +1081,7 @@ func TestAttributionCacheDashboardUnits(t *testing.T) {
 			// Refresh is sent as true. Still must return from cache for all presets except for todays.
 			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, rangeString, query, true, true)
 			assert.NotNil(t, w)
-			if http.StatusInternalServerError == w.Code {
-				// todo fix this "error":"no customer user IDs found, exiting"
-				continue
-			}
+
 			assert.Equal(t, http.StatusOK, w.Code)
 			result = nil
 			json.Unmarshal([]byte(w.Body.String()), &result)
@@ -1108,16 +1092,12 @@ func TestAttributionCacheDashboardUnits(t *testing.T) {
 			}
 			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, 0, 0, rangeString, query, false, false)
 			assert.NotEmpty(t, w)
-			if http.StatusInternalServerError == w.Code {
-				// todo fix this "error":"no customer user IDs found, exiting"
-				continue
-			}
 			assert.Equal(t, http.StatusOK, w.Code)
 		}
 	}
 }
 
-func TestInValidationCacheDashboardUnits(t *testing.T) {
+func TestEventsQueryInValidationCacheDashboardUnits(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
@@ -1178,7 +1158,7 @@ func TestInValidationCacheDashboardUnits(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
 		from, to, errCode := rangeFunction(timezoneString)
@@ -1263,7 +1243,7 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
 		from, to, errCode := rangeFunction(timezoneString)
@@ -1365,7 +1345,7 @@ func TestEventsFunnelKPICacheDashboardUnitsForHardRefresh(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]uint64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, 3, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
@@ -1468,7 +1448,7 @@ func TestAttributionCacheDashboardUnitsForHardRefresh(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]uint64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	assert.Equal(t, 1, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
@@ -1605,7 +1585,7 @@ func TestCacheDashboardUnitsForLastComputed1(t *testing.T) {
 
 // Testing by taking lastMonth into consideration.
 // Cache for lastMonth should be filled with data And normal query without lastXDays should return some values. but with lastXDays, it should return 0.
-func TestEventsDateTypeFiltersQueryDashboardUnit(t *testing.T) {
+func TestEventQueryDateTypeFiltersQueryDashboardUnit(t *testing.T) {
 	r := gin.Default()
 	H.InitSDKServiceRoutes(r)
 	H.InitAppRoutes(r)
@@ -1692,7 +1672,7 @@ func TestEventsDateTypeFiltersQueryDashboardUnit(t *testing.T) {
 	dashboardQueryClassList = append(dashboardQueryClassList, query1.GetClass())
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery(), -1)
 	result := struct {
 		Cache  bool              `json:"cache"`
 		Result model.QueryResult `json:"result"`

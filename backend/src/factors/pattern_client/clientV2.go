@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	PS "factors/pattern_server/store"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func GetAllPatternsV2(reqId string, projectId int64, modelId uint64, startEvent, endEvent string) ([]*P.Pattern, error) {
@@ -19,7 +21,7 @@ func GetAllPatternsV2(reqId string, projectId int64, modelId uint64, startEvent,
 	patterns = make([]*P.Pattern, 0)
 	patternsToReturn := make([]*json.RawMessage, 0, 0)
 
-	fm := C.GetCloudManager(projectId)
+	fm := C.GetCloudManager(projectId, false)
 
 	patternsWithMeta, err := getExplainV2FromFileManager(fm, projectId, modelId, "chunk_1.txt")
 	if err != nil {
@@ -45,7 +47,7 @@ func GetAllContainingPatternsV2(reqId string, projectId int64, modelId uint64, e
 	patterns = make([]*P.Pattern, 0)
 	patternsToReturn := make([]*json.RawMessage, 0, 0)
 
-	fm := C.GetCloudManager(projectId)
+	fm := C.GetCloudManager(projectId, false)
 
 	patternsWithMeta, err := getExplainV2FromFileManager(fm, projectId, modelId, "chunk_1.txt")
 	if err != nil {
@@ -71,7 +73,7 @@ func GetPatternsV2(reqId string, projectId int64, modelId uint64, patternEvents 
 	patterns = make([]*P.Pattern, 0)
 	patternsToReturn := make([]*json.RawMessage, 0, 0)
 
-	fm := C.GetCloudManager(projectId)
+	fm := C.GetCloudManager(projectId, false)
 
 	patternsWithMeta, err := getExplainV2FromFileManager(fm, projectId, modelId, "chunk_1.txt")
 	if err != nil {
@@ -93,7 +95,7 @@ func GetPatternsV2(reqId string, projectId int64, modelId uint64, patternEvents 
 }
 
 func GetUserAndEventsInfoV2(reqId string, projectId int64, modelId uint64) (*P.UserAndEventsInfo, error) {
-	fm := C.GetCloudManager(projectId)
+	fm := C.GetCloudManager(projectId, false)
 	userEventsInfo, err := getModelEventInfoFromFileManager(fm, projectId, modelId)
 	if err != nil {
 		return nil, err
@@ -106,7 +108,7 @@ func GetTotalEventCountV2(reqId string, projectId int64, modelId uint64) (uint64
 	var totalEventCount uint64 = 0
 	singleEventRawPatterns := make([]*json.RawMessage, 0, 0)
 
-	fm := C.GetCloudManager(projectId)
+	fm := C.GetCloudManager(projectId, false)
 
 	patternsWithMeta, err := getExplainV2FromFileManager(fm, projectId, modelId, "chunk_1.txt")
 	if err != nil {
@@ -149,6 +151,7 @@ func getModelEventInfoFromFileManager(fm filestore.FileManager, projectId int64,
 
 func getExplainV2FromFileManager(fm filestore.FileManager, projectId int64, modelId uint64, chunkId string) ([]*PS.PatternWithMeta, error) {
 	path, fName := fm.GetExplainV2ModelPath(modelId, projectId)
+	log.Infof("opening path:%s,%s", path, fName)
 	patternsReader, err := fm.Get(path, fName)
 	if err != nil {
 		return nil, err

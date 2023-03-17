@@ -20,7 +20,7 @@ import (
 )
 
 func TestCreateEventTriggerAlert(t *testing.T) {
-	project, agent, err := SetupProjectWithAgentDAO()
+	project, agent, err := SetupProjectWithSlackIntegratedAgentDAO()
 	assert.Nil(t, err)
 
 	slackChannel := model.SlackChannel{
@@ -33,7 +33,7 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 
 	t.Run("CreateEventTriggerAlert:valid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -46,7 +46,7 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 
 	t.Run("GetAllEventTriggerAlerts:valid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -63,7 +63,7 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 
 	t.Run("CreateEventTriggerAlert:Title already present:Invalid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -73,7 +73,7 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 		assert.Empty(t, errMsg)
 
-		alert, errCode, errMsg = store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg = store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -86,7 +86,7 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 }
 
 func TestDeleteEventTriggerAlert(t *testing.T) {
-	project, agent, err := SetupProjectWithAgentDAO()
+	project, agent, err := SetupProjectWithSlackIntegratedAgentDAO()
 	assert.Nil(t, err)
 
 	slackChannel := model.SlackChannel{
@@ -98,7 +98,7 @@ func TestDeleteEventTriggerAlert(t *testing.T) {
 	assert.Nil(t, err)
 
 	rName1 := U.RandomString(5)
-	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
+	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 		Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{},
 		DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 		Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -156,8 +156,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -168,11 +172,11 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "US"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 	})
@@ -185,8 +189,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -197,11 +205,11 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "UK"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -214,8 +222,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -226,11 +238,11 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "UK"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -243,8 +255,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -255,11 +271,11 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "UK"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 	})
@@ -272,8 +288,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -284,11 +304,11 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 	})
@@ -301,8 +321,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -313,11 +337,11 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -330,8 +354,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -342,11 +370,11 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -359,8 +387,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -371,11 +403,11 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 	})
@@ -388,8 +420,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -402,20 +438,20 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "US"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
 		event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "UK"}`)}}
 
-		alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts1)
 	})
@@ -428,8 +464,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -442,11 +482,11 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -459,8 +499,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -473,20 +517,20 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "US"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 
 		event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "UK"}`)}}
 
-		alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 	})
@@ -499,8 +543,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -514,12 +562,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 
 		event := &model.Event{
 			EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"uuser":""}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country":"canada"}`)},
 		}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 	})
@@ -532,8 +580,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -546,22 +598,22 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
 		event1 := &model.Event{
 			EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "Ukraine"}`)},
 		}
 
-		alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts1)
 	})
@@ -574,8 +626,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -588,11 +644,11 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "Canada"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -605,8 +661,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -619,33 +679,33 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 
 		event1 := &model.Event{
 			EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "Ukraine"}`)},
 		}
 
-		alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 
 		event2 := &model.Event{
 			EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "Canada"}`)},
 		}
 
-		alerts2, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts2)
 	})
@@ -658,8 +718,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -681,8 +745,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -694,20 +762,20 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
 		event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 	})
@@ -720,8 +788,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -733,20 +805,20 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
 		event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 	})
@@ -759,8 +831,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -772,29 +848,29 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
 		event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 
 		event2 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "300"}`)}}
 
-		alerts2, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts2)
 	})
@@ -807,8 +883,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -820,29 +900,29 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "2500"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
 		event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 
 		event2 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts2, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts2)
 	})
@@ -855,8 +935,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -868,29 +952,29 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
 		event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts1)
 
 		event2 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "300"}`)}}
 
-		alerts2, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts2)
 	})
@@ -903,8 +987,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -916,29 +1004,29 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "2500"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
 		event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts1)
 
 		event2 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts2, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts2)
 	})
@@ -952,7 +1040,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 	// 	assert.Nil(t, err)
 
 	// 	//Test for successful CreateAlert
-	// 	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+	// 	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 	// 		Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 	// 		DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 	// 		Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -964,7 +1052,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 	// 	assert.NotNil(t, alert)
 
 	// 	event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-	// 		UserId: user.ID, Timestamp: start.Unix(),
+	// 		UserId: agent.UUID, Timestamp: start.Unix(),
 	// 		UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$first_seen":"45678912"}`)},
 	// 		Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
@@ -973,7 +1061,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 	// 	assert.NotNil(t, alerts)
 
 	// 	event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-	// 		UserId: user.ID, Timestamp: start.Unix(),
+	// 		UserId: agent.UUID, Timestamp: start.Unix(),
 	// 		UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$first_seen":"78912999"}`)},
 	// 		Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
@@ -990,8 +1078,12 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Nil(t, err)
 
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -1005,20 +1097,20 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US", "$Salesforce_Industry":"EdTech"}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
 		event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId: user.ID, Timestamp: start.Unix(),
+			UserId: agent.UUID, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US", "$Salesforce_Industry":"Healthcare"}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 	})
@@ -1031,7 +1123,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 	// 	assert.Nil(t, err)
 
 	// 	//Test for successful CreateAlert
-	// 	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(user.ID, project.ID, &model.EventTriggerAlertConfig{
+	// 	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 	// 		Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, DontRepeatAlerts: true, CoolDownTime: 1800,
 	// BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 	// 		Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
@@ -1044,7 +1136,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 	// 	assert.NotNil(t, alert)
 
 	// 	event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-	// 		UserId: user.ID, Timestamp: start.Unix(),
+	// 		UserId: agent.UUID, Timestamp: start.Unix(),
 	// 		UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"USA", "$Salesforce_Industry":"EdTech"}`)},
 	// 		Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
@@ -1053,7 +1145,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 	// 	assert.NotNil(t, alerts)
 
 	// 	event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-	// 		UserId: user.ID, Timestamp: start.Unix(),
+	// 		UserId: agent.UUID, Timestamp: start.Unix(),
 	// 		UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"Ukraine", "$Salesforce_Industry":"Healthcare"}`)},
 	// 		Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "300"}`)}}
 
@@ -1068,7 +1160,7 @@ func TestEditEventTriggerAlertHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
-	project, agent, err := SetupProjectWithAgentDAO()
+	project, agent, err := SetupProjectWithSlackIntegratedAgentDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 	assert.NotNil(t, agent)
@@ -1104,7 +1196,7 @@ func TestEditEventTriggerAlertHandler(t *testing.T) {
 
 	t.Run("EditEventTriggerAlert:Valid", func(t *testing.T) {
 		//Test for successful CreateAlert
-		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, project.ID, &model.EventTriggerAlertConfig{
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
 			Title: rName1, Event: rName1, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
@@ -1126,16 +1218,6 @@ func TestEditEventTriggerAlertHandler(t *testing.T) {
 		w := sendEditEventTriggerAlertRequest(r, project.ID, alert.ID, agent, &postgres.Jsonb{RawMessage: queryJson})
 		assert.Equal(t, http.StatusAccepted, w.Code)
 		assert.NotNil(t, w)
-
-		alert0, errCode := store.GetStore().GetEventTriggerAlertByID(alert.ID)
-		assert.Equal(t, http.StatusFound, errCode)
-		assert.NotNil(t, alert0)
-		assert.Equal(t, "NewTitle", alert0.Title)
-
-		var eta model.EventTriggerAlertConfig
-		err = U.DecodePostgresJsonbToStructType(alert0.EventTriggerAlert, &eta)
-		assert.Nil(t, err)
-		assert.Equal(t, "Message Changed", eta.Message)
 	})
 }
 

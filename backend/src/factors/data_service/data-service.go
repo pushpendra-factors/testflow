@@ -43,6 +43,7 @@ func main() {
 	useHubspotBatchInsertByProjectID := flag.String("use_hubspot_batch_insert_by_project_id", "", "")
 	allowHubspotEngagementsByProjectID := flag.String("allow_hubspot_engagements_by_project_id", "", "")
 	dbMaxAllowedPacket := flag.Int64("db_max_allowed_packet", 0, "database maximum allowed packet ")
+	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 	flag.Parse()
 
 	defaultAppName := "data_server"
@@ -79,6 +80,7 @@ func main() {
 		UseHubspotBatchInsertByProjectID:                *useHubspotBatchInsertByProjectID,
 		AllowHubspotEngagementsByProjectID:              *allowHubspotEngagementsByProjectID,
 		DBMaxAllowedPacket:                              *dbMaxAllowedPacket,
+		EnableSyncReferenceFieldsByProjectID:            *enableSyncReferenceFieldsByProjectID,
 	}
 	C.InitConf(config)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)

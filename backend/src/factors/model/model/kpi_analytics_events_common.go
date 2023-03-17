@@ -96,13 +96,6 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 	U.EP_PAGE_SPENT_TIME:     {EventEntity: {"name": U.EP_PAGE_SPENT_TIME, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_SPENT_TIME], "data_type": U.PropertyTypeNumerical, "entity": EventEntity}},
 	U.EP_PAGE_SCROLL_PERCENT: {EventEntity: {"name": U.EP_PAGE_SCROLL_PERCENT, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_SCROLL_PERCENT], "data_type": U.PropertyTypeNumerical, "entity": EventEntity}},
 
-	// Generic Event - User Properties.
-	U.UP_DEVICE_TYPE:  {UserEntity: {"name": U.UP_DEVICE_TYPE, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_DEVICE_TYPE], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
-	U.UP_DEVICE_BRAND: {UserEntity: {"name": U.UP_DEVICE_BRAND, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_DEVICE_BRAND], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
-	U.UP_DEVICE_MODEL: {UserEntity: {"name": U.UP_DEVICE_MODEL, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_DEVICE_MODEL], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
-	U.UP_DEVICE_NAME:  {UserEntity: {"name": U.UP_DEVICE_NAME, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_DEVICE_NAME], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
-	U.UP_PLATFORM:     {UserEntity: {"name": U.UP_PLATFORM, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_PLATFORM], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
-
 	// Session and Generic Event - Properties which could be in event or user entity.
 	U.UP_OS: {UserEntity: {"name": U.UP_OS, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_OS], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
 		EventEntity: {"name": U.UP_OS, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_OS], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
@@ -615,6 +608,7 @@ func ConvertStaticKPIQueryToInternalEventQueriesAndTransformationOperations(proj
 	kpiMetric string, enableFilterOpt bool) ([]Query, []string) {
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	transformations := TransformationOfKPIMetricsToEventAnalyticsQuery[kpiQuery.DisplayCategory][kpiMetric]
+	// Kark this one.
 	currentQuery := BuildFiltersAndGroupByBasedOnKPIQuery(query, kpiQuery, kpiMetric)
 	currentQueries := SplitKPIQueryToInternalKPIQueries(currentQuery, kpiQuery, kpiMetric, transformations)
 	operations := make([]string, 0)

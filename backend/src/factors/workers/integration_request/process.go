@@ -80,8 +80,8 @@ func main() {
 	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
-	eventTriggerEnabled := flag.Bool("event_trigger_enabled", false, "")
-	eventTriggerEnabledProjectIDs := flag.String("event_trigger_enabled_project_ids", "", "")
+	enableSixSignalGroupByProjectID := flag.String("enable_six_signal_group_by_project_id", "", "")
+	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -131,8 +131,8 @@ func main() {
 		SixSignalEnabled:                                   *sixSignalEnabled,
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
 		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
-		EventTriggerEnabled:           *eventTriggerEnabled,
-		EventTriggerEnabledProjectIDs: *eventTriggerEnabledProjectIDs,
+		EnableSixSignalGroupByProjectID:                    *enableSixSignalGroupByProjectID,
+		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
 	}
 	C.InitConf(config)
 

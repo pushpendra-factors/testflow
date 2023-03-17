@@ -667,20 +667,31 @@ func Track(projectId int64, request *TrackPayload,
 		userProperties = requestUserProperties
 	}
 
+	_, countryName := model.FillLocationUserProperties(userProperties, clientIP)
+	pageURLProp := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
+
 	if C.GetClearbitEnabled() == 1 {
 		FillClearbitUserProperties(projectId, projectSettings, userProperties, request.UserId, clientIP)
 	}
 
 	if C.Get6SignalEnabled() == 1 {
-		FillSixSignalUserProperties(projectId, projectSettings, userProperties, request.UserId, clientIP)
+		FillSixSignalUserProperties(projectId, projectSettings, userProperties, request.UserId, clientIP, countryName, pageURLProp)
+		if C.EnableSixSignalGroupByProjectID(projectId) {
+			groupProperties := U.FilterPropertiesByKeysByPrefix(userProperties, U.SIX_SIGNAL_PROPERTIES_PREFIX)
+			if groupProperties != nil && len(*groupProperties) > 0 {
+				status := TrackUserAccountGroup(projectId, request.UserId, U.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+				if status != http.StatusOK && status != http.StatusNotModified && status != http.StatusNotImplemented {
+					logCtx.Error("Failed to TrackUserGroup.")
+				}
+			}
+		}
 	}
-
-	_ = model.FillLocationUserProperties(userProperties, clientIP)
 
 	if C.IsEnableDebuggingForIP() {
 		log.WithFields(log.Fields{"userProperties": userProperties,
 			"eventProperties": eventProperties, "ip": clientIP}).Info("Debugging ip enrichment.")
 	}
+
 	// Add latest user properties without UTM parameters.
 	U.FillLatestPageUserProperties(userProperties, eventProperties)
 	// Add latest touch user properties.
@@ -810,17 +821,43 @@ func Track(projectId int64, request *TrackPayload,
 }
 
 func FillSixSignalUserProperties(projectId int64, projectSettings *model.ProjectSetting,
-	userProperties *U.PropertiesMap, UserId string, clientIP string) {
+	userProperties *U.PropertiesMap, UserId, clientIP, countryName, pageURLProp string) {
 
 	logCtx := log.WithField("project_id", projectId)
+
+	// Existing if keys are not present
+	if !((projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true) ||
+		(projectSettings.Factors6SignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true)) {
+		return
+	}
+
+	sixSignalConfig := model.SixSignalConfig{}
+	if projectSettings.SixSignalConfig != nil {
+		err := json.Unmarshal(projectSettings.SixSignalConfig.RawMessage, &sixSignalConfig)
+		if err != nil {
+			logCtx.WithField("six_signal_config", projectSettings.SixSignalConfig).
+				WithError(err).Error("Failed to decode six signal property")
+		}
+		// Todo (Anil): extract api limit and use it
+	}
+
+	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, countryName, pageURLProp)
+
+	if shouldEnrichUsingSixSignal == false {
+		//logCtx.WithFields(log.Fields{"six_signal_config": sixSignalConfig, "countryName": countryName, "page": pageURLProp}).
+		//	Warn("request filtered for six signal")
+		return
+	}
+
 	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true {
+
 		execute6SignalStatusChannel := make(chan int)
 		sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, UserId, clientIP)
 		if sixSignalExists {
 			// logCtx.Info("6Signal cache hit")
 		} else {
 			// logCtx.Info("6Signal cache miss")
-			go six_signal.ExecuteSixSignalEnrich(projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
 
 			select {
 			case ok := <-execute6SignalStatusChannel:
@@ -833,7 +870,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 					// logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("ExecuteSixSignal failed in track call using clients Key")
 				}
 			case <-time.After(U.TimeoutOneSecond):
-				logCtx.Warn("Six_Signal enrichment timed out in Track call")
+				logCtx.Warn("six_Signal enrichment timed out in Track call")
 				//logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("Timed Out 6Signal enrichment using clients Key")
 			}
 		}
@@ -844,7 +881,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			// logCtx.Info("6Signal cache hit")
 		} else {
 			// logCtx.Info("6Signal cache miss")
-			go six_signal.ExecuteSixSignalEnrich(projectSettings.Factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
 
 			select {
 			case ok := <-execute6SignalStatusChannel:
@@ -852,10 +889,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 					six_signal.SetSixSignalCacheResult(projectId, UserId, clientIP)
 					// Total hit counts
 					six_signal.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
-					// Total counts having valid domain name i.e. SIX_SIGNAL_DOMAIN
-					if (*userProperties)[util.SIX_SIGNAL_DOMAIN] != "" {
-						six_signal.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
-					}
+
 					// logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("SetSixSignalCacheResult using Factors key")
 
 				} else {
@@ -870,6 +904,93 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			}
 		}
 	}
+}
+
+func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, pageUrl string) (bool, error) {
+
+	//No filter case is true
+	if (sixSignalConfig.CountryInclude == nil || len(sixSignalConfig.CountryInclude) == 0) &&
+		(sixSignalConfig.CountryExclude == nil || len(sixSignalConfig.CountryExclude) == 0) &&
+		(sixSignalConfig.PagesInclude == nil || len(sixSignalConfig.PagesInclude) == 0) &&
+		(sixSignalConfig.PagesExclude == nil || len(sixSignalConfig.PagesExclude) == 0) {
+		return true, nil
+	}
+
+	countryFilterPassed := true
+	pageFilterPassed := true
+	if sixSignalConfig.CountryInclude != nil && len(sixSignalConfig.CountryInclude) != 0 {
+		countryFilterPassed = false
+		for _, filter := range sixSignalConfig.CountryInclude {
+			switch filter.Type {
+			case model.EqualsOpStr:
+				if filter.Value == countryName {
+					countryFilterPassed = true
+				}
+			}
+		}
+		// failed to satisfy country include filter
+		if countryFilterPassed == false {
+			return false, nil
+		}
+	}
+
+	if sixSignalConfig.CountryExclude != nil && len(sixSignalConfig.CountryExclude) != 0 {
+		for _, filter := range sixSignalConfig.CountryExclude {
+			switch filter.Type {
+			case model.EqualsOpStr:
+				if filter.Value == countryName {
+					//skip if country name matches
+					return false, nil
+				}
+			}
+		}
+	}
+
+	if sixSignalConfig.PagesInclude != nil && len(sixSignalConfig.PagesInclude) != 0 {
+		pageFilterPassed = false
+		for _, filter := range sixSignalConfig.PagesInclude {
+			switch filter.Type {
+			case model.EqualsOpStr:
+				if filter.Value == pageUrl {
+					pageFilterPassed = true
+					break
+				}
+			case model.ContainsOpStr:
+				if strings.Contains(pageUrl, filter.Value) {
+					pageFilterPassed = true
+					break
+				}
+			}
+		}
+		// failed to satisfy page include  filter
+		if pageFilterPassed == false {
+			return false, nil
+		}
+	}
+
+	if sixSignalConfig.PagesExclude != nil && len(sixSignalConfig.PagesExclude) != 0 {
+		for _, filter := range sixSignalConfig.PagesExclude {
+			switch filter.Type {
+			case model.EqualsOpStr:
+				if filter.Value == pageUrl {
+					//skip if page name matches
+					return false, nil
+				}
+			case model.ContainsOpStr:
+				if strings.Contains(pageUrl, filter.Value) {
+					//skip if page contains data matches
+					return false, nil
+				}
+			}
+		}
+	}
+
+	//return pass only when both cases pass i.e. AND
+	if countryFilterPassed && pageFilterPassed {
+		return true, nil
+	}
+	//else
+	return false, nil
 }
 
 func FillClearbitUserProperties(projectId int64, projectSettings *model.ProjectSetting,
@@ -1397,7 +1518,7 @@ func AddUserProperties(projectId int64,
 			sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
 
 			if !sixSignalExists {
-				go six_signal.ExecuteSixSignalEnrich(ClientSixSignalKey, validProperties, request.ClientIP, statusChannel)
+				go six_signal.ExecuteSixSignalEnrich(projectId, ClientSixSignalKey, validProperties, request.ClientIP, statusChannel)
 
 				select {
 				case ok := <-statusChannel:
@@ -1415,7 +1536,7 @@ func AddUserProperties(projectId int64,
 			sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
 
 			if !sixSignalExists {
-				go six_signal.ExecuteSixSignalEnrich(FactorsSixSignalKey, validProperties, request.ClientIP, statusChannel)
+				go six_signal.ExecuteSixSignalEnrich(projectId, FactorsSixSignalKey, validProperties, request.ClientIP, statusChannel)
 
 				select {
 				case ok := <-statusChannel:
@@ -1423,10 +1544,6 @@ func AddUserProperties(projectId int64,
 						six_signal.SetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
 						// Total hit counts
 						six_signal.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
-						// Total counts having valid domain name i.e. SIX_SIGNAL_DOMAIN
-						if (*validProperties)[util.SIX_SIGNAL_DOMAIN] != "" {
-							six_signal.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
-						}
 
 					} else {
 						logCtx.Warn("ExecuteSixSignal failed in AddUserProperties")
@@ -1441,7 +1558,7 @@ func AddUserProperties(projectId int64,
 		}
 
 	}
-	_ = model.FillLocationUserProperties(validProperties, request.ClientIP)
+	_, _ = model.FillLocationUserProperties(validProperties, request.ClientIP)
 	propertiesJSON, err := json.Marshal(validProperties)
 	if err != nil {
 		return http.StatusBadRequest,
@@ -2316,4 +2433,153 @@ func FillUserAgentUserProperties(userProperties *U.PropertiesMap, userAgentStr s
 	}
 
 	return nil
+}
+
+// TrackGroupWithDomain tracks groups which will also get associated with domains group
+func TrackGroupWithDomain(projectID int64, groupName, domainName string, properties U.PropertiesMap, timestamp int64) (string, int) {
+	logFields := log.Fields{"project_id": projectID, "domain_name": domainName, "group_name": groupName, "properties": properties}
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || groupName == "" || domainName == "" || timestamp == 0 {
+		logCtx.Error("Invalid parameters.")
+		return "", http.StatusBadRequest
+	}
+
+	if !model.IsAllowedAccountGroupNames(groupName) {
+		logCtx.Error("Invalid account group name.")
+		return "", http.StatusBadRequest
+	}
+
+	_, status := store.GetStore().CreateOrGetGroupByName(projectID, groupName, model.AllowedGroupNames)
+	if status != http.StatusFound && status != http.StatusCreated {
+		logCtx.Error("Failed to CreateOrGetGroupByName on TrackGroupWithDomain.")
+		return "", http.StatusInternalServerError
+	}
+
+	groupID := U.GetDomainGroupDomainName(domainName)
+	groupUserID, status := store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, timestamp, model.GetGroupUserSourceByGroupName(groupName))
+	if status != http.StatusCreated && status != http.StatusFound {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for  group user by group id.")
+		return "", http.StatusInternalServerError
+	}
+
+	propertiesMap := map[string]interface{}(properties)
+	source := model.GetGroupUserSourceNameByGroupName(groupName)
+
+	_, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, groupUserID, &propertiesMap, timestamp, timestamp, source)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to create or update group user on TrackUserGroup.")
+		return "", http.StatusInternalServerError
+	}
+
+	if C.IsAllowedDomainsGroupByProjectID(projectID) {
+		status = TrackDomainsGroup(projectID, groupUserID, groupName, domainName, nil, timestamp)
+		if status != http.StatusOK {
+			logCtx.Error("Failed to TrackDomainsGroup.")
+			return "", http.StatusInternalServerError
+		}
+	}
+
+	return groupUserID, http.StatusOK
+}
+
+// TrackUserAccountGroup to used only within Track call
+func TrackUserAccountGroup(projectID int64, userID string, groupName string, groupProperties *U.PropertiesMap, timestamp int64) (status int) {
+	logFields := log.Fields{"project_id": projectID, "group_name": groupName, "user_id": userID, "properties": groupProperties}
+	logCtx := log.WithFields(logFields)
+	defer func(startTime time.Time) {
+		if status == http.StatusOK {
+			totalTime := time.Now().Sub(startTime).Milliseconds()
+			logCtx.WithFields(log.Fields{"total_time": totalTime}).Warning("TrackUserGroup completed successfully.")
+		}
+
+	}(time.Now())
+
+	if projectID == 0 || groupName == "" || groupProperties == nil || userID == "" {
+		logCtx.Error("Invalid arguments")
+		return http.StatusBadRequest
+	}
+
+	groupIDPropertyKey := model.GetGroupsGroupIDPropertyKey(groupName)
+	groupID := U.GetDomainGroupDomainName(U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKey]))
+
+	if groupID == "" {
+		logCtx.Warning("No group id. Skip processing user group.")
+		return http.StatusNotImplemented
+	}
+
+	groupUserID, status := TrackGroupWithDomain(projectID, groupName, groupID, *groupProperties, timestamp)
+	if status != http.StatusOK {
+		logCtx.Error("Failed to track TrackUserGroup.")
+		return http.StatusInternalServerError
+	}
+
+	_, status = store.GetStore().UpdateUserGroup(projectID, userID, groupName, groupID, groupUserID, true)
+	if status != http.StatusAccepted && status != http.StatusNotModified {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to update user association with group user on TrackUserGroup.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
+// TrackDomainsGroup track $domains/All accounts group. Either group user id or domain name is required
+func TrackDomainsGroup(projectID int64, groupUserID string, groupName string, domainName string, properties U.PropertiesMap, timestamp int64) int {
+	logFields := log.Fields{"project_id": projectID,
+		"domain_name": domainName, "domain_properties": properties, "timestamp": timestamp}
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupName == "" || timestamp == 0 {
+		logCtx.Error("Invalid parameters.")
+		return http.StatusBadRequest
+	}
+
+	if !model.IsAllowedGroupForDomainsGroup(groupName) {
+		logCtx.Error("Group not allowed for domains group.")
+		return http.StatusBadRequest
+	}
+
+	if groupUserID == "" && domainName == "" {
+		logCtx.Error("Group user id and domain name empty.")
+		return http.StatusBadRequest
+	}
+
+	_, status := store.GetStore().CreateOrGetDomainsGroup(projectID)
+	if status != http.StatusFound && status != http.StatusCreated {
+		logCtx.Error("Failed to CreateOrGetDomainsGroup.")
+		return http.StatusInternalServerError
+	}
+
+	groupID := U.GetDomainGroupDomainName(domainName)
+	if groupUserID == "" {
+		groupUserID, status = store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, timestamp,
+			model.GetGroupUserSourceByGroupName(groupName))
+		if status != http.StatusFound && status != http.StatusCreated {
+			logCtx.Warning("Failed to CreateOrGetGroupUserID on TrackDomainsGroup.")
+			return http.StatusInternalServerError
+		}
+	}
+
+	domainsGroupUserID, status := store.GetStore().CreateOrGetDomainGroupUser(projectID, model.GROUP_NAME_DOMAINS, groupID, timestamp,
+		model.GetGroupUserSourceByGroupName(model.GROUP_NAME_DOMAINS))
+	if status != http.StatusFound && status != http.StatusCreated {
+		logCtx.Warning("Failed to CreateOrGetDomainGroupUser on TrackDomainsGroup.")
+		return http.StatusInternalServerError
+	}
+
+	propertiesMap := map[string]interface{}(properties)
+	source := model.GetGroupUserSourceNameByGroupName(model.GROUP_NAME_DOMAINS)
+	_, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, model.GROUP_NAME_DOMAINS, groupID, domainsGroupUserID,
+		&propertiesMap, U.TimeNowUnix(), U.TimeNowUnix(), source)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to create or update domains group.")
+		return http.StatusInternalServerError
+	}
+
+	_, status = store.GetStore().UpdateGroupUserDomainsGroup(projectID, groupUserID, groupName, domainsGroupUserID, groupID, true)
+	if status != http.StatusAccepted && status != http.StatusNotModified {
+		logCtx.WithError(err).Error("Failed to update group user association with domains group user.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
 }

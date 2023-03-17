@@ -41,6 +41,7 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 
 	projectIDList := flag.String("project_ids", "*", "List of project_id to run for.")
+	skippedProjectIDListForOtp := flag.String("skipped_project_ids", "1,3", "List of project_id to be skip for otp job.")
 	disabledProjectIDList := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
 	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
 
@@ -69,6 +70,8 @@ func main() {
 	allowHubspotPastEventsEnrichmentByProjectID := flag.String("allow_hubspot_past_events_enrichment_by_project_id", "", "")
 	allowHubspotContactListInsertByProjectID := flag.String("allow_hubspot_contact_list_insert_by_project_id", "", "")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
+	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
+	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -105,6 +108,7 @@ func main() {
 		DryRunCRMSmartEvent:                           *dryRunSmartEvent,
 		CacheSortedSet:                                *cacheSortedSet,
 		AllowedHubspotGroupsByProjectIDs:              *enableHubspotGroupsByProjectID,
+		SkippedProjectIDListForOtp:                    C.GetTokensFromStringListAsUint64(*skippedProjectIDListForOtp),
 		UseSourcePropertyOverwriteByProjectIDs:        *useSourcePropertyOverwriteByProjectID,
 		CaptureSourceInUsersTable:                     *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:          *restrictReusingUsersByCustomerUserId,
@@ -118,6 +122,8 @@ func main() {
 		AllowHubspotPastEventsEnrichmentByProjectID:        *allowHubspotPastEventsEnrichmentByProjectID,
 		AllowHubspotContactListInsertByProjectID:           *allowHubspotContactListInsertByProjectID,
 		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
+		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
+		EnableSyncReferenceFieldsByProjectID:               *enableSyncReferenceFieldsByProjectID,
 	}
 
 	C.InitConf(config)

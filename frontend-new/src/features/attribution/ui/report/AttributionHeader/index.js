@@ -12,6 +12,8 @@ import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import FaSelect from 'Components/FaSelect';
 import styles from './index.module.scss';
 import { CoreQueryContext } from 'Context/CoreQueryContext';
+import AppModal from 'Components/AppModal';
+import useQuery from 'hooks/useQuery';
 const { TabPane } = Tabs;
 
 function AttributionHeader({
@@ -28,7 +30,12 @@ function AttributionHeader({
   const [hideIntercomState, setHideIntercomState] = useState(true);
   const [showSaveQueryModal, setShowSaveQueryModal] = useState(false);
   const [ShowAddToDashModal, setShowAddToDashModal] = useState(false);
+  // for showing modal on closing unsaved report
+  const [visible, setVisible] = useState(false);
+  const [showSaveOrUpdateModal, setShowSaveOrUpdateModal] = useState(false);
   let [helpMenu, setHelpMenu] = useState(false);
+  const routerQuery = useQuery();
+  const paramQueryId = routerQuery.get('queryId');
 
   useEffect(() => {
     if (window.Intercom) {
@@ -71,8 +78,10 @@ function AttributionHeader({
     });
   }, []);
 
-  const handleCloseButton = () => {
-    if (navigatedFromDashboard?.id) {
+  const handleCloseButton = (close = false) => {
+    if (!savedQueryId && requestQuery !== null && !close) {
+      setVisible(true);
+    } else if (navigatedFromDashboard?.id) {
       history.push({
         pathname: ATTRIBUTION_ROUTES.reports,
         state: { dashboardWidgetId: navigatedFromDashboard.id }
@@ -95,7 +104,11 @@ function AttributionHeader({
   );
 
   const renderReportCloseIcon = () => (
-    <Button size='large' type='default' onClick={handleCloseButton}>
+    <Button
+      size='large'
+      type='default'
+      onClick={() => handleCloseButton(false)}
+    >
       Close
     </Button>
   );
@@ -104,7 +117,7 @@ function AttributionHeader({
     <Button
       size='large'
       type='text'
-      onClick={handleCloseButton}
+      onClick={() => handleCloseButton(true)}
       icon={<SVG size={32} name='Brand' />}
     />
   );
@@ -122,6 +135,7 @@ function AttributionHeader({
         requestQuery={requestQuery}
         queryTitle={queryTitle}
         savedQueryId={savedQueryId}
+        showSaveOrUpdateModal={showSaveOrUpdateModal}
         {...rest}
       />
     );
@@ -177,6 +191,18 @@ function AttributionHeader({
     );
   };
 
+  const saveAndClose = () => {
+    setVisible(false);
+    if (paramQueryId) {
+      setShowSaveOrUpdateModal({ update: true });
+      setTimeout(() => {
+        handleCloseButton(true);
+      }, 1500);
+    } else {
+      setShowSaveOrUpdateModal({ save: true });
+    }
+  };
+
   return (
     <div id='app-header' className='bg-white z-50 flex-col  px-8 w-full fixed'>
       <div className='items-center flex justify-between w-full pt-3 pb-3'>
@@ -205,13 +231,52 @@ function AttributionHeader({
             </div>
           ) : (
             ''
-            )}
+          )}
           <div className='pr-2'>{renderSaveQueryComp()}</div>
           {renderReportCloseIcon()}
         </div>
       </div>
 
       {renderReportTabs()}
+      <AppModal
+        visible={visible}
+        onCancel={() => setVisible(false)}
+        footer={null}
+        width={300}
+        height={200}
+        style={{ position: 'absolute', top: 60, right: 30 }}
+        mask={false}
+      >
+        <div className='text-center'>
+          <div className='text-center mx-24 my-2'>
+            <SVG name={'Files'} />
+          </div>
+          <Text
+            type='title'
+            level={6}
+            color='grey-2'
+            className='mx-6 my-2 w-11/12'
+          >
+            This report contains unsaved progress.{' '}
+          </Text>
+          <Button
+            type='primary'
+            style={{ width: '168px', height: '32px' }}
+            className='mx-4 my-2'
+            onClick={saveAndClose}
+          >
+            {paramQueryId ? 'Save and Close' : 'Save as New'}
+          </Button>
+          <Button
+            type='default'
+            style={{ width: '168px', height: '32px' }}
+            className='mx-4 my-2'
+            onClick={() => handleCloseButton(true)}
+          >
+            Close without saving
+          </Button>
+        </div>
+      </AppModal>
     </div>
   );
 }

@@ -79,14 +79,14 @@ func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID int64, req
 
 func (store *MemSQL) getPropertiesForSalesforceByDisplayCategory(projectID int64, reqID, displayCategory string) []map[string]string {
 	finalProperties := make([]map[string]string, 0)
-	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
+	
 	switch displayCategory {
 	case model.SalesforceOpportunitiesDisplayCategory:
 		finalProperties = store.GetPropertiesForSalesforceOpportunities(projectID, reqID)
 	case model.SalesforceAccountsDisplayCategory:
 		finalProperties = store.GetPropertiesForSalesforceAccounts(projectID, reqID)
 	case model.SalesforceUsersDisplayCategory:
-		finalProperties = append(standardUserProperties, store.GetPropertiesForSalesforceUsers(projectID, reqID)...)
+		finalProperties = store.GetPropertiesForSalesforceUsers(projectID, reqID)
 	default:
 		log.WithFields(log.Fields{"project_id": projectID, "req_id": reqID, "display_category": displayCategory}).
 			Error("Invalid category on GetPropertiesForSalesforceByDisplayCategory.")
@@ -110,7 +110,9 @@ func (store *MemSQL) GetPropertiesForSalesforceUsers(projectID int64, reqID stri
 	}
 
 	// transforming to kpi structure.
-	return model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames, "$salesforce")
+	salesforceUsersOnlyProperties := model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames, "$salesforce")
+	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
+	return append(standardUserProperties, salesforceUsersOnlyProperties...)
 }
 
 func (store *MemSQL) GetPropertiesForSalesforceOpportunities(projectID int64, reqID string) []map[string]string {
@@ -124,7 +126,7 @@ func (store *MemSQL) GetPropertiesForSalesforceOpportunities(projectID int64, re
 	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricSectionDisplayCategory(model.SalesforceOpportunitiesDisplayCategory), 2500,
 		C.GetLookbackWindowForEventUserCache())
 	if status != http.StatusFound {
-		logCtx.Error("Failed to get salesforce opportunities properties. Internal error")
+		logCtx.WithField("err_code", status).Error("Failed to get salesforce opportunities properties. Internal error")
 		return make([]map[string]string, 0)
 	}
 
@@ -162,7 +164,7 @@ func (store *MemSQL) GetPropertiesForSalesforceAccounts(projectID int64, reqID s
 	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricSectionDisplayCategory(model.SalesforceAccountsDisplayCategory), 2500,
 		C.GetLookbackWindowForEventUserCache())
 	if status != http.StatusFound {
-		logCtx.Error("Failed to get salesforce account properties. Internal error")
+		logCtx.WithField("err_code", status).Error("Failed to get salesforce account properties. Internal error")
 		return make([]map[string]string, 0)
 	}
 

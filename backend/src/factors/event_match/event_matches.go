@@ -7,6 +7,7 @@ import (
 	"strconv"
 	M "factors/model/model"
 	log "github.com/sirupsen/logrus"
+	cacheRedis "factors/cache/redis"
 )
 type PropertiesMode string
 type BooleanOperator string
@@ -50,27 +51,27 @@ type EventsCriteria struct {
 	EventCriterionList []EventCriterion `json:"events"`
 }
 
-func EventMatchesCriterion(eventName string, userProperties, eventProperties  map[string]interface{}, eventCriterion EventCriterion) bool {
+func EventMatchesCriterion(projectId int64, eventName string, userProperties, eventProperties  map[string]interface{}, eventCriterion EventCriterion) bool {
 	// TODO: Match event filters as well.
 	nameMatchFlag := eventCriterion.EqualityFlag == (eventName == eventCriterion.Name)
 	if !nameMatchFlag {
 		return false
 	}
-	filterMatchFlag := EventMatchesFilterCriterionList(userProperties, eventProperties, eventCriterion.FilterCriterionList)
+	filterMatchFlag := EventMatchesFilterCriterionList(projectId, userProperties, eventProperties, eventCriterion.FilterCriterionList)
 	return filterMatchFlag
 }
 
-func EventMatchesFilterCriterionList(userProperties, eventProperties  map[string]interface{},  filterCriterionList []EventFilterCriterion) bool {
+func EventMatchesFilterCriterionList(projectId int64, userProperties, eventProperties  map[string]interface{},  filterCriterionList []EventFilterCriterion) bool {
 	for _, fc := range filterCriterionList {
 		// Today we dont support OR across filters. So retaining it this way. Its always a AND
-		if !eventMatchesFilterCriterion(userProperties, eventProperties, fc) { // "AND" logic: If even a single filter fails, return False.
+		if !eventMatchesFilterCriterion(projectId, userProperties, eventProperties, fc) { // "AND" logic: If even a single filter fails, return False.
 			return false
 		}
 	}
 	return true
 }
 
-func eventMatchesFilterCriterion(userProperties, eventProperties  map[string]interface{},  filterCriterion EventFilterCriterion) bool {
+func eventMatchesFilterCriterion(projectId int64, userProperties, eventProperties  map[string]interface{},  filterCriterion EventFilterCriterion) bool {
 	// If catagorical property then there will be both AND and OR. Though AND doesnt makes sense there is a possiblity
 	// Will add log to check if there are any queries like that
 	// if numerical, it can never be OR it will always be AND
@@ -92,7 +93,7 @@ func eventMatchesFilterCriterion(userProperties, eventProperties  map[string]int
 		return matchFitlerValuesForNumerical(propertyValue, ok, filterValues)
 	}
 	if filterCriterion.Type == U.PropertyTypeCategorical {
-		return matchFitlerValuesForCategorical(propertyValue, ok, filterValues)
+		return matchFitlerValuesForCategorical(projectId, propertyValue, ok, filterValues)
 	}
 	if filterCriterion.Type == U.PropertyTypeDateTime {
 		return matchFitlerValuesForDatetime(propertyValue, ok, filterValues)
@@ -100,7 +101,7 @@ func eventMatchesFilterCriterion(userProperties, eventProperties  map[string]int
 	return false
 }
 
-func matchFitlerValuesForCategorical(eventPropValue interface{}, isPresentEventPropValue bool, filterValues []OperatorValueTuple) bool {
+func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}, isPresentEventPropValue bool, filterValues []OperatorValueTuple) bool {
 	/*
 		Categorical	,=, !=, contains, not contains
 		A = b	right
@@ -124,7 +125,7 @@ func matchFitlerValuesForCategorical(eventPropValue interface{}, isPresentEventP
 		if value.LogicalOp == "OR" {
 			orCount++
 		}
-		if value.Operator == M.EqualsOpStr || value.Operator == M.NotEqualOpStr {
+		if value.Operator == M.EqualsOpStr || value.Operator == M.NotEqualOpStr  {
 			equalsCount++
 		}
 		if value.Operator == M.ContainsOpStr || value.Operator == M.NotContainsOpStr {
@@ -172,6 +173,23 @@ func matchFitlerValuesForCategorical(eventPropValue interface{}, isPresentEventP
 		}
 		if value.Operator == M.NotContainsOpStr {
 			results[i] = !(strings.Contains(strings.ToLower(propertyValue), strings.ToLower(value.Value)))
+		}
+		if value.Operator == M.InList{
+			cacheKeyList, err := M.GetListCacheKey(projectId, value.Value)
+			if err != nil {
+				results[i] = false
+			} else {
+				score, err := cacheRedis.ZScorePersistent(cacheKeyList, propertyValue)
+				if err != nil {
+					results[i] = false
+				} else {
+					if(score == 1){
+						results[i] = true
+					} else {
+						results[i] = false
+					}
+				}
+			}
 		}
 	}
 	var soFar bool

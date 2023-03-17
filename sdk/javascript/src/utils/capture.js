@@ -231,7 +231,7 @@ function bindAllClickableElements(appInstance, processCallback) {
                         }
                     }
                 } else 
-                    logger.errorLine("Unable to get anchor element on click.")
+                logger.debug("Unable to get anchor element on click.", false);
                 
                 if (anchor) {
                     var _appInstance = appInstance;

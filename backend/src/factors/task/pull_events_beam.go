@@ -311,7 +311,7 @@ func SortUsersExecutor(beamStruct *merge.RunBeamConfig, cPatternsString []string
 	beam.ParDo0(s, &SortUsDoFn{Config: config}, cPatternsPcolReshuffled)
 	err := beamx.Run(ctx, p)
 	if err != nil {
-		peLog.Fatalf("unable to run beam pipeline :  %s", err)
+		peLog.Errorf("unable to run beam pipeline :  %s", err)
 		return err
 	}
 	return nil

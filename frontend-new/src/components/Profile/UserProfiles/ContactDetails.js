@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Avatar, Menu, Dropdown, Popover, Tabs } from 'antd';
-import { connect } from 'react-redux';
+import {
+  Button,
+  Avatar,
+  Menu,
+  Dropdown,
+  Popover,
+  Tabs,
+  notification
+} from 'antd';
+import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { SVG, Text } from '../../factorsComponents';
-import FaTimeline from '../../FaTimeline';
+import UserTimelineBirdview from './UserTimelineBirdview';
+import UserTimelineSingleview from './UserTimelineSingleview';
 import {
   ALPHANUMSTR,
   DEFAULT_TIMELINE_CONFIG,
+  getPropType,
   granularityOptions,
   iconColors
 } from '../utils';
@@ -15,10 +25,14 @@ import {
   fetchProjectSettings
 } from '../../../reducers/global';
 import { getProfileUserDetails } from '../../../reducers/timelines/middleware';
-import { getActivitiesWithEnableKeyConfig } from '../../../reducers/timelines/utils';
+import {
+  formatUserPropertiesToCheckList,
+  getActivitiesWithEnableKeyConfig
+} from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
-import LeftPanePropBlock from '../LeftPanePropBlock';
+import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function ContactDetails({
   user,
@@ -37,6 +51,21 @@ function ContactDetails({
   const [collapse, setCollapse] = useState(true);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState({});
+  const [checkListMilestones, setCheckListMilestones] = useState([]);
+  const { TabPane } = Tabs;
+
+  const { userPropNames } = useSelector((state) => state.coreQuery);
+
+  useEffect(() => {
+    const lsitDatetimeProperties = userProperties.filter(
+      (item) => item[2] === 'datetime'
+    );
+    const userPropsWithEnableKey = formatUserPropertiesToCheckList(
+      lsitDatetimeProperties,
+      currentProjectSettings.timelines_config?.user_config?.milestones
+    );
+    setCheckListMilestones(userPropsWithEnableKey);
+  }, [currentProjectSettings, userProperties]);
 
   useEffect(() => {
     if (currentProjectSettings?.timelines_config) {
@@ -86,7 +115,7 @@ function ContactDetails({
     </Menu>
   );
 
-  const handleChange = (option) => {
+  const handleEventsChange = (option) => {
     const timelinesConfig = { ...tlConfig };
     if (option.enabled) {
       timelinesConfig.disabled_events.push(option.display_name);
@@ -101,6 +130,45 @@ function ContactDetails({
     });
   };
 
+  const handleMilestonesChange = (option) => {
+    if (
+      option.enabled ||
+      checkListMilestones.filter((item) => item.enabled === true).length < 5
+    ) {
+      const checkListProps = [...checkListMilestones];
+      const optIndex = checkListProps.findIndex(
+        (obj) => obj.prop_name === option.prop_name
+      );
+      checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
+      setCheckListMilestones(
+        checkListProps.sort((a, b) => b.enabled - a.enabled)
+      );
+    } else {
+      notification.error({
+        message: 'Error',
+        description: 'Maximum of 5 Milestones Selection Reached.',
+        duration: 2
+      });
+    }
+  };
+
+  const applyMilestones = () => {
+    const timelinesConfig = { ...tlConfig };
+    timelinesConfig.user_config.milestones = checkListMilestones
+      .filter((item) => item.enabled === true)
+      .map((item) => item?.prop_name);
+    udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...timelinesConfig }
+    }).then(() =>
+      getProfileUserDetails(
+        activeProject?.id,
+        user?.identity?.id,
+        user?.identity?.isAnonymous,
+        currentProjectSettings?.timelines_config
+      )
+    );
+  };
+
   const controlsPopover = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
@@ -112,7 +180,21 @@ function ContactDetails({
           mapArray={activities}
           titleKey='display_name'
           checkedKey='enabled'
-          onChange={handleChange}
+          onChange={handleEventsChange}
+        />
+      </Tabs.TabPane>
+      <Tabs.TabPane
+        tab={<span className='fa-activity-filter--tabname'>Milestones</span>}
+        key='milestones'
+      >
+        <SearchCheckList
+          placeholder='Select Upto 5 Milestones'
+          mapArray={checkListMilestones}
+          titleKey='display_name'
+          checkedKey='enabled'
+          onChange={handleMilestonesChange}
+          showApply
+          onApply={applyMilestones}
         />
       </Tabs.TabPane>
     </Tabs>
@@ -187,11 +269,17 @@ function ContactDetails({
       [];
 
     showProps.forEach((prop, index) => {
+      const propType = getPropType(userProperties, prop);
+      const propDisplayName = userPropNames[prop]
+        ? userPropNames[prop]
+        : PropTextFormat(prop);
       const value = props[prop] || '-';
       propsList.push(
         <div key={index}>
           <LeftPanePropBlock
             property={prop}
+            type={propType}
+            displayName={propDisplayName}
             value={value}
             onDelete={onDelete}
           />
@@ -206,7 +294,7 @@ function ContactDetails({
       <div className='relative'>
         <GroupSelect2
           groupedProperties={generateUserProps()}
-          placeholder='Select Event'
+          placeholder='Select Property'
           optionClick={handleOptionClick}
           onClickOutside={() => setPropSelectOpen(false)}
         />
@@ -231,7 +319,7 @@ function ContactDetails({
 
   const renderLeftPane = () => (
     <div className='leftpane'>
-      <div className='leftpane__user'>
+      <div className='user'>
         {user.identity.isAnonymous ? (
           <SVG
             name={`TrackedUser${user.identity.id.match(/\d/g)[0]}`}
@@ -240,7 +328,7 @@ function ContactDetails({
         ) : (
           <Avatar
             size={96}
-            className='leftpane__user__avatar'
+            className='avatar'
             style={{
               backgroundColor: `${
                 iconColors[
@@ -266,29 +354,36 @@ function ContactDetails({
           )}
         </div>
       </div>
-      <div className='leftpane__props'>
+      <div className='props'>
         {listLeftPaneProps(userDetails.data.left_pane_props)}
-      </div>
-      <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
-      <div className='leftpane__groups'>
-        <Text type='title' level={7} extraClass='m-0 my-2' color='grey'>
-          Associated Groups:
-        </Text>
-        {userDetails?.data?.group_infos?.map((group) => (
-          <Text type='title' level={7} extraClass='m-0 mb-2'>
-            {group.group_name}
+        <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
+        <div className='groups'>
+          <Text type='title' level={7} extraClass='m-0 my-2' color='grey'>
+            Associated Groups:
           </Text>
-        )) || '-'}
+          {userDetails?.data?.group_infos?.map((group) => (
+            <Text type='title' level={7} extraClass='m-0 mb-2'>
+              {group.group_name}
+            </Text>
+          )) || '-'}
+        </div>
       </div>
     </div>
   );
 
-  const renderTimelineWithActions = () => (
-    <div className='timeline-view'>
-      <div className='timeline-actions'>
-        <Text type='title' level={3} weight='bold'>
-          Timeline
-        </Text>
+  const renderSingleTimelineView = () => (
+    <UserTimelineSingleview
+      activities={activities?.filter((activity) => activity.enabled === true)}
+      milestones={userDetails.data?.milestones || {}}
+      loading={userDetails.isLoading}
+      eventNamesMap={eventNamesMap}
+      listProperties={userProperties}
+    />
+  );
+
+  const renderBirdviewWithActions = () => (
+    <div className='flex flex-col'>
+      <div className='timeline-actions flex-row-reverse'>
         <div className='timeline-actions__group'>
           <div className='timeline-actions__group__collapse'>
             <Button
@@ -306,7 +401,6 @@ function ContactDetails({
               <SVG name='grip_lines' size={22} />
             </Button>
           </div>
-
           <Popover
             overlayClassName='fa-activity--filter'
             placement='bottomLeft'
@@ -329,23 +423,50 @@ function ContactDetails({
           </Dropdown>
         </div>
       </div>
-      <FaTimeline
+      <UserTimelineBirdview
         activities={activities?.filter((activity) => activity.enabled === true)}
+        milestones={userDetails.data?.milestones || {}}
         loading={userDetails.isLoading}
         granularity={granularity}
         collapse={collapse}
         setCollapse={setCollapse}
         eventNamesMap={eventNamesMap}
+        listProperties={userProperties}
       />
     </div>
   );
+
+  const renderTimelineView = () => {
+    return (
+      <div className='timeline-view'>
+        <Tabs
+          defaultActiveKey='birdview'
+          size='small'
+          onChange={() => setGranularity(granularity)}
+        >
+          <TabPane
+            tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
+            key='timeline'
+          >
+            {renderSingleTimelineView()}
+          </TabPane>
+          <TabPane
+            tab={<span className='fa-activity-filter--tabname'>Birdview</span>}
+            key='birdview'
+          >
+            {renderBirdviewWithActions()}
+          </TabPane>
+        </Tabs>
+      </div>
+    );
+  };
 
   return (
     <div>
       {renderModalHeader()}
       <div className='fa-timeline'>
         {renderLeftPane()}
-        {renderTimelineWithActions()}
+        {renderTimelineView()}
       </div>
     </div>
   );

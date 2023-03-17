@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import cx from 'classnames';
 import { formatData } from '../../CoreQuery/FunnelsResultPage/utils';
 import Chart from '../../CoreQuery/FunnelsResultPage/GroupedChart/Chart';
@@ -43,8 +43,12 @@ function GroupedChart({
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [eventsData, setEventsData] = useState([]);
   const [groups, setGroups] = useState([]);
-  // const { handleEditQuery } = useContext(DashboardContext);
-  const [sorter, setSorter] = useState([]);
+  const [sorter, setSorter] = useState(
+    unit?.query?.settings?.sorter != null &&
+      Array.isArray(unit.query.settings.sorter)
+      ? unit.query.settings.sorter
+      : []
+  );
 
   useEffect(() => {
     const { groups: appliedGroups, events } = formatData(
@@ -60,6 +64,19 @@ function GroupedChart({
       ...appliedGroups.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES)
     ]);
   }, [resultState.data, arrayMapper]);
+
+  const columnChartCategories = useMemo(() => {
+    return visibleProperties.map((v) => v.name);
+  }, [visibleProperties]);
+
+  const columnChartSeries = useMemo(() => {
+    return [
+      {
+        name: 'OG',
+        data: visibleProperties.map((v, index) => Number(v.value.split('%')[0]))
+      }
+    ];
+  }, [visibleProperties]);
 
   if (!groups.length) {
     return (
@@ -87,19 +104,13 @@ function GroupedChart({
   } else if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
       <ColumnChart
-        categories={visibleProperties.map((v) => v.name)}
+        categories={columnChartCategories}
         multiColored
         valueMetricType={METRIC_TYPES.percentType}
         height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
         cardSize={unit.cardSize}
-        series={[
-          {
-            name: 'OG',
-            data: visibleProperties.map((v, index) =>
-              parseInt(v.value.split('%')[0])
-            )
-          }
-        ]}
+        chartId={`funnel${unit.id}`}
+        series={columnChartSeries}
       />
     );
   } else if (chartType === CHART_TYPE_HORIZONTAL_BAR_CHART) {
@@ -113,7 +124,7 @@ function GroupedChart({
             name: 'OG',
             data: visibleProperties.slice(0, 5).map((v, index) => {
               return {
-                y: parseInt(v.value.split('%')[0]),
+                y: Number(v.value.split('%')[0]),
                 color: colors[index],
                 metricType: METRIC_TYPES.percentType
               };
@@ -168,6 +179,7 @@ function GroupedChart({
         resultData={resultState.data}
         sorter={sorter}
         setSorter={setSorter}
+        isBreakdownApplied={true}
       />
     );
   }

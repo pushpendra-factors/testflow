@@ -1151,7 +1151,7 @@ function CustomKPI({
                                   }
                                 ]}
                                 setGlobalFilters={setGlobalFiltersOption}
-                                selKPICategory={selKPICategory}
+                                selectedMainCategory={{group: selKPICategory, category: 'events'}}
                                 KPIConfigProps={filterDDValues}
                               />
                             </div>

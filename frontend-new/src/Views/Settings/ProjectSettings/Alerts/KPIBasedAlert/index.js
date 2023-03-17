@@ -159,11 +159,29 @@ const KPIBasedAlert = ({
       }
     }
 
-    if (alertState.state === 'edit') {
+    if (alertState?.state === 'edit') {
+      let queryData = [];
+      queryData.push({
+        alias: '',
+        label: _.startCase(viewAlertDetails?.alert_description?.name),
+        filters: getStateFromFilters(
+          viewAlertDetails?.alert_description?.query?.fil
+        ),
+        group: viewAlertDetails?.alert_description?.query?.dc,
+        metric: viewAlertDetails?.alert_description?.name,
+        metricType: '',
+        qt: viewAlertDetails?.alert_description?.qt,
+        pageViewVal: viewAlertDetails?.alert_description?.queries?.pgUrl,
+        category: viewAlertDetails?.alert_description?.query?.ca
+      });
+      setQueries(queryData);
+      setAlertType(viewAlertDetails?.alert_type);
+      setOperatorState(viewAlertDetails?.alert_description?.operator);
+      setValue(viewAlertDetails?.alert_description?.value);
       setEmailEnabled(viewAlertDetails?.alert_configuration?.email_enabled);
       setSlackEnabled(viewAlertDetails?.alert_configuration?.slack_enabled);
     }
-  }, [viewAlertDetails]);
+  }, [alertState?.state, viewAlertDetails]);
 
   const queryChange = (newEvent, index, changeType = 'add', flag = null) => {
     const queryupdated = [...queries];
@@ -271,9 +289,13 @@ const KPIBasedAlert = ({
         slackChannels = { ...slackChannels, [key]: value };
       }
     }
+
+    const arr = slackChannels[agent_details?.uuid]; // access array with key
+    const size = arr?.length;
     if (
       queries.length > 0 &&
-      (emails.length > 0 || Object.keys(slackChannels).length > 0)
+      (emailEnabled || slackEnabled) &&
+      (emails.length > 0 || size > 0)
     ) {
       let payload = {
         alert_name: data?.alert_name,
@@ -307,92 +329,58 @@ const KPIBasedAlert = ({
         }
       };
 
-      createAlert(activeProject.id, payload, 0)
-        .then((res) => {
-          setLoading(false);
-          fetchAlerts(activeProject.id);
-          notification.success({
-            message: 'Alerts Saved',
-            description: 'New Alerts is created and saved successfully.'
+      if (alertState?.state === 'edit') {
+        editAlert(activeProject.id, payload, viewAlertDetails?.id)
+          .then((res) => {
+            setLoading(false);
+            fetchAlerts(activeProject.id);
+            notification.success({
+              message: 'Alerts Saved',
+              description: 'Alerts is saved successfully.'
+            });
+            onReset();
+          })
+          .catch((err) => {
+            setLoading(false);
+            notification.error({
+              message: 'Error',
+              description: err?.data?.error
+            });
           });
-          onReset();
-        })
-        .catch((err) => {
-          setLoading(false);
-          notification.error({
-            message: 'Error',
-            description: err?.data?.error
+      } else {
+        createAlert(activeProject.id, payload, 0)
+          .then((res) => {
+            setLoading(false);
+            fetchAlerts(activeProject.id);
+            notification.success({
+              message: 'Alerts Saved',
+              description: 'New Alerts is created and saved successfully.'
+            });
+            onReset();
+          })
+          .catch((err) => {
+            setLoading(false);
+            notification.error({
+              message: 'Error',
+              description: err?.data?.error
+            });
           });
-          console.log('create alerts error->', err);
-        });
+      }
     } else {
       setLoading(false);
-      notification.error({
-        message: 'Error',
-        description:
-          'Please select KPI and atleast one delivery option to send alert.'
-      });
-    }
-  };
-
-  const onEdit = (data) => {
-    setLoading(true);
-    // Putting All emails into single array
-    let emails = [];
-    if (emailEnabled) {
-      if (data?.emails) {
-        emails = data.emails.map((item) => {
-          return item.email;
+      if (queries.length === 0) {
+        notification.error({
+          message: 'Error',
+          description: 'Please select KPI to send alert.'
         });
       }
-      if (data?.email) {
-        emails.push(data.email);
-      }
-    }
-
-    let slackChannels = {};
-    if (slackEnabled) {
-      const map = new Map();
-      map.set(agent_details.uuid, saveSelectedChannel);
-      for (const [key, value] of map) {
-        slackChannels = { ...slackChannels, [key]: value };
-      }
-    }
-
-    if (emails.length > 0 || Object.keys(slackChannels).length > 0) {
-      let payload = {
-        alert_name: data?.alert_name,
-        alert_configuration: {
-          email_enabled: emailEnabled,
-          slack_enabled: slackEnabled,
-          emails: emails,
-          slack_channels_and_user_groups: slackChannels
-        }
-      };
-
-      editAlert(activeProject.id, payload, viewAlertDetails?.id)
-        .then((res) => {
-          setLoading(false);
-          fetchAlerts(activeProject.id);
-          notification.success({
-            message: 'Alerts Saved',
-            description: 'Alerts is saved successfully.'
-          });
-          onReset();
-        })
-        .catch((err) => {
-          setLoading(false);
-          notification.error({
-            message: 'Error',
-            description: err?.data?.error
-          });
+      if (emails.length === 0 || size === 0) {
+        notification.error({
+          message: 'Error',
+          description:
+            'Please select atleast one delivery option to send alert.'
         });
-    } else {
-      setLoading(false);
-      notification.error({
-        message: 'Error',
-        description: 'Please select atleast one delivery option to send alert.'
-      });
+      }
     }
   };
 
@@ -443,6 +431,7 @@ const KPIBasedAlert = ({
     <Select
       className={'fa-select w-full'}
       options={DateRangeTypes}
+      value={viewAlertDetails?.alert_description?.date_range}
       placeholder='Date range'
       showSearch
     ></Select>
@@ -477,6 +466,7 @@ const KPIBasedAlert = ({
       options={operatorOpts}
       placeholder='Operator'
       showSearch
+      value={viewAlertDetails?.alert_description?.operator}
       onChange={(value) => {
         setOperatorState(value);
       }}
@@ -578,7 +568,20 @@ const KPIBasedAlert = ({
               <Form.Item
                 name='alert_name'
                 className={'m-0'}
-                rules={[{ required: true, message: 'Please enter alert name' }]}
+                rules={[
+                  { required: true, message: 'Please enter alert name' },
+                  {
+                    validator: (_, value) => {
+                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
+                      if (!value || regex.test(value)) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
+                      );
+                    }
+                  }
+                ]}
               >
                 <Input
                   className={'fa-input'}
@@ -921,7 +924,7 @@ const KPIBasedAlert = ({
       <>
         <Form
           form={form}
-          onFinish={onEdit}
+          onFinish={onFinish}
           className={'w-full'}
           onChange={onChange}
           loading={loading}
@@ -981,7 +984,20 @@ const KPIBasedAlert = ({
                 name='alert_name'
                 className={'m-0'}
                 initialValue={viewAlertDetails?.alert_name}
-                rules={[{ required: true, message: 'Please enter alert name' }]}
+                rules={[
+                  { required: true, message: 'Please enter alert name' },
+                  {
+                    validator: (_, value) => {
+                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
+                      if (!value || regex.test(value)) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
+                      );
+                    }
+                  }
+                ]}
               >
                 <Input
                   className={'fa-input'}
@@ -1005,43 +1021,13 @@ const KPIBasedAlert = ({
               </Text>
             </Col>
           </Row>
-          <Row className={'m-0 mt-2'}>
-            <Col>
-              <Button className={`mr-2`} type='link' disabled={true}>
-                {_.startCase(viewAlertDetails?.alert_description?.name)}
-              </Button>
-            </Col>
-            <Col>
-              {viewAlertDetails?.alert_description?.query?.pgUrl && (
-                <div>
-                  <span className={'mr-2'}>from</span>
-                  <Button className={`mr-2`} type='link' disabled={true}>
-                    {viewAlertDetails?.alert_description?.query?.pgUrl}
-                  </Button>
-                </div>
-              )}
+          <Row className={'m-0'}>
+            <Col span={24}>
+              <Form.Item name='query_type' className={'m-0'}>
+                {queryList()}
+              </Form.Item>
             </Col>
           </Row>
-          {viewAlertDetails?.alert_description?.query?.fil?.length > 0 && (
-            <Row className={'mt-2'}>
-              <Col span={18}>
-                <Text
-                  type={'title'}
-                  level={7}
-                  weight={'bold'}
-                  color={'grey-2'}
-                  extraClass={'m-0 my-1'}
-                >
-                  Filters
-                </Text>
-                <GLobalFilter
-                  filters={viewFilter}
-                  delFilter={false}
-                  viewMode
-                />
-              </Col>
-            </Row>
-          )}
           <Row className={'mt-4'}>
             <Col span={18}>
               <Text
@@ -1057,21 +1043,30 @@ const KPIBasedAlert = ({
           </Row>
           <Row className={'mt-4'}>
             <Col span={8} className={'m-0'}>
-              <Input
-                disabled={true}
-                className={'fa-input w-full'}
-                value={_.startCase(
-                  viewAlertDetails?.alert_description?.operator
-                )}
-              />
+              <Form.Item
+                name='operator'
+                className={'m-0'}
+                initialValue={viewAlertDetails?.alert_description?.operator}
+                rules={[{ required: true, message: 'Please select Operator' }]}
+              >
+                {selectOperator}
+              </Form.Item>
             </Col>
-            <Col span={8} className={'ml-4 w-24'}>
-              <Input
-                disabled={true}
-                className={'fa-input'}
-                type={'number'}
-                value={viewAlertDetails?.alert_description?.value}
-              />
+            <Col span={8} className={'ml-4'}>
+              <Form.Item
+                name='value'
+                className={'m-0'}
+                initialValue={viewAlertDetails?.alert_description?.value}
+                rules={[{ required: true, message: 'Please enter value' }]}
+              >
+                <Input
+                  className={'fa-input'}
+                  type={'number'}
+                  placeholder={'Qualifier'}
+                  value={viewAlertDetails?.alert_description?.value}
+                  onChange={(e) => setValue(e.target.value)}
+                />
+              </Form.Item>
             </Col>
           </Row>
 
@@ -1086,15 +1081,21 @@ const KPIBasedAlert = ({
               >
                 In the period of
               </Text>
-              <Input
-                disabled={true}
-                className={'fa-input w-full'}
-                value={_.startCase(
-                  viewAlertDetails?.alert_description?.date_range
-                )}
-              />
+              <Form.Item
+                name='date_range'
+                className={'m-0'}
+                initialValue={viewAlertDetails?.alert_description?.date_range}
+                rules={[
+                  {
+                    required: true,
+                    message: 'Please select Date range'
+                  }
+                ]}
+              >
+                {DateRangeTypeSelect}
+              </Form.Item>
             </Col>
-            {viewAlertDetails?.alert_description?.compared_to && (
+            {showCompareField && (
               <Col span={8} className={'ml-4'}>
                 <Text
                   type={'title'}
@@ -1105,13 +1106,28 @@ const KPIBasedAlert = ({
                 >
                   Compared to
                 </Text>
-                <Input
-                  disabled={true}
-                  className={'fa-input w-full'}
-                  value={_.startCase(
-                    viewAlertDetails?.alert_description?.compared_to
-                  )}
-                />
+                <Form.Item
+                  name='compared_to'
+                  className={'m-0'}
+                  initialValue={
+                    viewAlertDetails?.alert_description?.compared_to ||
+                    'previous_period'
+                  }
+                  rules={[{ required: true, message: 'Please select Compare' }]}
+                >
+                  <Select
+                    className={'fa-select w-full'}
+                    placeholder='Compare'
+                    showSearch
+                    value={
+                      viewAlertDetails?.alert_description?.compared_to ||
+                      'previous_period'
+                    }
+                    disabled={true}
+                  >
+                    <Option value='previous_period'>Previous period</Option>
+                  </Select>
+                </Form.Item>
               </Col>
             )}
           </Row>
@@ -1408,11 +1424,7 @@ const KPIBasedAlert = ({
               >
                 Filters
               </Text>
-              <GLobalFilter
-                filters={viewFilter}
-                delFilter={false}
-                viewMode
-              />
+              <GLobalFilter filters={viewFilter} delFilter={false} viewMode />
             </Col>
           </Row>
         )}

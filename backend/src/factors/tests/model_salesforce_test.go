@@ -3266,8 +3266,17 @@ func TestSalesforceGroups(t *testing.T) {
 	createdDate := account3CreatedDate
 	processRecords := make([]map[string]interface{}, 0)
 	processRecordsType := make([]string, 0)
+	_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+
+	_, status = store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+
+	_, status = store.GetStore().CreateOrGetDomainsGroup(project.ID)
+	assert.Equal(t, http.StatusCreated, status)
 	document := map[string]interface{}{
 		"Id":               accountID1,
+		"website":          "www.Abc.com",
 		"Name":             "account1",
 		"CreatedDate":      account1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
 		"LastModifiedDate": account1CreatedDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
@@ -3277,6 +3286,7 @@ func TestSalesforceGroups(t *testing.T) {
 
 	document = map[string]interface{}{
 		"Id":               accountID2,
+		"website":          "www.Abc2.com",
 		"Name":             "account2",
 		"CreatedDate":      account2CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
 		"LastModifiedDate": account2CreatedDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
@@ -3463,7 +3473,7 @@ func TestSalesforceGroups(t *testing.T) {
 	requestPayload["name"] = groupAccountSmartEventName
 	requestPayload["expr"] = rule
 
-	_, status := store.GetStore().CreateOrGetCRMSmartEventFilterEventName(project.ID, &model.EventName{ProjectId: project.ID, Name: groupAccountSmartEventName}, rule)
+	_, status = store.GetStore().CreateOrGetCRMSmartEventFilterEventName(project.ID, &model.EventName{ProjectId: project.ID, Name: groupAccountSmartEventName}, rule)
 	assert.Equal(t, http.StatusCreated, status)
 
 	// Create account smart event
@@ -3537,6 +3547,25 @@ func TestSalesforceGroups(t *testing.T) {
 					assert.Equal(t, accountID2, groupUser.Group1ID)
 					account2GroupUserId = groupUser.ID
 				}
+
+				// check for $domains group with salesforce accounts group
+				groupUser, _ := store.GetStore().GetUser(project.ID, documents[0].GroupUserID)
+				assert.Equal(t, true, *groupUser.IsGroupUser)
+				if documents[0].ID == accountID1 {
+					assert.Equal(t, "abc.com", groupUser.Group3ID, groupUser.ID)
+				} else {
+					assert.Equal(t, "abc2.com", groupUser.Group3ID, groupUser.ID)
+				}
+
+				domainsGroup, _ := store.GetStore().GetUser(project.ID, groupUser.Group3UserID)
+				assert.Equal(t, true, *domainsGroup.IsGroupUser)
+				assert.Empty(t, domainsGroup.Group3UserID)
+				if documents[0].ID == accountID1 {
+					assert.Equal(t, "abc.com", domainsGroup.Group3ID)
+				} else {
+					assert.Equal(t, "abc2.com", domainsGroup.Group3ID)
+				}
+
 			}
 		} else if documents[0].Type == model.SalesforceDocumentTypeOpportunityContactRole {
 			if documents[0].ID == opportunityID4ContactRole1 {
@@ -3558,7 +3587,7 @@ func TestSalesforceGroups(t *testing.T) {
 			assert.Equal(t, false, *nonGroupUser.IsGroupUser)
 			if documents[0].ID == contactID1 || documents[0].ID == leadID1 ||
 				documents[0].ID == opportunityID1 || documents[0].ID == opportunityID3 {
-				assert.Equal(t, accountID1, nonGroupUser.Group1ID)
+				assert.Equal(t, accountID1, nonGroupUser.Group1ID, nonGroupUser.ID)
 			} else {
 				assert.Equal(t, accountID2, nonGroupUser.Group1ID)
 			}

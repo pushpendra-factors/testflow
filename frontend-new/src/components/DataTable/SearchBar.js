@@ -19,7 +19,8 @@ function SearchBar({
   setFiltersVisibility,
   filters,
   appliedFilters,
-  setAppliedFilters
+  setAppliedFilters,
+  breakupHeading = 'Break-up'
 }) {
   const inputComponentRef = useAutoFocus(searchBar);
   let csvData = { data: [], fileName: 'data' };
@@ -125,7 +126,7 @@ function SearchBar({
       <div className='flex justify-between w-full'>
         {!searchBar ? (
           <div className='flex items-center cursor-pointer'>
-            <div className={styles.breakupHeading}>Break-up</div>
+            <div className={styles.breakupHeading}>{breakupHeading}</div>
           </div>
         ) : (
           <Input

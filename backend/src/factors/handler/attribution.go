@@ -188,6 +188,8 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	H.SleepIfHeaderSet(c)
 	QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
+	log.WithFields(log.Fields{"projectId": projectId,
+		"QueryKey": QueryKey}).Info("AttributionHandler project_id")
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
 	var result *model.QueryResult
 	result, err = store.GetStore().ExecuteAttributionQueryV0(projectId, requestPayload.Query, debugQueryKey,

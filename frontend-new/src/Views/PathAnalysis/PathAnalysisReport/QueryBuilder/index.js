@@ -1,4 +1,4 @@
-import React, { useState, useContext, useCallback } from 'react';
+import React, { useState, useContext, useCallback, useMemo } from 'react';
 // import SavedGoals from './savedList';
 import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { Button, Select, message, Checkbox, Tooltip, Modal, Form, Input } from 'antd';
@@ -16,21 +16,21 @@ import GLobalFilter from './GlobalFilter';
 import { getGlobalFilters, getGlobalFiltersfromSavedState } from './utils'
 import _ from 'lodash';
 import FaSelect from 'Components/FaSelect';
-import { PropTextFormat } from 'Utils/dataFormatter';
-import { RevAvailableGroups } from 'Utils/constants';
+import { fetchGroups } from 'Reducers/coreQuery/services';
 
 const QueryBuilder = ({
   queryOptions = {},
   queryType = "", 
   fetchSavedPathAnalysis,
   createPathPathAnalysisQuery, 
+  fetchGroups,
   activeProject,
   activeQuery,
+  groupOpts
 }) => { 
   const [singleQueries, setSingleQueries] = useState([]);
   const [globalFilters, setGlobalFilters] = useState([]);
   const [multipleQueries, setMultipleQueries] = useState([]);
-  const groupState = useSelector((state) => state.groups);
   const [excludeEvents, setExcludeEvents] = useState('true');
   const [pathCondition, setPathCondition] = useState('startswith');
   const [pathStepCount, setPathStepCount] = useState('4');
@@ -39,13 +39,24 @@ const QueryBuilder = ({
   const [selectedDateRange, setSelectedDateRange] = useState({});
   const [isGroupDDVisible, setGroupDDVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const groupOpts = groupState?.data;
   const [groupCategory, setGroupCategory] = useState('users');
   const [collapse, setCollapse] = useState(false);
   const [showCollapseBtn, setCollapseBtn] = useState(false);
 
   const history = useHistory();
 
+  useEffect(() => {
+    fetchGroups(activeProject.id, true);
+  }, [activeProject]);
+
+  const groupsList = useMemo(() => {
+    let groups = [['Users', 'users']];
+    groupOpts?.forEach((elem) => {
+      groups.push([elem.display_name, elem.group_name]);
+    });
+    return groups;
+  }, [groupOpts]);
+  
   const returnEventname = (arr) => {
     return arr.map((item) => item.label)
   } 
@@ -60,7 +71,7 @@ const QueryBuilder = ({
       return query 
     }
     else return null
-  }
+  } 
  
   const buildPathAnalysisQuery = (data) => {
 
@@ -100,9 +111,14 @@ const QueryBuilder = ({
       setRepetativeStep(activeQuery?.avoid_repeated_events)
       setPathCondition(`${activeQuery?.event_type}`)
       setPathStepCount(`${activeQuery?.steps}`)
-      setExcludeEvents(`${activeQuery?.include_events ? 'true' : 'false'}`)
+      setExcludeEvents(`${activeQuery?.include_events ? 'false' : 'true'}`)
 
-      setSingleQueries([activeQuery?.event]);
+      let eventFromState = {
+        ...activeQuery?.event,
+        //adding filters key for filters to work
+        filters: activeQuery?.event?.filter ? getGlobalFiltersfromSavedState(activeQuery?.event?.filter) : null
+      } 
+      setSingleQueries([eventFromState]);
       setMultipleQueries(activeQuery?.include_events ? (activeQuery?.include_events ? activeQuery?.include_events : []) : (activeQuery?.exclude_events ? activeQuery?.exclude_events : []));
 
       let defaultDate = {
@@ -117,15 +133,6 @@ const QueryBuilder = ({
 
   const triggerDropDown = () => {
     setGroupDDVisible(true);
-  };
-
-  const enabledGroups = () => {
-    let groups = [['Users', 'users']];
-    groupOpts?.forEach((elem) => {
-      const formatName = RevAvailableGroups[elem.name];
-      groups.push([formatName, elem.name]);
-    });
-    return groups;
   };
 
   const singleEventChange = useCallback(
@@ -196,7 +203,7 @@ const QueryBuilder = ({
         {isGroupDDVisible ? (
           <FaSelect
             extraClass={`${styles.groupsection_dropdown_menu}`}
-            options={enabledGroups()}
+            options={groupsList}
             onClickOutside={() => setGroupDDVisible(false)}
             optionClick={(val) => onGroupSelect(val[1])}
           ></FaSelect>
@@ -233,7 +240,11 @@ const QueryBuilder = ({
                     weight={'bold'}
                     extraClass={`m-0 mr-1`}
                   >
-                    {PropTextFormat(groupCategory)}
+                    {
+                      groupsList?.find(
+                        ([_, groupName]) => groupName === groupCategory
+                      )?.[0]
+                    }
                   </Text>
                   <SVG name='caretDown' />
                 </div>
@@ -250,7 +261,7 @@ const QueryBuilder = ({
 
   const queryList = (type) => {
 
-    let isSingleEvent = (type == 'singleEvent') ? true : false
+    let isSingleEvent = (type === 'singleEvent') ? true : false
     let filterConfig = (isSingleEvent) ?
       {
         eventLimit: 1,
@@ -611,8 +622,12 @@ const mapStateToProps = (state) => {
   return {
     // savedQuery: state.pathAnalysis.savedQuery, 
     activeProject: state.global.active_project,
+    groupOpts: state.groups.data
   };
 };
 
-
-export default connect(mapStateToProps, { fetchSavedPathAnalysis, createPathPathAnalysisQuery })(QueryBuilder);
+export default connect(mapStateToProps, {
+  fetchSavedPathAnalysis,
+  createPathPathAnalysisQuery,
+  fetchGroups
+})(QueryBuilder);

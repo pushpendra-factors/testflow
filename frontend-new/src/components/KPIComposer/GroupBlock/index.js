@@ -21,6 +21,8 @@ function GroupBlock({
   eventPropNames,
   KPIConfigProps,
   textStartCase,
+  propertyMaps,
+  isSameKPIGrp
 }) {
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
@@ -34,14 +36,20 @@ function GroupBlock({
   ]);
 
   useEffect(() => {
-    const filterOpts = [...filterOptions];
-    filterOpts[0].values = KPIConfigProps;
+    let commonProperties = [];
+    if(propertyMaps){
+      commonProperties = propertyMaps?.map((item)=>{
+        return [item?.display_name, item?.name, item?.data_type, "propMap"]
+      })
+    }
+    const filterOpts = [...filterOptions]; 
+    filterOpts[0].values = !isSameKPIGrp ? commonProperties : (KPIConfigProps ? KPIConfigProps : []);
     setFilterOptions(filterOpts);
-  }, [KPIConfigProps]);
+  }, [KPIConfigProps, propertyMaps]);
 
   const delOption = (index) => {
     delGroupBy('global', groupByState.global[index], index);
-  };
+  }; 
 
   const onGrpPropChange = (val, index) => {
     const newGroupByState = Object.assign({}, groupByState.global[index]);
@@ -174,10 +182,16 @@ function GroupBlock({
     );
   };
 
+  const matchEventName = (item) => {
+    let findItem =
+      eventPropNames?.[item] || userPropNames?.[item];
+    return findItem ? findItem : item;
+  };
+
   const renderGroupDisplayName = (opt, index) => {
     let propertyName = ''; 
     if (opt?.property) {
-      propertyName = opt?.display_name ? opt.display_name : opt.property;
+      propertyName = opt?.display_name ? opt.display_name : matchEventName(opt.property);
     }
     if (!opt.property) {
       propertyName = 'Select user property';

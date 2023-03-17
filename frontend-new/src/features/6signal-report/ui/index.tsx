@@ -1,20 +1,166 @@
-import { Button, Collapse, Divider, Drawer } from 'antd';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Button, Divider, notification, Spin } from 'antd';
+import { Link, useHistory } from 'react-router-dom';
 import { Text, SVG } from 'Components/factorsComponents';
 import FaPublicHeader from 'Components/FaPublicHeader';
 import style from './index.module.scss';
-import React, { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
-import BrandInfo from './components/BrandInfo';
-import Properties from './components/Properties';
-import RecentActivity from './components/RecentActivity';
+
 import QuickFilter from './components/QuickFilter';
+import SideDrawer from './components/SideDrawer';
+import {
+  generateFirstAndLastDayOfLastWeeks,
+  getFormattedRange,
+  getPublicUrl,
+  parseResultGroupResponse
+} from '../utils';
+import FaSelect from 'Components/FaSelect';
+import {
+  ShareApiResponse,
+  WeekStartEnd,
+  ShareData,
+  ReportApiResponse,
+  ReportApiResponseData
+} from '../types';
+import ReportTable from './components/ReportTable';
+import { CHANNEL_QUICK_FILTERS, SHARE_QUERY_PARAMS } from '../const';
+import {
+  getSixSignalReportData,
+  getSixSignalReportPublicData,
+  shareSixSignalReport
+} from '../state/services';
+import useAgentInfo from 'hooks/useAgentInfo';
+import ShareModal from './components/ShareModal';
+import useQuery from 'hooks/useQuery';
 
 const SixSignalReport = () => {
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [filterValue, setFilterValue] = useState<undefined | string>(undefined);
+  const [filterValue, setFilterValue] = useState<string>(
+    CHANNEL_QUICK_FILTERS[0].id
+  );
+  const [data, setData] = useState<ReportApiResponseData | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [campaigns, setCampaigns] = useState<string[]>([]);
+  const [isCampaignSelectVisible, setIsCampaignSelectVisible] = useState(false);
+  const [seletedCampaigns, setSelectedCampaigns] = useState([]);
+  const [dateSelected, setDateSelected] = useState<string>('');
+  const [isDateSelectionOpen, setIsDateSelectionOpen] =
+    useState<boolean>(false);
+  const [pageMode, setPageMode] = useState<'in-app' | 'public'>('in-app');
+  const [shareModalVisibility, setShareModalVisibility] =
+    useState<boolean>(false);
+  const [loadingShareData, setLoadingShareData] = useState<boolean>(false);
+  const [shareData, setShareData] = useState<ShareData | null>(null);
+  const { isLoggedIn } = useAgentInfo();
+  const { active_project, currentProjectSettings } = useSelector(
+    (state: any) => state.global
+  );
+  const routerQuery = useQuery();
+  const history = useHistory();
+  const paramQueryId = routerQuery.get(SHARE_QUERY_PARAMS.queryId);
+  const paramProjectId = routerQuery.get(SHARE_QUERY_PARAMS.projectId);
+
+  const isSixSignalActivated =
+    currentProjectSettings?.int_factors_six_signal_key ||
+    currentProjectSettings?.int_client_six_signal_key
+      ? true
+      : false;
+
+  const showDrawer = () => {
+    setDrawerVisible(true);
+  };
+
+  const hideDrawer = () => {
+    setDrawerVisible(false);
+  };
+
+  const dateValues = useMemo(() => generateFirstAndLastDayOfLastWeeks(5), []);
+
   const dispatch = useDispatch();
+
+  const handleQuickFilterChange = (filterId: string) => {
+    setFilterValue(filterId);
+  };
+
+  const getCampaignOptions = () => {
+    return campaigns.map((campaign) => [campaign]);
+  };
+
+  const getDateOptions = () => {
+    return dateValues.map((date) => [
+      date.formattedRangeOption,
+      date.formattedRange
+    ]);
+  };
+
+  const handleApplyClick = (val) => {
+    setSelectedCampaigns(val.map((vl) => JSON.parse(vl)[0]));
+  };
+
+  const renderCampaignText = () => {
+    const text = seletedCampaigns?.join(', ');
+    return text?.length > 40 ? `${text.slice(0, 40)}...` : text;
+  };
+
+  const getDateObjFromSelectedDate = () => {
+    const dateObj: WeekStartEnd | undefined = dateValues.find(
+      (date) => date.formattedRange === dateSelected
+    );
+    return dateObj;
+  };
+
+  const handleShareClick = async () => {
+    try {
+      setLoadingShareData(true);
+      //checking if share data is already fetched for the dates
+      if (dateSelected === shareData?.dateSelected) {
+        setShareModalVisibility(true);
+        return;
+      }
+      const dateObj = getDateObjFromSelectedDate();
+      if (!dateObj) {
+        notification.error({
+          message: 'Error',
+          description: 'Please select date range to share report',
+          duration: 5
+        });
+        return;
+      }
+
+      const res = (await shareSixSignalReport(
+        active_project.id,
+        dateObj?.from,
+        dateObj?.to,
+        active_project?.time_zone || 'Asia/Kolkata'
+      )) as ShareApiResponse;
+      setLoadingShareData(false);
+      if (res.data) {
+        setShareData({
+          ...res?.data,
+          dateSelected,
+          publicUrl: getPublicUrl(res.data)
+        });
+        setShareModalVisibility(true);
+      } else {
+        console.error('No data found to share', res?.data);
+      }
+    } catch (error) {
+      console.error('Error in sharing report', error);
+      notification.error({
+        message: 'Error',
+        description: error?.data?.error || 'Something went wrong',
+        duration: 5
+      });
+      setLoadingShareData(false);
+    }
+  };
+
+  const handleShareModalCancel = () => {
+    setShareModalVisibility(false);
+    setLoadingShareData(false);
+  };
+
   useEffect(() => {
     dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
     return () => {
@@ -22,50 +168,92 @@ const SixSignalReport = () => {
     };
   }, [dispatch]);
 
-  const showDrawer = () => {
-    console.log('show drawer called', drawerVisible);
-    setDrawerVisible(true);
-  };
+  useEffect(() => {
+    const fetchPublicData = async () => {
+      try {
+        if (!isLoggedIn) setPageMode('public');
+        setLoading(true);
+        if (paramQueryId && paramProjectId) {
+          const res = (await getSixSignalReportPublicData(
+            paramProjectId,
+            paramQueryId
+          )) as ReportApiResponse;
 
-  const hideDrawer = () => {
-    setDrawerVisible(false);
-  };
-  const drawerTitle = () => (
-    <div className='flex gap-2 items-center'>
-      <SVG name={'Eye'} size={24} />
-      <Text
-        type={'title'}
-        level={6}
-        weight={'bold'}
-        color='grey-2'
-        extraClass='mb-0'
-      >
-        Quickview
-      </Text>
-    </div>
-  );
-  const drawerFooter = () => (
-    <div className='flex justify-center items-center p-4'>
-      <Button
-        style={{ width: '100%' }}
-        onClick={() => console.log('see journey clicked')}
-        size='large'
-        type='primary'
-      >
-        See Full Journey
-      </Button>
-    </div>
-  );
-  const renderPanelHeader = (header: string) => (
-    <div className='px-5'>
-      <Text type={'title'} level={7} color='grey-2' weight={'bold'}>
-        {header}
-      </Text>
-    </div>
-  );
+          setLoading(false);
+          if (res?.data?.[1]?.result_group) {
+            setData(res?.data?.[1]);
+            const _query = res?.data?.[1].query?.six_signal_query_group?.[0];
+            if (_query.fr && _query.to) {
+              setDateSelected(
+                getFormattedRange(_query.fr, _query.to, _query.tz)
+              );
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error in fetching public data', error);
+        notification.error({
+          message: 'Error',
+          description: error?.data?.error || 'Something went wrong',
+          duration: 5
+        });
+        setLoading(false);
+        setData(null);
+      }
+    };
+    if (paramQueryId && paramProjectId) fetchPublicData();
+    //navigating back to login page if required parameters are not there
+    if (!isLoggedIn && (!paramProjectId || !paramQueryId)) {
+      history.push('/login');
+    }
+  }, [paramQueryId, paramProjectId, isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn && isSixSignalActivated && dateValues && !paramQueryId) {
+      setDateSelected(dateValues[0].formattedRange);
+    }
+  }, [isLoggedIn, dateValues, isSixSignalActivated, paramQueryId]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        if (dateSelected) {
+          const dateObj = getDateObjFromSelectedDate();
+          if (!dateObj) return;
+          const res = (await getSixSignalReportData(
+            active_project.id,
+            dateObj?.from,
+            dateObj?.to,
+            active_project?.time_zone || 'Asia/Kolkata'
+          )) as ReportApiResponse;
+          setLoading(false);
+          if (res?.data?.[1]?.result_group) {
+            setData(res?.data?.[1]);
+          }
+        }
+      } catch (error) {
+        console.error('Error in fetching data', error);
+        setLoading(false);
+        setData(null);
+      }
+    };
+    if (active_project && active_project?.id && dateSelected) fetchData();
+  }, [active_project, dateSelected, dateValues]);
+
+  useEffect(() => {
+    if (data) {
+      const value = parseResultGroupResponse(data.result_group[0]);
+      setCampaigns(value.campaigns);
+    }
+  }, [data]);
+
   return (
     <div className='flex flex-col'>
-      <FaPublicHeader showDrawer={showDrawer} />
+      <FaPublicHeader
+        showDrawer={showDrawer}
+        handleShareClick={handleShareClick}
+      />
       <div className='px-24 pt-16 mt-12'>
         <div className='flex justify-between align-middle'>
           <div className='flex align-middle gap-2'>
@@ -90,7 +278,8 @@ const SixSignalReport = () => {
                     See which key accounts are engaging with your marketing.
                     Take action and close more deals.
                   </Text>
-                  <Link
+                  {/* To do: uncomment the below line when learn more link is available */}
+                  {/* <Link
                     className='flex items-center font-semibold gap-2'
                     style={{ color: `#1d89ff` }}
                     target='_blank'
@@ -107,7 +296,7 @@ const SixSignalReport = () => {
                     >
                       Learn more
                     </Text>
-                  </Link>
+                  </Link> */}
                 </div>
               </div>
             </div>
@@ -115,124 +304,84 @@ const SixSignalReport = () => {
           <div>{/* match account */}</div>
         </div>
         <Divider />
-        <div className='flex align-middle gap-2'>
-          <div>{/* date picker */}</div>
+        <div className='flex align-middle gap-4'>
+          <div className={style.filter}>
+            <Button
+              onClick={() => setIsDateSelectionOpen(true)}
+              icon={<SVG name={'calendar'} color='#8692A3' size={16} />}
+              className={style.customButton}
+              disabled={pageMode === 'public' || !isSixSignalActivated}
+            >
+              {dateSelected ? dateSelected : 'Select Report'}
+            </Button>
+
+            {isDateSelectionOpen && (
+              // @ts-ignore
+              <FaSelect
+                options={getDateOptions()}
+                onClickOutside={() => setIsDateSelectionOpen(false)}
+                allowSearch
+                optionClick={(option) => {
+                  setDateSelected(option[1]);
+                  setIsDateSelectionOpen(false);
+                }}
+              />
+            )}
+          </div>
           <QuickFilter
-            filters={[
-              { id: 'all', label: 'All' },
-              { id: 'paid', label: 'Paid Search' },
-              { label: 'Organic', id: 'organic' },
-              { label: 'Direct', id: 'direct' }
-            ]}
-            onFilterChange={(id) => setFilterValue(id)}
+            filters={CHANNEL_QUICK_FILTERS}
+            onFilterChange={handleQuickFilterChange}
             selectedFilter={filterValue}
           />
+          <div className={style.filter}>
+            <Button
+              className={style.customButton}
+              onClick={() => setIsCampaignSelectVisible(true)}
+              icon={<SVG name={'Filter'} color='#8692A3' size={12} />}
+            >
+              {!seletedCampaigns || !seletedCampaigns?.length
+                ? 'Filter by campaign'
+                : renderCampaignText()}
+            </Button>
+
+            {isCampaignSelectVisible && (
+              // @ts-ignore
+              <FaSelect
+                options={getCampaignOptions()}
+                onClickOutside={() => setIsCampaignSelectVisible(false)}
+                applClick={handleApplyClick}
+                selectedOpts={seletedCampaigns}
+                allowSearch
+                multiSelect
+              />
+            )}
+          </div>
+        </div>
+        <div className='mt-5 '>
+          {loading || loadingShareData ? (
+            <div className='w-full h-full flex items-center justify-center'>
+              <div className='w-full h-64 flex items-center justify-center'>
+                <Spin size='large' />
+              </div>
+            </div>
+          ) : (
+            <ReportTable
+              data={data?.result_group[0]}
+              selectedChannel={filterValue}
+              selectedCampaigns={seletedCampaigns}
+              isSixSignalActivated={isSixSignalActivated}
+            />
+          )}
         </div>
       </div>
-
-      <Drawer
-        title={drawerTitle()}
-        closable={true}
-        onClose={hideDrawer}
-        width={300}
-        visible={drawerVisible}
-        closeIcon={<SVG name={'Remove'} color='#8692A3' />}
-        className={style.drawerStyle}
-        headerStyle={{ background: '#F5F6F8' }}
-        bodyStyle={{ padding: 0 }}
-        footer={drawerFooter()}
-      >
-        <div className='flex flex-col'>
-          <BrandInfo
-            name='Wayne Enterprises'
-            description='Subscription management software'
-            logo='https://freestencilgallery.com/wp-content/uploads/2017/05/Wayne-Enterprises-Logo-Stencil-Thumb.jpg'
-            links={[
-              {
-                source: 'https://cdn-icons-png.flaticon.com/512/174/174857.png',
-                href: 'www.lindedin.com'
-              }
-            ]}
-          />
-          <Divider className={style.divider} />
-          <Collapse
-            defaultActiveKey={['0']}
-            expandIconPosition={'right'}
-            className='fa-six-signal-panel'
-            ghost
-          >
-            <Collapse.Panel
-              header={renderPanelHeader('Properties')}
-              className='fa-six-signal-panel-item'
-            >
-              <Properties
-                properties={[
-                  { name: '6signal Name', value: 'Wayne Enterprises' },
-                  { name: '6signal Domain', value: 'North America' },
-                  { name: '6signal Name', value: 'Wayne Enterprises' },
-                  { name: '6signal Domain', value: 'North America' }
-                ]}
-              />
-            </Collapse.Panel>
-          </Collapse>
-          <Divider className={style.divider} />
-          <Collapse
-            expandIconPosition={'right'}
-            className='fa-six-signal-panel'
-            ghost
-          >
-            <Collapse.Panel
-              header={renderPanelHeader('Engaged With')}
-              className='fa-six-signal-panel-item'
-            >
-              <div className='flex justify-start flex-wrap gap-1 px-5 pb-0'>
-                {[
-                  'Webinar',
-                  'Google Ads',
-                  'Webinar',
-                  'Google Ads',
-                  'Website',
-                  'E-book download',
-                  'Website'
-                ].map((item) => (
-                  <div className={style.engagedContainer}>
-                    <Text
-                      type={'paragraph'}
-                      mini
-                      weight='bold'
-                      extraClass='m-0'
-                      color='grey'
-                    >
-                      {item}
-                    </Text>
-                  </div>
-                ))}
-              </div>
-            </Collapse.Panel>
-          </Collapse>
-          <Divider className={style.divider} />
-
-          <Collapse
-            expandIconPosition={'right'}
-            className='fa-six-signal-panel'
-            ghost
-          >
-            <Collapse.Panel
-              header={renderPanelHeader('Recent Activites')}
-              className='fa-six-signal-panel-item'
-            >
-              <RecentActivity
-                recentActivities={[
-                  'www.factors.ai/',
-                  'www.factors.ai/pricing',
-                  'www.factors.ai/lp/leadfeeder',
-                  'www.factors.ai/blog'
-                ]}
-              />
-            </Collapse.Panel>
-          </Collapse>
-        </div>
-      </Drawer>
+      <SideDrawer drawerVisible={drawerVisible} hideDrawer={hideDrawer} />
+      {shareModalVisibility && (
+        <ShareModal
+          visible={shareModalVisibility}
+          onCancel={handleShareModalCancel}
+          shareData={shareData ? shareData : undefined}
+        />
+      )}
     </div>
   );
 };

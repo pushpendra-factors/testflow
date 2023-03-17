@@ -4,17 +4,14 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 
-import lazyWithRetry from 'Utils/lazyWithRetry';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchAttributionActiveUnits,
   fetchAttributionDashboard
 } from 'Attribution/state/services';
-
-const BaseComponent = lazyWithRetry(() => import('./baseComponent'));
-
-const Report = lazyWithRetry(() => import('./report'));
-const Reports = lazyWithRetry(() => import('./reports'));
+import BaseComponent from './baseComponent';
+import Report from './report';
+import Reports from './reports';
 
 function Attribution() {
   const { path } = useRouteMatch();

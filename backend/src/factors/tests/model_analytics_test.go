@@ -334,9 +334,9 @@ func TestAnalyticsFunnelGroupUserQuery(t *testing.T) {
 		}
 
 		// associate normal users to group
-		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID, groupName, groupID, groupUserID)
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID, groupName, groupID, groupUserID, false)
 		assert.Equal(t, http.StatusAccepted, status)
-		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID1, groupName, groupID, groupUserID)
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID1, groupName, groupID, groupUserID, false)
 		assert.Equal(t, http.StatusAccepted, status)
 
 		// fire funnel query
@@ -439,9 +439,9 @@ func TestAnalyticsUniqueUsersQueryWithGroupEvent(t *testing.T) {
 		}
 
 		// Associate normal users to group
-		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID, groupName, groupID, groupUserID)
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID, groupName, groupID, groupUserID, false)
 		assert.Equal(t, http.StatusAccepted, status)
-		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID1, groupName, groupID, groupUserID)
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID1, groupName, groupID, groupUserID, false)
 		assert.Equal(t, http.StatusAccepted, status)
 
 		// Non-group user with same customer_user_id
@@ -3099,7 +3099,7 @@ func TestAttributionClassBaseQueryHashStringConsistency(t *testing.T) {
 	}
 }
 
-func TestQueryCaching(t *testing.T) {
+func TestAnalyticsQueryCaching(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
@@ -3119,13 +3119,12 @@ func TestQueryCaching(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	var queriesStr = map[string]string{
-		model.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
-		model.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
-		model.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
-		model.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
-		model.QueryClassEvents:      `{"query_group":[{"cl":"events","ty":"events_occurrence","fr":1612031400,"to":1612376999,"ewp":[{"na":"$hubspot_contact_created","pr":[]}],"gbt":"date","gbp":[{"pr":"$hubspot_contact_revenue_segment_fs_","en":"event","pty":"categorical","ena":"$hubspot_contact_created","eni":1},{"pr":"$hubspot_contact_revenue_segment_fs_","en":"user","pty":"categorical","ena":"$present"}],"ec":"each_given_event","tz":"Asia/Kolkata"},{"cl":"events","ty":"events_occurrence","fr":1612031400,"to":1612376999,"ewp":[{"na":"$hubspot_contact_created","pr":[]}],"gbt":"","gbp":[{"pr":"$hubspot_contact_revenue_segment_fs_","en":"event","pty":"categorical","ena":"$hubspot_contact_created","eni":1},{"pr":"$hubspot_contact_revenue_segment_fs_","en":"user","pty":"categorical","ena":"$present"}],"ec":"each_given_event","tz":"Asia/Kolkata"}]}`,
-		model.QueryClassChannelV1:   `{"query_group":[{"channel":"facebook_ads","select_metrics":["clicks"],"group_by":[{"name":"ad_group","property":"name"}],"filters":[],"gbt":"date","fr":1611426600,"to":1612031399},{"channel":"facebook_ads","select_metrics":["clicks"],"group_by":[{"name":"ad_group","property":"name"}],"filters":[],"gbt":"","fr":1611426600,"to":1612031399}],"cl":"channel_v1"}`,
-		model.QueryClassWeb:         `{"units":[{"unit_id":194,"query_name":"bounce_rate"},{"unit_id":195,"query_name":"unique_users"},{"unit_id":196,"query_name":"avg_session_duration"},{"unit_id":197,"query_name":"avg_pages_per_session"},{"unit_id":200,"query_name":"sessions"},{"unit_id":201,"query_name":"total_page_view"},{"unit_id":199,"query_name":"traffic_channel_report"},{"unit_id":198,"query_name":"top_pages_report"}],"custom_group_units":[],"from":1609612200,"to":1610044199}`,
+		model.QueryClassInsights:  `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassFunnel:    `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassChannel:   `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
+		model.QueryClassEvents:    `{"query_group":[{"cl":"events","ty":"events_occurrence","fr":1612031400,"to":1612376999,"ewp":[{"na":"$hubspot_contact_created","pr":[]}],"gbt":"date","gbp":[{"pr":"$hubspot_contact_revenue_segment_fs_","en":"event","pty":"categorical","ena":"$hubspot_contact_created","eni":1},{"pr":"$hubspot_contact_revenue_segment_fs_","en":"user","pty":"categorical","ena":"$present"}],"ec":"each_given_event","tz":"Asia/Kolkata"},{"cl":"events","ty":"events_occurrence","fr":1612031400,"to":1612376999,"ewp":[{"na":"$hubspot_contact_created","pr":[]}],"gbt":"","gbp":[{"pr":"$hubspot_contact_revenue_segment_fs_","en":"event","pty":"categorical","ena":"$hubspot_contact_created","eni":1},{"pr":"$hubspot_contact_revenue_segment_fs_","en":"user","pty":"categorical","ena":"$present"}],"ec":"each_given_event","tz":"Asia/Kolkata"}]}`,
+		model.QueryClassChannelV1: `{"query_group":[{"channel":"facebook_ads","select_metrics":["clicks"],"group_by":[{"name":"ad_group","property":"name"}],"filters":[],"gbt":"date","fr":1611426600,"to":1612031399},{"channel":"facebook_ads","select_metrics":["clicks"],"group_by":[{"name":"ad_group","property":"name"}],"filters":[],"gbt":"","fr":1611426600,"to":1612031399}],"cl":"channel_v1"}`,
+		model.QueryClassWeb:       `{"units":[{"unit_id":194,"query_name":"bounce_rate"},{"unit_id":195,"query_name":"unique_users"},{"unit_id":196,"query_name":"avg_session_duration"},{"unit_id":197,"query_name":"avg_pages_per_session"},{"unit_id":200,"query_name":"sessions"},{"unit_id":201,"query_name":"total_page_view"},{"unit_id":199,"query_name":"traffic_channel_report"},{"unit_id":198,"query_name":"top_pages_report"}],"custom_group_units":[],"from":1609612200,"to":1610044199}`,
 	}
 
 	var waitGroup sync.WaitGroup
@@ -3153,7 +3152,55 @@ func TestQueryCaching(t *testing.T) {
 	}
 }
 
-func TestQueryCachingFailedCondition(t *testing.T) {
+func TestAttributionQueryCaching(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	_, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "$session"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	customerAccountID := U.RandomLowerAphaNumString(5)
+	store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountID,
+		IntFacebookAdAccount:        customerAccountID,
+	})
+
+	errCode = store.GetStore().CreateWebAnalyticsDefaultDashboardWithUnits(project.ID, agent.UUID)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	var queriesStr = map[string]string{
+		model.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
+	}
+
+	var waitGroup sync.WaitGroup
+	for queryClass, queryString := range queriesStr {
+		var dashboardID, unitID int64
+		if queryClass == model.QueryClassWeb {
+			dashboardID, _, _ = store.GetStore().GetWebAnalyticsQueriesFromDashboardUnits(project.ID)
+		}
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		waitGroup.Add(1)
+		go sendAnalyticsQueryFromRoutine(r, queryClass, project.ID, agent, dashboardID, unitID, baseQuery, false, false, 1, &waitGroup)
+
+		// Another immediate query. Should return from cache after polling.
+		time.Sleep(50 * time.Millisecond)
+		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboardID, unitID, "", baseQuery, false, false)
+		assert.NotEmpty(t, w)
+		assert.Equal(t, http.StatusOK, w.Code)
+		if queryClass != model.QueryClassWeb {
+			// For website analytics, it returns from Dashboard cache.
+			assert.Equal(t, "true", w.HeaderMap.Get(model.QueryCacheResponseFromCacheHeader), queryClass+" "+w.Body.String())
+		}
+	}
+}
+
+func TestAnalyticsQueryCachingFailedCondition(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
@@ -3165,10 +3212,45 @@ func TestQueryCachingFailedCondition(t *testing.T) {
 		// Bad query type for insights and funnel query.
 		model.QueryClassInsights: `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrences", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
 		model.QueryClassFunnel:   `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_userss", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassChannel:  `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
+	}
 
+	for queryClass, queryString := range badQueriesStr {
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		waitGroup.Add(1)
+		go sendAnalyticsQueryFromRoutine(r, queryClass, project.ID, agent, 0, 0, baseQuery, false, false, 1, &waitGroup)
+
+		// First query should will fail because of wrong query class. This query should return error after polling.
+		time.Sleep(50 * time.Millisecond)
+		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, 0, 0, "", baseQuery, false, false)
+		assert.NotEmpty(t, w)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		type errorObj struct {
+			Err string `json:"error"`
+		}
+		var errData errorObj
+		decoder := json.NewDecoder(w.Body)
+		decoder.DisallowUnknownFields()
+		decoder.Decode(&errData)
+
+		assert.Equal(t, "Error Processing/Fetching data from Query cache", errData.Err)
+	}
+}
+
+func TestAttributionQueryCachingFailedCondition(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	var waitGroup sync.WaitGroup
+	var badQueriesStr = map[string]string{
 		// Attribution and channel query should fail as no customer account id is created for project in test.
 		model.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
-		model.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
 	}
 
 	for queryClass, queryString := range badQueriesStr {
@@ -3593,7 +3675,7 @@ func TestAnalyticsFunnelGroupQuery(t *testing.T) {
 			Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
 		assert.Equal(t, http.StatusCreated, errCode)
 		hubspotContactUser = append(hubspotContactUser, userID)
-		_, status = store.GetStore().UpdateUserGroup(project.ID, userID, model.GROUP_NAME_HUBSPOT_COMPANY, group1ID, groupUserIDMap[group1ID])
+		_, status = store.GetStore().UpdateUserGroup(project.ID, userID, model.GROUP_NAME_HUBSPOT_COMPANY, group1ID, groupUserIDMap[group1ID], false)
 		assert.Equal(t, http.StatusAccepted, status)
 	}
 

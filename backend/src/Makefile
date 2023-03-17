@@ -168,6 +168,14 @@ upload-hubspot-enrich: export IMAGE_NAME=hubspot-enrich-job
 upload-hubspot-enrich: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG)
 
+pack-otp-hubspot:
+	docker build -t us.gcr.io/factors-$(ENV)/otp-hubspot-job:$(TAG) -f Dockerfile.otp_hubspot_job .
+
+upload-otp-hubspot: export IMAGE_NAME=otp-hubspot-job
+upload-otp-hubspot: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/otp-hubspot-job:$(TAG)
+
+
 pack-marketo-enrich:
 	docker build -t us.gcr.io/factors-$(ENV)/marketo-enrich-job:$(TAG) -f Dockerfile.marketo_enrich_job .
 
@@ -349,6 +357,13 @@ pack-beam-dashboard-caching-now:
 upload-beam-dashboard-caching-now: export IMAGE_NAME=beam-dashboard-caching-job-now
 upload-beam-dashboard-caching-now: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/beam-dashboard-caching-job-now:$(TAG)
+
+pack-sixsignal-report:
+	docker build -t us.gcr.io/factors-$(ENV)/sixsignal-report-job:$(TAG) -f Dockerfile.sixsignal_report_job .
+
+upload-sixsignal-report: export IMAGE_NAME=sixsignal-report-job
+upload-sixsignal-report: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/sixsignal-report-job:$(TAG)
 
 pack-beam-add-session:
 	docker build -t us.gcr.io/factors-$(ENV)/beam-add-session-job:$(TAG) -f Dockerfile.beam_add_session_job .
@@ -641,3 +656,9 @@ pack-adhoc-sensehq-count-touchpoints:
 upload-adhoc-sensehq-count-touchpoints: export IMAGE_NAME=adhoc-sensehq-count-touchpoints
 upload-adhoc-sensehq-count-touchpoints: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/adhoc-sensehq-count-touchpoints:$(TAG)
+
+pack-delete-sessions-job:
+	docker build -t us.gcr.io/factors-$(ENV)/delete-sessions-job:$(TAG) -f Dockerfile.delete_sessions_job .
+upload-delete-sessions-job: export IMAGE_NAME=delete-sessions-job
+upload-delete-sessions-job: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/delete-sessions-job:$(TAG)

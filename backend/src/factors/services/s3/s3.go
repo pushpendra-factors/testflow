@@ -52,6 +52,10 @@ func (sd *S3Driver) Create(dir, fileName string, reader io.Reader) error {
 	return nil
 }
 
+func (sd *S3Driver) GetWriter(dir, fileName string) (io.WriteCloser, error) {
+	return nil, nil
+}
+
 func (sd *S3Driver) Get(dir, fileName string) (io.ReadCloser, error) {
 	input := s3.GetObjectInput{
 		Bucket: aws.String(sd.BucketName),
@@ -133,7 +137,7 @@ func (sd *S3Driver) GetEventsGroupFilePathAndName(projectId int64, startTimestam
 }
 
 func (sd *S3Driver) GetChannelFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64) (string, string) {
-	path := sd.GetProjectDataFileDir(projectId, startTimestamp, "ad_reports")
+	path := sd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeAdReport)
 	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
 	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
 	fileName := fmt.Sprintf("%s_%s-%s.txt", channel, dateFormattedStart, dateFormattedEnd)
@@ -352,4 +356,17 @@ func (sd *S3Driver) GetExplainV2ModelPath(id uint64, projectId int64) (string, s
 	path := sd.GetExplainV2Dir(id, projectId)
 	chunksPath := pb.Join(path, "chunks")
 	return chunksPath, "chunk_1.txt"
+}
+
+func (sd *S3Driver) GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string){
+	return fmt.Sprintf("projects/%v/list/%v/", projectID, reference), "list.txt"
+}
+func (sd *S3Driver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) string {
+	path := sd.GetProjectDir(projectId)
+	return fmt.Sprintf("%ssixSignal/%v/", path, id)
+}
+
+func (sd *S3Driver) GetSixSignalAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
+	path := sd.GetSixSignalAnalysisTempFileDir(id, projectId)
+	return path, "results.txt"
 }

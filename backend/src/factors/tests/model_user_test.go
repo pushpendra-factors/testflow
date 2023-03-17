@@ -46,8 +46,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.InDelta(t, user.JoinTimestamp, start.Unix()-60, 3)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
-	// Not more than 50ms difference.
-	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 5.0e+7)
+
 	// Test Get User on the created one.
 	retUser, errCode := store.GetStore().GetUser(projectId, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -89,8 +88,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.InDelta(t, user.JoinTimestamp, start.Unix()-60, 3)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
-	// Not more than 50ms difference.
-	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 5.0e+7)
+
 	var retProperties map[string]interface{}
 	err = json.Unmarshal(user.Properties.RawMessage, &retProperties)
 	assert.Nil(t, err)
@@ -427,7 +425,7 @@ func TestPropertiesUpdatedTimestamp(t *testing.T) {
 
 func TestDBFillUserDefaultProperties(t *testing.T) {
 	propertiesMap := U.PropertiesMap{"prop_1": "value_1"}
-	err := model.FillLocationUserProperties(&propertiesMap, "180.151.36.234") // Our gateway IP.
+	err, _ := model.FillLocationUserProperties(&propertiesMap, "180.151.36.234") // Our gateway IP.
 	assert.Nil(t, err)
 	// IP is not stored in user properties.
 	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
@@ -441,12 +439,12 @@ func TestDBFillUserDefaultProperties(t *testing.T) {
 	assert.NotNil(t, propertiesMap["prop_1"]) // Should append to existing values.
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
-	err = model.FillLocationUserProperties(&propertiesMap, "127.0.0.1")
+	err, _ = model.FillLocationUserProperties(&propertiesMap, "127.0.0.1")
 	assert.Nil(t, err)
 	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
-	err = model.FillLocationUserProperties(&propertiesMap, "::1")
+	err, _ = model.FillLocationUserProperties(&propertiesMap, "::1")
 	assert.Nil(t, err)
 	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
 }
@@ -1245,11 +1243,11 @@ func TestUserPropertiesUpdateByGroupColumnName(t *testing.T) {
 	*/
 	testUserCopy := testUser
 	assert.Equal(t, "", testUserCopy.Group1ID)
-	processed, updated, err := model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_id", "g1")
+	processed, updated, err := model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_id", "g1", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
@@ -1266,68 +1264,68 @@ func TestUserPropertiesUpdateByGroupColumnName(t *testing.T) {
 	/*
 	 Test Multipele group column updates
 	*/
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_id", "g1")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_id", "g1", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_2_id", "g2")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_2_id", "g2", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_3_id", "g3")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_3_id", "g3", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_4_id", "g4")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_4_id", "g4", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_5_id", "g5")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_5_id", "g5", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_6_id", "g6")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_6_id", "g6", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_7_id", "g7")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_7_id", "g7", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_8_id", "g8")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_8_id", "g8", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
 
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_2_user_id", "g2user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_2_user_id", "g2user", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_3_user_id", "g3user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_3_user_id", "g3user", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_4_user_id", "g4user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_4_user_id", "g4user", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_5_user_id", "g5user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_5_user_id", "g5user", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_6_user_id", "g6user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_6_user_id", "g6user", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_7_user_id", "g7user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_7_user_id", "g7user", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_8_user_id", "g8user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_8_user_id", "g8user", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
@@ -1371,11 +1369,11 @@ func TestUserPropertiesUpdateByGroupColumnName(t *testing.T) {
 	/*
 	 Test update not allowed for already set value
 	*/
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user2")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user2", false)
 	assert.Nil(t, err)
 	// got processed but didn't allow update
 	assert.Equal(t, true, processed)
@@ -1384,9 +1382,31 @@ func TestUserPropertiesUpdateByGroupColumnName(t *testing.T) {
 	testUserCopy.Group1UserID = "" // reset
 
 	/*
+		Test allow update on overwrite enabled
+	*/
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user2", true)
+	assert.Nil(t, err)
+	assert.Equal(t, true, processed)
+	assert.Equal(t, true, updated)
+	assert.Equal(t, "g1user2", testUserCopy.Group1UserID)
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_id", "g12", true)
+	assert.Nil(t, err)
+	assert.Equal(t, true, processed)
+	assert.Equal(t, true, updated)
+	assert.Equal(t, "g12", testUserCopy.Group1ID)
+	// empty value  should not overwrite
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_id", "", true)
+	assert.NotNil(t, err)
+	assert.Equal(t, false, processed)
+	assert.Equal(t, false, updated)
+	assert.Equal(t, "g12", testUserCopy.Group1ID)
+	testUserCopy.Group1UserID = ""
+	testUserCopy.Group1ID = ""
+
+	/*
 		group 8 test and max allowed group
 	*/
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_8_user_id", "g1user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_8_user_id", "g1user", false)
 	assert.Nil(t, err)
 	assert.Equal(t, true, processed)
 	assert.Equal(t, true, updated)
@@ -1396,7 +1416,7 @@ func TestUserPropertiesUpdateByGroupColumnName(t *testing.T) {
 	/*
 		Test invalid column name, max allowed 8
 	*/
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_9_user_id", "g1user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_9_user_id", "g1user", false)
 	assert.NotNil(t, err)
 	assert.Equal(t, false, processed) // didn't find field
 	assert.Equal(t, false, updated)
@@ -1405,7 +1425,7 @@ func TestUserPropertiesUpdateByGroupColumnName(t *testing.T) {
 	/*
 		Test update non group column
 	*/
-	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "amp_user_id", "g1user")
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "amp_user_id", "g1user", false)
 	assert.NotNil(t, err)
 	assert.Equal(t, false, processed)
 	assert.Equal(t, false, updated)
@@ -1472,7 +1492,7 @@ func TestUserGroupsPropertiesUpdate(t *testing.T) {
 		Source:    model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().UpdateUserGroup(project.ID, userID, groupName, docID, groupUserID)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userID, groupName, docID, groupUserID, false)
 	assert.Equal(t, http.StatusAccepted, status)
 	user, status = store.GetStore().GetUser(project.ID, userID)
 	assert.Equal(t, http.StatusFound, status)

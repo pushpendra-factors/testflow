@@ -14,12 +14,12 @@ export const getAccountActivitiesWithEnableKeyConfig = (
 ) => {
   const timelineArray = [];
   accountTimeline?.forEach((user) => {
-    const newOpts = user.user_activities.map((activity) => {
+    const newOpts = user?.user_activities?.map((activity) => {
       let isEnabled = true;
       if (disabledEvents?.includes(activity.display_name)) {
         isEnabled = false;
       }
-      return { ...activity, user: user.user_name, enabled: isEnabled };
+      return { ...activity, user: user.user_id, enabled: isEnabled };
     });
     timelineArray.push(...newOpts);
   });
@@ -31,9 +31,15 @@ export const formatAccountTimeline = (data, config) => {
     name: data.name,
     host: data.host_name,
     left_pane_props: data.left_pane_props,
+    milestones: data.milestones,
     account_users: [],
     account_events: []
   };
+  const arrayMilestones = [
+    ...Object.entries(data?.milestones || {}).map(([key, value]) => {
+      return { event_name: key, timestamp: value, user: 'milestone' };
+    })
+  ];
   returnData.account_users = data.account_timeline
     ?.sort((a, b) =>
       compareObjTimestampsDesc(a.user_activities[0], b.user_activities[0])
@@ -41,12 +47,15 @@ export const formatAccountTimeline = (data, config) => {
     .map((user) => ({
       title: user.user_name,
       subtitle: user.additional_prop,
+      userId: user.user_id,
       isAnonymous: user.is_anonymous
     }));
   returnData.account_events = getAccountActivitiesWithEnableKeyConfig(
     data?.account_timeline,
     config?.disabled_events
-  ).sort(compareObjTimestampsDesc);
+  )
+    .concat(arrayMilestones)
+    .sort(compareObjTimestampsDesc);
   return returnData;
 };
 
@@ -64,16 +73,24 @@ export const getActivitiesWithEnableKeyConfig = (
 
 export const formatUsersTimeline = (data, config) => {
   const returnData = {
-    title: !data.is_anonymous ? data.name || data.user_id : 'Unidentified User',
+    title: !data.is_anonymous ? data.name || data.user_id : 'New User',
     subtitle: data.company || data.user_id,
     left_pane_props: data.left_pane_props,
+    milestones: data.milestones,
     group_infos: data.group_infos,
     user_activities: []
   };
+  const arrayMilestones = [
+    ...Object.entries(data?.milestones || {}).map(([key, value]) => {
+      return { event_name: key, timestamp: value, event_type: 'milestone' };
+    })
+  ];
   returnData.user_activities = getActivitiesWithEnableKeyConfig(
     data.user_activities,
     config?.disabled_events
-  ).sort(compareObjTimestampsDesc);
+  )
+    .concat(arrayMilestones)
+    .sort(compareObjTimestampsDesc);
   return returnData;
 };
 

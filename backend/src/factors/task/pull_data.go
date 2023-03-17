@@ -19,10 +19,11 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 
 	startTimestamp := configs["startTimestamp"].(int64)
 	endTimestamp := configs["endTimestamp"].(int64)
-	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
 	cloudManager := configs["cloudManager"].(*filestore.FileManager)
 	hardPull := configs["hardPull"].(*bool)
 	fileTypes := configs["fileTypes"].(map[int64]bool)
+	splitRangeProjectIds := configs["splitRangeProjectIds"].([]int64)
+	noOfSplits := configs["noOfSplits"].(int)
 
 	status := make(map[string]interface{})
 	if projectId == 0 {
@@ -47,6 +48,11 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 		offset := U.FindOffsetInUTC(U.TimeZoneString(projectDetails.TimeZone))
 		startTimestampInProjectTimezone = startTimestamp - int64(offset)
 		endTimestampInProjectTimezone = endTimestamp - int64(offset)
+	}
+
+	if endTimestampInProjectTimezone > U.TimeNowUnix() {
+		status["error"] = "invalid end timestamp (project timezone)"
+		return status, false
 	}
 
 	logCtx := peLog.WithFields(log.Fields{"ProjectId": projectId,
@@ -81,7 +87,7 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 			}
 
 			if toPull {
-				if _, ok := pull.PullEventsData(projectId, cloudManager, diskManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, status, logCtx); !ok {
+				if _, ok := pull.PullEventsData(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, splitRangeProjectIds, noOfSplits, status, logCtx); !ok {
 					return status, false
 				}
 			} else {
@@ -89,7 +95,6 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 				status["events-error"] = errMsg
 			}
 		}
-
 	}
 
 	// AD REPORTS
@@ -105,7 +110,7 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 				status[channel+"-info"] = "Not Integrated"
 			} else {
 				if store.GetStore().IsDataAvailable(projectId, channel, uint64(endTimestampInProjectTimezone)) {
-					if _, ok := pull.PullDataForChannel(channel, projectId, cloudManager, diskManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, status, logCtx); !ok {
+					if _, ok := pull.PullDataForChannel(channel, projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, status, logCtx); !ok {
 						return status, false
 					}
 				} else {
@@ -118,7 +123,7 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 
 	//USERS
 	if fileTypes[pull.FileType["users"]] {
-		if _, ok := pull.PullUsersDataForCustomMetrics(projectId, cloudManager, diskManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, hardPull, status, logCtx); !ok {
+		if _, ok := pull.PullUsersDataForCustomMetrics(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, hardPull, status, logCtx); !ok {
 			return status, false
 		}
 	}

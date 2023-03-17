@@ -132,6 +132,10 @@ const (
 	UserSourceSalesforceString = "salesforce"
 	UserSourceMarketo          = "marketo"
 	UserSourceLeadSquared      = U.CRM_SOURCE_NAME_LEADSQUARED
+	UserSourceSixSignalString  = "6signal"
+	UserSourceSixSignal        = 8
+	UserSourceDomainsString    = "domains"
+	UserSourceDomains          = 9
 )
 
 var UserSourceMap = map[string]int{
@@ -140,6 +144,8 @@ var UserSourceMap = map[string]int{
 	UserSourceSalesforceString: 3,
 	UserSourceMarketo:          6,
 	UserSourceLeadSquared:      7,
+	UserSourceSixSignalString:  UserSourceSixSignal,
+	UserSourceDomainsString:    UserSourceDomains,
 }
 
 var UserSourceCRM = map[string]int{
@@ -154,6 +160,8 @@ var GroupUserSource = map[string]int{
 	U.GROUP_NAME_SALESFORCE_OPPORTUNITY: UserSourceSalesforce,
 	U.GROUP_NAME_HUBSPOT_COMPANY:        UserSourceHubspot,
 	U.GROUP_NAME_HUBSPOT_DEAL:           UserSourceHubspot,
+	U.GROUP_NAME_SIX_SIGNAL:             UserSourceSixSignal,
+	U.GROUP_NAME_DOMAINS:                UserSourceDomains,
 }
 
 const USERS = "users"
@@ -511,25 +519,27 @@ func IsEmptyPropertyValue(propertyValue interface{}) bool {
 	}
 }
 
-func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string) error {
+func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string) (error, string) {
 	geo := config.GetServices().GeoLocation
 
+	country := ""
 	// ClientIP unavailable.
 	if clientIP == "" {
-		return fmt.Errorf("invalid IP, failed adding geolocation properties")
+		return fmt.Errorf("invalid IP, failed adding geolocation properties"), country
 	}
 
 	city, err := geo.City(net.ParseIP(clientIP))
 	if err != nil {
 		log.WithFields(log.Fields{"clientIP": clientIP}).WithError(err).Error(
 			"Failed to get city information from geodb")
-		return err
+		return err, country
 	}
 
 	// Using en -> english name.
 	if countryName, ok := city.Country.Names["en"]; ok && countryName != "" {
 		if c, ok := (*properties)[util.UP_COUNTRY]; !ok || c == "" {
 			(*properties)[util.UP_COUNTRY] = countryName
+			country = countryName
 		}
 	}
 
@@ -550,7 +560,7 @@ func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string)
 		}
 	}
 
-	return nil
+	return nil, country
 }
 
 // GetDecodedUserPropertiesIdentifierMetaObject gets the identifier meta data from the user properties
@@ -899,7 +909,7 @@ func GetSourceUserPropertyOverwritePropertySuffix(source string, objectType stri
 }
 
 // SetUserGroupFieldByColumnName update user struct field by gorm column name. If value already set then it won't update the value
-func SetUserGroupFieldByColumnName(user *User, columnName, value string) (bool, bool, error) {
+func SetUserGroupFieldByColumnName(user *User, columnName, value string, overwrite bool) (bool, bool, error) {
 
 	if user == nil || columnName == "" || value == "" {
 		return false, false, errors.New("invalid parameters")
@@ -935,7 +945,7 @@ func SetUserGroupFieldByColumnName(user *User, columnName, value string) (bool, 
 					return false, false, errors.New("duplicate tag found")
 				}
 
-				if currValue == "" { // don't overwrite if already set
+				if currValue == "" || (overwrite && currValue != value) { // don't overwrite if already set
 
 					if !field.CanSet() {
 						return false, false, errors.New("cannot update field")
@@ -956,10 +966,38 @@ func SetUserGroupFieldByColumnName(user *User, columnName, value string) (bool, 
 	return processed, updated, nil
 }
 
-func GetUserGroupID(user *User) (string, error) {
-	if !(*user.IsGroupUser) {
+func GetGroupUserGroupID(groupUser *User, groupIndex int) (string, error) {
+	if groupUser.IsGroupUser == nil || !(*groupUser.IsGroupUser) {
 		return "", errors.New("not a group user")
 	}
+	groupID, err := GetUserGroupID(groupUser, groupIndex)
+	if err != nil {
+		return "", err
+	}
+	if groupID == "" {
+		return "", errors.New("failed to get group id for group user")
+	}
+	return groupID, nil
+}
+
+func GetUserGroupUserID(user *User, groupIndex int) (string, error) {
+	groupUserID := ""
+	if groupIndex != 0 {
+		groupUserID = fmt.Sprintf("group_%d_user_id", groupIndex)
+	}
+	return GetUserGroupColumn(user, groupUserID)
+}
+
+func GetUserGroupID(user *User, groupIndex int) (string, error) {
+	groupID := ""
+	if groupIndex != 0 {
+		groupID = fmt.Sprintf("group_%d_id", groupIndex)
+	}
+	return GetUserGroupColumn(user, groupID)
+}
+
+// GetUserGroupColumn return group_<index>_id or group_<index>_user_id by group index
+func GetUserGroupColumn(user *User, searchColumn string) (string, error) {
 
 	refUserVal := reflect.ValueOf(user)
 	refUserTyp := refUserVal.Elem().Type()
@@ -968,6 +1006,10 @@ func GetUserGroupID(user *User) (string, error) {
 	for i := 0; i < refUserVal.Elem().NumField(); i++ {
 		refField := refUserTyp.Field(i)
 		if tagName := refField.Tag.Get("json"); strings.HasPrefix(tagName, "group_") {
+			if searchColumn != "" && searchColumn != tagName {
+				continue
+			}
+
 			field := refUserVal.Elem().Field(i)
 			if field.Kind() != reflect.String {
 				continue
@@ -985,10 +1027,6 @@ func GetUserGroupID(user *User) (string, error) {
 
 	}
 
-	if value == "" {
-		return "", errors.New("failed to get group id for user")
-	}
-
 	return value, nil
 }
 
@@ -998,4 +1036,26 @@ func IsValidUserSource(source string) bool {
 	} else {
 		return false
 	}
+}
+
+func GetUserSourceByName(source string) int {
+	return UserSourceMap[source]
+}
+
+func GetUserSourceName(source int) string {
+	for name := range UserSourceMap {
+		if UserSourceMap[name] == source {
+			return name
+		}
+	}
+
+	return ""
+}
+
+func GetGroupUserSourceByGroupName(groupName string) int {
+	return GroupUserSource[groupName]
+}
+
+func GetGroupUserSourceNameByGroupName(groupName string) string {
+	return GetUserSourceName(GroupUserSource[groupName])
 }

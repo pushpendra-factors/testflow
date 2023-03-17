@@ -113,6 +113,13 @@ func InitAppRoutes(r *gin.Engine) {
 	shareRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
 	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
+	//Six Signal Report
+	shareSixSignalRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
+	shareSixSignalRouteGroup.Use(mid.ValidateAccessToSharedEntity(model.ShareableURLEntityTypeSixSignal))
+	shareSixSignalRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/sixsignal", responseWrapper(GetSixSignalReportHandler))
+	shareSixSignalRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/sixsignal/publicreport", responseWrapper(GetSixSignalPublicReportHandler))
+	featuresGatesRouteGroup.POST("/:project_id/sixsignal/share", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateSixSignalShareableURLHandler))
+
 	// Dashboard endpoints
 	featuresGatesRouteGroup.GET("/:project_id/dashboards", stringifyWrapper(GetDashboardsHandler))
 	featuresGatesRouteGroup.POST("/:project_id/dashboards", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateDashboardHandler))
@@ -301,6 +308,8 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.GET("/:project_id/teams/get_teams", mid.SkipDemoProjectWriteAccess(), teams.GetAllTeamsHandler)
 	featuresGatesRouteGroup.GET("/:project_id/teams/channels", mid.SkipDemoProjectWriteAccess(), teams.GetTeamsChannelsHandler)
 	featuresGatesRouteGroup.DELETE("/:project_id/teams/delete", mid.SkipDemoProjectWriteAccess(), teams.DeleteTeamsIntegrationHandler)
+	// Upload
+	featuresGatesRouteGroup.POST("/:project_id/uploadlist", V1.UploadListForFilters)
 
 	// Auth route group with authentication an authorization middleware.
 	authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
@@ -367,6 +376,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 		r.GET("/sdk/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
+	r.GET("/", SDKStatusHandler) // Default handler for probes.
 	r.GET(ROUTE_SDK_ROOT+"/service/status", SDKStatusHandler)
 	r.POST(ROUTE_SDK_ROOT+"/service/error", SDKErrorHandler)
 
@@ -379,6 +389,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 
 	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
 	sdkRouteGroup.Use(mid.SetScopeProjectToken())
+	sdkRouteGroup.Use(mid.IsBlockedIPByProject())
 
 	// DEPRECATED: Kept for backward compatibility.
 	// Used on only on old npm installations. JS_SDK uses /get_info.

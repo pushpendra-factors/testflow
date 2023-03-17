@@ -9,12 +9,13 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
+	"io/ioutil"
 	E "factors/event_match"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
+	"encoding/json"
 )
 
 const (
@@ -38,7 +39,7 @@ func (store *MemSQL) GetAllEventTriggerAlertsByProject(projectID int64) ([]model
 		Where("project_id = ? AND is_deleted = ?", projectID, false).
 		Order("created_at DESC").Limit(ListLimit).Find(&alerts).Error
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch rows from pathanalysis table for project")
+		log.WithError(err).Error("Failed to fetch rows from event_trigger_alerts table for project")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -62,7 +63,7 @@ func (store *MemSQL) GetEventTriggerAlertByID(id string) (*model.EventTriggerAle
 		Where("id = ? AND is_deleted = ?", id, false).
 		Order("created_at DESC").Limit(ListLimit).Find(&alert).Error
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch rows from pathanalysis table for project")
+		log.WithError(err).Error("Failed to fetch rows from event_trigger_alerts table for project")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -79,7 +80,7 @@ func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []mode
 		var alert model.EventTriggerAlertConfig
 		err := U.DecodePostgresJsonbToStructType(obj.EventTriggerAlert, &alert)
 		if err != nil {
-			log.WithError(err).Error("Problem deserializing pathanalysis query.")
+			log.WithError(err).Error("Problem deserializing event_trigger_alerts query.")
 			return nil
 		}
 		deliveryOption := ""
@@ -127,7 +128,7 @@ func (store *MemSQL) DeleteEventTriggerAlert(projectID int64, id string) (int, s
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) CreateEventTriggerAlert(userID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string) {
+func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"event_trigger_alert": alertConfig,
@@ -141,12 +142,52 @@ func (store *MemSQL) CreateEventTriggerAlert(userID string, projectID int64, ale
 	transTime := gorm.NowFunc()
 	id := U.GetUUID()
 
+	isValidAlertBody, errCode, errMsg := store.isValidEventTriggerAlertBody(projectID, userID, alertConfig)
+	if !isValidAlertBody {
+		return nil, errCode, errMsg
+	}
+
 	if alertCreationLimitExceeded(projectID) {
 		return nil, http.StatusConflict, "Alerts limit reached"
 	}
 
-	if isDuplicateAlertTitle(projectID, alertConfig.Title, id) {
+	if isDuplicateAlertTitle(projectID, alertConfig.Title, oldID) {
 		return nil, http.StatusConflict, "Alert already exist"
+	}
+
+	for _, filter := range (*alertConfig).Filter {
+		if(filter.Operator == model.InList){
+			// Get the cloud file that is there for the reference value
+			path, file := C.GetCloudManager(projectID, true).GetListReferenceFileNameAndPathFromCloud(projectID, filter.Value)
+			reader, err := C.GetCloudManager(projectID, true).Get(path, file)
+			if(err != nil){
+				log.WithFields(logFields).WithError(err).Error("List File Missing")
+				return nil, http.StatusInternalServerError, "List File Missing"
+			}
+			valuesInFile := make([]string, 0)
+			data, err := ioutil.ReadAll(reader)
+			if(err != nil){
+				log.WithFields(logFields).WithError(err).Error("File reader failed")
+				return nil, http.StatusInternalServerError, "File reader failed"
+			}
+			err = json.Unmarshal(data, &valuesInFile)
+			if(err != nil){
+				log.WithFields(logFields).WithError(err).Error("list data unmarshall failed")
+				return nil, http.StatusInternalServerError, "list data unmarshall failed"
+			}
+			cacheKeyList, err := model.GetListCacheKey(projectID, filter.Value)
+			if(err != nil){
+				log.WithFields(logFields).WithError(err).Error("get cache key failed")
+				return nil, http.StatusInternalServerError, "get cache key failed"
+			}
+			for _, value := range valuesInFile {
+				err = cacheRedis.ZAddPersistent(cacheKeyList, value, 0)
+				if(err != nil){
+					log.WithFields(logFields).WithError(err).Error("failed to add new values to sorted set")
+					return nil, http.StatusInternalServerError, "failed to add new values to sorted set"
+				}
+			}
+		}
 	}
 
 	trigger, err := U.EncodeStructTypeToPostgresJsonb(*alertConfig)
@@ -172,6 +213,31 @@ func (store *MemSQL) CreateEventTriggerAlert(userID string, projectID int64, ale
 	}
 
 	return &alert, http.StatusCreated, ""
+}
+
+func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID string, alert *model.EventTriggerAlertConfig) (bool, int, string) {
+
+	if alert.Title == "" {
+		return false, http.StatusBadRequest, "title can not be empty"
+	}
+	if alert.Event == "" {
+		return false, http.StatusBadRequest, "event can not be empty"
+	}
+	if !alert.Slack && !alert.Webhook {
+		return false, http.StatusBadRequest, "Choose atleast one delivery option"
+	}
+	if alert.Slack && (alert.SlackChannels == nil || U.IsEmptyPostgresJsonb(alert.SlackChannels)) {
+		return false, http.StatusBadRequest, "Slack channel not selected"
+	}
+	isSlackIntegrated, errCode := store.IsSlackIntegratedForProject(projectID, agentID)
+	if errCode != http.StatusOK {
+		log.WithFields(log.Fields{"agentUUID": agentID, "event_trigger_alert": alert}).Error("failed to check slack integration")
+		return false, errCode, "failed to check slack integration"
+	}
+	if alert.Slack && !isSlackIntegrated {
+		return false, http.StatusBadRequest, "Slack integration is not enabled for this project"
+	}
+	return true, http.StatusOK, ""
 }
 
 func alertCreationLimitExceeded(projectID int64) bool {
@@ -218,7 +284,7 @@ func isDuplicateAlertTitle(projectID int64, title, id string) bool {
 	return false
 }
 
-func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([]model.EventTriggerAlert, int) {
+func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([]model.EventTriggerAlert, model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"prefix":     id,
@@ -234,10 +300,10 @@ func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([
 		log.WithFields(log.Fields{"projectId": projectId, "id": id}).WithError(err).Error(
 			"event_name not found")
 		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
+			return nil, model.EventName{}, http.StatusNotFound
 		}
 
-		return nil, http.StatusInternalServerError
+		return nil, model.EventName{}, http.StatusInternalServerError
 	}
 
 	if err := db.Where("project_id = ? AND is_deleted = 0", projectId).
@@ -246,20 +312,20 @@ func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([
 		log.WithFields(log.Fields{"projectId": projectId, "event": eventName.Name}).WithError(err).Error(
 			"filtering eventName failed on GetFilterEventNamesByEvent")
 		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
+			return nil, eventName, http.StatusNotFound
 		}
 
-		return nil, http.StatusInternalServerError
+		return nil, eventName, http.StatusInternalServerError
 	}
 
 	if len(eventAlerts) == 0 {
-		return nil, http.StatusNotFound
+		return nil, eventName, http.StatusNotFound
 	}
 
-	return eventAlerts, http.StatusFound
+	return eventAlerts, eventName, http.StatusFound
 }
 
-func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, int) {
+func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int) {
 	logFields := log.Fields{
 		"project_id":       projectId,
 		"event_name":       eventNameId,
@@ -268,10 +334,10 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	alerts, errCode := store.GetEventTriggerAlertsByEvent(projectId, eventNameId)
+	alerts, eventName, errCode := store.GetEventTriggerAlertsByEvent(projectId, eventNameId)
 	if errCode != http.StatusFound || alerts == nil {
 		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
-		return nil, errCode
+		return nil, nil, errCode
 	}
 
 	var userPropMap, eventPropMap, updatedEventProps *map[string]interface{}
@@ -291,7 +357,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		err := U.DecodePostgresJsonbToStructType(alert.EventTriggerAlert, &config)
 		if err != nil {
 			log.WithError(err).Error("Jsonb decoding to struct failure")
-			return nil, http.StatusInternalServerError
+			return nil, nil, http.StatusInternalServerError
 		}
 		if isUpdate {
 			if len(*updatedEventProps) == 0 {
@@ -309,15 +375,15 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 				}
 			}
 		}
-		if E.EventMatchesFilterCriterionList(*userPropMap, *eventPropMap, E.MapFilterProperties(config.Filter)) {
+		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, E.MapFilterProperties(config.Filter)) {
 			matchedAlerts = append(matchedAlerts, alert)
 		}
 	}
 	if len(matchedAlerts) == 0 {
 		log.WithFields(logFields).Info("Match function did not find anything in event_trigger_alerts")
-		return nil, http.StatusNotFound
+		return nil, nil, http.StatusNotFound
 	}
-	return &matchedAlerts, http.StatusFound
+	return &matchedAlerts, &eventName, http.StatusFound
 }
 
 func (store *MemSQL) getDisplayNamesForEP(projectId int64, eventName string) map[string]string {
@@ -439,7 +505,7 @@ func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{
 	return res
 }
 
-func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, alert *model.EventTriggerAlertConfig) (U.PropertiesMap, map[string]interface{}, error) {
+func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, alert *model.EventTriggerAlertConfig, eventName *model.EventName) (U.PropertiesMap, map[string]interface{}, error) {
 	logFields := log.Fields{
 		"event_trigger_alert": *alert,
 		"event":               *event,
@@ -472,14 +538,14 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 		}
 	}
 
-	displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, event.EventNameId)
+	displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, eventName.Name)
 	//log.Info(fmt.Printf("%+v\n", displayNamesEP))
 
 	displayNamesUP := store.getDisplayNamesForUP(event.ProjectId)
 	//log.Info(fmt.Printf("%+v\n", displayNamesUP))
 
 	msgPropMap := make(U.PropertiesMap, 0)
-	for _, messageProperty := range messageProperties {
+	for idx, messageProperty := range messageProperties {
 		p := messageProperty.Property
 		if messageProperty.Entity == "user" {
 
@@ -488,7 +554,10 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 				displayName = U.CreateVirtualDisplayName(p)
 			}
 			propVal, exi := (*userPropMap)[p]
-			msgPropMap[displayName] = getDisplayLikePropValue(messageProperty.Type, exi, propVal)
+			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
+				DisplayName : displayName,
+				PropValue: getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+			} 
 
 		} else if messageProperty.Entity == "event" {
 			displayName, exists := displayNamesEP[p]
@@ -496,7 +565,10 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 				displayName = U.CreateVirtualDisplayName(p)
 			}
 			propVal, exi := (*eventPropMap)[p]
-			msgPropMap[displayName] = getDisplayLikePropValue(messageProperty.Type, exi, propVal)
+			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
+				DisplayName : displayName,
+				PropValue: getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+			} 
 		} else {
 			log.Warn("can not find the message property in user and event prop sets")
 		}
@@ -598,7 +670,7 @@ func isCoolDownTimeExhausted(key *cacheRedis.Key, coolDownTime, unixtime int64) 
 	return true, nil
 }
 
-func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, event *model.Event) bool {
+func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, event *model.Event, eventName *model.EventName) bool {
 
 	//Adding alert to cache
 	//INCR the counter key
@@ -653,7 +725,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 	}
 
 	if addToCache {
-		messageProps, breakdownProps, err := store.GetMessageAndBreakdownPropertiesMap(event, &eta)
+		messageProps, breakdownProps, err := store.GetMessageAndBreakdownPropertiesMap(event, &eta, eventName)
 		if err != nil {
 			log.WithError(err).Error("key and sortedTuple fetching error")
 			return false

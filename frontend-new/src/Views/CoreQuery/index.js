@@ -111,7 +111,8 @@ import {
   DEFAULT_PIVOT_CONFIG,
   UPDATE_FUNNEL_TABLE_CONFIG,
   UPDATE_CORE_QUERY_REDUCER,
-  SET_NAVIGATED_FROM_ANALYSE
+  SET_NAVIGATED_FROM_ANALYSE,
+  DEFAULT_ATTRIBUTION_TABLE_FILTERS
 } from './constants';
 import {
   getValidGranularityOptions,
@@ -140,7 +141,8 @@ function CoreQuery({
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
-  fetchKPIConfig
+  fetchKPIConfig,
+  currentAgent
 }) {
   const { query_id, query_type } = useParams();
 
@@ -546,7 +548,6 @@ function CoreQuery({
     [updateLocalReducer]
   );
 
-
   const setNavigatedFromAnalyse = useCallback(
     (payload) => {
       updateLocalReducer(SET_NAVIGATED_FROM_ANALYSE, payload);
@@ -573,6 +574,10 @@ function CoreQuery({
         // setNavigatedFromDashboard(false);
         updateSavedQuerySettings(EMPTY_OBJECT);
         setAttributionMetrics([...ATTRIBUTION_METRICS]);
+        // reset attribution table filters
+        updateCoreQueryReducer({
+          attributionTableFilters: DEFAULT_ATTRIBUTION_TABLE_FILTERS
+        });
       } else if (queryType !== QUERY_TYPE_CAMPAIGN) {
         const selectedReport = savedQueries.find(
           (elem) => elem.id === isQuerySaved.id
@@ -630,31 +635,23 @@ function CoreQuery({
         updateAppliedBreakdown();
       }
     },
-    [
-      dispatch,
-      queryType,
-      queriesA,
-      groupBy,
-      models,
-      updatePivotConfig,
-      setNavigatedFromDashboard,
-      updateSavedQuerySettings,
-      savedQueries,
-      updateChartTypes,
-      updateAppliedBreakdown,
-      profileQueries
-    ]
+    [dispatch, queryType, queriesA, groupBy, models, updatePivotConfig, updateSavedQuerySettings, updateCoreQueryReducer, savedQueries, updateChartTypes, updateAppliedBreakdown, profileQueries]
   );
 
   const getDashboardConfigs = useCallback(
     (isQuerySaved) => {
       // use cache urls when user expands the dashboard widget
       if (isQuerySaved && coreQueryState.navigatedFromDashboard) {
-        return {
-          id: coreQueryState.navigatedFromDashboard.dashboard_id,
-          unit_id: coreQueryState.navigatedFromDashboard.id,
-          refresh: false
-        };
+        if (
+          coreQueryState?.navigatedFromDashboard?.dashboard_id &&
+          coreQueryState?.navigatedFromDashboard?.id
+        ) {
+          return {
+            id: coreQueryState.navigatedFromDashboard.dashboard_id,
+            unit_id: coreQueryState.navigatedFromDashboard.id,
+            refresh: false
+          };
+        }
       }
       return null;
     },
@@ -733,6 +730,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_EVENT,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -849,6 +847,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_FUNNEL,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -972,6 +971,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_ATTRIBUTION,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -1090,6 +1090,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_KPI,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -1178,6 +1179,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_CAMPAIGN,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -1246,6 +1248,7 @@ function CoreQuery({
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
+            email_id: currentAgent?.email,
             query_type: QUERY_TYPE_PROFILE,
             project_id: activeProject?.id,
             project_name: activeProject?.name
@@ -2186,7 +2189,8 @@ function CoreQuery({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   KPI_config: state.kpi?.config,
-  existingQueries: state.queries
+  existingQueries: state.queries,
+  currentAgent: state.agent.agent_details,
 });
 
 const mapDispatchToProps = (dispatch) =>

@@ -29,7 +29,7 @@ func SetClearBitCacheResult(projectID int64, userId string, userIP string) {
 		return
 	}
 
-	var ipEnrichmentCacheInvalidationDuration float64 = 30 * 60 // 30 minutes.
+	var ipEnrichmentCacheInvalidationDuration float64 = 24 * 60 * 60 // 24 hrs
 	err = cacheRedis.SetPersistent(cacheKey, string(resultString), ipEnrichmentCacheInvalidationDuration)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for ip enrichment")

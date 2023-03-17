@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -79,6 +80,249 @@ func Test6SignalEnrichmentInSDKTrackHandler(t *testing.T) {
 	//fmt.Println(sessionUserProperties[U.SIX_SIGNAL_COUNTRY])
 	//println("END")
 
+}
+
+func TestSDK6SignalGroup(t *testing.T) {
+
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// check group not exist
+	_, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL)
+	assert.Equal(t, http.StatusNotFound, status)
+
+	userPropertiesMap := U.PropertiesMap{
+		U.UP_CITY:                      "city1",
+		U.UP_LATEST_PAGE_URL:           "www.abc.com",
+		U.SIX_SIGNAL_ZIP:               "1234",
+		U.SIX_SIGNAL_NAICS_DESCRIPTION: "abc",
+		U.SIX_SIGNAL_EMPLOYEE_COUNT:    10,
+		U.SIX_SIGNAL_COUNTRY:           "country",
+		U.SIX_SIGNAL_ADDRESS:           "Address1",
+		U.SIX_SIGNAL_CITY:              "city",
+		U.SIX_SIGNAL_EMPLOYEE_RANGE:    "1-20",
+		U.SIX_SIGNAL_INDUSTRY:          "industry",
+		U.SIX_SIGNAL_SIC:               "123",
+		U.SIX_SIGNAL_REVENUE_RANGE:     "1-10K",
+		U.SIX_SIGNAL_COUNTRY_ISO_CODE:  "123",
+		U.SIX_SIGNAL_PHONE:             "987654321",
+		U.SIX_SIGNAL_DOMAIN:            "abc.com",
+		U.SIX_SIGNAL_NAME:              "abc",
+		U.SIX_SIGNAL_STATE:             "state",
+		U.SIX_SIGNAL_REGION:            "region",
+		U.SIX_SIGNAL_NAICS:             "1234",
+		U.SIX_SIGNAL_ANNUAL_REVENUE:    "10K",
+		U.SIX_SIGNAL_SIC_DESCRIPTION:   "description",
+	}
+	userPropertiesEn, err := json.Marshal(userPropertiesMap)
+	assert.Nil(t, err)
+	userPropertiesJsonb := &postgres.Jsonb{userPropertiesEn}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, createdUserID, userPropertiesJsonb, time.Now().Unix())
+	assert.Equal(t, http.StatusAccepted, status)
+
+	groupProperties := U.FilterPropertiesByKeysByPrefix(&userPropertiesMap, U.SIX_SIGNAL_PROPERTIES_PREFIX)
+	assert.Len(t, *groupProperties, 19) // only 6signal properties
+	assert.Equal(t, "1234", (*groupProperties)[U.SIX_SIGNAL_ZIP])
+	assert.Equal(t, "abc", (*groupProperties)[U.SIX_SIGNAL_NAICS_DESCRIPTION])
+	assert.Equal(t, 10, (*groupProperties)[U.SIX_SIGNAL_EMPLOYEE_COUNT])
+	assert.Equal(t, "country", (*groupProperties)[U.SIX_SIGNAL_COUNTRY])
+	assert.Equal(t, "Address1", (*groupProperties)[U.SIX_SIGNAL_ADDRESS])
+	assert.Equal(t, "city", (*groupProperties)[U.SIX_SIGNAL_CITY])
+	assert.Equal(t, "1-20", (*groupProperties)[U.SIX_SIGNAL_EMPLOYEE_RANGE])
+	assert.Equal(t, "industry", (*groupProperties)[U.SIX_SIGNAL_INDUSTRY])
+	assert.Equal(t, "123", (*groupProperties)[U.SIX_SIGNAL_SIC])
+	assert.Equal(t, "1-10K", (*groupProperties)[U.SIX_SIGNAL_REVENUE_RANGE])
+	assert.Equal(t, "123", (*groupProperties)[U.SIX_SIGNAL_COUNTRY_ISO_CODE])
+	assert.Equal(t, "987654321", (*groupProperties)[U.SIX_SIGNAL_PHONE])
+	assert.Equal(t, "abc.com", (*groupProperties)[U.SIX_SIGNAL_DOMAIN])
+	assert.Equal(t, "abc", (*groupProperties)[U.SIX_SIGNAL_NAME])
+	assert.Equal(t, "state", (*groupProperties)[U.SIX_SIGNAL_STATE])
+	assert.Equal(t, "region", (*groupProperties)[U.SIX_SIGNAL_REGION])
+	assert.Equal(t, "1234", (*groupProperties)[U.SIX_SIGNAL_NAICS])
+	assert.Equal(t, "10K", (*groupProperties)[U.SIX_SIGNAL_ANNUAL_REVENUE])
+	assert.Equal(t, "description", (*groupProperties)[U.SIX_SIGNAL_SIC_DESCRIPTION])
+
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	group, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 1, group.ID)
+	groupUser1, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abc.com", groupUser1.Group1ID) // only 6signal group used
+	assert.Equal(t, "dom-MS1hYmMuY29t", groupUser1.ID)
+	user, status := store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser1.ID, user.Group1UserID)
+	assert.Equal(t, groupUser1.Group1ID, user.Group1ID)
+
+	// track again should not create new group user
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	groupUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abc.com", groupUser1.Group1ID)
+	user, status = store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser1.ID, user.Group1UserID)
+	assert.Equal(t, groupUser1.Group1ID, user.Group1ID)
+
+	// track again shouldn't create new group or new association
+	// should only update group properties
+	(*groupProperties)[U.SIX_SIGNAL_ZIP] = "1235"
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	groupUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abc.com", groupUser1.Group1ID)
+	assert.Equal(t, "dom-MS1hYmMuY29t", groupUser1.ID)
+	propertiesMap := make(map[string]interface{})
+	err = json.Unmarshal(groupUser1.Properties.RawMessage, &propertiesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, "1235", propertiesMap[U.SIX_SIGNAL_ZIP])
+	user, status = store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser1.ID, user.Group1UserID)
+	assert.Equal(t, groupUser1.Group1ID, user.Group1ID)
+
+	// same company with a new user shouldn't create new group user
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, createdUserID2)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser1.ID, user.Group1UserID)
+	assert.Equal(t, groupUser1.Group1ID, user.Group1ID)
+
+	// new company2 with existing user should create or update group user and associate with current user
+	(*groupProperties)[U.SIX_SIGNAL_DOMAIN] = "abc2.com"
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	groupUser2, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc2.com")
+	assert.Equal(t, http.StatusFound, status) // new group user created
+	assert.Equal(t, "dom-MS1hYmMyLmNvbQ==", groupUser2.ID)
+	user, status = store.GetStore().GetUser(project.ID, createdUserID2)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser2.ID, user.Group1UserID) // existing assocation overwriten
+	assert.Equal(t, groupUser2.Group1ID, user.Group1ID)
+
+	// existing company2 with existing user who is already associated with another group should update association with existing user
+	(*groupProperties)[U.SIX_SIGNAL_DOMAIN] = "abc2.com"
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, groupUser2.ID, user.Group1UserID) // existing assocation overwriten
+	assert.Equal(t, groupUser2.Group1ID, user.Group1ID)
+}
+
+func TestSDKDomainsGroup(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// check group not exist
+	_, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL)
+	assert.Equal(t, http.StatusNotFound, status)
+
+	userPropertiesMap := U.PropertiesMap{
+		U.UP_CITY:                      "city1",
+		U.UP_LATEST_PAGE_URL:           "www.abc.com",
+		U.SIX_SIGNAL_NAICS_DESCRIPTION: "abc",
+		U.SIX_SIGNAL_EMPLOYEE_COUNT:    10,
+		U.SIX_SIGNAL_DOMAIN:            "abc.com",
+		U.SIX_SIGNAL_NAME:              "abc",
+	}
+	groupProperties := U.FilterPropertiesByKeysByPrefix(&userPropertiesMap, U.SIX_SIGNAL_PROPERTIES_PREFIX)
+	status = sdk.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	user, status := store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, status)
+	groupUser, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotEmpty(t, user.Group1UserID)
+	assert.NotEmpty(t, user.Group1ID)
+	assert.NotEmpty(t, groupUser.Group1ID)
+	assert.Empty(t, groupUser.Group1UserID)
+	assert.NotEmpty(t, groupUser.Group2ID)
+	assert.NotEmpty(t, groupUser.Group2UserID)
+	assert.Equal(t, "abc.com", user.Group1ID)
+	assert.Equal(t, "abc.com", groupUser.Group1ID)
+	assert.Equal(t, "abc.com", groupUser.Group2ID) // domains group
+	assert.Empty(t, *user.IsGroupUser)
+	assert.True(t, *groupUser.IsGroupUser)
+	domainsGroupUser, status := store.GetStore().GetUser(project.ID, groupUser.Group2UserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotEmpty(t, domainsGroupUser.Group2ID)
+	assert.True(t, *domainsGroupUser.IsGroupUser)
+
+	// domain name will be changed to lower case for domains group and non group user will be re associated
+	userPropertiesMap[U.SIX_SIGNAL_DOMAIN] = "AbcXyx.com"
+	groupProperties = U.FilterPropertiesByKeysByPrefix(&userPropertiesMap, U.SIX_SIGNAL_PROPERTIES_PREFIX)
+	status = sdk.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	groupUser, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "AbcXyx.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abcxyx.com", groupUser.Group2ID)
+	domainsGroupUser, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "AbcXyx.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abcxyx.com", domainsGroupUser.Group2ID)
+	user, status = store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, user.Group1UserID, groupUser.ID)
+	assert.Equal(t, strings.ToLower(user.Group1ID), groupUser.Group1ID)
+}
+
+func TestGetDomainGroupDomainName(t *testing.T) {
+	expectedDomainNames := map[string]string{
+		"www.abc.com":         "abc.com",
+		"www.ABC.com":         "abc.com",
+		"http://www.abc.com":  "abc.com",
+		"http://www.abc.com/": "abc.com",
+		"http://abc.com/":     "abc.com",
+		"https://abc.com/":    "abc.com",
+		"abc.com":             "abc.com",
+		"www.abc.co.in":       "abc.co.in",
+		"www.abc.aero":        "abc.aero",
+		"abc.cargo.aero":      "abc.cargo.aero",
+		"www.abc.cargo.aero":  "abc.cargo.aero",
+		"www.abc.xya":         "www.abc.xya", // if not found return as it is
+	}
+	for rawDomain := range expectedDomainNames {
+		assert.Equal(t, expectedDomainNames[rawDomain], U.GetDomainGroupDomainName(rawDomain))
+	}
+
+}
+
+func TestGetUserGroupID(t *testing.T) {
+	user := &model.User{
+		Group1ID: "group1",
+		Group2ID: "group2",
+		Group3ID: "group3",
+	}
+	groupID, err := model.GetUserGroupID(user, 1)
+	assert.Nil(t, err)
+	assert.Equal(t, "group1", groupID)
+	groupID, err = model.GetUserGroupID(user, 2)
+	assert.Nil(t, err)
+	assert.Equal(t, "group2", groupID)
+	groupID, err = model.GetUserGroupID(user, 3)
+	assert.Nil(t, err)
+	assert.Equal(t, "group3", groupID)
+
+	// group user method check
+	groupID, err = model.GetGroupUserGroupID(user, 1)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", groupID)
 }
 
 // TestClearbitEnrichmentInSDKTrackHanler tests clearbit enrichment in track call.
@@ -3311,4 +3555,131 @@ func TestSDKTrackHandlerForPageURL(t *testing.T) {
 	assert.NotNil(t, userProperties["$initial_page_url"])
 	assert.NotNil(t, userProperties["$latest_page_raw_url"])
 	assert.NotNil(t, userProperties["$latest_page_url"])
+}
+
+func Test_ApplySixSignalFilters(t *testing.T) {
+	type args struct {
+		sixSignalConfig model.SixSignalConfig
+		countryName     string
+		pageUrl         string
+	}
+	//Testing Country Include case
+	t1ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{{Value: "India", Type: "equals"}},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{},
+	}, countryName: "India", pageUrl: "www.abc.com"}
+	t2ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{{Value: "USA", Type: "equals"}},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{},
+	}, countryName: "India", pageUrl: "www.abc.com"}
+	//Testing Country Exclude case
+	t3ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{{Value: "India", Type: "equals"}},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{},
+	}, countryName: "India", pageUrl: "www.abc.com"}
+	t4ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{{Value: "USA", Type: "equals"}},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{},
+	}, countryName: "India", pageUrl: "www.abc.com"}
+
+	//Testing Page Include case
+	t5ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "equals"}},
+		PagesExclude:   []model.SixSignalFilter{}}, countryName: "India", pageUrl: "www.abc.com"}
+	t6ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc-abc.com", Type: "equals"}},
+		PagesExclude:   []model.SixSignalFilter{}}, countryName: "India", pageUrl: "www.abc.com"}
+
+	//Testing Page Exclude case
+	t7ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "equals"}}}, countryName: "India", pageUrl: "www.abc.com"}
+	t8ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{{Value: "www.abc-abc.com", Type: "equals"}}}, countryName: "India", pageUrl: "www.abc.com"}
+
+	//Contains Case
+	//Testing Page Include case
+	t9ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc", Type: "contains"}},
+		PagesExclude:   []model.SixSignalFilter{}}, countryName: "India", pageUrl: "www.abc.com"}
+	t10ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{{Value: "www.axc", Type: "contains"}},
+		PagesExclude:   []model.SixSignalFilter{}}, countryName: "India", pageUrl: "www.abc.com"}
+
+	//Testing Page Exclude case
+	t11ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "contains"}}}, countryName: "India", pageUrl: "www.abc.com"}
+	t12ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{{Value: "www.axc", Type: "contains"}}}, countryName: "India", pageUrl: "www.abc.com"}
+
+	tests := []struct {
+		name    string
+		args    args
+		want    bool
+		wantErr bool
+	}{
+		{"Test1", t1ar, true, false},
+		{"Test2", t2ar, false, false},
+		{"Test3", t3ar, false, false},
+		{"Test4", t4ar, true, false},
+		{"Test5", t5ar, true, false},
+		{"Test6", t6ar, false, false},
+		{"Test7", t7ar, false, false},
+		{"Test8", t8ar, true, false},
+		{"Test9", t9ar, true, false},
+		{"Test10", t10ar, false, false},
+		{"Test11", t11ar, false, false},
+		{"Test12", t12ar, true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := sdk.ApplySixSignalFilters(tt.args.sixSignalConfig, tt.args.countryName, tt.args.pageUrl)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("applySixSignalFilters() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("applySixSignalFilters() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

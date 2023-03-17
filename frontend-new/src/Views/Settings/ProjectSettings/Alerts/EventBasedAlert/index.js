@@ -11,13 +11,15 @@ import {
   notification,
   Checkbox,
   Modal,
-  Popover
+  Popover,
+  Tooltip
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import {
   createEventAlert,
   fetchEventAlerts,
-  deleteEventAlert
+  deleteEventAlert,
+  editEventAlert
 } from 'Reducers/global';
 import ConfirmationModal from 'Components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
@@ -26,7 +28,9 @@ import {
   setGroupBy,
   delGroupBy,
   getUserProperties,
-  resetGroupBy
+  resetGroupBy,
+  getGroupProperties,
+  getEventProperties
 } from 'Reducers/coreQuery/middleware';
 import { getEventsWithProperties, getStateFromFiltersEvent } from '../utils';
 import {
@@ -38,8 +42,7 @@ import SelectChannels from '../SelectChannels';
 import {
   QUERY_TYPE_EVENT,
   INITIAL_SESSION_ANALYTICS_SEQ,
-  QUERY_OPTIONS_DEFAULT_VALUE,
-  AvailableGroups
+  QUERY_OPTIONS_DEFAULT_VALUE
 } from 'Utils/constants';
 import { DefaultDateRangeFormat } from '../../../../CoreQuery/utils';
 import TextArea from 'antd/lib/input/TextArea';
@@ -47,6 +50,7 @@ import EventGroupBlock from '../../../../../components/QueryComposer/EventGroupB
 import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import _ from 'lodash';
+import { fetchGroups } from 'Reducers/coreQuery/services';
 
 const { Option } = Select;
 
@@ -55,6 +59,7 @@ const EventBasedAlert = ({
   fetchEventAlerts,
   deleteEventAlert,
   createEventAlert,
+  editEventAlert,
   agent_details,
   slack,
   fetchSlackChannels,
@@ -74,7 +79,12 @@ const EventBasedAlert = ({
   groupProperties,
   groupPropNames,
   userProperties,
-  userPropNames
+  userPropNames,
+  eventNames,
+  getGroupProperties,
+  getEventProperties,
+  fetchGroups,
+  groupOpts
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -106,6 +116,10 @@ const EventBasedAlert = ({
     date_range: { ...DefaultDateRangeFormat }
   });
 
+  useEffect(() => {
+    fetchGroups(activeProject.id);
+  }, [activeProject]);
+
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
   const [breakdownOptions, setBreakdownOptions] = useState([]);
@@ -113,25 +127,64 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     let DDCategory = [];
+    const { group_name } =
+      groupOpts.find((group) => group?.group_name === queries[0]?.group) || [];
     for (const key of Object.keys(eventProperties)) {
       if (key === queries[0]?.label) {
         DDCategory = _.union(eventProperties[queries[0]?.label], DDCategory);
       }
     }
-    if (AvailableGroups[queries[0]?.group]) {
+    if (group_name) {
       for (const key of Object.keys(groupProperties)) {
-        if (key === AvailableGroups[queries[0]?.group]) {
-          DDCategory = _.union(
-            DDCategory,
-            groupProperties[AvailableGroups[queries[0]?.group]]
-          );
+        if (key === group_name) {
+          DDCategory = _.union(DDCategory, groupProperties[group_name]);
         }
       }
     } else {
       DDCategory = _.union(DDCategory, userProperties);
     }
     setBreakdownOptions(DDCategory);
-  }, [queries, eventProperties, groupProperties, userProperties]);
+    if (
+      alertState?.state === 'edit' &&
+      !(EventPropertyDetails?.name || EventPropertyDetails?.[0])
+    ) {
+      let property = DDCategory.filter(
+        (data) =>
+          data[1] ===
+          viewAlertDetails?.event_alert?.breakdown_properties?.[0]?.pr
+      );
+      setEventPropertyDetails(property?.[0]);
+    }
+  }, [
+    queries,
+    eventProperties,
+    groupProperties,
+    userProperties,
+    viewAlertDetails,
+    alertState
+  ]);
+
+  const matchEventName = (item) => {
+    let findItem =
+      eventPropNames?.[item] || userPropNames?.[item] || groupPropNames?.[item];
+    return findItem ? findItem : item;
+  };
+
+  useEffect(() => {
+    const { group_name } =
+      groupOpts.find(
+        (group) => group?.group_name === viewAlertDetails?.event_alert?.event
+      ) || [];
+    if (viewAlertDetails?.event_alert?.event) {
+      getGroupProperties(activeProject.id, group_name);
+    }
+    if (viewAlertDetails?.event_alert?.event) {
+      getEventProperties(
+        activeProject.id,
+        viewAlertDetails?.event_alert?.event
+      );
+    }
+  }, [viewAlertDetails?.event_alert?.event]);
 
   const confirmRemove = (id) => {
     return deleteEventAlert(activeProject.id, id).then(
@@ -175,8 +228,31 @@ const EventBasedAlert = ({
     }
     if (viewAlertDetails?.event_alert?.slack_channels) {
       setViewSelectedChannels(viewAlertDetails?.event_alert?.slack_channels);
+      if (alertState?.state === 'edit') {
+        setSlackEnabled(viewAlertDetails?.event_alert?.slack);
+        setSaveSelectedChannel(viewAlertDetails?.event_alert?.slack_channels);
+        setSelectedChannel(viewAlertDetails?.event_alert?.slack_channels);
+      }
     }
-  }, [viewAlertDetails]);
+    if (alertState?.state === 'edit') {
+      let queryData = [];
+      queryData.push({
+        alias: '',
+        label: viewAlertDetails?.event_alert?.event,
+        filters: getStateFromFiltersEvent(viewAlertDetails.event_alert.filter),
+        group: ''
+      });
+      setQueries(queryData);
+      setAlertLimit(viewAlertDetails?.event_alert?.alert_limit);
+      setCoolDownTime(viewAlertDetails?.event_alert?.cool_down_time / 3600);
+      setNotRepeat(viewAlertDetails?.event_alert?.repeat_alerts);
+      setNotifications(viewAlertDetails?.event_alert?.notifications);
+      const messageProperty = getGroupByFromState(
+        viewAlertDetails?.event_alert?.message_property
+      );
+      messageProperty.forEach((property) => pushGroupBy(property));
+    }
+  }, [viewAlertDetails, alertState]);
 
   const queryChange = useCallback(
     (newEvent, index, changeType = 'add', flag = null) => {
@@ -271,6 +347,7 @@ const EventBasedAlert = ({
         setGroupState={pushGroupBy}
         closeDropDown={() => setGroupByDDVisible(false)}
         hideText={true}
+        posTop={true}
       />
     ) : null;
 
@@ -297,6 +374,7 @@ const EventBasedAlert = ({
                 setGroupState={pushGroupBy}
                 closeDropDown={() => setGroupByDDVisible(false)}
                 hideText={true}
+                posTop={true}
               />
             </div>
           );
@@ -320,11 +398,7 @@ const EventBasedAlert = ({
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
       groupBy
         .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-        .filter(
-          (gbp) =>
-            gbp.eventName === viewAlertDetails?.event_alert?.event &&
-            gbp.eventIndex === 1
-        )
+        .filter((gbp) => gbp.eventName === viewAlertDetails?.event_alert?.event)
         .forEach((gbp, gbpIndex) => {
           const { groupByIndex, ...orgGbp } = gbp;
           groupByEvents.push(
@@ -433,21 +507,26 @@ const EventBasedAlert = ({
     setLoading(true);
 
     let breakDownProperties = [];
-    if (EventPropertyDetails?.name) {
+    if (
+      queries.length > 0 &&
+      (EventPropertyDetails?.name || EventPropertyDetails?.[1])
+    ) {
       const category = eventProperties[queries[0]?.label].filter(
-        (prop) => prop[1] === EventPropertyDetails?.name
+        (prop) =>
+          prop[1] === (EventPropertyDetails?.name || EventPropertyDetails?.[1])
       );
       breakDownProperties = [
         {
           eventName: queries?.[0].label,
-          property: EventPropertyDetails?.name,
-          prop_type: EventPropertyDetails?.data_type,
+          property: EventPropertyDetails?.name || EventPropertyDetails?.[1],
+          prop_type:
+            EventPropertyDetails?.data_type || EventPropertyDetails?.[2],
           prop_category: category.length > 0 ? 'event' : 'user'
         }
       ];
     }
 
-    if (queries.length > 0 && saveSelectedChannel.length > 0) {
+    if (queries.length > 0 && slackEnabled && saveSelectedChannel.length > 0) {
       let payload = {
         title: data?.alert_name,
         event: queries[0]?.label,
@@ -474,31 +553,65 @@ const EventBasedAlert = ({
         slack_channels: saveSelectedChannel
       };
 
-      createEventAlert(activeProject.id, payload)
-        .then((res) => {
-          setLoading(false);
-          fetchEventAlerts(activeProject.id);
-          notification.success({
-            message: 'Alerts Saved',
-            description: 'New Alerts is created and saved successfully.'
+      if (alertState?.state === 'edit') {
+        editEventAlert(activeProject.id, payload, viewAlertDetails?.id)
+          .then((res) => {
+            setLoading(false);
+            fetchEventAlerts(activeProject.id);
+            notification.success({
+              message: 'Alerts Saved',
+              description: 'Alerts is edited and saved successfully.'
+            });
+            onReset();
+          })
+          .catch((err) => {
+            setLoading(false);
+            notification.error({
+              message: 'Error',
+              description: err?.data?.error
+            });
           });
-          onReset();
-        })
-        .catch((err) => {
-          setLoading(false);
-          notification.error({
-            message: 'Error',
-            description: err?.data?.error
+      } else {
+        createEventAlert(activeProject.id, payload)
+          .then((res) => {
+            setLoading(false);
+            fetchEventAlerts(activeProject.id);
+            notification.success({
+              message: 'Alerts Saved',
+              description: 'New Alerts is created and saved successfully.'
+            });
+            onReset();
+          })
+          .catch((err) => {
+            setLoading(false);
+            notification.error({
+              message: 'Error',
+              description: err?.data?.error
+            });
           });
-          console.log('create alerts error->', err);
-        });
+      }
     } else {
       setLoading(false);
-      notification.error({
-        message: 'Error',
-        description:
-          'Please select KPI and atleast one delivery option to send alert.'
-      });
+      if (queries.length === 0) {
+        notification.error({
+          message: 'Error',
+          description: 'Please select Event to send alert.'
+        });
+      }
+      if (!slackEnabled) {
+        notification.error({
+          message: 'Error',
+          description:
+            'Please select atleast one delivery option to send alert.'
+        });
+      }
+      if (saveSelectedChannel.length === 0) {
+        notification.error({
+          message: 'Error',
+          description:
+            'Please select atleast one delivery option to send alert.'
+        });
+      }
     }
   };
 
@@ -558,6 +671,25 @@ const EventBasedAlert = ({
   const handleCancel = () => {
     setSelectedChannel(saveSelectedChannel);
     setShowSelectChannelsModal(false);
+  };
+
+  const propOption = (item) => {
+    return (
+      <Tooltip title={item} placement={'right'}>
+        <div style={{ width: '210px' }}>
+          <div
+            style={{
+              maxWidth: '200px',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {item}
+          </div>
+        </div>{' '}
+      </Tooltip>
+    );
   };
 
   const renderEventForm = () => {
@@ -624,7 +756,20 @@ const EventBasedAlert = ({
               <Form.Item
                 name='alert_name'
                 className={'m-0'}
-                rules={[{ required: true, message: 'Please enter alert name' }]}
+                rules={[
+                  { required: true, message: 'Please enter alert name' },
+                  {
+                    validator: (_, value) => {
+                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
+                      if (!value || regex.test(value)) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
+                      );
+                    }
+                  }
+                ]}
               >
                 <Input
                   className={'fa-input'}
@@ -655,13 +800,13 @@ const EventBasedAlert = ({
             </Col>
           </Row>
           <Row className={'mt-4'}>
-            <Col span={10} className={'m-0'}>
+            <Col span={16} className={'m-0'}>
               <Form.Item name='repeat_alerts' className={'m-0'}>
                 <Checkbox
                   defaultChecked={notRepeat}
                   onChange={(e) => setNotRepeat(e.target.checked)}
                 >
-                  Do not repeat an alert more than once
+                  Do not repeat alerts more than once within
                 </Checkbox>
                 <div className='inline -ml-2'>
                   <Select
@@ -706,7 +851,7 @@ const EventBasedAlert = ({
                     style={{
                       width: 200
                     }}
-                    dropdownMatchSelectWidth={false}
+                    // dropdownMatchSelectWidth={false}
                     disabled={!queries[0]?.label}
                     onChange={(value, details) => {
                       setEventPropertyDetails(details);
@@ -714,9 +859,8 @@ const EventBasedAlert = ({
                     placeholder='Select Property'
                     showSearch
                     filterOption={(input, option) =>
-                      option.children
-                        .toLowerCase()
-                        .indexOf(input.toLowerCase()) >= 0
+                      option.value.toLowerCase().indexOf(input.toLowerCase()) >=
+                      0
                     }
                   >
                     {breakdownOptions?.map((item) => {
@@ -727,7 +871,7 @@ const EventBasedAlert = ({
                           name={item[1]}
                           data_type={item[2]}
                         >
-                          {item[0]}
+                          {propOption(item[0])}
                         </Option>
                       );
                     })}
@@ -738,7 +882,7 @@ const EventBasedAlert = ({
           </Row>
 
           <Row className={'mt-2'}>
-            <Col span={10} className={'m-0'}>
+            <Col span={16} className={'m-0'}>
               <Form.Item name='notifications' className={'m-0'}>
                 <Checkbox
                   defaultChecked={notifications}
@@ -832,7 +976,9 @@ const EventBasedAlert = ({
                       color={'grey-2'}
                       extraClass={'m-0 mt-2 ml-2'}
                     >
-                      Selected Channels
+                      {saveSelectedChannel.length > 1
+                        ? 'Select Channels'
+                        : 'Select Channel'}
                     </Text>
                     {saveSelectedChannel.map((channel, index) => (
                       <div key={index}>
@@ -856,7 +1002,9 @@ const EventBasedAlert = ({
                       type={'link'}
                       onClick={() => setShowSelectChannelsModal(true)}
                     >
-                      Select Channels
+                      {saveSelectedChannel.length > 1
+                        ? 'Select Channels'
+                        : 'Select Channel'}
                     </Button>
                   </Col>
                 </Row>
@@ -867,7 +1015,9 @@ const EventBasedAlert = ({
                       type={'link'}
                       onClick={() => setShowSelectChannelsModal(true)}
                     >
-                      Manage Channels
+                      {saveSelectedChannel.length > 1
+                        ? 'Manage Channels'
+                        : 'Manage Channel'}
                     </Button>
                   </Col>
                 </Row>
@@ -1005,6 +1155,495 @@ const EventBasedAlert = ({
                     </div>
                   </Popover>
                 </div>
+                <div className='fa--query_block_section borderless no-padding mt-0'>
+                  {groupByItems()}
+                </div>
+                <Button
+                  type='text'
+                  style={{ color: '#8692A3' }}
+                  icon={<SVG name='plus' color='#8692A3' />}
+                  onClick={() => addGroupBy()}
+                >
+                  Add a Property
+                </Button>
+              </Col>
+            </Row>
+          )}
+        </Form>
+      </>
+    );
+  };
+
+  const renderEventEdit = () => {
+    return (
+      <>
+        <Form
+          form={form}
+          onFinish={onFinish}
+          className={'w-full'}
+          onChange={onChange}
+          loading={loading}
+        >
+          <Row>
+            <Col span={12}>
+              <Text
+                type={'title'}
+                level={3}
+                weight={'bold'}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Edit alert
+              </Text>
+            </Col>
+            <Col span={12}>
+              <div className={'flex justify-end'}>
+                <Button
+                  size={'large'}
+                  disabled={loading}
+                  onClick={() => {
+                    onReset();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size={'large'}
+                  disabled={loading}
+                  loading={loading}
+                  className={'ml-2'}
+                  type={'primary'}
+                  htmlType='submit'
+                >
+                  Save
+                </Button>
+              </div>
+            </Col>
+          </Row>
+          <Row className={'mt-6'}>
+            <Col span={18}>
+              <Text
+                type={'title'}
+                level={7}
+                weight={'bold'}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Alert name
+              </Text>
+            </Col>
+          </Row>
+          <Row className={'mt-2'}>
+            <Col span={8} className={'m-0'}>
+              <Form.Item
+                name='alert_name'
+                className={'m-0'}
+                initialValue={viewAlertDetails?.title}
+                rules={[
+                  { required: true, message: 'Please enter alert name' },
+                  {
+                    validator: (_, value) => {
+                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
+                      if (!value || regex.test(value)) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
+                      );
+                    }
+                  }
+                ]}
+              >
+                <Input
+                  className={'fa-input'}
+                  placeholder={'Enter name'}
+                  ref={inputComponentRef}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row className={'mt-4'}>
+            <Col span={18}>
+              <Text
+                type={'title'}
+                level={7}
+                weight={'bold'}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Target Event
+              </Text>
+            </Col>
+          </Row>
+          <Row className={'m-0'}>
+            <Col span={24}>
+              <Form.Item name='event_name' className={'m-0'}>
+                {queryList()}
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row className={'mt-4'}>
+            <Col span={16} className={'m-0'}>
+              <Form.Item name='repeat_alerts' className={'m-0'}>
+                <Checkbox
+                  checked={notRepeat}
+                  onChange={(e) => setNotRepeat(e.target.checked)}
+                >
+                  Do not repeat alerts more than once within
+                </Checkbox>
+                <div className='inline -ml-2'>
+                  <Select
+                    bordered={false}
+                    size='small'
+                    className='m-0 inline'
+                    style={{
+                      width: 110
+                    }}
+                    value={coolDownTime}
+                    onChange={handleCoolDownTimeChange}
+                  >
+                    <Option value={0.5}>0.5 hours</Option>
+                    <Option value={1}>1 hours</Option>
+                    <Option value={2}>2 hours</Option>
+                    <Option value={4}>4 hours</Option>
+                    <Option value={6}>6 hours</Option>
+                    <Option value={8}>8 hours</Option>
+                    <Option value={12}>12 hours</Option>
+                    <Option value={24}>24 hours</Option>
+                  </Select>
+                </div>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row className={'m-0'}>
+            <Col span={16}>
+              <Form.Item name='event_property' className='m-0 inline'>
+                <Text
+                  type={'title'}
+                  level={7}
+                  color={'grey-2'}
+                  extraClass={'m-0 inline ml-10'}
+                >
+                  for the same value of
+                </Text>
+
+                <div className='inline ml-2'>
+                  <Select
+                    className='inline fa-select'
+                    style={{
+                      width: 200
+                    }}
+                    dropdownMatchSelectWidth={false}
+                    disabled={!queries[0]?.label}
+                    value={EventPropertyDetails}
+                    onChange={(value, details) => {
+                      setEventPropertyDetails(details);
+                    }}
+                    placeholder='Select Property'
+                    showSearch
+                    filterOption={(input, option) =>
+                      option.children
+                        .toLowerCase()
+                        .indexOf(input.toLowerCase()) >= 0
+                    }
+                  >
+                    {breakdownOptions?.map((item) => {
+                      return (
+                        <Option
+                          key={item[1]}
+                          value={item[0]}
+                          name={item[1]}
+                          data_type={item[2]}
+                        >
+                          {item[0]}
+                        </Option>
+                      );
+                    })}
+                  </Select>
+                </div>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row className={'mt-2'}>
+            <Col span={16} className={'m-0'}>
+              <Form.Item name='notifications' className={'m-0'}>
+                <Checkbox
+                  checked={notifications}
+                  onChange={(e) => setNotifications(e.target.checked)}
+                >
+                  Set limit for alerts per day to
+                </Checkbox>
+                <div className='inline -ml-2'>
+                  <Select
+                    bordered={false}
+                    size='small'
+                    className='m-0 inline'
+                    style={{
+                      width: 100
+                    }}
+                    value={alertLimit}
+                    onChange={handleAlertLimit}
+                  >
+                    <Option value={5}>5 alerts</Option>
+                    <Option value={10}>10 alerts</Option>
+                    <Option value={15}>15 alerts</Option>
+                    <Option value={20}>20 alerts</Option>
+                  </Select>
+                </div>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row className={'mt-2'}>
+            <Col span={24}>
+              <div className={'border-top--thin-2 pt-2 mt-2'} />
+              <Text
+                type={'title'}
+                level={7}
+                weight={'bold'}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Destinations
+              </Text>
+            </Col>
+          </Row>
+
+          <Row className={'mt-2 ml-2'}>
+            <Col className={'m-0'}>
+              <Form.Item name='slack_enabled' className={'m-0'}>
+                <Checkbox
+                  checked={slackEnabled}
+                  onChange={(e) => setSlackEnabled(e.target.checked)}
+                >
+                  Slack
+                </Checkbox>
+              </Form.Item>
+            </Col>
+          </Row>
+          {slackEnabled && !projectSettings?.int_slack && (
+            <>
+              <Row className={'mt-2 ml-2'}>
+                <Col span={10} className={'m-0'}>
+                  <Text
+                    type={'title'}
+                    level={6}
+                    color={'grey'}
+                    extraClass={'m-0'}
+                  >
+                    Slack is not integrated, Do you want to integrate with your
+                    slack account now?
+                  </Text>
+                </Col>
+              </Row>
+              <Row className={'mt-2 ml-2'}>
+                <Col span={10} className={'m-0'}>
+                  <Button onClick={onConnectSlack}>
+                    <SVG name={'Slack'} />
+                    Connect to slack
+                  </Button>
+                </Col>
+              </Row>
+            </>
+          )}
+          {slackEnabled && projectSettings?.int_slack && (
+            <>
+              {saveSelectedChannel.length > 0 && (
+                <Row
+                  className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
+                >
+                  <Col className={'m-0'}>
+                    <Text
+                      type={'title'}
+                      level={6}
+                      color={'grey-2'}
+                      extraClass={'m-0 mt-2 ml-2'}
+                    >
+                      {saveSelectedChannel.length > 1
+                        ? 'Select Channels'
+                        : 'Select Channel'}
+                    </Text>
+                    {saveSelectedChannel.map((channel, index) => (
+                      <div key={index}>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          color={'grey'}
+                          extraClass={'m-0 ml-2 my-1'}
+                        >
+                          {'#' + channel.name}
+                        </Text>
+                      </div>
+                    ))}
+                  </Col>
+                </Row>
+              )}
+              {!saveSelectedChannel.length > 0 ? (
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Button
+                      type={'link'}
+                      onClick={() => setShowSelectChannelsModal(true)}
+                    >
+                      {saveSelectedChannel.length > 1
+                        ? 'Select Channels'
+                        : 'Select Channel'}
+                    </Button>
+                  </Col>
+                </Row>
+              ) : (
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Button
+                      type={'link'}
+                      onClick={() => setShowSelectChannelsModal(true)}
+                    >
+                      {saveSelectedChannel.length > 1
+                        ? 'Manage Channels'
+                        : 'Manage Channel'}
+                    </Button>
+                  </Col>
+                </Row>
+              )}
+            </>
+          )}
+
+          {/* <Row className={'mt-2 ml-2'}>
+            <Col className={'m-0'}>
+              <Form.Item name='webhook_enabled' className={'m-0'}>
+                <Checkbox
+                  defaultChecked={webhookEnabled}
+                  onChange={(e) => setWebhookEnabled(e.target.checked)}
+                >
+                  Webhook
+                </Checkbox>
+              </Form.Item>
+            </Col>
+          </Row> */}
+          {/* {webhookEnabled && (
+            <>
+              <Row className={'mt-2 ml-2'}>
+                <Col span={12} className={'m-0'}>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    color={'grey'}
+                    extraClass={'m-0'}
+                  >
+                    Share an endpoint to receive alert notifications and trigger
+                    more flows
+                  </Text>
+                </Col>
+              </Row>
+              <Row className={'mt-2 ml-2'}>
+                <Col span={7}>
+                  <Input className='fa-input' placeholder='Webhook URL'></Input>
+                </Col>
+                <Col span={6} className={'m-0 ml-2'}>
+                  <Button type='primary'>Confirm</Button>
+                </Col>
+              </Row>
+            </>
+          )} */}
+
+          <Row className={'mt-4'}>
+            <Col span={18}>
+              <Text
+                type={'title'}
+                level={7}
+                weight={'bold'}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Configure your payload
+              </Text>
+            </Col>
+          </Row>
+          <Row className={'mt-4'}>
+            <Col span={8} className={'ml-4'}>
+              <div>
+                <Text type={'title'} level={7} extraClass={'m-0 inline'}>
+                  Add a message
+                </Text>
+                <Popover
+                  placement='rightTop'
+                  overlayInnerStyle={{ width: '340px' }}
+                  title={null}
+                  content={
+                    <div className='m-0 m-2'>
+                      <p className='m-0 text-gray-900 text-base font-bold'>
+                        Your notification inside slack
+                      </p>
+                      <p className='m-0 mb-2 text-gray-700'>
+                        As events across your marketing activities happen, get
+                        alerts that motivate actions right inside Slack
+                      </p>
+                      <img
+                        className='m-0'
+                        src='../../../../../assets/icons/Slackmock.svg'
+                      ></img>
+                    </div>
+                  }
+                >
+                  <div className='inline ml-1'>
+                    <SVG
+                      name='InfoCircle'
+                      size={18}
+                      color='#8692A3'
+                      extraClass={'inline'}
+                    />
+                  </div>
+                </Popover>
+              </div>
+              <Form.Item
+                name='message'
+                initialValue={viewAlertDetails?.event_alert?.message}
+                className={'m-0'}
+              >
+                <TextArea
+                  className={'fa-input'}
+                  placeholder={'Enter Message (max 300 characters)'}
+                  maxLength={300}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {queries.length > 0 && (
+            <Row className={'mt-4'}>
+              <Col span={12} className={'ml-4'}>
+                <div>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    extraClass={'m-0 inline mb-1 mr-1'}
+                  >
+                    Attach properties for your payload
+                  </Text>
+                  <Popover
+                    placement='rightTop'
+                    overlayInnerStyle={{ width: '300px' }}
+                    title={null}
+                    content={
+                      <p className='m-0 m-2 text-gray-700'>
+                        In Slack, you’ll get these values on your channel. With
+                        a webhook, use these properties to power your own
+                        workflows.
+                      </p>
+                    }
+                  >
+                    <div className='inline'>
+                      <SVG
+                        name='InfoCircle'
+                        size={18}
+                        color='#8692A3'
+                        extraClass={'inline'}
+                      />
+                    </div>
+                  </Popover>
+                </div>
                 <div>{groupByItems()}</div>
                 <Button
                   type='text'
@@ -1085,7 +1724,9 @@ const EventBasedAlert = ({
         <Row className={'m-0 mt-2'}>
           <Col>
             <Button className={`mr-2`} type='link' disabled={true}>
-              {viewAlertDetails?.event_alert?.event}
+              {eventNames[viewAlertDetails?.event_alert?.event]
+                ? eventNames[viewAlertDetails?.event_alert?.event]
+                : viewAlertDetails?.event_alert?.event}
             </Button>
           </Col>
         </Row>
@@ -1106,7 +1747,7 @@ const EventBasedAlert = ({
           </Row>
         )}
         <Row className={'mt-2'}>
-          <Col span={12}>
+          <Col span={16}>
             <Checkbox
               className='inline'
               disabled={true}
@@ -1129,43 +1770,46 @@ const EventBasedAlert = ({
             </div>
           </Col>
         </Row>
-        <Row className={'m-0'}>
-          <Col span={16}>
-            <Form.Item name='event_property' className='m-0 inline'>
-              <Text
-                type={'title'}
-                level={7}
-                color={'grey-2'}
-                extraClass={'m-0 inline ml-10'}
+        <Row className={'m-0 my-2'}>
+          <Col span={20}>
+            <Text
+              type={'title'}
+              level={7}
+              color={'grey-2'}
+              extraClass={'inline m-0 ml-10'}
+            >
+              for the same value of
+            </Text>
+            <div className='inline ml-2'>
+              <Select
+                disabled={true}
+                style={{
+                  width: 200
+                }}
+                showArrow={false}
+                className={'inline fa-select'}
+                value={
+                  viewAlertDetails?.event_alert?.breakdown_properties?.[0]?.pr
+                }
               >
-                for the same value of
-              </Text>
-              {viewAlertDetails?.event_alert?.breakdown_properties?.length >
-                0 && (
-                <div className='inline ml-2'>
-                  {viewGroupByItems(
-                    viewAlertDetails?.event_alert?.breakdown_properties &&
-                      viewAlertDetails?.event_alert?.breakdown_properties
-                        .length &&
-                      viewAlertDetails?.event_alert?.breakdown_properties[0] &&
-                      getGroupByFromState(
-                        viewAlertDetails?.event_alert?.breakdown_properties
-                          .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-                          .filter(
-                            (gbp) =>
-                              gbp.ena ===
-                                viewAlertDetails?.event_alert?.event &&
-                              gbp.eni === 1
-                          )
-                      )
+                <Option
+                  value={
+                    viewAlertDetails?.event_alert?.breakdown_properties?.[0]?.pr
+                  }
+                >
+                  {propOption(
+                    matchEventName(
+                      viewAlertDetails?.event_alert?.breakdown_properties?.[0]
+                        ?.pr
+                    )
                   )}
-                </div>
-              )}
-            </Form.Item>
+                </Option>
+              </Select>
+            </div>
           </Col>
         </Row>
         <Row className={'mt-2'}>
-          <Col span={12}>
+          <Col span={16}>
             <Checkbox
               className='inline'
               disabled={true}
@@ -1221,7 +1865,9 @@ const EventBasedAlert = ({
                   color={'grey-2'}
                   extraClass={'m-0 mt-2 ml-2'}
                 >
-                  Selected Channels
+                  {viewSelectedChannels.length > 1
+                    ? 'Selected Channels'
+                    : 'Selected Channel'}
                 </Text>
                 {viewSelectedChannels.map((channel, index) => (
                   <div key={index}>
@@ -1271,7 +1917,7 @@ const EventBasedAlert = ({
               <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>
                 Attach properties for your payload
               </Text>
-              <div>
+              <div className='fa--query_block_section borderless no-padding mt-0'>
                 {viewGroupByItems(
                   viewAlertDetails?.event_alert?.message_property &&
                     viewAlertDetails?.event_alert?.message_property.length &&
@@ -1322,6 +1968,8 @@ const EventBasedAlert = ({
             {alertState.state == 'add' && renderEventForm()}
 
             {alertState.state == 'view' && renderEventView()}
+
+            {alertState.state == 'edit' && renderEventEdit()}
 
             <ConfirmationModal
               visible={deleteWidgetModal ? true : false}
@@ -1396,18 +2044,24 @@ const mapStateToProps = (state) => ({
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
   userProperties: state.coreQuery.userProperties,
-  userPropNames: state.coreQuery.userPropNames
+  userPropNames: state.coreQuery.userPropNames,
+  eventNames: state.coreQuery.eventNames,
+  groupOpts: state.groups.data
 });
 
 export default connect(mapStateToProps, {
   fetchEventAlerts,
   deleteEventAlert,
   createEventAlert,
+  editEventAlert,
   fetchSlackChannels,
   fetchProjectSettingsV1,
   enableSlackIntegration,
   setGroupBy,
   delGroupBy,
   getUserProperties,
-  resetGroupBy
+  resetGroupBy,
+  getGroupProperties,
+  getEventProperties,
+  fetchGroups
 })(EventBasedAlert);

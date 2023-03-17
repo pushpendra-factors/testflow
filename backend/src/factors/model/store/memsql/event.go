@@ -46,7 +46,7 @@ func (store *MemSQL) GetHubspotFormEvents(projectID int64, userId string, timest
 
 	eventName, status := store.GetEventName(U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION, projectID)
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-		log.Error("Failed to get event name")
+		log.WithField("err_code", status).Error("Failed to get event name")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -439,23 +439,21 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		&model.CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
 
 	t1 := time.Now()
-	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
-		//log.Info("EventTriggerAlerts match function trigger point.")
-		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties, nil, false)
-		if ErrCode == http.StatusFound && alerts != nil {
-			// log.WithFields(log.Fields{"project_id": event.ProjectId,
-			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
+	alerts, eventName, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, &event.Properties, event.UserProperties, nil, false)
+	if ErrCode == http.StatusFound && alerts != nil {
+		// log.WithFields(log.Fields{"project_id": event.ProjectId,
+		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
 
-			for _, alert := range *alerts {
-				success := store.CacheEventTriggerAlert(&alert, event)
-				if !success {
-					log.WithFields(log.Fields{"project_id": event.ProjectId,
-						"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
-				}
+		for _, alert := range *alerts {
+			success := store.CacheEventTriggerAlert(&alert, event, eventName)
+			if !success {
+				log.WithFields(log.Fields{"project_id": event.ProjectId,
+					"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
 			}
 		}
-		log.Info("Control past EventTrigger block: ", time.Since(t1))
 	}
+	log.Info("Control past EventTrigger block: ", time.Since(t1))
+	
 	return event, http.StatusCreated
 }
 
@@ -832,19 +830,17 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 		store.addEventDetailsToCache(projectId, &model.Event{EventNameId: event.EventNameId, Properties: *updatedPropertiesOnlyJsonBlob}, true)
 	}
 
-	if C.IsEventTriggerEnabled() && C.IsProjectIDEventTriggerEnabledProjectID(event.ProjectId) {
-		//log.Info("EventTriggerAlerts match function trigger point.")
-		alerts, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
-		if ErrCode == http.StatusFound && alerts != nil {
-			// log.WithFields(log.Fields{"project_id": event.ProjectId,
-			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
+    //log.Info("EventTriggerAlerts match function trigger point.")
+	alerts, eventName, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
+	if ErrCode == http.StatusFound && alerts != nil {
+		// log.WithFields(log.Fields{"project_id": event.ProjectId,
+		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
 
-			for _, alert := range *alerts {
-				success := store.CacheEventTriggerAlert(&alert, event)
-				if !success {
-					log.WithFields(log.Fields{"project_id": event.ProjectId,
-						"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
-				}
+		for _, alert := range *alerts {
+			success := store.CacheEventTriggerAlert(&alert, event, eventName)
+			if !success {
+				log.WithFields(log.Fields{"project_id": event.ProjectId,
+					"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
 			}
 		}
 	}
@@ -1191,6 +1187,40 @@ func (store *MemSQL) associateSessionToEventsInBatch(projectId int64, userID str
 	return http.StatusAccepted
 }
 
+func (store *MemSQL) DissociateEventsFromSession(projectID int64, events []model.Event, sessionID string) int {
+	logFields := log.Fields{
+		"project_id":   projectID,
+		"total_events": len(events),
+		"session_id":   sessionID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || len(events) == 0 || sessionID == "" {
+		logCtx.Error("Invalid parameter.")
+		return http.StatusBadRequest
+	}
+
+	startTimestamp, endTimestamp := events[0].Timestamp, events[0].Timestamp
+	eventIDs := make([]string, 0)
+	for i := range events {
+		startTimestamp = U.Min(startTimestamp, events[i].Timestamp)
+		endTimestamp = U.Max(endTimestamp, events[i].Timestamp)
+		eventIDs = append(eventIDs, events[i].ID)
+	}
+
+	updateFields := map[string]interface{}{"session_id": nil}
+	db := C.GetServices().Db
+	if err := db.Model(&model.Event{}).Where("project_id = ? AND id in ( ? ) and session_id = ? AND timestamp BETWEEN ? AND ? ",
+		projectID, eventIDs, sessionID, startTimestamp, endTimestamp).Update(updateFields).Error; err != nil {
+		logCtx.Error("Failed to DissociateEventFromSession.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+
+}
+
 // AddSessionForUser - Wrapper for addSessionForUser to handle creating
 // new session for last event when new session conditions met.
 func (store *MemSQL) AddSessionForUser(projectId int64, userId string, userEvents []model.Event,
@@ -1286,7 +1316,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 	project, errCode := store.GetProject(projectId)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get project on addSessionForUser")
+		logCtx.WithField("err_code", errCode).Error("Failed to get project on addSessionForUser")
 		return 0, 0, false, 0, false, http.StatusNotModified
 	}
 
@@ -1428,7 +1458,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 				if !isEmptyUserProperties {
 					userPropertiesDecoded, err := U.DecodePostgresJsonb(firstEvent.UserProperties)
 					if err != nil {
-						logCtx.WithField("user_properties", firstEvent.UserProperties).
+						logCtx.WithError(err).WithField("user_properties", firstEvent.UserProperties).
 							Error("Failed to decode user properties of first event on session.")
 						return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
 							isLastEventToBeProcessed, http.StatusInternalServerError
@@ -1441,7 +1471,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 				firstEventPropertiesDecoded, err := U.DecodePostgresJsonb(&firstEvent.Properties)
 				if err != nil {
-					logCtx.Error("Failed to decode event properties of first event on session.")
+					logCtx.WithError(err).Error("Failed to decode event properties of first event on session.")
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
 						isLastEventToBeProcessed, http.StatusInternalServerError
 				}
@@ -1449,7 +1479,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 				sessionEventCount, errCode := store.GetEventCountOfUserByEventName(projectId, userId, sessionEventNameId)
 				if errCode == http.StatusInternalServerError {
-					logCtx.Error("Failed to get session event count for user.")
+					logCtx.WithField("err_code", errCode).Error("Failed to get session event count for user.")
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 						0, isLastEventToBeProcessed, errCode
 				}
@@ -1485,7 +1515,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 				})
 
 				if errCode != http.StatusCreated {
-					logCtx.Error("Failed to create session event.")
+					logCtx.WithField("err_code", errCode).Error("Failed to create session event.")
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 						0, isLastEventToBeProcessed, errCode
 				}
@@ -1501,14 +1531,14 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 			errCode := store.associateSessionToEventsInBatch(projectId, userId,
 				eventsOfSession, sessionEvent.ID, 100, sessionEventNameId)
 			if errCode == http.StatusInternalServerError {
-				logCtx.Error("Failed to associate session to events.")
+				logCtx.WithField("err_code", errCode).Error("Failed to associate session to events.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 					0, isLastEventToBeProcessed, errCode
 			}
 
 			lastEventProperties, err := U.DecodePostgresJsonb(&events[sessionEndIndex].Properties)
 			if err != nil {
-				logCtx.Error("Failed to decode properties of last event of session.")
+				logCtx.WithError(err).Error("Failed to decode properties of last event of session.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
 					isLastEventToBeProcessed, http.StatusInternalServerError
 			}
@@ -1534,7 +1564,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 					onlyThisSessionPageSpentTime, errCode = getPageCountAndTimeSpentForContinuedSession(
 					projectId, userId, sessionEvent, events[sessionStartIndex:sessionEndIndex+1])
 				if errCode == http.StatusInternalServerError {
-					logCtx.Error("Failed to get page count and spent time of session on add session.")
+					logCtx.WithField("err_code", errCode).Error("Failed to get page count and spent time of session on add session.")
 				}
 			} else {
 				// events from sessionStartIndex till i.
@@ -1551,7 +1581,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 			}
 			sessionEventProps, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
 			if err != nil {
-				logCtx.Error("Failed to decode session event properties for adding channel property on add session")
+				logCtx.WithError(err).Error("Failed to decode session event properties for adding channel property on add session")
 			} else {
 				channel, errString := model.GetChannelGroup(*project, *sessionEventProps)
 				if errString != "" {
@@ -1598,7 +1628,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 					sessionEvent.UserId, &sessionPropertiesMap, sessionEvent.Timestamp+1,
 					newSessionEventUserPropertiesJsonb)
 				if errCode == http.StatusInternalServerError {
-					logCtx.Error("Failed updating session event properties on add session.")
+					logCtx.WithField("err_code", errCode).Error("Failed updating session event properties on add session.")
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 						0, isLastEventToBeProcessed, errCode
 				}
@@ -1988,6 +2018,44 @@ func (store *MemSQL) GetEventsByEventNameId(projectId int64, eventNameId string,
 	return events, http.StatusFound
 }
 
+func (store *MemSQL) GetEventsByEventNameIDANDTimeRange(projectID int64, eventNameID string,
+	startTimestamp int64, endTimestamp int64) ([]model.Event, int) {
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"event_name_id":   eventNameID,
+		"start_timestamp": startTimestamp,
+		"end_timestamp":   endTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || eventNameID == "" || startTimestamp == 0 || endTimestamp == 0 {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	var events []model.Event
+
+	db := C.GetServices().Db
+	if err := db.Order("timestamp").Where(
+		"project_id = ? AND event_name_id = ? AND timestamp BETWEEN ? AND ? ",
+		projectID, eventNameID, startTimestamp, endTimestamp).Find(&events).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get events by event name id in time range.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return events, http.StatusFound
+}
+
 // GetEventsWithoutPropertiesAndWithPropertiesByName - Use for getting properties with and without values
 // and use it for updating the events which doesn't have the values. User for fixing data for YourStory.
 func (store *MemSQL) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID int64, from,
@@ -2134,7 +2202,7 @@ func (store *MemSQL) GetUnusedSessionIDsForJob(projectID int64, startTimestamp, 
 
 	sessionEventName, errCode := store.GetSessionEventName(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get session event_name.")
+		logCtx.WithField("err_code", errCode).Error("Failed to get session event_name.")
 		return unusedSessions, http.StatusInternalServerError
 	}
 
@@ -2500,4 +2568,58 @@ func (store *MemSQL) GetUserIdFromEventId(projectID int64, id string, userId str
 		return "", "", http.StatusInternalServerError
 	}
 	return event.ID, event.UserId, http.StatusFound
+}
+
+func (store *MemSQL) GetEventsBySessionEvent(projectID int64, sessionEventID, userID string) ([]model.Event, int) {
+	logFields := log.Fields{
+		"project_id":       projectID,
+		"session_event_id": sessionEventID,
+		"user_id":          userID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || sessionEventID == "" || userID == "" {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var events []model.Event
+	if err := db.Where("project_id = ? AND session_id = ? AND user_id = ? ", projectID, sessionEventID, userID).Find(&events).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Getting user_id failed on GetUserIdFromEventById")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return nil, http.StatusNotFound
+	}
+	return events, http.StatusFound
+}
+
+func (store *MemSQL) DeleteSessionsAndAssociationForTimerange(projectID, startTimestamp, endTimestamp int64) (int64, int64, int) {
+
+	logCtx := log.WithField("project_id", projectID).WithField("start_timestamp", startTimestamp).WithField("end_timestamp", endTimestamp)
+
+	db := C.GetServices().Db
+	delSessionsSQL := "DELETE FROM events WHERE project_id=? AND event_name_id=(SELECT id FROM event_names WHERE project_id=? AND name=? LIMIT 1) AND timestamp BETWEEN ? AND ?"
+	delSessionExec := db.Exec(delSessionsSQL, projectID, projectID, U.EVENT_NAME_SESSION, startTimestamp, endTimestamp)
+	if delSessionExec.Error != nil {
+		logCtx.WithError(delSessionExec.Error).Error("Failed to delete session events.")
+		return 0, 0, http.StatusInternalServerError
+	}
+
+	removeAssociationsSQL := "UPDATE events SET session_id=NULL WHERE project_id=? AND timestamp between ? AND ? AND session_id IS NOT NULL"
+	removeAssociationsExec := db.Raw(removeAssociationsSQL, projectID, startTimestamp, endTimestamp)
+	if removeAssociationsExec.Error != nil {
+		logCtx.WithError(removeAssociationsExec.Error).Error("Failed to delete session associations.")
+		return delSessionExec.RowsAffected, 0, http.StatusInternalServerError
+	}
+
+	return delSessionExec.RowsAffected, removeAssociationsExec.RowsAffected, http.StatusAccepted
 }

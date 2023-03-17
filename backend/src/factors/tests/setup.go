@@ -256,3 +256,46 @@ func SetupTestData() (*testData, int) {
 		BillingAccount: billingAccount,
 	}, http.StatusCreated
 }
+
+func SetupAgentReturnWithSlackIntegrationDAO(email, phone string, projectID int64) (*model.Agent, int) {
+
+	if email == "" {
+		email = getRandomEmail()
+	}
+	slack := model.SlackAccessTokens{
+		BotAccessToken: "random",
+		UserAccessToken: "random",
+	}
+	slackAuth := model.SlackAuthTokens{
+		projectID: slack,
+	}
+	slackJson, err := U.EncodeStructTypeToPostgresJsonb(&slackAuth)
+	if err != nil {
+		return nil, http.StatusInternalServerError
+	}
+	createAgentParams := &model.CreateAgentParams{Agent: &model.Agent{FirstName: getRandomName(),
+		LastName: getRandomName(), Email: email, Phone: phone, 
+		SlackAccessTokens: slackJson}, PlanCode: model.FreePlanCode}
+	resp, errCode := store.GetStore().CreateAgentWithDependencies(createAgentParams)
+	if errCode != http.StatusCreated {
+		return nil, errCode
+	}
+	return resp.Agent, http.StatusCreated
+}
+
+func SetupProjectWithSlackIntegratedAgentDAO() (*model.Project, *model.Agent, error) {
+	project, err := SetupProjectReturnDAO()
+	if err != nil {
+		return nil, nil, err
+	}
+	agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+	if errCode != http.StatusCreated {
+		return nil, nil, fmt.Errorf("agent creation failed")
+	}
+	_, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent.UUID})
+	if errCode != http.StatusCreated {
+		return nil, nil, fmt.Errorf("projectAgentMapping creation failed")
+	}
+	return project, agent, nil
+}

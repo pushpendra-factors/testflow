@@ -1,4 +1,4 @@
-import { CREATE_SMART_PROPERTY, FETCH_CLICKABLE_ELEMENTS, FETCH_PROPERTY_CONFIG, FETCH_SMART_PROPERTIES, TOGGLE_CLICKABLE_ELEMENT, UPDATE_SMART_PROPERTY } from "./actions";
+import { CREATE_SMART_PROPERTY, FETCH_CLICKABLE_ELEMENTS, FETCH_PROPERTY_CONFIG, FETCH_SMART_PROPERTIES, TOGGLE_CLICKABLE_ELEMENT, UPDATE_SMART_PROPERTY, FETCH_PROPERTY_MAPPING } from "./actions";
 
 const defaultState = {
     smartProperties: [],
@@ -10,6 +10,8 @@ export default function (state = defaultState, action) {
     switch (action.type) {
         case FETCH_SMART_PROPERTIES:
           return { ...state, smartProperties: action.payload };
+        case FETCH_PROPERTY_MAPPING:
+          return { ...state, propertyMapping: action.payload };
         case FETCH_PROPERTY_CONFIG:
             return { ...state, propertyConfig: action.payload };
         case CREATE_SMART_PROPERTY:

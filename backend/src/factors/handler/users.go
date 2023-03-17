@@ -256,7 +256,7 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 			return
 		}
 		if len(propertyValues) == 0 {
-			logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %v, propertyName - %s", projectId, propertyName))
+			logCtx.WithError(err).Error(fmt.Sprintf("No user property values Returned - ProjectID - %v, propertyName - %s", projectId, propertyName))
 		}
 	} else {
 		var status int
@@ -270,6 +270,28 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 			return
 		}
 	}
+
+	label := c.Query("label")
+	if label == "true" {
+		propertyValueLabel, err, isSourceEmpty := getPropertyValueLabel(projectId, propertyName, propertyValues)
+		if err != nil {
+			logCtx.WithError(err).Error("get user properties labels and values by property name")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		if isSourceEmpty {
+			logCtx.WithField("property_name", propertyName).Warning("source is empty")
+		}
+
+		if len(propertyValueLabel) == 0 {
+			logCtx.WithField("property_name", propertyName).Error("No user property value labels Returned")
+		}
+
+		c.JSON(http.StatusOK, propertyValueLabel)
+		return
+	}
+
 	c.JSON(http.StatusOK, propertyValues)
 }
 

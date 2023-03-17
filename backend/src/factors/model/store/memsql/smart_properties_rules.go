@@ -390,7 +390,7 @@ func (store *MemSQL) DeleteSmartPropertyRules(projectID int64, ruleID string) in
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND id = ?", projectID, ruleID).Updates(map[string]interface{}{"is_deleted": true, "evaluation_status": model.EvaluationStatusMap["not_picked"], "updated_at": time.Now().UTC()}).Error
 	if err != nil {
-		log.WithField("project_id", projectID).Error(err)
+		log.WithError(err).WithField("project_id", projectID).Error("Failure in DeleteSmartPropertyRules")
 		return http.StatusInternalServerError
 	}
 	return http.StatusAccepted

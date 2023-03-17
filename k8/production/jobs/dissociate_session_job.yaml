@@ -1,0 +1,69 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: shared-persistent-pool2
+  name: dissociate-sessions-job
+spec:
+  schedule: "1 2 3 4 5" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: shared-persistent-pool2
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: shared-persistent-pool2
+          containers:
+          - name: dissociate-sessions-job
+            image: us.gcr.io/factors-production/dissociate-sessions-job:v0.0
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_HEAVY_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
+            - --redis_host
+            - $(REDIS_HOST)
+            - --redis_port
+            - $(REDIS_PORT)
+            - --redis_host_ps
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port_ps
+            - $(PERSISTENT_REDIS_PORT)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
+            - --project_ids
+            - ""
+            - --start_timestamp
+            - ""
+            - --end_timestamp
+            - ""
+            envFrom:
+            - configMapRef:
+                name: config-redis
+            - configMapRef:
+                name: config-persistent-redis
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-memsql
+            - secretRef:
+                name: secret-memsql
+            - secretRef:
+                name: secret-sentry
+          restartPolicy: OnFailure

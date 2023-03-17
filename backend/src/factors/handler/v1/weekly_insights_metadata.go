@@ -7,8 +7,6 @@ import (
 	U "factors/util"
 	"net/http"
 
-	C "factors/config"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -35,10 +33,6 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}
 	var result Result
-	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	if !C.IsWeeklyInsightsWhitelisted(agentUUID, projectId) {
-		return result, http.StatusOK, "", "", false
-	}
 
 	logCtx := log.WithFields(log.Fields{
 		"projectId": projectId,

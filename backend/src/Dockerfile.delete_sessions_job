@@ -1,0 +1,13 @@
+FROM golang:1.14-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/deletesessions $GOPATH/src/factors/scripts/run_delete_sessions/run_delete_sessions.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+# Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+COPY --from=builder /go/bin/deletesessions /go/bin/deletesessions
+ENTRYPOINT ["/go/bin/deletesessions"]

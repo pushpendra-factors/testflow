@@ -90,7 +90,7 @@ const Touchpoints = ({
     }
   }, [activeProject, tabNo]);
 
-  const setSalesforceContactData = () => {
+  const setSalesforceContactData = (data = []) => {
     const touchpointObjs = data.length
       ? [
           ...data
@@ -450,9 +450,11 @@ const Touchpoints = ({
               <Table
                 className='fa-table--basic mt-4'
                 columns={columns}
-                dataSource={touchPointsData}
+                dataSource={touchPointsData.filter(
+                  (obj) => obj.crm_type === getCRMType()
+                )}
                 pagination={false}
-                loading={false}
+                loading={touchPointState.loading}
               />
             </div>
           </TabPane>

@@ -17,8 +17,9 @@ ADWORDS_CLIENT_USER_AGENT = "FactorsAI (https://www.factors.ai)"
 class AuthorisationFlow(BaseOauthService):
     VERSION = "v201809"
 
+    # GETAPIScope is giving wrong value. Hence directly entering scope value.
     def initialise_flow(self):
-        flow = Flow.from_client_config(self.CONFIG.secret_json, scopes=[oauth2.GetAPIScope("adwords")])
+        flow = Flow.from_client_config(self.CONFIG.secret_json, scopes=["https://www.googleapis.com/auth/adwords"])
         flow.redirect_uri = self.CONFIG.callback_url
         return flow
 
@@ -32,7 +33,7 @@ class AuthorisationFlow(BaseOauthService):
 
         authorization_url, state = self.flow.authorization_url(
             access_type="offline",
-            scopes=[oauth2.GetAPIScope("adwords")],
+            scopes=["https://www.googleapis.com/auth/adwords"],
             state=state)
 
         log.info("Generated authorization URL: %s", authorization_url)

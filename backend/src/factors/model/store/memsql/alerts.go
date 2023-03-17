@@ -93,7 +93,7 @@ func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOf
 		} else if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
 			query, status := store.GetQueryWithQueryId(alert.ProjectID, alert.QueryID)
 			if status != http.StatusFound {
-				log.Error("Query not found for id ", alert.QueryID)
+				log.WithField("err_code", status).Error("Query not found for id ", alert.QueryID)
 				continue
 			}
 			class, errMsg := store.GetQueryClassFromQueries(*query)
@@ -143,7 +143,7 @@ func (store *MemSQL) GetAlertNamesByProjectIdTypeAndNameAndPropertyMappingName(p
 		} else if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
 			query, status := store.GetQueryWithQueryId(alert.ProjectID, alert.QueryID)
 			if status != http.StatusFound {
-				log.Error("Query not found for id ", alert.QueryID)
+				log.WithField("err_code", status).Error("Query not found for id ", alert.QueryID)
 				continue
 			}
 			class, errMsg := store.GetQueryClassFromQueries(*query)
@@ -188,7 +188,7 @@ func (store *MemSQL) DeleteAlert(id string, projectID int64) (int, string) {
 	db := C.GetServices().Db
 	err := db.Table("alerts").Where("project_id = ? AND id = ?", projectID, id).Updates(map[string]interface{}{"is_deleted": true, "updated_at": time.Now().UTC()}).Error
 	if err != nil {
-		log.WithField("project_id", projectID).Error(err)
+		log.WithError(err).WithField("project_id", projectID).Error(err)
 		return http.StatusInternalServerError, err.Error()
 	}
 	return http.StatusAccepted, ""
@@ -223,7 +223,7 @@ func (store *MemSQL) UpdateAlertStatus(lastAlertSent bool) (int, string) {
 	db := C.GetServices().Db
 	err := db.Table("alerts").Where("id = ?", lastAlertSent).Updates(map[string]interface{}{"last_alert_sent": lastAlertSent, "updated_at": time.Now().UTC()}).Error
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failure in UpdateAlertStatus")
 		return http.StatusInternalServerError, err.Error()
 	}
 	return http.StatusAccepted, ""
@@ -272,10 +272,6 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 
 	var alertDescription model.AlertDescription
 	var alertConfiguration model.AlertConfiguration
-	err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
-	if err != nil {
-		return false, http.StatusInternalServerError, "failed to decode jsonb to alert description"
-	}
 	// validations
 	// - Check for valid operator
 	// - Check if the KPI/Metric is valid TODO
@@ -286,11 +282,7 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 	if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
 		skipValidation = true
 	}
-	if alertDescription.Name == "" && alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
-		logCtx.Error("Invalid alert name")
-		return false, http.StatusBadRequest, "Invalid alert name"
-	}
-	err = U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
+	err := U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
 	if err != nil {
 		return false, http.StatusInternalServerError, "failed to decode jsonb to alert configuration"
 	}
@@ -310,10 +302,33 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 		logCtx.Error("Slack integration is not enabled for this project")
 		return false, http.StatusBadRequest, "Slack integration is not enabled for this project"
 	}
+	if alertConfiguration.IsSlackEnabled {
+
+		slackChannels := make(map[string][]model.SlackChannel)
+		err = U.DecodePostgresJsonbToStructType(alertConfiguration.SlackChannelsAndUserGroups, &slackChannels)
+		if err != nil {
+			log.WithError(err).Error("failed to decode slack channels")
+			return false, http.StatusBadRequest, "failed to decode slack channels"
+		}
+
+		if len(slackChannels[alert.CreatedBy]) == 0 {
+			log.WithError(err).Error("Empty Slack Channel List")
+			return false, http.StatusBadRequest, "Empty Slack Channel List"
+		}
+	}
 	_, err = store.checkIfDuplicateAlertNameExists(projectID, alert.AlertName, alert.ID)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to create alert")
 		return false, http.StatusBadRequest, err.Error()
+	}
+	err = U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
+	if err != nil {
+		return false, http.StatusInternalServerError, "failed to decode jsonb to alert description"
+	}
+
+	if alertDescription.Name == "" && alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
+		logCtx.Error("Invalid alert name")
+		return false, http.StatusBadRequest, "Invalid alert name"
 	}
 
 	if !skipValidation {

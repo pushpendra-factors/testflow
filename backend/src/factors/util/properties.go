@@ -185,7 +185,6 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_HUBSPOT_CONTACT_LIST,
 	EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
 	EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION,
-	EVENT_NAME_HUBSPOT_CONTACT_LIST,
 	GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
 	GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
 	GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED,
@@ -312,6 +311,8 @@ const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
 const GROUP_NAME_HUBSPOT_DEAL = "$hubspot_deal"
 const GROUP_NAME_SALESFORCE_ACCOUNT = "$salesforce_account"
 const GROUP_NAME_SALESFORCE_OPPORTUNITY = "$salesforce_opportunity"
+const GROUP_NAME_SIX_SIGNAL = "$6signal"
+const GROUP_NAME_DOMAINS = "$domains"
 
 var GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING = map[string]string{
 	GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED:        GROUP_NAME_HUBSPOT_COMPANY,
@@ -1495,6 +1496,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_HUBSPOT_DEAL:           "Hubspot Deals",
 	GROUP_NAME_SALESFORCE_ACCOUNT:     "Salesforce Accounts",
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
+	GROUP_NAME_SIX_SIGNAL:             "Six Signal Domains",
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{
@@ -1667,6 +1669,8 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"page_url":                                "Page URL",
 }
 
+// GetStandardUserPropertiesBasedOnIntegration is using this.
+// Separate logic for integration based properties is there.
 var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_PLATFORM:                         "Platform",
 	UP_BROWSER:                          "Browser",
@@ -3129,6 +3133,23 @@ func FilterGroupUserPropertiesKeysByPrefix(propertyKeys []string) []string {
 	return filteredPropertiesKeys
 }
 
+func FilterPropertiesByKeysByPrefix(properties *PropertiesMap, prefix string) *PropertiesMap {
+	if properties == nil {
+		return nil
+	}
+
+	filteredProperties := make(PropertiesMap)
+	for key := range *properties {
+		if !strings.HasPrefix(key, prefix) {
+			continue
+		}
+
+		filteredProperties[key] = (*properties)[key]
+	}
+
+	return &filteredProperties
+}
+
 // isValidProperty - Validate property type.
 func isPropertyTypeValid(value interface{}) error {
 	if value == nil {
@@ -3245,7 +3266,7 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 	for k, v := range *properties {
 		if err := isPropertyTypeValid(v); err == nil {
 			if strings.HasPrefix(k, NAME_PREFIX) &&
-				!isAllowedCRMPropertyPrefix(k) &&
+				!IsAllowedCRMPropertyPrefix(k) &&
 				!isSDKAllowedUserProperty(&k) {
 
 				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
@@ -3271,7 +3292,7 @@ func isCRMSmartEventPropertyKey(key *string) bool {
 	return true
 }
 
-func isAllowedCRMPropertyPrefix(name string) bool {
+func IsAllowedCRMPropertyPrefix(name string) bool {
 	for prefix := range AllowedCRMPropertyPrefix {
 		if strings.HasPrefix(name, prefix) {
 			return true
@@ -3289,7 +3310,7 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 			// with selected prefixes starting with $ and default properties.
 			if strings.HasPrefix(k, NAME_PREFIX) &&
 				!strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) &&
-				!isAllowedCRMPropertyPrefix(k) &&
+				!IsAllowedCRMPropertyPrefix(k) &&
 				!isCRMSmartEventPropertyKey(&k) &&
 				!isSDKAllowedEventProperty(&k) {
 				propertyKey = fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)

@@ -9,23 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetPropertiesForLeadSquared(projectID int64, reqID string) []map[string]string {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"req_id":     reqID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
-	properties, propertiesToDisplayNames, err := store.GetRequiredUserPropertiesByProject(projectID, 2500, C.GetLookbackWindowForEventUserCache())
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get lead squared properties. Internal error")
-		return make([]map[string]string, 0)
-	}
-
-	// transforming to kpi structure.
-	return model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames, "$leadsquared")
-}
-
 func (store *MemSQL) GetKPIConfigsForLeadSquaredLeads(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -63,12 +46,31 @@ func (store *MemSQL) getConfigForSpecificLeadSquaredCategory(projectID int64, re
 	rMetrics := store.GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)
 
 	leadSquaredProperties := store.GetPropertiesForLeadSquared(projectID, reqID)
-	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
 
 	return map[string]interface{}{
 		"category":         model.ProfileCategory,
 		"display_category": displayCategory,
 		"metrics":          rMetrics,
-		"properties":       append(standardUserProperties, leadSquaredProperties...),
+		"properties":       leadSquaredProperties,
 	}
+}
+
+// This function is having requirements specific to user level, not other objects level. Eg - standardUserProperties.
+func (store *MemSQL) GetPropertiesForLeadSquared(projectID int64, reqID string) []map[string]string {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	properties, propertiesToDisplayNames, err := store.GetRequiredUserPropertiesByProject(projectID, 2500, C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get lead squared properties. Internal error")
+		return make([]map[string]string, 0)
+	}
+
+	// transforming to kpi structure.
+	leadSquaredOnlyProperties := model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames, "$leadsquared")
+	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
+	return append(standardUserProperties, leadSquaredOnlyProperties...)
 }

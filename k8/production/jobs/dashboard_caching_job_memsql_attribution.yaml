@@ -20,7 +20,7 @@ spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: preemptible-high-mem
           containers:
-            - name: dashboard-caching-job-memsql-kpi
+            - name: dashboard-caching-job-memsql-attribution
               image: us.gcr.io/factors-production/dashboard-caching-job:v001
               imagePullPolicy: IfNotPresent
               args:

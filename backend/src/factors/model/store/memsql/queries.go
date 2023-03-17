@@ -74,7 +74,7 @@ func (store *MemSQL) GetALLQueriesWithProjectId(projectID int64) ([]model.Querie
 		Where("project_id = ? AND is_deleted = ?", projectID, false).
 		Order("created_at DESC").Find(&queries).Error
 	if err != nil {
-		log.WithField("project_id", projectID).Error("Failed to fetch rows from queries table for project")
+		log.WithError(err).WithField("project_id", projectID).Error("Failed to fetch rows from queries table for project")
 		return queries, http.StatusInternalServerError
 	}
 	if len(queries) == 0 {
@@ -83,7 +83,7 @@ func (store *MemSQL) GetALLQueriesWithProjectId(projectID int64) ([]model.Querie
 	q, errCode := store.addCreatedByNameInQueries(queries, projectID)
 	if errCode != http.StatusFound {
 		// logging error but still sending the queries
-		log.WithField("project_id", projectID).Error("could not update created " +
+		log.WithField("project_id", projectID).WithField("err_code", errCode).Error("could not update created " +
 			"by name for queries")
 		return queries, http.StatusFound
 	}
@@ -114,7 +114,7 @@ func (store *MemSQL) GetAllNonConvertedQueries(projectID int64) ([]model.Queries
 	q, errCode := store.addCreatedByNameInQueries(queries, projectID)
 	if errCode != http.StatusFound {
 		// logging error but still sending the queries
-		log.WithField("project_id", projectID).Error("could not update created " +
+		log.WithError(err).WithField("project_id", projectID).Error("could not update created " +
 			"by name for queries")
 		return queries, http.StatusFound
 	}
@@ -138,7 +138,7 @@ func (store *MemSQL) addCreatedByNameInQueries(queries []model.Queries, projectI
 
 	agents, errCode := store.GetAgentsByUUIDs(agentUUIDs)
 	if errCode != http.StatusFound {
-		log.WithField("project_id", projectID).Error("could not get agents for given agentUUIDs")
+		log.WithField("project_id", projectID).WithField("err_code", errCode).Error("could not get agents for given agentUUIDs")
 		return queries, errCode
 	}
 
@@ -206,6 +206,16 @@ func (store *MemSQL) GetQueryWithQueryId(projectID int64, queryID int64) (*model
 	return store.getQueryWithQueryID(projectID, queryID, model.QueryTypeAllQueries)
 }
 
+//GetSixSignalQueryWithQueryID Get query by query id of type SixSignalQuery
+func (store *MemSQL) GetSixSignalQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query_id":   queryID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	return store.getQueryWithQueryID(projectID, queryID, model.QueryTypeSixSignalQuery)
+}
+
 func (store *MemSQL) GetQueryWithQueryIdString(projectID int64, queryIDString string) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -249,7 +259,7 @@ func (store *MemSQL) getQueryWithQueryID(projectID int64, queryID int64, queryTy
 		if errCode != http.StatusFound {
 			// logging error but still sending the queries
 			log.WithField("project_id", projectID).WithField("query_id",
-				queryID).Error("could not update created by name for queries")
+				queryID).WithField("err_code", errCode).Error("could not update created by name for queries")
 			return &query, http.StatusFound
 		}
 		return &q, http.StatusFound

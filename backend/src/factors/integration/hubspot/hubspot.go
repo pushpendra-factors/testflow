@@ -85,12 +85,20 @@ type Company struct {
 	Properties map[string]Property `json:"properties"`
 }
 
+// Option definition
+type Option struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
 // PropertyDetail definition for hubspot properties api
 type PropertyDetail struct {
-	Name      string `json:"name"`
-	Label     string `json:"label"`
-	Type      string `json:"type"`
-	FieldType string `json:"fieldType"`
+	Name                         string   `json:"name"`
+	Label                        string   `json:"label"`
+	Type                         string   `json:"type"`
+	FieldType                    string   `json:"fieldType"`
+	ExternalOptionsReferenceType string   `json:"externalOptionsReferenceType"`
+	Options                      []Option `json:"options"`
 }
 
 var syncOrderByType = [...]int{
@@ -285,10 +293,13 @@ func syncContactFormSubmissions(project *model.Project, otpRules *[]model.OTPRul
 			return
 		}
 		logCtx.WithFields(log.Fields{"ProjectID": project.ID, "Payload": payload}).Info("Invoking method ApplyHSOfflineTouchPointRuleForForms")
-		err = ApplyHSOfflineTouchPointRuleForForms(project, otpRules, uniqueOTPEventKeys, payload, document, eventTimestamp)
-		if err != nil {
-			// log and continue
-			logCtx.WithField("EventID", trackResponse.EventId).WithField("userID", trackResponse.UserId).Info("failed creating hubspot offline touch point for form submission")
+
+		if !C.IsProjectIDSkippedForOtp(project.ID) {
+			err = ApplyHSOfflineTouchPointRuleForForms(project, otpRules, uniqueOTPEventKeys, payload, document, eventTimestamp)
+			if err != nil {
+				// log and continue
+				logCtx.WithField("EventID", trackResponse.EventId).WithField("userID", trackResponse.UserId).Info("failed creating hubspot offline touch point for form submission")
+			}
 		}
 
 	}
@@ -889,6 +900,162 @@ func SyncDatetimeAndNumericalProperties(projectID int64, apiKey, refreshToken st
 	return anyFailures, allStatus
 }
 
+func GetHubspotPropertyDetailsByDataType(apiKey, refreshToken string, docTypes []string) (map[string][]PropertyDetail, bool) {
+	propertyDetailsMap := make(map[string][]PropertyDetail)
+	failures := false
+
+	for i := range docTypes {
+		logCtx := log.WithFields(log.Fields{"doc_type": docTypes[i]})
+
+		apiObjectName := model.GetHubspotObjectTypeByDocumentType(docTypes[i])
+		if apiObjectName == "" {
+			logCtx.Error("Invalid doc_type for GetHubspotPropertyDetailsByDataType.")
+			failures = true
+			continue
+		}
+
+		propertiesMeta, err := GetHubspotPropertiesMeta(apiObjectName, apiKey, refreshToken)
+		if err != nil {
+			logCtx.WithField("api_object_name", apiObjectName).WithError(err).Error("Failed to get hubspot properties meta.")
+			failures = true
+			continue
+		}
+
+		propertyDetailsMap[docTypes[i]] = propertiesMeta
+	}
+	return propertyDetailsMap, failures
+}
+
+func SyncPropertiesOptions(projectID int64, propertiesMetaMap map[string][]PropertyDetail) bool {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	failures := false
+	for docType, propertiesMeta := range propertiesMetaMap {
+		logCtx.WithFields(log.Fields{"doc_type": docType})
+
+		for _, property := range propertiesMeta {
+			for i := range property.Options {
+				if property.Options[i].Value == "" || property.Options[i].Label == "" {
+					continue
+				}
+
+				propertyKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, docType, property.Name)
+				status := store.GetStore().CreateOrUpdateDisplayNameLabel(projectID, model.SmartCRMEventSourceHubspot, propertyKey, property.Options[i].Value, property.Options[i].Label)
+				if status == http.StatusBadRequest || status == http.StatusInternalServerError {
+					logCtx.WithFields(log.Fields{"key": propertyKey, "value": property.Options[i].Value, "label": property.Options[i].Label}).
+						Error("Failed to create or update display name label from reference field")
+					failures = true
+					continue
+				}
+			}
+		}
+	}
+
+	return failures
+}
+
+func SyncOwnerReferenceFields(projectID int64, propertiesMetaMap map[string][]PropertyDetail, recordsMaxCreatedAtSec int64) bool {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	failures := false
+
+	ownerRecords, status := store.GetStore().GetHubspotDocumentsByTypeForSync(projectID, model.HubspotDocumentTypeOwner, recordsMaxCreatedAtSec)
+	if status != http.StatusNotFound && status != http.StatusFound {
+		logCtx.WithFields(log.Fields{"doc_type": model.HubspotDocumentTypeOwner,
+			"recordsMaxCreatedAtSec": recordsMaxCreatedAtSec}).Error("Failed to get hubspot owner document for sync.")
+		return true
+	} else if status == http.StatusNotFound {
+		logCtx.WithFields(log.Fields{"doc_type": model.HubspotDocumentTypeOwner,
+			"recordsMaxCreatedAtSec": recordsMaxCreatedAtSec}).Warning("No hubspot owner document available for sync.")
+		return false
+	}
+
+	for _, document := range ownerRecords {
+		for docType, propertiesMeta := range propertiesMetaMap {
+			for _, property := range propertiesMeta {
+				value, err := U.DecodePostgresJsonb(document.Value)
+				if err != nil {
+					logCtx.WithFields(log.Fields{"doc_type": docType, "owner_doc_id": document.ID, "timestamp": document.Timestamp}).
+						WithError(err).Error("Error occured during unmarshal of hubspot owner document")
+					failures = true
+					continue
+				}
+
+				propertyKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, docType, property.Name)
+				ownerId := U.GetPropertyValueAsString((*value)["ownerId"])
+
+				firstName := U.GetPropertyValueAsString((*value)["firstName"])
+				lastName := U.GetPropertyValueAsString((*value)["lastName"])
+				label := firstName + " " + lastName
+
+				status = store.GetStore().CreateOrUpdateDisplayNameLabel(projectID, U.CRM_SOURCE_NAME_HUBSPOT, propertyKey, ownerId, label)
+				if status != http.StatusCreated && status != http.StatusConflict && status != http.StatusAccepted {
+					logCtx.WithFields(log.Fields{"key": propertyKey, "value": ownerId, "label": label}).
+						Error("Failed to create or update display name label from reference field")
+					failures = true
+					continue
+				}
+			}
+		}
+
+		status = store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeOwner, "", document.Timestamp, document.Action, "", "")
+		if status != http.StatusAccepted {
+			logCtx.WithFields(log.Fields{"owner_doc_id": document.ID, "timestamp": document.Timestamp}).Error("Failed to update hubspot owner document as synced.")
+			failures = true
+			continue
+		}
+	}
+
+	return failures
+}
+
+func SyncReferenceField(projectID int64, apiKey, refreshToken string, hubspotAllowedDocTypes []string, recordsMaxCreatedAtSec int64) bool {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	propertiesMetaMap, failures := GetHubspotPropertyDetailsByDataType(apiKey, refreshToken, hubspotAllowedDocTypes)
+
+	externalOptionsReferencedRecords := make(map[string][]PropertyDetail, 0)
+	propertiesOptions := make(map[string][]PropertyDetail)
+	for docType, propertiesMeta := range propertiesMetaMap {
+		logCtx.WithFields(log.Fields{"doc_type": docType})
+
+		for _, property := range propertiesMeta {
+			if property.ExternalOptionsReferenceType != "OWNER" && len(property.Options) == 0 {
+				logCtx.WithField("key", property.Name).Warning("No external options reference type in syncReferenceField")
+				continue
+			} else if property.ExternalOptionsReferenceType == "OWNER" {
+				if _, exists := externalOptionsReferencedRecords[docType]; !exists {
+					externalOptionsReferencedRecords[docType] = make([]PropertyDetail, 0)
+				}
+				externalOptionsReferencedRecords[docType] = append(externalOptionsReferencedRecords[docType], property)
+				continue
+			} else {
+				if _, exists := propertiesOptions[docType]; !exists {
+					propertiesOptions[docType] = make([]PropertyDetail, 0)
+				}
+				propertiesOptions[docType] = append(propertiesOptions[docType], property)
+				continue
+			}
+		}
+	}
+
+	if len(propertiesOptions) > 0 {
+		propertyOptionsFailures := SyncPropertiesOptions(projectID, propertiesOptions)
+		if propertyOptionsFailures {
+			failures = true
+		}
+	}
+
+	if len(externalOptionsReferencedRecords) > 0 {
+		ownerReferenceFieldsFailures := SyncOwnerReferenceFields(projectID, externalOptionsReferencedRecords, recordsMaxCreatedAtSec)
+		if ownerReferenceFieldsFailures {
+			failures = true
+		}
+	}
+
+	return failures
+}
+
 func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
 	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
 
@@ -1228,7 +1395,7 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 			Warn("Different customer user id seen on sync contact")
 	}
 
-	if document.Action == model.HubspotDocumentActionUpdated {
+	if document.Action == model.HubspotDocumentActionUpdated && !C.IsProjectIDSkippedForOtp(project.ID) {
 		err = ApplyHSOfflineTouchPointRule(project, otpRules, uniqueOTPEventKeys, trackPayload, document, defaultSmartEventTimestamp)
 		if err != nil {
 			// log and continue
@@ -1279,7 +1446,7 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPR
 
 		otpUniqueKey, err := createOTPUniqueKeyForFormsAndContacts(rule, trackPayload)
 		if err != http.StatusCreated {
-			logCtx.Error("Failed to create otp_unique_key")
+			logCtx.Warn("Failed to create otp_unique_key")
 			continue
 		}
 
@@ -1291,7 +1458,7 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPR
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+		if !IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 
@@ -1322,7 +1489,7 @@ func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]mo
 
 		otpUniqueKey, err := createOTPUniqueKeyForFormsAndContacts(rule, trackPayload)
 		if err != http.StatusCreated {
-			logCtx.Error("Failed to create otp_unique_key")
+			logCtx.Warn("Failed to create otp_unique_key")
 			continue
 		}
 
@@ -1335,7 +1502,7 @@ func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]mo
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+		if !IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 
@@ -1365,7 +1532,7 @@ func ApplyHSOfflineTouchPointRuleForEngagement(project *model.Project, otpRules 
 
 		otpUniqueKey, err := createOTPUniqueKeyForEngagements(rule, trackPayload, engagementType, logCtx)
 		if err != http.StatusCreated {
-			logCtx.Error("Failed to create otp_unique_key")
+			logCtx.Warn("Failed to create otp_unique_key")
 			continue
 		}
 		// Check if rule is applicable & the record has changed property w.r.t filters
@@ -1377,7 +1544,7 @@ func ApplyHSOfflineTouchPointRuleForEngagement(project *model.Project, otpRules 
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+		if !IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 
@@ -1405,7 +1572,7 @@ func ApplyHSOfflineTouchPointRuleForContactList(project *model.Project, otpRules
 
 		otpUniqueKey, err := createOTPUniqueKeyForContactList(rule, trackPayload, logCtx)
 		if err != http.StatusCreated {
-			logCtx.Error("Failed to create otp_unique_key")
+			logCtx.Warn("Failed to create otp_unique_key")
 			continue
 		}
 
@@ -1418,7 +1585,7 @@ func ApplyHSOfflineTouchPointRuleForContactList(project *model.Project, otpRules
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+		if !IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
 			continue
 		}
 		_, err1 := CreateTouchPointEventForLists(project, trackPayload, document, rule, otpUniqueKey)
@@ -1722,10 +1889,10 @@ func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SD
 }
 
 // Returns true or false if the otpKey (userID+ruleID+keyID) is not present in uniqueOTPEventKeys i.e. Unique OTP key.
-func isOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string, logCtx *log.Entry) bool {
+func IsOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string, logCtx *log.Entry) bool {
 	isUnique := !U.StringValueIn(otpUniqueKey, *uniqueOTPEventKeys)
 	if !isUnique {
-		logCtx.Error("The OTP Key is not unique.")
+		logCtx.Warn("The OTP Key is not unique.")
 	}
 	return isUnique
 }
@@ -1954,8 +2121,9 @@ func filterCheckGeneral(rule model.OTPRule, trackPayload *SDK.TrackPayload, logC
 	if filtersPassed != 0 && filtersPassed == len(ruleFilters) {
 		return true
 	}
+
 	// When neither filters matched nor (filters matched but values are same)
-	logCtx.Error("Filter check general is failing for offline touch point rule")
+	logCtx.Warn("Filter check general is failing for offline touch point rule")
 	return false
 }
 
@@ -2243,7 +2411,7 @@ func syncCompany(projectID int64, document *model.HubspotDocument) int {
 
 				if C.IsAllowedHubspotGroupsByProjectID(projectID) {
 					logCtx.Info("Updating user company group user id.")
-					_, status = store.GetStore().UpdateUserGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID)
+					_, status = store.GetStore().UpdateUserGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID, false)
 					if status != http.StatusAccepted && status != http.StatusNotModified {
 						logCtx.Error("Failed to update user group id.")
 					}
@@ -2455,7 +2623,7 @@ func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.Hubs
 	createdEventName, updatedEventName := getGroupEventName(document.Type)
 	if document.Action == model.HubspotDocumentActionCreated {
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
-			enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.SmartCRMEventSourceHubspot)
+			enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.UserSourceHubspotString)
 
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update hubspot created group properties.")
@@ -2484,7 +2652,7 @@ func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.Hubs
 		groupUser := getGroupUserID(createdDocument)
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID,
 			groupUser, enProperties, getEventTimestamp(createdDocument.Timestamp), getEventTimestamp(document.Timestamp),
-			model.SmartCRMEventSourceHubspot)
+			model.UserSourceHubspotString)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update hubspot updated group properties.")
 			return "", "", http.StatusInternalServerError
@@ -2585,6 +2753,18 @@ func syncGroupCompany(projectID int64, document *model.HubspotDocument, enProper
 		return "", "", errors.New("failed to update company group properties")
 	}
 
+	if C.IsAllowedDomainsGroupByProjectID(projectID) {
+		accountWebsite := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+			model.HubspotDocumentTypeNameCompany, "website")])
+		if accountWebsite != "" {
+			status := sdk.TrackDomainsGroup(projectID, companyUserID, model.GROUP_NAME_HUBSPOT_COMPANY, accountWebsite, nil, document.Timestamp)
+			if status != http.StatusOK {
+				log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID, "timestamp": document.Timestamp}).
+					Error("Failed to TrackDomainsGroup in hubspot company enrichment.")
+			}
+		}
+	}
+
 	return companyUserID, companyGroupID, nil
 }
 
@@ -2630,7 +2810,7 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 				continue
 			}
 
-			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_HUBSPOT_DEAL, "", dealGroupUserID)
+			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_HUBSPOT_DEAL, "", dealGroupUserID, false)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				logCtx.WithFields(log.Fields{"contact_id": documents[i].ID, "deal_group_user_id": dealGroupUserID, "err_code": status}).
 					Error("Failed to update contact user group for hubspot deal.")
@@ -3050,11 +3230,13 @@ func syncEngagements(project *model.Project, otpRules *[]model.OTPRule, uniqueOT
 			return http.StatusInternalServerError
 		}
 
-		err = ApplyHSOfflineTouchPointRuleForEngagement(project, otpRules, uniqueOTPEventKeys, payload, document, engagement, engagementTypeStr)
-		if err != nil {
-			// log and continue
-			logCtx.WithField("TrackPayload", payload).WithField("userID", userId).Info("failed " +
-				"creating engagement hubspot offline touch point")
+		if !C.IsProjectIDSkippedForOtp(project.ID) {
+			err = ApplyHSOfflineTouchPointRuleForEngagement(project, otpRules, uniqueOTPEventKeys, payload, document, engagement, engagementTypeStr)
+			if err != nil {
+				// log and continue
+				logCtx.WithField("TrackPayload", payload).WithField("userID", userId).Info("failed " +
+					"creating engagement hubspot offline touch point")
+			}
 		}
 
 	}
@@ -3214,12 +3396,13 @@ func syncContactListV2(project *model.Project, otpRules *[]model.OTPRule, unique
 		return http.StatusInternalServerError
 	}
 
-	err = ApplyHSOfflineTouchPointRuleForContactList(project, otpRules, uniqueOTPEventKeys, request, document)
-	if err != nil {
-		// log and continue
-		logCtx.WithField("EventID", response.EventId).WithField("userID", response.UserId).Info("failed creating hubspot offline touch point for contact list")
+	if !C.IsProjectIDSkippedForOtp(project.ID) {
+		err = ApplyHSOfflineTouchPointRuleForContactList(project, otpRules, uniqueOTPEventKeys, request, document)
+		if err != nil {
+			// log and continue
+			logCtx.WithField("EventID", response.EventId).WithField("userID", response.UserId).Info("failed creating hubspot offline touch point for contact list")
+		}
 	}
-
 	errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
 		project.ID, document.ID, model.HubspotDocumentTypeContactList, "", document.Timestamp, document.Action, contact_document.UserId, "")
 	if errCode != http.StatusAccepted {
@@ -3361,7 +3544,7 @@ func syncByOrderedTimeSeries(project *model.Project, otpRules *[]model.OTPRule, 
 					GetHubspotDocumentsByTypeForSync(project.ID, syncOrderByType[i], recordsMaxCreatedAtSec)
 			}
 
-			if errCode != http.StatusFound {
+			if errCode != http.StatusFound && errCode != http.StatusNotFound {
 				logCtx.WithFields(log.Fields{"time_range": timeRange, "doc_type": syncOrderByType[i]}).Error("Failed to get hubspot document by type for sync.")
 				continue
 			}

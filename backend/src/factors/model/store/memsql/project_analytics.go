@@ -222,7 +222,7 @@ func GetEventsFromCacheByDocumentType(projectID, documentType, dateKey string) (
 	if events[projectID] != "" {
 		result, err := strconv.ParseUint(events[projectID], 10, 64)
 		if err != nil {
-			log.Error(err)
+			log.WithError(err).Error("Failure in GetEventsFromCacheByDocumentType")
 			return 0, err
 		}
 		return result, nil

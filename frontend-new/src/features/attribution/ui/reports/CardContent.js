@@ -11,9 +11,11 @@ import {
   QUERY_TYPE_ATTRIBUTION
 } from 'Utils/constants';
 import {
-  getAttributionStateFromRequestQuery,
   getStateQueryFromRequestQuery
 } from 'Views/CoreQuery/utils';
+
+import {getAttributionStateFromRequestQuery} from 'Attribution/utils';
+
 import AttributionsChart from 'Views/Dashboard/Attributions/AttributionsChart';
 import {
   DEFAULT_DASHBOARD_PRESENTATION,
@@ -49,10 +51,10 @@ function CardContent({ unit, resultState, durationObj }) {
       eventGoal: equivalentQuery.eventGoal,
       touchpoint: equivalentQuery.touchpoint,
       models: equivalentQuery.models,
-      linkedEvents: equivalentQuery.linkedEvents,
+      linkedEvents: [],
       attr_dimensions: equivalentQuery.attr_dimensions,
       content_groups: equivalentQuery.content_groups,
-      queryOptions: { group_analysis: equivalentQuery.analyze_type },
+      queryOptions: { group_analysis: 'all' },
       attrQueries: equivalentQuery.attrQueries
     };
   }, [equivalentQuery]);

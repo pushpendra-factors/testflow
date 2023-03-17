@@ -651,20 +651,6 @@ export const QUERY_OPTIONS_DEFAULT_VALUE = {
   events_condition: 'any_given_event'
 };
 
-export const AvailableGroups = {
-  'Hubspot Companies': '$hubspot_company',
-  'Hubspot Deals': '$hubspot_deal',
-  'Salesforce Accounts': '$salesforce_account',
-  'Salesforce Opportunities': '$salesforce_opportunity'
-};
-
-export const RevAvailableGroups = {
-  $hubspot_company: 'Hubspot Companies',
-  $hubspot_deal: 'Hubspot Deals',
-  $salesforce_account: 'Salesforce Accounts',
-  $salesforce_opportunity: 'Salesforce Opportunities'
-};
-
 export const DealOrOppurtunity = 'Deal / Opportunity';
 export const CompanyOrAccount = 'Company / Account';
 
@@ -681,8 +667,8 @@ export const RevFunnelEventsConditionMap = {
 };
 
 export const OPERATORS = {
-  equalTo: '=',
-  notEqualTo: '!=',
+  equalTo: 'equals',
+  notEqualTo: 'not equals',
   contain: 'contains',
   doesNotContain: 'does not contain',
   lesserThan: '<',

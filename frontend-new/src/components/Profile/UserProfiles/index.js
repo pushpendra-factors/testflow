@@ -21,7 +21,7 @@ import {
 } from '../../../utils/constants';
 import FaSelect from '../../FaSelect';
 import { getUserProperties } from '../../../reducers/coreQuery/middleware';
-import PropertyFilter from './PropertyFilter';
+import PropertyFilter from '../MyComponents/PropertyFilter';
 import MomentTz from '../../MomentTz';
 import {
   fetchDemoProject,
@@ -39,6 +39,7 @@ import {
   formatFiltersForPayload,
   formatPayloadForFilters,
   formatSegmentsObjToGroupSelectObj,
+  getPropType,
   iconColors,
   propValueFormat
 } from '../utils';
@@ -55,7 +56,7 @@ import SegmentModal from './SegmentModal';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
-import EventsBlock from './EventsBlock';
+import EventsBlock from '../MyComponents/EventsBlock';
 
 function UserProfiles({
   activeProject,
@@ -129,12 +130,22 @@ function UserProfiles({
   }, [activeProject]);
 
   useEffect(() => {
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+  }, [activeProject]);
+
+  useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
     fetchProjectSettings(activeProject.id);
     if (_.isEmpty(dashboards?.data)) {
       fetchBingAdsIntegration(activeProject?.id);
       fetchMarketoIntegration(activeProject?.id);
     }
+  }, [activeProject]);
+
+  useEffect(() => {
+    getUserProperties(activeProject.id);
   }, [activeProject]);
 
   const isIntegrationEnabled =
@@ -157,10 +168,6 @@ function UserProfiles({
     integration?.int_rudderstack;
 
   useEffect(() => {
-    getUserProperties(activeProject.id);
-  }, [activeProject]);
-
-  useEffect(() => {
     const tableProps = timelinePayload.segment_id
       ? activeSegment.query.table_props
       : currentProjectSettings.timelines_config?.user_config?.table_props;
@@ -169,17 +176,16 @@ function UserProfiles({
       tableProps
     );
     setCheckListUserProps(userPropsWithEnableKey);
-  }, [currentProjectSettings, userProperties, timelinePayload]);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-  }, [activeProject]);
+  }, [currentProjectSettings, userProperties, activeSegment, timelinePayload]);
 
   useEffect(() => {
     getSavedSegments(activeProject.id);
   }, [activeProject]);
+
+  const userOptions = [...profileOptions.users].map((item) => [
+    item,
+    ProfileMapper[item]
+  ]);
 
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
@@ -218,7 +224,7 @@ function UserProfiles({
               </Avatar>
             )}
             <span className='ml-2 truncate'>
-              {identity.isAnonymous ? 'Unidentified User' : identity.id}
+              {identity.isAnonymous ? 'New User' : identity.id}
             </span>
           </div>
         )
@@ -231,6 +237,7 @@ function UserProfiles({
       const propDisplayName = userPropNames[prop]
         ? userPropNames[prop]
         : PropTextFormat(prop);
+      const propType = getPropType(userProperties, prop);
       columns.push({
         title: (
           <Text
@@ -247,9 +254,9 @@ function UserProfiles({
         dataIndex: prop,
         key: prop,
         width: 300,
-        render: (item) => (
+        render: (value) => (
           <Text type='title' level={7} className='m-0' truncate>
-            {propValueFormat(prop, item) || '-'}
+            {value ? propValueFormat(prop, value, propType) : '-'}
           </Text>
         )
       });
@@ -289,9 +296,9 @@ function UserProfiles({
   };
 
   const onChange = (val) => {
-    if ((ProfileMapper[val[0]] || val[0]) !== timelinePayload.source) {
+    if (val[1]!== timelinePayload.source) {
       const opts = { ...timelinePayload };
-      opts.source = ProfileMapper[val[0]] || val[0];
+      opts.source = val[1];
       setTimelinePayload(opts);
     }
     setUserDDVisible(false);
@@ -342,7 +349,7 @@ function UserProfiles({
     <div className='absolute top-0'>
       {isUserDDVisible ? (
         <FaSelect
-          options={[['All'], ...profileOptions.users]}
+          options={[['All Users', 'All'], ...userOptions]}
           onClickOutside={() => setUserDDVisible(false)}
           optionClick={(val) => onChange(val)}
         />
@@ -416,7 +423,7 @@ function UserProfiles({
         profileType='user'
         activeProject={activeProject}
         type={timelinePayload.source}
-        typeOptions={[...profileOptions.users]}
+        typeOptions={userOptions}
         tableProps={
           currentProjectSettings.timelines_config?.user_config?.table_props
         }
@@ -437,7 +444,6 @@ function UserProfiles({
           placeholder='Search Segments'
           optionClick={onOptionClick}
           onClickOutside={() => setSegmentDDVisible(false)}
-          allowEmpty
           additionalActions={renderAdditionalActionsInSegment()}
         />
       ) : null}
@@ -461,24 +467,32 @@ function UserProfiles({
     });
 
     return (
-      <div className='flex items-start'>
+      <div className='segment-query_block'>
         {blockList.length ? (
-          <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
+          <h2
+            className={`title ${
+              activeSegment?.query?.gup?.length ? '' : 'width-unset'
+            }`}
+          >
             Performed Events
           </h2>
         ) : null}
-        <div className='flex flex-wrap flex-col'>{blockList}</div>
+        <div className='content'>{blockList}</div>
       </div>
     );
   };
 
   const filtersList = (filters) => {
     return (
-      <div className='flex items-start'>
-        <h2 className='whitespace-no-wrap line-height-8 m-0 mr-2'>
-          Properties
+      <div className='segment-query_block'>
+        <h2
+          className={`title ${
+            activeSegment?.query?.ewp?.length ? '' : 'width-unset'
+          }`}
+        >
+          With Properties
         </h2>
-        <div className='flex flex-wrap flex-col'>
+        <div className='content'>
           <PropertyFilter
             filtersLimit={10}
             profileType='user'
@@ -521,7 +535,7 @@ function UserProfiles({
     } else {
       notification.error({
         message: 'Error',
-        description: 'Maximum Table Properties Selection Reached.',
+        description: 'Maximum of 8 Table Properties Selection Allowed.',
         duration: 2
       });
     }
@@ -579,7 +593,9 @@ function UserProfiles({
         icon={<SVG name='user_friends' size={16} />}
         onClick={() => setUserDDVisible(!isUserDDVisible)}
       >
-        {ReverseProfileMapper[timelinePayload.source]?.users || 'All'}
+        {userOptions?.find(
+          (item) => item[1] === timelinePayload?.source
+        )?.[0] || 'All Users'}
         <SVG name='caretDown' size={16} />
       </Button>
       {selectUsers()}
@@ -593,6 +609,7 @@ function UserProfiles({
         placement='bottomLeft'
         trigger={activeSegment.query ? 'hover' : ''}
         content={segmentInfo}
+        mouseEnterDelay={0.5}
       >
         <Button
           className='dropdown-btn'
@@ -708,6 +725,7 @@ function UserProfiles({
       <ContactDetails user={activeUser} onCancel={handleCancel} />
     </Modal>
   );
+
   if (loading) {
     return (
       <div className='flex justify-center items-center w-full h-64'>

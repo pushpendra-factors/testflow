@@ -10,6 +10,7 @@ import (
 	"time"
 
 	C "factors/config"
+	"factors/sdk"
 	SDK "factors/sdk"
 	"factors/util"
 	U "factors/util"
@@ -424,6 +425,17 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 			properties, prevProperties, lastModifiedTimestamp, false)
 	}
 
+	if C.IsAllowedDomainsGroupByProjectID(projectID) {
+		accountWebsite := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+			model.SalesforceDocumentTypeNameAccount, "website")])
+		if accountWebsite != "" {
+			status := sdk.TrackDomainsGroup(projectID, groupAccountUserID, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountWebsite, nil, lastModifiedTimestamp)
+			if status != http.StatusOK {
+				logCtx.Error("Failed to TrackDomainsGroup in account enrichment.")
+			}
+		}
+	}
+
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, "", groupAccountUserID, true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce account document as synced.")
@@ -522,7 +534,7 @@ func enrichContact(projectID int64, document *model.SalesforceDocument, salesfor
 		}
 
 		if groupUserID, exist := pendingOpportunityAssociatedRecords[document.ID]; exist {
-			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID)
+			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID, false)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				logCtx.Error("Failed associating contact user with group opportunity.")
 			}
@@ -891,7 +903,7 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 	var groupUserID string
 	if document.Action == model.SalesforceDocumentCreated {
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
-			enProperties, createdTimestamp, lastModifiedTimestamp, model.SmartCRMEventSourceSalesforce)
+			enProperties, createdTimestamp, lastModifiedTimestamp, model.UserSourceSalesforceString)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update salesforce group.")
 			return "", http.StatusInternalServerError, ""
@@ -921,7 +933,7 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 		createdDocument := documents[0]
 
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, createdDocument.GroupUserID,
-			enProperties, createdTimestamp, lastModifiedTimestamp, model.SmartCRMEventSourceSalesforce)
+			enProperties, createdTimestamp, lastModifiedTimestamp, model.UserSourceSalesforceString)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update salesforce group properties.")
 			return "", http.StatusInternalServerError, ""
@@ -1125,7 +1137,7 @@ func enrichOpportunityContactRoles(projectID int64, document *model.SalesforceDo
 			}
 
 			contactUserID := documents[0].UserID
-			_, status = store.GetStore().UpdateUserGroup(projectID, contactUserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID)
+			_, status = store.GetStore().UpdateUserGroup(projectID, contactUserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID, false)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				log.WithFields(log.Fields{"project_id": projectID, "user_id": contactUserID, "group_user_id": groupUserID}).
 					Error("Failed to update salesforce user group id for opportunity contact roles.")
@@ -1175,13 +1187,21 @@ func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string
 		return http.StatusInternalServerError
 	}
 
-	groupID, err := model.GetUserGroupID(groupUser)
+	group, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_SALESFORCE_ACCOUNT)
+	if status != http.StatusFound {
+		log.WithFields(log.Fields{"project_id": projectID, "account_id": accountID, "user_id": userID}).
+			Error("Failed to get group on updateSalesforceUserAccountGroups.")
+		return http.StatusInternalServerError
+	}
+
+	// use group id, to avoid conflict with all accounts group id
+	groupID, err := model.GetGroupUserGroupID(groupUser, group.ID)
 	if err != nil {
 		log.WithError(err).Error("Failed to get group user group id.")
 		return http.StatusInternalServerError
 	}
 
-	_, status = store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_ACCOUNT, groupID, groupUserID)
+	_, status = store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_ACCOUNT, groupID, groupUserID, false)
 	if status != http.StatusAccepted && status != http.StatusNotModified {
 		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "group_user_id": groupUserID, "group_id": groupID}).
 			Error("Failed to update salesforce user group id.")
@@ -1251,7 +1271,7 @@ func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforce
 		}
 
 		if groupUserID, exist := pendingOpportunityAssociatedRecords[document.ID]; exist {
-			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID)
+			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID, false)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				logCtx.Error("Failed associating contact user with group opportunity.")
 			}
@@ -2501,7 +2521,7 @@ func associateGroupUserOpportunitytoUser(projectID int64, oppLeadIds, oppContact
 				continue
 			}
 
-			_, status = store.GetStore().UpdateUserGroup(projectID, createdDocument.UserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", OpportunityGroupUserID)
+			_, status = store.GetStore().UpdateUserGroup(projectID, createdDocument.UserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", OpportunityGroupUserID, false)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				logCtx.Error("Failed associating user with group opportunity.")
 			}

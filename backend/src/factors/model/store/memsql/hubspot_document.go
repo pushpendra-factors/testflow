@@ -98,6 +98,8 @@ func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 		idKey = "id"
 	case model.HubspotDocumentTypeContactList:
 		idKey = "listId"
+	case model.HubspotDocumentTypeOwner:
+		idKey = "ownerId"
 	default:
 		idKey = "guid"
 	}
@@ -346,7 +348,7 @@ func (store *MemSQL) getUpdatedDealAssociationDocument(projectID int64, incoming
 			return nil, errCode
 		}
 
-		logCtx.WithField("errCode", errCode).Error("Failed to check satisfiesHubspotDocumentUniquenessConstraints.")
+		logCtx.WithField("err_code", errCode).Error("Failed to check satisfiesHubspotDocumentUniquenessConstraints.")
 		return nil, status
 	}
 
@@ -497,7 +499,7 @@ func (store *MemSQL) modifyAndCreateBatchedHubspotDocuments(projectID int64, doc
 	for i := range documents {
 		value, err := documents[i].Value.RawMessage.MarshalJSON()
 		if err != nil {
-			logCtx.WithField("document", documents[i]).Error(err)
+			logCtx.WithError(err).WithField("document", documents[i]).Error(err)
 			continue
 		}
 		maxByteSize = math.Max(maxByteSize, float64(len(value)))
@@ -644,7 +646,7 @@ func (store *MemSQL) CreateHubspotDocumentInBatch(projectID int64, docType int, 
 	existDocumentIDs, errCode := isExistHubspotDocumentByIDAndTypeInBatch(projectID,
 		documentIDs, docType)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-		logCtx.Error("Failed to get isExistHubspotDocumentByIDAndTypeInBatch")
+		logCtx.WithField("err_code", errCode).Error("Failed to get isExistHubspotDocumentByIDAndTypeInBatch")
 		return errCode
 	}
 
@@ -652,7 +654,7 @@ func (store *MemSQL) CreateHubspotDocumentInBatch(projectID int64, docType int, 
 	if docType == model.HubspotDocumentTypeDeal {
 		existDocuments, errCode = store.getExistingDocumentsForDealAssociationUpdates(projectID, documentIDs)
 		if errCode != http.StatusOK {
-			logCtx.Error("Failed to get getExistingDocumentsForDealAssociationUpdates")
+			logCtx.WithField("err_code", errCode).Error("Failed to get getExistingDocumentsForDealAssociationUpdates")
 			return errCode
 		}
 	}
@@ -899,7 +901,7 @@ func (store *MemSQL) updateHubspotProjectSettingsLastSyncInfo(projectID int64, i
 
 	projectSetting, status := store.GetProjectSetting(projectID)
 	if status != http.StatusFound {
-		logCtx.Error("Failed to get project setttings on hubspot last sync info.")
+		logCtx.WithField("err_code", status).Error("Failed to get project setttings on hubspot last sync info.")
 		return errors.New("failed to get project settings ")
 	}
 
@@ -920,7 +922,7 @@ func (store *MemSQL) updateHubspotProjectSettingsLastSyncInfo(projectID int64, i
 	pJSONLastSyncInfo := postgres.Jsonb{RawMessage: enlastSyncInfo}
 	_, status = store.UpdateProjectSettings(projectID, &model.ProjectSetting{IntHubspotSyncInfo: &pJSONLastSyncInfo})
 	if status != http.StatusAccepted {
-		logCtx.Error("Failed to update hubspot last sync info on success.")
+		logCtx.WithField("err_code", status).Error("Failed to update hubspot last sync info on success.")
 		return errors.New("Failed to update hubspot last sync info")
 	}
 
@@ -943,7 +945,7 @@ func (store *MemSQL) UpdateHubspotProjectSettingsBySyncStatus(success []model.Hu
 				})
 
 				if status != http.StatusAccepted {
-					log.WithFields(log.Fields{"project_id": pid}).
+					log.WithFields(log.Fields{"project_id": pid, "err_code": status}).
 						Error("Failed to update hubspot first time sync status on success.")
 					anyFailure = true
 				}
@@ -1002,6 +1004,10 @@ func (store *MemSQL) GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, 
 		// add types not synced before.
 		for typ := range model.HubspotDocumentTypeAlias {
 			if !C.AllowHubspotEngagementsByProjectID(ps.ProjectId) && typ == model.HubspotDocumentTypeNameEngagement {
+				continue
+			}
+
+			if !C.AllowSyncReferenceFields(ps.ProjectId) && typ == model.HubspotDocumentTypeNameOwner {
 				continue
 			}
 
@@ -1103,6 +1109,10 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 				continue
 			}
 
+			if !C.AllowSyncReferenceFields(ps.ProjectId) && typ == model.HubspotDocumentTypeNameOwner {
+				continue
+			}
+
 			_, typExists := enabledProjectLastSync[ps.ProjectId][typ]
 			if !typExists {
 				// last sync timestamp as zero as type not synced before.
@@ -1155,8 +1165,15 @@ func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId int64, typ int, 
 	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND created_at < ? ",
 		projectId, typ, maxCreatedAtFmt).Find(&documents).Error
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
-		return nil, http.StatusInternalServerError
+		if !gorm.IsRecordNotFoundError(err) {
+			logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
+			return nil, http.StatusInternalServerError
+		}
+		return nil, http.StatusNotFound
+	}
+
+	if len(documents) == 0 {
+		return nil, http.StatusNotFound
 	}
 
 	return documents, http.StatusFound
@@ -1651,7 +1668,8 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 		return "", errors.New("invalid parameters")
 	}
 
-	if source != model.SmartCRMEventSourceHubspot && source != model.SmartCRMEventSourceSalesforce {
+	if source != model.UserSourceHubspotString && source != model.UserSourceSalesforceString &&
+		source != model.UserSourceSixSignalString && source != model.UserSourceDomainsString {
 		logCtx.Error("Invalid source.")
 		return "", errors.New("invalid source")
 	}
@@ -1696,12 +1714,7 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 		return groupUserID, nil
 	}
 
-	var requestSource int
-	if source == model.SmartCRMEventSourceHubspot {
-		requestSource = model.UserSourceHubspot
-	} else {
-		requestSource = model.UserSourceSalesforce
-	}
+	requestSource := model.GetUserSourceByName(source)
 
 	isGroupUser := true
 	userID, status := store.CreateGroupUser(&model.User{

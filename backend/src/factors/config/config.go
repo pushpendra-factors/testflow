@@ -161,6 +161,7 @@ type Configuration struct {
 	SegmentRequestQueueProjectTokens               []string
 	UseDefaultProjectSettingForSDK                 bool
 	BlockedSDKRequestProjectTokens                 []string
+	BlockedIPProjectIDs                            string
 	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
 	CacheLookUpRangeProjects                map[int64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
 	LookbackWindowForEventUserCache         int
@@ -178,8 +179,8 @@ type Configuration struct {
 	blacklistedProjectIDPropertyTypeFromDB string
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
-	CustomerEnabledProjectsWeeklyInsights  []int64
 	CustomerEnabledProjectsLastComputed    []int64
+	SkippedProjectIDListForOtp             []int64
 	DemoProjectIds                         []string
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
@@ -275,8 +276,6 @@ type Configuration struct {
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
-	EventTriggerEnabled                                bool
-	EventTriggerEnabledProjectIDs                      string
 	IncreaseKPILimitForProjectIDs                      string
 	EnableUserLevelEventPullForAddSessionByProjectID   string
 	EventsPullMaxLimit                                 int
@@ -284,10 +283,17 @@ type Configuration struct {
 	EnableDBConnectionPool2                            bool
 	FormFillIdentificationAllowedProjects              string
 	EnableEventFiltersInSegments                       bool
+	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
 	TeamsAppTenantID                                   string
 	TeamsAppClientID                                   string
 	TeamsAppClientSecret                               string
+	EnableDomainsGroupByProjectID                      string
+	DisableUpdateNextSessionTimestamp                  int
+	EnableSyncReferenceFieldsByProjectID               string
+	StartTimestampForWeekMonth                         int64
+	CacheForLongerExpiryProjects                       string
+	AllowedSalesforceSyncDocTypes                      string
 }
 
 type Services struct {
@@ -322,8 +328,10 @@ const (
 	HealthcheckCleanupEventUserCachePingID      = "85e21b5c-5503-4172-af40-de918741a4d1"
 	HealthcheckDashboardCachingPingID           = "72e5eadc-b46e-45ca-ba78-29819532307d"
 	HealthcheckHubspotEnrichPingID              = "6f522e60-6bf8-4aea-99fe-f5a1c68a00e7"
+	HealthcheckOTPHubspotPingID                 = "c937adf4-a54d-4ee8-8ec9-3e5ed8a83e42"
 	HealthcheckMonitoringJobPingID              = "18db44be-c193-4f11-84e5-5ff144e272e9"
 	HealthcheckSalesforceEnrichPingID           = "e56175aa-3407-4595-bb94-d8325952b224"
+	HealthcheckSalesforceSyncPingID             = "c5434535-ea40-42b8-8e1f-243ccf88fef3"
 	HealthcheckYourstoryAddPropertiesPingID     = "acf7faab-c56f-415e-aa10-ca2aa9246172"
 	HealthCheckSmartPropertiesPingID            = "ead84671-b84c-481b-bfa5-59403d626652"
 	HealthCheckSmartPropertiesDupPingID         = "d2b55241-52d8-4cc5-a49c-5b57f6a96642"
@@ -346,6 +354,8 @@ const (
 	HealthcheckPathAnalysisPingID               = "9f71b930-9233-4e58-9935-5de0434d8fa8"
 	HealthCheckPreBuiltCustomKPIPingID          = "9e5ac799-e15f-4f44-86b0-4be88379f486"
 	HealthCheckAnalyzeJobPingID                 = "3d1bd82d-e036-4433-a794-1042a7f29976"
+	HealthCheckSixSignalReportPingID            = "2508c4c3-b941-40bb-8f2b-a59e4bedf3e5"
+	HealthcheckCurrencyUploadPingID             = "29defb4f-c95e-4895-a515-591fb7c216f7"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
@@ -1794,6 +1804,16 @@ func GetSkipAttributionDashboardCaching() int {
 	return configuration.SkipAttributionDashboardCaching
 }
 
+func IsProjectIDSkippedForOtp(projectId int64) bool {
+	skip := false
+	for _, id := range configuration.SkippedProjectIDListForOtp {
+		if id == projectId {
+			skip = true
+		}
+	}
+	return skip
+}
+
 func GetSDKRequestQueueAllowedTokens() []string {
 	return configuration.SDKRequestQueueProjectTokens
 }
@@ -1882,6 +1902,28 @@ func IsBlockedSDKRequestProjectToken(projectToken string) bool {
 	}
 
 	return U.StringValueIn(projectToken, configuration.BlockedSDKRequestProjectTokens)
+}
+
+// IsIPBlockingFeatureEnabled - Enables the feature of blocking
+// IP for a project, based on given project_id and list of block_ip_project_ids.
+func IsIPBlockingFeatureEnabled(projectID int64) bool {
+	if configuration.BlockedIPProjectIDs == "" {
+		return false
+	}
+
+	if configuration.BlockedIPProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.BlockedIPProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
 }
 
 // PingHealthcheckForSuccess Ping healthchecks.io for cron success.
@@ -2007,20 +2049,6 @@ func GetUUIdsFromStringListAsString(stringList string) []string {
 	return stringTokens
 }
 
-func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId int64) bool {
-	for _, id := range configuration.CustomerEnabledProjectsWeeklyInsights {
-		if id == projectId {
-			return true
-		}
-	}
-	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
-		if uuid == loggedInUUID {
-			return true
-		}
-	}
-	return false
-}
-
 func IsLastComputedWhitelisted(projectId int64) bool {
 	for _, id := range configuration.CustomerEnabledProjectsLastComputed {
 		if id == projectId {
@@ -2084,7 +2112,10 @@ func GetAppName(defaultAppName, overrideAppName string) string {
 	return defaultAppName
 }
 
-func GetCloudManager(projectId int64) filestore.FileManager {
+func GetCloudManager(projectId int64, skipProjectIdDependency bool) filestore.FileManager {
+	if skipProjectIdDependency {
+		return configuration.NewCloudManager
+	}
 	if U.ContainsInt64InArray(configuration.ProjectIdsV2, projectId) {
 		return configuration.NewCloudManager
 	}
@@ -2387,20 +2418,6 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	return true
 }
 
-func IsEventTriggerEnabled() bool {
-	return configuration.EventTriggerEnabled
-}
-
-func IsProjectIDEventTriggerEnabledProjectID(id int64) bool {
-	list := GetTokensFromStringListAsUint64(configuration.EventTriggerEnabledProjectIDs)
-	for _, i := range list {
-		if i == id {
-			return true
-		}
-	}
-	return false
-}
-
 func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
 	if configuration.IncreaseKPILimitForProjectIDs == "" {
 		return false
@@ -2433,6 +2450,14 @@ func IsEnabledFeatureGates() bool {
 	return configuration.EnableFeatureGates
 }
 
+func EnableSixSignalGroupByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSixSignalGroupByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
+}
+
 func IsEnableDebuggingForIP() bool {
 	return configuration.EnableDebuggingForIP
 }
@@ -2447,4 +2472,42 @@ func GetTeamsClientSecret() string {
 
 func GetTeamsTenantID() string {
 	return configuration.TeamsAppTenantID
+}
+
+func IsAllowedDomainsGroupByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDomainsGroupByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
+}
+
+func AllowSyncReferenceFields(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSyncReferenceFieldsByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
+}
+
+func GetStartTimestampForWeekMonth() int64 {
+	return configuration.StartTimestampForWeekMonth
+}
+
+func IsProjectAllowedForLongerExpiry(projectId int64) bool {
+	return isProjectOnProjectsList(configuration.CacheForLongerExpiryProjects, projectId)
+}
+
+func IsSalesforceDocTypeEnabledForSync(docType string) bool {
+	allowedSalesforceDocTypesForSync := GetConfig().AllowedSalesforceSyncDocTypes
+	if allowedSalesforceDocTypesForSync == "" {
+		return false
+	}
+
+	if allowedSalesforceDocTypesForSync == "*" {
+		return true
+	}
+
+	allowedDocTypes := strings.Split(allowedSalesforceDocTypesForSync, ",")
+	return U.StringValueIn(docType, allowedDocTypes)
 }

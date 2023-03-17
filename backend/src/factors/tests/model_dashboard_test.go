@@ -391,29 +391,29 @@ func TestWebAnalyticsUnitShouldRefreshDashboardUnit(t *testing.T) {
 	timezoneString := U.TimeZoneString(project.TimeZone)
 	// 30mins range. Should allow.
 	from, to, _ := U.WebAnalyticsQueryDateRangePresets[U.DateRangePreset30Minutes](timezoneString)
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, "", timezoneString, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
 
 	// Todays range. Should allow.
 	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetToday](timezoneString)
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, "", timezoneString, true))
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, U.DateRangePresetToday, timezoneString, false))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 
 	// Yesterday's range. Should allow first time.
 	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetYesterday](timezoneString)
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, "", timezoneString, true))
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, U.DateRangePresetYesterday, timezoneString, false))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 
 	// Yesterday's range. Should not allow again on same day once cache is set.
 	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetYesterday](timezoneString)
 	model.SetCacheResultForWebAnalyticsDashboard(&model.WebAnalyticsQueryResult{}, project.ID, dashboard.ID, from, to, timezoneString)
-	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, "", timezoneString, true))
+	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
 	model.SetCacheResultByDashboardIdAndUnitIdWithPreset("{}", project.ID, dashboard.ID, dashboardUnit.ID, U.DateRangePresetYesterday, from, to, timezoneString, nil)
-	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, U.DateRangePresetYesterday, timezoneString, false))
+	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 
 	// More than 2 days old range. Should allow.
 	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetYesterday](timezoneString)
 	from = from - 30*U.SECONDS_IN_A_DAY
 	to = to - 2*U.SECONDS_IN_A_DAY
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, "", timezoneString, true))
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, "", timezoneString, false))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 }

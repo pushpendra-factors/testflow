@@ -1,0 +1,7 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: staging-api
+spec:
+  domains:
+  - staging-api.factors.ai

@@ -3507,6 +3507,10 @@ func TestHubspotCompanyGroups(t *testing.T) {
 				Value:     "testcompany",
 				Timestamp: companyCreatedDate.Unix() * 1000,
 			},
+			"website": {
+				Value:     "abc.com",
+				Timestamp: companyCreatedDate.Unix() * 1000,
+			},
 			"company_id": {
 				Value: fmt.Sprintf("%d", company1ID),
 			},
@@ -3971,6 +3975,20 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	assert.Equal(t, 1, groupRelationship[0].RightGroupNameID)
 	user, _ = store.GetStore().GetUser(project.ID, companyContacts[0].UserId)
 	assert.True(t, assertUserGroupValueByColumnName(user, "group_2_user_id", deal3GroupUserID))
+
+	// check for domains group for hubspot company group
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{U.GetPropertyValueAsString(company1ID)}, model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	groupUser, status := store.GetStore().GetUser(project.ID, documents[0].GroupUserId)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abc.com", groupUser.Group3ID)
+	assert.True(t, *groupUser.IsGroupUser)
+	domainsGroup, status := store.GetStore().GetUser(project.ID, groupUser.Group3UserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abc.com", domainsGroup.Group3ID)
+	assert.Empty(t, domainsGroup.Group3UserID)
+	assert.True(t, *domainsGroup.IsGroupUser)
+
 }
 
 /*func TestHubspotOfflineTouchPoint(t *testing.T) {
@@ -5886,4 +5904,185 @@ func TestHubspotContactListV2(t *testing.T) {
 	for _, id := range []string{"3", "5"} {
 		assert.Equal(t, contactIdToContactDocumentsMap[id].UserId, contactListIdToContactListDocumentMap["1:"+id].UserId)
 	}
+}
+
+func TestSyncPropertiesOptions(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	dealPropertiesWithOptionsJson := `{
+        "name": "dealtype",
+        "label": "Deal Type",
+        "description": "Type of the deal",
+        "groupName": "dealinformation",
+        "type": "enumeration",
+        "fieldType": "radio",
+        "options": [
+            {
+                "description": null,
+                "label": "New Business",
+                "displayOrder": 0,
+                "hidden": false,
+                "doubleData": 0,
+                "readOnly": false,
+                "value": "newbusiness"
+            },
+            {
+                "description": null,
+                "label": "ExistingBusiness",
+                "displayOrder": 1,
+                "hidden": false,
+                "doubleData": 0,
+                "readOnly": false,
+                "value": "existingbusiness"
+            },
+            {
+                "description": null,
+                "label": "Existing Customer - Upgrade",
+                "displayOrder": -1,
+                "hidden": true,
+                "doubleData": 0,
+                "readOnly": false,
+                "value": "Existing Customer - Upgrade"
+            }
+        ],
+        "formField": false,
+        "displayOrder": 7,
+        "readOnlyValue": false,
+        "readOnlyDefinition": true,
+        "hidden": false,
+        "mutableDefinitionNotDeletable": true,
+        "calculated": false,
+        "externalOptions": false,
+        "displayMode": "current_value",
+        "hubspotDefined": true
+    }`
+
+	dealPropertiesWithOptionsJsonb := postgres.Jsonb{json.RawMessage(dealPropertiesWithOptionsJson)}
+	dealPropertiesWithOptionsPropertyDetail := IntHubspot.PropertyDetail{}
+	err = U.DecodePostgresJsonbToStructType(&dealPropertiesWithOptionsJsonb, &dealPropertiesWithOptionsPropertyDetail)
+	assert.Nil(t, err)
+
+	dealPropertiesWithOptions := map[string][]IntHubspot.PropertyDetail{
+		model.HubspotDocumentTypeNameDeal: {dealPropertiesWithOptionsPropertyDetail},
+	}
+
+	failures := IntHubspot.SyncPropertiesOptions(project.ID, dealPropertiesWithOptions)
+	assert.False(t, failures)
+
+	propertyDetails, errCode := store.GetStore().GetDisplayNameLabelsByProjectIdAndSource(project.ID, model.SmartCRMEventSourceHubspot)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, 3, len(propertyDetails))
+
+	sort.Slice(propertyDetails, func(i, j int) bool {
+		return propertyDetails[i].CreatedAt.UnixNano() < propertyDetails[j].CreatedAt.UnixNano()
+	})
+
+	for i := range propertyDetails {
+		assert.Equal(t, project.ID, propertyDetails[i].ProjectID)
+		assert.NotNil(t, propertyDetails[i].ID)
+		assert.Equal(t, model.SmartCRMEventSourceHubspot, propertyDetails[i].Source)
+		assert.Equal(t, "$hubspot_deal_dealtype", propertyDetails[i].PropertyKey)
+		assert.LessOrEqual(t, propertyDetails[i].CreatedAt.UnixNano(), propertyDetails[i].UpdatedAt.UnixNano())
+		if i == 0 {
+			assert.Equal(t, "newbusiness", propertyDetails[i].Value)
+			assert.Equal(t, "New Business", propertyDetails[i].Label)
+		} else if i == 1 {
+			assert.Equal(t, "existingbusiness", propertyDetails[i].Value)
+			assert.Equal(t, "ExistingBusiness", propertyDetails[i].Label)
+		} else {
+			assert.Equal(t, "Existing Customer - Upgrade", propertyDetails[i].Value)
+			assert.Equal(t, "Existing Customer - Upgrade", propertyDetails[i].Label)
+		}
+	}
+}
+
+func TestSyncOwnerReferenceFields(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	jsonOwner := `{
+		        "portalId": 62515,
+		        "ownerId": 66,
+		        "type": "PERSON",
+		        "firstName": "Blog Api",
+		        "lastName": "Test",
+		        "email": "blogapitest@hubspot.com",
+		        "createdAt": 1405605858898,
+		        "updatedAt": 1502455466553,
+		        "remoteList": [
+		            {
+		                "id": 29451,
+		                "portalId": 62515,
+		                "ownerId": 66,
+		                "remoteId": "166656",
+		                "remoteType": "HUBSPOT",
+		                "active": true
+		            }
+		        ],
+		        "hasContactsAccess": false,
+		        "activeUserId": 166656,
+		        "userIdIncludingInactive": 166656,
+		        "activeSalesforceId": null,
+		        "isActive": true
+		    }`
+
+	dealPropertiesWithOwnerJson := `{
+        "name": "hubspot_owner_id",
+        "label": "HubSpot Owner",
+        "description": "The owner of the deal",
+        "groupName": "dealinformation",
+        "type": "enumeration",
+        "fieldType": "select",
+        "options": [],
+        "formField": false,
+        "displayOrder": 6,
+        "readOnlyValue": false,
+        "readOnlyDefinition": true,
+        "hidden": false,
+        "mutableDefinitionNotDeletable": true,
+        "calculated": false,
+        "externalOptions": true,
+        "displayMode": "current_value",
+        "hubspotDefined": true,
+		"externalOptionsReferenceType": "OWNER"
+    }`
+
+	ownerRecordJson := postgres.Jsonb{json.RawMessage(jsonOwner)}
+	ownerRecord := &model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameOwner,
+		Value:     &ownerRecordJson,
+	}
+
+	status := store.GetStore().CreateHubspotDocument(project.ID, ownerRecord)
+	assert.Equal(t, http.StatusCreated, status)
+
+	dealPropertiesWithOwnerJsonb := postgres.Jsonb{json.RawMessage(dealPropertiesWithOwnerJson)}
+	dealPropertiesWithOwnerPropertyDetail := IntHubspot.PropertyDetail{}
+	err = U.DecodePostgresJsonbToStructType(&dealPropertiesWithOwnerJsonb, &dealPropertiesWithOwnerPropertyDetail)
+	assert.Nil(t, err)
+
+	dealPropertiesWithOwner := map[string][]IntHubspot.PropertyDetail{
+		model.HubspotDocumentTypeNameDeal: {dealPropertiesWithOwnerPropertyDetail},
+	}
+
+	failures := IntHubspot.SyncOwnerReferenceFields(project.ID, dealPropertiesWithOwner, time.Now().Unix())
+	assert.False(t, failures)
+
+	ownerRecords, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"66"}, model.HubspotDocumentTypeOwner, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 1, len(ownerRecords))
+	assert.True(t, ownerRecords[0].Synced)
+
+	propertyDetails, errCode := store.GetStore().GetDisplayNameLabelsByProjectIdAndSource(project.ID, model.SmartCRMEventSourceHubspot)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, 1, len(propertyDetails))
+
+	assert.Equal(t, project.ID, propertyDetails[0].ProjectID)
+	assert.NotNil(t, propertyDetails[0].ID)
+	assert.Equal(t, model.SmartCRMEventSourceHubspot, propertyDetails[0].Source)
+	assert.Equal(t, "$hubspot_deal_hubspot_owner_id", propertyDetails[0].PropertyKey)
+	assert.LessOrEqual(t, propertyDetails[0].CreatedAt.UnixNano(), propertyDetails[0].UpdatedAt.UnixNano())
+	assert.Equal(t, "66", propertyDetails[0].Value)
+	assert.Equal(t, "Blog Api Test", propertyDetails[0].Label)
 }

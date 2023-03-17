@@ -470,7 +470,7 @@ func (store *MemSQL) DeleteDashboard(projectID int64, agentUUID string, dashboar
 
 	dashboardUnits, errCode := store.GetDashboardUnits(projectID, agentUUID, dashboardID)
 	if errCode != http.StatusFound {
-		log.Error("failed to fetch dashboard units for delete dashboard")
+		log.WithField("err_code", errCode).Error("failed to fetch dashboard units for delete dashboard")
 		return http.StatusBadRequest
 	}
 
@@ -480,7 +480,7 @@ func (store *MemSQL) DeleteDashboard(projectID int64, agentUUID string, dashboar
 		if errCode != http.StatusAccepted {
 			// continue
 			log.WithFields(log.Fields{"project_id": projectID, "dashboard_id": dashboardID,
-				"dashboard_uint_id": dashboardUnit.ID}).Error("failed to delete dashboard unit.")
+				"dashboard_uint_id": dashboardUnit.ID, "err_code": errCode}).Error("failed to delete dashboard unit.")
 		}
 	}
 

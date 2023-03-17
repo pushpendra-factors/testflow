@@ -112,8 +112,8 @@ func (q *KPIQueryGroup) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key,
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
-func (q *KPIQueryGroup) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Queries[0].From, q.Queries[0].To, q.Queries[0].Timezone)
+func (q *KPIQueryGroup) GetQueryCacheExpiry(projectID int64) float64 {
+	return getQueryCacheResultExpiry(projectID, q.Queries[0].From, q.Queries[0].To, q.Queries[0].Timezone)
 }
 
 func (q *KPIQueryGroup) GetGroupByTimestamp() string {
@@ -684,7 +684,7 @@ func TransformEventPropertiesToKPIConfigProperties(properties map[string][]strin
 			}
 			tempKPIConfigProperty = map[string]string{
 				"name":         propertyName,
-				"display_name": displayName,
+				"display_name": strings.Title(displayName),
 				"data_type":    dataType,
 				"entity":       EventEntity,
 			}
@@ -710,7 +710,7 @@ func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string,
 				}
 				tempKPIConfigProperty = map[string]string{
 					"name":         propertyName,
-					"display_name": displayName,
+					"display_name": strings.Title(displayName),
 					"data_type":    dataType,
 					"entity":       UserEntity,
 				}

@@ -3,6 +3,7 @@ package util
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -19,6 +20,8 @@ const (
 	DATETIME_FORMAT_DB_WITH_TIMEZONE string = "2006-01-02T15:04:05-07:00"
 )
 
+var BaseYears = []int{2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035}
+
 // Returns date in YYYYMMDD format
 func GetDateOnlyFromTimestampZ(timestamp int64) string {
 	return time.Unix(timestamp, 0).UTC().Format(DATETIME_FORMAT_YYYYMMDD)
@@ -26,6 +29,12 @@ func GetDateOnlyFromTimestampZ(timestamp int64) string {
 
 func GetDateOnlyHyphenFormatFromTimestampZ(timestamp int64) string {
 	return time.Unix(timestamp, 0).UTC().Format(DATETIME_FORMAT_YYYYMMDD_HYPHEN)
+}
+
+// Returns date in YYYYMMDD format for a given timestamp and timezone
+func GetDateOnlyFormatFromTimestampAndTimezone(timestamp int64, timezone TimeZoneString) string {
+	in := GetTimeLocationFor(timezone)
+	return time.Unix(timestamp, 0).In(in).Format(DATETIME_FORMAT_YYYYMMDD)
 }
 
 // TimeNowZ Return current time in UTC. Should be used everywhere to avoid local timezone.
@@ -470,4 +479,98 @@ func GetBeginningDayTimestampFromDateString(date string) (int64, error) {
 		return 0, err
 	}
 	return time.Date(int(startYear), time.Month(startMonth), int(startDay), 0, 0, 0, 0, time.FixedZone("UTC", 0)).Unix(), nil
+}
+
+func GetTimestampInSecs(timestamp int) int {
+	digitsCount := 0
+	{
+		timestampTmp := timestamp
+		for timestampTmp > 0 {
+			timestampTmp = timestampTmp / 10
+			digitsCount++
+		}
+	}
+	reqTimestamp := int(float64(timestamp) * math.Pow(10, float64(10-digitsCount)))
+	return reqTimestamp
+}
+
+func startDateOfMonth(year int, month time.Month) time.Time {
+	//timezoneLocation, _ := time.LoadLocation("Asia/Kolkata")
+	return time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
+}
+
+func lastDateOfMonth(year int, month time.Month) time.Time {
+	// timezoneLocation, _ := time.LoadLocation("Asia/Kolkata")
+	return time.Date(year, month+1, 0, 0, 0, -1, 0, time.UTC)
+}
+
+type CustomPreset struct {
+	From  int64
+	To    int64
+	Year  int
+	Month string
+	Day   int
+	TZ    TimeZoneString
+}
+
+func GetAllMonthFromTo(startTime int64, zoneString TimeZoneString) []CustomPreset {
+
+	currentTime := time.Now().Unix()
+	startOfMonth := startTime
+	endOfMonth := startTime
+	var allRanges []CustomPreset
+
+	for _, baseYear := range BaseYears {
+
+		for y, m := baseYear, time.Month(1); m <= 12; m++ {
+			startOfMonth = GetBeginningOfDayTimestampIn(startDateOfMonth(y, m).Unix(), zoneString)
+			endOfMonth = GetEndOfDayTimestampIn(lastDateOfMonth(y, m).Unix(), zoneString)
+
+			// skip month if it is before start time
+			if endOfMonth < startTime {
+				continue
+			}
+			// exit when the end of last month/current month is reached
+			if endOfMonth > currentTime {
+				break
+			}
+
+			newRange := CustomPreset{
+				From:  startOfMonth,
+				To:    endOfMonth,
+				Year:  time.Unix(startOfMonth, 0).Year(),
+				Month: time.Unix(startOfMonth, 0).Month().String(),
+				Day:   time.Unix(startOfMonth, 0).Day(),
+				TZ:    zoneString,
+			}
+			allRanges = append(allRanges, newRange)
+		}
+		// exit when the end of last month/current month is reached
+		if endOfMonth > currentTime {
+			break
+		}
+	}
+	return allRanges
+}
+
+func GetAllWeeksFromStartTime(startTime int64, zoneString TimeZoneString) []CustomPreset {
+	currentTime := time.Now().Unix()
+
+	fromNew := startTime
+	toNew := fromNew + (7 * 24 * 60 * 60) - 1
+	var allRanges []CustomPreset
+	for currentTime > toNew {
+		newRange := CustomPreset{
+			From:  fromNew,
+			To:    toNew,
+			Year:  time.Unix(fromNew, 0).Year(),
+			Month: time.Unix(fromNew, 0).Month().String(),
+			Day:   time.Unix(fromNew, 0).Day(),
+			TZ:    zoneString,
+		}
+		allRanges = append(allRanges, newRange)
+		fromNew = toNew + 1
+		toNew = fromNew + (7 * 24 * 60 * 60) - 1
+	}
+	return allRanges
 }

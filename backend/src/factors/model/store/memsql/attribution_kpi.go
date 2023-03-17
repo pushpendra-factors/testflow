@@ -160,7 +160,7 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 	customMetrics, errMsg, statusCode := store.GetCustomMetricsByProjectId(projectID)
 
 	if statusCode != http.StatusFound {
-		logCtx.WithField("messageFinder", "Failed to get custom metrics").Error(errMsg)
+		logCtx.WithFields(log.Fields{"messageFinder": "Failed to get custom metrics", "err_code": statusCode}).Error(errMsg)
 		return nil
 	}
 	if C.GetAttributionDebug() == 1 {
@@ -214,7 +214,7 @@ func (store *MemSQL) GetDataFromKPIResultV1(projectID int64, kpiQueryResult mode
 	customMetrics, errMsg, statusCode := store.GetCustomMetricsByProjectId(projectID)
 
 	if statusCode != http.StatusFound {
-		logCtx.WithField("messageFinder", "Failed to get custom metrics").Error(errMsg)
+		logCtx.WithFields(log.Fields{"messageFinder": "Failed to get custom metrics", "err_code": statusCode}).Error(errMsg)
 		return nil
 	}
 	if C.GetAttributionDebug() == 1 {
@@ -263,7 +263,7 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
 		if statusCode != http.StatusOK {
-			logCtx.Error("failed to get KPI result for attribution query")
+			logCtx.WithField("err_code", statusCode).Error("failed to get KPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
 				return errors.New("failed to get KPI result for attribution query - StatusPartialContent"), nil
 			}
@@ -303,7 +303,7 @@ func (store *MemSQL) RunKPIGroupQueryV1(projectID int64, query *model.Attributio
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
 		if statusCode != http.StatusOK {
-			logCtx.Error("failed to get KPI result for attribution query")
+			logCtx.WithField("err_code", statusCode).Error("failed to get KPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
 				return errors.New("failed to get KPI result for attribution query - StatusPartialContent"), nil
 			}
@@ -338,7 +338,7 @@ func (store *MemSQL) FillKPIGroupUserData(projectID int64, query *model.Attribut
 
 	_groups, errCode := store.GetGroups(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("failed to get groups for project")
+		logCtx.WithField("err_code", errCode).Error("failed to get groups for project")
 		return errors.New("failed to get groups for project")
 	}
 
@@ -386,7 +386,7 @@ func (store *MemSQL) FillKPIGroupUserDataV1(projectID int64, query *model.Attrib
 
 	_groups, errCode := store.GetGroups(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("failed to get groups for project")
+		logCtx.WithField("err_code", errCode).Error("failed to get groups for project")
 		return errors.New("failed to get groups for project")
 	}
 

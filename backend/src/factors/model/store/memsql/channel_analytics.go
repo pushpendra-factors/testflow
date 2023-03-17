@@ -915,7 +915,7 @@ func (store *MemSQL) GetSmartPropertyAndRelated(projectID int64, object string, 
 	}
 	err := db.Table("smart_property_rules").Where("project_id = ? AND type = ? and is_deleted = ?", projectID, object_type, false).Find(&smartPropertyRules).Error
 	if err != nil {
-		log.Error("Failed to get smart property filters from DB")
+		log.WithError(err).Error("Failed to get smart property filters from DB")
 	}
 
 	if len(smartPropertyRules) == 0 {

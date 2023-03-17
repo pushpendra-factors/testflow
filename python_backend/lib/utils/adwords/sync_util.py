@@ -14,32 +14,43 @@ class AdwordsSyncUtil:
         sync_last_timestamp = last_sync.get("last_timestamp")
         sync_doc_type = last_sync.get("doc_type_alias")
         first_run = (sync_last_timestamp == 0)
-        next_timestamps = AdwordsSyncUtil.get_next_timestamps_for_run(first_run, input_last_timestamp, input_to_timestamp,
-                                                                      sync_last_timestamp, sync_doc_type)
         next_sync_infos = []
-        for next_timestamp in next_timestamps:
+
+        if AdwordsSyncUtil.non_historical_doc_type(sync_doc_type):
+            next_timestamp = None
+            next_timestamp_end = None
+            if input_last_timestamp is not None:
+                next_timestamp = SyncUtil.get_next_start_time(input_last_timestamp)
+            else:
+                next_timestamp = SyncUtil.get_next_start_time(sync_last_timestamp)
+
+            if input_to_timestamp is not None:
+                next_timestamp_end = input_to_timestamp
+            else:
+                next_timestamp_end = TimeUtil.get_timestamp_from_datetime(datetime.utcnow())
+
             next_sync_info = last_sync.copy()
             next_sync_info['next_timestamp'] = next_timestamp
+            next_sync_info['next_timestamp_end'] = next_timestamp_end
             next_sync_info['first_run'] = first_run
             next_sync_infos.append(next_sync_info)
-        return next_sync_infos
 
-    @staticmethod
-    def get_next_timestamps_for_run(first_run, input_last_timestamp, input_to_timestamp, sync_last_timestamp, sync_doc_type):
-        next_timestamps = []
-        if first_run or (input_last_timestamp is None and input_to_timestamp is None):
-            if AdwordsSyncUtil.doesnt_contains_historical_data(sync_last_timestamp, sync_doc_type):
-                next_timestamps = [TimeUtil.get_timestamp_from_datetime(datetime.utcnow())]
+        else:
+            next_timestamps = []
+            if input_last_timestamp is not None and input_to_timestamp is not None:
+                next_timestamps = SyncUtil.get_next_timestamps(input_last_timestamp, input_to_timestamp)
+            elif input_last_timestamp is not None and input_to_timestamp is None:
+                next_timestamps = SyncUtil.get_next_timestamps(input_last_timestamp)
             else:
                 next_timestamps = SyncUtil.get_next_timestamps(sync_last_timestamp)
 
-        if scripts.adwords.CONFIG.ADWORDS_APP.type_of_run != scripts.adwords.EXTRACT:
-            if input_last_timestamp is not None and input_to_timestamp is not None:
-                next_timestamps = SyncUtil.get_next_timestamps(input_last_timestamp, input_to_timestamp)
-            elif input_last_timestamp is not None:
-                next_timestamps = SyncUtil.get_next_timestamp(input_last_timestamp)
-        return next_timestamps
+            for next_timestamp in next_timestamps:
+                next_sync_info = last_sync.copy()
+                next_sync_info['next_timestamp'] = next_timestamp
+                next_sync_info['first_run'] = first_run
+                next_sync_infos.append(next_sync_info)
 
+        return next_sync_infos
 
     @staticmethod
     def doesnt_contains_historical_data(last_timestamp, doc_type):
