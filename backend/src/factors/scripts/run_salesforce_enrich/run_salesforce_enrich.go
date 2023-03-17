@@ -275,13 +275,13 @@ func main() {
 
 			propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailSync...)
 		}
+
 		if anyFailure {
 			C.PingHealthcheckForFailure(syncHealthcheckPingID, syncStatus)
-			return
+		} else {
+			C.PingHealthcheckForSuccess(syncHealthcheckPingID, syncStatus)
+			log.WithFields(log.Fields{"syncStatus": syncStatus}).Info("Sync Job completed.")
 		}
-
-		C.PingHealthcheckForSuccess(syncHealthcheckPingID, syncStatus)
-		log.WithFields(log.Fields{"syncStatus": syncStatus}).Info("Sync Job completed.")
 	}
 
 	var jobStatus salesforceJobStatus
