@@ -4,7 +4,7 @@ import React from 'react';
 
 const EmptyDataState = ({ title, subtitle, icon, action }: Props) => {
   return (
-    <div className='w-100 flex flex-col  align-middle gap-4 py-10'>
+    <div className='w-100 flex flex-col  align-middle  py-10'>
       <div className='flex justify-center align-middle'>
         <SVG
           name={icon.name}
@@ -14,16 +14,22 @@ const EmptyDataState = ({ title, subtitle, icon, action }: Props) => {
           width={icon.width}
         />
       </div>
-      <div>
-        <Text type={'title'} level={6} weight={'bold'} color='grey-2'>
+      <div className='mt-4'>
+        <Text
+          type={'title'}
+          level={6}
+          weight={'bold'}
+          color='grey-2'
+          extraClass='m-0'
+        >
           {title}
         </Text>
-        <Text type={'title'} level={7} color='grey-2' extraClass='mt-2'>
+        <Text type={'title'} level={7} color='grey-2' extraClass='mt-1'>
           {subtitle}
         </Text>
       </div>
       {action && action?.name && (
-        <div>
+        <div style={{ marginTop: 22 }}>
           <Button size='large' type='primary' onClick={action.handleClick}>
             {action.name}
           </Button>
@@ -39,7 +45,7 @@ type Props = {
   icon: {
     name: string;
     size?: number;
-    color: string;
+    color?: string;
     height?: number;
     width?: number;
   };

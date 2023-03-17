@@ -21,7 +21,8 @@ export const KEY_LABELS = {
   [CHANNEL_KEY]: 'Channel',
   [INDUSTRY_KEY]: 'Industry',
   [EMP_RANGE_KEY]: 'Employee Range',
-  [REVENUE_RANGE_KEY]: 'Revenue Range'
+  [REVENUE_RANGE_KEY]: 'Revenue Range',
+  [DOMAIN_KEY]: 'Domain'
 };
 
 export const DEFAULT_COLUMNS = [

@@ -1,11 +1,6 @@
 import React from 'react';
-import { Text } from 'Components/factorsComponents';
 import MomentTz from 'Components/MomentTz';
-import {
-  formatDuration,
-  getClickableTitleSorter,
-  SortResults
-} from 'Utils/dataFormatter';
+import { getClickableTitleSorter, SortResults } from 'Utils/dataFormatter';
 import {
   SESSION_SPENT_TIME,
   KEY_LABELS,
@@ -17,11 +12,13 @@ import {
   SHARE_QUERY_PARAMS,
   DEFAULT_COLUMNS,
   EMP_RANGE_KEY,
-  REVENUE_RANGE_KEY
+  REVENUE_RANGE_KEY,
+  INDUSTRY_KEY
 } from './const';
 import { ResultGroup, StringObject, WeekStartEnd, ShareApiData } from './types';
 import momentTz from 'moment-timezone';
 import { intersection } from 'lodash';
+import TableCell from './ui/components/ReportTable/TableCell';
 
 export const generateFirstAndLastDayOfLastWeeks = (
   n: number = 5
@@ -105,6 +102,26 @@ export const getSortType = (header: string) => {
   return 'categorical';
 };
 
+const getColumnWidth = (header: string) => {
+  if ([COMPANY_KEY, INDUSTRY_KEY].includes(header)) {
+    const windowSize = window.innerWidth;
+    if (header === INDUSTRY_KEY)
+      return {
+        width: 200
+      };
+    if (windowSize <= 1440) {
+      return {
+        width: 260
+      };
+    } else {
+      return {
+        width: 350
+      };
+    }
+  }
+  return {};
+};
+
 export const getTableColumuns = (
   data: ResultGroup,
   sorter: any,
@@ -112,7 +129,7 @@ export const getTableColumuns = (
 ) => {
   const { headers } = data;
   const tColumns = intersection(DEFAULT_COLUMNS, headers)
-    .map((header, i) => {
+    .map((header: string, i: number) => {
       let returnObj = {
         key: i,
         dataIndex: header,
@@ -128,27 +145,17 @@ export const getTableColumuns = (
           handleSorting,
           'left',
           'center',
-          'px-6 py-3'
+          'p-0 m-0 text-ellipsis'
         ),
-        render: (d) => React.createElement(Text, { type: 'title', level: 7 }, d)
+        render: (text: string, record: StringObject) =>
+          // @ts-ignore
+          React.createElement(TableCell, {
+            text: text,
+            record: record,
+            header: header
+          }),
+        ...getColumnWidth(header)
       };
-
-      if (header === SESSION_SPENT_TIME) {
-        returnObj.render = (d) =>
-          React.createElement(
-            Text,
-            { type: 'title', level: 7 },
-            formatDuration(d)
-          );
-      }
-      if (header === PAGE_COUNT_KEY) {
-        returnObj.render = (d) =>
-          React.createElement(
-            Text,
-            { type: 'title', level: 7 },
-            `${d} ${Number(d) > 1 ? 'Pages' : 'Page'}`
-          );
-      }
 
       return returnObj;
     })

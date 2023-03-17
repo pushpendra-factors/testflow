@@ -27,7 +27,8 @@ function DataTable({
   filters,
   appliedFilters,
   setAppliedFilters,
-  breakupHeading
+  breakupHeading,
+  tableLayout
 }) {
   const componentRef = useRef(null);
   const downloadBtnRef = useRef(null);
@@ -117,6 +118,7 @@ function DataTable({
         scroll={scroll}
         // size={isDashboardWidget ? 'middle' : ''}
         size={'middle'}
+        {...(tableLayout && { tableLayout })}
       />
     </div>
   );
