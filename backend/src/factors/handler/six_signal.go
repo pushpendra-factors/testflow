@@ -173,7 +173,7 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 		response = model.SixSignalPublicURLResponse{
 			ProjectID:    projectID,
 			QueryID:      queries.IdText,
-			RouteVersion: ROUTE_VERSION_V1,
+			RouteVersion: ROUTE_VERSION_V1_WITHOUT_SLASH,
 		}
 		logCtx.Info("Response structure if shared already: ", response)
 		return response, http.StatusCreated, "Shareable Query already shared", false
@@ -211,7 +211,7 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 
 	response = model.SixSignalPublicURLResponse{
 		ProjectID:    projectID,
-		RouteVersion: ROUTE_VERSION_V1,
+		RouteVersion: ROUTE_VERSION_V1_WITHOUT_SLASH,
 		QueryID:      share.QueryID,
 	}
 	logCtx.Info("Response structure for sharing: ", response)
