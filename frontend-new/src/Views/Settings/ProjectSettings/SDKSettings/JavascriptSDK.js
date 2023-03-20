@@ -56,8 +56,6 @@ const ViewSetup = ({ activeProject }) => {
       </Col>
       <Col span={24}>
         <CodeBlock
-          preClassName={'my-4 fa-code-block'}
-          codeClassName={'fa-code-code-block'}
           codeContent={
             <>
               {' '}
@@ -70,8 +68,10 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
               <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
             </>
           }
+          pureTextCode={`window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("${{
+            projectToken
+          }}"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); `}
         ></CodeBlock>
-
       </Col>
       <Col span={24}>
         <Text type={'paragraph'} extraClass={'m-0 mt-2 mb-2'}>
@@ -102,13 +102,10 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
         </Text>
       </Col>
       <Col span={24}>
-
         <CodeBlock
-          preClassName={'my-4 fa-code-block'}
-          codeClassName={'fa-code-code-block'}
           codeContent={'factors.track("YOUR_EVENT");'}
+          pureTextCode={'factors.track("YOUR_EVENT");'}
         ></CodeBlock>
-
       </Col>
     </Row>
   );
@@ -154,10 +151,7 @@ const GTMSetup = ({ activeProject }) => {
         </Text>
       </Col>
       <Col span={24}>
-
         <CodeBlock
-          preClassName={'my-4 fa-code-block'}
-          codeClassName={'fa-code-code-block'}
           codeContent={
             <>
               {' '}
@@ -170,8 +164,10 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
               <span style={{ color: '#2F80ED' }}>{`</script>`}</span>{' '}
             </>
           }
+          pureTextCode={`window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("${{
+            projectToken
+          }}"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); `}
         />
-
       </Col>
       <Col span={24}>
         <Text type={'paragraph'} extraClass={'m-0'}>
@@ -215,11 +211,9 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
       </Col>
       <Col span={24}>
         <CodeBlock
-          preClassName={'my-4 fa-code-block'}
-          codeClassName={'fa-code-code-block'}
           codeContent={'factors.track("YOUR_EVENT");'}
+          pureTextCode={`factors.track("YOUR_EVENT");`}
         ></CodeBlock>
-
       </Col>
     </Row>
   );
@@ -816,31 +810,36 @@ const VerifySdkCheck = ({
   fetchMarketoIntegration,
   fetchProjectSettingsV1
 }) => {
-  const [sdkCheck, setSdkCheck] = useState();
+  const int_completed = useSelector(
+    (state) => state?.global?.projectSettingsV1?.int_completed
+  );
+  const [sdkCheck, setSdkCheck] = useState(null);
   const [loading, setloading] = useState(false);
   const fetchProjectsV1 = async () => {
-    console.log('FETCH');
     try {
+      setloading(true);
+
       fetchProjectSettingsV1(activeProject.id).then((res) => {
+        if (res.data.int_completed) {
+          message.success('SDK Verified!');
+        } else {
+          message.error('SDK not verified');
+        }
         setSdkCheck(res.data.int_completed);
-        console.log(res);
+        setloading(false);
       });
     } catch (error) {
       console.error(error);
+      setloading(false);
     }
   };
   useEffect(() => {
-    fetchProjectsV1();
-  }, [sdkCheck]);
-
+    setSdkCheck(int_completed);
+  }, []);
   const onSDKcheck = () => {
-    setloading(true);
-    setTimeout(() => {
-      setloading(false);
-    }, 2000);
-    setSdkCheck(!sdkCheck);
+    fetchProjectsV1();
+    // setSdkCheck(!sdkCheck);
   };
-
 
   return (
     <React.Fragment>
@@ -900,7 +899,6 @@ const VerifySdkCheck = ({
               <Button type={'default'} onClick={onSDKcheck}>
                 Verify it now
               </Button>
-
             </div>
           )}
         </>

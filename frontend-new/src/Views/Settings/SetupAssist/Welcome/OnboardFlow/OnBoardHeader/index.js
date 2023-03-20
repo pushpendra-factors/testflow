@@ -49,12 +49,18 @@ const AdditionalMenu = (
   const { int_client_six_signal_key, int_factors_six_signal_key } = useSelector(
     (state) => state?.global?.currentProjectSettings
   );
+  const factors6SignalKeyRequested = useSelector(
+    (state) => state?.onBoardFlow?.factors6SignalKeyRequested
+  );
+
   const { steps, currentStep } = useSelector((state) => state?.onBoardFlow);
   const isNextBtnEnabled = () => {
     if (currentStep === 1) {
       return steps.step1;
     } else if (currentStep === 2) {
-      return steps.step2 || int_client_six_signal_key;
+      return (
+        steps.step2 || int_client_six_signal_key || factors6SignalKeyRequested
+      );
     } else if (currentStep === 3) {
       return steps.step3;
     }

@@ -57,8 +57,14 @@ const OnBoard3 = ({ enableSlackIntegration }) => {
               </div>
             </div>
             <div className={styles['horizontalCardRight']}>
-              <Button onClick={onConnectSlack}>
-                {int_slack ? 'Already Connected' : 'Connect'}
+              <Button onClick={int_slack ? null : onConnectSlack}>
+                {int_slack ? (
+                  <>
+                    <SVG name='Greentick' /> Already Connected
+                  </>
+                ) : (
+                  'Connect'
+                )}
               </Button>
             </div>
           </div>

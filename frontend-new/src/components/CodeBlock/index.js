@@ -4,10 +4,11 @@ import React from 'react';
 import styles from './index.module.scss';
 const CodeBlock = ({
   codeContent,
-  preClassName = '',
-  codeClassName = '',
+  preClassName = 'my-4 fa-code-block',
+  codeClassName = 'fa-code-code-block',
   preProps = {},
-  codeProps = {}
+  codeProps = {},
+  pureTextCode = ``
 }) => {
   return (
     <div>
@@ -16,15 +17,29 @@ const CodeBlock = ({
           <Button
             className={styles['btn']}
             onClick={() => {
-              navigator?.clipboard?.writeText(codeContent);
-              message.success({
-                content: 'copied',
-                style: {
-                  display: 'flex',
-                  justifyContent: 'center',
-                  margin: '0 auto'
-                }
-              });
+              navigator?.clipboard
+                ?.writeText(pureTextCode)
+                .then(() => {
+                  message.success({
+                    content: 'copied',
+                    style: {
+                      display: 'flex',
+                      justifyContent: 'center',
+                      margin: '0 auto'
+                    }
+                  });
+                })
+                .catch(() => {
+                  console.log('ERROR');
+                  message.error({
+                    content: 'copying failed',
+                    style: {
+                      display: 'flex',
+                      justifyContent: 'center',
+                      margin: '0 auto'
+                    }
+                  });
+                });
             }}
           >
             <SVG name='copycode' />

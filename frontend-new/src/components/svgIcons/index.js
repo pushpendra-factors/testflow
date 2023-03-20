@@ -6825,8 +6825,8 @@ const OnboardtargetSVG = () => {
 const OnboardsearchSVG = () => {
   return (
     <svg
-      width='167'
-      height='136'
+      width='136'
+      height='128'
       viewBox='0 0 167 136'
       fill='none'
       xmlns='http://www.w3.org/2000/svg'

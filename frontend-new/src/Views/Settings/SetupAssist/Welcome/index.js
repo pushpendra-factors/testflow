@@ -48,7 +48,7 @@ const EachWelcomeCard = ({ onClick, title, description, type }) => {
           </Text>
           <Text
             type={'title'}
-            level={6}
+            level={7}
             weight={'regular'}
             align={'center'}
             color={'grey'}
@@ -135,14 +135,12 @@ const Welcome = ({
         <Row justify={'center'} className={'mt-8'}>
           <Col span={15}>
             <Row className={'justify-center'}>
-              <Link to='/project-setup'>
-                <EachWelcomeCard
-                  title='Analytics and Attribution'
-                  description='Make data-driven decisions and optimize marketing strategies'
-                  type={1}
-                  onClick={handleRoute}
-                />
-              </Link>
+              <EachWelcomeCard
+                title='Analytics and Attribution'
+                description='Make data-driven decisions and optimize marketing strategies'
+                type={1}
+                onClick={handleRoute}
+              />
               <EachWelcomeCard
                 title='Website visitor identification'
                 description='Identify anonymous users and track high intent accounts'
