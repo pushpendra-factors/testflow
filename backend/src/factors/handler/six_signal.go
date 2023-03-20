@@ -176,6 +176,10 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 			RouteVersion: ROUTE_VERSION_V1_WITHOUT_SLASH,
 		}
 		logCtx.Info("Response structure if shared already: ", response)
+		errCode, errMsg := store.GetStore().DeleteQuery(projectID, queries.ID)
+		if errCode != http.StatusAccepted {
+			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg)
+		}
 		return response, http.StatusCreated, "Shareable Query already shared", false
 	}
 
@@ -197,6 +201,10 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 	if !valid {
 		logCtx.Error(errMsg)
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
+		errCode, errMsg := store.GetStore().DeleteQuery(projectID, queries.ID)
+		if errCode != http.StatusAccepted {
+			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg)
+		}
 		return nil, http.StatusBadRequest, errMsg, true
 	}
 
@@ -206,6 +214,10 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 	if errCode != http.StatusCreated {
 		logCtx.WithError(err).Error("Failed to create shareable query")
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Shareable query creation failed."})
+		errCode, errMsg := store.GetStore().DeleteQuery(projectID, queries.ID)
+		if errCode != http.StatusAccepted {
+			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg)
+		}
 		return nil, http.StatusInternalServerError, "Shareable query creation failed.", true
 	}
 
