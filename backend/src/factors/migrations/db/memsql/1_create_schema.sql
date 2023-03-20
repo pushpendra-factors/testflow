@@ -1304,8 +1304,7 @@ CREATE TABLE IF NOT EXISTS property_mappings (
     is_deleted boolean NOT NULL DEFAULT false,
     KEY (updated_at),
     SHARD KEY (project_id),
-    PRIMARY KEY (project_id, id),
-    UNIQUE KEY unique_property_mappings_project_id_name_idx(project_id, name) USING HASH
+    PRIMARY KEY (project_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS display_name_labels (

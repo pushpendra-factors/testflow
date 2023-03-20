@@ -1,0 +1,1 @@
+ALTER TABLE property_mappings DROP INDEX unique_property_mappings_project_id_name_idx;
