@@ -8,16 +8,16 @@
 /backend/src/factors/cache/redis/ dinesh@factors.ai janani@factors.ai
 /backend/src/factors/config/ dinesh@factors.ai janani@factors.ai
 /backend/src/factors/crm_enrichment/ maisa@factors.ai
-/backend/src/factors/data_service/ dinesh@factors.ai kartheek@factors.ai maisa@factors.ai
+/backend/src/factors/data_service/ dinesh@factors.ai kartheek+1@factors.ai maisa@factors.ai
 /backend/src/factors/dd_attribution/ anil@factors.ai
-/backend/src/factors/default_data/ kartheek@factors.ai
+/backend/src/factors/default_data/ kartheek+1@factors.ai
 /backend/src/factors/delta/ anshul@factors.ai janani@factors.ai
 /backend/src/factors/event_match/ janani@factors.ai
 /backend/src/factors/explain/ anshul@factors.ai janani@factors.ai vinith@factors.ai
 /backend/src/factors/filestore/ janani@factors.ai
 /backend/src/factors/fivetran/ janani@factors.ai
 /backend/src/factors/fptree/ vinith@factors.ai
-/backend/src/factors/handlers/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
+/backend/src/factors/handlers/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek+1@factors.ai
 /backend/src/factors/histogram/ vinith@factors.ai
 /backend/src/factors/integration/clear_bit/ anil@factors.ai
 /backend/src/factors/integration/hubspot/ maisa@factors.ai
@@ -28,8 +28,8 @@
 /backend/src/factors/merge/ anshul@factors.ai vinith@factors.ai
 /backend/src/factors/metrics/ dinesh@factors.ai
 /backend/src/factors/middleware/ janani@factors.ai
-/backend/src/factors/migrations/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
-/backend/src/factors/model/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
+/backend/src/factors/migrations/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek+1@factors.ai
+/backend/src/factors/model/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek+1@factors.ai
 /backend/src/factors/pattern/ anshul@factors.ai janani@factors.ai vinith@factors.ai
 /backend/src/factors/pattern_client/ vinith@factors.ai
 /backend/src/factors/pattern_server/ vinith@factors.ai
@@ -37,15 +37,15 @@
 /backend/src/factors/predict/ vinith@factors.ai
 /backend/src/factors/pull/ anshul@factors.ai
 /backend/src/factors/quickchart/ sumit@factors.ai
-/backend/src/factors/scripts/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
+/backend/src/factors/scripts/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek+1@factors.ai
 /backend/src/factors/sdk/ dinesh@factors.ai
 /backend/src/factors/services/ dinesh@factors.ai janani@factors.ai
 /backend/src/factors/session/ janani@factors.ai
 /backend/src/factors/slack_bot/ sumit@factors.ai
 /backend/src/factors/task/ janani@factors.ai maisa@factors.ai vinith@factors.ai
 /backend/src/factors/tests
-/backend/src/factors/util/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
-/backend/src/factors/vendor/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek@factors.ai
+/backend/src/factors/util/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek+1@factors.ai
+/backend/src/factors/vendor/ anil@factors.ai dinesh@factors.ai janani@factors.ai kartheek+1@factors.ai
 /backend/src/factors/vendor_custom/ dinesh@factors.ai
 /backend/src/factors/workers/ dinesh@factors.ai janani@factors.ai
 
