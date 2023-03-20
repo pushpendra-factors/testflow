@@ -27,7 +27,19 @@ import ComposerBlock from '../../components/QueryCommons/ComposerBlock';
 import EventTag from './FactorsInsightsNew/Components/EventTag';
 import factorsai from 'factorsai';
 import FaDatepicker from 'Components/FaDatepicker';
-import { operatorMap } from 'Utils/operatorMapping';
+// import { operatorMap } from 'Utils/operatorMapping';
+
+const symbolToTextConv = (symbol) =>{
+  switch(symbol){
+    case '=':
+      return 'equals';
+    case '!=':
+      return 'notEqual';
+    default:
+      return 'equals'
+  }
+}
+
 
 const title = (props) => {
   return (
@@ -105,7 +117,7 @@ const CreateGoalDrawer = (props) => {
         result.push({
           en: filter.props[2],
           lop: !index ? 'AND' : 'OR',
-          op: operatorMap[filter.operator],
+          op: symbolToTextConv(filter.operator),
           pr: filter.props[0],
           ty: filter.props[1],
           va: value
@@ -116,9 +128,7 @@ const CreateGoalDrawer = (props) => {
   };
 
   const onChangeGroupSelect1 = (grp, value) => {
-    setShowDropDown(false);
-    // console.log("value-->",value);
-    // console.log("event value-->",value);
+    setShowDropDown(false); 
     setEvent1(value[0]);
   };
   const removeFilter = (index) => {
@@ -152,8 +162,7 @@ const CreateGoalDrawer = (props) => {
 
   useEffect(() => {
     let goalInsights = props.goal_insights;
-    if (goalInsights) {
-      console.log('goalInsights-->>', goalInsights);
+    if (goalInsights) { 
 
       let defaultDate = {
         startDate: moment.unix(goalInsights?.sts),
@@ -275,9 +284,7 @@ const CreateGoalDrawer = (props) => {
     const getInsights = (reportName) => {
       setInsightBtnLoading(true);
       // const calcModelId = modelIDtoStringMap();
-      let projectID = props.activeProject.id;
-
-      // console.log("calcModelId",calcModelId[0].mid);
+      let projectID = props.activeProject.id; 
       let gprData = getFilters(filters);
       let event1pr = getFilters(filtersEvent1);
       let event2pr = getFilters(filtersEvent2);
