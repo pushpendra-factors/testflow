@@ -37,7 +37,7 @@ function AttributionsScatterPlot({
   const { eventNames } = useSelector((state) => state.coreQuery);
   const [xAxisMetric, setXAxisMetric] = useState('Conversion');
   const [yAxisMetric, setYAxisMetric] = useState(
-    attribution_method_compare ? 'conversion_compare' : 'Cost Per Conversion'
+    attribution_method_compare ? 'Conversion(compare)' : 'Cost Per Conversion'
   );
 
   const chartData = useMemo(() => {

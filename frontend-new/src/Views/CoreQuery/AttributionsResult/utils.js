@@ -36,7 +36,8 @@ export const defaultSortProp = (queryOptions, attrQueries, data) => {
   );
   if (
     groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.HUBSPOT_DEALS ||
-    groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.SALESFORCE_OPPORTUNITIES ||
+    groupAnalysis ===
+      ATTRIBUTION_GROUP_ANALYSIS_KEYS.SALESFORCE_OPPORTUNITIES ||
     groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.ALL
   ) {
     if (attrQueries.length > 0) {
@@ -254,8 +255,16 @@ export const getDualTouchPointChartData = (
   touchpoint,
   attribution_method,
   attribution_method_compare,
-  currMetricsValue
+  currMetricsValue,
+  attrQueries,
+  groupAnalysis
 ) => {
+  const seriesKeys = getBarLineChartSeriesKeys({
+    attrQueries,
+    groupAnalysis,
+    headers: keys(data[0]),
+    touchPoint: touchpoint
+  });
   const listDimensions = isLandingPageOrAllPageViewSelected(touchpoint)
     ? content_groups.slice()
     : attr_dimensions.slice();
@@ -271,12 +280,10 @@ export const getDualTouchPointChartData = (
       : [d[touchpoint]];
     return {
       name: name.join(', '),
-      [attribution_method]: !currMetricsValue
-        ? d.Conversion
-        : d['Cost Per Conversion'],
-      [attribution_method_compare]: !currMetricsValue
-        ? d.conversion_compare
-        : d.cost_compare
+      [attribution_method]: Number(d[seriesKeys[currMetricsValue]]),
+      [attribution_method_compare]: Number(
+        d[`${seriesKeys[currMetricsValue]}(compare)`]
+      )
     };
   });
   return result;
@@ -389,31 +396,6 @@ export const formatData = (
     categories,
     series
   };
-};
-
-export const formatGroupedData = (
-  data,
-  event,
-  visibleIndices,
-  attribution_method,
-  attribution_method_compare,
-  currMetricsValue
-) => {
-  const { headers } = data;
-  const str = currMetricsValue ? 'Cost Per Conversion' : `${event} - Users`;
-  const compareStr = currMetricsValue
-    ? 'Compare Cost Per Conversion'
-    : 'Compare - Users';
-  const userIdx = headers.indexOf(str);
-  const compareUsersIdx = headers.indexOf(compareStr);
-  let rows = data.rows.filter((_, index) => visibleIndices.indexOf(index) > -1);
-  rows = SortData(rows, userIdx, 'descend');
-  const chartData = rows.map((row) => ({
-    name: row[0],
-    [attribution_method]: row[userIdx],
-    [attribution_method_compare]: row[compareUsersIdx]
-  }));
-  return chartData;
 };
 
 const firstColumn = (d, durationObj, cmprDuration) => {
@@ -755,7 +737,7 @@ export const getTableColumns = (
       eventColumns.push(
         getEventColumnConfig({
           title: 'Conversion',
-          key: 'conversion_compare',
+          key: 'Conversion(compare)',
           method: attribution_method_compare,
           hasBorder: conversionBorderCondition
         })
@@ -764,7 +746,7 @@ export const getTableColumns = (
         eventColumns.push(
           getEventColumnConfig({
             title: 'Cost Per Conversion',
-            key: 'cost_compare',
+            key: 'Cost Per Conversion(compare)',
             method: attribution_method_compare,
             hasBorder: costBorderCondition
           })
@@ -1133,8 +1115,11 @@ export const getTableData = (
         });
       }
       if (attributionMethodCompare) {
-        resultantRow.conversion_compare = row[compareUsersIdx];
-        resultantRow.cost_compare = formatCount(row[compareCostIdx], 1);
+        resultantRow['Conversion(compare)'] = row[compareUsersIdx];
+        resultantRow[`Cost Per Conversion(compare)`] = formatCount(
+          row[compareCostIdx],
+          1
+        );
         resultantRow.conversion_rate_compare = formatCount(
           row[compareConvRateIdx],
           1
@@ -1269,7 +1254,7 @@ export const getAxisMetricOptions = (
           (m) => m.value === attribution_method_compare
         ).text
       }`,
-      value: 'conversion_compare'
+      value: 'Conversion(compare)'
     });
 
     result.push({
@@ -1278,7 +1263,7 @@ export const getAxisMetricOptions = (
           (m) => m.value === attribution_method_compare
         ).text
       }`,
-      value: 'cost_compare'
+      value: 'Cost Per Conversion(compare)'
     });
 
     // result.push({
