@@ -1149,7 +1149,7 @@ export const getTableData = (
         );
         return filteredRows.length > 0;
       }
-      return row[touchPoint].toLowerCase().includes(searchText.toLowerCase());
+      return row[touchPoint]?.toLowerCase().includes(searchText.toLowerCase());
     });
   const filteredResults = applyAdvancedFilters(result, appliedFilters);
   return {

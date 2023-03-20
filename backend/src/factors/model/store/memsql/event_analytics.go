@@ -120,6 +120,12 @@ func (store *MemSQL) fillEventNameIDs(projectID int64, query *model.Query) {
 
 }
 
+func logDifferenceIfAny(hash1, hash2 string, query model.Query, logMessage string) {
+	if hash1 != hash2 {
+		log.WithField("query", query).Warn(logMessage)
+	}
+}
+
 func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"query":      query,
@@ -131,7 +137,9 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 		store.fillEventNameIDs(projectId, &query)
 	}
 
+	hash1, _ := query.GetQueryCacheHashString()
 	stmnt, params, err := store.BuildInsightsQuery(projectId, query, enableFilterOpt)
+	hash2, _ := query.GetQueryCacheHashString()
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
 		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -144,11 +152,15 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
+	hash1, _ = query.GetQueryCacheHashString()
 	result, err, reqID := store.ExecQuery(stmnt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
 		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
+	hash2, _ = query.GetQueryCacheHashString()
+	logDifferenceIfAny(hash1, hash2, query, "Query change - 02")
+
 
 	startComputeTime := time.Now()
 	groupPropsLen := len(query.GroupByProperties)
@@ -159,17 +171,24 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 	}
 
 	model.AddMissingEventNamesInResult(result, &query)
+	hash1, _ = query.GetQueryCacheHashString()
 	err = SanitizeQueryResult(result, &query)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to sanitize query results.")
 		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
+	hash2, _ = query.GetQueryCacheHashString()
+	logDifferenceIfAny(hash1, hash2, query, "Query change - 03")
 
+	hash1, _ = query.GetQueryCacheHashString()
 	// Replace the event_name with alias, if the event condition is each_given_event
 	if query.EventsCondition == model.EventCondEachGivenEvent {
 		model.AddAliasNameOnEventCondEachGivenEventQueryResult(result, query)
 	}
+	hash2, _ = query.GetQueryCacheHashString()
+	logDifferenceIfAny(hash1, hash2, query, "Query change - 04")
 
+	hash1, _ = query.GetQueryCacheHashString()
 	// if and only if breakdown is by datetime (condition for both events/users count for each event.)
 	if len(query.GroupByProperties) == 0 &&
 		query.EventsCondition == model.EventCondEachGivenEvent &&
@@ -211,6 +230,9 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 			}
 		}
 	}
+	hash2, _ = query.GetQueryCacheHashString()
+	logDifferenceIfAny(hash1, hash2, query, "Query change - 05")
+
 	addQueryToResultMeta(result, query)
 	U.LogComputeTimeWithQueryRequestID(startComputeTime, reqID, &logFields)
 
@@ -2119,7 +2141,11 @@ func (store *MemSQL) buildEventCountForEachGivenEventsQueryNEW(projectID int64, 
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
+	hash1, _ := query.GetQueryCacheHashString()
 	steps, stepsToKeysMap, err := store.addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
+	hash2, _ := query.GetQueryCacheHashString()
+	logDifferenceIfAny(hash1, hash2, query, "Query change - 2")
+
 	if err != nil {
 		return qStmnt, qParams, err
 	}
@@ -2158,7 +2184,11 @@ func (store *MemSQL) buildEventCountForEachGivenEventsQueryNEW(projectID int64, 
 	}
 
 	qStmnt = joinWithComma(qStmnt, as(stepUsersUnion, unionStmnt))
+	hash1, _ = query.GetQueryCacheHashString()
 	addEventCountAggregationQuery(projectID, &query, &qStmnt, &qParams, stepUsersUnion)
+	hash2, _ = query.GetQueryCacheHashString()
+	logDifferenceIfAny(hash1, hash2, query, "Query change - 3")
+
 	qStmnt = with(qStmnt)
 
 	return qStmnt, qParams, nil
@@ -2268,8 +2298,12 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 		var stepParams []interface{}
 		var stepGroupSelect, stepGroupKeys string
 		var stepGroupParams []interface{}
+
+		hash1, _ := q.GetQueryCacheHashString()
 		stepGroupSelect, stepGroupParams, stepGroupKeys, _ = buildGroupKeyForStep(projectID,
 			&q.EventsWithProperties[i], q.GroupByProperties, i+1, q.Timezone)
+		hash2, _ := q.GetQueryCacheHashString()
+		logDifferenceIfAny(hash1, hash2, *q, "Query change - 2 - 1")
 
 		eventSelect := commonSelectArr[i]
 		stepParams = append(stepParams, commonParams...)
@@ -2379,10 +2413,13 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	hash1, _ := query.GetQueryCacheHashString()
 	eventLevelGroupBys, otherGroupBys := separateEventLevelGroupBys(query.GroupByProperties)
 	var egKeys string
 	var unionStepName string
 	var termStmnt string
+	hash2, _ := query.GetQueryCacheHashString()
+	logDifferenceIfAny(hash1, hash2, *query, "Query change - 3-1")
 
 	_, _, egKeys = buildGroupKeys(projectID, eventLevelGroupBys, query.Timezone)
 	unionStepName = "each_users_union"
@@ -2415,8 +2452,12 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
 
+	hash1, _ = query.GetQueryCacheHashString()
 	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties, query.Timezone)
+	hash2, _ = query.GetQueryCacheHashString()
+	logDifferenceIfAny(hash1, hash2, *query, "Query change - 3-2")
 
+	hash1, _ = query.GetQueryCacheHashString()
 	termStmnt = as(unionStepName, termStmnt)
 	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string
 	if isGroupByTypeWithBuckets(query.GroupByProperties) {
@@ -2445,6 +2486,9 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 			aggregateFromStepName = refStep
 		}
 	}
+	hash2, _ = query.GetQueryCacheHashString()
+	logDifferenceIfAny(hash1, hash2, *query, "Query change - 3-3")
+
 
 	aggregateSelect := "SELECT "
 	if isGroupByTimestamp {
@@ -2470,7 +2514,11 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 	} else {
 		aggregateSelect = appendOrderByAggr(aggregateSelect)
 	}
+	hash1, _ = query.GetQueryCacheHashString()
 	aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
+	hash2, _ = query.GetQueryCacheHashString()
+	logDifferenceIfAny(hash1, hash2, *query, "Query change - 3-4")
+
 	*qStmnt = appendStatement(*qStmnt, aggregateSelect)
 }
 

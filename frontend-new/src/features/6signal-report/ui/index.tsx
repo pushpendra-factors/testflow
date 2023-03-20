@@ -40,7 +40,7 @@ const SixSignalReport = () => {
     CHANNEL_QUICK_FILTERS[0].id
   );
   const [data, setData] = useState<ReportApiResponseData | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [campaigns, setCampaigns] = useState<string[]>([]);
   const [isCampaignSelectVisible, setIsCampaignSelectVisible] = useState(false);
   const [seletedCampaigns, setSelectedCampaigns] = useState([]);
@@ -61,11 +61,12 @@ const SixSignalReport = () => {
   const paramQueryId = routerQuery.get(SHARE_QUERY_PARAMS.queryId);
   const paramProjectId = routerQuery.get(SHARE_QUERY_PARAMS.projectId);
 
-  const isSixSignalActivated =
-    currentProjectSettings?.int_factors_six_signal_key ||
-    currentProjectSettings?.int_client_six_signal_key
-      ? true
-      : false;
+  const isSixSignalActivated = currentProjectSettings
+    ? !currentProjectSettings?.int_factors_six_signal_key &&
+      !currentProjectSettings?.int_client_six_signal_key
+      ? false
+      : true
+    : true;
 
   const showDrawer = () => {
     setDrawerVisible(true);
@@ -167,6 +168,19 @@ const SixSignalReport = () => {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     };
   }, [dispatch]);
+
+  //TODO: Remove the below useEffect when 6 signal report is accessible to all
+  useEffect(() => {
+    if (isLoggedIn && email !== 'solutions@factors.ai') {
+      history.push('/');
+    }
+  }, [isLoggedIn, email]);
+
+  useEffect(() => {
+    if (!isSixSignalActivated) {
+      setLoading(false);
+    }
+  }, [isSixSignalActivated]);
 
   //TODO: Remove the below useEffect when 6 signal report is accessible to all
   useEffect(() => {
@@ -380,12 +394,28 @@ const SixSignalReport = () => {
               </div>
             </div>
           ) : (
-            <ReportTable
-              data={data?.result_group[0]}
-              selectedChannel={filterValue}
-              selectedCampaigns={seletedCampaigns}
-              isSixSignalActivated={isSixSignalActivated}
-            />
+            <>
+              <ReportTable
+                data={data?.result_group[0]}
+                selectedChannel={filterValue}
+                selectedCampaigns={seletedCampaigns}
+                isSixSignalActivated={isSixSignalActivated}
+                dataSelected={dateSelected}
+              />
+              {!!data && (
+                <div className='text-right font-size--small'>
+                  Logos provided by{' '}
+                  <a
+                    className='font-size--small'
+                    href='https://www.uplead.com'
+                    target='_blank'
+                    rel='noreferrer'
+                  >
+                    UpLead
+                  </a>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

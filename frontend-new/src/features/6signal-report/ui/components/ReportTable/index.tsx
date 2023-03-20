@@ -11,12 +11,14 @@ import {
   getTableData
 } from '../../../utils';
 import EmptyDataState from './EmptyDataState';
+import style from './index.module.scss';
 
 const ReportTable = ({
   data,
   selectedChannel,
   selectedCampaigns,
-  isSixSignalActivated
+  isSixSignalActivated,
+  dataSelected
 }: ReportTableProps) => {
   const [searchText, setSearchText] = useState<string>('');
   const [tableData, setTableData] = useState<StringObject[]>([]);
@@ -50,17 +52,30 @@ const ReportTable = ({
       ];
     });
   }, []);
+
   const getCSVData = () => {
-    const columnsArray = columns?.map(
-      (column) => KEY_LABELS?.[column?.dataIndex] || column
-    );
-    const rowsArray = tableData.map((row, i) => {
-      return columns.map((column) => {
-        return row[column.dataIndex] || '';
+    if (!data) {
+      return {
+        fileName: `SixSignalReport${
+          dataSelected ? `(${dataSelected})` : ''
+        }.csv`,
+        data: [getDefaultTableColumns().map((c) => c.dataIndex)]
+      };
+    }
+    let columnsArray: string[] = [];
+    const columns = data?.headers?.map((header) => {
+      // @ts-ignore
+      columnsArray.push(KEY_LABELS?.[header] || header);
+      return header;
+    });
+
+    const rowsArray = tableData.map((row) => {
+      return columns?.map((col) => {
+        return row?.[col] || '';
       });
     });
     return {
-      fileName: `SixSignalReport.csv`,
+      fileName: `SixSignalReport${dataSelected ? `(${dataSelected})` : ''}.csv`,
       data: [columnsArray, ...rowsArray]
     };
   };
@@ -95,7 +110,7 @@ const ReportTable = ({
     <EmptyDataState
       title='New deals are just around the corner'
       subtitle="Looks like there isn't much here yet"
-      icon={{ name: 'EmptyDataBox', height: 111, width: 131, color: '' }}
+      icon={{ name: 'EmptyDataBox' }}
     />
   );
 
@@ -103,7 +118,7 @@ const ReportTable = ({
     <EmptyDataState
       title='Get started by integrating with 6signal'
       subtitle='Use your own API key, or use ours to get going immediately '
-      icon={{ name: 'UserSearch', height: 57, width: 71, color: '' }}
+      icon={{ name: 'UserSearch' }}
       action={{
         name: 'Setup 6signal',
         handleClick: () => {
@@ -117,6 +132,7 @@ const ReportTable = ({
     <div>
       <ConfigProvider
         renderEmpty={() => {
+          if (data) return null;
           if (isLoggedIn) {
             return isSixSignalActivated ? NoDataState : NoIntegrationState;
           }
@@ -134,6 +150,8 @@ const ReportTable = ({
           isPaginationEnabled
           isWidgetModal={true}
           breakupHeading={'Top accounts'}
+          tableLayout={'fixed'}
+          className={style.reportTable}
         />
       </ConfigProvider>
     </div>

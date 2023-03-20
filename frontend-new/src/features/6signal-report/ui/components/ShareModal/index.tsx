@@ -65,7 +65,8 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
             <Text type={'paragraph'} mini extraClass={'mt-3'} color='grey'>
               By default, everyone in this project will receive weekly and
               monthly updates. Subscribe others to receive the same updates via
-              a public link. These users will receive simple, auth-less access.
+              a public link. These users will have access without any
+              authorization.
             </Text>
           </div>
           <Form
@@ -74,7 +75,7 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
             initialValues={{ subscriptionType: 'subscribe', emails: [''] }}
             form={form}
           >
-            <div className='mt-4'>
+            {/* <div className='mt-4'>
               <Form.Item
                 name='subscriptionType'
                 rules={[
@@ -90,13 +91,12 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
                   <Radio value={'subscribe'}>Subscribe</Radio>
                 </Radio.Group>
               </Form.Item>
-            </div>
+            </div> */}
 
-            <div className='mt-4'>
+            {/* <div className='mt-4'>
               <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
                 Recipients
               </Text>
-              {/* <div className='mt-2'>{renderEmailInputs()}</div> */}
               <div className='mt-2'>
                 <Form.List
                   name='emails'
@@ -171,7 +171,7 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
                   )}
                 </Form.List>
               </div>
-            </div>
+            </div> */}
 
             <div className='flex justify-between items-center w-100 mt-6'>
               {shareData?.publicUrl && document.queryCommandSupported('copy') && (
@@ -184,11 +184,11 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
                   Copy link
                 </Button>
               )}
-              <Form.Item>
+              {/* <Form.Item>
                 <Button htmlType='submit' size='large' type='primary'>
                   Done
                 </Button>
-              </Form.Item>
+              </Form.Item> */}
             </div>
           </Form>
         </div>
