@@ -52,7 +52,7 @@ function QueryBlock({
 
   const eventGroup = useMemo(() => {
     const group =
-      availableGroups.find((group) => group[1] === event.group) || [];
+      availableGroups?.find((group) => group?.[1] === event?.group) || [];
     return group;
   }, [availableGroups, event]);
 
@@ -208,6 +208,7 @@ function QueryBlock({
       insertFilter={insertFilters}
       closeFilter={closeFilter}
       refValue={ind}
+      showInList={true}
     />
   );
 
@@ -294,6 +295,7 @@ function QueryBlock({
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   refValue={refValue}
+                  showInList={true}
                 />
               </div>
               {ind !== orFilterIndex && (
@@ -310,6 +312,7 @@ function QueryBlock({
                     closeFilter={closeFilter}
                     refValue={refValue}
                     showOr
+                    showInList={true}
                   />
                 </div>
               )}
@@ -330,6 +333,7 @@ function QueryBlock({
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   refValue={refValue}
+                  showInList={true}
                 />
               </div>
               <div key={ind + 1}>
@@ -344,6 +348,7 @@ function QueryBlock({
                   closeFilter={closeFilter}
                   refValue={refValue}
                   showOr
+                  showInList={true}
                 />
               </div>
             </div>

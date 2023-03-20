@@ -1276,3 +1276,21 @@ export function editEventAlert(projectId, payload, id) {
     });
   };
 }
+
+export function uploadList(projectId, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(
+        dispatch,
+        host + 'projects/' + projectId + '/uploadlist',
+        payload
+      )
+        .then((r) => {
+          resolve(r);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}

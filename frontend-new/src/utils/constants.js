@@ -686,5 +686,6 @@ export const OPERATORS = {
   before: 'before',
   since: 'since',
   isKnown: 'is known',
-  isUnknown: 'is unknown'
+  isUnknown: 'is unknown',
+  inList: 'is in a list',
 };
