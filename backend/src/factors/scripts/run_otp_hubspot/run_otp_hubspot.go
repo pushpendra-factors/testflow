@@ -43,7 +43,6 @@ func main() {
 	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
-
 	projectIDList := flag.String("project_ids", "*", "List of project_id to run for.")
 	disabledProjectIDList := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
 	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
