@@ -9,6 +9,7 @@ import {
   NEXT_STEP_ONBOARD_FLOW,
   TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL
 } from 'Reducers/types';
+import logger from 'Utils/logger';
 import styles from './index.module.scss';
 const RenderLogo = () => (
   <Button size='large' type='text' icon={<SVG size={32} name='Brand' />} />
@@ -39,8 +40,8 @@ const AdditionalMenu = (
   const history = useHistory();
   const dispatch = useDispatch();
   const handleCloseDrawer = useCallback(() => {
-    dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
-    // history.push('/welcome');
+    // dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
+    history.push('/welcome');
   }, []);
   const handleDoneDrawer = useCallback(() => {
     dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
@@ -73,10 +74,13 @@ const AdditionalMenu = (
         <Button
           className={styles['btn']}
           onClick={() => {
-            dispatch({ type: BACK_STEP_ONBOARD_FLOW });
-            // setCurrentStep((prev) => prev - 1);
-            // history.go(-1);
-            // history.push('/visitoridentification/' + Number(step - 1));
+            // dispatch({ type: BACK_STEP_ONBOARD_FLOW });
+            console.log(
+              '/welcome/visitoridentification/' + Number(currentStep - 1)
+            );
+            history.push(
+              '/welcome/visitoridentification/' + Number(currentStep - 1)
+            );
           }}
         >
           <ArrowLeftOutlined /> Back
@@ -100,11 +104,11 @@ const AdditionalMenu = (
           onClick={
             currentStep && currentStep >= 1 && currentStep < 3
               ? () => {
-                  dispatch({ type: NEXT_STEP_ONBOARD_FLOW });
+                  // dispatch({ type: NEXT_STEP_ONBOARD_FLOW });
                   // setCurrentStep((prev) => prev + 1);
-                  // history.push(
-                  //   '/visitoridentification/' + Number(currentStep + 1)
-                  // );
+                  history.push(
+                    '/welcome/visitoridentification/' + Number(currentStep + 1)
+                  );
                 }
               : handleDoneDrawer
           }

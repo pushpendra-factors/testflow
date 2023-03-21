@@ -22,6 +22,7 @@ import {
   TOGGLE_FACTORS_6SIGNAL_REQUEST
 } from 'Reducers/types';
 import { sendSlackNotification } from 'Utils/slack';
+import { useHistory } from 'react-router-dom';
 
 const HorizontalCard = ({
   isDropdown,
@@ -260,6 +261,7 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
   const [isModalRequestAccess, setIsModalRequestAccess] = useState(false);
   const activeProject = useSelector((state) => state?.global?.active_project);
   const currentAgent = useSelector((state) => state?.agent?.agent_details);
+  const history = useHistory();
   const dispatch = useDispatch();
   const int_client_six_signal_key = useSelector(
     (state) => state?.global?.currentProjectSettings?.int_client_six_signal_key
@@ -286,8 +288,10 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
       });
     dispatch({
       type: ENABLE_STEP_AND_MOVE_TO_NEXT,
-      payload: { step: '2', state: true, moveTo: 3 }
+      payload: { step: 2, state: true, moveTo: 2 }
     });
+    history.push('/welcome/visitoridentification/3');
+
     message.success('Requested for Factors 6 Signal Key');
   };
   return (

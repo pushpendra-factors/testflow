@@ -1,6 +1,7 @@
 import {
   BACK_STEP_ONBOARD_FLOW,
   ENABLE_STEP_AND_MOVE_TO_NEXT,
+  JUMP_TO_STEP_WEBSITE_VISITOR_IDENTIFICATION,
   NEXT_STEP_ONBOARD_FLOW,
   TOGGLE_DISABLED_STATE_NEXT_BUTTON,
   TOGGLE_FACTORS_6SIGNAL_REQUEST,
@@ -65,6 +66,8 @@ export default function (state = defaultState, action) {
         ...state,
         factors6SignalKeyRequested: !state.factors6SignalKeyRequested
       };
+    case JUMP_TO_STEP_WEBSITE_VISITOR_IDENTIFICATION:
+      return { ...state, currentStep: action.payload };
     default:
       return state;
   }

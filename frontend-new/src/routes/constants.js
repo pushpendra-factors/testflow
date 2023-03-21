@@ -154,6 +154,13 @@ export const APP_LAYOUT_ROUTES = {
     Private: true,
     Layout: AppLayout
   },
+  OnBoardFlow: {
+    exact: true,
+    path: '/welcome/visitoridentification/:step',
+    Component: OnBoard,
+    Private: true,
+    Layout: AppLayout
+  },
   Template: {
     exact: true,
     path: '/template',

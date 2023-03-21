@@ -1072,10 +1072,17 @@ export function editAlert(projectId, payload, id) {
   };
 }
 
-export function enableSlackIntegration(projectId) {
+export function enableSlackIntegration(projectId, redirect_url = '') {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects/' + projectId + '/slack/auth')
+      post(
+        dispatch,
+        host +
+          'projects/' +
+          projectId +
+          '/slack/auth?redirect_url=' +
+          redirect_url
+      )
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_SLACK_FULFILLED', payload: r.data });

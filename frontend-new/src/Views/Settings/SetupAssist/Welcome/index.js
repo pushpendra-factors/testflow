@@ -77,7 +77,8 @@ const Welcome = ({
     history.push('/project-setup');
   };
   const handleRoute1 = () => {
-    dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
+    // dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
+    history.push('/welcome/visitoridentification/1');
   };
 
   useEffect(() => {
@@ -180,7 +181,7 @@ const Welcome = ({
             </Row>
           </Col>
         </Row>
-        <OnBoard />
+        {/* <OnBoard /> */}
         <Row justify='center' className={'mt-12'}>
           <Col span={7}>
             <Text
