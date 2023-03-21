@@ -1924,7 +1924,10 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData,
-			"marketingReports": marketingReports}).Info("KPI Attribution data 1")
+			"BingAdsCampaignIDData":       marketingReports.BingAdsCampaignIDData,
+			"BingAdsCampaignKeyData":      marketingReports.BingAdsCampaignKeyData,
+			"CampaignSourceMapping":       marketingReports.CampaignSourceMapping,
+			"CampaignChannelGroupMapping": marketingReports.CampaignChannelGroupMapping}).Info("KPI Attribution data 1")
 	}
 
 	// add CampaignData result based on Key Dimensions
