@@ -317,10 +317,20 @@ func main() {
 	// 	C.PingHealthcheckForSuccess(healthcheckPingID, "Pattern Mine  success.")
 	// }
 
-	status := taskWrapper.TaskFuncWithProjectId("ExplainV2Job", *lookback, projectIdsArray, T.BuildSequentialV2, configs)
-	log.Info(status)
-	if status["err"] != nil {
-		C.PingHealthcheckForFailure(healthcheckPingID, status)
+	var result bool
+	finalStatus := make(map[string]interface{})
+	for _, projectId := range projectIdsArray {
+		status := make(map[string]interface{})
+		status, result := T.BuildSequentialV2(projectId, configs)
+		if result == false {
+			finalStatus["err"+fmt.Sprintf("%v",projectId)] = status
+			break
+		}
+		finalStatus[fmt.Sprintf("%v",projectId)] = status
 	}
-	C.PingHealthcheckForSuccess(healthcheckPingID, status)
+	if result == false  {
+		C.PingHealthcheckForFailure(healthcheckPingID, finalStatus)
+	} else {
+		C.PingHealthcheckForSuccess(healthcheckPingID, finalStatus)
+	}
 }
