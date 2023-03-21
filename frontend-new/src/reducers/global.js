@@ -209,11 +209,20 @@ export default function (state = defaultState, action) {
     case 'FETCH_SLACK_FULFILLED': {
       return { ...state, slack: action.payload };
     }
+    case 'FETCH_TEAMS_FULFILLED': {
+      return { ...state, teams: action.payload };
+    }
     case 'FETCH_SLACK_REJECTED': {
       return { ...state, slack: action.payload };
     }
+    case 'FETCH_TEAMS_REJECTED': {
+      return { ...state, teams: action.payload };
+    }
     case 'DISABLE_SLACK_FULFILLED': {
       return { ...state, slack: {} };
+    }
+    case 'DISABLE_TEAMS_FULFILLED': {
+      return { ...state, teams: {} };
     }
     default:
       return state;
@@ -1123,6 +1132,86 @@ export function disableSlackIntegration(projectId) {
     });
   };
 }
+
+export function enableTeamsIntegration(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + 'projects/' + projectId + '/teams/auth')
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'ENABLE_TEAMS_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({ type: 'ENABLE_TEAMS_REJECTED' });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'ENABLE_TEAMS_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function fetchTeamsWorkspace(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/' + projectId + '/teams/get_teams')
+        .then((r) => {
+          if (r.ok) {
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function fetchTeamsChannels(projectId, teamId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/' + projectId + '/teams/channels?teams_id=' + teamId)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_TEAMS_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({ type: 'FETCH_TEAMS_REJECTED', payload: {} });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_TEAMS_REJECTED', payload: {} });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function disableTeamsIntegration(projectId) {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/' + projectId + '/teams/delete', {})
+        .then((res) => {
+          if (res.ok) {
+            dispatch({ type: 'DISABLE_TEAMS_FULFILLED', payload: res.data });
+            resolve(res);
+          } else {
+            reject(res);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
 
 export function enableHubspotIntegration(projectId) {
   return function (dispatch) {
