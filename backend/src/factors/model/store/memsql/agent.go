@@ -464,3 +464,16 @@ func (store *MemSQL) IsSlackIntegratedForProject(projectID int64, agentUUID stri
 	}
 	return false, http.StatusOK
 }
+func (store *MemSQL) IsTeamsIntegratedForProject(projectID int64, agentUUID string) (bool, int) {
+	tokens, err := store.GetTeamsAuthTokens(projectID, agentUUID)
+	if err != nil {
+		log.WithError(err).Error("Failed to get teams auth tokens")
+		return false, http.StatusInternalServerError
+	}
+	// check if this is a valid token
+	if tokens.AccessToken != "" && tokens.RefreshToken != "" {
+		return true, http.StatusOK
+	}
+
+	return false, http.StatusOK
+}

@@ -204,6 +204,9 @@ func main() {
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
 	enableEventFiltersInSegments := flag.Bool("enable_event_filters_in_segments", false, "Enables adding event filters in segment query")
 	enableFeatureGates := flag.Bool("enable_feature_gates", false, "Enable Feature Gates")
+	teamsAppTenantID := flag.String("teams_app_tenant_id", "", "")
+	teamsAppClientID := flag.String("teams_app_client_id", "", "")
+	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -366,6 +369,9 @@ func main() {
 		EnableEventFiltersInSegments:                   *enableEventFiltersInSegments,
 		EnableFeatureGates:                             *enableFeatureGates,
 		EnableDBConnectionPool2:                        *enableDBConnectionPool2,
+		TeamsAppTenantID:                               *teamsAppTenantID,
+		TeamsAppClientID:                               *teamsAppClientID,
+		TeamsAppClientSecret:                           *teamsAppClientSecret,
 		BlockedIPProjectIDs:                            *blockedIpProjectIds,
 	}
 	C.InitConf(config)

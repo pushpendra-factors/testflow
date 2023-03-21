@@ -285,6 +285,9 @@ type Configuration struct {
 	EnableEventFiltersInSegments                       bool
 	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
+	TeamsAppTenantID                                   string
+	TeamsAppClientID                                   string
+	TeamsAppClientSecret                               string
 	EnableDomainsGroupByProjectID                      string
 	DisableUpdateNextSessionTimestamp                  int
 	EnableSyncReferenceFieldsByProjectID               string
@@ -2457,6 +2460,18 @@ func EnableSixSignalGroupByProjectID(projectID int64) bool {
 
 func IsEnableDebuggingForIP() bool {
 	return configuration.EnableDebuggingForIP
+}
+
+func GetTeamsClientID() string {
+	return configuration.TeamsAppClientID
+}
+
+func GetTeamsClientSecret() string {
+	return configuration.TeamsAppClientSecret
+}
+
+func GetTeamsTenantID() string {
+	return configuration.TeamsAppTenantID
 }
 
 func IsAllowedDomainsGroupByProjectID(projectID int64) bool {

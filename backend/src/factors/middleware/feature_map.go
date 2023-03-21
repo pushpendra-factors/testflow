@@ -43,6 +43,7 @@ const (
 	BIG_QUERY_UPLOAD    = "big_query_upload"
 	IMPORT_ADS          = "import_ads"
 	LEADGEN             = "leadgen"
+	TEAMS               = "teams"
 
 	// INTEGRAION
 	INT_SHOPFIY        = "int_shopify"
@@ -54,6 +55,7 @@ const (
 	INT_HUBSPOT        = "int_hubspot"
 	INT_DELETE         = "int_delete"
 	INT_SLACK          = "int_slack"
+	INT_TEAMS          = "int_teams"
 
 	// DATA SERVICE
 	DS_ADWORDS        = "ds_adwords"
@@ -232,7 +234,6 @@ func initFeatureMap() {
 	featureMap["SlackAuthRedirectHandler"] = []string{SlACK}
 	featureMap["GetSlackChannelsListHandler"] = []string{SlACK}
 	featureMap["DeleteSlackIntegrationHandler"] = []string{SlACK}
-	featureMap["SlackCallbackHandler"] = []string{SlACK}
 
 	// profiles
 	featureMap["GetProfileUsersHandler"] = []string{PROFILES}
@@ -253,6 +254,12 @@ func initFeatureMap() {
 	featureMap["DeleteSavedPathAnalysisEntityHandler"] = []string{PATH_ANALYSIS}
 	featureMap["GetPathAnalysisData"] = []string{PATH_ANALYSIS}
 
+	// teams 
+	featureMap["TeamsAuthRedirectHandler"] = []string{TEAMS}
+	featureMap["GetAllTeamsHandler"] = []string{TEAMS}
+	featureMap["GetTeamsChannelsHandler"] = []string{TEAMS}
+	featureMap["DeleteTeamsIntegrationHandler"] = []string{TEAMS}
+
 	// INTEGRATION
 	featureMap["IntShopifyHandler"] = []string{INT_SHOPFIY}
 	featureMap["IntShopifySDKHandler"] = []string{INT_SHOPFIY}
@@ -269,6 +276,7 @@ func initFeatureMap() {
 	featureMap["HubspotCallbackHandler"] = []string{INT_HUBSPOT}
 	featureMap["IntDeleteHandler"] = []string{INT_DELETE}
 	featureMap["SlackCallbackHandler"] = []string{INT_SLACK}
+	featureMap["TeamsCallbackHandler"] = []string{INT_TEAMS}
 
 	// DATA SERVICE
 	featureMap["DataServiceAdwordsAddDocumentHandler"] = []string{DS_ADWORDS}
