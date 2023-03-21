@@ -134,12 +134,12 @@ func syncWorkerForOTP(projectID int64, wg *sync.WaitGroup) {
 
 	eventsIds, events, err := PullEventIdsWithEventName(projectID, startTime, endTime, U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED)
 	if err != nil {
-		logCtx.Error("Failed to get events")
+		logCtx.Warn("Failed to get events")
 		return
 	}
 
 	if len(eventsIds) == 0 {
-		logCtx.Error("no event found")
+		logCtx.Warn("no event found")
 		return
 	}
 
@@ -152,7 +152,7 @@ func syncWorkerForOTP(projectID int64, wg *sync.WaitGroup) {
 
 			eventName := events[batch[ei]].Name
 
-			log.Info(fmt.Sprintf("event name  %s", eventName))
+			logCtx.Info(fmt.Sprintf("event name  %s", eventName))
 
 			switch eventName {
 
@@ -206,7 +206,7 @@ func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OT
 
 		_, err1 := CreateTouchPointEventForFormsAndContactsV1(project, event, rule, eventTimestamp, otpUniqueKey)
 		if err1 != nil {
-			logCtx.WithError(err1).Error("failed to create touch point for hubspot contact updated document.")
+			logCtx.Warn("failed to create touch point for hubspot contact updated document.")
 			continue
 		}
 

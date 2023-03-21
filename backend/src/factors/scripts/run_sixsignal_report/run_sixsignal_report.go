@@ -3,6 +3,7 @@ package main
 import (
 	C "factors/config"
 	"factors/delta"
+	"factors/model/store"
 
 	"factors/filestore"
 	serviceDisk "factors/services/disk"
@@ -78,13 +79,10 @@ func main() {
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	db := C.GetServices().Db
 	defer db.Close()
+
+	projectIdsArray := store.GetStore().GetProjectsToRunForIncludeExcludeString(*projectIdFlag, "")
+
 	//Initialized configs
-	_, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
-	projectIdsArray := make([]int64, 0)
-	for projectId := range projectIdsToRun {
-		projectIdsArray = append(projectIdsArray, projectId)
-	}
-	// Get All the Projects for which the path analysis has pending items
 	configs := make(map[string]interface{})
 
 	if *useBucketV2 {

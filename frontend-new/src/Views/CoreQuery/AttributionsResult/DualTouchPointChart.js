@@ -9,6 +9,8 @@ import {
   CHART_COLOR_3
 } from '../../../constants/color.constants';
 
+const chartColors = [CHART_COLOR_1, CHART_COLOR_3];
+
 const DualTouchPointChart = ({
   attribution_method,
   attribution_method_compare,
@@ -37,10 +39,6 @@ const DualTouchPointChart = ({
     allValues.push(allValues.push(cd[attribution_method_compare]));
   });
 
-  const getColors = () => {
-    return [CHART_COLOR_1, CHART_COLOR_3];
-  };
-
   let legends, tooltipTitle;
   if (currMetricsValue) {
     legends = [
@@ -58,7 +56,7 @@ const DualTouchPointChart = ({
 
   return (
     <GroupedBarChart
-      colors={getColors()}
+      colors={chartColors}
       chartData={chartsData}
       visibleIndices={visibleIndices}
       metricsData={data}
