@@ -71,14 +71,14 @@ func TeamsAuthRedirectHandler(c *gin.Context) {
 
 }
 func GetTeamsAuthorisationURL(tenantID, clientID, state string) string {
-	url := fmt.Sprintf(`https://login.microsoftonline.com/%s/organizations/oauth2/v2.0/authorize?client_id=%s&scope=ChannelMessage.Send,group.ReadWriteAll,user.ReadAll&state=%s`, tenantID, clientID, state)
+	url := fmt.Sprintf(`https://login.microsoftonline.com/%s/oauth2/v2.0/authorize?client_id=%s&response_type=code&response_mode=query&scope=offline_access ChannelMessage.Send Channel.ReadBasic.All Team.ReadBasic.All&state=%s`, tenantID, clientID, state)
 	return url
 }
 func TeamsCallbackHandler(c *gin.Context) {
 	// Extract the code from the query string
 	code := c.Query("code")
 	if code == "" {
-		log.Error("Failed to get auth code")
+		log.Error("Failed to get auth code for teams")
 		redirectURL := buildRedirectURL("AUTH_ERROR")
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
@@ -100,7 +100,7 @@ func TeamsCallbackHandler(c *gin.Context) {
 	// Use the code to get an access token from Microsoft's authorization server
 	form := url.Values{}
 	form.Add("client_id", C.GetTeamsClientID())
-	form.Add("scope", "ChannelMessage.Send group.ReadWriteAll user.ReadAll")
+	// form.Add("scope", "ChannelMessage.Send")
 	form.Add("code", code)
 	// form.Add("redirect_uri", "http://localhost/myapp/")
 	form.Add("grant_type", "authorization_code")
@@ -114,24 +114,19 @@ func TeamsCallbackHandler(c *gin.Context) {
 	}
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	client := &http.Client{}
-	if err != nil {
-		logCtx.Error("Failed to get auth code")
-		redirectURL := buildRedirectURL("AUTH_ERROR")
-		c.Redirect(http.StatusPermanentRedirect, redirectURL)
-	}
 	resp, err := client.Do(request)
 	if err != nil {
 		logCtx.Error("Failed to make request to get auth code")
 		redirectURL := buildRedirectURL("AUTH_ERROR")
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logCtx.Error("Failed to read response body.")
 		redirectURL := buildRedirectURL("AUTH_ERROR")
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
+	// TODO: handle other error gracefully, eg : client secret not matched.
 	var tokens model.TeamsAccessTokens
 
 	err = json.Unmarshal(body, &tokens)
@@ -334,4 +329,14 @@ func DeleteTeamsIntegrationHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": "Teams integration deleted successfully"})
+}
+func VerifyPublisherDomainStaging(c *gin.Context) {
+	json := `{
+		"associatedApplications": [
+		  {
+			"applicationId": "b60cd2fb-e869-4940-9aad-098d551f8217"
+		  }
+		]
+	  }`
+	c.JSON(200,json)
 }

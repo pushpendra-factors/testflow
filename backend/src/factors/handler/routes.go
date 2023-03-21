@@ -36,6 +36,7 @@ func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
 	r.GET(routePrefix+"/login", ExternalAuthentication(auth, SIGNIN_FLOW))
 	r.GET(routePrefix+"/activate", ExternalAuthentication(auth, ACTIVATE_FLOW))
 	r.GET(routePrefix+"/callback", CallbackHandler(auth))
+	
 }
 
 func InitAppRoutes(r *gin.Engine) {
@@ -48,6 +49,8 @@ func InitAppRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, resp)
 		return
 	})
+
+	r.GET(routePrefix+"/.well-known/microsoft-identity-association.",teams.VerifyPublisherDomainStaging)
 
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
@@ -368,7 +371,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings", responseWrapper(V1.GetPropertyMappings))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings/:id", responseWrapper(V1.DeletePropertyMapping))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings/commom_properties", responseWrapper(V1.GetCommonPropertyMappings))
-}
+}   
 
 func InitSDKServiceRoutes(r *gin.Engine) {
 	// Initialize swagger api docs only for development / staging.
