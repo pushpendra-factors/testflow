@@ -27,7 +27,8 @@ function DataTable({
   filters,
   appliedFilters,
   setAppliedFilters,
-  breakupHeading
+  breakupHeading,
+  tableLayout
 }) {
   const componentRef = useRef(null);
   const downloadBtnRef = useRef(null);
@@ -35,10 +36,14 @@ function DataTable({
   const [searchBar, toggleSearchBar] = useToggle(false);
   const history = useHistory();
   let isDashboardWidget = !isWidgetModal;
-  
-  if (history.location.pathname.includes('/reports')) {
+  if (history.location.pathname === '/reports/6_signal') {
+    isDashboardWidget = false;
+  } else if (history.location.pathname.includes('/reports')) {
     isDashboardWidget = true;
-  } else if (history.location.pathname.includes('/analyse') || history.location.pathname.includes('/report')) {
+  } else if (
+    history.location.pathname.includes('/analyse') ||
+    history.location.pathname.includes('/report')
+  ) {
     isDashboardWidget = false;
   }
 
@@ -113,6 +118,7 @@ function DataTable({
         scroll={scroll}
         // size={isDashboardWidget ? 'middle' : ''}
         size={'middle'}
+        {...(tableLayout && { tableLayout })}
       />
     </div>
   );

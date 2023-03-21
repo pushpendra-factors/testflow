@@ -30,6 +30,17 @@ func RemoveAttributionV1Queries(queries []Queries) []Queries {
 
 }
 
+//RemoveSixSignalQuery takes list of queries as input and returns list of queries by removing sixsignal queries
+func RemoveSixSignalQueries(queries []Queries) []Queries {
+	var finalQueries []Queries
+	for _, query := range queries {
+		if query.Type != QueryTypeSixSignalQuery {
+			finalQueries = append(finalQueries, query)
+		}
+	}
+	return finalQueries
+}
+
 // SelectAttributionV1Queries takes list of queries as input and returns list of queries by removing attribution v1 queries
 func SelectAttributionV1Queries(queries []Queries) []Queries {
 	var finalQueries []Queries

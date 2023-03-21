@@ -47,6 +47,7 @@ import { AppLayoutRoutes } from 'Routes';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import GlobalSearch from 'Components/GlobalSearch';
 import './index.css';
+import _ from 'lodash';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -115,7 +116,7 @@ function AppLayout({
   useEffect(() => {
     if (projects.length && _.isEmpty(active_project)) {
       let activeItem = projects?.filter(
-        (item) => item.id == localStorage.getItem('activeProject')
+        (item) => item.id === localStorage.getItem('activeProject')
       );
       //handling Saas factors demo project
       let default_project = demoProjectId.includes(projects[0].id)
@@ -126,6 +127,7 @@ function AppLayout({
       let projectDetails = _.isEmpty(activeItem)
         ? default_project
         : activeItem[0];
+      localStorage.setItem('activeProject', projectDetails?.id);
       setActiveProject(projectDetails);
     }
   }, [projects]);

@@ -392,11 +392,28 @@ const KPIBasedAlert = ({
           description: 'Please select KPI to send alert.'
         });
       }
-      if (emails.length === 0 || size === 0) {
+
+      if(!emailEnabled && !slackEnabled) {
         notification.error({
           message: 'Error',
           description:
             'Please select atleast one delivery option to send alert.'
+        });
+      }
+
+      if (slackEnabled && size === 0) {
+        notification.error({
+          message: 'Error',
+          description:
+            'Empty Slack Channel List'
+        });
+      }
+
+      if (emailEnabled && emails.length === 0) {
+        notification.error({
+          message: 'Error',
+          description:
+            'Empty Email List'
         });
       }
     }

@@ -2214,7 +2214,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       property: opt.prNa,
       prop_type: opt.prDaTy,
       overAllIndex: index,
-      prop_category: opt.en || opt.objTy,
+      prop_category: opt?.isPrMa ? "propMap" : (opt.en || opt.objTy),
       display_name: opt?.dpNa ? opt?.dpNa : ''
     };
     if (opt.prDaTy === 'datetime') {

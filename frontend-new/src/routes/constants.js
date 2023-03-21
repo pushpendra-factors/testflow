@@ -44,6 +44,9 @@ const FactorsInsightsOld = lazyWithRetry(() =>
 const CoreQuery = lazyWithRetry(() => import('../Views/CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Views/Dashboard'));
 const Factors = lazyWithRetry(() => import('../Views/Factors'));
+const SixSignalReportComponent = lazyWithRetry(() =>
+  import('../features/6signal-report/ui')
+);
 
 const componentsLib = lazyWithRetry(() => import('../Views/componentsLib'));
 
@@ -280,6 +283,13 @@ export const APP_LAYOUT_ROUTES = {
     Component: AccountProfiles,
     Private: true,
     Layout: AppLayout
+  },
+  SixSignalReport: {
+    exact: true,
+    path: '/reports/6_signal',
+    Layout: AppLayout,
+    Private: false,
+    Component: SixSignalReportComponent
   }
 };
 

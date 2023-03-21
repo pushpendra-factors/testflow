@@ -605,11 +605,11 @@ const EventBasedAlert = ({
             'Please select atleast one delivery option to send alert.'
         });
       }
-      if (saveSelectedChannel.length === 0) {
+      if (slackEnabled && saveSelectedChannel.length === 0) {
         notification.error({
           message: 'Error',
           description:
-            'Please select atleast one delivery option to send alert.'
+            'Empty Slack Channel List'
         });
       }
     }

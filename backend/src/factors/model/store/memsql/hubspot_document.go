@@ -597,7 +597,8 @@ func (store *MemSQL) getHubspotDocumentsForInsertion(projectId int64, documents 
 func allowedHubspotDocTypeForBatchInsert(docType int) bool {
 	return docType == model.HubspotDocumentTypeContact || docType == model.HubspotDocumentTypeCompany ||
 		docType == model.HubspotDocumentTypeEngagement || docType == model.HubspotDocumentTypeForm ||
-		docType == model.HubspotDocumentTypeFormSubmission || docType == model.HubspotDocumentTypeDeal || docType == model.HubspotDocumentTypeContactList
+		docType == model.HubspotDocumentTypeFormSubmission || docType == model.HubspotDocumentTypeDeal ||
+		docType == model.HubspotDocumentTypeContactList || docType == model.HubspotDocumentTypeOwner
 }
 
 func (store *MemSQL) CreateHubspotDocumentInBatch(projectID int64, docType int, documents []*model.HubspotDocument, batchSize int) int {

@@ -26,10 +26,9 @@ module.exports = {
     currentPageURLEventName: "currentPageURLEventName",
     currentPageTrackEventId: "currentPageTrackEventId",
     currentPageOriginalURL: "currentPageOriginalURL",
+    currentPageSpentTimeInMs: "currentPageSpentTimeInMs",
     lastPollerId: "lastPollerId",
     trackPageOnSPA: "trackPageOnSPA",
-    prevActivityTime: "prevActivityTime",
     lastActivityTime: "lastActivityTime",
-    startOfPageSpentTime: "startOfPageSpentTime",
     lastPageProperties: "lastPageProperties",
 }

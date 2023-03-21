@@ -269,7 +269,7 @@ func getPropsBlock(propMap U.PropertiesMap) string {
 						"text": "%s"
 					},
 					{
-						"type": "plain_text",
+						"type": "mrkdwn",
 						"text": "%v",
 					}
 				]

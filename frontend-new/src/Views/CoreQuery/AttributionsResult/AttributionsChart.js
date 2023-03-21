@@ -260,7 +260,13 @@ const AttributionsChartComponent = forwardRef(
             touchpoint,
             attribution_method,
             attribution_method_compare,
-            currMetricsValue
+            currMetricsValue,
+            attrQueries,
+            get(
+              queryOptions,
+              'group_analysis',
+              ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
+            )
           );
           setDualTouchpointChartData(chartData);
         }

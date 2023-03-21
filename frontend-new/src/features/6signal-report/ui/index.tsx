@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Divider, notification, Spin } from 'antd';
 import { Link, useHistory } from 'react-router-dom';
 import { Text, SVG } from 'Components/factorsComponents';
@@ -40,7 +40,7 @@ const SixSignalReport = () => {
     CHANNEL_QUICK_FILTERS[0].id
   );
   const [data, setData] = useState<ReportApiResponseData | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [campaigns, setCampaigns] = useState<string[]>([]);
   const [isCampaignSelectVisible, setIsCampaignSelectVisible] = useState(false);
   const [seletedCampaigns, setSelectedCampaigns] = useState([]);
@@ -52,7 +52,7 @@ const SixSignalReport = () => {
     useState<boolean>(false);
   const [loadingShareData, setLoadingShareData] = useState<boolean>(false);
   const [shareData, setShareData] = useState<ShareData | null>(null);
-  const { isLoggedIn } = useAgentInfo();
+  const { isLoggedIn, email } = useAgentInfo();
   const { active_project, currentProjectSettings } = useSelector(
     (state: any) => state.global
   );
@@ -61,11 +61,12 @@ const SixSignalReport = () => {
   const paramQueryId = routerQuery.get(SHARE_QUERY_PARAMS.queryId);
   const paramProjectId = routerQuery.get(SHARE_QUERY_PARAMS.projectId);
 
-  const isSixSignalActivated =
-    currentProjectSettings?.int_factors_six_signal_key ||
-    currentProjectSettings?.int_client_six_signal_key
-      ? true
-      : false;
+  const isSixSignalActivated = currentProjectSettings
+    ? !currentProjectSettings?.int_factors_six_signal_key &&
+      !currentProjectSettings?.int_client_six_signal_key
+      ? false
+      : true
+    : true;
 
   const showDrawer = () => {
     setDrawerVisible(true);
@@ -103,12 +104,12 @@ const SixSignalReport = () => {
     return text?.length > 40 ? `${text.slice(0, 40)}...` : text;
   };
 
-  const getDateObjFromSelectedDate = () => {
+  const getDateObjFromSelectedDate = useCallback(() => {
     const dateObj: WeekStartEnd | undefined = dateValues.find(
       (date) => date.formattedRange === dateSelected
     );
     return dateObj;
-  };
+  }, [dateSelected, dateValues]);
 
   const handleShareClick = async () => {
     try {
@@ -167,6 +168,26 @@ const SixSignalReport = () => {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     };
   }, [dispatch]);
+
+  //TODO: Remove the below useEffect when 6 signal report is accessible to all
+  useEffect(() => {
+    if (isLoggedIn && email !== 'solutions@factors.ai') {
+      history.push('/');
+    }
+  }, [isLoggedIn, email]);
+
+  useEffect(() => {
+    if (!isSixSignalActivated) {
+      setLoading(false);
+    }
+  }, [isSixSignalActivated]);
+
+  //TODO: Remove the below useEffect when 6 signal report is accessible to all
+  useEffect(() => {
+    if (isLoggedIn && email !== 'solutions@factors.ai') {
+      history.push('/');
+    }
+  }, [isLoggedIn, email]);
 
   useEffect(() => {
     const fetchPublicData = async () => {
@@ -239,7 +260,7 @@ const SixSignalReport = () => {
       }
     };
     if (active_project && active_project?.id && dateSelected) fetchData();
-  }, [active_project, dateSelected, dateValues]);
+  }, [active_project, dateSelected, dateValues, getDateObjFromSelectedDate]);
 
   useEffect(() => {
     if (data) {
@@ -256,7 +277,7 @@ const SixSignalReport = () => {
       />
       <div className='px-24 pt-16 mt-12'>
         <div className='flex justify-between align-middle'>
-          <div className='flex align-middle gap-2'>
+          <div className='flex align-middle gap-6'>
             <div className={style.mixChartContainer}>
               <SVG name={'MixChart'} color='#5ACA89' size={24} />
             </div>
@@ -351,13 +372,21 @@ const SixSignalReport = () => {
                 onClickOutside={() => setIsCampaignSelectVisible(false)}
                 applClick={handleApplyClick}
                 selectedOpts={seletedCampaigns}
-                allowSearch
-                multiSelect
-              />
+                allowSearch={campaigns?.length > 0}
+                multiSelect={campaigns?.length > 0}
+              >
+                {!campaigns?.length ? (
+                  <div className='px-2'>
+                    <Text type={'title'} level={7} extraClass={'m-0'}>
+                      No Campaigns Found!
+                    </Text>
+                  </div>
+                ) : null}
+              </FaSelect>
             )}
           </div>
         </div>
-        <div className='mt-5 '>
+        <div className='mt-6'>
           {loading || loadingShareData ? (
             <div className='w-full h-full flex items-center justify-center'>
               <div className='w-full h-64 flex items-center justify-center'>
@@ -365,12 +394,28 @@ const SixSignalReport = () => {
               </div>
             </div>
           ) : (
-            <ReportTable
-              data={data?.result_group[0]}
-              selectedChannel={filterValue}
-              selectedCampaigns={seletedCampaigns}
-              isSixSignalActivated={isSixSignalActivated}
-            />
+            <>
+              <ReportTable
+                data={data?.result_group[0]}
+                selectedChannel={filterValue}
+                selectedCampaigns={seletedCampaigns}
+                isSixSignalActivated={isSixSignalActivated}
+                dataSelected={dateSelected}
+              />
+              {!!data && (
+                <div className='text-right font-size--small'>
+                  Logos provided by{' '}
+                  <a
+                    className='font-size--small'
+                    href='https://www.uplead.com'
+                    target='_blank'
+                    rel='noreferrer'
+                  >
+                    UpLead
+                  </a>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

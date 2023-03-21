@@ -25,7 +25,8 @@ export const getPropertiesDetails = (queries) => {
           "dc": item?.group, 
           "name": item?.name,
           "da_ty": item?.objType,
-          "en": item?.entity, 
+          "en": item?.entity,
+          "obj_ty": item?.qt
         }
 })
 return propertiesDetails

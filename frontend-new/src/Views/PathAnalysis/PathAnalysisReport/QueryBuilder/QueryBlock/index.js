@@ -7,7 +7,8 @@ import styles from './index.module.scss';
 import {
   setGroupBy,
   delGroupBy,
-  getGroupProperties
+  getGroupProperties,
+  getEventProperties
 } from 'Reducers/coreQuery/middleware';
 import FaSelect from 'Components/FaSelect';
 import EventFilterWrapper from '../EventFilterWrapper';
@@ -35,7 +36,8 @@ function QueryBlock({
   eventProperties,
   groupProperties,
   getGroupProperties,
-  filterConfig
+  filterConfig,
+  getEventProperties
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -80,13 +82,16 @@ function QueryBlock({
     setDDVisible(false);
     eventChange(newEvent, index - 1);
   };
-
+ 
   useEffect(() => {
     if (!event || event === undefined) {
       return;
+    } 
+    if (!eventProperties[event.label]) {
+      getEventProperties(activeProject?.id, event?.label);
     }
-    if (eventGroup) {
-      getGroupProperties(activeProject.id, eventGroup[1]);
+    if (AvailableGroups[event.group]) {
+      getGroupProperties(activeProject?.id, AvailableGroups[event.group]);
     }
   }, [event]);
 
@@ -523,7 +528,8 @@ const mapDispatchToProps = (dispatch) =>
     {
       setGroupBy,
       delGroupBy,
-      getGroupProperties
+      getGroupProperties,
+      getEventProperties
     },
     dispatch
   );
