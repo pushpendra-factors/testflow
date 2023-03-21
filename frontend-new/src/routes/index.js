@@ -99,13 +99,7 @@ export const AppLayoutRoutes = ({
           component={Attribution}
         />
       ) : null}
-      {featureLock(activeAgent) ? (
-        <Route
-          path='/reports/6_signal'
-          name='6-signal-report'
-          component={SixSignalReport}
-        />
-      ) : null}
+
       {currentProjectSettings?.is_path_analysis_enabled && (
         <>
           <PrivateRoute
