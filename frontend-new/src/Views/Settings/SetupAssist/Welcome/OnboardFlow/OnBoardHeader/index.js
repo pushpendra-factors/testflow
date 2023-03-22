@@ -30,19 +30,16 @@ const RenderStep = () => {
     </div>
   );
 };
-const AdditionalMenu = (
-  int_completed,
-  closeDrawer,
-  setCurrentStep,
-  stepDone,
-  setStepDone
-) => {
+const AdditionalMenu = (closeDrawer, setCurrentStep, stepDone, setStepDone) => {
   const history = useHistory();
   const dispatch = useDispatch();
   const handleCloseDrawer = useCallback(() => {
     // dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
     history.push('/welcome');
   }, []);
+  const int_completed = useSelector(
+    (state) => state?.global?.projectSettingsV1?.int_completed
+  );
   const handleDoneDrawer = useCallback(() => {
     dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
     history.push('/');
@@ -57,7 +54,7 @@ const AdditionalMenu = (
   const { steps, currentStep } = useSelector((state) => state?.onBoardFlow);
   const isNextBtnEnabled = () => {
     if (currentStep === 1) {
-      return steps.step1;
+      return int_completed;
     } else if (currentStep === 2) {
       return (
         steps.step2 || int_client_six_signal_key || factors6SignalKeyRequested
