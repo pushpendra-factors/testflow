@@ -79,6 +79,15 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Fetch marketing report took time")
 	}
 
+	if C.GetAttributionDebug() == 1 && projectID == 12384898976000000 {
+		log.WithFields(log.Fields{"Attribution": "Debug",
+			"marketingReports":            marketingReports,
+			"BingAdsCampaignIDData":       marketingReports.BingAdsCampaignIDData,
+			"BingAdsCampaignKeyData":      marketingReports.BingAdsCampaignKeyData,
+			"CampaignSourceMapping":       marketingReports.CampaignSourceMapping,
+			"CampaignChannelGroupMapping": marketingReports.CampaignChannelGroupMapping}).Info("MarketingReports after FetchMarketingReports")
+	}
+
 	queryStartTime = time.Now().UTC().Unix()
 
 	if err != nil {
@@ -143,6 +152,14 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		userData, err4 = store.PullPagesOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
 	} else {
 		userData, err4 = store.PullSessionsOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
+	}
+
+	if C.GetAttributionDebug() == 1 && projectID == 12384898976000000 {
+		log.WithFields(log.Fields{"Attribution": "Debug",
+			"BingAdsCampaignIDData":       marketingReports.BingAdsCampaignIDData,
+			"BingAdsCampaignKeyData":      marketingReports.BingAdsCampaignKeyData,
+			"CampaignSourceMapping":       marketingReports.CampaignSourceMapping,
+			"CampaignChannelGroupMapping": marketingReports.CampaignChannelGroupMapping}).Info("MarketingReports after PullSessionsOfConvertedUsers")
 	}
 	if err4 != nil {
 		return nil, err4
