@@ -90,8 +90,8 @@ function QueryBlock({
     if (!eventProperties[event.label]) {
       getEventProperties(activeProject?.id, event?.label);
     }
-    if (AvailableGroups[event.group]) {
-      getGroupProperties(activeProject?.id, AvailableGroups[event.group]);
+    if (eventGroup?.length) {
+      getGroupProperties(activeProject?.id, eventGroup[1]);
     }
   }, [event]);
 
@@ -100,7 +100,7 @@ function QueryBlock({
       return;
     }
     const assignFilterProps = { ...filterProps };
-    if (eventGroup) {
+    if (eventGroup?.length) {
       assignFilterProps.group = groupProperties[eventGroup[1]];
       assignFilterProps.user = [];
     } else {

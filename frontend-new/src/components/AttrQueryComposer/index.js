@@ -52,6 +52,7 @@ const AttrQueryComposer = ({
   setCollapse,
   queryOptions,
   setQueryOptions,
+  fetchGroups,
   groupOpts
 }) => {
   const [linkEvExpansion, setLinkEvExpansion] = useState(true);
@@ -67,7 +68,7 @@ const AttrQueryComposer = ({
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetchGroups(activeProject.id, false);
+    fetchGroups(activeProject?.id, false);
   }, [activeProject]);
 
   const groupsList = useMemo(() => {

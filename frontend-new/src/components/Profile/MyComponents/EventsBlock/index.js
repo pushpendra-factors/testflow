@@ -47,7 +47,7 @@ function EventsBlock({
           availableGroups.find((group) => group[1] === groupAnalysis) || [];
         return item.label === label;
       });
-      const groupNamesList = availableGroups.map((item) => item[1]);
+      const groupNamesList = availableGroups.map((item) => item[0]);
       const userOpts = eventOptions?.filter(
         (item) => !groupNamesList.includes(item?.label)
       );

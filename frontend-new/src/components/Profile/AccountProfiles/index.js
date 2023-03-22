@@ -84,7 +84,7 @@ function AccountProfiles({
   });
 
   useEffect(() => {
-    fetchGroups(activeProject.id, true);
+    fetchGroups(activeProject?.id, true);
   }, [activeProject]);
 
   const groupsList = useMemo(() => {
