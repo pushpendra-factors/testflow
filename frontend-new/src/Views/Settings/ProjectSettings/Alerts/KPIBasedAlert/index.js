@@ -28,7 +28,10 @@ import { getEventsWithPropertiesKPI, getStateFromFilters } from '../utils';
 import {
   fetchSlackChannels,
   fetchProjectSettingsV1,
-  enableSlackIntegration
+  enableSlackIntegration,
+  enableTeamsIntegration,
+  fetchTeamsWorkspace,
+  fetchTeamsChannels
 } from 'Reducers/global';
 import SelectChannels from '../SelectChannels';
 import useAutoFocus from 'hooks/useAutoFocus';
@@ -50,9 +53,13 @@ const KPIBasedAlert = ({
   fetchProjectSettingsV1,
   projectSettings,
   enableSlackIntegration,
+  enableTeamsIntegration,
+  fetchTeamsWorkspace,
+  fetchTeamsChannels,
   viewAlertDetails,
   alertState,
-  setAlertState
+  setAlertState,
+  teams
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -60,6 +67,7 @@ const KPIBasedAlert = ({
   const [Value, setValue] = useState(null);
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [slackEnabled, setSlackEnabled] = useState(false);
+  const [teamsEnabled, setTeamsEnabled] = useState(false);
   const [showCompareField, setShowCompareField] = useState(false);
   const [alertType, setAlertType] = useState(1);
   const [viewFilter, setViewFilter] = useState([]);
@@ -68,6 +76,16 @@ const KPIBasedAlert = ({
   const [saveSelectedChannel, setSaveSelectedChannel] = useState([]);
   const [showSelectChannelsModal, setShowSelectChannelsModal] = useState(false);
   const [viewSelectedChannels, setViewSelectedChannels] = useState([]);
+  const [teamsWorkspaceOpts, setTeamsWorkspaceOpts] = useState([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
+  const [teamsChannelOpts, setTeamsChannelOpts] = useState([]);
+  const [teamsSelectedChannel, setTeamsSelectedChannel] = useState([]);
+  const [teamsSaveSelectedChannel, setTeamsSaveSelectedChannel] = useState([]);
+  const [teamsShowSelectChannelsModal, setTeamsShowSelectChannelsModal] =
+    useState(false);
+  const [teamsViewSelectedChannels, setTeamsViewSelectedChannels] = useState(
+    []
+  );
 
   const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
@@ -434,6 +452,21 @@ const KPIBasedAlert = ({
       });
   };
 
+  const onConnectMSTeams = () => {
+    enableTeamsIntegration(activeProject.id)
+      .then((r) => {
+        if (r.status == 200) {
+          window.open(r.data.redirectURL, '_blank');
+        }
+        if (r.status >= 400) {
+          message.error('Error fetching teams redirect url');
+        }
+      })
+      .catch((err) => {
+        console.log('Teams error-->', err);
+      });
+  };
+
   const onChange = () => {
     seterrorInfo(null);
   };
@@ -498,6 +531,27 @@ const KPIBasedAlert = ({
   }, [activeProject, projectSettings?.int_slack, slackEnabled]);
 
   useEffect(() => {
+    fetchProjectSettingsV1(activeProject.id);
+    if (projectSettings?.int_teams) {
+      fetchTeamsWorkspace(activeProject.id)
+      .then((res) => {
+        if(res.ok) {
+          setTeamsWorkspaceOpts(res?.data?.value)
+        }
+      }).catch((err) => {
+        message.error(err?.data?.error);
+      });
+    }
+  }, [activeProject, projectSettings?.int_teams, teamsEnabled]);
+
+
+  useEffect(() => {
+    if (projectSettings?.int_teams && selectedWorkspace) {
+      fetchTeamsChannels(activeProject.id, selectedWorkspace);
+    }
+  }, [activeProject, projectSettings?.int_teams, teamsEnabled, selectedWorkspace]);
+
+  useEffect(() => {
     if (slack?.length > 0) {
       let tempArr = [];
       for (let i = 0; i < slack.length; i++) {
@@ -511,6 +565,21 @@ const KPIBasedAlert = ({
     }
   }, [activeProject, agent_details, slack]);
 
+  useEffect(() => {
+    if (teams?.value?.length > 0 && selectedWorkspace) {
+      let tempArr = [];
+      for (let i = 0; i < teams?.value?.length; i++) {
+        tempArr.push({
+          name: teams?.value?.[i]?.displayName,
+          id: teams?.value?.[i]?.id
+        });
+      }
+      setTeamsChannelOpts(tempArr);
+    } else {
+      setTeamsChannelOpts([]);
+    }
+  }, [activeProject, agent_details, teams]);
+
   const handleOk = () => {
     setSaveSelectedChannel(selectedChannel);
     setShowSelectChannelsModal(false);
@@ -519,6 +588,16 @@ const KPIBasedAlert = ({
   const handleCancel = () => {
     setSelectedChannel(saveSelectedChannel);
     setShowSelectChannelsModal(false);
+  };
+
+  const handleOkTeams = () => {
+    setTeamsSaveSelectedChannel(teamsSelectedChannel);
+    setTeamsShowSelectChannelsModal(false);
+  };
+
+  const handleCancelTeams = () => {
+    setTeamsSelectedChannel(teamsSaveSelectedChannel);
+    setTeamsShowSelectChannelsModal(false);
   };
 
   const renderKPIForm = () => {
@@ -923,6 +1002,99 @@ const KPIBasedAlert = ({
                     <Button
                       type={'link'}
                       onClick={() => setShowSelectChannelsModal(true)}
+                    >
+                      Manage Channels
+                    </Button>
+                  </Col>
+                </Row>
+              )}
+            </>
+          )}
+
+          <Row className={'mt-2 ml-2'}>
+            <Col className={'m-0'}>
+              <Form.Item name='slack_enabled' className={'m-0'}>
+                <Checkbox
+                  defaultChecked={teamsEnabled}
+                  onChange={(e) => setTeamsEnabled(e.target.checked)}
+                >
+                  Teams
+                </Checkbox>
+              </Form.Item>
+            </Col>
+          </Row>
+          {teamsEnabled && !projectSettings?.int_teams && (
+            <>
+              <Row className={'mt-2 ml-2'}>
+                <Col span={10} className={'m-0'}>
+                  <Text
+                    type={'title'}
+                    level={6}
+                    color={'grey'}
+                    extraClass={'m-0'}
+                  >
+                    Teams is not integrated, Do you want to integrate with your
+                    Microsoft Teams account now?
+                  </Text>
+                </Col>
+              </Row>
+              <Row className={'mt-2 ml-2'}>
+                <Col span={10} className={'m-0'}>
+                  <Button onClick={onConnectMSTeams}>
+                    <SVG name={'MSTeam'} size={20} />
+                    Connect to Teams
+                  </Button>
+                </Col>
+              </Row>
+            </>
+          )}
+          {teamsEnabled && projectSettings?.int_teams && (
+            <>
+              {teamsSaveSelectedChannel.length > 0 && (
+                <Row
+                  className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
+                >
+                  <Col className={'m-0'}>
+                    <Text
+                      type={'title'}
+                      level={6}
+                      color={'grey-2'}
+                      extraClass={'m-0 mt-2 ml-2'}
+                    >
+                      Selected Channels
+                    </Text>
+                    {teamsSaveSelectedChannel.map((channel, index) => (
+                      <div key={index}>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          color={'grey'}
+                          extraClass={'m-0 ml-2 my-1'}
+                        >
+                          {'#' + channel.name}
+                        </Text>
+                      </div>
+                    ))}
+                  </Col>
+                </Row>
+              )}
+              {!teamsSaveSelectedChannel.length > 0 ? (
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Button
+                      type={'link'}
+                      onClick={() => setTeamsShowSelectChannelsModal(true)}
+                    >
+                      Select Channels
+                    </Button>
+                  </Col>
+                </Row>
+              ) : (
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Button
+                      type={'link'}
+                      onClick={() => setTeamsShowSelectChannelsModal(true)}
                     >
                       Manage Channels
                     </Button>
@@ -1347,6 +1519,99 @@ const KPIBasedAlert = ({
               )}
             </>
           )}
+
+          <Row className={'mt-2 ml-2'}>
+            <Col className={'m-0'}>
+              <Form.Item name='slack_enabled' className={'m-0'}>
+                <Checkbox
+                  checked={teamsEnabled}
+                  onChange={(e) => setTeamsEnabled(e.target.checked)}
+                >
+                  Teams
+                </Checkbox>
+              </Form.Item>
+            </Col>
+          </Row>
+          {teamsEnabled && !projectSettings?.int_teams && (
+            <>
+              <Row className={'mt-2 ml-2'}>
+                <Col span={10} className={'m-0'}>
+                  <Text
+                    type={'title'}
+                    level={6}
+                    color={'grey'}
+                    extraClass={'m-0'}
+                  >
+                    Teams is not integrated, Do you want to integrate with your
+                    Microsoft Teams account now?
+                  </Text>
+                </Col>
+              </Row>
+              <Row className={'mt-2 ml-2'}>
+                <Col span={10} className={'m-0'}>
+                  <Button onClick={onConnectMSTeams}>
+                    <SVG name={'MSTeam'} size={20} />
+                    Connect to Teams
+                  </Button>
+                </Col>
+              </Row>
+            </>
+          )}
+          {teamsEnabled && projectSettings?.int_teams && (
+            <>
+              {teamsSaveSelectedChannel.length > 0 && (
+                <Row
+                  className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
+                >
+                  <Col className={'m-0'}>
+                    <Text
+                      type={'title'}
+                      level={6}
+                      color={'grey-2'}
+                      extraClass={'m-0 mt-2 ml-2'}
+                    >
+                      Selected Channels
+                    </Text>
+                    {teamsSaveSelectedChannel.map((channel, index) => (
+                      <div key={index}>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          color={'grey'}
+                          extraClass={'m-0 ml-2 my-1'}
+                        >
+                          {'#' + channel.name}
+                        </Text>
+                      </div>
+                    ))}
+                  </Col>
+                </Row>
+              )}
+              {!teamsSaveSelectedChannel.length > 0 ? (
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Button
+                      type={'link'}
+                      onClick={() => setTeamsShowSelectChannelsModal(true)}
+                    >
+                      Select Channels
+                    </Button>
+                  </Col>
+                </Row>
+              ) : (
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Button
+                      type={'link'}
+                      onClick={() => setTeamsShowSelectChannelsModal(true)}
+                    >
+                      Manage Channels
+                    </Button>
+                  </Col>
+                </Row>
+              )}
+            </>
+          )}
         </Form>
       </>
     );
@@ -1586,6 +1851,44 @@ const KPIBasedAlert = ({
               </Col>
             </Row>
           )}
+        <Row className={'mt-2 ml-2'}>
+          <Col span={4}>
+            <Checkbox
+              disabled={true}
+              checked={viewAlertDetails?.alert_configuration?.teams_enabled}
+            >
+              Teams
+            </Checkbox>
+          </Col>
+        </Row>
+        {viewAlertDetails?.alert_configuration?.teams_enabled &&
+          viewAlertDetails?.alert_configuration
+            ?.teams_channels_and_user_groups && (
+            <Row className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}>
+              <Col className={'m-0'}>
+                <Text
+                  type={'title'}
+                  level={6}
+                  color={'grey-2'}
+                  extraClass={'m-0 mt-2 ml-2'}
+                >
+                  Selected Channels
+                </Text>
+                {teamsViewSelectedChannels.map((channel, index) => (
+                  <div key={index}>
+                    <Text
+                      type={'title'}
+                      level={7}
+                      color={'grey'}
+                      extraClass={'m-0 ml-2 my-1'}
+                    >
+                      {'#' + channel.name}
+                    </Text>
+                  </div>
+                ))}
+              </Col>
+            </Row>
+          )}
         <Row className={'mt-2'}>
           <Col span={24}>
             <div className={'border-top--thin-2 mt-2 mb-4'} />
@@ -1655,13 +1958,7 @@ const KPIBasedAlert = ({
         <div>
           <Row>
             <Col span={24}>
-              <Text
-                type={'title'}
-                level={4}
-                weight={'bold'}
-                size={'grey'}
-                extraClass={'m-0'}
-              >
+              <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
                 Select slack channels
               </Text>
             </Col>
@@ -1677,6 +1974,71 @@ const KPIBasedAlert = ({
           </Row>
         </div>
       </Modal>
+
+      <Modal
+        title={null}
+        visible={teamsShowSelectChannelsModal}
+        centered={true}
+        zIndex={1005}
+        width={700}
+        onCancel={handleCancelTeams}
+        onOk={handleOkTeams}
+        className={'fa-modal--regular p-4 fa-modal--slideInDown'}
+        closable={true}
+        okText={'Save'}
+        cancelText={'Close'}
+        transitionName=''
+        maskTransitionName=''
+        okButtonProps={{ size: 'large' }}
+        cancelButtonProps={{ size: 'large' }}
+      >
+        <div>
+          <Row>
+            <Col span={24}>
+              <Text
+                type={'title'}
+                level={4}
+                weight={'bold'}
+                size={'grey'}
+                extraClass={'m-0'}
+              >
+                Select Teams channels
+              </Text>
+            </Col>
+          </Row>
+          <Row className='my-3'>
+            <Col span={24}>
+              <Text
+                type={'title'}
+                level={6}
+                color={'grey-2'}
+                extraClass={'m-0 inline mr-2'}
+              >
+                Workspace
+              </Text>
+              <Select
+                className={'fa-select inline'}
+                options={teamsWorkspaceOpts}
+                placeholder='Select Workspace'
+                showSearch
+                onChange={(value) => {
+                  setSelectedWorkspace(value);
+                }}
+              >
+              </Select>
+            </Col>
+          </Row>
+          <Row>
+            <Col span={24}>
+              <SelectChannels
+                channelOpts={teamsChannelOpts}
+                selectedChannel={teamsSelectedChannel}
+                setSelectedChannel={setTeamsSelectedChannel}
+              />
+            </Col>
+          </Row>
+        </div>
+      </Modal>
     </div>
   );
 };
@@ -1687,6 +2049,7 @@ const mapStateToProps = (state) => ({
   kpi: state?.kpi,
   agent_details: state.agent.agent_details,
   slack: state.global.slack,
+  teams: state.global.teams,
   projectSettings: state.global.projectSettingsV1
 });
 
@@ -1697,5 +2060,8 @@ export default connect(mapStateToProps, {
   editAlert,
   fetchSlackChannels,
   fetchProjectSettingsV1,
-  enableSlackIntegration
+  enableSlackIntegration,
+  enableTeamsIntegration,
+  fetchTeamsWorkspace,
+  fetchTeamsChannels
 })(KPIBasedAlert);

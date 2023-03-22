@@ -986,7 +986,10 @@ func SyncOwnerReferenceFields(projectID int64, propertiesMetaMap map[string][]Pr
 
 				firstName := U.GetPropertyValueAsString((*value)["firstName"])
 				lastName := U.GetPropertyValueAsString((*value)["lastName"])
-				label := firstName + " " + lastName
+				label := strings.TrimSpace(firstName + " " + lastName)
+				if label == "" {
+					continue
+				}
 
 				status = store.GetStore().CreateOrUpdateDisplayNameLabel(projectID, U.CRM_SOURCE_NAME_HUBSPOT, propertyKey, ownerId, label)
 				if status != http.StatusCreated && status != http.StatusConflict && status != http.StatusAccepted {
@@ -2751,6 +2754,18 @@ func syncGroupCompany(projectID int64, document *model.HubspotDocument, enProper
 	companyUserID, _, status := createOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID)
 	if status != http.StatusOK {
 		return "", "", errors.New("failed to update company group properties")
+	}
+
+	if C.IsAllowedDomainsGroupByProjectID(projectID) {
+		accountWebsite := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+			model.HubspotDocumentTypeNameCompany, "website")])
+		if accountWebsite != "" {
+			status := sdk.TrackDomainsGroup(projectID, companyUserID, model.GROUP_NAME_HUBSPOT_COMPANY, accountWebsite, nil, document.Timestamp)
+			if status != http.StatusOK {
+				log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID, "timestamp": document.Timestamp}).
+					Error("Failed to TrackDomainsGroup in hubspot company enrichment.")
+			}
+		}
 	}
 
 	return companyUserID, companyGroupID, nil

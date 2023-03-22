@@ -633,10 +633,11 @@ type Model interface {
 	CreateOrUpdateDisplayName(projectID int64, eventName, propertyName, displayName, tag string) int
 
 	// display name_labels
-	CreateOrUpdateDisplayNameLabel(projectID int64, source, key, value, label string) int
+	CreateOrUpdateDisplayNameLabel(projectID int64, source, propertyKey, value, label string) int
 	CreateDisplayNameLabel(projectID int64, source, propertyKey, value, label string) (int, error)
 	GetDisplayNameLabel(projectID int64, source, propertyKey, value string) (*model.DisplayNameLabel, int, error)
 	GetDisplayNameLabelsByProjectIdAndSource(projectID int64, source string) ([]model.DisplayNameLabel, int)
+	GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID int64, source, propertyKey string) (map[string]string, error)
 
 	// task and task-execution
 	RegisterTaskWithDefaultConfiguration(taskName string, source string, frequency int, isProjectEnabled bool) (uint64, int, string)
@@ -686,6 +687,7 @@ type Model interface {
 	//Group
 	CreateGroup(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
 	CreateOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
+	CreateOrGetDomainsGroup(projectID int64) (*model.Group, int)
 	GetGroup(projectID int64, groupName string) (*model.Group, int)
 	GetGroupUserByGroupID(projectID int64, groupName string, groupID string) (*model.User, int)
 	CreateOrUpdateGroupPropertiesBySource(projectID int64, groupName string, groupID, groupUserID string,
@@ -694,6 +696,7 @@ type Model interface {
 	GetPropertiesByGroup(projectID int64, groupName string, limit int, lastNDays int) (map[string][]string, int)
 	GetPropertyValuesByGroupProperty(projectID int64, groupName string, propertyName string, limit int, lastNDays int) ([]string, error)
 	IsGroupEventName(projectID int64, eventName, eventNameID string) (string, int)
+	UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainGroupID string, overwrite bool) (*model.User, int)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID int64, channelName string) (int, error)
@@ -731,9 +734,6 @@ type Model interface {
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
 
 	// alerts
-	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
-	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
-	DeleteSlackIntegration(projectID int64, agentUUID string) error
 	GetAlertById(id string, projectID int64) (model.Alert, int)
 	GetAllAlerts(projectID int64, excludeSavedQueries bool) ([]model.Alert, int)
 	DeleteAlert(id string, projectID int64) (int, string)
@@ -882,4 +882,17 @@ type Model interface {
 	GetPropertyMappingsByProjectId(projectID int64) ([]*model.PropertyMapping, string, int)
 	GetPropertyMappingsByProjectIdAndSectionBitMap(projectID int64, sectionBitMap int64) ([]*model.PropertyMapping, string, int)
 	DeletePropertyMappingByID(projectID int64, id string) int
+
+	// Slack
+	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
+	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
+	DeleteSlackIntegration(projectID int64, agentUUID string) error
+
+	// MS Teams
+	SetAuthTokenforTeamsIntegration(projectID int64, agentUUID string, authTokens model.TeamsAccessTokens) error
+	GetTeamsAuthTokens(projectID int64, agentUUID string) (model.TeamsAccessTokens, error)
+	DeleteTeamsIntegration(projectID int64, agentUUID string) error
+	// Currency
+	CreateCurrencyDetails(currency string, date int64, value float64) (error)
+	GetCurrencyDetails(currency string, date int64) ([]model.Currency, error)
 }

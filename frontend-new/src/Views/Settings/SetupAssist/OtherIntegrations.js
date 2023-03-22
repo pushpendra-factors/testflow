@@ -11,6 +11,7 @@ import GoogleSearchConsole from '../ProjectSettings/IntegrationSettings/GoogleSe
 import RevealIntegration from '../ProjectSettings/IntegrationSettings/Reveal';
 import MarketoIntegration from '../ProjectSettings/IntegrationSettings/Marketo';
 import SlackIntegration from '../ProjectSettings/IntegrationSettings/Slack';
+import MSTeamIntegration from '../ProjectSettings/IntegrationSettings/MSTeam';
 import SixSignalIntegration from '../ProjectSettings/IntegrationSettings/SixSignal';
 import RudderstackIntegration from '../ProjectSettings/IntegrationSettings/Rudderstack';
 
@@ -49,6 +50,12 @@ const IntegrationProviderData = [
     name: 'Slack',
     desc: 'Does your team live on Slack? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
     icon: 'Slack',
+    kbLink: false
+  },
+  {
+    name: 'Microsoft Teams',
+    desc: 'Does your team live on Teams? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
+    icon: 'MSTeam',
     kbLink: false
   },
   {
@@ -93,6 +100,10 @@ function IntegrationCard({ item, index }) {
       case 'Slack':
         return (
           <SlackIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
+        );
+      case 'Microsoft Teams':
+        return (
+          <MSTeamIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
         );
       case 'Rudderstack':
         return (

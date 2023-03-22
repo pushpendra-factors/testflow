@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -145,7 +146,7 @@ func TestSDK6SignalGroup(t *testing.T) {
 	assert.Equal(t, "10K", (*groupProperties)[U.SIX_SIGNAL_ANNUAL_REVENUE])
 	assert.Equal(t, "description", (*groupProperties)[U.SIX_SIGNAL_SIC_DESCRIPTION])
 
-	status = SDK.TrackUserGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
 	assert.Equal(t, http.StatusOK, status)
 	group, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL)
 	assert.Equal(t, http.StatusFound, status)
@@ -160,7 +161,7 @@ func TestSDK6SignalGroup(t *testing.T) {
 	assert.Equal(t, groupUser1.Group1ID, user.Group1ID)
 
 	// track again should not create new group user
-	status = SDK.TrackUserGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
 	assert.Equal(t, http.StatusOK, status)
 	groupUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
 	assert.Equal(t, http.StatusFound, status)
@@ -173,7 +174,7 @@ func TestSDK6SignalGroup(t *testing.T) {
 	// track again shouldn't create new group or new association
 	// should only update group properties
 	(*groupProperties)[U.SIX_SIGNAL_ZIP] = "1235"
-	status = SDK.TrackUserGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
 	assert.Equal(t, http.StatusOK, status)
 	groupUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
 	assert.Equal(t, http.StatusFound, status)
@@ -192,7 +193,7 @@ func TestSDK6SignalGroup(t *testing.T) {
 	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
 		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
-	status = SDK.TrackUserGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
 	assert.Equal(t, http.StatusOK, status)
 	user, status = store.GetStore().GetUser(project.ID, createdUserID2)
 	assert.Equal(t, http.StatusFound, status)
@@ -201,7 +202,7 @@ func TestSDK6SignalGroup(t *testing.T) {
 
 	// new company2 with existing user should create or update group user and associate with current user
 	(*groupProperties)[U.SIX_SIGNAL_DOMAIN] = "abc2.com"
-	status = SDK.TrackUserGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
 	assert.Equal(t, http.StatusOK, status)
 	groupUser2, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc2.com")
 	assert.Equal(t, http.StatusFound, status) // new group user created
@@ -213,12 +214,72 @@ func TestSDK6SignalGroup(t *testing.T) {
 
 	// existing company2 with existing user who is already associated with another group should update association with existing user
 	(*groupProperties)[U.SIX_SIGNAL_DOMAIN] = "abc2.com"
-	status = SDK.TrackUserGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties)
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
 	assert.Equal(t, http.StatusOK, status)
 	user, status = store.GetStore().GetUser(project.ID, createdUserID)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, groupUser2.ID, user.Group1UserID) // existing assocation overwriten
 	assert.Equal(t, groupUser2.Group1ID, user.Group1ID)
+}
+
+func TestSDKDomainsGroup(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// check group not exist
+	_, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL)
+	assert.Equal(t, http.StatusNotFound, status)
+
+	userPropertiesMap := U.PropertiesMap{
+		U.UP_CITY:                      "city1",
+		U.UP_LATEST_PAGE_URL:           "www.abc.com",
+		U.SIX_SIGNAL_NAICS_DESCRIPTION: "abc",
+		U.SIX_SIGNAL_EMPLOYEE_COUNT:    10,
+		U.SIX_SIGNAL_DOMAIN:            "abc.com",
+		U.SIX_SIGNAL_NAME:              "abc",
+	}
+	groupProperties := U.FilterPropertiesByKeysByPrefix(&userPropertiesMap, U.SIX_SIGNAL_PROPERTIES_PREFIX)
+	status = sdk.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	user, status := store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, status)
+	groupUser, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "abc.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotEmpty(t, user.Group1UserID)
+	assert.NotEmpty(t, user.Group1ID)
+	assert.NotEmpty(t, groupUser.Group1ID)
+	assert.Empty(t, groupUser.Group1UserID)
+	assert.NotEmpty(t, groupUser.Group2ID)
+	assert.NotEmpty(t, groupUser.Group2UserID)
+	assert.Equal(t, "abc.com", user.Group1ID)
+	assert.Equal(t, "abc.com", groupUser.Group1ID)
+	assert.Equal(t, "abc.com", groupUser.Group2ID) // domains group
+	assert.Empty(t, *user.IsGroupUser)
+	assert.True(t, *groupUser.IsGroupUser)
+	domainsGroupUser, status := store.GetStore().GetUser(project.ID, groupUser.Group2UserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotEmpty(t, domainsGroupUser.Group2ID)
+	assert.True(t, *domainsGroupUser.IsGroupUser)
+
+	// domain name will be changed to lower case for domains group and non group user will be re associated
+	userPropertiesMap[U.SIX_SIGNAL_DOMAIN] = "AbcXyx.com"
+	groupProperties = U.FilterPropertiesByKeysByPrefix(&userPropertiesMap, U.SIX_SIGNAL_PROPERTIES_PREFIX)
+	status = sdk.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	groupUser, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "AbcXyx.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abcxyx.com", groupUser.Group2ID)
+	domainsGroupUser, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "AbcXyx.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abcxyx.com", domainsGroupUser.Group2ID)
+	user, status = store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, user.Group1UserID, groupUser.ID)
+	assert.Equal(t, strings.ToLower(user.Group1ID), groupUser.Group1ID)
 }
 
 func TestGetDomainGroupDomainName(t *testing.T) {

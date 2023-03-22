@@ -1290,7 +1290,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		assert.Equal(t, len(result[1].Rows), 1)
 		assert.Equal(t, result[0].Rows[0][1], float64(1))
 	})
-	
+
 }
 
 func TestDerivedKPIChannels(t *testing.T) {

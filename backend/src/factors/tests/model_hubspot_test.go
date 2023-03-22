@@ -3507,6 +3507,10 @@ func TestHubspotCompanyGroups(t *testing.T) {
 				Value:     "testcompany",
 				Timestamp: companyCreatedDate.Unix() * 1000,
 			},
+			"website": {
+				Value:     "abc.com",
+				Timestamp: companyCreatedDate.Unix() * 1000,
+			},
 			"company_id": {
 				Value: fmt.Sprintf("%d", company1ID),
 			},
@@ -3971,6 +3975,20 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	assert.Equal(t, 1, groupRelationship[0].RightGroupNameID)
 	user, _ = store.GetStore().GetUser(project.ID, companyContacts[0].UserId)
 	assert.True(t, assertUserGroupValueByColumnName(user, "group_2_user_id", deal3GroupUserID))
+
+	// check for domains group for hubspot company group
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{U.GetPropertyValueAsString(company1ID)}, model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	groupUser, status := store.GetStore().GetUser(project.ID, documents[0].GroupUserId)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abc.com", groupUser.Group3ID)
+	assert.True(t, *groupUser.IsGroupUser)
+	domainsGroup, status := store.GetStore().GetUser(project.ID, groupUser.Group3UserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abc.com", domainsGroup.Group3ID)
+	assert.Empty(t, domainsGroup.Group3UserID)
+	assert.True(t, *domainsGroup.IsGroupUser)
+
 }
 
 /*func TestHubspotOfflineTouchPoint(t *testing.T) {

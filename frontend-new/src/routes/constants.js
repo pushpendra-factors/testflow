@@ -19,6 +19,7 @@ import UserProfiles from 'Components/Profile/UserProfiles';
 import AccountProfiles from 'Components/Profile/AccountProfiles';
 import Touchpoints from 'Views/Settings/ProjectConfigure/Touchpoints';
 import AppLayout from 'Views/AppLayout';
+import OnBoard from 'Views/Settings/SetupAssist/Welcome/OnboardFlow';
 
 const Login = lazyWithRetry(() => import('../Views/Pages/Login'));
 const ForgotPassword = lazyWithRetry(() =>
@@ -153,6 +154,13 @@ export const APP_LAYOUT_ROUTES = {
     exact: true,
     path: '/welcome',
     Component: Welcome,
+    Private: true,
+    Layout: AppLayout
+  },
+  OnBoardFlow: {
+    exact: true,
+    path: '/welcome/visitoridentification/:step',
+    Component: OnBoard,
     Private: true,
     Layout: AppLayout
   },

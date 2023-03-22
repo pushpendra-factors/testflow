@@ -129,8 +129,6 @@ func main() {
 	allowSmartEventRuleCreation := flag.Bool("allow_smart_event_rule_creation", false, "Should allow smart event rule creation")
 	projectAnalyticsWhitelistedUUIds := flag.String("project_analytics_whitelisted_uuids",
 		"", "List of UUIDs whitelisted for project analytics API")
-	customerEnabledProjectsWeeklyInsights := flag.String("customer_enabled_projects_wi",
-		"", "List of projects customer enabled for Weekly Insights")
 	customerEnabledProjectsLastComputed := flag.String("customer_enabled_projects_last_computed",
 		"*", "List of projects customer enabled forLast Computed")
 	demoProjectIds := flag.String("demo_projects", "", "List of projectIds those are used for demo")
@@ -206,6 +204,9 @@ func main() {
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
 	enableEventFiltersInSegments := flag.Bool("enable_event_filters_in_segments", false, "Enables adding event filters in segment query")
 	enableFeatureGates := flag.Bool("enable_feature_gates", false, "Enable Feature Gates")
+	teamsAppTenantID := flag.String("teams_app_tenant_id", "", "")
+	teamsAppClientID := flag.String("teams_app_client_id", "", "")
+	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -311,7 +312,6 @@ func main() {
 		ActiveFactorsTrackedUserPropertiesLimit: *factorsActiveTrackedUserPropertiesLimit,
 		AllowSmartEventRuleCreation:             *allowSmartEventRuleCreation,
 		ProjectAnalyticsWhitelistedUUIds:        C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
-		CustomerEnabledProjectsWeeklyInsights:   C.GetTokensFromStringListAsUint64(*customerEnabledProjectsWeeklyInsights),
 		CustomerEnabledProjectsLastComputed:     C.GetTokensFromStringListAsUint64(*customerEnabledProjectsLastComputed),
 		DemoProjectIds:                          C.GetTokensFromStringListAsString(*demoProjectIds),
 		EnableDemoReadAccess:                    enableDemoReadAccess,
@@ -369,6 +369,9 @@ func main() {
 		EnableEventFiltersInSegments:                   *enableEventFiltersInSegments,
 		EnableFeatureGates:                             *enableFeatureGates,
 		EnableDBConnectionPool2:                        *enableDBConnectionPool2,
+		TeamsAppTenantID:                               *teamsAppTenantID,
+		TeamsAppClientID:                               *teamsAppClientID,
+		TeamsAppClientSecret:                           *teamsAppClientSecret,
 		BlockedIPProjectIDs:                            *blockedIpProjectIds,
 	}
 	C.InitConf(config)

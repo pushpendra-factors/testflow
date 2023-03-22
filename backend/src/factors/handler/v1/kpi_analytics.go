@@ -146,7 +146,7 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 // @Param project_id path integer true "Project ID"
 // @Param query body model.KPIFilterValuesRequest true "Filter Values payload"
 // @Success 200 {string} json "{"result": interface{}}"
-// @Router /{project_id}/v1/channels/filter_values [get]
+// @Router /{project_id}/v1/kpi/filter_values [get]
 func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	reqID, projectID := getReqIDAndProjectID(c)
 	logCtx := log.WithField("projectID", projectID).WithField("req_id", reqID)
@@ -163,12 +163,44 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 		return nil, http.StatusInternalServerError, INVALID_INPUT, "Error during validation of KPI FilterValues Data.", true
 	}
 
+	var kpiFilterValues interface{}
+	var status int
+	var errString, errMsg string
+	var failures bool
 	// If property mapping is requested, then get the union of individual property values
 	if request.IsPropertyMapping {
-		return getKpiFilterValuesForPropertyMapping(request, projectID, reqID)
+		kpiFilterValues, status, errString, errMsg, failures = getKpiFilterValuesForPropertyMapping(request, projectID, reqID)
 	} else {
-		return getKpiFilterValuesForStaticProperty(request, projectID, reqID)
+		kpiFilterValues, status, errString, errMsg, failures = getKpiFilterValuesForStaticProperty(request, projectID, reqID)
 	}
+
+	if failures {
+		return kpiFilterValues, status, errString, errMsg, failures
+	}
+
+	label := c.Query("label")
+	if label != "true" {
+		return kpiFilterValues, http.StatusOK, "", "", false
+	}
+
+	var source string
+	if U.IsAllowedCRMPropertyPrefix(request.PropertyName) {
+		source = strings.Split(request.PropertyName, "_")[0]
+		source = strings.TrimPrefix(source, "$")
+	} else {
+		logCtx.WithField("source", source).Warning("source is empty")
+	}
+
+	propertyValueLabelMap, err := store.GetStore().GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID, source, request.PropertyName)
+	if err != nil {
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during getting property values and labels of KPI FilterValues Data.", true
+	}
+
+	if len(propertyValueLabelMap) == 0 {
+		logCtx.WithField("property_name", request.PropertyName).Error("No KPI Filter property value labels returned")
+	}
+
+	return propertyValueLabelMap, http.StatusOK, "", "", false
 }
 
 // Gets filter values for property mapping request as union of individual property values

@@ -179,7 +179,6 @@ type Configuration struct {
 	blacklistedProjectIDPropertyTypeFromDB string
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
-	CustomerEnabledProjectsWeeklyInsights  []int64
 	CustomerEnabledProjectsLastComputed    []int64
 	SkippedProjectIDListForOtp             []int64
 	DemoProjectIds                         []string
@@ -286,6 +285,10 @@ type Configuration struct {
 	EnableEventFiltersInSegments                       bool
 	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
+	TeamsAppTenantID                                   string
+	TeamsAppClientID                                   string
+	TeamsAppClientSecret                               string
+	EnableDomainsGroupByProjectID                      string
 	DisableUpdateNextSessionTimestamp                  int
 	EnableSyncReferenceFieldsByProjectID               string
 	StartTimestampForWeekMonth                         int64
@@ -2060,20 +2063,6 @@ func GetUUIdsFromStringListAsString(stringList string) []string {
 	return stringTokens
 }
 
-func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId int64) bool {
-	for _, id := range configuration.CustomerEnabledProjectsWeeklyInsights {
-		if id == projectId {
-			return true
-		}
-	}
-	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
-		if uuid == loggedInUUID {
-			return true
-		}
-	}
-	return false
-}
-
 func IsLastComputedWhitelisted(projectId int64) bool {
 	for _, id := range configuration.CustomerEnabledProjectsLastComputed {
 		if id == projectId {
@@ -2487,13 +2476,32 @@ func IsEnableDebuggingForIP() bool {
 	return configuration.EnableDebuggingForIP
 }
 
-func AllowSyncReferenceFields(projectId int64) bool {
-	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSyncReferenceFieldsByProjectID, "")
+func GetTeamsClientID() string {
+	return configuration.TeamsAppClientID
+}
+
+func GetTeamsClientSecret() string {
+	return configuration.TeamsAppClientSecret
+}
+
+func GetTeamsTenantID() string {
+	return configuration.TeamsAppTenantID
+}
+
+func IsAllowedDomainsGroupByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDomainsGroupByProjectID, "")
 	if allProjects {
 		return true
 	}
+	return allowedProjectIDs[projectID]
+}
 
-	return projectIDsMap[projectId]
+func AllowSyncReferenceFields(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSyncReferenceFieldsByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
 }
 
 func GetStartTimestampForWeekMonth() int64 {

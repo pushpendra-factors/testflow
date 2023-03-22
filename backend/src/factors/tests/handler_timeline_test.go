@@ -486,10 +486,12 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		U.EP_SALESFORCE_CAMPAIGN_TYPE:                "Some Type",
 		U.EP_SALESFORCE_CAMPAIGNMEMBER_STATUS:        "CurrentStatus",
 		U.EP_HUBSPOT_ENGAGEMENT_SOURCE:               "Some Engagement Source",
+		U.EP_HUBSPOT_ENGAGEMENT_FROM:                 "Somewhere",
 		U.EP_HUBSPOT_ENGAGEMENT_TYPE:                 "Some Engagement Type",
 		U.EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME:       "Some Outcome",
 		U.EP_HUBSPOT_ENGAGEMENT_STARTTIME:            "Start time",
 		U.EP_HUBSPOT_ENGAGEMENT_DURATIONMILLISECONDS: 10000000000,
+		U.EP_HUBSPOT_ENGAGEMENT_STATUS:               "Testing",
 		U.EP_HUBSPOT_FORM_SUBMISSION_FORMTYPE:        "Some HS Form Submission Type",
 		U.EP_HUBSPOT_FORM_SUBMISSION_PAGEURL:         RandomURL(),
 		U.EP_HUBSPOT_ENGAGEMENT_ENDTIME:              "End Time",
@@ -497,6 +499,12 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		U.EP_HUBSPOT_FORM_SUBMISSION_TITLE:           "Some form submission title",
 		U.EP_HUBSPOT_ENGAGEMENT_SUBJECT:              "Some Engagement Subject",
 		U.EP_HUBSPOT_ENGAGEMENT_TITLE:                "Some Engagement Title",
+		U.EP_SF_TASK_TYPE:                            "Some Task Type",
+		U.EP_SF_TASK_SUBTYPE:                         "Some Task SubType",
+		U.EP_SF_TASK_COMPLETED_DATETIME:              1660875887,
+		U.EP_SF_EVENT_TYPE:                           "Some Event Type",
+		U.EP_SF_EVENT_SUBTYPE:                        "Some Event Subtype",
+		U.EP_SF_EVENT_COMPLETED_DATETIME:             1660875887,
 		"$curr_prop_value":                           "Current Custom Value",
 		"$prev_prop_value":                           "Previous Custom Value",
 	}
@@ -591,13 +599,13 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.Empty(t, response.UserId)
 	assert.Equal(t, http.StatusOK, status)
 
-	// Event 6 : Campaign Member Updated
+	// Event 6 : Campaign Member Responded to Campaign
 	timestamp = timestamp - 10000
 	trackPayload = SDK.TrackPayload{
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
-		Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+		Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
@@ -611,7 +619,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 
 	// Event 7 : Hubspot Form Submission
 	timestamp = timestamp - 10000
-	eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TIMESTAMP] = timestamp
 	trackPayload = SDK.TrackPayload{
 		UserId:          user.ID,
 		CreateUser:      false,
@@ -630,7 +637,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 
 	// Event 8 : Engagement Email
 	timestamp = timestamp - 10000
-	eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 	trackPayload = SDK.TrackPayload{
 		UserId:          user.ID,
 		CreateUser:      false,
@@ -665,27 +671,8 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.Empty(t, response.UserId)
 	assert.Equal(t, http.StatusOK, status)
 
-	// Event 10 : Engagement Meeting Updated
+	// Event 10 : Engagement Call Created
 	timestamp = timestamp - 10000
-	trackPayload = SDK.TrackPayload{
-		UserId:          user.ID,
-		CreateUser:      false,
-		IsNewUser:       false,
-		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
-		EventProperties: eventProperties,
-		UserProperties:  map[string]interface{}{},
-		Timestamp:       timestamp,
-		Auto:            false,
-		RequestSource:   model.UserSourceSalesforce,
-	}
-	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
-	assert.NotNil(t, response.EventId)
-	assert.Empty(t, response.UserId)
-	assert.Equal(t, http.StatusOK, status)
-
-	// Event 11 : Engagement Call Created
-	timestamp = timestamp - 10000
-	eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 	trackPayload = SDK.TrackPayload{
 		UserId:          user.ID,
 		CreateUser:      false,
@@ -695,6 +682,24 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
 		Auto:            false,
+		RequestSource:   model.UserSourceHubspot,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Event 11 : Salesforce Task Created
+	timestamp = timestamp - 10000
+	trackPayload = SDK.TrackPayload{
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_SALESFORCE_TASK_CREATED,
+		EventProperties: eventProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		Auto:            false,
 		RequestSource:   model.UserSourceSalesforce,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -702,14 +707,13 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.Empty(t, response.UserId)
 	assert.Equal(t, http.StatusOK, status)
 
-	// Event 12 : Engagement Call Updated
+	// Event 11 : Salesforce Task Created
 	timestamp = timestamp - 10000
-	eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 	trackPayload = SDK.TrackPayload{
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
-		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
+		Name:            U.EVENT_NAME_SALESFORCE_EVENT_CREATED,
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
@@ -826,17 +830,21 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 					assert.Equal(t, activity.DisplayName, U.STANDARD_EVENTS_DISPLAY_NAMES[activity.EventName])
 					if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
 						assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
-					} else if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
-						assert.Equal(t, activity.AliasName, fmt.Sprintf("Interacted with %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
+					} else if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("Responded to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
 					} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
 						assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE]))
 					} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
 						assert.Equal(t, activity.AliasName, fmt.Sprintf("%s: %s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TYPE], eventProperties[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT]))
 					} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
-						activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED ||
-						activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED ||
-						activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED {
+						activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED {
 						assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TITLE]))
+					} else if activity.EventName == U.EVENT_NAME_SALESFORCE_TASK_CREATED {
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Task - %s", eventProperties[U.EP_SF_TASK_SUBJECT]))
+					} else if activity.EventName == U.EVENT_NAME_SALESFORCE_EVENT_CREATED {
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Event - %s", eventProperties[U.EP_SF_EVENT_SUBJECT]))
+					} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_LIST {
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to Hubspot List - %s", eventProperties[U.EP_HUBSPOT_CONTACT_LIST_LIST_NAME]))
 					}
 				} else if model.IsEventNameTypeSmartEvent(activity.EventType) {
 					assert.Equal(t, activity.EventName, "Smart Event Name 0")
@@ -1222,10 +1230,12 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		U.EP_SALESFORCE_CAMPAIGN_TYPE:                "Some Type",
 		U.EP_SALESFORCE_CAMPAIGNMEMBER_STATUS:        "CurrentStatus",
 		U.EP_HUBSPOT_ENGAGEMENT_SOURCE:               "Some Engagement Source",
+		U.EP_HUBSPOT_ENGAGEMENT_FROM:                 "Somewhere",
 		U.EP_HUBSPOT_ENGAGEMENT_TYPE:                 "Some Engagement Type",
 		U.EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME:       "Some Outcome",
 		U.EP_HUBSPOT_ENGAGEMENT_STARTTIME:            "Start time",
 		U.EP_HUBSPOT_ENGAGEMENT_DURATIONMILLISECONDS: 10000000000,
+		U.EP_HUBSPOT_ENGAGEMENT_STATUS:               "Testing",
 		U.EP_HUBSPOT_FORM_SUBMISSION_FORMTYPE:        "Some HS Form Submission Type",
 		U.EP_HUBSPOT_FORM_SUBMISSION_PAGEURL:         RandomURL(),
 		U.EP_HUBSPOT_ENGAGEMENT_ENDTIME:              "End Time",
@@ -1233,6 +1243,12 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		U.EP_HUBSPOT_FORM_SUBMISSION_TITLE:           "Some form submission title",
 		U.EP_HUBSPOT_ENGAGEMENT_SUBJECT:              "Some Engagement Subject",
 		U.EP_HUBSPOT_ENGAGEMENT_TITLE:                "Some Engagement Title",
+		U.EP_SF_TASK_TYPE:                            "Some Task Type",
+		U.EP_SF_TASK_SUBTYPE:                         "Some Task SubType",
+		U.EP_SF_TASK_COMPLETED_DATETIME:              1660875887,
+		U.EP_SF_EVENT_TYPE:                           "Some Event Type",
+		U.EP_SF_EVENT_SUBTYPE:                        "Some Event Subtype",
+		U.EP_SF_EVENT_COMPLETED_DATETIME:             1660875887,
 	}
 	randomURL := RandomURL()
 	customerEmail = "@example.com"
@@ -1365,13 +1381,13 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Empty(t, response.UserId)
 		assert.Equal(t, http.StatusOK, status)
 
-		// Event 6 : Campaign Member Updated
+		// Event 6 : Campaign Member Responded to Campaign
 		timestamp = timestamp - 10000
 		trackPayload = SDK.TrackPayload{
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
-			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
@@ -1385,7 +1401,6 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 		// Event 7 : Hubspot Form Submission
 		timestamp = timestamp - 10000
-		eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TIMESTAMP] = timestamp
 		trackPayload = SDK.TrackPayload{
 			UserId:          user.ID,
 			CreateUser:      false,
@@ -1404,7 +1419,6 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 		// Event 8 : Engagement Email
 		timestamp = timestamp - 10000
-		eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 		trackPayload = SDK.TrackPayload{
 			UserId:          user.ID,
 			CreateUser:      false,
@@ -1439,27 +1453,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Empty(t, response.UserId)
 		assert.Equal(t, http.StatusOK, status)
 
-		// Event 10 : Engagement Meeting Updated
+		// Event 10 : Engagement Call Created
 		timestamp = timestamp - 10000
-		trackPayload = SDK.TrackPayload{
-			UserId:          user.ID,
-			CreateUser:      false,
-			IsNewUser:       false,
-			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
-			EventProperties: eventProperties,
-			UserProperties:  map[string]interface{}{},
-			Timestamp:       timestamp,
-			Auto:            false,
-			RequestSource:   model.UserSourceSalesforce,
-		}
-		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
-		assert.NotNil(t, response.EventId)
-		assert.Empty(t, response.UserId)
-		assert.Equal(t, http.StatusOK, status)
-
-		// Event 11 : Engagement Call Created
-		timestamp = timestamp - 10000
-		eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 		trackPayload = SDK.TrackPayload{
 			UserId:          user.ID,
 			CreateUser:      false,
@@ -1469,6 +1464,24 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
 			Auto:            false,
+			RequestSource:   model.UserSourceHubspot,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 11 : Salesforce Task Created
+		timestamp = timestamp - 10000
+		trackPayload = SDK.TrackPayload{
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_SALESFORCE_TASK_CREATED,
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			Auto:            false,
 			RequestSource:   model.UserSourceSalesforce,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1476,14 +1489,13 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Empty(t, response.UserId)
 		assert.Equal(t, http.StatusOK, status)
 
-		// Event 12 : Engagement Call Updated
+		// Event 11 : Salesforce Task Created
 		timestamp = timestamp - 10000
-		eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 		trackPayload = SDK.TrackPayload{
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
-			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
+			Name:            U.EVENT_NAME_SALESFORCE_EVENT_CREATED,
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
@@ -1554,17 +1566,21 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 							assert.Equal(t, activity.DisplayName, U.STANDARD_EVENTS_DISPLAY_NAMES[activity.EventName])
 							if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
 								assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
-							} else if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
-								assert.Equal(t, activity.AliasName, fmt.Sprintf("Interacted with %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
+							} else if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
+								assert.Equal(t, activity.AliasName, fmt.Sprintf("Responded to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
 							} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
 								assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE]))
 							} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
 								assert.Equal(t, activity.AliasName, fmt.Sprintf("%s: %s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TYPE], eventProperties[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT]))
 							} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
-								activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED ||
-								activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED ||
-								activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED {
+								activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED {
 								assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TITLE]))
+							} else if activity.EventName == U.EVENT_NAME_SALESFORCE_TASK_CREATED {
+								assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Task - %s", eventProperties[U.EP_SF_TASK_SUBJECT]))
+							} else if activity.EventName == U.EVENT_NAME_SALESFORCE_EVENT_CREATED {
+								assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Event - %s", eventProperties[U.EP_SF_EVENT_SUBJECT]))
+							} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_LIST {
+								assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to Hubspot List - %s", eventProperties[U.EP_HUBSPOT_CONTACT_LIST_LIST_NAME]))
 							}
 						}
 						assert.NotNil(t, activity.Timestamp)

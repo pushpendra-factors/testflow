@@ -63,6 +63,7 @@ func main() {
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	formFillIdentifyAllowedProjectIDs := flag.String("form_fill_identify_allowed_projects", "", "Form fill identification allowed project ids.")
 	enableSixSignalGroupByProjectID := flag.String("enable_six_signal_group_by_project_id", "", "")
+	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -111,6 +112,7 @@ func main() {
 		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		FormFillIdentificationAllowedProjects:              *formFillIdentifyAllowedProjectIDs,
 		EnableSixSignalGroupByProjectID:                    *enableSixSignalGroupByProjectID,
+		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
 	}
 	C.InitConf(config)
 

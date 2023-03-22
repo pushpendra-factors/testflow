@@ -1,6 +1,7 @@
 package model
 
 import (
+	U "factors/util"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -56,7 +57,7 @@ type PropertyMapping struct {
 func (propertyMapping *PropertyMapping) IsValid(properties []Property) (bool, string) {
 
 	// TODO: more validation to be added, $ _ validation
-	if propertyMapping.DisplayName == "" {
+	if propertyMapping.DisplayName == "" || !U.IsValidPropertyDisplayName(propertyMapping.DisplayName) {
 		return false, "Invalid display name for property mapping"
 	}
 

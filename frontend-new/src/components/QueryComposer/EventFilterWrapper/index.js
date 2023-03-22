@@ -1,4 +1,3 @@
-/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
@@ -8,7 +7,6 @@ import MomentTz from 'Components/MomentTz';
 import { SVG, Text } from 'factorsComponents';
 import { DEFAULT_DATE_RANGE } from '../DateRangeSelector/utils';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
-
 import {
   fetchEventPropertyValues,
   fetchUserPropertyValues,
@@ -16,12 +14,12 @@ import {
   fetchGroupPropertyValues
 } from '../../../reducers/coreQuery/services';
 import FAFilterSelect from '../../FaFilterSelect';
-import { AvailableGroups } from '../../../utils/constants';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 export default function EventFilterWrapper({
   displayMode,
+  eventGroup,
   index,
   refValue,
   blockType = 'event',
@@ -47,7 +45,8 @@ export default function EventFilterWrapper({
   operatorDDPos,
   operatorDDHeight,
   valuesDDPos,
-  valuesDDHeight
+  valuesDDHeight,
+  showInList = false
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -135,6 +134,7 @@ export default function EventFilterWrapper({
         operatorDDHeight={operatorDDHeight}
         valuesDDPos={valuesDDPos}
         valuesDDHeight={valuesDDHeight}
+        showInList={showInList}
       />
     );
   };
@@ -175,12 +175,12 @@ export default function EventFilterWrapper({
 
   const removeFilter = () => {
     const filterState = Object.assign({}, newFilterState);
-    filterTypeState === 'operator'
-      ? (() => {
-          filterState.props = [];
-          changeFilterTypeState(false);
-        })()
-      : null;
+    if (filterTypeState === 'operator') {
+      (() => {
+        filterState.props = [];
+        changeFilterTypeState(false);
+      })();
+    }
     if (filterTypeState === 'values') {
       filterState.values.length
         ? filterState.values.pop()
@@ -218,7 +218,7 @@ export default function EventFilterWrapper({
               ddValues[newFilterState.props[0]] = [...res.data, '$none'];
               setDropDownValues(ddValues);
             })
-            .catch(() => {
+            .catch((err) => {
               console.log(err);
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[newFilterState.props[0]] = ['$none'];
@@ -237,7 +237,7 @@ export default function EventFilterWrapper({
               ddValues[newFilterState.props[0]] = [...res.data, '$none'];
               setDropDownValues(ddValues);
             })
-            .catch(() => {
+            .catch((err) => {
               console.log(err);
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[newFilterState.props[0]] = ['$none'];
@@ -248,7 +248,7 @@ export default function EventFilterWrapper({
         if (!dropDownValues[newFilterState.props[0]]) {
           fetchGroupPropertyValues(
             activeProject.id,
-            AvailableGroups[event.group],
+            eventGroup[1],
             newFilterState.props[0]
           )
             .then((res) => {
@@ -256,7 +256,7 @@ export default function EventFilterWrapper({
               ddValues[newFilterState.props[0]] = [...res.data, '$none'];
               setDropDownValues(ddValues);
             })
-            .catch(() => {
+            .catch((err) => {
               console.log(err);
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[newFilterState.props[0]] = ['$none'];
@@ -279,7 +279,7 @@ export default function EventFilterWrapper({
               ];
               setDropDownValues(ddValues);
             })
-            .catch(() => {
+            .catch((err) => {
               console.log(err);
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[newFilterState.props[0]] = ['$none'];
@@ -676,11 +676,7 @@ export default function EventFilterWrapper({
         }
       } else if (props[3] === 'group') {
         if (!dropDownValues[props[0]]) {
-          fetchGroupPropertyValues(
-            activeProject.id,
-            AvailableGroups[event.group],
-            props[1]
-          )
+          fetchGroupPropertyValues(activeProject.id, eventGroup[1], props[1])
             .then((res) => {
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[props[1]] = [...res.data, '$none'];
@@ -719,6 +715,7 @@ export default function EventFilterWrapper({
           operatorDDHeight={operatorDDHeight}
           valuesDDPos={valuesDDPos}
           valuesDDHeight={valuesDDHeight}
+          showInList={showInList}
         />
       </>
     );

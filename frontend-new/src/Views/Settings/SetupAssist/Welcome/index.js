@@ -1,49 +1,155 @@
 import React, { useState, useEffect } from 'react';
-import {
-    Row, Col, Modal, Button, notification
-} from 'antd';
+import { Row, Col, Modal, Button, notification } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { connect } from 'react-redux';
-import { useHistory } from 'react-router-dom';
-import { getHubspotContact, fetchDemoProject, setActiveProject } from 'Reducers/global';
+import { connect, useDispatch } from 'react-redux';
+import { Link, useHistory } from 'react-router-dom';
+import {
+  getHubspotContact,
+  fetchDemoProject,
+  setActiveProject
+} from 'Reducers/global';
 import styles from './index.module.scss';
 import Video from './Video';
 import { meetLink } from '../../../../utils/hubspot';
 import FaHeader from '../../../../components/FaHeader';
+import OnBoard from './OnboardFlow';
+import { TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL } from 'Reducers/types';
 
-const Welcome = ({currentAgent, activeProject, getHubspotContact, fetchDemoProject, setActiveProject, projects}) => {
-    const [showModal,setShowModal] = useState(false);
-    const [ownerID, setownerID] = useState();
-    const history = useHistory();
+const EachWelcomeCard = ({ onClick, title, description, type }) => {
+  return (
+    <div
+      className={`${styles.first} ml-2 mr-2 ${styles['eachWelcomeCard']}`}
+      onClick={onClick}
+    >
+      <Row
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          flexWrap: 'initial',
+          flexDirection: 'column'
+        }}
+      >
+        <Col className={styles['img']}>
+          {type === 1 ? (
+            <SVG name='onboardtarget' />
+          ) : (
+            <SVG name='onboardsearch' />
+          )}
+        </Col>
+        <Col justify={'center'} span={24} className={'mt-12'}>
+          <Text
+            type={'title'}
+            level={5}
+            align={'center'}
+            weight={'bold'}
+            extraClass={'m-0'}
+          >
+            {title}
+          </Text>
+          <Text
+            type={'title'}
+            level={7}
+            weight={'regular'}
+            align={'center'}
+            color={'grey'}
+          >
+            {description}
+          </Text>
+        </Col>
+      </Row>
+    </div>
+  );
+};
+const Welcome = ({
+  currentAgent,
+  activeProject,
+  getHubspotContact,
+  fetchDemoProject,
+  setActiveProject,
+  projects
+}) => {
+  const [showModal, setShowModal] = useState(false);
+  const [ownerID, setownerID] = useState();
+  const dispatch = useDispatch();
+  const history = useHistory();
 
-    const handleRoute = () => {
-        history.push('/project-setup');
-    }
+  const handleRoute = () => {
+    history.push('/project-setup');
+  };
+  const handleRoute1 = () => {
+    // dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
+    history.push('/welcome/visitoridentification/1');
+  };
 
-    useEffect(() => {
-        let email = currentAgent?.email;
-        getHubspotContact(email).then((res) => {
-            setownerID(res?.data?.hubspot_owner_id)
-        }).catch((err) => {
-            console.log(err?.data?.error)
-        });
-    }, []);
-
-    const switchProject = () => {
-      fetchDemoProject().then((res) => {
-          let id = res.data[0];
-          let selectedProject = projects.filter(project => project?.id === id);
-          selectedProject = selectedProject[0];
-          localStorage.setItem('activeProject', selectedProject?.id);
-          setActiveProject(selectedProject);
-          history.push('/');
-          notification.success({
-              message: 'Project Changed!',
-              description: `You are currently viewing data from demo project`
-          });
+  useEffect(() => {
+    let email = currentAgent?.email;
+    getHubspotContact(email)
+      .then((res) => {
+        setownerID(res?.data?.hubspot_owner_id);
+      })
+      .catch((err) => {
+        console.log(err?.data?.error);
       });
-    };
+  }, []);
 
+  const switchProject = () => {
+    fetchDemoProject().then((res) => {
+      let id = res.data[0];
+      let selectedProject = projects.filter((project) => project?.id === id);
+      selectedProject = selectedProject[0];
+      localStorage.setItem('activeProject', selectedProject?.id);
+      setActiveProject(selectedProject);
+      history.push('/');
+      notification.success({
+        message: 'Project Changed!',
+        description: `You are currently viewing data from demo project`
+      });
+    });
+  };
+
+  return (
+    <>
+      <div className={'m-0'}>
+        <Row justify={'center'} className={'mt-24'}>
+          <Col span={12}>
+            <Text
+              type={'title'}
+              level={2}
+              weight={'bold'}
+              align={'center'}
+              extraClass={'m-0 mt-16'}
+            >
+              What do you wanna get started on first?
+            </Text>
+            <Text
+              type={'title'}
+              level={6}
+              align={'center'}
+              weight={'regular'}
+              extraClass={'m-0 mt-2'}
+              color={'grey'}
+            >
+              Don't worry, you can set up the rest at any time
+            </Text>
+          </Col>
+        </Row>
+        <Row justify={'center'} className={'mt-8'}>
+          <Col span={15}>
+            <Row className={'justify-center'}>
+              <EachWelcomeCard
+                title='Analytics and Attribution'
+                description='Make data-driven decisions and optimize marketing strategies'
+                type={1}
+                onClick={handleRoute}
+              />
+              <EachWelcomeCard
+                title='Website visitor identification'
+                description='Identify anonymous users and track high intent accounts'
+                type={2}
+                onClick={handleRoute1}
+              />
+
+              {/* <div className={`${styles.first}`} onClick={() => {
     return (
       <>
         <div className={"m-0"}>
@@ -131,38 +237,49 @@ const Welcome = ({currentAgent, activeProject, getHubspotContact, fetchDemoProje
                       </Text>
                     </Col>
                   </Row>
-                </div>
-              </Row>
-            </Col>
-          </Row>
-          <Row justify='center' className={'mt-12'}>
-            <Col span={7}>
-              <Text type={"title"} level={6} weight={"regular"} extraClass={"m-0 inline"} color={"grey-2"}>
-                Want a quick video tour first?
-              </Text>
-              <Button
-                type={"text"}
-                size={"large"}
-                className={"inline ml-1 mb-4"}
-                onClick={() => setShowModal(true)}
-              >
-                <SVG name={"PlayButton"} size={25} />
-                Play Video
-              </Button>
-            </Col>
-          </Row>
-        </div>
-        {/* video modal */}
-        <Video showModal={showModal} setShowModal={setShowModal} />
-      </>
-    );
-}
-           
+                </div> */}
+            </Row>
+          </Col>
+        </Row>
+        {/* <OnBoard /> */}
+        <Row justify='center' className={'mt-12'}>
+          <Col span={7}>
+            <Text
+              type={'title'}
+              level={6}
+              weight={'regular'}
+              extraClass={'m-0 inline'}
+              color={'grey-2'}
+              style={{ userSelect: 'none' }}
+            >
+              Want a quick video tour first?
+            </Text>
+            <Button
+              type={'text'}
+              size={'large'}
+              className={'inline ml-1 mb-4 ' + styles['playvideobtn']}
+              onClick={() => setShowModal(true)}
+            >
+              <SVG name={'PlayButton'} size={25} />
+              Play Video
+            </Button>
+          </Col>
+        </Row>
+      </div>
+      {/* video modal */}
+      <Video showModal={showModal} setShowModal={setShowModal} />
+    </>
+  );
+};
 
 const mapStateToProps = (state) => ({
-    activeProject: state.global.active_project,
-    currentAgent: state.agent.agent_details,
-    projects: state.global.projects
+  activeProject: state.global.active_project,
+  currentAgent: state.agent.agent_details,
+  projects: state.global.projects
 });
 
-export default connect(mapStateToProps, { getHubspotContact, fetchDemoProject, setActiveProject })(Welcome);
+export default connect(mapStateToProps, {
+  getHubspotContact,
+  fetchDemoProject,
+  setActiveProject
+})(Welcome);

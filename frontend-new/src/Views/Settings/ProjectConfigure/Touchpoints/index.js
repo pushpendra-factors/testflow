@@ -450,7 +450,9 @@ const Touchpoints = ({
               <Table
                 className='fa-table--basic mt-4'
                 columns={columns}
-                dataSource={touchPointsData}
+                dataSource={touchPointsData.filter(
+                  (obj) => obj.crm_type === getCRMType()
+                )}
                 pagination={false}
                 loading={touchPointState.loading}
               />

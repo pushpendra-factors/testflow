@@ -69,10 +69,11 @@ function UserTimelineBirdview({
   };
 
   const renderInfoCard = (event) => {
-    const eventName =
-      event.display_name === 'Page View'
-        ? event.event_name
-        : event?.alias_name || PropTextFormat(event.display_name);
+    const eventName = event.alias_name
+      ? event.alias_name
+      : event.display_name !== 'Page View'
+      ? PropTextFormat(event.display_name)
+      : event.event_name;
     const hoverConditionals =
       hoverEvents.includes(event.event_name) ||
       event.display_name === 'Page View' ||

@@ -435,7 +435,8 @@ const SearchResults = ({ searchString, openSavedReports }) => {
     'explainV2',
     'project-setup',
     'template',
-    'welcome'
+    'welcome',
+    'visitoridentification'
   ]);
   const checkRoute = (eachRoute) => {
     let x = eachRoute.split('/')[1]?.trim();
