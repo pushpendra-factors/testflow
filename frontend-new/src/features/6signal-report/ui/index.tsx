@@ -113,12 +113,12 @@ const SixSignalReport = () => {
 
   const handleShareClick = async () => {
     try {
-      setLoadingShareData(true);
       //checking if share data is already fetched for the dates
       if (dateSelected === shareData?.dateSelected) {
         setShareModalVisibility(true);
         return;
       }
+      setLoadingShareData(true);
       const dateObj = getDateObjFromSelectedDate();
       if (!dateObj) {
         notification.error({
@@ -160,6 +160,14 @@ const SixSignalReport = () => {
   const handleShareModalCancel = () => {
     setShareModalVisibility(false);
     setLoadingShareData(false);
+  };
+
+  const handleDateChange = (option: string[]) => {
+    setDateSelected(option[1]);
+    setIsDateSelectionOpen(false);
+    //resetting campaigns to null
+    setCampaigns([]);
+    setSelectedCampaigns([]);
   };
 
   useEffect(() => {
@@ -335,10 +343,7 @@ const SixSignalReport = () => {
                 options={getDateOptions()}
                 onClickOutside={() => setIsDateSelectionOpen(false)}
                 allowSearch
-                optionClick={(option) => {
-                  setDateSelected(option[1]);
-                  setIsDateSelectionOpen(false);
-                }}
+                optionClick={(option: string[]) => handleDateChange(option)}
               />
             )}
           </div>

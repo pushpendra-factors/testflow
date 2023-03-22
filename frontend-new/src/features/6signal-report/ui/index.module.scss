@@ -11,6 +11,7 @@
 .filter {
   display: flex;
   position: relative;
+  word-wrap: break-word;
 
   &__propContainer {
     position: relative;

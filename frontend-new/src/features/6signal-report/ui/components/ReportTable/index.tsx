@@ -132,7 +132,6 @@ const ReportTable = ({
     <div>
       <ConfigProvider
         renderEmpty={() => {
-          if (data) return null;
           if (isLoggedIn) {
             return isSixSignalActivated ? NoDataState : NoIntegrationState;
           }
