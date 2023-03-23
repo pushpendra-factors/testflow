@@ -536,6 +536,32 @@ func (store *MemSQL) GetAllProjectIDs() ([]int64, int) {
 	return projectIds, http.StatusFound
 }
 
+//GetProjectIDsWithSixSignalEnabled Gets the project_ids of projects for which 6Signal is enabled.
+func (store *MemSQL) GetProjectIDsWithSixSignalEnabled() []int64 {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
+	projectIds := make([]int64, 0, 0)
+
+	db := C.GetServices().Db
+	rows, err := db.Raw("SELECT project_id from project_settings WHERE int_factors_six_signal_key=1 OR int_client_six_signal_key=1").Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get projectIds for which sixsignal is enabled. ")
+		return projectIds
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var projectId int64
+		if err = rows.Scan(&projectId); err != nil {
+			log.WithError(err).Error("Failed to get project ids for which sixsignal is enabled. Scanning failed.")
+			return projectIds
+		}
+
+		projectIds = append(projectIds, projectId)
+	}
+
+	return projectIds
+}
+
 // GetNextSessionStartTimestampForProject - Returns start timestamp for
 // pulling events, for add session job, by project.
 func (store *MemSQL) GetNextSessionStartTimestampForProject(projectID int64) (int64, int) {
