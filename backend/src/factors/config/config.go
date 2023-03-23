@@ -234,6 +234,7 @@ type Configuration struct {
 	MonitoringAPIToken                                 string
 	DelayedTaskThreshold                               int
 	SdkQueueThreshold                                  int
+	UseQueueRedis                                      bool
 	IntegrationQueueThreshold                          int
 	UsageBasedDashboardCaching                         int
 	OnlyKPICaching                                     int
@@ -317,6 +318,7 @@ type Services struct {
 	DeviceDetector       *D.DeviceDetector
 	SentryHook           *logrus_sentry.SentryHook
 	MetricsExporter      *stackdriver.Exporter
+	QueueRedis           *redis.Pool
 }
 
 // Healthchecks.io ping IDs for monitoring. Can be used anywhere in code to report error on job.
@@ -1029,7 +1031,7 @@ func InitDB(config Configuration) error {
 }
 
 func InitRedisPersistent(host string, port int) {
-	initRedisConnection(host, port, true, 300, 100)
+	initRedisConnection(host, port, true, false, 300, 100)
 }
 
 func InitFilemanager(bucketName string, env string, config *Configuration) {
@@ -1046,15 +1048,19 @@ func InitFilemanager(bucketName string, env string, config *Configuration) {
 }
 
 func InitRedis(host string, port int) {
-	initRedisConnection(host, port, false, 300, 100)
+	initRedisConnection(host, port, false, false, 300, 100)
+}
+
+func InitQueueRedis(host string, port int) {
+	initRedisConnection(host, port, false, true, 300, 100)
 }
 
 // InitRedisConnection Init redis with custom requirements.
 func InitRedisConnection(host string, port int, persistent bool, maxActive, maxIdle int) {
-	initRedisConnection(host, port, persistent, maxActive, maxIdle)
+	initRedisConnection(host, port, persistent, false, maxActive, maxIdle)
 }
 
-func initRedisConnection(host string, port int, persistent bool, maxActive, maxIdle int) {
+func initRedisConnection(host string, port int, persistent bool, queue bool, maxActive, maxIdle int) {
 	if host == "" || port == 0 {
 		log.WithField("host", host).WithField("port", port).Fatal(
 			"Invalid redis host or port.")
@@ -1097,7 +1103,11 @@ func initRedisConnection(host string, port int, persistent bool, maxActive, maxI
 	}
 
 	log.Info("Redis Service initialized.")
-	if persistent {
+	if queue {
+		configuration.QueueRedisHost = host
+		configuration.QueueRedisPort = port
+		services.QueueRedis = redisPool
+	} else if persistent {
 		configuration.RedisHostPersistent = host
 		configuration.RedisPortPersistent = port
 		services.RedisPeristent = redisPool
@@ -1359,6 +1369,10 @@ func InitTestServer(config *Configuration) error {
 	return nil
 }
 
+func UseQueueRedis() bool {
+	return configuration.UseQueueRedis
+}
+
 // UseOpportunityAssociationByProjectID should use salesforce association for opportunity stitching
 func UseOpportunityAssociationByProjectID(projectID int64) bool {
 	if configuration.UseOpportunityAssociationByProjectID == "" {
@@ -1498,6 +1512,8 @@ func InitSDKService(config *Configuration) error {
 
 	InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
+	InitQueueRedis(config.QueueRedisHost, config.QueueRedisPort)
+
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
 
@@ -1567,6 +1583,10 @@ func GetCacheRedisConnection() redis.Conn {
 
 func GetCacheRedisPersistentConnection() redis.Conn {
 	return services.RedisPeristent.Get()
+}
+
+func GetCacheQueueRedisConnection() redis.Conn {
+	return services.QueueRedis.Get()
 }
 
 func IsDevelopment() bool {

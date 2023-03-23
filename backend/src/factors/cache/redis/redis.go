@@ -135,14 +135,18 @@ func KeyFromStringWithPid(key string) (*Key, error) {
 }
 
 func SetPersistent(key *Key, value string, expiryInSecs float64) error {
-	return set(key, value, expiryInSecs, true)
+	return set(key, value, expiryInSecs, true, false)
 }
 
 func Set(key *Key, value string, expiryInSecs float64) error {
-	return set(key, value, expiryInSecs, false)
+	return set(key, value, expiryInSecs, false, false)
 }
 
-func set(key *Key, value string, expiryInSecs float64, persistent bool) error {
+func SetQueueRedis(key *Key, value string, expiryInSecs float64) error {
+	return set(key, value, expiryInSecs, false, true)
+}
+
+func set(key *Key, value string, expiryInSecs float64, persistent bool, queue bool) error {
 	if key == nil {
 		return ErrorInvalidKey
 	}
@@ -157,7 +161,9 @@ func set(key *Key, value string, expiryInSecs float64, persistent bool) error {
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -174,14 +180,18 @@ func set(key *Key, value string, expiryInSecs float64, persistent bool) error {
 }
 
 func ZAddPersistent(key *Key, value string, expiryInSecs float64) error {
-	return zadd(key, value, expiryInSecs, true)
+	return zadd(key, value, expiryInSecs, true, false)
 }
 
 func ZAdd(key *Key, value string, expiryInSecs float64) error {
-	return zadd(key, value, expiryInSecs, false)
+	return zadd(key, value, expiryInSecs, false, false)
 }
 
-func zadd(key *Key, value string, expiryInSecs float64, persistent bool) error {
+func ZAddQueueRedis(key *Key, value string, expiryInSecs float64) error {
+	return zadd(key, value, expiryInSecs, false, true)
+}
+
+func zadd(key *Key, value string, expiryInSecs float64, persistent bool, queue bool) error {
 	if key == nil {
 		return ErrorInvalidKey
 	}
@@ -196,7 +206,9 @@ func zadd(key *Key, value string, expiryInSecs float64, persistent bool) error {
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -229,14 +241,18 @@ func GetIfExistsPersistent(key *Key) (string, bool, error) {
 }
 
 func GetPersistent(key *Key) (string, error) {
-	return get(key, true)
+	return get(key, true, false)
 }
 
 func Get(key *Key) (string, error) {
-	return get(key, false)
+	return get(key, false, false)
 }
 
-func get(key *Key, persistent bool) (string, error) {
+func GetQueueRedis(key *Key) (string, error) {
+	return get(key, false, true)
+}
+
+func get(key *Key, persistent bool, queue bool) (string, error) {
 	if key == nil {
 		return "", ErrorInvalidKey
 	}
@@ -247,7 +263,9 @@ func get(key *Key, persistent bool) (string, error) {
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -258,15 +276,19 @@ func get(key *Key, persistent bool) (string, error) {
 }
 
 func MGetPersistent(keys ...*Key) ([]string, error) {
-	return mGet(true, keys...)
+	return mGet(true, false, keys...)
 }
 
 func MGet(keys ...*Key) ([]string, error) {
-	return mGet(false, keys...)
+	return mGet(false, false, keys...)
+}
+
+func MGetQueueRedis(keys ...*Key) ([]string, error) {
+	return mGet(false, true, keys...)
 }
 
 // MGet Function to get multiple keys from redis. Returns slice of result strings.
-func mGet(persistent bool, keys ...*Key) ([]string, error) {
+func mGet(persistent bool, queue bool, keys ...*Key) ([]string, error) {
 
 	var cKeys []interface{}
 	var cValues []string
@@ -282,7 +304,9 @@ func mGet(persistent bool, keys ...*Key) ([]string, error) {
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -301,14 +325,18 @@ func mGet(persistent bool, keys ...*Key) ([]string, error) {
 }
 
 func DelPersistent(keys ...*Key) error {
-	return del(true, keys...)
+	return del(true, false, keys...)
 }
 
 func Del(keys ...*Key) error {
-	return del(false, keys...)
+	return del(false, false, keys...)
 }
 
-func del(persistent bool, keys ...*Key) error {
+func DelQueueRedis(keys ...*Key) error {
+	return del(false, true, keys...)
+}
+
+func del(persistent bool, queue bool, keys ...*Key) error {
 	var cKeys []interface{}
 
 	for _, key := range keys {
@@ -323,7 +351,9 @@ func del(persistent bool, keys ...*Key) error {
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -338,15 +368,19 @@ func del(persistent bool, keys ...*Key) error {
 }
 
 func ExistsPersistent(key *Key) (bool, error) {
-	return exists(key, true)
+	return exists(key, true, false)
 }
 
 func Exists(key *Key) (bool, error) {
-	return exists(key, false)
+	return exists(key, false, false)
+}
+
+func ExistsQueueRedis(key *Key) (bool, error) {
+	return exists(key, false, true)
 }
 
 // Exists Checks if a key exists in Redis.
-func exists(key *Key, persistent bool) (bool, error) {
+func exists(key *Key, persistent bool, queue bool) (bool, error) {
 	if key == nil {
 		return false, ErrorInvalidKey
 	}
@@ -357,7 +391,9 @@ func exists(key *Key, persistent bool) (bool, error) {
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -372,17 +408,22 @@ func exists(key *Key, persistent bool) (bool, error) {
 }
 
 func IncrBatch(keys ...*Key) ([]int64, error) {
-	return incrBatch(false, keys)
+	return incrBatch(false, false, keys)
 }
 func IncrPersistentBatch(keys ...*Key) ([]int64, error) {
-	return incrBatch(true, keys)
+	return incrBatch(true, false, keys)
 }
-func incrBatch(persistent bool, keys []*Key) ([]int64, error) {
+func IncrQueueRedisBatch(keys ...*Key) ([]int64, error) {
+	return incrBatch(false, true, keys)
+}
+func incrBatch(persistent bool, queue bool, keys []*Key) ([]int64, error) {
 	if len(keys) == 0 {
 		return nil, ErrorInvalidValues
 	}
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -422,18 +463,23 @@ type SortedSetKeyValueTuple struct {
 }
 
 func ZincrBatch(OnlyPrefixKey bool, keys ...SortedSetKeyValueTuple) ([]int64, error) {
-	return zincrBatch(false, keys, OnlyPrefixKey)
+	return zincrBatch(false, false, keys, OnlyPrefixKey)
 }
 func ZincrPersistentBatch(OnlyPrefixKey bool, keys ...SortedSetKeyValueTuple) ([]int64, error) {
-	return zincrBatch(true, keys, OnlyPrefixKey)
+	return zincrBatch(true, false, keys, OnlyPrefixKey)
+}
+func ZincrQueueRedisBatch(OnlyPrefixKey bool, keys ...SortedSetKeyValueTuple) ([]int64, error) {
+	return zincrBatch(false, true, keys, OnlyPrefixKey)
 }
 
-func zincrBatch(persistent bool, keys []SortedSetKeyValueTuple, OnlyPrefixKey bool) ([]int64, error) {
+func zincrBatch(persistent bool, queue bool, keys []SortedSetKeyValueTuple, OnlyPrefixKey bool) ([]int64, error) {
 	if len(keys) == 0 {
 		return nil, ErrorInvalidValues
 	}
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -474,19 +520,25 @@ func zincrBatch(persistent bool, keys []SortedSetKeyValueTuple, OnlyPrefixKey bo
 }
 
 func SetBatch(values map[*Key]string, expiryInSecs float64) error {
-	return setBatch(values, expiryInSecs, false)
+	return setBatch(values, expiryInSecs, false, false)
 }
 
 func SetPersistentBatch(values map[*Key]string, expiryInSecs float64) error {
-	return setBatch(values, expiryInSecs, true)
+	return setBatch(values, expiryInSecs, true, false)
 }
 
-func setBatch(values map[*Key]string, expiryInSecs float64, persistent bool) error {
+func SetBatchQueueRedis(values map[*Key]string, expiryInSecs float64) error {
+	return setBatch(values, expiryInSecs, false, true)
+}
+
+func setBatch(values map[*Key]string, expiryInSecs float64, persistent bool, queue bool) error {
 	if len(values) == 0 {
 		return ErrorInvalidValues
 	}
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -522,20 +574,26 @@ func setBatch(values map[*Key]string, expiryInSecs float64, persistent bool) err
 }
 
 func GetKeysPersistent(pattern string) ([]*Key, error) {
-	return getKeys(pattern, true)
+	return getKeys(pattern, true, false)
 }
 
 func GetKeys(pattern string) ([]*Key, error) {
-	return getKeys(pattern, false)
+	return getKeys(pattern, false, false)
 }
 
-func getKeys(pattern string, persistent bool) ([]*Key, error) {
+func GetKeysQueueRedis(pattern string) ([]*Key, error) {
+	return getKeys(pattern, false, true)
+}
+
+func getKeys(pattern string, persistent bool, queue bool) ([]*Key, error) {
 	if pattern == "" {
 		return nil, ErrorInvalidKey
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -558,14 +616,18 @@ func getKeys(pattern string, persistent bool) ([]*Key, error) {
 }
 
 func PFAddPersistent(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
-	return pfAdd(cacheKey, value, expiryInSeconds, true)
+	return pfAdd(cacheKey, value, expiryInSeconds, true, false)
 }
 
 func PFAdd(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
-	return pfAdd(cacheKey, value, expiryInSeconds, false)
+	return pfAdd(cacheKey, value, expiryInSeconds, false, false)
 }
 
-func pfAdd(cacheKey *Key, value string, expiryInSeconds float64, persistent bool) (bool, error) {
+func PFAddQueueRedis(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
+	return pfAdd(cacheKey, value, expiryInSeconds, false, true)
+}
+
+func pfAdd(cacheKey *Key, value string, expiryInSeconds float64, persistent bool, queue bool) (bool, error) {
 	if cacheKey == nil {
 		return false, ErrorInvalidKey
 	}
@@ -574,7 +636,9 @@ func pfAdd(cacheKey *Key, value string, expiryInSeconds float64, persistent bool
 		return false, err
 	}
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -598,16 +662,22 @@ func pfAdd(cacheKey *Key, value string, expiryInSeconds float64, persistent bool
 }
 
 func Scan(pattern string, perScanCount int64, limit int64) ([]*Key, error) {
-	return scan(pattern, perScanCount, limit, false)
+	return scan(pattern, perScanCount, limit, false, false)
 }
 
 func ScanPersistent(pattern string, perScanCount int64, limit int64) ([]*Key, error) {
-	return scan(pattern, perScanCount, limit, true)
+	return scan(pattern, perScanCount, limit, true, false)
 }
 
-func scan(pattern string, perScanCount int64, limit int64, persistent bool) ([]*Key, error) {
+func ScanQueueRedis(pattern string, perScanCount int64, limit int64) ([]*Key, error) {
+	return scan(pattern, perScanCount, limit, false, true)
+}
+
+func scan(pattern string, perScanCount int64, limit int64, persistent bool, queue bool) ([]*Key, error) {
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -643,19 +713,25 @@ type KeyCountTuple struct {
 }
 
 func IncrByBatch(keys []KeyCountTuple) ([]int64, error) {
-	return incrByBatch(keys, false)
+	return incrByBatch(keys, false, false)
 }
 
 func IncrByBatchPersistent(keys []KeyCountTuple) ([]int64, error) {
-	return incrByBatch(keys, true)
+	return incrByBatch(keys, true, false)
 }
 
-func incrByBatch(keys []KeyCountTuple, persistent bool) ([]int64, error) {
+func IncrByBatchQueueRedis(keys []KeyCountTuple) ([]int64, error) {
+	return incrByBatch(keys, false, true)
+}
+
+func incrByBatch(keys []KeyCountTuple, persistent bool, queue bool) ([]int64, error) {
 	if len(keys) == 0 {
 		return nil, ErrorInvalidValues
 	}
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -689,19 +765,25 @@ func incrByBatch(keys []KeyCountTuple, persistent bool) ([]int64, error) {
 }
 
 func DecrByBatch(keys map[*Key]int64) error {
-	return decrByBatch(keys, false)
+	return decrByBatch(keys, false, false)
 }
 
 func DecrByBatchPersistent(keys map[*Key]int64) error {
-	return decrByBatch(keys, true)
+	return decrByBatch(keys, true, false)
 }
 
-func decrByBatch(keys map[*Key]int64, persistent bool) error {
+func DecrByBatchQueueRedis(keys map[*Key]int64) error {
+	return decrByBatch(keys, false, true)
+}
+
+func decrByBatch(keys map[*Key]int64, persistent bool, queue bool) error {
 	if len(keys) == 0 {
 		return ErrorInvalidValues
 	}
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -731,12 +813,15 @@ func decrByBatch(keys map[*Key]int64, persistent bool) error {
 }
 
 func Zcard(key *Key) (int64, error) {
-	return zcard(key, false)
+	return zcard(key, false, false)
 }
 func ZcardPersistent(key *Key) (int64, error) {
-	return zcard(key, true)
+	return zcard(key, true, false)
 }
-func zcard(key *Key, persistent bool) (int64, error) {
+func ZcardQueueRedis(key *Key) (int64, error) {
+	return zcard(key, false, true)
+}
+func zcard(key *Key, persistent bool, queue bool) (int64, error) {
 	if key == nil {
 		return 0, ErrorInvalidKey
 	}
@@ -747,7 +832,9 @@ func zcard(key *Key, persistent bool) (int64, error) {
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -758,12 +845,15 @@ func zcard(key *Key, persistent bool) (int64, error) {
 }
 
 func ZScore(key *Key, member string) (int64, error) {
-	return zscore(key, member, false)
+	return zscore(key, member, false, false)
 }
 func ZScorePersistent(key *Key, member string) (int64, error) {
-	return zscore(key, member, true)
+	return zscore(key, member, true, false)
 }
-func zscore(key *Key, member string, persistent bool) (int64, error) {
+func ZScoreQueueRedis(key *Key, member string) (int64, error) {
+	return zscore(key, member, false, true)
+}
+func zscore(key *Key, member string, persistent bool, queue bool) (int64, error) {
 	if key == nil {
 		return 0, ErrorInvalidKey
 	}
@@ -774,7 +864,9 @@ func zscore(key *Key, member string, persistent bool) (int64, error) {
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -786,12 +878,15 @@ func zscore(key *Key, member string, persistent bool) (int64, error) {
 }
 
 func ZrangeWithScores(OnlyPrefixKey bool, key *Key) (map[string]string, error) {
-	return zrangeWithScores(OnlyPrefixKey, key, false)
+	return zrangeWithScores(OnlyPrefixKey, key, false, false)
 }
 func ZrangeWithScoresPersistent(OnlyPrefixKey bool, key *Key) (map[string]string, error) {
-	return zrangeWithScores(OnlyPrefixKey, key, true)
+	return zrangeWithScores(OnlyPrefixKey, key, true, false)
 }
-func zrangeWithScores(OnlyPrefixKey bool, key *Key, persistent bool) (map[string]string, error) {
+func ZrangeWithScoresQueueRedis(OnlyPrefixKey bool, key *Key) (map[string]string, error) {
+	return zrangeWithScores(OnlyPrefixKey, key, false, true)
+}
+func zrangeWithScores(OnlyPrefixKey bool, key *Key, persistent bool, queue bool) (map[string]string, error) {
 	if key == nil {
 		return nil, ErrorInvalidKey
 	}
@@ -807,7 +902,9 @@ func zrangeWithScores(OnlyPrefixKey bool, key *Key, persistent bool) (map[string
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -830,12 +927,15 @@ func zrangeWithScores(OnlyPrefixKey bool, key *Key, persistent bool) (map[string
 }
 
 func ZRemRange(key *Key, startIndex int, endIndex int) (int64, error) {
-	return zRemRange(key, startIndex, endIndex, false)
+	return zRemRange(key, startIndex, endIndex, false, false)
 }
 func ZRemRangePersistent(key *Key, startIndex int, endIndex int) (int64, error) {
-	return zRemRange(key, startIndex, endIndex, true)
+	return zRemRange(key, startIndex, endIndex, true, false)
 }
-func zRemRange(key *Key, startIndex int, endIndex int, persistent bool) (int64, error) {
+func ZRemRangeQueueRedis(key *Key, startIndex int, endIndex int) (int64, error) {
+	return zRemRange(key, startIndex, endIndex, false, true)
+}
+func zRemRange(key *Key, startIndex int, endIndex int, persistent bool, queue bool) (int64, error) {
 	if key == nil {
 		return 0, ErrorInvalidKey
 	}
@@ -846,7 +946,9 @@ func zRemRange(key *Key, startIndex int, endIndex int, persistent bool) (int64, 
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -857,12 +959,15 @@ func zRemRange(key *Key, startIndex int, endIndex int, persistent bool) (int64, 
 }
 
 func ZRem(key *Key, OnlyPrefixKey bool, members ...string) (int64, error) {
-	return zRem(key, OnlyPrefixKey, false, members...)
+	return zRem(key, OnlyPrefixKey, false, false, members...)
 }
 func ZRemPersistent(key *Key, OnlyPrefixKey bool, members ...string) (int64, error) {
-	return zRem(key, OnlyPrefixKey, true, members...)
+	return zRem(key, OnlyPrefixKey, true, false, members...)
 }
-func zRem(key *Key, OnlyPrefixKey bool, persistent bool, members ...string) (int64, error) {
+func ZRemQueueRedis(key *Key, OnlyPrefixKey bool, members ...string) (int64, error) {
+	return zRem(key, OnlyPrefixKey, false, true, members...)
+}
+func zRem(key *Key, OnlyPrefixKey bool, persistent bool, queue bool, members ...string) (int64, error) {
 	if key == nil {
 		return 0, ErrorInvalidKey
 	}
@@ -882,7 +987,9 @@ func zRem(key *Key, OnlyPrefixKey bool, persistent bool, members ...string) (int
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
@@ -893,12 +1000,15 @@ func zRem(key *Key, OnlyPrefixKey bool, persistent bool, members ...string) (int
 }
 
 func SetExpiry(key *Key, expiryInSeconds int) (int64, error) {
-	return setExpiry(key, false, expiryInSeconds)
+	return setExpiry(key, false, false, expiryInSeconds)
 }
 func SetExpiryPersistent(key *Key, expiryInSeconds int) (int64, error) {
-	return setExpiry(key, true, expiryInSeconds)
+	return setExpiry(key, true, false, expiryInSeconds)
 }
-func setExpiry(key *Key, persistent bool, expiryInSeconds int) (int64, error) {
+func SetExpiryQueueRedis(key *Key, expiryInSeconds int) (int64, error) {
+	return setExpiry(key, false, true, expiryInSeconds)
+}
+func setExpiry(key *Key, persistent bool, queue bool, expiryInSeconds int) (int64, error) {
 	if key == nil {
 		return 0, ErrorInvalidKey
 	}
@@ -909,7 +1019,9 @@ func setExpiry(key *Key, persistent bool, expiryInSeconds int) (int64, error) {
 	}
 
 	var redisConn redis.Conn
-	if persistent {
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
 	} else {
 		redisConn = C.GetCacheRedisConnection()
