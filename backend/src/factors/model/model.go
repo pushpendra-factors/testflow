@@ -444,6 +444,7 @@ type Model interface {
 	GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []int64
 	GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[int64]bool) (projectIds []int64, errCode int)
 	GetTimezoneForProject(projectID int64) (U.TimeZoneString, int)
+	GetProjectIDsWithSixSignalEnabled() []int64
 
 	// queries
 	CreateQuery(projectID int64, query *model.Queries) (*model.Queries, int, string)

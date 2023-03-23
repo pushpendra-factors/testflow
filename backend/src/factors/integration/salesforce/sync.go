@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -387,12 +388,13 @@ func (s *DataClient) getRequest(queryURL string) (*QueryResponse, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errBody []DataServiceError
-		if err := json.NewDecoder(resp.Body).Decode(&errBody); err != nil {
-			return nil, err
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error while reading resp.Body %+v", err)
 		}
 
-		return nil, fmt.Errorf("error while query data %+v %d", errBody, resp.StatusCode)
+		bodyString := string(body)
+		return nil, fmt.Errorf("error while query data %s %d", bodyString, resp.StatusCode)
 	}
 
 	var jsonResponse QueryResponse

@@ -70,7 +70,7 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 		return err
 	}
 
-	log.WithFields(log.Fields{"clientIP": clientIP, "response": result}).Info("Six Signal Data Logs")
+	//log.WithFields(log.Fields{"clientIP": clientIP, "response": result}).Info("Six Signal Data Logs")
 
 	if zip := result.Company.Zip; zip != "" {
 		if c, ok := (*properties)[util.SIX_SIGNAL_ZIP]; !ok || c == "" {
