@@ -3398,6 +3398,20 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
 			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
+
+		// Test for Last campaign touch
+		{"last_touch_nd",
+			args{model.AttributionMethodLastCampaignTouch,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
+			},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -3530,6 +3544,19 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
 			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
+		// Test for Last campaign touch
+		{"last_touch_nd",
+			args{model.AttributionMethodLastCampaignTouch,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
+			},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -3618,6 +3645,19 @@ func TestAttributionMethodologiesNonDirectAdgroup(t *testing.T) {
 			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
 			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
+		// Test for last camp touch
+		{"last_touch_nd",
+			args{model.AttributionMethodLastCampaignTouch,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyAdgroup,
+			},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -3690,6 +3730,19 @@ func TestAttributionMethodologiesNonDirectKeyword(t *testing.T) {
 		// Test for LAST_TOUCH_ND
 		{"last_touch_nd",
 			args{model.AttributionMethodLastTouchNonDirect,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyKeyword,
+			},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
+			false},
+		// Test for last camp touch
+		{"last_touch_nd",
+			args{model.AttributionMethodLastCampaignTouch,
 				conversionEvent,
 				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,

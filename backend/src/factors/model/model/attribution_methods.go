@@ -55,6 +55,11 @@ func ApplyAttributionKPI(attributionType string,
 					lookbackPeriod, campaignFrom, campaignTo)
 				break
 
+			case AttributionMethodLastCampaignTouch:
+				attributionKeys = getLastCampaignTouchId(attributionType, userSessions, conversionTime,
+					lookbackPeriod, campaignFrom, campaignTo, attributionKey)
+				break
+
 			case AttributionMethodLinear:
 				attributionKeys = getLinearTouch(attributionType, userSessions, conversionTime,
 					lookbackPeriod, campaignFrom, campaignTo)
@@ -133,6 +138,11 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 		case AttributionMethodLastTouchNonDirect:
 			attributionKeys = getLastTouchNDId(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
+			break
+
+		case AttributionMethodLastCampaignTouch:
+			attributionKeys = getLastCampaignTouchId(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo, attributionKey)
 			break
 
 		case AttributionMethodLinear:
@@ -565,6 +575,45 @@ func getLastTouchNDId(attributionType string, attributionTimerange map[string]Us
 	// return $none key only if Direct session was seen
 	if directChannelExists {
 		return []AttributionKeyWeight{{Key: directChannelInteraction[0], Weight: 1}}
+	} else {
+		return []AttributionKeyWeight{}
+	}
+}
+
+func getLastCampaignTouchId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
+	lookbackPeriod, from, to int64, attributionKey string) []AttributionKeyWeight {
+
+	interactions := getMergedInteractions(attributionTimerange)
+	interactions = SortInteractionTime(interactions, SortDESC)
+	directSessionExists := false
+	noneKey := GetNoneKeyForAttributionType(attributionKey)
+	if len(interactions) > 0 {
+
+		switch attributionType {
+		case AttributionQueryTypeConversionBased:
+			for i := 0; i < len(interactions); i++ {
+				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
+					if interactions[i].AttributionKey != noneKey {
+						return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
+					}
+					directSessionExists = true
+				}
+			}
+		case AttributionQueryTypeEngagementBased:
+			for i := 0; i < len(interactions); i++ {
+				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
+					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
+					if interactions[i].AttributionKey != noneKey {
+						return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
+					}
+					directSessionExists = true
+				}
+			}
+		}
+	}
+	// return $none key only if Direct session was seen
+	if directSessionExists {
+		return []AttributionKeyWeight{{Key: noneKey, Weight: 1}}
 	} else {
 		return []AttributionKeyWeight{}
 	}

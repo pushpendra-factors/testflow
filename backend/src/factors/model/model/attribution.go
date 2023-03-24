@@ -72,6 +72,7 @@ const (
 	AttributionMethodFirstTouchNonDirect = "First_Touch_ND"
 	AttributionMethodLastTouch           = "Last_Touch"
 	AttributionMethodLastTouchNonDirect  = "Last_Touch_ND"
+	AttributionMethodLastCampaignTouch   = "Last_Campaign_Touch"
 	AttributionMethodLinear              = "Linear"
 	AttributionMethodUShaped             = "U_Shaped"
 	AttributionMethodTimeDecay           = "Time_Decay"
