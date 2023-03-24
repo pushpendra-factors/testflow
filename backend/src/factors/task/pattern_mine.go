@@ -68,6 +68,8 @@ const countMedium = 0
 const countAdgroup = 0
 const USER_PROP_MIN_SUPPORT = 2.0
 const EVENT_PROP_MIN_SUPPORT = 20.0
+const EXPLAIN_V2_VERSION = 4
+const EXPLAIN_V1_VERSION = 3
 
 var BLACKLIST_USER_PROPERTIES = map[string][]string{
 	"all":     {},
@@ -525,7 +527,7 @@ func mineAndWriteLenOnePatterns(projectID int64, modelId uint64, cloudManager *f
 	lenOnePatterns = append(lenOnePatterns, lenOnePatternsCampigns...)
 	// countPatterns(projectID, filepath, lenOnePatterns, numRoutines, countOccurence, countsVersion))
 
-	if cAlgoProps.Counting_version == 4 {
+	if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
 		lenOnePatterns = nil
 		lenOnePatterns, err = GenLenOneV2(cAlgoProps.Job, userAndEventsInfo)
 		if err != nil {
@@ -616,7 +618,7 @@ func mineAndWriteLenTwoPatterns(projectId int64, modelId uint64,
 	// var countsVersion int = cAlgoProps.Counting_version
 	// var hmineSupport float32 = cAlgoProps.Hmine_support
 
-	if cAlgoProps.Counting_version == 4 {
+	if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
 		combinationGoalPatterns, err = CreateCombinationEventsV2(cAlgoProps.Job, userAndEventsInfo)
 		if err != nil {
 			return nil, 0, err
@@ -659,7 +661,7 @@ func mineAndWriteLenTwoPatterns(projectId int64, modelId uint64,
 	// for each goal event based on quota logic filter patterns.
 	// based on the quota  startevent filter url, sme, campaign events etc.
 
-	if cAlgoProps.Counting_version == 4 {
+	if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
 		goalFilteredLenTwoPatterns = filteredLenTwoPatterns
 	} else {
 		goalFilteredLenTwoPatterns = FilterCombinationPatterns(filteredLenTwoPatterns, goalPatterns, eventNamesWithType)
@@ -873,7 +875,7 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 		lenThreePatterns = MergePatterns(lenThreePatterns, generatedThreeRepeatedPatterns)
 		lenThreePatterns = MergePatterns(lenThreePatterns, lenThreeCampaign)
 
-		if cAlgoProps.Counting_version == 4 {
+		if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
 			lenThreePatterns, err = GenThreeLenEventsV2(cAlgoProps.Job, userAndEventsInfo)
 			if err != nil {
 				return err
@@ -923,7 +925,7 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 			mineLog.Error("Unable to create missing two len pattern")
 		}
 		for _, p := range missingPatternsTwo {
-			if cAlgoProps.Counting_version == 4 {
+			if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
 				p.Segment = 0
 			}
 		}
@@ -967,7 +969,7 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 			return nil
 		}
 
-		if cAlgoProps.Counting_version == 4 {
+		if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
 			// count four len patterns
 			lenFourPatterns, err := CreateFourLenEventsV2(cAlgoProps.Job, userAndEventsInfo)
 			if err != nil {
@@ -1377,7 +1379,7 @@ func rewriteEventsFile(efCloudPath, efCloudName string, tmpPath string, sortedCl
 
 	events_to_include_v2 := make(map[string]int)
 
-	if cAlgoProps.Counting_version == 4 {
+	if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
 		// put all events to be included into one single map
 		jb := cAlgoProps.Job
 		events_to_include_v2[jb.Query.StartEvent] = 1
@@ -1439,6 +1441,37 @@ func rewriteEventsFile(efCloudPath, efCloudName string, tmpPath string, sortedCl
 
 	delEvent := 0
 	delUser := 0
+
+	if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
+		cc := cAlgoProps.Job.Query.Rule
+		for idx, _ := range cc.EndEnEventFitler {
+			delete(epCatg, cAlgoProps.Job.Query.Rule.EndEnEventFitler[idx].Key)
+			mineLog.WithFields(log.Fields{"Key": cAlgoProps.Job.Query.Rule.EndEnEventFitler[idx].Key}).Info("Deleted key")
+		}
+
+		for idx, _ := range cc.EndEnUserFitler {
+			delete(upCatg, cAlgoProps.Job.Query.Rule.EndEnUserFitler[idx].Key)
+			mineLog.WithFields(log.Fields{"Key": cAlgoProps.Job.Query.Rule.EndEnUserFitler[idx].Key}).Info("Deleted key")
+		}
+
+		for idx, _ := range cc.StartEnEventFitler {
+			delete(epCatg, cAlgoProps.Job.Query.Rule.StartEnEventFitler[idx].Key)
+			mineLog.WithFields(log.Fields{"Key": cAlgoProps.Job.Query.Rule.StartEnEventFitler[idx].Key}).Info("Deleted key")
+		}
+
+		for idx, _ := range cc.StartEnUserFitler {
+			delete(upCatg, cAlgoProps.Job.Query.Rule.StartEnUserFitler[idx].Key)
+			mineLog.WithFields(log.Fields{"Key": cAlgoProps.Job.Query.Rule.StartEnUserFitler[idx].Key}).Info("Deleted key")
+		}
+
+		frule := cAlgoProps.Job.Query
+		frulebyte, err := json.Marshal(frule)
+		if err != nil {
+			mineLog.WithFields(log.Fields{"rule": frule}).Errorf("Unable to marshall json")
+		}
+		mineLog.WithFields(log.Fields{"rule": string(frulebyte)}).Infof("rewritten events rule")
+		mineLog.WithFields(log.Fields{"included events": events_to_include_v2}).Infof("included events")
+	}
 
 	log.Infof("--------------- rewriting events file ---- $$$$$---\n")
 	w := bufio.NewWriter(file)
@@ -1527,10 +1560,10 @@ func rewriteEventsFile(efCloudPath, efCloudName string, tmpPath string, sortedCl
 			return CampaignEventLists{}, err
 		}
 
-		if cAlgoProps.Counting_version != 4 {
+		if cAlgoProps.Counting_version != EXPLAIN_V2_VERSION {
 			lineWrite := string(eventDetailsBytes)
 			if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-				peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+				mineLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
 				return CampaignEventLists{}, err
 			}
 
@@ -1556,7 +1589,7 @@ func rewriteEventsFile(efCloudPath, efCloudName string, tmpPath string, sortedCl
 
 					lineWrite := string(eventDetailsBytes)
 					if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-						peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+						mineLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
 						return CampaignEventLists{}, err
 					}
 					numlinesv2 += 1
@@ -1564,7 +1597,7 @@ func rewriteEventsFile(efCloudPath, efCloudName string, tmpPath string, sortedCl
 			} else {
 
 				if numfilterEvent < 40 {
-					if strings.Compare(ename, "$session") == 0 {
+					if strings.Compare(ename, U.EVENT_NAME_SESSION) == 0 {
 						lineWrite := string(eventDetailsBytes)
 						log.Infof("$session event ---->%s", lineWrite)
 
@@ -1576,7 +1609,7 @@ func rewriteEventsFile(efCloudPath, efCloudName string, tmpPath string, sortedCl
 		}
 	}
 	w.Flush()
-	if cAlgoProps.Counting_version == 4 {
+	if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
 		log.Infof("total number of lines rewritten is :%d", numlinesv2)
 	}
 
@@ -1618,7 +1651,7 @@ func writeEncodedEvent(eventName string, property string, propertyName string, p
 			lineWrite := string(eventDetailsBytes)
 
 			if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-				peLog.WithFields(log.Fields{"line": line, "property": property, "err": err}).Error("Unable to write to file.")
+				mineLog.WithFields(log.Fields{"line": line, "property": property, "err": err}).Error("Unable to write to file.")
 				return err
 			}
 		}
@@ -1828,7 +1861,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 		}
 	}
 
-	if cAlgoProps.Counting_version == 4 {
+	if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
 		mineLog.Debugf("explain v2 job :%v", cAlgoProps.Job)
 	}
 
@@ -1860,7 +1893,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 		return 0, err
 	}
 
-	if cAlgoProps.Counting_version == 4 {
+	if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
 		// add top 50 events in case if events to include in nill
 		jb := cAlgoProps.Job
 		mineLog.Debug("before counting all:%v", jb)
@@ -1991,7 +2024,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 	mineLog.Debug("Successfully mined patterns and written it as chunks.")
 
 	var chunkIds []string
-	if cAlgoProps.Counting_version != 4 {
+	if cAlgoProps.Counting_version != EXPLAIN_V2_VERSION {
 		// upload chunks to cloud
 		cloudChunksDir := (*modelCloudManager).GetPatternChunksDir(projectId, modelId)
 		mineLog.WithFields(log.Fields{"tmpChunksDir": tmpChunksDir,
@@ -2070,7 +2103,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 
 	}
 
-	if cAlgoProps.Counting_version == 4 {
+	if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
 		mineLog.Infof("compute results and set in cache ")
 		_, err = ComputeResultAndCache(projectId, modelId, cAlgoProps.Job)
 		if err != nil {
@@ -3052,36 +3085,35 @@ func GetChunkMetaData(Patterns []*P.Pattern) []ChunkMetaData {
 }
 func getToBeFilteredKeysInMetaData() map[string]bool {
 	keys := map[string]bool{
-		"$session[":       true,
-		"$AllActiveUsers": true,
+		U.EVENT_NAME_SESSION: true,
+		"$AllActiveUsers":    true,
 	}
 	return keys
 }
 
 func addIncludedEventsV2(jb *model.ExplainV2Query, ec map[string]int) {
 
-	if jb.Query.StartEvent == "" {
-		jb.Query.StartEvent = "$session"
-	}
-
 	if len(jb.Query.Rule.IncludedEvents) == 0 {
-		log.Infof("Number of included events is nil , hence appending events ")
-		for ename, _ := range ec {
-			jb.Query.Rule.IncludedEvents = append(jb.Query.Rule.IncludedEvents, ename)
+		ec[U.EVENT_NAME_SESSION] += 1
+		for event_key, _ := range ec {
+			jb.Query.Rule.IncludedEvents = append(jb.Query.Rule.IncludedEvents, event_key)
+		}
+	} else {
+		filterevents := make(map[string]int)
+		for _, k := range jb.Query.Rule.IncludedEvents {
+			filterevents[k] += 1
+		}
+		if _, ok := filterevents[U.EVENT_NAME_SESSION]; !ok {
+			jb.Query.Rule.IncludedEvents = append(jb.Query.Rule.IncludedEvents)
 		}
 	}
-	if (strings.Compare(jb.Query.StartEvent, "$session") != 0) && (strings.Compare(jb.Query.EndEvent, "$session") != 0) {
-		jb.Query.Rule.IncludedEvents = append(jb.Query.Rule.IncludedEvents, "$session")
-	}
 
-	log.Infof("total number of included events :%d", len(jb.Query.Rule.IncludedEvents))
 	mineLog.Debugf("Recal top 50 properties :%v", jb)
 }
 
 func FilterEventsOnRule(ev P.CounterEventFormat, r model.ExplainV2Query, upCatg, epCatg map[string]string) bool {
 
 	var frule model.FactorsGoalRule = r.Query
-
 	ename := ev.EventName
 
 	if strings.Compare(ename, frule.StartEvent) == 0 {
@@ -3158,7 +3190,7 @@ func checkProperties(filterString string, ev P.CounterEventFormat, ru model.Fact
 							num_rules_matched += 1
 						}
 					} else {
-						if strings.Compare(vl, fproperty.Value) != 0 {
+						if strings.Compare(vl, prop_val) != 0 {
 							num_rules_matched += 1
 						}
 					}
@@ -3188,7 +3220,7 @@ func checkProperties(filterString string, ev P.CounterEventFormat, ru model.Fact
 							num_rules_matched += 1
 						}
 					} else {
-						if strings.Compare(vl, fproperty.Value) != 0 {
+						if strings.Compare(vl, prop_val) != 0 {
 							num_rules_matched += 1
 						}
 					}
@@ -3219,7 +3251,7 @@ func checkProperties(filterString string, ev P.CounterEventFormat, ru model.Fact
 							num_rules_matched += 1
 						}
 					} else {
-						if strings.Compare(vl, fproperty.Value) != 0 {
+						if strings.Compare(vl, prop_val) != 0 {
 							num_rules_matched += 1
 						}
 					}
@@ -3237,7 +3269,7 @@ func checkProperties(filterString string, ev P.CounterEventFormat, ru model.Fact
 		en_ev_ft := ru.Rule.EndEnEventFitler
 		num_filters := len(en_ev_ft)
 		num_rules_matched := 0
-		for ukey, uval := range upr {
+		for ukey, uval := range epr {
 			for _, fproperty := range en_ev_ft {
 				if ukey == fproperty.Key {
 					vl := U.GetPropertyValueAsString(uval)
@@ -3248,7 +3280,8 @@ func checkProperties(filterString string, ev P.CounterEventFormat, ru model.Fact
 							num_rules_matched += 1
 						}
 					} else {
-						if strings.Compare(vl, fproperty.Value) != 0 {
+
+						if strings.Compare(vl, prop_val) != 0 {
 							num_rules_matched += 1
 						}
 					}

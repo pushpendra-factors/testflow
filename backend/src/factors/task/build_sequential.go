@@ -117,8 +117,6 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 	modelType := configs["modelType"].(string)
 	countOccurence := configs["countOccurence"].(bool)
 	numCampaignsLimit := configs["numCampaignsLimit"].(int)
-	startTimestamp := configs["startTimestamp"].(int64)
-	endTimestamp := configs["endTimestamp"].(int64)
 	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
 	hmineSupport := configs["hmineSupport"].(float32)
 	hmine_persist := configs["hminePersist"].(int)
@@ -134,9 +132,7 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 		return status, false
 	}
 
-	logCtx := bsLog.WithFields(log.Fields{"ProjectId": projectId,
-		"StartTime": startTimestamp, "EndTime": endTimestamp,
-		"UnitType": modelType})
+	logCtx := bsLog.WithFields(log.Fields{"ProjectId": projectId, "UnitType": modelType})
 
 	// Prefix timestamp with randomAlphanumeric(5).
 	curTimeInMilliSecs := time.Now().UnixNano() / 1000000
@@ -188,8 +184,8 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 		jb.StartTimestamp = startTimestampInProjectTimezone
 		jb.EndTimestamp = endTimestampInProjectTimezone
 
-		startTimestamp = jb.StartTimestamp
-		endTimestamp = jb.EndTimestamp
+		startTimestamp := jb.StartTimestamp
+		endTimestamp := jb.EndTimestamp
 		count_algo_props.Job = jb
 		count_algo_props.JobId = query.ID
 		mineLog.Infof("Job to execute: %v", jb)

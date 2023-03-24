@@ -531,7 +531,7 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 	log.Infof("Project Id : %d  ", projectID)
 	log.Infof("Model Id : %d  ", modelId)
 	log.Infof("BucketName: %s  ", bucketName)
-	if countsVersion == 3 {
+	if countsVersion == EXPLAIN_V1_VERSION {
 		log.Infof("counting algo : hmine")
 	}
 
@@ -627,7 +627,7 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 		}
 		log.Infof("creating a base folder for artifacts:%s", dname)
 
-		if countsVersion == 3 {
+		if countsVersion == EXPLAIN_V1_VERSION {
 
 			baseFolder := dname
 			basePathUserProps := path.Join(baseFolder, "fptree", "userProps")
@@ -1100,7 +1100,7 @@ func (f *UpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 	log.Infof("Project Id : %d  ", projectID)
 	log.Infof("Model Id : %d  ", modelId)
 	log.Infof("BucketName: %s  ", bucketName)
-	if countsVersion == 3 {
+	if countsVersion == EXPLAIN_V1_VERSION {
 		log.Infof("counting algo : hmine")
 	}
 
@@ -1198,7 +1198,7 @@ func (f *UpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 		}
 		log.Infof("creating a base folder for artifacts:%s", dname)
 
-		if countsVersion == 3 {
+		if countsVersion == EXPLAIN_V1_VERSION {
 
 			baseFolder := dname
 			basePathUserProps := path.Join(baseFolder, "fptree", "userProps")
@@ -1475,6 +1475,11 @@ func GenLenOneV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, er
 	for _, e := range jb.Query.Rule.IncludedEvents {
 		job_events_map[e] = true
 	}
+	if jb.Query.StartEvent == "" {
+		job_events_map[U.EVENT_NAME_SESSION] = true
+
+	}
+
 	for ename, _ := range job_events_map {
 		eventSlice := make([]string, 0)
 		eventSlice = append(eventSlice, ename)
@@ -1483,7 +1488,7 @@ func GenLenOneV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, er
 			return nil, err
 		}
 		p.Segment = 0
-		if strings.Compare(ename, jb.Query.StartEvent) == 0 || strings.Compare(ename, jb.Query.EndEvent) == 0 {
+		if strings.Compare(ename, jb.Query.StartEvent) == 0 || strings.Compare(ename, jb.Query.EndEvent) == 0 || strings.Compare(ename, U.EVENT_NAME_SESSION) == 0 {
 			p.Segment = 1
 
 		}
@@ -1491,37 +1496,6 @@ func GenLenOneV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, er
 
 	}
 
-	return patterns, nil
-}
-
-func CreateCombinationEventsV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
-	patterns := make([]*P.Pattern, 0)
-	events_to_count := make([]string, 2)
-	events_to_count[0] = jb.Query.StartEvent
-	events_to_count[1] = jb.Query.EndEvent
-	p, err := P.NewPattern(events_to_count, us)
-	if err != nil {
-		return nil, err
-	}
-	p.Segment = 1 // have to set to 1 for explain v2 job
-	patterns = append(patterns, p)
-	return patterns, nil
-}
-
-func GenThreeLenEventsV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
-	patterns := make([]*P.Pattern, 0)
-	for _, e := range jb.Query.Rule.IncludedEvents {
-		events_to_count := make([]string, 3)
-		events_to_count[0] = jb.Query.StartEvent
-		events_to_count[1] = e
-		events_to_count[2] = jb.Query.EndEvent
-		p, err := P.NewPattern(events_to_count, us)
-		if err != nil {
-			return nil, err
-		}
-		p.Segment = 0
-		patterns = append(patterns, p)
-	}
 	return patterns, nil
 }
 
@@ -1553,14 +1527,277 @@ func CreateFourLenEventsV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.P
 	return patterns, nil
 }
 
-// func GetPatternsToCompute(cloudManager *filestore.FileManager, cpString string) ([]string, error) {
+func createPattern(events []string, us *P.UserAndEventsInfo, segment int) (*P.Pattern, error) {
+	p, err := P.NewPattern(events, us)
+	if err != nil {
+		return nil, err
+	}
+	p.Segment = segment
+	if len(events) == 2 {
+		if strings.Compare(events[0], U.EVENT_NAME_SESSION) == 0 || strings.Compare(events[1], U.EVENT_NAME_SESSION) == 0 {
+			p.Segment = 1
+		}
+	}
 
-// 	var cp CPatternsBeam
-// 	pattern_names := make([]string, 0)
-// 	err := json.Unmarshal([]byte(cpString), &cp)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("unable to unmarshall string in processElement :%s", cpString)
-// 	}
+	return p, nil
+}
 
-// 	return nil
-// }
+func CreateCombinationEventsV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+	patterns := make([]*P.Pattern, 0)
+
+	if strings.Compare(jb.Query.StartEvent, "") != 0 && strings.Compare(jb.Query.EndEvent, "") != 0 {
+
+		fevents := make(map[string]int, 0)
+		includedEvents := make([]string, 0)
+		for _, ky := range jb.Query.Rule.IncludedEvents {
+			fevents[ky] = 1
+		}
+		fevents[jb.Query.StartEvent] += 1
+		fevents[jb.Query.EndEvent] += 1
+
+		for k, _ := range fevents {
+			includedEvents = append(includedEvents, k)
+		}
+
+		ev := []string{jb.Query.StartEvent, jb.Query.EndEvent}
+		segment := 1
+		p, err := createPattern(ev, us, segment)
+		if err != nil {
+			return nil, err
+		}
+		patterns = append(patterns, p)
+
+		delete(fevents, jb.Query.StartEvent)
+		delete(fevents, jb.Query.EndEvent)
+
+		includedEvents = make([]string, 0)
+		for k, _ := range fevents {
+			includedEvents = append(includedEvents, k)
+		}
+
+		for _, e1 := range includedEvents {
+
+			ev := []string{e1, jb.Query.EndEvent}
+			segment := 0
+			p2, err := createPattern(ev, us, segment)
+			if err != nil {
+				return nil, err
+			}
+			patterns = append(patterns, p2)
+
+			ev = []string{jb.Query.StartEvent, e1}
+			segment = 0
+			p3, err := createPattern(ev, us, segment)
+			if err != nil {
+				return nil, err
+			}
+			patterns = append(patterns, p3)
+
+			ev = []string{e1, jb.Query.StartEvent}
+			segment = 0
+			p3, err = createPattern(ev, us, segment)
+			if err != nil {
+				return nil, err
+			}
+			patterns = append(patterns, p3)
+
+		}
+
+	} else {
+		fevents := make(map[string]int, 0)
+		includedEvents := make([]string, 0)
+		for _, ky := range jb.Query.Rule.IncludedEvents {
+			fevents[ky] = 1
+		}
+		fevents[jb.Query.StartEvent] += 1
+		fevents[jb.Query.EndEvent] += 1
+
+		delete(fevents, jb.Query.StartEvent)
+		delete(fevents, jb.Query.EndEvent)
+		delete(fevents, U.EVENT_NAME_SESSION)
+
+		for k, _ := range fevents {
+			includedEvents = append(includedEvents, k)
+		}
+
+		events_to_count := make([]string, 2)
+		events_to_count[0] = U.EVENT_NAME_SESSION
+		events_to_count[1] = jb.Query.EndEvent
+		p, err := P.NewPattern(events_to_count, us)
+		if err != nil {
+			return nil, err
+		}
+		p.Segment = 1
+		patterns = append(patterns, p)
+
+		for _, incEvent := range includedEvents {
+			events_to_count := make([]string, 2)
+			events_to_count[0] = incEvent
+			events_to_count[1] = jb.Query.EndEvent
+			p, err := P.NewPattern(events_to_count, us)
+			if err != nil {
+				return nil, err
+			}
+			p.Segment = 0
+			if strings.Compare(incEvent, U.EVENT_NAME_SESSION) == 0 {
+				p.Segment = 1 // have to set to 1 for explain v2 job
+			}
+			patterns = append(patterns, p)
+
+			events_to_count = make([]string, 2)
+			events_to_count[0] = U.EVENT_NAME_SESSION
+			events_to_count[1] = incEvent
+			p1, err := P.NewPattern(events_to_count, us)
+			if err != nil {
+				return nil, err
+			}
+			p.Segment = 1
+			patterns = append(patterns, p1)
+
+			events_to_count = make([]string, 2)
+			events_to_count[0] = incEvent
+			events_to_count[1] = U.EVENT_NAME_SESSION
+			p2, err := P.NewPattern(events_to_count, us)
+			if err != nil {
+				return nil, err
+			}
+			p.Segment = 1
+			patterns = append(patterns, p2)
+
+		}
+
+	}
+	mineLog.Info("Total number of len two events to be captured:%d", len(patterns))
+	return patterns, nil
+}
+
+func GenThreeLenEventsV2(jb M.ExplainV2Query, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+	patterns := make([]*P.Pattern, 0)
+	fevents := make(map[string]int, 0)
+	includedEvents := make([]string, 0)
+	for _, ky := range jb.Query.Rule.IncludedEvents {
+		fevents[ky] = 1
+	}
+	fevents[jb.Query.StartEvent] += 1
+	fevents[jb.Query.EndEvent] += 1
+	fevents[U.EVENT_NAME_SESSION] += 1
+	delete(fevents, jb.Query.EndEvent)
+	delete(fevents, jb.Query.StartEvent)
+
+	for k, _ := range fevents {
+		includedEvents = append(includedEvents, k)
+	}
+
+	if strings.Compare(jb.Query.StartEvent, "") != 0 && strings.Compare(jb.Query.EndEvent, "") != 0 {
+		for _, e := range jb.Query.Rule.IncludedEvents {
+			events_to_count := make([]string, 3)
+			events_to_count[0] = jb.Query.StartEvent
+			events_to_count[1] = e
+			events_to_count[2] = jb.Query.EndEvent
+			p, err := P.NewPattern(events_to_count, us)
+			if err != nil {
+				return nil, err
+			}
+			p.Segment = 0
+			patterns = append(patterns, p)
+		}
+
+		for _, e1 := range includedEvents {
+			for _, e2 := range includedEvents {
+				if strings.Compare(e1, e2) != 0 {
+					events_to_count := make([]string, 3)
+					events_to_count[0] = jb.Query.StartEvent
+					events_to_count[1] = e1
+					events_to_count[2] = e2
+					p, err := P.NewPattern(events_to_count, us)
+					if err != nil {
+						return nil, err
+					}
+					p.Segment = 0
+					patterns = append(patterns, p)
+
+					events_to_count = make([]string, 3)
+					events_to_count[0] = e1
+					events_to_count[1] = e2
+					events_to_count[2] = jb.Query.StartEvent
+					p1, err := P.NewPattern(events_to_count, us)
+					if err != nil {
+						return nil, err
+					}
+					p1.Segment = 0
+					patterns = append(patterns, p1)
+				}
+
+			}
+		}
+
+		for _, e1 := range includedEvents {
+			for _, e2 := range includedEvents {
+				if strings.Compare(e1, e2) != 0 {
+					events_to_count := make([]string, 3)
+					events_to_count[0] = e1
+					events_to_count[1] = e2
+					events_to_count[2] = jb.Query.EndEvent
+					p, err := P.NewPattern(events_to_count, us)
+					if err != nil {
+						return nil, err
+					}
+					p.Segment = 0
+					patterns = append(patterns, p)
+				}
+
+			}
+		}
+
+	} else {
+		includedEvents := make([]string, 0)
+		delete(fevents, U.EVENT_NAME_SESSION)
+		for k, _ := range fevents {
+			includedEvents = append(includedEvents, k)
+		}
+
+		for _, es := range includedEvents {
+			for _, ev := range includedEvents {
+				if strings.Compare(es, ev) != 0 {
+					events_to_count := make([]string, 3)
+					events_to_count[0] = es
+					events_to_count[1] = ev
+					events_to_count[2] = jb.Query.EndEvent
+
+					p, err := createPattern(events_to_count, us, 0)
+					if err != nil {
+						return nil, err
+					}
+					patterns = append(patterns, p)
+
+					events_to_count = make([]string, 3)
+					events_to_count[0] = U.EVENT_NAME_SESSION
+					events_to_count[1] = es
+					events_to_count[2] = ev
+
+					p1, err := createPattern(events_to_count, us, 0)
+					if err != nil {
+						return nil, err
+					}
+					patterns = append(patterns, p1)
+
+				}
+			}
+		}
+
+		for _, es := range includedEvents {
+			events_to_count := make([]string, 3)
+			events_to_count[0] = U.EVENT_NAME_SESSION
+			events_to_count[1] = es
+			events_to_count[2] = jb.Query.EndEvent
+
+			p, err := createPattern(events_to_count, us, 0)
+			if err != nil {
+				return nil, err
+			}
+			patterns = append(patterns, p)
+		}
+
+	}
+	return patterns, nil
+}
