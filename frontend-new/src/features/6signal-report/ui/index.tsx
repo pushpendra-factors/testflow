@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Divider, notification, Spin } from 'antd';
+import { Button, Divider, notification, Spin, Tooltip } from 'antd';
 import { Link, useHistory } from 'react-router-dom';
 import { Text, SVG } from 'Components/factorsComponents';
 import FaPublicHeader from 'Components/FaPublicHeader';
@@ -97,6 +97,8 @@ const SixSignalReport = () => {
 
   const handleApplyClick = (val) => {
     setSelectedCampaigns(val.map((vl) => JSON.parse(vl)[0]));
+    //re-setting the quick filters
+    setFilterValue(CHANNEL_QUICK_FILTERS[0].id);
   };
 
   const renderCampaignText = () => {
@@ -353,15 +355,31 @@ const SixSignalReport = () => {
             selectedFilter={filterValue}
           />
           <div className={style.filter}>
-            <Button
-              className={style.customButton}
-              onClick={() => setIsCampaignSelectVisible(true)}
-              icon={<SVG name={'Filter'} color='#8692A3' size={12} />}
-            >
-              {!seletedCampaigns || !seletedCampaigns?.length
-                ? 'Filter by campaign'
-                : renderCampaignText()}
-            </Button>
+            <div>
+              <Button
+                className={`${
+                  seletedCampaigns?.length > 0
+                    ? style.campaignButton
+                    : style.customButton
+                }`}
+                onClick={() => setIsCampaignSelectVisible(true)}
+                icon={<SVG name={'Filter'} color='#8692A3' size={12} />}
+              >
+                {!seletedCampaigns || !seletedCampaigns?.length
+                  ? 'Filter by campaign'
+                  : renderCampaignText()}
+              </Button>
+              {seletedCampaigns && seletedCampaigns.length > 0 && (
+                <Tooltip title='Reset Campaigns'>
+                  <Button
+                    onClick={() => setSelectedCampaigns([])}
+                    className={`${style.deleteButton}`}
+                  >
+                    <SVG name='remove' />
+                  </Button>
+                </Tooltip>
+              )}
+            </div>
 
             {isCampaignSelectVisible && (
               // @ts-ignore
