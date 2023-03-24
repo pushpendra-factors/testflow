@@ -209,7 +209,6 @@ function Dashboard({
   }
 
   if (dashboards.data.length) {
-    8;
     return (
       <ErrorBoundary
         fallback={
