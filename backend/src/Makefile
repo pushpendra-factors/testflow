@@ -232,6 +232,13 @@ upload-salesforce-enrich: export IMAGE_NAME=salesforce-enrich-job
 upload-salesforce-enrich: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/salesforce-enrich-job:$(TAG)
 
+pack-otp-salesforce:
+	docker build -t us.gcr.io/factors-$(ENV)/otp-salesforce-job:$(TAG) -f Dockerfile.otp_salesforce_job .
+
+upload-otp-salesforce: export IMAGE_NAME=otp-salesforce-job
+upload-otp-salesforce: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/otp-salesforce-job:$(TAG)
+
 pack-backfill-salesforce-datetime-job:
 	docker build -t us.gcr.io/factors-$(ENV)/backfill-salesforce-datetime-job:$(TAG) -f Dockerfile.backfill_salesforce_datetime_job .
 
@@ -577,7 +584,6 @@ pack-sdk-bundle: pack-hubspot-enrich
 pack-sdk-bundle: pack-salesforce-enrich
 pack-sdk-bundle: pack-marketo-enrich
 pack-sdk-bundle: pack-leadsquared-enrich
-
 upload-sdk-bundle: upload-sdk-request-worker
 upload-sdk-bundle: upload-integration-request-worker
 upload-sdk-bundle: upload-hubspot-enrich
