@@ -13,6 +13,7 @@ import {
 import { CHART_COLOR_1 } from '../../constants/color.constants';
 import { COLOR_CLASSNAMES } from '../../constants/charts.constants';
 import { generateColors } from '../../utils/dataFormatter';
+import TopLegends from 'Components/GroupedBarChart/TopLegends';
 
 const defaultColors = generateColors(10);
 
@@ -25,7 +26,8 @@ function ColumnChart({
   multiColored,
   colors,
   valueMetricType,
-  height
+  height,
+  legendsProps
 }) {
   useEffect(() => {
     if (comparisonApplied) {
@@ -222,14 +224,32 @@ function ColumnChart({
   }, [drawChart]);
 
   return (
-    <div
-      className={cx('w-full', styles.columnChart, {
-        [styles.comparisonApplied]: comparisonApplied && !multiColored,
-        [styles.multiColoredComparisonApplied]:
-          comparisonApplied && multiColored
-      })}
-      id={chartId}
-    />
+    <>
+      {legendsProps != null && legendsProps.position === 'top' ? (
+        <TopLegends
+          cardSize={cardSize}
+          colors={colors}
+          showAllLegends={legendsProps.showAll}
+          legends={categories}
+        />
+      ) : null}
+      <div
+        className={cx('w-full', styles.columnChart, {
+          [styles.comparisonApplied]: comparisonApplied && !multiColored,
+          [styles.multiColoredComparisonApplied]:
+            comparisonApplied && multiColored
+        })}
+        id={chartId}
+      />
+      {legendsProps != null && legendsProps.position === 'bottom' ? (
+        <TopLegends
+          cardSize={cardSize}
+          colors={colors}
+          showAllLegends={legendsProps.showAll}
+          legends={categories}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -248,7 +268,11 @@ ColumnChart.propTypes = {
   multiColored: PropTypes.bool,
   colors: PropTypes.arrayOf(PropTypes.string),
   valueMetricType: PropTypes.string,
-  height: PropTypes.number
+  height: PropTypes.number,
+  legendsProps: PropTypes.shape({
+    showAll: PropTypes.bool,
+    position: PropTypes.oneOf(['top', 'bottom'])
+  })
 };
 
 ColumnChart.defaultProps = {
@@ -260,5 +284,6 @@ ColumnChart.defaultProps = {
   multiColored: false,
   colors: defaultColors,
   valueMetricType: null,
-  height: null
+  height: null,
+  legendsProps: null
 };

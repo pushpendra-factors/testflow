@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import cx from 'classnames';
 import {
   formatData,
@@ -21,11 +21,12 @@ import {
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT
 } from '../../../utils/constants';
 import LineChart from '../../../components/HCLineChart';
-import BarChart from '../../../components/BarChart';
 import BreakdownTable from '../../CoreQuery/KPIAnalysis/BreakdownCharts/BreakdownTable';
 import HorizontalBarChartTable from '../../CoreQuery/KPIAnalysis/BreakdownCharts/HorizontalBarChartTable';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
+import ColumnChart from 'Components/ColumnChart';
+import { CHART_COLOR_1 } from '../../../constants/color.constants';
 
 const BreakdownCharts = ({
   breakdown,
@@ -88,6 +89,21 @@ const BreakdownCharts = ({
     setVisibleSeriesData(getVisibleSeriesData(data, dateSorter));
   }, [data, dateSorter]);
 
+  const columnCategories = useMemo(
+    () => visibleProperties.map((v) => v.label),
+    [visibleProperties]
+  );
+
+  const columnSeries = useMemo(() => {
+    const series = [
+      {
+        data: visibleProperties.map((v) => v.value),
+        color: CHART_COLOR_1
+      }
+    ];
+    return series;
+  }, [visibleProperties]);
+
   if (!aggregateData.length) {
     return (
       <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
@@ -123,12 +139,13 @@ const BreakdownCharts = ({
 
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
-      <BarChart
-        section={section}
+      <ColumnChart
+        categories={columnCategories}
+        multiColored
         height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
-        title={unit.id}
-        chartData={visibleProperties}
         cardSize={unit.cardSize}
+        chartId={`kpi${unit.id}`}
+        series={columnSeries}
       />
     );
   } else if (chartType === CHART_TYPE_HORIZONTAL_BAR_CHART) {
