@@ -292,6 +292,8 @@ type Configuration struct {
 	CacheForLongerExpiryProjects                       string
 	CacheOnlyDashboards                                string
 	AllowedSalesforceSyncDocTypes                      string
+	CustomDateStart                                    int64
+	CustomDateEnd                                      int64
 }
 
 type Services struct {
@@ -2497,6 +2499,14 @@ func AllowSyncReferenceFields(projectId int64) bool {
 
 func GetStartTimestampForWeekMonth() int64 {
 	return configuration.StartTimestampForWeekMonth
+}
+
+func GetStartTimestampForCustomRun() int64 {
+	return configuration.CustomDateStart
+}
+
+func GetEndTimestampForCustomRun() int64 {
+	return configuration.CustomDateEnd
 }
 
 func IsProjectAllowedForLongerExpiry(projectId int64) bool {
