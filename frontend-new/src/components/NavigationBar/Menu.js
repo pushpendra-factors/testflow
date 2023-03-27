@@ -272,6 +272,14 @@ function SiderMenu({
           >
             {MenuItems.Accounts}
           </Menu.Item>
+          {whiteListedAccounts.includes(activeAgent) && (
+            <Menu.Item
+              className={styles.menuitems_sub}
+              key={`/reports/6_signal`}
+            >
+              {MenuItems.visitorIdentification}
+            </Menu.Item>
+          )}
         </SubMenu>
       )}
 

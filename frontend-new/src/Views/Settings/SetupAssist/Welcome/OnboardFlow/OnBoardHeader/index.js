@@ -9,6 +9,7 @@ import {
   NEXT_STEP_ONBOARD_FLOW,
   TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL
 } from 'Reducers/types';
+import logger from 'Utils/logger';
 import styles from './index.module.scss';
 const RenderLogo = () => (
   <Button size='large' type='text' icon={<SVG size={32} name='Brand' />} />
@@ -29,19 +30,16 @@ const RenderStep = () => {
     </div>
   );
 };
-const AdditionalMenu = (
-  int_completed,
-  closeDrawer,
-  setCurrentStep,
-  stepDone,
-  setStepDone
-) => {
+const AdditionalMenu = (closeDrawer, setCurrentStep, stepDone, setStepDone) => {
   const history = useHistory();
   const dispatch = useDispatch();
   const handleCloseDrawer = useCallback(() => {
-    dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
-    // history.push('/welcome');
+    // dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
+    history.push('/welcome');
   }, []);
+  const int_completed = useSelector(
+    (state) => state?.global?.projectSettingsV1?.int_completed
+  );
   const handleDoneDrawer = useCallback(() => {
     dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
     history.push('/');
@@ -49,12 +47,18 @@ const AdditionalMenu = (
   const { int_client_six_signal_key, int_factors_six_signal_key } = useSelector(
     (state) => state?.global?.currentProjectSettings
   );
+  const factors6SignalKeyRequested = useSelector(
+    (state) => state?.onBoardFlow?.factors6SignalKeyRequested
+  );
+
   const { steps, currentStep } = useSelector((state) => state?.onBoardFlow);
   const isNextBtnEnabled = () => {
     if (currentStep === 1) {
-      return steps.step1;
+      return int_completed;
     } else if (currentStep === 2) {
-      return steps.step2 || int_client_six_signal_key;
+      return (
+        steps.step2 || int_client_six_signal_key || factors6SignalKeyRequested
+      );
     } else if (currentStep === 3) {
       return steps.step3;
     }
@@ -67,10 +71,13 @@ const AdditionalMenu = (
         <Button
           className={styles['btn']}
           onClick={() => {
-            dispatch({ type: BACK_STEP_ONBOARD_FLOW });
-            // setCurrentStep((prev) => prev - 1);
-            // history.go(-1);
-            // history.push('/visitoridentification/' + Number(step - 1));
+            // dispatch({ type: BACK_STEP_ONBOARD_FLOW });
+            console.log(
+              '/welcome/visitoridentification/' + Number(currentStep - 1)
+            );
+            history.push(
+              '/welcome/visitoridentification/' + Number(currentStep - 1)
+            );
           }}
         >
           <ArrowLeftOutlined /> Back
@@ -94,11 +101,11 @@ const AdditionalMenu = (
           onClick={
             currentStep && currentStep >= 1 && currentStep < 3
               ? () => {
-                  dispatch({ type: NEXT_STEP_ONBOARD_FLOW });
+                  // dispatch({ type: NEXT_STEP_ONBOARD_FLOW });
                   // setCurrentStep((prev) => prev + 1);
-                  // history.push(
-                  //   '/visitoridentification/' + Number(currentStep + 1)
-                  // );
+                  history.push(
+                    '/welcome/visitoridentification/' + Number(currentStep + 1)
+                  );
                 }
               : handleDoneDrawer
           }

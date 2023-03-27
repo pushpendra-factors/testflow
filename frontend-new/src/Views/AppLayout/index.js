@@ -8,7 +8,8 @@ import {
   fetchProjects,
   setActiveProject,
   fetchDemoProject,
-  fetchProjectSettings
+  fetchProjectSettings,
+  fetchProjectSettingsV1
 } from 'Reducers/global';
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
@@ -46,6 +47,7 @@ import { AppLayoutRoutes } from 'Routes';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import GlobalSearch from 'Components/GlobalSearch';
 import './index.css';
+import _ from 'lodash';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -59,7 +61,8 @@ function AppLayout({
   fetchWeeklyIngishtsMetaData,
   setActiveProject,
   fetchDemoProject,
-  fetchProjectSettings
+  fetchProjectSettings,
+  fetchProjectSettingsV1
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [demoProjectId, setDemoProjectId] = useState(EMPTY_ARRAY);
@@ -113,7 +116,7 @@ function AppLayout({
   useEffect(() => {
     if (projects.length && _.isEmpty(active_project)) {
       let activeItem = projects?.filter(
-        (item) => item.id == localStorage.getItem('activeProject')
+        (item) => item.id === localStorage.getItem('activeProject')
       );
       //handling Saas factors demo project
       let default_project = demoProjectId.includes(projects[0].id)
@@ -124,6 +127,7 @@ function AppLayout({
       let projectDetails = _.isEmpty(activeItem)
         ? default_project
         : activeItem[0];
+      localStorage.setItem('activeProject', projectDetails?.id);
       setActiveProject(projectDetails);
     }
   }, [projects]);
@@ -144,6 +148,8 @@ function AppLayout({
       dispatch(fetchAttrContentGroups(active_project?.id));
       dispatch(fetchTemplates());
       fetchProjectSettings(active_project?.id);
+
+      fetchProjectSettingsV1(active_project?.id);
       dispatch(fetchEventDisplayNames({ projectId: active_project?.id }));
       dispatch(fetchAttributionQueries(active_project?.id));
     }
@@ -226,7 +232,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchWeeklyIngishtsMetaData,
       setActiveProject,
       fetchDemoProject,
-      fetchProjectSettings
+      fetchProjectSettings,
+      fetchProjectSettingsV1
     },
     dispatch
   );

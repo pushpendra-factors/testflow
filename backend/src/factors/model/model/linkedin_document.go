@@ -18,6 +18,7 @@ type LinkedinDocument struct {
 	CampaignGroupID     string          `json:"campaign_group_id"`
 	CreativeID          string          `json:"creative_id"`
 	Value               *postgres.Jsonb `json:"value"`
+	IsBackfilled        bool            `json:"is_backfilled"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
 }
@@ -27,11 +28,19 @@ type LinkedinLastSyncInfoPayload struct {
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 }
 type LinkedinLastSyncInfo struct {
+	ProjectID             int64  `json:"project_id"`
+	CustomerAdAccountID   string `json:"customer_ad_account_id"`
+	DocumentType          int    `json:"document_type"`
+	DocumentTypeAlias     string `json:"type_alias"`
+	LastTimestamp         int64  `json:"last_timestamp"`
+	LastBackfillTimestamp int64  `json:"last_backfill_timestamp"`
+}
+
+type LinkedinDeleteDocumentsPayload struct {
 	ProjectID           int64  `json:"project_id"`
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
-	DocumentType        int    `json:"document_type"`
-	DocumentTypeAlias   string `json:"type_alias"`
-	LastTimestamp       int64  `json:"last_timestamp"`
+	Timestamp           int64  `json:"timestamp"`
+	TypeAlias           string `json:"type_alias"`
 }
 
 const (
@@ -48,9 +57,8 @@ var ObjectsForLinkedin = []string{AdwordsCampaign, AdwordsAdGroup}
 var ObjectsForLinkedinCompany = []string{LinkedinCompany}
 var ObjectToDisplayCategoryForLinkedin = map[string]string{
 	AdwordsCampaign: "Campaign Group",
-	AdwordsAdGroup: "Campaign",
+	AdwordsAdGroup:  "Campaign",
 }
-
 
 var ObjectToValueInLinkedinJobsMapping = map[string]string{
 	"campaign_group:name": "campaign_group_name",

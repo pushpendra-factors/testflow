@@ -1,8 +1,10 @@
 import {
   BACK_STEP_ONBOARD_FLOW,
   ENABLE_STEP_AND_MOVE_TO_NEXT,
+  JUMP_TO_STEP_WEBSITE_VISITOR_IDENTIFICATION,
   NEXT_STEP_ONBOARD_FLOW,
   TOGGLE_DISABLED_STATE_NEXT_BUTTON,
+  TOGGLE_FACTORS_6SIGNAL_REQUEST,
   TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL,
   UPDATE_ONBOARD_FLOW_STEPS
 } from 'Reducers/types';
@@ -59,6 +61,13 @@ export default function (state = defaultState, action) {
         },
         currentStep: action.payload.moveTo
       };
+    case TOGGLE_FACTORS_6SIGNAL_REQUEST:
+      return {
+        ...state,
+        factors6SignalKeyRequested: !state.factors6SignalKeyRequested
+      };
+    case JUMP_TO_STEP_WEBSITE_VISITOR_IDENTIFICATION:
+      return { ...state, currentStep: action.payload };
     default:
       return state;
   }

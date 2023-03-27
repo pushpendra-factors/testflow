@@ -986,7 +986,10 @@ func SyncOwnerReferenceFields(projectID int64, propertiesMetaMap map[string][]Pr
 
 				firstName := U.GetPropertyValueAsString((*value)["firstName"])
 				lastName := U.GetPropertyValueAsString((*value)["lastName"])
-				label := firstName + " " + lastName
+				label := strings.TrimSpace(firstName + " " + lastName)
+				if label == "" {
+					continue
+				}
 
 				status = store.GetStore().CreateOrUpdateDisplayNameLabel(projectID, U.CRM_SOURCE_NAME_HUBSPOT, propertyKey, ownerId, label)
 				if status != http.StatusCreated && status != http.StatusConflict && status != http.StatusAccepted {

@@ -18,9 +18,11 @@ import { udpateProjectSettings } from 'Reducers/global';
 import { useSelector, connect, useDispatch } from 'react-redux';
 import {
   ENABLE_STEP_AND_MOVE_TO_NEXT,
-  TOGGLE_DISABLED_STATE_NEXT_BUTTON
+  TOGGLE_DISABLED_STATE_NEXT_BUTTON,
+  TOGGLE_FACTORS_6SIGNAL_REQUEST
 } from 'Reducers/types';
 import { sendSlackNotification } from 'Utils/slack';
+import { useHistory } from 'react-router-dom';
 
 const HorizontalCard = ({
   isDropdown,
@@ -36,7 +38,9 @@ const HorizontalCard = ({
   const currentProjectSettings = useSelector(
     (state) => state?.global?.currentProjectSettings
   );
-  console.log(currentProjectSettings);
+  const factors6SignalKeyRequested = useSelector(
+    (state) => state?.onBoardFlow?.factors6SignalKeyRequested
+  );
   const [selectedOption, setSelectedOption] = useState(undefined);
   const [isOpen, setIsOpen] = useState(false);
   const RadioHandle = (e) => {
@@ -72,6 +76,9 @@ const HorizontalCard = ({
         console.error(err);
       });
   };
+  const handleFactors6SignalKeyRequest = useCallback(() => {
+    setIsModalRequestAccess(true);
+  }, []);
   return (
     <Row className={styles['horizontalCard']}>
       <div className={styles['horizontalCardContent']}>
@@ -219,12 +226,21 @@ const HorizontalCard = ({
                     <Button
                       size='large'
                       className={styles['btn']}
-                      onClick={() => {
-                        setIsModalRequestAccess(true);
-                      }}
+                      onClick={
+                        factors6SignalKeyRequested === false
+                          ? handleFactors6SignalKeyRequest
+                          : ''
+                      }
                       disabled={selectedOption != '2'}
                     >
-                      Request Access
+                      {factors6SignalKeyRequested === true ? (
+                        <span>
+                          {' '}
+                          <SVG name='Greentick' /> Access Requested
+                        </span>
+                      ) : (
+                        'Request Access'
+                      )}
                     </Button>
                   </Space>
                 </div>
@@ -245,10 +261,15 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
   const [isModalRequestAccess, setIsModalRequestAccess] = useState(false);
   const activeProject = useSelector((state) => state?.global?.active_project);
   const currentAgent = useSelector((state) => state?.agent?.agent_details);
+  const history = useHistory();
   const dispatch = useDispatch();
   const int_client_six_signal_key = useSelector(
     (state) => state?.global?.currentProjectSettings?.int_client_six_signal_key
   );
+  const factors6SignalKeyRequested = useSelector(
+    (state) => state?.onBoardFlow?.factors6SignalKeyRequested
+  );
+
   useEffect(() => {
     dispatch({
       type: TOGGLE_DISABLED_STATE_NEXT_BUTTON,
@@ -261,10 +282,17 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
       activeProject.name,
       'factors6Signal_Test'
     );
+    if (factors6SignalKeyRequested === false)
+      dispatch({
+        type: TOGGLE_FACTORS_6SIGNAL_REQUEST
+      });
     dispatch({
       type: ENABLE_STEP_AND_MOVE_TO_NEXT,
-      payload: { step: '2', state: true, moveTo: 3 }
+      payload: { step: 2, state: true, moveTo: 2 }
     });
+    history.push('/welcome/visitoridentification/3');
+
+    message.success('Requested for Factors 6 Signal Key');
   };
   return (
     <div className={styles['onBoardContainer']}>

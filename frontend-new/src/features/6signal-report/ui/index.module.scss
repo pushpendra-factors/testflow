@@ -11,6 +11,7 @@
 .filter {
   display: flex;
   position: relative;
+  word-wrap: break-word;
 
   &__propContainer {
     position: relative;
@@ -32,4 +33,17 @@
 .customButton {
   background-color: #fff;
   border-color: #b7bec8;
+}
+
+.deleteButton {
+  @extend .customButton;
+  border-left: 0px;
+  border-top-left-radius: 0px;
+  border-bottom-left-radius: 0px;
+}
+
+.campaignButton {
+  @extend .customButton;
+  border-top-right-radius: 0px;
+  border-bottom-right-radius: 0px;
 }

@@ -27,6 +27,7 @@ const ROUTE_INTEGRATIONS_ROOT = "/integrations"
 const ROUTE_DATA_SERVICE_ROOT = "/data_service"
 const ROUTE_SDK_ADWORDS_ROOT = "/adwords_sdk_service"
 const ROUTE_VERSION_V1 = "/v1"
+const ROUTE_VERSION_V1_WITHOUT_SLASH = "v1"
 const ROUTE_COMMON_ROOT = "/common"
 
 func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
@@ -564,8 +565,11 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.POST("/linkedin/documents/add", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinAddDocumentHandler)
 
-	dataServiceRouteGroup.POST("/linkedin/documents/add_multiple",
+	dataServiceRouteGroup.POST("/linkedin/documents/add_multiple", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinAddMultipleDocumentsHandler)
+
+	dataServiceRouteGroup.DELETE("/linkedin/documents",
+		IH.DataServiceLinkedinDeleteDocumentsHandler)
 
 	dataServiceRouteGroup.PUT("/linkedin/access_token", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinUpdateAccessToken)

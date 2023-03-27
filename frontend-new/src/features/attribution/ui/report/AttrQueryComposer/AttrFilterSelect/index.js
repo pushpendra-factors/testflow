@@ -50,6 +50,7 @@ function AttrFilterSelect({
           filter.operator === OPERATORS['notEqualTo'] ||
           filter.operator?.[0] === OPERATORS['equalTo'] ||
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
+        filter.values?.length === 1 &&
         filter.values?.[0] === '$none'
       ) {
         if (

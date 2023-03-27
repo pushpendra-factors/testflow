@@ -58,6 +58,16 @@ function Properties({
 
   const [showForm, setShowForm] = useState(false);
 
+  const whiteListedAccounts = [
+    'baliga@factors.ai',
+    'solutions@factors.ai',
+    'sonali@factors.ai',
+    'praveenr@factors.ai', 
+    'kartheek@factors.ai',
+    'raj@factors.ai',
+  ];
+
+
   useEffect(() => {
     setEnableEdit(false);
     agents &&
@@ -265,10 +275,13 @@ function Properties({
                     setShowModalVisible={setShowModalVisible}
                     enableEdit={enableEdit}
                   />
-                </TabPane>
+                </TabPane>  
+
+                {whiteListedAccounts.includes(currentAgent?.email) && <>
                 <TabPane tab='Property Mapping' key='3'>
                   <SavedPropertyMapping />
                 </TabPane>
+                </>}
               </Tabs>
             </div>
           </Col>

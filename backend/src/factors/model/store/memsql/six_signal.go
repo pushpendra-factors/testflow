@@ -172,7 +172,7 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 		U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 		projectID, query.From, query.To, projectID)
 
-	selectStmnt := "SELECT t1.company, t2.country, t2.industry, t2.emp_range, t2.revenue_range, t1.time_spent, t2.page_count, t2.domain, t2.Page_Seen, t2.Campaign, t2.channel " + "FROM "
+	selectStmnt := "SELECT t1.company, t2.country, t2.industry, t2.emp_range, t2.revenue_range, t1.time_spent, t2.page_count, t2.domain, t2.page_seen, t2.campaign, t2.channel " + "FROM "
 
 	qStmnt = selectStmnt + "( " + maxSessionTimeStmnt + " ) AS t1 " + " JOIN " + "( " + sixSignalPropertiesStmnt + " ) AS t2 " +
 		"ON t1.company=t2.company " +

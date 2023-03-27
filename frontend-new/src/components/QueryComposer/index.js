@@ -64,7 +64,7 @@ function QueryComposer({
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetchGroups(activeProject.id, true);
+    fetchGroups(activeProject?.id);
   }, [activeProject]);
 
   const groupsList = useMemo(() => {
@@ -152,7 +152,9 @@ function QueryComposer({
   );
 
   const setGroupAnalysis = (group) => {
-    getGroupProperties(activeProject.id, group);
+    if (group !== 'users') {
+      getGroupProperties(activeProject.id, group);
+    }
     const opts = Object.assign({}, queryOptions);
     opts.group_analysis = group;
     opts.globalFilters = [];

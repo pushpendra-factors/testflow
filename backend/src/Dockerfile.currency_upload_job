@@ -1,0 +1,13 @@
+FROM golang:1.14-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/currencyupload $GOPATH/src/factors/scripts/run_upload_currency_conversion_rates/run_upload_currency_conversion_rates.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+# Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+COPY --from=builder /go/bin/currencyupload /go/bin/currencyupload
+ENTRYPOINT ["/go/bin/currencyupload"]

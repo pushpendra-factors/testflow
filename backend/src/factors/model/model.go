@@ -320,6 +320,7 @@ type Model interface {
 	// linkedin document
 	CreateLinkedinDocument(projectID int64, document *model.LinkedinDocument) int
 	CreateMultipleLinkedinDocument(linkedinDoc []model.LinkedinDocument) int
+	DeleteLinkedinDocuments(deletePayload model.LinkedinDeleteDocumentsPayload) int
 	GetLinkedinSQLQueryAndParametersForFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 	ExecuteLinkedinChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int)
 	GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int)
@@ -444,6 +445,7 @@ type Model interface {
 	GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []int64
 	GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[int64]bool) (projectIds []int64, errCode int)
 	GetTimezoneForProject(projectID int64) (U.TimeZoneString, int)
+	GetProjectIDsWithSixSignalEnabled() []int64
 
 	// queries
 	CreateQuery(projectID int64, query *model.Queries) (*model.Queries, int, string)

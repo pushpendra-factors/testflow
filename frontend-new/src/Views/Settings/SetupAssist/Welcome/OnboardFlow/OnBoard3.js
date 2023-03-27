@@ -1,28 +1,34 @@
+import { LoadingOutlined } from '@ant-design/icons';
 import { Button, Row, message } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { connect, useSelector } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 import { enableSlackIntegration } from 'Reducers/global';
 import styles from './index.module.scss';
 const OnBoard3 = ({ enableSlackIntegration }) => {
   const activeProject = useSelector((state) => state?.global?.active_project);
+  const [isLoading, setIsLoading] = useState(false);
   const int_slack = useSelector(
     (state) => state?.global?.projectSettingsV1?.int_slack
   );
-  const onConnectSlack = () => {
-    enableSlackIntegration(activeProject.id)
+  const onConnectSlack = useCallback(() => {
+    setIsLoading(true);
+    enableSlackIntegration(activeProject.id, window.location.href)
       .then((r) => {
         if (r.status === 200) {
-          window.open(r.data.redirectURL, '_blank');
+          window.open(r.data.redirectURL, '_self');
         }
         if (r.status >= 400) {
+          setIsLoading(false);
           message.error('Error fetching slack redirect url');
         }
       })
       .catch((err) => {
         console.log('Slack error-->', err);
+        setIsLoading(false);
       });
-  };
+  }, []);
   return (
     <div className={styles['onBoardContainer']}>
       {/* <SixSignal setIsActive={() => {}} kbLink={true} /> */}
@@ -57,8 +63,17 @@ const OnBoard3 = ({ enableSlackIntegration }) => {
               </div>
             </div>
             <div className={styles['horizontalCardRight']}>
-              <Button onClick={onConnectSlack}>
-                {int_slack ? 'Already Connected' : 'Connect'}
+              <Button
+                onClick={int_slack ? null : onConnectSlack}
+                icon={isLoading === true ? <LoadingOutlined /> : null}
+              >
+                {int_slack ? (
+                  <>
+                    <SVG name='Greentick' /> Already Connected
+                  </>
+                ) : (
+                  <>Connect</>
+                )}
               </Button>
             </div>
           </div>

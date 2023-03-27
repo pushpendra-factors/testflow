@@ -46,7 +46,7 @@ function ProfileComposer({
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetchGroups(activeProject.id, false);
+    fetchGroups(activeProject?.id);
   }, [activeProject]);
 
   const groupsList = useMemo(() => {

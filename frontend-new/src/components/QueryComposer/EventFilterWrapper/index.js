@@ -45,7 +45,8 @@ export default function EventFilterWrapper({
   operatorDDPos,
   operatorDDHeight,
   valuesDDPos,
-  valuesDDHeight
+  valuesDDHeight,
+  showInList = false
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -133,6 +134,7 @@ export default function EventFilterWrapper({
         operatorDDHeight={operatorDDHeight}
         valuesDDPos={valuesDDPos}
         valuesDDHeight={valuesDDHeight}
+        showInList={showInList}
       />
     );
   };
@@ -713,6 +715,7 @@ export default function EventFilterWrapper({
           operatorDDHeight={operatorDDHeight}
           valuesDDPos={valuesDDPos}
           valuesDDHeight={valuesDDHeight}
+          showInList={showInList}
         />
       </>
     );

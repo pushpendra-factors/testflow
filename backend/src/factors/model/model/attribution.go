@@ -1923,7 +1923,11 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug"})
 
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData}).Info("KPI Attribution data")
+		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData,
+			"BingAdsCampaignIDData":       marketingReports.BingAdsCampaignIDData,
+			"BingAdsCampaignKeyData":      marketingReports.BingAdsCampaignKeyData,
+			"CampaignSourceMapping":       marketingReports.CampaignSourceMapping,
+			"CampaignChannelGroupMapping": marketingReports.CampaignChannelGroupMapping}).Info("KPI Attribution data 1")
 	}
 
 	// add CampaignData result based on Key Dimensions
@@ -1932,11 +1936,17 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	// add CampaignData result based on Key Dimensions
 	_ = AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
 
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData}).Info("KPI Attribution data 2")
+	}
 	for key, _ := range *attributionData {
 		//add key to attribution data
 		addKeyToMarketingInfoForChannelOrSource(attributionData, key, query)
 	}
 
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData}).Info("KPI Attribution data 3")
+	}
 	// Add additional metrics values
 	ComputeAdditionalMetrics(attributionData)
 

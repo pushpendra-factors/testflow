@@ -79,10 +79,11 @@ function AccountTimelineBirdView({
   };
 
   const renderInfoCard = (event) => {
-    const eventName =
-      event.display_name === 'Page View'
-        ? event.event_name
-        : event?.alias_name || PropTextFormat(event.display_name);
+    const eventName = event.alias_name
+      ? event.alias_name
+      : event.display_name !== 'Page View'
+      ? PropTextFormat(event.display_name)
+      : event.event_name;
     const hoverConditionals =
       hoverEvents.includes(event.event_name) ||
       event.display_name === 'Page View' ||
@@ -90,6 +91,7 @@ function AccountTimelineBirdView({
       event.event_type === 'CS';
     const category = getEventCategory(event, eventNamesMap);
     const icon = getIconForCategory(category);
+    
     return (
       <div className='tag'>
         <InfoCard

@@ -63,6 +63,7 @@ export interface ReportTableProps {
   selectedCampaigns: string[];
   selectedChannel: string;
   isSixSignalActivated: boolean;
+  dataSelected: string;
 }
 
 export interface StringObject {

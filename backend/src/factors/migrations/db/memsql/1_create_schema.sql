@@ -580,6 +580,7 @@ CREATE TABLE IF NOT EXISTS linkedin_documents (
     creative_id text,
     campaign_group_id text,
     campaign_id text,
+    is_backfilled boolean default FALSE NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
@@ -1307,8 +1308,7 @@ CREATE TABLE IF NOT EXISTS property_mappings (
     is_deleted boolean NOT NULL DEFAULT false,
     KEY (updated_at),
     SHARD KEY (project_id),
-    PRIMARY KEY (project_id, id),
-    UNIQUE KEY unique_property_mappings_project_id_name_idx(project_id, name) USING HASH
+    PRIMARY KEY (project_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS display_name_labels (

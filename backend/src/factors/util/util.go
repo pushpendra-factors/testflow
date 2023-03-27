@@ -1418,6 +1418,11 @@ func FormatProperty(property string) string {
 	return property
 }
 
+func IsValidPropertyDisplayName(str string) bool {
+	regexpPropertyDisplayName := regexp.MustCompile(`^[a-zA-Z0-9 _]*$`)
+	return regexpPropertyDisplayName.MatchString(str)
+}
+
 func CreatePropertyNameFromDisplayName(displayName string) string {
 	displaySplit := strings.Split(displayName, " ")
 	propertyName := strings.ToLower(displaySplit[0])

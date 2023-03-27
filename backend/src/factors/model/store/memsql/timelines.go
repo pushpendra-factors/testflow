@@ -371,7 +371,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		AND user_id IN (
 			SELECT id FROM users WHERE project_id=? AND %s = ?
 		) AND event_name_id NOT IN (
-			SELECT id FROM event_names WHERE project_id=? AND name IN ('%s','%s','%s','%s','%s','%s','%s')
+			SELECT id FROM event_names WHERE project_id=? AND name IN ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')
 		) 
 		LIMIT 5000) AS events1 
 	LEFT JOIN event_names
@@ -385,6 +385,11 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		U.EVENT_NAME_MARKETO_LEAD_UPDATED,
 		U.EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
 		U.EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
+		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+		U.EVENT_NAME_SALESFORCE_TASK_UPDATED,
+		U.EVENT_NAME_SALESFORCE_EVENT_UPDATED,
+		U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
+		U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
 	)
 	rows, err := db.Raw(eventsQuery, projectID, gorm.NowFunc().Unix(), projectID, identity, projectID, projectID).Rows()
 
@@ -415,6 +420,12 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		if err != nil {
 			log.WithFields(logFields).WithError(err).Error("Failed decoding event properties")
 		} else {
+			// Virtual Events Case: Replace event_name with $page_url
+			if userActivity.EventType == model.TYPE_FILTER_EVENT_NAME {
+				if pageURL, exists := (*properties)[U.EP_PAGE_URL]; exists {
+					userActivity.AliasName = fmt.Sprintf("%s", pageURL)
+				}
+			}
 			// Display Names
 			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
 				userActivity.DisplayName = "Page View"
@@ -430,8 +441,8 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			// Alias Names
 			if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
 				userActivity.AliasName = fmt.Sprintf("Added to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
-			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
-				userActivity.AliasName = fmt.Sprintf("Interacted with %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
+			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
+				userActivity.AliasName = fmt.Sprintf("Responded to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
 			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
 				userActivity.AliasName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE])
 			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
@@ -443,12 +454,15 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 				}
 				userActivity.AliasName = fmt.Sprintf("%s: %s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TYPE], emailSubject)
 			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
-				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED ||
-				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED ||
-				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED {
+				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED {
 				userActivity.AliasName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TITLE])
+			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_TASK_CREATED {
+				userActivity.AliasName = fmt.Sprintf("Created Task - %s", (*properties)[U.EP_SF_TASK_SUBJECT])
+			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_EVENT_CREATED {
+				userActivity.AliasName = fmt.Sprintf("Created Event - %s", (*properties)[U.EP_SF_EVENT_SUBJECT])
+			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_LIST {
+				userActivity.AliasName = fmt.Sprintf("Added to Hubspot List - %s", (*properties)[U.EP_HUBSPOT_CONTACT_LIST_LIST_NAME])
 			}
-
 			// Set Icons
 			if icon, exists := model.EVENT_ICONS_MAP[userActivity.EventName]; exists {
 				userActivity.Icon = icon
@@ -523,9 +537,6 @@ func GetFilteredProperties(eventName string, eventType string, properties *map[s
 			if strings.Contains(key, "$curr_") || strings.Contains(key, "$prev_") {
 				filteredProperties[key] = value
 			}
-		}
-		if value, propExists := (*properties)[U.EP_TIMESTAMP]; propExists {
-			filteredProperties[U.EP_TIMESTAMP] = value
 		}
 	}
 	if len(filteredProperties) > 0 {

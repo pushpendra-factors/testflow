@@ -22,7 +22,12 @@ func (store *MemSQL) CreatePropertyMapping(propertyMapping model.PropertyMapping
 		logCtx.WithField("propertyMapping", propertyMapping).Warn("Invalid project ID for property mappin")
 		return &model.PropertyMapping{}, "Invalid project ID for property mappin", http.StatusBadRequest
 	}
-
+	_, _, statusCode := store.GetPropertyMappingByProjectIDAndName(propertyMapping.ProjectID, propertyMapping.Name)
+	if statusCode == http.StatusOK {
+		logCtx.WithField("propertyMapping", propertyMapping).Warn("Failed to create property mapping. Duplicate record")
+		return &model.PropertyMapping{}, "Failed to create property mapping. Duplicate record", http.StatusConflict
+	}
+	
 	propertyMapping.ID = uuid.New().String()
 
 	db := C.GetServices().Db

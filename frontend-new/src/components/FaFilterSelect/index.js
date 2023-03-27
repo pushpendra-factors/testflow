@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, connect } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from '../factorsComponents';
-import { Button, Input, InputNumber, Tooltip, DatePicker, Select } from 'antd';
+import {
+  Button,
+  Input,
+  InputNumber,
+  Tooltip,
+  DatePicker,
+  Select,
+  Upload,
+  Row,
+  Col,
+  message
+} from 'antd';
 import GroupSelect2 from '../QueryComposer/GroupSelect2';
 import FaDatepicker from '../FaDatepicker';
 import FaSelect from '../FaSelect';
@@ -16,6 +27,9 @@ import moment from 'moment';
 import { DISPLAY_PROP, OPERATORS } from '../../utils/constants';
 import { toCapitalCase } from '../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
+import AppModal from 'Components/AppModal';
+import { UploadOutlined } from '@ant-design/icons';
+import { uploadList } from 'Reducers/global';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -43,7 +57,9 @@ const FAFilterSelect = ({
   operatorDDPos,
   operatorDDHeight,
   valuesDDPos,
-  valuesDDHeight
+  valuesDDHeight,
+  uploadList,
+  showInList = false
 }) => {
   const [propState, setPropState] = useState({
     icon: '',
@@ -63,10 +79,15 @@ const FAFilterSelect = ({
   const [containButton, setContainButton] = useState(true);
 
   const [updateState, updateStateApply] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadFileName, setUploadFileName] = useState('');
+  const [uploadFileByteArray, setUploadFileByteArray] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const { userPropNames, eventPropNames, groupPropNames } = useSelector(
     (state) => state.coreQuery
   );
+  const activeProject = useSelector((state) => state.global.active_project);
 
   useEffect(() => {
     if (
@@ -108,6 +129,7 @@ const FAFilterSelect = ({
           filter.operator === OPERATORS['notEqualTo'] ||
           filter.operator?.[0] === OPERATORS['equalTo'] ||
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
+        filter.values?.length === 1 &&
         filter.values?.[0] === '$none'
       ) {
         if (
@@ -354,7 +376,12 @@ const FAFilterSelect = ({
 
         {operSelectOpen && (
           <FaSelect
-            options={operatorOpts[propState.type].map((op) => [op])}
+            options={operatorOpts[propState.type]
+              .filter((op) => {
+                // Only include the operator if showInList is true or it's not 'inList'
+                return showInList || op !== OPERATORS['inList'];
+              })
+              .map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
             placement={operatorDDPos}
@@ -726,6 +753,159 @@ const FAFilterSelect = ({
     );
   };
 
+  const handleChange = (info) => {
+    let reader = new FileReader();
+    let fileByteArray = [];
+    reader.readAsArrayBuffer(info?.file?.originFileObj);
+    reader.onloadend = function (evt) {
+      if (evt.target.readyState === FileReader.DONE) {
+        let arrayBuffer = evt.target.result,
+          array = new Uint8Array(arrayBuffer);
+        for (let i = 0; i < array.length; i++) {
+          fileByteArray.push(array[i]);
+        }
+      }
+    };
+
+    setUploadFileName(info?.file?.name);
+    setUploadFileByteArray(fileByteArray);
+  };
+
+  const handleCancel = () => {
+    setUploadModalOpen(false);
+    setUploadFileName('');
+    setUploadFileByteArray([]);
+  };
+
+  const handleOk = () => {
+    setLoading(true);
+
+    uploadList(activeProject?.id, uploadFileByteArray)
+      .then((res) => {
+        valuesSelectSingle([res?.data?.file_reference]);
+        handleCancel();
+        setLoading(false);
+      })
+      .catch((err) => {
+        setLoading(false);
+        message.error(err?.data?.error);
+      });
+  };
+
+  const renderCsvUpload = () => {
+    let selectionComponent;
+
+    if (propState.type === 'categorical') {
+      selectionComponent = (
+        <AppModal
+          visible={uploadModalOpen}
+          width={500}
+          closable={false}
+          title={null}
+          footer={null}
+        >
+          <Text type={'title'} level={6} weight={'bold'} extraClcalass={'m-0'}>
+            Upload a CSV with a single column
+          </Text>
+          <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
+            We’ll only look at the first column as your reference list of data
+          </Text>
+          <div className='border rounded mt-2'>
+            <Upload
+              showUploadList={false}
+              onChange={handleChange}
+              accept='.csv'
+              maxCount={1}
+              className={'text-center'}
+            >
+              <div className={'p-8'} style={{ marginLeft: '8rem' }}>
+                {uploadFileName ? (
+                  <Button className='inline'>
+                    {uploadFileName}
+                    <SVG extraClass={'ml-1'} name={'close'} color='grey' />
+                  </Button>
+                ) : (
+                  <Button icon={<UploadOutlined />}>Upload CSV</Button>
+                )}
+              </div>
+            </Upload>
+          </div>
+          <Row className={'mt-4'}>
+            <Col span={24}>
+              <div className='flex justify-end'>
+                <Button
+                  size={'large'}
+                  className='mr-2'
+                  onClick={() => handleCancel()}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size={'large'}
+                  className={'ml-2'}
+                  type={'primary'}
+                  onClick={() => handleOk()}
+                  disabled={!uploadFileName}
+                  loading={loading}
+                >
+                  Done
+                </Button>
+              </div>
+            </Col>
+          </Row>
+        </AppModal>
+      );
+    }
+
+    return (
+      <div
+        className={`${styles.filter__propContainer}${
+          disabled ? `fa-truncate-150` : ''
+        }`}
+      >
+        {propState.type === 'categorical' ? (
+          <>
+            <Tooltip
+              mouseLeaveDelay={0}
+              title={
+                valuesState && valuesState.length
+                  ? valuesState
+                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                      .join(', ')
+                  : null
+              }
+              color={TOOLTIP_CONSTANTS.DARK}
+            >
+              <Button
+                className={`fa-button--truncate ${
+                  caller === 'profiles' ? 'fa-button--truncate-sm' : ''
+                }  ${
+                  displayMode
+                    ? 'btn-right-round static-button'
+                    : 'filter-buttons-radius'
+                } filter-buttons-margin`}
+                type={displayMode ? 'default' : 'link'}
+                disabled={disabled}
+                onClick={() =>
+                  displayMode ? null : setUploadModalOpen(!uploadModalOpen)
+                }
+              >
+                {valuesState && valuesState.length
+                  ? valuesState
+                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                      .join(', ')
+                  : 'Upload list'}
+              </Button>
+            </Tooltip>
+            {uploadModalOpen && selectionComponent}
+          </>
+        ) : null}
+
+        {propState.type !== 'categorical' ? selectionComponent : null}
+      </div>
+    );
+  };
+
   return (
     <div className={styles.filter}>
       {renderPropSelect()}
@@ -736,11 +916,14 @@ const FAFilterSelect = ({
       operatorState !== OPERATORS['isKnown'] &&
       operatorState !== OPERATORS['isUnknown'] &&
       operatorState?.[0] !== OPERATORS['isKnown'] &&
-      operatorState?.[0] !== OPERATORS['isUnknown']
+      operatorState?.[0] !== OPERATORS['isUnknown'] &&
+      operatorState?.[0] !== OPERATORS['inList']
         ? renderValuesSelector()
+        : operatorState?.[0] === OPERATORS['inList']
+        ? renderCsvUpload()
         : null}
     </div>
   );
 };
 
-export default FAFilterSelect;
+export default connect(null, { uploadList })(FAFilterSelect);

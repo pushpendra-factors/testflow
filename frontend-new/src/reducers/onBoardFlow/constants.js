@@ -5,5 +5,6 @@ export const defaultState = {
     step3: true // not mandatory
   },
   isWebsiteVisitorIdentificationVisible: false,
-  currentStep: null
+  currentStep: 1,
+  factors6SignalKeyRequested: false
 };

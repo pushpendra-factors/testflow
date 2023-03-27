@@ -36,6 +36,11 @@ import StackedBarChart from '../../../../components/StackedBarChart';
 import PivotTable from '../../../../components/PivotTable';
 import ColumnChart from '../../../../components/ColumnChart/ColumnChart';
 
+const legendsProps = {
+  position: 'bottom',
+  showAll: true
+};
+
 const BreakdownChartsComponent = forwardRef(
   (
     {
@@ -188,6 +193,8 @@ const BreakdownChartsComponent = forwardRef(
             comparisonApplied={comparisonData.data != null}
             categories={columnCategories}
             series={columnSeries}
+            multiColored
+            legendsProps={legendsProps}
           />
         </div>
       );

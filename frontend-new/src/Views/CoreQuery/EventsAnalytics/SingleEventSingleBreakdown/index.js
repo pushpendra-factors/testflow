@@ -33,6 +33,11 @@ import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import SingleEventSingleBreakdownHorizontalBarChart from './SingleEventSingleBreakdownHorizontalBarChart';
 import ColumnChart from '../../../../components/ColumnChart/ColumnChart';
 
+const legendsProps = {
+  position: 'bottom',
+  showAll: true
+};
+
 const SingleEventSingleBreakdownComponent = forwardRef(
   (
     {
@@ -169,6 +174,8 @@ const SingleEventSingleBreakdownComponent = forwardRef(
             comparisonApplied={comparisonData.data != null}
             categories={columnCategories}
             series={columnSeries}
+            multiColored
+            legendsProps={legendsProps}
           />
         </div>
       );

@@ -206,30 +206,10 @@ function SixSignalFactorsIntegration({
         </div>
       </Modal>
 
-      {currentProjectSettings?.int_factors_six_signal_key &&
-        userEmail === 'solutions@factors.ai' && (
-          <ConnectedScreen
-            apiKey={currentProjectSettings?.factors6_signal_key}
-          />
-        )}
-      {currentProjectSettings?.int_factors_six_signal_key &&
-        userEmail !== 'solutions@factors.ai' && (
-          <div className='mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'>
-            <Text type='title' level={6} weight='bold' extraClass='m-0'>
-              Connected Account
-            </Text>
-            <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
-              API Key
-            </Text>
-            <Input
-              size='large'
-              disabled
-              placeholder='API Key'
-              value={currentProjectSettings?.factors6_signal_key}
-              style={{ width: '400px' }}
-            />
-          </div>
-        )}
+      {currentProjectSettings?.int_factors_six_signal_key && (
+        <ConnectedScreen apiKey={currentProjectSettings?.factors6_signal_key} />
+      )}
+
       <div className='mt-4 flex' data-tour='step-11'>
         {currentProjectSettings?.int_factors_six_signal_key ? (
           <Button loading={loading} onClick={() => onDisconnect()}>

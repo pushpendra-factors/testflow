@@ -21,7 +21,8 @@ export const KEY_LABELS = {
   [CHANNEL_KEY]: 'Channel',
   [INDUSTRY_KEY]: 'Industry',
   [EMP_RANGE_KEY]: 'Employee Range',
-  [REVENUE_RANGE_KEY]: 'Revenue Range'
+  [REVENUE_RANGE_KEY]: 'Revenue Range',
+  [DOMAIN_KEY]: 'Domain'
 };
 
 export const DEFAULT_COLUMNS = [
@@ -31,7 +32,7 @@ export const DEFAULT_COLUMNS = [
   INDUSTRY_KEY,
   REVENUE_RANGE_KEY,
   EMP_RANGE_KEY,
-  PAGE_COUNT_KEY
+  SESSION_SPENT_TIME
 ];
 
 export const CHANNEL_QUICK_FILTERS: Filters[] = [

@@ -256,26 +256,21 @@ func PostFactorsHandlerV2(c *gin.Context) {
 	modelId = entity.ModelID
 
 	var entityv2 model.ExplainV2Query
+	var params model.FactorsGoalRule
+	in_en := make(map[string]bool)
+	in_epr := make(map[string]bool)
+	in_upr := make(map[string]bool)
+
+	inputType := c.Query("type")
+	patternMode := ""
 	err = U.DecodePostgresJsonbToStructType(entity.ExplainV2Query, &entityv2)
 	if err != nil {
 		log.Errorf("Unable to create goal params")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
-	patternMode := c.Query("pattern_mode")
-	propertyName := c.Query("debug_property_name")
-	propertyValue := c.Query("debug_property_value")
-	inputType := c.Query("type")
-
-	ipParams, err := GetcreateFactorsGoalParams(c)
-	if err != nil {
-		log.Errorf("Unable to create goal params")
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	params, in_en, in_epr, in_upr := MapRule(ipParams.Rule)
+	params.StartEvent = entityv2.Query.StartEvent
+	params.EndEvent = entityv2.Query.EndEvent
 
 	result, err := T.GetResultCache(projectId, modelId)
 	if err != nil {
@@ -354,8 +349,7 @@ func PostFactorsHandlerV2(c *gin.Context) {
 		return
 	}
 	debugParams := make(map[string]string)
-	debugParams["PropertyName"] = propertyName
-	debugParams["PropertyValue"] = propertyValue
+
 	if results, err, debugData := PW.FactorV1(reqID,
 		projectId, params.StartEvent, startConstraints,
 		params.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, patternMode, debugParams, in_en, in_epr, in_upr); err != nil {

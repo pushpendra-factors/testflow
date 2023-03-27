@@ -48,7 +48,7 @@ const EachWelcomeCard = ({ onClick, title, description, type }) => {
           </Text>
           <Text
             type={'title'}
-            level={6}
+            level={7}
             weight={'regular'}
             align={'center'}
             color={'grey'}
@@ -77,7 +77,8 @@ const Welcome = ({
     history.push('/project-setup');
   };
   const handleRoute1 = () => {
-    dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
+    // dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
+    history.push('/welcome/visitoridentification/1');
   };
 
   useEffect(() => {
@@ -135,14 +136,12 @@ const Welcome = ({
         <Row justify={'center'} className={'mt-8'}>
           <Col span={15}>
             <Row className={'justify-center'}>
-              <Link to='/project-setup'>
-                <EachWelcomeCard
-                  title='Analytics and Attribution'
-                  description='Make data-driven decisions and optimize marketing strategies'
-                  type={1}
-                  onClick={handleRoute}
-                />
-              </Link>
+              <EachWelcomeCard
+                title='Analytics and Attribution'
+                description='Make data-driven decisions and optimize marketing strategies'
+                type={1}
+                onClick={handleRoute}
+              />
               <EachWelcomeCard
                 title='Website visitor identification'
                 description='Identify anonymous users and track high intent accounts'
@@ -151,6 +150,66 @@ const Welcome = ({
               />
 
               {/* <div className={`${styles.first}`} onClick={() => {
+    return (
+      <>
+        <div className={"m-0"}>
+          <Row justify={"center"} className={"mt-24"}>
+            <Col span={12}>
+              <Text type={"title"} level={2} weight={"bold"} align={'center'} extraClass={"m-0 mt-16"}>
+                Hey {currentAgent?.first_name ? currentAgent?.first_name : 'there'}, welcome to Factors
+              </Text>
+              <Text type={"title"} level={6} align={'center'} weight={"regular"} extraClass={"m-0 mt-2"} color={"grey"}>
+                What are you looking to do next?
+              </Text>
+            </Col>
+          </Row>
+          <Row justify={"center"} className={"mt-8"}>
+            <Col span={15}>
+              <Row className={"justify-between"}>
+                <div className={`${styles.first}`} onClick={handleRoute}>
+                  <Row>
+                    <Col className={`${styles.img}`}>
+                      <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/computer.svg' />
+                    </Col>
+                    <Col justify={'center'} span={24} className={'mt-24'}>
+                      <Text type={"title"} level={5} align={'center'} weight={"bold"} extraClass={"m-0"}>
+                        Start implementing
+                      </Text>
+                      <Text
+                        type={"title"}
+                        level={6}
+                        weight={"regular"}
+                        align={'center'}
+                        color={"grey"}
+                      >
+                        Approximated time ~15 min
+                      </Text>
+                    </Col>
+                  </Row>
+                </div>
+                <div className={`${styles.first}`} onClick={() => switchProject}>
+                  <Row>
+                    <Col className={`${styles.img}`}>
+                      <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/file.svg' />
+                    </Col>
+                    <Col justify={'center'} span={24} className={'mt-24'}>
+                      <Text type={"title"} align={'center'} level={5} weight={"bold"} extraClass={"m-0"}>
+                        Explore demo
+                      </Text>
+                      <Text
+                        type={"title"}
+                        level={6}
+                        align={'center'}
+                        weight={"regular"}
+                        extraClass={"m-0"}
+                        color={"grey"}
+                      >
+                        Jump into a sample project
+                      </Text>
+                    </Col>
+                  </Row>
+                </div>
+                <div className={`${styles.first}`} onClick={() => {
                   window.open(meetLink(ownerID), '_blank');
                 }}>
                   <Row>
@@ -182,7 +241,7 @@ const Welcome = ({
             </Row>
           </Col>
         </Row>
-        <OnBoard />
+        {/* <OnBoard /> */}
         <Row justify='center' className={'mt-12'}>
           <Col span={7}>
             <Text
