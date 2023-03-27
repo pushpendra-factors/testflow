@@ -22,7 +22,8 @@ class LinkedinSetting:
         return False
     
     def generate_access_token(self, options):
-        url = TOKEN_GENERATION_URL.format(self.refresh_token, options.client_id, options.client_secret)
+        url = TOKEN_GENERATION_URL.format(self.refresh_token, 
+                            options.client_id, options.client_secret)
         response = requests.get(url)
         response_json = response.json()
         if response.ok:

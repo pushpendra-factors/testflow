@@ -21,6 +21,7 @@ API_REQUESTS = 'api_requests'
 META_COUNT = 100
 INSIGHTS_COUNT = 10000
 BATCH_SIZE = 1000
+BACKFILL_DAY = 8
 META_DATA_URL = 'https://api.linkedin.com/v2/{}?q=search&search.account.values[0]=urn:li:sponsoredAccount:{}&start={}&count={}'
 INSIGHTS_REQUEST_URL_FORMAT = 'https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&pivot={}&dateRange.start.day={}&dateRange.start.month={}&dateRange.start.year={}&dateRange.end.day={}&dateRange.end.month={}&dateRange.end.year={}&timeGranularity=DAILY&fields={}&accounts[0]=urn:li:sponsoredAccount:{}&start={}&count={}'
 REQUESTED_FIELDS='totalEngagements,impressions,clicks,dateRange,landingPageClicks,costInUsd,leadGenerationMailContactInfoShares,leadGenerationMailInterestedClicks,opens,videoCompletions,videoFirstQuartileCompletions,videoMidpointCompletions,videoThirdQuartileCompletions,videoViews,externalWebsiteConversions,externalWebsitePostClickConversions,externalWebsitePostViewConversions,costInLocalCurrency,conversionValueInLocalCurrency,pivotValue'
@@ -29,7 +30,7 @@ AD_ACCOUNT_URL = 'https://api.linkedin.com/v2/adAccountsV2/{}'
 FETCH_LOG_WITH_DOC_TYPE = 'Fetching {} started for project {} for timestamp {}'
 NUM_OF_RECORDS_LOG = 'No of {} records to be inserted for project {} : {}'
 API_ERROR_FORMAT = 'Failed to get {} {} from linkedin. StatusCode: {}. Error: {}. Project_id: {}. Ad Account: {}'
-DOC_INSERT_ERROR = 'Failed to insert {} {} in database. StatusCode: {}. Error: {}. Project_id: {}. Ad Account: {}'
+DOC_INSERT_ERROR = 'Failed to insert {} {} in database. StatusCode: {}. Error: {}. Project_id: {}. Ad Account: {}. Timestamp: {}'
 META_FETCH_START = 'Fetching metadata for {} started for project {}'
 INSERTION_LOG = 'Inserting {} {} for timestamp {}'
 INSERTION_END_LOG = 'Inserting {} {} ended for timestamp {}'
@@ -43,3 +44,6 @@ HEALTHCHECK_TOKEN_FAILURE_PING_ID = 'b231cf93-ce7e-4df6-9416-1797c5065c22'
 URL_ENDPOINT_CAMPAIGN_GROUP_META = 'adCampaignGroupsV2'
 URL_ENDPOINT_CAMPAIGN_META = 'adCampaignsV2'
 URL_ENDPOINT_CREATIVE_META = 'adCreativesV2'
+BACKFILL_NOT_REQUIRED = "Backfill not required for %s for project %s for ad account %s"
+AD_ACCOUNT_FAILURE = 'Failed to get ad_accounts metadata from linkedin'
+ORG_DATA_FETCH_ERROR = "Failed getting organisation data with error {}"
