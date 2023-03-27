@@ -129,6 +129,7 @@ const FAFilterSelect = ({
           filter.operator === OPERATORS['notEqualTo'] ||
           filter.operator?.[0] === OPERATORS['equalTo'] ||
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
+        filter.values?.length === 1 &&
         filter.values?.[0] === '$none'
       ) {
         if (
@@ -780,15 +781,15 @@ const FAFilterSelect = ({
     setLoading(true);
 
     uploadList(activeProject?.id, uploadFileByteArray)
-    .then((res) => {
-      valuesSelectSingle([res?.data?.file_reference]);
-      handleCancel();
-      setLoading(false);
-    })
-    .catch((err) => {
-      setLoading(false);
-      message.error(err?.data?.error);
-    });
+      .then((res) => {
+        valuesSelectSingle([res?.data?.file_reference]);
+        handleCancel();
+        setLoading(false);
+      })
+      .catch((err) => {
+        setLoading(false);
+        message.error(err?.data?.error);
+      });
   };
 
   const renderCsvUpload = () => {
@@ -925,4 +926,4 @@ const FAFilterSelect = ({
   );
 };
 
-export default connect(null, {uploadList})(FAFilterSelect);
+export default connect(null, { uploadList })(FAFilterSelect);
