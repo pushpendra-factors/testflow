@@ -1,4 +1,4 @@
-import { Tooltip } from 'antd';
+import { Tooltip, Image } from 'antd';
 import { Text } from 'Components/factorsComponents';
 import { getHost } from 'Components/Profile/utils';
 import React from 'react';
@@ -11,13 +11,20 @@ import {
   SESSION_SPENT_TIME
 } from '../../../const';
 import { StringObject } from '../../../types';
+import fallbackImage from '../../../../../assets/icons/fallbackImage.svg';
 
 const TableCell = ({ text, record, header }: TableCellProps) => {
   let title = text;
   const domain = record?.[DOMAIN_KEY];
   const showCursor = header === COMPANY_KEY && domain;
   if (header === SESSION_SPENT_TIME) {
-    title = formatDuration(text);
+    if (isNaN(Number(text))) {
+      title = 'NA';
+    } else if (Number(text) < 1800) {
+      title = formatDuration(text);
+    } else {
+      title = '> 30mins';
+    }
   } else if (header === PAGE_COUNT_KEY) {
     title = `${text} ${Number(text) > 1 ? 'Pages' : 'Page'}`;
   }
@@ -42,19 +49,13 @@ const TableCell = ({ text, record, header }: TableCellProps) => {
       >
         {domain && header === COMPANY_KEY && (
           <div className='w-6 h-6 flex justify-center items-center'>
-            <img
+            <Image
+              width={24}
+              height={24}
               className='w-100 h-100 rounded '
               src={`https://logo.uplead.com/${getHost(domain)}`}
-              onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                if (
-                  e.target.src !==
-                  'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
-                ) {
-                  e.target.src =
-                    'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
-                }
-              }}
-              alt=''
+              fallback={fallbackImage}
+              preview={false}
             />
           </div>
         )}
