@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"reflect"
 
-	slack "factors/slack_bot/handler"
 	teams "factors/ms_teams"
+	slack "factors/slack_bot/handler"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -37,7 +37,7 @@ func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
 	r.GET(routePrefix+"/login", ExternalAuthentication(auth, SIGNIN_FLOW))
 	r.GET(routePrefix+"/activate", ExternalAuthentication(auth, ACTIVATE_FLOW))
 	r.GET(routePrefix+"/callback", CallbackHandler(auth))
-	
+
 }
 
 func InitAppRoutes(r *gin.Engine) {
@@ -51,7 +51,7 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
-	r.GET(routePrefix+"/.well-known/microsoft-identity-association.",teams.VerifyPublisherDomainStaging)
+	r.GET(routePrefix+"/.well-known/microsoft-identity-association.", teams.VerifyPublisherDomainStaging)
 
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
@@ -372,7 +372,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings", responseWrapper(V1.GetPropertyMappings))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings/:id", responseWrapper(V1.DeletePropertyMapping))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings/commom_properties", responseWrapper(V1.GetCommonPropertyMappings))
-}   
+
+	//six signal
+	authRouteGroup.POST("/:project_id/sixsignal/email", responseWrapper(SendSixSignalReportViaEmail))
+}
 
 func InitSDKServiceRoutes(r *gin.Engine) {
 	// Initialize swagger api docs only for development / staging.
@@ -492,7 +495,7 @@ func InitIntRoutes(r *gin.Engine) {
 
 	intRouteGroup.GET("/slack/callback", slack.SlackCallbackHandler)
 
-	intRouteGroup.GET("/teams/callback",teams.TeamsCallbackHandler)
+	intRouteGroup.GET("/teams/callback", teams.TeamsCallbackHandler)
 
 }
 
