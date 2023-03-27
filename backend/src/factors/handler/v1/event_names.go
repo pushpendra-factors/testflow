@@ -153,6 +153,10 @@ func GetEventNamesByTypeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"event_names": eventNames})
 }
 
+type UploadRequest struct {
+	Payload []byte `json:"Payload"`
+}
+
 func UploadListForFilters(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -162,6 +166,18 @@ func UploadListForFilters(c *gin.Context) {
 
 	fileReference := U.GetUUID()
 	result := make([]string, 0 )
+
+	var payload UploadRequest
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&payload); err != nil {
+		errMsg := "Create File payload failed"
+		log.WithFields(log.Fields{"project_id": projectId}).WithError(err).Error(errMsg)
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	payloadString := string(payload.Payload)
+	result = strings.Split(payloadString, "\n")
 
 	path, file := C.GetCloudManager(projectId, false).GetListReferenceFileNameAndPathFromCloud(projectId, fileReference)
 	resultJson, err := json.Marshal(result)
