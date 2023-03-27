@@ -1,0 +1,66 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: factors-staging-node-pool
+  name: dashboard-caching-queries-comparision
+spec:
+  schedule: "0 */1 * * *" #On Trigger
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: factors-staging-node-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: dashboard-caching-queries-comparision
+            image: us.gcr.io/factors-staging/dashboard-caching-queries-comparision:v1
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_HEAVY_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
+            - --redis_host
+            - $(REDIS_HOST)
+            - --redis_port
+            - $(REDIS_PORT)
+            - --redis_host_ps
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port_ps
+            - $(PERSISTENT_REDIS_PORT)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-memsql
+            - configMapRef:
+                name: config-redis
+            - configMapRef:
+                name: config-persistent-redis
+            - secretRef:
+                name: secret-memsql
+            - secretRef:
+                name: secret-aws
+            - secretRef:
+                name: secret-sentry
+          restartPolicy: OnFailure

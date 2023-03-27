@@ -1,0 +1,13 @@
+FROM golang:1.14-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/run_dashboard_caching_queries_comparision $GOPATH/src/factors/scripts/adhoc/run_dashboard_caching_queries_comparision/run_dashboard_caching_queries_comparision.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+# Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+COPY --from=builder /go/bin/run_dashboard_caching_queries_comparision /go/bin/run_dashboard_caching_queries_comparision
+ENTRYPOINT ["/go/bin/run_dashboard_caching_queries_comparision"]
