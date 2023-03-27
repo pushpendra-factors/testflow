@@ -261,7 +261,7 @@ const AttrFilterSelect = ({
             options={operatorOpts[propState.type].map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
-          ></FaSelect>
+          />
         )}
       </div>
     );

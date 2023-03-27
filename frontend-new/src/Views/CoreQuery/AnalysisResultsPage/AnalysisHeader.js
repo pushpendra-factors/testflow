@@ -315,6 +315,7 @@ function AnalysisHeader({
         optionClick={(val) => setActions(val)}
         onClickOutside={() => setHelpMenu(false)}
         posRight={true}
+        showIcon
       ></FaSelect>
     );
   };

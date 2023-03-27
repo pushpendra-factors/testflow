@@ -91,10 +91,11 @@ function AccountTimelineBirdView({
       event.event_type === 'CS';
     const category = getEventCategory(event, eventNamesMap);
     const icon = getIconForCategory(category);
-    
+
     return (
       <div className='tag'>
         <InfoCard
+          eventType={event?.event_type}
           title={event?.alias_name}
           eventSource={event?.display_name}
           eventName={event?.event_name}

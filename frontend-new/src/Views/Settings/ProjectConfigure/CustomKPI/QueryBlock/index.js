@@ -287,6 +287,7 @@ function QueryBlock({
               options={[['Filter By', 'filter']]}
               optionClick={(val) => setAdditionalactions(val)}
               onClickOutside={() => setMoreOptions(false)}
+              showIcon
             ></FaSelect>
           ) : (
             false
