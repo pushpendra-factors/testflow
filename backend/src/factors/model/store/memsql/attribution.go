@@ -189,6 +189,12 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	queryStartTime = time.Now().UTC().Unix()
 
 	result := ProcessAttributionDataToResult(projectID, query, attributionData, isCompare, queryStartTime, marketingReports, kpiData, logCtx)
+
+	if projectID == 1125899914000022 {
+		log.WithFields(logFields).WithFields(log.Fields{"attributionData": attributionData}).Warn("Debug logs for linkedin 1010")
+		log.WithFields(logFields).WithFields(log.Fields{"result": result}).Warn("Debug logs for linkedin 2002")
+	}
+
 	result.Meta.Currency = ""
 	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
 		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To, *logCtx)
