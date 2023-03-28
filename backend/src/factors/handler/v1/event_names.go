@@ -177,7 +177,22 @@ func UploadListForFilters(c *gin.Context) {
 		return
 	}
 	payloadString := string(payload.Payload)
-	result = strings.Split(payloadString, "\n")
+	if(strings.Contains(payloadString, "\r\n")){
+		result = strings.Split(payloadString, "\r\n")
+	} else {
+		result = strings.Split(payloadString, "\n")
+	}
+
+	resultTrimmed := make([]string, 0)
+	for _, data := range result {
+		if(data != ""){
+			resultTrimmed = append(resultTrimmed, data)
+		}
+	}
+	if(len(resultTrimmed) <= 0){
+		c.JSON(http.StatusInternalServerError,  gin.H{"error": "EmptyFile"})
+		return
+	}
 
 	resultTrimmed := make([]string, 0)
 	for _, data := range result {
