@@ -427,7 +427,7 @@ func TestGetEventNameByUserHandler(t *testing.T) {
 
 		assert.Nil(t, eventNames.EventNames[U.SmartEvent])
 
-		assert.Equal(t, len(eventNames.AllowedDisplayNameGroups), 4)
+		assert.Equal(t, len(eventNames.AllowedDisplayNameGroups), 5) // STANDARD_GROUP_DISPLAY_NAMES
 		for displayGroupName, groupName := range U.GetStandardDisplayNameGroups() {
 			assert.Equal(t, eventNames.AllowedDisplayNameGroups[displayGroupName], groupName)
 		}
@@ -526,7 +526,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// should contain all event names along with $session.
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Most Recent"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 36) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 38) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Website Session")
 
 	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "$session", DisplayName: "Test1"}, agent, project.ID)
@@ -553,7 +553,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// should contain all event names along with $session.
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Most Recent"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 36) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 38) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Test1")
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$hubspot_contact_created"], "Test2")
 
