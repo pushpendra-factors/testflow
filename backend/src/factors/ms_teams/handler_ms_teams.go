@@ -336,16 +336,20 @@ type PublisherDomain struct {
     } `json:"associatedApplications"`
 }
 func VerifyPublisherDomainStaging(c *gin.Context) {
-	data := PublisherDomain{
-        AssociatedApplications: []struct {
-            ApplicationId string `json:"applicationId"`
-        }{
-            {
-                ApplicationId: "b60cd2fb-e869-4940-9aad-098d551f8217",
-            },
-        },
-    }
-
+	var data PublisherDomain
+	if C.GetConfig().Env == C.STAGING {
+		data = PublisherDomain{
+			AssociatedApplications: []struct {
+				ApplicationId string `json:"applicationId"`
+			}{
+				{
+					ApplicationId: "b60cd2fb-e869-4940-9aad-098d551f8217",
+				},
+			},
+		}
+	
+	}
+	
 	// json := `{
 	// 	"associatedApplications": [
 	// 	  {
