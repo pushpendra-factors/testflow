@@ -5,15 +5,45 @@ import React, { useState } from 'react';
 import { ShareData } from '../../../types';
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import style from './index.module.scss';
+import logger from 'Utils/logger';
+import { shareSixSignalReportToEmails } from '../../../state/services';
 
 const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
   const [loading, setIsLoading] = useState<boolean>(false);
   const [form] = Form.useForm();
 
-  const handleFinish = (values: any) => {
-    // to do: remove this log once share api is ready
-    console.log('handle finish is called', values);
-    onCancel();
+  const handleFinish = async (values: { emails: string[] }) => {
+    const { from, timezone, to, domain, publicUrl } = shareData || {};
+    try {
+      if (!from || !to || !publicUrl || !timezone || !values?.emails) {
+        notification.error({
+          message: 'Fields are missing!',
+          duration: 3
+        });
+        return;
+      }
+      setIsLoading(true);
+      await shareSixSignalReportToEmails(
+        values.emails,
+        publicUrl,
+        domain || '',
+        from,
+        to,
+        timezone
+      );
+      notification.success({
+        message: 'Emails successfully sent',
+        duration: 3
+      });
+      onCancel();
+    } catch (error) {
+      logger.error('Error in sending report over emails', error);
+      notification.error({
+        message: 'Error',
+        description: error?.data?.error || 'Something went wrong',
+        duration: 5
+      });
+    }
   };
 
   const copyToClipboard = async () => {
@@ -34,7 +64,7 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
         });
       }
     } catch (err) {
-      console.error('Error in copying data', err);
+      logger.error('Error in copying data', err);
     }
   };
 
@@ -63,10 +93,9 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
           </div>
           <div>
             <Text type={'paragraph'} mini extraClass={'mt-3'} color='grey'>
-              By default, everyone in this project will receive weekly and
-              monthly updates. Subscribe others to receive the same updates via
-              a public link. These users will have access without any
-              authorization.
+              Share a public link that allows others in your team to view this.
+              These users will have access to this report without having to sign
+              up or login.
             </Text>
           </div>
           <Form
@@ -93,7 +122,7 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
               </Form.Item>
             </div> */}
 
-            {/* <div className='mt-4'>
+            <div className='mt-4'>
               <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
                 Recipients
               </Text>
@@ -156,22 +185,24 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
                           </div>
                         </Form.Item>
                       ))}
-                      <Form.Item>
-                        <Button
-                          onClick={() => add()}
-                          type='text'
-                          icon={<PlusOutlined color='#8692A3' />}
-                          className='mt-3'
-                        >
-                          Add Email
-                        </Button>
-                        <Form.ErrorList errors={errors} />
-                      </Form.Item>
+                      {fields?.length < 5 && (
+                        <Form.Item>
+                          <Button
+                            onClick={() => add()}
+                            type='text'
+                            icon={<PlusOutlined color='#8692A3' />}
+                            className='mt-3'
+                          >
+                            Add Email
+                          </Button>
+                          <Form.ErrorList errors={errors} />
+                        </Form.Item>
+                      )}
                     </>
                   )}
                 </Form.List>
               </div>
-            </div> */}
+            </div>
 
             <div className='flex justify-between items-center w-100 mt-6'>
               {shareData?.publicUrl && document.queryCommandSupported('copy') && (
@@ -184,11 +215,16 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
                   Copy link
                 </Button>
               )}
-              {/* <Form.Item>
-                <Button htmlType='submit' size='large' type='primary'>
+              <Form.Item>
+                <Button
+                  htmlType='submit'
+                  size='large'
+                  type='primary'
+                  loading={loading}
+                >
                   Done
                 </Button>
-              </Form.Item> */}
+              </Form.Item>
             </div>
           </Form>
         </div>
