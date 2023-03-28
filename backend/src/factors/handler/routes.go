@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"reflect"
 
-	teams "factors/ms_teams"
 	slack "factors/slack_bot/handler"
+	// "factors/ms_teams"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -51,7 +51,7 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
-	r.GET(routePrefix+"/.well-known/microsoft-identity-association.", teams.VerifyPublisherDomainStaging)
+	// r.GET(routePrefix+"/.well-known/microsoft-identity-association.",teams.VerifyPublisherDomainStaging)
 
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
@@ -308,10 +308,10 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id", responseWrapper(V1.EditEventTriggerAlertHandler))
 
 	// teams
-	featuresGatesRouteGroup.POST("/:project_id/teams/auth", mid.SkipDemoProjectWriteAccess(), teams.TeamsAuthRedirectHandler)
-	featuresGatesRouteGroup.GET("/:project_id/teams/get_teams", mid.SkipDemoProjectWriteAccess(), teams.GetAllTeamsHandler)
-	featuresGatesRouteGroup.GET("/:project_id/teams/channels", mid.SkipDemoProjectWriteAccess(), teams.GetTeamsChannelsHandler)
-	featuresGatesRouteGroup.DELETE("/:project_id/teams/delete", mid.SkipDemoProjectWriteAccess(), teams.DeleteTeamsIntegrationHandler)
+	// featuresGatesRouteGroup.POST("/:project_id/teams/auth", mid.SkipDemoProjectWriteAccess(), teams.TeamsAuthRedirectHandler)
+	// featuresGatesRouteGroup.GET("/:project_id/teams/get_teams", mid.SkipDemoProjectWriteAccess(), teams.GetAllTeamsHandler)
+	// featuresGatesRouteGroup.GET("/:project_id/teams/channels", mid.SkipDemoProjectWriteAccess(), teams.GetTeamsChannelsHandler)
+	// featuresGatesRouteGroup.DELETE("/:project_id/teams/delete", mid.SkipDemoProjectWriteAccess(), teams.DeleteTeamsIntegrationHandler)
 	// Upload
 	featuresGatesRouteGroup.POST("/:project_id/uploadlist", V1.UploadListForFilters)
 
@@ -495,7 +495,7 @@ func InitIntRoutes(r *gin.Engine) {
 
 	intRouteGroup.GET("/slack/callback", slack.SlackCallbackHandler)
 
-	intRouteGroup.GET("/teams/callback", teams.TeamsCallbackHandler)
+//	intRouteGroup.GET("/teams/callback",teams.TeamsCallbackHandler)
 
 }
 
