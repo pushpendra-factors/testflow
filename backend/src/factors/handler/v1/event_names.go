@@ -194,18 +194,6 @@ func UploadListForFilters(c *gin.Context) {
 		return
 	}
 
-	resultTrimmed := make([]string, 0)
-	for _, data := range result {
-		if(data != ""){
-			resultTrimmed = append(resultTrimmed, data)
-		}
-	}
-
-	if(len(resultTrimmed) <= 0){
-		c.JSON(http.StatusInternalServerError,  gin.H{"error": "EmptyFile"})
-		return
-	}
-
 	path, file := C.GetCloudManager(projectId, false).GetListReferenceFileNameAndPathFromCloud(projectId, fileReference)
 	resultJson, err := json.Marshal(resultTrimmed)
 	if err != nil {
