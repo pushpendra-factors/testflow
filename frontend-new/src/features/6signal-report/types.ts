@@ -82,4 +82,8 @@ export interface ShareApiResponse extends APIResponse {
 export interface ShareData extends ShareApiData {
   dateSelected: string;
   publicUrl: string;
+  from?: number;
+  to?: number;
+  timezone?: string;
+  domain?: string;
 }

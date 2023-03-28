@@ -1680,7 +1680,7 @@ const KPIBasedAlert = ({
         <Row className={'m-0 mt-2'}>
           <Col>
             <Button className={`mr-2`} type='link' disabled={true}>
-              {_.startCase(viewAlertDetails?.alert_description?.name)}
+              {_.startCase(viewAlertDetails?.alert_description?.name) + ' [ ' + _.startCase(viewAlertDetails?.alert_description?.query?.dc) + ' ]'}
             </Button>
           </Col>
           <Col>
