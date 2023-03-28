@@ -56,7 +56,8 @@ function EditBasicSettings({
       ...values,
       name: projectName,
       profile_picture: imageUrl,
-      time_zone: values?.time_zone
+      time_zone: "" // disabling sending timezone in project settings update
+      // time_zone: values?.time_zone 
     };
 
     udpateProjectDetails(activeProject.id, projectData)
@@ -298,6 +299,7 @@ function EditBasicSettings({
                     className={'fa-select w-full'}
                     placeholder={'Time Zone'}
                     size={'large'}
+                    disabled={true} //disabling timezone dropdown
                   >
                     {TimeZoneOffsetValueArr?.map((item) => {
                       return (
