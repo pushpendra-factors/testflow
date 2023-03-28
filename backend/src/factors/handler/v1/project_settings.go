@@ -15,7 +15,6 @@ type ProjectSettings struct {
 	Settings     model.ProjectSetting `json:"project_settings"`
 	IntCompleted bool                 `json:"int_completed"`
 	IntSlack     bool                 `json:"int_slack"`
-	IntTeams bool `json:"int_teams"`
 }
 
 func GetProjectSettingHandler(c *gin.Context) {
@@ -38,8 +37,6 @@ func GetProjectSettingHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
-	isTeamsIntegerated, errCode := store.GetStore().Teams
 
 	settings, errCode := store.GetStore().GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
