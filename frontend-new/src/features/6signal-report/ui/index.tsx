@@ -33,6 +33,8 @@ import {
 import useAgentInfo from 'hooks/useAgentInfo';
 import ShareModal from './components/ShareModal';
 import useQuery from 'hooks/useQuery';
+import { WhiteListedAccounts } from '../../../routes/constants';
+import logger from 'Utils/logger';
 
 const SixSignalReport = () => {
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -142,14 +144,18 @@ const SixSignalReport = () => {
         setShareData({
           ...res?.data,
           dateSelected,
-          publicUrl: getPublicUrl(res.data)
+          publicUrl: getPublicUrl(res.data),
+          from: dateObj.from,
+          to: dateObj.to,
+          timezone: active_project?.time_zone || 'Asia/Kolkata',
+          domain: active_project?.name
         });
         setShareModalVisibility(true);
       } else {
-        console.error('No data found to share', res?.data);
+        logger.error('No data found to share', res?.data);
       }
     } catch (error) {
-      console.error('Error in sharing report', error);
+      logger.error('Error in sharing report', error);
       notification.error({
         message: 'Error',
         description: error?.data?.error || 'Something went wrong',
@@ -181,7 +187,7 @@ const SixSignalReport = () => {
 
   //TODO: Remove the below useEffect when 6 signal report is accessible to all
   useEffect(() => {
-    if (isLoggedIn && email !== 'solutions@factors.ai') {
+    if (isLoggedIn && !WhiteListedAccounts.includes(email)) {
       history.push('/');
     }
   }, [isLoggedIn, email]);
@@ -191,13 +197,6 @@ const SixSignalReport = () => {
       setLoading(false);
     }
   }, [isSixSignalActivated]);
-
-  //TODO: Remove the below useEffect when 6 signal report is accessible to all
-  useEffect(() => {
-    if (isLoggedIn && email !== 'solutions@factors.ai') {
-      history.push('/');
-    }
-  }, [isLoggedIn, email]);
 
   useEffect(() => {
     const fetchPublicData = async () => {
@@ -222,7 +221,7 @@ const SixSignalReport = () => {
           }
         }
       } catch (error) {
-        console.error('Error in fetching public data', error);
+        logger.error('Error in fetching public data', error);
         notification.error({
           message: 'Error',
           description: error?.data?.error || 'Something went wrong',
@@ -264,7 +263,7 @@ const SixSignalReport = () => {
           }
         }
       } catch (error) {
-        console.error('Error in fetching data', error);
+        logger.error('Error in fetching data', error);
         setLoading(false);
         setData(null);
       }
