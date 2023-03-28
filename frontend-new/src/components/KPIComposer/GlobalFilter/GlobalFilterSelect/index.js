@@ -77,6 +77,7 @@ const GlobalFilterSelect = ({
           filter.operator === OPERATORS['notEqualTo'] ||
           filter.operator?.[0] === OPERATORS['equalTo'] ||
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
+        filter.values?.length === 1 &&
         filter.values?.[0] === '$none'
       ) {
         if (
@@ -150,7 +151,6 @@ const GlobalFilterSelect = ({
     setOperSelectOpen(false);
   };
 
-
   const renderDisplayName = (propState) => {
     // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
     let propertyName = '';
@@ -160,16 +160,17 @@ const GlobalFilterSelect = ({
     // if(propState.name && propState.icon === 'event') {
     //   propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
     // }
-    
-    propertyName = eventPropNames[propState?.name] ? eventPropNames[propState?.name] : propState?.name;
+
+    propertyName = eventPropNames[propState?.name]
+      ? eventPropNames[propState?.name]
+      : propState?.name;
     // propertyName = _.startCase(propState?.name);
 
     if (!propState.name) {
       propertyName = 'Select Property';
     }
     return propertyName;
-  }; 
-
+  };
 
   const propSelect = (label, val, cat) => {
     let prop = [label, ...val];
@@ -308,7 +309,10 @@ const GlobalFilterSelect = ({
 
         {operSelectOpen && (
           <FaSelect
-            options={operatorOpts[propState.type].map((op) => [op])}
+            options={operatorOpts[propState.type].filter((op) => {
+              // Only include the operator if showInList is true or it's not 'inList'
+              return false || op !== OPERATORS['inList'];
+            }).map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
           ></FaSelect>

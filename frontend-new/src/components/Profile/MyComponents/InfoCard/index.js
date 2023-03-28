@@ -10,6 +10,7 @@ import {
 
 function InfoCard({
   title,
+  eventType,
   eventSource,
   icon,
   eventName,
@@ -24,7 +25,7 @@ function InfoCard({
         {title ? (
           <div className='heading-with-sub'>
             <div className='sub'>{PropTextFormat(eventSource)}</div>
-            <div className='main'>{title}</div>
+            <div className='main'>{eventType === 'FE' ? eventName : title}</div>
           </div>
         ) : (
           <div className='heading'>{PropTextFormat(eventSource)}</div>
@@ -33,7 +34,7 @@ function InfoCard({
       </div>
 
       {Object.entries(properties).map(([key, value]) => {
-        const propType = getPropType(listProperties, key)
+        const propType = getPropType(listProperties, key);
         if (key === '$is_page_view' && value === true)
           return (
             <div className='flex justify-between py-2'>
@@ -55,7 +56,7 @@ function InfoCard({
                 truncate
                 charLimit={40}
               >
-                {eventName}
+                {eventType === 'FE' ? title : eventName}
               </Text>
             </div>
           );

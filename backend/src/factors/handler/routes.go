@@ -37,7 +37,7 @@ func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
 	r.GET(routePrefix+"/login", ExternalAuthentication(auth, SIGNIN_FLOW))
 	r.GET(routePrefix+"/activate", ExternalAuthentication(auth, ACTIVATE_FLOW))
 	r.GET(routePrefix+"/callback", CallbackHandler(auth))
-	
+
 }
 
 func InitAppRoutes(r *gin.Engine) {
@@ -372,7 +372,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings", responseWrapper(V1.GetPropertyMappings))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings/:id", responseWrapper(V1.DeletePropertyMapping))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings/commom_properties", responseWrapper(V1.GetCommonPropertyMappings))
-}   
+
+	//six signal
+	authRouteGroup.POST("/:project_id/sixsignal/email", responseWrapper(SendSixSignalReportViaEmail))
+}
 
 func InitSDKServiceRoutes(r *gin.Engine) {
 	// Initialize swagger api docs only for development / staging.
@@ -565,8 +568,11 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.POST("/linkedin/documents/add", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinAddDocumentHandler)
 
-	dataServiceRouteGroup.POST("/linkedin/documents/add_multiple",
+	dataServiceRouteGroup.POST("/linkedin/documents/add_multiple", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinAddMultipleDocumentsHandler)
+
+	dataServiceRouteGroup.DELETE("/linkedin/documents",
+		IH.DataServiceLinkedinDeleteDocumentsHandler)
 
 	dataServiceRouteGroup.PUT("/linkedin/access_token", mid.FeatureMiddleware(),
 		IH.DataServiceLinkedinUpdateAccessToken)

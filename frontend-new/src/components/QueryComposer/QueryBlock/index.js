@@ -284,6 +284,7 @@ function QueryBlock({
               ]}
               optionClick={(val) => setAdditionalactions(val)}
               onClickOutside={() => setMoreOptions(false)}
+              showIcon
             />
           ) : (
             false

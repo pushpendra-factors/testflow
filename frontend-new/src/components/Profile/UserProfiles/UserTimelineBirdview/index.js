@@ -25,7 +25,9 @@ function UserTimelineBirdview({
   listProperties
 }) {
   const [showAll, setShowAll] = useState([]);
-  const { userPropNames } = useSelector((state) => state.coreQuery);
+  const { userPropNames } = useSelector(
+    (state) => state.coreQuery
+  );
 
   const groupedActivities = _.groupBy(activities, groups[granularity]);
 
@@ -85,6 +87,7 @@ function UserTimelineBirdview({
     return (
       <div className='tag'>
         <InfoCard
+          eventType={event?.event_type}
           title={event?.alias_name}
           eventSource={event?.display_name}
           eventName={event?.event_name}

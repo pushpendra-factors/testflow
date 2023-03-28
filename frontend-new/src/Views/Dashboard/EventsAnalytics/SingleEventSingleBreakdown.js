@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import cx from 'classnames';
 import {
   formatData,
@@ -7,7 +7,6 @@ import {
   getVisibleData,
   getVisibleSeriesData
 } from '../../CoreQuery/EventsAnalytics/SingleEventSingleBreakdown/utils';
-import BarChart from '../../../components/BarChart';
 import SingleEventSingleBreakdownTable from '../../CoreQuery/EventsAnalytics/SingleEventSingleBreakdown/SingleEventSingleBreakdownTable';
 import LineChart from '../../../components/HCLineChart';
 import StackedAreaChart from '../../../components/StackedAreaChart';
@@ -25,6 +24,8 @@ import {
 import StackedBarChart from '../../../components/StackedBarChart';
 import NoDataChart from '../../../components/NoDataChart';
 import SingleEventSingleBreakdownHorizontalBarChart from '../../CoreQuery/EventsAnalytics/SingleEventSingleBreakdown/SingleEventSingleBreakdownHorizontalBarChart';
+import ColumnChart from 'Components/ColumnChart';
+import { CHART_COLOR_1 } from '../../../constants/color.constants';
 
 function SingleEventSingleBreakdown({
   resultState,
@@ -74,6 +75,21 @@ function SingleEventSingleBreakdown({
     setVisibleProperties(getVisibleData(aggregateData, sorter));
   }, [aggregateData, sorter]);
 
+  const columnCategories = useMemo(
+    () => visibleProperties.map((v) => v.label),
+    [visibleProperties]
+  );
+
+  const columnSeries = useMemo(() => {
+    const series = [
+      {
+        data: visibleProperties.map((v) => v.value),
+        color: CHART_COLOR_1
+      }
+    ];
+    return series;
+  }, [visibleProperties]);
+
   if (!visibleProperties.length) {
     return (
       <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
@@ -86,13 +102,13 @@ function SingleEventSingleBreakdown({
 
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
-      <BarChart
-        chartData={visibleProperties}
+      <ColumnChart
+        categories={columnCategories}
+        multiColored
         height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
-        title={unit.id}
         cardSize={unit.cardSize}
-        section={section}
-        queries={queries}
+        chartId={`events${unit.id}`}
+        series={columnSeries}
       />
     );
   } else if (chartType === CHART_TYPE_TABLE) {

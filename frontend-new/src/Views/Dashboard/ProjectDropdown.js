@@ -303,6 +303,7 @@ function ProjectDropdown({
             optionClick={(val) => setAdditionalactions(val)}
             onClickOutside={() => setMoreOptions(false)}
             posRight
+            showIcon
           />
         ) : (
           false

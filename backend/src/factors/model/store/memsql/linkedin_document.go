@@ -127,7 +127,10 @@ const linkedinCampaignMetadataFetchQueryStr = "select campaign_information.campa
 	"from linkedin_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_ad_account_id IN (?) group by campaign_id_1 " +
 	") as campaign_latest_timestamp_id " +
 	"ON campaign_information.campaign_id_1 = campaign_latest_timestamp_id.campaign_id_1 AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp "
-const insertLinkedinStr = "INSERT INTO linkedin_documents (project_id,customer_ad_account_id,type,timestamp,id,campaign_group_id,campaign_id,creative_id,value,created_at,updated_at) VALUES "
+const insertLinkedinStr = "INSERT INTO linkedin_documents (project_id,customer_ad_account_id,type,timestamp,id,campaign_group_id,campaign_id,creative_id,value,created_at,updated_at,is_backfilled) VALUES "
+
+//  we are not deleting many records. Hence taken the direct approach.
+const deleteDocumentQuery = "Delete from linkedin_documents where project_id = ? and customer_ad_account_id = ? and type = ? and timestamp = ?"
 
 func (store *MemSQL) satisfiesLinkedinDocumentForeignConstraints(linkedinDocument model.LinkedinDocument) int {
 	logFields := log.Fields{
@@ -206,6 +209,13 @@ func getLinkedinDocumentTypeAliasByType() map[int]string {
 	return documentTypeMap
 }
 
+/*
+	Backfill logic: get min timestamp in last 30 days where is_backfilled is false
+	This will be our backfill start date.
+	Corner case: min(timestamp) returns nil if data is not present
+		In this case we return backfill timestamp as 0, which means we don't have to refer to this data while backfilling
+		we'll only look at the last sync info timestamp and treat timestamp <= t-8 as backfill and > t-8 as normal run
+*/
 func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int) {
 	logFields := log.Fields{
 		"project_id":             projectID,
@@ -248,6 +258,42 @@ func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountI
 		}
 
 		linkedinLastSyncInfos[i].DocumentTypeAlias = typeAlias
+	}
+
+	// backfill part
+	currentTime := time.Now()
+	timestampBefore30Days, errConv := strconv.ParseInt(currentTime.AddDate(0, 0, -30).Format("20060102"), 10, 64)
+	if errConv != nil {
+		log.WithError(err).Error("Failed to get timestamp before 31 days")
+		return linkedinLastSyncInfos, http.StatusInternalServerError
+	}
+
+	backfillTimestampQuery := "SELECT CASE WHEN min(timestamp) is NULL THEN 0 ELSE min(timestamp) END AS " +
+		"min_timestamp from linkedin_documents where project_id = ? AND customer_ad_account_id = ? " +
+		"and type = 8 and is_backfilled = False and timestamp >= ?"
+	var backfillTimestamp interface{}
+	rows, err = db.Raw(backfillTimestampQuery, projectID, CustomerAdAccountID, timestampBefore30Days).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get backfill timestamp.")
+	}
+	for rows.Next() {
+		if err := rows.Scan(&backfillTimestamp); err != nil {
+			log.WithError(err).Error("Failed to scan backfill timestamp.")
+		}
+	}
+
+	for i := range linkedinLastSyncInfos {
+		logCtx := log.WithFields(logFields)
+		if linkedinLastSyncInfos[i].DocumentTypeAlias == "member_company_insights" {
+			intBackfillTimestamp, ok := backfillTimestamp.(int64)
+			if !ok {
+				logCtx.WithField("document_type",
+					linkedinLastSyncInfos[i].DocumentType).Error("Failed to convert backfill timestamp to int64")
+				continue
+			} else {
+				linkedinLastSyncInfos[i].LastBackfillTimestamp = intBackfillTimestamp
+			}
+		}
 	}
 	return linkedinLastSyncInfos, http.StatusOK
 }
@@ -355,6 +401,29 @@ func addLinkedinDocType(linkedinDoc *model.LinkedinDocument, docType int) {
 	linkedinDoc.Type = docType
 }
 
+func (store *MemSQL) DeleteLinkedinDocuments(deletePayload model.LinkedinDeleteDocumentsPayload) int {
+	logFields := log.Fields{"delete_payload_linkedin": deletePayload}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	docType, docTypeExists := LinkedinDocumentTypeAlias[deletePayload.TypeAlias]
+	if !docTypeExists {
+		logCtx.Error("Invalid type alias.")
+		return http.StatusBadRequest
+	}
+	if docType != 8 {
+		return http.StatusForbidden
+	}
+	query := deleteDocumentQuery
+	params := []interface{}{deletePayload.ProjectID, deletePayload.CustomerAdAccountID, docType, deletePayload.Timestamp}
+	_, _, err := store.ExecuteSQL(query, params, logCtx)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to delete data")
+		return http.StatusInternalServerError
+	}
+	return http.StatusAccepted
+}
+
 // CreateMultipleLinkedinDocument ...
 func (store *MemSQL) CreateMultipleLinkedinDocument(linkedinDocuments []model.LinkedinDocument) int {
 	logFields := log.Fields{"linkedin_documents": linkedinDocuments}
@@ -371,12 +440,13 @@ func (store *MemSQL) CreateMultipleLinkedinDocument(linkedinDocuments []model.Li
 	db := C.GetServices().Db
 
 	insertStatement := insertLinkedinStr
-	insertValuesStatement := make([]string, 0, 0)
-	insertValues := make([]interface{}, 0, 0)
+	insertValuesStatement := make([]string, 0)
+	insertValues := make([]interface{}, 0)
 	for _, linkedinDoc := range linkedinDocuments {
-		insertValuesStatement = append(insertValuesStatement, fmt.Sprintf("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+		insertValuesStatement = append(insertValuesStatement, fmt.Sprintf("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
 		insertValues = append(insertValues, linkedinDoc.ProjectID, linkedinDoc.CustomerAdAccountID,
-			linkedinDoc.Type, linkedinDoc.Timestamp, linkedinDoc.ID, linkedinDoc.CampaignGroupID, linkedinDoc.CampaignID, linkedinDoc.CreativeID, linkedinDoc.Value, linkedinDoc.CreatedAt, linkedinDoc.UpdatedAt)
+			linkedinDoc.Type, linkedinDoc.Timestamp, linkedinDoc.ID, linkedinDoc.CampaignGroupID, linkedinDoc.CampaignID,
+			linkedinDoc.CreativeID, linkedinDoc.Value, time.Now(), time.Now(), linkedinDoc.IsBackfilled)
 		UpdateCountCacheByDocumentType(linkedinDoc.ProjectID, &linkedinDoc.CreatedAt, "linkedin")
 	}
 	insertStatement += joinWithComma(insertValuesStatement...)

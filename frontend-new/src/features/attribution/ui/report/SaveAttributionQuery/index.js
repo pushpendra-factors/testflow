@@ -315,6 +315,7 @@ const SaveAttributionQuery = ({
         optionClick={(val) => setActions(val)}
         onClickOutside={() => setOptions(false)}
         posRight={true}
+        showIcon
       ></FaSelect>
     ) : null;
   };

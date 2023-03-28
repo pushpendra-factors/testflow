@@ -129,6 +129,7 @@ const FAFilterSelect = ({
           filter.operator === OPERATORS['notEqualTo'] ||
           filter.operator?.[0] === OPERATORS['equalTo'] ||
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
+        filter.values?.length === 1 &&
         filter.values?.[0] === '$none'
       ) {
         if (
@@ -779,16 +780,16 @@ const FAFilterSelect = ({
   const handleOk = () => {
     setLoading(true);
 
-    uploadList(activeProject?.id, uploadFileByteArray)
-    .then((res) => {
-      valuesSelectSingle([res?.data?.file_reference]);
-      handleCancel();
-      setLoading(false);
-    })
-    .catch((err) => {
-      setLoading(false);
-      message.error(err?.data?.error);
-    });
+    uploadList(activeProject?.id, {'payload': uploadFileByteArray})
+      .then((res) => {
+        valuesSelectSingle([res?.data?.file_reference]);
+        handleCancel();
+        setLoading(false);
+      })
+      .catch((err) => {
+        setLoading(false);
+        message.error(err?.data?.error);
+      });
   };
 
   const renderCsvUpload = () => {
@@ -809,7 +810,7 @@ const FAFilterSelect = ({
           <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
             We’ll only look at the first column as your reference list of data
           </Text>
-          <div className='border rounded mt-2'>
+          <div className='border rounded mt-2 flex justify-center '>
             <Upload
               showUploadList={false}
               onChange={handleChange}
@@ -817,7 +818,7 @@ const FAFilterSelect = ({
               maxCount={1}
               className={'text-center'}
             >
-              <div className={'p-8'} style={{ marginLeft: '8rem' }}>
+              <div className={'p-8'}>
                 {uploadFileName ? (
                   <Button className='inline'>
                     {uploadFileName}
@@ -925,4 +926,4 @@ const FAFilterSelect = ({
   );
 };
 
-export default connect(null, {uploadList})(FAFilterSelect);
+export default connect(null, { uploadList })(FAFilterSelect);

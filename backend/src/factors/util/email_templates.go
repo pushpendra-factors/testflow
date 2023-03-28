@@ -408,3 +408,21 @@ func GetSavedReportSharingEmailTemplate(title, Date, ChartUrl, TableUrl string) 
 	`, title, Date, ChartUrl, TableUrl)
 	return html
 }
+
+func GetSixSignalReportSharingTemplate(url string, domain string) string {
+	html := fmt.Sprintf(`<!DOCTYPE html>
+	<html>
+		<head>
+			<meta charset="utf-8">
+	
+		</head>
+		<body>
+			<p>Hey there,</p>
+			<p>New accounts have been visiting %s. Find out who's been looking - </p>
+			<p><a href=%s>View latest visiting accounts</a></p>
+			<p>Good luck, more deals are on the table!</p>
+  			<p>-The Factors Team</p>
+		</body>
+	</html>`, domain, url)
+	return html
+}

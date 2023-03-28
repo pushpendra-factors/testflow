@@ -88,6 +88,30 @@ func DataServiceLinkedinAddMultipleDocumentsHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Created linkedin document."})
 }
 
+// DataServiceLinkedinDeleteDocumentsHandler deletes the db insertions of one doc_type of given timestamp
+func DataServiceLinkedinDeleteDocumentsHandler(c *gin.Context) {
+	r := c.Request
+
+	var deleteDocumentsPayload model.LinkedinDeleteDocumentsPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&deleteDocumentsPayload); err != nil {
+		log.WithError(err).Error("Failed to decode JSON request")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Failed to decode JSON request."})
+		return
+	}
+	errCode := store.GetStore().DeleteLinkedinDocuments(deleteDocumentsPayload)
+
+	if errCode != http.StatusAccepted {
+		c.AbortWithStatusJSON(errCode,
+			gin.H{"error": "Failed deleting linkedin documents"})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{"message": "Deleted linkedin documents"})
+}
+
 type LinkedinUpdateAccessToken struct {
 	ProjectID   int64  `json:"project_id"`
 	AccessToken string `json:"access_token"`

@@ -27,13 +27,19 @@ import Attributions from './Attributions';
 import CampaignAnalytics from './CampaignAnalytics';
 import NoDataChart from '../../components/NoDataChart';
 import { useSelector } from 'react-redux';
-import { SVG, Text } from '../../components/factorsComponents';
+import {
+  FaErrorComp,
+  SVG,
+  Text,
+  FaErrorLog
+} from '../../components/factorsComponents';
 import ProfileAnalysis from './ProfileAnalysis';
 import KPIAnalysis from './KPIAnalysis';
 import {
   DEFAULT_DASHBOARD_PRESENTATION,
   DASHBOARD_PRESENTATION_KEYS
 } from '../../components/SaveQuery/saveQuery.constants';
+import { ErrorBoundary } from 'react-error-boundary';
 
 function CardContent({ unit, resultState, durationObj }) {
   let content = null;
@@ -171,15 +177,15 @@ function CardContent({ unit, resultState, durationObj }) {
 
   if (resultState.loading) {
     content = (
-      <div className="flex justify-center items-center w-full h-full">
-        <Spin size="small" />
+      <div className='flex justify-center items-center w-full h-full'>
+        <Spin size='small' />
       </div>
     );
   }
 
   if (resultState.error) {
     content = (
-      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
         <NoDataChart />
       </div>
     );
@@ -187,9 +193,9 @@ function CardContent({ unit, resultState, durationObj }) {
 
   if (resultState.apiCallStatus && !resultState.apiCallStatus.required) {
     content = (
-      <div className="flex justify-center flex-col items-center w-full h-full px-2 text-center">
-        <SVG name="nodata" />
-        <Text type="title" color="grey" extraClass="mb-0">
+      <div className='flex justify-center flex-col items-center w-full h-full px-2 text-center'>
+        <SVG name='nodata' />
+        <Text type='title' color='grey' extraClass='mb-0'>
           {resultState.apiCallStatus.message}
         </Text>
       </div>
@@ -300,7 +306,21 @@ function CardContent({ unit, resultState, durationObj }) {
     }
   }
 
-  return <>{content}</>;
+  return (
+    <ErrorBoundary
+      fallback={
+        <FaErrorComp
+          size='small'
+          title='Widget Error'
+          subtitle='We are facing trouble loading this widget. Drop us a message on the in-app chat.'
+          className="h-full"
+        />
+      }
+      onError={FaErrorLog}
+    >
+      {content}
+    </ErrorBoundary>
+  );
 }
 
 export default CardContent;
