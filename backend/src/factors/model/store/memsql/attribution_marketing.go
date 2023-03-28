@@ -200,11 +200,6 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 			linkedinCampaignAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(linkedinCampaignAllRows[i].CampaignName), linkedinCampaignAllRows[i].CampaignName, linkedinCampaignAllRows[i].Name).(string)
 		}
 
-		if projectID == 1125899914000022 {
-			log.WithFields(logFields).WithFields(log.Fields{"linkedinCampaignAllRows": linkedinCampaignAllRows}).Warn("Debug logs for linkedin 001")
-			log.WithFields(logFields).WithFields(log.Fields{"linkedinCampaignIDData": linkedinCampaignIDData}).Warn("Debug logs for linkedin 002")
-		}
-
 		reportType = LinkedinDocumentTypeAlias["campaign_insights"] // 6
 		linkedinAdgroupIDData, linkedinAdgroupAllRows, err = store.PullLinkedinMarketingData(projectID, effectiveFrom,
 			effectiveTo, linkedinCustomerID, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone, projectCurrency, dataCurrency)
@@ -423,10 +418,6 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 
 	data.LinkedinCampaignIDData = linkedinCampaignIDData
 	data.LinkedinCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, linkedinCampaignAllRows, data.LinkedinCampaignIDData)
-
-	if projectID == 1125899914000022 {
-		log.WithFields(logFields).WithFields(log.Fields{"LinkedinCampaignKeyData": data.LinkedinCampaignKeyData}).Warn("Debug logs for linkedin 003")
-	}
 
 	data.LinkedinAdgroupIDData = linkedinAdgroupIDData
 	data.LinkedinAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, linkedinAdgroupAllRows, data.LinkedinAdgroupIDData)

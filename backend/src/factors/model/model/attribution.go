@@ -740,12 +740,9 @@ func EnrichUsingMarketingID(attributionKey string, sessionUTMMarketingValue Mark
 		report = reports.LinkedinCampaignIDData
 		if v, ok := report[ID]; ok {
 
-			log.WithFields(log.Fields{"sessionUTMMarketingValue": sessionUTMMarketingValue}).Warn("Debug logs for linkedin 0004")
-			log.WithFields(log.Fields{"VVV": report[ID]}).Warn("Debug logs for linkedin 0005")
 			sessionUTMMarketingValue.CampaignName = v.CampaignName
 			sessionUTMMarketingValue.Name = v.CampaignName
 			sessionUTMMarketingValue.Channel = ChannelLinkedin
-			log.WithFields(log.Fields{"sessionUTMMarketingValue": sessionUTMMarketingValue}).Warn("Debug logs for linkedin 0004-005")
 			return v.CampaignName, sessionUTMMarketingValue
 		}
 
