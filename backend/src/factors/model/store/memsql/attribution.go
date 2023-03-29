@@ -169,6 +169,10 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "sessions": userData}).Info("UserKPI Attribution sessions")
 	}
 
+	if C.GetAttributionDebug() == 1 && projectID == 12384898978000017 {
+		log.WithFields(log.Fields{"Attribution": "Debug", "sessions": userData}).Info("Attribution sessions")
+	}
+
 	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
 	store.AppendOTPSessions(projectID, query, &userData, *logCtx)
 	if C.GetAttributionDebug() == 1 {
