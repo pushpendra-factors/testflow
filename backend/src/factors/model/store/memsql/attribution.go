@@ -169,10 +169,18 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "sessions": userData}).Info("UserKPI Attribution sessions")
 	}
 
+	if C.GetAttributionDebug() == 1 && projectID == 12384898978000017 {
+		log.WithFields(log.Fields{"Attribution": "Debug", "sessions": userData}).Info("Attribution sessions")
+	}
+
 	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
 	store.AppendOTPSessions(projectID, query, &userData, *logCtx)
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
+	}
+
+	if C.GetAttributionDebug() == 1 && projectID == 12384898978000017 {
+		log.WithFields(log.Fields{"Attribution": "Debug", "sessions": userData}).Info("Attribution sessions")
 	}
 	queryStartTime = time.Now().UTC().Unix()
 
@@ -189,6 +197,7 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	queryStartTime = time.Now().UTC().Unix()
 
 	result := ProcessAttributionDataToResult(projectID, query, attributionData, isCompare, queryStartTime, marketingReports, kpiData, logCtx)
+
 	result.Meta.Currency = ""
 	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
 		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To, *logCtx)

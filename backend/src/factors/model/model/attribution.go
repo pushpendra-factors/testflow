@@ -739,6 +739,7 @@ func EnrichUsingMarketingID(attributionKey string, sessionUTMMarketingValue Mark
 
 		report = reports.LinkedinCampaignIDData
 		if v, ok := report[ID]; ok {
+
 			sessionUTMMarketingValue.CampaignName = v.CampaignName
 			sessionUTMMarketingValue.Name = v.CampaignName
 			sessionUTMMarketingValue.Channel = ChannelLinkedin
