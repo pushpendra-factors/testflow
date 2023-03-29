@@ -148,9 +148,8 @@ function SiderMenu({
         </div>
       );
     } else if (title === 'profile') {
-      const items = ['People', 'Accounts'];
-      if (whiteListedAccounts.includes(activeAgent))
-        items.push('visitorIdentification');
+      const items = ['People', 'Accounts', 'visitorIdentification'];
+
       return (
         <div className={styles.popover_content}>
           {items.map((item) => {
@@ -272,14 +271,9 @@ function SiderMenu({
           >
             {MenuItems.Accounts}
           </Menu.Item>
-          {whiteListedAccounts.includes(activeAgent) && (
-            <Menu.Item
-              className={styles.menuitems_sub}
-              key={`/reports/6_signal`}
-            >
-              {MenuItems.visitorIdentification}
-            </Menu.Item>
-          )}
+          <Menu.Item className={styles.menuitems_sub} key={`/reports/6_signal`}>
+            {MenuItems.visitorIdentification}
+          </Menu.Item>
         </SubMenu>
       )}
 
