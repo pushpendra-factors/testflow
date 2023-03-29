@@ -178,6 +178,10 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
 	}
+
+	if C.GetAttributionDebug() == 1 && projectID == 12384898978000017 {
+		log.WithFields(log.Fields{"Attribution": "Debug", "sessions": userData}).Info("Attribution sessions")
+	}
 	queryStartTime = time.Now().UTC().Unix()
 
 	attributionData, isCompare, err2 := store.GetAttributionData(query, userData, userInfo, coalUserIdConversionTimestamp, marketingReports, kpiData, logCtx)
