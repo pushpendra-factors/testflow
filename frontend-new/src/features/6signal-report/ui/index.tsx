@@ -33,7 +33,6 @@ import {
 import useAgentInfo from 'hooks/useAgentInfo';
 import ShareModal from './components/ShareModal';
 import useQuery from 'hooks/useQuery';
-import { WhiteListedAccounts } from '../../../routes/constants';
 import logger from 'Utils/logger';
 
 const SixSignalReport = () => {
@@ -54,7 +53,7 @@ const SixSignalReport = () => {
     useState<boolean>(false);
   const [loadingShareData, setLoadingShareData] = useState<boolean>(false);
   const [shareData, setShareData] = useState<ShareData | null>(null);
-  const { isLoggedIn, email } = useAgentInfo();
+  const { isLoggedIn } = useAgentInfo();
   const { active_project, currentProjectSettings } = useSelector(
     (state: any) => state.global
   );
@@ -184,13 +183,6 @@ const SixSignalReport = () => {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     };
   }, [dispatch]);
-
-  //TODO: Remove the below useEffect when 6 signal report is accessible to all
-  useEffect(() => {
-    if (isLoggedIn && !WhiteListedAccounts.includes(email)) {
-      history.push('/');
-    }
-  }, [isLoggedIn, email]);
 
   useEffect(() => {
     if (!isSixSignalActivated) {
