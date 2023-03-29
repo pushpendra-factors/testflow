@@ -44,9 +44,11 @@ const AdditionalMenu = (closeDrawer, setCurrentStep, stepDone, setStepDone) => {
     dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
     history.push('/');
   }, []);
-  const { int_client_six_signal_key, int_factors_six_signal_key } = useSelector(
-    (state) => state?.global?.currentProjectSettings
-  );
+  const {
+    int_client_six_signal_key,
+    int_factors_six_signal_key,
+    int_clear_bit
+  } = useSelector((state) => state?.global?.currentProjectSettings);
   const factors6SignalKeyRequested = useSelector(
     (state) => state?.onBoardFlow?.factors6SignalKeyRequested
   );
@@ -57,7 +59,10 @@ const AdditionalMenu = (closeDrawer, setCurrentStep, stepDone, setStepDone) => {
       return int_completed;
     } else if (currentStep === 2) {
       return (
-        steps.step2 || int_client_six_signal_key || factors6SignalKeyRequested
+        steps.step2 ||
+        int_client_six_signal_key ||
+        factors6SignalKeyRequested ||
+        int_clear_bit
       );
     } else if (currentStep === 3) {
       return steps.step3;
@@ -135,6 +140,7 @@ const OnBoardHeader = ({
   setStepDone
 }) => {
   const history = useHistory();
+  const dispatch = useDispatch();
   const currentStep = useSelector((state) => state?.onBoardFlow?.currentStep);
   const int_completed = useSelector(
     (state) => state?.global?.projectSettingsV1?.int_completed
@@ -154,7 +160,7 @@ const OnBoardHeader = ({
     <Row className={styles['headerContainer']}>
       <div>
         <Row>
-          {RenderLogo()} {RenderTitle(getTitle(currentStep))} <RenderStep />
+          {RenderLogo()} {RenderTitle(getTitle(currentStep))} <RenderStep />{' '}
         </Row>
       </div>
       <div>

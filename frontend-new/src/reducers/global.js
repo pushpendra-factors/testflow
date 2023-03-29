@@ -1080,8 +1080,8 @@ export function enableSlackIntegration(projectId, redirect_url = '') {
         host +
           'projects/' +
           projectId +
-          '/slack/auth?redirect_url=' +
-          redirect_url
+          '/slack/auth' +
+          (redirect_url.length > 0 ? '?source=2' : '')
       )
         .then((r) => {
           if (r.ok) {

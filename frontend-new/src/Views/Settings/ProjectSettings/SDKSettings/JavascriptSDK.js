@@ -29,6 +29,9 @@ import { connect, useSelector } from 'react-redux';
 import MomentTz from '../../../../components/MomentTz';
 import DemoSDK from './DemoSDK';
 import CodeBlock from 'Components/CodeBlock';
+import styles from './index.module.scss';
+import { UserAddOutlined } from '@ant-design/icons';
+import InviteUsers from 'Views/Settings/ProjectSettings/UserSettings/InviteUsers';
 
 const { TabPane } = Tabs;
 
@@ -890,7 +893,7 @@ const VerifySdkCheck = ({
                 SDK not detected yet. Have you added the code?{' '}
               </Text>
               <Button type={'default'} onClick={onSDKcheck}>
-                Verify it now
+                Check for SDK
               </Button>
             </div>
           )}
@@ -912,7 +915,8 @@ function JavascriptSDK({
 
   fetchBingAdsIntegration,
   fetchMarketoIntegration,
-  fetchProjectSettingsV1
+  fetchProjectSettingsV1,
+  isOnBoardFlow
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [isDemo, setIsDemo] = useState(null);
@@ -989,15 +993,45 @@ function JavascriptSDK({
 
     return tabs;
   };
-
+  const [inviteModal, setInviteModal] = useState(false);
+  const handleOk = () => {};
+  const confirmLoading = () => {};
   return (
     <>
       <div className={'mb-4 pl-4'}>
-        <Row>
+        <Row style={{ width: '100%', justifyContent: 'space-between' }}>
           <Col span={12}>
             <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
-              Javascript SDK
+              {isOnBoardFlow === true ? 'Add our ' : ''} Javascript SDK
             </Text>
+          </Col>
+          <Col>
+            {isOnBoardFlow === true ? (
+              <Row>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    margin: '0 10px',
+                    fontWeight: '600'
+                  }}
+                >
+                  Need help?
+                </div>
+                <Button
+                  size='large'
+                  icon={<UserAddOutlined />}
+                  className={styles['btn']}
+                  onClick={() => {
+                    setInviteModal((prev) => !prev);
+                  }}
+                >
+                  Invite Team
+                </Button>
+              </Row>
+            ) : (
+              ''
+            )}
           </Col>
         </Row>
         <Row>
@@ -1008,16 +1042,36 @@ function JavascriptSDK({
               color={'grey-2'}
               extraClass={'m-0 my-1'}
             >
-              Your website data will be visible on the platform from the time
-              the your javascript SDK is placed on your site. Hence, no
-              historical data prior to the setup would be available on the
-              platform.
+              {isOnBoardFlow === true
+                ? 'Track Data Natively With a Factors SDK (Coded Tracking)'
+                : 'Your website data will be visible on the platform from the time the your javascript SDK is placed on your site. Hence, no historical data prior to the setup would be available on the platform.'}
             </Text>
-            <Text type={'title'} level={6} color={'grey-2'} extraClass={'m-0'}>
-              The website data you see in Factors is real-time.
-            </Text>
+            {isOnBoardFlow === true ? (
+              <a
+                href='https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website'
+                target='_blank'
+                rel='noreferrer'
+              >
+                Learn More
+              </a>
+            ) : (
+              <Text
+                type={'title'}
+                level={6}
+                color={'grey-2'}
+                extraClass={'m-0 my-1'}
+              >
+                The website data you see in Factors is real-time.
+              </Text>
+            )}
           </Col>
         </Row>
+        <InviteUsers
+          visible={inviteModal}
+          onCancel={() => setInviteModal(false)}
+          onOk={() => handleOk()}
+          confirmLoading={confirmLoading}
+        />
         <Row className={'mt-2'}>
           <Col span={24}>
             {isDemo === true ? (
