@@ -1,0 +1,2 @@
+ALTER TABLE feature_gates ADD COLUMN teams INT DEFAULT 2,
+ADD COLUMN int_teams INT DEFAULT 2;

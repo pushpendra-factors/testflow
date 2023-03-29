@@ -132,3 +132,42 @@ func (store *MemSQL) GetDisplayNameLabelsByProjectIdAndSource(projectID int64, s
 
 	return displayNameLabel, http.StatusFound
 }
+
+func (store *MemSQL) GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID int64, source, propertyKey string) (map[string]string, error) {
+	propertyValueLabelMap := make(map[string]string, 0)
+
+	if projectID == 0 {
+		return propertyValueLabelMap, errors.New("invalid project on GetPropertyLabelAndValuesByProjectIdAndPropertyKey")
+	}
+
+	if propertyKey == "" {
+		return propertyValueLabelMap, errors.New("invalid property_key on GetPropertyLabelAndValuesByProjectIdAndPropertyKey")
+	}
+
+	if source == "" {
+		return propertyValueLabelMap, errors.New("invalid source on GetPropertyLabelAndValuesByProjectIdAndPropertyKey")
+	}
+
+	var displayNameLabels []model.DisplayNameLabel
+
+	db := C.GetServices().Db
+	dbx := db.Where("project_id = ? AND source = ? AND property_key = ?", projectID, source, propertyKey)
+
+	if err := dbx.Find(&displayNameLabels).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return propertyValueLabelMap, nil
+		}
+
+		return propertyValueLabelMap, errors.New("failed to get display name labels on GetPropertyLabelAndValuesByProjectIdAndPropertyKey")
+	}
+
+	if len(displayNameLabels) == 0 {
+		return propertyValueLabelMap, nil
+	}
+
+	for i := range displayNameLabels {
+		propertyValueLabelMap[displayNameLabels[i].Value] = displayNameLabels[i].Label
+	}
+
+	return propertyValueLabelMap, nil
+}

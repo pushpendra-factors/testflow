@@ -42,8 +42,7 @@ import SelectChannels from '../SelectChannels';
 import {
   QUERY_TYPE_EVENT,
   INITIAL_SESSION_ANALYTICS_SEQ,
-  QUERY_OPTIONS_DEFAULT_VALUE,
-  AvailableGroups
+  QUERY_OPTIONS_DEFAULT_VALUE
 } from 'Utils/constants';
 import { DefaultDateRangeFormat } from '../../../../CoreQuery/utils';
 import TextArea from 'antd/lib/input/TextArea';
@@ -51,6 +50,7 @@ import EventGroupBlock from '../../../../../components/QueryComposer/EventGroupB
 import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import _ from 'lodash';
+import { fetchGroups } from 'Reducers/coreQuery/services';
 
 const { Option } = Select;
 
@@ -82,7 +82,9 @@ const EventBasedAlert = ({
   userPropNames,
   eventNames,
   getGroupProperties,
-  getEventProperties
+  getEventProperties,
+  fetchGroups,
+  groupOpts
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -114,6 +116,10 @@ const EventBasedAlert = ({
     date_range: { ...DefaultDateRangeFormat }
   });
 
+  useEffect(() => {
+    fetchGroups(activeProject.id);
+  }, [activeProject]);
+
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
   const [breakdownOptions, setBreakdownOptions] = useState([]);
@@ -121,18 +127,17 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     let DDCategory = [];
+    const { group_name } =
+      groupOpts.find((group) => group?.group_name === queries[0]?.group) || [];
     for (const key of Object.keys(eventProperties)) {
       if (key === queries[0]?.label) {
         DDCategory = _.union(eventProperties[queries[0]?.label], DDCategory);
       }
     }
-    if (AvailableGroups[queries[0]?.group]) {
+    if (group_name) {
       for (const key of Object.keys(groupProperties)) {
-        if (key === AvailableGroups[queries[0]?.group]) {
-          DDCategory = _.union(
-            DDCategory,
-            groupProperties[AvailableGroups[queries[0]?.group]]
-          );
+        if (key === group_name) {
+          DDCategory = _.union(DDCategory, groupProperties[group_name]);
         }
       }
     } else {
@@ -166,11 +171,12 @@ const EventBasedAlert = ({
   };
 
   useEffect(() => {
+    const { group_name } =
+      groupOpts.find(
+        (group) => group?.group_name === viewAlertDetails?.event_alert?.event
+      ) || [];
     if (viewAlertDetails?.event_alert?.event) {
-      getGroupProperties(
-        activeProject.id,
-        AvailableGroups[viewAlertDetails?.event_alert?.event]
-      );
+      getGroupProperties(activeProject.id, group_name);
     }
     if (viewAlertDetails?.event_alert?.event) {
       getEventProperties(
@@ -2039,7 +2045,8 @@ const mapStateToProps = (state) => ({
   groupPropNames: state.coreQuery.groupPropNames,
   userProperties: state.coreQuery.userProperties,
   userPropNames: state.coreQuery.userPropNames,
-  eventNames: state.coreQuery.eventNames
+  eventNames: state.coreQuery.eventNames,
+  groupOpts: state.groups.data
 });
 
 export default connect(mapStateToProps, {
@@ -2055,5 +2062,6 @@ export default connect(mapStateToProps, {
   getUserProperties,
   resetGroupBy,
   getGroupProperties,
-  getEventProperties
+  getEventProperties,
+  fetchGroups
 })(EventBasedAlert);

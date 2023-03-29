@@ -37,7 +37,12 @@ import {
 } from './analysisResultsPage.helpers';
 import { getKpiLabel } from '../KPIAnalysis/kpiAnalysis.helpers';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from '../AttributionsResult/attributionsResult.constants';
-
+import NoDataChart from 'Components/NoDataChart';
+const nodata = (
+  <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
+    <NoDataChart />
+  </div>
+);
 function ReportContent({
   resultState,
   queryType,
@@ -67,7 +72,7 @@ function ReportContent({
   let metricsDropdown = <div className='mr-0' />;
 
   const {
-    coreQueryState: { chartTypes }
+    coreQueryState: { chartTypes, comparison_data }
   } = useContext(CoreQueryContext);
 
   const { attrQueries } = useSelector((state) => state.coreQuery);
@@ -267,18 +272,22 @@ function ReportContent({
     }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      content = (
-        <AttributionsResult
-          resultState={resultState}
-          durationObj={durationObj}
-          attributionsState={attributionsState}
-          section={section}
-          currMetricsValue={currMetricsValue}
-          renderedCompRef={renderedCompRef}
-          chartType={chartType}
-          queryOptions={queryOptions}
-        />
-      );
+      if (comparison_data.error) {
+        content = nodata;
+      } else {
+        content = (
+          <AttributionsResult
+            resultState={resultState}
+            durationObj={durationObj}
+            attributionsState={attributionsState}
+            section={section}
+            currMetricsValue={currMetricsValue}
+            renderedCompRef={renderedCompRef}
+            chartType={chartType}
+            queryOptions={queryOptions}
+          />
+        );
+      }
     }
 
     if (queryType === QUERY_TYPE_CAMPAIGN) {

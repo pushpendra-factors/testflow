@@ -182,6 +182,11 @@ function UserProfiles({
     getSavedSegments(activeProject.id);
   }, [activeProject]);
 
+  const userOptions = [...profileOptions.users].map((item) => [
+    item,
+    ProfileMapper[item]
+  ]);
+
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
 
@@ -261,7 +266,6 @@ function UserProfiles({
       dataIndex: 'last_activity',
       key: 'last_activity',
       width: 250,
-      fixed: 'right',
       align: 'right',
       render: (item) => MomentTz(item).fromNow()
     });
@@ -291,9 +295,9 @@ function UserProfiles({
   };
 
   const onChange = (val) => {
-    if ((ProfileMapper[val[0]] || val[0]) !== timelinePayload.source) {
+    if (val[1] !== timelinePayload.source) {
       const opts = { ...timelinePayload };
-      opts.source = ProfileMapper[val[0]] || val[0];
+      opts.source = val[1];
       setTimelinePayload(opts);
     }
     setUserDDVisible(false);
@@ -344,7 +348,7 @@ function UserProfiles({
     <div className='absolute top-0'>
       {isUserDDVisible ? (
         <FaSelect
-          options={[['All'], ...profileOptions.users]}
+          options={[['All Users', 'All'], ...userOptions]}
           onClickOutside={() => setUserDDVisible(false)}
           optionClick={(val) => onChange(val)}
         />
@@ -418,7 +422,7 @@ function UserProfiles({
         profileType='user'
         activeProject={activeProject}
         type={timelinePayload.source}
-        typeOptions={[...profileOptions.users]}
+        typeOptions={userOptions}
         tableProps={
           currentProjectSettings.timelines_config?.user_config?.table_props
         }
@@ -588,7 +592,9 @@ function UserProfiles({
         icon={<SVG name='user_friends' size={16} />}
         onClick={() => setUserDDVisible(!isUserDDVisible)}
       >
-        {ReverseProfileMapper[timelinePayload.source]?.users || 'All'}
+        {userOptions?.find(
+          (item) => item[1] === timelinePayload?.source
+        )?.[0] || 'All Users'}
         <SVG name='caretDown' size={16} />
       </Button>
       {selectUsers()}
@@ -633,7 +639,7 @@ function UserProfiles({
 
   const renderClearFilterButton = () => (
     <Button
-      className='dropdown-btn'
+      className='dropdown-btn mr-2'
       type='text'
       icon={<SVG name='times_circle' size={16} />}
       onClick={clearFilters}
@@ -656,8 +662,12 @@ function UserProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button size='large' className='fa-btn--custom mx-2 relative'>
-        <SVG name='activity_filter' />
+      <Button
+        size='large'
+        icon={<SVG name='activity_filter' />}
+        className='relative'
+      >
+        Configure
       </Button>
     </Popover>
   );

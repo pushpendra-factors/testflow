@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Button, Tooltip } from 'antd';
@@ -16,8 +16,7 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
   FunnelEventsConditionMap,
-  RevFunnelEventsConditionMap,
-  RevAvailableGroups
+  RevFunnelEventsConditionMap
 } from 'Utils/constants';
 import FaDatepicker from '../FaDatepicker';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
@@ -32,6 +31,7 @@ import {
 } from 'Reducers/coreQuery/actions';
 import { ReactSortable } from 'react-sortablejs';
 import { isEqual } from 'lodash';
+import { fetchGroups } from 'Reducers/coreQuery/services';
 
 function QueryComposer({
   queries = [],
@@ -39,11 +39,13 @@ function QueryComposer({
   runQuery,
   eventChange,
   queryType,
+  fetchGroups,
   fetchEventNames,
   getUserProperties,
   getGroupProperties,
   getEventProperties,
   activeProject,
+  groupOpts,
   eventProperties,
   queryOptions,
   setQueryOptions,
@@ -60,8 +62,18 @@ function QueryComposer({
   const eventBreakdowns = useSelector((state) => state.coreQuery.groupBy.event);
 
   const dispatch = useDispatch();
-  const groupState = useSelector((state) => state.groups);
-  const groupOpts = groupState?.data;
+
+  useEffect(() => {
+    fetchGroups(activeProject?.id);
+  }, [activeProject]);
+
+  const groupsList = useMemo(() => {
+    let groups = [['Users', 'users']];
+    groupOpts?.forEach((elem) => {
+      groups.push([elem.display_name, elem.group_name]);
+    });
+    return groups;
+  }, [groupOpts]);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -140,7 +152,9 @@ function QueryComposer({
   );
 
   const setGroupAnalysis = (group) => {
-    getGroupProperties(activeProject.id, group);
+    if (group !== 'users') {
+      getGroupProperties(activeProject.id, group);
+    }
     const opts = Object.assign({}, queryOptions);
     opts.group_analysis = group;
     opts.globalFilters = [];
@@ -160,21 +174,12 @@ function QueryComposer({
     setGroupDDVisible(false);
   };
 
-  const enabledGroups = () => {
-    let groups = [['Users', 'users']];
-    groupOpts?.forEach((elem) => {
-      const formatName = RevAvailableGroups[elem.name];
-      groups.push([formatName, elem.name]);
-    });
-    return groups;
-  };
-
   const selectGroup = () => {
     return (
       <div className={`${styles.toplevel_select_dropdown}`}>
         {isGroupDDVisible ? (
           <FaSelect
-            options={enabledGroups()}
+            options={groupsList}
             onClickOutside={() => setGroupDDVisible(false)}
             optionClick={(val) => onGroupChange(val[1])}
           />
@@ -212,9 +217,12 @@ function QueryComposer({
                     weight={'bold'}
                     extraClass={`m-0 mr-1`}
                   >
-                    {queryOptions.group_analysis === 'users'
-                      ? 'Users'
-                      : RevAvailableGroups[queryOptions.group_analysis]}
+                    {
+                      groupsList?.find(
+                        ([_, groupName]) =>
+                          groupName === queryOptions?.group_analysis
+                      )?.[0]
+                    }
                   </Text>
                   <SVG name='caretDown' />
                 </div>
@@ -235,6 +243,7 @@ function QueryComposer({
       blockList.push(
         <div key={index} className={styles.composer_body__query_block}>
           <QueryBlock
+            availableGroups={groupsList}
             index={index + 1}
             queryType={queryType}
             event={event}
@@ -253,6 +262,7 @@ function QueryComposer({
       blockList.push(
         <div key='init' className={styles.composer_body__query_block}>
           <QueryBlock
+            availableGroups={groupsList}
             queryType={queryType}
             index={queries.length + 1}
             queries={queries}
@@ -424,7 +434,9 @@ function QueryComposer({
       ) {
         return (
           <ComposerBlock
-            blockTitle={queryType === QUERY_TYPE_FUNNEL ? 'FUNNEL CRITERIA': 'CRITERIA'}
+            blockTitle={
+              queryType === QUERY_TYPE_FUNNEL ? 'FUNNEL CRITERIA' : 'CRITERIA'
+            }
             isOpen={criterieaBlockOpen}
             showIcon
             onClick={() => {
@@ -504,12 +516,14 @@ function QueryComposer({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
+  groupOpts: state.groups.data,
   eventProperties: state.coreQuery.eventProperties
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
+      fetchGroups,
       fetchEventNames,
       getEventProperties,
       getUserProperties,

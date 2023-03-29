@@ -8,7 +8,8 @@ import {
   fetchProjects,
   setActiveProject,
   fetchDemoProject,
-  fetchProjectSettings
+  fetchProjectSettings,
+  fetchProjectSettingsV1
 } from 'Reducers/global';
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
@@ -60,7 +61,8 @@ function AppLayout({
   fetchWeeklyIngishtsMetaData,
   setActiveProject,
   fetchDemoProject,
-  fetchProjectSettings
+  fetchProjectSettings,
+  fetchProjectSettingsV1
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [demoProjectId, setDemoProjectId] = useState(EMPTY_ARRAY);
@@ -134,7 +136,6 @@ function AppLayout({
     if (active_project && active_project?.id && isAgentLoggedIn) {
       dispatch(fetchDashboards(active_project?.id));
       dispatch(fetchQueries(active_project?.id));
-      dispatch(fetchGroups(active_project?.id));
       dispatch(fetchKPIConfig(active_project?.id));
       dispatch(fetchPageUrls(active_project?.id));
       // dispatch(deleteQueryTest())
@@ -146,6 +147,8 @@ function AppLayout({
       dispatch(fetchAttrContentGroups(active_project?.id));
       dispatch(fetchTemplates());
       fetchProjectSettings(active_project?.id);
+
+      fetchProjectSettingsV1(active_project?.id);
       dispatch(fetchEventDisplayNames({ projectId: active_project?.id }));
       dispatch(fetchAttributionQueries(active_project?.id));
     }
@@ -228,7 +231,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchWeeklyIngishtsMetaData,
       setActiveProject,
       fetchDemoProject,
-      fetchProjectSettings
+      fetchProjectSettings,
+      fetchProjectSettingsV1
     },
     dispatch
   );

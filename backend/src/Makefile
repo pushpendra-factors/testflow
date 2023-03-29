@@ -531,6 +531,13 @@ upload-bingads-integration: export IMAGE_NAME=bing-ads-integration-job
 upload-bingads-integration: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/bing-ads-integration-job:$(TAG)
 
+pack-currency-upload:
+	docker build -t us.gcr.io/factors-$(ENV)/currency-upload-job:$(TAG) -f Dockerfile.currency_upload_job .
+
+upload-currency-upload: export IMAGE_NAME=currency-upload-job
+upload-currency-upload: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/currency-upload-job:$(TAG)
+
 pack-numerical-bucketing:
 	docker build -t us.gcr.io/factors-$(ENV)/numerical-bucketing-job:$(TAG) -f Dockerfile.numerical_bucketing_job .
 

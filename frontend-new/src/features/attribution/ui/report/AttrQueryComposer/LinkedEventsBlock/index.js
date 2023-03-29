@@ -164,6 +164,7 @@ function LinkedEventsBlock({
                 setMoreOptions(false);
               }}
               onClickOutside={() => setMoreOptions(false)}
+              showIcon
             ></FaSelect>
           ) : (
             false

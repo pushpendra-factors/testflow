@@ -134,6 +134,8 @@ const (
 	UserSourceLeadSquared      = U.CRM_SOURCE_NAME_LEADSQUARED
 	UserSourceSixSignalString  = "6signal"
 	UserSourceSixSignal        = 8
+	UserSourceDomainsString    = "domains"
+	UserSourceDomains          = 9
 )
 
 var UserSourceMap = map[string]int{
@@ -143,6 +145,7 @@ var UserSourceMap = map[string]int{
 	UserSourceMarketo:          6,
 	UserSourceLeadSquared:      7,
 	UserSourceSixSignalString:  UserSourceSixSignal,
+	UserSourceDomainsString:    UserSourceDomains,
 }
 
 var UserSourceCRM = map[string]int{
@@ -158,6 +161,7 @@ var GroupUserSource = map[string]int{
 	U.GROUP_NAME_HUBSPOT_COMPANY:        UserSourceHubspot,
 	U.GROUP_NAME_HUBSPOT_DEAL:           UserSourceHubspot,
 	U.GROUP_NAME_SIX_SIGNAL:             UserSourceSixSignal,
+	U.GROUP_NAME_DOMAINS:                UserSourceDomains,
 }
 
 const USERS = "users"
@@ -962,27 +966,38 @@ func SetUserGroupFieldByColumnName(user *User, columnName, value string, overwri
 	return processed, updated, nil
 }
 
-func GetGroupUserGroupID(user *User, groupIndex int) (string, error) {
-	if user.IsGroupUser == nil || !(*user.IsGroupUser) {
+func GetGroupUserGroupID(groupUser *User, groupIndex int) (string, error) {
+	if groupUser.IsGroupUser == nil || !(*groupUser.IsGroupUser) {
 		return "", errors.New("not a group user")
 	}
-	groupID, err := GetUserGroupID(user, groupIndex)
+	groupID, err := GetUserGroupID(groupUser, groupIndex)
 	if err != nil {
 		return "", err
 	}
 	if groupID == "" {
-		return "", errors.New("failed to get group id for user")
+		return "", errors.New("failed to get group id for group user")
 	}
 	return groupID, nil
 }
 
-// GetUserGroupID return group_<index>_id by group index
-func GetUserGroupID(user *User, groupIndex int) (string, error) {
+func GetUserGroupUserID(user *User, groupIndex int) (string, error) {
+	groupUserID := ""
+	if groupIndex != 0 {
+		groupUserID = fmt.Sprintf("group_%d_user_id", groupIndex)
+	}
+	return GetUserGroupColumn(user, groupUserID)
+}
 
+func GetUserGroupID(user *User, groupIndex int) (string, error) {
 	groupID := ""
 	if groupIndex != 0 {
 		groupID = fmt.Sprintf("group_%d_id", groupIndex)
 	}
+	return GetUserGroupColumn(user, groupID)
+}
+
+// GetUserGroupColumn return group_<index>_id or group_<index>_user_id by group index
+func GetUserGroupColumn(user *User, searchColumn string) (string, error) {
 
 	refUserVal := reflect.ValueOf(user)
 	refUserTyp := refUserVal.Elem().Type()
@@ -991,7 +1006,7 @@ func GetUserGroupID(user *User, groupIndex int) (string, error) {
 	for i := 0; i < refUserVal.Elem().NumField(); i++ {
 		refField := refUserTyp.Field(i)
 		if tagName := refField.Tag.Get("json"); strings.HasPrefix(tagName, "group_") {
-			if groupID != "" && groupID != tagName {
+			if searchColumn != "" && searchColumn != tagName {
 				continue
 			}
 

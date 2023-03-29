@@ -2597,6 +2597,16 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
+	if projectID == 0 || userID == "" || groupName == "" || groupUserID == "" {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	if groupName == model.GROUP_NAME_DOMAINS {
+		logCtx.Error("domains group not allowed.")
+		return nil, http.StatusBadRequest
+	}
+
 	group, status := store.GetGroup(projectID, groupName)
 	if status != http.StatusFound {
 		if status == http.StatusNotFound {
@@ -2608,8 +2618,6 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 		return nil, http.StatusInternalServerError
 	}
 
-	groupIndex := fmt.Sprintf("group_%d_id", group.ID)
-	groupUserIndex := fmt.Sprintf("group_%d_user_id", group.ID)
 	user, status := store.GetUserWithoutProperties(projectID, userID)
 	if status != http.StatusFound {
 		logCtx.WithField("err_code", status).Error("Failed to get user for group association.")
@@ -2623,10 +2631,35 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 
 	isGroupUser := false
 	user.IsGroupUser = &isGroupUser
+	return store.updateUserGroup(projectID, user, userID, group.ID, groupID, groupUserID, overwrite)
+}
+
+func (store *MemSQL) updateUserGroup(projectID int64, user *model.User, userID string, groupIndex int, groupID, groupUserID string, overwrite bool) (*model.User, int) {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"group_index":   groupIndex,
+		"group_id":      groupID,
+		"group_user_id": groupUserID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || user == nil || groupIndex == 0 || groupUserID == "" {
+		logCtx.Error("Invalid parameters on updateUserGroup.")
+		return nil, http.StatusBadRequest
+	}
+	logFields["user_id"] = user.ID
+
+	if user.IsGroupUser == nil {
+		logCtx.Error("Missing user.")
+		return nil, http.StatusBadRequest
+	}
+
 	var IDUpdated, userIDUpdated, processed bool
 	var err error
 	if groupID != "" {
-		processed, IDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupIndex, groupID, overwrite)
+		groupIndexColumn := fmt.Sprintf("group_%d_id", groupIndex)
+		processed, IDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupIndexColumn, groupID, overwrite)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update user by group id.")
 			return nil, http.StatusInternalServerError
@@ -2637,7 +2670,8 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 		}
 	}
 
-	processed, userIDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupUserIndex, groupUserID, overwrite)
+	groupUserIndexColumn := fmt.Sprintf("group_%d_user_id", groupIndex)
+	processed, userIDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupUserIndexColumn, groupUserID, overwrite)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update user by group id.")
 		return nil, http.StatusInternalServerError
@@ -2654,6 +2688,49 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 	user.ProjectId = 0
 	user.ID = ""
 	return store.UpdateUser(projectID, userID, user, user.PropertiesUpdatedTimestamp)
+}
+
+func (store *MemSQL) UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainsGroupID string, overwrite bool) (*model.User, int) {
+	logFields := log.Fields{
+		"project_id":            projectID,
+		"group_user_id":         groupUserID,
+		"domains_user_id":       domainsUserID,
+		"group_user_group_name": groupUserGroupName,
+		"domains_group_id":      domainsGroupID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupUserID == "" || groupUserGroupName == "" || domainsGroupID == "" || domainsUserID == "" {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	group, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if status != http.StatusFound {
+		if status == http.StatusNotFound {
+			logCtx.WithField("err_code", status).Error("domains group not found.")
+			return nil, http.StatusBadRequest
+		}
+
+		logCtx.WithField("err_code", status).Error("Failed to get domains group.")
+		return nil, http.StatusInternalServerError
+	}
+
+	user, status := store.GetUserWithoutProperties(projectID, groupUserID)
+	if status != http.StatusFound {
+		logCtx.WithField("err_code", status).Error("Failed to get user for group association.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if user.IsGroupUser == nil || *user.IsGroupUser == false {
+		logCtx.Error("Cannot update non group user.")
+		return nil, http.StatusBadRequest
+	}
+
+	isGroupUser := true
+	user.IsGroupUser = &isGroupUser
+	return store.updateUserGroup(projectID, user, groupUserID, group.ID, domainsGroupID, domainsUserID, overwrite)
 }
 
 func (store *MemSQL) UpdateUserGroupProperties(projectID int64, userID string,

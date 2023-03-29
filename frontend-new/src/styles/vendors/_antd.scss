@@ -21751,7 +21751,8 @@ textarea.ant-mentions {
   text-align: center;
 }
 .ant-message-notice-content {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 10px 16px;
   background: #fff;
   border-radius: 2px;

@@ -124,8 +124,7 @@ const MarkTouchpointBlock = ({
             optionClick={(val) => onEventSelect(val)}
             onClickOutside={() => setSelectVisible(false)}
             extraClass={touchPoint ? styles.touchPointSelector : ''}
-            showIcon={false}
-          ></FaSelect>
+          />
         ) : null}
       </div>
     );
@@ -198,6 +197,7 @@ const MarkTouchpointBlock = ({
                   setMoreOptions(false);
                 }}
                 onClickOutside={() => setMoreOptions(false)}
+                showIcon
               ></FaSelect>
             ) : (
               false

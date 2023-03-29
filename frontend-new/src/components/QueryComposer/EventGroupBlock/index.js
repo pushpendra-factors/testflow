@@ -5,9 +5,9 @@ import { SVG, Text } from '../../factorsComponents';
 import styles from './index.module.scss';
 import GroupSelect2 from '../GroupSelect2';
 import FaSelect from '../../FaSelect';
-import { AvailableGroups } from '../../../utils/constants';
 
 function EventGroupBlock({
+  eventGroup,
   index,
   eventIndex,
   grpIndex,
@@ -22,8 +22,8 @@ function EventGroupBlock({
   setGroupState,
   delGroupState,
   closeDropDown,
-  hideText = false,  // added to hide the text from UI (Used in event based alerts)
-  posTop = false,   // used to open the drop down at the top( Event based alerts)
+  hideText = false, // added to hide the text from UI (Used in event based alerts)
+  posTop = false // used to open the drop down at the top( Event based alerts)
 }) {
   const [filterOptions, setFilterOptions] = useState([
     {
@@ -49,8 +49,8 @@ function EventGroupBlock({
   useEffect(() => {
     const filterOpts = [...filterOptions];
     filterOpts[0].values = eventProperties[event.label];
-    if (AvailableGroups[event.group]) {
-      filterOpts[2].values = groupProperties[AvailableGroups[event.group]];
+    if (eventGroup?.length) {
+      filterOpts[2].values = groupProperties[eventGroup[1]];
       filterOpts[1].values = [];
     } else {
       filterOpts[1].values = userProperties;
@@ -131,7 +131,7 @@ function EventGroupBlock({
     };
 
     return (
-      <div className="flex items-center m-0 mx-2">
+      <div className='flex items-center m-0 mx-2'>
         show as
         <div
           className={`flex relative m-0 mx-2 ${styles.grpProps__select__opt}`}
@@ -171,22 +171,26 @@ function EventGroupBlock({
     }
 
     return isGroupByDDVisible ? (
-      <div className="relative">
+      <div className='relative'>
         <Tooltip title={propName}>
           <Button
             icon={
-              <SVG name={groupByEvent.prop_category} size={16} color="purple" />
+              <SVG name={groupByEvent.prop_category} size={16} color='purple' />
             }
-            type="link"
-            className="fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin"
+            type='link'
+            className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
           >
             {propName}
           </Button>
         </Tooltip>
-        <div className={`${styles.group_block__event_selector} ${posTop && styles.group_block__select_ct}`}>
+        <div
+          className={`${styles.group_block__event_selector} ${
+            posTop && styles.group_block__select_ct
+          }`}
+        >
           <GroupSelect2
             groupedProperties={filterOptions}
-            placeholder="Select Property"
+            placeholder='Select Property'
             optionClick={(group, val) => onChange(group, val, index)}
             onClickOutside={() => setGroupByDDVisible(false)}
           />
@@ -197,10 +201,10 @@ function EventGroupBlock({
         <Tooltip title={propName}>
           <Button
             icon={
-              <SVG name={groupByEvent.prop_category} size={16} color="purple" />
+              <SVG name={groupByEvent.prop_category} size={16} color='purple' />
             }
-            type="link"
-            className="fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin"
+            type='link'
+            className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
             onClick={() => setGroupByDDVisible(true)}
           >
             {propName}
@@ -212,10 +216,14 @@ function EventGroupBlock({
   };
 
   const renderGroupBySelect = () => (
-    <div className={`${styles.group_block__event_selector} ${posTop && styles.group_block__select_ct}`}>
+    <div
+      className={`${styles.group_block__event_selector} ${
+        posTop && styles.group_block__select_ct
+      }`}
+    >
       <GroupSelect2
         groupedProperties={filterOptions}
-        placeholder="Select Property"
+        placeholder='Select Property'
         optionClick={(group, val) => onChange(group, val)}
         onClickOutside={() => closeDropDown()}
       />
@@ -223,33 +231,34 @@ function EventGroupBlock({
   );
 
   return (
-    <div className="flex items-center relative ml-10">
-      {!hideText && (grpIndex >= 1 ? (
-        <Text level={8} type="title" extraClass="m-0 mr-16" weight="thin">
-          and
-        </Text>
-      ) : (
-        <Text
-          level={8}
-          type="title"
-          extraClass="m-0 breakdown-margin"
-          weight="thin"
-        >
-          Breakdown
-        </Text>
-      ))}
+    <div className='flex items-center relative ml-10'>
+      {!hideText &&
+        (grpIndex >= 1 ? (
+          <Text level={8} type='title' extraClass='m-0 mr-16' weight='thin'>
+            and
+          </Text>
+        ) : (
+          <Text
+            level={8}
+            type='title'
+            extraClass='m-0 breakdown-margin'
+            weight='thin'
+          >
+            Breakdown
+          </Text>
+        ))}
       {groupByEvent && groupByEvent.property ? (
         renderGroupContent()
       ) : (
         <>{renderGroupBySelect()}</>
       )}
       <Button
-        type="text"
+        type='text'
         onClick={() => delGroupState(groupByEvent)}
-        size="small"
-        className="fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button"
+        size='small'
+        className='fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button'
       >
-        <SVG name="remove" />
+        <SVG name='remove' />
       </Button>
     </div>
   );

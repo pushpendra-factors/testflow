@@ -88,6 +88,7 @@ const GlobalFilterSelect = ({
           filter.operator === OPERATORS['notEqualTo'] ||
           filter.operator?.[0] === OPERATORS['equalTo'] ||
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
+        filter.values?.length === 1 &&
         filter.values?.[0] === '$none'
       ) {
         if (
@@ -336,7 +337,10 @@ const GlobalFilterSelect = ({
 
         {operSelectOpen && (
           <FaSelect
-            options={operatorOpts[propState.type].map((op) => [op])}
+            options={operatorOpts[propState.type].filter((op) => {
+              // Only include the operator if showInList is true or it's not 'inList'
+              return false || op !== OPERATORS['inList'];
+            }).map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
           ></FaSelect>

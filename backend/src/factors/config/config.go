@@ -179,7 +179,6 @@ type Configuration struct {
 	blacklistedProjectIDPropertyTypeFromDB string
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
-	CustomerEnabledProjectsWeeklyInsights  []int64
 	CustomerEnabledProjectsLastComputed    []int64
 	SkippedProjectIDListForOtp             []int64
 	DemoProjectIds                         []string
@@ -286,6 +285,10 @@ type Configuration struct {
 	EnableEventFiltersInSegments                       bool
 	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
+	TeamsAppTenantID                                   string
+	TeamsAppClientID                                   string
+	TeamsAppClientSecret                               string
+	EnableDomainsGroupByProjectID                      string
 	DisableUpdateNextSessionTimestamp                  int
 	EnableSyncReferenceFieldsByProjectID               string
 	StartTimestampForWeekMonth                         int64
@@ -356,6 +359,7 @@ const (
 	HealthCheckPreBuiltCustomKPIPingID           = "9e5ac799-e15f-4f44-86b0-4be88379f486"
 	HealthCheckAnalyzeJobPingID                  = "3d1bd82d-e036-4433-a794-1042a7f29976"
 	HealthCheckSixSignalReportPingID             = "2508c4c3-b941-40bb-8f2b-a59e4bedf3e5"
+	HealthcheckCurrencyUploadPingID              = "29defb4f-c95e-4895-a515-591fb7c216f7"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
@@ -2061,20 +2065,6 @@ func GetUUIdsFromStringListAsString(stringList string) []string {
 	return stringTokens
 }
 
-func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId int64) bool {
-	for _, id := range configuration.CustomerEnabledProjectsWeeklyInsights {
-		if id == projectId {
-			return true
-		}
-	}
-	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
-		if uuid == loggedInUUID {
-			return true
-		}
-	}
-	return false
-}
-
 func IsLastComputedWhitelisted(projectId int64) bool {
 	for _, id := range configuration.CustomerEnabledProjectsLastComputed {
 		if id == projectId {
@@ -2488,13 +2478,32 @@ func IsEnableDebuggingForIP() bool {
 	return configuration.EnableDebuggingForIP
 }
 
-func AllowSyncReferenceFields(projectId int64) bool {
-	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSyncReferenceFieldsByProjectID, "")
+func GetTeamsClientID() string {
+	return configuration.TeamsAppClientID
+}
+
+func GetTeamsClientSecret() string {
+	return configuration.TeamsAppClientSecret
+}
+
+func GetTeamsTenantID() string {
+	return configuration.TeamsAppTenantID
+}
+
+func IsAllowedDomainsGroupByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDomainsGroupByProjectID, "")
 	if allProjects {
 		return true
 	}
+	return allowedProjectIDs[projectID]
+}
 
-	return projectIDsMap[projectId]
+func AllowSyncReferenceFields(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSyncReferenceFieldsByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
 }
 
 func GetStartTimestampForWeekMonth() int64 {

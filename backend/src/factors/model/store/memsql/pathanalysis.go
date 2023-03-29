@@ -292,7 +292,7 @@ func (store *MemSQL) GetAllSavedPathAnalysisEntityByProject(projectID int64) ([]
 	entity := make([]model.PathAnalysis, 0)
 
 	err := db.Table("pathanalysis").
-		Where("project_id = ? AND is_deleted = ? AND status = ?", projectID, false, model.SAVED).
+		Where("project_id = ? AND is_deleted = ? AND status IN ( ?, ? )", projectID, false, model.SAVED, model.BUILDING).
 		Order("created_at ASC").Limit(LimitPathAnalysisEntityList).Find(&entity).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch rows from queries table for project")

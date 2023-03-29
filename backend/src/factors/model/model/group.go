@@ -25,6 +25,7 @@ const GROUP_NAME_HUBSPOT_DEAL = "$hubspot_deal"
 const GROUP_NAME_SALESFORCE_ACCOUNT = "$salesforce_account"
 const GROUP_NAME_SALESFORCE_OPPORTUNITY = "$salesforce_opportunity"
 const GROUP_NAME_SIX_SIGNAL = "$6signal"
+const GROUP_NAME_DOMAINS = "$domains"
 
 // AllowedGroupNames list of allowed group names
 var AllowedGroupNames = map[string]bool{
@@ -32,6 +33,25 @@ var AllowedGroupNames = map[string]bool{
 	GROUP_NAME_HUBSPOT_DEAL:           true,
 	GROUP_NAME_SALESFORCE_ACCOUNT:     true,
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: true,
+	GROUP_NAME_SIX_SIGNAL:             true,
+}
+var AccountGroupNames = map[string]bool{
+	GROUP_NAME_HUBSPOT_COMPANY:    true,
+	GROUP_NAME_SALESFORCE_ACCOUNT: true,
+	GROUP_NAME_SIX_SIGNAL:         true,
+}
+
+var AllowedGroupToDomainsGroup = map[string]bool{
+	GROUP_NAME_HUBSPOT_COMPANY:    true,
+	GROUP_NAME_SALESFORCE_ACCOUNT: true,
+	GROUP_NAME_SIX_SIGNAL:         true,
+}
+
+var GroupIsAccountMap = map[string]bool{
+	GROUP_NAME_HUBSPOT_COMPANY:        true,
+	GROUP_NAME_HUBSPOT_DEAL:           false,
+	GROUP_NAME_SALESFORCE_ACCOUNT:     true,
+	GROUP_NAME_SALESFORCE_OPPORTUNITY: false,
 	GROUP_NAME_SIX_SIGNAL:             true,
 }
 
@@ -137,4 +157,12 @@ func GetPropertyValuesByGroupPropertyFromCache(projectID int64, groupName string
 
 func IsAllowedGroupName(name string) bool {
 	return AllowedGroupNames[name]
+}
+
+func IsAllowedGroupForDomainsGroup(name string) bool {
+	return AllowedGroupToDomainsGroup[name]
+}
+
+func IsAllowedAccountGroupNames(name string) bool {
+	return AccountGroupNames[name]
 }

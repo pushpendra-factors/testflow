@@ -39,6 +39,7 @@ import LeadSquaredIntegration from './LeadSquared';
 import SixSignalIntegration from './SixSignal';
 import SixSignalFactorsIntegration from './SixSignalFactors';
 import RudderstackIntegration from './Rudderstack';
+import MSTeamIntegration from './MSTeam';
 
 import { ADWORDS_INTERNAL_REDIRECT_URI } from './util';
 
@@ -65,6 +66,12 @@ const IntegrationProviderData = [
     name: 'Slack',
     desc: 'Does your team live on Slack? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
     icon: 'Slack',
+    kbLink: false
+  },
+  {
+    name: 'Microsoft Teams',
+    desc: 'Does your team live on Teams? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
+    icon: 'MSTeam',
     kbLink: false
   },
   {
@@ -196,6 +203,10 @@ function IntegrationCard({ item, index, defaultOpen }) {
       case 'Slack':
         return (
           <SlackIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
+        );
+      case 'Microsoft Teams':
+        return (
+          <MSTeamIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
         );
       case 'Clearbit Reveal':
         return (
@@ -416,8 +427,8 @@ function IntegrationSettings({
                       }
                       // Flag for 6Signal Factors key
                       if (
-                        item.name === 'Factors Website De-anonymization' &&
-                        !whiteListedAccounts.includes(currentAgent.email)
+                        (item.name === 'Factors Website De-anonymization' &&
+                        !whiteListedAccounts.includes(currentAgent.email)) || (item.name === 'Microsoft Teams' && !['junaid@factors.ai'].includes(currentAgent.email))
                       ) {
                         return null;
                       }

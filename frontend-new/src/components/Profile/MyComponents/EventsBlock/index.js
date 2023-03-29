@@ -7,11 +7,11 @@ import styles from './index.module.scss';
 import { getEventProperties } from 'Reducers/coreQuery/middleware';
 import EventFilterWrapper from 'Components/QueryComposer/EventFilterWrapper';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
-import { RevAvailableGroups } from 'Utils/constants';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 
 function EventsBlock({
+  availableGroups,
   index,
   event,
   closeEvent,
@@ -38,17 +38,18 @@ function EventsBlock({
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
   useEffect(() => {
-    const groupsArray = Object.values(RevAvailableGroups);
-    const options = [...eventOptions];
     let showOpts = [];
     if (groupAnalysis === 'users') {
-      showOpts = [...options];
+      showOpts = [...eventOptions];
     } else {
-      const groupOpts = options.filter(
-        (item) => item.label === RevAvailableGroups[groupAnalysis]
-      );
-      const userOpts = options.filter(
-        (item) => !groupsArray.includes(item?.label)
+      const groupOpts = eventOptions?.filter((item) => {
+        const [label] =
+          availableGroups.find((group) => group[1] === groupAnalysis) || [];
+        return item.label === label;
+      });
+      const groupNamesList = availableGroups.map((item) => item[0]);
+      const userOpts = eventOptions?.filter(
+        (item) => !groupNamesList.includes(item?.label)
       );
       showOpts = groupOpts.concat(userOpts);
     }

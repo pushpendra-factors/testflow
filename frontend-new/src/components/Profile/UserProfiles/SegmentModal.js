@@ -8,7 +8,6 @@ import {
 import { SVG, Text } from 'Components/factorsComponents';
 import InputFieldWithLabel from '../MyComponents/InputFieldWithLabel/index';
 import {
-  ProfileMapper,
   QUERY_OPTIONS_DEFAULT_VALUE,
   QUERY_TYPE_SEGMENT,
   ReverseProfileMapper
@@ -17,7 +16,6 @@ import FaSelect from 'Components/FaSelect';
 import { compareFilters, generateRandomKey } from 'Utils/global';
 import { useSelector } from 'react-redux';
 import PropFilterBlock from '../MyComponents/PropertyFilter/PropFilterBlock';
-import { deleteGroupByForEvent } from 'Reducers/coreQuery/middleware';
 import EventsBlock from '../MyComponents/EventsBlock';
 
 function SegmentModal({
@@ -113,18 +111,11 @@ function SegmentModal({
   };
 
   const setSegmentType = (val) => {
-    if (profileType === 'user') {
-      if ((ProfileMapper[val[0]] || val[0]) !== segmentPayload.type) {
-        const opts = { ...segmentPayload };
-        opts.type = ProfileMapper[val[0]] || val[0];
-        setSegmentPayload(opts);
-      }
-    }
-    if (profileType === 'account') {
-      if (val[1] !== segmentPayload.type) {
-        const opts = { ...segmentPayload };
-        opts.type = val[1];
-        setSegmentPayload(opts);
+    if (val[1] !== segmentPayload.type) {
+      const opts = { ...segmentPayload };
+      opts.type = val[1];
+      setSegmentPayload(opts);
+      if (profileType === 'account') {
         const queryOpts = { ...queryOptions };
         queryOpts.group_analysis = val[1];
         setQueryOptions(queryOpts);
@@ -179,17 +170,11 @@ function SegmentModal({
       const queryupdated = [...listEvents];
       if (queryupdated[index]) {
         if (changeType === 'add') {
-          if (
-            JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)
-          ) {
-            deleteGroupByForEvent(newEvent, index);
-          }
           queryupdated[index] = newEvent;
         } else if (changeType === 'filters_updated') {
           // dont remove group by if filter is changed
           queryupdated[index] = newEvent;
         } else {
-          deleteGroupByForEvent(newEvent, index);
           queryupdated.splice(index, 1);
         }
       } else {
@@ -207,7 +192,7 @@ function SegmentModal({
         })
       );
     },
-    [listEvents, deleteGroupByForEvent]
+    [listEvents]
   );
 
   const eventsList = () => {
@@ -216,6 +201,7 @@ function SegmentModal({
       blockList.push(
         <div key={index}>
           <EventsBlock
+            availableGroups={typeOptions}
             index={index + 1}
             queryType={QUERY_TYPE_SEGMENT}
             event={event}
@@ -233,6 +219,7 @@ function SegmentModal({
         blockList.push(
           <div key={blockList.length}>
             <EventsBlock
+              availableGroups={typeOptions}
               queryType={QUERY_TYPE_SEGMENT}
               index={listEvents.length + 1}
               queries={listEvents}
@@ -394,9 +381,7 @@ function SegmentModal({
             icon={<SVG name='user_friends' size={16} />}
             onClick={() => setUserDDVisible(!isUserDDVisible)}
           >
-            {profileType === 'user'
-              ? ReverseProfileMapper[segmentPayload.type]?.users
-              : displayFilterOpts[segmentPayload.type] || 'All'}
+            {typeOptions?.find((elem) => elem[1] === segmentPayload?.type)?.[0]}
             <SVG name='caretDown' size={16} />
           </Button>
           {selectUsers()}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import styles from './index.module.scss';
@@ -6,7 +6,6 @@ import { SVG, Text } from '../../components/factorsComponents';
 import ConversionGoalBlock from './ConversionGoalBlock';
 import FaDatepicker from '../../components/FaDatepicker';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
-import { PropTextFormat } from '../../utils/dataFormatter';
 import { INITIALIZE_GROUPBY } from 'Reducers/coreQuery/actions';
 import FaSelect from '../FaSelect';
 
@@ -28,6 +27,7 @@ import AttributionOptions from './AttributionOptions';
 import LinkedEventsBlock from './LinkedEventsBlock';
 import { QUERY_TYPE_EVENT } from '../../utils/constants';
 import { SET_ATTR_QUERIES } from '../../reducers/coreQuery/actions';
+import { fetchGroups } from 'Reducers/coreQuery/services';
 
 const AttrQueryComposer = ({
   activeProject,
@@ -51,7 +51,9 @@ const AttrQueryComposer = ({
   collapse = false,
   setCollapse,
   queryOptions,
-  setQueryOptions
+  setQueryOptions,
+  fetchGroups,
+  groupOpts
 }) => {
   const [linkEvExpansion, setLinkEvExpansion] = useState(true);
   const [convGblockOpen, setConvGblockOpen] = useState(true);
@@ -65,14 +67,22 @@ const AttrQueryComposer = ({
 
   const dispatch = useDispatch();
 
-  const enabledGroups = () => {
-    let groups = [
-      ['Users', 'users'],
-      ['Hubspot Deals', 'hubspot_deals'],
-      ['Salesforce Opportunity', 'salesforce_opportunities']
-    ];
+  useEffect(() => {
+    fetchGroups(activeProject?.id, false);
+  }, [activeProject]);
+
+  const groupsList = useMemo(() => {
+    let groups = [['Users', 'users']];
+    const valueMap = {
+      $hubspot_deal: 'hubspot_deals',
+      $salesforce_opportunity: 'salesforce_opportunities'
+    };
+    groupOpts?.forEach((elem) => {
+      groups.push([elem.display_name, valueMap[elem.group_name]]);
+    });
     return groups;
-  };
+  }, [groupOpts]);
+
   useEffect(() => {
     if (activeProject && activeProject.id) {
       getCampaignConfigData(activeProject.id, 'all_ads');
@@ -335,7 +345,7 @@ const AttrQueryComposer = ({
         {isGroupDDVisible ? (
           <FaSelect
             extraClass={`${styles.groupsection_dropdown_menu}`}
-            options={enabledGroups()}
+            options={groupsList}
             onClickOutside={() => setGroupDDVisible(false)}
             optionClick={(val) => onGroupSelect(val[1])}
           ></FaSelect>
@@ -350,6 +360,11 @@ const AttrQueryComposer = ({
 
   const renderGroupSection = () => {
     try {
+      const groupDisplayName = queryOptions?.group_analysis
+        ? groupsList?.find(
+            ([_, groupName]) => groupName === queryOptions?.group_analysis
+          )?.[0]
+        : 'Users';
       return (
         <div className={`flex items-center pt-6`}>
           <Text
@@ -359,7 +374,7 @@ const AttrQueryComposer = ({
             extraClass={`m-0 mr-3`}
           >
             Analyse
-          </Text>{' '}
+          </Text>
           <div className={`${styles.groupsection}`}>
             <Tooltip title='Attribute at a User, Deal, or Opportunity level'>
               <Button
@@ -374,7 +389,7 @@ const AttrQueryComposer = ({
                     weight={'bold'}
                     extraClass={`m-0 mr-1`}
                   >
-                    {PropTextFormat(queryOptions.group_analysis)}
+                    {groupDisplayName}
                   </Text>
                   <SVG name='caretDown' />
                 </div>
@@ -456,12 +471,14 @@ const mapStateToProps = (state) => ({
   models: state.coreQuery.models,
   window: state.coreQuery.window,
   linkedEvents: state.coreQuery.linkedEvents,
-  dateRange: state.coreQuery.attr_dateRange
+  dateRange: state.coreQuery.attr_dateRange,
+  groupOpts: state.groups.data
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
+      fetchGroups,
       fetchEventNames,
       getEventProperties,
       getUserProperties,

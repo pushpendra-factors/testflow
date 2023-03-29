@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Table,
   Button,
@@ -19,7 +19,6 @@ import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import {
   DEFAULT_TIMELINE_CONFIG,
-  displayFilterOpts,
   formatEventsFromSegment,
   formatFiltersForPayload,
   formatPayloadForFilters,
@@ -45,15 +44,18 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from '../UserProfiles/SegmentModal';
 import EventsBlock from '../MyComponents/EventsBlock';
+import { fetchGroups } from 'Reducers/coreQuery/services';
 
 function AccountProfiles({
   activeProject,
+  groupOpts,
   accounts,
   segments,
   createNewSegment,
   getSavedSegments,
   accountDetails,
   fetchProjectSettings,
+  fetchGroups,
   udpateProjectSettings,
   currentProjectSettings,
   getProfileAccounts,
@@ -65,8 +67,6 @@ function AccountProfiles({
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
-  const groupState = useSelector((state) => state.groups);
-  const groupOpts = groupState?.data;
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isGroupDDVisible, setGroupDDVisible] = useState(false);
@@ -82,6 +82,18 @@ function AccountProfiles({
     source: 'All',
     filters: []
   });
+
+  useEffect(() => {
+    fetchGroups(activeProject?.id, true);
+  }, [activeProject]);
+
+  const groupsList = useMemo(() => {
+    let groups = [['All Accounts', 'All']];
+    groupOpts?.forEach((elem) => {
+      groups.push([elem.display_name, elem.group_name]);
+    });
+    return groups;
+  }, [groupOpts]);
 
   useEffect(() => {
     if (currentProjectSettings?.timelines_config) {
@@ -100,19 +112,6 @@ function AccountProfiles({
       setTLConfig(timelinesConfig);
     }
   }, [currentProjectSettings]);
-
-  const enabledGroups = () => {
-    const groups = [['All Accounts', 'All']];
-    groupOpts?.forEach((elem) => {
-      if (
-        elem.name === '$hubspot_company' ||
-        elem.name === '$salesforce_account'
-      ) {
-        groups.push([displayFilterOpts[elem.name], elem.name]);
-      }
-    });
-    return groups;
-  };
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
@@ -221,7 +220,6 @@ function AccountProfiles({
       dataIndex: 'last_activity',
       key: 'last_activity',
       width: 250,
-      fixed: 'right',
       align: 'right',
       render: (item) => MomentTz(item).fromNow()
     });
@@ -275,7 +273,7 @@ function AccountProfiles({
     <div className='absolute top-0'>
       {isGroupDDVisible ? (
         <FaSelect
-          options={enabledGroups()}
+          options={groupsList}
           onClickOutside={() => setGroupDDVisible(false)}
           optionClick={(val) => onChange(val[1])}
         />
@@ -438,7 +436,7 @@ function AccountProfiles({
         profileType='account'
         activeProject={activeProject}
         type={accountPayload.source}
-        typeOptions={enabledGroups().filter((group) => group[1] !== 'All')}
+        typeOptions={groupsList.filter((group) => group[1] !== 'All')}
         visible={showSegmentModal}
         segment={{}}
         onSave={handleSaveSegment}
@@ -471,6 +469,7 @@ function AccountProfiles({
       blockList.push(
         <div key={index} className='m-0 mr-2 mb-2'>
           <EventsBlock
+            availableGroups={groupsList}
             index={index + 1}
             event={event}
             queries={listEvents}
@@ -543,7 +542,11 @@ function AccountProfiles({
         icon={<SVG name='user_friends' size={16} />}
         onClick={() => setGroupDDVisible(!isGroupDDVisible)}
       >
-        {displayFilterOpts[accountPayload.source]}
+        {
+          groupsList?.find(
+            ([_, groupName]) => groupName === accountPayload?.source
+          )?.[0]
+        }
         <SVG name='caretDown' size={16} />
       </Button>
       {selectGroup()}
@@ -587,7 +590,7 @@ function AccountProfiles({
 
   const renderClearFilterButton = () => (
     <Button
-      className='dropdown-btn'
+      className='dropdown-btn mr-2'
       type='text'
       icon={<SVG name='times_circle' size={16} />}
       onClick={clearFilters}
@@ -595,6 +598,7 @@ function AccountProfiles({
       Clear Filters
     </Button>
   );
+
   const renderTablePropsSelect = () => (
     <Popover
       overlayClassName='fa-activity--filter'
@@ -609,8 +613,12 @@ function AccountProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button size='large' className='fa-btn--custom mx-2 relative'>
-        <SVG name='activity_filter' />
+      <Button
+        size='large'
+        icon={<SVG name='activity_filter' />}
+        className='relative'
+      >
+        Configure
       </Button>
     </Popover>
   );
@@ -708,6 +716,7 @@ function AccountProfiles({
 }
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
+  groupOpts: state.groups.data,
   accounts: state.timelines.accounts,
   segments: state.timelines.segments,
   accountDetails: state.timelines.accountDetails,
@@ -717,6 +726,7 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
+      fetchGroups,
       getProfileAccounts,
       getProfileAccountDetails,
       createNewSegment,

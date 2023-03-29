@@ -312,6 +312,7 @@ const GROUP_NAME_HUBSPOT_DEAL = "$hubspot_deal"
 const GROUP_NAME_SALESFORCE_ACCOUNT = "$salesforce_account"
 const GROUP_NAME_SALESFORCE_OPPORTUNITY = "$salesforce_opportunity"
 const GROUP_NAME_SIX_SIGNAL = "$6signal"
+const GROUP_NAME_DOMAINS = "$domains"
 
 var GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING = map[string]string{
 	GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED:        GROUP_NAME_HUBSPOT_COMPANY,
@@ -453,13 +454,24 @@ var EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME string = "$hubspot_engagement_meetingou
 var EP_HUBSPOT_ENGAGEMENT_STARTTIME string = "$hubspot_engagement_starttime"
 var EP_HUBSPOT_ENGAGEMENT_ENDTIME string = "$hubspot_engagement_endtime"
 var EP_HUBSPOT_ENGAGEMENT_DURATIONMILLISECONDS string = "$hubspot_engagement_durationmilliseconds"
+var EP_HUBSPOT_ENGAGEMENT_STATUS string = "$hubspot_engagement_status"
 var EP_HUBSPOT_ENGAGEMENT_SOURCE string = "$hubspot_engagement_source"
+var EP_HUBSPOT_ENGAGEMENT_FROM string = "$hubspot_engagement_from"
 var EP_HUBSPOT_ENGAGEMENT_TIMESTAMP string = "$hubspot_engagement_timestamp"
 var EP_HUBSPOT_ENGAGEMENT_ID string = "$hubspot_engagement_id"
 var EP_HUBSPOT_CONTACT_LIST_LIST_ID string = "$hubspot_contact_list_list_id"
+var EP_HUBSPOT_CONTACT_LIST_LIST_NAME string = "$hubspot_contact_list_list_name"
 var EP_OTP_UNIQUE_KEY string = "$otp_unique_key"
 var EP_SF_TASK_ID string = "$salesforce_task_id"
 var EP_SF_EVENT_ID string = "$salesforce_event_id"
+var EP_SF_TASK_SUBJECT string = "$salesforce_task_subject"
+var EP_SF_TASK_TYPE string = "$salesforce_task_type"
+var EP_SF_TASK_SUBTYPE string = "$salesforce_task_tasksubtype"
+var EP_SF_TASK_COMPLETED_DATETIME string = "$salesforce_task_completeddatetime"
+var EP_SF_EVENT_SUBJECT string = "$salesforce_event_subject"
+var EP_SF_EVENT_TYPE string = "$salesforce_event_type"
+var EP_SF_EVENT_SUBTYPE string = "$salesforce_event_eventsubtype"
+var EP_SF_EVENT_COMPLETED_DATETIME string = "$salesforce_event_completeddatetime"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -1474,20 +1486,22 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$sf_campaign_member_created":               "Added to Campaign",
 	"$sf_campaign_member_updated":               "Interacted with Campaign",
 	"$sf_campaign_member_responded_to_campaign": "Responded to Campaign",
-	"$session":                        "Website Session",
-	"$form_submitted":                 "Form Button Click",
-	"$hubspot_company_created":        "Company Created",
-	"$hubspot_company_updated":        "Company Updated",
-	"$hubspot_deal_created":           "Deal Created",
-	"$hubspot_deal_updated":           "Deal Updated",
-	"$salesforce_account_updated":     "Salesforce Account Updated",
-	"$salesforce_opportunity_updated": "Salesforce Opportunity Updated",
-	"$salesforce_account_created":     "Salesforce Account Created",
-	"$salesforce_opportunity_created": "Salesforce Opportunity Created",
-	"$offline_touch_point":            "Offline Touchpoint",
-	"$leadsquared_lead_created":       "Lead Created",
-	"$leadsquared_lead_updated":       "Lead Updated",
-	EVENT_NAME_FORM_FILL:              "Form Fills",
+	"$session":                          "Website Session",
+	"$form_submitted":                   "Form Button Click",
+	"$hubspot_company_created":          "Company Created",
+	"$hubspot_company_updated":          "Company Updated",
+	"$hubspot_deal_created":             "Deal Created",
+	"$hubspot_deal_updated":             "Deal Updated",
+	"$salesforce_account_updated":       "Salesforce Account Updated",
+	"$salesforce_opportunity_updated":   "Salesforce Opportunity Updated",
+	"$salesforce_account_created":       "Salesforce Account Created",
+	"$salesforce_opportunity_created":   "Salesforce Opportunity Created",
+	"$offline_touch_point":              "Offline Touchpoint",
+	"$leadsquared_lead_created":         "Lead Created",
+	"$leadsquared_lead_updated":         "Lead Updated",
+	EVENT_NAME_FORM_FILL:                "Form Fills",
+	EVENT_NAME_SALESFORCE_TASK_CREATED:  "Salesforce Task Created",
+	EVENT_NAME_SALESFORCE_EVENT_CREATED: "Salesforce Event Created",
 }
 
 var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
@@ -1495,6 +1509,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_HUBSPOT_DEAL:           "Hubspot Deals",
 	GROUP_NAME_SALESFORCE_ACCOUNT:     "Salesforce Accounts",
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
+	GROUP_NAME_SIX_SIGNAL:             "Six Signal Domains",
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{
@@ -3264,7 +3279,7 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 	for k, v := range *properties {
 		if err := isPropertyTypeValid(v); err == nil {
 			if strings.HasPrefix(k, NAME_PREFIX) &&
-				!isAllowedCRMPropertyPrefix(k) &&
+				!IsAllowedCRMPropertyPrefix(k) &&
 				!isSDKAllowedUserProperty(&k) {
 
 				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
@@ -3290,7 +3305,7 @@ func isCRMSmartEventPropertyKey(key *string) bool {
 	return true
 }
 
-func isAllowedCRMPropertyPrefix(name string) bool {
+func IsAllowedCRMPropertyPrefix(name string) bool {
 	for prefix := range AllowedCRMPropertyPrefix {
 		if strings.HasPrefix(name, prefix) {
 			return true
@@ -3308,7 +3323,7 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 			// with selected prefixes starting with $ and default properties.
 			if strings.HasPrefix(k, NAME_PREFIX) &&
 				!strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) &&
-				!isAllowedCRMPropertyPrefix(k) &&
+				!IsAllowedCRMPropertyPrefix(k) &&
 				!isCRMSmartEventPropertyKey(&k) &&
 				!isSDKAllowedEventProperty(&k) {
 				propertyKey = fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)

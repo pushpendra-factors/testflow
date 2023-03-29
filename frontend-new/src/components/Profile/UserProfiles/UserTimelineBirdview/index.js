@@ -25,7 +25,9 @@ function UserTimelineBirdview({
   listProperties
 }) {
   const [showAll, setShowAll] = useState([]);
-  const { userPropNames } = useSelector((state) => state.coreQuery);
+  const { userPropNames } = useSelector(
+    (state) => state.coreQuery
+  );
 
   const groupedActivities = _.groupBy(activities, groups[granularity]);
 
@@ -69,10 +71,11 @@ function UserTimelineBirdview({
   };
 
   const renderInfoCard = (event) => {
-    const eventName =
-      event.display_name === 'Page View'
-        ? event.event_name
-        : event?.alias_name || PropTextFormat(event.display_name);
+    const eventName = event.alias_name
+      ? event.alias_name
+      : event.display_name !== 'Page View'
+      ? PropTextFormat(event.display_name)
+      : event.event_name;
     const hoverConditionals =
       hoverEvents.includes(event.event_name) ||
       event.display_name === 'Page View' ||
@@ -84,6 +87,7 @@ function UserTimelineBirdview({
     return (
       <div className='tag'>
         <InfoCard
+          eventType={event?.event_type}
           title={event?.alias_name}
           eventSource={event?.display_name}
           eventName={event?.event_name}

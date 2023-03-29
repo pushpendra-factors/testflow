@@ -22,7 +22,7 @@ function FaSelect({
   children,
   extraClass = '',
   disabled = false,
-  showIcon = true,
+  showIcon = false,
   placement = 'bottom'
 }) {
   const [optClickArr, setOptClickArr] = useState([]);

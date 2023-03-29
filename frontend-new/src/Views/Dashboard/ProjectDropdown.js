@@ -303,6 +303,7 @@ function ProjectDropdown({
             optionClick={(val) => setAdditionalactions(val)}
             onClickOutside={() => setMoreOptions(false)}
             posRight
+            showIcon
           />
         ) : (
           false
@@ -362,7 +363,7 @@ function ProjectDropdown({
 
   const items = [
     {
-      label: 'New KPI Report',
+      label: 'KPI Report',
       key: 1,
       icon: (
         <div style={{ padding: '0 10px 0 0px' }}>
@@ -372,7 +373,7 @@ function ProjectDropdown({
       description: 'Measure performance over time'
     },
     {
-      label: 'New Funnel Report',
+      label: 'Funnel Report',
       key: 2,
       icon: (
         <div style={{ padding: '0 10px 0 0px' }}>
@@ -382,7 +383,7 @@ function ProjectDropdown({
       description: 'Track how users navigate'
     },
     {
-      label: 'New Attribution Report',
+      label: 'Attribution Report',
       key: 3,
       icon: (
         <div style={{ padding: '0 10px 0 0px' }}>
@@ -392,7 +393,7 @@ function ProjectDropdown({
       description: 'Identify the channels that contribute'
     },
     {
-      label: 'New Event Report',
+      label: 'Event Report',
       key: 4,
       icon: (
         <div style={{ padding: '0 10px 0 0px' }}>
@@ -607,7 +608,7 @@ function ProjectDropdown({
               <Button type='primary'>
                 <Space>
                   <SVG name={'plus'} size={16} color='white' />
-                  Report
+                  New Report
                   {/* <CaretDownOutlined /> */}
                 </Space>
               </Button>

@@ -169,6 +169,7 @@ CREATE TABLE IF NOT EXISTS agents (
     is_auth0_user boolean NOT NULL DEFAULT false,
     value json,
     slack_access_tokens JSON,
+    teams_access_tokens JSON,
     last_logged_out bigint DEFAULT 0,
     SHARD KEY (uuid),
     PRIMARY KEY (uuid),
@@ -579,6 +580,7 @@ CREATE TABLE IF NOT EXISTS linkedin_documents (
     creative_id text,
     campaign_group_id text,
     campaign_id text,
+    is_backfilled boolean default FALSE NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
@@ -1256,6 +1258,7 @@ CREATE TABLE IF NOT EXISTS feature_gates (
   weekly_insights INT DEFAULT 1,
   alerts INT DEFAULT 2,
   slack INT DEFAULT 2,
+  teams INT DEFAULT 2,
   profiles INT DEFAULT 2,
   segment INT DEFAULT 2,
   path_analysis INT DEFAULT 1,
@@ -1272,6 +1275,7 @@ CREATE TABLE IF NOT EXISTS feature_gates (
   int_hubspot INT DEFAULT 2,
   int_delete INT DEFAULT 2,
   int_slack INT DEFAULT 2,
+  int_teams INT DEFAULT 2,
   ds_adwords INT DEFAULT 2,
   ds_google_oraganic INT DEFAULT 2,
   ds_hubspot INT DEFAULT 2,
@@ -1304,8 +1308,7 @@ CREATE TABLE IF NOT EXISTS property_mappings (
     is_deleted boolean NOT NULL DEFAULT false,
     KEY (updated_at),
     SHARD KEY (project_id),
-    PRIMARY KEY (project_id, id),
-    UNIQUE KEY unique_property_mappings_project_id_name_idx(project_id, name) USING HASH
+    PRIMARY KEY (project_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS display_name_labels (

@@ -57,11 +57,13 @@ function SetupAssist({
   };
 
   useEffect(() => {
-    fetchProjectSettingsV1(activeProject.id).then((res) => {
-      setsdkCheck(res.data.int_completed);
-    });
-    fetchBingAdsIntegration(activeProject.id);
-    fetchMarketoIntegration(activeProject.id);
+    // console.log(fetchProjectSettingsV1(activeProject.id));
+    // fetchProjectSettingsV1(activeProject.id).then((res) => {
+    //   setsdkCheck(res.data.int_completed);
+    //   console.log(res);
+    // });
+    // fetchBingAdsIntegration(activeProject.id);
+    // fetchMarketoIntegration(activeProject.id);
   }, [activeProject, sdkCheck]);
 
   const checkIntegration =
@@ -79,7 +81,8 @@ function SetupAssist({
     marketo?.status ||
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
-    (integration?.int_client_six_signal_key || integration?.int_factors_six_signal_key) ||
+    integration?.int_client_six_signal_key ||
+    integration?.int_factors_six_signal_key ||
     integration?.int_rudderstack;
 
   return (

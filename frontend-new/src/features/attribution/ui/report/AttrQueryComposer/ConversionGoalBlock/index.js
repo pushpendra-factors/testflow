@@ -352,6 +352,7 @@ function ConversionGoalBlock({
                 setMoreOptions(false);
               }}
               onClickOutside={() => setMoreOptions(false)}
+              showIcon
             ></FaSelect>
           ) : (
             false

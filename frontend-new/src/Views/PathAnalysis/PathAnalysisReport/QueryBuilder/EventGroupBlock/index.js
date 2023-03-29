@@ -5,9 +5,9 @@ import { SVG, Text } from 'factorsComponents';
 import styles from './index.module.scss';
 import GroupSelect2 from '../GroupSelect2';
 import FaSelect from 'Components/FaSelect';
-import { AvailableGroups } from 'Utils/constants';
 
 function EventGroupBlock({
+  eventGroup,
   index,
   eventIndex,
   grpIndex,
@@ -47,8 +47,8 @@ function EventGroupBlock({
   useEffect(() => {
     const filterOpts = [...filterOptions];
     filterOpts[0].values = eventProperties[event.label];
-    if (AvailableGroups[event.group]) {
-      filterOpts[2].values = groupProperties[AvailableGroups[event.group]];
+    if (eventGroup?.length) {
+      filterOpts[2].values = groupProperties[eventGroup[1]];
       filterOpts[1].values = [];
     } else {
       filterOpts[1].values = userProperties;

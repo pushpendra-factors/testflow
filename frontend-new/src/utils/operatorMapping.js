@@ -18,7 +18,8 @@ export const operatorMap = {
   [OPERATORS['before']]: 'before',
   [OPERATORS['since']]: 'since',
   [OPERATORS['isKnown']]: 'notEqual',
-  [OPERATORS['isUnknown']]: 'equals'
+  [OPERATORS['isUnknown']]: 'equals',
+  [OPERATORS['inList']]: 'inList',
 };
 
 export const reverseOperatorMap = {
@@ -29,7 +30,8 @@ export const reverseOperatorMap = {
   lesserThan: OPERATORS['lesserThan'],
   lesserThanOrEqual: OPERATORS['lesserThanOrEqual'],
   greaterThan: OPERATORS['greaterThan'],
-  greaterThanOrEqual: OPERATORS['greaterThanOrEqual']
+  greaterThanOrEqual: OPERATORS['greaterThanOrEqual'],
+  inList: [OPERATORS['inList']]
 };
 
 export const reverseDateOperatorMap = {
@@ -51,6 +53,7 @@ export const DEFAULT_OP_PROPS = {
     OPERATORS['notEqualTo'],
     OPERATORS['contain'],
     OPERATORS['doesNotContain'],
+    OPERATORS['inList'],
     OPERATORS['isKnown'],
     OPERATORS['isUnknown']
   ],

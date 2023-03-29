@@ -4,6 +4,7 @@ import {
   SET_COMPARISON_ENABLED,
   COMPARISON_DATA_LOADING,
   COMPARISON_DATA_FETCHED,
+  COMPARISON_DATA_ERROR,
   RESET_COMPARISON_DATA,
   SET_COMPARISON_SUPPORTED,
   SET_COMPARE_DURATION,
@@ -59,6 +60,15 @@ export default function (state, action) {
           loading: false,
           error: false,
           data: payload
+        }
+      };
+    case COMPARISON_DATA_ERROR:
+      return {
+        ...state,
+        comparison_data: {
+          loading: false,
+          error: true,
+          data: null
         }
       };
     case RESET_COMPARISON_DATA:

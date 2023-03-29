@@ -1,0 +1,1 @@
+ALTER TABLE agents ADD COLUMN teams_access_tokens JSON;

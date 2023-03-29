@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import cx from 'classnames';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { connect } from 'react-redux';
@@ -14,17 +14,14 @@ import {
 import EventFilterWrapper from '../EventFilterWrapper';
 import GroupSelect2 from '../GroupSelect2';
 import EventGroupBlock from '../EventGroupBlock';
-import {
-  AvailableGroups,
-  QUERY_TYPE_FUNNEL,
-  RevAvailableGroups
-} from '../../../utils/constants';
+import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 import AliasModal from '../AliasModal';
 import ORButton from '../../ORButton';
 import { compareFilters, groupFilters } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
 function QueryBlock({
+  availableGroups,
   index,
   event,
   eventChange,
@@ -53,19 +50,25 @@ function QueryBlock({
   });
   const [showGroups, setShowGroups] = useState([]);
 
+  const eventGroup = useMemo(() => {
+    const group =
+      availableGroups?.find((group) => group[0] === event?.group) || [];
+    return group;
+  }, [availableGroups, event]);
+
   useEffect(() => {
-    const groupsArray = Object.values(RevAvailableGroups);
-    const options = [...eventOptions];
     let showOpts = [];
     if (groupAnalysis === 'users') {
-      // showOpts = options.filter((item) => !groupsArray.includes(item?.label));
-      showOpts = [...options];
+      showOpts = [...eventOptions];
     } else {
-      const groupOpts = options.filter(
-        (item) => item.label === RevAvailableGroups[groupAnalysis]
-      );
-      const userOpts = options.filter(
-        (item) => !groupsArray.includes(item?.label)
+      const groupOpts = eventOptions?.filter((item) => {
+        const [groupDisplayName] =
+          availableGroups?.find((group) => group[1] === groupAnalysis) || [];
+        return item.label === groupDisplayName;
+      });
+      const groupNamesList = availableGroups.map((item) => item[0]);
+      const userOpts = eventOptions?.filter(
+        (item) => !groupNamesList.includes(item?.label)
       );
       showOpts = groupOpts.concat(userOpts);
     }
@@ -104,8 +107,8 @@ function QueryBlock({
     if (!event || event === undefined) {
       return;
     }
-    if (AvailableGroups[event.group]) {
-      getGroupProperties(activeProject.id, AvailableGroups[event.group]);
+    if (eventGroup?.length) {
+      getGroupProperties(activeProject.id, eventGroup[1]);
     }
   }, [event]);
 
@@ -114,8 +117,8 @@ function QueryBlock({
       return;
     }
     const assignFilterProps = { ...filterProps };
-    if (AvailableGroups[event.group]) {
-      assignFilterProps.group = groupProperties[AvailableGroups[event.group]];
+    if (eventGroup?.length) {
+      assignFilterProps.group = groupProperties[eventGroup[1]];
       assignFilterProps.user = [];
     } else {
       assignFilterProps.user = userProperties;
@@ -191,6 +194,7 @@ function QueryBlock({
   };
   const selectEventFilter = (ind) => (
     <EventFilterWrapper
+      eventGroup={eventGroup}
       filterProps={filterProps}
       activeProject={activeProject}
       event={event}
@@ -213,6 +217,7 @@ function QueryBlock({
   const selectGroupByEvent = () =>
     isGroupByDDVisible ? (
       <EventGroupBlock
+        eventGroup={eventGroup}
         eventIndex={index}
         event={event}
         setGroupState={pushGroupBy}
@@ -279,6 +284,7 @@ function QueryBlock({
               ]}
               optionClick={(val) => setAdditionalactions(val)}
               onClickOutside={() => setMoreOptions(false)}
+              showIcon
             />
           ) : (
             false
@@ -328,6 +334,7 @@ function QueryBlock({
             <div className='fa--query_block--filters flex flex-row'>
               <div key={ind}>
                 <EventFilterWrapper
+                  eventGroup={eventGroup}
                   index={ind}
                   filter={filter}
                   event={event}
@@ -345,6 +352,7 @@ function QueryBlock({
               {ind === orFilterIndex && (
                 <div key='init'>
                   <EventFilterWrapper
+                    eventGroup={eventGroup}
                     filterProps={filterProps}
                     activeProject={activeProject}
                     event={event}
@@ -364,6 +372,7 @@ function QueryBlock({
             <div className='fa--query_block--filters flex flex-row'>
               <div key={ind}>
                 <EventFilterWrapper
+                  eventGroup={eventGroup}
                   index={ind}
                   filter={filtersGr[0]}
                   event={event}
@@ -377,6 +386,7 @@ function QueryBlock({
               </div>
               <div key={ind + 1}>
                 <EventFilterWrapper
+                  eventGroup={eventGroup}
                   index={ind + 1}
                   filter={filtersGr[1]}
                   event={event}

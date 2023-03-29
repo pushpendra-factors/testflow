@@ -35,6 +35,6 @@
       "Routes/*": ["./src/routes"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "declaration"],
   "exclude": ["node_modules", "dist"]
 }
