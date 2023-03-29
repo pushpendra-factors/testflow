@@ -75,7 +75,9 @@ const ReportTable = ({
       });
     });
     return {
-      fileName: `SixSignalReport${dataSelected ? `(${dataSelected})` : ''}.csv`,
+      fileName: `Factors.ai website Visitor Identification report${
+        dataSelected ? `(${dataSelected})` : ''
+      }.csv`,
       data: [columnsArray, ...rowsArray]
     };
   };
