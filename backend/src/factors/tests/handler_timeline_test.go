@@ -912,7 +912,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 
 	timelinesConfig := &model.TimelinesConfig{
 		AccountConfig: model.AccountConfig{
-			TableProps: []string{"$salesforce_account_billingcountry", "$hubspot_company_country", U.SIX_SIGNAL_COUNTRY},
+			TableProps: []string{"$salesforce_account_billingcountry", "$hubspot_company_country"},
 		},
 	}
 
@@ -930,9 +930,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
 	assert.NotNil(t, group2)
 	assert.Equal(t, http.StatusCreated, status)
-	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL, model.AllowedGroupNames)
-	assert.NotNil(t, group3)
-	assert.Equal(t, http.StatusCreated, status)
 
 	// Properties Map
 	propertiesMap := []map[string]interface{}{
@@ -946,11 +943,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development"},
 		{"$hubspot_company_name": "Clientjoy Ads", "$hubspot_company_country": "India", "$hubspot_company_domain": "clientjoy.io", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "IT Services"},
 		{"$hubspot_company_name": "Adapt.IO", "$hubspot_company_country": "India", "$hubspot_company_domain": "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services"},
-		{U.SIX_SIGNAL_NAME: "AdPushup", U.SIX_SIGNAL_COUNTRY: "US", U.SIX_SIGNAL_DOMAIN: "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet"},
-		{U.SIX_SIGNAL_NAME: "Mad Street Den", U.SIX_SIGNAL_COUNTRY: "US", U.SIX_SIGNAL_DOMAIN: "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development"},
-		{U.SIX_SIGNAL_NAME: "Heyflow", U.SIX_SIGNAL_COUNTRY: "Germany", U.SIX_SIGNAL_DOMAIN: "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development"},
-		{U.SIX_SIGNAL_NAME: "Clientjoy Ads", U.SIX_SIGNAL_COUNTRY: "India", U.SIX_SIGNAL_DOMAIN: "clientjoy.io", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "IT Services"},
-		{U.SIX_SIGNAL_NAME: "Adapt.IO", U.SIX_SIGNAL_COUNTRY: "India", U.SIX_SIGNAL_DOMAIN: "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services"},
 	}
 
 	// Create 5 Salesforce Accounts
@@ -1001,34 +993,11 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	}
 	assert.Equal(t, len(accounts), 10)
 
-	// Create 5 Six Signal Domains
-	for i := 0; i < numUsers; i++ {
-		propertiesJSON, err := json.Marshal(propertiesMap[i+5])
-		if err != nil {
-			log.WithError(err).Fatal("Marshal error.")
-		}
-		properties := postgres.Jsonb{RawMessage: propertiesJSON}
-		source := model.GetRequestSourcePointer(model.UserSourceSixSignal)
-
-		createdUserID, _ := store.GetStore().CreateUser(&model.User{
-			ProjectId:      project.ID,
-			Source:         source,
-			Group3ID:       "3",
-			CustomerUserId: fmt.Sprintf("6siguser%d@%s", i+1, propertiesMap[i+10][U.SIX_SIGNAL_DOMAIN]),
-			Properties:     properties,
-			IsGroupUser:    &groupUser,
-		})
-		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
-		assert.Equal(t, http.StatusFound, errCode)
-		accounts = append(accounts, *account)
-	}
-	assert.Equal(t, len(accounts), 15)
-
 	var payload model.TimelinePayload
 
 	// Test Cases :-
 	// 1. Accounts from Different Sources (No filter, no segment applied)
-	sourceToUserCountMap := map[string]int{"All": 15, U.GROUP_NAME_HUBSPOT_COMPANY: 5, U.GROUP_NAME_SALESFORCE_ACCOUNT: 5, U.GROUP_NAME_SIX_SIGNAL: 5}
+	sourceToUserCountMap := map[string]int{"All": 10, U.GROUP_NAME_HUBSPOT_COMPANY: 5, U.GROUP_NAME_SALESFORCE_ACCOUNT: 5}
 	for source, count := range sourceToUserCountMap {
 		payload.Source = source
 		w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
@@ -1042,14 +1011,11 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 			for i, user := range resp {
 				if source == "All" {
 					if i < 5 {
-						assert.Equal(t, user.Name, propertiesMap[14-i][U.SIX_SIGNAL_NAME])
-						assert.Equal(t, user.HostName, propertiesMap[14-i][U.SIX_SIGNAL_DOMAIN])
-					} else if i >= 5 && i < 10 {
-						assert.Equal(t, user.Name, propertiesMap[14-i]["$hubspot_company_name"])
-						assert.Equal(t, user.HostName, propertiesMap[14-i]["$hubspot_company_domain"])
+						assert.Equal(t, user.Name, propertiesMap[9-i]["$hubspot_company_name"])
+						assert.Equal(t, user.HostName, propertiesMap[9-i]["$hubspot_company_domain"])
 					} else {
-						assert.Equal(t, user.Name, propertiesMap[14-i]["$salesforce_account_name"])
-						assert.Equal(t, user.HostName, propertiesMap[14-i]["$salesforce_account_website"])
+						assert.Equal(t, user.Name, propertiesMap[9-i]["$salesforce_account_name"])
+						assert.Equal(t, user.HostName, propertiesMap[9-i]["$salesforce_account_website"])
 					}
 				}
 				if source == U.GROUP_NAME_HUBSPOT_COMPANY {
@@ -1059,10 +1025,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				if source == U.GROUP_NAME_SALESFORCE_ACCOUNT {
 					assert.Equal(t, user.Name, propertiesMap[count-i-1]["$salesforce_account_name"])
 					assert.Equal(t, user.HostName, propertiesMap[count-i-1]["$salesforce_account_website"])
-				}
-				if source == U.GROUP_NAME_SIX_SIGNAL {
-					assert.Equal(t, user.Name, propertiesMap[count+9-i][U.SIX_SIGNAL_NAME])
-					assert.Equal(t, user.HostName, propertiesMap[count+9-i][U.SIX_SIGNAL_DOMAIN])
 				}
 				assert.NotNil(t, user.LastActivity)
 				if i > 0 {

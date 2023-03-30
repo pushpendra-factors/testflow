@@ -20,7 +20,7 @@ import { compareFilters, groupFilters } from 'Utils/global';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 
 function QueryBlock({
-  availableGroups = [],
+  availableGroups,
   index,
   event,
   eventChange,
@@ -51,7 +51,7 @@ function QueryBlock({
 
   const eventGroup = useMemo(() => {
     const group =
-      availableGroups?.find((group) => group[1] === event.group) || [];
+      availableGroups.find((group) => group[1] === event.group) || [];
     return group;
   }, [availableGroups, event]);
 

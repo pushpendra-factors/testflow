@@ -147,8 +147,6 @@ func FormFillProcessing() int {
 					Error("Failed to track form fill.")
 				continue
 			}
-
-			logCtx.WithField("tag", "form_fill_debug").WithField("user_id", row.UserId).Info("Tracked form fills")
 		}
 
 	}
