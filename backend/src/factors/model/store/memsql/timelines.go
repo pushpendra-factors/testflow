@@ -117,7 +117,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		salesforceID, salesforceExists := groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT]
 		sixSignalID, sixSignalExists := groupNameIDMap[model.GROUP_NAME_SIX_SIGNAL]
 
-		if !hubspotExists && !salesforceExists {
+		if !hubspotExists && !salesforceExists && !sixSignalExists {
 			log.WithFields(logFields).Error("No CRMs Enabled for this project.")
 			return nil, http.StatusBadRequest
 		}
@@ -136,20 +136,20 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		selectString = "id AS identity, properties, updated_at AS last_activity"
 		isGroupUserString = "is_group_user=1"
 		if payload.Source == "All" {
-			sourceStr := ""
-			if hubspotExists {
-				sourceStr = sourceStr + fmt.Sprintf("group_%d_id IS NOT NULL ", hubspotID)
-			}
+			var sourceArr []string
 			if salesforceExists {
-				sourceStr = sourceStr + fmt.Sprintf("OR group_%d_id IS NOT NULL ", salesforceID)
+				sourceArr = append(sourceArr, fmt.Sprintf("group_%d_id IS NOT NULL", salesforceID))
 			}
 			if sixSignalExists {
-				sourceStr = sourceStr + fmt.Sprintf("OR group_%d_id IS NOT NULL ", sixSignalID)
+				sourceArr = append(sourceArr, fmt.Sprintf("group_%d_id IS NOT NULL", sixSignalID))
 			}
+			if hubspotExists {
+				sourceArr = append(sourceArr, fmt.Sprintf("group_%d_id IS NOT NULL", hubspotID))
+			}
+			sourceStr := strings.Join(sourceArr, " OR ")
 			if sourceStr != "" {
 				sourceString = fmt.Sprintf("AND (%s)", sourceStr)
 			}
-			log.Info("SourceString: ", sourceString, sixSignalExists)
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
 			sourceString = fmt.Sprintf("AND group_%d_id IS NOT NULL", hubspotID)
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {

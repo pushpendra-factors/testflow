@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"os"
 
 	log "github.com/sirupsen/logrus"
 
@@ -29,13 +28,18 @@ func main() {
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
+	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
+	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
+
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
-	sdkRequestQueueProjectTokens := flag.String("sdk_request_queue_project_tokens", "",
-		"List of project tokens allowed to use sdk request queue")
+	sdkRequestQueueProjectTokens := flag.String("sdk_request_queue_project_tokens", "*",
+		"List of project tokens allowed to use sdk request queue.")
+	formFillIdentifyAllowedProjectIDs := flag.String("form_fill_identify_allowed_projects", "*",
+		"Form fill identification allowed project ids.")
 
 	flag.Parse()
 
@@ -65,22 +69,31 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:             *primaryDatastore,
-		RedisHost:                    *redisHost,
-		RedisPort:                    *redisPort,
-		RedisHostPersistent:          *redisHostPersistent,
-		RedisPortPersistent:          *redisPortPersistent,
-		SentryDSN:                    *sentryDSN,
-		SDKRequestQueueProjectTokens: C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
+		PrimaryDatastore:                      *primaryDatastore,
+		RedisHost:                             *redisHost,
+		RedisPort:                             *redisPort,
+		RedisHostPersistent:                   *redisHostPersistent,
+		RedisPortPersistent:                   *redisPortPersistent,
+		QueueRedisHost:                        *queueRedisHost,
+		QueueRedisPort:                        *queueRedisPort,
+		SentryDSN:                             *sentryDSN,
+		FormFillIdentificationAllowedProjects: *formFillIdentifyAllowedProjectIDs,
+		SDKRequestQueueProjectTokens:          C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
 	}
 
 	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 
+	// Mandatory requirement.
 	err := C.InitDB(*config)
 	if err != nil {
-		log.Error("Failed to initialize DB.")
-		os.Exit(1)
+		log.WithError(err).Fatal("Failed to initialize DB.")
+	}
+
+	// Mandatory requirement.
+	err = C.InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to initialize queue client on form fills.")
 	}
 
 	C.InitRedis(config.RedisHost, config.RedisPort)

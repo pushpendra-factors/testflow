@@ -33,7 +33,8 @@ function PropertyFilter({
             : []),
           ...(groupProperties.$salesforce_account
             ? groupProperties.$salesforce_account
-            : [])
+            : []),
+          ...(groupProperties.$6signal ? groupProperties.$6signal : [])
         ];
       } else props.group = groupProperties[source];
     } else if (profileType === 'user') props.user = userProperties;
