@@ -699,37 +699,25 @@ func Track(projectId int64, request *TrackPayload,
 		U.FillLatestTouchUserProperties(userProperties, eventProperties)
 	}
 
-	logCxFFD := logCtx.WithField("user_id", request.UserId).WithField("tag", "form_fill_debug")
-
 	// Identify users with form events.
 	isFormEvent := request.Name == U.EVENT_NAME_FORM_SUBMITTED
 	if C.IsFormFillIdentificationAllowedForProject(projectId) {
-		logCxFFD.Info("Allowed form fill identification")
 		isFormEvent = request.Name == U.EVENT_NAME_FORM_SUBMITTED || request.Name == U.EVENT_NAME_FORM_FILL
 	}
 	if isFormEvent {
 		customerUserID, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(
 			projectId, request.UserId, eventProperties)
 		if errCode == http.StatusInternalServerError {
-			logCxFFD.WithFields(log.Fields{"userProperties": userProperties,
+			log.WithFields(log.Fields{"userProperties": userProperties,
 				"eventProperties": eventProperties}).Error(
 				"Failed adding user properties from form submitted event.")
 			response.Error = "Failed adding user properties."
 		}
 
-		if strings.TrimSpace(customerUserID) == "" {
-			logCxFFD.
-				WithField("event_name", request.Name).
-				WithField("event_properties", eventProperties).
-				WithField("form_submit_properties", formSubmitUserProperties).
-				WithField("err_code", errCode).
-				Info("Customer user id empty.")
-		}
-
 		if customerUserID != "" {
 			pageURL := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
-			errCode, identifyResponse := Identify(projectId, &IdentifyPayload{
+			errCode, _ := Identify(projectId, &IdentifyPayload{
 				UserId:         request.UserId,
 				CustomerUserId: customerUserID,
 				Timestamp:      request.Timestamp,
@@ -738,12 +726,8 @@ func Track(projectId int64, request *TrackPayload,
 				RequestSource:  request.RequestSource,
 			}, request.Name == U.EVENT_NAME_FORM_SUBMITTED)
 			if errCode != http.StatusOK {
-				logCxFFD.WithFields(log.Fields{
-					"project_id":       projectId,
-					"user_id":          request.UserId,
-					"customer_user_id": customerUserID,
-					"response":         identifyResponse,
-				}).Error("Failed to identify user on form submit event.")
+				log.WithFields(log.Fields{"projectId": projectId, "userId": request.UserId,
+					"customerUserId": customerUserID}).Error("Failed to identify user on form submit event.")
 			}
 
 			// Add user properties from form submit event properties.
