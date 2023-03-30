@@ -923,17 +923,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
 	assert.Equal(t, errCode, http.StatusAccepted)
 
-	// Create Groups
-	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.NotNil(t, group1)
-	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
-	assert.NotNil(t, group2)
-	assert.Equal(t, http.StatusCreated, status)
-	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL, model.AllowedGroupNames)
-	assert.NotNil(t, group3)
-	assert.Equal(t, http.StatusCreated, status)
-
 	// Properties Map
 	propertiesMap := []map[string]interface{}{
 		{"$salesforce_account_name": "Pepper Content", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "peppercontent.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target"},
@@ -1027,6 +1016,43 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	var payload model.TimelinePayload
 
 	// Test Cases :-
+
+	// Source: All, 1 group exists
+	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group1)
+
+	payload.Source = "All"
+	w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	resp := make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 5)
+	assert.Condition(t, func() bool {
+		for i, user := range resp {
+			assert.Equal(t, user.Name, propertiesMap[9-i][U.GP_HUBSPOT_COMPANY_NAME])
+			assert.Equal(t, user.HostName, propertiesMap[9-i][U.GP_HUBSPOT_COMPANY_DOMAIN])
+			assert.NotNil(t, user.LastActivity)
+			if i > 0 {
+				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
+			}
+			for _, prop := range timelinesConfig.UserConfig.TableProps {
+				assert.NotNil(t, user.TableProps[prop])
+			}
+		}
+		return true
+	})
+
+	//2 more groups
+	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.NotNil(t, group2)
+	assert.Equal(t, http.StatusCreated, status)
+	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL, model.AllowedGroupNames)
+	assert.NotNil(t, group3)
+	assert.Equal(t, http.StatusCreated, status)
+
 	// 1. Accounts from Different Sources (No filter, no segment applied)
 	sourceToUserCountMap := map[string]int{"All": 15, U.GROUP_NAME_HUBSPOT_COMPANY: 5, U.GROUP_NAME_SALESFORCE_ACCOUNT: 5, U.GROUP_NAME_SIX_SIGNAL: 5}
 	for source, count := range sourceToUserCountMap {
@@ -1131,10 +1157,10 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		SegmentId: segments["$hubspot_company"][0].Id,
 	}
 
-	w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
-	resp := make([]model.Profile, 0)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 3)
@@ -1159,6 +1185,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		}
 		return true
 	})
+	log.Fatal("resp: ", w)
 
 }
 

@@ -118,6 +118,7 @@ function AccountProfiles({
     getSavedSegments(activeProject.id);
     getGroupProperties(activeProject.id, '$hubspot_company');
     getGroupProperties(activeProject.id, '$salesforce_account');
+    getGroupProperties(activeProject.id, '$6signal');
   }, [activeProject.id]);
 
   useEffect(() => {
@@ -133,7 +134,8 @@ function AccountProfiles({
         : []),
       ...(groupProperties.$salesforce_account
         ? groupProperties.$salesforce_account
-        : [])
+        : []),
+      ...(groupProperties.$6signal ? groupProperties.$6signal : [])
     ];
     setListProperties(mergeGroupedProps);
   }, [groupProperties]);
