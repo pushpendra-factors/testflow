@@ -719,6 +719,8 @@ func Track(projectId int64, request *TrackPayload,
 
 		if strings.TrimSpace(customerUserID) == "" {
 			logCxFFD.
+				WithField("event_name", request.Name).
+				WithField("event_properties", eventProperties).
 				WithField("form_submit_properties", formSubmitUserProperties).
 				WithField("err_code", errCode).
 				Info("Customer user id empty.")

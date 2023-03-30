@@ -108,13 +108,14 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		groupNameIDMap := make(map[string]int)
 		if len(groups) > 0 {
 			for _, group := range groups {
-				if group.Name == model.GROUP_NAME_HUBSPOT_COMPANY || group.Name == model.GROUP_NAME_SALESFORCE_ACCOUNT {
+				if model.IsAllowedAccountGroupNames(group.Name) {
 					groupNameIDMap[group.Name] = group.ID
 				}
 			}
 		}
 		hubspotID, hubspotExists := groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY]
 		salesforceID, salesforceExists := groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT]
+		sixSignalID, sixSignalExists := groupNameIDMap[model.GROUP_NAME_SIX_SIGNAL]
 
 		if !hubspotExists && !salesforceExists {
 			log.WithFields(logFields).Error("No CRMs Enabled for this project.")
@@ -128,14 +129,33 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			log.WithFields(logFields).Error("Salesforce Not Enabled for this project.")
 			return nil, http.StatusBadRequest
 		}
+		if payload.Source == model.GROUP_NAME_SIX_SIGNAL && !sixSignalExists {
+			log.WithFields(logFields).Error("Salesforce Not Enabled for this project.")
+			return nil, http.StatusBadRequest
+		}
 		selectString = "id AS identity, properties, updated_at AS last_activity"
 		isGroupUserString = "is_group_user=1"
-		if payload.Source == "All" && hubspotExists && salesforceExists {
-			sourceString = fmt.Sprintf("AND (group_%d_id IS NOT NULL OR group_%d_id IS NOT NULL)", hubspotID, salesforceID)
+		if payload.Source == "All" {
+			sourceStr := ""
+			if hubspotExists {
+				sourceStr = sourceStr + fmt.Sprintf("group_%d_id IS NOT NULL ", hubspotID)
+			}
+			if salesforceExists {
+				sourceStr = sourceStr + fmt.Sprintf("OR group_%d_id IS NOT NULL ", salesforceID)
+			}
+			if sixSignalExists {
+				sourceStr = sourceStr + fmt.Sprintf("OR group_%d_id IS NOT NULL ", sixSignalID)
+			}
+			if sourceStr != "" {
+				sourceString = fmt.Sprintf("AND (%s)", sourceStr)
+			}
+			log.Info("SourceString: ", sourceString, sixSignalExists)
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
 			sourceString = fmt.Sprintf("AND group_%d_id IS NOT NULL", hubspotID)
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
 			sourceString = fmt.Sprintf("AND group_%d_id IS NOT NULL", salesforceID)
+		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_SIX_SIGNAL) && sixSignalExists {
+			sourceString = fmt.Sprintf("AND group_%d_id IS NOT NULL", sixSignalID)
 		}
 	} else if profileType == model.PROFILE_TYPE_USER {
 		selectString = "COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, properties, MAX(updated_at) AS last_activity"
@@ -220,8 +240,8 @@ func FormatProfilesStruct(profiles []model.Profile, profileType string, tablePro
 	}
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
-		companyNameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_NAME}
-		hostNameProps := []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE}
+		companyNameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME}
+		hostNameProps := []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE, U.SIX_SIGNAL_DOMAIN}
 
 		for index, profile := range profiles {
 			filterTableProps := make(map[string]interface{}, 0)
@@ -574,7 +594,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 	groupNameIDMap := make(map[string]int)
 	if len(groups) > 0 {
 		for index, group := range groups {
-			if group.Name == model.GROUP_NAME_HUBSPOT_COMPANY || group.Name == model.GROUP_NAME_SALESFORCE_ACCOUNT {
+			if model.IsAllowedAccountGroupNames(group.Name) {
 				groupNameIDMap[group.Name] = group.ID
 			}
 			if index == 0 {
@@ -594,8 +614,8 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 	}
 
 	// Filter Properties
-	nameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME}
-	hostNameProps := []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE}
+	nameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME}
+	hostNameProps := []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE, U.SIX_SIGNAL_DOMAIN}
 	propertiesDecoded, err := U.DecodePostgresJsonb(accountDetails.Properties)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Failed decoding account properties.")
