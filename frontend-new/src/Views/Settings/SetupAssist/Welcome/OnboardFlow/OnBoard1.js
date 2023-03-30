@@ -7,7 +7,7 @@ const OnBoard1 = () => {
   return (
     <div className={styles['onBoardContainer']}>
       <JavascriptSDK isOnBoardFlow={true} />
-      <Row
+      {/* <Row
         style={{
           width: 'min-content',
           display: 'flex',
@@ -38,26 +38,7 @@ const OnBoard1 = () => {
             </Text>
           </Row>
         </Col>
-      </Row>
-      <Row
-        style={{
-          margin: '10px 15px',
-          display: 'flex'
-        }}
-      >
-        <span>
-          For detailed instructions on how to install and initialize the
-          JavaScript SDK please refer to our
-        </span>
-        <a
-          href='https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website'
-          target='_blank'
-          rel='noreferrer'
-          style={{ margin: '0 5px' }}
-        >
-          JavaScript developer documentation &#8594;
-        </a>
-      </Row>
+      </Row> */}
     </div>
   );
 };

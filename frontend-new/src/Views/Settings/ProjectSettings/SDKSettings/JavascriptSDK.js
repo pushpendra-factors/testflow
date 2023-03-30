@@ -75,19 +75,6 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
         ></CodeBlock>
       </Col>
       <Col span={24}>
-        <Text type={'paragraph'} extraClass={'m-0 mt-2 mb-2'}>
-          For detailed help or instructions to setup via GTM (Google Tag
-          Manager), please refer to our{' '}
-          <a
-            className={'fa-anchor'}
-            href='https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website'
-            target='_blank'
-          >
-            JavaScript developer documentation.
-          </a>
-        </Text>
-      </Col>
-      <Col span={24}>
         <Text
           type={'title'}
           level={5}
@@ -180,19 +167,7 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
           GTM window!
         </Text>
       </Col>
-      <Col span={24}>
-        <Text type={'paragraph'} extraClass={'m-0 mt-4 mb-2'}>
-          For detailed help or instructions to setup via GTM (Google Tag
-          Manager), please refer to our{' '}
-          <a
-            className={'fa-anchor'}
-            href='https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website'
-            target='_blank'
-          >
-            JavaScript developer documentation.
-          </a>
-        </Text>
-      </Col>
+
       <Col span={24}>
         <Text
           type={'title'}
@@ -1047,13 +1022,7 @@ function JavascriptSDK({
                 : 'Your website data will be visible on the platform from the time the your javascript SDK is placed on your site. Hence, no historical data prior to the setup would be available on the platform.'}
             </Text>
             {isOnBoardFlow === true ? (
-              <a
-                href='https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website'
-                target='_blank'
-                rel='noreferrer'
-              >
-                Learn More
-              </a>
+              <></>
             ) : (
               <Text
                 type={'title'}
@@ -1100,6 +1069,25 @@ function JavascriptSDK({
               </>
             )}
           </Col>
+        </Row>
+        <Row
+          style={{
+            margin: '10px 15px',
+            display: 'flex'
+          }}
+        >
+          <span>
+            For detailed instructions on how to install and initialize the
+            JavaScript SDK please refer to our
+          </span>
+          <a
+            href='https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website'
+            target='_blank'
+            rel='noreferrer'
+            style={{ margin: '0 5px' }}
+          >
+            JavaScript developer documentation &#8594;
+          </a>
         </Row>
       </div>
     </>

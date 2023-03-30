@@ -36,7 +36,7 @@ const EachWelcomeCard = ({ onClick, title, description, type }) => {
             <SVG name='onboardsearch' />
           )}
         </Col>
-        <Col justify={'center'} span={24} className={'mt-12'}>
+        <Col justify={'center'} span={24} className={'mt-8'}>
           <Text
             type={'title'}
             level={5}
@@ -52,6 +52,7 @@ const EachWelcomeCard = ({ onClick, title, description, type }) => {
             weight={'regular'}
             align={'center'}
             color={'grey'}
+            style={{ padding: '10px 0 0 0' }}
           >
             {description}
           </Text>
@@ -119,7 +120,7 @@ const Welcome = ({
               align={'center'}
               extraClass={'m-0 mt-16'}
             >
-              What do you wanna get started on first?
+              What do you want to get started on first?
             </Text>
             <Text
               type={'title'}
@@ -137,16 +138,16 @@ const Welcome = ({
           <Col span={15}>
             <Row className={'justify-center'}>
               <EachWelcomeCard
-                title='Analytics and Attribution'
-                description='Make data-driven decisions and optimize marketing strategies'
-                type={1}
-                onClick={handleRoute}
-              />
-              <EachWelcomeCard
                 title='Website visitor identification'
                 description='Identify anonymous users and track high intent accounts'
                 type={2}
                 onClick={handleRoute1}
+              />
+              <EachWelcomeCard
+                title='Analytics and Attribution'
+                description='Make data-driven decisions and optimize marketing strategies'
+                type={1}
+                onClick={handleRoute}
               />
 
               {/* <div className={`${styles.first}`} onClick={() => {
