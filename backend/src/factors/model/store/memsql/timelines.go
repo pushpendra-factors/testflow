@@ -220,8 +220,8 @@ func FormatProfilesStruct(profiles []model.Profile, profileType string, tablePro
 	}
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
-		companyNameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_NAME}
-		hostNameProps := []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE}
+		companyNameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME}
+		hostNameProps := []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE, U.SIX_SIGNAL_DOMAIN}
 
 		for index, profile := range profiles {
 			filterTableProps := make(map[string]interface{}, 0)
