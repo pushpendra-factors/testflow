@@ -82,6 +82,9 @@ type ProjectSetting struct {
 	IntRudderstack        *bool  `gorm:"not null;default:false" json:"int_rudderstack,omitempty"`
 	ProjectCurrency       string `json:"currency"`
 	IsPathAnalysisEnabled bool   `json:"is_path_analysis_enabled"`
+	// onboarding flow steps
+	IsDeanonymizationRequested bool `json:"is_deanonymization_requested"`
+	IsOnboardingCompleted     bool `json:"is_onboarding_completed"`
 }
 
 /* Sample Attribution Setting
