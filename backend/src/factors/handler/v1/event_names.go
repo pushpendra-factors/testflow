@@ -154,7 +154,8 @@ func GetEventNamesByTypeHandler(c *gin.Context) {
 }
 
 type UploadRequest struct {
-	Payload []byte `json:"Payload"`
+	Payload []byte `json:"payload"`
+	FileName string `json:"file_name"`
 }
 
 func UploadListForFilters(c *gin.Context) {
@@ -175,6 +176,14 @@ func UploadListForFilters(c *gin.Context) {
 		log.WithFields(log.Fields{"project_id": projectId}).WithError(err).Error(errMsg)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
+	}
+	if payload.FileName != "" {
+		fileNameSplit := strings.Split(payload.FileName, ".")
+		fileName := ""
+		for i := 0; i < len(fileNameSplit)-1; i++ {
+			fileName = fileName + fileNameSplit[i]
+		}
+		fileReference = fmt.Sprintf("%s_%s_%s", U.GetUUID(), fileName, fileNameSplit[len(fileNameSplit)-1])
 	}
 	payloadString := string(payload.Payload)
 	if(strings.Contains(payloadString, "\r\n")){

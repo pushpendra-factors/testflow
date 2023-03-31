@@ -780,7 +780,10 @@ const FAFilterSelect = ({
   const handleOk = () => {
     setLoading(true);
 
-    uploadList(activeProject?.id, {'payload': uploadFileByteArray})
+    uploadList(activeProject?.id, {
+      file_name: uploadFileName,
+      payload: uploadFileByteArray
+    })
       .then((res) => {
         valuesSelectSingle([res?.data?.file_reference]);
         handleCancel();
@@ -790,6 +793,21 @@ const FAFilterSelect = ({
         setLoading(false);
         message.error(err?.data?.error);
       });
+  };
+
+  const formatCsvUploadValue = (value) => {
+    const vl = value.split('_');
+    let data = '';
+    if (vl.length > 1) {
+      data += vl[1];
+      for (let i = 2; i < vl.length - 1; i++) {
+        data = data + '_' + vl?.[i];
+      }
+      data = data + '.' + vl[vl.length - 1];
+    } else {
+      data = value;
+    }
+    return data;
   };
 
   const renderCsvUpload = () => {
@@ -870,7 +888,11 @@ const FAFilterSelect = ({
               title={
                 valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                      .map((vl) =>
+                        DISPLAY_PROP[vl]
+                          ? DISPLAY_PROP[vl]
+                          : formatCsvUploadValue(vl)
+                      )
                       .join(', ')
                   : null
               }
@@ -892,7 +914,11 @@ const FAFilterSelect = ({
               >
                 {valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                      .map((vl) =>
+                        DISPLAY_PROP[vl]
+                          ? DISPLAY_PROP[vl]
+                          : formatCsvUploadValue(vl)
+                      )
                       .join(', ')
                   : 'Upload list'}
               </Button>
@@ -915,11 +941,13 @@ const FAFilterSelect = ({
       {operatorState &&
       operatorState !== OPERATORS['isKnown'] &&
       operatorState !== OPERATORS['isUnknown'] &&
+      operatorState !== OPERATORS['inList'] &&
       operatorState?.[0] !== OPERATORS['isKnown'] &&
       operatorState?.[0] !== OPERATORS['isUnknown'] &&
       operatorState?.[0] !== OPERATORS['inList']
         ? renderValuesSelector()
-        : operatorState?.[0] === OPERATORS['inList']
+        : operatorState === OPERATORS['inList'] ||
+          operatorState?.[0] === OPERATORS['inList']
         ? renderCsvUpload()
         : null}
     </div>
