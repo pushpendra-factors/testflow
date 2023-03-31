@@ -1581,11 +1581,12 @@ func syncByTypeUsingFields(ps *model.SalesforceProjectSettings, accessToken, obj
 	var failures []string
 	syncUsingFieldsAPICalls := 0
 
-	idBatches := U.GetStringListAsBatch(ids, 200)
+	batchSize := 142
+	idBatches := U.GetStringListAsBatch(ids, batchSize)
 	query = fmt.Sprintf("SELECT+FIELDS(ALL)+FROM+%s", objectName)
 
 	for i := range idBatches {
-		queryURL := query + "+" + fmt.Sprintf("WHERE+Id+IN+(%s)+LIMIT+200", "'"+strings.Join(idBatches[i], "','")+"'")
+		queryURL := query + "+" + fmt.Sprintf("WHERE+Id+IN+(%s)+LIMIT+%d", "'"+strings.Join(idBatches[i], "','")+"'", batchSize)
 		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, objectName)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to initialize salesforce data client to syncByTypeUsingFields.")
