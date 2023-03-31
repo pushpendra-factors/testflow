@@ -780,7 +780,7 @@ const FAFilterSelect = ({
   const handleOk = () => {
     setLoading(true);
 
-    uploadList(activeProject?.id, {'payload': uploadFileByteArray})
+    uploadList(activeProject?.id, {'file_name': uploadFileName, 'payload': uploadFileByteArray})
       .then((res) => {
         valuesSelectSingle([res?.data?.file_reference]);
         handleCancel();
@@ -791,6 +791,17 @@ const FAFilterSelect = ({
         message.error(err?.data?.error);
       });
   };
+  
+  const formatCsvUploadValue = (value) => {
+    const vl = value.split("_");
+    let data;
+    if (vl.length > 1) {
+      data = vl?.[1] + "." + vl?.[2];
+    } else {
+      data = value;
+    }
+    return data;
+  }
 
   const renderCsvUpload = () => {
     let selectionComponent;
@@ -870,7 +881,7 @@ const FAFilterSelect = ({
               title={
                 valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : formatCsvUploadValue(vl)))
                       .join(', ')
                   : null
               }
@@ -892,7 +903,7 @@ const FAFilterSelect = ({
               >
                 {valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : formatCsvUploadValue(vl)))
                       .join(', ')
                   : 'Upload list'}
               </Button>
@@ -915,11 +926,12 @@ const FAFilterSelect = ({
       {operatorState &&
       operatorState !== OPERATORS['isKnown'] &&
       operatorState !== OPERATORS['isUnknown'] &&
+      operatorState !== OPERATORS['inList'] &&
       operatorState?.[0] !== OPERATORS['isKnown'] &&
       operatorState?.[0] !== OPERATORS['isUnknown'] &&
       operatorState?.[0] !== OPERATORS['inList']
         ? renderValuesSelector()
-        : operatorState?.[0] === OPERATORS['inList']
+        : operatorState === OPERATORS['inList'] || operatorState?.[0] === OPERATORS['inList']
         ? renderCsvUpload()
         : null}
     </div>

@@ -309,10 +309,12 @@ const GlobalFilterSelect = ({
 
         {operSelectOpen && (
           <FaSelect
-            options={operatorOpts[propState.type].filter((op) => {
-              // Only include the operator if showInList is true or it's not 'inList'
-              return false || op !== OPERATORS['inList'];
-            }).map((op) => [op])}
+            options={operatorOpts[propState.type]
+              .filter((op) => {
+                // Only include the operator if showInList is true or it's not 'inList'
+                return false || op !== OPERATORS['inList'];
+              })
+              .map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
           ></FaSelect>
@@ -529,6 +531,24 @@ const GlobalFilterSelect = ({
     return selectorComponent;
   };
 
+  const formatCsvUploadValue = (value) => {
+    if (
+      operatorState === OPERATORS['inList'] ||
+      operatorState?.[0] === OPERATORS['inList']
+    ) {
+      const vl = value.split('_');
+      let data;
+      if (vl.length > 1) {
+        data = vl?.[1] + '.' + vl?.[2];
+      } else {
+        data = value;
+      }
+      return data;
+    }
+
+    return value;
+  };
+
   const renderValuesSelector = () => {
     let selectionComponent = null;
     const values = [];
@@ -623,7 +643,7 @@ const GlobalFilterSelect = ({
             title={
               valuesState && valuesState.length
                 ? valuesState
-                    .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                    .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : formatCsvUploadValue(vl)))
                     .join(', ')
                 : null
             }
@@ -637,7 +657,11 @@ const GlobalFilterSelect = ({
             >
               {valuesState && valuesState.length
                 ? valuesState
-                    .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                    .map((vl) =>
+                      DISPLAY_PROP[vl]
+                        ? DISPLAY_PROP[vl]
+                        : formatCsvUploadValue(vl)
+                    )
                     .join(', ')
                 : 'Select Values'}
             </Button>
