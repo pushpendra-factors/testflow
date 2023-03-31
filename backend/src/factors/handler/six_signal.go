@@ -16,13 +16,12 @@ import (
 	"time"
 )
 
-//GetSixSignalReportHandler fetches the sixsignal report from cloud storage for app-server
+//GetSixSignalReportHandler fetches the saved sixsignal report from cloud storage if the isSaved parameter in request payload is true
+//if the isSaved parameter is false the handler computes the result on the go.
+//The report fetched from the cloud are allowed to share and the result computed on the go is not allowed to share which is reflected
+//in the response parameter isShareable.
 func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	r := c.Request
-
-	// if isSaved is true: the file will be accessed from the cloud storage,
-	//else the result will be computed in real-time (Recent-feature)
-	isSaved := c.Query("isSaved")
 
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -49,7 +48,7 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 	}
 
 	result := make(map[int]model.SixSignalResultGroup)
-	if isSaved == "true" {
+	if requestPayload.Queries[0].IsSaved == true {
 
 		folderName := getFolderName(requestPayload.Queries[0])
 		logCtx.WithFields(log.Fields{"folder name": folderName}).Info("Folder name for reading the result")
@@ -71,6 +70,7 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 			return nil, http.StatusInternalServerError, "", "Failed to process Query", true
 		}
 		resultGroup.Query = requestPayload
+		resultGroup.IsShareable = false
 
 		//Adding cache meta to the result group
 		meta := model.CacheMeta{
