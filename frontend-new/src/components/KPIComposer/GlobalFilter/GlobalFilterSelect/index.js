@@ -537,9 +537,13 @@ const GlobalFilterSelect = ({
       operatorState?.[0] === OPERATORS['inList']
     ) {
       const vl = value.split('_');
-      let data;
+      let data = '';
       if (vl.length > 1) {
-        data = vl?.[1] + '.' + vl?.[2];
+        data += vl[1];
+        for (let i = 2; i < vl.length - 1; i++) {
+          data = data + '_' + vl?.[i];
+        }
+        data = data + '.' + vl[vl.length - 1];
       } else {
         data = value;
       }
@@ -643,7 +647,11 @@ const GlobalFilterSelect = ({
             title={
               valuesState && valuesState.length
                 ? valuesState
-                    .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : formatCsvUploadValue(vl)))
+                    .map((vl) =>
+                      DISPLAY_PROP[vl]
+                        ? DISPLAY_PROP[vl]
+                        : formatCsvUploadValue(vl)
+                    )
                     .join(', ')
                 : null
             }
