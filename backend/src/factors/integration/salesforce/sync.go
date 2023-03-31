@@ -195,38 +195,24 @@ func getFieldsListFromDescription(description *Describe) ([]string, error) {
 	return objectFields, nil
 }
 
-func getSalesforceDataByQuery(projectID int64, query, accessToken, instanceURL, dateTime string) (*QueryResponse, error) {
-	if query == "" || accessToken == "" || instanceURL == "" {
+func (s *DataClient) getSalesforceDataByQuery(projectID int64, query, objectName string) (*DataClient, error) {
+	if projectID == 0 || query == "" || objectName == "" {
 		return nil, errors.New("missing required fields")
 	}
 
-	queryURL := instanceURL + salesforceDataServiceRoute + GetSalesforceAPIVersion(projectID) + "/query?q=" + query
+	queryURL := s.instanceURL + salesforceDataServiceRoute + GetSalesforceAPIVersion(projectID) + "/query?q=" + query
 
-	if dateTime != "" {
-		queryURL = queryURL + "+" + "WHERE" + "+" + "LastModifiedDate" + url.QueryEscape(">"+dateTime)
+	dataClient := &DataClient{
+		ProjectID:      projectID,
+		accessToken:    s.accessToken,
+		instanceURL:    s.instanceURL,
+		queryURL:       queryURL,
+		isFirstRun:     true,
+		nextBatchRoute: "",
+		ObjectName:     objectName,
 	}
 
-	resp, err := GETRequest(queryURL, accessToken)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		var errBody []DataServiceError
-		if err := json.NewDecoder(resp.Body).Decode(&errBody); err != nil {
-			return nil, err
-		}
-
-		return nil, fmt.Errorf("error while query data %+v %d", errBody, resp.StatusCode)
-	}
-
-	var jsonResponse QueryResponse
-	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
-	if err != nil {
-		return nil, errors.New("failed to decode response")
-	}
-	return &jsonResponse, nil
+	return dataClient, nil
 }
 
 // DataClient salesforce data client handles data query from salesforce
@@ -1536,6 +1522,95 @@ func getStartTimestamp(docType string) int64 {
 	return now.New(currentTime).BeginningOfDay().Unix() // get from last 90 days
 }
 
+var ErrRequestHeaderFieldsTooLarge = errors.New("error while query data <h1>Bad Message 431</h1><pre>reason: Request Header Fields Too Large</pre> 431")
+
+func syncByTypeUsingFields(ps *model.SalesforceProjectSettings, accessToken, objectName string, startTimestamp int64) (ObjectStatus, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": objectName, "start_timestamp": startTimestamp})
+
+	var salesforceObjectStatus ObjectStatus
+	salesforceObjectStatus.ProjetID = ps.ProjectID
+	salesforceObjectStatus.DocType = objectName
+	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient.")
+		return salesforceObjectStatus, err
+	}
+
+	query := fmt.Sprintf("SELECT+id+FROM+%s", objectName)
+
+	if startTimestamp > 0 {
+		t := time.Unix(startTimestamp, 0)
+		sfFormatedTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		query = query + "+" + fmt.Sprintf("WHERE+LastModifiedDate%s+ORDER+BY+LastModifiedDate+ASC", url.QueryEscape(">"+sfFormatedTime))
+	}
+
+	paginatedIDs, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, query, objectName)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to initialize salesforce data client")
+		return salesforceObjectStatus, err
+	}
+	ids := make([]string, 0)
+
+	done := false
+	var objectRecords []model.SalesforceRecord
+	for !done {
+		objectRecords, done, err = paginatedIDs.getNextBatch()
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to getNextBatch.")
+			return salesforceObjectStatus, err
+		}
+
+		for i := range objectRecords {
+			if _, exists := objectRecords[i]["Id"]; !exists {
+				logCtx.WithField("record", objectRecords[i]).Error("ID doesn't exist")
+				continue
+			}
+			id := U.GetPropertyValueAsString(objectRecords[i]["Id"])
+			ids = append(ids, id)
+		}
+	}
+
+	salesforceObjectStatus.TotalAPICalls["FieldsIDAPICalls"] = paginatedIDs.APICall
+
+	var failures []string
+	syncUsingFieldsAPICalls := 0
+
+	idBatches := U.GetStringListAsBatch(ids, 200)
+	query = fmt.Sprintf("SELECT+FIELDS(ALL)+FROM+%s", objectName)
+
+	for i := range idBatches {
+		queryURL := query + "+" + fmt.Sprintf("WHERE+id+IN+(%s)+LIMIT+200", strings.Join(idBatches[i], ","))
+		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, objectName)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to initialize salesforce data client to syncByTypeUsingFields.")
+			return salesforceObjectStatus, err
+		}
+
+		done = false
+		for !done {
+			objectRecords, done, err = paginatedRecords.getNextBatch()
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to getNextBatch.")
+				break
+			}
+
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, objectName, objectRecords)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument documents on sync.")
+				failures = append(failures, err.Error())
+			}
+		}
+
+		syncUsingFieldsAPICalls += paginatedRecords.APICall
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDRecordsAPICalls"] = syncUsingFieldsAPICalls
+	salesforceObjectStatus.Failures = failures
+
+	return salesforceObjectStatus, nil
+}
+
 // SyncDocuments syncs from salesforce to database by doc type
 func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) []ObjectStatus {
 	var allObjectStatus []ObjectStatus
@@ -1552,6 +1627,10 @@ func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]
 		}
 
 		objectStatus, err := syncByType(ps, accessToken, docType, timestamp)
+		if docType == model.SalesforceDocumentTypeNameAccount && err == ErrRequestHeaderFieldsTooLarge && C.IsFieldsSyncAllowedForProjectID(ps.ProjectID) {
+			objectStatus, err = syncByTypeUsingFields(ps, accessToken, docType, timestamp)
+		}
+
 		if err != nil || len(objectStatus.Failures) != 0 {
 			log.WithFields(log.Fields{
 				"project_id": ps.ProjectID,
