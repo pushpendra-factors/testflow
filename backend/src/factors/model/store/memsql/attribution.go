@@ -79,15 +79,6 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Fetch marketing report took time")
 	}
 
-	if C.GetAttributionDebug() == 1 && projectID == 12384898976000000 {
-		log.WithFields(log.Fields{"Attribution": "Debug",
-			"marketingReports":            marketingReports,
-			"BingAdsCampaignIDData":       marketingReports.BingAdsCampaignIDData,
-			"BingAdsCampaignKeyData":      marketingReports.BingAdsCampaignKeyData,
-			"CampaignSourceMapping":       marketingReports.CampaignSourceMapping,
-			"CampaignChannelGroupMapping": marketingReports.CampaignChannelGroupMapping}).Info("MarketingReports after FetchMarketingReports")
-	}
-
 	queryStartTime = time.Now().UTC().Unix()
 
 	if err != nil {
@@ -154,13 +145,6 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		userData, err4 = store.PullSessionsOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
 	}
 
-	if C.GetAttributionDebug() == 1 && projectID == 12384898976000000 {
-		log.WithFields(log.Fields{"Attribution": "Debug",
-			"BingAdsCampaignIDData":       marketingReports.BingAdsCampaignIDData,
-			"BingAdsCampaignKeyData":      marketingReports.BingAdsCampaignKeyData,
-			"CampaignSourceMapping":       marketingReports.CampaignSourceMapping,
-			"CampaignChannelGroupMapping": marketingReports.CampaignChannelGroupMapping}).Info("MarketingReports after PullSessionsOfConvertedUsers")
-	}
 	if err4 != nil {
 		return nil, err4
 	}
@@ -198,6 +182,9 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Total query took time")
 	}
 	model.SanitizeResult(result)
+	if query.AttributionKey == model.AttributionKeySource || query.AttributionKey == model.AttributionKeyChannel {
+		model.SanitizeResultForSourceAndChannel(result)
+	}
 	return result, nil
 }
 
@@ -533,8 +520,6 @@ func (store *MemSQL) getAllThePages(projectId int64, sessionEventNameId string, 
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
-	reports.CampaignSourceMapping = make(map[string]string)
-	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
