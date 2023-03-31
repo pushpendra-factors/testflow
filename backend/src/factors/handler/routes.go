@@ -306,6 +306,7 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.POST("/:project_id/v1/eventtriggeralert", responseWrapper(V1.CreateEventTriggerAlertHandler))
 	featuresGatesRouteGroup.DELETE("/:project_id/v1/eventtriggeralert/:id", V1.DeleteEventTriggerAlertHandler)
 	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id", responseWrapper(V1.EditEventTriggerAlertHandler))
+	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/test_wh", responseWrapper(V1.TestWebhookforEventTriggerAlerts))
 
 	// teams
 	featuresGatesRouteGroup.POST("/:project_id/teams/auth", mid.SkipDemoProjectWriteAccess(), teams.TeamsAuthRedirectHandler)
