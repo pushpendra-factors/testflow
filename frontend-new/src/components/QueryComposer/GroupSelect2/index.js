@@ -28,7 +28,10 @@ function GroupSelect2({
   }, [groupedProperties]);
 
   useEffect(() => {
-    const flag = searchTerm.length || !useCollapseView ? false : true;
+    const flag =
+      groupedProps?.length === 1 || searchTerm.length || !useCollapseView
+        ? false
+        : true;
     const groupColState = new Array(groupedProps.length).fill(flag);
     setGroupCollapseState(groupColState);
   }, [groupedProps, searchTerm]);
@@ -113,7 +116,9 @@ function GroupSelect2({
       const groupItem = (
         <div key={group.label} className={`group`}>
           <div
-            className={`group__header ${useCollapseView ? 'cursor-pointer': 'cursor-default'}`}
+            className={`group__header ${
+              useCollapseView ? 'cursor-pointer' : 'cursor-default'
+            }`}
             onClick={() => (useCollapseView ? collapseGroup(grpIndex) : null)}
           >
             <div>

@@ -1,0 +1,1 @@
+alter table linkedin_documents add column is_backfilled boolean default FALSE NOT NULL;

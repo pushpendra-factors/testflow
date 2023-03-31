@@ -46,7 +46,7 @@ const QueryBuilder = ({
   const history = useHistory();
 
   useEffect(() => {
-    fetchGroups(activeProject.id, true);
+    fetchGroups(activeProject.id);
   }, [activeProject]);
 
   const groupsList = useMemo(() => {

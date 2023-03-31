@@ -52,6 +52,7 @@ const AttrQueryComposer = ({
   setCollapse,
   queryOptions,
   setQueryOptions,
+  fetchGroups,
   groupOpts
 }) => {
   const [linkEvExpansion, setLinkEvExpansion] = useState(true);
@@ -67,7 +68,7 @@ const AttrQueryComposer = ({
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetchGroups(activeProject.id, false);
+    fetchGroups(activeProject?.id, false);
   }, [activeProject]);
 
   const groupsList = useMemo(() => {
@@ -359,6 +360,11 @@ const AttrQueryComposer = ({
 
   const renderGroupSection = () => {
     try {
+      const groupDisplayName = queryOptions?.group_analysis
+        ? groupsList?.find(
+            ([_, groupName]) => groupName === queryOptions?.group_analysis
+          )?.[0]
+        : 'Users';
       return (
         <div className={`flex items-center pt-6`}>
           <Text
@@ -383,12 +389,7 @@ const AttrQueryComposer = ({
                     weight={'bold'}
                     extraClass={`m-0 mr-1`}
                   >
-                    {
-                      groupsList?.find(
-                        ([_, groupName]) =>
-                          groupName === queryOptions?.group_analysis
-                      )?.[0]
-                    }
+                    {groupDisplayName}
                   </Text>
                   <SVG name='caretDown' />
                 </div>

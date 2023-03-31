@@ -1080,8 +1080,8 @@ export function enableSlackIntegration(projectId, redirect_url = '') {
         host +
           'projects/' +
           projectId +
-          '/slack/auth?redirect_url=' +
-          redirect_url
+          '/slack/auth' +
+          (redirect_url.length > 0 ? '?source=2' : '')
       )
         .then((r) => {
           if (r.ok) {
@@ -1182,7 +1182,10 @@ export function fetchTeamsWorkspace(projectId) {
 export function fetchTeamsChannels(projectId, teamId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects/' + projectId + '/teams/channels?teams_id=' + teamId)
+      get(
+        dispatch,
+        host + 'projects/' + projectId + '/teams/channels?teams_id=' + teamId
+      )
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'FETCH_TEAMS_FULFILLED', payload: r.data });
@@ -1218,7 +1221,6 @@ export function disableTeamsIntegration(projectId) {
     });
   };
 }
-
 
 export function enableHubspotIntegration(projectId) {
   return function (dispatch) {
@@ -1376,11 +1378,7 @@ export function editEventAlert(projectId, payload, id) {
 export function uploadList(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(
-        dispatch,
-        host + 'projects/' + projectId + '/uploadlist',
-        payload
-      )
+      post(dispatch, host + 'projects/' + projectId + '/uploadlist', payload)
         .then((r) => {
           resolve(r);
         })

@@ -295,7 +295,7 @@ function UserProfiles({
   };
 
   const onChange = (val) => {
-    if (val[1]!== timelinePayload.source) {
+    if (val[1] !== timelinePayload.source) {
       const opts = { ...timelinePayload };
       opts.source = val[1];
       setTimelinePayload(opts);
@@ -639,7 +639,7 @@ function UserProfiles({
 
   const renderClearFilterButton = () => (
     <Button
-      className='dropdown-btn'
+      className='dropdown-btn mr-2'
       type='text'
       icon={<SVG name='times_circle' size={16} />}
       onClick={clearFilters}
@@ -662,8 +662,12 @@ function UserProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button size='large' className='fa-btn--custom mx-2 relative'>
-        <SVG name='activity_filter' />
+      <Button
+        size='large'
+        icon={<SVG name='activity_filter' />}
+        className='relative'
+      >
+        Configure
       </Button>
     </Popover>
   );

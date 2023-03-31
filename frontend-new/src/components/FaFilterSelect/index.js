@@ -129,6 +129,7 @@ const FAFilterSelect = ({
           filter.operator === OPERATORS['notEqualTo'] ||
           filter.operator?.[0] === OPERATORS['equalTo'] ||
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
+        filter.values?.length === 1 &&
         filter.values?.[0] === '$none'
       ) {
         if (
@@ -779,16 +780,34 @@ const FAFilterSelect = ({
   const handleOk = () => {
     setLoading(true);
 
-    uploadList(activeProject?.id, uploadFileByteArray)
-    .then((res) => {
-      valuesSelectSingle([res?.data?.file_reference]);
-      handleCancel();
-      setLoading(false);
+    uploadList(activeProject?.id, {
+      file_name: uploadFileName,
+      payload: uploadFileByteArray
     })
-    .catch((err) => {
-      setLoading(false);
-      message.error(err?.data?.error);
-    });
+      .then((res) => {
+        valuesSelectSingle([res?.data?.file_reference]);
+        handleCancel();
+        setLoading(false);
+      })
+      .catch((err) => {
+        setLoading(false);
+        message.error(err?.data?.error);
+      });
+  };
+
+  const formatCsvUploadValue = (value) => {
+    const vl = value.split('_');
+    let data = '';
+    if (vl.length > 1) {
+      data += vl[1];
+      for (let i = 2; i < vl.length - 1; i++) {
+        data = data + '_' + vl?.[i];
+      }
+      data = data + '.' + vl[vl.length - 1];
+    } else {
+      data = value;
+    }
+    return data;
   };
 
   const renderCsvUpload = () => {
@@ -809,7 +828,7 @@ const FAFilterSelect = ({
           <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
             We’ll only look at the first column as your reference list of data
           </Text>
-          <div className='border rounded mt-2'>
+          <div className='border rounded mt-2 flex justify-center '>
             <Upload
               showUploadList={false}
               onChange={handleChange}
@@ -817,7 +836,7 @@ const FAFilterSelect = ({
               maxCount={1}
               className={'text-center'}
             >
-              <div className={'p-8'} style={{ marginLeft: '8rem' }}>
+              <div className={'p-8'}>
                 {uploadFileName ? (
                   <Button className='inline'>
                     {uploadFileName}
@@ -869,7 +888,11 @@ const FAFilterSelect = ({
               title={
                 valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                      .map((vl) =>
+                        DISPLAY_PROP[vl]
+                          ? DISPLAY_PROP[vl]
+                          : formatCsvUploadValue(vl)
+                      )
                       .join(', ')
                   : null
               }
@@ -891,7 +914,11 @@ const FAFilterSelect = ({
               >
                 {valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                      .map((vl) =>
+                        DISPLAY_PROP[vl]
+                          ? DISPLAY_PROP[vl]
+                          : formatCsvUploadValue(vl)
+                      )
                       .join(', ')
                   : 'Upload list'}
               </Button>
@@ -914,15 +941,17 @@ const FAFilterSelect = ({
       {operatorState &&
       operatorState !== OPERATORS['isKnown'] &&
       operatorState !== OPERATORS['isUnknown'] &&
+      operatorState !== OPERATORS['inList'] &&
       operatorState?.[0] !== OPERATORS['isKnown'] &&
       operatorState?.[0] !== OPERATORS['isUnknown'] &&
       operatorState?.[0] !== OPERATORS['inList']
         ? renderValuesSelector()
-        : operatorState?.[0] === OPERATORS['inList']
+        : operatorState === OPERATORS['inList'] ||
+          operatorState?.[0] === OPERATORS['inList']
         ? renderCsvUpload()
         : null}
     </div>
   );
 };
 
-export default connect(null, {uploadList})(FAFilterSelect);
+export default connect(null, { uploadList })(FAFilterSelect);

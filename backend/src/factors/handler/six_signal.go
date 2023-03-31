@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	C "factors/config"
 	"factors/delta"
 	V1 "factors/handler/v1"
 	mid "factors/middleware"
@@ -257,6 +258,61 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 	logCtx.Info("Response structure for sharing: ", response)
 
 	return response, http.StatusCreated, "Shareable Query creation successful", false
+}
+
+//SendSixSignalReportViaEmail sends mail to the emailIDs provided by clients
+func SendSixSignalReportViaEmail(c *gin.Context) (interface{}, int, string, string, bool) {
+
+	r := c.Request
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		log.Error("Query failed. Invalid project.")
+		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, "Invalid Project", true
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectId,
+	})
+
+	var requestPayload model.SixSignalEmailAndMessage
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		logCtx.WithError(err).Error("Json decode failed in method SendSixSignalReportViaEmail.")
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Json Decode Failed", true
+	}
+
+	if len(requestPayload.EmailIDs) == 0 {
+		logCtx.Error("No email id present to send mail for SixSignal Report")
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "No email id provided", true
+	}
+
+	fromDate := U.GetDateFromTimestampAndTimezone(requestPayload.From, requestPayload.Timezone)
+	toDate := U.GetDateFromTimestampAndTimezone(requestPayload.To, requestPayload.Timezone)
+
+	var success, fail int
+	sub := "Latest accounts that visited " + requestPayload.Domain + " from " + fromDate + " to " + toDate
+	html := U.GetSixSignalReportSharingTemplate(requestPayload.Url, requestPayload.Domain)
+	text := ""
+	for _, email := range requestPayload.EmailIDs {
+		err := C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), sub, html, text)
+		if err != nil {
+			fail++
+			log.WithError(err).Error("failed to send email via SendSixSignalReportViaEmail method")
+			continue
+		}
+		success++
+	}
+	var msg string
+	if success < len(requestPayload.EmailIDs) {
+		msg = fmt.Sprintf("Email successfully sent to %d email id, failed to send email to %d", success, fail)
+	} else {
+		msg = "Email successfully sent to all the email ids"
+	}
+
+	return msg, http.StatusOK, "", "", false
+
 }
 
 //isReportShared checks if the report has been already made public

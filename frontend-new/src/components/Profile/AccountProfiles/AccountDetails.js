@@ -98,7 +98,8 @@ function AccountDetails({
         : []),
       ...(groupProperties.$salesforce_account
         ? groupProperties.$salesforce_account
-        : [])
+        : []),
+      ...(groupProperties.$6signal ? groupProperties.$6signal : [])
     ];
     setListProperties(mergeGroupedProps);
   }, [groupProperties]);

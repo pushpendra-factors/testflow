@@ -47,7 +47,7 @@ function EventGroupBlock({
   useEffect(() => {
     const filterOpts = [...filterOptions];
     filterOpts[0].values = eventProperties[event.label];
-    if (eventGroup) {
+    if (eventGroup?.length) {
       filterOpts[2].values = groupProperties[eventGroup[1]];
       filterOpts[1].values = [];
     } else {

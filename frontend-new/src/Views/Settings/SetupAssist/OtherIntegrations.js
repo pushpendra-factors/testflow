@@ -209,7 +209,8 @@ function IntegrationCard({ item, index }) {
 function IntegrationSettings({
   currentProjectSettings,
   activeProject,
-  fetchProjectSettings
+  fetchProjectSettings,
+  currentAgent
 }) {
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -246,14 +247,19 @@ function IntegrationSettings({
             {dataLoading ? (
               <Skeleton active paragraph={{ rows: 4 }} />
             ) : (
-              IntegrationProviderData.map((item, index) => (
-                <IntegrationCard
-                  item={item}
-                  index={index}
-                  key={index}
-                  currentProjectSettings={currentProjectSettings}
-                />
-              ))
+              IntegrationProviderData.map((item, index) => {
+                if(item.name === 'Microsoft Teams' && !['junaid@factors.ai'].includes(currentAgent.email)) {
+                  return null;
+                }
+                return (
+                  <IntegrationCard
+                    item={item}
+                    index={index}
+                    key={index}
+                    currentProjectSettings={currentProjectSettings}
+                  />
+                );
+              })
             )}
           </Col>
         </Row>
@@ -264,7 +270,8 @@ function IntegrationSettings({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  currentProjectSettings: state.global.currentProjectSettings
+  currentProjectSettings: state.global.currentProjectSettings,
+  currentAgent: state.agent.agent_details
 });
 
 export default connect(mapStateToProps, { fetchProjectSettings })(

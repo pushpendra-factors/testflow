@@ -718,10 +718,80 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit,
 	// 1607755924 is Saturday, 12 December 2020 06:52:04! Kept it randomly to avoid running job if date range is not right
 	if startTimeForCache != -1 && startTimeForCache > 1607755924 {
 		store.RunCachingToBackFillRanges(dashboardUnit, startTimeForCache, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
+
+		// Checking if we are running for custom date range
+	} else if C.GetConfig().CustomDateStart != -1 && C.GetConfig().CustomDateStart != 0 &&
+		C.GetConfig().CustomDateEnd != -1 && C.GetConfig().CustomDateEnd != 0 {
+
+		store.RunCustomQueryRangeCaching(dashboardUnit, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
 	} else {
+
 		store.RunEverydayCaching(dashboardUnit, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
 	}
 
+}
+
+func (store *MemSQL) RunCustomQueryRangeCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString, logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool) {
+
+	var unitWaitGroup sync.WaitGroup
+
+	from := C.GetConfig().CustomDateStart
+	to := C.GetConfig().CustomDateEnd
+
+	queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+	if errC != http.StatusFound {
+		logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+		return
+	}
+
+	// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
+	baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
+	if err != nil {
+		errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return
+	}
+
+	projectSettingsJSON, statusCodeProjectSettings := store.GetProjectSetting(dashboardUnit.ProjectID)
+	var cacheSettings model.CacheSettings
+
+	if projectSettingsJSON == nil || statusCodeProjectSettings != http.StatusFound {
+		log.WithField("projectID", dashboardUnit.ProjectID).WithField("statusCodeProjectSettings", statusCodeProjectSettings).Warn("errored in fetching project Settings")
+		return
+	}
+
+	if projectSettingsJSON.CacheSettings != nil && !U.IsEmptyPostgresJsonb(projectSettingsJSON.CacheSettings) {
+		err = json.Unmarshal(projectSettingsJSON.CacheSettings.RawMessage, &cacheSettings)
+	}
+
+	if err != nil {
+		return
+	}
+
+	baseQuery.SetQueryDateRange(from, to)
+	baseQuery.SetTimeZone(timezoneString)
+	baseQuery.SetDefaultGroupByTimestamp()
+	err = baseQuery.TransformDateTypeFilters()
+	if err != nil {
+		errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return
+	}
+	cachePayload := model.DashboardUnitCachePayload{
+		DashboardUnit: dashboardUnit,
+		BaseQuery:     baseQuery,
+		Preset:        "Custom",
+	}
+	if C.GetIsRunningForMemsql() == 0 {
+		unitWaitGroup.Add(1)
+		go store.cacheDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
+	} else {
+		store.cacheDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
+	}
+
+	if C.GetIsRunningForMemsql() == 0 {
+		unitWaitGroup.Wait()
+	}
 }
 
 func (store *MemSQL) RunEverydayCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString, logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool) {
@@ -796,6 +866,7 @@ func (store *MemSQL) RunEverydayCaching(dashboardUnit model.DashboardUnit, timez
 			store.cacheDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
 		}
 	}
+
 	if C.GetIsRunningForMemsql() == 0 {
 		unitWaitGroup.Wait()
 	}

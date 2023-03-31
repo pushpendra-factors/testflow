@@ -1,4 +1,4 @@
-import { SVG, Text } from 'Components/factorsComponents';
+import { Text } from 'Components/factorsComponents';
 import MomentTz from 'Components/MomentTz';
 import {
   eventIconsColorMap,
@@ -34,7 +34,9 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, listProperties }) => (
         {event.alias_name ? (
           <div className='heading-with-sub'>
             <div className='sub'>{PropTextFormat(event.display_name)}</div>
-            <div className='main'>{event.alias_name}</div>
+            <div className='main'>
+              {event.event_type === 'FE' ? event.event_name : event.alias_name}
+            </div>
           </div>
         ) : (
           <div className='heading'>{PropTextFormat(event.display_name)}</div>
@@ -72,7 +74,9 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, listProperties }) => (
                 truncate
                 charLimit={40}
               >
-                {event.event_name}
+                {event.event_type === 'FE'
+                  ? event.alias_name
+                  : event.event_name}
               </Text>
             </div>
           );

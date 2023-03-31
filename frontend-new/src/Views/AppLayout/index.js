@@ -136,7 +136,6 @@ function AppLayout({
     if (active_project && active_project?.id && isAgentLoggedIn) {
       dispatch(fetchDashboards(active_project?.id));
       dispatch(fetchQueries(active_project?.id));
-      dispatch(fetchGroups(active_project?.id));
       dispatch(fetchKPIConfig(active_project?.id));
       dispatch(fetchPageUrls(active_project?.id));
       // dispatch(deleteQueryTest())

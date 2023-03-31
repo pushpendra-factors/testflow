@@ -23,6 +23,8 @@ func main() {
 	numRoutinesForWebAnalyticsFlag := flag.Int("num_routines_for_web_analytics", 1,
 		"No.of routines to use for web analytics dashboard caching.")
 
+	customDateStart := flag.Int64("custom_start_timestamp", -1, "Start timestamp of a custom date range run.")
+	customDateEnd := flag.Int64("custom_end_timestamp", -1, "End timestamp of a custom date range run.")
 	cacheOnlyDashboards := flag.String("cache_only_dashboards", "*", "Comma separated dashboard ids to run for. * to run for all")
 	cacheForLongerExpiryProjects := flag.String("cache_for_longer_expiry_projects", "", "Comma separated project ids to run for. * to run for all")
 	startTimestampForWeekMonth := flag.Int64("start_timestamp_week_month", -1,
@@ -140,6 +142,8 @@ func main() {
 		StartTimestampForWeekMonth:            *startTimestampForWeekMonth,
 		CacheForLongerExpiryProjects:          *cacheForLongerExpiryProjects,
 		CacheOnlyDashboards:                   *cacheOnlyDashboards,
+		CustomDateStart:                       *customDateStart,
+		CustomDateEnd:                         *customDateEnd,
 	}
 
 	C.InitConf(config)

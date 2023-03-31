@@ -49,3 +49,12 @@ type SixSignalPublicURLResponse struct {
 	RouteVersion string `json:"route_version"`
 	QueryID      string `json:"query_id"`
 }
+
+type SixSignalEmailAndMessage struct {
+	EmailIDs []string            `json:"email_ids"`
+	Url      string              `json:"url"`
+	Domain   string              `json:"domain"`
+	From     int64               `json:"fr"`
+	To       int64               `json:"to"`
+	Timezone util.TimeZoneString `json:"tz"`
+}

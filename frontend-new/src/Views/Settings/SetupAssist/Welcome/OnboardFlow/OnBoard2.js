@@ -23,69 +23,117 @@ import {
 } from 'Reducers/types';
 import { sendSlackNotification } from 'Utils/slack';
 import { useHistory } from 'react-router-dom';
+import {
+  CaretDownOutlined,
+  CaretUpOutlined,
+  LoadingOutlined
+} from '@ant-design/icons';
 
 const HorizontalCard = ({
   isDropdown,
   setIsModalRequestAccess,
   setIsStep2Done,
-  udpateProjectSettings
+  udpateProjectSettings,
+  title,
+  description,
+  icon,
+  type,
+  onSuccess,
+  api_key = '',
+  isActivated = false
 }) => {
-  const dispatch = useDispatch();
-  const int_client_six_signal_key = useSelector(
-    (state) => state?.global?.currentProjectSettings?.int_client_six_signal_key
-  );
-  const activeProject = useSelector((state) => state?.global?.active_project);
-  const currentProjectSettings = useSelector(
-    (state) => state?.global?.currentProjectSettings
-  );
-  const factors6SignalKeyRequested = useSelector(
-    (state) => state?.onBoardFlow?.factors6SignalKeyRequested
-  );
-  const [selectedOption, setSelectedOption] = useState(undefined);
-  const [isOpen, setIsOpen] = useState(false);
-  const RadioHandle = (e) => {
-    let value = e.target.value;
-    console.log(value);
-    setSelectedOption(value);
+  const [isLoading, setIsLoading] = useState(false);
+  const onFinishFailed = () => {};
+  const Type1Form = () => {
+    return (
+      <div>
+        <Form
+          onFinish={onSuccess}
+          onFinishFailed={onFinishFailed}
+          style={{
+            display: 'flex',
+            flexWrap: 'nowrap',
+            margin: '10px 0'
+          }}
+        >
+          <Button
+            htmlType='submit'
+            style={{ margin: '0 0px', padding: '0 10px' }}
+            icon={isActivated === true ? <SVG name='Greentick' /> : ''}
+          >
+            {isActivated === true ? 'Request Sent' : 'Activate'}
+          </Button>
+        </Form>
+      </div>
+    );
   };
-  const openDropDown = useCallback(() => setIsOpen(true), []);
-  useEffect(() => {
-    if (int_client_six_signal_key) setSelectedOption('1');
-  }, [int_client_six_signal_key]);
-  const handleVerify6Signal = (values) => {
-    // Factors INTEGRATION tracking
-    factorsai.track('INTEGRATION', {
-      name: '6Signal',
-      activeProjectID: activeProject.id
-    });
-    udpateProjectSettings(activeProject.id, {
-      client6_signal_key: values.api_key,
-      int_client_six_signal_key: true
-    })
-      .then(() => {
-        setTimeout(() => {
-          message.success('6Signal integration successful');
-        }, 500);
-
-        dispatch({
-          type: TOGGLE_DISABLED_STATE_NEXT_BUTTON,
-          payload: { step: '2', state: true }
-        });
-      })
-      .catch((err) => {
-        console.error(err);
-      });
+  const onFinish = async (values) => {
+    try {
+      if (values.api_key === api_key) {
+        message.success('API Key Already Set!');
+        return;
+      }
+      setIsLoading(true);
+      await onSuccess(values);
+      setIsLoading(false);
+    } catch (e) {
+      setIsLoading(false);
+      message.error('Some error Occured!');
+    }
   };
-  const handleFactors6SignalKeyRequest = useCallback(() => {
-    setIsModalRequestAccess(true);
-  }, []);
+  const Type2Form = () => {
+    return (
+      <Row style={{ margin: '10px 0' }}>
+        <Row style={{ width: '100%' }}>
+          <Text type={'title'} level={7} weight={'bold'} style={{ margin: 0 }}>
+            Enter your API Key
+          </Text>
+        </Row>
+        <Row style={{ width: '100%' }}>
+          <Form
+            onFinish={onFinish}
+            onFinishFailed={onFinishFailed}
+            style={{
+              display: 'flex',
+              flexWrap: 'nowrap',
+              margin: '10px 0'
+            }}
+            initialValues={{ api_key: api_key }}
+          >
+            <Form.Item
+              name='api_key'
+              rules={[{ required: true, message: 'Please enter API Key!' }]}
+              style={{ margin: '0 10px' }}
+            >
+              <Input
+                disabled={isActivated}
+                placeholder='eg: xxxxxxxxxxxxxxxx'
+                style={{ minWidth: '320px' }}
+              />
+            </Form.Item>
+            <Button
+              htmlType='submit'
+              style={{ margin: '0 10px', padding: '0 10px' }}
+              icon={isLoading === true ? <LoadingOutlined /> : ''}
+            >
+              Activate
+            </Button>
+          </Form>
+        </Row>
+      </Row>
+    );
+  };
   return (
     <Row className={styles['horizontalCard']}>
       <div className={styles['horizontalCardContent']}>
         <div className={styles['horizontalCardLeft']}>
-          <div style={{ display: 'grid', placeContent: 'center' }}>
+          <div
+            style={{ display: 'grid', placeContent: 'baseline' }}
+            className={styles['brand']}
+          >
             {' '}
-            <SVG name={'SixSignalLogo'} size={40} color='purple' />{' '}
+            <div className={styles['brandItem']}>{icon}</div>
+            {/* <SVG name={'SixSignalLogo'} size={40} color='purple' />{' '} */}
           </div>
           <div>
             <Text
@@ -94,188 +142,43 @@ const HorizontalCard = ({
               weight={'bold'}
               style={{ margin: 0 }}
             >
-              Integrate with 6signal by 6sense
+              {title}
             </Text>
-            <div>
-              Gain insight into who is visiting your website and where they are
-              in the buying journey
-            </div>
+            <div>{description}</div>
+            {type === 2 ? <Type2Form /> : type === 1 ? <Type1Form /> : ''}
           </div>
         </div>
         <div className={styles['horizontalCardRight']}>
-          <Button onClick={isOpen === false ? openDropDown : null}>
+          {/* <Button onClick={isOpen === false ? openDropDown : null}>
             Connect
-          </Button>
+          </Button> */}
         </div>
       </div>
-      {isOpen === true ? (
-        <>
-          <Divider style={{ margin: '20px 0 5px 0' }} />
-          <div className={styles['cardExtension']}>
-            <div className={styles['eachExtension']}>
-              <Radio
-                name='test'
-                defaultChecked={selectedOption == '1'}
-                checked={selectedOption == '1'}
-                value='1'
-                onClick={RadioHandle}
-              />
-              <div>
-                <div
-                  onClick={() => setSelectedOption('1')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <Text
-                    type={'title'}
-                    level={7}
-                    weight={'bold'}
-                    style={{ margin: 0 }}
-                  >
-                    Use your own 6Signal API Key
-                  </Text>
-                  <div>
-                    If you have a Clearbit API key, add it below to use it
-                    directly in Factors. You usage will not be capped by your
-                    Factors plan.
-                  </div>
-                </div>
-                <div style={{ padding: '10px 0' }}>
-                  <div style={{ padding: '2px 0' }}>API Key</div>
-                  <Space direction='horizontal'>
-                    <Form
-                      onFinish={handleVerify6Signal}
-                      style={{ display: 'flex' }}
-                    >
-                      <Form.Item
-                        name='api_key'
-                        rules={[
-                          { required: true, message: 'API Key is required' }
-                        ]}
-                      >
-                        <Input
-                          defaultValue={
-                            currentProjectSettings?.int_client_six_signal_key
-                              ? currentProjectSettings.client6_signal_key
-                              : ''
-                          }
-                          style={{ margin: 0, width: '320px' }}
-                          placeholder='Enter/Paste API key here'
-                          disabled={
-                            selectedOption != '1'
-                              ? true
-                              : currentProjectSettings?.int_client_six_signal_key
-                          }
-                        />
-                      </Form.Item>
-                      {currentProjectSettings?.int_client_six_signal_key ? (
-                        <span
-                          role='img'
-                          aria-label='integration_done'
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '0 10px'
-                          }}
-                        >
-                          <SVG name='greentick' />
-                        </span>
-                      ) : (
-                        <Button
-                          style={{ margin: '0 10px' }}
-                          onClick={() => {}}
-                          disabled={selectedOption != '1'}
-                          htmlType='submit'
-                        >
-                          Verify key
-                        </Button>
-                      )}
-                    </Form>
-                  </Space>
-                </div>
-              </div>
-            </div>
-            <div className={styles['eachExtension']}>
-              <Radio
-                name='test'
-                value='2'
-                defaultChecked={selectedOption == '2'}
-                checked={selectedOption == '2'}
-                onClick={RadioHandle}
-              />
-              <div>
-                <div
-                  onClick={() => setSelectedOption('2')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <Text
-                    type={'title'}
-                    level={7}
-                    weight={'bold'}
-                    style={{ margin: 0 }}
-                  >
-                    Use the Factors 6signal Api key
-                  </Text>
-                  <div>
-                    In case you don’t have your own, get started immediately
-                    using the Factors’ API key. Usage will be capped according
-                    to your plan and conversation with the success team.
-                  </div>
-                </div>
-                <div style={{ padding: '10px 0' }}>
-                  <Space direction='horizontal'>
-                    <Button
-                      size='large'
-                      className={styles['btn']}
-                      onClick={
-                        factors6SignalKeyRequested === false
-                          ? handleFactors6SignalKeyRequest
-                          : ''
-                      }
-                      disabled={selectedOption != '2'}
-                    >
-                      {factors6SignalKeyRequested === true ? (
-                        <span>
-                          {' '}
-                          <SVG name='Greentick' /> Access Requested
-                        </span>
-                      ) : (
-                        'Request Access'
-                      )}
-                    </Button>
-                  </Space>
-                </div>
-              </div>
-            </div>
-
-            {/* <Radio value={3}>C</Radio>
-          <Radio value={4}>D</Radio> */}
-          </div>
-        </>
-      ) : (
-        ''
-      )}
     </Row>
   );
 };
 const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
   const [isModalRequestAccess, setIsModalRequestAccess] = useState(false);
   const activeProject = useSelector((state) => state?.global?.active_project);
+  const [isThirdPartyOpen, setIsThirdPartyOpen] = useState(false);
   const currentAgent = useSelector((state) => state?.agent?.agent_details);
   const history = useHistory();
   const dispatch = useDispatch();
-  const int_client_six_signal_key = useSelector(
-    (state) => state?.global?.currentProjectSettings?.int_client_six_signal_key
+  const { int_client_six_signal_key, int_clear_bit, clearbit_key } =
+    useSelector((state) => state?.global?.currentProjectSettings);
+  const { client6_signal_key } = useSelector(
+    (state) => state?.global?.currentProjectSettings
   );
   const factors6SignalKeyRequested = useSelector(
     (state) => state?.onBoardFlow?.factors6SignalKeyRequested
   );
 
-  useEffect(() => {
-    dispatch({
-      type: TOGGLE_DISABLED_STATE_NEXT_BUTTON,
-      payload: { step: '2', state: int_client_six_signal_key }
-    });
-  }, [int_client_six_signal_key]);
+  // useEffect(() => {
+  //   dispatch({
+  //     type: TOGGLE_DISABLED_STATE_NEXT_BUTTON,
+  //     payload: { step: '2', state: int_client_six_signal_key }
+  //   });
+  // }, [int_client_six_signal_key]);
   const handleFactors6SignalSetup = () => {
     sendSlackNotification(
       currentAgent.email,
@@ -294,6 +197,35 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
 
     message.success('Requested for Factors 6 Signal Key');
   };
+  const handleClient6SignalKeyActivate = (values) => {
+    return new Promise((resolve, reject) => {
+      // Factors INTEGRATION tracking
+      factorsai.track('INTEGRATION', {
+        name: '6Signal',
+        activeProjectID: activeProject.id
+      });
+      udpateProjectSettings(activeProject.id, {
+        client6_signal_key: values.api_key,
+        int_client_six_signal_key: true
+      })
+        .then(() => {
+          setTimeout(() => {
+            message.success('6Signal integration successful');
+          }, 500);
+
+          dispatch({
+            type: TOGGLE_DISABLED_STATE_NEXT_BUTTON,
+            payload: { step: '2', state: true }
+          });
+          resolve(true);
+        })
+        .catch((err) => {
+          console.error(err);
+          reject(err);
+        });
+    });
+  };
+  const handleClearBitKeyActivate = (values) => {};
   return (
     <div className={styles['onBoardContainer']}>
       {/* <SixSignal setIsActive={() => {}} kbLink={true} /> */}
@@ -307,8 +239,84 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
           isStep2Done={isStep2Done}
           setIsStep2Done={setIsStep2Done}
           udpateProjectSettings={udpateProjectSettings}
+          title={'Activate Factors Deanonymisation'}
+          description={
+            'Use Factors API key to get started with Website Visitor Identification immediately. Your usage will be charged based on our plan'
+          }
+          icon={<SVG size={32} name='Brand' />}
+          type={1}
+          onSuccess={() => {
+            setIsModalRequestAccess(true);
+          }}
+          api_key={''}
+          isActivated={factors6SignalKeyRequested}
         />
-        {console.log('SD')}
+        <Divider />
+
+        {isThirdPartyOpen === true ? (
+          <div className={styles['toggleMenu']}>
+            <Text type={'title'} level={6} weight={'bold'}>
+              Third party integrations
+            </Text>
+            <HorizontalCard
+              isDropdown={true}
+              setIsModalRequestAccess={setIsModalRequestAccess}
+              isStep2Done={isStep2Done}
+              setIsStep2Done={setIsStep2Done}
+              udpateProjectSettings={udpateProjectSettings}
+              title={'6Sense by 6Signal'}
+              description={
+                'If you have a 6Signal API key, add it below to use it directly in Factors. You usage will be charged as per 6Signals plans.'
+              }
+              icon={<SVG size={32} name='SixSignalLogo' />}
+              type={2}
+              onSuccess={handleClient6SignalKeyActivate}
+              api_key={
+                int_client_six_signal_key === true ? client6_signal_key : ''
+              }
+              isActivated={int_client_six_signal_key}
+            />
+            <HorizontalCard
+              isDropdown={true}
+              setIsModalRequestAccess={setIsModalRequestAccess}
+              isStep2Done={isStep2Done}
+              setIsStep2Done={setIsStep2Done}
+              udpateProjectSettings={udpateProjectSettings}
+              title={'Clearbit reveal'}
+              description={
+                'If you have a 6Signal API key, add it below to use it directly in Factors. You usage will be charged as per 6Signals plans.'
+              }
+              icon={<SVG size={32} name='ClearbitLogo' />}
+              type={2}
+              onSuccess={handleClearBitKeyActivate}
+              api_key={int_clear_bit === true ? clearbit_key : ''}
+              isActivated={int_clear_bit}
+            />
+          </div>
+        ) : (
+          ''
+        )}
+        <div
+          style={{
+            color: '#1890FF',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            width: 'fit-content'
+          }}
+          onClick={() => setIsThirdPartyOpen((prev) => !prev)}
+        >
+          {isThirdPartyOpen === false ? (
+            <>
+              I have a third party API key <CaretDownOutlined />
+            </>
+          ) : (
+            <>
+              Show less
+              <CaretUpOutlined />
+            </>
+          )}
+        </div>
         <Modal
           visible={isModalRequestAccess}
           onOk={() => setIsModalRequestAccess(false)}

@@ -17,6 +17,9 @@ const OnBoard = () => {
   const { int_client_six_signal_key, int_factors_six_signal_key } = useSelector(
     (state) => state?.global?.currentProjectSettings
   );
+  const int_completed = useSelector(
+    (state) => state?.global?.projectSettingsV1?.int_completed
+  );
   const {
     isWebsiteVisitorIdentificationVisible,
     currentStep,
@@ -25,7 +28,7 @@ const OnBoard = () => {
   } = useSelector((state) => state.onBoardFlow);
   const checkIsValid = (step) => {
     if (step == 1) {
-      return steps.step1;
+      return int_completed;
     } else if (step == 2) {
       return (
         steps.step2 || int_client_six_signal_key || factors6SignalKeyRequested

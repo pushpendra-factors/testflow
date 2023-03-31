@@ -52,7 +52,7 @@ function QueryBlock({
 
   const eventGroup = useMemo(() => {
     const group =
-      availableGroups?.find((group) => group?.[1] === event?.group) || [];
+      availableGroups?.find((group) => group?.[0] === event?.group) || [];
     return group;
   }, [availableGroups, event]);
 
@@ -63,10 +63,10 @@ function QueryBlock({
     } else {
       const groupOpts = eventOptions?.filter((item) => {
         const [groupDisplayName] =
-          availableGroups.find((group) => group[1] === event.group) || [];
+          availableGroups.find((group) => group[1] === groupAnalysis) || [];
         return item.label === groupDisplayName;
       });
-      const groupNamesList = availableGroups.map((item) => item[1]);
+      const groupNamesList = availableGroups.map((item) => item[0]);
       const userOpts = eventOptions?.filter(
         (item) => !groupNamesList.includes(item?.label)
       );
@@ -107,7 +107,7 @@ function QueryBlock({
     if (!event || event === undefined) {
       return;
     }
-    if (eventGroup) {
+    if (eventGroup?.length) {
       getGroupProperties(activeProject.id, eventGroup[1]);
     }
   }, [event]);
@@ -125,7 +125,7 @@ function QueryBlock({
       return;
     }
     const assignFilterProps = { ...filterProps };
-    if (eventGroup) {
+    if (eventGroup?.length) {
       assignFilterProps.group = groupProperties[eventGroup[1]];
       assignFilterProps.user = [];
     } else {

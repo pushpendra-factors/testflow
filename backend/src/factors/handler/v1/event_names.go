@@ -153,6 +153,11 @@ func GetEventNamesByTypeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"event_names": eventNames})
 }
 
+type UploadRequest struct {
+	Payload []byte `json:"payload"`
+	FileName string `json:"file_name"`
+}
+
 func UploadListForFilters(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -163,8 +168,43 @@ func UploadListForFilters(c *gin.Context) {
 	fileReference := U.GetUUID()
 	result := make([]string, 0 )
 
+	var payload UploadRequest
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&payload); err != nil {
+		errMsg := "Create File payload failed"
+		log.WithFields(log.Fields{"project_id": projectId}).WithError(err).Error(errMsg)
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	if payload.FileName != "" {
+		fileNameSplit := strings.Split(payload.FileName, ".")
+		fileName := ""
+		for i := 0; i < len(fileNameSplit)-1; i++ {
+			fileName = fileName + fileNameSplit[i]
+		}
+		fileReference = fmt.Sprintf("%s_%s_%s", U.GetUUID(), fileName, fileNameSplit[len(fileNameSplit)-1])
+	}
+	payloadString := string(payload.Payload)
+	if(strings.Contains(payloadString, "\r\n")){
+		result = strings.Split(payloadString, "\r\n")
+	} else {
+		result = strings.Split(payloadString, "\n")
+	}
+
+	resultTrimmed := make([]string, 0)
+	for _, data := range result {
+		if(data != ""){
+			resultTrimmed = append(resultTrimmed, data)
+		}
+	}
+	if(len(resultTrimmed) <= 0){
+		c.JSON(http.StatusInternalServerError,  gin.H{"error": "EmptyFile"})
+		return
+	}
+
 	path, file := C.GetCloudManager(projectId, false).GetListReferenceFileNameAndPathFromCloud(projectId, fileReference)
-	resultJson, err := json.Marshal(result)
+	resultJson, err := json.Marshal(resultTrimmed)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal result Info.")
 		c.AbortWithStatus(http.StatusInternalServerError)

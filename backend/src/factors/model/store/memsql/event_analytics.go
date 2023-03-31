@@ -161,7 +161,6 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 	hash2, _ = query.GetQueryCacheHashString()
 	logDifferenceIfAny(hash1, hash2, query, "Query change - 02")
 
-
 	startComputeTime := time.Now()
 	groupPropsLen := len(query.GroupByProperties)
 	err = LimitQueryResult(projectId, result, groupPropsLen, query.GetGroupByTimestamp() != "")
@@ -832,7 +831,7 @@ step1 AS (
 */
 
 func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *model.Query,
-	qStmnt *string, qParams *[]interface{}, enableFilterOpt bool) ([]string, map[string][]string) {
+	qStmnt *string, qParams *[]interface{}, enableFilterOpt bool) ([]string, map[string][]string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"q":          q,
@@ -909,8 +908,12 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	steps := make([]string, 0, 0)
 	// Adding source string
 	var addSourceStmt, addColsString string
+	var status int
 	if IsCallerProfiles(q.Caller) {
-		addSourceStmt, addColsString = store.addSourceFilterForSegments(projectID, q.Source, q.Caller)
+		addSourceStmt, addColsString, status = store.addSourceFilterForSegments(projectID, q.Source, q.Caller)
+		if status != http.StatusOK {
+			return steps, stepsToKeysMap, errors.New("CRMs not enabled for accounts timeline")
+		}
 	}
 	for i, ewp := range q.EventsWithProperties {
 		refStepName := stepNameByIndex(i)
@@ -1015,7 +1018,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		*qStmnt = result
 	}
 
-	return steps, stepsToKeysMap
+	return steps, stepsToKeysMap, nil
 }
 
 func IsCallerProfiles(caller string) bool {
@@ -1034,7 +1037,7 @@ func IsCallerProfiles(caller string) bool {
 // ( (JSON_EXTRACT_STRING(events.properties, '$channel') = 'ChannelName1') ) AND (users.is_group_user=1) AND
 // users.group_1_id IS NOT NULL)
 func (store *MemSQL) addSourceFilterForSegments(projectID int64,
-	source string, caller string) (string, string) {
+	source string, caller string) (string, string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -1047,6 +1050,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 	} else {
 		selectVal = "users"
 	}
+	status := http.StatusBadRequest
 	if caller == model.USER_PROFILE_CALLER {
 		addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=0 OR %s.is_group_user IS NULL)", selectVal, selectVal)
 		if model.UserSourceMap[source] == model.UserSourceWeb {
@@ -1057,6 +1061,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.source=", selectVal) + strconv.Itoa(model.UserSourceMap[source])
 		}
 		addColString = addColString + " " + "users.source"
+		status = http.StatusOK
 	} else if caller == model.ACCOUNT_PROFILE_CALLER {
 		groups, errCode := store.GetGroups(projectID)
 		if errCode != http.StatusFound {
@@ -1072,29 +1077,52 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		}
 		hubspotID, hubspotExists := groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY]
 		salesforceID, salesforceExists := groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT]
+		sixSignalID, sixSignalExists := groupNameIDMap[model.GROUP_NAME_SIX_SIGNAL]
 
-		if !hubspotExists && !salesforceExists {
+		if !hubspotExists && !salesforceExists && !sixSignalExists {
 			log.WithFields(logFields).Error("No CRMs Enabled for this project.")
-		}
-		if source == model.GROUP_NAME_HUBSPOT_COMPANY && !hubspotExists {
+		} else if source == model.GROUP_NAME_HUBSPOT_COMPANY && !hubspotExists {
 			log.WithFields(logFields).Error("Hubspot Not Enabled for this project.")
-		}
-		if source == model.GROUP_NAME_SALESFORCE_ACCOUNT && !salesforceExists {
+		} else if source == model.GROUP_NAME_SALESFORCE_ACCOUNT && !salesforceExists {
 			log.WithFields(logFields).Error("Salesforce Not Enabled for this project.")
-		}
-		addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=1)", selectVal)
-		if source == "All" && hubspotExists && salesforceExists {
-			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.group_%d_id IS NOT NULL OR %s.group_%d_id IS NOT NULL)", selectVal, hubspotID, selectVal, salesforceID)
-			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.group_%d_id", hubspotID, salesforceID)
-		} else if (source == "All" || source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
-			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, hubspotID)
-			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", hubspotID)
-		} else if (source == "All" || source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
-			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, salesforceID)
-			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", salesforceID)
+		} else if source == model.GROUP_NAME_SIX_SIGNAL && !sixSignalExists {
+			log.WithFields(logFields).Error("Six Signal Not Enabled for this project.")
+		} else {
+			addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=1)", selectVal)
+			if source == "All" {
+				var sourceArr, colArr []string
+				if hubspotExists {
+					sourceArr = append(sourceArr, fmt.Sprintf("%s.group_%d_id IS NOT NULL ", selectVal, hubspotID))
+					colArr = append(colArr, fmt.Sprintf("users.group_%d_id", hubspotID))
+				}
+				if salesforceExists {
+					sourceArr = append(sourceArr, fmt.Sprintf("%s.group_%d_id IS NOT NULL ", selectVal, salesforceID))
+					colArr = append(colArr, fmt.Sprintf("users.group_%d_id", salesforceID))
+				}
+				if sixSignalExists {
+					sourceArr = append(sourceArr, fmt.Sprintf("%s.group_%d_id IS NOT NULL ", selectVal, sixSignalID))
+					colArr = append(colArr, fmt.Sprintf("users.group_%d_id", sixSignalID))
+				}
+				sourceStr := strings.Join(sourceArr, " OR ")
+				colStr := strings.Join(colArr, " , ")
+				if sourceStr != "" {
+					addSourceStmt = addSourceStmt + fmt.Sprintf("AND (%s)", sourceStr)
+					addColString = addColString + colStr
+				}
+			} else if (source == "All" || source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
+				addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, hubspotID)
+				addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", hubspotID)
+			} else if (source == "All" || source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
+				addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, salesforceID)
+				addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", salesforceID)
+			} else if (source == "All" || source == model.GROUP_NAME_SIX_SIGNAL) && sixSignalExists {
+				addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, sixSignalID)
+				addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", sixSignalID)
+			}
+			status = http.StatusOK
 		}
 	}
-	return addSourceStmt, addColString
+	return addSourceStmt, addColString, status
 }
 
 /*
@@ -1432,7 +1460,10 @@ func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, stepsToKeysMap := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
+	steps, stepsToKeysMap, err := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
+	if err != nil {
+		return qStmnt, qParams, err
+	}
 	totalGroupKeys := 0
 	for _, val := range stepsToKeysMap {
 		totalGroupKeys = totalGroupKeys + len(val)
@@ -1616,7 +1647,10 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, _ := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
+	steps, _, err := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
+	if err != nil {
+		return qStmnt, qParams, err
+	}
 
 	// users intersection
 	var intersectSelect string
@@ -1766,7 +1800,10 @@ func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, stepsToKeysMap := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
+	steps, stepsToKeysMap, err := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
+	if err != nil {
+		return qStmnt, qParams, err
+	}
 	totalGroupKeys := 0
 	for _, val := range stepsToKeysMap {
 		totalGroupKeys = totalGroupKeys + len(val)
@@ -1852,7 +1889,10 @@ func (store *MemSQL) buildUniqueUsersSingleEventQuery(projectID int64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, _ := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
+	steps, _, err := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
+	if err != nil {
+		return qStmnt, qParams, err
+	}
 	addUniqueUsersAggregationQuery(projectID, &query, &qStmnt, &qParams, steps[0])
 	qStmnt = with(qStmnt)
 
@@ -2488,7 +2528,6 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 	}
 	hash2, _ = query.GetQueryCacheHashString()
 	logDifferenceIfAny(hash1, hash2, *query, "Query change - 3-3")
-
 
 	aggregateSelect := "SELECT "
 	if isGroupByTimestamp {

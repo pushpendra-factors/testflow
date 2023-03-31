@@ -531,7 +531,7 @@ function SmartEventsForm({
                           size='large'
                           className={'fa-input w-full'}
                           placeholder='Display Name'
-                          ref={inputComponentRef}
+                          // ref={inputComponentRef}
                         />
                       </Form.Item>
                     </Col>

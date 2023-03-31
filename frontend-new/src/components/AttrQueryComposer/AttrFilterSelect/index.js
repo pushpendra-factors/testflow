@@ -55,6 +55,7 @@ const AttrFilterSelect = ({
           filter.operator === OPERATORS['notEqualTo'] ||
           filter.operator?.[0] === OPERATORS['equalTo'] ||
           filter.operator?.[0] === OPERATORS['notEqualTo']) &&
+        filter.values?.length === 1 &&
         filter.values?.[0] === '$none'
       ) {
         if (
@@ -260,7 +261,7 @@ const AttrFilterSelect = ({
             options={operatorOpts[propState.type].map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
-          ></FaSelect>
+          />
         )}
       </div>
     );

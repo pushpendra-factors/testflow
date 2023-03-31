@@ -38,8 +38,8 @@ func main() {
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
-	projectIdFlag := flag.String("project_ids", "",
-		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
+	//projectIdFlag := flag.String("project_ids", "",
+	//	"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	flag.Parse()
 	if *env != "development" &&
 		*env != "staging" &&
@@ -80,7 +80,7 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	projectIdsArray := store.GetStore().GetProjectsToRunForIncludeExcludeString(*projectIdFlag, "")
+	projectIdsArray := store.GetStore().GetProjectIDsWithSixSignalEnabled()
 
 	//Initialized configs
 	configs := make(map[string]interface{})

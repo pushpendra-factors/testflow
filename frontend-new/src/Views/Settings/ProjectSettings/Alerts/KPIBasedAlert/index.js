@@ -1010,7 +1010,7 @@ const KPIBasedAlert = ({
               )}
             </>
           )}
-
+          {['junaid@factors.ai'].includes(agent_details?.email) &&
           <Row className={'mt-2 ml-2'}>
             <Col className={'m-0'}>
               <Form.Item name='slack_enabled' className={'m-0'}>
@@ -1022,7 +1022,7 @@ const KPIBasedAlert = ({
                 </Checkbox>
               </Form.Item>
             </Col>
-          </Row>
+          </Row>}
           {teamsEnabled && !projectSettings?.int_teams && (
             <>
               <Row className={'mt-2 ml-2'}>
@@ -1519,7 +1519,7 @@ const KPIBasedAlert = ({
               )}
             </>
           )}
-
+          {['junaid@factors.ai'].includes(agent_details?.email) &&
           <Row className={'mt-2 ml-2'}>
             <Col className={'m-0'}>
               <Form.Item name='slack_enabled' className={'m-0'}>
@@ -1531,7 +1531,7 @@ const KPIBasedAlert = ({
                 </Checkbox>
               </Form.Item>
             </Col>
-          </Row>
+          </Row>}
           {teamsEnabled && !projectSettings?.int_teams && (
             <>
               <Row className={'mt-2 ml-2'}>
@@ -1680,7 +1680,7 @@ const KPIBasedAlert = ({
         <Row className={'m-0 mt-2'}>
           <Col>
             <Button className={`mr-2`} type='link' disabled={true}>
-              {_.startCase(viewAlertDetails?.alert_description?.name)}
+              {_.startCase(viewAlertDetails?.alert_description?.name) + ' [ ' + _.startCase(viewAlertDetails?.alert_description?.query?.dc) + ' ]'}
             </Button>
           </Col>
           <Col>
@@ -1851,6 +1851,7 @@ const KPIBasedAlert = ({
               </Col>
             </Row>
           )}
+        {['junaid@factors.ai'].includes(agent_details?.email) &&
         <Row className={'mt-2 ml-2'}>
           <Col span={4}>
             <Checkbox
@@ -1860,7 +1861,7 @@ const KPIBasedAlert = ({
               Teams
             </Checkbox>
           </Col>
-        </Row>
+        </Row>}
         {viewAlertDetails?.alert_configuration?.teams_enabled &&
           viewAlertDetails?.alert_configuration
             ?.teams_channels_and_user_groups && (

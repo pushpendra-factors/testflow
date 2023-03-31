@@ -21,6 +21,7 @@ import {
   removePropertyMapping
 } from 'Reducers/settings/middleware';
 import { getPropertyDisplayName} from './utils';
+import _ from 'lodash';
 
 const SavedProperties = ({
   activeProject,
@@ -94,7 +95,7 @@ const SavedProperties = ({
             <div 
                 className={`fa-div--truncate btn-total-round py-1 px-2 background-color--mono-color-1`} 
               >
-                {getPropertyDisplayName(KPI_config,item?.dc,item?.name ) }
+                {`${getPropertyDisplayName(KPI_config,item?.dc,item?.name)} (${_.startCase(item?.dc)})`}
               </div>
           </div>
           )

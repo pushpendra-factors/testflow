@@ -427,8 +427,8 @@ function IntegrationSettings({
                       }
                       // Flag for 6Signal Factors key
                       if (
-                        item.name === 'Factors Website De-anonymization' &&
-                        !whiteListedAccounts.includes(currentAgent.email)
+                        (item.name === 'Factors Website De-anonymization' &&
+                        !whiteListedAccounts.includes(currentAgent.email)) || (item.name === 'Microsoft Teams' && !['junaid@factors.ai'].includes(currentAgent.email))
                       ) {
                         return null;
                       }

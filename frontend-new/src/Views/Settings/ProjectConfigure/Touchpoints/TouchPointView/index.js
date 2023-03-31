@@ -36,6 +36,7 @@ import {
   DEFAULT_TIMESTAMPS
 } from '../utils';
 import { toCapitalCase } from 'Utils/global';
+import styles from './index.module.scss';
 
 const TouchpointView = ({
   activeProject,
@@ -700,34 +701,40 @@ const TouchpointView = ({
               Type
             </Text>
           </Col>
-          <Col>
-            <div className={'relative'}>
-              <Tooltip
-                title={
-                  propertyMap['$type']['va'] === ''
-                    ? 'Select Type Property'
-                    : toCapitalCase(propertyMap['$type']['va'])
-                }
+          <div
+            className={`flex flex-col relative items-center ${styles.dropdown}`}
+          >
+            <Tooltip
+              title={
+                propertyMap['$type']['va'] === ''
+                  ? 'Select Type Property'
+                  : toCapitalCase(propertyMap['$type']['va'])
+              }
+            >
+              <Button
+                className={`${styles.dropdownbtn}`}
+                type='text'
+                onClick={() => setTypeSelectorOpen(true)}
               >
-                <Button
-                  className={`fa-button--truncate w-64`}
-                  type={'link'}
-                  onClick={() => setTypeSelectorOpen(true)}
-                >
+                <div className={styles.dropdownbtntext + '  text-sm'}>
                   {propertyMap['$type']['va'] === ''
                     ? 'Select Type'
                     : toCapitalCase(propertyMap['$type']['va'])}
-                </Button>
-              </Tooltip>
-              {typeSelectorOpen && (
-                <FaSelect
-                  options={renderTypePropertyOptions()}
-                  optionClick={(val) => setPropType(val)}
-                  onClickOutside={() => setTypeSelectorOpen(false)}
-                ></FaSelect>
-              )}
-            </div>
-          </Col>
+                </div>
+                <div className={styles.dropdownbtnicon}>
+                  <SVG name='caretDown' size={18} />
+                </div>
+              </Button>
+            </Tooltip>
+            {typeSelectorOpen && (
+              <FaSelect
+                options={renderTypePropertyOptions()}
+                optionClick={(val) => setPropType(val)}
+                onClickOutside={() => setTypeSelectorOpen(false)}
+                extraClass={`${styles.dropdownSelect}`}
+              ></FaSelect>
+            )}
+          </div>
         </Row>
 
         <Row className={`mt-4`}>
@@ -736,36 +743,41 @@ const TouchpointView = ({
               Source
             </Text>
           </Col>
-
-          <Col>
-            <div className={'relative'}>
-              <Tooltip
-                title={
-                  propertyMap['$source']['va'] === ''
-                    ? 'Select Source Property'
-                    : propertyNameMap(propertyMap['$source']['va'])
-                }
+          <div
+            className={`flex flex-col relative items-center ${styles.dropdown}`}
+          >
+            <Tooltip
+              title={
+                propertyMap['$source']['va'] === ''
+                  ? 'Select Source Property'
+                  : propertyNameMap(propertyMap['$source']['va'])
+              }
+            >
+              <Button
+                className={`${styles.dropdownbtn}`}
+                type='text'
+                onClick={() => setSourceSelectorOpen(true)}
               >
-                <Button
-                  className={`fa-button--truncate w-64`}
-                  type={'link'}
-                  onClick={() => setSourceSelectorOpen(true)}
-                >
+                <div className={styles.dropdownbtntext + '  text-sm'}>
                   {propertyMap['$source']['va'] === ''
                     ? 'Select Source Property'
                     : propertyNameMap(propertyMap['$source']['va'])}
-                </Button>
-              </Tooltip>
-              {sourceSelectorOpen && (
-                <FaSelect
-                  allowSearch
-                  options={renderEventPropertyCampOptions()}
-                  optionClick={(val) => setPropSource(val)}
-                  onClickOutside={() => setSourceSelectorOpen(false)}
-                ></FaSelect>
-              )}
-            </div>
-          </Col>
+                </div>
+                <div className={styles.dropdownbtnicon}>
+                  <SVG name='caretDown' size={18} />
+                </div>
+              </Button>
+            </Tooltip>
+            {sourceSelectorOpen && (
+              <FaSelect
+                allowSearch
+                options={renderEventPropertyCampOptions()}
+                optionClick={(val) => setPropSource(val)}
+                onClickOutside={() => setSourceSelectorOpen(false)}
+                extraClass={`${styles.dropdownSelect}`}
+              ></FaSelect>
+            )}
+          </div>
         </Row>
 
         <Row className={`mt-4`}>
@@ -775,35 +787,41 @@ const TouchpointView = ({
             </Text>
           </Col>
 
-          <Col>
-            <div className={'relative'}>
-              <Tooltip
-                title={
-                  propertyMap['$campaign']['va'] === ''
-                    ? 'Select Campaign Property'
-                    : propertyNameMap(propertyMap['$campaign']['va'])
-                }
+          <div
+            className={`flex flex-col relative items-center ${styles.dropdown}`}
+          >
+            <Tooltip
+              title={
+                propertyMap['$campaign']['va'] === ''
+                  ? 'Select Campaign Property'
+                  : propertyNameMap(propertyMap['$campaign']['va'])
+              }
+            >
+              <Button
+                className={`${styles.dropdownbtn}`}
+                type='text'
+                onClick={() => setCampaignSelectorOpen(true)}
               >
-                <Button
-                  className={`fa-button--truncate w-64 `}
-                  type={'link'}
-                  onClick={() => setCampaignSelectorOpen(true)}
-                >
+                <div className={styles.dropdownbtntext + '  text-sm'}>
                   {propertyMap['$campaign']['va'] === ''
                     ? 'Select Campaign Property'
                     : propertyNameMap(propertyMap['$campaign']['va'])}
-                </Button>
-              </Tooltip>
-              {campaignSelectorOpen && (
-                <FaSelect
-                  allowSearch
-                  options={renderEventPropertyCampOptions()}
-                  optionClick={(val) => setPropCampaign(val)}
-                  onClickOutside={() => setCampaignSelectorOpen(false)}
-                ></FaSelect>
-              )}
-            </div>
-          </Col>
+                </div>
+                <div className={styles.dropdownbtnicon}>
+                  <SVG name='caretDown' size={18} />
+                </div>
+              </Button>
+            </Tooltip>
+            {campaignSelectorOpen && (
+              <FaSelect
+                allowSearch
+                options={renderEventPropertyCampOptions()}
+                optionClick={(val) => setPropCampaign(val)}
+                onClickOutside={() => setCampaignSelectorOpen(false)}
+                extraClass={`${styles.dropdownSelect}`}
+              ></FaSelect>
+            )}
+          </div>
         </Row>
 
         <Row className={`mt-4`}>
@@ -813,35 +831,41 @@ const TouchpointView = ({
             </Text>
           </Col>
 
-          <Col>
-            <div className={'relative'}>
-              <Tooltip
-                title={
-                  propertyMap['$channel']['va'] === ''
-                    ? 'Select Channel Property'
-                    : propertyNameMap(propertyMap['$channel']['va'])
-                }
+          <div
+            className={`flex flex-col relative items-center ${styles.dropdown}`}
+          >
+            <Tooltip
+              title={
+                propertyMap['$channel']['va'] === ''
+                  ? 'Select Channel Property'
+                  : propertyNameMap(propertyMap['$channel']['va'])
+              }
+            >
+              <Button
+                className={`${styles.dropdownbtn}`}
+                type='text'
+                onClick={() => setChannelSelectorOpen(true)}
               >
-                <Button
-                  className={`fa-button--truncate w-64`}
-                  type={'link'}
-                  onClick={() => setChannelSelectorOpen(true)}
-                >
+                <div className={styles.dropdownbtntext + '  text-sm'}>
                   {propertyMap['$channel']['va'] === ''
                     ? 'Select Channel Property'
                     : propertyNameMap(propertyMap['$channel']['va'])}
-                </Button>
-              </Tooltip>
-              {channelSelectorOpen && (
-                <FaSelect
-                  allowSearch
-                  options={renderEventPropertyCampOptions()}
-                  optionClick={(val) => setPropChannel(val)}
-                  onClickOutside={() => setChannelSelectorOpen(false)}
-                ></FaSelect>
-              )}
-            </div>
-          </Col>
+                </div>
+                <div className={styles.dropdownbtnicon}>
+                  <SVG name='caretDown' size={18} />
+                </div>
+              </Button>
+            </Tooltip>
+            {channelSelectorOpen && (
+              <FaSelect
+                allowSearch
+                options={renderEventPropertyCampOptions()}
+                optionClick={(val) => setPropChannel(val)}
+                onClickOutside={() => setChannelSelectorOpen(false)}
+                extraClass={`${styles.dropdownSelect}`}
+              ></FaSelect>
+            )}
+          </div>
         </Row>
       </div>
     );
@@ -916,16 +940,21 @@ const TouchpointView = ({
       ruleTypes = Object.keys(ruleTypesNameMappingForSF).map((type) => [type]);
     }
     return (
-      <div className={'relative'}>
+      <div className={`flex flex-col relative items-center ${styles.dropdown}`}>
         <Tooltip title='Change in Hubspot Contact Field Value'>
           <Button
-            className={`fa-button--truncate w-64`}
-            type={'link'}
+            className={`${styles.dropdownbtn}`}
+            type='text'
             onClick={() => setRuleSelectorOpen(true)}
           >
-            {tchType === '2'
-              ? reverseRuleTypesNameMappingForHS[tchRuleType]
-              : reverseRuleTypesNameMappingForSF[tchRuleType]}
+            <div className={styles.dropdownbtntext + '  text-sm'}>
+              {tchType === '2'
+                ? reverseRuleTypesNameMappingForHS[tchRuleType]
+                : reverseRuleTypesNameMappingForSF[tchRuleType]}{' '}
+            </div>
+            <div className={styles.dropdownbtnicon}>
+              <SVG name='caretDown' size={18} />
+            </div>
           </Button>
         </Tooltip>
         {ruleSelectorOpen && (
@@ -933,6 +962,7 @@ const TouchpointView = ({
             options={ruleTypes}
             optionClick={(val) => ruleTypeSelect(val[0])}
             onClickOutside={() => setRuleSelectorOpen(false)}
+            extraClass={`${styles.dropdownSelect}`}
           ></FaSelect>
         )}
       </div>
@@ -1004,29 +1034,35 @@ const TouchpointView = ({
               {key[0]}
             </Text>
           </Col>
-          <Col>
-            <div className={'relative'}>
-              <Tooltip title='Select Property'>
-                <Button
-                  className={`fa-button--truncate w-64`}
-                  type={'link'}
-                  onClick={() => setExtraPropSelectorOpen(true)}
-                >
+          <div
+            className={`flex flex-col relative items-center ${styles.dropdown}`}
+          >
+            <Tooltip title='Select Property'>
+              <Button
+                className={`${styles.dropdownbtn}`}
+                type='text'
+                onClick={() => setExtraPropSelectorOpen(true)}
+              >
+                <div className={styles.dropdownbtntext + '  text-sm'}>
                   {extraPropMap['$' + key[2]]['va'] === ''
                     ? 'Select Property'
                     : propertyNameMap(extraPropMap[`$` + key[2]]['va'])}
-                </Button>
-              </Tooltip>
-              {extraPropSelectorOpen && (
-                <FaSelect
-                  allowSearch
-                  options={renderEventPropertyCampOptions()}
-                  optionClick={(val) => setExtraPropVal(val, key[2])}
-                  onClickOutside={() => setExtraPropSelectorOpen(false)}
-                ></FaSelect>
-              )}
-            </div>
-          </Col>
+                </div>
+                <div className={styles.dropdownbtnicon}>
+                  <SVG name='caretDown' size={18} />
+                </div>
+              </Button>
+            </Tooltip>
+            {extraPropSelectorOpen && (
+              <FaSelect
+                allowSearch
+                options={renderEventPropertyCampOptions()}
+                optionClick={(val) => setExtraPropVal(val, key[2])}
+                onClickOutside={() => setExtraPropSelectorOpen(false)}
+                extraClass={`${styles.dropdownSelect}`}
+              ></FaSelect>
+            )}
+          </div>
         </Row>
       );
     });
@@ -1052,7 +1088,6 @@ const TouchpointView = ({
       {tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS && renderExtraPropMap()}
 
       {renderFooterActions()}
-      {console.log('R5', propertyMap, extraPropMap)}
     </div>
   );
 };

@@ -20,7 +20,7 @@ import { compareFilters, groupFilters } from 'Utils/global';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 
 function QueryBlock({
-  availableGroups,
+  availableGroups = [],
   index,
   event,
   eventChange,
@@ -51,7 +51,7 @@ function QueryBlock({
 
   const eventGroup = useMemo(() => {
     const group =
-      availableGroups.find((group) => group[1] === event.group) || [];
+      availableGroups?.find((group) => group[1] === event.group) || [];
     return group;
   }, [availableGroups, event]);
 
@@ -90,8 +90,8 @@ function QueryBlock({
     if (!eventProperties[event.label]) {
       getEventProperties(activeProject?.id, event?.label);
     }
-    if (AvailableGroups[event.group]) {
-      getGroupProperties(activeProject?.id, AvailableGroups[event.group]);
+    if (eventGroup?.length) {
+      getGroupProperties(activeProject?.id, eventGroup[1]);
     }
   }, [event]);
 
@@ -100,7 +100,7 @@ function QueryBlock({
       return;
     }
     const assignFilterProps = { ...filterProps };
-    if (eventGroup) {
+    if (eventGroup?.length) {
       assignFilterProps.group = groupProperties[eventGroup[1]];
       assignFilterProps.user = [];
     } else {
@@ -247,6 +247,7 @@ function QueryBlock({
                 ]}
                 optionClick={(val) => setAdditionalactions(val)}
                 onClickOutside={() => setMoreOptions(false)}
+                showIcon
               />
             ) : (
               false
