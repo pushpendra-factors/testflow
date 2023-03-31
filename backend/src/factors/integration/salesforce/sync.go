@@ -366,6 +366,8 @@ func (s *DataClient) getNextBatch() ([]model.SalesforceRecord, bool, error) {
 	return res.Records, res.Done, nil
 }
 
+var ErrRequestHeaderFieldsTooLarge = errors.New("error while query data : Request Header Fields Too Large")
+
 func (s *DataClient) getRequest(queryURL string) (*QueryResponse, error) {
 	resp, err := GETRequest(queryURL, s.accessToken)
 	if err != nil {
@@ -373,7 +375,7 @@ func (s *DataClient) getRequest(queryURL string) (*QueryResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusRequestHeaderFieldsTooLarge {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, fmt.Errorf("error while reading resp.Body %+v", err)
@@ -381,6 +383,10 @@ func (s *DataClient) getRequest(queryURL string) (*QueryResponse, error) {
 
 		bodyString := string(body)
 		return nil, fmt.Errorf("error while query data %s %d", bodyString, resp.StatusCode)
+	}
+
+	if resp.StatusCode == http.StatusRequestHeaderFieldsTooLarge {
+		return nil, ErrRequestHeaderFieldsTooLarge
 	}
 
 	var jsonResponse QueryResponse
@@ -1522,8 +1528,6 @@ func getStartTimestamp(docType string) int64 {
 	return now.New(currentTime).BeginningOfDay().Unix() // get from last 90 days
 }
 
-var ErrRequestHeaderFieldsTooLarge = errors.New("error while query data <h1>Bad Message 431</h1><pre>reason: Request Header Fields Too Large</pre> 431")
-
 func syncByTypeUsingFields(ps *model.SalesforceProjectSettings, accessToken, objectName string, startTimestamp int64) (ObjectStatus, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": objectName, "start_timestamp": startTimestamp})
 
@@ -1628,6 +1632,7 @@ func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]
 
 		objectStatus, err := syncByType(ps, accessToken, docType, timestamp)
 		if docType == model.SalesforceDocumentTypeNameAccount && err == ErrRequestHeaderFieldsTooLarge && C.IsFieldsSyncAllowedForProjectID(ps.ProjectID) {
+			log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": docType, "timestamp": timestamp}).Warn("Using syncByTypeUsingFields")
 			objectStatus, err = syncByTypeUsingFields(ps, accessToken, docType, timestamp)
 		}
 
