@@ -19,6 +19,7 @@ import (
 type oauthState struct {
 	ProjectID int64   `json:"project_id"`
 	AgentUUID *string `json:"agent_uuid"`
+	Source    int     `json:"source"`
 }
 
 func SlackAuthRedirectHandler(c *gin.Context) {
@@ -32,6 +33,12 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 	state := oauthState{
 		ProjectID: projectId,
 		AgentUUID: &currentAgentUUID,
+	}
+
+	source := c.Query("source")
+
+	if source == "2" {
+		state.Source = 2
 	}
 
 	enOAuthState, err := json.Marshal(state)
@@ -50,26 +57,26 @@ func SlackCallbackHandler(c *gin.Context) {
 	code := c.Query("code")
 	if code == "" {
 		log.Error("Failed to get auth code")
-		redirectURL := buildRedirectURL("AUTH_ERROR")
+		redirectURL := buildRedirectURL("AUTH_ERROR", 0)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	var oauthState oauthState
 	state := c.Query("state")
 	err := json.Unmarshal([]byte(state), &oauthState)
 	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" {
-		redirectURL := buildRedirectURL("invalid values in state")
+		redirectURL := buildRedirectURL("invalid values in state", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	_, status := store.GetStore().GetProjectAgentMapping(oauthState.ProjectID, *oauthState.AgentUUID)
 	if status != http.StatusFound {
-		redirectURL := buildRedirectURL("AUTH_ERROR")
+		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	logCtx := log.WithFields(log.Fields{"project_id": oauthState.ProjectID, "agent_uuid": oauthState.AgentUUID})
 	request, err := http.NewRequest("POST", fmt.Sprintf("https://slack.com/api/oauth.v2.access?client_id=%s&client_secret=%s&code=%s", C.GetSlackClientID(), C.GetSlackClientSecret(), code), nil)
 	if err != nil {
 		log.Error("Failed to create request to get auth code")
-		redirectURL := buildRedirectURL("AUTH_ERROR")
+		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -77,31 +84,31 @@ func SlackCallbackHandler(c *gin.Context) {
 	resp, err := client.Do(request)
 	if err != nil {
 		logCtx.Error("Failed to get auth code")
-		redirectURL := buildRedirectURL("AUTH_ERROR")
+		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	var jsonResponse map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
 	if err != nil {
 		logCtx.Error("failed to decode json response", err)
-		redirectURL := buildRedirectURL("AUTH_ERROR")
+		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	if jsonResponse["ok"] != true {
 		logCtx.Error("Failed to get auth code")
-		redirectURL := buildRedirectURL("AUTH_ERROR")
+		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	if jsonResponse["access_token"] == nil || jsonResponse["authed_user"] == nil {
 		logCtx.Error("Failed to get access token")
-		redirectURL := buildRedirectURL("AUTH_ERROR")
+		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	access_token := jsonResponse["access_token"].(string)
 	authed_user := jsonResponse["authed_user"].(map[string]interface{})
 	if authed_user["access_token"] == nil {
 		logCtx.Error("Failed to get access token")
-		redirectURL := buildRedirectURL("AUTH_ERROR")
+		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	user_access_token := authed_user["access_token"].(string)
@@ -114,14 +121,17 @@ func SlackCallbackHandler(c *gin.Context) {
 	err = store.GetStore().SetAuthTokenforSlackIntegration(oauthState.ProjectID, *oauthState.AgentUUID, tokens)
 	if err != nil {
 		logCtx.Error("Failed to store access token for slack")
-		redirectURl := buildRedirectURL("AUTH_ERROR")
+		redirectURl := buildRedirectURL("AUTH_ERROR", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURl)
 	}
-	redirectURL := buildRedirectURL("")
+	redirectURL := buildRedirectURL("", oauthState.Source)
 	c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	defer resp.Body.Close()
 }
-func buildRedirectURL(errMsg string) string {
+func buildRedirectURL(errMsg string, source int) string {
+	if source == 2 {
+		return C.GetProtocol() + C.GetAPPDomain() + "/welcome/visitoridentification/3?error=" + url.QueryEscape(errMsg)
+	}
 	return C.GetProtocol() + C.GetAPPDomain() + "/settings/integration?error=" + url.QueryEscape(errMsg)
 }
 
