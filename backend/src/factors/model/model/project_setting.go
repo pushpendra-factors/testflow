@@ -83,7 +83,7 @@ type ProjectSetting struct {
 	ProjectCurrency       string `json:"currency"`
 	IsPathAnalysisEnabled bool   `json:"is_path_analysis_enabled"`
 	// onboarding flow steps
-	IsDeanonymizatinRequested bool `json:"is_deanonymization_requested"`
+	IsDeanonymizationRequested bool `json:"is_deanonymization_requested"`
 	IsOnboardingCompleted     bool `json:"is_onboarding_completed"`
 }
 
