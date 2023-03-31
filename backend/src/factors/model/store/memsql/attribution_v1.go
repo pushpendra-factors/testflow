@@ -179,6 +179,9 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Total query took time")
 	}
 	model.SanitizeResult(result)
+	if query.AttributionKey == model.AttributionKeySource || query.AttributionKey == model.AttributionKeyChannel {
+		model.SanitizeResultForSourceAndChannel(result)
+	}
 	return result, nil
 }
 
@@ -1260,8 +1263,6 @@ func (store *MemSQL) getAllThePagesV1(projectId int64, sessionEventNameId string
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
-	reports.CampaignSourceMapping = make(map[string]string)
-	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -1365,8 +1366,6 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
-	reports.CampaignSourceMapping = make(map[string]string)
-	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -1465,8 +1464,6 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
-	reports.CampaignSourceMapping = make(map[string]string)
-	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -1565,8 +1562,6 @@ func (store *MemSQL) getAllTheSessionsAttributionKPI(projectId int64, sessionEve
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
-	reports.CampaignSourceMapping = make(map[string]string)
-	reports.CampaignChannelGroupMapping = make(map[string]string)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)

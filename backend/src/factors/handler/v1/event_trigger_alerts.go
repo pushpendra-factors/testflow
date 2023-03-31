@@ -6,6 +6,8 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	webhooks "factors/webhooks"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -36,7 +38,6 @@ func CreateEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, s
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Create failed. Invalid project id."})
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
 	}
-	log.Info("Create function handler triggered.")
 
 	var alert model.EventTriggerAlertConfig
 	r := c.Request
@@ -116,4 +117,69 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 	}
 
 	return alert, http.StatusAccepted, "", "", false
+}
+
+func TestWebhookforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	userID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	if projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Create failed. Invalid project id."})
+		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
+	}
+
+	if userID == "" {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Create failed. Invalid user id."})
+		return nil, http.StatusUnauthorized, "INVALID_USER", ErrorMessages["INVALID_USER"], true
+	}
+
+	var webhook model.EventTriggerWebhook
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&webhook); err != nil {
+		errMsg := "Test TriggerAlert failed. Invalid JSON."
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
+	}
+
+	messageProperties := make([]model.QueryGroupByProperty, 0)
+	if webhook.MessageProperty != nil {
+		err := U.DecodePostgresJsonbToStructType(webhook.MessageProperty, &messageProperties)
+		if err != nil {
+			errMsg := "Jsonb decoding to struct failure"
+			log.WithError(err).Error(errMsg)
+			return nil, http.StatusBadRequest, errMsg, "", true
+		}
+	}
+	msgPropMap := make(U.PropertiesMap, 0)
+	for i, mp := range messageProperties {
+		var val interface{}
+		if mp.Type == "datetime" {
+			val = "01-01-1970"
+		} else if mp.Type == "numerical" {
+			val = 1234
+		} else {
+			val = "test"
+		}
+		msgPropMap[fmt.Sprintf("%d", i)] = model.MessagePropMapStruct{
+			DisplayName: U.CreateVirtualDisplayName(mp.Property),
+			PropValue: val, 
+		}
+	}
+	payload := model.EventTriggerAlertMessage{
+		Title:           webhook.Title,
+		Event:           webhook.Event,
+		Message:         webhook.Message,
+		MessageProperty: msgPropMap,
+	}
+
+	response, err := webhooks.DropWebhook(webhook.Url, webhook.Secret, payload)
+	if err != nil {
+		errMsg := "Failed to send test webhook"
+		log.WithFields(log.Fields{"project_id": projectID, "response": response}).WithError(err).Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
+	}
+
+	return response, http.StatusAccepted, "", "", false
 }

@@ -17,7 +17,10 @@ import (
 	"time"
 )
 
-//GetSixSignalReportHandler fetches the sixsignal report from cloud storage for app-server
+//GetSixSignalReportHandler fetches the saved sixsignal report from cloud storage if the isSaved parameter in request payload is true
+//if the isSaved parameter is false the handler computes the result on the go.
+//The report fetched from the cloud are allowed to share and the result computed on the go is not allowed to share which is reflected
+//in the response parameter isShareable.
 func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	r := c.Request
 
@@ -45,16 +48,41 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Empty query group.", true
 	}
 
-	folderName := getFolderName(requestPayload.Queries[0])
-	logCtx.WithFields(log.Fields{"folder name": folderName}).Info("Folder name for reading the result")
+	result := make(map[int]model.SixSignalResultGroup)
+	if requestPayload.Queries[0].IsSaved == true {
 
-	result := delta.GetSixSignalAnalysisData(projectId, folderName)
-	if result == nil {
-		logCtx.Error("Report is not present for this date range")
-		return result, http.StatusBadRequest, "", "Report is not present for this date range", true
-	} else if len(result[1].Results[0].Rows) == 0 {
-		logCtx.Warn("Data is not present for this date range")
-		return result, http.StatusOK, "", "Data is not present for this date range", false
+		folderName := getFolderName(requestPayload.Queries[0])
+		logCtx.WithFields(log.Fields{"folder name": folderName}).Info("Folder name for reading the result")
+
+		result = delta.GetSixSignalAnalysisData(projectId, folderName)
+		if result == nil {
+			logCtx.Error("Report is not present for this date range")
+			return result, http.StatusBadRequest, "", "Report is not present for this date range", true
+		} else if len(result[1].Results[0].Rows) == 0 {
+			logCtx.Warn("Data is not present for this date range")
+			return result, http.StatusOK, "", "Data is not present for this date range", false
+		}
+
+	} else {
+
+		resultGroup, errCode := store.GetStore().RunSixSignalGroupQuery(requestPayload.Queries, projectId)
+		if errCode != http.StatusOK {
+			logCtx.Error("Query failed. Failed to process query from DB with error: ", errCode)
+			return nil, http.StatusInternalServerError, "", "Failed to process Query", true
+		}
+		resultGroup.Query = requestPayload
+		resultGroup.IsShareable = false
+
+		//Adding cache meta to the result group
+		meta := model.CacheMeta{
+			Timezone:       string(requestPayload.Queries[0].Timezone),
+			From:           requestPayload.Queries[0].From,
+			To:             requestPayload.Queries[0].To,
+			LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		}
+		resultGroup.CacheMeta = meta
+
+		result[1] = resultGroup
 	}
 	return result, http.StatusOK, "", "", false
 }

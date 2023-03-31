@@ -377,7 +377,13 @@ func getCacheProjectSetting(tokenKey, tokenValue string) (*model.ProjectSetting,
 		return nil, http.StatusInternalServerError
 	}
 
-	settingsJson, err := cacheRedis.Get(key)
+	var settingsJson string
+	if C.UseQueueRedis() {
+		settingsJson, err = cacheRedis.GetQueueRedis(key)
+	} else {
+		settingsJson, err = cacheRedis.Get(key)
+	}
+
 	if err != nil {
 		if err == redis.ErrNil {
 			return nil, http.StatusNotFound
@@ -432,7 +438,11 @@ func setCacheProjectSetting(tokenKey, tokenValue string, settings *model.Project
 	}
 
 	var expiryInSecs float64 = 60 * 60
-	err = cacheRedis.Set(key, string(settingsJson), expiryInSecs)
+	if C.UseQueueRedis() {
+		err = cacheRedis.SetQueueRedis(key, string(settingsJson), expiryInSecs)
+	} else {
+		err = cacheRedis.Set(key, string(settingsJson), expiryInSecs)
+	}
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache on setCacheProjectSetting")
 		return http.StatusInternalServerError

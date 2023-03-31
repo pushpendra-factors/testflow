@@ -11,7 +11,6 @@ import (
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
-	taskWrapper "factors/task/task_wrapper"
 	"factors/util"
 	"flag"
 	"fmt"
@@ -101,7 +100,6 @@ func main() {
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
-	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	createMetadata := flag.Bool("create_metadata", false, "")
 	flag.Parse()
 

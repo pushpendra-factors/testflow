@@ -54,6 +54,7 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) (
 			LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 		}
 		resultGroup.CacheMeta = meta
+		resultGroup.IsShareable = true
 
 		logCtx.WithFields(log.Fields{"result": resultGroup}).Info("Printing the resultGroup")
 

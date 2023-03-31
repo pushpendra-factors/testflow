@@ -84,6 +84,8 @@ func main() {
 		false, "Enables SDK and Integration request queue duplication monitoring.")
 	monitoringAPIToken := flag.String("monitoring_api_token", "", "enter  monitoring api token")
 
+	useQueueRedis := flag.Bool("use_queue_redis", false, "")
+
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
@@ -348,6 +350,7 @@ func main() {
 		IntegrationQueueThreshold:                      *integrationQueueThreshold,
 		EnableBingAdsAttribution:                       *enableBingAdsAttribution,
 		MonitoringAPIToken:                             *monitoringAPIToken,
+		UseQueueRedis:                                  *useQueueRedis,
 		SalesforcePropertyLookBackTimeHr:               *salesforcePropertyLookBackTimeHr,
 		HubspotPropertyLookBackLimit:                   *hubspotPropertyLookbackLimit,
 		EnableSlowDBQueryLogging:                       *enableSlowDBQueryLogging,

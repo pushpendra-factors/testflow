@@ -187,10 +187,6 @@ func AddHeadersByAttributionKeyV1(result *QueryResult, query *AttributionQueryV1
 			result.Headers = append(result.Headers, AddedKeysForAdgroup...)
 		case AttributionKeyKeyword:
 			result.Headers = append(result.Headers, AddedKeysForKeyword...)
-		case AttributionKeySource:
-			result.Headers = append(result.Headers, AddedKeysForSource...)
-		case AttributionKeyChannel:
-			result.Headers = append(result.Headers, AddedKeysForChannel...)
 		default:
 		}
 
@@ -595,10 +591,8 @@ func AddTheAddedKeysAndMetricsV1(attributionData *map[string]*AttributionData, q
 						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].Channel, sessionKeyMarketingInfo[key].CampaignName, sessionKeyMarketingInfo[key].AdgroupName, sessionKeyMarketingInfo[key].KeywordMatchType)
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].KeywordName
 					case AttributionKeySource:
-						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].Source
 					case AttributionKeyChannel:
-						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].ChannelGroup
 					case AttributionKeyLandingPage:
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].LandingPageUrl
@@ -796,12 +790,6 @@ func ProcessQueryKPIV1(query *AttributionQueryV1, attributionData *map[string]*A
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData}).Info("KPI Attribution data")
 	}
-
-	// add CampaignData result based on Key Dimensions
-	AddCampaignDataForSourceV1(*attributionData, marketingReports, query)
-
-	// add CampaignData result based on Key Dimensions
-	AddCampaignDataForChannelGroupV1(*attributionData, marketingReports, query)
 
 	for key, _ := range *attributionData {
 		//add key to attribution data
@@ -1073,16 +1061,6 @@ func ProcessEventRowsV1(rows *sql.Rows, query *AttributionQueryV1, reports *Mark
 				attributionKeyName = attributionIdBasedOnEnrichment
 			} else {
 				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, CampaignID: campaignID, AdgroupID: adgroupID})
-			}
-		} else if query.AttributionKey == AttributionKeySource && U.IsNonEmptyKey(sourceName) {
-
-			if _, ok := reports.CampaignSourceMapping[marketingValues.CampaignName]; !ok {
-				reports.CampaignSourceMapping[marketingValues.CampaignName] = sourceName
-			}
-		} else if query.AttributionKey == AttributionKeyChannel && U.IsNonEmptyKey(channelGroup) {
-
-			if _, ok := reports.CampaignChannelGroupMapping[marketingValues.CampaignName]; !ok {
-				reports.CampaignChannelGroupMapping[marketingValues.CampaignName] = channelGroup
 			}
 		}
 

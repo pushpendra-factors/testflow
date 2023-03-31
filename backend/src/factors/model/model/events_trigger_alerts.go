@@ -55,6 +55,7 @@ type EventTriggerAlertConfig struct {
 	Slack               bool            `json:"slack"`
 	SlackChannels       *postgres.Jsonb `json:"slack_channels"`
 	Webhook             bool            `json:"webhook"`
+	Secret              string          `json:"secret"`
 	WebhookURL          string          `json:"url"`
 }
 
@@ -76,9 +77,18 @@ type EventTriggerAlertMessage struct {
 	Message         string
 }
 
+type EventTriggerWebhook struct {
+	Title           string          `json:"title"`
+	Event           string          `json:"event"`
+	MessageProperty *postgres.Jsonb `json:"message_property"`
+	Message         string          `json:"message"`
+	Url             string          `json:"url"`
+	Secret          string          `json:"secret"`
+}
+
 type MessagePropMapStruct struct {
 	DisplayName string
-	PropValue interface{}
+	PropValue   interface{}
 }
 
 func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTriggerAlert) error {
