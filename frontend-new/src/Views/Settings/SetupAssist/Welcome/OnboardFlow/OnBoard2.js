@@ -39,6 +39,7 @@ const HorizontalCard = ({
   icon,
   type,
   onSuccess,
+  onDeactivate,
   api_key = '',
   isActivated = false
 }) => {
@@ -69,6 +70,10 @@ const HorizontalCard = ({
   };
   const onFinish = async (values) => {
     try {
+      if (isActivated) {
+        onDeactivate();
+        return;
+      }
       if (values.api_key === api_key) {
         message.success('API Key Already Set!');
         return;
@@ -114,9 +119,17 @@ const HorizontalCard = ({
             <Button
               htmlType='submit'
               style={{ margin: '0 10px', padding: '0 10px' }}
-              icon={isLoading === true ? <LoadingOutlined /> : ''}
+              icon={
+                isActivated === true ? (
+                  <SVG name='Greentick' />
+                ) : isLoading === true ? (
+                  <LoadingOutlined />
+                ) : (
+                  ''
+                )
+              }
             >
-              Activate
+              {isActivated === true ? 'Activated' : 'Activate'}
             </Button>
           </Form>
         </Row>
@@ -225,6 +238,98 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
         });
     });
   };
+  const onClient6SignalDeactivate = () => {
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        udpateProjectSettings(activeProject.id, {
+          client6_signal_key: '',
+          int_client_six_signal_key: false
+        })
+          .then(() => {
+            setTimeout(() => {
+              message.success('6Signal integration disconnected!');
+            }, 500);
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+          });
+      },
+      onCancel: () => {}
+    });
+  };
+  const onClearBitActivate = (values) => {
+    // setLoading(true);
+    return new Promise((resolve, reject) => {
+      //Factors INTEGRATION tracking
+      factorsai.track('INTEGRATION', {
+        name: 'reveal',
+        activeProjectID: activeProject.id
+      });
+
+      udpateProjectSettings(activeProject.id, {
+        clearbit_key: values.api_key,
+        int_clear_bit: true
+      })
+        .then(() => {
+          // setLoading(false);
+          // setShowForm(false);
+          setTimeout(() => {
+            message.success('Clearbit integration successful');
+          }, 500);
+          // setIsActive(true);
+          resolve(true);
+          sendSlackNotification(
+            currentAgent.email,
+            activeProject.name,
+            'Reveal'
+          );
+        })
+        .catch((err) => {
+          // setShowForm(false);
+          // setLoading(false);
+          // seterrorInfo(err?.error);
+          // setIsActive(false);
+          reject();
+        });
+    });
+  };
+
+  const onClearBitDeactivate = () => {
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        // setLoading(true);
+        udpateProjectSettings(activeProject.id, {
+          clearbit_key: '',
+          int_clear_bit: false
+        })
+          .then(() => {
+            // setLoading(false);
+            // setShowForm(false);
+            setTimeout(() => {
+              message.success('Clearbit integration disconnected!');
+            }, 500);
+            // setIsActive(false);
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+            // setShowForm(false);
+            // setLoading(false);
+          });
+      },
+      onCancel: () => {}
+    });
+  };
+
   const handleClearBitKeyActivate = (values) => {};
   return (
     <div className={styles['onBoardContainer']}>
@@ -271,6 +376,7 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
               icon={<SVG size={32} name='SixSignalLogo' />}
               type={2}
               onSuccess={handleClient6SignalKeyActivate}
+              onDeactivate={onClient6SignalDeactivate}
               api_key={
                 int_client_six_signal_key === true ? client6_signal_key : ''
               }
@@ -288,7 +394,8 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
               }
               icon={<SVG size={32} name='ClearbitLogo' />}
               type={2}
-              onSuccess={handleClearBitKeyActivate}
+              onSuccess={onClearBitActivate}
+              onDeactivate={onClearBitDeactivate}
               api_key={int_clear_bit === true ? clearbit_key : ''}
               isActivated={int_clear_bit}
             />
@@ -334,8 +441,8 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
               Request have been sent
             </Text>
             <p>
-              We have received your request. We will get back to you within half
-              a day.
+              We have received your request, Factors deanonymisation will be
+              activated for you shortly.
             </p>
             <div
               style={{ width: '100%', display: 'flex', justifyContent: 'end' }}

@@ -59,9 +59,9 @@ const AdditionalMenu = (closeDrawer, setCurrentStep, stepDone, setStepDone) => {
       return int_completed;
     } else if (currentStep === 2) {
       return (
-        steps.step2 ||
         int_client_six_signal_key ||
         factors6SignalKeyRequested ||
+        int_factors_six_signal_key ||
         int_clear_bit
       );
     } else if (currentStep === 3) {
@@ -127,8 +127,10 @@ const AdditionalMenu = (closeDrawer, setCurrentStep, stepDone, setStepDone) => {
         </Button>
       </Tooltip>
 
-      <div className={styles['closebtnc'] + ' ' + styles['btn']}>
-        <Button onClick={handleCloseDrawer}>Close</Button>
+      <div className={styles['closebtnc']}>
+        <Button className={styles['btn']} onClick={handleCloseDrawer}>
+          Close
+        </Button>
       </div>
     </div>
   );

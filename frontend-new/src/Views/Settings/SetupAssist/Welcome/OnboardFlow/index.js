@@ -14,9 +14,11 @@ const OnBoard = () => {
   const history = useHistory();
   const dispatch = useDispatch();
   const { step } = useParams();
-  const { int_client_six_signal_key, int_factors_six_signal_key } = useSelector(
-    (state) => state?.global?.currentProjectSettings
-  );
+  const {
+    int_client_six_signal_key,
+    int_factors_six_signal_key,
+    int_clear_bit
+  } = useSelector((state) => state?.global?.currentProjectSettings);
   const int_completed = useSelector(
     (state) => state?.global?.projectSettingsV1?.int_completed
   );
@@ -31,7 +33,10 @@ const OnBoard = () => {
       return int_completed;
     } else if (step == 2) {
       return (
-        steps.step2 || int_client_six_signal_key || factors6SignalKeyRequested
+        int_client_six_signal_key ||
+        factors6SignalKeyRequested ||
+        int_clear_bit ||
+        int_factors_six_signal_key
       );
     } else if (step == 3) {
       return steps.step3;
