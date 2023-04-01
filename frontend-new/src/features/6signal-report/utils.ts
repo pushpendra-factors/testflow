@@ -237,11 +237,11 @@ export const checkStringEquality = (
   return str1?.toLowerCase() === str2?.toLowerCase();
 };
 
-export const getPublicUrl = (obj: ShareApiData): string => {
+export const getPublicUrl = (obj: ShareApiData, project_id: string): string => {
   return (
     window.location.protocol +
     '//' +
     window.location.host +
-    `/reports/6_signal?${SHARE_QUERY_PARAMS.queryId}=${obj.query_id}&${SHARE_QUERY_PARAMS.projectId}=${obj.project_id}&${SHARE_QUERY_PARAMS.routeVersion}=${obj.route_version}`
+    `/reports/6_signal?${SHARE_QUERY_PARAMS.queryId}=${obj.query_id}&${SHARE_QUERY_PARAMS.projectId}=${project_id}&${SHARE_QUERY_PARAMS.routeVersion}=${obj.route_version}`
   );
 };
