@@ -143,7 +143,7 @@ const SixSignalReport = () => {
         setShareData({
           ...res?.data,
           dateSelected,
-          publicUrl: getPublicUrl(res.data),
+          publicUrl: getPublicUrl(res.data, active_project?.id),
           from: dateObj.from,
           to: dateObj.to,
           timezone: active_project?.time_zone || 'Asia/Kolkata',
