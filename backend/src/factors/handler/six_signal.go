@@ -200,7 +200,6 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 	isShared, _ := isReportShared(projectID, queries.IdText)
 	if isShared {
 		response = model.SixSignalPublicURLResponse{
-			ProjectID:    projectID,
 			QueryID:      queries.IdText,
 			RouteVersion: ROUTE_VERSION_V1_WITHOUT_SLASH,
 		}
@@ -251,7 +250,6 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 	}
 
 	response = model.SixSignalPublicURLResponse{
-		ProjectID:    projectID,
 		RouteVersion: ROUTE_VERSION_V1_WITHOUT_SLASH,
 		QueryID:      share.QueryID,
 	}
