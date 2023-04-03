@@ -45,5 +45,5 @@ URL_ENDPOINT_CAMPAIGN_GROUP_META = 'adCampaignGroupsV2'
 URL_ENDPOINT_CAMPAIGN_META = 'adCampaignsV2'
 URL_ENDPOINT_CREATIVE_META = 'adCreativesV2'
 BACKFILL_NOT_REQUIRED = "Backfill not required for %s for project %s for ad account %s"
-AD_ACCOUNT_FAILURE = 'Failed to get ad_accounts metadata from linkedin'
+AD_ACCOUNT_FAILURE = 'Failed to get ad account metadata from linkedin'
 ORG_DATA_FETCH_ERROR = "Failed getting organisation data with error {}"

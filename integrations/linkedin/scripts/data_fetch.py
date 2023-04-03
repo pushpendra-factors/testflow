@@ -321,6 +321,7 @@ class DataFetch:
                                                 ad_account, access_token, 
                                                 records, request_counter, 
                                                 timestamp, is_backfill=False):
+        updated_records = []
         if len(records) != 0:
             ids_batch = U.get_batch_of_ids(records)
             map_id_to_org_data, request_counter, errString = (self
@@ -328,6 +329,7 @@ class DataFetch:
                                                 ids_batch, access_token, 
                                                 request_counter))
             if errString != '':
+                log.error(errString)
                 return {'status': 'failed', 'errMsg': errString, 
                         API_REQUESTS: request_counter}
             
@@ -346,8 +348,6 @@ class DataFetch:
         if insert_err != '':
             return {'status': 'failed', 'errMsg': insert_err, 
                         API_REQUESTS: request_counter}
-        if errString != '':
-            log.error(errString)
         return {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}
     
 
