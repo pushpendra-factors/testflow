@@ -51,9 +51,7 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
-
-//	r.GET(routePrefix+"/.well-known/microsoft-identity-association.json",teams.VerifyPublisherDomainStaging)
-
+	//	r.GET(routePrefix+"/.well-known/microsoft-identity-association.json",teams.VerifyPublisherDomainStaging)
 
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
@@ -498,7 +496,7 @@ func InitIntRoutes(r *gin.Engine) {
 
 	intRouteGroup.GET("/slack/callback", slack.SlackCallbackHandler)
 
-//	intRouteGroup.GET("/teams/callback",teams.TeamsCallbackHandler)
+	//	intRouteGroup.GET("/teams/callback",teams.TeamsCallbackHandler)
 
 }
 
