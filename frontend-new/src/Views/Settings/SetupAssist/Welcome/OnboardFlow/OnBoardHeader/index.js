@@ -62,11 +62,11 @@ const AdditionalMenu = ({
   const {
     int_client_six_signal_key,
     int_factors_six_signal_key,
-    int_clear_bit
+    int_clear_bit,
+    is_deanonymization_requested
   } = useSelector((state) => state?.global?.currentProjectSettings);
-  const factors6SignalKeyRequested = useSelector(
-    (state) => state?.onBoardFlow?.factors6SignalKeyRequested
-  );
+
+  console.log(is_deanonymization_requested);
   const activeProject = useSelector((state) => state?.global?.active_project);
   const { steps, currentStep } = useSelector((state) => state?.onBoardFlow);
   const isNextBtnEnabled = () => {
@@ -75,7 +75,7 @@ const AdditionalMenu = ({
     } else if (currentStep === 2) {
       return (
         int_client_six_signal_key ||
-        factors6SignalKeyRequested ||
+        is_deanonymization_requested ||
         int_factors_six_signal_key ||
         int_clear_bit
       );
