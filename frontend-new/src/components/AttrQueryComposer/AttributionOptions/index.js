@@ -33,7 +33,8 @@ const AttributionOptions = ({
     ['U Shaped', 'U_Shaped'],
     ['W Shaped', 'W_Shaped'],
     ['Time Decay', 'Time_Decay'],
-    ['Influence', 'Influence']
+    ['Influence', 'Influence'],
+    ['Last Campaign Touch', 'Last_Campaign_Touch']
   ];
 
   const timeLineMap = {
