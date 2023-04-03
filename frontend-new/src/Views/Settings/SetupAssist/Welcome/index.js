@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Row, Col, Modal, Button, notification } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Row, Col, Modal, Button, notification, Alert, Spin } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { connect, useDispatch } from 'react-redux';
+import { connect, useDispatch, useSelector } from 'react-redux';
 import { Link, useHistory } from 'react-router-dom';
 import {
   getHubspotContact,
   fetchDemoProject,
-  setActiveProject
+  setActiveProject,
+  fetchProjectSettings,
+  fetchProjectSettingsV1
 } from 'Reducers/global';
 import styles from './index.module.scss';
 import Video from './Video';
@@ -14,8 +16,9 @@ import { meetLink } from '../../../../utils/hubspot';
 import FaHeader from '../../../../components/FaHeader';
 import OnBoard from './OnboardFlow';
 import { TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL } from 'Reducers/types';
+import { LoadingOutlined } from '@ant-design/icons';
 
-const EachWelcomeCard = ({ onClick, title, description, type }) => {
+const EachWelcomeCard = ({ onClick, title, description, type, inProgress }) => {
   return (
     <div
       className={`${styles.first} ml-2 mr-2 ${styles['eachWelcomeCard']}`}
@@ -29,6 +32,16 @@ const EachWelcomeCard = ({ onClick, title, description, type }) => {
           flexDirection: 'column'
         }}
       >
+        <Alert
+          message={<span style={{ color: '#FA8C16' }}>In Progress</span>}
+          type='warning'
+          style={{
+            visibility: inProgress === true ? 'visible' : 'hidden',
+            width: 'fit-content',
+            padding: '0 5px',
+            borderRadius: '5px'
+          }}
+        />
         <Col className={styles['img']}>
           {type === 1 ? (
             <SVG name='onboardtarget' />
@@ -67,13 +80,21 @@ const Welcome = ({
   getHubspotContact,
   fetchDemoProject,
   setActiveProject,
-  projects
+  projects,
+  fetchProjectSettings,
+  fetchProjectSettingsV1
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [ownerID, setownerID] = useState();
   const dispatch = useDispatch();
   const history = useHistory();
-
+  const { agents, agent_details } = useSelector((state) => state.agent);
+  const is_onboarding_completed = useSelector(
+    (state) => state.global.currentProjectSettings.is_onboarding_completed
+  );
+  const currentProjectSettingsLoading = useSelector(
+    (state) => state.global.currentProjectSettingsLoading
+  );
   const handleRoute = () => {
     history.push('/project-setup');
   };
@@ -107,7 +128,20 @@ const Welcome = ({
       });
     });
   };
-
+  const showInprogress = (is_onboarding_completed) => {
+    // console.log(is_onboarding_completed);
+    // If onboarding is completed no need to show in-progress alert
+    if (is_onboarding_completed === true) return false;
+    for (let agent of agents) {
+      if (
+        agent.email !== agent_details.email &&
+        agent.email !== 'solutions@factors.ai'
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
   return (
     <>
       <div className={'m-0'}>
@@ -137,18 +171,28 @@ const Welcome = ({
         <Row justify={'center'} className={'mt-8'}>
           <Col span={15}>
             <Row className={'justify-center'}>
-              <EachWelcomeCard
-                title='Website visitor identification'
-                description='Identify anonymous users and track high intent accounts'
-                type={2}
-                onClick={handleRoute1}
-              />
-              <EachWelcomeCard
-                title='Analytics and Attribution'
-                description='Make data-driven decisions and optimize marketing strategies'
-                type={1}
-                onClick={handleRoute}
-              />
+              {currentProjectSettingsLoading === true ? (
+                <>
+                  <Spin />
+                </>
+              ) : (
+                <>
+                  <EachWelcomeCard
+                    title='Website visitor identification'
+                    description='Identify anonymous users and track high intent accounts'
+                    type={2}
+                    inProgress={showInprogress(is_onboarding_completed)}
+                    onClick={handleRoute1}
+                  />
+                  <EachWelcomeCard
+                    title='Analytics and Attribution'
+                    description='Make data-driven decisions and optimize marketing strategies'
+                    type={1}
+                    inProgress={false}
+                    onClick={handleRoute}
+                  />
+                </>
+              )}
 
               {/* <div className={`${styles.first}`} onClick={() => {
     return (
@@ -282,5 +326,7 @@ const mapStateToProps = (state) => ({
 export default connect(mapStateToProps, {
   getHubspotContact,
   fetchDemoProject,
-  setActiveProject
+  setActiveProject,
+  fetchProjectSettings,
+  fetchProjectSettingsV1
 })(Welcome);

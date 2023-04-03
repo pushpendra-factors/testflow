@@ -185,7 +185,12 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
   const factors6SignalKeyRequested = useSelector(
     (state) => state?.onBoardFlow?.factors6SignalKeyRequested
   );
+  const is_deanonymization_requested = useSelector(
+    (state) =>
+      state?.global?.currentProjectSettings?.is_deanonymization_requested
+  );
 
+  const [isLoadingFactors6Signal, setIsLoadignFactors6Signal] = useState(false);
   // useEffect(() => {
   //   dispatch({
   //     type: TOGGLE_DISABLED_STATE_NEXT_BUTTON,
@@ -193,22 +198,36 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
   //   });
   // }, [int_client_six_signal_key]);
   const handleFactors6SignalSetup = () => {
-    sendSlackNotification(
-      currentAgent.email,
-      activeProject.name,
-      'factors6Signal_Test'
-    );
-    if (factors6SignalKeyRequested === false)
-      dispatch({
-        type: TOGGLE_FACTORS_6SIGNAL_REQUEST
-      });
-    dispatch({
-      type: ENABLE_STEP_AND_MOVE_TO_NEXT,
-      payload: { step: 2, state: true, moveTo: 2 }
-    });
-    history.push('/welcome/visitoridentification/3');
+    setIsLoadignFactors6Signal(true);
+    udpateProjectSettings(activeProject.id, {
+      is_deanonymization_requested: true
+    })
+      .then(() => {
+        sendSlackNotification(
+          currentAgent.email,
+          activeProject.name,
+          'factors6Signal_Test'
+        );
+        if (factors6SignalKeyRequested === false)
+          dispatch({
+            type: TOGGLE_FACTORS_6SIGNAL_REQUEST
+          });
+        dispatch({
+          type: ENABLE_STEP_AND_MOVE_TO_NEXT,
+          payload: { step: 2, state: true, moveTo: 2 }
+        });
 
-    message.success('Requested for Factors 6 Signal Key');
+        setIsLoadignFactors6Signal(false);
+        history.push('/welcome/visitoridentification/3');
+
+        message.success('Requested for Factors 6 Signal Key');
+      })
+      .catch((error) => {
+        message.error(error);
+        console.error(error);
+
+        setIsLoadignFactors6Signal(false);
+      });
   };
   const handleClient6SignalKeyActivate = (values) => {
     return new Promise((resolve, reject) => {
@@ -351,10 +370,14 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
           icon={<SVG size={32} name='Brand' />}
           type={1}
           onSuccess={() => {
-            setIsModalRequestAccess(true);
+            if (is_deanonymization_requested === true) {
+              message.success('Already Requested!');
+            } else {
+              setIsModalRequestAccess(true);
+            }
           }}
           api_key={''}
-          isActivated={factors6SignalKeyRequested}
+          isActivated={is_deanonymization_requested}
         />
         <Divider />
 
@@ -456,6 +479,7 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
                 }}
                 onClick={handleFactors6SignalSetup}
               >
+                {isLoadingFactors6Signal === true ? <LoadingOutlined /> : ''}{' '}
                 Continue with setup
               </Button>
             </div>

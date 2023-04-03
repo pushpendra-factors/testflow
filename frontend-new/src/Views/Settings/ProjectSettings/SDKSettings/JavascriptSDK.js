@@ -865,7 +865,7 @@ const VerifySdkCheck = ({
                 weight='bold'
                 extraClass={'m-0 ml-2 mr-1 flex '}
               >
-                SDK not detected yet. Have you added the code?{' '}
+                Have you added the SDK? Verify Here{' '}
               </Text>
               <Button type={'default'} onClick={onSDKcheck}>
                 Check for SDK
