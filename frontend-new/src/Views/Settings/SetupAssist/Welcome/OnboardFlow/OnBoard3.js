@@ -85,6 +85,38 @@ const OnBoard3 = ({
     (state) => state?.global?.currentProjectSettings
   );
   const history = useHistory();
+  const {
+    int_client_six_signal_key,
+    int_factors_six_signal_key,
+    int_clear_bit,
+    is_deanonymization_requested
+  } = useSelector((state) => state?.global?.currentProjectSettings);
+  const int_completed = useSelector(
+    (state) => state?.global?.projectSettingsV1?.int_completed
+  );
+
+  const [isLoadingDone, setIsLoadingDone] = useState(false);
+  const checkIsValid = (step) => {
+    if (step == 1) {
+      return int_completed;
+    } else if (step == 2) {
+      return (
+        int_client_six_signal_key ||
+        is_deanonymization_requested ||
+        int_clear_bit ||
+        int_factors_six_signal_key
+      );
+    }
+    return false;
+  };
+  useEffect(() => {
+    if (checkIsValid(1) && checkIsValid(2)) {
+      if (is_deanonymization_requested === false)
+        udpateProjectSettings(activeProject.id, {
+          is_onboarding_completed: true
+        });
+    }
+  }, []);
   const onConnectSlack = () => {
     return new Promise((resolve, reject) => {
       enableSlackIntegration(activeProject.id, window.location.href)
@@ -235,15 +267,25 @@ const OnBoard3 = ({
   };
 
   const completeUserOnboard = () => {
+    setIsLoadingDone(true);
     udpateProjectSettings(activeProject.id, {
       is_onboarding_completed: true
-    });
-    history.push('/');
+    })
+      .then(() => {
+        history.push('/');
+        setIsLoadingDone(false);
+      })
+      .catch((e) => {
+        message.error(e);
+        setIsLoadingDone(false);
+      });
   };
+
   return (
     <div className={styles['onBoardContainer']}>
       <Alert
         className={styles['notification']}
+        style={{ borderRadius: '5px' }}
         description={
           <div
             style={{
@@ -270,7 +312,8 @@ const OnBoard3 = ({
                 style={{ border: '1px solid #E5E5E5' }}
                 onClick={completeUserOnboard}
               >
-                Go to Dashboard
+                {isLoadingDone === true ? <LoadingOutlined /> : ''}Go to
+                Dashboard
               </Button>
             </div>
           </div>

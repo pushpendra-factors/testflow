@@ -1,5 +1,9 @@
-import { ArrowLeftOutlined, ArrowRightOutlined } from '@ant-design/icons';
-import { Button, Row, Tooltip } from 'antd';
+import {
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  LoadingOutlined
+} from '@ant-design/icons';
+import { Button, Row, Tooltip, message } from 'antd';
 import { SVG } from 'Components/factorsComponents';
 import React, { useCallback, useEffect, useState } from 'react';
 import { connect, useDispatch, useSelector } from 'react-redux';
@@ -47,17 +51,21 @@ const AdditionalMenu = ({
   const int_completed = useSelector(
     (state) => state?.global?.projectSettingsV1?.int_completed
   );
-
-  const completeUserOnboard = () => {
+  const [isLoadingDone, setIsLoadingDone] = useState(false);
+  const handleDoneDrawer = useCallback(() => {
+    // dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
+    setIsLoadingDone(true);
     udpateProjectSettings(activeProject.id, {
       is_onboarding_completed: true
-    });
-  };
-
-  const handleDoneDrawer = useCallback(() => {
-    completeUserOnboard();
-    // dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
-    history.push('/');
+    })
+      .then(() => {
+        setIsLoadingDone(false);
+        history.push('/');
+      })
+      .catch((error) => {
+        setIsLoadingDone(false);
+        message.error(error);
+      });
   }, []);
   const {
     int_client_six_signal_key,
@@ -137,7 +145,7 @@ const AdditionalMenu = ({
               Next <ArrowRightOutlined />
             </>
           ) : (
-            'Done'
+            <> {isLoadingDone === true ? <LoadingOutlined /> : ''} Done</>
           )}
         </Button>
       </Tooltip>

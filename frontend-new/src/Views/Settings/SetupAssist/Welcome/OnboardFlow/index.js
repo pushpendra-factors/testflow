@@ -17,24 +17,21 @@ const OnBoard = () => {
   const {
     int_client_six_signal_key,
     int_factors_six_signal_key,
-    int_clear_bit
+    int_clear_bit,
+    is_deanonymization_requested
   } = useSelector((state) => state?.global?.currentProjectSettings);
   const int_completed = useSelector(
     (state) => state?.global?.projectSettingsV1?.int_completed
   );
-  const {
-    isWebsiteVisitorIdentificationVisible,
-    currentStep,
-    steps,
-    factors6SignalKeyRequested
-  } = useSelector((state) => state.onBoardFlow);
+  const { isWebsiteVisitorIdentificationVisible, currentStep, steps } =
+    useSelector((state) => state.onBoardFlow);
   const checkIsValid = (step) => {
     if (step == 1) {
       return int_completed;
     } else if (step == 2) {
       return (
         int_client_six_signal_key ||
-        factors6SignalKeyRequested ||
+        is_deanonymization_requested ||
         int_clear_bit ||
         int_factors_six_signal_key
       );
@@ -43,6 +40,11 @@ const OnBoard = () => {
     }
     return false;
   };
+  useEffect(() => {
+    if (is_deanonymization_requested) {
+      history.push('/welcome/visitoridentification/3');
+    }
+  }, []);
   useEffect(() => {
     if (step == '1' || step == '2' || step == '3') {
       if (step == '1') {
