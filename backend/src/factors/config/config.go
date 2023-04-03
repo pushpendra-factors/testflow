@@ -288,6 +288,7 @@ type Configuration struct {
 	TeamsAppTenantID                                   string
 	TeamsAppClientID                                   string
 	TeamsAppClientSecret                               string
+	TeamsApplicationID                                 string
 	EnableDomainsGroupByProjectID                      string
 	DisableUpdateNextSessionTimestamp                  int
 	EnableSyncReferenceFieldsByProjectID               string
@@ -2488,6 +2489,9 @@ func GetTeamsClientSecret() string {
 }
 
 func GetTeamsTenantID() string {
+	return configuration.TeamsAppTenantID
+}
+func GetTeamsApplicationID() string {
 	return configuration.TeamsAppTenantID
 }
 
