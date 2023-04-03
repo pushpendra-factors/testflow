@@ -4,7 +4,8 @@ import {
   SET_PROJECTS,
   SET_ACTIVE_PROJECT,
   CREATE_PROJECT_FULFILLED,
-  FETCH_PROJECTS_REJECTED
+  FETCH_PROJECTS_REJECTED,
+  TEST_TOGGLE_SDK_VERIFICATION
 } from './types';
 import { get, getHostUrl, post, put, del } from '../utils/request';
 
@@ -223,6 +224,15 @@ export default function (state = defaultState, action) {
     }
     case 'DISABLE_TEAMS_FULFILLED': {
       return { ...state, teams: {} };
+    }
+    case TEST_TOGGLE_SDK_VERIFICATION: {
+      return {
+        ...state,
+        projectSettingsV1: {
+          ...state?.projectSettingsV1,
+          int_completed: !state?.projectSettingsV1?.int_completed
+        }
+      };
     }
     default:
       return state;
