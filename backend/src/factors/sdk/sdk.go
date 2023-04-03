@@ -1480,10 +1480,7 @@ func AddUserProperties(projectId int64,
 
 	// Validate properties.
 	validProperties := U.GetValidatedUserProperties(&request.Properties)
-	projectSettings, err1 := store.GetStore().GetProjectSetting(projectId)
-	if err1 != http.StatusFound {
-		return http.StatusInternalServerError, &AddUserPropertiesResponse{Error: "Tracking failed. Invalid project."}
-	}
+
 	if C.GetClearbitEnabled() == 1 {
 		clearbitKey, errCode := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
 		if errCode != http.StatusFound {
@@ -1512,52 +1509,6 @@ func AddUserProperties(projectId int64,
 
 	}
 
-	if C.Get6SignalEnabled() == 1 {
-		if ClientSixSignalKey, ClientErrCode := store.GetStore().GetClient6SignalKeyFromProjectSetting(projectId); ClientSixSignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true {
-			statusChannel := make(chan int)
-			sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
-
-			if !sixSignalExists {
-				go six_signal.ExecuteSixSignalEnrich(projectId, ClientSixSignalKey, validProperties, request.ClientIP, statusChannel)
-
-				select {
-				case ok := <-statusChannel:
-					if ok == 1 {
-						six_signal.SetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
-					} else {
-						logCtx.Warn("ExecuteSixSignal failed in AddUserProperties")
-					}
-				case <-time.After(U.TimeoutOneSecond):
-					logCtx.Warn("six_signal enrichment timed out in AddUserProperties")
-				}
-			}
-		} else if FactorsSixSignalKey, FactorsErrCode := store.GetStore().GetFactors6SignalKeyFromProjectSetting(projectId); FactorsSixSignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true {
-			statusChannel := make(chan int)
-			sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
-
-			if !sixSignalExists {
-				go six_signal.ExecuteSixSignalEnrich(projectId, FactorsSixSignalKey, validProperties, request.ClientIP, statusChannel)
-
-				select {
-				case ok := <-statusChannel:
-					if ok == 1 {
-						six_signal.SetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
-						// Total hit counts
-						six_signal.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
-
-					} else {
-						logCtx.Warn("ExecuteSixSignal failed in AddUserProperties")
-					}
-				case <-time.After(U.TimeoutOneSecond):
-					logCtx.Warn("six_signal enrichment timed out in AddUserProperties")
-
-				}
-			}
-		} else if ClientErrCode == http.StatusNotFound || FactorsErrCode == http.StatusNotFound {
-			logCtx.Warn("Get six_signal key from project_settings failed.")
-		}
-
-	}
 	_, _ = model.FillLocationUserProperties(validProperties, request.ClientIP)
 	propertiesJSON, err := json.Marshal(validProperties)
 	if err != nil {
