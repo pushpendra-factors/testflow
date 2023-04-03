@@ -2492,7 +2492,7 @@ func GetTeamsTenantID() string {
 	return configuration.TeamsAppTenantID
 }
 func GetTeamsApplicationID() string {
-	return configuration.TeamsAppTenantID
+	return configuration.TeamsApplicationID
 }
 
 func IsAllowedDomainsGroupByProjectID(projectID int64) bool {
