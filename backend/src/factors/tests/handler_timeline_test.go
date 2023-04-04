@@ -1185,8 +1185,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		}
 		return true
 	})
-	log.Fatal("resp: ", w)
-
 }
 
 func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
