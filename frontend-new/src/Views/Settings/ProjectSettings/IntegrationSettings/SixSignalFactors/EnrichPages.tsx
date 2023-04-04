@@ -225,7 +225,7 @@ const EnrichPages = ({
           <div className={`mt-5 ${style.customSelect}`}>
             {data && data?.length > 0 && renderData()}
           </div>
-          {data.length <= 15 && (
+          {data.length < 50 && (
             <div className='mt-5'>
               <Button
                 type='text'

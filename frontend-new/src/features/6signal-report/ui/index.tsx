@@ -170,6 +170,10 @@ const SixSignalReport = () => {
   };
 
   const handleDateChange = (option: string[]) => {
+    if (dateSelected === option[1]) {
+      setIsDateSelectionOpen(false);
+      return;
+    }
     setDateSelected(option[1]);
     setIsDateSelectionOpen(false);
     //resetting campaigns to null
