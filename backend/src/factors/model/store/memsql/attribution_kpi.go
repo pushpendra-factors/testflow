@@ -378,6 +378,12 @@ func (store *MemSQL) FillKPIGroupUserData(projectID int64, query *model.Attribut
 func (store *MemSQL) FillKPIGroupUserDataV1(projectID int64, query *model.AttributionKPIQueries, kpiData *map[string]model.KPIInfo,
 	kpiKeys *[]string, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
 
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"query": query,
+			"kpiData":            kpiData,
+			"kpiKeys":            kpiKeys,
+			"groupUserIDToKpiID": groupUserIDToKpiID}).Info("Values in FillKPIGroupUserDataV1")
+	}
 	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
 	logCtx.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
 	if len(*kpiKeys) == 0 {
@@ -418,7 +424,9 @@ func (store *MemSQL) FillKPIGroupUserDataV1(projectID int64, query *model.Attrib
 		}
 		err = store.FillNormalUsersForKPIAccCompUser(projectID, accCompIds, _groupIDUserKey, kpiData, logCtx)
 	}
-
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiData": kpiData}).Info("Values after FillKPIGroupUserDataV1")
+	}
 	return err
 }
 
