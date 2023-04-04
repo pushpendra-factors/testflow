@@ -96,7 +96,7 @@ const Welcome = ({
     (state) => state.global.currentProjectSettingsLoading
   );
   const handleRoute = () => {
-    history.push('/project-setup');
+    history.push('/project-setup?redirected_from=onboardflow');
   };
   const handleRoute1 = () => {
     // dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });

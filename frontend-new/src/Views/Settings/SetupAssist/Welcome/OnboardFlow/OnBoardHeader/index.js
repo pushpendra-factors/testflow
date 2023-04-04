@@ -175,7 +175,7 @@ const OnBoardHeader = ({
     if (step === 1) {
       return 'Add the Javascript SDK';
     } else if (step === 2) {
-      return 'Integrations to push';
+      return 'Factors Deanonymisation';
     } else if (step === 3) {
       return 'Get alerts on Slack';
     } else {

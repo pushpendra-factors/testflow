@@ -354,9 +354,6 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
     <div className={styles['onBoardContainer']}>
       {/* <SixSignal setIsActive={() => {}} kbLink={true} /> */}
       <div>
-        <Text type={'title'} level={6} weight={'bold'}>
-          Integrations to push
-        </Text>
         <HorizontalCard
           isDropdown={true}
           setIsModalRequestAccess={setIsModalRequestAccess}
