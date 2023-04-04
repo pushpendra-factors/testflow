@@ -144,6 +144,7 @@ func main() {
 	disallowSalesforceActivityEventByProjectID := flag.String("disallowed_salesforce_activity_events_by_project_ids", "", "Disallowed project id for salesforce activity - event")
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
 	allowedSalesforceSyncDocTypes := flag.String("allowed_salesforce_doc_types_for_sync", "*", "")
+	enableFieldsSyncByProjectID := flag.String("enable_fields_sync_by_project_ids", "", "Use FIELDS() for sync if Request Header is Too Large")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -208,6 +209,7 @@ func main() {
 		DisallowedSalesforceActivityEventsByProjectIDs:     *disallowSalesforceActivityEventByProjectID,
 		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
 		AllowedSalesforceSyncDocTypes:                      *allowedSalesforceSyncDocTypes,
+		EnableFieldsSyncByProjectID:                        *enableFieldsSyncByProjectID,
 	}
 
 	C.InitConf(config)

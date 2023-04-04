@@ -65,6 +65,14 @@ func GetGroupsHandler(c *gin.Context) {
 		filteredGroups = groups
 	}
 
+	// remove $domains group
+	for i := range filteredGroups {
+		if filteredGroups[i].Name == model.GROUP_NAME_DOMAINS {
+			filteredGroups = append(filteredGroups[:i], filteredGroups[i+1:]...)
+			break
+		}
+	}
+
 	var response []map[string]string
 	for _, group := range filteredGroups {
 		resp := make(map[string]string)

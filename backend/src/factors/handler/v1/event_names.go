@@ -203,14 +203,14 @@ func UploadListForFilters(c *gin.Context) {
 		return
 	}
 
-	path, file := C.GetCloudManager(projectId, false).GetListReferenceFileNameAndPathFromCloud(projectId, fileReference)
+	path, file := C.GetCloudManager(projectId, true).GetListReferenceFileNameAndPathFromCloud(projectId, fileReference)
 	resultJson, err := json.Marshal(resultTrimmed)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal result Info.")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	err = C.GetCloudManager(projectId, false).Create(path, file, bytes.NewReader(resultJson))
+	err = C.GetCloudManager(projectId, true).Create(path, file, bytes.NewReader(resultJson))
 	if err != nil {
 		log.WithError(err).Error("list File Failed to write to cloud")
 		c.AbortWithStatus(http.StatusInternalServerError)

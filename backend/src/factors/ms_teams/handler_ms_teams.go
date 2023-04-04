@@ -330,32 +330,24 @@ func DeleteTeamsIntegrationHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"success": "Teams integration deleted successfully"})
 }
+
 type PublisherDomain struct {
-    AssociatedApplications []struct {
-        ApplicationId string `json:"applicationId"`
-    } `json:"associatedApplications"`
+	AssociatedApplications []struct {
+		ApplicationId string `json:"applicationId"`
+	} `json:"associatedApplications"`
 }
-func VerifyPublisherDomainStaging(c *gin.Context) {
+
+func VerifyPublisherDomainTeams(c *gin.Context) {
 	var data PublisherDomain
-	if C.GetConfig().Env == C.STAGING {
-		data = PublisherDomain{
-			AssociatedApplications: []struct {
-				ApplicationId string `json:"applicationId"`
-			}{
-				{
-					ApplicationId: "b60cd2fb-e869-4940-9aad-098d551f8217",
-				},
+
+	data = PublisherDomain{
+		AssociatedApplications: []struct {
+			ApplicationId string `json:"applicationId"`
+		}{
+			{
+				ApplicationId: C.GetTeamsApplicationID(),
 			},
-		}
-	
+		},
 	}
-	
-	// json := `{
-	// 	"associatedApplications": [
-	// 	  {
-	// 		"applicationId": "b60cd2fb-e869-4940-9aad-098d551f8217"
-	// 	  }
-	// 	]
-	//   }`
-	c.JSON(200,data)
+	c.JSON(200, data)
 }

@@ -289,6 +289,7 @@ type Configuration struct {
 	TeamsAppTenantID                                   string
 	TeamsAppClientID                                   string
 	TeamsAppClientSecret                               string
+	TeamsApplicationID                                 string
 	EnableDomainsGroupByProjectID                      string
 	DisableUpdateNextSessionTimestamp                  int
 	EnableSyncReferenceFieldsByProjectID               string
@@ -298,6 +299,7 @@ type Configuration struct {
 	AllowedSalesforceSyncDocTypes                      string
 	CustomDateStart                                    int64
 	CustomDateEnd                                      int64
+	EnableFieldsSyncByProjectID                        string
 }
 
 type Services struct {
@@ -2510,6 +2512,9 @@ func GetTeamsClientSecret() string {
 func GetTeamsTenantID() string {
 	return configuration.TeamsAppTenantID
 }
+func GetTeamsApplicationID() string {
+	return configuration.TeamsApplicationID
+}
 
 func IsAllowedDomainsGroupByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDomainsGroupByProjectID, "")
@@ -2559,4 +2564,13 @@ func IsSalesforceDocTypeEnabledForSync(docType string) bool {
 
 	allowedDocTypes := strings.Split(allowedSalesforceDocTypesForSync, ",")
 	return U.StringValueIn(docType, allowedDocTypes)
+}
+
+func IsFieldsSyncAllowedForProjectID(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableFieldsSyncByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return projectIDsMap[projectID]
 }

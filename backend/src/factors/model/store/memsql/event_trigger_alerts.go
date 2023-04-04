@@ -695,7 +695,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 	}
 
 	tt := time.Now()
-	timestamp := tt.Unix()
+	timestamp := tt.UnixNano()
 	date := tt.UTC().Format(U.DATETIME_FORMAT_YYYYMMDD)
 
 	counterKey, err := model.GetEventTriggerAlertCacheCounterKey(event.ProjectId, alert.ID, date)
