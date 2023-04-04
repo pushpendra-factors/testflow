@@ -43,10 +43,16 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	if errCode != http.StatusFound {
 		return nil, errors.New("failed to get project settings during attribution call")
 	}
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"query": query}).Info("Run type attribution debug before enrichment")
+	}
 	// enrich RunType for attribution query
 	err := model.EnrichRequestUsingAttributionConfigV1(query, settings, logCtx)
 	if err != nil {
 		return nil, err
+	}
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"query": query}).Info("Run type attribution debug")
 	}
 
 	// supporting existing old/saved queries
@@ -460,9 +466,15 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 	headerPosition := int64(0)
 	kpiData := make(map[string]model.KPIInfo)
 
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"query": query}).Info("Run type attribution debug PullConvertedUsersV1")
+	}
 	for index, individualKPIQuery := range query.KPIQueries {
 
 		if query.KPIQueries[index].AnalyzeType == model.AnalyzeTypeUserKPI {
+			if C.GetAttributionDebug() == 1 {
+				log.WithFields(log.Fields{"individualKPIQuery": individualKPIQuery}).Info("Run type attribution debug individualKPIQuery in PullConvertedUsersV1")
+			}
 
 			var err error
 			queryStartTime := time.Now().UTC().Unix()
