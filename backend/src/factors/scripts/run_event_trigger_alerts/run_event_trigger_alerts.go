@@ -197,7 +197,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 
 	msg := alert.Message
 	if alertConfiguration.Slack {
-		slackSuccess = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.CreatedBy, msg, alertConfiguration.SlackChannels)
+		slackSuccess = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels)
 		if !slackSuccess {
 			err := AddKeyToFailureSet(key, eta.ProjectID, "Slack")
 			if err != nil {

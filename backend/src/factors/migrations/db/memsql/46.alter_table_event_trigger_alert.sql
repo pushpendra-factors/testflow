@@ -1,0 +1,3 @@
+alter table event_trigger_alerts add column slack_channel_associated_by text
+
+update event_trigger_alerts set slack_channel_associated_by = created_by

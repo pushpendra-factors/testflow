@@ -128,7 +128,7 @@ func (store *MemSQL) DeleteEventTriggerAlert(projectID int64, id string) (int, s
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string) {
+func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser string) (*model.EventTriggerAlert, int, string) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"event_trigger_alert": alertConfig,
@@ -205,6 +205,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 		CreatedAt:         transTime,
 		UpdatedAt:         transTime,
 		IsDeleted:         false,
+		SlackChannelAssociatedBy: slackTokenUser,
 	}
 
 	if err := db.Create(&alert).Error; err != nil {
