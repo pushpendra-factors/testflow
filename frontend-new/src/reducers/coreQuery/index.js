@@ -94,9 +94,9 @@ const defaultState = {
     dateStr: ''
   },
   eventNames: [],
-  userPropNames: [],
-  eventPropNames: [],
-  groupPropNames: [],
+  userPropNames: {},
+  eventPropNames: {},
+  groupPropNames: {},
   eventPropertiesDisplayNames: {
     loading: false,
     error: false,
@@ -115,7 +115,10 @@ export default function (state = defaultState, action) {
     case SET_USER_PROP_NAME:
       return { ...state, userPropNames: action.payload };
     case SET_GROUP_PROP_NAME:
-      return { ...state, groupPropNames: action.payload };
+      return {
+        ...state,
+        groupPropNames: { ...state.groupPropNames, ...action.payload }
+      };
     case FETCH_GROUP_PROPERTIES:
       const groupPropState = Object.assign({}, state.groupProperties);
       groupPropState[action.groupName] = action.payload;

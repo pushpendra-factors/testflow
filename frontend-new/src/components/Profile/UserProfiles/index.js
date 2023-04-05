@@ -514,6 +514,11 @@ function UserProfiles({
         {activeSegment.query.gup && activeSegment.query.gup.length
           ? filtersList(formatPayloadForFilters(activeSegment.query.gup))
           : null}
+        <h2 className='whitespace-no-wrap italic line-height-8 m-0 mr-2'>
+          {`*Shows ${
+            ReverseProfileMapper[activeSegment.type]?.users
+          } from last 28 days.`}
+        </h2>
       </div>
     );
   };

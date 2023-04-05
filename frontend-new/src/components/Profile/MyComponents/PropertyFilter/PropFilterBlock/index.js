@@ -104,12 +104,14 @@ export default function PropFilterBlock({
             });
         }
       } else if (newFilterState.props[2] === 'group') {
-        let source;
-        if (newFilterState.props[0].includes('hubspot'))
-          source = '$hubspot_company';
-        else if (newFilterState.props[0].includes('salesforce'))
-          source = '$salesforce_account';
         if (!dropDownValues[newFilterState.props[0]]) {
+          let source;
+          if (newFilterState.props[0].startsWith('$hubspot'))
+            source = '$hubspot_company';
+          else if (newFilterState.props[0].startsWith('$salesforce'))
+            source = '$salesforce_account';
+          else if (newFilterState.props[0].startsWith('$6Signal'))
+            source = '$6signal';
           fetchGroupPropertyValues(
             activeProject.id,
             source,
@@ -170,13 +172,14 @@ export default function PropFilterBlock({
             });
         }
       } else if (propOpByPayload(props, 2) === 'group') {
-        let source;
-        if (propOpByPayload(props, 0).includes('hubspot'))
-          source = '$hubspot_company';
-        else if (propOpByPayload(props, 0).includes('salesforce'))
-          source = '$salesforce_account';
-
         if (!dropDownValues[propOpByPayload(props, 0)]) {
+          let source;
+          if (propOpByPayload(props, 0).startsWith('$hubspot'))
+            source = '$hubspot_company';
+          else if (propOpByPayload(props, 0).startsWith('$salesforce'))
+            source = '$salesforce_account';
+          else if (propOpByPayload(props, 0).startsWith('$6Signal'))
+            source = '$6signal';
           fetchGroupPropertyValues(
             activeProject.id,
             source,

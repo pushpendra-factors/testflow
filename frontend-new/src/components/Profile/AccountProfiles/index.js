@@ -19,6 +19,7 @@ import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import {
   DEFAULT_TIMELINE_CONFIG,
+  displayFilterOpts,
   formatEventsFromSegment,
   formatFiltersForPayload,
   formatPayloadForFilters,
@@ -79,8 +80,9 @@ function AccountProfiles({
   const [checkListAccountProps, setCheckListAccountProps] = useState([]);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const [accountPayload, setAccountPayload] = useState({
-    source: 'All',
-    filters: []
+    source: '',
+    filters: [],
+    segment_id: ''
   });
 
   useEffect(() => {
@@ -88,11 +90,33 @@ function AccountProfiles({
   }, [activeProject]);
 
   const groupsList = useMemo(() => {
-    let groups = [['All Accounts', 'All']];
+    const groups = [];
+    if (groupOpts?.length > 1) groups.push(['All Accounts', 'All']);
     groupOpts?.forEach((elem) => {
       groups.push([elem.display_name, elem.group_name]);
     });
     return groups;
+  }, [groupOpts]);
+
+  const displayTableProps = useMemo(() => {
+    const filterPropsMap = {
+      $hubspot_company: 'hubspot',
+      $salesforce_account: 'salesforce',
+      $6signal: '6Signal',
+      All: ''
+    };
+    const tableProps = accountPayload.segment_id
+      ? activeSegment.query.table_props
+      : currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
+          (item) => item.includes(filterPropsMap[accountPayload?.source])
+        );
+    return tableProps;
+  }, [currentProjectSettings, accountPayload, activeSegment]);
+
+  useEffect(() => {
+    const payload = { ...accountPayload };
+    payload.source = groupOpts?.[0]?.group_name;
+    setAccountPayload(payload);
   }, [groupOpts]);
 
   useEffect(() => {
@@ -122,27 +146,37 @@ function AccountProfiles({
   }, [activeProject.id]);
 
   useEffect(() => {
-    const opts = { ...accountPayload };
-    opts.filters = formatFiltersForPayload(accountPayload.filters);
-    getProfileAccounts(activeProject.id, opts);
-  }, [activeProject, currentProjectSettings, accountPayload, segments]);
+    if (accountPayload.source && accountPayload.source !== '') {
+      const opts = { ...accountPayload };
+      opts.filters = formatFiltersForPayload(opts.filters);
+      getProfileAccounts(activeProject.id, opts);
+    }
+  }, [activeProject?.id, currentProjectSettings, accountPayload]);
 
   useEffect(() => {
-    const mergeGroupedProps = [
-      ...(groupProperties.$hubspot_company
-        ? groupProperties.$hubspot_company
-        : []),
-      ...(groupProperties.$salesforce_account
-        ? groupProperties.$salesforce_account
-        : []),
-      ...(groupProperties.$6signal ? groupProperties.$6signal : [])
-    ];
-    setListProperties(mergeGroupedProps);
-  }, [groupProperties]);
+    let listProps = [];
+    if (accountPayload?.source === 'All') {
+      listProps = [
+        ...(groupProperties.$hubspot_company
+          ? groupProperties.$hubspot_company
+          : []),
+        ...(groupProperties.$salesforce_account
+          ? groupProperties.$salesforce_account
+          : []),
+        ...(groupProperties.$6signal ? groupProperties.$6signal : [])
+      ];
+    } else
+      listProps = [
+        ...(groupProperties?.[accountPayload?.source]
+          ? groupProperties[accountPayload.source]
+          : [])
+      ];
+    setListProperties(listProps);
+  }, [groupProperties, accountPayload?.source]);
 
   useEffect(() => {
     const tableProps = accountPayload.segment_id
-      ? activeSegment.query.table_props
+      ? activeSegment.query.table_p_props
       : currentProjectSettings.timelines_config?.account_config?.table_props;
     const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
       listProperties,
@@ -186,10 +220,7 @@ function AccountProfiles({
           ) || '-'
       }
     ];
-    const tableProps = accountPayload.segment_id
-      ? activeSegment.query.table_props
-      : currentProjectSettings?.timelines_config?.account_config?.table_props;
-    tableProps?.forEach((prop) => {
+    displayTableProps?.forEach((prop) => {
       const propDisplayName = groupPropNames[prop]
         ? groupPropNames[prop]
         : PropTextFormat(prop);
@@ -254,6 +285,9 @@ function AccountProfiles({
     if (val !== accountPayload.source) {
       const opts = { ...accountPayload };
       opts.source = val;
+      opts.filters = [];
+      opts.segment_id = '';
+      setActiveSegment({});
       setAccountPayload(opts);
     }
     setGroupDDVisible(false);
@@ -318,9 +352,16 @@ function AccountProfiles({
         .then(() => setActiveSegment({ ...activeSegment, query }));
     } else {
       const config = { ...tlConfig };
-      config.account_config.table_props = checkListAccountProps
-        .filter((item) => item.enabled === true)
-        .map((item) => item?.prop_name);
+      config.account_config.table_props = tlConfig.account_config.table_props
+        .filter(
+          (item) =>
+            !checkListAccountProps.map((item) => item?.prop_name).includes(item)
+        )
+        .concat(
+          ...checkListAccountProps
+            .filter((item) => item.enabled === true)
+            .map((item) => item?.prop_name)
+        );
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...config }
       });
@@ -354,7 +395,9 @@ function AccountProfiles({
     if (accountPayload.source === 'All') {
       Object.entries(segments)
         .filter((segment) =>
-          ['$hubspot_company', '$salesforce_account'].includes(segment[0])
+          ['$hubspot_company', '$salesforce_account', '$6signal'].includes(
+            segment[0]
+          )
         )
         .forEach(([group, vals]) => {
           const obj = formatSegmentsObjToGroupSelectObj(group, vals);
@@ -530,6 +573,11 @@ function AccountProfiles({
           {activeSegment.query.gup && activeSegment.query.gup.length
             ? filtersList(formatPayloadForFilters(activeSegment.query.gup))
             : null}
+          <h2 className='whitespace-no-wrap italic line-height-8 m-0 mr-2'>
+            {`*Shows ${
+              displayFilterOpts[activeSegment.type]
+            } from last 28 days.`}
+          </h2>
         </div>
       );
     }
@@ -689,7 +737,6 @@ function AccountProfiles({
       <AccountDetails
         accountId={activeModalKey}
         onCancel={handleCancel}
-        accountDetails={accountDetails}
       />
     </Modal>
   );
