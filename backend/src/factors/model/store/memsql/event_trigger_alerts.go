@@ -360,18 +360,43 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 			log.WithError(err).Error("Jsonb decoding to struct failure")
 			return nil, nil, http.StatusInternalServerError
 		}
+		messageProperties := make([]model.QueryGroupByProperty, 0)
+		if config.MessageProperty != nil {
+			err := U.DecodePostgresJsonbToStructType(config.MessageProperty, &messageProperties)
+			if err != nil {
+				log.WithError(err).Error("Jsonb decoding to struct failure")
+				return nil, nil, http.StatusInternalServerError
+			}
+		}
+		if( !isUpdate){
+			isUpdateOnlyPropertyInMessageBody := false
+			for _, msgProp := range messageProperties {
+				if (eventName.Name == "$session" && U.SESSION_PROPERTIES_SET_IN_UPDATE[msgProp.Property] == true){
+					isUpdateOnlyPropertyInMessageBody = true
+				}
+			}
+			if isUpdateOnlyPropertyInMessageBody{
+				continue
+			}
+		}
 		if isUpdate {
 			if len(*updatedEventProps) == 0 {
 				continue
 			} else {
 				isPropertyInFilterUpdated := false
+				isUpdateOnlyPropertyInMessageBody := false
+				for _, msgProp := range messageProperties {
+					if (eventName.Name == "$session" && U.SESSION_PROPERTIES_SET_IN_UPDATE[msgProp.Property] == true){
+						isUpdateOnlyPropertyInMessageBody = true
+					}
+				}
 				for _, fil := range config.Filter {
 					_, exists := (*updatedEventProps)[fil.Property]
 					if fil.Entity == "event" && exists {
 						isPropertyInFilterUpdated = true
 					}
 				}
-				if !isPropertyInFilterUpdated {
+				if !isPropertyInFilterUpdated && !isUpdateOnlyPropertyInMessageBody{
 					continue
 				}
 			}
