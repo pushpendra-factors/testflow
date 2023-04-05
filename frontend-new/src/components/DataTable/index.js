@@ -6,6 +6,7 @@ import styles from './index.module.scss';
 import { useHistory } from 'react-router-dom';
 import useToggle from '../../hooks/useToggle';
 import ControlledComponent from '../ControlledComponent/ControlledComponent';
+import { APP_LAYOUT_ROUTES } from 'Routes/constants';
 
 function DataTable({
   tableData,
@@ -36,7 +37,10 @@ function DataTable({
   const [searchBar, toggleSearchBar] = useToggle(false);
   const history = useHistory();
   let isDashboardWidget = !isWidgetModal;
-  if (history.location.pathname === '/reports/6_signal') {
+  if (
+    history.location.pathname ===
+    APP_LAYOUT_ROUTES.VisitorIdentificationReport.path
+  ) {
     isDashboardWidget = false;
   } else if (history.location.pathname.includes('/reports')) {
     isDashboardWidget = true;

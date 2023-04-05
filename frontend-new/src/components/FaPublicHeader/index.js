@@ -27,7 +27,7 @@ function FaPublicHeader(props) {
         </Button>
       </div>
       <div className='w-3/4 flex justify-end gap-2 items-center px-6'>
-        <ControlledComponent controller={isLoggedIn}>
+        <ControlledComponent controller={props?.showShareButton}>
           <Tooltip placement='bottom' title='Share'>
             <Button
               onClick={props?.handleShareClick}

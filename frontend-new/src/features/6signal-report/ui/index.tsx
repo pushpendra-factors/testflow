@@ -41,7 +41,7 @@ const SixSignalReport = () => {
     CHANNEL_QUICK_FILTERS[0].id
   );
   const [data, setData] = useState<ReportApiResponseData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [campaigns, setCampaigns] = useState<string[]>([]);
   const [isCampaignSelectVisible, setIsCampaignSelectVisible] = useState(false);
   const [seletedCampaigns, setSelectedCampaigns] = useState([]);
@@ -54,13 +54,16 @@ const SixSignalReport = () => {
   const [loadingShareData, setLoadingShareData] = useState<boolean>(false);
   const [shareData, setShareData] = useState<ShareData | null>(null);
   const { isLoggedIn } = useAgentInfo();
-  const { active_project, currentProjectSettings } = useSelector(
-    (state: any) => state.global
-  );
+  const {
+    active_project,
+    currentProjectSettings,
+    currentProjectSettingsLoading
+  } = useSelector((state: any) => state.global);
   const routerQuery = useQuery();
   const history = useHistory();
   const paramQueryId = routerQuery.get(SHARE_QUERY_PARAMS.queryId);
   const paramProjectId = routerQuery.get(SHARE_QUERY_PARAMS.projectId);
+  const showShareButton = data ? data?.is_shareable && isLoggedIn : false;
 
   const isSixSignalActivated = currentProjectSettings
     ? !currentProjectSettings?.int_factors_six_signal_key &&
@@ -189,12 +192,6 @@ const SixSignalReport = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (!isSixSignalActivated) {
-      setLoading(false);
-    }
-  }, [isSixSignalActivated]);
-
-  useEffect(() => {
     const fetchPublicData = async () => {
       try {
         if (!isLoggedIn) setPageMode('public');
@@ -251,7 +248,8 @@ const SixSignalReport = () => {
             active_project.id,
             dateObj?.from,
             dateObj?.to,
-            active_project?.time_zone || 'Asia/Kolkata'
+            active_project?.time_zone || 'Asia/Kolkata',
+            dateObj.isSaved
           )) as ReportApiResponse;
           setLoading(false);
           if (res?.data?.[1]?.result_group) {
@@ -279,6 +277,7 @@ const SixSignalReport = () => {
       <FaPublicHeader
         showDrawer={showDrawer}
         handleShareClick={handleShareClick}
+        showShareButton={showShareButton}
       />
       <div className='px-24 pt-16 mt-12'>
         <div className='flex justify-between align-middle'>
@@ -405,7 +404,7 @@ const SixSignalReport = () => {
           </div>
         </div>
         <div className='mt-6'>
-          {loading || loadingShareData ? (
+          {loading || loadingShareData || currentProjectSettingsLoading ? (
             <div className='w-full h-full flex items-center justify-center'>
               <div className='w-full h-64 flex items-center justify-center'>
                 <Spin size='large' />
@@ -420,7 +419,7 @@ const SixSignalReport = () => {
                 isSixSignalActivated={isSixSignalActivated}
                 dataSelected={dateSelected}
               />
-              {!!data && (
+              {!!data && data.result_group?.[0]?.rows?.length > 0 && (
                 <div className='text-right font-size--small'>
                   Logos provided by{' '}
                   <a

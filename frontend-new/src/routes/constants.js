@@ -44,7 +44,7 @@ const FactorsInsightsOld = lazyWithRetry(() =>
 const CoreQuery = lazyWithRetry(() => import('../Views/CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Views/Dashboard'));
 const Factors = lazyWithRetry(() => import('../Views/Factors'));
-const SixSignalReportComponent = lazyWithRetry(() =>
+const VisitorIdentificationReportComponent = lazyWithRetry(() =>
   import('../features/6signal-report/ui')
 );
 
@@ -284,12 +284,12 @@ export const APP_LAYOUT_ROUTES = {
     Private: true,
     Layout: AppLayout
   },
-  SixSignalReport: {
+  VisitorIdentificationReport: {
     exact: true,
-    path: '/reports/6_signal',
+    path: '/reports/visitor_report',
     Layout: AppLayout,
     Private: false,
-    Component: SixSignalReportComponent
+    Component: VisitorIdentificationReportComponent
   }
 };
 

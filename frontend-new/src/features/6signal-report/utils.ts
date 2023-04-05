@@ -19,6 +19,7 @@ import { ResultGroup, StringObject, WeekStartEnd, ShareApiData } from './types';
 import momentTz from 'moment-timezone';
 import { intersection } from 'lodash';
 import TableCell from './ui/components/ReportTable/TableCell';
+import { APP_LAYOUT_ROUTES } from 'Routes/constants';
 
 export const generateFirstAndLastDayOfLastWeeks = (
   n: number = 5
@@ -39,9 +40,19 @@ export const generateFirstAndLastDayOfLastWeeks = (
       from: weekStart.unix(),
       to: weekEnd.unix(),
       formattedRange,
-      formattedRangeOption
+      formattedRangeOption,
+      isSaved: true
     });
   }
+  dateArray.unshift({
+    from: lastWeek.unix(),
+    to: MomentTz().unix(),
+    formattedRange: `${lastWeek.format('MMM D, Y')} - ${MomentTz().format(
+      'MMM D, Y'
+    )}`,
+    formattedRangeOption: 'Last 7 Days',
+    isSaved: false
+  });
   return dateArray;
 };
 
@@ -242,6 +253,6 @@ export const getPublicUrl = (obj: ShareApiData, project_id: string): string => {
     window.location.protocol +
     '//' +
     window.location.host +
-    `/reports/6_signal?${SHARE_QUERY_PARAMS.queryId}=${obj.query_id}&${SHARE_QUERY_PARAMS.projectId}=${project_id}&${SHARE_QUERY_PARAMS.routeVersion}=${obj.route_version}`
+    `${APP_LAYOUT_ROUTES.VisitorIdentificationReport.path}?${SHARE_QUERY_PARAMS.queryId}=${obj.query_id}&${SHARE_QUERY_PARAMS.projectId}=${project_id}&${SHARE_QUERY_PARAMS.routeVersion}=${obj.route_version}`
   );
 };

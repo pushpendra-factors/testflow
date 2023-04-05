@@ -9,6 +9,7 @@ import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 import { fetchProjects } from 'Reducers/global';
 import { getActiveDomain } from '@sentry/hub';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
+import { APP_LAYOUT_ROUTES } from 'Routes/constants';
 
 const { SubMenu } = Menu;
 
@@ -160,7 +161,7 @@ function SiderMenu({
                 to={
                   item !== 'visitorIdentification'
                     ? `/profiles/${item.toLowerCase()}`
-                    : '/reports/6_signal'
+                    : APP_LAYOUT_ROUTES.VisitorIdentificationReport.path
                 }
                 onClick={() => setShowPopOverSettings(false)}
               >
@@ -271,7 +272,10 @@ function SiderMenu({
           >
             {MenuItems.Accounts}
           </Menu.Item>
-          <Menu.Item className={styles.menuitems_sub} key={`/reports/6_signal`}>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={APP_LAYOUT_ROUTES.VisitorIdentificationReport.path}
+          >
             {MenuItems.visitorIdentification}
           </Menu.Item>
         </SubMenu>

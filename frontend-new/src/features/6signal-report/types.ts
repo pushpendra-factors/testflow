@@ -9,6 +9,7 @@ export type WeekStartEnd = {
   to: number;
   formattedRange: string;
   formattedRangeOption: string;
+  isSaved: boolean;
 };
 
 export interface Query {
@@ -29,6 +30,7 @@ export interface ReportApiResponseData {
   result_group: ResultGroup[];
   query: Query;
   cache_meta?: CacheMeta;
+  is_shareable: boolean;
 }
 
 export interface ReportIndex {
