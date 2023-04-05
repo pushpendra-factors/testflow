@@ -47,6 +47,10 @@ export const ATTRIBUTION_METHODOLOGY = [
   {
     text: 'Time Decay',
     value: 'Time_Decay'
+  },
+  {
+    text: 'Last Campaign Touch',
+    value: 'Last_Campaign_Touch'
   }
 ];
 
@@ -687,5 +691,5 @@ export const OPERATORS = {
   since: 'since',
   isKnown: 'is known',
   isUnknown: 'is unknown',
-  inList: 'is in a list',
+  inList: 'is in a list'
 };
