@@ -342,17 +342,17 @@ func EnrichRequestUsingAttributionConfigV1(query *AttributionQueryV1, settings *
 
 		case AnalyzeTypeUsers:
 			query.KPIQueries[index].RunType = RunTypeUser
-			return nil
+			break
 		case AnalyzeTypeUserKPI:
 			query.KPIQueries[index].RunType = RunTypeUserKPI
-			return nil
+			break
 		case AnalyzeTypeHSDeals:
 			if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSCompaniesEnabled == true {
 				query.KPIQueries[index].RunType = RunTypeHSCompanies
-				return nil
+				break
 			} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSDealsEnabled == true {
 				query.KPIQueries[index].RunType = RunTypeHSDeals
-				return nil
+				break
 			} else {
 				logCtx.WithFields(log.Fields{"Query": query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
 				return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
@@ -360,24 +360,21 @@ func EnrichRequestUsingAttributionConfigV1(query *AttributionQueryV1, settings *
 		case AnalyzeTypeSFOpportunities:
 			if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFAccountsEnabled == true {
 				query.KPIQueries[index].RunType = RunTypeSFAccounts
-				return nil
+				break
 			} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFOpportunitiesEnabled == true {
 				query.KPIQueries[index].RunType = RunTypeSFOpportunities
-				return nil
+				break
 			} else {
 				logCtx.WithFields(log.Fields{"Query": query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
 				return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
 			}
 		default:
-			query.KPIQueries[index].AnalyzeType = AnalyzeTypeUsers
-			query.KPIQueries[index].RunType = RunTypeUser
-			return nil
-			// logCtx.WithFields(log.Fields{"Query": query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
-			// return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
+			query.KPIQueries[index].AnalyzeType = AnalyzeTypeUserKPI
+			query.KPIQueries[index].RunType = RunTypeUserKPI
+			break
 		}
 	}
 	return nil
-	// return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
 }
 
 // AddDefaultKeyDimensionsToAttributionQueryV1 adds default custom Dimensions for supporting existing old/saved queries

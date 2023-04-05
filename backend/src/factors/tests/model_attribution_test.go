@@ -1643,8 +1643,8 @@ func TestAttributionKPI(t *testing.T) {
 		}
 
 		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeHSDeals,
-			RunType:                 model.RunTypeHSDeals,
+			AnalyzeType: model.AnalyzeTypeHSDeals,
+			//RunType:                 model.RunTypeHSDeals,
 			From:                    timestamp,
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
@@ -1698,8 +1698,8 @@ func TestAttributionKPI(t *testing.T) {
 		}
 
 		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeHSDeals,
-			RunType:                 model.RunTypeHSDeals,
+			AnalyzeType: model.AnalyzeTypeHSDeals,
+			//RunType:                 model.RunTypeHSDeals,
 			From:                    timestamp,
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
@@ -1754,8 +1754,8 @@ func TestAttributionKPI(t *testing.T) {
 		}
 
 		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeHSDeals,
-			RunType:                 model.RunTypeHSDeals,
+			AnalyzeType: model.AnalyzeTypeHSDeals,
+			//RunType:                 model.RunTypeHSDeals,
 			From:                    timestamp,
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
@@ -1807,8 +1807,8 @@ func TestAttributionKPI(t *testing.T) {
 		}
 
 		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeHSDeals,
-			RunType:                 model.RunTypeHSDeals,
+			AnalyzeType: model.AnalyzeTypeHSDeals,
+			//RunType:                 model.RunTypeHSDeals,
 			From:                    timestamp,
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
@@ -1913,8 +1913,8 @@ func TestAttributionKPI(t *testing.T) {
 		}
 
 		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeHSDeals,
-			RunType:                 model.RunTypeHSDeals,
+			AnalyzeType: model.AnalyzeTypeHSDeals,
+			//RunType:                 model.RunTypeHSDeals,
 			From:                    timestamp,
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
@@ -1974,8 +1974,8 @@ func TestAttributionKPI(t *testing.T) {
 		}
 
 		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeHSDeals,
-			RunType:                 model.RunTypeHSCompanies, // This gets set at handler level but for ExecuteAttributionQueryV0, setting in query
+			AnalyzeType: model.AnalyzeTypeHSDeals,
+			//RunType:                 model.RunTypeHSCompanies, // This gets set at handler level but for ExecuteAttributionQueryV0, setting in query
 			From:                    timestamp,
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
@@ -2035,8 +2035,8 @@ func TestAttributionKPI(t *testing.T) {
 		}
 
 		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeSFOpportunities,
-			RunType:                 model.RunTypeSFOpportunities,
+			AnalyzeType: model.AnalyzeTypeSFOpportunities,
+			//RunType:                 model.RunTypeSFOpportunities,
 			From:                    timestamp,
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
@@ -2096,8 +2096,8 @@ func TestAttributionKPI(t *testing.T) {
 		}
 
 		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeSFOpportunities,
-			RunType:                 model.RunTypeSFAccounts, // This gets set at handler level but for ExecuteAttributionQueryV0, setting in query
+			AnalyzeType: model.AnalyzeTypeSFOpportunities,
+			//RunType:                 model.RunTypeSFAccounts, // This gets set at handler level but for ExecuteAttributionQueryV0, setting in query
 			From:                    timestamp,
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
@@ -2228,7 +2228,7 @@ func TestAttributionKPIV1(t *testing.T) {
 			KPIQueries: []model.AttributionKPIQueries{
 				{KPI: kpiQueryGroup,
 					AnalyzeType: model.AnalyzeTypeHSDeals,
-					RunType:     model.RunTypeHSDeals,
+					//RunType:     model.RunTypeHSDeals,
 				},
 			},
 
@@ -2314,11 +2314,11 @@ func TestAttributionKPIV1(t *testing.T) {
 			KPIQueries: []model.AttributionKPIQueries{
 				{KPI: kpiQueryGroup1,
 					AnalyzeType: model.AnalyzeTypeHSDeals,
-					RunType:     model.RunTypeHSDeals,
+					//RunType:     model.RunTypeHSDeals,
 				},
 				{KPI: kpiQueryGroup2,
 					AnalyzeType: model.AnalyzeTypeSFOpportunities,
-					RunType:     model.RunTypeSFOpportunities,
+					//RunType:     model.RunTypeSFOpportunities,
 				},
 			},
 
@@ -4167,8 +4167,8 @@ func TestKpiAttributionWithMultipleRows(t *testing.T) {
 		}
 
 		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeHSDeals,
-			RunType:                 model.RunTypeHSDeals,
+			AnalyzeType: model.AnalyzeTypeHSDeals,
+			//RunType:                 model.RunTypeHSDeals,
 			From:                    timestamp,
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
@@ -4234,8 +4234,8 @@ func TestKpiAttributionWithMultipleRows(t *testing.T) {
 		}
 
 		query := &model.AttributionQuery{
-			AnalyzeType:             model.AnalyzeTypeHSDeals,
-			RunType:                 model.RunTypeHSDeals,
+			AnalyzeType: model.AnalyzeTypeHSDeals,
+			//RunType:                 model.RunTypeHSDeals,
 			From:                    timestamp,
 			To:                      timestamp + 5*U.SECONDS_IN_A_DAY,
 			KPI:                     kpiQueryGroup,
