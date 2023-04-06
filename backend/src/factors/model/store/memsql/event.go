@@ -836,8 +836,11 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 		// log.WithFields(log.Fields{"project_id": event.ProjectId,
 		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
 
+		updatedEvent := model.Event{}
+		updatedEvent = *event
+		updatedEvent.Properties = *updatedPostgresJsonb
 		for _, alert := range *alerts {
-			success := store.CacheEventTriggerAlert(&alert, event, eventName)
+			success := store.CacheEventTriggerAlert(&alert, &updatedEvent, eventName)
 			if !success {
 				log.WithFields(log.Fields{"project_id": event.ProjectId,
 					"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
