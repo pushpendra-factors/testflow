@@ -321,12 +321,12 @@ func main() {
 		status := make(map[string]interface{})
 		status, result := T.BuildSequentialV2(projectId, configs)
 		if result == false {
-			finalStatus["err"+fmt.Sprintf("%v",projectId)] = status
+			finalStatus["err"+fmt.Sprintf("%v", projectId)] = status
 			break
 		}
-		finalStatus[fmt.Sprintf("%v",projectId)] = status
+		finalStatus[fmt.Sprintf("%v", projectId)] = status
 	}
-	if result == false  {
+	if result == false {
 		C.PingHealthcheckForFailure(healthcheckPingID, finalStatus)
 	} else {
 		C.PingHealthcheckForSuccess(healthcheckPingID, finalStatus)
