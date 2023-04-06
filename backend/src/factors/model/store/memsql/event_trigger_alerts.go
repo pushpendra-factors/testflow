@@ -616,9 +616,9 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 		uval, uexists := (*userPropMap)[prop]
 		eval, eexists := (*eventPropMap)[prop]
 
-		if uexists {
+		if breakdownProperty.Entity == "user" && uexists {
 			value = uval
-		} else if eexists {
+		} else if breakdownProperty.Entity == "event" &&  eexists {
 			value = eval
 		} else {
 			log.Warn("can not find the breakdown property in user and event prop sets")
