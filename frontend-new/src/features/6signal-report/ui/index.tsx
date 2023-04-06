@@ -364,7 +364,7 @@ const SixSignalReport = () => {
                     : style.customButton
                 }`}
                 onClick={() => setIsCampaignSelectVisible(true)}
-                icon={<SVG name={'Filter'} color='#8692A3' size={12} />}
+                icon={<SVG name={'Filter'} color='#8692A3' size={16} />}
               >
                 {!seletedCampaigns || !seletedCampaigns?.length
                   ? 'Filter by campaign'

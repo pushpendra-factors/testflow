@@ -47,6 +47,9 @@ const Factors = lazyWithRetry(() => import('../Views/Factors'));
 const VisitorIdentificationReportComponent = lazyWithRetry(() =>
   import('../features/6signal-report/ui')
 );
+const SixSignalReportRedirection = lazyWithRetry(() =>
+  import('../features/6signal-report/ui/SixSignalRedirection')
+);
 
 const componentsLib = lazyWithRetry(() => import('../Views/componentsLib'));
 
@@ -290,6 +293,14 @@ export const APP_LAYOUT_ROUTES = {
     Layout: AppLayout,
     Private: false,
     Component: VisitorIdentificationReportComponent
+  },
+  //For backward compatibility for old url sent over mail
+  SixSignalReportRedirection: {
+    exact: true,
+    path: '/reports/6_signal',
+    Layout: AppLayout,
+    Private: false,
+    Component: SixSignalReportRedirection
   }
 };
 
