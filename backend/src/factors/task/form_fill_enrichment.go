@@ -96,13 +96,11 @@ func FormFillProcessing() int {
 
 			var hasValidValue bool
 			var email string
+
+			// Only email is used for tracking and identification of form fills.
 			if U.IsEmail(row.Value) {
 				email = row.Value
 				properties[U.UP_EMAIL] = email
-				hasValidValue = true
-			}
-			if U.IsValidPhone(row.Value) {
-				properties[U.UP_PHONE] = row.Value
 				hasValidValue = true
 			}
 

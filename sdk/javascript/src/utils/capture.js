@@ -13,7 +13,7 @@ function isEmail(email) {
 
 function isPhone(phone) {
     // should not be empty.
-    if (!phone || phone.length == 0) return false;
+    if (!phone || phone.length == 0 || phone.length > 20) return false;
 
     // should not contain any alphabets.
     if (/[a-zA-Z]/g.test(phone)) return false;
