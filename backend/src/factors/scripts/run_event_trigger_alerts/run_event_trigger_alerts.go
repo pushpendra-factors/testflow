@@ -192,7 +192,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		return false
 	}
 
-	var slackSuccess bool
+	slackSuccess := true
 	whSuccess := true
 
 	msg := alert.Message
