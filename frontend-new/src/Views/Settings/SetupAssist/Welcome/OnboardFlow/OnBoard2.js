@@ -41,7 +41,8 @@ const HorizontalCard = ({
   onSuccess,
   onDeactivate,
   api_key = '',
-  isActivated = false
+  isActivated = false,
+  isFactors6SignalActivated = false
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const onFinishFailed = () => {};
@@ -60,9 +61,19 @@ const HorizontalCard = ({
           <Button
             htmlType='submit'
             style={{ margin: '0 0px', padding: '0 10px' }}
-            icon={isActivated === true ? <SVG name='Greentick' /> : ''}
+            icon={
+              isActivated === true || isFactors6SignalActivated === true ? (
+                <SVG name='Greentick' />
+              ) : (
+                ''
+              )
+            }
           >
-            {isActivated === true ? 'Request Sent' : 'Activate'}
+            {isFactors6SignalActivated === true
+              ? 'Activated'
+              : isActivated === true
+              ? 'Request Sent'
+              : 'Activate'}
           </Button>
         </Form>
       </div>
@@ -177,8 +188,13 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
   const currentAgent = useSelector((state) => state?.agent?.agent_details);
   const history = useHistory();
   const dispatch = useDispatch();
-  const { int_client_six_signal_key, int_clear_bit, clearbit_key } =
-    useSelector((state) => state?.global?.currentProjectSettings);
+  const {
+    int_factors_six_signal_key,
+    int_client_six_signal_key,
+    int_clear_bit,
+    clearbit_key,
+    factors6_signal_key
+  } = useSelector((state) => state?.global?.currentProjectSettings);
   const { client6_signal_key } = useSelector(
     (state) => state?.global?.currentProjectSettings
   );
@@ -241,14 +257,11 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
         int_client_six_signal_key: true
       })
         .then(() => {
-          setTimeout(() => {
-            message.success('6Signal integration successful');
-          }, 500);
-
           dispatch({
             type: TOGGLE_DISABLED_STATE_NEXT_BUTTON,
             payload: { step: '2', state: true }
           });
+          message.success('6Signal integration successful');
           resolve(true);
         })
         .catch((err) => {
@@ -297,10 +310,8 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
         .then(() => {
           // setLoading(false);
           // setShowForm(false);
-          setTimeout(() => {
-            message.success('Clearbit integration successful');
-          }, 500);
           // setIsActive(true);
+          message.success('Clearbit integration successful');
           resolve(true);
           sendSlackNotification(
             currentAgent.email,
@@ -367,14 +378,19 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
           icon={<SVG size={32} name='Brand' />}
           type={1}
           onSuccess={() => {
+            if (int_factors_six_signal_key) {
+              message.success('Already Activated!');
+              return;
+            }
             if (is_deanonymization_requested === true) {
               message.success('Already Requested!');
             } else {
               setIsModalRequestAccess(true);
             }
           }}
-          api_key={''}
+          api_key={factors6_signal_key}
           isActivated={is_deanonymization_requested}
+          isFactors6SignalActivated={int_factors_six_signal_key}
         />
         <Divider />
 

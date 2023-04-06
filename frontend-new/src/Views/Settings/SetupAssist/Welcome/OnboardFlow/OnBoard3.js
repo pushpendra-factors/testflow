@@ -78,8 +78,8 @@ const OnBoard3 = ({
 }) => {
   const activeProject = useSelector((state) => state?.global?.active_project);
   const currentAgent = useSelector((state) => state.agent.agent_details);
-  const { int_slack } = useSelector(
-    (state) => state?.global?.projectSettingsV1
+  const int_slack = useSelector(
+    (state) => state?.global?.projectSettingsV1?.int_slack
   );
   const { int_hubspot, int_salesforce_enabled_agent_uuid } = useSelector(
     (state) => state?.global?.currentProjectSettings
@@ -93,6 +93,10 @@ const OnBoard3 = ({
   } = useSelector((state) => state?.global?.currentProjectSettings);
   const int_completed = useSelector(
     (state) => state?.global?.projectSettingsV1?.int_completed
+  );
+
+  const is_onboarding_completed = useSelector(
+    (state) => state?.global?.currentProjectSettings?.is_onboarding_completed
   );
 
   const [isLoadingDone, setIsLoadingDone] = useState(false);
@@ -165,7 +169,6 @@ const OnBoard3 = ({
         name: 'hubspot',
         activeProjectID: activeProject.id
       });
-      console.log(activeProject);
       enableHubspotIntegration(activeProject.id)
         .then((r) => {
           sendSlackNotification(
@@ -268,6 +271,14 @@ const OnBoard3 = ({
 
   const completeUserOnboard = () => {
     setIsLoadingDone(true);
+    if (is_onboarding_completed === true) {
+      setTimeout(() => {
+        setIsLoadingDone(false);
+        history.push('/');
+      }, 500);
+      return;
+    }
+
     udpateProjectSettings(activeProject.id, {
       is_onboarding_completed: true
     })

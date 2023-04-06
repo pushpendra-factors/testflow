@@ -62,7 +62,9 @@ const OnBoard = () => {
           history.push('/welcome/visitoridentification/1');
         }
       } else if (step == '3') {
-        if (checkIsValid(1) && checkIsValid(2)) {
+        let t1 = checkIsValid(1);
+        let t2 = checkIsValid(2);
+        if ((t1 && t2) || (t1 === undefined && t2 === undefined)) {
           dispatch({
             type: JUMP_TO_STEP_WEBSITE_VISITOR_IDENTIFICATION,
             payload: Number(step)

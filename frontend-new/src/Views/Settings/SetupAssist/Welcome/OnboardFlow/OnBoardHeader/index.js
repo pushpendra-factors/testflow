@@ -51,10 +51,21 @@ const AdditionalMenu = ({
   const int_completed = useSelector(
     (state) => state?.global?.projectSettingsV1?.int_completed
   );
+  const is_onboarding_completed = useSelector(
+    (state) => state?.global?.currentProjectSettings?.is_onboarding_completed
+  );
   const [isLoadingDone, setIsLoadingDone] = useState(false);
   const handleDoneDrawer = useCallback(() => {
     // dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
     setIsLoadingDone(true);
+    if (is_onboarding_completed === true) {
+      setTimeout(() => {
+        setIsLoadingDone(false);
+        history.push('/');
+      }, 500);
+      return;
+    }
+
     udpateProjectSettings(activeProject.id, {
       is_onboarding_completed: true
     })
@@ -74,7 +85,6 @@ const AdditionalMenu = ({
     is_deanonymization_requested
   } = useSelector((state) => state?.global?.currentProjectSettings);
 
-  console.log(is_deanonymization_requested);
   const activeProject = useSelector((state) => state?.global?.active_project);
   const { steps, currentStep } = useSelector((state) => state?.onBoardFlow);
   const isNextBtnEnabled = () => {
