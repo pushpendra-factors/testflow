@@ -91,7 +91,7 @@ function DashboardSubMenu({
           <Button
             type={'text'}
             onClick={handleRefreshClick}
-            icon={refreshInProgress ? null : <SVG name={'syncAlt'} />}
+            icon={refreshInProgress ? null : <SVG name='arrowRotateRight' />}
             loading={refreshInProgress}
             style={{ minWidth: '125px' }}
             className={'fa-button-ghost p-0 py-2'}
