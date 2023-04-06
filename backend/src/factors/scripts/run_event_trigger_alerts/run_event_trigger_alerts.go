@@ -35,7 +35,7 @@ func main() {
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
-	
+
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
@@ -133,7 +133,7 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 		log.WithError(err).Error("Failed to get all alert keys for project: ", projectID)
 		return nil, false
 	}
-	
+
 	for key := range allKeys {
 		cacheKey, err := cacheRedis.KeyFromStringWithPid(key)
 		if err != nil {
@@ -167,13 +167,13 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 			}
 			ok++
 		}
-		
+
 		cc, err := cacheRedis.ZRemPersistent(ssKey, true, key)
 		if err != nil || cc != 1 {
 			log.WithError(err).Error("Cannot remove alert by zrem")
 		}
 	}
-	
+
 	return status, ok == len(allKeys)
 }
 
@@ -213,7 +213,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		log.Info(fmt.Printf("Webhook dropped for alert: %s. RESPONSE: %+v", alertID, response))
 		stat := response["status"]
-		if !(stat == "success" || stat == "ok") {
+		if stat != "ok" {
 			err := AddKeyToFailureSet(key, eta.ProjectID, "WH")
 			if err != nil {
 				log.WithError(err).Error("failed to put key in FailureSortedSet")
