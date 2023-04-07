@@ -2472,14 +2472,14 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, meth
 		}
 		// If attribution method is influence then replacing the value of grand total row of conversion with conversion Influence
 		if method == AttributionMethodInfluence {
-			grandTotalRow[8] = grandTotalRow[9]
+			grandTotalRow[keyIndex+8] = grandTotalRow[keyIndex+9]
 			for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 3 {
 				grandTotalRow[i] = grandTotalRow[i+1]
 
 			}
 		}
 		if methodCompare == AttributionMethodInfluence {
-			grandTotalRow[11] = grandTotalRow[12]
+			grandTotalRow[keyIndex+11] = grandTotalRow[keyIndex+12]
 		}
 
 	}
@@ -2725,14 +2725,14 @@ func AddGrandTotalRowKPILandingPage(rows [][]interface{}, keyIndex int, goalEven
 			grandTotalRow[keyIndex+4+nextConPosition] = grandTotalRow[keyIndex+4+nextConPosition].(float64) + row[keyIndex+4+nextConPosition].(float64) // Compare Conversion Influence - values same as Linear Touch
 
 			if method == AttributionMethodInfluence {
-				grandTotalRow[1] = grandTotalRow[2]
+				grandTotalRow[keyIndex+1+nextConPosition] = grandTotalRow[keyIndex+2+nextConPosition]
 				for i := keyIndex + 4*len(goalEvents) + 1; i < len(grandTotalRow); i += 2 {
 					grandTotalRow[i] = grandTotalRow[i+1]
 
 				}
 			}
 			if methodCompare == AttributionMethodInfluence {
-				grandTotalRow[3] = grandTotalRow[4]
+				grandTotalRow[keyIndex+3+nextConPosition] = grandTotalRow[keyIndex+4+nextConPosition]
 			}
 
 		}
@@ -2780,14 +2780,14 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 		}
 	}
 	if method == AttributionMethodInfluence {
-		grandTotalRow[1] = grandTotalRow[2]
+		grandTotalRow[keyIndex+1] = grandTotalRow[keyIndex+2]
 		for i := keyIndex + 5; i < len(grandTotalRow); i += 2 {
 			grandTotalRow[i] = grandTotalRow[i+1]
 
 		}
 	}
 	if methodCompare == AttributionMethodInfluence {
-		grandTotalRow[3] = grandTotalRow[4]
+		grandTotalRow[keyIndex+3] = grandTotalRow[keyIndex+4]
 	}
 
 	rows = append([][]interface{}{grandTotalRow}, rows...)

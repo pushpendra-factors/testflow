@@ -58,6 +58,8 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			return nil, http.StatusInternalServerError
 		}
 		tableProps = segmentQuery.TableProps
+		segmentQuery.From = U.TimeNowZ().AddDate(0, 0, -28).Unix()
+		segmentQuery.To = U.TimeNowZ().Unix()
 		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
 			if C.IsEnabledEventsFilterInSegments() {
 				segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters...)
