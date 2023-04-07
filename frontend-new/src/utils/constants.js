@@ -47,6 +47,10 @@ export const ATTRIBUTION_METHODOLOGY = [
   {
     text: 'Time Decay',
     value: 'Time_Decay'
+  },
+  {
+    text: 'Last Campaign Touch',
+    value: 'Last_Campaign_Touch'
   }
 ];
 
@@ -591,7 +595,8 @@ export const ProfileMapper = {
   'All Accounts': 'salesforce',
   'All Companies': 'hubspot',
   'Marketo Person': 'marketo',
-  'LeadSquared Person': 'leadsquared'
+  'LeadSquared Person': 'leadsquared',
+  'All Domains': '6signal'
 };
 
 export const ReverseProfileMapper = {
@@ -607,7 +612,8 @@ export const ReverseProfileMapper = {
     $salesforce_account: 'All Accounts'
   },
   marketo: { users: 'Marketo Person' },
-  leadsquared: { users: 'LeadSquared Person' }
+  leadsquared: { users: 'LeadSquared Person' },
+  '6signal': { $6signal: 'All Domains' }
 };
 
 export const profileOptions = {
@@ -621,7 +627,8 @@ export const profileOptions = {
   $salesforce_opportunity: [['All Opportunities']],
   $hubspot_deal: [['All Deals']],
   $salesforce_account: [['All Accounts']],
-  $hubspot_company: [['All Companies']]
+  $hubspot_company: [['All Companies']],
+  $6signal: [['All Domains']]
 };
 
 export const DISPLAY_PROP = { $none: '(Not Set)' };
@@ -687,5 +694,5 @@ export const OPERATORS = {
   since: 'since',
   isKnown: 'is known',
   isUnknown: 'is unknown',
-  inList: 'is in a list',
+  inList: 'is in a list'
 };

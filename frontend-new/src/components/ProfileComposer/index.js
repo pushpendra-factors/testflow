@@ -85,6 +85,8 @@ function ProfileComposer({
       ? 'salesforce'
       : group.toLowerCase().includes('hubspot')
       ? 'hubspot'
+      : group.toLowerCase().includes('6signal')
+      ? '6signal'
       : 'web';
     query.alias = '';
     query.filters = [];

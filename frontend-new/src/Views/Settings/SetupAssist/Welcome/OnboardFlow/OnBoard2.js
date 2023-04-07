@@ -39,8 +39,10 @@ const HorizontalCard = ({
   icon,
   type,
   onSuccess,
+  onDeactivate,
   api_key = '',
-  isActivated = false
+  isActivated = false,
+  isFactors6SignalActivated = false
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const onFinishFailed = () => {};
@@ -59,9 +61,19 @@ const HorizontalCard = ({
           <Button
             htmlType='submit'
             style={{ margin: '0 0px', padding: '0 10px' }}
-            icon={isActivated === true ? <SVG name='Greentick' /> : ''}
+            icon={
+              isActivated === true || isFactors6SignalActivated === true ? (
+                <SVG name='Greentick' />
+              ) : (
+                ''
+              )
+            }
           >
-            {isActivated === true ? 'Request Sent' : 'Activate'}
+            {isFactors6SignalActivated === true
+              ? 'Activated'
+              : isActivated === true
+              ? 'Request Sent'
+              : 'Activate'}
           </Button>
         </Form>
       </div>
@@ -69,6 +81,10 @@ const HorizontalCard = ({
   };
   const onFinish = async (values) => {
     try {
+      if (isActivated) {
+        onDeactivate();
+        return;
+      }
       if (values.api_key === api_key) {
         message.success('API Key Already Set!');
         return;
@@ -114,9 +130,17 @@ const HorizontalCard = ({
             <Button
               htmlType='submit'
               style={{ margin: '0 10px', padding: '0 10px' }}
-              icon={isLoading === true ? <LoadingOutlined /> : ''}
+              icon={
+                isActivated === true ? (
+                  <SVG name='Greentick' />
+                ) : isLoading === true ? (
+                  <LoadingOutlined />
+                ) : (
+                  ''
+                )
+              }
             >
-              Activate
+              {isActivated === true ? 'Activated' : 'Activate'}
             </Button>
           </Form>
         </Row>
@@ -164,15 +188,25 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
   const currentAgent = useSelector((state) => state?.agent?.agent_details);
   const history = useHistory();
   const dispatch = useDispatch();
-  const { int_client_six_signal_key, int_clear_bit, clearbit_key } =
-    useSelector((state) => state?.global?.currentProjectSettings);
+  const {
+    int_factors_six_signal_key,
+    int_client_six_signal_key,
+    int_clear_bit,
+    clearbit_key,
+    factors6_signal_key
+  } = useSelector((state) => state?.global?.currentProjectSettings);
   const { client6_signal_key } = useSelector(
     (state) => state?.global?.currentProjectSettings
   );
   const factors6SignalKeyRequested = useSelector(
     (state) => state?.onBoardFlow?.factors6SignalKeyRequested
   );
+  const is_deanonymization_requested = useSelector(
+    (state) =>
+      state?.global?.currentProjectSettings?.is_deanonymization_requested
+  );
 
+  const [isLoadingFactors6Signal, setIsLoadignFactors6Signal] = useState(false);
   // useEffect(() => {
   //   dispatch({
   //     type: TOGGLE_DISABLED_STATE_NEXT_BUTTON,
@@ -180,22 +214,36 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
   //   });
   // }, [int_client_six_signal_key]);
   const handleFactors6SignalSetup = () => {
-    sendSlackNotification(
-      currentAgent.email,
-      activeProject.name,
-      'factors6Signal_Test'
-    );
-    if (factors6SignalKeyRequested === false)
-      dispatch({
-        type: TOGGLE_FACTORS_6SIGNAL_REQUEST
-      });
-    dispatch({
-      type: ENABLE_STEP_AND_MOVE_TO_NEXT,
-      payload: { step: 2, state: true, moveTo: 2 }
-    });
-    history.push('/welcome/visitoridentification/3');
+    setIsLoadignFactors6Signal(true);
+    udpateProjectSettings(activeProject.id, {
+      is_deanonymization_requested: true
+    })
+      .then(() => {
+        sendSlackNotification(
+          currentAgent.email,
+          activeProject.name,
+          'factors6Signal_Test'
+        );
+        if (factors6SignalKeyRequested === false)
+          dispatch({
+            type: TOGGLE_FACTORS_6SIGNAL_REQUEST
+          });
+        dispatch({
+          type: ENABLE_STEP_AND_MOVE_TO_NEXT,
+          payload: { step: 2, state: true, moveTo: 2 }
+        });
 
-    message.success('Requested for Factors 6 Signal Key');
+        setIsLoadignFactors6Signal(false);
+        history.push('/welcome/visitoridentification/3');
+
+        message.success('Requested for Factors 6 Signal Key');
+      })
+      .catch((error) => {
+        message.error(error);
+        console.error(error);
+
+        setIsLoadignFactors6Signal(false);
+      });
   };
   const handleClient6SignalKeyActivate = (values) => {
     return new Promise((resolve, reject) => {
@@ -209,14 +257,11 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
         int_client_six_signal_key: true
       })
         .then(() => {
-          setTimeout(() => {
-            message.success('6Signal integration successful');
-          }, 500);
-
           dispatch({
             type: TOGGLE_DISABLED_STATE_NEXT_BUTTON,
             payload: { step: '2', state: true }
           });
+          message.success('6Signal integration successful');
           resolve(true);
         })
         .catch((err) => {
@@ -225,14 +270,101 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
         });
     });
   };
+  const onClient6SignalDeactivate = () => {
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        udpateProjectSettings(activeProject.id, {
+          client6_signal_key: '',
+          int_client_six_signal_key: false
+        })
+          .then(() => {
+            setTimeout(() => {
+              message.success('6Signal integration disconnected!');
+            }, 500);
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+          });
+      },
+      onCancel: () => {}
+    });
+  };
+  const onClearBitActivate = (values) => {
+    // setLoading(true);
+    return new Promise((resolve, reject) => {
+      //Factors INTEGRATION tracking
+      factorsai.track('INTEGRATION', {
+        name: 'reveal',
+        activeProjectID: activeProject.id
+      });
+
+      udpateProjectSettings(activeProject.id, {
+        clearbit_key: values.api_key,
+        int_clear_bit: true
+      })
+        .then(() => {
+          // setLoading(false);
+          // setShowForm(false);
+          // setIsActive(true);
+          message.success('Clearbit integration successful');
+          resolve(true);
+          sendSlackNotification(
+            currentAgent.email,
+            activeProject.name,
+            'Reveal'
+          );
+        })
+        .catch((err) => {
+          // setShowForm(false);
+          // setLoading(false);
+          // seterrorInfo(err?.error);
+          // setIsActive(false);
+          reject();
+        });
+    });
+  };
+
+  const onClearBitDeactivate = () => {
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        // setLoading(true);
+        udpateProjectSettings(activeProject.id, {
+          clearbit_key: '',
+          int_clear_bit: false
+        })
+          .then(() => {
+            // setLoading(false);
+            // setShowForm(false);
+            setTimeout(() => {
+              message.success('Clearbit integration disconnected!');
+            }, 500);
+            // setIsActive(false);
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+            // setShowForm(false);
+            // setLoading(false);
+          });
+      },
+      onCancel: () => {}
+    });
+  };
+
   const handleClearBitKeyActivate = (values) => {};
   return (
     <div className={styles['onBoardContainer']}>
       {/* <SixSignal setIsActive={() => {}} kbLink={true} /> */}
       <div>
-        <Text type={'title'} level={6} weight={'bold'}>
-          Integrations to push
-        </Text>
         <HorizontalCard
           isDropdown={true}
           setIsModalRequestAccess={setIsModalRequestAccess}
@@ -246,10 +378,19 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
           icon={<SVG size={32} name='Brand' />}
           type={1}
           onSuccess={() => {
-            setIsModalRequestAccess(true);
+            if (int_factors_six_signal_key) {
+              message.success('Already Activated!');
+              return;
+            }
+            if (is_deanonymization_requested === true) {
+              message.success('Already Requested!');
+            } else {
+              setIsModalRequestAccess(true);
+            }
           }}
-          api_key={''}
-          isActivated={factors6SignalKeyRequested}
+          api_key={factors6_signal_key}
+          isActivated={is_deanonymization_requested}
+          isFactors6SignalActivated={int_factors_six_signal_key}
         />
         <Divider />
 
@@ -271,6 +412,7 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
               icon={<SVG size={32} name='SixSignalLogo' />}
               type={2}
               onSuccess={handleClient6SignalKeyActivate}
+              onDeactivate={onClient6SignalDeactivate}
               api_key={
                 int_client_six_signal_key === true ? client6_signal_key : ''
               }
@@ -288,7 +430,8 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
               }
               icon={<SVG size={32} name='ClearbitLogo' />}
               type={2}
-              onSuccess={handleClearBitKeyActivate}
+              onSuccess={onClearBitActivate}
+              onDeactivate={onClearBitDeactivate}
               api_key={int_clear_bit === true ? clearbit_key : ''}
               isActivated={int_clear_bit}
             />
@@ -334,8 +477,8 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
               Request have been sent
             </Text>
             <p>
-              We have received your request. We will get back to you within half
-              a day.
+              We have received your request, Factors deanonymisation will be
+              activated for you shortly.
             </p>
             <div
               style={{ width: '100%', display: 'flex', justifyContent: 'end' }}
@@ -349,6 +492,7 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
                 }}
                 onClick={handleFactors6SignalSetup}
               >
+                {isLoadingFactors6Signal === true ? <LoadingOutlined /> : ''}{' '}
                 Continue with setup
               </Button>
             </div>

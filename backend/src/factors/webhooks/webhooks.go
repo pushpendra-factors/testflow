@@ -43,14 +43,11 @@ func DropWebhook(url, secret string, payload interface{}) (map[string]interface{
 		return nil, err
 	}
 	defer resp.Body.Close()
-	var response map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
-		log.Error("failed to decode response from target")
-		return nil, err
-	}
+	response := make(map[string]interface{})
 
-	log.Info("failed to drop webhook at url:%s, response:%+v", url, response)
+	if resp.StatusCode == 201 || resp.StatusCode == 200 {
+		response["status"] = "ok"
+	}
 	return response, nil
 }
 

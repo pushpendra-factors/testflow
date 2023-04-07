@@ -1339,6 +1339,14 @@ var DISABLED_CORE_QUERY_EVENT_PROPERTIES = [...]string{
 	"$marketo_lead__fivetran_synced",
 }
 
+var SESSION_PROPERTIES_SET_IN_UPDATE = map[string]bool{
+	EP_CHANNEL:             true,
+	SP_SPENT_TIME:          true,
+	SP_PAGE_COUNT:          true,
+	SP_LATEST_PAGE_RAW_URL: true,
+	SP_LATEST_PAGE_URL:     true,
+}
+
 var DISABLED_USER_PROPERTIES_UI = [...]string{
 	UP_USER_AGENT,
 	UP_BROWSER_WITH_VERSION,

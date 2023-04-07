@@ -1,11 +1,22 @@
 import { LoadingOutlined } from '@ant-design/icons';
-import { Button, Row, message, Alert, Divider } from 'antd';
+import { Button, Row, message, Alert, Divider, Modal } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { connect, useSelector } from 'react-redux';
-import { useLocation } from 'react-router-dom';
-import { enableSlackIntegration } from 'Reducers/global';
+import { useHistory, useLocation } from 'react-router-dom';
+import {
+  disableSlackIntegration,
+  enableHubspotIntegration,
+  enableSalesforceIntegration,
+  enableSlackIntegration,
+  fetchProjectSettings,
+  fetchProjectSettingsV1,
+  fetchSalesforceRedirectURL,
+  udpateProjectSettings
+} from 'Reducers/global';
 import styles from './index.module.scss';
+import factorsai from 'factorsai';
+import { sendSlackNotification } from 'Utils/slack';
 
 const HorizontalCard = ({
   title,
@@ -55,15 +66,62 @@ const HorizontalCard = ({
     </Row>
   );
 };
-const OnBoard3 = ({ enableSlackIntegration }) => {
+const OnBoard3 = ({
+  enableSlackIntegration,
+  enableHubspotIntegration,
+  enableSalesforceIntegration,
+  fetchSalesforceRedirectURL,
+  udpateProjectSettings,
+  fetchProjectSettings,
+  fetchProjectSettingsV1,
+  disableSlackIntegration
+}) => {
   const activeProject = useSelector((state) => state?.global?.active_project);
-  const { int_slack } = useSelector(
-    (state) => state?.global?.projectSettingsV1
+  const currentAgent = useSelector((state) => state.agent.agent_details);
+  const int_slack = useSelector(
+    (state) => state?.global?.projectSettingsV1?.int_slack
   );
   const { int_hubspot, int_salesforce_enabled_agent_uuid } = useSelector(
     (state) => state?.global?.currentProjectSettings
   );
-  const onConnectSlack = useCallback(() => {
+  const history = useHistory();
+  const {
+    int_client_six_signal_key,
+    int_factors_six_signal_key,
+    int_clear_bit,
+    is_deanonymization_requested
+  } = useSelector((state) => state?.global?.currentProjectSettings);
+  const int_completed = useSelector(
+    (state) => state?.global?.projectSettingsV1?.int_completed
+  );
+
+  const is_onboarding_completed = useSelector(
+    (state) => state?.global?.currentProjectSettings?.is_onboarding_completed
+  );
+
+  const [isLoadingDone, setIsLoadingDone] = useState(false);
+  const checkIsValid = (step) => {
+    if (step == 1) {
+      return int_completed;
+    } else if (step == 2) {
+      return (
+        int_client_six_signal_key ||
+        is_deanonymization_requested ||
+        int_clear_bit ||
+        int_factors_six_signal_key
+      );
+    }
+    return false;
+  };
+  useEffect(() => {
+    if (checkIsValid(1) && checkIsValid(2)) {
+      if (is_deanonymization_requested === false)
+        udpateProjectSettings(activeProject.id, {
+          is_onboarding_completed: true
+        });
+    }
+  }, []);
+  const onConnectSlack = () => {
     return new Promise((resolve, reject) => {
       enableSlackIntegration(activeProject.id, window.location.href)
         .then((r) => {
@@ -80,11 +138,165 @@ const OnBoard3 = ({ enableSlackIntegration }) => {
           reject();
         });
     });
-  }, []);
+  };
+  const onDisconnectSlack = () => {
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        disableSlackIntegration(activeProject.id)
+          .then(() => {
+            setTimeout(() => {
+              message.success('Slack integration disconnected!');
+            }, 500);
+            fetchProjectSettingsV1(activeProject.id);
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+          });
+      },
+      onCancel: () => {}
+    });
+  };
+
+  const onClickEnableHubspot = () => {
+    return new Promise((resolve, reject) => {
+      //Factors INTEGRATION tracking
+      factorsai.track('INTEGRATION', {
+        name: 'hubspot',
+        activeProjectID: activeProject.id
+      });
+      enableHubspotIntegration(activeProject.id)
+        .then((r) => {
+          sendSlackNotification(
+            currentAgent.email,
+            activeProject.name,
+            'Hubspot'
+          );
+          console.log(r);
+          if (r.status == 307) {
+            window.location = r.data.redirect_url;
+          }
+        })
+        .catch((err) => {
+          message.error(`${err?.data?.error}`);
+          reject();
+        });
+    });
+  };
+
+  const onDisconnectHubspot = () => {
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        udpateProjectSettings(activeProject.id, {
+          int_hubspot_api_key: '',
+          int_hubspot: false
+        })
+          .then(() => {
+            setTimeout(() => {
+              message.success('Hubspot integration disconnected!');
+            }, 500);
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+          });
+      },
+      onCancel: () => {}
+    });
+  };
+  const handleRedirectToURL = () => {
+    fetchSalesforceRedirectURL(activeProject.id).then((r) => {
+      if (r.status == 307) {
+        window.location = r.data.redirectURL;
+      }
+    });
+  };
+  const onClickEnableSalesforce = () => {
+    return new Promise((resolve, reject) => {
+      //Factors INTEGRATION tracking
+      factorsai.track('INTEGRATION', {
+        name: 'salesforce',
+        activeProjectID: activeProject.id
+      });
+
+      enableSalesforceIntegration(activeProject.id)
+        .then((r) => {
+          sendSlackNotification(
+            currentAgent.email,
+            activeProject.name,
+            'Salesforce'
+          );
+          if (r.status == 304) {
+            handleRedirectToURL();
+          }
+        })
+        .catch((error) => {
+          message.error(error);
+          reject();
+        });
+    });
+  };
+
+  const onDisconnectSalesForce = () => {
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        udpateProjectSettings(activeProject.id, {
+          int_salesforce_enabled_agent_uuid: ''
+        })
+          .then(() => {
+            setTimeout(() => {
+              message.success('Salesforce integration disconnected!');
+            }, 500);
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+          });
+      },
+      onCancel: () => {}
+    });
+  };
+
+  const completeUserOnboard = () => {
+    setIsLoadingDone(true);
+    if (is_onboarding_completed === true) {
+      setTimeout(() => {
+        setIsLoadingDone(false);
+        history.push('/');
+      }, 500);
+      return;
+    }
+
+    udpateProjectSettings(activeProject.id, {
+      is_onboarding_completed: true
+    })
+      .then(() => {
+        history.push('/');
+        setIsLoadingDone(false);
+      })
+      .catch((e) => {
+        message.error(e);
+        setIsLoadingDone(false);
+      });
+  };
+
   return (
     <div className={styles['onBoardContainer']}>
       <Alert
         className={styles['notification']}
+        style={{ borderRadius: '5px' }}
         description={
           <div
             style={{
@@ -107,8 +319,12 @@ const OnBoard3 = ({ enableSlackIntegration }) => {
               first Dashboard.
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <Button style={{ border: '1px solid #E5E5E5' }}>
-                Go to Dashboard
+              <Button
+                style={{ border: '1px solid #E5E5E5' }}
+                onClick={completeUserOnboard}
+              >
+                {isLoadingDone === true ? <LoadingOutlined /> : ''}Go to
+                Dashboard
               </Button>
             </div>
           </div>
@@ -130,7 +346,7 @@ const OnBoard3 = ({ enableSlackIntegration }) => {
         }
         icon={<SVG name={'Slack'} size={40} extraClass={'inline mr-2 -mt-2'} />}
         is_connected={int_slack}
-        onClickConnect={onConnectSlack}
+        onClickConnect={int_slack ? onDisconnectSlack : onConnectSlack}
       />
       <Divider style={{ margin: '5px 0' }} />
       <HorizontalCard
@@ -146,7 +362,9 @@ const OnBoard3 = ({ enableSlackIntegration }) => {
           />
         }
         is_connected={int_hubspot}
-        onClickConnect={null}
+        onClickConnect={
+          int_hubspot ? onDisconnectHubspot : onClickEnableHubspot
+        }
       />
       <Divider style={{ margin: '5px 0' }} />
       <HorizontalCard
@@ -162,7 +380,11 @@ const OnBoard3 = ({ enableSlackIntegration }) => {
           />
         }
         is_connected={int_salesforce_enabled_agent_uuid}
-        onClickConnect={null}
+        onClickConnect={
+          int_salesforce_enabled_agent_uuid
+            ? onDisconnectSalesForce
+            : onClickEnableSalesforce
+        }
       />
     </div>
   );
@@ -171,4 +393,13 @@ const OnBoard3 = ({ enableSlackIntegration }) => {
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project
 });
-export default connect(mapStateToProps, { enableSlackIntegration })(OnBoard3);
+export default connect(mapStateToProps, {
+  enableSlackIntegration,
+  enableHubspotIntegration,
+  enableSalesforceIntegration,
+  fetchSalesforceRedirectURL,
+  udpateProjectSettings,
+  fetchProjectSettings,
+  fetchProjectSettingsV1,
+  disableSlackIntegration
+})(OnBoard3);

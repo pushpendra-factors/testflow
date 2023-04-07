@@ -211,6 +211,7 @@ func main() {
 	teamsAppTenantID := flag.String("teams_app_tenant_id", "", "")
 	teamsAppClientID := flag.String("teams_app_client_id", "", "")
 	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
+	teamsApplicationID := flag.String("teams_application_id", "", "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -380,6 +381,7 @@ func main() {
 		TeamsAppClientID:                               *teamsAppClientID,
 		TeamsAppClientSecret:                           *teamsAppClientSecret,
 		BlockedIPProjectIDs:                            *blockedIpProjectIds,
+		TeamsApplicationID:                             *teamsApplicationID,
 	}
 	C.InitConf(config)
 

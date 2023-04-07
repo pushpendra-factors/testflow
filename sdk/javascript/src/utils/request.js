@@ -139,7 +139,7 @@ function sendErrorWithInfo(error) {
 }
 
 function requestWithLocalStorage(method, url, headers, data) {
-    let options = { method: method, keepalive: true };
+    let options = { method: method };
 
     if(data && data != undefined) 
         options["body"] = JSON.stringify(data);

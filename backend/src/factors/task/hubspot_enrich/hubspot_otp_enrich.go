@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -191,11 +192,9 @@ func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OT
 			continue
 		}
 
-		// Check if rule is applicable & the record has changed property w.r.t filters
+		// Check if rule is applicable
 
-		//since otp runs only for event type "model.HubspotDocumentActionUpdated"
-
-		if !canCreateHSTouchPoint(model.HubspotDocumentActionUpdated) {
+		if !filterCheckGeneralV1(rule, event, logCtx) {
 			continue
 		}
 
@@ -216,6 +215,55 @@ func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OT
 	return nil
 }
 
+func filterCheckGeneralV1(rule model.OTPRule, event eventIdToProperties, logCtx *log.Entry) bool {
+	var ruleFilters []model.TouchPointFilter
+	err := U.DecodePostgresJsonbToStructType(&rule.Filters, &ruleFilters)
+	if err != nil {
+		logCtx.WithFields(log.Fields{"event": event, "rule": rule}).WithError(err).Error("Failed to decode/fetch offline touch point rule FILTERS for salesforce document.")
+		return false
+	}
+
+	filtersPassed := 0
+	for _, filter := range ruleFilters {
+		switch filter.Operator {
+		case model.EqualsOpStr:
+			if _, exists := event.EventProperties[filter.Property]; exists {
+				if filter.Value != "" && event.EventProperties[filter.Property] == filter.Value {
+					filtersPassed++
+				}
+			}
+		case model.NotEqualOpStr:
+			if _, exists := event.EventProperties[filter.Property]; exists {
+				if filter.Value != "" && event.EventProperties[filter.Property] != filter.Value {
+					filtersPassed++
+				}
+			}
+		case model.ContainsOpStr:
+			if _, exists := event.EventProperties[filter.Property]; exists {
+				if filter.Property != "" {
+					val, ok := event.EventProperties[filter.Property].(string)
+					if ok && strings.Contains(val, filter.Value) {
+						filtersPassed++
+					}
+				}
+			}
+		default:
+			logCtx.WithField("Rule", rule).WithField("event", event).
+				Error("No matching operator found for offline touch point rules for hubspot engagement document.")
+			continue
+		}
+	}
+
+	// return true if all the filters passed
+	if filtersPassed != 0 && filtersPassed == len(ruleFilters) {
+		return true
+	}
+
+	// When neither filters matched nor (filters matched but values are same)
+	logCtx.Warn("Filter check general is failing for offline touch point rule")
+	return false
+}
+
 //Creates a unique key using ruleID, userID and eventID as keyID for Forms and contacts
 func createOTPUniqueKeyForFormsAndContactsV1(rule model.OTPRule, event eventIdToProperties) (string, int) {
 
@@ -227,15 +275,6 @@ func createOTPUniqueKeyForFormsAndContactsV1(rule model.OTPRule, event eventIdTo
 
 	return uniqueKey, http.StatusCreated
 
-}
-
-//canCreateHSTouchPoint- Returns true if the document action type is Updated for HS Contacts.
-func canCreateHSTouchPoint(documentActionType int) bool {
-	// Ignore doc types other than HubspotDocumentActionUpdated
-	if documentActionType != model.HubspotDocumentActionUpdated {
-		return false
-	}
-	return true
 }
 
 func PullEventIdsWithEventName(projectId int64, startTimestamp int64, endTimestamp int64, eventName string) ([]string, map[string]eventIdToProperties, error) {

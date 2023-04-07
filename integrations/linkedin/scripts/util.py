@@ -206,7 +206,7 @@ class Util:
                 setting.access_token = new_access_token
                 token_update_response = DataService(options).update_access_token(
                                     setting.project_id,
-                                    setting.access_token, options)
+                                    setting.access_token)
                 if not token_update_response.ok:
                     failures.append({'status': 'failed', 
                                     'errMsg': 'failed to update access token in db',

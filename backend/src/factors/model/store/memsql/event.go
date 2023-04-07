@@ -453,7 +453,7 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		}
 	}
 	log.Info("Control past EventTrigger block: ", time.Since(t1))
-	
+
 	return event, http.StatusCreated
 }
 
@@ -830,14 +830,17 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 		store.addEventDetailsToCache(projectId, &model.Event{EventNameId: event.EventNameId, Properties: *updatedPropertiesOnlyJsonBlob}, true)
 	}
 
-    //log.Info("EventTriggerAlerts match function trigger point.")
+	//log.Info("EventTriggerAlerts match function trigger point.")
 	alerts, eventName, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
 	if ErrCode == http.StatusFound && alerts != nil {
 		// log.WithFields(log.Fields{"project_id": event.ProjectId,
 		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
 
+		updatedEvent := model.Event{}
+		updatedEvent = *event
+		updatedEvent.Properties = *updatedPostgresJsonb
 		for _, alert := range *alerts {
-			success := store.CacheEventTriggerAlert(&alert, event, eventName)
+			success := store.CacheEventTriggerAlert(&alert, &updatedEvent, eventName)
 			if !success {
 				log.WithFields(log.Fields{"project_id": event.ProjectId,
 					"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)

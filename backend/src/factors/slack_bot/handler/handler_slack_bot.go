@@ -54,17 +54,18 @@ func GetSlackAuthorisationURL(clientID string, state string) string {
 	return url
 }
 func SlackCallbackHandler(c *gin.Context) {
-	code := c.Query("code")
-	if code == "" {
-		log.Error("Failed to get auth code")
-		redirectURL := buildRedirectURL("AUTH_ERROR", 0)
-		c.Redirect(http.StatusPermanentRedirect, redirectURL)
-	}
 	var oauthState oauthState
 	state := c.Query("state")
 	err := json.Unmarshal([]byte(state), &oauthState)
 	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" {
 		redirectURL := buildRedirectURL("invalid values in state", oauthState.Source)
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
+	}
+
+	code := c.Query("code")
+	if code == "" {
+		log.Error("Failed to get auth code")
+		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	_, status := store.GetStore().GetProjectAgentMapping(oauthState.ProjectID, *oauthState.AgentUUID)

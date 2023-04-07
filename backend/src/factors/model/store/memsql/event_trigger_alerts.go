@@ -3,19 +3,19 @@ package memsql
 import (
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
+	E "factors/event_match"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
-	"io/ioutil"
-	E "factors/event_match"
 
+	"encoding/json"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-	"encoding/json"
 )
 
 const (
@@ -128,7 +128,7 @@ func (store *MemSQL) DeleteEventTriggerAlert(projectID int64, id string) (int, s
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig) (*model.EventTriggerAlert, int, string) {
+func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser string) (*model.EventTriggerAlert, int, string) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"event_trigger_alert": alertConfig,
@@ -156,33 +156,33 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	}
 
 	for _, filter := range (*alertConfig).Filter {
-		if(filter.Operator == model.InList){
+		if filter.Operator == model.InList {
 			// Get the cloud file that is there for the reference value
 			path, file := C.GetCloudManager(projectID, true).GetListReferenceFileNameAndPathFromCloud(projectID, filter.Value)
 			reader, err := C.GetCloudManager(projectID, true).Get(path, file)
-			if(err != nil){
+			if err != nil {
 				log.WithFields(logFields).WithError(err).Error("List File Missing")
 				return nil, http.StatusInternalServerError, "List File Missing"
 			}
 			valuesInFile := make([]string, 0)
 			data, err := ioutil.ReadAll(reader)
-			if(err != nil){
+			if err != nil {
 				log.WithFields(logFields).WithError(err).Error("File reader failed")
 				return nil, http.StatusInternalServerError, "File reader failed"
 			}
 			err = json.Unmarshal(data, &valuesInFile)
-			if(err != nil){
+			if err != nil {
 				log.WithFields(logFields).WithError(err).Error("list data unmarshall failed")
 				return nil, http.StatusInternalServerError, "list data unmarshall failed"
 			}
 			cacheKeyList, err := model.GetListCacheKey(projectID, filter.Value)
-			if(err != nil){
+			if err != nil {
 				log.WithFields(logFields).WithError(err).Error("get cache key failed")
 				return nil, http.StatusInternalServerError, "get cache key failed"
 			}
 			for _, value := range valuesInFile {
 				err = cacheRedis.ZAddPersistent(cacheKeyList, value, 0)
-				if(err != nil){
+				if err != nil {
 					log.WithFields(logFields).WithError(err).Error("failed to add new values to sorted set")
 					return nil, http.StatusInternalServerError, "failed to add new values to sorted set"
 				}
@@ -197,14 +197,15 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	}
 
 	alert = model.EventTriggerAlert{
-		ID:                id,
-		ProjectID:         projectID,
-		Title:             alertConfig.Title,
-		EventTriggerAlert: trigger,
-		CreatedBy:         userID,
-		CreatedAt:         transTime,
-		UpdatedAt:         transTime,
-		IsDeleted:         false,
+		ID:                       id,
+		ProjectID:                projectID,
+		Title:                    alertConfig.Title,
+		EventTriggerAlert:        trigger,
+		CreatedBy:                userID,
+		CreatedAt:                transTime,
+		UpdatedAt:                transTime,
+		IsDeleted:                false,
+		SlackChannelAssociatedBy: slackTokenUser,
 	}
 
 	if err := db.Create(&alert).Error; err != nil {
@@ -359,18 +360,43 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 			log.WithError(err).Error("Jsonb decoding to struct failure")
 			return nil, nil, http.StatusInternalServerError
 		}
+		messageProperties := make([]model.QueryGroupByProperty, 0)
+		if config.MessageProperty != nil {
+			err := U.DecodePostgresJsonbToStructType(config.MessageProperty, &messageProperties)
+			if err != nil {
+				log.WithError(err).Error("Jsonb decoding to struct failure")
+				return nil, nil, http.StatusInternalServerError
+			}
+		}
+		if !isUpdate {
+			isUpdateOnlyPropertyInMessageBody := false
+			for _, msgProp := range messageProperties {
+				if eventName.Name == "$session" && U.SESSION_PROPERTIES_SET_IN_UPDATE[msgProp.Property] == true {
+					isUpdateOnlyPropertyInMessageBody = true
+				}
+			}
+			if isUpdateOnlyPropertyInMessageBody {
+				continue
+			}
+		}
 		if isUpdate {
 			if len(*updatedEventProps) == 0 {
 				continue
 			} else {
 				isPropertyInFilterUpdated := false
+				isUpdateOnlyPropertyInMessageBody := false
+				for _, msgProp := range messageProperties {
+					if eventName.Name == "$session" && U.SESSION_PROPERTIES_SET_IN_UPDATE[msgProp.Property] == true {
+						isUpdateOnlyPropertyInMessageBody = true
+					}
+				}
 				for _, fil := range config.Filter {
 					_, exists := (*updatedEventProps)[fil.Property]
 					if fil.Entity == "event" && exists {
 						isPropertyInFilterUpdated = true
 					}
 				}
-				if !isPropertyInFilterUpdated {
+				if !isPropertyInFilterUpdated && !isUpdateOnlyPropertyInMessageBody {
 					continue
 				}
 			}
@@ -555,9 +581,9 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			}
 			propVal, exi := (*userPropMap)[p]
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
-				DisplayName : displayName,
-				PropValue: getDisplayLikePropValue(messageProperty.Type, exi, propVal),
-			} 
+				DisplayName: displayName,
+				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+			}
 
 		} else if messageProperty.Entity == "event" {
 			displayName, exists := displayNamesEP[p]
@@ -566,9 +592,9 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			}
 			propVal, exi := (*eventPropMap)[p]
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
-				DisplayName : displayName,
-				PropValue: getDisplayLikePropValue(messageProperty.Type, exi, propVal),
-			} 
+				DisplayName: displayName,
+				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+			}
 		} else {
 			log.Warn("can not find the message property in user and event prop sets")
 		}
@@ -590,9 +616,9 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 		uval, uexists := (*userPropMap)[prop]
 		eval, eexists := (*eventPropMap)[prop]
 
-		if uexists {
+		if breakdownProperty.Entity == "user" && uexists {
 			value = uval
-		} else if eexists {
+		} else if breakdownProperty.Entity == "event" && eexists {
 			value = eval
 		} else {
 			log.Warn("can not find the breakdown property in user and event prop sets")
@@ -695,7 +721,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 	}
 
 	tt := time.Now()
-	timestamp := tt.Unix()
+	timestamp := tt.UnixNano()
 	date := tt.UTC().Format(U.DATETIME_FORMAT_YYYYMMDD)
 
 	counterKey, err := model.GetEventTriggerAlertCacheCounterKey(event.ProjectId, alert.ID, date)

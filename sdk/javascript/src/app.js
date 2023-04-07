@@ -716,7 +716,7 @@ function captureInputFieldValues(appInstance, input) {
 
     // Below conditions would limit the no.of entries captured.
     if (newValue.length < 4) return; 
-    var isCapturable = Capture.isPossibleEmail(newValue) || Capture.isPhone(newValue);
+    var isCapturable = Capture.isPossibleEmail(newValue);
     if (!isCapturable) return
     
     var inputId = input.getAttribute(FACTORS_INPUT_ID_ATTRIBUTE);

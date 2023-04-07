@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Row, Col, Modal, Button } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import Lottie from 'react-lottie';
 import {
   fetchProjectSettingsV1,
@@ -17,6 +17,7 @@ import OtherIntegrations from './OtherIntegrations';
 import setupAssistData from '../../../assets/lottie/Final Jan 3 Setupassist.json';
 import styles from './index.module.scss';
 import { meetLink } from '../../../utils/hubspot';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 
 function SetupAssist({
   currentAgent,
@@ -35,8 +36,15 @@ function SetupAssist({
   const [ownerID, setownerID] = useState();
   const [sdkCheck, setsdkCheck] = useState();
   const history = useHistory();
-
+  const location = useLocation();
+  const [isBackBtn, setIsBackButton] = useState(false);
   useEffect(() => {
+    let searchParams = new URLSearchParams(location.search, {
+      get: (searchParams, prop) => searchParams.get(prop)
+    });
+    if (searchParams.get('redirected_from') === 'onboardflow') {
+      setIsBackButton(true);
+    }
     const { email } = currentAgent;
     getHubspotContact(email)
       .then((res) => {
@@ -89,6 +97,20 @@ function SetupAssist({
     <>
       <div className='fa-container'>
         <Row gutter={[24, 24]} justify='center' className='pt-24 pb-12 mt-0 '>
+          {isBackBtn ? (
+            <Col>
+              <Button
+                size='large'
+                type='text'
+                icon={<ArrowLeftOutlined />}
+                onClick={() => {
+                  history.go(-1);
+                }}
+              ></Button>
+            </Col>
+          ) : (
+            ''
+          )}
           <Col span={checkIntegration ? 17 : 20}>
             <Text type='title' level={2} weight='bold' extraClass='m-0'>
               Let's get started

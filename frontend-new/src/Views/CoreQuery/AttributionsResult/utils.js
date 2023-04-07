@@ -590,7 +590,15 @@ export const getTableColumns = (
   }
 
   const metricsColumns = metrics
-    .filter((metric) => metric.enabled && !metric.isEventMetric)
+    .filter((metric) => {
+      if (
+        ['Source', 'ChannelGroup'].includes(touchpoint) &&
+        ['Impressions', 'Clicks', 'Spend', 'CTR(%)'].includes(metric.header)
+      ) {
+        return false;
+      }
+      return metric.enabled && !metric.isEventMetric;
+    })
     .map((metric) => ({
       title: getClickableTitleSorter(
         metric.title,

@@ -6,13 +6,13 @@ import (
 	V1 "factors/handler/v1"
 	mid "factors/middleware"
 	"factors/model/model"
+	teams "factors/ms_teams"
 	U "factors/util"
 	"fmt"
 	"net/http"
 	"reflect"
 
 	slack "factors/slack_bot/handler"
-	// "factors/ms_teams"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -51,7 +51,7 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
-	//	r.GET(routePrefix+"/.well-known/microsoft-identity-association.json",teams.VerifyPublisherDomainStaging)
+	r.GET(routePrefix+"/.well-known/microsoft-identity-association.json", teams.VerifyPublisherDomainTeams)
 
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {

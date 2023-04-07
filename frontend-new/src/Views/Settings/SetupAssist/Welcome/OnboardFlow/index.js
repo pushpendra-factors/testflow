@@ -14,30 +14,37 @@ const OnBoard = () => {
   const history = useHistory();
   const dispatch = useDispatch();
   const { step } = useParams();
-  const { int_client_six_signal_key, int_factors_six_signal_key } = useSelector(
-    (state) => state?.global?.currentProjectSettings
-  );
+  const {
+    int_client_six_signal_key,
+    int_factors_six_signal_key,
+    int_clear_bit,
+    is_deanonymization_requested
+  } = useSelector((state) => state?.global?.currentProjectSettings);
   const int_completed = useSelector(
     (state) => state?.global?.projectSettingsV1?.int_completed
   );
-  const {
-    isWebsiteVisitorIdentificationVisible,
-    currentStep,
-    steps,
-    factors6SignalKeyRequested
-  } = useSelector((state) => state.onBoardFlow);
+  const { isWebsiteVisitorIdentificationVisible, currentStep, steps } =
+    useSelector((state) => state.onBoardFlow);
   const checkIsValid = (step) => {
     if (step == 1) {
       return int_completed;
     } else if (step == 2) {
       return (
-        steps.step2 || int_client_six_signal_key || factors6SignalKeyRequested
+        int_client_six_signal_key ||
+        is_deanonymization_requested ||
+        int_clear_bit ||
+        int_factors_six_signal_key
       );
     } else if (step == 3) {
       return steps.step3;
     }
     return false;
   };
+  useEffect(() => {
+    if (is_deanonymization_requested) {
+      history.push('/welcome/visitoridentification/3');
+    }
+  }, []);
   useEffect(() => {
     if (step == '1' || step == '2' || step == '3') {
       if (step == '1') {
@@ -55,7 +62,9 @@ const OnBoard = () => {
           history.push('/welcome/visitoridentification/1');
         }
       } else if (step == '3') {
-        if (checkIsValid(1) && checkIsValid(2)) {
+        let t1 = checkIsValid(1);
+        let t2 = checkIsValid(2);
+        if ((t1 && t2) || (t1 === undefined && t2 === undefined)) {
           dispatch({
             type: JUMP_TO_STEP_WEBSITE_VISITOR_IDENTIFICATION,
             payload: Number(step)

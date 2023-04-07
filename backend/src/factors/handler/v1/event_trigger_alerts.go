@@ -48,7 +48,7 @@ func CreateEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, s
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 	oldID := ""
-	obj, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, oldID, projectID, &alert)
+	obj, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, oldID, projectID, &alert, userID)
 	if errCode != http.StatusCreated {
 		log.WithFields(log.Fields{"document": alert, "err-message": errMsg}).Error("Failed to create alert in handler.")
 		return nil, errCode, PROCESSING_FAILED, errMsg, true
@@ -104,7 +104,58 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 
-	eta, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, id, projectID, &alert)
+	existingAlert, err := store.GetStore().GetEventTriggerAlertByID(id)
+	if err != http.StatusFound {
+		return nil, http.StatusBadRequest, "Invalid ID - Alert not found", "", true
+	}
+	var existingAlertPayload model.EventTriggerAlertConfig
+	errObj := U.DecodePostgresJsonbToStructType(existingAlert.EventTriggerAlert, &existingAlertPayload)
+	if errObj != nil {
+		log.WithError(errObj).Error("Problem deserializing event_trigger_alerts query.")
+		return nil, http.StatusBadRequest, "Problem deserializing event_trigger_alerts query.", "", true
+	}
+
+	var existingSlackChannels []model.SlackChannel
+	if existingAlertPayload.Slack == true {
+		errObj = U.DecodePostgresJsonbToStructType(existingAlertPayload.SlackChannels, &existingSlackChannels)
+		if errObj != nil {
+			log.WithError(errObj).Error("failed to decode slack channels")
+			return nil, http.StatusBadRequest, "failed to decode slack channels", "", true
+		}
+	}
+	var newSlackChannels []model.SlackChannel
+	if alert.Slack == true {
+		errObj = U.DecodePostgresJsonbToStructType(alert.SlackChannels, &newSlackChannels)
+		if errObj != nil {
+			log.WithError(errObj).Error("failed to decode slack channels")
+			return nil, http.StatusBadRequest, "failed to decode slack channels", "", true
+		}
+	}
+
+	slackAssociatedUserId := existingAlert.CreatedBy
+	if len(existingSlackChannels) == len(newSlackChannels) {
+		existingChannelNameMap := make(map[string]bool)
+		existingChannelIDMap := make(map[string]bool)
+		for _, channel := range existingSlackChannels {
+			existingChannelNameMap[channel.Name] = true
+			existingChannelIDMap[channel.Id] = true
+		}
+		for _, channel := range newSlackChannels {
+			if existingChannelNameMap[channel.Name] == false {
+				slackAssociatedUserId = userID
+				break
+			}
+			if existingChannelIDMap[channel.Id] == false {
+				slackAssociatedUserId = userID
+				break
+			}
+		}
+
+	} else {
+		slackAssociatedUserId = userID
+	}
+
+	eta, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, id, projectID, &alert, slackAssociatedUserId)
 	if errMsg != "" || errCode != http.StatusCreated || eta == nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Edit TriggerAlert failed while updating db"})
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
@@ -164,7 +215,7 @@ func TestWebhookforEventTriggerAlerts(c *gin.Context) (interface{}, int, string,
 		}
 		msgPropMap[fmt.Sprintf("%d", i)] = model.MessagePropMapStruct{
 			DisplayName: U.CreateVirtualDisplayName(mp.Property),
-			PropValue: val, 
+			PropValue:   val,
 		}
 	}
 	payload := model.EventTriggerAlertMessage{
