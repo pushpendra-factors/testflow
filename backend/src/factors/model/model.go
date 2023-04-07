@@ -429,6 +429,8 @@ type Model interface {
 	GetAllPathAnalysisEnabledProjects() ([]int64, error)
 	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
 	GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error)
+	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
+	AddSixsignalEmailList(projectId int64, emailIds string) int
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
@@ -895,6 +897,6 @@ type Model interface {
 	GetTeamsAuthTokens(projectID int64, agentUUID string) (model.TeamsAccessTokens, error)
 	DeleteTeamsIntegration(projectID int64, agentUUID string) error
 	// Currency
-	CreateCurrencyDetails(currency string, date int64, value float64) (error)
+	CreateCurrencyDetails(currency string, date int64, value float64) error
 	GetCurrencyDetails(currency string, date int64) ([]model.Currency, error)
 }

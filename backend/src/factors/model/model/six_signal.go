@@ -45,7 +45,6 @@ type SixSignalShareableURLParams struct {
 }
 
 type SixSignalPublicURLResponse struct {
-	ProjectID    int64  `json:"project_id"`
 	RouteVersion string `json:"route_version"`
 	QueryID      string `json:"query_id"`
 }

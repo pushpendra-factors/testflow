@@ -123,6 +123,7 @@ func InitAppRoutes(r *gin.Engine) {
 	shareSixSignalRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/sixsignal", responseWrapper(GetSixSignalReportHandler))
 	shareSixSignalRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/sixsignal/publicreport", responseWrapper(GetSixSignalPublicReportHandler))
 	featuresGatesRouteGroup.POST("/:project_id/sixsignal/share", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateSixSignalShareableURLHandler))
+	featuresGatesRouteGroup.POST("/:project_id/sixsignal/add_email", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(AddSixSignalEmailIDHandler))
 
 	// Dashboard endpoints
 	featuresGatesRouteGroup.GET("/:project_id/dashboards", stringifyWrapper(GetDashboardsHandler))
