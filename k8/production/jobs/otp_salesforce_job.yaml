@@ -20,7 +20,7 @@ spec:
             cloud.google.com/gke-nodepool: default-pool
           containers:
             - name: otp-salesforce-job:1.0
-              image: us.gcr.io/factors-production/otp-salesforce-job:1.0
+              image: us.gcr.io/factors-production/otp-salesforce-job
               imagePullPolicy: IfNotPresent
               args:
                 - --env
