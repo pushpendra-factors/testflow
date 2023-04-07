@@ -590,7 +590,15 @@ export const getTableColumns = (
   }
 
   const metricsColumns = metrics
-    .filter((metric) => metric.enabled && !metric.isEventMetric)
+    .filter((metric) => {
+      if (
+        ['Source', 'ChannelGroup'].includes(touchpoint) &&
+        ['Impressions', 'Clicks', 'Spend', 'CTR(%)'].includes(metric.header)
+      ) {
+        return false;
+      }
+      return metric.enabled && !metric.isEventMetric;
+    })
     .map((metric) => ({
       title: getClickableTitleSorter(
         metric.title,
@@ -607,7 +615,7 @@ export const getTableColumns = (
       render: (d) => renderMetric(d, comparison_data)
     }));
 
-  const showCPC = metrics.find(
+  const showCPC = ['Source', 'ChannelGroup'].includes(touchpoint)? false :  metrics.find(
     (elem) => elem.header === 'Cost Per Conversion'
   )?.enabled;
   const showCR = metrics.find((elem) => elem.header === 'ALL CR')?.enabled;

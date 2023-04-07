@@ -19,12 +19,15 @@ type SixSignalQuery struct {
 	Timezone util.TimeZoneString `json:"tz"`
 	From     int64               `json:"fr"`
 	To       int64               `json:"to"`
+	IsSaved  bool                `json:"isSaved"`
 }
 
 type SixSignalResultGroup struct {
 	Results   []SixSignalQueryResult `json:"result_group"`
 	Query     interface{}            `json:"query"`
 	CacheMeta interface{}            `json:"cache_meta"`
+	//is_shareable reflects if the results are allowed to share through a public-url
+	IsShareable bool `json:"is_shareable"`
 }
 
 type SixSignalQueryResult struct {
@@ -42,7 +45,6 @@ type SixSignalShareableURLParams struct {
 }
 
 type SixSignalPublicURLResponse struct {
-	ProjectID    int64  `json:"project_id"`
 	RouteVersion string `json:"route_version"`
 	QueryID      string `json:"query_id"`
 }

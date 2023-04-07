@@ -33,4 +33,30 @@
       border-color: #8c8c8c;
     }
   }
+  .brand {
+    margin: 0 10px;
+  }
+  .brandItem {
+    padding: 8px;
+    border-radius: 6px;
+    background: #f5f5f5;
+  }
+}
+
+.toggleMenu {
+  // transition: opacity 2s ease-in;
+  animation: fadeIn 0.4s;
+}
+
+.notification {
+  background-color: #fafafa;
+  border-color: #d9d9d9;
+}
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }

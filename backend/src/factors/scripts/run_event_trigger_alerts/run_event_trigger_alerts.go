@@ -14,9 +14,15 @@ import (
 	"time"
 
 	slack "factors/slack_bot/handler"
+	webhook "factors/webhooks"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	SortedSetKeyPrefix     = "ETA"
+	FailureSortedSetPrefix = "ETA:Fail"
 )
 
 func main() {
@@ -29,6 +35,8 @@ func main() {
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
+
+	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
@@ -66,7 +74,8 @@ func main() {
 		RedisPortPersistent: *redisPortPersistent,
 		SentryDSN:           *sentryDSN,
 	}
-
+	defaultHealthcheckPingID := C.HealthcheckEventTriggerAlertPingID
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
@@ -81,31 +90,49 @@ func main() {
 	defer db.Close()
 
 	conf := make(map[string]interface{})
+	finalStatus := make(map[int64]interface{})
+	var success bool
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 	for _, projectID := range projectIDs {
 		status, success := EventTriggerAlertsSender(projectID, conf)
-		log.Info(status)
 		if status["err"] != nil || !success {
 			log.Error("Event Trigger Alert job failing for projectID: ", projectID)
+			finalStatus[projectID] = status
 		}
 	}
+	if !success {
+		C.PingHealthcheckForFailure(healthcheckPingID, finalStatus)
+	} else {
+		C.PingHealthcheckForSuccess(healthcheckPingID, finalStatus)
+	}
+}
+
+func getSortedSetCacheKey(prefix string, projectId int64) (*cacheRedis.Key, error) {
+	pre := fmt.Sprintf("%s:pid:%d", prefix, projectId)
+	key, err := cacheRedis.NewKeyWithOnlyPrefix(pre)
+	if err != nil {
+		log.WithError(err).Error("Cannot get redis key")
+		return nil, err
+	}
+	return key, err
 }
 
 func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
-	prefix := fmt.Sprintf("ETA:pid:%d", projectID)
-	ssKey, err := cacheRedis.NewKeyWithOnlyPrefix(prefix)
+	status := make(map[string]interface{})
+	var ok int
+
+	ssKey, err := getSortedSetCacheKey(SortedSetKeyPrefix, projectID)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch cacheKey for sortedSet")
 		return nil, false
 	}
+
 	allKeys, err := cacheRedis.ZrangeWithScoresPersistent(true, ssKey)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all alert keys for project: ", projectID)
 		return nil, false
 	}
-
-	status := make(map[string]interface{})
 
 	for key := range allKeys {
 		cacheKey, err := cacheRedis.KeyFromStringWithPid(key)
@@ -126,7 +153,7 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 		err = U.DecodeJSONStringToStructType(cacheStr, &msg)
 		if err != nil {
 			log.WithError(err).Error("failed to decode alert for event_trigger_alert")
-			status["error"] = err
+			status["err"] = err
 			continue
 		}
 
@@ -134,19 +161,20 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 		success := sendHelperForEventTriggerAlert(cacheKey, &msg, alertID)
 
 		if success {
-			err := cacheRedis.DelPersistent(cacheKey)
+			err = cacheRedis.DelPersistent(cacheKey)
 			if err != nil {
 				log.WithError(err).Error("Cannot remove alert from cache")
 			}
-			cc, err := cacheRedis.ZRemPersistent(ssKey, true, key)
-			if err != nil || cc != 1 {
-				log.WithError(err).Error("Cannot remove alert by zrem")
-			}
-			log.Info("Alert removed from cache")
+			ok++
+		}
+
+		cc, err := cacheRedis.ZRemPersistent(ssKey, true, key)
+		if err != nil || cc != 1 {
+			log.WithError(err).Error("Cannot remove alert by zrem")
 		}
 	}
 
-	return nil, true
+	return status, ok == len(allKeys)
 }
 
 func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEventTriggerAlert, alertID string) bool {
@@ -164,25 +192,72 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		return false
 	}
 
-	var sendSuccess bool
+	slackSuccess := true
+	whSuccess := true
 
 	msg := alert.Message
 	if alertConfiguration.Slack {
-		// log.Info(fmt.Printf("Message to be sent: %s", msg))
-		log.Info(fmt.Printf("%+v\n", alertConfiguration))
-		sendSuccess = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.CreatedBy, msg, alertConfiguration.SlackChannels)
+		slackSuccess = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels)
+		if !slackSuccess {
+			err := AddKeyToFailureSet(key, eta.ProjectID, "Slack")
+			if err != nil {
+				log.WithError(err).Error("failed to put key in FailureSortedSet")
+			}
+		}
+	}
+	if alertConfiguration.Webhook {
+		response, err := webhook.DropWebhook(alertConfiguration.WebhookURL, alertConfiguration.Secret, alert.Message)
+		if err != nil {
+			log.WithFields(log.Fields{"alert_id": alertID, "server_response": response}).
+				WithError(err).Error("Webhook failure")
+		}
+		log.Info(fmt.Printf("Webhook dropped for alert: %s. RESPONSE: %+v", alertID, response))
+		stat := response["status"]
+		if stat != "ok" {
+			err := AddKeyToFailureSet(key, eta.ProjectID, "WH")
+			if err != nil {
+				log.WithError(err).Error("failed to put key in FailureSortedSet")
+			}
+			whSuccess = false
+		}
 	}
 
-	if sendSuccess {
+	if slackSuccess || whSuccess {
 		status, err := store.GetStore().UpdateEventTriggerAlertField(eta.ProjectID, eta.ID,
 			map[string]interface{}{"last_alert_at": time.Now()})
 		if status != http.StatusAccepted || err != nil {
 			log.Fatalf("Failed to update db field")
 		}
-		log.Info("Alert update in db successful")
-		return true
 	}
-	return false
+
+	return slackSuccess && whSuccess
+}
+
+func AddKeyToFailureSet(key *cacheRedis.Key, projectID int64, failPoint string) error {
+	failureKey, err := getSortedSetCacheKey(FailureSortedSetPrefix, projectID)
+	if err != nil {
+		log.WithError(err).Error("failed to fetch sorted set key for failure set")
+		return err
+	}
+
+	val, err := key.Key()
+	if err != nil {
+		log.WithError(err).Error("cannot find str value for cache key")
+		return err
+	}
+
+	failureSS := cacheRedis.SortedSetKeyValueTuple{
+		Key:   failureKey,
+		Value: fmt.Sprintf("%s:%s", failPoint, val),
+	}
+
+	_, err = cacheRedis.ZincrPersistentBatch(true, failureSS)
+	if err != nil {
+		log.WithError(err).Error("failed to update failureSortedSet")
+		return err
+	}
+
+	return nil
 }
 
 func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg model.EventTriggerAlertMessage, Schannels *postgres.Jsonb) bool {
@@ -201,15 +276,12 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 	wetRun := true
 	if wetRun {
 		for _, channel := range slackChannels {
-			// log.Info("Sending alert for slack channel ", channel)
 
 			status, err := slack.SendSlackAlert(projectID, getSlackMsgBlock(msg), agentUUID, channel)
 			if err != nil || !status {
 				logCtx.WithError(err).Error("failed to send slack alert ", msg)
 				return false
 			}
-
-			logCtx.Info("slack alert sent")
 		}
 	} else {
 		log.Info("Dry run mode enabled. No alerts will be sent")

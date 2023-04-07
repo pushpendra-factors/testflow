@@ -188,15 +188,16 @@ func (store *MemSQL) UpdateProject(projectId int64, project *model.Project) int 
 		updateFields["project_uri"] = project.ProjectURI
 	}
 	if project.TimeZone != "" {
-		updateFields["time_zone"] = project.TimeZone
+		updatedTimeZone := project.TimeZone
+		_, errCode := time.LoadLocation(string(updatedTimeZone))
+		if errCode != nil {
+			log.WithField("projectId", project.ID).Error("This project hasnt been given with wrong timezone")
+			updatedTimeZone = string(U.TimeZoneStringIST)
+		}
+		updateFields["time_zone"] = updatedTimeZone
 	}
 	if project.ProfilePicture != "" {
 		updateFields["profile_picture"] = project.ProfilePicture
-	}
-	_, errCode := time.LoadLocation(string(project.TimeZone))
-	if errCode != nil {
-		log.WithField("projectId", project.ID).Error("This project hasnt been given with wrong timezone")
-		project.TimeZone = string(U.TimeZoneStringIST)
 	}
 
 	if !U.IsEmptyPostgresJsonb(&project.InteractionSettings) {

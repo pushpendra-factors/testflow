@@ -33,7 +33,8 @@ function AttributionOptions({
     ['U Shaped', 'U_Shaped'],
     ['W Shaped', 'W_Shaped'],
     ['Time Decay', 'Time_Decay'],
-    ['Influence', 'Influence']
+    ['Influence', 'Influence'],
+    ['Last Campaign Touch', 'Last_Campaign_Touch']
   ];
 
   const timeLineMap = {
@@ -357,11 +358,7 @@ function AttributionOptions({
     );
   };
 
-  return (
-    <div className={`${styles.block}`}>
-      {renderAttributionModel()}
-    </div>
-  );
+  return <div className={`${styles.block}`}>{renderAttributionModel()}</div>;
 }
 
 const mapStateToProps = (state) => ({

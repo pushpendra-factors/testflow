@@ -29,6 +29,9 @@ import { connect, useSelector } from 'react-redux';
 import MomentTz from '../../../../components/MomentTz';
 import DemoSDK from './DemoSDK';
 import CodeBlock from 'Components/CodeBlock';
+import styles from './index.module.scss';
+import { UserAddOutlined } from '@ant-design/icons';
+import InviteUsers from 'Views/Settings/ProjectSettings/UserSettings/InviteUsers';
 
 const { TabPane } = Tabs;
 
@@ -70,19 +73,6 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
           }
           pureTextCode={`<script> window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("${projectToken}"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); </script>`}
         ></CodeBlock>
-      </Col>
-      <Col span={24}>
-        <Text type={'paragraph'} extraClass={'m-0 mt-2 mb-2'}>
-          For detailed help or instructions to setup via GTM (Google Tag
-          Manager), please refer to our{' '}
-          <a
-            className={'fa-anchor'}
-            href='https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website'
-            target='_blank'
-          >
-            JavaScript developer documentation.
-          </a>
-        </Text>
       </Col>
       <Col span={24}>
         <Text
@@ -177,19 +167,7 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
           GTM window!
         </Text>
       </Col>
-      <Col span={24}>
-        <Text type={'paragraph'} extraClass={'m-0 mt-4 mb-2'}>
-          For detailed help or instructions to setup via GTM (Google Tag
-          Manager), please refer to our{' '}
-          <a
-            className={'fa-anchor'}
-            href='https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website'
-            target='_blank'
-          >
-            JavaScript developer documentation.
-          </a>
-        </Text>
-      </Col>
+
       <Col span={24}>
         <Text
           type={'title'}
@@ -887,10 +865,10 @@ const VerifySdkCheck = ({
                 weight='bold'
                 extraClass={'m-0 ml-2 mr-1 flex '}
               >
-                SDK not detected yet. Have you added the code?{' '}
+                Have you added the SDK? Verify Here{' '}
               </Text>
               <Button type={'default'} onClick={onSDKcheck}>
-                Verify it now
+                Check for SDK
               </Button>
             </div>
           )}
@@ -912,7 +890,8 @@ function JavascriptSDK({
 
   fetchBingAdsIntegration,
   fetchMarketoIntegration,
-  fetchProjectSettingsV1
+  fetchProjectSettingsV1,
+  isOnBoardFlow
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [isDemo, setIsDemo] = useState(null);
@@ -989,15 +968,45 @@ function JavascriptSDK({
 
     return tabs;
   };
-
+  const [inviteModal, setInviteModal] = useState(false);
+  const handleOk = () => {};
+  const confirmLoading = () => {};
   return (
     <>
       <div className={'mb-4 pl-4'}>
-        <Row>
+        <Row style={{ width: '100%', justifyContent: 'space-between' }}>
           <Col span={12}>
             <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
-              Javascript SDK
+              {isOnBoardFlow === true ? 'Add our ' : ''} Javascript SDK
             </Text>
+          </Col>
+          <Col>
+            {isOnBoardFlow === true ? (
+              <Row>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    margin: '0 10px',
+                    fontWeight: '600'
+                  }}
+                >
+                  Need help?
+                </div>
+                <Button
+                  size='large'
+                  icon={<UserAddOutlined />}
+                  className={styles['btn']}
+                  onClick={() => {
+                    setInviteModal((prev) => !prev);
+                  }}
+                >
+                  Invite Team
+                </Button>
+              </Row>
+            ) : (
+              ''
+            )}
           </Col>
         </Row>
         <Row>
@@ -1008,16 +1017,30 @@ function JavascriptSDK({
               color={'grey-2'}
               extraClass={'m-0 my-1'}
             >
-              Your website data will be visible on the platform from the time
-              the your javascript SDK is placed on your site. Hence, no
-              historical data prior to the setup would be available on the
-              platform.
+              {isOnBoardFlow === true
+                ? 'Track Data Natively With a Factors SDK (Coded Tracking)'
+                : 'Your website data will be visible on the platform from the time the your javascript SDK is placed on your site. Hence, no historical data prior to the setup would be available on the platform.'}
             </Text>
-            <Text type={'title'} level={6} color={'grey-2'} extraClass={'m-0'}>
-              The website data you see in Factors is real-time.
-            </Text>
+            {isOnBoardFlow === true ? (
+              <></>
+            ) : (
+              <Text
+                type={'title'}
+                level={6}
+                color={'grey-2'}
+                extraClass={'m-0 my-1'}
+              >
+                The website data you see in Factors is real-time.
+              </Text>
+            )}
           </Col>
         </Row>
+        <InviteUsers
+          visible={inviteModal}
+          onCancel={() => setInviteModal(false)}
+          onOk={() => handleOk()}
+          confirmLoading={confirmLoading}
+        />
         <Row className={'mt-2'}>
           <Col span={24}>
             {isDemo === true ? (
@@ -1046,6 +1069,25 @@ function JavascriptSDK({
               </>
             )}
           </Col>
+        </Row>
+        <Row
+          style={{
+            margin: '10px 15px',
+            display: 'flex'
+          }}
+        >
+          <span>
+            For detailed instructions on how to install and initialize the
+            JavaScript SDK please refer to our
+          </span>
+          <a
+            href='https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website'
+            target='_blank'
+            rel='noreferrer'
+            style={{ margin: '0 5px' }}
+          >
+            JavaScript developer documentation &#8594;
+          </a>
         </Row>
       </div>
     </>

@@ -47,6 +47,10 @@ export const ATTRIBUTION_METHODOLOGY = [
   {
     text: 'Time Decay',
     value: 'Time_Decay'
+  },
+  {
+    text: 'Last Campaign Touch',
+    value: 'Last_Campaign_Touch'
   }
 ];
 

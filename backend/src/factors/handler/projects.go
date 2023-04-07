@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"	
 
 	C "factors/config"
 
@@ -131,20 +130,6 @@ func EditProjectHandler(c *gin.Context) {
 	}
 	if !U.IsUserOrProjectNameValid(projectEditDetails.Name) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid character"})
-		return
-	}
-	project, status := store.GetStore().GetProject(projectID)
-	if status != http.StatusFound {
-		c.AbortWithStatus(errCode)
-		return
-	}
-	_, err = time.LoadLocation(projectEditDetails.TimeZone)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid Timezone sent."})
-		return
-	}
-	if project.TimeZone != "Asia/Kolkata" && projectEditDetails.TimeZone != "" {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "cannot edit existing timezone"})
 		return
 	}
 	if projectEditDetails.ProfilePicture != "" && !(strings.HasPrefix(projectEditDetails.ProfilePicture, "data:image/png") || strings.HasPrefix(projectEditDetails.ProfilePicture, "data:image/jpeg")) {

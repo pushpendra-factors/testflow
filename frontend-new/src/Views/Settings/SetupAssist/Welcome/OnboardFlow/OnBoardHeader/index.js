@@ -1,8 +1,12 @@
-import { ArrowLeftOutlined, ArrowRightOutlined } from '@ant-design/icons';
-import { Button, Row, Tooltip } from 'antd';
+import {
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  LoadingOutlined
+} from '@ant-design/icons';
+import { Button, Row, Tooltip, message } from 'antd';
 import { SVG } from 'Components/factorsComponents';
 import React, { useCallback, useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { connect, useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import {
   BACK_STEP_ONBOARD_FLOW,
@@ -11,6 +15,7 @@ import {
 } from 'Reducers/types';
 import logger from 'Utils/logger';
 import styles from './index.module.scss';
+import { udpateProjectSettings } from 'Reducers/global';
 const RenderLogo = () => (
   <Button size='large' type='text' icon={<SVG size={32} name='Brand' />} />
 );
@@ -30,7 +35,13 @@ const RenderStep = () => {
     </div>
   );
 };
-const AdditionalMenu = (closeDrawer, setCurrentStep, stepDone, setStepDone) => {
+const AdditionalMenu = ({
+  closeDrawer,
+  setCurrentStep,
+  stepDone,
+  setStepDone,
+  udpateProjectSettings
+}) => {
   const history = useHistory();
   const dispatch = useDispatch();
   const handleCloseDrawer = useCallback(() => {
@@ -40,24 +51,51 @@ const AdditionalMenu = (closeDrawer, setCurrentStep, stepDone, setStepDone) => {
   const int_completed = useSelector(
     (state) => state?.global?.projectSettingsV1?.int_completed
   );
+  const is_onboarding_completed = useSelector(
+    (state) => state?.global?.currentProjectSettings?.is_onboarding_completed
+  );
+  const [isLoadingDone, setIsLoadingDone] = useState(false);
   const handleDoneDrawer = useCallback(() => {
-    dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
-    history.push('/');
-  }, []);
-  const { int_client_six_signal_key, int_factors_six_signal_key } = useSelector(
-    (state) => state?.global?.currentProjectSettings
-  );
-  const factors6SignalKeyRequested = useSelector(
-    (state) => state?.onBoardFlow?.factors6SignalKeyRequested
-  );
+    // dispatch({ type: TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL });
+    setIsLoadingDone(true);
+    if (is_onboarding_completed === true) {
+      setTimeout(() => {
+        setIsLoadingDone(false);
+        history.push('/');
+      }, 500);
+      return;
+    }
 
+    udpateProjectSettings(activeProject.id, {
+      is_onboarding_completed: true
+    })
+      .then(() => {
+        setIsLoadingDone(false);
+        history.push('/');
+      })
+      .catch((error) => {
+        setIsLoadingDone(false);
+        message.error(error);
+      });
+  }, []);
+  const {
+    int_client_six_signal_key,
+    int_factors_six_signal_key,
+    int_clear_bit,
+    is_deanonymization_requested
+  } = useSelector((state) => state?.global?.currentProjectSettings);
+
+  const activeProject = useSelector((state) => state?.global?.active_project);
   const { steps, currentStep } = useSelector((state) => state?.onBoardFlow);
   const isNextBtnEnabled = () => {
     if (currentStep === 1) {
       return int_completed;
     } else if (currentStep === 2) {
       return (
-        steps.step2 || int_client_six_signal_key || factors6SignalKeyRequested
+        int_client_six_signal_key ||
+        is_deanonymization_requested ||
+        int_factors_six_signal_key ||
+        int_clear_bit
       );
     } else if (currentStep === 3) {
       return steps.step3;
@@ -117,13 +155,15 @@ const AdditionalMenu = (closeDrawer, setCurrentStep, stepDone, setStepDone) => {
               Next <ArrowRightOutlined />
             </>
           ) : (
-            'Done'
+            <> {isLoadingDone === true ? <LoadingOutlined /> : ''} Done</>
           )}
         </Button>
       </Tooltip>
 
-      <div className={styles['closebtnc'] + ' ' + styles['btn']}>
-        <Button onClick={handleCloseDrawer}>Close</Button>
+      <div className={styles['closebtnc']}>
+        <Button className={styles['btn']} onClick={handleCloseDrawer}>
+          Close
+        </Button>
       </div>
     </div>
   );
@@ -132,9 +172,11 @@ const OnBoardHeader = ({
   closeDrawer,
   setCurrentStep,
   stepDone,
-  setStepDone
+  setStepDone,
+  udpateProjectSettings
 }) => {
   const history = useHistory();
+  const dispatch = useDispatch();
   const currentStep = useSelector((state) => state?.onBoardFlow?.currentStep);
   const int_completed = useSelector(
     (state) => state?.global?.projectSettingsV1?.int_completed
@@ -143,7 +185,7 @@ const OnBoardHeader = ({
     if (step === 1) {
       return 'Add the Javascript SDK';
     } else if (step === 2) {
-      return 'Integrations to push';
+      return 'Factors Deanonymisation';
     } else if (step === 3) {
       return 'Get alerts on Slack';
     } else {
@@ -154,7 +196,7 @@ const OnBoardHeader = ({
     <Row className={styles['headerContainer']}>
       <div>
         <Row>
-          {RenderLogo()} {RenderTitle(getTitle(currentStep))} <RenderStep />
+          {RenderLogo()} {RenderTitle(getTitle(currentStep))} <RenderStep />{' '}
         </Row>
       </div>
       <div>
@@ -164,10 +206,16 @@ const OnBoardHeader = ({
           setCurrentStep={setCurrentStep}
           stepDone={stepDone}
           setStepDone={setStepDone}
+          udpateProjectSettings={udpateProjectSettings}
         />
       </div>
     </Row>
   );
 };
 
-export default OnBoardHeader;
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project
+});
+export default connect(mapStateToProps, { udpateProjectSettings })(
+  OnBoardHeader
+);

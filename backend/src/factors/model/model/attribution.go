@@ -8,7 +8,6 @@ import (
 	C "factors/config"
 	U "factors/util"
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -72,6 +71,7 @@ const (
 	AttributionMethodFirstTouchNonDirect = "First_Touch_ND"
 	AttributionMethodLastTouch           = "Last_Touch"
 	AttributionMethodLastTouchNonDirect  = "Last_Touch_ND"
+	AttributionMethodLastCampaignTouch   = "Last_Campaign_Touch"
 	AttributionMethodLinear              = "Linear"
 	AttributionMethodUShaped             = "U_Shaped"
 	AttributionMethodTimeDecay           = "Time_Decay"
@@ -188,8 +188,6 @@ const (
 
 var AddedKeysForCampaign = []string{"ChannelName"}
 var AddedKeysForAdgroup = []string{"ChannelName", "Campaign"}
-var AddedKeysForSource = []string{"Campaign"}
-var AddedKeysForChannel = []string{"Campaign"}
 var AddedKeysForKeyword = []string{"ChannelName", "Campaign", "AdGroup", "MatchType"}
 var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR(%)", "Average CPC", "CPM", "ClickConversionRate(%)"}
 var AttributionFixedHeadersPostPostConversion = []string{"Cost Per Conversion", "Compare - Users", "Compare - Users (InfluenceRemove)", "Compare Cost Per Conversion"}
@@ -432,11 +430,6 @@ type MarketingReports struct {
 	CustomAdsCampaignDimensions map[string]MarketingData
 	// id = campaignID + KeyDelimiter + campaignName + KeyDelimiter + adgroupID + KeyDelimiter + adgroupName
 	CustomAdsAdgroupDimensions map[string]MarketingData
-
-	//relation between Campaign and Source
-	CampaignSourceMapping map[string]string
-	//relation between Campaign and Channel
-	CampaignChannelGroupMapping map[string]string
 }
 
 type MarketingData struct {
@@ -991,10 +984,6 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 			result.Headers = append(result.Headers, AddedKeysForAdgroup...)
 		case AttributionKeyKeyword:
 			result.Headers = append(result.Headers, AddedKeysForKeyword...)
-		case AttributionKeySource:
-			result.Headers = append(result.Headers, AddedKeysForSource...)
-		case AttributionKeyChannel:
-			result.Headers = append(result.Headers, AddedKeysForChannel...)
 		default:
 		}
 
@@ -1033,10 +1022,6 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 			result.Headers = append(result.Headers, AddedKeysForAdgroup...)
 		case AttributionKeyKeyword:
 			result.Headers = append(result.Headers, AddedKeysForKeyword...)
-		case AttributionKeySource:
-			result.Headers = append(result.Headers, AddedKeysForSource...)
-		case AttributionKeyChannel:
-			result.Headers = append(result.Headers, AddedKeysForChannel...)
 		default:
 		}
 
@@ -1133,10 +1118,6 @@ func GetKeyIndexOrAddedKeySize(attributionKey string) int {
 		addedKeysSize = 2
 	case AttributionKeyKeyword:
 		addedKeysSize = 4
-	case AttributionKeySource:
-		addedKeysSize = 1
-	case AttributionKeyChannel:
-		addedKeysSize = 1
 	default:
 	}
 	return addedKeysSize
@@ -1351,10 +1332,8 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 		nonMatchingRow = append(nonMatchingRow, customDims...)
 		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
 	case AttributionKeySource:
-		nonMatchingRow = append(nonMatchingRow, "none") // camp
 		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
 	case AttributionKeyChannel:
-		nonMatchingRow = append(nonMatchingRow, "none") // camp
 		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
 	default:
 		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
@@ -1824,13 +1803,8 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	logFields := log.Fields{"Method": "ProcessQuery"}
 	logCtx = *logCtx.WithFields(logFields)
 
-	// add CampaignData result based on Key Dimensions
-	_ = AddCampaignDataForSource(*attributionData, marketingReports, query)
-
-	// add CampaignData result based on Key Dimensions
-	_ = AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
 	if C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"attributionData": attributionData}).Info(" attributionData after AddCampaignDataForChannelGroup")
+		log.WithFields(log.Fields{"attributionData": attributionData}).Info(" attributionData before ProcessQuery")
 	}
 	for key, _ := range *attributionData {
 		//add key to attribution data
@@ -1922,20 +1896,6 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	marketingReports *MarketingReports, isCompare bool, kpiData map[string]KPIInfo) *QueryResult {
 
 	logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug"})
-
-	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData,
-			"BingAdsCampaignIDData":       marketingReports.BingAdsCampaignIDData,
-			"BingAdsCampaignKeyData":      marketingReports.BingAdsCampaignKeyData,
-			"CampaignSourceMapping":       marketingReports.CampaignSourceMapping,
-			"CampaignChannelGroupMapping": marketingReports.CampaignChannelGroupMapping}).Info("KPI Attribution data 1")
-	}
-
-	// add CampaignData result based on Key Dimensions
-	_ = AddCampaignDataForSource(*attributionData, marketingReports, query)
-
-	// add CampaignData result based on Key Dimensions
-	_ = AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
 
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData}).Info("KPI Attribution data 2")
@@ -2048,12 +2008,6 @@ func ProcessQueryUserKPI(query *AttributionQuery, attributionData *map[string]*A
 
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData}).Info("KPI Attribution data")
 
-	// add CampaignData result based on Key Dimensions
-	_ = AddCampaignDataForSource(*attributionData, marketingReports, query)
-
-	// add CampaignData result based on Key Dimensions
-	_ = AddCampaignDataForChannelGroup(*attributionData, marketingReports, query)
-
 	for key, _ := range *attributionData {
 		//add key to attribution data
 		addKeyToMarketingInfoForChannelOrSource(attributionData, key, query)
@@ -2143,122 +2097,6 @@ func ProcessQueryUserKPI(query *AttributionQuery, attributionData *map[string]*A
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
 
 	return result
-}
-
-// AddCampaignDataForSource add data campaign name wise
-func AddCampaignDataForSource(attributionData map[string]*AttributionData, reports *MarketingReports, query *AttributionQuery) error {
-
-	if query.AttributionKey != AttributionKeySource {
-		return nil
-	}
-
-	validHeadersDimensions := make(map[string]int)
-	for _, val := range query.AttributionKeyDimension {
-		if _, exists := KeyDimensionToHeaderMap[val]; !exists {
-			return errors.New("couldn't find the header value for given dimensions value")
-		}
-		validHeadersDimensions[KeyDimensionToHeaderMap[val]] = 1
-	}
-
-	CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
-	for campaignName, value := range CampaignNameWiseMap {
-		if _, ok := attributionData[reports.CampaignSourceMapping[campaignName]]; ok {
-
-			attributionData[reports.CampaignSourceMapping[campaignName]].Impressions += value.Impressions
-			attributionData[reports.CampaignSourceMapping[campaignName]].Clicks += value.Clicks
-			attributionData[reports.CampaignSourceMapping[campaignName]].Spend += value.Spend
-
-		}
-	}
-
-	return nil
-}
-
-// AddCampaignDataForChannelGroup add data campaign name wise
-func AddCampaignDataForChannelGroup(attributionData map[string]*AttributionData, reports *MarketingReports, query *AttributionQuery) error {
-
-	if query.AttributionKey != AttributionKeyChannel {
-		return nil
-	}
-
-	validHeadersDimensions := make(map[string]int)
-	for _, val := range query.AttributionKeyDimension {
-		if _, exists := KeyDimensionToHeaderMap[val]; !exists {
-			return errors.New("couldn't find the header value for given dimensions value")
-		}
-		validHeadersDimensions[KeyDimensionToHeaderMap[val]] = 1
-	}
-
-	CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
-	for campaignName, value := range CampaignNameWiseMap {
-		if _, ok := attributionData[reports.CampaignChannelGroupMapping[campaignName]]; ok {
-
-			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Impressions += value.Impressions
-			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Clicks += value.Clicks
-			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Spend += value.Spend
-
-		}
-	}
-
-	return nil
-}
-
-// AddCampaignDataForSourceV1 add data campaign name wise
-func AddCampaignDataForSourceV1(attributionData map[string]*AttributionData, reports *MarketingReports, query *AttributionQueryV1) error {
-
-	if query.AttributionKey != AttributionKeySource {
-		return nil
-	}
-
-	validHeadersDimensions := make(map[string]int)
-	for _, val := range query.AttributionKeyDimension {
-		if _, exists := KeyDimensionToHeaderMap[val]; !exists {
-			return errors.New("couldn't find the header value for given dimensions value")
-		}
-		validHeadersDimensions[KeyDimensionToHeaderMap[val]] = 1
-	}
-
-	CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
-	for campaignName, value := range CampaignNameWiseMap {
-		if _, ok := attributionData[reports.CampaignSourceMapping[campaignName]]; ok {
-
-			attributionData[reports.CampaignSourceMapping[campaignName]].Impressions += value.Impressions
-			attributionData[reports.CampaignSourceMapping[campaignName]].Clicks += value.Clicks
-			attributionData[reports.CampaignSourceMapping[campaignName]].Spend += value.Spend
-
-		}
-	}
-
-	return nil
-}
-
-// AddCampaignDataForChannelGroupV1 add data campaign name wise
-func AddCampaignDataForChannelGroupV1(attributionData map[string]*AttributionData, reports *MarketingReports, query *AttributionQueryV1) error {
-
-	if query.AttributionKey == AttributionKeyChannel {
-		return nil
-	}
-
-	validHeadersDimensions := make(map[string]int)
-	for _, val := range query.AttributionKeyDimension {
-		if _, exists := KeyDimensionToHeaderMap[val]; !exists {
-			return errors.New("couldn't find the header value for given dimensions value")
-		}
-		validHeadersDimensions[KeyDimensionToHeaderMap[val]] = 1
-	}
-
-	CampaignNameWiseMap := MarketingDataGroupByCampaignName(reports)
-	for campaignName, value := range CampaignNameWiseMap {
-		if _, ok := attributionData[reports.CampaignChannelGroupMapping[campaignName]]; ok {
-
-			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Impressions += value.Impressions
-			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Clicks += value.Clicks
-			attributionData[reports.CampaignChannelGroupMapping[campaignName]].Spend += value.Spend
-
-		}
-	}
-
-	return nil
 }
 
 // GetUpdatedRowsByDimensions updated the granular result with reduced dimensions
@@ -2458,6 +2296,44 @@ func SanitizeResult(result *QueryResult) {
 	var validIdx []int
 	for idx, colName := range result.Headers {
 		if !strings.Contains(colName, "(remove)") && !strings.Contains(colName, "InfluenceRemove") {
+			validIdx = append(validIdx, idx)
+		}
+	}
+
+	// Building new headers
+	var resultHeader []string
+	for _, val := range validIdx {
+		resultHeader = append(resultHeader, result.Headers[val])
+	}
+
+	// Building new rows
+	resultRows := make([][]interface{}, 0)
+	for _, row := range result.Rows {
+
+		for len(row) < len(result.Headers) {
+			row = append(row, float64(0))
+		}
+		resultRow := make([]interface{}, 0)
+		for _, val := range validIdx {
+
+			resultRow = append(resultRow, row[val])
+		}
+		resultRows = append(resultRows, resultRow)
+	}
+
+	result.Headers = resultHeader
+	result.Rows = resultRows
+}
+
+// SanitizeResultForSourceAndChannel removes marketing metrics for source and channel level report
+func SanitizeResultForSourceAndChannel(result *QueryResult) {
+
+	// Populating the valid index
+	var validIdx []int
+	for idx, colName := range result.Headers {
+		if colName != "Impressions" && colName != "Clicks" && colName != "Spend" &&
+			colName != "CTR(%)" && colName != "Average CPC" && colName != "CPM" && colName != "ClickConversionRate(%)" &&
+			!strings.Contains(colName, "Cost Per Conversion") && !strings.Contains(colName, "Return on Cost") {
 			validIdx = append(validIdx, idx)
 		}
 	}
@@ -3171,10 +3047,8 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].Channel, sessionKeyMarketingInfo[key].CampaignName, sessionKeyMarketingInfo[key].AdgroupName, sessionKeyMarketingInfo[key].KeywordMatchType)
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].KeywordName
 					case AttributionKeySource:
-						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].Source
 					case AttributionKeyChannel:
-						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].ChannelGroup
 					case AttributionKeyLandingPage:
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].LandingPageUrl
@@ -3205,74 +3079,6 @@ func AddPerformanceData(attributionData *map[string]*AttributionData, attributio
 	AddLinkedinPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
 	AddBingAdsPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
 	AddCustomAdsPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
-}
-
-func MarketingDataGroupByCampaignName(marketingReport *MarketingReports) map[string]MarketingData {
-	var marketingDataChannelNameWise = make(map[string]MarketingData)
-
-	values := reflect.ValueOf(*marketingReport)
-
-	for _, value := range marketingReport.AdwordsCampaignIDData {
-		_ = values
-		if value.Impressions == 0 && value.Clicks == 0 && value.Spend == 0 {
-			// ignore ZERO valued keys
-			continue
-		}
-
-		if _, ok := (marketingDataChannelNameWise)[value.CampaignName]; !ok {
-			marketingDataChannelNameWise[value.CampaignName] = value
-		}
-	}
-
-	for _, value := range marketingReport.FacebookCampaignIDData {
-		_ = values
-		if value.Impressions == 0 && value.Clicks == 0 && value.Spend == 0 {
-			// ignore ZERO valued keys
-			continue
-		}
-
-		if _, ok := (marketingDataChannelNameWise)[value.CampaignName]; !ok {
-			marketingDataChannelNameWise[value.CampaignName] = value
-		}
-	}
-
-	for _, value := range marketingReport.LinkedinCampaignIDData {
-		_ = values
-		if value.Impressions == 0 && value.Clicks == 0 && value.Spend == 0 {
-			// ignore ZERO valued keys
-			continue
-		}
-
-		if _, ok := (marketingDataChannelNameWise)[value.CampaignName]; !ok {
-			marketingDataChannelNameWise[value.CampaignName] = value
-		}
-	}
-
-	for _, value := range marketingReport.BingAdsCampaignIDData {
-		_ = values
-		if value.Impressions == 0 && value.Clicks == 0 && value.Spend == 0 {
-			// ignore ZERO valued keys
-			continue
-		}
-
-		if _, ok := (marketingDataChannelNameWise)[value.CampaignName]; !ok {
-			marketingDataChannelNameWise[value.CampaignName] = value
-		}
-	}
-
-	for _, value := range marketingReport.CustomAdsCampaignIDData {
-		_ = values
-		if value.Impressions == 0 && value.Clicks == 0 && value.Spend == 0 {
-			// ignore ZERO valued keys
-			continue
-		}
-
-		if _, ok := (marketingDataChannelNameWise)[value.CampaignName]; !ok {
-			marketingDataChannelNameWise[value.CampaignName] = value
-		}
-	}
-
-	return marketingDataChannelNameWise
 }
 
 func AddAdwordsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
@@ -3716,16 +3522,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 				attributionKeyName = attributionIdBasedOnEnrichment
 			} else {
 				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, CampaignID: campaignID, AdgroupID: adgroupID})
-			}
-		} else if query.AttributionKey == AttributionKeySource && U.IsNonEmptyKey(sourceName) {
-
-			if _, ok := reports.CampaignSourceMapping[marketingValues.CampaignName]; !ok {
-				reports.CampaignSourceMapping[marketingValues.CampaignName] = sourceName
-			}
-		} else if query.AttributionKey == AttributionKeyChannel && U.IsNonEmptyKey(channelGroup) {
-
-			if _, ok := reports.CampaignChannelGroupMapping[marketingValues.CampaignName]; !ok {
-				reports.CampaignChannelGroupMapping[marketingValues.CampaignName] = channelGroup
 			}
 		}
 

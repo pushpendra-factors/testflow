@@ -20,6 +20,11 @@
     & > * {
       margin: 0 6px;
     }
+    button {
+      padding: 20px !important;
+      display: flex !important;
+      align-items: center !important;
+    }
     .btn {
       border-color: #dedede;
       &:hover {

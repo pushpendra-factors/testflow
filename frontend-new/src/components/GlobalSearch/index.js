@@ -741,7 +741,7 @@ const GlobalSearch = () => {
         {
           name: 'Website visitors identification',
           fullName: 'Website visitors identification',
-          description: 'Coming Soon', // See visiting and high-intent accounts
+          description: 'See visiting and high-intent accounts', // See visiting and high-intent accounts
           icon: (
             <SVG
               name={`WebsiteVisitorsIdentification`}
@@ -749,7 +749,7 @@ const GlobalSearch = () => {
               color={'blue'}
             />
           ),
-          path: '/',
+          path: '/reports/6_signal',
           disabled: true
         }
       ]

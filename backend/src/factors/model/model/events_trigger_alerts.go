@@ -35,6 +35,7 @@ type EventTriggerAlert struct {
 	Title             string          `gorm:"column:title; not null" json:"title"`
 	EventTriggerAlert *postgres.Jsonb `json:"event_trigger_alert"`
 	CreatedBy         string          `gorm:"column:created_by" json:"created_by"`
+	SlackChannelAssociatedBy string   `gorm:"column:slack_channel_associated_by" json:"slack_channel_associated_by"`
 	LastAlertAt       time.Time       `json:"last_alert_at"`
 	CreatedAt         time.Time       `gorm:"column:created_at; autoCreateTime" json:"created_at"`
 	UpdatedAt         time.Time       `gorm:"column:updated_at; autoUpdateTime" json:"updated_at"`
@@ -55,6 +56,7 @@ type EventTriggerAlertConfig struct {
 	Slack               bool            `json:"slack"`
 	SlackChannels       *postgres.Jsonb `json:"slack_channels"`
 	Webhook             bool            `json:"webhook"`
+	Secret              string          `json:"secret"`
 	WebhookURL          string          `json:"url"`
 }
 
@@ -76,9 +78,18 @@ type EventTriggerAlertMessage struct {
 	Message         string
 }
 
+type EventTriggerWebhook struct {
+	Title           string          `json:"title"`
+	Event           string          `json:"event"`
+	MessageProperty *postgres.Jsonb `json:"message_property"`
+	Message         string          `json:"message"`
+	Url             string          `json:"url"`
+	Secret          string          `json:"secret"`
+}
+
 type MessagePropMapStruct struct {
 	DisplayName string
-	PropValue interface{}
+	PropValue   interface{}
 }
 
 func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTriggerAlert) error {
