@@ -920,6 +920,8 @@ func GetAttributionKeyForOffline(attributionKey string) (string, error) {
 		return U.EP_SOURCE, nil
 	} else if attributionKey == AttributionKeyChannel {
 		return U.EP_CHANNEL, nil
+	} else if attributionKey == AttributionKeyAdgroup {
+		return U.EP_ADGROUP, nil
 	}
 	return "", errors.New("invalid query properties for offline touch point")
 }
@@ -3309,13 +3311,16 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
 		var userIDNull sql.NullString
 		var campaignIDNull sql.NullString
 		var campaignNameNull sql.NullString
+		var adgroupIDNull sql.NullString
+		var adgroupNameNull sql.NullString
 		var sourceNameNull sql.NullString
 		var channelGroupNull sql.NullString
 		var typeNull sql.NullString
 		var attributionIdNull sql.NullString
 		var timestampNull sql.NullInt64
 
-		if err := rows.Scan(&userIDNull, &campaignIDNull, &campaignNameNull, &sourceNameNull, &channelGroupNull, &typeNull, &attributionIdNull, &timestampNull); err != nil {
+		if err := rows.Scan(&userIDNull, &campaignIDNull, &campaignNameNull, &adgroupIDNull, &adgroupNameNull,
+			&sourceNameNull, &channelGroupNull, &typeNull, &attributionIdNull, &timestampNull); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row (OTP). Continuing")
 			continue
 		}
@@ -3323,6 +3328,8 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
 		var userID string
 		var campaignID string
 		var campaignName string
+		var adgroupID string
+		var adgroupName string
 		var sourceName string
 		var channelGroup string
 		var typeName string
@@ -3332,6 +3339,8 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
 		userID = U.IfThenElse(userIDNull.Valid, userIDNull.String, PropertyValueNone).(string)
 		campaignID = U.IfThenElse(campaignIDNull.Valid, campaignIDNull.String, PropertyValueNone).(string)
 		campaignName = U.IfThenElse(campaignNameNull.Valid, campaignNameNull.String, PropertyValueNone).(string)
+		adgroupID = U.IfThenElse(adgroupIDNull.Valid, adgroupIDNull.String, PropertyValueNone).(string)
+		adgroupName = U.IfThenElse(adgroupNameNull.Valid, adgroupNameNull.String, PropertyValueNone).(string)
 		sourceName = U.IfThenElse(sourceNameNull.Valid, sourceNameNull.String, PropertyValueNone).(string)
 		channelGroup = U.IfThenElse(channelGroupNull.Valid, channelGroupNull.String, PropertyValueNone).(string)
 		typeName = U.IfThenElse(typeNull.Valid, typeNull.String, PropertyValueNone).(string)
@@ -3353,7 +3362,8 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
 			userIdsWithSession = append(userIdsWithSession, userID)
 			userIdMap[userID] = true
 		}
-		marketingValues := MarketingData{Channel: SessionChannelOTP, CampaignID: campaignID, CampaignName: campaignName, AdgroupID: PropertyValueNone, AdgroupName: PropertyValueNone, KeywordName: PropertyValueNone, KeywordMatchType: PropertyValueNone,
+		marketingValues := MarketingData{Channel: SessionChannelOTP, CampaignID: campaignID, CampaignName: campaignName, AdgroupID: adgroupID, AdgroupName: adgroupName,
+			KeywordName: PropertyValueNone, KeywordMatchType: PropertyValueNone,
 			Source: sourceName, TypeName: typeName, ChannelGroup: channelGroup}
 
 		// Name
