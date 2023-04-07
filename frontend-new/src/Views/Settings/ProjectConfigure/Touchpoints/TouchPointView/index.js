@@ -37,6 +37,7 @@ import {
 } from '../utils';
 import { toCapitalCase } from 'Utils/global';
 import styles from './index.module.scss';
+import logger from 'Utils/logger';
 
 const TouchpointView = ({
   activeProject,
@@ -68,6 +69,8 @@ const TouchpointView = ({
 
   const [extraPropBtn, setExtraPropBtn] = useState(false);
   const [initialRender, setInitialRender] = useState(true);
+
+  const [propertyValArray, setPropertyValArray] = useState(null);
 
   //property map
   const [propertyMap, setPropertyMap] = useState({
@@ -157,6 +160,19 @@ const TouchpointView = ({
       }
     }
   }, [rule]);
+
+  useEffect(() => {
+    if(propertyValArray) {
+      propertyValArray.then((res) =>{
+        newFilterStates.forEach((filt, index) => {
+          const prop = filt.props;
+          const propToCall = prop.length > 3 ? prop[1] : prop[0];
+          setPropData(propToCall, res[index]?.data)
+        })
+      })
+    }
+  }, [propertyValArray])
+
   const reversePropertyMap = (properties) => {
     //Gets the extra Properties Filtered and return the defined properties.
     const propMap = { ...properties };
@@ -176,17 +192,13 @@ const TouchpointView = ({
   };
 
   const chainEventPropertyValues = (filters) => {
-    const eventToCall = getEventToCall();
-    filters.forEach((filt) => {
+    const filterData = Promise.all(filters.map(async filt => {
+      const eventToCall = getEventToCall();
       const prop = filt.props;
       const propToCall = prop.length > 3 ? prop[1] : prop[0];
-      const propCallBack = (data) => setPropData(propToCall, data);
-      fetchEventPropertyValues(activeProject.id, eventToCall, propToCall).then(
-        (res) => {
-          propCallBack(res.data);
-        }
-      );
-    });
+      return await fetchEventPropertyValues(activeProject.id, eventToCall, propToCall);
+    }));
+    setPropertyValArray(filterData);
   };
 
   const setPropData = (propToCall, data) => {
