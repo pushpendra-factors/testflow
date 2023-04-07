@@ -263,6 +263,11 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
             payload: { step: '2', state: true }
           });
           message.success('6Signal integration successful');
+          sendSlackNotification(
+            currentAgent.email,
+            activeProject.name,
+            '6Signal'
+          );
           resolve(true);
         })
         .catch((err) => {
