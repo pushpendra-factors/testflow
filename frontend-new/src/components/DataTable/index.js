@@ -29,10 +29,10 @@ function DataTable({
   appliedFilters,
   setAppliedFilters,
   breakupHeading,
-  tableLayout
+  tableLayout,
+  rowClassName
 }) {
   const componentRef = useRef(null);
-  const downloadBtnRef = useRef(null);
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [searchBar, toggleSearchBar] = useToggle(false);
   const history = useHistory();
@@ -101,6 +101,7 @@ function DataTable({
         />
       </ControlledComponent>
       <Table
+        rowClassName={rowClassName}
         pagination={
           !isDashboardWidget && isPaginationEnabled
             ? {
