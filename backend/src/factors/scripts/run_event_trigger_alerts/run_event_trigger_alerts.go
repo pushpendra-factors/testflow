@@ -90,14 +90,22 @@ func main() {
 	defer db.Close()
 
 	conf := make(map[string]interface{})
-	finalStatus := make(map[int64]interface{})
-	var success bool
+	finalStatus := make(map[string]interface{})
+	success := true
+	successCount, failureCount := 0, 0
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 	for _, projectID := range projectIDs {
-		status, success := EventTriggerAlertsSender(projectID, conf)
-		if status["err"] != nil || !success {
+		projectSuccess := false 
+		successCount, failureCount, projectSuccess = EventTriggerAlertsSender(projectID, conf)
+		if !projectSuccess {
 			log.Error("Event Trigger Alert job failing for projectID: ", projectID)
-			finalStatus[projectID] = status
+		}
+		success = success && projectSuccess
+		if(successCount > 0){
+			finalStatus[fmt.Sprintf("Success-%v",projectID)] = successCount
+		}
+		if(failureCount > 0){
+			finalStatus[fmt.Sprintf("Failure-%v",projectID)] = failureCount
 		}
 	}
 	if !success {
@@ -117,21 +125,20 @@ func getSortedSetCacheKey(prefix string, projectId int64) (*cacheRedis.Key, erro
 	return key, err
 }
 
-func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
+func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (int, int, bool) {
 
-	status := make(map[string]interface{})
-	var ok int
+	ok := int(0)
 
 	ssKey, err := getSortedSetCacheKey(SortedSetKeyPrefix, projectID)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch cacheKey for sortedSet")
-		return nil, false
+		return -1, -1, false
 	}
 
 	allKeys, err := cacheRedis.ZrangeWithScoresPersistent(true, ssKey)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all alert keys for project: ", projectID)
-		return nil, false
+		return -1, -1, false
 	}
 
 	for key := range allKeys {
@@ -153,7 +160,6 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 		err = U.DecodeJSONStringToStructType(cacheStr, &msg)
 		if err != nil {
 			log.WithError(err).Error("failed to decode alert for event_trigger_alert")
-			status["err"] = err
 			continue
 		}
 
@@ -167,14 +173,12 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 			}
 			ok++
 		}
-
 		cc, err := cacheRedis.ZRemPersistent(ssKey, true, key)
 		if err != nil || cc != 1 {
 			log.WithError(err).Error("Cannot remove alert by zrem")
 		}
 	}
-
-	return status, ok == len(allKeys)
+	return ok, len(allKeys)-ok, ok == len(allKeys)
 }
 
 func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEventTriggerAlert, alertID string) bool {
