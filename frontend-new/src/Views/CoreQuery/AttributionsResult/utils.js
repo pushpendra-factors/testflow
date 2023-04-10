@@ -615,7 +615,7 @@ export const getTableColumns = (
       render: (d) => renderMetric(d, comparison_data)
     }));
 
-  const showCPC = metrics.find(
+  const showCPC = ['Source', 'ChannelGroup'].includes(touchpoint)? false :  metrics.find(
     (elem) => elem.header === 'Cost Per Conversion'
   )?.enabled;
   const showCR = metrics.find((elem) => elem.header === 'ALL CR')?.enabled;
