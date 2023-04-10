@@ -222,7 +222,8 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
         sendSlackNotification(
           currentAgent.email,
           activeProject.name,
-          'factors6Signal_Test'
+          'factors6Signal_Test',
+          `User ${currentAgent.email} from project ${activeProject.name} requested to enable visitor identification`
         );
         if (factors6SignalKeyRequested === false)
           dispatch({
@@ -262,6 +263,11 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
             payload: { step: '2', state: true }
           });
           message.success('6Signal integration successful');
+          sendSlackNotification(
+            currentAgent.email,
+            activeProject.name,
+            '6Signal'
+          );
           resolve(true);
         })
         .catch((err) => {

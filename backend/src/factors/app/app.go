@@ -212,7 +212,6 @@ func main() {
 	teamsAppClientID := flag.String("teams_app_client_id", "", "")
 	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
 	teamsApplicationID := flag.String("teams_application_id", "", "")
-
 	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 	flag.Parse()
 

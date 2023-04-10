@@ -33,6 +33,8 @@ func (store *MemSQL) fetchOTPSessions(projectID int64, offlineTouchPointEventNam
 	queryUserOTPSessions := "SELECT sessions.user_id, " +
 		caseSelectStmt + " AS campaignID, " +
 		caseSelectStmt + " AS campaignName, " +
+		caseSelectStmt + " AS adgroupID, " +
+		caseSelectStmt + " AS adgroupName, " +
 		caseSelectStmt + " AS source, " +
 		caseSelectStmt + " AS channel, " +
 		caseSelectStmt + " AS type, " +
@@ -44,6 +46,8 @@ func (store *MemSQL) fetchOTPSessions(projectID int64, offlineTouchPointEventNam
 	qParams = append(qParams,
 		U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID,
 		U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN,
+		U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID,
+		U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP,
 		U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE,
 		U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 		U.EP_TYPE, model.PropertyValueNone, U.EP_TYPE, model.PropertyValueNone, U.EP_TYPE,
@@ -86,6 +90,8 @@ func (store *MemSQL) fetchOTPSessionsV1(projectID int64, offlineTouchPointEventN
 	queryUserOTPSessions := "SELECT sessions.user_id, " +
 		caseSelectStmt + " AS campaignID, " +
 		caseSelectStmt + " AS campaignName, " +
+		caseSelectStmt + " AS adgroupID, " +
+		caseSelectStmt + " AS adgroupName, " +
 		caseSelectStmt + " AS source, " +
 		caseSelectStmt + " AS channel, " +
 		caseSelectStmt + " AS type, " +
@@ -97,6 +103,8 @@ func (store *MemSQL) fetchOTPSessionsV1(projectID int64, offlineTouchPointEventN
 	qParams = append(qParams,
 		U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID,
 		U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN,
+		U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID,
+		U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP,
 		U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE,
 		U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 		U.EP_TYPE, model.PropertyValueNone, U.EP_TYPE, model.PropertyValueNone, U.EP_TYPE,

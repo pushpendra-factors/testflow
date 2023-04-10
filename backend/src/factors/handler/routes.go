@@ -51,7 +51,7 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
-	r.GET(routePrefix+"/.well-known/microsoft-identity-association.json", teams.VerifyPublisherDomainTeams)
+	r.GET(routePrefix+"/.well-known/microsoft-identity-association.json",teams.VerifyPublisherDomainTeams)
 
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
