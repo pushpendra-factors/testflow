@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
-import { SVG, Text } from 'factorsComponents';
+import { SVG } from 'Components/factorsComponents';
 import { Button, InputNumber, Tooltip, Select, DatePicker, Input } from 'antd';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import FaDatepicker from 'Components/FaDatepicker';
@@ -14,8 +14,8 @@ import {
   dateTimeSelect
 } from 'Components/FaFilterSelect/utils';
 import { DISPLAY_PROP, OPERATORS } from 'Utils/constants';
-import { toCapitalCase } from '../../../../utils/global';
-import { TOOLTIP_CONSTANTS } from '../../../../constants/tooltips.constans';
+import { toCapitalCase } from 'Utils/global';
+import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -27,7 +27,7 @@ const deltaPicker = [OPERATORS['inThePrevious'], OPERATORS['notInThePrevious']];
 const currentPicker = [OPERATORS['inTheCurrent'], OPERATORS['notInTheCurrent']];
 const datePicker = [OPERATORS['before'], OPERATORS['since']];
 
-const GlobalFilterSelect = ({
+const FilterSelect = ({
   propOpts = [],
   operatorOpts = defaultOpProps,
   valueOpts = [],
@@ -196,7 +196,6 @@ const GlobalFilterSelect = ({
         ? eventPropNames[propState.name]
         : propState.name;
     }
-
     if (!propState.name) {
       propertyName = 'Select Property';
     }
@@ -672,6 +671,7 @@ const GlobalFilterSelect = ({
       </div>
     );
   };
+
   return (
     <div className={styles.filter}>
       {renderPropSelect()}
@@ -689,4 +689,4 @@ const GlobalFilterSelect = ({
   );
 };
 
-export default GlobalFilterSelect;
+export default FilterSelect;

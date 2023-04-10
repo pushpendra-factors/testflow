@@ -459,7 +459,7 @@ function UserProfiles({
             event={event}
             queries={listEvents}
             groupAnalysis={activeSegment?.query?.grpa}
-            displayMode
+            viewMode
           />
         </div>
       );
@@ -497,7 +497,7 @@ function UserProfiles({
             profileType='user'
             source={timelinePayload.source}
             filters={filters}
-            displayMode
+            viewMode
           ></PropertyFilter>
         </div>
       </div>

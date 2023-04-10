@@ -18,7 +18,8 @@ const whiteListedAccounts = [
   'solutions@factors.ai',
   'sonali@factors.ai',
   'praveenr@factors.ai',
-  'janani@factors.ai'
+  'janani@factors.ai',
+  'vikas@factors.ai'
 ];
 
 const MenuItems = {

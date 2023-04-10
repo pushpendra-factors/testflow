@@ -5,14 +5,18 @@ import styles from './index.module.scss';
 import { SVG } from 'Components/factorsComponents';
 import { Button } from 'antd';
 
-import GlobalFilterBlock from './GlobalFilterBlock';
-import ORButton from '../../ORButton';
-import { compareFilters, groupFilters } from '../../../utils/global';
+import ORButton from '../ORButton';
+import { compareFilters, groupFilters } from '../../utils/global';
+import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 
-const GLobalFilter = ({ filters = [], setGlobalFilters, groupName }) => {
-  const userProperties = useSelector((state) => state.coreQuery.userProperties);
-  const groupProperties = useSelector(
-    (state) => state.coreQuery.groupProperties
+const GlobalFilter = ({
+  filters = [],
+  setGlobalFilters,
+  groupName = 'users',
+  event
+}) => {
+  const { userProperties, groupProperties, eventProperties } = useSelector(
+    (state) => state.coreQuery
   );
   const activeProject = useSelector((state) => state.global.active_project);
   const [filterProps, setFilterProperties] = useState({});
@@ -21,16 +25,18 @@ const GLobalFilter = ({ filters = [], setGlobalFilters, groupName }) => {
 
   useEffect(() => {
     const props = Object.assign({}, filterProps);
-    if (groupName === 'users') {
-      props['user'] = userProperties;
-      props['group'] = [];
-    } else {
-      props['user'] = [];
-      props['group'] = groupProperties[groupName];
+    if (event?.label) {
+      props.event = eventProperties[event.label];
     }
-
+    if (groupName === 'users') {
+      props.user = userProperties;
+      props.group = [];
+    } else {
+      props.user = [];
+      props.group = groupProperties[groupName];
+    }
     setFilterProperties(props);
-  }, [userProperties, groupProperties, groupName]);
+  }, [userProperties, groupProperties, eventProperties, event, groupName]);
 
   const delFilter = (index) => {
     const filtersSorted = [...filters];
@@ -71,21 +77,18 @@ const GLobalFilter = ({ filters = [], setGlobalFilters, groupName }) => {
           filtrs.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index} className={`mt-2`}>
-                <GlobalFilterBlock
-                  activeProject={activeProject}
+                <FilterWrapper
+                  event={event}
+                  projectID={activeProject?.id}
                   index={index}
-                  filterType={'analytics'}
                   filter={filt}
-                  extraClass={styles.filterSelect}
-                  delIcon={`remove`}
                   deleteFilter={delFilter}
                   insertFilter={(val, index) => editFilter(index, val)}
                   closeFilter={closeFilter}
                   filterProps={filterProps}
-                  propsConstants={['user']}
                   refValue={refValue}
                   groupName={groupName}
-                ></GlobalFilterBlock>
+                />
               </div>
               {index !== orFilterIndex && (
                 <div className={`mt-2`}>
@@ -94,21 +97,17 @@ const GLobalFilter = ({ filters = [], setGlobalFilters, groupName }) => {
               )}
               {index === orFilterIndex && (
                 <div key={'init'} className={`mt-2`}>
-                  <GlobalFilterBlock
-                    activeProject={activeProject}
-                    blockType={'global'}
-                    filterType={'analytics'}
-                    extraClass={styles.filterSelect}
-                    delBtnClass={styles.filterDelBtn}
+                  <FilterWrapper
+                    event={event}
+                    projectID={activeProject?.id}
                     filterProps={filterProps}
-                    propsConstants={Object.keys(filterProps)}
                     insertFilter={addFilter}
                     deleteFilter={() => closeFilter()}
                     closeFilter={closeFilter}
                     refValue={refValue}
                     showOr={true}
                     groupName={groupName}
-                  ></GlobalFilterBlock>
+                  />
                 </div>
               )}
             </div>
@@ -118,39 +117,33 @@ const GLobalFilter = ({ filters = [], setGlobalFilters, groupName }) => {
           filtrs.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index} className={`mt-2`}>
-                <GlobalFilterBlock
-                  activeProject={activeProject}
+                <FilterWrapper
+                  event={event}
+                  projectID={activeProject?.id}
                   index={index}
-                  filterType={'analytics'}
                   filter={filtersGr[0]}
-                  extraClass={styles.filterSelect}
-                  delIcon={`remove`}
                   deleteFilter={delFilter}
                   insertFilter={(val, index) => editFilter(index, val)}
                   closeFilter={closeFilter}
                   filterProps={filterProps}
-                  propsConstants={['user', 'group']}
                   refValue={refValue}
                   groupName={groupName}
-                ></GlobalFilterBlock>
+                />
               </div>
               <div key={index + 1} className={`mt-2`}>
-                <GlobalFilterBlock
-                  activeProject={activeProject}
+                <FilterWrapper
+                  event={event}
+                  projectID={activeProject?.id}
                   index={index + 1}
-                  filterType={'analytics'}
                   filter={filtersGr[1]}
-                  extraClass={styles.filterSelect}
-                  delIcon={`remove`}
                   deleteFilter={delFilter}
                   insertFilter={(val, index) => editFilter(index, val)}
                   closeFilter={closeFilter}
                   filterProps={filterProps}
-                  propsConstants={['user', 'group']}
                   refValue={refValue}
                   showOr={true}
                   groupName={groupName}
-                ></GlobalFilterBlock>
+                />
               </div>
             </div>
           );
@@ -161,20 +154,16 @@ const GLobalFilter = ({ filters = [], setGlobalFilters, groupName }) => {
     if (filterDD) {
       filtrs.push(
         <div key={filtrs.length} className={`mt-2`}>
-          <GlobalFilterBlock
-            activeProject={activeProject}
-            blockType={'global'}
-            filterType={'analytics'}
-            extraClass={styles.filterSelect}
-            delBtnClass={styles.filterDelBtn}
+          <FilterWrapper
+            event={event}
+            projectID={activeProject?.id}
             filterProps={filterProps}
-            propsConstants={Object.keys(filterProps)}
             insertFilter={addFilter}
             deleteFilter={() => closeFilter()}
             closeFilter={closeFilter}
             refValue={lastRef + 1}
             groupName={groupName}
-          ></GlobalFilterBlock>
+          />
         </div>
       );
     } else {
@@ -195,4 +184,4 @@ const GLobalFilter = ({ filters = [], setGlobalFilters, groupName }) => {
   }
 };
 
-export default GLobalFilter;
+export default GlobalFilter;

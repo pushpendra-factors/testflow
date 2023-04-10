@@ -518,7 +518,7 @@ function AccountProfiles({
             index={index + 1}
             event={event}
             queries={listEvents}
-            displayMode
+            viewMode
           />
         </div>
       );
@@ -553,10 +553,10 @@ function AccountProfiles({
         <div className='content'>
           <PropertyFilter
             filtersLimit={10}
-            profileType='user'
+            profileType='account'
             source={accountPayload.source}
             filters={filters}
-            displayMode
+            viewMode
           ></PropertyFilter>
         </div>
       </div>

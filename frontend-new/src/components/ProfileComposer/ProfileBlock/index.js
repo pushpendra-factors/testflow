@@ -3,7 +3,6 @@ import { SVG, Text } from '../../factorsComponents';
 import styles from './index.module.scss';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { connect } from 'react-redux';
-import ProfileFilterWrapper from '../ProfileFilterWrapper';
 import FaSelect from 'Components/FaSelect';
 import {
   ProfileMapper,
@@ -16,6 +15,7 @@ import { useDispatch } from 'react-redux';
 import ORButton from '../../ORButton';
 import { compareFilters, groupFilters } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
+import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 
 function ProfileBlock({
   index,
@@ -31,7 +31,6 @@ function ProfileBlock({
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
-  const [moreOptions, setMoreOptions] = useState(false);
   const [filterProps, setFilterProperties] = useState({
     user: []
   });
@@ -85,11 +84,11 @@ function ProfileBlock({
     }
     const assignFilterProps = Object.assign({}, filterProps);
     if (groupAnalysis === 'users') {
-      assignFilterProps['user'] = userProperties;
-      assignFilterProps['group'] = [];
+      assignFilterProps.user = userProperties;
+      assignFilterProps.group = [];
     } else {
-      assignFilterProps['user'] = [];
-      assignFilterProps['group'] = groupProperties[groupAnalysis];
+      assignFilterProps.user = [];
+      assignFilterProps.group = groupProperties[groupAnalysis];
     }
     setFilterProperties(assignFilterProps);
   }, [userProperties, groupProperties, groupAnalysis]);
@@ -104,7 +103,7 @@ function ProfileBlock({
 
   const selectProfile = () => {
     return (
-      <div className={`${styles.query_block__event_selector}`}>
+      <div className='absolute top-0'>
         {isDDVisible ? (
           <FaSelect
             options={profileOptions[groupAnalysis]}
@@ -156,16 +155,17 @@ function ProfileBlock({
 
   const selectEventFilter = (refValue) => {
     return (
-      <ProfileFilterWrapper
+      <FilterWrapper
+        hasPrefix
         filterProps={filterProps}
-        activeProject={activeProject}
+        projectID={activeProject?.id}
         event={event}
         deleteFilter={closeFilter}
         insertFilter={insertFilters}
         closeFilter={closeFilter}
         refValue={refValue}
         groupName={groupAnalysis}
-      ></ProfileFilterWrapper>
+      />
     );
   };
 
@@ -175,7 +175,6 @@ function ProfileBlock({
     } else {
       showModal();
     }
-    setMoreOptions(false);
   };
   const getMenu = (filterOptions) => (
     <Menu style={{ minWidth: '200px', padding: '10px' }}>
@@ -212,19 +211,6 @@ function ProfileBlock({
               <SVG name='filter'></SVG>
             </Button>
           </Tooltip>
-
-          {/* {moreOptions ? (
-            <FaSelect
-              options={[
-                ['Filter By', 'filter'],
-                [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
-              ]}
-              optionClick={(val) => setAdditionalactions(val)}
-              onClickOutside={() => setMoreOptions(false)}
-            ></FaSelect>
-          ) : (
-            false
-          )} */}
           <AliasModal
             visible={isModalVisible}
             event={ReverseProfileMapper[event.label][groupAnalysis]}
@@ -263,33 +249,35 @@ function ProfileBlock({
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-                <ProfileFilterWrapper
+                <FilterWrapper
+                  hasPrefix
                   index={index}
                   filter={filter}
                   event={event}
                   filterProps={filterProps}
-                  activeProject={activeProject}
+                  projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   refValue={refValue}
-                ></ProfileFilterWrapper>
+                />
               </div>
               {index !== orFilterIndex && (
                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex} />
               )}
               {index === orFilterIndex && (
                 <div key={'init'}>
-                  <ProfileFilterWrapper
+                  <FilterWrapper
+                    hasPrefix
                     filterProps={filterProps}
-                    activeProject={activeProject}
+                    projectID={activeProject?.id}
                     event={event}
                     deleteFilter={closeFilter}
                     insertFilter={insertFilters}
                     closeFilter={closeFilter}
                     refValue={refValue}
                     showOr={true}
-                  ></ProfileFilterWrapper>
+                  />
                 </div>
               )}
             </div>
@@ -299,31 +287,33 @@ function ProfileBlock({
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-                <ProfileFilterWrapper
+                <FilterWrapper
+                  hasPrefix
                   index={index}
                   filter={filtersGr[0]}
                   event={event}
                   filterProps={filterProps}
-                  activeProject={activeProject}
+                  projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   refValue={refValue}
-                ></ProfileFilterWrapper>
+                />
               </div>
               <div key={index + 1}>
-                <ProfileFilterWrapper
+                <FilterWrapper
+                  hasPrefix
                   index={index + 1}
                   filter={filtersGr[1]}
                   event={event}
                   filterProps={filterProps}
-                  activeProject={activeProject}
+                  projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   refValue={refValue}
                   showOr={true}
-                ></ProfileFilterWrapper>
+                />
               </div>
             </div>
           );
@@ -368,7 +358,6 @@ function ProfileBlock({
     );
   }
   let filterOptions = [
-    // ['Filter By', 'filter'],
     [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
   ];
   return (
@@ -425,7 +414,7 @@ function ProfileBlock({
               {selectProfile()}
             </Tooltip>
           </div>
-          {filterOptions.length != 0 ? (
+          {filterOptions.length !== 0 ? (
             <Dropdown
               placement='bottomLeft'
               overlay={getMenu(filterOptions)}

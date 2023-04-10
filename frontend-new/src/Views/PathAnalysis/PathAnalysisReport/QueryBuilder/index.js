@@ -1,33 +1,50 @@
-import React, { useState, useContext, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 // import SavedGoals from './savedList';
-import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
-import { Button, Select, message, Checkbox, Tooltip, Modal, Form, Input } from 'antd';
+import { Text, SVG } from 'factorsComponents';
+import {
+  Button,
+  Select,
+  message,
+  Checkbox,
+  Tooltip,
+  Modal,
+  Form,
+  Input
+} from 'antd';
 import styles from './index.module.scss';
-import { connect, useSelector } from 'react-redux';
-import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
+import { connect } from 'react-redux';
 import QueryBlock from './QueryBlock';
-import { deleteGroupByForEvent, getUserProperties } from 'Reducers/coreQuery/middleware';
-import { fetchSavedPathAnalysis, createPathPathAnalysisQuery } from 'Reducers/pathAnalysis';
+import {
+  deleteGroupByForEvent,
+  getGroupProperties,
+  getUserProperties
+} from 'Reducers/coreQuery/middleware';
+import {
+  fetchSavedPathAnalysis,
+  createPathPathAnalysisQuery
+} from 'Reducers/pathAnalysis';
 import { useHistory } from 'react-router-dom';
 import FaDatepicker from 'Components/FaDatepicker';
 import { useEffect } from 'react';
 import moment from 'moment';
-import GLobalFilter from './GlobalFilter';
-import { getGlobalFilters, getGlobalFiltersfromSavedState } from './utils'
+import { getGlobalFilters, getGlobalFiltersfromSavedState } from './utils';
 import _ from 'lodash';
 import FaSelect from 'Components/FaSelect';
 import { fetchGroups } from 'Reducers/coreQuery/services';
+import GlobalFilter from 'Components/GlobalFilter';
 
 const QueryBuilder = ({
   queryOptions = {},
-  queryType = "", 
+  queryType = '',
   fetchSavedPathAnalysis,
-  createPathPathAnalysisQuery, 
+  createPathPathAnalysisQuery,
   fetchGroups,
   activeProject,
   activeQuery,
-  groupOpts
-}) => { 
+  groupOpts,
+  getGroupProperties,
+  getUserProperties
+}) => {
   const [singleQueries, setSingleQueries] = useState([]);
   const [globalFilters, setGlobalFilters] = useState([]);
   const [multipleQueries, setMultipleQueries] = useState([]);
@@ -47,7 +64,16 @@ const QueryBuilder = ({
 
   useEffect(() => {
     fetchGroups(activeProject.id);
-  }, [activeProject]);
+  }, [activeProject?.id]);
+
+  useEffect(() => {
+    console.log('groupCategory: ', groupCategory);
+    if (groupCategory === 'users') {
+      getUserProperties(activeProject?.id);
+    } else {
+      getGroupProperties(activeProject?.id, groupCategory);
+    }
+  }, [activeProject?.id, groupCategory]);
 
   const groupsList = useMemo(() => {
     let groups = [['Users', 'users']];
@@ -56,80 +82,94 @@ const QueryBuilder = ({
     });
     return groups;
   }, [groupOpts]);
-  
-  const returnEventname = (arr) => {
-    return arr.map((item) => item.label)
-  } 
 
-  const transformIndividualFilter = (Arr) =>{ 
-    if(!_.isEmpty(Arr)){
-      let query  = { 
+  const returnEventname = (arr) => {
+    return arr.map((item) => item.label);
+  };
+
+  const transformIndividualFilter = (Arr) => {
+    if (!_.isEmpty(Arr)) {
+      let query = {
         ...Arr[0],
         filters: _, // removing filters key
-        filter: !_.isEmpty(Arr[0]?.filters) ? getGlobalFilters(Arr[0]?.filters) : null
-      }
-      return query 
-    }
-    else return null
-  } 
- 
-  const buildPathAnalysisQuery = (data) => {
+        filter: !_.isEmpty(Arr[0]?.filters)
+          ? getGlobalFilters(Arr[0]?.filters)
+          : null
+      };
+      return query;
+    } else return null;
+  };
 
+  const buildPathAnalysisQuery = (data) => {
     setLoading(true);
     let payload = {
-      "title": data?.title,
-      "event_type": pathCondition,
-      "group": groupCategory,
-      "event": transformIndividualFilter(singleQueries),
-      "steps": Number(pathStepCount),
-      "include_events": (excludeEvents == 'false') ? multipleQueries : null,
-      "exclude_events": (excludeEvents == 'true') ? multipleQueries : null,
-      "starttimestamp": moment(selectedDateRange.startDate).unix(),
-      "endtimestamp": moment(selectedDateRange.endDate).unix(),
-      "avoid_repeated_events": repetativeStep,
-      "filter": globalFilters ? getGlobalFilters(globalFilters) : null
-    }; 
- 
-    createPathPathAnalysisQuery(activeProject?.id, payload).then(() => {
-      fetchSavedPathAnalysis(activeProject?.id);
-      setLoading(false)
-      history.push('/path-analysis');
-      message.success('Report saved!');
-    }).catch((err) => {
-      setLoading(false)
-      console.log('path analysis err->', err);
-      message.error(err.data.error);
-    });
+      title: data?.title,
+      event_type: pathCondition,
+      group: groupCategory,
+      event: transformIndividualFilter(singleQueries),
+      steps: Number(pathStepCount),
+      include_events: excludeEvents == 'false' ? multipleQueries : null,
+      exclude_events: excludeEvents == 'true' ? multipleQueries : null,
+      starttimestamp: moment(selectedDateRange.startDate).unix(),
+      endtimestamp: moment(selectedDateRange.endDate).unix(),
+      avoid_repeated_events: repetativeStep,
+      filter: globalFilters ? getGlobalFilters(globalFilters) : null
+    };
 
-  }
-
+    createPathPathAnalysisQuery(activeProject?.id, payload)
+      .then(() => {
+        fetchSavedPathAnalysis(activeProject?.id);
+        setLoading(false);
+        history.push('/path-analysis');
+        message.success('Report saved!');
+      })
+      .catch((err) => {
+        setLoading(false);
+        console.log('path analysis err->', err);
+        message.error(err.data.error);
+      });
+  };
 
   useEffect(() => {
     if (activeQuery) {
       setCollapseBtn(true);
-      setCollapse(true)
-      setRepetativeStep(activeQuery?.avoid_repeated_events)
-      setPathCondition(`${activeQuery?.event_type}`)
-      setPathStepCount(`${activeQuery?.steps}`)
-      setExcludeEvents(`${activeQuery?.include_events ? 'false' : 'true'}`)
+      setCollapse(true);
+      setRepetativeStep(activeQuery?.avoid_repeated_events);
+      setPathCondition(`${activeQuery?.event_type}`);
+      setPathStepCount(`${activeQuery?.steps}`);
+      setExcludeEvents(`${activeQuery?.include_events ? 'false' : 'true'}`);
 
       let eventFromState = {
         ...activeQuery?.event,
         //adding filters key for filters to work
-        filters: activeQuery?.event?.filter ? getGlobalFiltersfromSavedState(activeQuery?.event?.filter) : null
-      } 
+        filters: activeQuery?.event?.filter
+          ? getGlobalFiltersfromSavedState(activeQuery?.event?.filter)
+          : null
+      };
       setSingleQueries([eventFromState]);
-      setMultipleQueries(activeQuery?.include_events ? (activeQuery?.include_events ? activeQuery?.include_events : []) : (activeQuery?.exclude_events ? activeQuery?.exclude_events : []));
+      setMultipleQueries(
+        activeQuery?.include_events
+          ? activeQuery?.include_events
+            ? activeQuery?.include_events
+            : []
+          : activeQuery?.exclude_events
+          ? activeQuery?.exclude_events
+          : []
+      );
 
       let defaultDate = {
         startDate: moment.unix(activeQuery?.starttimestamp),
-        endDate: moment.unix(activeQuery?.endtimestamp),
-      } 
+        endDate: moment.unix(activeQuery?.endtimestamp)
+      };
 
-      setGlobalFilters(activeQuery?.filter ? getGlobalFiltersfromSavedState(activeQuery?.filter) : null)
-      setSelectedDateRange(defaultDate)
+      setGlobalFilters(
+        activeQuery?.filter
+          ? getGlobalFiltersfromSavedState(activeQuery?.filter)
+          : null
+      );
+      setSelectedDateRange(defaultDate);
     }
-  }, [activeQuery])
+  }, [activeQuery]);
 
   const triggerDropDown = () => {
     setGroupDDVisible(true);
@@ -193,7 +233,7 @@ const QueryBuilder = ({
   );
 
   const onGroupSelect = (val) => {
-    setGroupCategory(val); 
+    setGroupCategory(val);
     setGroupDDVisible(false);
   };
 
@@ -212,8 +252,6 @@ const QueryBuilder = ({
     );
   };
 
-
-
   const renderGroupSection = () => {
     try {
       return (
@@ -225,7 +263,7 @@ const QueryBuilder = ({
             extraClass={`m-0 mr-3`}
           >
             Analyse
-          </Text>{' '}
+          </Text>
           <div className={`${styles.groupsection}`}>
             <Tooltip title='Attribute at a User, Deal, or Opportunity level'>
               <Button
@@ -260,21 +298,19 @@ const QueryBuilder = ({
   };
 
   const queryList = (type) => {
-
-    let isSingleEvent = (type === 'singleEvent') ? true : false
-    let filterConfig = (isSingleEvent) ?
-      {
-        eventLimit: 1,
-        extraActions: true
-      }
-      :
-      {
-        eventLimit: 15,
-        extraActions: false
-      }
+    let isSingleEvent = type === 'singleEvent' ? true : false;
+    let filterConfig = isSingleEvent
+      ? {
+          eventLimit: 1,
+          extraActions: true
+        }
+      : {
+          eventLimit: 15,
+          extraActions: false
+        };
 
     const blockList = [];
-    let queryArr = isSingleEvent ? singleQueries : multipleQueries
+    let queryArr = isSingleEvent ? singleQueries : multipleQueries;
     queryArr.forEach((event, index) => {
       blockList.push(
         <div key={index} className={styles.composer_body__query_block}>
@@ -283,7 +319,9 @@ const QueryBuilder = ({
             queryType={queryType}
             event={event}
             queries={queryArr}
-            eventChange={isSingleEvent ? singleEventChange : multipleEventChange}
+            eventChange={
+              isSingleEvent ? singleEventChange : multipleEventChange
+            }
             filterConfig={filterConfig}
           ></QueryBlock>
         </div>
@@ -297,7 +335,9 @@ const QueryBuilder = ({
             queryType={queryType}
             index={queryArr.length + 1}
             queries={queryArr}
-            eventChange={isSingleEvent ? singleEventChange : multipleEventChange}
+            eventChange={
+              isSingleEvent ? singleEventChange : multipleEventChange
+            }
             groupBy={queryOptions.groupBy}
             filterConfig={filterConfig}
           ></QueryBlock>
@@ -305,43 +345,45 @@ const QueryBuilder = ({
       );
     }
 
-
     return blockList;
   };
 
-
   const renderPathCondition = () => {
-    return (<div className={'mt-4'}>
-      <Text type={'title'} level={7} weight={'bold'} extraClass={`m-0 mb-2`} >SHOW PATHS THAT</Text>
-      <Select
-        style={{
-          width: 250,
-        }}
-        className={'fa-select'}
-        options={[
-          {
-            value: 'startswith',
-            label: 'Start with an event',
-          },
-          {
-            value: 'endswith',
-            label: 'Ends with an event',
-          },
-        ]}
-        defaultValue={pathCondition}
-        value={pathCondition}
-        onChange={(data) => setPathCondition(data)}
-      />
-    </div>
-    )
-  }
-
+    return (
+      <div className={'mt-4'}>
+        <Text type={'title'} level={7} weight={'bold'} extraClass={`m-0 mb-2`}>
+          SHOW PATHS THAT
+        </Text>
+        <Select
+          style={{
+            width: 250
+          }}
+          className={'fa-select'}
+          options={[
+            {
+              value: 'startswith',
+              label: 'Start with an event'
+            },
+            {
+              value: 'endswith',
+              label: 'Ends with an event'
+            }
+          ]}
+          defaultValue={pathCondition}
+          value={pathCondition}
+          onChange={(data) => setPathCondition(data)}
+        />
+      </div>
+    );
+  };
 
   const renderSingleEvent = () => {
     try {
       return (
-        <div className={`mt-4`} >
-          <Text type={'title'} level={7} extraClass={`m-0`} >Select Event</Text>
+        <div className={`mt-4`}>
+          <Text type={'title'} level={7} extraClass={`m-0`}>
+            Select Event
+          </Text>
           {queryList('singleEvent')}
         </div>
       );
@@ -350,36 +392,37 @@ const QueryBuilder = ({
     }
   };
 
-
   const renderMultiEventList = () => {
     try {
-      return (<>
-        <div className={`mt-4`}>
-          <div className={'flex items-center'}>
-            <Text type={'title'} level={7} extraClass={`m-0`} >In this path, Show</Text>
+      return (
+        <>
+          <div className={`mt-4`}>
+            <div className={'flex items-center'}>
+              <Text type={'title'} level={7} extraClass={`m-0`}>
+                In this path, Show
+              </Text>
 
-            <Select
-              bordered={false}
-              className={'fa-select-ghost--highlight-text'}
-              options={[
-                {
-                  value: 'true',
-                  label: 'All events except',
-                },
-                {
-                  value: 'false',
-                  label: 'Only specific events',
-                },
-              ]}
-              value={excludeEvents}
-              onChange={(data) => setExcludeEvents(data)}
-            />
+              <Select
+                bordered={false}
+                className={'fa-select-ghost--highlight-text'}
+                options={[
+                  {
+                    value: 'true',
+                    label: 'All events except'
+                  },
+                  {
+                    value: 'false',
+                    label: 'Only specific events'
+                  }
+                ]}
+                value={excludeEvents}
+                onChange={(data) => setExcludeEvents(data)}
+              />
+            </div>
 
+            {queryList()}
           </div>
-
-          {queryList()}
-        </div>
-      </>
+        </>
       );
     } catch (err) {
       console.log(err);
@@ -389,17 +432,22 @@ const QueryBuilder = ({
   const renderGlobalFilterBlock = () => {
     try {
       return (
-        <div className={`mt-6 pt-5 pb-5 border-top--thin-2 border-bottom--thin-2`}>
-          <Text type={'title'} level={7} weight={'bold'} extraClass={`m-0 mb-2`} >FILTER PATH BY</Text>
-          <GLobalFilter
+        <div
+          className={`mt-6 pt-5 pb-5 border-top--thin-2 border-bottom--thin-2`}
+        >
+          <Text
+            type={'title'}
+            level={7}
+            weight={'bold'}
+            extraClass={`m-0 mb-2`}
+          >
+            FILTER PATH BY
+          </Text>
+          <GlobalFilter
             filters={globalFilters}
             setGlobalFilters={setGlobalFilters}
-            onFiltersLoad={[
-              () => {
-                getUserProperties(activeProject?.id);
-              },
-            ]}
-          ></GLobalFilter>
+            groupName={groupCategory}
+          />
         </div>
       );
     } catch (err) {
@@ -407,49 +455,65 @@ const QueryBuilder = ({
     }
   };
 
-
   const pathStepSelection = () => {
     try {
-      return (<>
-        <div className={`mt-6`}>
-          <Text type={'title'} level={7} weight={'bold'} extraClass={`m-0 mb-2`} >IN THIS PATH</Text>
-          <div className={'flex items-center'}>
-            <Text type={'title'} level={7} extraClass={`m-0`} >Show</Text>
-            <Select
-              bordered={false}
-              className={'fa-select-ghost--highlight-text'}
-              options={[
-                {
-                  value: '1',
-                  label: '1 Step',
-                },
-                {
-                  value: '2',
-                  label: '2 Steps',
-                },
-                {
-                  value: '3',
-                  label: '3 Steps',
-                },
-                {
-                  value: '4',
-                  label: '4 Steps',
-                },
-                {
-                  value: '5',
-                  label: '5 Steps',
-                },
-              ]}
-              value={pathStepCount}
-              onChange={(data) => setPathStepCount(data)}
-            />
+      return (
+        <>
+          <div className={`mt-6`}>
+            <Text
+              type={'title'}
+              level={7}
+              weight={'bold'}
+              extraClass={`m-0 mb-2`}
+            >
+              IN THIS PATH
+            </Text>
+            <div className={'flex items-center'}>
+              <Text type={'title'} level={7} extraClass={`m-0`}>
+                Show
+              </Text>
+              <Select
+                bordered={false}
+                className={'fa-select-ghost--highlight-text'}
+                options={[
+                  {
+                    value: '1',
+                    label: '1 Step'
+                  },
+                  {
+                    value: '2',
+                    label: '2 Steps'
+                  },
+                  {
+                    value: '3',
+                    label: '3 Steps'
+                  },
+                  {
+                    value: '4',
+                    label: '4 Steps'
+                  },
+                  {
+                    value: '5',
+                    label: '5 Steps'
+                  }
+                ]}
+                value={pathStepCount}
+                onChange={(data) => setPathStepCount(data)}
+              />
+            </div>
+            <div className={'mt-2'}>
+              <Checkbox
+                checked={repetativeStep}
+                onChange={(e) => setRepetativeStep(e.target.checked)}
+              >
+                Avoid repeated events
+              </Checkbox>
+              <Text type={'title'} level={8} extraClass={`m-0 ml-6`}>
+                Restrict events to appear only once in this path
+              </Text>
+            </div>
           </div>
-          <div className={'mt-2'}>
-            <Checkbox checked={repetativeStep} onChange={(e) => setRepetativeStep(e.target.checked)}>Avoid repeated events</Checkbox>
-            <Text type={'title'} level={8} extraClass={`m-0 ml-6`} >Restrict events to appear only once in this path</Text>
-          </div>
-        </div>
-      </>
+        </>
       );
     } catch (err) {
       console.log(err);
@@ -460,73 +524,82 @@ const QueryBuilder = ({
     const [form] = Form.useForm();
     const onFinish = (values) => {
       buildPathAnalysisQuery(values).then(() => {
-        setIsModalOpen(false)
+        setIsModalOpen(false);
       });
     };
     const onFinishFailed = (errorInfo) => {
       console.log('Failed:', errorInfo);
     };
-    const onReset = () => { 
-      setIsModalOpen(false)
+    const onReset = () => {
+      setIsModalOpen(false);
       form.resetFields();
     };
     return (
-      <Modal title="Save report"
+      <Modal
+        title='Save report'
         visible={isModalOpen}
         okText={'Save'}
-        footer={null} 
+        footer={null}
         className='fa-modal--regular'
         afterClose={onReset}
         onCancel={onReset}
       >
-
         <Form
-          name="basic"
+          name='basic'
           initialValues={{
-            remember: true,
+            remember: true
           }}
           onFinish={onFinish}
           onFinishFailed={onFinishFailed}
-          autoComplete="off"
+          autoComplete='off'
           form={form}
         >
           <Form.Item
-
-            name="title"
+            name='title'
             rules={[
               {
                 required: true,
-                message: 'Please enter a name (or) title for the report',
-              },
+                message: 'Please enter a name (or) title for the report'
+              }
             ]}
           >
             <Input placeholder={'Name'} className={'fa-input'} size={'large'} />
           </Form.Item>
 
           <div className='mt-2'>
-            <Form.Item name="description">
-              <Input.TextArea className={'fa-input'} size={'large'} placeholder={'Description'} />
+            <Form.Item name='description'>
+              <Input.TextArea
+                className={'fa-input'}
+                size={'large'}
+                placeholder={'Description'}
+              />
             </Form.Item>
           </div>
 
-          <div className='mt-8 flex justify-end'> 
-
+          <div className='mt-8 flex justify-end'>
             <Form.Item>
-            <Button size={'large'} htmlType="button" onClick={onReset}>
-                                    Cancel
-                                    </Button>
-              <Button size={'large'}  type="primary" htmlType="submit" loading={loading} className={'ml-2'}> Save </Button>
-            </Form.Item> 
+              <Button size={'large'} htmlType='button' onClick={onReset}>
+                Cancel
+              </Button>
+              <Button
+                size={'large'}
+                type='primary'
+                htmlType='submit'
+                loading={loading}
+                className={'ml-2'}
+              >
+                Save
+              </Button>
+            </Form.Item>
           </div>
-
         </Form>
       </Modal>
-    )
-  }
+    );
+  };
 
   const setDateRange = (data) => {
-    setSelectedDateRange(data)
-  }
+    setSelectedDateRange(data);
+  };
   const footer = () => {
     try {
       // if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
@@ -535,7 +608,7 @@ const QueryBuilder = ({
       // if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
       //   return null;
       // } else {
-       
+
       return (
         <div
           // className={ !collapse ? styles.composer_footer : styles.composer_footer_right }
@@ -550,77 +623,79 @@ const QueryBuilder = ({
             buttonSize={'large'}
             range={{
               startDate: selectedDateRange.startDate,
-              endDate: selectedDateRange.endDate,
+              endDate: selectedDateRange.endDate
             }}
             onSelect={setDateRange}
-          /> 
+          />
 
-          <div className='flex justify-end items-center'> 
-         {showCollapseBtn && <Button
-              className={`mr-2`}
-              size={'large'}
-              type={'default'}
-              onClick={() => setCollapse(true)}
+          <div className='flex justify-end items-center'>
+            {showCollapseBtn && (
+              <Button
+                className={`mr-2`}
+                size={'large'}
+                type={'default'}
+                onClick={() => setCollapse(true)}
+              >
+                <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>
+                Collapse all
+              </Button>
+            )}
+            <Button
+              type='primary'
+              size='large'
+              disabled={_.isEmpty(singleQueries)}
+              loading={loading}
+              onClick={() => setIsModalOpen(true)}
             >
-              <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>
-              Collapse all
-            </Button> }
-          <Button type='primary' size='large' disabled={_.isEmpty(singleQueries)} loading={loading} onClick={() => setIsModalOpen(true)}> {`Save and Build`}</Button>
+              {`Save and Build`}
+            </Button>
           </div>
-
         </div>
       );
       // }
     } catch (err) {
       console.log(err);
     }
-  }; 
+  };
 
-  return <>
-    <div className={'relative'}>
-
-
-      {
-        <div
-          className={`query_card_cont mb-10 ${!collapse ? `query_card_open` : `query_card_close`
+  return (
+    <>
+      <div className={'relative'}>
+        {
+          <div
+            className={`query_card_cont mb-10 ${
+              !collapse ? `query_card_open` : `query_card_close`
             }`}
-          // onClick={(e) => setCollapse(false)}
-        >
-          {renderGroupSection()}
-
-          {renderPathCondition()}
-
-          {renderSingleEvent('singleEvent')} {/* Single event selection with filters */}
-
-          {renderMultiEventList()} {/* Multi event selection without filters */}
-
-          {renderGlobalFilterBlock()}
-
-          {pathStepSelection()}
-
-          {SaveReportModal()}
-
-
-          {footer()}
-
-
-          <Button size="large" onClick={(e) => setCollapse(false)} className="query_card_expand">
-            <SVG name="expand" size={20} />
-            Expand
-          </Button>
-        </div>}
-
-
-
-
-
-    </div>
-  </>
-}
+            // onClick={(e) => setCollapse(false)}
+          >
+            {renderGroupSection()}
+            {renderPathCondition()}
+            {renderSingleEvent('singleEvent')}
+            {/* Single event selection with filters */}
+            {renderMultiEventList()}
+            {/* Multi event selection without filters */}
+            {renderGlobalFilterBlock()}
+            {pathStepSelection()}
+            {SaveReportModal()}
+            {footer()}
+            <Button
+              size='large'
+              onClick={(e) => setCollapse(false)}
+              className='query_card_expand'
+            >
+              <SVG name='expand' size={20} />
+              Expand
+            </Button>
+          </div>
+        }
+      </div>
+    </>
+  );
+};
 
 const mapStateToProps = (state) => {
   return {
-    // savedQuery: state.pathAnalysis.savedQuery, 
+    // savedQuery: state.pathAnalysis.savedQuery,
     activeProject: state.global.active_project,
     groupOpts: state.groups.data
   };
@@ -629,5 +704,7 @@ const mapStateToProps = (state) => {
 export default connect(mapStateToProps, {
   fetchSavedPathAnalysis,
   createPathPathAnalysisQuery,
-  fetchGroups
+  fetchGroups,
+  getGroupProperties,
+  getUserProperties
 })(QueryBuilder);

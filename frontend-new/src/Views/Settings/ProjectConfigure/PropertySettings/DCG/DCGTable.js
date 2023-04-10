@@ -113,7 +113,7 @@ const DCGTable = ({
         </div>
       );
     } else {
-      null;
+      return null;
     }
   };
   const columns = [

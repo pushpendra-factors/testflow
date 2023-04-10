@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import FaSelect from 'Components/FaSelect';
 import { SVG, Text } from 'factorsComponents';
 import styles from './index.module.scss';
 import {
@@ -11,13 +10,12 @@ import {
   getGroupProperties,
   getEventProperties
 } from 'Reducers/coreQuery/middleware';
-import EventFilterWrapper from 'Components/QueryComposer/EventFilterWrapper';
+import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import EventGroupBlock from 'Components/QueryComposer/EventGroupBlock';
 import AliasModal from 'Components/QueryComposer/AliasModal';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
-import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 
 function QueryBlock({
   availableGroups,
@@ -53,7 +51,7 @@ function QueryBlock({
   const eventGroup = useMemo(() => {
     const group =
       availableGroups?.find((group) => group?.[0] === event?.group) || [];
-    return group;
+    return group[1];
   }, [availableGroups, event]);
 
   useEffect(() => {
@@ -107,8 +105,8 @@ function QueryBlock({
     if (!event || event === undefined) {
       return;
     }
-    if (eventGroup?.length) {
-      getGroupProperties(activeProject.id, eventGroup[1]);
+    if (eventGroup) {
+      getGroupProperties(activeProject.id, eventGroup);
     }
   }, [event]);
 
@@ -125,8 +123,8 @@ function QueryBlock({
       return;
     }
     const assignFilterProps = { ...filterProps };
-    if (eventGroup?.length) {
-      assignFilterProps.group = groupProperties[eventGroup[1]];
+    if (eventGroup) {
+      assignFilterProps.group = groupProperties[eventGroup];
       assignFilterProps.user = [];
     } else {
       assignFilterProps.user = userProperties;
@@ -200,7 +198,7 @@ function QueryBlock({
     setOrFilterIndex(-1);
   };
   const selectEventFilter = (ind) => (
-    <EventFilterWrapper
+    <FilterWrapper
       filterProps={filterProps}
       activeProject={activeProject}
       event={event}
@@ -285,7 +283,7 @@ function QueryBlock({
           filters.push(
             <div className='fa--query_block--filters flex flex-row'>
               <div key={ind}>
-                <EventFilterWrapper
+                <FilterWrapper
                   index={ind}
                   filter={filter}
                   event={event}
@@ -303,7 +301,7 @@ function QueryBlock({
               )}
               {ind === orFilterIndex && (
                 <div key='init'>
-                  <EventFilterWrapper
+                  <FilterWrapper
                     filterProps={filterProps}
                     activeProject={activeProject}
                     event={event}
@@ -323,7 +321,7 @@ function QueryBlock({
           filters.push(
             <div className='fa--query_block--filters flex flex-row'>
               <div key={ind}>
-                <EventFilterWrapper
+                <FilterWrapper
                   index={ind}
                   filter={filtersGr[0]}
                   event={event}
@@ -337,7 +335,7 @@ function QueryBlock({
                 />
               </div>
               <div key={ind + 1}>
-                <EventFilterWrapper
+                <FilterWrapper
                   index={ind + 1}
                   filter={filtersGr[1]}
                   event={event}

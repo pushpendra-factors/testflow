@@ -12,27 +12,21 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   QUERY_OPTIONS_DEFAULT_VALUE
 } from '../../utils/constants';
-
 import FaDatepicker from '../../components/FaDatepicker';
-
 import ComposerBlock from '../QueryCommons/ComposerBlock';
-
 import CriteriaSection from './CriteriaSection';
-
 import {
   fetchEventNames,
   getEventProperties
 } from 'Reducers/coreQuery/middleware';
-
 import { resetGroupByAction } from 'Reducers/coreQuery/actions';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
-
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 import GlobalFilterBlock from './GlobalFilterBlock';
 import GroupByBlock from './GroupByBlock';
-import { areKpisInSameGroup } from 'Utils/kpiQueryComposer.helpers'; 
+import { areKpisInSameGroup } from 'Utils/kpiQueryComposer.helpers';
 import _ from 'lodash';
-import { getKPIPropertyMappings } from 'Reducers/kpi'
+import { getKPIPropertyMappings } from 'Reducers/kpi';
 
 function KPIComposer({
   queries,
@@ -117,21 +111,19 @@ function KPIComposer({
   useEffect(() => {
     // Filters gets reset when ever query groups are changed
     setSameGrpState(isSameKPIGrp);
-    if(!isSameKPIGrp && !_.isEmpty(queries) ){
-      
-
+    if (!isSameKPIGrp && !_.isEmpty(queries)) {
       //fetch common properties if different group
-      if(queries.length > 1 && !isSameKPIGrp){
-        let payload = queries?.map((item)=>{
-            return {
-              'name': item?.group,
-              "derived_kpi": item?.qt == 'derived' ? true : false
-            }
-        })
-        getKPIPropertyMappings(activeProject?.id, payload).catch((err)=>{
-          console.log("getKPIPropertyMappings err", err)
+      if (queries.length > 1 && !isSameKPIGrp) {
+        let payload = queries?.map((item) => {
+          return {
+            name: item?.group,
+            derived_kpi: item?.qt == 'derived' ? true : false
+          };
+        });
+        getKPIPropertyMappings(activeProject?.id, payload).catch((err) => {
+          console.log('getKPIPropertyMappings err', err);
           return null;
-        }) 
+        });
       }
     }
     // if(_.isEmpty(queries)){
@@ -140,28 +132,25 @@ function KPIComposer({
     //       ...currState,
     //       globalFilters: DefaultQueryOptsVal.globalFilters
     //     };
-    //   });  
-    //   resetGroupByAction(); 
+    //   });
+    //   resetGroupByAction();
     // }
-    if(!_.isNull(sameGrpState)){
-    if(sameGrpState != isSameKPIGrp){
-      setQueryOptions((currState) => {
-        return {
-          ...currState,
-          globalFilters: DefaultQueryOptsVal.globalFilters
-        };
-      });  
-      resetGroupByAction(); 
+    if (!_.isNull(sameGrpState)) {
+      if (sameGrpState != isSameKPIGrp) {
+        setQueryOptions((currState) => {
+          return {
+            ...currState,
+            globalFilters: DefaultQueryOptsVal.globalFilters
+          };
+        });
+        resetGroupByAction();
+      }
     }
-  }
-}, [
-  isSameKPIGrp
-]);
- 
+  }, [isSameKPIGrp]);
 
   const setGlobalFiltersOption = (filters) => {
     const opts = Object.assign({}, queryOptions);
-    opts.globalFilters = filters; 
+    opts.globalFilters = filters;
     setQueryOptions(opts);
   };
 
@@ -298,8 +287,8 @@ function KPIComposer({
     } catch (err) {
       console.log(err);
     }
-  }; 
-  
+  };
+
   return (
     <div className={styles.composer_body}>
       {renderQueryList()}
@@ -331,7 +320,7 @@ function KPIComposer({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   eventProperties: state.coreQuery.eventProperties,
-  propertyMaps: state.kpi.kpi_property_mapping,
+  propertyMaps: state.kpi.kpi_property_mapping
 });
 
 const mapDispatchToProps = (dispatch) =>

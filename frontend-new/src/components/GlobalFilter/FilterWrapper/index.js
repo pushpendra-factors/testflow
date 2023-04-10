@@ -1,0 +1,236 @@
+import React, { useState, useEffect } from 'react';
+import { SVG, Text } from 'factorsComponents';
+import FaFilterSelect from '../../FaFilterSelect';
+import { Button } from 'antd';
+import {
+  getEventPropertyValues,
+  getGroupPropertyValues,
+  getUserPropertyValues
+} from 'Reducers/coreQuery/middleware';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+
+function FilterWrapper({
+  viewMode,
+  index,
+  groupName,
+  filterProps,
+  refValue,
+  projectID,
+  event,
+  filter,
+  delIcon = 'remove',
+  deleteFilter,
+  insertFilter,
+  closeFilter,
+  showOr,
+  hasPrefix = false,
+  filterPrefix = 'Filter by',
+  caller,
+  dropdownPlacement,
+  dropdownMaxHeight,
+  showInList = false,
+  getEventPropertyValues,
+  getGroupPropertyValues,
+  getUserPropertyValues,
+  propertyValuesMap
+}) {
+  const [newFilterState, setNewFilterState] = useState({
+    props: [],
+    operator: '',
+    values: []
+  });
+  const [filterDropDownOptions, setFiltDD] = useState({});
+
+  useEffect(() => {
+    if (filter && filter.props[1] === 'categorical') {
+      setValuesByProps(filter.props);
+      setNewFilterState(filter);
+    }
+  }, [filter]);
+
+  useEffect(() => {
+    const filterDD = Object.assign({}, filterDropDownOptions);
+    const propState = [];
+    Object.keys(filterProps).forEach((k, i) => {
+      propState.push({
+        label: k,
+        icon: k,
+        values: filterProps[k]
+      });
+    });
+    filterDD.props = propState;
+    setFiltDD(filterDD);
+  }, [filterProps]);
+
+  const renderFilterContent = () => {
+    return (
+      <FaFilterSelect
+        viewMode={viewMode}
+        propOpts={filterDropDownOptions.props}
+        operatorOpts={filterDropDownOptions.operator}
+        valueOpts={propertyValuesMap}
+        applyFilter={applyFilter}
+        setValuesByProps={setValuesByProps}
+        filter={filter}
+        refValue={refValue}
+        caller={caller}
+        dropdownPlacement={dropdownPlacement}
+        dropdownMaxHeight={dropdownMaxHeight}
+        showInList={showInList}
+      />
+    );
+  };
+
+  useEffect(() => {
+    if (newFilterState.props[1] === 'categorical') {
+      if (
+        newFilterState.props[2] === 'user' ||
+        newFilterState.props[2] === 'user_g'
+      ) {
+        if (!propertyValuesMap[newFilterState.props[0]]) {
+          getUserPropertyValues(projectID, newFilterState.props[0]);
+        }
+      } else if (newFilterState.props[2] === 'event') {
+        if (!propertyValuesMap[newFilterState.props[0]]) {
+          getEventPropertyValues(
+            projectID,
+            event.label,
+            newFilterState.props[0]
+          );
+        }
+      } else if (newFilterState.props[2] === 'group') {
+        if (!propertyValuesMap[newFilterState.props[0]]) {
+          let group = groupName;
+          if (groupName === 'All') {
+            if (newFilterState.props[0].includes('hubspot'))
+              group = '$hubspot_company';
+            if (newFilterState.props[0].includes('salesforce'))
+              group = '$salesforce_account';
+            if (newFilterState.props[0].includes('6signal')) group = '$6signal';
+          }
+          getGroupPropertyValues(projectID, group, newFilterState.props[0]);
+        }
+      }
+    }
+  }, [newFilterState]);
+
+  const delFilter = () => {
+    deleteFilter(index);
+  };
+
+  const applyFilter = (filterState) => {
+    if (filterState) {
+      insertFilter(filterState, index);
+      closeFilter();
+    }
+  };
+
+  const setValuesByProps = (props) => {
+    if (props[2] === 'categorical') {
+      if (props[3] === 'user' || props[3] === 'user_g') {
+        if (!propertyValuesMap[props[1]]) {
+          getUserPropertyValues(projectID, props[1]);
+        }
+      } else if (props[3] === 'event') {
+        if (!propertyValuesMap[props[1]]) {
+          getEventPropertyValues(projectID, event.label, props[1]);
+        }
+      } else if (props[3] === 'group') {
+        if (!propertyValuesMap[props[1]]) {
+          let group = groupName;
+          if (groupName === 'All') {
+            if (props[1].includes('hubspot')) group = '$hubspot_company';
+            if (props[1].includes('salesforce')) group = '$salesforce_account';
+            if (props[1].includes('6signal')) group = '$6signal';
+          }
+          getGroupPropertyValues(projectID, group, props[1]);
+        }
+      }
+    }
+  };
+
+  const filterSelComp = () => (
+    <FaFilterSelect
+      viewMode={viewMode}
+      propOpts={filterDropDownOptions.props}
+      operatorOpts={filterDropDownOptions.operator}
+      valueOpts={propertyValuesMap}
+      applyFilter={applyFilter}
+      refValue={refValue}
+      setValuesByProps={setValuesByProps}
+      caller={caller}
+      dropdownPlacement={dropdownPlacement}
+      dropdownMaxHeight={dropdownMaxHeight}
+      showInList={showInList}
+    />
+  );
+
+  return (
+    <div
+      className={`flex items-center relative ${
+        caller === 'profiles' ? 'mb-2' : ''
+      }`}
+    >
+      {!showOr &&
+        hasPrefix &&
+        (index >= 1 ? (
+          <Text
+            level={8}
+            type={'title'}
+            extraClass={`m-0 ${caller === 'profiles' ? 'mx-3' : 'mr-16 ml-10'}`}
+            weight={'thin'}
+          >
+            and
+          </Text>
+        ) : (
+          <Text
+            level={8}
+            type={'title'}
+            extraClass={`whitespace-no-wrap m-0 ${
+              caller === 'profiles' ? 'mx-3' : 'mx-10'
+            }`}
+            weight={'thin'}
+          >
+            {filterPrefix}
+          </Text>
+        ))}
+      {showOr && (
+        <Text
+          level={8}
+          type={'title'}
+          extraClass={`m-0 ${caller === 'profiles' ? 'mx-3' : 'mx-2'}`}
+          weight={'thin'}
+        >
+          or
+        </Text>
+      )}
+
+      <div className={`relative flex`}>
+        {filter ? renderFilterContent() : filterSelComp()}
+      </div>
+      {delFilter && !viewMode && (
+        <Button
+          type='text'
+          onClick={delFilter}
+          size={'small'}
+          className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
+        >
+          <SVG name={delIcon} />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+const mapStateToProps = (state) => ({
+  propertyValuesMap: state.coreQuery.propertyValuesMap
+});
+
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    { getEventPropertyValues, getGroupPropertyValues, getUserPropertyValues },
+    dispatch
+  );
+
+export default connect(mapStateToProps, mapDispatchToProps)(FilterWrapper);

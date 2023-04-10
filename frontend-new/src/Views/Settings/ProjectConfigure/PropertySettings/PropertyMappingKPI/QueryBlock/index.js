@@ -234,7 +234,7 @@ function QueryBlock({
         closeFilter={closeFilter}
         selectedMainCategory={selectedMainCategory}
         refValue={index}
-      ></EventFilterWrapper>
+      />
     );
   };
 
@@ -308,7 +308,7 @@ function QueryBlock({
                   closeFilter={closeFilter}
                   selectedMainCategory={selectedMainCategory}
                   refValue={refValue}
-                ></EventFilterWrapper>
+                />
               </div>
               {index !== orFilterIndex && (
                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex} />
@@ -325,7 +325,7 @@ function QueryBlock({
                     selectedMainCategory={selectedMainCategory}
                     refValue={refValue}
                     showOr={true}
-                  ></EventFilterWrapper>
+                  />
                 </div>
               )}
             </div>
@@ -346,7 +346,7 @@ function QueryBlock({
                   closeFilter={closeFilter}
                   selectedMainCategory={selectedMainCategory}
                   refValue={refValue}
-                ></EventFilterWrapper>
+                />
               </div>
               <div key={index + 1}>
                 <EventFilterWrapper
@@ -361,7 +361,7 @@ function QueryBlock({
                   selectedMainCategory={selectedMainCategory}
                   refValue={refValue}
                   showOr={true}
-                ></EventFilterWrapper>
+                />
               </div>
             </div>
           );

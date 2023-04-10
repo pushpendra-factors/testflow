@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, connect } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from '../factorsComponents';
@@ -8,7 +8,6 @@ import {
   InputNumber,
   Tooltip,
   DatePicker,
-  Select,
   Upload,
   Row,
   Col,
@@ -32,32 +31,25 @@ import { UploadOutlined } from '@ant-design/icons';
 import { uploadList } from 'Reducers/global';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
-
-const { Option } = Select;
-
 const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
 const customRangePicker = [OPERATORS['between'], OPERATORS['notBetween']];
 const deltaPicker = [OPERATORS['inThePrevious'], OPERATORS['notInThePrevious']];
 const currentPicker = [OPERATORS['inTheCurrent'], OPERATORS['notInTheCurrent']];
 const datePicker = [OPERATORS['before'], OPERATORS['since']];
 
-const FAFilterSelect = ({
-  displayMode,
+const FaFilterSelect = ({
+  viewMode,
   propOpts = [],
   operatorOpts = defaultOpProps,
-  valueOpts = [],
+  valueOpts = {},
   setValuesByProps,
   applyFilter,
   filter,
   disabled = false,
   refValue,
   caller,
-  propsDDPos,
-  propsDDHeight,
-  operatorDDPos,
-  operatorDDHeight,
-  valuesDDPos,
-  valuesDDHeight,
+  dropdownPlacement,
+  dropdownMaxHeight,
   uploadList,
   showInList = false
 }) => {
@@ -69,7 +61,6 @@ const FAFilterSelect = ({
 
   const [operatorState, setOperatorState] = useState(OPERATORS['equalTo']);
   const [valuesState, setValuesState] = useState(null);
-
   const [propSelectOpen, setPropSelectOpen] = useState(true);
   const [operSelectOpen, setOperSelectOpen] = useState(false);
   const [valuesSelectionOpen, setValuesSelectionOpen] = useState(false);
@@ -77,7 +68,6 @@ const FAFilterSelect = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateOptionSelectOpen, setDateOptionSelectOpen] = useState(false);
   const [containButton, setContainButton] = useState(true);
-
   const [updateState, updateStateApply] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadFileName, setUploadFileName] = useState('');
@@ -88,6 +78,12 @@ const FAFilterSelect = ({
     (state) => state.coreQuery
   );
   const activeProject = useSelector((state) => state.global.active_project);
+
+  const valueDisplayNames = useMemo(() => {
+    return valueOpts?.[propState?.name]
+      ? valueOpts[propState.name]
+      : DISPLAY_PROP;
+  }, [valueOpts, propState.name]);
 
   useEffect(() => {
     if (
@@ -323,16 +319,16 @@ const FAFilterSelect = ({
                 <SVG
                   name={propState.icon}
                   size={16}
-                  color={displayMode ? 'grey' : 'purple'}
+                  color={viewMode ? 'grey' : 'purple'}
                 />
               ) : null
             }
             className={`fa-button--truncate fa-button--truncate-xs ${
-              displayMode ? 'static-button' : ''
+              viewMode ? 'static-button' : ''
             }  btn-left-round filter-buttons-margin`}
-            type={displayMode ? 'default' : 'link'}
+            type={viewMode ? 'default' : 'link'}
             onClick={() =>
-              displayMode ? null : setPropSelectOpen(!propSelectOpen)
+              viewMode ? null : setPropSelectOpen(!propSelectOpen)
             }
           >
             {renderGroupDisplayName(propState)}
@@ -345,8 +341,8 @@ const FAFilterSelect = ({
               placeholder='Select Property'
               optionClick={(group, val) => propSelect([...val, group])}
               onClickOutside={() => setPropSelectOpen(false)}
-              placement={propsDDPos}
-              height={propsDDHeight}
+              placement={dropdownPlacement}
+              height={dropdownMaxHeight}
             />
           </div>
         )}
@@ -360,15 +356,15 @@ const FAFilterSelect = ({
         <Tooltip
           title='Select an equator to define your filter rules. '
           color={TOOLTIP_CONSTANTS.DARK}
-          trigger={displayMode ? [] : 'hover'}
+          trigger={viewMode ? [] : 'hover'}
         >
           <Button
             disabled={disabled}
             className={`fa-button--truncate ${
-              displayMode ? 'static-button' : ''
+              viewMode ? 'static-button' : ''
             } filter-buttons-radius filter-buttons-margin`}
-            type={displayMode ? 'default' : 'link'}
-            onClick={() => (displayMode ? null : setOperSelectOpen(true))}
+            type={viewMode ? 'default' : 'link'}
+            onClick={() => (viewMode ? null : setOperSelectOpen(true))}
           >
             {operatorState ? operatorState : 'Select Operator'}
           </Button>
@@ -384,7 +380,7 @@ const FAFilterSelect = ({
               .map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
-            placement={operatorDDPos}
+            placement={dropdownPlacement}
           />
         )}
       </div>
@@ -523,12 +519,12 @@ const FAFilterSelect = ({
 
           <Button
             disabled={disabled}
-            trigger={displayMode ? [] : 'hover'}
+            trigger={viewMode ? [] : 'hover'}
             className={`fa-button--truncate ${
-              displayMode ? 'static-button' : ''
+              viewMode ? 'static-button' : ''
             } filter-buttons-radius filter-buttons-margin`}
-            type={displayMode ? 'default' : 'link'}
-            onClick={() => (displayMode ? null : setDateOptionSelectOpen(true))}
+            type={viewMode ? 'default' : 'link'}
+            onClick={() => (viewMode ? null : setDateOptionSelectOpen(true))}
           >
             {parsedValues['gran']
               ? dateTimeSelect.get(parsedValues['gran'])
@@ -540,7 +536,7 @@ const FAFilterSelect = ({
               options={[['Days'], ['Weeks'], ['Months'], ['Quarters']]}
               optionClick={(val) => setDeltaGran(dateTimeSelect.get(val[0]))}
               onClickOutside={() => setDateOptionSelectOpen(false)}
-              placement={valuesDDPos}
+              placement={dropdownPlacement}
             />
           )}
         </div>
@@ -552,12 +548,12 @@ const FAFilterSelect = ({
         <div className={`fa-filter-dateDeltaContainer`}>
           <Button
             disabled={disabled}
-            trigger={displayMode ? [] : 'hover'}
+            trigger={viewMode ? [] : 'hover'}
             className={`fa-button--truncate ${
-              displayMode ? 'static-button' : ''
+              viewMode ? 'static-button' : ''
             } filter-buttons-radius filter-buttons-margin`}
-            type={displayMode ? 'default' : 'link'}
-            onClick={() => (displayMode ? null : setDateOptionSelectOpen(true))}
+            type={viewMode ? 'default' : 'link'}
+            onClick={() => (viewMode ? null : setDateOptionSelectOpen(true))}
           >
             {parsedValues['gran']
               ? toCapitalCase(parsedValues['gran'])
@@ -569,7 +565,7 @@ const FAFilterSelect = ({
               options={[['Week'], ['Month'], ['Quarter']]}
               optionClick={(val) => setCurrentGran(val[0].toLowerCase())}
               onClickOutside={() => setDateOptionSelectOpen(false)}
-              placement={valuesDDPos}
+              placement={dropdownPlacement}
             />
           )}
         </div>
@@ -611,7 +607,6 @@ const FAFilterSelect = ({
 
   const renderValuesSelector = () => {
     let selectionComponent;
-    const values = [];
     if (propState.type === 'categorical') {
       selectionComponent = (
         <FaSelect
@@ -624,16 +619,17 @@ const FAFilterSelect = ({
               : true
           }
           options={
-            valueOpts && valueOpts[propState.name]?.length
-              ? valueOpts[propState.name].map((op) => [op])
+            valueOpts?.[propState?.name]
+              ? Object.entries(valueOpts[propState.name])
               : []
           }
+          displayNames={valueDisplayNames}
           applClick={(val) => valuesSelect(val)}
           optionClick={(val) => valuesSelectSingle(val)}
           onClickOutside={() => setValuesSelectionOpen(false)}
           selectedOpts={valuesState ? valuesState : []}
           allowSearch={true}
-          placement={valuesDDPos}
+          placement={dropdownPlacement}
         />
       );
     }
@@ -669,12 +665,12 @@ const FAFilterSelect = ({
           {containButton && (
             <Button
               disabled={disabled}
-              trigger={displayMode ? [] : 'hover'}
+              trigger={viewMode ? [] : 'hover'}
               className={`fa-button--truncate ${
-                displayMode ? 'static-button' : ''
+                viewMode ? 'static-button' : ''
               } filter-buttons-radius filter-buttons-margin`}
-              type={displayMode ? 'default' : 'link'}
-              onClick={() => (displayMode ? null : setContainButton(false))}
+              type={viewMode ? 'default' : 'link'}
+              onClick={() => (viewMode ? null : setContainButton(false))}
             >
               {valuesState ? valuesState : 'Enter Value'}
             </Button>
@@ -715,7 +711,9 @@ const FAFilterSelect = ({
               title={
                 valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                      .map((vl) =>
+                        valueDisplayNames[vl] ? valueDisplayNames[vl] : vl
+                      )
                       .join(', ')
                   : null
               }
@@ -725,21 +723,21 @@ const FAFilterSelect = ({
                 className={`fa-button--truncate ${
                   caller === 'profiles' ? 'fa-button--truncate-sm' : ''
                 }  ${
-                  displayMode
+                  viewMode
                     ? 'btn-right-round static-button'
                     : 'filter-buttons-radius'
                 } filter-buttons-margin`}
-                type={displayMode ? 'default' : 'link'}
+                type={viewMode ? 'default' : 'link'}
                 disabled={disabled}
                 onClick={() =>
-                  displayMode
-                    ? null
-                    : setValuesSelectionOpen(!valuesSelectionOpen)
+                  viewMode ? null : setValuesSelectionOpen(!valuesSelectionOpen)
                 }
               >
                 {valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                      .map((vl) =>
+                        valueDisplayNames[vl] ? valueDisplayNames[vl] : vl
+                      )
                       .join(', ')
                   : 'Select Values'}
               </Button>
@@ -889,8 +887,8 @@ const FAFilterSelect = ({
                 valuesState && valuesState.length
                   ? valuesState
                       .map((vl) =>
-                        DISPLAY_PROP[vl]
-                          ? DISPLAY_PROP[vl]
+                        valueDisplayNames[vl]
+                          ? valueDisplayNames[vl]
                           : formatCsvUploadValue(vl)
                       )
                       .join(', ')
@@ -902,21 +900,21 @@ const FAFilterSelect = ({
                 className={`fa-button--truncate ${
                   caller === 'profiles' ? 'fa-button--truncate-sm' : ''
                 }  ${
-                  displayMode
+                  viewMode
                     ? 'btn-right-round static-button'
                     : 'filter-buttons-radius'
                 } filter-buttons-margin`}
-                type={displayMode ? 'default' : 'link'}
+                type={viewMode ? 'default' : 'link'}
                 disabled={disabled}
                 onClick={() =>
-                  displayMode ? null : setUploadModalOpen(!uploadModalOpen)
+                  viewMode ? null : setUploadModalOpen(!uploadModalOpen)
                 }
               >
                 {valuesState && valuesState.length
                   ? valuesState
                       .map((vl) =>
-                        DISPLAY_PROP[vl]
-                          ? DISPLAY_PROP[vl]
+                        valueDisplayNames[vl]
+                          ? valueDisplayNames[vl]
                           : formatCsvUploadValue(vl)
                       )
                       .join(', ')
@@ -954,4 +952,4 @@ const FAFilterSelect = ({
   );
 };
 
-export default connect(null, { uploadList })(FAFilterSelect);
+export default connect(null, { uploadList })(FaFilterSelect);

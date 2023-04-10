@@ -47,8 +47,8 @@ function EventGroupBlock({
   useEffect(() => {
     const filterOpts = [...filterOptions];
     filterOpts[0].values = eventProperties[event.label];
-    if (eventGroup?.length) {
-      filterOpts[2].values = groupProperties[eventGroup[1]];
+    if (eventGroup) {
+      filterOpts[2].values = groupProperties[eventGroup];
       filterOpts[1].values = [];
     } else {
       filterOpts[1].values = userProperties;
@@ -129,7 +129,7 @@ function EventGroupBlock({
     };
 
     return (
-      <div className="flex items-center m-0 mx-2">
+      <div className='flex items-center m-0 mx-2'>
         show as
         <div
           className={`flex relative m-0 mx-2 ${styles.grpProps__select__opt}`}
@@ -169,14 +169,14 @@ function EventGroupBlock({
     }
 
     return isGroupByDDVisible ? (
-      <div className="relative">
+      <div className='relative'>
         <Tooltip title={propName}>
           <Button
             icon={
-              <SVG name={groupByEvent.prop_category} size={16} color="purple" />
+              <SVG name={groupByEvent.prop_category} size={16} color='purple' />
             }
-            type="link"
-            className="fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin"
+            type='link'
+            className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
           >
             {propName}
           </Button>
@@ -184,7 +184,7 @@ function EventGroupBlock({
         <div className={styles.group_block__event_selector}>
           <GroupSelect2
             groupedProperties={filterOptions}
-            placeholder="Select Property"
+            placeholder='Select Property'
             optionClick={(group, val) => onChange(group, val, index)}
             onClickOutside={() => setGroupByDDVisible(false)}
           />
@@ -195,10 +195,10 @@ function EventGroupBlock({
         <Tooltip title={propName}>
           <Button
             icon={
-              <SVG name={groupByEvent.prop_category} size={16} color="purple" />
+              <SVG name={groupByEvent.prop_category} size={16} color='purple' />
             }
-            type="link"
-            className="fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin"
+            type='link'
+            className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
             onClick={() => setGroupByDDVisible(true)}
           >
             {propName}
@@ -213,7 +213,7 @@ function EventGroupBlock({
     <div className={styles.group_block__event_selector}>
       <GroupSelect2
         groupedProperties={filterOptions}
-        placeholder="Select Property"
+        placeholder='Select Property'
         optionClick={(group, val) => onChange(group, val)}
         onClickOutside={() => closeDropDown()}
       />
@@ -221,17 +221,17 @@ function EventGroupBlock({
   );
 
   return (
-    <div className="flex items-center relative ml-10">
+    <div className='flex items-center relative ml-10'>
       {grpIndex >= 1 ? (
-        <Text level={8} type="title" extraClass="m-0 mr-16" weight="thin">
+        <Text level={8} type='title' extraClass='m-0 mr-16' weight='thin'>
           and
         </Text>
       ) : (
         <Text
           level={8}
-          type="title"
-          extraClass="m-0 breakdown-margin"
-          weight="thin"
+          type='title'
+          extraClass='m-0 breakdown-margin'
+          weight='thin'
         >
           Breakdown
         </Text>
@@ -242,12 +242,12 @@ function EventGroupBlock({
         <>{renderGroupBySelect()}</>
       )}
       <Button
-        type="text"
+        type='text'
         onClick={() => delGroupState(groupByEvent)}
-        size="small"
-        className="fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button"
+        size='small'
+        className='fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button'
       >
-        <SVG name="remove" />
+        <SVG name='remove' />
       </Button>
     </div>
   );
