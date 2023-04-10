@@ -18,10 +18,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) (map[string]interface{}, bool) {
+func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) interface{} {
 
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
 	modelCloudManager := configs["modelCloudManager"].(*filestore.FileManager)
+	errMsgToProjectIDMap := make(map[string][]int64)
 
 	for _, projectId := range projectIdArray {
 
@@ -42,6 +43,8 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) (
 		resultGroup, errCode := store.GetStore().RunSixSignalGroupQuery(requestPayload.Queries, projectId)
 		if errCode != http.StatusOK {
 			logCtx.Error("Query failed. Failed to process query from DB with error: ", errCode)
+			errMsg := fmt.Sprintf("%v", errCode)
+			errMsgToProjectIDMap[errMsg] = append(errMsgToProjectIDMap[errMsg], projectId)
 			continue
 		}
 		resultGroup.Query = requestPayload
@@ -55,8 +58,6 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) (
 		}
 		resultGroup.CacheMeta = meta
 		resultGroup.IsShareable = true
-
-		logCtx.WithFields(log.Fields{"result": resultGroup}).Info("Printing the resultGroup")
 
 		fromDate := U.GetDateOnlyFormatFromTimestampAndTimezone(from, timezone)
 		toDate := U.GetDateOnlyFormatFromTimestampAndTimezone(to, timezone)
@@ -73,6 +74,9 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) (
 		resultFile, err := os.Create(sixSignalAnalysisTempPath + sixSignalAnalysisTempName)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("Failed creating sixSignalAnalysis temp file")
+			errMsg := fmt.Sprintf("%v", err)
+			errMsgToProjectIDMap[errMsg] = append(errMsgToProjectIDMap[errMsg], projectId)
+			continue
 		}
 
 		pwmBytes, _ := json.Marshal(resultGroup)
@@ -80,11 +84,22 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) (
 		pString = pString + "\n"
 		pBytes := []byte(pString)
 		_, err = resultFile.Write(pBytes)
-		logCtx.Info("ResultFile in SIxSignalAnalysis: ", resultFile)
+		if err != nil {
+			logCtx.Error("Failed to write results in result file with err: ", err)
+			errMsg := fmt.Sprintf("%v", err)
+			errMsgToProjectIDMap[errMsg] = append(errMsgToProjectIDMap[errMsg], projectId)
+			continue
+		}
 
-		WriteSixSignalResultsToCloud(modelCloudManager, diskManager, folderName, projectId, logCtx)
+		err1 := WriteSixSignalResultsToCloud(modelCloudManager, diskManager, folderName, projectId, logCtx)
+		if err1 != nil {
+			logCtx.Error("Writing sixsignal results to cloud failed with err: ", err1)
+			errMsg := fmt.Sprintf("Writing sixsignal results to cloud failed with errCode %v ", err1)
+			errMsgToProjectIDMap[errMsg] = append(errMsgToProjectIDMap[errMsg], projectId)
+			continue
+		}
 	}
-	return nil, true
+	return errMsgToProjectIDMap
 
 }
 

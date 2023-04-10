@@ -115,12 +115,8 @@ func main() {
 	configs["sortOnGroup"] = *sortOnGroup
 
 	log.Info("Hitting the method SixSignalAnalysis")
-	_, status := delta.SixSignalAnalysis(projectIdsArray, configs)
-	if !status {
-		log.Info("Six Signal Analysis status failed")
-		C.PingHealthcheckForFailure(healthcheckPingID, status)
-	}
-	log.Info("Six Signal Analysis status successful")
-	C.PingHealthcheckForSuccess(healthcheckPingID, status)
+	jobReport := delta.SixSignalAnalysis(projectIdsArray, configs)
+
+	C.PingHealthcheckForSuccess(healthcheckPingID, jobReport)
 
 }
