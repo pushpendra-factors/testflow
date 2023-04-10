@@ -24,7 +24,9 @@ function FaSelect({
   extraClass = '',
   disabled = false,
   showIcon = false,
-  placement = 'bottom'
+  placement = 'bottom',
+  style,
+  placeholder='Search'
 }) {
   const [optClickArr, setOptClickArr] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -303,7 +305,7 @@ function FaSelect({
           style={{ overflow: 'hidden' }}
           prefix={<SVG name={'search'} />}
           size='large'
-          placeholder={'Search'}
+          placeholder={placeholder}
           onChange={search}
           ref={inputComponentRef}
         ></Input>
@@ -314,6 +316,7 @@ function FaSelect({
   return (
     <>
       <div
+        style={style}
         className={`${extraClass}  ${styles.dropdown__select}
           ${
             posRight

@@ -207,6 +207,35 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		return true
 	})
 
+	// 2. UserSourceWeb (1 search filter applied)
+	payload = model.TimelinePayload{
+		Source: "web",
+		SearchFilter: []model.QueryProperty{{
+			Entity:    "user_g",
+			Type:      "categorical",
+			Property:  "$user_id",
+			Operator:  "contains",
+			Value:     "user2",
+			LogicalOp: "AND",
+		}},
+		SegmentId: "",
+	}
+	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 1)
+	assert.Equal(t, resp[0].Identity, "user2@example.com")
+	assert.Condition(t, func() bool {
+		for _, prop := range timelinesConfig.UserConfig.TableProps {
+			assert.NotNil(t, resp[0].TableProps[prop])
+		}
+		assert.NotNil(t, resp[0].LastActivity)
+		return true
+	})
+
 	// 3. UserSourceWeb (Segment Applied, no filters)
 	// creating a segment
 	segmentPayload := &model.SegmentPayload{
@@ -1017,7 +1046,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 
 	// Test Cases :-
 
-	// Source: All, 1 group exists
+	//1. Source: All, 1 group exists
 	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group1)
@@ -1053,7 +1082,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.NotNil(t, group3)
 	assert.Equal(t, http.StatusCreated, status)
 
-	// 1. Accounts from Different Sources (No filter, no segment applied)
+	// 2. Accounts from Different Sources (No filter, no segment applied)
 	sourceToUserCountMap := map[string]int{"All": 15, U.GROUP_NAME_HUBSPOT_COMPANY: 5, U.GROUP_NAME_SALESFORCE_ACCOUNT: 5, U.GROUP_NAME_SIX_SIGNAL: 5}
 	for source, count := range sourceToUserCountMap {
 		payload.Source = source
@@ -1102,7 +1131,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		})
 	}
 
-	// 4. Segment with multiple $hubspot_company filters
+	// 3. Segment with multiple $hubspot_company filters
 	segmentPayload := &model.SegmentPayload{
 		Name:        "Name1",
 		Description: "dummy info",
@@ -1185,6 +1214,59 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		}
 		return true
 	})
+
+	// Search Filter:-
+	payload = model.TimelinePayload{
+		Source: "$hubspot_company",
+		SearchFilter: []model.QueryProperty{
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$hubspot_company_name",
+				Operator:  "equals",
+				Value:     "AdPushup",
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$hubspot_company_name",
+				Operator:  "equals",
+				Value:     "Heyflow",
+				LogicalOp: "OR",
+			},
+		},
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+	assert.Condition(t, func() bool {
+		filteredCompaniesNameHostNameMap := map[string]string{"AdPushup": "adpushup.com", "Heyflow": "heyflow.app"}
+		for i, user := range resp {
+			assert.Condition(t, func() bool {
+				for name, hostName := range filteredCompaniesNameHostNameMap {
+					if name == user.Name && hostName == user.HostName {
+						return true
+					}
+				}
+				return false
+			})
+			assert.NotNil(t, user.LastActivity)
+			if i > 0 {
+				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
+			}
+			for _, prop := range timelinesConfig.UserConfig.TableProps {
+				assert.NotNil(t, user.TableProps[prop])
+			}
+		}
+		return true
+	})
+
 }
 
 func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {

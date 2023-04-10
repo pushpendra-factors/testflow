@@ -110,7 +110,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
 		logCtx.Error("Json decode failed.")
-		message := fmt.Sprintf("Query failed. Invalid source provided : %s", payload.Source)
+		message := "Query failed. Invalid payload"
 		return nil, http.StatusBadRequest, "", message, true
 	}
 

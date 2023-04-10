@@ -45,6 +45,9 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusBadRequest
 	}
 
+	// Merge Filters
+	payload.Filters = append(payload.Filters, payload.SearchFilter...)
+
 	var tableProps []string
 	if payload.SegmentId != "" {
 		segment, status := store.GetSegmentById(projectID, payload.SegmentId)
