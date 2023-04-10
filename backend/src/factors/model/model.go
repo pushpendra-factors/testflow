@@ -642,6 +642,8 @@ type Model interface {
 	GetDisplayNameLabel(projectID int64, source, propertyKey, value string) (*model.DisplayNameLabel, int, error)
 	GetDisplayNameLabelsByProjectIdAndSource(projectID int64, source string) ([]model.DisplayNameLabel, int)
 	GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID int64, source, propertyKey string) (map[string]string, error)
+	AddPropertyValueLabelToQueryResults(projectID int64, oldResults []model.QueryResult) ([]model.QueryResult, error)
+	TransformQueryResultsColumnValuesToLabel(projectID int64, result map[string]interface{}) (map[string]interface{}, error)
 
 	// task and task-execution
 	RegisterTaskWithDefaultConfiguration(taskName string, source string, frequency int, isProjectEnabled bool) (uint64, int, string)

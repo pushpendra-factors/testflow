@@ -136,6 +136,7 @@ func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID int64, query model.P
 		logCtx.WithError(err).Error("Failed to sanitize query results.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
+
 	U.LogComputeTimeWithQueryRequestID(startComputeTime, reqID, &logFields)
 	return result, http.StatusOK, ""
 }

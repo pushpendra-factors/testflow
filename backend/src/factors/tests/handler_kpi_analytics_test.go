@@ -6,6 +6,7 @@ import (
 	H "factors/handler"
 	"factors/handler/helpers"
 	v1 "factors/handler/v1"
+	IntHubspot "factors/integration/hubspot"
 	"factors/model/model"
 	M "factors/model/model"
 	"factors/model/store"
@@ -1792,8 +1793,6 @@ func sendKPIAnalyticsQueryReq(r *gin.Engine, projectId int64, agent *M.Agent, kp
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
-	log.Warn(jsonResponse)
 	return w
 }
 
@@ -1952,4 +1951,307 @@ func TestKPIChannelsMissingTimestamps(t *testing.T) {
 	assert.Equal(t, len(result[0].Rows), 10)
 	assert.Equal(t, result[0].Rows[2], []interface{}{"2022-08-02T00:00:00+05:30", "test1", float64(1000)})
 	assert.Equal(t, result[0].Rows[5], []interface{}{"2022-08-03T00:00:00+05:30", "test2", float64(500)})
+}
+
+func TestKPIQueryGroupHandlerForPropertyValueLabels(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, agent)
+
+	startTimestamp := time.Now().Unix()
+
+	hubspotDisplayNameLabels := map[string]string{
+		"OFFFLINE":       "Offline",
+		"PAID_SEARCH":    "Paid Search",
+		"DIRECT_TRAFFIC": "Direct Traffic",
+		"ORGANIC_SEARCH": "Organic Search",
+		"SOCIAL_MEDIA":   "Social Media",
+	}
+
+	for value, label := range hubspotDisplayNameLabels {
+		status := store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_hs_latest_source", value, label)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	// create new hubspot document
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  	"firstname": { "value": "%s" },
+		  	"lastname": { "value": "%s" },
+			"createdate": { "value": "%d" },
+		  	"lastmodifieddate": { "value": "%d" },
+			"hs_latest_source": { "value": "%s" }
+		},
+		"identity-profiles": [
+			{
+				"vid": %d,
+				"identities": [
+					{
+					  "type": "EMAIL",
+					  "value": "%s"
+					},
+					{
+						"type": "LEAD_GUID",
+						"value": "%s"
+					}
+				]
+			}
+		]
+	}`
+
+	latestSources := []string{"ORGANIC_SEARCH", "DIRECT_TRAFFIC", "PAID_SOCIAL"}
+	hubspotDocuments := make([]*model.HubspotDocument, 0)
+	for i := 0; i < len(latestSources); i++ {
+		documentID := i
+		createdTime := startTimestamp*1000 + int64(i*100)
+		updatedTime := createdTime + 200
+		cuid := U.RandomString(10)
+		leadGUID := U.RandomString(15)
+		jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdTime, "Sample", fmt.Sprintf("Test %d", i), createdTime, updatedTime, latestSources[i], documentID, cuid, leadGUID)
+
+		document := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Value:     &postgres.Jsonb{json.RawMessage(jsonContact)},
+		}
+		hubspotDocuments = append(hubspotDocuments, &document)
+	}
+
+	status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, hubspotDocuments, 3)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// execute sync job
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	customMetric := &model.CustomMetric{
+		ProjectID:              project.ID,
+		Name:                   "Contact Created",
+		Description:            "Custom KPI",
+		TypeOfQuery:            model.ProfileQueryType,
+		SectionDisplayCategory: "hubspot_contacts",
+		Transformations:        &postgres.Jsonb{json.RawMessage(`{"agFn":"unique","daFie":"$hubspot_contact_createdate","fil":[]}`)},
+	}
+	customMetric, errString, statusCode := store.GetStore().CreateCustomMetric(*customMetric)
+	assert.NotNil(t, customMetric)
+	assert.Equal(t, "", errString)
+	assert.Equal(t, http.StatusCreated, statusCode)
+
+	kpiQueryGroup := model.KPIQueryGroup{
+		Class: model.QueryClassKPI,
+		Queries: []model.KPIQuery{
+			model.KPIQuery{
+				Category:         "profiles",
+				DisplayCategory:  "hubspot_contacts",
+				Metrics:          []string{"Contact Created"},
+				From:             startTimestamp,
+				To:               startTimestamp + 500,
+				QueryType:        "custom",
+				GroupByTimestamp: "date",
+			},
+		},
+		GlobalGroupBy: []model.KPIGroupBy{
+			model.KPIGroupBy{
+				PropertyName:     "$hubspot_contact_hs_latest_source",
+				PropertyDataType: "categorical",
+				Entity:           model.PropertyEntityUser,
+			},
+		},
+	}
+	kpiQueryGroupJson, err := U.EncodeStructTypeToPostgresJsonb(kpiQueryGroup)
+	assert.Nil(t, err)
+	assert.NotNil(t, kpiQueryGroupJson)
+
+	C.GetConfig().EnableSyncReferenceFieldsByProjectID = ""
+	w := sendKPIAnalyticsQueryReq(r, project.ID, agent, kpiQueryGroup)
+	jsonResponse, err := ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	kpiQueryGroupResult := struct {
+		QueryResult []model.QueryResult `json:"result"`
+		Query       model.KPIQueryGroup `json:"query"`
+		IsSharable  bool                `json:"sharable"`
+	}{}
+	json.Unmarshal(jsonResponse, &kpiQueryGroupResult)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	assert.NotNil(t, kpiQueryGroupResult)
+	assert.Equal(t, false, kpiQueryGroupResult.IsSharable)
+	assert.NotNil(t, kpiQueryGroupResult.QueryResult)
+	assert.NotNil(t, kpiQueryGroupResult.Query)
+
+	assert.Equal(t, 1, len(kpiQueryGroupResult.QueryResult))
+
+	startTimestampString := time.Unix(U.GetBeginningOfDayTimestamp(time.Now().Unix()), 0).Format(U.DATETIME_FORMAT_DB_WITH_TIMEZONE)
+
+	assert.Equal(t, kpiQueryGroupResult.QueryResult[0].Headers, []string{"datetime", "$hubspot_contact_hs_latest_source", "Contact Created"})
+	assert.Equal(t, len(latestSources), len(kpiQueryGroupResult.QueryResult[0].Rows))
+	for i := range kpiQueryGroupResult.QueryResult[0].Rows {
+		assert.Equal(t, startTimestampString, kpiQueryGroupResult.QueryResult[0].Rows[i][0])
+		assert.Contains(t, latestSources, kpiQueryGroupResult.QueryResult[0].Rows[i][1])
+		assert.Equal(t, float64(1), kpiQueryGroupResult.QueryResult[0].Rows[i][2])
+	}
+
+	C.GetConfig().EnableSyncReferenceFieldsByProjectID = "*"
+	w = sendKPIAnalyticsQueryReq(r, project.ID, agent, kpiQueryGroup)
+	jsonResponse, err = ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+
+	queryResultsFromCache := make([]model.QueryResult, 0)
+	json.Unmarshal(jsonResponse, &queryResultsFromCache)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	assert.NotNil(t, queryResultsFromCache)
+
+	assert.Equal(t, 1, len(queryResultsFromCache))
+
+	startTimestampString = time.Unix(U.GetBeginningOfDayTimestamp(time.Now().Unix()), 0).Format(U.DATETIME_FORMAT_DB_WITH_TIMEZONE)
+
+	assert.Equal(t, queryResultsFromCache[0].Headers, []string{"datetime", "$hubspot_contact_hs_latest_source", "Contact Created"})
+	assert.Equal(t, len(latestSources), len(queryResultsFromCache[0].Rows))
+	for i := range queryResultsFromCache[0].Rows {
+		assert.Equal(t, startTimestampString, queryResultsFromCache[0].Rows[i][0])
+		assert.Contains(t, []string{"Organic Search", "Direct Traffic", "PAID_SOCIAL"}, queryResultsFromCache[0].Rows[i][1])
+		assert.Equal(t, float64(1), queryResultsFromCache[0].Rows[i][2])
+	}
+
+	// Dashboard Cache Response
+	dashboard, statusCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: U.RandomString(5), Type: model.DashboardTypeProjectVisible})
+	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.NotNil(t, dashboard)
+
+	dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
+		ProjectID: project.ID,
+		Type:      model.QueryTypeDashboardQuery,
+		Query:     *kpiQueryGroupJson,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, dashboardQuery)
+
+	dashboardUnit, statusCode, errMsg := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
+		DashboardId:  dashboard.ID,
+		QueryId:      dashboardQuery.ID,
+		Presentation: model.PresentationLine,
+	})
+	assert.Equal(t, "", errMsg)
+	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.NotNil(t, dashboardUnit)
+
+	meta := model.CacheMeta{
+		Timezone:       string(U.TimeZoneStringIST),
+		From:           kpiQueryGroup.Queries[0].From,
+		To:             kpiQueryGroup.Queries[0].To,
+		RefreshedAt:    U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		Preset:         "",
+	}
+	for i := range kpiQueryGroupResult.QueryResult {
+		kpiQueryGroupResult.QueryResult[i].CacheMeta = meta
+	}
+
+	model.SetCacheResultByDashboardIdAndUnitId(kpiQueryGroupResult.QueryResult, project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone), meta)
+
+	shouldReturn, resCode, resMsgInt := helpers.GetResponseIfCachedDashboardQuery("", project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone))
+	assert.Equal(t, http.StatusOK, resCode)
+	assert.Equal(t, true, shouldReturn)
+	assert.NotNil(t, resMsgInt)
+
+	resMsgByte, err := json.Marshal(resMsgInt)
+	assert.Nil(t, err)
+	var cachedDashboardQueryResponse helpers.DashboardQueryResponsePayload
+	err = json.Unmarshal(resMsgByte, &cachedDashboardQueryResponse)
+	assert.Nil(t, err)
+
+	assert.NotNil(t, cachedDashboardQueryResponse)
+	assert.Equal(t, true, cachedDashboardQueryResponse.Cache)
+	assert.Equal(t, meta.RefreshedAt, cachedDashboardQueryResponse.RefreshedAt)
+	assert.Equal(t, meta.Timezone, cachedDashboardQueryResponse.TimeZone)
+	assert.NotNil(t, cachedDashboardQueryResponse.CacheMeta)
+	assert.NotNil(t, cachedDashboardQueryResponse.Result)
+
+	result, ok := cachedDashboardQueryResponse.Result.([]interface{})
+	assert.Equal(t, true, ok)
+	assert.NotNil(t, result)
+
+	var responseQueryResults []model.QueryResult
+	for i := range result {
+		resultByte, err := json.Marshal(result[i])
+		assert.Nil(t, err)
+		var queryResult model.QueryResult
+		err = json.Unmarshal(resultByte, &queryResult)
+		assert.Nil(t, err)
+
+		responseQueryResults = append(responseQueryResults, queryResult)
+	}
+	assert.Equal(t, 1, len(responseQueryResults))
+
+	assert.Equal(t, "datetime", responseQueryResults[0].Headers[0])
+	for i := range responseQueryResults[0].Rows {
+		assert.Equal(t, startTimestampString, responseQueryResults[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "$hubspot_contact_hs_latest_source", responseQueryResults[0].Headers[1])
+	for i := range responseQueryResults[0].Rows {
+		assert.Contains(t, latestSources, responseQueryResults[0].Rows[i][1])
+	}
+
+	assert.Equal(t, "Contact Created", responseQueryResults[0].Headers[2])
+	for i := range responseQueryResults[0].Rows {
+		assert.Equal(t, float64(1), responseQueryResults[0].Rows[i][2])
+	}
+
+	resMsgIntTransformed, err := helpers.TransformQueryCacheResponseColumnValuesToLabel(project.ID, resMsgInt)
+	assert.Nil(t, err)
+	assert.NotNil(t, resMsgIntTransformed)
+
+	resMsgTransformedByte, err := json.Marshal(resMsgIntTransformed)
+	assert.Nil(t, err)
+	cachedDashboardQueryResponse = helpers.DashboardQueryResponsePayload{}
+	err = json.Unmarshal(resMsgTransformedByte, &cachedDashboardQueryResponse)
+	assert.Nil(t, err)
+
+	assert.NotNil(t, cachedDashboardQueryResponse)
+	assert.Equal(t, true, cachedDashboardQueryResponse.Cache)
+	assert.Equal(t, meta.RefreshedAt, cachedDashboardQueryResponse.RefreshedAt)
+	assert.Equal(t, meta.Timezone, cachedDashboardQueryResponse.TimeZone)
+	assert.NotNil(t, cachedDashboardQueryResponse.CacheMeta)
+	assert.NotNil(t, cachedDashboardQueryResponse.Result)
+
+	result, ok = cachedDashboardQueryResponse.Result.([]interface{})
+	assert.Equal(t, true, ok)
+	assert.NotNil(t, result)
+
+	responseQueryResults = make([]model.QueryResult, 0)
+	for i := range result {
+		resultByte, err := json.Marshal(result[i])
+		assert.Nil(t, err)
+		var queryResult model.QueryResult
+		err = json.Unmarshal(resultByte, &queryResult)
+		assert.Nil(t, err)
+
+		responseQueryResults = append(responseQueryResults, queryResult)
+	}
+	assert.Equal(t, 1, len(responseQueryResults))
+
+	assert.Equal(t, "datetime", responseQueryResults[0].Headers[0])
+	for i := range responseQueryResults[0].Rows {
+		assert.Equal(t, startTimestampString, responseQueryResults[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "$hubspot_contact_hs_latest_source", responseQueryResults[0].Headers[1])
+	for i := range responseQueryResults[0].Rows {
+		assert.Contains(t, []string{"Organic Search", "Direct Traffic", "PAID_SOCIAL"}, responseQueryResults[0].Rows[i][1])
+	}
+
+	assert.Equal(t, "Contact Created", responseQueryResults[0].Headers[2])
+	for i := range responseQueryResults[0].Rows {
+		assert.Equal(t, float64(1), responseQueryResults[0].Rows[i][2])
+	}
 }

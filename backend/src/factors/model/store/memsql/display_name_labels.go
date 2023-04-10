@@ -3,7 +3,9 @@ package memsql
 import (
 	C "factors/config"
 	"factors/model/model"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"errors"
 	U "factors/util"
@@ -170,4 +172,103 @@ func (store *MemSQL) GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectI
 	}
 
 	return propertyValueLabelMap, nil
+}
+
+func (store *MemSQL) AddPropertyValueLabelToQueryResults(projectID int64, oldResults []model.QueryResult) ([]model.QueryResult, error) {
+	newResults := make([]model.QueryResult, 0, 0)
+	for i := range oldResults {
+		result, err := U.EncodeStructTypeToMap(&oldResults[i])
+		if err != nil {
+			return oldResults, err
+		}
+
+		result, err = store.TransformQueryResultsColumnValuesToLabel(projectID, result)
+		if err != nil {
+			return oldResults, fmt.Errorf("Failed to set property value labels")
+		}
+
+		var newResult model.QueryResult
+		err = U.DecodeInterfaceMapToStructType(result, &newResult)
+		if err != nil {
+			return oldResults, fmt.Errorf("Failed to encode map to query_result on AddPropertyValueLabelToQueryResults")
+		}
+		newResults = append(newResults, newResult)
+	}
+	return newResults, nil
+}
+
+func (store *MemSQL) TransformQueryResultsColumnValuesToLabel(projectID int64, result map[string]interface{}) (map[string]interface{}, error) {
+	if projectID == 0 || len(result) == 0 {
+		return result, errors.New("Invalid parameters")
+	}
+
+	logCtx := log.WithField("project_id", projectID)
+
+	if _, exists := result["headers"]; !exists {
+		return result, fmt.Errorf("Headers not available in map on TransformQueryResultsColumnValuesToLabel")
+	}
+
+	if _, exists := result["rows"]; !exists {
+		return result, fmt.Errorf("Rows not available in map on TransformQueryResultsColumnValuesToLabel")
+	}
+
+	headers, ok := result["headers"].([]interface{})
+	if !ok {
+		return result, errors.New("Cannot decode headers to []interface{} on TransformQueryResultsColumnValuesToLabel")
+	}
+	rowsInt, ok := result["rows"].([]interface{})
+	if !ok {
+		return result, errors.New("Cannot decode rows to []interface{} on TransformQueryResultsColumnValuesToLabel")
+	}
+
+	rows := make([][]interface{}, 0, 0)
+	for i := range rowsInt {
+		if rowsInt[i] != nil {
+			row, ok := rowsInt[i].([]interface{})
+			if !ok {
+				return result, errors.New("Cannot decode rows to [][]interface{} on TransformQueryResultsColumnValuesToLabel")
+			}
+			rows = append(rows, row)
+		}
+	}
+
+	for _, header := range headers {
+		propertyName := U.GetPropertyValueAsString(header)
+		if !U.IsAllowedCRMPropertyPrefix(propertyName) {
+			continue
+		}
+
+		source := strings.Split(propertyName, "_")[0]
+		source = strings.TrimPrefix(source, "$")
+
+		propertyIndex := -1
+		for i, property := range headers {
+			if propertyName == property {
+				propertyIndex = i
+			}
+		}
+
+		if propertyIndex == -1 {
+			logCtx.WithFields(log.Fields{"source": source, "property_key": propertyName}).Error("Failed to get property value labels in result headers on transformResultsColumnValuesToLabel")
+			continue
+		}
+
+		propertyValueLabels, err := store.GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID, source, propertyName)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"source": source, "property_key": propertyName}).WithError(err).Error("Failed to get property value labels on transformResultsColumnValuesToLabel")
+			continue
+		}
+
+		if len(propertyValueLabels) == 0 {
+			continue
+		}
+
+		for i := range rows {
+			propertyValue := U.GetPropertyValueAsString(rows[i][propertyIndex])
+			if label, exists := propertyValueLabels[propertyValue]; exists {
+				rows[i][propertyIndex] = label
+			}
+		}
+	}
+	return result, nil
 }

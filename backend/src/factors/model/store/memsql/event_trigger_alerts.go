@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	E "factors/event_match"
@@ -625,7 +626,51 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 		}
 		breakdownPropMap[prop] = value
 	}
+
+	projectID := event.ProjectId
+	if C.AllowSyncReferenceFields(projectID) {
+		breakdownPropMap, err = store.transformBreakdownPropertiesToPropertyLabels(projectID, breakdownPropMap)
+		if err != nil {
+			log.WithError(err).Error("Failed to get property labels on GetMessageAndBreakdownPropertiesMap")
+			return msgPropMap, breakdownPropMap, err
+		}
+	}
+
 	return msgPropMap, breakdownPropMap, nil
+}
+
+func (store *MemSQL) transformBreakdownPropertiesToPropertyLabels(projectID int64, breakdownPropertiesMap map[string]interface{}) (map[string]interface{}, error) {
+	if projectID == 0 {
+		return breakdownPropertiesMap, errors.New("Invalid parameters.")
+	}
+
+	newBreakdownPropertiesMap := make(map[string]interface{}, 0)
+	for propertyKey, valueInt := range breakdownPropertiesMap {
+		if !U.IsAllowedCRMPropertyPrefix(propertyKey) {
+			continue
+		}
+
+		source := strings.Split(propertyKey, "_")[0]
+		source = strings.TrimPrefix(source, "$")
+
+		value := U.GetPropertyValueAsString(valueInt)
+
+		displayLabel, errCode, err := store.GetDisplayNameLabel(projectID, source, propertyKey, value)
+		if errCode != http.StatusFound && errCode != http.StatusNotFound {
+			log.WithFields(log.Fields{"project_id": projectID, "source": source,
+				"property_key": propertyKey, "value": value}).WithError(err).Error("Failed to get display name label.")
+			return breakdownPropertiesMap, err
+		}
+
+		if errCode == http.StatusNotFound {
+			newBreakdownPropertiesMap[propertyKey] = valueInt
+			continue
+		}
+
+		newBreakdownPropertiesMap[propertyKey] = displayLabel.Label
+	}
+
+	return newBreakdownPropertiesMap, nil
 }
 
 func getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(projectID int64, dontRepeatAlerts bool,
