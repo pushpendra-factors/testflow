@@ -1165,10 +1165,12 @@ func TestEditEventTriggerAlertHandler(t *testing.T) {
 	assert.NotNil(t, project)
 	assert.NotNil(t, agent)
 
-	slackChannel := model.SlackChannel{
-		Name:      "channel1",
-		Id:        U.GetUUID(),
-		IsPrivate: false,
+	slackChannel := []model.SlackChannel{
+		{
+			Name:      "channel1",
+			Id:        U.GetUUID(),
+			IsPrivate: false,
+		},
 	}
 	slackChannelJson, err := json.Marshal(slackChannel)
 	assert.NotNil(t, slackChannelJson)
