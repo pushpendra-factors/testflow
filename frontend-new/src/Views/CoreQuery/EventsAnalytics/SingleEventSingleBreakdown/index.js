@@ -23,21 +23,28 @@ import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
-  CHART_TYPE_LINECHART
+  CHART_TYPE_LINECHART,
+  CHART_TYPE_METRIC_CHART,
+  MAX_ALLOWED_VISIBLE_PROPERTIES
 } from '../../../../utils/constants';
 import StackedAreaChart from '../../../../components/StackedAreaChart';
 import StackedBarChart from '../../../../components/StackedBarChart';
-import { getNewSorterState } from '../../../../utils/dataFormatter';
+import {
+  generateColors,
+  getNewSorterState
+} from '../../../../utils/dataFormatter';
 import { CHART_COLOR_1 } from '../../../../constants/color.constants';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import SingleEventSingleBreakdownHorizontalBarChart from './SingleEventSingleBreakdownHorizontalBarChart';
 import ColumnChart from '../../../../components/ColumnChart/ColumnChart';
+import MetricChart from 'Components/MetricChart/MetricChart';
 
 const legendsProps = {
   position: 'bottom',
   showAll: true
 };
 
+const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 const SingleEventSingleBreakdownComponent = forwardRef(
   (
     {
@@ -212,6 +219,25 @@ const SingleEventSingleBreakdownComponent = forwardRef(
             comparisonApplied={comparisonData.data != null}
             compareCategories={compareCategories}
           />
+        </div>
+      );
+    } else if (chartType === CHART_TYPE_METRIC_CHART) {
+      console.log(visibleSeriesData);
+      chart = (
+        <div className='w-full'>
+          {visibleSeriesData &&
+            visibleSeriesData.map((eachSeriesData, eachIndex) => {
+              return (
+                <MetricChart
+                  key={eachSeriesData.name}
+                  headerTitle={eachSeriesData.name}
+                  value={eachSeriesData.value}
+                  iconColor={colors[eachIndex]}
+                  compareValue={eachSeriesData.compareValue}
+                  showComparison={comparisonData.data != null}
+                />
+              );
+            })}
         </div>
       );
     } else {

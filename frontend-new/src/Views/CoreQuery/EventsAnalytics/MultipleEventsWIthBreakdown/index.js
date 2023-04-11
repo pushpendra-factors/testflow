@@ -14,17 +14,15 @@ import StackedAreaChart from 'Components/StackedAreaChart';
 import StackedBarChart from 'Components/StackedBarChart';
 import PivotTable from 'Components/PivotTable';
 
-import {
-  generateColors,
-  getNewSorterState
-} from 'Utils/dataFormatter';
+import { generateColors, getNewSorterState } from 'Utils/dataFormatter';
 import {
   DASHBOARD_MODAL,
   CHART_TYPE_BARCHART,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_PIVOT_CHART,
-  QUERY_TYPE_EVENT
+  QUERY_TYPE_EVENT,
+  CHART_TYPE_METRIC_CHART
 } from 'Utils/constants';
 
 import {
@@ -37,6 +35,7 @@ import {
 import MultipleEventsWithBreakdownTable from './MultipleEventsWithBreakdownTable';
 
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
+import MetricChart from 'Components/MetricChart/MetricChart';
 
 const MultipleEventsWithBreakdown = forwardRef(
   (
@@ -125,7 +124,7 @@ const MultipleEventsWithBreakdown = forwardRef(
     let chart = null;
 
     const table = (
-      <div className="mt-12 w-full">
+      <div className='mt-12 w-full'>
         <MultipleEventsWithBreakdownTable
           isWidgetModal={section === DASHBOARD_MODAL}
           data={aggregateData}
@@ -160,7 +159,7 @@ const MultipleEventsWithBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_AREA) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <StackedAreaChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -171,7 +170,7 @@ const MultipleEventsWithBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_BAR) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <StackedBarChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -182,7 +181,7 @@ const MultipleEventsWithBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_PIVOT_CHART) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <PivotTable
             data={aggregateData}
             breakdown={breakdown}
@@ -191,9 +190,25 @@ const MultipleEventsWithBreakdown = forwardRef(
           />
         </div>
       );
+    } else if (chartType === CHART_TYPE_METRIC_CHART) {
+      console.log(visibleSeriesData);
+      chart = (
+        <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12'>
+          {visibleSeriesData &&
+            visibleSeriesData.map((eachSeriesData) => {
+              return (
+                <MetricChart
+                  key={eachSeriesData.name}
+                  headerTitle={eachSeriesData.name}
+                  value={eachSeriesData.value}
+                />
+              );
+            })}
+        </div>
+      );
     } else {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <LineChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -205,7 +220,7 @@ const MultipleEventsWithBreakdown = forwardRef(
     }
 
     return (
-      <div className="flex items-center justify-center flex-col">
+      <div className='flex items-center justify-center flex-col'>
         {chart}
         {table}
       </div>
