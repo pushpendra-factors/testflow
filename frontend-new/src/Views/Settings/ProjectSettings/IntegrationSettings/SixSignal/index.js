@@ -7,6 +7,7 @@ import { Text, FaErrorComp, FaErrorLog, SVG } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
 import { sendSlackNotification } from '../../../../../utils/slack';
+import { getDefaultTimelineConfigForSixSignal } from '../util';
 
 function SixSignalIntegration({
   fetchProjectSettings,
@@ -39,7 +40,11 @@ function SixSignalIntegration({
 
     udpateProjectSettings(activeProject.id, {
       client6_signal_key: values.api_key,
-      int_client_six_signal_key: true
+      int_client_six_signal_key: true,
+      //updating table user and account table config when six signal is activated
+      timelines_config: getDefaultTimelineConfigForSixSignal(
+        currentProjectSettings
+      )
     })
       .then(() => {
         setLoading(false);

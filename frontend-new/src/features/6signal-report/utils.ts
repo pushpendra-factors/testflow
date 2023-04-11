@@ -20,12 +20,41 @@ import momentTz from 'moment-timezone';
 import { intersection } from 'lodash';
 import TableCell from './ui/components/ReportTable/TableCell';
 import { APP_LAYOUT_ROUTES } from 'Routes/constants';
+import {
+  DATE_RANGE_TODAY_LABEL,
+  DATE_RANGE_YESTERDAY_LABEL,
+  DATE_RANGE_LABEL_LAST_7_DAYS,
+  getRangeByLabel
+} from 'Components/FaDatepicker/utils';
 
 export const generateFirstAndLastDayOfLastWeeks = (
   n: number = 5
 ): WeekStartEnd[] => {
   const lastWeek = MomentTz().subtract(7, 'd');
   let dateArray: WeekStartEnd[] = [];
+  const dateValues = [
+    DATE_RANGE_TODAY_LABEL,
+    DATE_RANGE_YESTERDAY_LABEL,
+    DATE_RANGE_LABEL_LAST_7_DAYS
+  ];
+  //generating unsaved report dates
+  dateValues.forEach((dateValue) => {
+    const dateObj = getRangeByLabel(dateValue);
+    const from = dateObj?.startDate ? momentTz(dateObj.startDate) : momentTz();
+    const to = dateObj?.endDate ? momentTz(dateObj.endDate) : momentTz();
+    dateArray.push({
+      from: from.unix(),
+      to: to.unix(),
+      formattedRange:
+        dateValue === DATE_RANGE_TODAY_LABEL
+          ? momentTz().format('MMM DD, YYYY')
+          : `${from.format('MMM D, Y')} - ${to.format('MMM D, Y')}`,
+      formattedRangeOption: dateValue,
+      isSaved: false
+    });
+  });
+
+  //generating saved report dates
   for (let i = 0; i < n; i++) {
     const day = MomentTz(lastWeek).subtract(7 * i, 'd');
     const weekStart = day.clone().startOf('week');
@@ -44,15 +73,7 @@ export const generateFirstAndLastDayOfLastWeeks = (
       isSaved: true
     });
   }
-  dateArray.unshift({
-    from: lastWeek.unix(),
-    to: MomentTz().unix(),
-    formattedRange: `${lastWeek.format('MMM D, Y')} - ${MomentTz().format(
-      'MMM D, Y'
-    )}`,
-    formattedRangeOption: 'Last 7 Days',
-    isSaved: false
-  });
+
   return dateArray;
 };
 

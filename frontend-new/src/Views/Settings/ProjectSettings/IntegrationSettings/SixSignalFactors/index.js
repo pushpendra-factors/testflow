@@ -9,6 +9,7 @@ import factorsai from 'factorsai';
 import { sendSlackNotification } from '../../../../../utils/slack';
 import ConnectedScreen from './ConnectedScreen';
 import useAgentInfo from 'hooks/useAgentInfo';
+import { getDefaultTimelineConfigForSixSignal } from '../util';
 
 function SixSignalFactorsIntegration({
   fetchProjectSettings,
@@ -42,7 +43,11 @@ function SixSignalFactorsIntegration({
 
     udpateProjectSettings(activeProject.id, {
       factors6_signal_key: values.api_key,
-      int_factors_six_signal_key: true
+      int_factors_six_signal_key: true,
+      //updating table user and account table config when six signal is activated
+      timelines_config: getDefaultTimelineConfigForSixSignal(
+        currentProjectSettings
+      )
     })
       .then(() => {
         setLoading(false);

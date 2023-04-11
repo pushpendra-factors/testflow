@@ -27,13 +27,21 @@ function FaPublicHeader(props) {
         </Button>
       </div>
       <div className='w-3/4 flex justify-end gap-2 items-center px-6'>
-        <ControlledComponent controller={props?.showShareButton}>
-          <Tooltip placement='bottom' title='Share'>
+        <ControlledComponent controller={isLoggedIn}>
+          <Tooltip
+            placement='bottom'
+            title={`${
+              props?.showShareButton
+                ? 'Share'
+                : 'Only weekly visitor reports can be shared for easy access'
+            }`}
+          >
             <Button
               onClick={props?.handleShareClick}
               size='large'
               type='primary'
               icon={<SVG name={'link'} color='#fff' />}
+              disabled={!props?.showShareButton}
             >
               Share
             </Button>
