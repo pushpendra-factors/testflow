@@ -823,7 +823,7 @@ const FaFilterSelect = ({
           <Text type={'title'} level={6} weight={'bold'} extraClcalass={'m-0'}>
             Upload a CSV with a single column
           </Text>
-          <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
+          <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 -mt-2'}>
             We’ll only look at the first column as your reference list of data
           </Text>
           <div className='border rounded mt-2 flex justify-center '>
