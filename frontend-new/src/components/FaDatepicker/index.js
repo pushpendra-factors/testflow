@@ -24,7 +24,8 @@ const FaDatepicker = ({
   className,
   comparison_supported: comparisonSupported = false,
   handleCompareWithClick,
-  disabled = false
+  disabled = false,
+  todayPicker = true
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setDatePickerType] = useState('');
@@ -313,11 +314,13 @@ const FaDatepicker = ({
 
       {presetRange && (
         <>
+        {todayPicker &&
           <Menu.Item key="today">
             <a target="_blank" onClick={() => returnPreSetDate('today')}>
               Today
             </a>
           </Menu.Item>
+          }
           <Menu.Item key="yesterday">
             <a target="_blank" onClick={() => returnPreSetDate('yesterday')}>
               Yesterday
@@ -507,7 +510,7 @@ const FaDatepicker = ({
                 <RangePicker
                   disabled={disabled}
                   format="MMM DD YYYY"
-                  disabledDate={(d) => !d || d.isAfter(MomentTz())}
+                  disabledDate={(d) => !d || (todayPicker ?  d.isAfter(MomentTz()) : d.isAfter(MomentTz().subtract(1, 'days')) )}
                   dropdownClassName="fa-custom-datepicker--datepicker"
                   size="small"
                   suffixIcon={null}
