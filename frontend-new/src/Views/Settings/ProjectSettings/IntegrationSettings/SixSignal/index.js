@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useEffect } from 'react';
-import { connect } from 'react-redux';
+import { connect, useDispatch } from 'react-redux';
 import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import { Row, Col, Modal, Input, Form, Button, message, Avatar } from 'antd';
 import { Text, FaErrorComp, FaErrorLog, SVG } from 'factorsComponents';
@@ -8,6 +8,10 @@ import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
 import { sendSlackNotification } from '../../../../../utils/slack';
 import { getDefaultTimelineConfigForSixSignal } from '../util';
+import { createDashboardFromTemplate } from 'Reducers/dashboard_templates/services';
+import { fetchDashboards } from 'Reducers/dashboard/services';
+import { fetchQueries } from 'Reducers/coreQuery/services';
+import logger from 'Utils/logger';
 
 function SixSignalIntegration({
   fetchProjectSettings,
@@ -22,12 +26,31 @@ function SixSignalIntegration({
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (currentProjectSettings?.int_client_six_signal_key) {
       setIsActive(true);
     }
   }, [currentProjectSettings]);
+
+  //activating visitor identification template when 6 signal keys are added
+  const activateVisitorIdentificationTemplate = async () => {
+    try {
+      if (!activeProject?.id) return;
+      const res = await createDashboardFromTemplate(
+        activeProject.id,
+        // eslint-disable-next-line no-undef
+        BUILD_CONFIG.firstTimeDashboardTemplates?.websitevisitoridentification
+      );
+      if (res) {
+        dispatch(fetchDashboards(activeProject.id));
+        dispatch(fetchQueries(activeProject.id));
+      }
+    } catch (error) {
+      logger.error('Error in activating visitor identification', error);
+    }
+  };
 
   const onFinish = (values) => {
     setLoading(true);
@@ -49,6 +72,7 @@ function SixSignalIntegration({
       .then(() => {
         setLoading(false);
         setShowForm(false);
+        activateVisitorIdentificationTemplate();
         setTimeout(() => {
           message.success('6Signal integration successful');
         }, 500);

@@ -184,6 +184,7 @@ const SixSignalReport = () => {
     setSelectedCampaigns([]);
   };
 
+  //Effect for hiding the side panel and menu
   useEffect(() => {
     dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
     return () => {
@@ -191,6 +192,7 @@ const SixSignalReport = () => {
     };
   }, [dispatch]);
 
+  //Effect for fetching the data when relevant query params are available
   useEffect(() => {
     const fetchPublicData = async () => {
       try {
@@ -231,12 +233,14 @@ const SixSignalReport = () => {
     }
   }, [paramQueryId, paramProjectId, isLoggedIn]);
 
+  //Effect for selecting the selected date as default date
   useEffect(() => {
     if (isLoggedIn && isSixSignalActivated && dateValues && !paramQueryId) {
       setDateSelected(dateValues[0].formattedRange);
     }
   }, [isLoggedIn, dateValues, isSixSignalActivated, paramQueryId]);
 
+  //Effect for getting data from API when date is selected or changed
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -265,6 +269,7 @@ const SixSignalReport = () => {
     if (active_project && active_project?.id && dateSelected) fetchData();
   }, [active_project, dateSelected, dateValues, getDateObjFromSelectedDate]);
 
+  //Effect for formatting data when api data is available.
   useEffect(() => {
     if (data) {
       const value = parseResultGroupResponse(data.result_group[0]);
