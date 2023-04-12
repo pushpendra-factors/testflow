@@ -808,6 +808,7 @@ type Model interface {
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
+	GetAssociatedGroup(projectID int64, userID string, groupName string) (string, error)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)

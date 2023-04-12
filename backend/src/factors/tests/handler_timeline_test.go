@@ -456,7 +456,28 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
 	assert.Equal(t, errCode, http.StatusAccepted)
 
+	// Create Associated Account
 	props := map[string]interface{}{
+		"$hubspot_company_name": "Freshworks",
+		"$country":              "Australia",
+	}
+	propertiesJSON, err := json.Marshal(props)
+	if err != nil {
+		log.WithError(err).Fatal("Marshal error.")
+	}
+	accProps := postgres.Jsonb{RawMessage: propertiesJSON}
+	isGroupUser := true
+
+	accountID, _ := store.GetStore().CreateUser(&model.User{
+		ProjectId:   project.ID,
+		Properties:  accProps,
+		IsGroupUser: &isGroupUser,
+		Group1ID:    "1",
+		Group2ID:    "2",
+		Source:      model.GetRequestSourcePointer(model.UserSourceHubspot),
+	})
+
+	props = map[string]interface{}{
 		"$name":               "Cameron Williomson",
 		"$company":            "Freshworks",
 		"$country":            "Australia",
@@ -469,13 +490,12 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		"$milesone_4":         U.UnixTimeBeforeDuration(4 * time.Hour),
 		"$milesone_5":         U.UnixTimeBeforeDuration(5 * time.Hour),
 	}
-	propertiesJSON, err := json.Marshal(props)
+	propertiesJSON, err = json.Marshal(props)
 	if err != nil {
 		log.WithError(err).Fatal("Marshal error.")
 	}
 	properties := postgres.Jsonb{RawMessage: propertiesJSON}
-
-	boolTrue := true
+	isGroupUser = false
 	customerEmail := "abc@example.com"
 
 	createdUserID, _ := store.GetStore().CreateUser(&model.User{
@@ -483,9 +503,10 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
 		Group1ID:       "1",
 		Group2ID:       "2",
+		Group1UserID:   accountID,
 		CustomerUserId: customerEmail,
 		Properties:     properties,
-		IsGroupUser:    &boolTrue,
+		IsGroupUser:    &isGroupUser,
 	})
 	user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 	assert.Equal(t, user.ID, createdUserID)
@@ -845,7 +866,8 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 			return true
 		})
 		assert.NotNil(t, resp.GroupInfos)
-		assert.Condition(t, func() bool { return len(resp.GroupInfos) <= 4 })
+		assert.Equal(t, resp.GroupInfos[0], model.GroupsInfo{GroupName: U.GROUP_NAME_HUBSPOT_COMPANY, AssociatedGroup: "Freshworks"})
+		assert.Equal(t, resp.GroupInfos[1], model.GroupsInfo{GroupName: U.GROUP_NAME_SALESFORCE_ACCOUNT, AssociatedGroup: ""})
 		assert.NotNil(t, resp.UserActivity)
 		assert.Condition(t, func() bool {
 			for i, activity := range resp.UserActivity {
@@ -1336,7 +1358,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	}
 	properties := postgres.Jsonb{RawMessage: propertiesJSON}
 
-	boolTrue := true
+	isGroupUser := true
 	customerEmail := "abc@example.com"
 
 	createdUserID, _ := store.GetStore().CreateUser(&model.User{
@@ -1345,7 +1367,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		Group1ID:       "1",
 		CustomerUserId: customerEmail,
 		Properties:     properties,
-		IsGroupUser:    &boolTrue,
+		IsGroupUser:    &isGroupUser,
 	})
 	projectID := project.ID
 	accountID := createdUserID
@@ -1397,7 +1419,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	}
 	randomURL := RandomURL()
 	customerEmail = "@example.com"
-	boolTrue = false
+	isGroupUser = false
 	users := make([]model.User, 0)
 	numUsers := 10
 	for i := 1; i <= numUsers; i++ {
@@ -1425,7 +1447,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		associatedUserId, _ := store.GetStore().CreateUser(&model.User{
 			ProjectId:      projectID,
 			Properties:     userPropsEncoded,
-			IsGroupUser:    &boolTrue,
+			IsGroupUser:    &isGroupUser,
 			Group1ID:       "1",
 			Group1UserID:   accountID,
 			CustomerUserId: customerUserID,

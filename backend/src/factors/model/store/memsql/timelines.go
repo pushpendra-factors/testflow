@@ -309,18 +309,9 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		"id":           identity,
 		"is_anonymous": isAnonymous,
 	}
-
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	if projectID == 0 {
-		log.Error("Invalid project ID.")
-		return nil, http.StatusBadRequest
-	}
-	if identity == "" {
-		log.Error("Invalid user ID.")
-		return nil, http.StatusBadRequest
-	}
-	if isAnonymous == "" {
-		log.Error("Invalid user type.")
+	if projectID == 0 || identity == "" || isAnonymous == "" {
+		log.WithFields(logFields).Error("invalid payload.")
 		return nil, http.StatusBadRequest
 	}
 
@@ -331,19 +322,31 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 
 	db := C.GetServices().Db
 	var uniqueUser model.ContactDetails
-	err := db.Table("users").Select(`COALESCE(customer_user_id,id) AS user_id,
+	if err := db.Table("users").Select(`COALESCE(customer_user_id,id) AS user_id,
 		ISNULL(customer_user_id) AS is_anonymous,
 		properties,
-		GROUP_CONCAT(group_1_id) IS NOT NULL AS group_1,
-		GROUP_CONCAT(group_2_id) IS NOT NULL AS group_2,
-		GROUP_CONCAT(group_3_id) IS NOT NULL AS group_3,
-		GROUP_CONCAT(group_4_id) IS NOT NULL AS group_4`).
+		MAX(group_1_id) IS NOT NULL AS group_1,
+		MAX(group_2_id) IS NOT NULL AS group_2,
+		MAX(group_3_id) IS NOT NULL AS group_3,
+		MAX(group_4_id) IS NOT NULL AS group_4,
+		MAX(group_5_id) IS NOT NULL AS group_5,
+		MAX(group_6_id) IS NOT NULL AS group_6,
+		MAX(group_7_id) IS NOT NULL AS group_7,
+		MAX(group_8_id) IS NOT NULL AS group_8,
+		MAX(group_1_user_id) AS group_1_user_id,
+		MAX(group_2_user_id) AS group_2_user_id,
+		MAX(group_3_user_id) AS group_3_user_id,
+		MAX(group_4_user_id) AS group_4_user_id,
+		MAX(group_5_user_id) AS group_5_user_id,
+		MAX(group_6_user_id) AS group_6_user_id,
+		MAX(group_7_user_id) AS group_7_user_id,
+		MAX(group_8_user_id) AS group_8_user_id
+		`).
 		Where("project_id=? AND "+userId+"=?", projectID, identity).
 		Group("user_id").
 		Order("updated_at desc").
 		Limit(1).
-		Find(&uniqueUser).Error
-	if err != nil {
+		Find(&uniqueUser).Error; err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to get contact details.")
 		return nil, http.StatusInternalServerError
 	}
@@ -351,22 +354,21 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	propertiesDecoded, err := U.DecodePostgresJsonb(uniqueUser.Properties)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Failed decoding user properties.")
+	} else {
+		if name, exists := (*propertiesDecoded)[U.UP_NAME]; exists {
+			uniqueUser.Name = fmt.Sprintf("%s", name)
+		}
+		if company, exists := (*propertiesDecoded)[U.UP_COMPANY]; exists {
+			uniqueUser.Company = fmt.Sprintf("%s", company)
+		}
+		timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
+		if err != nil {
+			log.WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+		}
+		uniqueUser.LeftPaneProps = GetLeftPanePropertiesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
+		uniqueUser.Milestones = GetMilestonesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
 	}
 
-	if name, exists := (*propertiesDecoded)[U.UP_NAME]; exists {
-		uniqueUser.Name = fmt.Sprintf("%s", name)
-	}
-	if company, exists := (*propertiesDecoded)[U.UP_COMPANY]; exists {
-		uniqueUser.Company = fmt.Sprintf("%s", company)
-	}
-
-	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
-	if err != nil {
-		log.WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
-	}
-
-	uniqueUser.LeftPaneProps = GetLeftPanePropertiesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
-	uniqueUser.Milestones = GetMilestonesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
 	activities, _ := store.GetUserActivitiesAndSessionCount(projectID, identity, userId)
 	uniqueUser.UserActivity = activities
 	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
@@ -383,26 +385,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 	var userActivities []model.UserActivity
 	webSessionCount := 0
 
-	db := C.GetServices().Db
-	eventsQuery := fmt.Sprintf(`SELECT event_names.name AS event_name, 
-		event_names.type as event_type, 
-		events1.timestamp AS timestamp, 
-		events1.properties AS properties 
-	FROM (
-		SELECT project_id, event_name_id, timestamp, properties 
-		FROM events 
-		WHERE project_id=?
-		AND timestamp <= ? 
-		AND user_id IN (
-			SELECT id FROM users WHERE project_id=? AND %s = ?
-		) AND event_name_id NOT IN (
-			SELECT id FROM event_names WHERE project_id=? AND name IN ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')
-		) 
-		LIMIT 5000) AS events1 
-	LEFT JOIN event_names
-	ON events1.event_name_id=event_names.id 
-	AND event_names.project_id=?
-	ORDER BY timestamp DESC;`, userId,
+	eventNamesToExclude := []string{
 		U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
 		U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
 		U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
@@ -415,8 +398,44 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		U.EVENT_NAME_SALESFORCE_EVENT_UPDATED,
 		U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
 		U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
-	)
-	rows, err := db.Raw(eventsQuery, projectID, gorm.NowFunc().Unix(), projectID, identity, projectID, projectID).Rows()
+	}
+
+	eventNamesToExcludePlaceholders := strings.Repeat("?,", len(eventNamesToExclude)-1) + "?"
+	eventsQuery := fmt.Sprintf(`SELECT event_names.name AS event_name, 
+		event_names.type as event_type, 
+		events1.timestamp AS timestamp, 
+		events1.properties AS properties 
+	FROM (
+		SELECT project_id, event_name_id, timestamp, properties 
+		FROM events 
+		WHERE project_id=? AND timestamp <= ? 
+		AND user_id IN (
+			SELECT id FROM users WHERE project_id=? AND %s = ?
+		) AND event_name_id NOT IN (
+			SELECT id FROM event_names WHERE project_id=? AND name IN (%s)
+		) 
+		LIMIT 5000) AS events1 
+	LEFT JOIN event_names
+	ON events1.event_name_id=event_names.id 
+	AND event_names.project_id=? 
+	ORDER BY timestamp DESC;`, userId, eventNamesToExcludePlaceholders)
+
+	excludedEventNamesArgs := make([]interface{}, len(eventNamesToExclude))
+	for i, name := range eventNamesToExclude {
+		excludedEventNamesArgs[i] = name
+	}
+	queryArgs := []interface{}{
+		projectID,
+		gorm.NowFunc().Unix(),
+		projectID,
+		identity,
+		projectID,
+	}
+	queryArgs = append(queryArgs, excludedEventNamesArgs...)
+	queryArgs = append(queryArgs, projectID)
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(eventsQuery, queryArgs...).Rows()
 
 	if err != nil || rows.Err() != nil {
 		log.WithFields(logFields).WithError(err).WithError(rows.Err()).Error("Failed to get events")
@@ -511,34 +530,58 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 }
 
 func (store *MemSQL) GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo {
-	var groupsInfo []model.GroupsInfo
-	groups, errCode := store.GetGroups(projectID)
-	if errCode != http.StatusFound {
-		log.WithField("project_id", projectID).WithField("status", errCode).Error("Failed to get groups while adding group info.")
-		return []model.GroupsInfo{}
+	groupsInfo := []model.GroupsInfo{}
+
+	groups, err := store.GetGroups(projectID)
+	if err != http.StatusFound {
+		log.WithField("project_id", projectID).WithField("status", err).Error("Failed to get groups.")
+		return groupsInfo
 	}
-	if errCode == http.StatusFound && len(groups) == 0 {
-		return []model.GroupsInfo{}
+
+	if len(groups) == 0 {
+		return groupsInfo
 	}
 
 	groupsMap := make(map[int]string)
-	for _, value := range groups {
-		groupsMap[value.ID] = U.STANDARD_GROUP_DISPLAY_NAMES[value.Name]
+	for _, group := range groups {
+		groupsMap[group.ID] = group.Name
 	}
 
-	if userDetails.Group1 {
-		groupsInfo = append(groupsInfo, model.GroupsInfo{GroupName: groupsMap[1]})
-	}
-	if userDetails.Group2 {
-		groupsInfo = append(groupsInfo, model.GroupsInfo{GroupName: groupsMap[2]})
-	}
-	if userDetails.Group3 {
-		groupsInfo = append(groupsInfo, model.GroupsInfo{GroupName: groupsMap[3]})
-	}
-	if userDetails.Group4 {
-		groupsInfo = append(groupsInfo, model.GroupsInfo{GroupName: groupsMap[4]})
+	for i := 1; i <= model.AllowedGroups; i++ {
+		// Get the groupX field from the userDetails struct
+		groupField := reflect.ValueOf(userDetails).FieldByName(fmt.Sprintf("Group%d", i))
+
+		// Skip if groupX is 0
+		if !groupField.Bool() {
+			continue
+		}
+
+		groupInfo := model.GroupsInfo{GroupName: groupsMap[i]}
+
+		userIDField := reflect.ValueOf(userDetails).FieldByName(fmt.Sprintf("Group%dUserID", i)) // Get the group_x_user_id field for the group
+		if userIDField.String() != "" {
+			associatedGroup, err := store.GetAssociatedGroup(projectID, userIDField.String(), groupsMap[i]) // Call GetAssociatedGroup method to get the associated group name for the user
+			if err != nil {
+				if gorm.IsRecordNotFoundError(err) {
+					log.WithField("project_id", projectID).WithField("status", err).Error("Group record not found for user.")
+				}
+			} else {
+				groupInfo.AssociatedGroup = associatedGroup // Set the associated group name for the groupInfo object
+			}
+		}
+		groupsInfo = append(groupsInfo, groupInfo) // Append the groupInfo object to the groupsInfo slice
 	}
 	return groupsInfo
+}
+
+func (store *MemSQL) GetAssociatedGroup(projectID int64, userID string, groupName string) (string, error) {
+	db := C.GetServices().Db
+	companyQuery := "SELECT JSON_EXTRACT_STRING(properties, ?) AS associated_group FROM users WHERE project_id=? AND id=?"
+	groupInfo := model.GroupsInfo{}
+	if err := db.Raw(companyQuery, model.GROUP_TO_COMPANY_NAME_MAP[groupName], projectID, userID).Scan(&groupInfo).Limit(1).Error; err != nil {
+		return "", err
+	}
+	return groupInfo.AssociatedGroup, nil
 }
 
 func GetFilteredProperties(eventName string, eventType string, properties *map[string]interface{}) *postgres.Jsonb {

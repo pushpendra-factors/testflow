@@ -29,6 +29,18 @@ type ContactDetails struct {
 	Group2        bool                   `gorm:"default:false;column:group_2" json:"-"`
 	Group3        bool                   `gorm:"default:false;column:group_3" json:"-"`
 	Group4        bool                   `gorm:"default:false;column:group_4" json:"-"`
+	Group5        bool                   `gorm:"default:false;column:group_5" json:"-"`
+	Group6        bool                   `gorm:"default:false;column:group_6" json:"-"`
+	Group7        bool                   `gorm:"default:false;column:group_7" json:"-"`
+	Group8        bool                   `gorm:"default:false;column:group_8" json:"-"`
+	Group1UserID  string                 `gorm:"default:null;column:group_1_user_id" json:"-"`
+	Group2UserID  string                 `gorm:"default:null;column:group_2_user_id" json:"-"`
+	Group3UserID  string                 `gorm:"default:null;column:group_3_user_id" json:"-"`
+	Group4UserID  string                 `gorm:"default:null;column:group_4_user_id" json:"-"`
+	Group5UserID  string                 `gorm:"default:null;column:group_5_user_id" json:"-"`
+	Group6UserID  string                 `gorm:"default:null;column:group_6_user_id" json:"-"`
+	Group7UserID  string                 `gorm:"default:null;column:group_7_user_id" json:"-"`
+	Group8UserID  string                 `gorm:"default:null;column:group_8_user_id" json:"-"`
 	GroupInfos    []GroupsInfo           `json:"group_infos,omitempty"`
 	UserActivity  []UserActivity         `json:"user_activities,omitempty"`
 }
@@ -107,4 +119,10 @@ var EVENT_ICONS_MAP = map[string]string{
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED:    "phone",
 	U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:    "listcheck",
 	U.EVENT_NAME_FORM_SUBMITTED:                     "hand-pointer",
+}
+
+var GROUP_TO_COMPANY_NAME_MAP = map[string]string{
+	U.GROUP_NAME_HUBSPOT_COMPANY:    U.GP_HUBSPOT_COMPANY_NAME,
+	U.GROUP_NAME_SALESFORCE_ACCOUNT: U.GP_SALESFORCE_ACCOUNT_NAME,
+	U.SIX_SIGNAL_DOMAIN:             U.SIX_SIGNAL_NAME,
 }
