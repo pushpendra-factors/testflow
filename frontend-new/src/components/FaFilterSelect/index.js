@@ -301,6 +301,24 @@ const FaFilterSelect = ({
     return propertyName;
   };
 
+  const getIcon = (propState) => {
+    const { name, icon } = propState || {};
+
+    if (!name) return null;
+
+    const iconName =
+      icon === 'group' ||
+      name.startsWith('$salesforce') ||
+      name.startsWith('$hubspot') ||
+      name.startsWith('$6Signal')
+        ? 'profile'
+        : icon;
+
+    return (
+      <SVG name={iconName} size={16} color={viewMode ? 'grey' : 'purple'} />
+    );
+  };
+
   const renderPropSelect = () => {
     return (
       <div
@@ -314,15 +332,7 @@ const FaFilterSelect = ({
         >
           <Button
             disabled={disabled}
-            icon={
-              propState && propState.icon ? (
-                <SVG
-                  name={propState.icon}
-                  size={16}
-                  color={viewMode ? 'grey' : 'purple'}
-                />
-              ) : null
-            }
+            icon={getIcon(propState)}
             className={`fa-button--truncate fa-button--truncate-xs ${
               viewMode ? 'static-button' : ''
             }  btn-left-round filter-buttons-margin`}
@@ -823,7 +833,12 @@ const FaFilterSelect = ({
           <Text type={'title'} level={6} weight={'bold'} extraClcalass={'m-0'}>
             Upload a CSV with a single column
           </Text>
-          <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 -mt-2'}>
+          <Text
+            type={'title'}
+            level={7}
+            color={'grey'}
+            extraClass={'m-0 -mt-2'}
+          >
             We’ll only look at the first column as your reference list of data
           </Text>
           <div className='border rounded mt-2 flex justify-center '>

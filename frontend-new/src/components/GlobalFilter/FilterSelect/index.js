@@ -284,6 +284,22 @@ const FilterSelect = ({
     return propertyName;
   };
 
+  const getIcon = (propState) => {
+    const { name, icon } = propState || {};
+
+    if (!name) return null;
+
+    const iconName =
+      icon === 'group' ||
+      name.startsWith('$salesforce') ||
+      name.startsWith('$hubspot') ||
+      name.startsWith('$6Signal')
+        ? 'profile'
+        : icon;
+
+    return <SVG name={iconName} size={16} color={'purple'} />;
+  };
+
   const renderPropSelect = () => {
     return (
       <div className={styles.filter__propContainer}>
@@ -292,11 +308,7 @@ const FilterSelect = ({
           color={TOOLTIP_CONSTANTS.DARK}
         >
           <Button
-            icon={
-              propState && propState.icon ? (
-                <SVG name={propState.icon} size={16} color={'purple'} />
-              ) : null
-            }
+            icon={getIcon(propState)}
             className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
             type='link'
             onClick={() => setPropSelectOpen(!propSelectOpen)}
@@ -337,10 +349,12 @@ const FilterSelect = ({
 
         {operSelectOpen && (
           <FaSelect
-            options={operatorOpts[propState.type].filter((op) => {
-              // Only include the operator if showInList is true or it's not 'inList'
-              return false || op !== OPERATORS['inList'];
-            }).map((op) => [op])}
+            options={operatorOpts[propState.type]
+              .filter((op) => {
+                // Only include the operator if showInList is true or it's not 'inList'
+                return false || op !== OPERATORS['inList'];
+              })
+              .map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
           ></FaSelect>
