@@ -1,6 +1,7 @@
 package task
 
 import (
+	"bufio"
 	"encoding/json"
 	"factors/filestore"
 	"factors/merge"
@@ -34,35 +35,18 @@ func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[st
 	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
 	status := make(map[string]interface{})
 
+	var efCloudPath, efCloudName string
+	var err error
 	if useBucketV2 {
-		if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp,
-			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0); err != nil {
+		if efCloudPath, efCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp,
+			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, false, false); err != nil {
 			mineLog.Error("Failed creating events file")
 			status["error"] = err
 			return status, false
 		}
+	} else {
+		efCloudPath, efCloudName = (*sortedCloudManager).GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
 	}
-
-	efCloudPath, efCloudName := (*sortedCloudManager).GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
-	efTmpPath, efTmpName := diskManager.GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
-	log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
-		"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
-	eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
-		status["error"] = "Failed downloading events file"
-		return status, false
-	}
-	err = diskManager.Create(efTmpPath, efTmpName, eReader)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-			"eventFileName": efCloudName}).Error("Failed creating events file in local.")
-		status["error"] = "Failed creating events file in local."
-		return status, false
-	}
-	tmpEventsFilepath := efTmpPath + efTmpName
-	log.Info("Successfuly downloaded events file from cloud.", tmpEventsFilepath, efTmpPath, efTmpName)
 
 	//Download master file
 	masterNumBucketCloudPath, masterNumBucketCloudName := (*sortedCloudManager).GetMasterNumericalBucketsFile(projectId)
@@ -85,7 +69,7 @@ func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[st
 		existingEPMasterBuckets, existingUPMasterBuckets = GetMasterBuckets(tmpNumBucketFilepath)
 	}
 
-	eventProperties, userProperties, err := GetNumericalPropertiesWithDatarange(tmpEventsFilepath, projectId)
+	eventProperties, userProperties, err := GetNumericalPropertiesWithDatarange(efCloudPath, efCloudName, projectId, sortedCloudManager, startTimestamp, endTimestamp)
 	if err != nil {
 		log.WithError(err).Error("Failed finding min/max for  numerical properties")
 		status["error"] = "Failed finding min/max for  numerical properties"
@@ -151,7 +135,7 @@ func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[st
 	fPath, fName := diskManager.GetModelEventsBucketingFilePathAndName(projectId, startTimestamp, endTimestamp)
 	serviceDisk.MkdirAll(fPath) // create dir if not exist.
 	tmpBucketedEventsFile := fPath + fName
-	WriteBucketedEvents(efTmpPath+efTmpName, EPRanges, UPRanges, tmpBucketedEventsFile)
+	WriteBucketedEvents(efCloudPath, efCloudName, EPRanges, UPRanges, tmpBucketedEventsFile, sortedCloudManager)
 	WriteBuckets(weekNumBucketLocalPath+weekNumBucketLocalName, EPRanges, UPRanges)
 	WriteBuckets(masterNumBucketLocalPath+masterNumBucketLocalName, EPRanges, UPRanges)
 
@@ -307,17 +291,31 @@ func GetMasterBuckets(tmpNumBucketFilePath string) (map[string][]BucketRange, ma
 }
 
 // This method takes all the numerical properties and returns the list of values seen so that bucketing can be done.
-func GetNumericalPropertiesWithDatarange(tmpEventsFilePath string, projectID int64) (map[string]MinMaxTuple, map[string]MinMaxTuple, error) {
-	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
-	if err != nil {
-		return nil, nil, err
-	}
+func GetNumericalPropertiesWithDatarange(efCloudPath, efCloudName string, projectID int64, sortedCloudManager *filestore.FileManager, startTimestamp, endTimestamp int64) (map[string]MinMaxTuple, map[string]MinMaxTuple, error) {
 	propertyNumRangeEventProperties := make(map[string]MinMaxTuple)
 	propertyNumRangeUserProperties := make(map[string]MinMaxTuple)
+
+	log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
+		"eventFileCloudName": efCloudName}).Info("Gettting events file reader from cloud.")
+	eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+			"eventFileName": efCloudName}).Error("Failed getting events file reader from cloud.")
+		return propertyNumRangeEventProperties, propertyNumRangeUserProperties, err
+	}
+
+	scanner := bufio.NewScanner(eReader)
+	const maxCapacity = 30 * 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		var event P.CounterEventFormat
 		json.Unmarshal([]byte(line), &event)
+		if event.EventTimestamp < startTimestamp || event.EventTimestamp > endTimestamp {
+			continue
+		}
 		for property, value := range event.EventProperties {
 			var numValue float64
 			ptype := store.GetStore().GetPropertyTypeByKeyValue(projectID, event.EventName, property, value, false)
@@ -412,14 +410,24 @@ func WriteBuckets(filePath string, eventBuckets map[string][]BucketRange, userBu
 	}
 }
 
-func WriteBucketedEvents(tmpEventsFilePath string, eventBuckets map[string][]BucketRange, userBuckets map[string][]BucketRange, tmpBucketedEventsFile string) {
+func WriteBucketedEvents(efCloudPath, efCloudName string, eventBuckets map[string][]BucketRange, userBuckets map[string][]BucketRange, tmpBucketedEventsFile string, sortedCloudManager *filestore.FileManager) {
 	file, err := os.Create(tmpBucketedEventsFile)
 	defer file.Close()
 
-	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
+	log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
+		"eventFileCloudName": efCloudName}).Info("Gettting events file reader from cloud.")
+	eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
 	if err != nil {
+		log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+			"eventFileName": efCloudName}).Error("Failed getting events file reader from cloud.")
 		return
 	}
+
+	scanner := bufio.NewScanner(eReader)
+	const maxCapacity = 30 * 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		var event P.CounterEventFormat

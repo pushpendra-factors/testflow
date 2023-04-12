@@ -73,17 +73,17 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 	useBucketV2 := configs["useBucketV2"].(bool)
 
 	finalStatus := make(map[string]interface{})
-	processedQueries := make([]string,0)
+	processedQueries := make([]string, 0)
 	queries, _ := store.GetStore().GetAllSavedPathAnalysisEntityByProject(projectId)
 	queryCountMap := make(map[string]int)
 	for _, query := range queries {
 
 		timeNow := U.TimeNowZ().Unix()
-        lastUpdated := query.UpdatedAt.Unix()
-        lastCreated := query.CreatedAt.Unix()
-        if  (lastUpdated - lastCreated > 3600)&& ((lastUpdated + 14400) > timeNow) {
-            continue
-        }
+		lastUpdated := query.UpdatedAt.Unix()
+		lastCreated := query.CreatedAt.Unix()
+		if (lastUpdated-lastCreated > 3600) && ((lastUpdated + 14400) > timeNow) {
+			continue
+		}
 		store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.BUILDING)
 		var actualQuery M.PathAnalysisQuery
 		U.DecodePostgresJsonbToStructType(query.PathAnalysisQuery, &actualQuery)
@@ -120,29 +120,25 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				groupId = groupDetails.ID
 			}
 		}
-		startTimestampInProjectTimezone := actualQuery.StartTimestamp
-		endTimestampInProjectTimezone := actualQuery.EndTimestamp
-		projectDetails, _ := store.GetStore().GetProject(projectId)
-		startTimestamp := startTimestampInProjectTimezone
-		endTimestamp := endTimestampInProjectTimezone
-		if projectDetails.TimeZone != "" {
-			offset := U.FindOffsetInUTC(U.TimeZoneString(projectDetails.TimeZone))
-			startTimestamp = startTimestampInProjectTimezone + int64(offset)
-			endTimestamp = endTimestampInProjectTimezone + int64(offset)
-		}
+
+		var err error
+		var cfCloudPath, cfCloudName string
 		if useBucketV2 {
-			if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp,
-				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId); err != nil {
+			cfCloudPath, cfCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", actualQuery.StartTimestamp, actualQuery.EndTimestamp,
+				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId, true, true)
+			if err != nil {
 				store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
 				finalStatus[query.ID] = "Failed creating events file"
 				log.Error("Failed creating events file")
 				return finalStatus, false
 			}
+		} else {
+			cfCloudPath, cfCloudName = (*sortedCloudManager).GetEventsGroupFilePathAndName(projectId, actualQuery.StartTimestamp, actualQuery.EndTimestamp, groupId)
 		}
 		log.Info("Processing Query ID: ", query.ID, " query: ", actualQuery)
 		log.Info("Starting cloud events file get")
 		// "projects/2251799829000005/", "events.txt"
-		cfCloudPath, cfCloudName := (*sortedCloudManager).GetEventsGroupFilePathAndName(projectId, startTimestamp, endTimestamp, groupId)
+
 		eReader, err := (*sortedCloudManager).Get(cfCloudPath, cfCloudName)
 		if err != nil {
 			store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
@@ -192,6 +188,9 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			err := json.Unmarshal([]byte(txtline), &event) // TODO: Add error check.
 			if err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("Failed unmarshaling file")
+			}
+			if event.EventTimestamp < actualQuery.StartTimestamp || event.EventTimestamp > actualQuery.EndTimestamp {
+				continue
 			}
 			if ok, err := toCountEvent(event, actualQuery.Event.Label, append(actualQuery.Filter, actualQuery.Event.Filter...)); err != nil {
 				log.WithError(err).Error("error counting")
@@ -400,7 +399,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		}
 		WriteResultsToCloud(diskManager, modelCloudManager, query.ID, projectId)
 		processedQueries = append(processedQueries, query.ID)
-		if(len(processedQueries) > 0){
+		if len(processedQueries) > 0 {
 			finalStatus["PROCESSED QUERIES"] = processedQueries
 		}
 		store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.ACTIVE)

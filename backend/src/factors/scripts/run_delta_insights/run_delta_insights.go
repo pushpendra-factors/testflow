@@ -59,6 +59,7 @@ func mainRunDeltaInsights() {
 	sortedBucketNameFlag := flag.String("sorted_bucket_name", "/usr/local/var/factors/cloud_storage_sorted", "--bucket_name=/usr/local/var/factors/cloud_storage_sorted pass sorted data bucket name")
 	modelBucketNameFlag := flag.String("model_bucket_name", "/usr/local/var/factors/cloud_storage_models", "--bucket_name=/usr/local/var/factors/cloud_storage_models pass model bucket name")
 	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
+	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
 	runBeam := flag.Int("run_beam", 1, "run build seq on beam ")
 	numWorkersFlag := flag.Int("num_beam_workers", 100, "Num of beam workers")
 
@@ -241,6 +242,7 @@ func mainRunDeltaInsights() {
 	}
 
 	configs["useBucketV2"] = *useBucketV2
+	configs["hardPull"] = *hardPull
 	configs["diskManager"] = diskManager
 	configs["beamConfig"] = &beamConfig
 

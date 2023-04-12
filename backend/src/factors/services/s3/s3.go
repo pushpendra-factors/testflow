@@ -5,6 +5,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"io"
+	"strings"
 
 	pb "path/filepath"
 
@@ -323,19 +324,15 @@ func (sd *S3Driver) GetModelArtifactsPath(projectId int64, modelId uint64) strin
 	return path
 }
 
-func (sd *S3Driver) GetEventsArtifactFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
-	path := sd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent)
-	path = pb.Join(path, "artifacts")
-	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
-	fileName := fmt.Sprintf("users_map_%s.txt", dateFormattedEnd)
+func (sd *S3Driver) GetEventsArtifactFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64, group int) (string, string) {
+	path := sd.GetEventsTempFilesDir(projectId, startTimestamp, endTimestamp, group)
+	fileName := "users_map.txt"
 	return path, fileName
 }
 
 func (sd *S3Driver) GetChannelArtifactFilePathAndName(channel string, projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
-	path := sd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeAdReport)
-	path = pb.Join(path, "artifacts")
-	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
-	fileName := fmt.Sprintf("doctypes_map_%s_%s.txt", dateFormattedEnd, channel)
+	path := sd.GetChannelTempFilesDir(channel, projectId, startTimestamp, endTimestamp)
+	fileName := "doctypes_map.txt"
 	return path, fileName
 }
 
@@ -358,7 +355,7 @@ func (sd *S3Driver) GetExplainV2ModelPath(id uint64, projectId int64) (string, s
 	return chunksPath, "chunk_1.txt"
 }
 
-func (sd *S3Driver) GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string){
+func (sd *S3Driver) GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string) {
 	return fmt.Sprintf("projects/%v/list/%v/", projectID, reference), "list.txt"
 }
 func (sd *S3Driver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) string {
@@ -369,4 +366,48 @@ func (sd *S3Driver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) 
 func (sd *S3Driver) GetSixSignalAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
 	path := sd.GetSixSignalAnalysisTempFileDir(id, projectId)
 	return path, "results.txt"
+}
+
+func (sd *S3Driver) GetEventsTempFilesDir(projectId int64, startTimestamp, endTimestamp int64, group int) string {
+	path, name := sd.GetEventsGroupFilePathAndName(projectId, startTimestamp, endTimestamp, group)
+	path = pb.Join(path, strings.Replace(name, ".txt", "", 1))
+	return path
+}
+
+func (sd *S3Driver) GetEventsPartFilesDir(projectId int64, startTimestamp, endTimestamp int64, sorted bool, group int) string {
+	tmp := "unsorted"
+	if sorted {
+		tmp = "sorted"
+	}
+	path := sd.GetEventsTempFilesDir(projectId, startTimestamp, endTimestamp, group)
+	path = pb.Join(path, tmp+"_parts")
+	return path
+}
+
+func (sd *S3Driver) GetEventsPartFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, sorted bool, startIndex, endIndex int, group int) (string, string) {
+	path := sd.GetEventsPartFilesDir(projectId, startTimestamp, endTimestamp, sorted, group)
+	name := fmt.Sprintf("%d-%d_uids.txt", startIndex, endIndex)
+	return path, name
+}
+
+func (sd *S3Driver) GetChannelTempFilesDir(channel string, projectId int64, startTimestamp, endTimestamp int64) string {
+	path, name := sd.GetChannelFilePathAndName(channel, projectId, startTimestamp, endTimestamp)
+	path = pb.Join(path, strings.Replace(name, ".txt", "", 1))
+	return path
+}
+
+func (sd *S3Driver) GetChannelPartFilesDir(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool) string {
+	tmp := "unsorted"
+	if sorted {
+		tmp = "sorted"
+	}
+	path := sd.GetChannelTempFilesDir(channel, projectId, startTimestamp, endTimestamp)
+	path = pb.Join(path, tmp+"_parts")
+	return path
+}
+
+func (sd *S3Driver) GetChannelPartFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool, index int) (string, string) {
+	path := sd.GetChannelPartFilesDir(channel, projectId, startTimestamp, endTimestamp, sorted)
+	name := fmt.Sprintf("%d_doctype.txt", index)
+	return path, name
 }

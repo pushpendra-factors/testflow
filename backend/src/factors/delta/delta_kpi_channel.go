@@ -35,7 +35,7 @@ var levelStrToIntAlias = map[string]int{
 	memsql.CAFilterAd:       1,
 }
 
-func getCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
+func getCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, startTimestamp, endTimestamp int64) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	wpi.MetricInfo = &MetricInfo{}
 	wpi.ScaleInfo = &MetricInfo{}
@@ -74,7 +74,7 @@ func getCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanne
 			metric = metricInt
 		}
 	}
-	var GetCampaignMetric func(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo ChannelMetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string) (*MetricInfo, *MetricInfo, error)
+	var GetCampaignMetric func(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo ChannelMetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string, startTimestamp, endTimestamp int64) (*MetricInfo, *MetricInfo, error)
 	if info, ok := metricToCalcinfo[metric]; ok {
 		if info.Operation == "sum" {
 			GetCampaignMetric = GetCampaignMetricSimple
@@ -86,7 +86,7 @@ func getCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanne
 		log.WithError(err).Error("error GetCampaignMetricsInfo")
 		return &wpi, err
 	}
-	if info, scale, err := GetCampaignMetric(scanner, newPropFilter, propsToEvalPerQuery, queryLevel, metricToCalcinfo[metric], docTypeAlias, requiredDocTypes, infoMap); err != nil {
+	if info, scale, err := GetCampaignMetric(scanner, newPropFilter, propsToEvalPerQuery, queryLevel, metricToCalcinfo[metric], docTypeAlias, requiredDocTypes, infoMap, startTimestamp, endTimestamp); err != nil {
 		log.WithError(err).Error("error GetCampaignMetricsInfo for kpi " + metric)
 		return &wpi, err
 	} else {
@@ -102,7 +102,7 @@ func getCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanne
 	return &wpi, nil
 }
 
-func GetCampaignMetricSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo ChannelMetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string) (*MetricInfo, *MetricInfo, error) {
+func GetCampaignMetricSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo ChannelMetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string, startTimestamp, endTimestamp int64) (*MetricInfo, *MetricInfo, error) {
 	var globalVal float64
 	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
@@ -119,6 +119,9 @@ func GetCampaignMetricSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, p
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
+		if campaignDetails.Timestamp < startTimestamp || campaignDetails.Timestamp > endTimestamp {
+			continue
+		}
 
 		//check document type and filters
 		if ok, err := isCampaignToBeCounted(campaignDetails, propFilter, requiredDocTypes); !ok {
@@ -127,6 +130,7 @@ func GetCampaignMetricSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, p
 			}
 			continue
 		}
+
 		docLevel, typeOfDoc, ok := getLevelAndtypeOfDoc(campaignDetails.Doctype, docTypeAlias, infoMap)
 		if !ok {
 			continue
@@ -193,7 +197,7 @@ func GetCampaignMetricSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, p
 	return &info, &scale, nil
 }
 
-func GetCampaignMetricComplex(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo ChannelMetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string) (*MetricInfo, *MetricInfo, error) {
+func GetCampaignMetricComplex(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo ChannelMetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string, startTimestamp, endTimestamp int64) (*MetricInfo, *MetricInfo, error) {
 	var globalVal float64
 	var globalFrac Fraction
 	var globalScale float64
@@ -211,6 +215,9 @@ func GetCampaignMetricComplex(scanner *bufio.Scanner, propFilter []M.KPIFilter, 
 		if err := json.Unmarshal([]byte(txtline), &campaignDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
+		}
+		if campaignDetails.Timestamp < startTimestamp || campaignDetails.Timestamp > endTimestamp {
+			continue
 		}
 
 		//check if event is session and contains all requiredProps(constraint)

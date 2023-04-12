@@ -20,7 +20,7 @@ import (
 var notOperations = []string{M.NotEqualOpStr, M.NotContainsOpStr, M.NotEqualOp}
 
 func createKpiInsights(diskManager *serviceDisk.DiskDriver, archiveCloudManager, tmpCloudManager, sortedCloudManager, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId int64, queryId int64, queryGroup M.KPIQueryGroup,
-	topK int, skipWpi, skipWpi2 bool, mailerRun bool, beamConfig *merge.RunBeamConfig, useBucketV2 bool, status map[string]interface{}) error {
+	topK int, skipWpi, skipWpi2 bool, mailerRun bool, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool, status map[string]interface{}) error {
 	// readEvents := true
 	var err error
 	var newInsightsList = make([]*WithinPeriodInsightsKpi, 0)
@@ -94,7 +94,7 @@ func createKpiInsights(diskManager *serviceDisk.DiskDriver, archiveCloudManager,
 				continue
 			}
 			if spectrum == "custom" {
-				kpiProperties, err = getFilteredKpiPropertiesForCustomMetric(kpiProperties, metric, projectId, periodCodesWithWeekNMinus1, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2)
+				kpiProperties, err = getFilteredKpiPropertiesForCustomMetric(kpiProperties, metric, projectId, periodCodesWithWeekNMinus1, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2, hardPull, pulledMap)
 				if err != nil {
 					wpi := &WithinPeriodInsightsKpi{Category: spectrum, MetricInfo: &MetricInfo{}, ScaleInfo: &MetricInfo{}}
 					newInsightsList = append(newInsightsList, wpi)
@@ -130,7 +130,7 @@ func createKpiInsights(diskManager *serviceDisk.DiskDriver, archiveCloudManager,
 
 		//get week 2 metrics by reading file
 		if !skipW2 {
-			if wpi, err := getMetricEvaluated(spectrum, query.DisplayCategory, metric, pageOrChannel, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[1], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2); err != nil {
+			if wpi, err := getMetricEvaluated(spectrum, query.DisplayCategory, metric, pageOrChannel, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[1], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap); err != nil {
 				wpi = &WithinPeriodInsightsKpi{Category: spectrum, MetricInfo: &MetricInfo{}, ScaleInfo: &MetricInfo{}}
 				newInsightsList = append(newInsightsList, wpi)
 				log.WithError(err).Errorf("error GetMetricEvaluated for week 2 and metric: %s", metric)
@@ -144,7 +144,7 @@ func createKpiInsights(diskManager *serviceDisk.DiskDriver, archiveCloudManager,
 
 		//get week 1 metrics by reading file
 		if !skipW1 {
-			if wpi, err := getMetricEvaluated(spectrum, query.DisplayCategory, metric, pageOrChannel, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[0], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2); err != nil {
+			if wpi, err := getMetricEvaluated(spectrum, query.DisplayCategory, metric, pageOrChannel, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[0], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap); err != nil {
 				wpi = &WithinPeriodInsightsKpi{Category: spectrum, MetricInfo: &MetricInfo{}, ScaleInfo: &MetricInfo{}}
 				oldInsightsList = append(oldInsightsList, wpi)
 				log.WithError(err).Errorf("error GetMetricEvaluated for week 1 and metric: %s", metric)
@@ -213,29 +213,29 @@ func createKpiInsights(diskManager *serviceDisk.DiskDriver, archiveCloudManager,
 // (queryEvent works as channel or page depending on spectrum)
 // get wpi for kpi for a week
 func getMetricEvaluated(spectrum, category string, metric string, eventOrChannel string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2 bool) (*WithinPeriodInsightsKpi, error) {
+	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) (*WithinPeriodInsightsKpi, error) {
 
 	var insights *WithinPeriodInsightsKpi
 	var err error
 	var scanner *bufio.Scanner
 	if spectrum == "events" {
-		if scanner, err = GetEventFileScanner(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2); err != nil {
+		if scanner, err = GetEventFileScanner(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap); err != nil {
 			log.WithError(err).Error("failed getting event file scanner")
 			return nil, err
 		}
-		insights, err = getEventMetricsInfo(metric, eventOrChannel, scanner, propFilter, propsToEval)
+		insights, err = getEventMetricsInfo(metric, eventOrChannel, scanner, propFilter, propsToEval, periodCode.From, periodCode.To)
 	} else if spectrum == "campaign" {
 		if category == M.AllChannelsDisplayCategory {
-			insights, err = getAllChannelMetricsInfo(metric, propFilter, propsToEval, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
+			insights, err = getAllChannelMetricsInfo(metric, propFilter, propsToEval, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap)
 		} else {
-			if scanner, err = GetChannelFileScanner(eventOrChannel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2); err != nil {
+			if scanner, err = GetChannelFileScanner(eventOrChannel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap); err != nil {
 				log.WithError(err).Error("failed getting " + eventOrChannel + " file scanner")
 				return nil, err
 			}
-			insights, err = getCampaignMetricsInfo(metric, eventOrChannel, scanner, propFilter, propsToEval)
+			insights, err = getCampaignMetricsInfo(metric, eventOrChannel, scanner, propFilter, propsToEval, periodCode.From, periodCode.To)
 		}
 	} else if spectrum == "custom" {
-		insights, err = getCustomMetricsInfo(metric, propFilter, propsToEval, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
+		insights, err = getCustomMetricsInfo(metric, propFilter, propsToEval, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap)
 	} else {
 		err = fmt.Errorf("unknown spectrum: %s", spectrum)
 	}

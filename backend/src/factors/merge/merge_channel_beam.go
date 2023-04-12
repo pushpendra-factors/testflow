@@ -10,12 +10,9 @@ import (
 	"factors/pull"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
-	U "factors/util"
 	"fmt"
 	"io"
-	"math"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -109,38 +106,16 @@ func getDoctypeFromFile(channel string, ctx context.Context, projectId int64, cl
 }
 
 // read unsorted channel file from cloud, pass some docTypes to a worker, workers sort ad reports for the alloted docType and upload sorted part files
-func Pull_channel_beam_controller(projectId int64, channel string, cloud_dir, cloud_file string,
-	batchSize int, docTypeMap map[string]int, beamStruct *RunBeamConfig,
+func Pull_channel_beam_controller(projectId int64, channel string, startToEndIndex map[int]int, beamStruct *RunBeamConfig,
 	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTime, endTime int64) error {
 
 	log.Infof(" Sorting pull %s in beam Project Id :%d", channel, projectId)
 	docTypesBeamString := make([]string, 0)
-	docTypesList := make([]string, 0)
-	docTypesMapList := make(map[string]int64)
 
 	bucketName := (*cloudManager).GetBucketName()
-	cloudEventFileName := path.Join(cloud_dir, cloud_file)
-	log.Infof("bucket name %s cloud name:%s", bucketName, cloudEventFileName)
 
-	for docType, _ := range docTypeMap {
-		docTypesList = append(docTypesList, docType)
-	}
-
-	for idx, uid := range docTypesList {
-		docTypesMapList[uid] = int64(idx)
-	}
-
-	err := putDoctypesToGCP(channel, projectId, docTypesMapList, cloudManager, diskManager, startTime, endTime)
-	if err != nil {
-		return err
-	}
-
-	num_docTypes := len(docTypesList)
-	numRoutines := num_docTypes
-	for i := 0; i < numRoutines; i++ {
+	for low, high := range startToEndIndex {
 		// Each worker gets a docType to sort.
-		low := int(math.Min(float64(i), float64(num_docTypes)))
-		high := int(math.Min(float64(i), float64(num_docTypes)))
 		tmp := CUserIdsBeam{projectId, int64(low), int64(high), bucketName, "", beamStruct.Env, startTime, endTime, channel, 0}
 
 		t, err := json.Marshal(tmp)
@@ -150,7 +125,7 @@ func Pull_channel_beam_controller(projectId int64, channel string, cloud_dir, cl
 		docTypesBeamString = append(docTypesBeamString, string(t))
 	}
 
-	err = SortDoctypesExecutor(beamStruct, docTypesBeamString)
+	err := SortDoctypesExecutor(beamStruct, docTypesBeamString)
 	if err != nil {
 		return err
 	}
@@ -238,12 +213,7 @@ func (f *SortAdDoFn) ProcessElement(ctx context.Context, cpString string) error 
 		}
 	}
 
-	docType, err := getDoctypeFromFile(channel, ctx, projectId, &cloudManager, startTime, endTime, lowNum, highNum)
-	if err != nil {
-		return err
-	}
-
-	err = downloadAndSortChannelFile(channel, ctx, projectId, &cloudManager, startTime, endTime, docType)
+	err = downloadAndSortChannelFile(channel, ctx, projectId, &cloudManager, startTime, endTime, lowNum)
 	if err != nil {
 		return err
 	}
@@ -252,19 +222,18 @@ func (f *SortAdDoFn) ProcessElement(ctx context.Context, cpString string) error 
 
 // read unsorted file, get ad reports with given docType, sort and upload sorted part file to cloud
 func downloadAndSortChannelFile(channel string, ctx context.Context, projectId int64, cloudManager *filestore.FileManager, startTime, endTime int64,
-	docType int) error {
+	docTypeIndex int64) error {
 
 	beamlog.Infof(ctx, "Downloading and sorting events file")
 	adReports := make([]*pull.CounterCampaignFormat, 0)
 
-	gcpPath, gcpFName := (*cloudManager).GetChannelFilePathAndName(channel, projectId, startTime, endTime)
-	gcpFName = "unsorted_" + gcpFName
-	rc, err := (*cloudManager).Get(gcpPath, gcpFName)
+	cDir, cName := (*cloudManager).GetChannelPartFilePathAndName(channel, projectId, startTime, endTime, false, int(docTypeIndex))
+	rc, err := (*cloudManager).Get(cDir, cName)
 	if err != nil {
 		return fmt.Errorf("unable to get file from cloud :%v", err)
 	}
 
-	beamlog.Infof(ctx, "Reading events from :%s%s", gcpPath, gcpFName)
+	beamlog.Infof(ctx, "Reading ad reports from :%s%s", cDir, cName)
 	scannerEvents := bufio.NewScanner(rc)
 	buf := make([]byte, 0, 64*1024)
 	scannerEvents.Buffer(buf, 1024*1024)
@@ -277,9 +246,8 @@ func downloadAndSortChannelFile(channel string, ctx context.Context, projectId i
 			return err
 		}
 
-		if report.Doctype == docType {
-			adReports = append(adReports, report)
-		}
+		adReports = append(adReports, report)
+
 	}
 
 	err = rc.Close()
@@ -287,10 +255,7 @@ func downloadAndSortChannelFile(channel string, ctx context.Context, projectId i
 		beamlog.Errorf(ctx, "unable to close events file from gcp :%v", err)
 	}
 
-	cDir, cName := GetSortedFilePathAndName(*cloudManager, U.DataTypeAdReport, channel, projectId, startTime, endTime, 0)
-	cDir = path.Join(cDir, "parts/"+strings.Replace(cName, ".txt", "", 1))
-	cName = fmt.Sprintf("%d_reports", docType)
-
+	cDir, cName = (*cloudManager).GetChannelPartFilePathAndName(channel, projectId, startTime, endTime, true, int(docTypeIndex))
 	cloudWriter, err := (*cloudManager).GetWriter(cDir, cName)
 	if err != nil {
 		beamlog.Error(ctx, "Failed to pull events. Upload failed.")
@@ -313,8 +278,8 @@ func downloadAndSortChannelFile(channel string, ctx context.Context, projectId i
 
 // merge all sorted part files to create one sorted file
 func ReadAndMergeChannelPartFiles(projectId int64, partsDir string, sortedDir string, sortedName string,
-	tmpCloudManager, sortedCloudManager *filestore.FileManager) (int64, error) {
-	var countLines int64
+	tmpCloudManager, sortedCloudManager *filestore.FileManager) (int, error) {
+	var countLines int
 	cloudWriter, err := (*sortedCloudManager).GetWriter(sortedDir, sortedName)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -323,8 +288,7 @@ func ReadAndMergeChannelPartFiles(projectId int64, partsDir string, sortedDir st
 	}
 
 	log.Infof("Merging partFiles:%d", projectId)
-	partFilesDir := path.Join(partsDir, "parts/"+strings.Replace(sortedName, ".txt", "", 1))
-	listFiles := (*tmpCloudManager).ListFiles(partFilesDir)
+	listFiles := (*tmpCloudManager).ListFiles(partsDir)
 	fileNames := make([]string, 0)
 	for _, partFileFullName := range listFiles {
 		partFNamelist := strings.Split(partFileFullName, "/")
@@ -341,8 +305,8 @@ func ReadAndMergeChannelPartFiles(projectId int64, partsDir string, sortedDir st
 
 	for _, partFileName := range fileNames {
 
-		log.Infof("Reading part file :%s, %s", partFilesDir, partFileName)
-		file, err := (*tmpCloudManager).Get(partFilesDir, partFileName)
+		log.Infof("Reading part file :%s, %s", partsDir, partFileName)
+		file, err := (*tmpCloudManager).Get(partsDir, partFileName)
 		if err != nil {
 			return 0, err
 		}

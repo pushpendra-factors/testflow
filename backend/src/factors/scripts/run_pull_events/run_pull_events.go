@@ -62,6 +62,7 @@ func main() {
 	isQuarterlyEnabled := flag.Bool("quarterly_enabled", false, "")
 
 	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
+	pullEventsDaily := flag.Bool("pull_events_daily", false, "run PullEventsDaily as well")
 
 	fileTypesFlag := flag.String("file_types", "*",
 		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to pull.FileType map
@@ -263,39 +264,62 @@ func main() {
 
 	if *useBucketV2 {
 		var statusEvents map[string]interface{}
-		if U.ContainsInt64InArray(fileTypes, 1) {
+		if *pullEventsDaily {
 			fileTypesMapOnlyEvents := make(map[int64]bool)
 			fileTypesMapOnlyEvents[1] = true
 			configs["fileTypes"] = fileTypesMapOnlyEvents
 			statusEvents = taskWrapper.TaskFuncWithProjectId("PullEventsDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
+			log.Info("events only: ", statusEvents)
 			var isSuccess bool = true
 			for reason, message := range statusEvents {
 				if message == false {
-					C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events daily failure")
-					isSuccess = false
-					break
+					for key, val := range statusEvents[reason[6:]].(map[string]interface{}) {
+						if strings.Contains(key, "error") {
+							if strings.HasPrefix(val.(string), "invalid end timestamp") {
+								continue
+							}
+							isSuccess = false
+							break
+						}
+					}
+					if !isSuccess {
+						break
+					}
 				}
 			}
 			if isSuccess {
-				C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events Daily run success.")
+				C.PingHealthcheckForSuccess(healthcheckPingID, statusEvents)
+			} else {
+				C.PingHealthcheckForFailure(healthcheckPingID, statusEvents)
 			}
 		}
 
 		configs["fileTypes"] = fileTypesMap
 		status := taskWrapper.TaskFuncWithProjectId("PullDataDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
+		log.Info("all data: ", status)
 		isSuccess := true
 		for reason, message := range status {
 			if message == false {
-				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull data daily run failure")
-				isSuccess = false
-				break
+				for key, val := range status[reason[6:]].(map[string]interface{}) {
+					if strings.Contains(key, "error") {
+						if strings.HasPrefix(val.(string), "invalid end timestamp") {
+							continue
+						}
+						isSuccess = false
+						break
+					}
+				}
+				if !isSuccess {
+					break
+				}
 			}
 		}
 		if isSuccess {
-			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Data Daily run success.")
+			C.PingHealthcheckForSuccess(healthcheckPingID, status)
+		} else {
+			C.PingHealthcheckForFailure(healthcheckPingID, status)
 		}
 		log.Info("events only: ", statusEvents)
-		log.Info("all data: ", status)
 	} else {
 		configs["diskManager"] = diskManager
 		configs["beamConfig"] = &beamConfig
@@ -369,5 +393,4 @@ func main() {
 			}
 		}
 	}
-
 }
