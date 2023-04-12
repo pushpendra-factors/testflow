@@ -304,6 +304,50 @@ func AddSixSignalEmailIDHandler(c *gin.Context) (interface{}, int, string, bool)
 	return "EmailID added successfully", http.StatusCreated, "", false
 }
 
+//FetchListofDatesForSixSignalReport fetches the list of dates for which the report is present in cloud storage
+func FetchListofDatesForSixSignalReport(c *gin.Context) (interface{}, int, string, bool) {
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		log.Error("Query failed. Invalid project.")
+		return nil, http.StatusUnauthorized, "Invalid Project", true
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectId,
+	})
+
+	timezoneString, statusCode := store.GetStore().GetTimezoneForProject(projectId)
+	if statusCode != http.StatusFound {
+		logCtx.Error("Failed to get Timezone in FetchListofDatesForSixSignalReport", statusCode)
+		return nil, http.StatusBadRequest, "Query failed. Failed to get Timezone.", true
+	}
+
+	path := fmt.Sprintf("projects/%d/sixSignal", projectId) //path= "projects/2/sixSignal"
+	cloudManager := C.GetCloudManager(projectId, true)
+	//filenames contains the complete path for the reports file
+	//filenames=["projects/2/sixSignal/20230212-20230219/results.txt","projects/2/sixSignal/20230220-20230227/results.txt",...]
+	filenames := cloudManager.ListFiles(path)
+
+	//dateList will contain the from-to values for all the sixsignal reports presents for a particular project on cloud storage.
+	dateList := make([]string, 0)
+
+	//In this loop, the dates(from-to) present in YYYYMMDD format is extracted from filenames using string slicing and then these from and to values are converted
+	//into epoch values based on the timezone. The epoch values of from and to are merged using a hyphen and then append to the dateList.
+	for _, filename := range filenames {
+		from := filename[len(path)+1 : len(path)+9]
+		to := filename[len(path)+10 : len(path)+18]
+
+		fromEpoch := U.GetBeginningoftheDayEpochForDateAndTimezone(from, string(timezoneString))
+		toEpoch := U.GetEndoftheDayEpochForDateAndTimezone(to, string(timezoneString))
+
+		dateRange := fmt.Sprintf("%d-%d", fromEpoch, toEpoch) //dateRange="1676140200-1676744999"
+		dateList = append(dateList, dateRange)                //dateList=["1676140200-1676744999", "1676745000-1677349799",...]
+	}
+
+	return dateList, http.StatusFound, "", false
+}
+
 //isReportShared checks if the report has been already made public
 func isReportShared(projectID int64, idText string) (bool, string) {
 

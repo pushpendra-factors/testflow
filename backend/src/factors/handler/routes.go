@@ -51,7 +51,7 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
-	r.GET(routePrefix+"/.well-known/microsoft-identity-association.json",teams.VerifyPublisherDomainTeams)
+	r.GET(routePrefix+"/.well-known/microsoft-identity-association.json", teams.VerifyPublisherDomainTeams)
 
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
@@ -124,6 +124,7 @@ func InitAppRoutes(r *gin.Engine) {
 	shareSixSignalRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/sixsignal/publicreport", responseWrapper(GetSixSignalPublicReportHandler))
 	featuresGatesRouteGroup.POST("/:project_id/sixsignal/share", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateSixSignalShareableURLHandler))
 	featuresGatesRouteGroup.POST("/:project_id/sixsignal/add_email", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(AddSixSignalEmailIDHandler))
+	featuresGatesRouteGroup.GET("/:project_id/sixsignal/date_list", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(FetchListofDatesForSixSignalReport))
 
 	// Dashboard endpoints
 	featuresGatesRouteGroup.GET("/:project_id/dashboards", stringifyWrapper(GetDashboardsHandler))
