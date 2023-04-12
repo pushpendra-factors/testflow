@@ -41,6 +41,13 @@ export const EVENTS_MAP = {
   [RULE_TYPE_SF_EVENTS]: EVENT_SF_EVENT
 };
 
+export const PROPERTY_MAP_OPTIONS = [
+  ['Type', '$type'],
+  ['Source', '$source'],
+  ['Campaign', '$campaign'],
+  ['Channel', '$channel']
+];
+
 export const Extra_PROP_SHOW_OPTIONS = [
   ['Campaign Id', null, 'campaign_id'],
   ['Adgroup', null, 'adgroup'],
