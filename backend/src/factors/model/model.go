@@ -904,4 +904,6 @@ type Model interface {
 	// Currency
 	CreateCurrencyDetails(currency string, date int64, value float64) error
 	GetCurrencyDetails(currency string, date int64) ([]model.Currency, error)
+	// UploadFile
+	UploadFilterFile(fileReference string, projectId int64)
 }

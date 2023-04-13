@@ -216,5 +216,6 @@ func UploadListForFilters(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+	store.GetStore().UploadFilterFile(fileReference, projectId)
 	c.JSON(http.StatusOK, gin.H{"file_reference": fileReference})
 }
