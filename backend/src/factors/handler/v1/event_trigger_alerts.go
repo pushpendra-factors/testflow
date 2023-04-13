@@ -132,7 +132,7 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 		}
 	}
 
-	slackAssociatedUserId := existingAlert.CreatedBy
+	slackAssociatedUserId := existingAlert.SlackChannelAssociatedBy
 	if(len(existingSlackChannels) == len(newSlackChannels)){
 		existingChannelNameMap := make(map[string]bool)
 		existingChannelIDMap := make(map[string]bool)
