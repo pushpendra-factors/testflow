@@ -265,7 +265,7 @@ function SiderMenu({
       ) : (
         <SubMenu key='sub1' icon={setIcon('profile')} title={<b>Profiles</b>}>
           <Menu.Item className={styles.menuitems_sub} key={`/profiles/people`}>
-            {MenuItems.People}
+            <b>{MenuItems.People}</b>
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
