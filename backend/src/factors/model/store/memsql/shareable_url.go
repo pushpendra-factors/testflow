@@ -307,3 +307,48 @@ func (store *MemSQL) RevokeShareableURLsWithProjectID(projectId int64) (int, str
 
 	return http.StatusAccepted, ""
 }
+
+func (store *MemSQL) ValidateCreateShareableURLRequest(params *model.ShareableURL, projectID int64, agentUUID string) (bool, string) {
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id":    projectID,
+		"agentUUID":     agentUUID,
+		"shareableURLs": params,
+	})
+
+	if params.EntityID == 0 {
+		return false, "Invalid entity id."
+	}
+
+	if !model.ValidShareEntityTypes[params.EntityType] {
+		return false, "Invalid entity type."
+	}
+
+	if !model.ValidShareTypes[params.ShareType] {
+		return false, "Invalid share type."
+	}
+
+	if params.EntityType == model.ShareableURLEntityTypeQuery || params.EntityType == model.ShareableURLEntityTypeSixSignal {
+		query, err := store.GetQueryWithQueryId(projectID, params.EntityID)
+		logCtx.Info("Query fetched : ", query)
+		if err != http.StatusFound {
+			return false, "Invalid query id."
+		}
+
+		_, err = store.GetShareableURLWithShareStringAndAgentID(projectID, query.IdText, agentUUID)
+		if err == http.StatusBadRequest || err == http.StatusInternalServerError {
+			return false, "Shareable query creation failed. DB error."
+		} else if err == http.StatusFound {
+			return false, "Shareable url already exists."
+		}
+
+		params.QueryID = query.IdText
+
+	} else if params.EntityType == model.ShareableURLEntityTypeDashboard {
+
+	} else if params.EntityType == model.ShareableURLEntityTypeTemplate {
+
+	}
+	logCtx.Info("Shareable URls is valid: ", params)
+	return true, ""
+}
