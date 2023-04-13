@@ -103,10 +103,14 @@ const CreateGoalDrawer = (props) => {
   const [showEventsToIncDD, setShowEventsToIncDD] = useState(false);
 
   const [modelMetadata, setModelMetadata] = useState([]);
-  const [selectedDateRange, setSelectedDateRange] = useState({});
+  const [selectedDateRange, setSelectedDateRange] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
+
+
+  const defaultStartDate = selectedDateRange ? selectedDateRange?.startDate : moment().subtract(1, 'days')
+  const defaultEndDate = selectedDateRange ? selectedDateRange?.endDate : moment().subtract(1, 'days')
 
   const getFilters = (filters) => {
     const result = [];
@@ -160,7 +164,7 @@ const CreateGoalDrawer = (props) => {
 
   useEffect(() => {
     let goalInsights = props.goal_insights;
-    if (goalInsights) { 
+    if (goalInsights) {
 
       let defaultDate = {
         startDate: moment.unix(goalInsights?.sts),
@@ -179,6 +183,11 @@ const CreateGoalDrawer = (props) => {
         setEvent1(goalInsights?.goal?.st_en);
         setEvent2(goalInsights?.goal?.en_en);
       }
+      
+      if(goalInsights?.goal?.rule?.in_en){
+        setEventsToInc(goalInsights?.goal?.rule?.in_en) 
+      }
+
     }
   }, []);
 
@@ -300,9 +309,9 @@ const CreateGoalDrawer = (props) => {
           in_en: eventsToInc
         },
         name: reportName,
-        sts: moment(selectedDateRange.startDate).unix(),
-        ets: moment(selectedDateRange.endDate).unix()
-      };
+        sts: moment(defaultStartDate).unix(),
+        ets: moment(defaultEndDate).unix()
+      }; 
 
       // creating explain job
       props
@@ -430,9 +439,10 @@ const CreateGoalDrawer = (props) => {
                 quarterPicker
                 placement='bottomRight'
                 buttonSize={'large'}
+                todayPicker={false}
                 range={{
-                  startDate: selectedDateRange.startDate,
-                  endDate: selectedDateRange.endDate
+                  startDate: defaultStartDate,
+                  endDate: defaultEndDate
                 }}
                 onSelect={setSelectedDateRange}
               />

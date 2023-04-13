@@ -21,13 +21,17 @@ import {
 } from '../../../../utils/dataFormatter';
 import {
   CHART_TYPE_SPARKLINES,
-  CHART_TYPE_LINECHART
+  CHART_TYPE_LINECHART,
+  CHART_TYPE_METRIC_CHART,
+  MAX_ALLOWED_VISIBLE_PROPERTIES
 } from '../../../../utils/constants';
 import LineChart from '../../../../components/HCLineChart';
 import NoBreakdownTable from './NoBreakdownTable';
 import SparkChartWithCount from '../../../../components/SparkChartWithCount/SparkChartWithCount';
 import { getKpiLabel } from '../kpiAnalysis.helpers';
+import MetricChart from 'Components/MetricChart/MetricChart';
 
+const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 const NoBreakdownChartsComponent = forwardRef(
   (
     {
@@ -181,6 +185,25 @@ const NoBreakdownChartsComponent = forwardRef(
             compareCategories={compareCategories}
             secondaryYAxisIndices={secondAxisKpiIndices}
           />
+        </div>
+      );
+    } else if (chartType === CHART_TYPE_METRIC_CHART) {
+      console.log(aggregateData);
+      chart = (
+        <div className='w-full'>
+          {aggregateData &&
+            aggregateData.map((eachAggregateData, eachIndex) => {
+              return (
+                <MetricChart
+                  key={eachAggregateData.name}
+                  headerTitle={eachAggregateData.name}
+                  value={eachAggregateData.total}
+                  iconColor={colors[eachIndex]}
+                  compareValue={eachAggregateData.compareTotal}
+                  showComparison={comparisonData.data != null}
+                />
+              );
+            })}
         </div>
       );
     }

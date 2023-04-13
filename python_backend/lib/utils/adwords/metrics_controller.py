@@ -140,7 +140,7 @@ class MetricsController:
         if cls.type_of_run == scripts.adwords.EXTRACT_AND_LOAD:
             cls.etl_stats["task_stats"] = cls.compare_load_and_extract()
 
-        if cls.etl_stats["status"] == SUCCESS_MESSAGE:
+        if cls.etl_stats["status"] == SUCCESS_MESSAGE or len(cls.etl_stats["failures"].keys()) == 0:
             HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["success"], cls.ADWORDS_SYNC_PING_ID)
         else:
             HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["failures"], cls.ADWORDS_SYNC_PING_ID, endpoint="/fail")
