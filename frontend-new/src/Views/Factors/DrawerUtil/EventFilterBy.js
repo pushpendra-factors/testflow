@@ -49,26 +49,30 @@ moment.tz.setDefault(timeZone);
     setfilters([]);
   },[props.event])
 
+
   useEffect(() => {
     const assignFilterProps = Object.assign({}, filterProps); 
     assignFilterProps.user = props.userProperties;
-    let  catAndNumericalProps = [];
+    let  catAndNumericalProps = []; 
 
-    // console.log('userProperties-->>',props.userProperties);
-    // console.log('eventProperties-->>',props.eventProperties); 
-
+    //removing numerical type for both events and user properties
     if (props.event && props.eventProperties[props.event]) {
-      assignFilterProps.event = props.eventProperties[props.event];
+      let numericalEventProps =  props.eventProperties[props.event]?.filter((item)=>{  
+        if(item[2]=='categorical'){ 
+          return item
+        }
+      });
+      assignFilterProps.event =  numericalEventProps;
     }
-
-    props.userProperties.map((item)=>{ 
-      if(item[2]=='categorical' || item[2]=='numerical'){ 
-        catAndNumericalProps.push(item); 
-      }
-    }); 
     
-    assignFilterProps.user = catAndNumericalProps;
-    setFilterProperties(assignFilterProps);
+    props.userProperties.map((item)=>{
+        if(item[2]=='categorical'){ 
+          catAndNumericalProps.push(item); 
+        }
+      }); 
+      
+      assignFilterProps.user = catAndNumericalProps;
+      setFilterProperties(assignFilterProps);
 
   }, [props.userProperties, props.eventProperties]);
 
@@ -95,7 +99,6 @@ const closeFilter = () => {
  
 
 const renderFilterBlock = () => {
-  // console.log("filterProps final--->", filterProps);
   if(filterProps) {
       const filtrs = [];
 
@@ -158,7 +161,7 @@ const renderFilterBlock = () => {
           {filtrs} 
         </div>);
   }
-  
+   
 }
 
   return ( 
