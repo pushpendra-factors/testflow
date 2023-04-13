@@ -373,6 +373,7 @@ const (
 	HealthCheckSixSignalReportPingID             = "2508c4c3-b941-40bb-8f2b-a59e4bedf3e5"
 	HealthcheckCurrencyUploadPingID              = "29defb4f-c95e-4895-a515-591fb7c216f7"
 	HealthcheckEventTriggerAlertPingID           = "352760ec-66a2-4b5f-b52e-e2c3f434a567"
+	HealthcheckLinkedinGroupUserPingID           = "a8b221cd-6f14-4c9c-8ae7-cd26f585868b"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.

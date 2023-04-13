@@ -1,0 +1,1 @@
+ALTER TABLE linkedin_documents ADD COLUMN is_group_user_created BOOLEAN default FALSE;
