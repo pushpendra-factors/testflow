@@ -7,12 +7,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) UploadFilterFile(fileReference string, projectId int64){
+func (store *MemSQL) UploadFilterFile(fileReference string, projectId int64) {
 	uploadFilterFile := model.UploadFilterFiles{
-		FileReference:		fileReference,
-		ProjectID: 			projectId,
-		CreatedAt:          U.TimeNowZ(),
-		UpdatedAt:          U.TimeNowZ(),
+		FileReference: fileReference,
+		ProjectID:     projectId,
+		CreatedAt:     U.TimeNowZ(),
+		UpdatedAt:     U.TimeNowZ(),
 	}
 	db := C.GetServices().Db
 

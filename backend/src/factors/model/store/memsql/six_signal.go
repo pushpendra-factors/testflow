@@ -2,8 +2,11 @@ package memsql
 
 import (
 	C "factors/config"
+	"factors/handler"
 	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sync"
@@ -234,4 +237,107 @@ func validateSixSignalQueryProps(query *model.SixSignalQuery) (string, bool) {
 	}
 
 	return "", false
+}
+
+//CreateSixSignalShareableURL saves the query to the queries table and generate the queryID for public-URL for the given queryRequest and projectId
+func CreateSixSignalShareableURL(queryRequest *model.Queries, projectId int64, agentUUID string) (string, int, string) {
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectId,
+		"query":      queryRequest,
+	})
+	queries, errCode, errMsg := store.GetStore().CreateQuery(projectId, queryRequest)
+	if errCode != http.StatusCreated {
+		return "", errCode, errMsg
+	}
+
+	isShared, _ := isReportShared(projectId, queries.IdText)
+	if isShared {
+
+		logCtx.Info("Query Id if shared already: ", queries.IdText)
+		errCode1, errMsg1 := store.GetStore().DeleteQuery(projectId, queries.ID)
+		if errCode1 != http.StatusAccepted {
+			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg1)
+		}
+		return queries.IdText, http.StatusCreated, "Shareable Query already shared"
+	}
+
+	shareableUrlRequest := &model.ShareableURL{
+		EntityType: model.ShareableURLEntityTypeSixSignal,
+		EntityID:   queries.ID,
+		ShareType:  model.ShareableURLShareTypePublic,
+		ProjectID:  projectId,
+		CreatedBy:  agentUUID,
+		ExpiresAt:  time.Now().AddDate(0, 3, 0).Unix(),
+	}
+
+	valid, errMsg := handler.ValidateCreateShareableURLRequest(shareableUrlRequest, projectId, agentUUID)
+	if !valid {
+		logCtx.Error(errMsg)
+		errCode2, errMsg2 := store.GetStore().DeleteQuery(projectId, queries.ID)
+		if errCode2 != http.StatusAccepted {
+			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg2)
+			return "", http.StatusBadRequest, errMsg2
+		}
+		return "", http.StatusBadRequest, errMsg
+	}
+
+	logCtx.Info("Shareable urls after validation: ", shareableUrlRequest)
+	shareableUrlRequest.QueryID = queries.IdText
+	share, err := store.GetStore().CreateShareableURL(shareableUrlRequest)
+	if err != http.StatusCreated {
+		logCtx.Error("Failed to create shareable query")
+		errCode3, errMsg3 := store.GetStore().DeleteQuery(projectId, queries.ID)
+		if errCode3 != http.StatusAccepted {
+			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg3)
+		}
+		return "", http.StatusInternalServerError, "Shareable query creation failed."
+	}
+
+	return share.QueryID, http.StatusCreated, "Shareable Query creation successful"
+}
+
+//SendSixSignalReportViaEmail send email to the given list of emailIds along with info provided in the request Payload
+func SendSixSignalReportViaEmail(requestPayload model.SixSignalEmailAndMessage) (string, []string) {
+
+	fromDate := U.GetDateFromTimestampAndTimezone(requestPayload.From, requestPayload.Timezone)
+	toDate := U.GetDateFromTimestampAndTimezone(requestPayload.To, requestPayload.Timezone)
+
+	var success, fail int
+	sendEmailFailIds := make([]string, 0)
+	sub := "Latest accounts that visited " + requestPayload.Domain + " from " + fromDate + " to " + toDate
+	html := U.GetSixSignalReportSharingTemplate(requestPayload.Url, requestPayload.Domain)
+	text := ""
+	for _, email := range requestPayload.EmailIDs {
+		err := C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), sub, html, text)
+		if err != nil {
+			fail++
+			sendEmailFailIds = append(sendEmailFailIds, email)
+			log.WithError(err).Error("failed to send email via SendSixSignalReportViaEmail method")
+			continue
+		}
+		success++
+	}
+	var msg string
+	if success < len(requestPayload.EmailIDs) {
+		msg = fmt.Sprintf("Email successfully sent to %d email id, failed to send email to %d", success, fail)
+	} else {
+		msg = "Email successfully sent to all the email ids"
+	}
+
+	return msg, sendEmailFailIds
+}
+
+//isReportShared checks if the report has been already made public
+func isReportShared(projectID int64, idText string) (bool, string) {
+
+	share, err := store.GetStore().GetShareableURLWithShareStringWithLargestScope(projectID, idText, model.ShareableURLEntityTypeSixSignal)
+	if err == http.StatusBadRequest || err == http.StatusInternalServerError {
+		return false, "Shareable query fetch failed. DB error."
+	} else if err == http.StatusFound {
+		if share.ShareType == model.ShareableURLShareTypePublic {
+			return true, "Shareable url already exists."
+		}
+	}
+	return false, "Shareable url doesn't exist"
+
 }

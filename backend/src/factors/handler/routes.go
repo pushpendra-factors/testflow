@@ -122,7 +122,6 @@ func InitAppRoutes(r *gin.Engine) {
 	shareSixSignalRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/sixsignal/publicreport", responseWrapper(GetSixSignalPublicReportHandler))
 	featuresGatesRouteGroup.POST("/:project_id/sixsignal/share", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateSixSignalShareableURLHandler))
 	featuresGatesRouteGroup.POST("/:project_id/sixsignal/add_email", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(AddSixSignalEmailIDHandler))
-	featuresGatesRouteGroup.GET("/:project_id/sixsignal/date_list", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(FetchListofDatesForSixSignalReport))
 
 	// Dashboard endpoints
 	featuresGatesRouteGroup.GET("/:project_id/dashboards", stringifyWrapper(GetDashboardsHandler))
@@ -309,10 +308,10 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/test_wh", responseWrapper(V1.TestWebhookforEventTriggerAlerts))
 
 	// teams
-	featuresGatesRouteGroup.POST("/:project_id/teams/auth", mid.SkipDemoProjectWriteAccess(), teams.TeamsAuthRedirectHandler)
-	featuresGatesRouteGroup.GET("/:project_id/teams/get_teams", mid.SkipDemoProjectWriteAccess(), teams.GetAllTeamsHandler)
-	featuresGatesRouteGroup.GET("/:project_id/teams/channels", mid.SkipDemoProjectWriteAccess(), teams.GetTeamsChannelsHandler)
-	featuresGatesRouteGroup.DELETE("/:project_id/teams/delete", mid.SkipDemoProjectWriteAccess(), teams.DeleteTeamsIntegrationHandler)
+	// featuresGatesRouteGroup.POST("/:project_id/teams/auth", mid.SkipDemoProjectWriteAccess(), teams.TeamsAuthRedirectHandler)
+	// featuresGatesRouteGroup.GET("/:project_id/teams/get_teams", mid.SkipDemoProjectWriteAccess(), teams.GetAllTeamsHandler)
+	// featuresGatesRouteGroup.GET("/:project_id/teams/channels", mid.SkipDemoProjectWriteAccess(), teams.GetTeamsChannelsHandler)
+	// featuresGatesRouteGroup.DELETE("/:project_id/teams/delete", mid.SkipDemoProjectWriteAccess(), teams.DeleteTeamsIntegrationHandler)
 	// Upload
 	featuresGatesRouteGroup.POST("/:project_id/uploadlist", V1.UploadListForFilters)
 
@@ -375,7 +374,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/property_mappings/commom_properties", responseWrapper(V1.GetCommonPropertyMappings))
 
 	//six signal
-	authRouteGroup.POST("/:project_id/sixsignal/email", responseWrapper(SendSixSignalReportViaEmail))
+	authRouteGroup.POST("/:project_id/sixsignal/email", responseWrapper(SendSixSignalReportViaEmailHandler))
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
@@ -496,7 +495,7 @@ func InitIntRoutes(r *gin.Engine) {
 
 	intRouteGroup.GET("/slack/callback", slack.SlackCallbackHandler)
 
-	intRouteGroup.GET("/teams/callback",teams.TeamsCallbackHandler)
+	//	intRouteGroup.GET("/teams/callback",teams.TeamsCallbackHandler)
 
 }
 
