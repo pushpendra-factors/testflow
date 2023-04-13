@@ -486,7 +486,7 @@ def add_disposition_label(engagement, call_disposition):
         disposition_label = call_disposition.get(engagement["metadata"]["disposition"])
         if disposition_label != None:
             engagement["metadata"]["disposition_label"] = disposition_label
-    
+
 def get_call_disposition(project_id, hubspot_request_handler):
         get_disposition_label_url = "https://api.hubapi.com/calling/v1/dispositions?"
         r = hubspot_request_handler(project_id, get_disposition_label_url)

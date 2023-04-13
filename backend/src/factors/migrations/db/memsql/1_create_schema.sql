@@ -462,6 +462,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     filter_ips JSON,
     is_deanonymization_requested boolean,
     is_onboarding_completed boolean,
+    sixsignal_email_list string,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
@@ -583,6 +584,7 @@ CREATE TABLE IF NOT EXISTS linkedin_documents (
     campaign_group_id text,
     campaign_id text,
     is_backfilled boolean default FALSE NOT NULL,
+    is_group_user_created BOOLEAN default FALSE,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,

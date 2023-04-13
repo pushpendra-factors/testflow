@@ -49,8 +49,8 @@ function EventGroupBlock({
   useEffect(() => {
     const filterOpts = [...filterOptions];
     filterOpts[0].values = eventProperties[event.label];
-    if (eventGroup?.length) {
-      filterOpts[2].values = groupProperties[eventGroup[1]];
+    if (eventGroup) {
+      filterOpts[2].values = groupProperties[eventGroup];
       filterOpts[1].values = [];
     } else {
       filterOpts[1].values = userProperties;
@@ -150,6 +150,22 @@ function EventGroupBlock({
     );
   };
 
+  const getIcon = (groupByEvent) => {
+    const { property, prop_category } = groupByEvent || {};
+
+    if (!property) return null;
+
+    const iconName =
+      prop_category === 'group' ||
+      property.startsWith('$salesforce') ||
+      property.startsWith('$hubspot') ||
+      property.startsWith('$6Signal')
+        ? 'profile'
+        : prop_category;
+
+    return <SVG name={iconName} size={16} color={'purple'} />;
+  };
+
   const renderGroupContent = () => {
     let propName = '';
     if (groupByEvent.property && groupByEvent.prop_category === 'user') {
@@ -174,9 +190,7 @@ function EventGroupBlock({
       <div className='relative'>
         <Tooltip title={propName}>
           <Button
-            icon={
-              <SVG name={groupByEvent.prop_category} size={16} color='purple' />
-            }
+            icon={getIcon(groupByEvent)}
             type='link'
             className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
           >

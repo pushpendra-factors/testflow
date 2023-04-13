@@ -63,7 +63,7 @@ export function fetchEventProperties(projectId, eventName) {
 export function fetchEventPropertyValues(projectId, eventName, propertyName) {
   const url = `${host}projects/${projectId}/event_names/${btoa(
     btoa(eventName)
-  )}/properties/${propertyName}/values`;
+  )}/properties/${propertyName}/values?label=true`;
   return get(null, url);
 }
 
@@ -74,20 +74,16 @@ export const fetchChannelObjPropertyValues = (
   property
 ) => {
   const url = `${host}projects/${projectId}/v1/channels/filter_values?channel=${channel}&filter_object=${filterObj}&filter_property=${property}`;
-  // const url =
-  //   filterObj === "campaign"
-  //     ? `http://localhost:8000/getChannelFilters`
-  //     : `http://localhost:8000/adGroupFilters`;
   return get(null, url);
 };
 
-export function fetchUserPropertyValues(projectId, propertyName) {
-  const url = `${host}projects/${projectId}/user_properties/${propertyName}/values`;
+export function fetchUserProperties(projectId, queryType) {
+  const url = `${host}projects/${projectId}/user_properties?is_display_name_enabled=true`;
   return get(null, url);
 }
 
-export function fetchUserProperties(projectId, queryType) {
-  const url = `${host}projects/${projectId}/user_properties?is_display_name_enabled=true`;
+export function fetchUserPropertyValues(projectId, propertyName) {
+  const url = `${host}projects/${projectId}/user_properties/${propertyName}/values?label=true`;
   return get(null, url);
 }
 
@@ -328,7 +324,7 @@ export function fetchGroupProperties(projectId, groupName) {
 export function fetchGroupPropertyValues(projectId, groupName, propertyName) {
   const url = `${host}projects/${projectId}/groups/${btoa(
     btoa(groupName)
-  )}/properties/${propertyName}/values`;
+  )}/properties/${propertyName}/values?label=true`;
   return get(null, url);
 }
 

@@ -18,7 +18,7 @@ import (
 )
 
 // get within period insights for a week for custom kpi
-func getCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2 bool) (*WithinPeriodInsightsKpi, error) {
+func getCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	wpi.MetricInfo = &MetricInfo{}
 	wpi.ScaleInfo = &MetricInfo{}
@@ -39,20 +39,20 @@ func getCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval [
 	newPropFilter := append(propFilter, transformation.Filters...)
 
 	//get file scanner
-	scanner, err := GetUserFileScanner(transformation.DateField, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
+	scanner, err := GetUserFileScanner(transformation.DateField, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap)
 	if err != nil {
 		log.WithError(err).Error("failed getting " + transformation.DateField + " file scanner for custom kpi")
 		return &wpi, err
 	}
 
 	//get proper function (complex for avg, simple for unique,sum)
-	var GetCustomMetric func(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, metricFunc string, metricProp string) (*MetricInfo, *MetricInfo, error)
+	var GetCustomMetric func(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, metricFunc string, metricProp string, dateField string, startTimestamp, endTimestamp int64) (*MetricInfo, *MetricInfo, error)
 	if transformation.AggregateFunction == M.AverageAggregateFunction {
 		GetCustomMetric = getCustomMetricsComplex
 	} else {
 		GetCustomMetric = getCustomMetricsSimple
 	}
-	if info, scale, err := GetCustomMetric(scanner, newPropFilter, propsToEval, transformation.AggregateFunction, transformation.AggregateProperty); err != nil {
+	if info, scale, err := GetCustomMetric(scanner, newPropFilter, propsToEval, transformation.AggregateFunction, transformation.AggregateProperty, transformation.DateField, periodCode.From, periodCode.To); err != nil {
 		log.WithError(err).Error("error GetCustomMetric for kpi " + metric)
 		return &wpi, err
 	} else {
@@ -64,7 +64,7 @@ func getCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval [
 }
 
 // get custom kpi values for non-fraction type kpi
-func getCustomMetricsSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, metricFunc string, metricProp string) (*MetricInfo, *MetricInfo, error) {
+func getCustomMetricsSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, metricFunc string, metricProp string, dateField string, startTimestamp, endTimestamp int64) (*MetricInfo, *MetricInfo, error) {
 	var globalVal float64
 	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
@@ -79,6 +79,11 @@ func getCustomMetricsSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, pr
 		if err := json.Unmarshal([]byte(txtline), &userDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
+		}
+		timestampFloat, _ := U.GetPropertyValueAsFloat64(userDetails.Properties[dateField])
+		timestamp := int64(U.GetTimestampInSecs(int(timestampFloat)))
+		if timestamp < startTimestamp || timestamp > endTimestamp {
+			continue
 		}
 
 		//check filters
@@ -107,7 +112,7 @@ func getCustomMetricsSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, pr
 }
 
 // get custom kpi values for fraction type kpi
-func getCustomMetricsComplex(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, metricFunc string, metricProp string) (*MetricInfo, *MetricInfo, error) {
+func getCustomMetricsComplex(scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, metricFunc string, metricProp string, dateField string, startTimestamp, endTimestamp int64) (*MetricInfo, *MetricInfo, error) {
 	var globalVal float64
 	var globalFrac Fraction
 	var globalScale float64
@@ -124,6 +129,11 @@ func getCustomMetricsComplex(scanner *bufio.Scanner, propFilter []M.KPIFilter, p
 		if err := json.Unmarshal([]byte(txtline), &userDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
+		}
+		timestampFloat, _ := U.GetPropertyValueAsFloat64(userDetails.Properties[dateField])
+		timestamp := int64(U.GetTimestampInSecs(int(timestampFloat)))
+		if timestamp < startTimestamp || timestamp > endTimestamp {
+			continue
 		}
 
 		//check filters
@@ -226,7 +236,7 @@ func addToScaleUser(globalScale *float64, scaleMap map[string]map[string]float64
 
 // get union of topK properties from both files
 func getPropKeysToEvalForCustomMetric(metric string, projectId int64, periodCodes []Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, useBucketV2 bool) (map[string]bool, error) {
+	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) (map[string]bool, error) {
 
 	var finalProps = make(map[string]bool)
 
@@ -248,14 +258,14 @@ func getPropKeysToEvalForCustomMetric(metric string, projectId int64, periodCode
 	}
 
 	//add topK props from second week
-	err := addTopKPropKeys(finalProps, datefield, projectId, periodCodes[1], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2)
+	err := addTopKPropKeys(finalProps, datefield, projectId, periodCodes[1], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2, hardPull, pulledMap)
 	if err != nil {
 		log.WithField("err", err).Error("Failed in getting topk keys")
 		return nil, err
 	}
 
 	//add topK props from first week
-	err = addTopKPropKeys(finalProps, datefield, projectId, periodCodes[0], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2)
+	err = addTopKPropKeys(finalProps, datefield, projectId, periodCodes[0], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2, hardPull, pulledMap)
 	if err != nil {
 		log.WithField("err", err).Error("Failed in getting topk keys")
 		return nil, err
@@ -265,16 +275,16 @@ func getPropKeysToEvalForCustomMetric(metric string, projectId int64, periodCode
 
 // get user file and get topK keys(top K keys meaning unique keys from top K [key,value] pairs)
 func addTopKPropKeys(finalProps map[string]bool, datefield string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, useBucketV2 bool) error {
+	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) error {
 	//get counts map in proper format to use in functions built for events wi
 	var propsPerWeek = make(Level3CatRatioDist)
 	{
-		scanner, err := GetUserFileScanner(datefield, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
+		scanner, err := GetUserFileScanner(datefield, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap)
 		if err != nil {
 			log.WithError(err).Error("failed getting " + datefield + " file scanner for custom kpi")
 			return err
 		}
-		countsMap, err := getCountsMapFromUserScanner(scanner)
+		countsMap, err := getCountsMapFromUserScanner(scanner, periodCode.From, periodCode.To, datefield)
 		if err != nil {
 			log.WithError(err).Error("failed getting countsMap for" + datefield + " file scanner")
 			return err
@@ -314,7 +324,7 @@ func addTopKPropKeys(finalProps map[string]bool, datefield string, projectId int
 }
 
 // get map of counts of prop values (map[prop][value] = count) from user file scanner
-func getCountsMapFromUserScanner(scanner *bufio.Scanner) (map[string]map[string]float64, error) {
+func getCountsMapFromUserScanner(scanner *bufio.Scanner, startTimestamp, endTimestamp int64, dateField string) (map[string]map[string]float64, error) {
 
 	var countsMap = make(map[string]map[string]float64)
 	for scanner.Scan() {
@@ -324,6 +334,11 @@ func getCountsMapFromUserScanner(scanner *bufio.Scanner) (map[string]map[string]
 		if err := json.Unmarshal([]byte(txtline), &userDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, err
+		}
+		timestampFloat, _ := U.GetPropertyValueAsFloat64(userDetails.Properties[dateField])
+		timestamp := int64(timestampFloat)
+		if timestamp < startTimestamp || timestamp > endTimestamp {
+			continue
 		}
 
 		for k, v := range userDetails.Properties {
@@ -339,9 +354,9 @@ func getCountsMapFromUserScanner(scanner *bufio.Scanner) (map[string]map[string]
 
 // get union of topk prop keys from both files and filter through kpiProperties
 func getFilteredKpiPropertiesForCustomMetric(kpiProperties []map[string]string, metric string, projectId int64, periodCodes []Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, useBucketV2 bool) ([]map[string]string, error) {
+	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) ([]map[string]string, error) {
 	filteredKpiProperties := make([]map[string]string, 0)
-	propKeys, err := getPropKeysToEvalForCustomMetric(metric, projectId, periodCodes, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2)
+	propKeys, err := getPropKeysToEvalForCustomMetric(metric, projectId, periodCodes, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2, hardPull, pulledMap)
 	if err != nil {
 		err := fmt.Errorf("error getting topK keys from 1st scan")
 		log.WithError(err).Error("error getPropKeysToEvalForCustomMetric")

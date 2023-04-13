@@ -17,8 +17,6 @@ import {
 import { connect } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import _ from 'lodash';
-import FilterBlock from '../../components/QueryComposer/FilterBlock';
-import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 import EventFilterBy from './DrawerUtil/EventFilterBy';
 // import MomentTz from 'Components/MomentTz';
 import moment from 'moment-timezone';
@@ -810,7 +808,6 @@ export default connect(mapStateToProps, {
   saveGoalInsightRules,
   saveGoalInsightModel,
   getUserProperties,
-  fetchUserPropertyValues,
   getEventProperties,
   fetchFactorsModelMetadata
 })(CreateGoalDrawer);

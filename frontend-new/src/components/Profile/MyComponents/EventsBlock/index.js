@@ -5,7 +5,7 @@ import { bindActionCreators } from 'redux';
 import { SVG } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import { getEventProperties } from 'Reducers/coreQuery/middleware';
-import EventFilterWrapper from 'Components/QueryComposer/EventFilterWrapper';
+import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
@@ -22,14 +22,14 @@ function EventsBlock({
   eventProperties,
   getEventProperties,
   groupAnalysis,
-  displayMode
+  viewMode
 }) {
   const [isDDVisible, setDDVisible] = useState(true);
   useEffect(() => {
-    if (displayMode) {
+    if (viewMode) {
       setDDVisible(false);
     }
-  }, [displayMode]);
+  }, [viewMode]);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
   const [filterProps, setFilterProperties] = useState({
     event: []
@@ -69,10 +69,10 @@ function EventsBlock({
     if (!event || event === undefined) {
       return;
     }
-    if (!eventProperties[event.label] && !displayMode) {
-      getEventProperties(activeProject.id, event.label);
+    if (!eventProperties[event.label] && !viewMode) {
+      getEventProperties(activeProject?.id, event.label);
     }
-  }, [activeProject?.id, event, eventProperties, displayMode]);
+  }, [activeProject?.id, event, eventProperties, viewMode]);
 
   useEffect(() => {
     if (!event || event === undefined) {
@@ -146,22 +146,18 @@ function EventsBlock({
     setOrFilterIndex(-1);
   };
   const selectEventFilter = (ind) => (
-    <EventFilterWrapper
-      displayMode={displayMode}
+    <FilterWrapper
+      viewMode={viewMode}
       filterProps={filterProps}
-      activeProject={activeProject}
+      projectID={activeProject?.id}
       event={event}
       deleteFilter={closeFilter}
       insertFilter={insertFilters}
       closeFilter={closeFilter}
       refValue={ind}
       caller='profiles'
-      propsDDPos='top'
-      propsDDHeight={344}
-      operatorDDPos='top'
-      operatorDDHeight={344}
-      valuesDDPos='top'
-      valuesDDHeight={344}
+      dropdownPlacement='top'
+      dropdownMaxHeight={344}
     />
   );
 
@@ -208,36 +204,32 @@ function EventsBlock({
             <div className='fa--query_block--filters flex flex-col'>
               <div className='flex flex-row'>
                 <div key={ind}>
-                  <EventFilterWrapper
-                    displayMode={displayMode}
+                  <FilterWrapper
+                    viewMode={viewMode}
                     index={ind}
                     filter={filter}
                     event={event}
                     filterProps={filterProps}
-                    activeProject={activeProject}
+                    projectID={activeProject?.id}
                     deleteFilter={removeFilters}
                     insertFilter={insertFilters}
                     closeFilter={closeFilter}
                     refValue={refValue}
                     caller='profiles'
-                    propsDDPos='top'
-                    propsDDHeight={344}
-                    operatorDDPos='top'
-                    operatorDDHeight={344}
-                    valuesDDPos='top'
-                    valuesDDHeight={344}
+                    dropdownPlacement='top'
+                    dropdownMaxHeight={344}
                   />
                 </div>
-                {ind !== orFilterIndex && !displayMode && (
+                {ind !== orFilterIndex && !viewMode && (
                   <ORButton index={ind} setOrFilterIndex={setOrFilterIndex} />
                 )}
               </div>
               {ind === orFilterIndex && (
                 <div key='init'>
-                  <EventFilterWrapper
-                    displayMode={displayMode}
+                  <FilterWrapper
+                    viewMode={viewMode}
                     filterProps={filterProps}
-                    activeProject={activeProject}
+                    projectID={activeProject?.id}
                     event={event}
                     deleteFilter={closeFilter}
                     insertFilter={insertFilters}
@@ -245,12 +237,8 @@ function EventsBlock({
                     refValue={refValue}
                     showOr
                     caller='profiles'
-                    propsDDPos='top'
-                    propsDDHeight={344}
-                    operatorDDPos='top'
-                    operatorDDHeight={344}
-                    valuesDDPos='top'
-                    valuesDDHeight={344}
+                    dropdownPlacement='top'
+                    dropdownMaxHeight={344}
                   />
                 </div>
               )}
@@ -261,46 +249,38 @@ function EventsBlock({
           filters.push(
             <div className='fa--query_block--filters flex flex-col'>
               <div key={ind}>
-                <EventFilterWrapper
-                  displayMode={displayMode}
+                <FilterWrapper
+                  viewMode={viewMode}
                   index={ind}
                   filter={filtersGr[0]}
                   event={event}
                   filterProps={filterProps}
-                  activeProject={activeProject}
+                  projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   refValue={refValue}
                   caller='profiles'
-                  propsDDPos='top'
-                  propsDDHeight={344}
-                  operatorDDPos='top'
-                  operatorDDHeight={344}
-                  valuesDDPos='top'
-                  valuesDDHeight={344}
+                  dropdownPlacement='top'
+                  dropdownMaxHeight={344}
                 />
               </div>
               <div key={ind + 1}>
-                <EventFilterWrapper
-                  displayMode={displayMode}
+                <FilterWrapper
+                  viewMode={viewMode}
                   index={ind + 1}
                   filter={filtersGr[1]}
                   event={event}
                   filterProps={filterProps}
-                  activeProject={activeProject}
+                  projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   refValue={refValue}
                   showOr
                   caller='profiles'
-                  propsDDPos='top'
-                  propsDDHeight={344}
-                  operatorDDPos='top'
-                  operatorDDHeight={344}
-                  valuesDDPos='top'
-                  valuesDDHeight={344}
+                  dropdownPlacement='top'
+                  dropdownMaxHeight={344}
                 />
               </div>
             </div>
@@ -352,14 +332,14 @@ function EventsBlock({
                       <SVG
                         name='mouseevent'
                         size={16}
-                        color={displayMode ? 'grey' : 'purple'}
+                        color={viewMode ? 'grey' : 'purple'}
                       />
                     }
                     className={`fa-button--truncate fa-button--truncate-lg ${
-                      displayMode ? 'static-button' : ''
+                      viewMode ? 'static-button' : ''
                     } btn-total-round`}
-                    type={displayMode ? 'default' : 'link'}
-                    onClick={() => (displayMode ? null : setDDVisible(true))}
+                    type={viewMode ? 'default' : 'link'}
+                    onClick={() => (viewMode ? null : setDDVisible(true))}
                   >
                     {eventNames[event.label]
                       ? eventNames[event.label]
@@ -369,7 +349,7 @@ function EventsBlock({
                 {selectEvents()}
               </Tooltip>
             </div>
-            {event && !displayMode ? additionalActions() : null}
+            {event && !viewMode ? additionalActions() : null}
           </div>
         </div>
       </div>

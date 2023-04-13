@@ -82,6 +82,31 @@ func GetCurrentDayTimestamp() int64 {
 	return time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, currentTime.Location()).Unix()
 }
 
+//GetBeginningoftheDayEpochForDateAndTimezone provides the timestamp for the 00:00:00 hr of the given date and timezone
+func GetBeginningoftheDayEpochForDateAndTimezone(dateStr string, timezone string) int64 {
+	date, _ := time.Parse("20060102", dateStr)
+	loc, _ := time.LoadLocation(timezone)
+	t := time.Date(date.Year(), date.Month(), date.Day(), date.Hour(), date.Minute(), date.Second(), 0, loc)
+	// Get epoch timestamp
+	timestamp := t.Unix()
+	return timestamp
+}
+
+//GetEndoftheDayEpochForDateAndTimezone provides the timestamp for the 23:59:59 hr of the given date and timezone
+func GetEndoftheDayEpochForDateAndTimezone(dateStr string, timezone string) int64 {
+	date, _ := time.Parse("20060102", dateStr)
+	loc, _ := time.LoadLocation(timezone)
+	// Set time
+	hours := 23
+	minutes := 59
+	seconds := 59
+
+	t := time.Date(date.Year(), date.Month(), date.Day(), hours, minutes, seconds, 0, loc)
+	// Get epoch timestamp
+	timestamp := t.Unix()
+	return timestamp
+}
+
 func IsTimestampToday(timestamp int64) bool {
 	return GetBeginningOfDayTimestamp(timestamp) == GetCurrentDayTimestamp()
 }

@@ -1398,3 +1398,21 @@ export function uploadList(projectId, payload) {
     });
   };
 }
+
+export function testWebhhookUrl(projectId, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert/test_wh',
+        payload
+      )
+        .then((r) => {
+          resolve(r);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}

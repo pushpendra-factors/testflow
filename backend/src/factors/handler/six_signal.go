@@ -8,12 +8,14 @@ import (
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/model/store/memsql"
 	U "factors/util"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -191,75 +193,22 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 		Type:      model.QueryTypeSixSignalQuery,
 	}
 
-	queries, errCode, errMsg := store.GetStore().CreateQuery(projectID, queryRequest)
+	queryId, errCode, errMsg := CreateSixSignalShareableURL(queryRequest, projectID, agentUUID)
 	if errCode != http.StatusCreated {
+		logCtx.Error(errMsg)
 		return nil, errCode, errMsg, true
 	}
 
-	var response model.SixSignalPublicURLResponse
-	isShared, _ := isReportShared(projectID, queries.IdText)
-	if isShared {
-		response = model.SixSignalPublicURLResponse{
-			QueryID:      queries.IdText,
-			RouteVersion: ROUTE_VERSION_V1_WITHOUT_SLASH,
-		}
-		logCtx.Info("Response structure if shared already: ", response)
-		errCode, errMsg := store.GetStore().DeleteQuery(projectID, queries.ID)
-		if errCode != http.StatusAccepted {
-			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg)
-		}
-		return response, http.StatusCreated, "Shareable Query already shared", false
-	}
-
-	shareableUrlRequest := &model.ShareableURL{
-		EntityType: params.EntityType,
-		EntityID:   queries.ID,
-		ShareType:  params.ShareType,
-		ProjectID:  projectID,
-		CreatedBy:  agentUUID,
-	}
-
-	if params.IsExpirationSet && params.ExpirationTime > time.Now().Unix() {
-		shareableUrlRequest.ExpiresAt = params.ExpirationTime
-	} else {
-		shareableUrlRequest.ExpiresAt = time.Now().AddDate(0, 3, 0).Unix()
-	}
-
-	valid, errMsg := validateCreateShareableURLRequest(shareableUrlRequest, projectID, agentUUID)
-	if !valid {
-		logCtx.Error(errMsg)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
-		errCode, errMsg := store.GetStore().DeleteQuery(projectID, queries.ID)
-		if errCode != http.StatusAccepted {
-			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg)
-		}
-		return nil, http.StatusBadRequest, errMsg, true
-	}
-
-	logCtx.Info("Shareable urls after validation: ", shareableUrlRequest)
-	shareableUrlRequest.QueryID = queries.IdText
-	share, errCode := store.GetStore().CreateShareableURL(shareableUrlRequest)
-	if errCode != http.StatusCreated {
-		logCtx.WithError(err).Error("Failed to create shareable query")
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Shareable query creation failed."})
-		errCode, errMsg := store.GetStore().DeleteQuery(projectID, queries.ID)
-		if errCode != http.StatusAccepted {
-			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg)
-		}
-		return nil, http.StatusInternalServerError, "Shareable query creation failed.", true
-	}
-
-	response = model.SixSignalPublicURLResponse{
+	response := model.SixSignalPublicURLResponse{
+		QueryID:      queryId,
 		RouteVersion: ROUTE_VERSION_V1_WITHOUT_SLASH,
-		QueryID:      share.QueryID,
 	}
-	logCtx.Info("Response structure for sharing: ", response)
 
 	return response, http.StatusCreated, "Shareable Query creation successful", false
 }
 
-//SendSixSignalReportViaEmail sends mail to the emailIDs provided by clients
-func SendSixSignalReportViaEmail(c *gin.Context) (interface{}, int, string, string, bool) {
+//SendSixSignalReportViaEmailHandler SendSixSignalReportViaEmail sends mail to the emailIDs provided by clients
+func SendSixSignalReportViaEmailHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	r := c.Request
 
@@ -286,31 +235,103 @@ func SendSixSignalReportViaEmail(c *gin.Context) (interface{}, int, string, stri
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "No email id provided", true
 	}
 
-	fromDate := U.GetDateFromTimestampAndTimezone(requestPayload.From, requestPayload.Timezone)
-	toDate := U.GetDateFromTimestampAndTimezone(requestPayload.To, requestPayload.Timezone)
-
-	var success, fail int
-	sub := "Latest accounts that visited " + requestPayload.Domain + " from " + fromDate + " to " + toDate
-	html := U.GetSixSignalReportSharingTemplate(requestPayload.Url, requestPayload.Domain)
-	text := ""
-	for _, email := range requestPayload.EmailIDs {
-		err := C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), sub, html, text)
-		if err != nil {
-			fail++
-			log.WithError(err).Error("failed to send email via SendSixSignalReportViaEmail method")
-			continue
-		}
-		success++
-	}
-	var msg string
-	if success < len(requestPayload.EmailIDs) {
-		msg = fmt.Sprintf("Email successfully sent to %d email id, failed to send email to %d", success, fail)
-	} else {
-		msg = "Email successfully sent to all the email ids"
-	}
+	msg, _ := memsql.SendSixSignalReportViaEmail(requestPayload)
 
 	return msg, http.StatusOK, "", "", false
 
+}
+
+//AddSixSignalEmailIDHandler adds emailIDs provided by clients to the DB
+func AddSixSignalEmailIDHandler(c *gin.Context) (interface{}, int, string, bool) {
+	r := c.Request
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		log.Error("Query failed. Invalid project.")
+		return nil, http.StatusUnauthorized, "Invalid Project", true
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectId,
+	})
+
+	var requestPayload []string
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		logCtx.WithError(err).Error("Json decode failed in method AddSixSignalEmailIDHandler.")
+		return nil, http.StatusBadRequest, "Json Decode Failed", true
+	}
+	if len(requestPayload) == 0 {
+		logCtx.Error("No email id present to send mail for SixSignal Report")
+		return nil, http.StatusBadRequest, "No email id provided", true
+	}
+
+	emailIdsToAdd := strings.Join(requestPayload, ",")
+
+	emailIds, errCode := store.GetStore().GetSixsignalEmailListFromProjectSetting(projectId)
+	if errCode == http.StatusInternalServerError {
+		logCtx.Warn("Could not find emailids from sixsignal_email_list table")
+		return nil, http.StatusInternalServerError, "Could not find emailids from sixsignal_email_list table", true
+	}
+
+	var emailIdFinalList string
+	if len(emailIds) > 0 {
+		emailIdFinalList = emailIds + "," + emailIdsToAdd
+	} else {
+		emailIdFinalList = emailIdsToAdd
+	}
+
+	errCode1 := store.GetStore().AddSixsignalEmailList(projectId, emailIdFinalList)
+	if errCode1 != http.StatusCreated {
+		logCtx.Error("Failed to add data in sixsignal_email_list")
+		return nil, errCode1, "Failed to add data in sixsignal_email_list", true
+	}
+
+	return "EmailID added successfully", http.StatusCreated, "", false
+}
+
+//FetchListofDatesForSixSignalReport fetches the list of dates for which the report is present in cloud storage
+func FetchListofDatesForSixSignalReport(c *gin.Context) (interface{}, int, string, bool) {
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		log.Error("Query failed. Invalid project.")
+		return nil, http.StatusUnauthorized, "Invalid Project", true
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectId,
+	})
+
+	timezoneString, statusCode := store.GetStore().GetTimezoneForProject(projectId)
+	if statusCode != http.StatusFound {
+		logCtx.Error("Failed to get Timezone in FetchListofDatesForSixSignalReport", statusCode)
+		return nil, http.StatusBadRequest, "Query failed. Failed to get Timezone.", true
+	}
+
+	path := fmt.Sprintf("projects/%d/sixSignal", projectId) //path= "projects/2/sixSignal"
+	cloudManager := C.GetCloudManager(projectId, true)
+	//filenames contains the complete path for the reports file
+	//filenames=["projects/2/sixSignal/20230212-20230219/results.txt","projects/2/sixSignal/20230220-20230227/results.txt",...]
+	filenames := cloudManager.ListFiles(path)
+
+	//dateList will contain the from-to values for all the sixsignal reports presents for a particular project on cloud storage.
+	dateList := make([]string, 0)
+
+	//In this loop, the dates(from-to) present in YYYYMMDD format is extracted from filenames using string slicing and then these from and to values are converted
+	//into epoch values based on the timezone. The epoch values of from and to are merged using a hyphen and then append to the dateList.
+	for _, filename := range filenames {
+		from := filename[len(path)+1 : len(path)+9]
+		to := filename[len(path)+10 : len(path)+18]
+
+		fromEpoch := U.GetBeginningoftheDayEpochForDateAndTimezone(from, string(timezoneString))
+		toEpoch := U.GetEndoftheDayEpochForDateAndTimezone(to, string(timezoneString))
+
+		dateRange := fmt.Sprintf("%d-%d", fromEpoch, toEpoch) //dateRange="1676140200-1676744999"
+		dateList = append(dateList, dateRange)                //dateList=["1676140200-1676744999", "1676745000-1677349799",...]
+	}
+
+	return dateList, http.StatusFound, "", false
 }
 
 //isReportShared checks if the report has been already made public
@@ -338,4 +359,61 @@ func getFolderName(query model.SixSignalQuery) string {
 	toDate := U.GetDateOnlyFormatFromTimestampAndTimezone(commonQueryTo, timezoneString)
 	folderName := fmt.Sprintf("%v-%v", fromDate, toDate)
 	return folderName
+}
+
+//CreateSixSignalShareableURL saves the query to the queries table and generate the queryID for public-URL for the given queryRequest and projectId
+func CreateSixSignalShareableURL(queryRequest *model.Queries, projectId int64, agentUUID string) (string, int, string) {
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectId,
+		"query":      queryRequest,
+	})
+	queries, errCode, errMsg := store.GetStore().CreateQuery(projectId, queryRequest)
+	if errCode != http.StatusCreated {
+		return "", errCode, errMsg
+	}
+
+	isShared, _ := isReportShared(projectId, queries.IdText)
+	if isShared {
+
+		logCtx.Info("Query Id if shared already: ", queries.IdText)
+		errCode1, errMsg1 := store.GetStore().DeleteQuery(projectId, queries.ID)
+		if errCode1 != http.StatusAccepted {
+			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg1)
+		}
+		return queries.IdText, http.StatusCreated, "Shareable Query already shared"
+	}
+
+	shareableUrlRequest := &model.ShareableURL{
+		EntityType: model.ShareableURLEntityTypeSixSignal,
+		EntityID:   queries.ID,
+		ShareType:  model.ShareableURLShareTypePublic,
+		ProjectID:  projectId,
+		CreatedBy:  agentUUID,
+		ExpiresAt:  time.Now().AddDate(0, 3, 0).Unix(),
+	}
+
+	valid, errMsg := ValidateCreateShareableURLRequest(shareableUrlRequest, projectId, agentUUID)
+	if !valid {
+		logCtx.Error(errMsg)
+		errCode2, errMsg2 := store.GetStore().DeleteQuery(projectId, queries.ID)
+		if errCode2 != http.StatusAccepted {
+			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg2)
+			return "", http.StatusBadRequest, errMsg2
+		}
+		return "", http.StatusBadRequest, errMsg
+	}
+
+	logCtx.Info("Shareable urls after validation: ", shareableUrlRequest)
+	shareableUrlRequest.QueryID = queries.IdText
+	share, err := store.GetStore().CreateShareableURL(shareableUrlRequest)
+	if err != http.StatusCreated {
+		logCtx.Error("Failed to create shareable query")
+		errCode3, errMsg3 := store.GetStore().DeleteQuery(projectId, queries.ID)
+		if errCode3 != http.StatusAccepted {
+			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg3)
+		}
+		return "", http.StatusInternalServerError, "Shareable query creation failed."
+	}
+
+	return share.QueryID, http.StatusCreated, "Shareable Query creation successful"
 }

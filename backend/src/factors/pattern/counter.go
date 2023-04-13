@@ -422,7 +422,7 @@ func PropertySplitKeyValue(propertyKeyValue string) (string, string) {
 const max_SEEN_PROPERTIES = 20000
 const max_SEEN_PROPERTY_VALUES = 1000
 
-func CollectPropertiesInfoFiltered(projectID int64, scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo, upCount, epCount map[string]map[string]map[string]int) (*map[string]PropertiesCount, error) {
+func CollectPropertiesInfoFiltered(projectID int64, scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo, upCount, epCount map[string]map[string]map[string]int, startTimestamp, endTimestamp int64) (*map[string]PropertiesCount, error) {
 	// same as CollectPropertiesInfo(get all props and userAndEventsInfo by reading file)
 	// except userAndEventsInfo contains keys and values filtered using count maps
 
@@ -445,6 +445,9 @@ func CollectPropertiesInfoFiltered(projectID int64, scanner *bufio.Scanner, user
 		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
 			return nil, err
+		}
+		if eventDetails.EventTimestamp < startTimestamp || eventDetails.EventTimestamp > endTimestamp {
+			continue
 		}
 
 		eventName := eventDetails.EventName

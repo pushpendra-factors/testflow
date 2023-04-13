@@ -2,25 +2,19 @@ import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-
-import GroupSelect2 from '../../QueryComposer/GroupSelect2';
-import AttrFilterBlock from '../AttrFilterBlock';
-
 import {
   setTouchPointFilters,
   setTacticOfferType
 } from '../../../reducers/coreQuery/middleware';
-
 import { Button, Popover, Radio, Row } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import TouchPointDimensions from './TouchPointDimensions';
 import FaSelect from 'Components/FaSelect';
-import FaSelect2 from 'Components/FaSelect2';
-
 import ORButton from '../../ORButton';
 import { compareFilters, groupFilters } from '../../../utils/global';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { getTouchPointLabel } from 'Reducers/coreQuery/utils';
+import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 
 const MarkTouchpointBlock = ({
   touchPoint,
@@ -85,7 +79,7 @@ const MarkTouchpointBlock = ({
 
   const deleteItem = () => {
     setTouchpoint('');
-    setFilters([]);
+    // setFilters([]);
   };
   const toggleTouchPointSelect = () => {
     setSelectVisible(!selectVisible);
@@ -235,7 +229,7 @@ const MarkTouchpointBlock = ({
             filtrs.push(
               <div className={'fa--query_block--filters flex flex-row'}>
                 <div key={index} className={`mt-2`}>
-                  <AttrFilterBlock
+                  <FilterWrapper
                     activeProject={activeProject}
                     index={index}
                     blockType={'event'}
@@ -248,7 +242,7 @@ const MarkTouchpointBlock = ({
                     filterProps={filterProps}
                     propsConstants={Object.keys(filterProps)}
                     refValue={refValue}
-                  ></AttrFilterBlock>
+                  />
                 </div>
                 {index !== orFilterIndex && (
                   <div className={`mt-2`}>
@@ -260,7 +254,7 @@ const MarkTouchpointBlock = ({
                 )}
                 {index === orFilterIndex && (
                   <div key={'init'} className={`mt-2`}>
-                    <AttrFilterBlock
+                    <FilterWrapper
                       activeProject={activeProject}
                       index={index}
                       blockType={'event'}
@@ -274,7 +268,7 @@ const MarkTouchpointBlock = ({
                       propsConstants={Object.keys(filterProps)}
                       refValue={refValue}
                       showOr={true}
-                    ></AttrFilterBlock>
+                    />
                   </div>
                 )}
               </div>
@@ -284,7 +278,7 @@ const MarkTouchpointBlock = ({
             filtrs.push(
               <div className={'fa--query_block--filters flex flex-row'}>
                 <div key={index} className={`mt-2`}>
-                  <AttrFilterBlock
+                  <FilterWrapper
                     activeProject={activeProject}
                     index={index}
                     blockType={'event'}
@@ -297,10 +291,10 @@ const MarkTouchpointBlock = ({
                     filterProps={filterProps}
                     propsConstants={Object.keys(filterProps)}
                     refValue={refValue}
-                  ></AttrFilterBlock>
+                  />
                 </div>
                 <div key={index + 1} className={`mt-2`}>
-                  <AttrFilterBlock
+                  <FilterWrapper
                     activeProject={activeProject}
                     index={index + 1}
                     blockType={'event'}
@@ -314,7 +308,7 @@ const MarkTouchpointBlock = ({
                     propsConstants={Object.keys(filterProps)}
                     refValue={refValue}
                     showOr={true}
-                  ></AttrFilterBlock>
+                  />
                 </div>
               </div>
             );
@@ -325,7 +319,7 @@ const MarkTouchpointBlock = ({
       if (filterDD) {
         filtrs.push(
           <div key={filtrs.length} className={`mt-2`}>
-            <AttrFilterBlock
+            <FilterWrapper
               activeProject={activeProject}
               blockType={'event'}
               filterType={'channel'}
@@ -337,7 +331,7 @@ const MarkTouchpointBlock = ({
               deleteFilter={() => closeFilter()}
               closeFilter={closeFilter}
               refValue={lastRef + 1}
-            ></AttrFilterBlock>
+            />
           </div>
         );
       }
@@ -402,7 +396,7 @@ const MarkTouchpointBlock = ({
             placement='right'
             content={
               <>
-                <b>Tactics</b> are methods in which you reach out to customers.{' '}
+                <b>Tactics</b> are methods in which you reach out to customers.
                 <br />
                 For e.g. Google Ads is a classic tactic. <br />
                 <br />

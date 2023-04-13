@@ -7,13 +7,16 @@ import (
 	"factors/filestore"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/model/store/memsql"
 	serviceDisk "factors/services/disk"
 	T "factors/task"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -101,6 +104,68 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) i
 	}
 	return errMsgToProjectIDMap
 
+}
+
+//SendSixSignalEmailForSubscribe sends mail to all the email for which the sixsignal-report is subscribed on a weekly basis. The list of email id is fetched from the DB.
+func SendSixSignalEmailForSubscribe(projectIdArray []int64) interface{} {
+
+	projectIdToFailSendEmailIdsMap := make(map[int64][]string)
+	for _, projectId := range projectIdArray {
+
+		logCtx := log.WithFields(log.Fields{
+			"project_id": projectId,
+		})
+
+		//Changing all the report generated share type to public and generating public url
+		//Fetching date range and timezone for generating hash key and query
+		timezone, _ := store.GetStore().GetTimezoneForProject(projectId)
+		from, to, _ := U.GetQueryRangePresetLastWeekIn(timezone)
+
+		data := fmt.Sprintf("%d%s%d%d", projectId, timezone, from, to)
+		query := model.SixSignalQuery{From: from, To: to, Timezone: timezone}
+		queryJson, _ := json.Marshal(query)
+
+		queryRequest := &model.Queries{
+			Query:     postgres.Jsonb{RawMessage: json.RawMessage(queryJson)},
+			Title:     "Six Signal Report",
+			CreatedBy: "",
+			Settings:  postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+			IdText:    U.HashKeyUsingSha256Checksum(data),
+			Type:      model.QueryTypeSixSignalQuery,
+		}
+
+		queryId, errCode, errMsg := memsql.CreateSixSignalShareableURL(queryRequest, projectId, "")
+		if errCode != http.StatusCreated {
+			logCtx.Error(errMsg)
+			continue
+		}
+
+		publicUrlParams := fmt.Sprintf("/reports/visitor_report?queryId=%v&pId=%d&version=v1", queryId, projectId)
+		publicURL := C.GetProtocol() + C.GetAPPDomain() + publicUrlParams
+
+		//Fetching emailIds from database and converting the datatype to array
+		emailIdsString, errCode1 := store.GetStore().GetSixsignalEmailListFromProjectSetting(projectId)
+		if errCode1 != http.StatusFound {
+			logCtx.Error("No email Ids for sixsignal report subscription is found.")
+			continue
+		}
+		emailIds := strings.Split(emailIdsString, ",")
+		project, _ := store.GetStore().GetProject(projectId)
+		reqPayload := model.SixSignalEmailAndMessage{
+			EmailIDs: emailIds,
+			Url:      publicURL,
+			Domain:   project.Name,
+			From:     from,
+			To:       to,
+			Timezone: timezone,
+		}
+
+		_, failToSendEmailIds := memsql.SendSixSignalReportViaEmail(reqPayload)
+		projectIdToFailSendEmailIdsMap[projectId] = failToSendEmailIds
+
+	}
+
+	return projectIdToFailSendEmailIdsMap
 }
 
 func WriteSixSignalResultsToCloud(cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, queryId string, projectId int64, logCtx *log.Entry) error {

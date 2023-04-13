@@ -3,15 +3,23 @@ package tests
 import (
 	"encoding/json"
 	C "factors/config"
+	H "factors/handler"
+	"factors/handler/helpers"
+	IntHubspot "factors/integration/hubspot"
 	"factors/model/model"
+	M "factors/model/model"
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -655,4 +663,326 @@ func TestProfilesGroupSupport(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf("%d", group.ID), result4.Rows[0][1])
 		assert.Equal(t, float64(len(sourceSalesforceUsers2)), result4.Rows[0][0])
 	})
+}
+
+func sendProfilesQueryReq(r *gin.Engine, projectId int64, agent *M.Agent, profileQuery model.ProfileQueryGroup) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/profiles/query", projectId)).
+		WithPostParams(profileQuery).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating create dashboard_unit req.")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestProfilesUsersPropertyValueLabels(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, agent)
+
+	startTimestamp := time.Now().Unix()
+
+	hubspotDisplayNameLabels := map[string]string{
+		"OFFFLINE":       "Offline",
+		"PAID_SEARCH":    "Paid Search",
+		"DIRECT_TRAFFIC": "Direct Traffic",
+		"ORGANIC_SEARCH": "Organic Search",
+		"SOCIAL_MEDIA":   "Social Media",
+	}
+
+	for value, label := range hubspotDisplayNameLabels {
+		status := store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_hs_latest_source", value, label)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+
+	// create new hubspot document
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  	"firstname": { "value": "%s" },
+		  	"lastname": { "value": "%s" },
+		  	"lastmodifieddate": { "value": "%d" },
+			"hs_latest_source": { "value": "%s" }
+		},
+		"identity-profiles": [
+			{
+				"vid": %d,
+				"identities": [
+					{
+					  "type": "EMAIL",
+					  "value": "%s"
+					},
+					{
+						"type": "LEAD_GUID",
+						"value": "%s"
+					}
+				]
+			}
+		]
+	}`
+
+	latestSources := []string{"ORGANIC_SEARCH", "DIRECT_TRAFFIC", "PAID_SOCIAL"}
+	hubspotDocuments := make([]*model.HubspotDocument, 0)
+	for i := 0; i < len(latestSources); i++ {
+		documentID := i
+		createdTime := startTimestamp*1000 + int64(i*100)
+		updatedTime := createdTime + 200
+		cuid := U.RandomString(10)
+		leadGUID := U.RandomString(15)
+		jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdTime, "Sample", fmt.Sprintf("Test %d", i), updatedTime, latestSources[i], documentID, cuid, leadGUID)
+
+		document := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Value:     &postgres.Jsonb{json.RawMessage(jsonContact)},
+		}
+		hubspotDocuments = append(hubspotDocuments, &document)
+	}
+
+	status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, hubspotDocuments, 3)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// execute sync job
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	profileQueryGroup := model.ProfileQueryGroup{
+		Class: model.QueryClassProfiles,
+		Queries: []model.ProfileQuery{
+			model.ProfileQuery{
+				Type: "hubspot",
+			},
+		},
+		GlobalGroupBys: []model.QueryGroupByProperty{
+			model.QueryGroupByProperty{
+				Entity:   model.PropertyEntityUser,
+				Property: "$hubspot_contact_hs_latest_source",
+				Type:     "categorical",
+			},
+		},
+		From:          startTimestamp,
+		To:            startTimestamp + 500,
+		GroupAnalysis: "users",
+	}
+
+	C.GetConfig().EnableSyncReferenceFieldsByProjectID = ""
+	w := sendProfilesQueryReq(r, project.ID, agent, profileQueryGroup)
+	jsonResponse, err := ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	var resultGroup model.ResultGroup
+	json.Unmarshal(jsonResponse, &resultGroup)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	results := resultGroup.Results
+	assert.NotNil(t, results)
+	assert.Equal(t, 1, len(results))
+
+	assert.Equal(t, "query_index", results[0].Headers[0])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(0), results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "$hubspot_contact_hs_latest_source", results[0].Headers[2])
+	for i := range results[0].Rows {
+		assert.Contains(t, latestSources, results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", results[0].Headers[1])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(1), results[0].Rows[i][1])
+	}
+
+	C.GetConfig().EnableSyncReferenceFieldsByProjectID = "*"
+	w = sendProfilesQueryReq(r, project.ID, agent, profileQueryGroup)
+	jsonResponse, err = ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	resultFromCache := struct {
+		ResultGroup model.ResultGroup `json:"result"`
+	}{}
+	json.Unmarshal(jsonResponse, &resultFromCache)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	results = resultFromCache.ResultGroup.Results
+	assert.NotNil(t, results)
+	assert.Equal(t, 1, len(results))
+
+	assert.Equal(t, "query_index", results[0].Headers[0])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(0), results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "$hubspot_contact_hs_latest_source", results[0].Headers[2])
+	for i := range results[0].Rows {
+		assert.Contains(t, []string{"Organic Search", "Direct Traffic", "PAID_SOCIAL"}, results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", results[0].Headers[1])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(1), results[0].Rows[i][1])
+	}
+}
+
+func TestProfilesHubspotDealsPropertyValueLabels(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	startTimestamp := time.Now().Unix()
+
+	hubspotDisplayNameLabels := map[string]string{
+		"OFFFLINE":       "Offline",
+		"PAID_SEARCH":    "Paid Search",
+		"DIRECT_TRAFFIC": "Direct Traffic",
+		"ORGANIC_SEARCH": "Organic Search",
+		"SOCIAL_MEDIA":   "Social Media",
+	}
+
+	for value, label := range hubspotDisplayNameLabels {
+		status := store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_deal_latest_source", value, label)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	// create new hubspot document
+	jsonDealModel := `{
+		"dealId": %d,
+		"properties": {
+			"amount": { "value": "%d" },
+			"createdate": { "value": "%d" },
+			"hs_createdate": { "value": "%d" },
+		  	"dealname": { "value": "%s" },
+			"latest_source": { "value": "%s" },
+		  	"hs_lastmodifieddate": { "value": "%d" }
+		}
+	}`
+
+	latestSources := []string{"ORGANIC_SEARCH", "DIRECT_TRAFFIC", "PAID_SOCIAL"}
+	hubspotDocuments := make([]*model.HubspotDocument, 0)
+	for i := 0; i < len(latestSources); i++ {
+		documentID := i
+		createdTime := startTimestamp*1000 + int64(i*100)
+		updatedTime := createdTime + 200
+		amount := U.RandomIntInRange(1000, 2000)
+		jsonDeal := fmt.Sprintf(jsonDealModel, documentID, amount, createdTime, createdTime, fmt.Sprintf("Dealname %d", i), latestSources[i], updatedTime)
+
+		document := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameDeal,
+			Value:     &postgres.Jsonb{json.RawMessage(jsonDeal)},
+		}
+		hubspotDocuments = append(hubspotDocuments, &document)
+	}
+
+	status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeDeal, hubspotDocuments, 3)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// execute sync job
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	profileQueryGroup := model.ProfileQueryGroup{
+		Class: model.QueryClassProfiles,
+		Queries: []model.ProfileQuery{
+			model.ProfileQuery{
+				Type: "hubspot",
+			},
+		},
+		GlobalGroupBys: []model.QueryGroupByProperty{
+			model.QueryGroupByProperty{
+				Entity:   model.PropertyEntityUser,
+				Property: "$hubspot_deal_latest_source",
+				Type:     "categorical",
+			},
+		},
+		From:          startTimestamp,
+		To:            startTimestamp + 500,
+		GroupAnalysis: "$hubspot_deal",
+	}
+
+	C.GetConfig().EnableSyncReferenceFieldsByProjectID = ""
+	w := sendProfilesQueryReq(r, project.ID, agent, profileQueryGroup)
+	jsonResponse, err := ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	var resultGroup model.ResultGroup
+	json.Unmarshal(jsonResponse, &resultGroup)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	results := resultGroup.Results
+	assert.NotNil(t, results)
+	assert.Equal(t, 1, len(results))
+
+	assert.Equal(t, "query_index", results[0].Headers[0])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(0), results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "$hubspot_deal_latest_source", results[0].Headers[2])
+	for i := range results[0].Rows {
+		assert.Contains(t, latestSources, results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", results[0].Headers[1])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(1), results[0].Rows[i][1])
+	}
+
+	C.GetConfig().EnableSyncReferenceFieldsByProjectID = "*"
+	w = sendProfilesQueryReq(r, project.ID, agent, profileQueryGroup)
+	jsonResponse, err = ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	resultFromCache := struct {
+		ResultGroup model.ResultGroup `json:"result"`
+	}{}
+	json.Unmarshal(jsonResponse, &resultFromCache)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	results = resultFromCache.ResultGroup.Results
+	assert.NotNil(t, results)
+	assert.Equal(t, 1, len(results))
+
+	assert.Equal(t, "query_index", results[0].Headers[0])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(0), results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "$hubspot_deal_latest_source", results[0].Headers[2])
+	for i := range results[0].Rows {
+		assert.Contains(t, []string{"Organic Search", "Direct Traffic", "PAID_SOCIAL"}, results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", results[0].Headers[1])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(1), results[0].Rows[i][1])
+	}
 }

@@ -114,9 +114,10 @@ func main() {
 	configs["hardPull"] = *hardPull
 	configs["sortOnGroup"] = *sortOnGroup
 
-	log.Info("Hitting the method SixSignalAnalysis")
-	jobReport := delta.SixSignalAnalysis(projectIdsArray, configs)
+	SixSignaljobReport := delta.SixSignalAnalysis(projectIdsArray, configs)
+	C.PingHealthcheckForSuccess(healthcheckPingID, SixSignaljobReport)
 
-	C.PingHealthcheckForSuccess(healthcheckPingID, jobReport)
+	SendEmailReport := delta.SendSixSignalEmailForSubscribe(projectIdsArray)
+	C.PingHealthcheckForSuccess(healthcheckPingID, SendEmailReport)
 
 }

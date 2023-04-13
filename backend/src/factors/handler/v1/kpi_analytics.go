@@ -374,9 +374,18 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
 	}
+
+	allowSyncReferenceFields := C.AllowSyncReferenceFields(projectID)
+
 	if !hardRefresh {
 		data, statusCode, errorCode, errMsg, isErr := GetResultFromCacheOrDashboard(c, reqID, projectID, request, dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, timezoneString, isDashboardQueryRequest, logCtx, false)
 		if statusCode != http.StatusProcessing {
+			if allowSyncReferenceFields && data != nil {
+				data, err = H.TransformQueryCacheResponseColumnValuesToLabel(projectID, data)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to set property value label.")
+				}
+			}
 			return data, statusCode, errorCode, errMsg, isErr
 		}
 	}
@@ -431,9 +440,24 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 			model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectID, dashboardId, unitId,
 				commonQueryFrom, commonQueryTo, timezoneString, meta)
 		}
+
+		if allowSyncReferenceFields {
+			queryResult, err = store.GetStore().AddPropertyValueLabelToQueryResults(projectID, queryResult)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to set property value label.")
+			}
+		}
+
 		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), CacheMeta: meta}, http.StatusOK, "", "", false
 	}
 	isQueryShareable := isQueryShareable(request)
+
+	if allowSyncReferenceFields {
+		queryResult, err = store.GetStore().AddPropertyValueLabelToQueryResults(projectID, queryResult)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to set property value label.")
+		}
+	}
 	return gin.H{"result": queryResult, "query": request, "sharable": isQueryShareable}, http.StatusOK, "", "", false
 }
 func isQueryShareable(request model.KPIQueryGroup) bool {

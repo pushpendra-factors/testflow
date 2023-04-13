@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Table,
   Button,
@@ -7,7 +7,8 @@ import {
   notification,
   Popover,
   Tabs,
-  Avatar
+  Avatar,
+  Input
 } from 'antd';
 import Modal from 'antd/lib/modal/Modal';
 import { connect, useSelector } from 'react-redux';
@@ -57,6 +58,7 @@ import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import EventsBlock from '../MyComponents/EventsBlock';
+import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 
 function UserProfiles({
   activeProject,
@@ -85,6 +87,9 @@ function UserProfiles({
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
   const { userPropNames } = useSelector((state) => state.coreQuery);
 
+  const [listSearchItems, setListSearchItems] = useState([]);
+  const [searchBarOpen, setSearchBarOpen] = useState(false);
+  const [searchDDOpen, setSearchDDOpen] = useState(false);
   const [isUserDDVisible, setUserDDVisible] = useState(false);
   const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
   const [showSegmentModal, setShowSegmentModal] = useState(false);
@@ -459,7 +464,7 @@ function UserProfiles({
             event={event}
             queries={listEvents}
             groupAnalysis={activeSegment?.query?.grpa}
-            displayMode
+            viewMode
           />
         </div>
       );
@@ -497,7 +502,7 @@ function UserProfiles({
             profileType='user'
             source={timelinePayload.source}
             filters={filters}
-            displayMode
+            viewMode
           ></PropertyFilter>
         </div>
       </div>
@@ -653,6 +658,94 @@ function UserProfiles({
     </Button>
   );
 
+  const userValueOpts = useMemo(() => {
+    const userValues = [];
+    fetchUserPropertyValues(activeProject.id, '$user_id')
+      .then((res) => {
+        userValues.push(...res.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+    return userValues;
+  }, [activeProject.id]);
+
+  const onApplyClick = (val) => {
+    const searchFilter = {
+      props: ['$user_id', 'categorical', 'user'],
+      operator: ['contains'],
+      values: []
+    };
+    const payload = { ...timelinePayload };
+    searchFilter.values.push(...val.map((vl) => JSON.parse(vl)[0]));
+    payload.search_filter = formatFiltersForPayload([searchFilter]);
+    setListSearchItems(searchFilter.values);
+    setTimelinePayload(payload);
+  };
+
+  const searchUsers = () => (
+    <div className='absolute top-0'>
+      {searchDDOpen ? (
+        <FaSelect
+          multiSelect
+          options={userValueOpts.map((item) => [item])}
+          applClick={(val) => onApplyClick(val)}
+          onClickOutside={() => setSearchDDOpen(false)}
+          selectedOpts={listSearchItems}
+          allowSearch
+          placeholder='Search Users'
+          style={{
+            top: '-2px',
+            left: '-60px',
+            padding: 0
+          }}
+          posRight
+        />
+      ) : null}
+    </div>
+  );
+
+  const onSearchClose = () => {
+    setSearchBarOpen(false);
+    setSearchDDOpen(false);
+    if (timelinePayload?.search_filter?.length) {
+      const payload = { ...timelinePayload };
+      payload.search_filter = [];
+      setListSearchItems([]);
+      setTimelinePayload(payload);
+    }
+  };
+
+  const onSearchOpen = () => {
+    setSearchBarOpen(true);
+    setSearchDDOpen(true);
+  };
+
+  const renderSearchSection = () => (
+    <div className='relative mr-2'>
+      {searchBarOpen ? (
+        <div className={'flex items-center justify-between'}>
+          <Input
+            size='large'
+            value={listSearchItems ? listSearchItems.join(', ') : null}
+            placeholder={'Search Users'}
+            style={{ width: '240px', 'border-radius': '5px' }}
+            prefix={<SVG name='search' size={16} color={'grey'} />}
+            onClick={() => setSearchDDOpen(true)}
+          />
+          <Button className='search-btn' onClick={onSearchClose}>
+            <SVG name={'close'} size={20} color={'grey'} />
+          </Button>
+        </div>
+      ) : (
+        <Button className='search-btn' onClick={onSearchOpen}>
+          <SVG name={'search'} size={20} color={'grey'} />
+        </Button>
+      )}
+      {searchUsers()}
+    </div>
+  );
+
   const renderTablePropsSelect = () => (
     <Popover
       overlayClassName='fa-activity--filter'
@@ -686,6 +779,7 @@ function UserProfiles({
       </div>
       <div className='flex items-center justify-between'>
         {timelinePayload.filters.length ? renderClearFilterButton() : null}
+        {renderSearchSection()}
         {renderTablePropsSelect()}
       </div>
     </div>

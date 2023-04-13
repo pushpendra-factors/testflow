@@ -26,7 +26,7 @@ type UpdateShareableURLParams struct {
 	// AllowedUsers string `json:"allowed_users"`
 }
 
-func validateCreateShareableURLRequest(params *model.ShareableURL, projectID int64, agentUUID string) (bool, string) {
+func ValidateCreateShareableURLRequest(params *model.ShareableURL, projectID int64, agentUUID string) (bool, string) {
 
 	logCtx := log.WithFields(log.Fields{
 		"project_id":    projectID,
@@ -135,7 +135,7 @@ func CreateShareableURLHandler(c *gin.Context) {
 		shareableUrlRequest.ExpiresAt = time.Now().AddDate(0, 1, 0).Unix()
 	}
 
-	valid, errMsg := validateCreateShareableURLRequest(shareableUrlRequest, projectID, agentUUID)
+	valid, errMsg := ValidateCreateShareableURLRequest(shareableUrlRequest, projectID, agentUUID)
 	if !valid {
 		logCtx.Error(errMsg)
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})

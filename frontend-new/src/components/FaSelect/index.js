@@ -10,6 +10,7 @@ import sortBy from 'lodash/sortBy';
 
 function FaSelect({
   options,
+  displayNames = DISPLAY_PROP,
   delOption,
   optionClick,
   delOptionClick,
@@ -23,7 +24,9 @@ function FaSelect({
   extraClass = '',
   disabled = false,
   showIcon = false,
-  placement = 'bottom'
+  placement = 'bottom',
+  style,
+  placeholder='Search'
 }) {
   const [optClickArr, setOptClickArr] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -131,12 +134,12 @@ function FaSelect({
 
         if (
           op[0].toLowerCase().includes(st) ||
-          (op[0] === '$none' && DISPLAY_PROP[op[0]].toLowerCase().includes(st))
+          (op[0] === '$none' && displayNames[op[0]].toLowerCase().includes(st))
         ) {
           rendOpts.push(
             <div
               key={index}
-              title={DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
+              title={displayNames[op[0]] ? displayNames[op[0]] : op[0]}
               className={`${
                 allowSearch
                   ? 'fa-select-group-select--options'
@@ -148,7 +151,7 @@ function FaSelect({
                 <SVG name={op[1]} extraClass={'self-center'}></SVG>
               ) : null}
               <span className={`ml-1 ${styles.optText}`}>
-                {DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
+                {displayNames[op[0]] ? displayNames[op[0]] : op[0]}
               </span>
               {isSelected ? (
                 <SVG
@@ -172,7 +175,7 @@ function FaSelect({
           rendOpts.push(
             <div
               key={op ? op : generateRandomKey()}
-              title={DISPLAY_PROP[op] ? DISPLAY_PROP[op] : op}
+              title={displayNames[op] ? displayNames[op] : op}
               className={`${
                 allowSearch
                   ? 'fa-select-group-select--options'
@@ -181,7 +184,7 @@ function FaSelect({
               onClick={() => optClick(() => optionClick([op]), [op])}
             >
               <span className={`ml-1 ${styles.optText}`}>
-                {DISPLAY_PROP[op] ? DISPLAY_PROP[op] : op}
+                {displayNames[op] ? displayNames[op] : op}
               </span>
 
               <SVG
@@ -201,7 +204,7 @@ function FaSelect({
         rendOpts.push(
           <div
             key={op ? op[0] : generateRandomKey()}
-            title={DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
+            title={displayNames[op[0]] ? displayNames[op[0]] : op[0]}
             style={{
               color: op[2] === 'disabled' ? '#B7BEC8' : '#0E2647',
               cursor: op[2] === 'disabled' ? 'not-allowed' : 'pointer'
@@ -224,7 +227,7 @@ function FaSelect({
               ></SVG>
             ) : null}
             <span className={`ml-1 ${styles.optText}`}>
-              {DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
+              {displayNames[op[0]] ? displayNames[op[0]] : op[0]}
             </span>
             {isSelected ? (
               <SVG
@@ -302,7 +305,7 @@ function FaSelect({
           style={{ overflow: 'hidden' }}
           prefix={<SVG name={'search'} />}
           size='large'
-          placeholder={'Search'}
+          placeholder={placeholder}
           onChange={search}
           ref={inputComponentRef}
         ></Input>
@@ -313,6 +316,7 @@ function FaSelect({
   return (
     <>
       <div
+        style={style}
         className={`${extraClass}  ${styles.dropdown__select}
           ${
             posRight

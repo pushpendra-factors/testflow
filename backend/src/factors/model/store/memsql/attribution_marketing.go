@@ -223,7 +223,7 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 		}
 	}
 
-	// Bingads
+	// Bing Ads
 
 	var bingadsCampaignIDData, bingadsAdgroupIDData, bingadsKeywordIDData map[string]model.MarketingData
 	var bingadsCampaignAllRows, bingadsAdgroupAllRows, bingadsKeywordAllRows []model.MarketingData

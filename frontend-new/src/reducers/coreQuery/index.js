@@ -32,7 +32,8 @@ import {
   SET_EVENT_PROP_NAME,
   SET_GROUP_PROP_NAME,
   SET_ATTR_QUERIES,
-  FETCH_EVENTS_MAP
+  FETCH_EVENTS_MAP,
+  FETCH_PROPERTY_VALUES
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -53,6 +54,7 @@ const defaultState = {
   eventProperties: {},
   userProperties: [],
   groupProperties: {},
+  propertyValuesMap: {},
   groupBy: {
     global: [],
     event: []
@@ -129,6 +131,10 @@ export default function (state = defaultState, action) {
       const eventPropState = Object.assign({}, state.eventProperties);
       eventPropState[action.eventName] = action.payload;
       return { ...state, eventProperties: eventPropState };
+    case FETCH_PROPERTY_VALUES:
+      const propValState = Object.assign({}, state.propertyValuesMap);
+      propValState[action.propName] = { ...action.payload, $none: '(Not Set)' };
+      return { ...state, propertyValuesMap: propValState };
     case SET_EVENT_PROP_NAME:
       const evnPropNames = { ...state.eventPropNames, ...action.payload };
       return { ...state, eventPropNames: evnPropNames };

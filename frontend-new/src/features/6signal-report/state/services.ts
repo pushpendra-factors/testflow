@@ -6,7 +6,8 @@ export const getSixSignalReportData = async (
   projectId: string,
   from: number,
   to: number,
-  timezone: string
+  timezone: string,
+  isSaved: boolean
 ) => {
   try {
     if (!projectId || !from || !to || !timezone) {
@@ -18,7 +19,8 @@ export const getSixSignalReportData = async (
         {
           fr: from,
           to: to,
-          tz: timezone
+          tz: timezone,
+          isSaved
         }
       ]
     });

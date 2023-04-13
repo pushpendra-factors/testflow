@@ -141,7 +141,7 @@ func initConf(config *C.Configuration) {
 func putUserIdsToGCP(projectId int64, userIds map[string]int64, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
 	startTime, endTime int64) error {
 
-	cDir, cName := (diskManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime)
+	cDir, cName := (diskManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime, 0)
 	path := filepath.Join(cDir, cName)
 	err := (diskManager).Create(cDir, cName, bytes.NewReader([]byte("")))
 	if err != nil {
@@ -174,7 +174,7 @@ func putUserIdsToGCP(projectId int64, userIds map[string]int64, cloudManager *fi
 		return fmt.Errorf("unable to open file : %s :%v", path, err)
 	}
 	r := bufio.NewReader(f)
-	gDir, gName := (*cloudManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime)
+	gDir, gName := (*cloudManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime, 0)
 	err = (*cloudManager).Create(gDir, gName, r)
 	if err != nil {
 		return err
@@ -187,7 +187,7 @@ func getUserIdsFile(ctx context.Context, projectId int64, cloudManager *filestor
 	startTime, endTime int64, low, high int64) ([]string, error) {
 
 	beamlog.Infof(ctx, "getting users file :%d,%d,%d", projectId, low, high)
-	gDir, gName := (*cloudManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime)
+	gDir, gName := (*cloudManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime, 0)
 	r, err := (*cloudManager).Get(gDir, gName)
 	if err != nil {
 		return nil, err

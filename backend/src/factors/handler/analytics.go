@@ -141,6 +141,8 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 	requestPayload.SetTimeZone(timezoneString)
 
+	allowSyncReferenceFields := C.AllowSyncReferenceFields(projectId)
+
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
 		if preset == "" && C.IsLastComputedWhitelisted(projectId) {
@@ -160,6 +162,12 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		}
 		if shouldReturn {
 			if resCode == http.StatusOK {
+				if allowSyncReferenceFields && resMsg != nil {
+					resMsg, err = H.TransformQueryCacheResponseColumnValuesToLabel(projectId, resMsg)
+					if err != nil {
+						logCtx.WithError(err).Error("Failed to set property value label.")
+					}
+				}
 				return resMsg, resCode, "", "", false
 			}
 		}
@@ -169,11 +177,18 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	if err != nil {
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
 	}
+
 	var cacheResult model.ResultGroup
 	if !hardRefresh {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest, reqId, false)
 		if shouldReturn {
 			if resCode == http.StatusOK {
+				if allowSyncReferenceFields && resMsg != nil {
+					resMsg, err = H.TransformQueryCacheResponseColumnValuesToLabel(projectId, resMsg)
+					if err != nil {
+						logCtx.WithError(err).Error("Failed to set property value label.")
+					}
+				}
 				return resMsg, resCode, "", "", false
 			}
 			logCtx.Error("Query failed. Error Processing/Fetching data from Query cache")
@@ -221,11 +236,27 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 			model.SetCacheResultByDashboardIdAndUnitId(resultGroup, projectId, dashboardId, unitId,
 				commonQueryFrom, commonQueryTo, timezoneString, meta)
 		}
+
+		if allowSyncReferenceFields {
+			resultGroup.Results, err = store.GetStore().AddPropertyValueLabelToQueryResults(projectId, resultGroup.Results)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to set property value label.")
+			}
+		}
+
 		return H.DashboardQueryResponsePayload{
 			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString), CacheMeta: meta}, http.StatusOK, "", "", false
 	}
 	resultGroup.Query = requestPayload
 	resultGroup.IsShareable = isQueryShareable(requestPayload)
+
+	if allowSyncReferenceFields {
+		resultGroup.Results, err = store.GetStore().AddPropertyValueLabelToQueryResults(projectId, resultGroup.Results)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to set property value label.")
+		}
+	}
+
 	return resultGroup, http.StatusOK, "", "", false
 }
 func isQueryShareable(queryGroup model.QueryGroup) bool {

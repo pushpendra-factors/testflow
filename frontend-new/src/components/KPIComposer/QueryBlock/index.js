@@ -5,23 +5,18 @@ import styles from './index.module.scss';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
-
 import FilterBlock from '../FilterBlock';
 import EventFilterWrapper from '../EventFilterWrapper';
-
 import GroupSelect2 from '../GroupSelect2';
 import EventGroupBlock from '../EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
-
 import FaSelect from 'Components/FaSelect';
 import AliasModal from '../AliasModal';
 import ORButton from '../../ORButton';
 import { getNormalizedKpi } from '../../../utils/kpiQueryComposer.helpers';
 import { get } from 'lodash';
 import { compareFilters, groupFilters } from '../../../utils/global';
-
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
 function QueryBlock({
@@ -233,7 +228,7 @@ function QueryBlock({
         closeFilter={closeFilter}
         selectedMainCategory={selectedMainCategory}
         refValue={index}
-      ></EventFilterWrapper>
+      />
     );
   };
 
@@ -380,7 +375,7 @@ function QueryBlock({
                   closeFilter={closeFilter}
                   selectedMainCategory={selectedMainCategory}
                   refValue={refValue}
-                ></EventFilterWrapper>
+                />
               </div>
               {index !== orFilterIndex && (
                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex} />
@@ -397,7 +392,7 @@ function QueryBlock({
                     selectedMainCategory={selectedMainCategory}
                     refValue={refValue}
                     showOr={true}
-                  ></EventFilterWrapper>
+                  />
                 </div>
               )}
             </div>
@@ -418,7 +413,7 @@ function QueryBlock({
                   closeFilter={closeFilter}
                   selectedMainCategory={selectedMainCategory}
                   refValue={refValue}
-                ></EventFilterWrapper>
+                />
               </div>
               <div key={index + 1}>
                 <EventFilterWrapper
@@ -433,7 +428,7 @@ function QueryBlock({
                   selectedMainCategory={selectedMainCategory}
                   refValue={refValue}
                   showOr={true}
-                ></EventFilterWrapper>
+                />
               </div>
             </div>
           );

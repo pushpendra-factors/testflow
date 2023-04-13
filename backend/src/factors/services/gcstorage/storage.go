@@ -433,30 +433,26 @@ func (gcsd *GCSDriver) GetModelArtifactsPath(projectId int64, modelId uint64) st
 	return path
 }
 
-func (gcsd *GCSDriver) GetEventsArtifactFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
-	var fileName string
-	modelType := U.GetModelType(startTimestamp, endTimestamp)
-	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
-	path = pb.Join(path, "artifacts")
+func (gcsd *GCSDriver) GetEventsArtifactFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64, group int) (string, string) {
+	fileName := "users_map.txt"
+	var path string
 	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
-		fileName = "users_map.txt"
+		modelType := U.GetModelType(startTimestamp, endTimestamp)
+		path = gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
 	} else {
-		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
-		fileName = fmt.Sprintf("users_map_%s.txt", dateFormattedEnd)
+		path = gcsd.GetEventsTempFilesDir(projectId, startTimestamp, endTimestamp, group)
 	}
 	return path, fileName
 }
 
 func (gcsd *GCSDriver) GetChannelArtifactFilePathAndName(channel string, projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
-	var fileName string
-	modelType := U.GetModelType(startTimestamp, endTimestamp)
-	path := gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeAdReport, modelType)
-	path = pb.Join(path, "artifacts")
+	fileName := "doctypes_map.txt"
+	var path string
 	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
-		fileName = "doctypes_map_" + channel + ".txt"
+		modelType := U.GetModelType(startTimestamp, endTimestamp)
+		path = gcsd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeAdReport, modelType)
 	} else {
-		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
-		fileName = fmt.Sprintf("doctypes_map_%s_%s.txt", dateFormattedEnd, channel)
+		path = gcsd.GetChannelTempFilesDir(channel, projectId, startTimestamp, endTimestamp)
 	}
 	return path, fileName
 }
@@ -481,7 +477,7 @@ func (gcsd *GCSDriver) GetExplainV2ModelPath(id uint64, projectId int64) (string
 	return chunksPath, "chunk_1.txt"
 }
 
-func (gcsd *GCSDriver) GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string){
+func (gcsd *GCSDriver) GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string) {
 	return fmt.Sprintf("projects/%v/list/%v/", projectID, reference), "list.txt"
 }
 func (gcsd *GCSDriver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) string {
@@ -492,4 +488,48 @@ func (gcsd *GCSDriver) GetSixSignalAnalysisTempFileDir(id string, projectId int6
 func (gcsd *GCSDriver) GetSixSignalAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
 	path := gcsd.GetSixSignalAnalysisTempFileDir(id, projectId)
 	return path, "results.txt"
+}
+
+func (gcsd *GCSDriver) GetEventsTempFilesDir(projectId int64, startTimestamp, endTimestamp int64, group int) string {
+	path, name := gcsd.GetEventsGroupFilePathAndName(projectId, startTimestamp, endTimestamp, group)
+	path = pb.Join(path, strings.Replace(name, ".txt", "", 1))
+	return path
+}
+
+func (gcsd *GCSDriver) GetEventsPartFilesDir(projectId int64, startTimestamp, endTimestamp int64, sorted bool, group int) string {
+	tmp := "unsorted"
+	if sorted {
+		tmp = "sorted"
+	}
+	path := gcsd.GetEventsTempFilesDir(projectId, startTimestamp, endTimestamp, group)
+	path = pb.Join(path, tmp+"_parts")
+	return path
+}
+
+func (gcsd *GCSDriver) GetEventsPartFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, sorted bool, startIndex int, endIndex int, group int) (string, string) {
+	path := gcsd.GetEventsPartFilesDir(projectId, startTimestamp, endTimestamp, sorted, group)
+	name := fmt.Sprintf("%d-%d_uids.txt", startIndex, endIndex)
+	return path, name
+}
+
+func (gcsd *GCSDriver) GetChannelTempFilesDir(channel string, projectId int64, startTimestamp, endTimestamp int64) string {
+	path, name := gcsd.GetChannelFilePathAndName(channel, projectId, startTimestamp, endTimestamp)
+	path = pb.Join(path, strings.Replace(name, ".txt", "", 1))
+	return path
+}
+
+func (gcsd *GCSDriver) GetChannelPartFilesDir(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool) string {
+	tmp := "unsorted"
+	if sorted {
+		tmp = "sorted"
+	}
+	path := gcsd.GetChannelTempFilesDir(channel, projectId, startTimestamp, endTimestamp)
+	path = pb.Join(path, tmp+"_parts")
+	return path
+}
+
+func (gcsd *GCSDriver) GetChannelPartFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool, index int) (string, string) {
+	path := gcsd.GetChannelPartFilesDir(channel, projectId, startTimestamp, endTimestamp, sorted)
+	name := fmt.Sprintf("%d_doctype.txt", index)
+	return path, name
 }

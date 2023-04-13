@@ -21,7 +21,6 @@ import {
 import FaDatepicker from '../FaDatepicker';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
 import CriteriaSection from './CriteriaSection';
-import GLobalFilter from './GlobalFilter';
 import { getValidGranularityOptions } from 'Utils/dataFormatter';
 import FaSelect from '../FaSelect';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
@@ -32,6 +31,7 @@ import {
 import { ReactSortable } from 'react-sortablejs';
 import { isEqual } from 'lodash';
 import { fetchGroups } from 'Reducers/coreQuery/services';
+import GlobalFilter from '../GlobalFilter';
 
 function QueryComposer({
   queries = [],
@@ -301,7 +301,7 @@ function QueryComposer({
           extraClass='no-padding-l no-padding-r'
         >
           <div key={0} className='fa--query_block borderless no-padding '>
-            <GLobalFilter
+            <GlobalFilter
               filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
               groupName={queryOptions.group_analysis}

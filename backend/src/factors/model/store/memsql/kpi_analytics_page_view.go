@@ -18,7 +18,7 @@ func (store *MemSQL) GetKPIConfigsForPageViews(projectID int64, reqID string, in
 	config := model.KPIConfigForPageViews
 	rMetrics := model.GetStaticallyDefinedMetricsForDisplayCategory(model.PageViewsDisplayCategory)
 	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
-	rProperties := append(model.KPIPropertiesForPageViews, standardUserProperties...)
+	rProperties := model.MergeKPIPropertiesByConsiderElementsInFirst(model.KPIPropertiesForPageViews, standardUserProperties)
 
 	config["metrics"] = rMetrics
 	config["properties"] = rProperties

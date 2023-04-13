@@ -30,7 +30,6 @@ import {
 import userflow from 'userflow.js';
 import QueryComposer from '../../components/QueryComposer';
 import AttrQueryComposer from '../../components/AttrQueryComposer';
-import CampQueryComposer from '../../components/CampQueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
 import {
   Text,
@@ -1711,9 +1710,6 @@ function CoreQuery({
           setKPIConfigProps={setKPIConfigProps}
         />
       );
-    }
-    if (queryType === QUERY_TYPE_CAMPAIGN) {
-      return <CampQueryComposer handleRunQuery={runCampaignsQuery} />;
     }
 
     if (queryType === QUERY_TYPE_PROFILE) {

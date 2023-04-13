@@ -2,14 +2,11 @@ import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
-import EventFilterWrapper from '../../QueryComposer/EventFilterWrapper';
-
+import FilterWrapper from '../../GlobalFilter/FilterWrapper';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
-import { SVG, Text } from 'factorsComponents';
+import { SVG } from 'factorsComponents';
 import { isArray } from 'lodash';
-import FaSelect from 'Components/FaSelect';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 
 const LinkedEventsBlock = ({
@@ -29,8 +26,6 @@ const LinkedEventsBlock = ({
     event: [],
     user: []
   });
-
-  const [moreOptions, setMoreOptions] = useState(false);
 
   useEffect(() => {
     if (!linkEvent || !linkEvent?.label?.length) {
@@ -88,14 +83,15 @@ const LinkedEventsBlock = ({
 
   const selectEventFilter = () => {
     return (
-      <EventFilterWrapper
+      <FilterWrapper
+        hasPrefix
         filterProps={filterProps}
-        activeProject={activeProject}
+        projectID={activeProject?.id}
         event={linkEvent}
         deleteFilter={() => closeFilter()}
         insertFilter={addFilter}
         closeFilter={closeFilter}
-      ></EventFilterWrapper>
+      />
     );
   };
 
@@ -110,16 +106,17 @@ const LinkedEventsBlock = ({
             : filter.values;
         filters.push(
           <div key={index} className={'fa--query_block--filters'}>
-            <EventFilterWrapper
+            <FilterWrapper
+              hasPrefix
               index={index}
               filter={filterContent}
               filterProps={filterProps}
-              activeProject={activeProject}
+              projectID={activeProject?.id}
               event={linkEvent}
               deleteFilter={delFilter}
               insertFilter={(val) => editFilter(index, val)}
               closeFilter={closeFilter}
-            ></EventFilterWrapper>
+            />
           </div>
         );
       });
@@ -147,7 +144,6 @@ const LinkedEventsBlock = ({
     if (opt[1] === 'filter') {
       addFilterBlock();
     }
-    setMoreOptions(false);
   };
 
   const getMenu = (filterOptions) => (
@@ -188,24 +184,11 @@ const LinkedEventsBlock = ({
               <SVG name='filter'></SVG>
             </Button>
           </Tooltip>
-          {/* {moreOptions ? (
-            <FaSelect
-              options={[[`Filter By`, 'filter']]}
-              optionClick={(val) => {
-                addFilterBlock();
-                setMoreOptions(false);
-              }}
-              onClickOutside={() => setMoreOptions(false)}
-            ></FaSelect>
-          ) : (
-            false
-          )} */}
         </div>
         <Tooltip
           title='Delete this Linked Event'
           color={TOOLTIP_CONSTANTS.DARK}
         >
-          {' '}
           <Button
             className={'fa-btn--custom btn-total-round'}
             type='text'

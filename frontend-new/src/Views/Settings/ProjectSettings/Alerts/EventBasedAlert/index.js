@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { connect } from 'react-redux';
 import {
   Row,
@@ -12,14 +12,17 @@ import {
   Checkbox,
   Modal,
   Popover,
-  Tooltip
+  Tooltip,
+  Avatar,
+  Switch
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import {
   createEventAlert,
   fetchEventAlerts,
   deleteEventAlert,
-  editEventAlert
+  editEventAlert,
+  testWebhhookUrl
 } from 'Reducers/global';
 import ConfirmationModal from 'Components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
@@ -84,7 +87,8 @@ const EventBasedAlert = ({
   getGroupProperties,
   getEventProperties,
   fetchGroups,
-  groupOpts
+  groupOpts,
+  testWebhhookUrl
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -104,6 +108,18 @@ const EventBasedAlert = ({
   const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
   const inputComponentRef = useAutoFocus();
+
+  // Webhook support
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [finalWebhookUrl, setFinalWebhookUrl] = useState('');
+  const [confirmBtn, setConfirmBtn] = useState(true);
+  const [testMessageBtn, setTestMessageBtn] = useState(true);
+  const [testMessageResponse, setTestMassageResponse] = useState('');
+  const [confirmedMessageBtn, setConfirmedMessageBtn] = useState(false);
+  const [showEditBtn, setShowEditBtn] = useState(false);
+  const [disbleWebhookInput, setDisbleWebhookInput] = useState(false);
+  const [hideTestMessageBtn, setHideTestMessageBtn] = useState(true);
+  const webhookRef = useRef();
 
   const [form] = Form.useForm();
 
@@ -251,6 +267,31 @@ const EventBasedAlert = ({
         viewAlertDetails?.event_alert?.message_property
       );
       messageProperty.forEach((property) => pushGroupBy(property));
+
+      // webhook settings
+      if(viewAlertDetails?.event_alert?.webhook) {
+        setWebhookEnabled(viewAlertDetails?.event_alert?.webhook);
+        setWebhookUrl(viewAlertDetails?.event_alert?.url);
+        setFinalWebhookUrl(viewAlertDetails?.event_alert?.url);
+        setConfirmBtn(false);
+        setTestMessageBtn(true);
+        setTestMassageResponse('');
+        setConfirmedMessageBtn(false);
+        setShowEditBtn(true);
+        setDisbleWebhookInput(true);
+        setHideTestMessageBtn(false);
+      } else {
+        setWebhookEnabled(viewAlertDetails?.event_alert?.webhook);
+        setWebhookUrl('');
+        setFinalWebhookUrl('');
+        setConfirmBtn(true);
+        setTestMessageBtn(true);
+        setTestMassageResponse('');
+        setConfirmedMessageBtn(false);
+        setShowEditBtn(false);
+        setDisbleWebhookInput(false);
+        setHideTestMessageBtn(true);
+      }
     }
   }, [viewAlertDetails, alertState]);
 
@@ -526,7 +567,11 @@ const EventBasedAlert = ({
       ];
     }
 
-    if (queries.length > 0 && slackEnabled && saveSelectedChannel.length > 0) {
+    if (
+      queries.length > 0 &&
+      (slackEnabled || webhookEnabled) &&
+      (saveSelectedChannel.length > 0 || finalWebhookUrl !== '')
+    ) {
       let payload = {
         title: data?.alert_name,
         event: queries[0]?.label,
@@ -550,7 +595,9 @@ const EventBasedAlert = ({
         cool_down_time: coolDownTime * 3600,
         breakdown_properties: getGroupByFromProperties(breakDownProperties),
         slack: slackEnabled,
-        slack_channels: saveSelectedChannel
+        slack_channels: saveSelectedChannel,
+        webhook: webhookEnabled,
+        url: finalWebhookUrl
       };
 
       if (alertState?.state === 'edit') {
@@ -598,7 +645,7 @@ const EventBasedAlert = ({
           description: 'Please select Event to send alert.'
         });
       }
-      if (!slackEnabled) {
+      if (!slackEnabled || !webhookEnabled) {
         notification.error({
           message: 'Error',
           description:
@@ -608,8 +655,13 @@ const EventBasedAlert = ({
       if (slackEnabled && saveSelectedChannel.length === 0) {
         notification.error({
           message: 'Error',
-          description:
-            'Empty Slack Channel List'
+          description: 'Empty Slack Channel List'
+        });
+      }
+      if (webhookEnabled && finalWebhookUrl === '') {
+        notification.error({
+          message: 'Error',
+          description: 'Empty Webhook Url'
         });
       }
     }
@@ -636,10 +688,12 @@ const EventBasedAlert = ({
 
   const handleAlertLimit = (value) => {
     setAlertLimit(value);
+    setNotifications(true);
   };
 
   const handleCoolDownTimeChange = (value) => {
     setCoolDownTime(value);
+    setNotRepeat(true);
   };
 
   useEffect(() => {
@@ -672,6 +726,56 @@ const EventBasedAlert = ({
     setSelectedChannel(saveSelectedChannel);
     setShowSelectChannelsModal(false);
   };
+
+  // Webhook settings
+  const handleTestWebhook = () => {
+    const payload = {
+      title: 'Sample Alert',
+      event: '$session',
+      message_property: [
+        {
+          en: 'event',
+          ena: '$session',
+          eni: 1,
+          pr: '$session_latest_page_url',
+          pty: 'categorical'
+        }
+      ],
+      message: 'This is a sample payload to confirm your webhook URL endpoint',
+      url: webhookUrl,
+      secret: ''
+    };
+    testWebhhookUrl(activeProject?.id, payload)
+      .then((res) => {
+        setTestMassageResponse(res?.data);
+      })
+      .catch((err) => {
+        message.error(err?.data?.error);
+      });
+  };
+
+  const handleClickConfirmBtn = () => {
+    setConfirmedMessageBtn(true);
+    setDisbleWebhookInput(true);
+    setTimeout(() => {
+      setConfirmedMessageBtn(false);
+      setShowEditBtn(true);
+      setTestMassageResponse('');
+      setTestMessageBtn(true);
+      setFinalWebhookUrl(webhookUrl);
+      setHideTestMessageBtn(false);
+    }, 2000);
+  };
+
+  useEffect(() => {
+    if (showEditBtn && webhookUrl !== finalWebhookUrl) {
+      setShowEditBtn(false);
+      setConfirmedMessageBtn(false);
+      setConfirmBtn(false);
+      setTestMassageResponse('');
+      setTestMessageBtn(false);
+    }
+  }, [webhookUrl, finalWebhookUrl]);
 
   const propOption = (item) => {
     return (
@@ -803,7 +907,7 @@ const EventBasedAlert = ({
             <Col span={16} className={'m-0'}>
               <Form.Item name='repeat_alerts' className={'m-0'}>
                 <Checkbox
-                  defaultChecked={notRepeat}
+                  checked={notRepeat}
                   onChange={(e) => setNotRepeat(e.target.checked)}
                 >
                   Do not repeat alerts more than once within
@@ -855,6 +959,7 @@ const EventBasedAlert = ({
                     disabled={!queries[0]?.label}
                     onChange={(value, details) => {
                       setEventPropertyDetails(details);
+                      setNotRepeat(true);
                     }}
                     placeholder='Select Property'
                     showSearch
@@ -885,7 +990,7 @@ const EventBasedAlert = ({
             <Col span={16} className={'m-0'}>
               <Form.Item name='notifications' className={'m-0'}>
                 <Checkbox
-                  defaultChecked={notifications}
+                  checked={notifications}
                   onChange={(e) => setNotifications(e.target.checked)}
                 >
                   Set limit for alerts per day to
@@ -911,9 +1016,9 @@ const EventBasedAlert = ({
             </Col>
           </Row>
 
-          <Row className={'mt-2'}>
+          <Row className={''}>
             <Col span={24}>
-              <div className={'border-top--thin-2 pt-2 mt-2'} />
+              <div className={'border-top--thin-2 pb-6 mt-6'} />
               <Text
                 type={'title'}
                 level={7}
@@ -925,143 +1030,395 @@ const EventBasedAlert = ({
               </Text>
             </Col>
           </Row>
-
-          <Row className={'mt-2 ml-2'}>
-            <Col className={'m-0'}>
-              <Form.Item name='slack_enabled' className={'m-0'}>
-                <Checkbox
-                  defaultChecked={slackEnabled}
-                  onChange={(e) => setSlackEnabled(e.target.checked)}
-                >
-                  Slack
-                </Checkbox>
-              </Form.Item>
+          <Row className='m-0'>
+            <Col span={24}>
+              <Text
+                type='paragraph'
+                mini
+                extraClass='m-0'
+                color='grey'
+                lineHeight='medium'
+              >
+                Choose the destinations for your alerts. Attach text and any
+                properties along with it below
+              </Text>
             </Col>
           </Row>
-          {slackEnabled && !projectSettings?.int_slack && (
-            <>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    color={'grey'}
-                    extraClass={'m-0'}
-                  >
-                    Slack is not integrated, Do you want to integrate with your
-                    slack account now?
-                  </Text>
+
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'slack'} size={40} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
+                      />
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
+                        <Text
+                          type='title'
+                          level={7}
+                          weight='medium'
+                          extraClass='m-0'
+                        >
+                          Slack
+                        </Text>
+                      </div>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        Post to slack when events you care about happen.
+                        Motivate the right actions.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='slack_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          onChange={(checked) => setSlackEnabled(checked)}
+                          checked={slackEnabled}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
                 </Col>
               </Row>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Button onClick={onConnectSlack}>
-                    <SVG name={'Slack'} />
-                    Connect to slack
-                  </Button>
-                </Col>
-              </Row>
-            </>
-          )}
-          {slackEnabled && projectSettings?.int_slack && (
-            <>
-              {saveSelectedChannel.length > 0 && (
-                <Row
-                  className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
-                >
-                  <Col className={'m-0'}>
+            </div>
+            {slackEnabled && !projectSettings?.int_slack && (
+              <div className='p-4'>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
                     <Text
                       type={'title'}
                       level={6}
-                      color={'grey-2'}
-                      extraClass={'m-0 mt-2 ml-2'}
+                      color={'grey'}
+                      extraClass={'m-0'}
                     >
-                      {saveSelectedChannel.length > 1
-                        ? 'Select Channels'
-                        : 'Select Channel'}
+                      Slack is not integrated, Do you want to integrate with
+                      your slack account now?
                     </Text>
-                    {saveSelectedChannel.map((channel, index) => (
-                      <div key={index}>
+                  </Col>
+                </Row>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Button onClick={onConnectSlack}>
+                      <SVG name={'Slack'} />
+                      Connect to slack
+                    </Button>
+                  </Col>
+                </Row>
+              </div>
+            )}
+            {slackEnabled && projectSettings?.int_slack && (
+              <div className='p-4'>
+                {saveSelectedChannel.length > 0 && (
+                  <div>
+                    <Row>
+                      <Col>
                         <Text
                           type={'title'}
                           level={7}
-                          color={'grey'}
-                          extraClass={'m-0 ml-2 my-1'}
+                          weight={'regular'}
+                          extraClass={'m-0 mt-2 ml-2'}
                         >
-                          {'#' + channel.name}
+                          {saveSelectedChannel.length > 1
+                            ? 'Selected Channels'
+                            : 'Selected Channel'}
+                        </Text>
+                      </Col>
+                    </Row>
+                    <Row
+                      className={'rounded border border-gray-200 ml-2 w-2/6'}
+                    >
+                      <Col className={'m-0'}>
+                        {saveSelectedChannel.map((channel, index) => (
+                          <div key={index}>
+                            <Text
+                              type={'title'}
+                              level={7}
+                              color={'grey'}
+                              extraClass={'m-0 ml-4 my-2'}
+                            >
+                              {'#' + channel.name}
+                            </Text>
+                          </div>
+                        ))}
+                      </Col>
+                    </Row>
+                  </div>
+                )}
+                {!saveSelectedChannel.length > 0 ? (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setShowSelectChannelsModal(true)}
+                      >
+                        Select Channel
+                      </Button>
+                    </Col>
+                  </Row>
+                ) : (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setShowSelectChannelsModal(true)}
+                      >
+                        {saveSelectedChannel.length > 1
+                          ? 'Manage Channels'
+                          : 'Manage Channel'}
+                      </Button>
+                    </Col>
+                  </Row>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'Webhook'} size={40} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
+                      />
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
+                        <Text
+                          type='title'
+                          level={7}
+                          weight='medium'
+                          extraClass='m-0'
+                        >
+                          Webhook
                         </Text>
                       </div>
-                    ))}
-                  </Col>
-                </Row>
-              )}
-              {!saveSelectedChannel.length > 0 ? (
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setShowSelectChannelsModal(true)}
-                    >
-                      {saveSelectedChannel.length > 1
-                        ? 'Select Channels'
-                        : 'Select Channel'}
-                    </Button>
-                  </Col>
-                </Row>
-              ) : (
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setShowSelectChannelsModal(true)}
-                    >
-                      {saveSelectedChannel.length > 1
-                        ? 'Manage Channels'
-                        : 'Manage Channel'}
-                    </Button>
-                  </Col>
-                </Row>
-              )}
-            </>
-          )}
-
-          {/* <Row className={'mt-2 ml-2'}>
-            <Col className={'m-0'}>
-              <Form.Item name='webhook_enabled' className={'m-0'}>
-                <Checkbox
-                  defaultChecked={webhookEnabled}
-                  onChange={(e) => setWebhookEnabled(e.target.checked)}
-                >
-                  Webhook
-                </Checkbox>
-              </Form.Item>
-            </Col>
-          </Row> */}
-          {/* {webhookEnabled && (
-            <>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={12} className={'m-0'}>
-                  <Text
-                    type={'title'}
-                    level={7}
-                    color={'grey'}
-                    extraClass={'m-0'}
-                  >
-                    Share an endpoint to receive alert notifications and trigger
-                    more flows
-                  </Text>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        When this alert happens, send this information to other
+                        apps to enable more flows.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='webhook_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          onChange={(checked) => setWebhookEnabled(checked)}
+                          checked={webhookEnabled}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
                 </Col>
               </Row>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={7}>
-                  <Input className='fa-input' placeholder='Webhook URL'></Input>
-                </Col>
-                <Col span={6} className={'m-0 ml-2'}>
-                  <Button type='primary'>Confirm</Button>
-                </Col>
-              </Row>
-            </>
-          )} */}
+            </div>
+            {webhookEnabled && (
+              <div className='p-4'>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={12} className={'m-0'}>
+                    <Text
+                      type={'title'}
+                      level={7}
+                      weight='medium'
+                      extraClass={'m-0'}
+                    >
+                      Paste your webhook URL here
+                    </Text>
+                  </Col>
+                </Row>
+                <Row className={'mt-1 ml-2'}>
+                  <Col span={10}>
+                    <Input
+                      className='fa-input'
+                      size='large'
+                      placeholder='Webhook URL'
+                      disabled={disbleWebhookInput}
+                      ref={webhookRef}
+                      value={webhookUrl}
+                      onChange={(e) => {
+                        setWebhookUrl(e.target.value);
+                        setConfirmBtn(false);
+                        setTestMessageBtn(false);
+                      }}
+                      onBlur={() => {
+                        if (webhookUrl === '') {
+                          setTestMessageBtn(true);
+                          setConfirmBtn(true);
+                        }
+                        if (showEditBtn && webhookUrl === finalWebhookUrl) {
+                          setHideTestMessageBtn(true);
+                          setConfirmBtn(false);
+                          setDisbleWebhookInput(true);
+                        }
+                      }}
+                    ></Input>
+                  </Col>
+                  <Col span={6} className={'m-0 ml-2'}>
+                    {!confirmedMessageBtn && !showEditBtn ? (
+                      <Button
+                        type='link'
+                        disabled={confirmBtn}
+                        onClick={() => handleClickConfirmBtn()}
+                        size='large'
+                      >
+                        Confirm
+                      </Button>
+                    ) : confirmedMessageBtn && !showEditBtn ? (
+                      <Button
+                        type='link'
+                        disabled
+                        onClick={() => handleClickConfirmBtn()}
+                        size='large'
+                        icon={
+                          <SVG
+                            name={'Checkmark'}
+                            size={16}
+                            color={'#52C41A'}
+                            extraClass={'m-0'}
+                          />
+                        }
+                      >
+                        Confirmed
+                      </Button>
+                    ) : (
+                      <Button
+                        type='link'
+                        disabled={confirmBtn}
+                        onClick={() => {
+                          setDisbleWebhookInput(false);
+                          setConfirmBtn(true);
+                          setHideTestMessageBtn(true);
+                          setTimeout(() => {
+                            webhookRef.current.focus();
+                          }, 200);
+                        }}
+                        size='large'
+                      >
+                        Edit
+                      </Button>
+                    )}
+                  </Col>
+                </Row>
+                {hideTestMessageBtn && (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={24} className={'m-0'}>
+                      {testMessageResponse ? (
+                        <div>
+                          <div className='inline'>
+                            <SVG
+                              name={'CheckCircle'}
+                              size={16}
+                              extraClass={'m-0 inline'}
+                            />
+                            <Text
+                              type={'title'}
+                              level={7}
+                              extraClass={'m-0 ml-1 inline'}
+                            >
+                              We've sent a sample message to this endpoint.
+                              Check and hit 'Confirm' if everything is alright!
+                            </Text>
+                          </div>
+                          <div className='inline'>
+                            <Button
+                              type='link'
+                              style={{
+                                backgroundColor: 'white',
+                                borderStyle: 'none'
+                              }}
+                              size='small'
+                              disabled={testMessageBtn}
+                              onClick={() => handleTestWebhook()}
+                              icon={
+                                <SVG
+                                  name={'PaperPlane'}
+                                  size={18}
+                                  color={
+                                    testMessageBtn ? '#00000040' : '#1e89ff'
+                                  }
+                                  extraClass={'-mt-1'}
+                                />
+                              }
+                            >
+                              Try Again
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          type='link'
+                          disabled={testMessageBtn}
+                          style={{
+                            backgroundColor: 'white',
+                            borderStyle: 'none'
+                          }}
+                          size='small'
+                          onClick={() => handleTestWebhook()}
+                          icon={
+                            <SVG
+                              name={'PaperPlane'}
+                              size={18}
+                              color={testMessageBtn ? '#00000040' : '#1e89ff'}
+                              extraClass={'-mt-1'}
+                            />
+                          }
+                        >
+                          Test this with a sample message
+                        </Button>
+                      )}
+                    </Col>
+                  </Row>
+                )}
+              </div>
+            )}
+          </div>
 
           <Row className={'mt-4'}>
             <Col span={18}>
@@ -1339,6 +1696,7 @@ const EventBasedAlert = ({
                     value={EventPropertyDetails}
                     onChange={(value, details) => {
                       setEventPropertyDetails(details);
+                      setNotRepeat(true);
                     }}
                     placeholder='Select Property'
                     showSearch
@@ -1396,9 +1754,9 @@ const EventBasedAlert = ({
             </Col>
           </Row>
 
-          <Row className={'mt-2'}>
+          <Row className={''}>
             <Col span={24}>
-              <div className={'border-top--thin-2 pt-2 mt-2'} />
+              <div className={'border-top--thin-2 pb-6 mt-6'} />
               <Text
                 type={'title'}
                 level={7}
@@ -1410,143 +1768,395 @@ const EventBasedAlert = ({
               </Text>
             </Col>
           </Row>
-
-          <Row className={'mt-2 ml-2'}>
-            <Col className={'m-0'}>
-              <Form.Item name='slack_enabled' className={'m-0'}>
-                <Checkbox
-                  checked={slackEnabled}
-                  onChange={(e) => setSlackEnabled(e.target.checked)}
-                >
-                  Slack
-                </Checkbox>
-              </Form.Item>
+          <Row className='m-0'>
+            <Col span={24}>
+              <Text
+                type='paragraph'
+                mini
+                extraClass='m-0'
+                color='grey'
+                lineHeight='medium'
+              >
+                Choose the destinations for your alerts. Attach text and any
+                properties along with it below
+              </Text>
             </Col>
           </Row>
-          {slackEnabled && !projectSettings?.int_slack && (
-            <>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    color={'grey'}
-                    extraClass={'m-0'}
-                  >
-                    Slack is not integrated, Do you want to integrate with your
-                    slack account now?
-                  </Text>
+
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'slack'} size={40} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
+                      />
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
+                        <Text
+                          type='title'
+                          level={7}
+                          weight='medium'
+                          extraClass='m-0'
+                        >
+                          Slack
+                        </Text>
+                      </div>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        Post to slack when events you care about happen.
+                        Motivate the right actions.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='slack_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          onChange={(checked) => setSlackEnabled(checked)}
+                          checked={slackEnabled}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
                 </Col>
               </Row>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Button onClick={onConnectSlack}>
-                    <SVG name={'Slack'} />
-                    Connect to slack
-                  </Button>
-                </Col>
-              </Row>
-            </>
-          )}
-          {slackEnabled && projectSettings?.int_slack && (
-            <>
-              {saveSelectedChannel.length > 0 && (
-                <Row
-                  className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
-                >
-                  <Col className={'m-0'}>
+            </div>
+            {slackEnabled && !projectSettings?.int_slack && (
+              <div className='p-4'>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
                     <Text
                       type={'title'}
                       level={6}
-                      color={'grey-2'}
-                      extraClass={'m-0 mt-2 ml-2'}
+                      color={'grey'}
+                      extraClass={'m-0'}
                     >
-                      {saveSelectedChannel.length > 1
-                        ? 'Select Channels'
-                        : 'Select Channel'}
+                      Slack is not integrated, Do you want to integrate with
+                      your slack account now?
                     </Text>
-                    {saveSelectedChannel.map((channel, index) => (
-                      <div key={index}>
+                  </Col>
+                </Row>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Button onClick={onConnectSlack}>
+                      <SVG name={'Slack'} />
+                      Connect to slack
+                    </Button>
+                  </Col>
+                </Row>
+              </div>
+            )}
+            {slackEnabled && projectSettings?.int_slack && (
+              <div className='p-4'>
+                {saveSelectedChannel.length > 0 && (
+                  <div>
+                    <Row>
+                      <Col>
                         <Text
                           type={'title'}
                           level={7}
-                          color={'grey'}
-                          extraClass={'m-0 ml-2 my-1'}
+                          weight={'regular'}
+                          extraClass={'m-0 mt-2 ml-2'}
                         >
-                          {'#' + channel.name}
+                          {saveSelectedChannel.length > 1
+                            ? 'Selected Channels'
+                            : 'Selected Channel'}
+                        </Text>
+                      </Col>
+                    </Row>
+                    <Row
+                      className={'rounded border border-gray-200 ml-2 w-2/6'}
+                    >
+                      <Col className={'m-0'}>
+                        {saveSelectedChannel.map((channel, index) => (
+                          <div key={index}>
+                            <Text
+                              type={'title'}
+                              level={7}
+                              color={'grey'}
+                              extraClass={'m-0 ml-4 my-2'}
+                            >
+                              {'#' + channel.name}
+                            </Text>
+                          </div>
+                        ))}
+                      </Col>
+                    </Row>
+                  </div>
+                )}
+                {!saveSelectedChannel.length > 0 ? (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setShowSelectChannelsModal(true)}
+                      >
+                        Select Channel
+                      </Button>
+                    </Col>
+                  </Row>
+                ) : (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setShowSelectChannelsModal(true)}
+                      >
+                        {saveSelectedChannel.length > 1
+                          ? 'Manage Channels'
+                          : 'Manage Channel'}
+                      </Button>
+                    </Col>
+                  </Row>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'Webhook'} size={40} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
+                      />
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
+                        <Text
+                          type='title'
+                          level={7}
+                          weight='medium'
+                          extraClass='m-0'
+                        >
+                          Webhook
                         </Text>
                       </div>
-                    ))}
-                  </Col>
-                </Row>
-              )}
-              {!saveSelectedChannel.length > 0 ? (
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setShowSelectChannelsModal(true)}
-                    >
-                      {saveSelectedChannel.length > 1
-                        ? 'Select Channels'
-                        : 'Select Channel'}
-                    </Button>
-                  </Col>
-                </Row>
-              ) : (
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setShowSelectChannelsModal(true)}
-                    >
-                      {saveSelectedChannel.length > 1
-                        ? 'Manage Channels'
-                        : 'Manage Channel'}
-                    </Button>
-                  </Col>
-                </Row>
-              )}
-            </>
-          )}
-
-          {/* <Row className={'mt-2 ml-2'}>
-            <Col className={'m-0'}>
-              <Form.Item name='webhook_enabled' className={'m-0'}>
-                <Checkbox
-                  defaultChecked={webhookEnabled}
-                  onChange={(e) => setWebhookEnabled(e.target.checked)}
-                >
-                  Webhook
-                </Checkbox>
-              </Form.Item>
-            </Col>
-          </Row> */}
-          {/* {webhookEnabled && (
-            <>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={12} className={'m-0'}>
-                  <Text
-                    type={'title'}
-                    level={7}
-                    color={'grey'}
-                    extraClass={'m-0'}
-                  >
-                    Share an endpoint to receive alert notifications and trigger
-                    more flows
-                  </Text>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        When this alert happens, send this information to other
+                        apps to enable more flows.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='webhook_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          onChange={(checked) => setWebhookEnabled(checked)}
+                          checked={webhookEnabled}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
                 </Col>
               </Row>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={7}>
-                  <Input className='fa-input' placeholder='Webhook URL'></Input>
-                </Col>
-                <Col span={6} className={'m-0 ml-2'}>
-                  <Button type='primary'>Confirm</Button>
-                </Col>
-              </Row>
-            </>
-          )} */}
+            </div>
+            {webhookEnabled && (
+              <div className='p-4'>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={12} className={'m-0'}>
+                    <Text
+                      type={'title'}
+                      level={7}
+                      weight='medium'
+                      extraClass={'m-0'}
+                    >
+                      Paste your webhook URL here
+                    </Text>
+                  </Col>
+                </Row>
+                <Row className={'mt-1 ml-2'}>
+                  <Col span={10}>
+                    <Input
+                      className='fa-input'
+                      size='large'
+                      placeholder='Webhook URL'
+                      disabled={disbleWebhookInput}
+                      ref={webhookRef}
+                      value={webhookUrl}
+                      onChange={(e) => {
+                        setWebhookUrl(e.target.value);
+                        setConfirmBtn(false);
+                        setTestMessageBtn(false);
+                      }}
+                      onBlur={() => {
+                        if (webhookUrl === '') {
+                          setTestMessageBtn(true);
+                          setConfirmBtn(true);
+                        }
+                        if (showEditBtn && webhookUrl === finalWebhookUrl) {
+                          setHideTestMessageBtn(true);
+                          setConfirmBtn(false);
+                          setDisbleWebhookInput(true);
+                        }
+                      }}
+                    ></Input>
+                  </Col>
+                  <Col span={6} className={'m-0 ml-2'}>
+                    {!confirmedMessageBtn && !showEditBtn ? (
+                      <Button
+                        type='link'
+                        disabled={confirmBtn}
+                        onClick={() => handleClickConfirmBtn()}
+                        size='large'
+                      >
+                        Confirm
+                      </Button>
+                    ) : confirmedMessageBtn && !showEditBtn ? (
+                      <Button
+                        type='link'
+                        disabled
+                        onClick={() => handleClickConfirmBtn()}
+                        size='large'
+                        icon={
+                          <SVG
+                            name={'Checkmark'}
+                            size={16}
+                            color={'#52C41A'}
+                            extraClass={'m-0'}
+                          />
+                        }
+                      >
+                        Confirmed
+                      </Button>
+                    ) : (
+                      <Button
+                        type='link'
+                        disabled={confirmBtn}
+                        onClick={() => {
+                          setDisbleWebhookInput(false);
+                          setConfirmBtn(true);
+                          setHideTestMessageBtn(true);
+                          setTimeout(() => {
+                            webhookRef.current.focus();
+                          }, 200);
+                        }}
+                        size='large'
+                      >
+                        Edit
+                      </Button>
+                    )}
+                  </Col>
+                </Row>
+                {hideTestMessageBtn && (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={24} className={'m-0'}>
+                      {testMessageResponse ? (
+                        <div>
+                          <div className='inline'>
+                            <SVG
+                              name={'CheckCircle'}
+                              size={16}
+                              extraClass={'m-0 inline'}
+                            />
+                            <Text
+                              type={'title'}
+                              level={7}
+                              extraClass={'m-0 ml-1 inline'}
+                            >
+                              We've sent a sample message to this endpoint.
+                              Check and hit 'Confirm' if everything is alright!
+                            </Text>
+                          </div>
+                          <div className='inline'>
+                            <Button
+                              type='link'
+                              style={{
+                                backgroundColor: 'white',
+                                borderStyle: 'none'
+                              }}
+                              size='small'
+                              disabled={testMessageBtn}
+                              onClick={() => handleTestWebhook()}
+                              icon={
+                                <SVG
+                                  name={'PaperPlane'}
+                                  size={18}
+                                  color={
+                                    testMessageBtn ? '#00000040' : '#1e89ff'
+                                  }
+                                  extraClass={'-mt-1'}
+                                />
+                              }
+                            >
+                              Try Again
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          type='link'
+                          disabled={testMessageBtn}
+                          style={{
+                            backgroundColor: 'white',
+                            borderStyle: 'none'
+                          }}
+                          size='small'
+                          onClick={() => handleTestWebhook()}
+                          icon={
+                            <SVG
+                              name={'PaperPlane'}
+                              size={18}
+                              color={testMessageBtn ? '#00000040' : '#1e89ff'}
+                              extraClass={'-mt-1'}
+                            />
+                          }
+                        >
+                          Test this with a sample message
+                        </Button>
+                      )}
+                    </Col>
+                  </Row>
+                )}
+              </div>
+            )}
+          </div>
 
           <Row className={'mt-4'}>
             <Col span={18}>
@@ -1830,9 +2440,9 @@ const EventBasedAlert = ({
           </Col>
         </Row>
 
-        <Row className={'mt-2'}>
+        <Row className={''}>
           <Col span={24}>
-            <div className={'border-top--thin-2 pt-2 mt-2'} />
+            <div className={'border-top--thin-2 pb-6 mt-6'} />
             <Text
               type={'title'}
               level={7}
@@ -1844,46 +2454,232 @@ const EventBasedAlert = ({
             </Text>
           </Col>
         </Row>
-
-        <Row className={'mt-2 ml-2'}>
-          <Col span={4}>
-            <Checkbox
-              disabled={true}
-              checked={viewAlertDetails?.event_alert?.slack}
+        <Row className='m-0'>
+          <Col span={24}>
+            <Text
+              type='paragraph'
+              mini
+              extraClass='m-0'
+              color='grey'
+              lineHeight='medium'
             >
-              Slack
-            </Checkbox>
+              Choose the destinations for your alerts. Attach text and any
+              properties along with it below
+            </Text>
           </Col>
         </Row>
-        {viewAlertDetails?.event_alert?.slack &&
-          viewAlertDetails?.event_alert?.slack_channels.length > 0 && (
-            <Row className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}>
-              <Col className={'m-0'}>
-                <Text
-                  type={'title'}
-                  level={6}
-                  color={'grey-2'}
-                  extraClass={'m-0 mt-2 ml-2'}
-                >
-                  {viewSelectedChannels.length > 1
-                    ? 'Selected Channels'
-                    : 'Selected Channel'}
-                </Text>
-                {viewSelectedChannels.map((channel, index) => (
-                  <div key={index}>
+
+        <div className='border rounded mt-3'>
+          <div style={{ backgroundColor: '#fafafa' }}>
+            <Row className={'ml-2'}>
+              <Col span={20}>
+                <div className='flex justify-between p-3'>
+                  <div className='flex'>
+                    <Avatar
+                      size={40}
+                      shape='square'
+                      icon={<SVG name={'slack'} size={40} color='purple' />}
+                      style={{ backgroundColor: '#F5F6F8' }}
+                    />
+                  </div>
+                  <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                    <div className='flex flex-row items-center justify-start'>
+                      <Text
+                        type='title'
+                        level={7}
+                        weight='medium'
+                        extraClass='m-0'
+                      >
+                        Slack
+                      </Text>
+                    </div>
+                    <Text
+                      type='paragraph'
+                      mini
+                      extraClass='m-0'
+                      color='grey'
+                      lineHeight='medium'
+                    >
+                      Post to slack when events you care about happen. Motivate
+                      the right actions.
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+              <Col className={'m-0 mt-4'}>
+                <Form.Item name='slack_enabled' className={'m-0'}>
+                  <div span={24} className={'flex flex-start items-center'}>
                     <Text
                       type={'title'}
                       level={7}
-                      color={'grey'}
-                      extraClass={'m-0 ml-2 my-1'}
+                      weight='medium'
+                      extraClass={'m-0 mr-2'}
                     >
-                      {'#' + channel.name}
+                      Enable
                     </Text>
+                    <span style={{ width: '50px' }}>
+                      <Switch
+                        checkedChildren='On'
+                        unCheckedChildren='OFF'
+                        disabled
+                        checked={viewAlertDetails?.event_alert?.slack}
+                      />
+                    </span>{' '}
                   </div>
-                ))}
+                </Form.Item>
               </Col>
             </Row>
+          </div>
+
+          {viewAlertDetails?.event_alert?.slack &&
+            viewAlertDetails?.event_alert?.slack_channels.length > 0 && (
+              <div className='p-4'>
+                {viewSelectedChannels.length > 0 && (
+                  <div>
+                    <Row>
+                      <Col>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          weight={'regular'}
+                          extraClass={'m-0 mt-2 ml-2'}
+                        >
+                          {viewSelectedChannels.length > 1
+                            ? 'Selected Channels'
+                            : 'Selected Channel'}
+                        </Text>
+                      </Col>
+                    </Row>
+                    <Row
+                      className={'rounded border border-gray-200 ml-2 w-2/6'}
+                    >
+                      <Col className={'m-0'}>
+                        {viewSelectedChannels.map((channel, index) => (
+                          <div key={index}>
+                            <Text
+                              type={'title'}
+                              level={7}
+                              color={'grey'}
+                              extraClass={'m-0 ml-4 my-2'}
+                            >
+                              {'#' + channel.name}
+                            </Text>
+                          </div>
+                        ))}
+                      </Col>
+                    </Row>
+                  </div>
+                )}
+              </div>
+            )}
+        </div>
+
+        <div className='border rounded mt-3'>
+          <div style={{ backgroundColor: '#fafafa' }}>
+            <Row className={'ml-2'}>
+              <Col span={20}>
+                <div className='flex justify-between p-3'>
+                  <div className='flex'>
+                    <Avatar
+                      size={40}
+                      shape='square'
+                      icon={<SVG name={'Webhook'} size={40} color='purple' />}
+                      style={{ backgroundColor: '#F5F6F8' }}
+                    />
+                  </div>
+                  <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                    <div className='flex flex-row items-center justify-start'>
+                      <Text
+                        type='title'
+                        level={7}
+                        weight='medium'
+                        extraClass='m-0'
+                      >
+                        Webhook
+                      </Text>
+                    </div>
+                    <Text
+                      type='paragraph'
+                      mini
+                      extraClass='m-0'
+                      color='grey'
+                      lineHeight='medium'
+                    >
+                      When this alert happens, send this information to other
+                      apps to enable more flows.
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+              <Col className={'m-0 mt-4'}>
+                <Form.Item name='webhook_enabled' className={'m-0'}>
+                  <div span={24} className={'flex flex-start items-center'}>
+                    <Text
+                      type={'title'}
+                      level={7}
+                      weight='medium'
+                      extraClass={'m-0 mr-2'}
+                    >
+                      Enable
+                    </Text>
+                    <span style={{ width: '50px' }}>
+                      <Switch
+                        checkedChildren='On'
+                        unCheckedChildren='OFF'
+                        disabled
+                        checked={viewAlertDetails?.event_alert?.webhook}
+                      />
+                    </span>{' '}
+                  </div>
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
+          {viewAlertDetails?.event_alert?.webhook && (
+            <div className='p-4'>
+              <Row className={'mt-2 ml-2'}>
+                <Col span={12} className={'m-0'}>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    weight='medium'
+                    extraClass={'m-0'}
+                  >
+                    Paste your webhook URL here
+                  </Text>
+                </Col>
+              </Row>
+              <Row className={'mt-1 ml-2'}>
+                <Col span={10}>
+                  <Input
+                    className='fa-input'
+                    size='large'
+                    placeholder='Webhook URL'
+                    disabled
+                    value={viewAlertDetails?.event_alert?.url}
+                  ></Input>
+                </Col>
+                <Col span={6} className={'m-0 ml-2'}>
+                  <Button
+                    type='link'
+                    disabled
+                    size='large'
+                    icon={
+                      <SVG
+                        name={'Checkmark'}
+                        size={16}
+                        color={'#52C41A'}
+                        extraClass={'m-0'}
+                      />
+                    }
+                  >
+                    Confirmed
+                  </Button>
+                </Col>
+              </Row>
+            </div>
           )}
+        </div>
 
         <Row className={'mt-4'}>
           <Col span={18}>
@@ -2063,5 +2859,6 @@ export default connect(mapStateToProps, {
   resetGroupBy,
   getGroupProperties,
   getEventProperties,
-  fetchGroups
+  fetchGroups,
+  testWebhhookUrl
 })(EventBasedAlert);

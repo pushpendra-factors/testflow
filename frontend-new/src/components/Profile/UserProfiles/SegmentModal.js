@@ -15,8 +15,8 @@ import {
 import FaSelect from 'Components/FaSelect';
 import { compareFilters, generateRandomKey } from 'Utils/global';
 import { useSelector } from 'react-redux';
-import PropFilterBlock from '../MyComponents/PropertyFilter/PropFilterBlock';
 import EventsBlock from '../MyComponents/EventsBlock';
+import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 
 function SegmentModal({
   profileType,
@@ -279,20 +279,16 @@ function SegmentModal({
       queryOptions.globalFilters.forEach((filter, id) => {
         list.push(
           <div key={id}>
-            <PropFilterBlock
-              activeProject={activeProject}
+            <FilterWrapper
+              projectID={activeProject?.id}
               index={id}
               filter={filter}
               deleteFilter={removeFilters}
               insertFilter={(val) => editFilter(id, val)}
               closeFilter={closeFilter}
               filterProps={filterProperties}
-              propsDDPos='top'
-              propsDDHeight={344}
-              operatorDDPos='top'
-              operatorDDHeight={344}
-              valuesDDPos='top'
-              valuesDDHeight={344}
+              dropdownPlacement='top'
+              dropdownMaxHeight={344}
             />
           </div>
         );
@@ -301,19 +297,15 @@ function SegmentModal({
         if (isFilterDDVisible) {
           list.push(
             <div key={list.length}>
-              <PropFilterBlock
-                activeProject={activeProject}
+              <FilterWrapper
+                projectID={activeProject?.id}
                 index={list.length}
                 deleteFilter={() => closeFilter()}
                 insertFilter={addFilter}
                 closeFilter={closeFilter}
                 filterProps={filterProperties}
-                propsDDPos='top'
-                propsDDHeight={344}
-                operatorDDPos='top'
-                operatorDDHeight={344}
-                valuesDDPos='top'
-                valuesDDHeight={344}
+                dropdownPlacement='top'
+                dropdownMaxHeight={344}
               />
             </div>
           );

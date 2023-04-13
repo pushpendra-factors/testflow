@@ -434,34 +434,30 @@ func (dd *DiskDriver) GetEventsUnsortedFilePathAndName(projectId int64, startTim
 	return path, fileName
 }
 
-func (dd *DiskDriver) GetEventsArtifactFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
-	var fileName string
-	modelType := U.GetModelType(startTimestamp, endTimestamp)
-	path := dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
-	path = pb.Join(path, "artifacts")
+func (dd *DiskDriver) GetEventsArtifactFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64, group int) (string, string) {
+	var fileName string = "users_map.txt"
+	var path string
 	pathArr := strings.Split(dd.baseDir, "/")
 	folderName := pathArr[len(pathArr)-1]
 	if folderName == "cloud_storage" {
-		fileName = "users_map.txt"
+		modelType := U.GetModelType(startTimestamp, endTimestamp)
+		path = dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
 	} else {
-		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
-		fileName = fmt.Sprintf("users_map_%s.txt", dateFormattedEnd)
+		path = dd.GetEventsTempFilesDir(projectId, startTimestamp, endTimestamp, group)
 	}
 	return path, fileName
 }
 
 func (dd *DiskDriver) GetChannelArtifactFilePathAndName(channel string, projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
-	var fileName string
-	modelType := U.GetModelType(startTimestamp, endTimestamp)
-	path := dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeAdReport, modelType)
-	path = pb.Join(path, "artifacts")
+	var fileName string = "doctypes_map.txt"
+	var path string
 	pathArr := strings.Split(dd.baseDir, "/")
 	folderName := pathArr[len(pathArr)-1]
 	if folderName == "cloud_storage" {
-		fileName = "doctypes_map_" + channel + ".txt"
+		modelType := U.GetModelType(startTimestamp, endTimestamp)
+		path = dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeAdReport, modelType)
 	} else {
-		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
-		fileName = fmt.Sprintf("doctypes_map_%s_%s.txt", dateFormattedEnd, channel)
+		path = dd.GetChannelTempFilesDir(channel, projectId, startTimestamp, endTimestamp)
 	}
 	return path, fileName
 }
@@ -486,7 +482,7 @@ func (dd *DiskDriver) GetExplainV2ModelPath(id uint64, projectId int64) (string,
 	return chunksPath, "chunk_1.txt"
 }
 
-func (dd *DiskDriver) GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string){
+func (dd *DiskDriver) GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string) {
 	return fmt.Sprintf("%s/projects/%v/list/%v/", dd.baseDir, projectID, reference), "list.txt"
 }
 func (dd *DiskDriver) GetSixSignalAnalysisTempFileDir(id string, projectId int64) string {
@@ -497,4 +493,48 @@ func (dd *DiskDriver) GetSixSignalAnalysisTempFileDir(id string, projectId int64
 func (dd *DiskDriver) GetSixSignalAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
 	path := dd.GetSixSignalAnalysisTempFileDir(id, projectId)
 	return path, "results.txt"
+}
+
+func (dd *DiskDriver) GetEventsTempFilesDir(projectId int64, startTimestamp, endTimestamp int64, group int) string {
+	path, name := dd.GetEventsGroupFilePathAndName(projectId, startTimestamp, endTimestamp, group)
+	path = pb.Join(path, strings.Replace(name, ".txt", "", 1))
+	return path
+}
+
+func (dd *DiskDriver) GetEventsPartFilesDir(projectId int64, startTimestamp, endTimestamp int64, sorted bool, group int) string {
+	tmp := "unsorted"
+	if sorted {
+		tmp = "sorted"
+	}
+	path := dd.GetEventsTempFilesDir(projectId, startTimestamp, endTimestamp, group)
+	path = pb.Join(path, tmp+"_parts")
+	return path
+}
+
+func (dd *DiskDriver) GetEventsPartFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, sorted bool, startIndex, endIndex int, group int) (string, string) {
+	path := dd.GetEventsPartFilesDir(projectId, startTimestamp, endTimestamp, sorted, group)
+	name := fmt.Sprintf("%d-%d_uids.txt", startIndex, endIndex)
+	return path, name
+}
+
+func (dd *DiskDriver) GetChannelTempFilesDir(channel string, projectId int64, startTimestamp, endTimestamp int64) string {
+	path, name := dd.GetChannelFilePathAndName(channel, projectId, startTimestamp, endTimestamp)
+	path = pb.Join(path, strings.Replace(name, ".txt", "", 1))
+	return path
+}
+
+func (dd *DiskDriver) GetChannelPartFilesDir(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool) string {
+	tmp := "unsorted"
+	if sorted {
+		tmp = "sorted"
+	}
+	path := dd.GetChannelTempFilesDir(channel, projectId, startTimestamp, endTimestamp)
+	path = pb.Join(path, tmp+"_parts")
+	return path
+}
+
+func (dd *DiskDriver) GetChannelPartFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool, index int) (string, string) {
+	path := dd.GetChannelPartFilesDir(channel, projectId, startTimestamp, endTimestamp, sorted)
+	name := fmt.Sprintf("%d_doctype.txt", index)
+	return path, name
 }

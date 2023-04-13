@@ -162,6 +162,9 @@ const GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED = "$salesforce_account_updated
 const GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED = "$salesforce_opportunity_created"
 const GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$salesforce_opportunity_updated"
 
+const GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD = "$linkedin_viewed_ad"
+const GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD = "$linkedin_clicked_ad"
+
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
 const EVENT_NAME_SHOPIFY_CHECKOUT_UPDATED = "$shopify_checkout_updated"
@@ -305,6 +308,8 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_LEADSQUARED_EMAIL_VIEW_IN_BROWSER_LINK_CLICKED_CREATED,
 	EVENT_NAME_LEADSQUARED_EMAIL_RECEIVED_UPDATED,
 	EVENT_NAME_LEADSQUARED_EMAIL_RECEIVED_CREATED,
+	GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD,
+	GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD,
 }
 
 const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
@@ -313,6 +318,7 @@ const GROUP_NAME_SALESFORCE_ACCOUNT = "$salesforce_account"
 const GROUP_NAME_SALESFORCE_OPPORTUNITY = "$salesforce_opportunity"
 const GROUP_NAME_SIX_SIGNAL = "$6signal"
 const GROUP_NAME_DOMAINS = "$domains"
+const GROUP_NAME_LINKEDIN_COMPANY = "$linkedin_company"
 
 var GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING = map[string]string{
 	GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED:        GROUP_NAME_HUBSPOT_COMPANY,
@@ -673,6 +679,16 @@ var SIX_SIGNAL_REGION = "$6Signal_region"
 var SIX_SIGNAL_NAICS = "$6Signal_naics"
 var SIX_SIGNAL_ANNUAL_REVENUE = "$6Signal_annual_revenue"
 var SIX_SIGNAL_SIC_DESCRIPTION = "$6Signal_sic_description"
+
+//LinkedinCompany properties
+var LI_PROPERTIES_PREFIX = "$li_"
+var LI_DOMAIN = "$li_domain"
+var LI_HEADQUARTER = "$li_headquarter"
+var LI_PREFERRED_COUNTRY = "$li_preferred_country"
+var LI_VANITY_NAME = "$li_vanity_name"
+var LI_LOCALIZED_NAME = "$li_localized_name"
+var LI_AD_VIEW_COUNT = "$li_ad_view_count"
+var LI_AD_CLICK_COUNT = "$li_ad_click_count"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -1339,13 +1355,12 @@ var DISABLED_CORE_QUERY_EVENT_PROPERTIES = [...]string{
 	"$marketo_lead__fivetran_synced",
 }
 
-var SESSION_PROPERTIES_SET_IN_UPDATE = map[string]bool {
-	EP_CHANNEL: true,
-	SP_SPENT_TIME: true,
-	SP_PAGE_COUNT: true,
+var SESSION_PROPERTIES_SET_IN_UPDATE = map[string]bool{
+	EP_CHANNEL:             true,
+	SP_SPENT_TIME:          true,
+	SP_PAGE_COUNT:          true,
 	SP_LATEST_PAGE_RAW_URL: true,
-	SP_LATEST_PAGE_URL: true,
-
+	SP_LATEST_PAGE_URL:     true,
 }
 
 var DISABLED_USER_PROPERTIES_UI = [...]string{
@@ -1519,6 +1534,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_SALESFORCE_ACCOUNT:     "Salesforce Accounts",
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
 	GROUP_NAME_SIX_SIGNAL:             "6Signal Domain",
+	GROUP_NAME_LINKEDIN_COMPANY:       "Linkedin Company Engagements",
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{

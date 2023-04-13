@@ -41,6 +41,8 @@ func main() {
 	deviceDetectorPath := flag.String("device_detector_path", "/usr/local/var/factors/devicedetector_data/regexes", "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
+	useSentryRollup := flag.Bool("use_sentry_rollup", false, "Enables rollup support for sentry")
+	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 300, "Enables to send errors to sentry in given interval.")
 
 	workerConcurrency := flag.Int("worker_concurrency", 10, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
@@ -74,20 +76,22 @@ func main() {
 	defer U.NotifyOnPanic(workerName, *env)
 
 	config := &C.Configuration{
-		AppName:             workerName,
-		Env:                 *env,
-		GCPProjectID:        *gcpProjectID,
-		GCPProjectLocation:  *gcpProjectLocation,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		QueueRedisHost:      *queueRedisHost,
-		QueueRedisPort:      *queueRedisPort,
-		GeolocationFile:     *geoLocFilePath,
-		DeviceDetectorPath:  *deviceDetectorPath,
-		SentryDSN:           *sentryDSN,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
-		CacheSortedSet:      *cacheSortedSet,
+		AppName:                workerName,
+		Env:                    *env,
+		GCPProjectID:           *gcpProjectID,
+		GCPProjectLocation:     *gcpProjectLocation,
+		RedisHost:              *redisHost,
+		RedisPort:              *redisPort,
+		QueueRedisHost:         *queueRedisHost,
+		QueueRedisPort:         *queueRedisPort,
+		GeolocationFile:        *geoLocFilePath,
+		DeviceDetectorPath:     *deviceDetectorPath,
+		SentryDSN:              *sentryDSN,
+		UseSentryRollup:        *useSentryRollup,
+		SentryRollupSyncInSecs: *sentryRollupSyncInSecs,
+		RedisHostPersistent:    *redisHostPersistent,
+		RedisPortPersistent:    *redisPortPersistent,
+		CacheSortedSet:         *cacheSortedSet,
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,

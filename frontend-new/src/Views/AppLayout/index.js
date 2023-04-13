@@ -48,6 +48,8 @@ import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import GlobalSearch from 'Components/GlobalSearch';
 import './index.css';
 import _ from 'lodash';
+import logger from 'Utils/logger';
+import { useHistory, useLocation } from 'react-router-dom';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -75,6 +77,8 @@ function AppLayout({
   const { currentProjectSettings } = useSelector((state) => state.global);
   const dispatch = useDispatch();
   const [sidebarCollapse, setSidebarCollapse] = useState(true);
+  const location = useLocation();
+  const history = useHistory();
 
   const activeAgent = agentState?.agent_details?.email;
 
@@ -90,7 +94,7 @@ function AppLayout({
   const asyncCallOnLoad = useCallback(async () => {
     try {
       if (isAgentLoggedIn) await fetchProjects();
-      setDataLoading(false);
+      else setDataLoading(false);
     } catch (err) {
       console.log(err);
     }
@@ -132,6 +136,25 @@ function AppLayout({
     }
   }, [projects]);
 
+  const handleRedirection = async () => {
+    try {
+      if (active_project && active_project?.id && isAgentLoggedIn) {
+        const res = await fetchProjectSettings(active_project?.id);
+        if (
+          location?.state?.navigatedFromLoginPage &&
+          (res?.data?.int_factors_six_signal_key ||
+            res?.data?.int_client_six_signal_key)
+        ) {
+          history.push('/reports/6_signal');
+        }
+      }
+      setDataLoading(false);
+    } catch (error) {
+      logger.error('Error in fetching project settings', error);
+      setDataLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (active_project && active_project?.id && isAgentLoggedIn) {
       dispatch(fetchDashboards(active_project?.id));
@@ -146,7 +169,7 @@ function AppLayout({
       fetchWeeklyIngishtsMetaData(active_project?.id);
       dispatch(fetchAttrContentGroups(active_project?.id));
       dispatch(fetchTemplates());
-      fetchProjectSettings(active_project?.id);
+      handleRedirection();
 
       fetchProjectSettingsV1(active_project?.id);
       dispatch(fetchEventDisplayNames({ projectId: active_project?.id }));

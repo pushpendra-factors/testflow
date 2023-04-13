@@ -2,15 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { Text } from 'factorsComponents';
 import { Modal, Form, Row, Col, Select, Input, Button, message } from 'antd';
-import GlobalFilter from '../GlobalFilter';
 import { getEventProperties } from 'Reducers/coreQuery/middleware';
 import { udpateProjectDetails } from 'Reducers/global';
 import defaultRules from '../defaultRules';
 import _ from 'lodash';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { operatorMap } from 'Utils/operatorMapping';
-
-const { Option, OptGroup } = Select;
+import GlobalFilter from 'Components/GlobalFilter';
 
 function PropertyValueModal({
   eventProperties,

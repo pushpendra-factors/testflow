@@ -105,7 +105,7 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 	}
 
 	existingAlert, err := store.GetStore().GetEventTriggerAlertByID(id)
-	if err != http.StatusFound{
+	if err != http.StatusFound {
 		return nil, http.StatusBadRequest, "Invalid ID - Alert not found", "", true
 	}
 	var existingAlertPayload model.EventTriggerAlertConfig
@@ -116,7 +116,7 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 	}
 
 	var existingSlackChannels []model.SlackChannel
-	if(existingAlertPayload.Slack == true){
+	if existingAlertPayload.Slack == true {
 		errObj = U.DecodePostgresJsonbToStructType(existingAlertPayload.SlackChannels, &existingSlackChannels)
 		if errObj != nil {
 			log.WithError(errObj).Error("failed to decode slack channels")
@@ -124,7 +124,7 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 		}
 	}
 	var newSlackChannels []model.SlackChannel
-	if(alert.Slack == true){
+	if alert.Slack == true {
 		errObj = U.DecodePostgresJsonbToStructType(alert.SlackChannels, &newSlackChannels)
 		if errObj != nil {
 			log.WithError(errObj).Error("failed to decode slack channels")
@@ -141,14 +141,14 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 			existingChannelIDMap[channel.Id] = true
 		}
 		for _, channel := range newSlackChannels {
-			if(existingChannelNameMap[channel.Name] == false){
+			if existingChannelNameMap[channel.Name] == false {
 				slackAssociatedUserId = userID
 				break
-			} 
-			if(existingChannelIDMap[channel.Id] == false){
+			}
+			if existingChannelIDMap[channel.Id] == false {
 				slackAssociatedUserId = userID
 				break
-			} 
+			}
 		}
 
 	} else {
@@ -215,7 +215,7 @@ func TestWebhookforEventTriggerAlerts(c *gin.Context) (interface{}, int, string,
 		}
 		msgPropMap[fmt.Sprintf("%d", i)] = model.MessagePropMapStruct{
 			DisplayName: U.CreateVirtualDisplayName(mp.Property),
-			PropValue: val, 
+			PropValue:   val,
 		}
 	}
 	payload := model.EventTriggerAlertMessage{

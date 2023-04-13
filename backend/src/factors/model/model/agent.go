@@ -107,9 +107,10 @@ type SlackAccessTokens struct {
 
 type TeamsAuthTokens map[int64]TeamsAccessTokens
 type TeamsAccessTokens struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn uint64 `json:"expires_in"` 
+	AccessToken     string    `json:"access_token"`
+	RefreshToken    string    `json:"refresh_token"`
+	ExpiresIn       uint64    `json:"expires_in"`
+	LastRefreshedAt time.Time `json:"last_refreshed_at"`
 }
 
 func Firstname(firstName string) Option {

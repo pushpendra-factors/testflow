@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
-import { SVG, Text } from 'factorsComponents';
-import { Button, Input, InputNumber, Tooltip, DatePicker, Select } from 'antd';
+import { Button, Input, InputNumber, Tooltip, DatePicker } from 'antd';
 import GroupSelect2 from '../GroupSelect2';
 import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from '../FaSelect';
@@ -19,8 +18,6 @@ import { toCapitalCase } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
-
-const { Option } = Select;
 
 const FAFilterSelect = ({
   propOpts = [],
@@ -228,7 +225,7 @@ const FAFilterSelect = ({
   const matchEventName = (item) => {
     let findItem =
       eventPropNames?.[item] || userPropNames?.[item] || groupPropNames?.[item];
-    return findItem ? findItem : item;
+    return findItem ? findItem : _.startCase(item);
   };
 
   const renderGroupDisplayName = (propState) => {
@@ -299,10 +296,12 @@ const FAFilterSelect = ({
 
         {operSelectOpen && (
           <FaSelect
-            options={operatorOpts[propState.type].filter((op) => {
-              // Only include the operator if showInList is true or it's not 'inList'
-              return false || op !== OPERATORS['inList'];
-            }).map((op) => [op])}
+            options={operatorOpts[propState.type]
+              .filter((op) => {
+                // Only include the operator if showInList is true or it's not 'inList'
+                return false || op !== OPERATORS['inList'];
+              })
+              .map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
           ></FaSelect>

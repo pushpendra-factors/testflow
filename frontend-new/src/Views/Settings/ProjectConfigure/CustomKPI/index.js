@@ -30,7 +30,6 @@ import {
 } from 'Reducers/coreQuery/middleware';
 import _ from 'lodash';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
-import { formatFilterDate } from '../../../../utils/dataFormatter';
 import styles from './index.module.scss';
 import {
   convertDateTimeObjectValuesToMilliSeconds,
@@ -48,7 +47,7 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   QUERY_OPTIONS_DEFAULT_VALUE
 } from '../../../../utils/constants';
-import EventFilter from './EventFilter/GlobalFilter';
+import EventFilter from 'Components/GlobalFilter';
 import useAutoFocus from 'hooks/useAutoFocus';
 
 const { Option } = Select;
@@ -727,7 +726,7 @@ function CustomKPI({
                 <EventFilter
                   filters={EventfilterValues?.globalFilters}
                   setGlobalFilters={setEventGlobalFiltersOption}
-                  selEventName={selEventName}
+                  event={{ label: selEventName }}
                   eventProperties={eventProperties}
                 />
               </div>
@@ -1142,7 +1141,10 @@ function CustomKPI({
                                   }
                                 ]}
                                 setGlobalFilters={setGlobalFiltersOption}
-                                selectedMainCategory={{group: selKPICategory, category: 'events'}}
+                                selectedMainCategory={{
+                                  group: selKPICategory,
+                                  category: 'events'
+                                }}
                                 KPIConfigProps={filterDDValues}
                                 isSameKPIGrp={true} // To avoid common properties in filter
                               />

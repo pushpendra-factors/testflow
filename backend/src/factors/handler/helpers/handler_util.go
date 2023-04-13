@@ -42,6 +42,91 @@ func getQueryCacheResponse(c *gin.Context, cacheResult model.QueryCacheResult, f
 	return true, http.StatusOK, cacheResult.Result
 }
 
+func AddPropertyLabelsToQueryCacheInterfaceArrayResponse(projectID int64, recordsInt []interface{}) (interface{}, error) {
+	if len(recordsInt) == 0 {
+		return recordsInt, nil
+	}
+
+	newRecordsInt := make([]interface{}, 0)
+	for i := range recordsInt {
+		if recordsInt[i] == nil {
+			continue
+		}
+
+		record, ok := recordsInt[i].(map[string]interface{})
+		if !ok {
+			return recordsInt, errors.New("Failed to convert record to map on AddPropertyLabelsToQueryCacheInterfaceArrayResponse")
+		}
+
+		var err error
+		record, err = store.GetStore().TransformQueryResultsColumnValuesToLabel(projectID, record)
+		if err != nil {
+			return recordsInt, err
+		}
+
+		newRecordsInt = append(newRecordsInt, record)
+	}
+	return newRecordsInt, nil
+}
+
+func AddPropertyLabelsToQueryCacheResultGroupResponse(projectID int64, record map[string]interface{}) (interface{}, error) {
+	if _, exists := record["result_group"]; exists {
+		var resultGroup model.ResultGroup
+		err := U.DecodeInterfaceMapToStructType(record, &resultGroup)
+		if err != nil {
+			return record, errors.New("Failed to decode interface to ResultGroup on AddPropertyLabelsToQueryCacheResultGroupResponse")
+		}
+		// log.WithField("result_group_record", resultGroup).Warning("ResultGroup record in AddPropertyLabelsToQueryCacheResultGroupResponse")
+
+		resultGroup.Results, err = store.GetStore().AddPropertyValueLabelToQueryResults(projectID, resultGroup.Results)
+		if err != nil {
+			return record, err
+		}
+		// log.WithField("result_group_record_after", resultGroup).Warning("ResultGroup after record in AddPropertyLabelsToQueryCacheResultGroupResponse")
+		result, err := U.EncodeStructTypeToMap(resultGroup)
+		if err != nil {
+			return record, err
+		}
+		return result, nil
+	}
+
+	return record, nil
+}
+
+func AddPropertyLabelsToDashboardQueryResponsePayload(projectID int64, record DashboardQueryResponsePayload) (DashboardQueryResponsePayload, error) {
+	var err error
+	switch result := record.Result.(type) {
+	case []interface{}:
+		log.Error("Inside []interface{} in AddPropertyLabelsToDashboardQueryResponsePayload")
+		record.Result, err = AddPropertyLabelsToQueryCacheInterfaceArrayResponse(projectID, result)
+		return record, err
+	case map[string]interface{}:
+		log.Error("Inside map[string]interface{} in AddPropertyLabelsToDashboardQueryResponsePayload")
+		log.WithField("record_before", record).Warning("Record before AddPropertyLabelsToDashboardQueryResponsePayload")
+		record.Result, err = AddPropertyLabelsToQueryCacheResultGroupResponse(projectID, result)
+		log.WithField("record_after", record).Warning("Record before AddPropertyLabelsToDashboardQueryResponsePayload")
+		return record, err
+	default:
+		return record, errors.New("invalid record type on AddPropertyLabelsToDashboardQueryResponsePayload")
+	}
+}
+
+func TransformQueryCacheResponseColumnValuesToLabel(projectID int64, recordsInt interface{}) (interface{}, error) {
+	switch records := recordsInt.(type) {
+	case DashboardQueryResponsePayload:
+		log.Error("Inside DashboardQueryResponsePayload in TransformQueryCacheResponseColumnValuesToLabel")
+		return AddPropertyLabelsToDashboardQueryResponsePayload(projectID, records)
+	case []interface{}:
+		log.Error("Inside []interface{} in TransformQueryCacheResponseColumnValuesToLabel")
+		return AddPropertyLabelsToQueryCacheInterfaceArrayResponse(projectID, records)
+	case map[string]interface{}:
+		log.Error("Inside map[string]interface{} in TransformQueryCacheResponseColumnValuesToLabel")
+		return AddPropertyLabelsToQueryCacheResultGroupResponse(projectID, records)
+	default:
+		return nil, errors.New("invalid record type on TransformQueryCacheResponseColumnValuesToLabel")
+	}
+}
+
 // ShouldAllowHardRefresh To check from query api if hard refresh should be applied or return from cache.
 func ShouldAllowHardRefresh(from, to int64, timezoneString U.TimeZoneString, hardRefresh bool) bool {
 	if C.DisableQueryCache() {

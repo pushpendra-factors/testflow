@@ -298,6 +298,48 @@ func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountI
 	return linkedinLastSyncInfos, http.StatusOK
 }
 
+func (store *MemSQL) GetDomainData(projectID string) ([]model.DomainDataResponse, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	domainDatas := make([]model.DomainDataResponse, 0)
+
+	currentTime := time.Now()
+	timestampBefore30Days, err := strconv.ParseInt(currentTime.AddDate(0, 0, -30).Format("20060102"), 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to get timestamp before 31 days")
+		return domainDatas, http.StatusInternalServerError
+	}
+
+	queryStr := "SELECT project_id, id, timestamp, customer_ad_account_id, JSON_EXTRACT_STRING(value, 'companyHeadquarters') as headquarters, " +
+		"JSON_EXTRACT_STRING(value, 'localizedWebsite') as domain, JSON_EXTRACT_STRING(value, 'vanityName') as vanity_name, " +
+		"JSON_EXTRACT_STRING(value, 'localizedName') as localized_name, JSON_EXTRACT_STRING(value, 'preferredCountry') as preferred_country, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) as clicks " +
+		"FROM linkedin_documents WHERE " +
+		"project_id = ? and type = 8 and is_backfilled = TRUE and is_group_user_created != TRUE and domain != '$none' and timestamp >= ? " +
+		"group by project_id, id, timestamp, customer_ad_account_id, headquarters, domain, vanity_name, localized_name, preferred_country " +
+		"order by timestamp ASC, project_id, id, customer_ad_account_id, headquarters, domain, vanity_name, localized_name, preferred_country"
+
+	rows, err := db.Raw(queryStr, projectID, timestampBefore30Days).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get last linkedin documents by type for sync info.")
+		return domainDatas, http.StatusInternalServerError
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var domainData model.DomainDataResponse
+		if err := db.ScanRows(rows, &domainData); err != nil {
+			log.WithError(err).Error("Failed to scan last linkedin documents by type for sync info.")
+			return []model.DomainDataResponse{}, http.StatusInternalServerError
+		}
+
+		domainDatas = append(domainDatas, domainData)
+	}
+	return domainDatas, http.StatusOK
+}
 func validateLinkedinDocuments(linkedinDocuments []model.LinkedinDocument) int {
 	for index, document := range linkedinDocuments {
 		if document.CustomerAdAccountID == "" || document.TypeAlias == "" {
@@ -501,6 +543,15 @@ func (store *MemSQL) IsLinkedInIntegrationAvailable(projectID int64) bool {
 		return false
 	}
 	return true
+}
+
+func (store *MemSQL) UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error {
+	db := C.GetServices().Db
+	err := db.Table("linkedin_documents").Where("project_id = ? and customer_ad_account_id = ? and timestamp = ? and id = ? and type = 8", domainData.ProjectID, domainData.CustomerAdAccountID, domainData.Timestamp, domainData.ID).Updates(map[string]interface{}{"is_group_user_created": true}).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // v1 Api

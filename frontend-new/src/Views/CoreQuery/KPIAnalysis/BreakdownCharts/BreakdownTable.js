@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect, memo } from 'react';
-import { useSelector } from 'react-redux';
 import { find } from 'lodash';
 import {
   getTableColumns,
@@ -203,6 +202,9 @@ const BreakdownTable = ({
       }
       scroll={{ x: 250 }}
       getCSVData={getCSVData}
+      rowClassName={(record, index) => {
+        return `multi-colored-checkbox-${index}`;
+      }}
     />
   );
 };

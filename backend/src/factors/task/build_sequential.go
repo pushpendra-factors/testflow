@@ -84,7 +84,7 @@ func BuildSequential(projectId int64, configs map[string]interface{}) (map[strin
 	numChunks, err := PatternMine(db, etcdClient, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager,
 		noOfPatternWorkers, projectId, modelId, modelType,
 		startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
-		beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2)
+		beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2, false, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to mine patterns.")
 		status["error"] = "Failed to mine patterns."
@@ -169,20 +169,20 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 			return status, false
 		}
 
-		projectDetails, _ := store.GetStore().GetProject(projectId)
-		startTimestampInProjectTimezone := jb.StartTimestamp
-		endTimestampInProjectTimezone := jb.EndTimestamp
-		if projectDetails.TimeZone != "" {
-			// Input time is in UTC. We need the same time in the other timezone
-			// if 2021-08-30 00:00:00 is UTC then we need the epoch equivalent in 2021-08-30 00:00:00 IST(project time zone)
-			offset := U.FindOffsetInUTC(U.TimeZoneString(projectDetails.TimeZone))
-			log.Infof("time zone detected Updating time zone - adding offset %d", offset)
+		// projectDetails, _ := store.GetStore().GetProject(projectId)
+		// startTimestampInProjectTimezone := jb.StartTimestamp
+		// endTimestampInProjectTimezone := jb.EndTimestamp
+		// if projectDetails.TimeZone != "" {
+		// 	// Input time is in UTC. We need the same time in the other timezone
+		// 	// if 2021-08-30 00:00:00 is UTC then we need the epoch equivalent in 2021-08-30 00:00:00 IST(project time zone)
+		// 	offset := U.FindOffsetInUTC(U.TimeZoneString(projectDetails.TimeZone))
+		// 	log.Infof("time zone detected Updating time zone - adding offset %d", offset)
 
-			startTimestampInProjectTimezone = jb.StartTimestamp + int64(offset)
-			endTimestampInProjectTimezone = jb.EndTimestamp + int64(offset)
-		}
-		jb.StartTimestamp = startTimestampInProjectTimezone
-		jb.EndTimestamp = endTimestampInProjectTimezone
+		// 	startTimestampInProjectTimezone = jb.StartTimestamp + int64(offset)
+		// 	endTimestampInProjectTimezone = jb.EndTimestamp + int64(offset)
+		// }
+		// jb.StartTimestamp = startTimestampInProjectTimezone
+		// jb.EndTimestamp = endTimestampInProjectTimezone
 
 		startTimestamp := jb.StartTimestamp
 		endTimestamp := jb.EndTimestamp
@@ -202,7 +202,7 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 		numChunks, err := PatternMine(db, etcdClient, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManger,
 			noOfPatternWorkers, projectId, modelId, modelType,
 			startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
-			beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2)
+			beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2, true, true)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to mine patterns.")
 			status["error"] = "Failed to mine patterns."

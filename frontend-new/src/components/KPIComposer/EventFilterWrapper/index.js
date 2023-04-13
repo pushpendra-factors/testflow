@@ -6,35 +6,23 @@ import { DateRangePicker } from 'react-date-range';
 import { Input, Button, Result } from 'antd';
 import MomentTz from 'Components/MomentTz';
 import { SVG, Text } from 'factorsComponents';
-import { DEFAULT_DATE_RANGE } from '../DateRangeSelector/utils';
+import { DEFAULT_DATE_RANGE } from '../../QueryComposer/DateRangeSelector/utils';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
-
-import {
-  fetchEventPropertyValues,
-  fetchUserPropertyValues,
-  fetchChannelObjPropertyValues,
-} from '../../../reducers/coreQuery/services';
-import FaFilterSelectKPI from '../FaFilterSelectKPI';
 import { fetchKPIFilterValues } from 'Reducers/kpi';
 import _ from 'lodash';
+import FAFilterSelect from 'Components/KPIComposer/FaFilterSelectKPI';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 function EventFilterWrapper({
   index,
   refValue,
-  blockType = 'event',
-  filterType = 'analytics',
-  typeProps,
   filterProps,
   activeProject,
   operatorProps = defaultOpProps,
   event,
   filter,
   delIcon = 'remove',
-  propsConstants = ['user', 'event'],
-  extraClass,
-  delBtnClass,
   deleteFilter,
   insertFilter,
   closeFilter,
@@ -56,12 +44,6 @@ function EventFilterWrapper({
   const [selectedRngState, setSelectedRngState] = useState([
     { ...DEFAULT_DATE_RANGE },
   ]);
-
-  const placeHolder = {
-    props: 'Choose a property',
-    operator: 'Choose an operator',
-    values: 'Choose values',
-  };
 
   const [filterDropDownOptions, setFiltDD] = useState({
     props: [
@@ -172,7 +154,6 @@ function EventFilterWrapper({
   };
 
   const setValuesByProps = (props) => {
-
     if (props && props[3]) {
       let filterData = {}; 
       if (event?.category == 'channels' || event?.category == 'custom_channels') { //use event instead of selectedMainCategory since it is in induvidual level
@@ -209,7 +190,7 @@ function EventFilterWrapper({
 
   const renderFilterContent = () => {
     return (
-      <FaFilterSelectKPI
+      <FAFilterSelect
         propOpts={filterDropDownOptions.props}
         operatorOpts={filterDropDownOptions.operator}
         valueOpts={dropDownValues}

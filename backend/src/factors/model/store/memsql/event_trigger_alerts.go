@@ -1,21 +1,22 @@
 package memsql
 
 import (
+	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
+	E "factors/event_match"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
-	"io/ioutil"
-	E "factors/event_match"
 
+	"encoding/json"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-	"encoding/json"
 )
 
 const (
@@ -156,33 +157,33 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	}
 
 	for _, filter := range (*alertConfig).Filter {
-		if(filter.Operator == model.InList){
+		if filter.Operator == model.InList {
 			// Get the cloud file that is there for the reference value
 			path, file := C.GetCloudManager(projectID, true).GetListReferenceFileNameAndPathFromCloud(projectID, filter.Value)
 			reader, err := C.GetCloudManager(projectID, true).Get(path, file)
-			if(err != nil){
+			if err != nil {
 				log.WithFields(logFields).WithError(err).Error("List File Missing")
 				return nil, http.StatusInternalServerError, "List File Missing"
 			}
 			valuesInFile := make([]string, 0)
 			data, err := ioutil.ReadAll(reader)
-			if(err != nil){
+			if err != nil {
 				log.WithFields(logFields).WithError(err).Error("File reader failed")
 				return nil, http.StatusInternalServerError, "File reader failed"
 			}
 			err = json.Unmarshal(data, &valuesInFile)
-			if(err != nil){
+			if err != nil {
 				log.WithFields(logFields).WithError(err).Error("list data unmarshall failed")
 				return nil, http.StatusInternalServerError, "list data unmarshall failed"
 			}
 			cacheKeyList, err := model.GetListCacheKey(projectID, filter.Value)
-			if(err != nil){
+			if err != nil {
 				log.WithFields(logFields).WithError(err).Error("get cache key failed")
 				return nil, http.StatusInternalServerError, "get cache key failed"
 			}
 			for _, value := range valuesInFile {
 				err = cacheRedis.ZAddPersistent(cacheKeyList, value, 0)
-				if(err != nil){
+				if err != nil {
 					log.WithFields(logFields).WithError(err).Error("failed to add new values to sorted set")
 					return nil, http.StatusInternalServerError, "failed to add new values to sorted set"
 				}
@@ -197,14 +198,14 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	}
 
 	alert = model.EventTriggerAlert{
-		ID:                id,
-		ProjectID:         projectID,
-		Title:             alertConfig.Title,
-		EventTriggerAlert: trigger,
-		CreatedBy:         userID,
-		CreatedAt:         transTime,
-		UpdatedAt:         transTime,
-		IsDeleted:         false,
+		ID:                       id,
+		ProjectID:                projectID,
+		Title:                    alertConfig.Title,
+		EventTriggerAlert:        trigger,
+		CreatedBy:                userID,
+		CreatedAt:                transTime,
+		UpdatedAt:                transTime,
+		IsDeleted:                false,
 		SlackChannelAssociatedBy: slackTokenUser,
 	}
 
@@ -368,14 +369,14 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 				return nil, nil, http.StatusInternalServerError
 			}
 		}
-		if( !isUpdate){
+		if !isUpdate {
 			isUpdateOnlyPropertyInMessageBody := false
 			for _, msgProp := range messageProperties {
-				if (eventName.Name == "$session" && U.SESSION_PROPERTIES_SET_IN_UPDATE[msgProp.Property] == true){
+				if eventName.Name == "$session" && U.SESSION_PROPERTIES_SET_IN_UPDATE[msgProp.Property] == true {
 					isUpdateOnlyPropertyInMessageBody = true
 				}
 			}
-			if isUpdateOnlyPropertyInMessageBody{
+			if isUpdateOnlyPropertyInMessageBody {
 				continue
 			}
 		}
@@ -386,7 +387,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 				isPropertyInFilterUpdated := false
 				isUpdateOnlyPropertyInMessageBody := false
 				for _, msgProp := range messageProperties {
-					if (eventName.Name == "$session" && U.SESSION_PROPERTIES_SET_IN_UPDATE[msgProp.Property] == true){
+					if eventName.Name == "$session" && U.SESSION_PROPERTIES_SET_IN_UPDATE[msgProp.Property] == true {
 						isUpdateOnlyPropertyInMessageBody = true
 					}
 				}
@@ -396,7 +397,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 						isPropertyInFilterUpdated = true
 					}
 				}
-				if !isPropertyInFilterUpdated && !isUpdateOnlyPropertyInMessageBody{
+				if !isPropertyInFilterUpdated && !isUpdateOnlyPropertyInMessageBody {
 					continue
 				}
 			}
@@ -581,9 +582,9 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			}
 			propVal, exi := (*userPropMap)[p]
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
-				DisplayName : displayName,
-				PropValue: getDisplayLikePropValue(messageProperty.Type, exi, propVal),
-			} 
+				DisplayName: displayName,
+				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+			}
 
 		} else if messageProperty.Entity == "event" {
 			displayName, exists := displayNamesEP[p]
@@ -592,9 +593,9 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			}
 			propVal, exi := (*eventPropMap)[p]
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
-				DisplayName : displayName,
-				PropValue: getDisplayLikePropValue(messageProperty.Type, exi, propVal),
-			} 
+				DisplayName: displayName,
+				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+			}
 		} else {
 			log.Warn("can not find the message property in user and event prop sets")
 		}
@@ -618,14 +619,58 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 
 		if breakdownProperty.Entity == "user" && uexists {
 			value = uval
-		} else if breakdownProperty.Entity == "event" &&  eexists {
+		} else if breakdownProperty.Entity == "event" && eexists {
 			value = eval
 		} else {
 			log.Warn("can not find the breakdown property in user and event prop sets")
 		}
 		breakdownPropMap[prop] = value
 	}
+
+	projectID := event.ProjectId
+	if C.AllowSyncReferenceFields(projectID) {
+		breakdownPropMap, err = store.transformBreakdownPropertiesToPropertyLabels(projectID, breakdownPropMap)
+		if err != nil {
+			log.WithError(err).Error("Failed to get property labels on GetMessageAndBreakdownPropertiesMap")
+			return msgPropMap, breakdownPropMap, err
+		}
+	}
+
 	return msgPropMap, breakdownPropMap, nil
+}
+
+func (store *MemSQL) transformBreakdownPropertiesToPropertyLabels(projectID int64, breakdownPropertiesMap map[string]interface{}) (map[string]interface{}, error) {
+	if projectID == 0 {
+		return breakdownPropertiesMap, errors.New("Invalid parameters.")
+	}
+
+	newBreakdownPropertiesMap := make(map[string]interface{}, 0)
+	for propertyKey, valueInt := range breakdownPropertiesMap {
+		if !U.IsAllowedCRMPropertyPrefix(propertyKey) {
+			continue
+		}
+
+		source := strings.Split(propertyKey, "_")[0]
+		source = strings.TrimPrefix(source, "$")
+
+		value := U.GetPropertyValueAsString(valueInt)
+
+		displayLabel, errCode, err := store.GetDisplayNameLabel(projectID, source, propertyKey, value)
+		if errCode != http.StatusFound && errCode != http.StatusNotFound {
+			log.WithFields(log.Fields{"project_id": projectID, "source": source,
+				"property_key": propertyKey, "value": value}).WithError(err).Error("Failed to get display name label.")
+			return breakdownPropertiesMap, err
+		}
+
+		if errCode == http.StatusNotFound {
+			newBreakdownPropertiesMap[propertyKey] = valueInt
+			continue
+		}
+
+		newBreakdownPropertiesMap[propertyKey] = displayLabel.Label
+	}
+
+	return newBreakdownPropertiesMap, nil
 }
 
 func getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(projectID int64, dontRepeatAlerts bool,
