@@ -43,6 +43,7 @@ type Model interface {
 	GetPrimaryAgentOfProject(projectId int64) (uuid string, errCode int)
 	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
 	IsSlackIntegratedForProject(projectID int64, agentUUID string) (bool, int)
+	IsTeamsIntegratedForProject(projectID int64, agentUUID string) (bool, int)
 	UpdateLastLoggedOut(agentUUID string, timestamp int64) int
 
 	// analytics

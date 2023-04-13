@@ -15,6 +15,7 @@ type ProjectSettings struct {
 	Settings     model.ProjectSetting `json:"project_settings"`
 	IntCompleted bool                 `json:"int_completed"`
 	IntSlack     bool                 `json:"int_slack"`
+	IntTeams     bool                 `json:"int_teams"`
 }
 
 func GetProjectSettingHandler(c *gin.Context) {
@@ -37,6 +38,12 @@ func GetProjectSettingHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+	isTeamsIntegrated, errCode := store.GetStore().IsTeamsIntegratedForProject(projectId, agentUUID)
+	if errCode != http.StatusOK {
+		logCtx.Error("Get teams integration status failed.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
 
 	settings, errCode := store.GetStore().GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
@@ -52,6 +59,7 @@ func GetProjectSettingHandler(c *gin.Context) {
 		Settings:     *settings,
 		IntCompleted: int_completed,
 		IntSlack:     isSlackIntegrated,
+		IntTeams:     isTeamsIntegrated,
 	}
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings."})

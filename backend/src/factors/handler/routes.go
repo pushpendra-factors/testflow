@@ -51,8 +51,6 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
-	r.GET(routePrefix+"/.well-known/microsoft-identity-association.json", teams.VerifyPublisherDomainTeams)
-
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -311,10 +309,10 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/test_wh", responseWrapper(V1.TestWebhookforEventTriggerAlerts))
 
 	// teams
-	// featuresGatesRouteGroup.POST("/:project_id/teams/auth", mid.SkipDemoProjectWriteAccess(), teams.TeamsAuthRedirectHandler)
-	// featuresGatesRouteGroup.GET("/:project_id/teams/get_teams", mid.SkipDemoProjectWriteAccess(), teams.GetAllTeamsHandler)
-	// featuresGatesRouteGroup.GET("/:project_id/teams/channels", mid.SkipDemoProjectWriteAccess(), teams.GetTeamsChannelsHandler)
-	// featuresGatesRouteGroup.DELETE("/:project_id/teams/delete", mid.SkipDemoProjectWriteAccess(), teams.DeleteTeamsIntegrationHandler)
+	featuresGatesRouteGroup.POST("/:project_id/teams/auth", mid.SkipDemoProjectWriteAccess(), teams.TeamsAuthRedirectHandler)
+	featuresGatesRouteGroup.GET("/:project_id/teams/get_teams", mid.SkipDemoProjectWriteAccess(), teams.GetAllTeamsHandler)
+	featuresGatesRouteGroup.GET("/:project_id/teams/channels", mid.SkipDemoProjectWriteAccess(), teams.GetTeamsChannelsHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/teams/delete", mid.SkipDemoProjectWriteAccess(), teams.DeleteTeamsIntegrationHandler)
 	// Upload
 	featuresGatesRouteGroup.POST("/:project_id/uploadlist", V1.UploadListForFilters)
 
@@ -498,7 +496,7 @@ func InitIntRoutes(r *gin.Engine) {
 
 	intRouteGroup.GET("/slack/callback", slack.SlackCallbackHandler)
 
-	//	intRouteGroup.GET("/teams/callback",teams.TeamsCallbackHandler)
+	intRouteGroup.GET("/teams/callback",teams.TeamsCallbackHandler)
 
 }
 

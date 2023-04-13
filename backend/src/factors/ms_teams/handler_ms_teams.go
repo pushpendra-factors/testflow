@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"time"
+
 	// "errors"
 	C "factors/config"
 	mid "factors/middleware"
@@ -71,7 +73,7 @@ func TeamsAuthRedirectHandler(c *gin.Context) {
 
 }
 func GetTeamsAuthorisationURL(tenantID, clientID, state string) string {
-	url := fmt.Sprintf(`https://login.microsoftonline.com/%s/oauth2/v2.0/authorize?client_id=%s&response_type=code&response_mode=query&scope=offline_access ChannelMessage.Send Channel.ReadBasic.All Team.ReadBasic.All&state=%s`, tenantID, clientID, state)
+	url := fmt.Sprintf(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=%s&response_type=code&response_mode=query&scope=https://graph.microsoft.com/.default offline_access&state=%s&redirect_uri=%s`, clientID, state, getTeamsCallbackURL())
 	return url
 }
 func TeamsCallbackHandler(c *gin.Context) {
@@ -102,11 +104,11 @@ func TeamsCallbackHandler(c *gin.Context) {
 	form.Add("client_id", C.GetTeamsClientID())
 	// form.Add("scope", "ChannelMessage.Send")
 	form.Add("code", code)
-	// form.Add("redirect_uri", "http://localhost/myapp/")
+	form.Add("redirect_uri", getTeamsCallbackURL())
 	form.Add("grant_type", "authorization_code")
 	form.Add("client_secret", C.GetTeamsClientSecret())
 
-	request, err := http.NewRequest("POST", fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", C.GetTeamsTenantID()), strings.NewReader(form.Encode()))
+	request, err := http.NewRequest("POST", fmt.Sprintf("https://login.microsoftonline.com/common/oauth2/v2.0/token"), strings.NewReader(form.Encode()))
 	if err != nil {
 		log.Error("Failed to create request to get auth code")
 		redirectURL := buildRedirectURL("AUTH_ERROR")
@@ -120,15 +122,20 @@ func TeamsCallbackHandler(c *gin.Context) {
 		redirectURL := buildRedirectURL("AUTH_ERROR")
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logCtx.Error("Failed to read response body.")
 		redirectURL := buildRedirectURL("AUTH_ERROR")
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
+	if resp.StatusCode != http.StatusOK {
+		logCtx.Error("Error while requesting auth token ", string(body))
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
+	}
 	// TODO: handle other error gracefully, eg : client secret not matched.
 	var tokens model.TeamsAccessTokens
-
 	err = json.Unmarshal(body, &tokens)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to unmarshal json response")
@@ -147,7 +154,9 @@ func TeamsCallbackHandler(c *gin.Context) {
 	c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	defer resp.Body.Close()
 }
-
+func getTeamsCallbackURL() string {
+	return C.GetProtocol() + C.GetAPIDomain() + "/integrations/teams/callback"
+}
 func buildRedirectURL(errMsg string) string {
 	return C.GetProtocol() + C.GetAPPDomain() + "/settings/integration?error=" + url.QueryEscape(errMsg)
 }
@@ -170,10 +179,6 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 	if err != nil {
 		return err
 	}
-	req, err = http.NewRequest("POST", url, bytes.NewBuffer(jsonMessage))
-	if err != nil {
-		return err
-	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+tokens.AccessToken)
@@ -183,9 +188,37 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 	if err != nil {
 		return err
 	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.WithError(err).Error("Failed to read response body")
+		return err
+	}
 
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		var errorResponse map[string]interface{}
+		json.Unmarshal(body, &errorResponse)
+		errorCode, ok := errorResponse["error"].(map[string]interface{})["code"].(string)
+		if ok && errorCode == "InvalidAuthenticationToken" {
+			_, err := refreshAndGetTeamsAccessToken(projectID, agentUUID)
+			if err != nil {
+				return err
+			}
+			req.Header.Set("Authorization", "Bearer "+tokens.AccessToken)
 
+			client := &http.Client{}
+			resp, err = client.Do(req)
+			if err != nil {
+				return err
+			}
+
+		} else {
+			//
+			log.Error("Error in making request to teams " + errorCode)
+			// add healthcheck/sentry notifcation to re integrate
+			return errors.New("Error in making request to teams " + errorCode)
+		}
+	}
 	if resp.StatusCode != http.StatusCreated {
 		return errors.New(fmt.Sprintf("failed to send Teams message: %v", resp.Status))
 	}
@@ -234,11 +267,38 @@ func getAllTeams(projectID int64, agentUUID string) ([]Team, error) {
 	}
 
 	defer resp.Body.Close()
-
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.WithError(err).Error("Failed to read response body")
+		return nil, err
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to get Teams teams: %v", resp.Status)
 	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		var errorResponse map[string]interface{}
+		json.Unmarshal(body, &errorResponse)
+		errorCode, ok := errorResponse["error"].(map[string]interface{})["code"].(string)
+		if ok && errorCode == "InvalidAuthenticationToken" {
+			_, err := refreshAndGetTeamsAccessToken(projectID, agentUUID)
+			if err != nil {
+				return nil, err
+			}
+			req.Header.Set("Authorization", "Bearer "+tokens.AccessToken)
 
+			client := &http.Client{}
+			resp, err = client.Do(req)
+			if err != nil {
+				return nil, err
+			}
+
+		} else {
+			//
+			log.Error("Error in making request to teams " + errorCode)
+			// add healthcheck/sentry notifcation to re integrate
+			return nil, errors.New("Error in making request to teams " + errorCode)
+		}
+	}
 	var teamList struct {
 		Value []Team `json:"value"`
 	}
@@ -301,7 +361,35 @@ func getTeamsChannels(projectID int64, agentUUID, teamID string) ([]Channel, err
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to get Teams channels: %v", resp.Status)
 	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.WithError(err).Error("Failed to read response body")
+		return nil, err
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		var errorResponse map[string]interface{}
+		json.Unmarshal(body, &errorResponse)
+		errorCode, ok := errorResponse["error"].(map[string]interface{})["code"].(string)
+		if ok && errorCode == "InvalidAuthenticationToken" {
+			_, err := refreshAndGetTeamsAccessToken(projectID, agentUUID)
+			if err != nil {
+				return nil, err
+			}
+			req.Header.Set("Authorization", "Bearer "+tokens.AccessToken)
 
+			client := &http.Client{}
+			resp, err = client.Do(req)
+			if err != nil {
+				return nil, err
+			}
+
+		} else {
+			//
+			log.Error("Error in making request to teams " + errorCode)
+			// add healthcheck/sentry notifcation to re integrate
+			return nil, errors.New("Error in making request to teams " + errorCode)
+		}
+	}
 	var channelList struct {
 		Value []Channel `json:"value"`
 	}
@@ -350,4 +438,45 @@ func VerifyPublisherDomainTeams(c *gin.Context) {
 		},
 	}
 	c.JSON(200, data)
+}
+func refreshAndGetTeamsAccessToken(projectID int64, agentUUID string) (string, error) {
+	accessTokens, err := store.GetStore().GetTeamsAuthTokens(projectID, agentUUID)
+	if err != nil {
+		log.WithError(err).Error("Failed to refresh access token for teams")
+		return "", err
+	}
+	form := url.Values{}
+	form.Add("grant_type", "refresh_token")
+	form.Add("client_id", C.GetTeamsClientID())
+	form.Add("client_secret", C.GetTeamsClientSecret())
+	form.Add("refresh_token", accessTokens.RefreshToken)
+
+	request, err := http.NewRequest("POST", "https://login.microsoftonline.com/common/oauth2/v2.0/token", strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", err
+	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	client := &http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("refresh token request failed with status code %d", resp.StatusCode)
+	}
+
+	var tokens model.TeamsAccessTokens
+	err = json.NewDecoder(resp.Body).Decode(&tokens)
+	if err != nil {
+		return "", err
+	}
+	tokens.LastRefreshedAt = time.Now()
+	err = store.GetStore().SetAuthTokenforTeamsIntegration(projectID, agentUUID, tokens)
+	if err != nil {
+		log.WithError(err).Error("Failed to update access tokens for teams after refresh")
+	}
+	return tokens.AccessToken, nil
 }
