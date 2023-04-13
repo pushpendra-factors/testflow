@@ -336,6 +336,7 @@ const (
 	HealthcheckDashboardCachingPingID            = "72e5eadc-b46e-45ca-ba78-29819532307d"
 	HealthcheckHubspotEnrichPingID               = "6f522e60-6bf8-4aea-99fe-f5a1c68a00e7"
 	HealthcheckOTPHubspotPingID                  = "c937adf4-a54d-4ee8-8ec9-3e5ed8a83e42"
+	HealthcheckOTPSalesforcePingID               = "4ffe2119-64bc-41d4-bc5a-64bea0f121b7"
 	HealthcheckMonitoringJobPingID               = "18db44be-c193-4f11-84e5-5ff144e272e9"
 	HealthcheckSalesforceEnrichPingID            = "e56175aa-3407-4595-bb94-d8325952b224"
 	HealthcheckSalesforceSyncPingID              = "c5434535-ea40-42b8-8e1f-243ccf88fef3"
