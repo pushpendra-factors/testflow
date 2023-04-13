@@ -77,7 +77,7 @@ func filterCheckGeneralV1(rule model.OTPRule, event eventIdToProperties, logCtx 
 	}
 
 	// When neither filters matched nor (filters matched but values are same)
-	logCtx.Warn("Filter check general is failing for offline touch point rule")
+	logCtx.WithField("Rule", rule).WithField("event", event).Warn("Filter check general is failing for offline touch point rule")
 	return false
 }
 

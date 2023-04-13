@@ -594,6 +594,50 @@ func UpdateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[s
 	}
 }
 
+// FilterNoneKeyForKeywordReport removes userSessions with none KeywordName
+func FilterNoneKeyForKeywordReport(sessionMap map[string]map[string]UserSessionData, attributionKey string) (map[string]map[string]UserSessionData, []UserSessionData) {
+
+	if attributionKey != AttributionKeyKeyword {
+		return sessionMap, nil
+	}
+
+	deletedSessions := make([]UserSessionData, 0)
+	// Collect the keys to delete from sessionMap
+	keysToDelete := make([]struct{ userID, attributionID string }, 0)
+	for userID, attributionIdMap := range sessionMap {
+		for attributionID, userSession := range attributionIdMap {
+			if userSession.MarketingInfo.KeywordName == PropertyValueNone {
+				keysToDelete = append(keysToDelete, struct{ userID, attributionID string }{userID, attributionID})
+				deletedSessions = append(deletedSessions, userSession)
+			}
+		}
+	}
+	// Delete the keys outside the loop to avoid modifying the map while iterating over it
+	for _, key := range keysToDelete {
+		userID, attributionID := key.userID, key.attributionID
+		if attributionIDMap, ok := sessionMap[userID]; ok {
+			if _, ok := attributionIDMap[attributionID]; ok {
+				// Create a new map without the deleted key
+				newAttributionIDMap := make(map[string]UserSessionData)
+				for k, v := range attributionIDMap {
+					if k != attributionID {
+						newAttributionIDMap[k] = v
+					}
+				}
+				// Replace the old inner map with the new one
+				sessionMap[userID] = newAttributionIDMap
+			}
+		}
+	}
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"Attribution": "Debug",
+			"Method":          "FilterNoneKeyForKeywordReport",
+			"deletedSessions": deletedSessions}).Info("deletedSessions in FilterNoneKeyForKeywordReport")
+	}
+	return sessionMap, deletedSessions
+
+}
+
 // AddDefaultAnalyzeType adds default Analyze Type as 'users'
 func AddDefaultAnalyzeType(query *AttributionQuery) {
 
@@ -1840,9 +1884,6 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 
 	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes)
 
-	// Additional filtering based on AttributionKey.
-	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
-
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndex(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
@@ -1959,8 +2000,6 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
 	}
-	// Additional filtering based on AttributionKey.
-	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
 
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
@@ -2060,9 +2099,6 @@ func ProcessQueryUserKPI(query *AttributionQuery, attributionData *map[string]*A
 	result.Rows = MergeDataRowsHavingSameKeyKPI(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes, *logCtx)
 
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
-
-	// Additional filtering based on AttributionKey.
-	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
 
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
 

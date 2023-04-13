@@ -185,11 +185,11 @@ if (process.env.NODE_ENV === "development") {
 }
 
 if(factors && factors.TOKEN) {
-    init(factors.TOKEN, factors.INIT_PARAMS, INIT_CALLBACK);
+    init(factors.TOKEN, factors.INIT_PARAMS, factors.INIT_CALLBACK);
 }
 
 window.addEventListener('FACTORS_INIT_EVENT', function(e) {
-    init(factors.TOKEN, factors.INIT_PARAMS, INIT_CALLBACK);
+    init(factors.TOKEN, factors.INIT_PARAMS, factors.INIT_CALLBACK);
 })
 
 

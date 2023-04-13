@@ -153,7 +153,7 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "sessions": userData}).Info("UserKPI Attribution sessions")
 	}
 
-	if C.GetAttributionDebug() == 1 && projectID == 12384898978000017 {
+	if C.GetAttributionDebug() == 1 {
 		log.WithFields(log.Fields{"Attribution": "Debug", "sessions": userData}).Info("Attribution sessions")
 	}
 
@@ -163,9 +163,19 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
 	}
 
-	if C.GetAttributionDebug() == 1 && projectID == 12384898978000017 {
-		log.WithFields(log.Fields{"Attribution": "Debug", "sessions": userData}).Info("Attribution sessions")
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"Attribution": "Debug", "sessions": userData}).Info("Attribution sessions after AppendOTPSessions")
 	}
+
+	userData, _ = model.FilterNoneKeyForKeywordReport(userData, query.AttributionKey)
+
+	if C.GetAttributionDebug() == 1 && query.AttributionKey == model.AttributionKeyKeyword {
+		log.WithFields(log.Fields{"Attribution": "Debug",
+			"Method":   "ExecuteAttributionQueryV0",
+			"sessions": userData}).Info("Attribution sessions after FilterNoneKeyForKeywordReport")
+
+	}
+
 	queryStartTime = time.Now().UTC().Unix()
 
 	attributionData, isCompare, err2 := store.GetAttributionData(query, userData, userInfo, coalUserIdConversionTimestamp, marketingReports, kpiData, logCtx)
