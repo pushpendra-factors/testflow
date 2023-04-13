@@ -764,6 +764,7 @@ type Model interface {
 	RevokeShareableURLsWithProjectID(projectId int64) (int, string)
 
 	CreateSharableURLAudit(sharableURL *model.ShareableURL, agentId string) int
+	ValidateCreateShareableURLRequest(params *model.ShareableURL, projectID int64, agentUUID string) (bool, string)
 
 	//crm
 	CreateCRMUser(crmUser *model.CRMUser) (int, error)
