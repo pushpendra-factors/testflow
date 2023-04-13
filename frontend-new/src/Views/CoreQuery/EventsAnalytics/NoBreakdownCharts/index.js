@@ -20,10 +20,12 @@ import { generateColors } from '../../../../utils/dataFormatter';
 import {
   DASHBOARD_MODAL,
   CHART_TYPE_SPARKLINES,
-  CHART_TYPE_LINECHART
+  CHART_TYPE_LINECHART,
+  CHART_TYPE_METRIC_CHART
 } from '../../../../utils/constants';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import SparkChartWithCount from '../../../../components/SparkChartWithCount/SparkChartWithCount';
+import MetricChart from 'Components/MetricChart/MetricChart';
 
 const NoBreakdownChartsComponent = forwardRef(
   (

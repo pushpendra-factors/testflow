@@ -16,7 +16,10 @@ import {
   getVisibleSeriesData,
   getDefaultSortProp
 } from './utils';
-import { getNewSorterState } from '../../../../utils/dataFormatter';
+import {
+  generateColors,
+  getNewSorterState
+} from '../../../../utils/dataFormatter';
 import { CHART_COLOR_1 } from '../../../../constants/color.constants';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import NoDataChart from '../../../../components/NoDataChart';
@@ -26,7 +29,8 @@ import {
   CHART_TYPE_LINECHART,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
-  CHART_TYPE_PIVOT_CHART
+  CHART_TYPE_PIVOT_CHART,
+  CHART_TYPE_METRIC_CHART
 } from '../../../../utils/constants';
 import LineChart from '../../../../components/HCLineChart';
 import BreakdownTable from './BreakdownTable';
@@ -35,12 +39,15 @@ import StackedAreaChart from '../../../../components/StackedAreaChart';
 import StackedBarChart from '../../../../components/StackedBarChart';
 import PivotTable from '../../../../components/PivotTable';
 import ColumnChart from '../../../../components/ColumnChart/ColumnChart';
+import MetricChart from 'Components/MetricChart/MetricChart';
+import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
 
 const legendsProps = {
   position: 'bottom',
   showAll: true
 };
 
+const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 const BreakdownChartsComponent = forwardRef(
   (
     {
@@ -251,6 +258,24 @@ const BreakdownChartsComponent = forwardRef(
             breakdown={breakdown}
             metrics={kpis}
           />
+        </div>
+      );
+    } else if (chartType === CHART_TYPE_METRIC_CHART) {
+      chart = (
+        <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12'>
+          {aggregateData &&
+            aggregateData.map((eachAggregateData, eachIndex) => {
+              return (
+                <MetricChart
+                  key={eachAggregateData.label}
+                  headerTitle={eachAggregateData.label}
+                  value={eachAggregateData.value}
+                  iconColor={colors[eachIndex]}
+                  compareValue={eachAggregateData.compareValue}
+                  showComparison={comparisonData.data != null}
+                />
+              );
+            })}
         </div>
       );
     }

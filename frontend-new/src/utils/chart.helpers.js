@@ -51,6 +51,10 @@ export const getChartTypeMenuItems = (
         {
           key: CHART_TYPE_STACKED_BAR,
           name: 'Stacked Column'
+        },
+        {
+          key: CHART_TYPE_METRIC_CHART,
+          name: 'Metric'
         }
       ];
       if (
@@ -144,6 +148,10 @@ export const getChartTypeMenuItems = (
       {
         key: CHART_TYPE_LINECHART,
         name: 'Line Chart'
+      },
+      {
+        key: CHART_TYPE_METRIC_CHART,
+        name: 'Metric'
       }
     ];
   }
@@ -165,6 +173,10 @@ export const getChartTypeMenuItems = (
       {
         key: CHART_TYPE_STACKED_BAR,
         name: 'Stacked Column'
+      },
+      {
+        key: CHART_TYPE_METRIC_CHART,
+        name: 'Metric'
       }
     ];
     if (breakdownLength <= 3) {
