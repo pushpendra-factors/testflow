@@ -78,7 +78,6 @@ function PropertyFilter({
     if (filterProps) {
       const list = [];
       filters.forEach((filter, id) => {
-        console.log('filter: ', filter);
         list.push(
           <div key={id} className='m-0 mr-2 mb-2'>
             <FilterWrapper

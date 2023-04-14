@@ -88,29 +88,19 @@ function FilterWrapper({
         newFilterState.props[2] === 'user' ||
         newFilterState.props[2] === 'user_g'
       ) {
-        if (!propertyValuesMap[newFilterState.props[0]]) {
-          getUserPropertyValues(projectID, newFilterState.props[0]);
-        }
+        getUserPropertyValues(projectID, newFilterState.props[0]);
       } else if (newFilterState.props[2] === 'event') {
-        if (!propertyValuesMap[newFilterState.props[0]]) {
-          getEventPropertyValues(
-            projectID,
-            event.label,
-            newFilterState.props[0]
-          );
-        }
+        getEventPropertyValues(projectID, event.label, newFilterState.props[0]);
       } else if (newFilterState.props[2] === 'group') {
-        if (!propertyValuesMap[newFilterState.props[0]]) {
-          let group = groupName;
-          if (groupName === 'All') {
-            if (newFilterState.props[0].includes('hubspot'))
-              group = '$hubspot_company';
-            if (newFilterState.props[0].includes('salesforce'))
-              group = '$salesforce_account';
-            if (newFilterState.props[0].includes('6signal')) group = '$6signal';
-          }
-          getGroupPropertyValues(projectID, group, newFilterState.props[0]);
+        let group = groupName;
+        if (groupName === 'All') {
+          if (newFilterState.props[0].includes('hubspot'))
+            group = '$hubspot_company';
+          if (newFilterState.props[0].includes('salesforce'))
+            group = '$salesforce_account';
+          if (newFilterState.props[0].includes('6signal')) group = '$6signal';
         }
+        getGroupPropertyValues(projectID, group, newFilterState.props[0]);
       }
     }
   }, [newFilterState]);
@@ -129,23 +119,17 @@ function FilterWrapper({
   const setValuesByProps = (props) => {
     if (props[2] === 'categorical') {
       if (props[3] === 'user' || props[3] === 'user_g') {
-        if (!propertyValuesMap[props[1]]) {
-          getUserPropertyValues(projectID, props[1]);
-        }
+        getUserPropertyValues(projectID, props[1]);
       } else if (props[3] === 'event') {
-        if (!propertyValuesMap[props[1]]) {
-          getEventPropertyValues(projectID, event.label, props[1]);
-        }
+        getEventPropertyValues(projectID, event.label, props[1]);
       } else if (props[3] === 'group') {
-        if (!propertyValuesMap[props[1]]) {
-          let group = groupName;
-          if (groupName === 'All') {
-            if (props[1].includes('hubspot')) group = '$hubspot_company';
-            if (props[1].includes('salesforce')) group = '$salesforce_account';
-            if (props[1].includes('6signal')) group = '$6signal';
-          }
-          getGroupPropertyValues(projectID, group, props[1]);
+        let group = groupName;
+        if (groupName === 'All') {
+          if (props[1].includes('hubspot')) group = '$hubspot_company';
+          if (props[1].includes('salesforce')) group = '$salesforce_account';
+          if (props[1].includes('6signal')) group = '$6signal';
         }
+        getGroupPropertyValues(projectID, group, props[1]);
       }
     }
   };
