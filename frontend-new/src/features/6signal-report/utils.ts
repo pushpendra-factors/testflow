@@ -26,33 +26,13 @@ import {
   DATE_RANGE_LABEL_LAST_7_DAYS,
   getRangeByLabel
 } from 'Components/FaDatepicker/utils';
+import momentTimezone from 'moment-timezone';
 
 export const generateFirstAndLastDayOfLastWeeks = (
   n: number = 5
 ): WeekStartEnd[] => {
   const lastWeek = MomentTz().subtract(7, 'd');
-  let dateArray: WeekStartEnd[] = [];
-  const dateValues = [
-    DATE_RANGE_TODAY_LABEL,
-    DATE_RANGE_YESTERDAY_LABEL,
-    DATE_RANGE_LABEL_LAST_7_DAYS
-  ];
-  //generating unsaved report dates
-  dateValues.forEach((dateValue) => {
-    const dateObj = getRangeByLabel(dateValue);
-    const from = dateObj?.startDate ? momentTz(dateObj.startDate) : momentTz();
-    const to = dateObj?.endDate ? momentTz(dateObj.endDate) : momentTz();
-    dateArray.push({
-      from: from.unix(),
-      to: to.unix(),
-      formattedRange:
-        dateValue === DATE_RANGE_TODAY_LABEL
-          ? momentTz().format('MMM DD, YYYY')
-          : `${from.format('MMM D, Y')} - ${to.format('MMM D, Y')}`,
-      formattedRangeOption: dateValue,
-      isSaved: false
-    });
-  });
+  let dateArray: WeekStartEnd[] = [...generateUnsavedReportDateRanges()];
 
   //generating saved report dates
   for (let i = 0; i < n; i++) {
@@ -74,6 +54,61 @@ export const generateFirstAndLastDayOfLastWeeks = (
     });
   }
 
+  return dateArray;
+};
+
+export const generateUnsavedReportDateRanges = (): WeekStartEnd[] => {
+  let dateArray: WeekStartEnd[] = [];
+  const dateValues = [
+    DATE_RANGE_TODAY_LABEL,
+    DATE_RANGE_YESTERDAY_LABEL,
+    DATE_RANGE_LABEL_LAST_7_DAYS
+  ];
+
+  dateValues.forEach((dateValue) => {
+    const dateObj = getRangeByLabel(dateValue);
+    const from = dateObj?.startDate ? momentTz(dateObj.startDate) : momentTz();
+    const to = dateObj?.endDate ? momentTz(dateObj.endDate) : momentTz();
+    dateArray.push({
+      from: from.unix(),
+      to: to.unix(),
+      formattedRange:
+        dateValue === DATE_RANGE_TODAY_LABEL
+          ? momentTz().format('MMM DD, YYYY')
+          : `${from.format('MMM D, Y')} - ${to.format('MMM D, Y')}`,
+      formattedRangeOption: dateValue,
+      isSaved: false
+    });
+  });
+  return dateArray;
+};
+
+export const parseSavedReportDates = (dates: string[]): WeekStartEnd[] => {
+  if (!dates || !dates?.length) return [];
+  let dateArray: WeekStartEnd[] = [];
+  dates.forEach((dateValue: string) => {
+    if (typeof dateValue !== 'string') return;
+    const dateValueArray = dateValue?.trim()?.split('-');
+    if (dateValueArray.length < 2) return;
+    const fromEpoch = Number(dateValueArray[0]);
+    const fromDate = momentTimezone.unix(fromEpoch);
+    const toEpoch = Number(dateValueArray[1]);
+    const toDate = momentTimezone.unix(toEpoch);
+
+    const formattedRangeOption = `${fromDate.format(
+      'MMM Do'
+    )} to ${toDate.format('MMM Do')}`;
+    const formattedRange = `${fromDate.format('MMM D, Y')} - ${toDate.format(
+      'MMM D, Y'
+    )}`;
+    dateArray.unshift({
+      from: fromEpoch,
+      to: toEpoch,
+      formattedRange,
+      formattedRangeOption,
+      isSaved: true
+    });
+  });
   return dateArray;
 };
 

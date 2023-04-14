@@ -40,7 +40,12 @@ function FaPublicHeader(props) {
               onClick={props?.handleShareClick}
               size='large'
               type='primary'
-              icon={<SVG name={'link'} color='#fff' />}
+              icon={
+                <SVG
+                  name={'link'}
+                  color={`${props?.showShareButton ? '#fff' : '#b8b8b8'}`}
+                />
+              }
               disabled={!props?.showShareButton}
             >
               Share

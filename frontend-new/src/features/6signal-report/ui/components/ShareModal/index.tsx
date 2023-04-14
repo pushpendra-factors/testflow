@@ -6,16 +6,31 @@ import { ShareData } from '../../../types';
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import style from './index.module.scss';
 import logger from 'Utils/logger';
-import { shareSixSignalReportToEmails } from '../../../state/services';
+import {
+  shareSixSignalReportToEmails,
+  subscribeToVistorIdentificationEmails
+} from '../../../state/services';
 
 const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
   const [loading, setIsLoading] = useState<boolean>(false);
   const [form] = Form.useForm();
 
-  const handleFinish = async (values: { emails: string[] }) => {
-    const { from, timezone, to, domain, publicUrl } = shareData || {};
+  const handleFinish = async (values: {
+    emails: string[];
+    subscriptionType: string;
+  }) => {
+    const { from, timezone, to, domain, publicUrl, projectId } =
+      shareData || {};
+    const isSubscriptionType = values.subscriptionType === 'subscribe';
     try {
-      if (!from || !to || !publicUrl || !timezone || !values?.emails) {
+      if (
+        !from ||
+        !to ||
+        !publicUrl ||
+        !timezone ||
+        !values?.emails ||
+        !projectId
+      ) {
         notification.error({
           message: 'Fields are missing!',
           duration: 3
@@ -23,16 +38,26 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
         return;
       }
       setIsLoading(true);
-      await shareSixSignalReportToEmails(
-        values.emails,
-        publicUrl,
-        domain || '',
-        from,
-        to,
-        timezone
-      );
+      if (!isSubscriptionType) {
+        await shareSixSignalReportToEmails(
+          values.emails,
+          publicUrl,
+          domain || '',
+          from,
+          to,
+          timezone,
+          projectId
+        );
+      } else {
+        await subscribeToVistorIdentificationEmails(values.emails, projectId);
+      }
+
       notification.success({
-        message: 'Emails successfully sent',
+        message: `${
+          isSubscriptionType
+            ? 'Emails added to subscription list'
+            : 'Emails successfully sent'
+        }`,
         duration: 3
       });
       onCancel();
@@ -104,7 +129,7 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
             initialValues={{ subscriptionType: 'subscribe', emails: [''] }}
             form={form}
           >
-            {/* <div className='mt-4'>
+            <div className='mt-4'>
               <Form.Item
                 name='subscriptionType'
                 rules={[
@@ -120,7 +145,7 @@ const ShareModal = ({ visible, onCancel, shareData }: ShareModalProps) => {
                   <Radio value={'subscribe'}>Subscribe</Radio>
                 </Radio.Group>
               </Form.Item>
-            </div> */}
+            </div>
 
             <div className='mt-4'>
               <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
