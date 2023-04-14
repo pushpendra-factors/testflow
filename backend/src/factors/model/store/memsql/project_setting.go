@@ -241,7 +241,7 @@ func (store *MemSQL) AddSixsignalEmailList(projectId int64, emailIds string) int
 		logCtx.WithError(err).Error("Setting sixsignal_email_list from project_setting failed")
 		return http.StatusInternalServerError
 	}
-	return http.StatusAccepted
+	return http.StatusCreated
 }
 
 func (store *MemSQL) GetIntegrationBitsFromProjectSetting(projectId int64) (string, int) {

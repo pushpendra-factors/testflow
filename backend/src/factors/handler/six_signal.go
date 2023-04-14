@@ -258,19 +258,19 @@ func AddSixSignalEmailIDHandler(c *gin.Context) (interface{}, int, string, bool)
 		"project_id": projectId,
 	})
 
-	var requestPayload []string
+	var requestPayload model.SixSignalEmailAndMessage
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestPayload); err != nil {
 		logCtx.WithError(err).Error("Json decode failed in method AddSixSignalEmailIDHandler.")
 		return nil, http.StatusBadRequest, "Json Decode Failed", true
 	}
-	if len(requestPayload) == 0 {
+	if len(requestPayload.EmailIDs) == 0 {
 		logCtx.Error("No email id present to send mail for SixSignal Report")
 		return nil, http.StatusBadRequest, "No email id provided", true
 	}
 
-	emailIdsToAdd := strings.Join(requestPayload, ",")
+	emailIdsToAdd := strings.Join(requestPayload.EmailIDs, ",")
 
 	emailIds, errCode := store.GetStore().GetSixsignalEmailListFromProjectSetting(projectId)
 	if errCode == http.StatusInternalServerError {
