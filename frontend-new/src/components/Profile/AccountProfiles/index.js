@@ -744,6 +744,7 @@ function AccountProfiles({
     <div className='absolute top-0'>
       {searchDDOpen ? (
         <FaSelect
+          placeholder='Search Accounts'
           multiSelect
           options={
             companyValueOpts?.[accountPayload?.source]
@@ -774,7 +775,7 @@ function AccountProfiles({
           <Input
             size='large'
             value={listSearchItems ? listSearchItems.join(', ') : null}
-            placeholder={'Search reports'}
+            placeholder={'Search Accounts'}
             style={{ width: '240px', 'border-radius': '5px' }}
             prefix={<SVG name='search' size={16} color={'grey'} />}
             onClick={() => setSearchDDOpen(true)}
