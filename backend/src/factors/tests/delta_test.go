@@ -16,7 +16,7 @@ import (
 
 var filePath = "./data/delta_test.txt"
 
-func TestGetCampaignMetricSimple(t *testing.T) {
+func TestGetCampaignMetric(t *testing.T) {
 	// var wpi *D.WithinPeriodInsightsKpi
 	metric := "testMetric"
 
@@ -79,7 +79,7 @@ func TestGetCampaignMetricSimple(t *testing.T) {
 			log.Fatal(err)
 		}
 		scanner := bufio.NewScanner(file)
-		if info, _, err := D.GetCampaignMetricSimple(scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap); err != nil {
+		if info, _, err := D.GetCampaignMetricSimple(scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap, 0, 9999999999); err != nil {
 			log.WithError(err).Error("error GetCampaignMetric for kpi " + metric)
 		} else {
 			assert.Equal(t, globalExpected[i], info.Global)
@@ -97,7 +97,7 @@ func TestGetCampaignMetricSimple(t *testing.T) {
 			log.Fatal(err)
 		}
 		scanner := bufio.NewScanner(file)
-		if info, _, err := D.GetCampaignMetricComplex(scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap); err != nil {
+		if info, _, err := D.GetCampaignMetricComplex(scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap, 0, 9999999999); err != nil {
 			log.WithError(err).Error("error GetCampaignMetric for kpi " + metric)
 		} else {
 			assert.Equal(t, globalExpected[i], info.Global)
