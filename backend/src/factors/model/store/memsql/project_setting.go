@@ -216,7 +216,7 @@ func (store *MemSQL) GetSixsignalEmailListFromProjectSetting(projectId int64) (s
 	}
 
 	var projectSetting model.ProjectSetting
-	if err := db.Where("project_id = ?", projectId).Find(&projectSetting).Error; err != nil {
+	if err := db.Where("project_id = ?", projectId).Select("sixsignal_email_list").Find(&projectSetting).Error; err != nil {
 		logCtx.WithError(err).Error("Getting project_setting failed in GetSixsignalEmailListFromProjectSetting.")
 
 		if gorm.IsRecordNotFoundError(err) {
@@ -241,7 +241,7 @@ func (store *MemSQL) AddSixsignalEmailList(projectId int64, emailIds string) int
 		logCtx.WithError(err).Error("Setting sixsignal_email_list from project_setting failed")
 		return http.StatusInternalServerError
 	}
-	return http.StatusAccepted
+	return http.StatusCreated
 }
 
 func (store *MemSQL) GetIntegrationBitsFromProjectSetting(projectId int64) (string, int) {

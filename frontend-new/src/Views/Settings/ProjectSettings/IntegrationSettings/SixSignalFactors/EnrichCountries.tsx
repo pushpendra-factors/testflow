@@ -191,16 +191,19 @@ const EnrichCountries = ({
         '$country'
       );
       if (res.ok && res?.data) {
-        const countryListWithLabels = res?.data?.map((country: string) => ({
+        const data = res?.data;
+        if (typeof data !== 'object' || !data) return;
+        const countryList = Object.keys(data);
+        const countryListWithLabels = countryList.map((country: string) => ({
           value: country,
-          label: renderOption(country)
+          label: renderOption(data[country])
         }));
         setCountryOptions(countryListWithLabels);
         if (!countriesSet.current) {
-          const firstCountry = res.data[0];
+          const firstCountry = countryList[0];
           if (firstCountry)
             setData([
-              { value: firstCountry, label: renderOption(firstCountry) }
+              { value: firstCountry, label: renderOption(data[firstCountry]) }
             ]);
         }
       }
@@ -239,7 +242,7 @@ const EnrichCountries = ({
             </Radio.Group>
           </div>
           <div className='mt-5'>{data && data?.length > 0 && renderData()}</div>
-          {data.length <= 15 && data.length < countryOptions.length && (
+          {data.length < 50 && data.length < countryOptions.length && (
             <div className='mt-5'>
               <Button
                 type='text'

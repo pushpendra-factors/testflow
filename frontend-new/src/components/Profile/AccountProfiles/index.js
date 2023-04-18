@@ -91,6 +91,7 @@ function AccountProfiles({
     filters: [],
     segment_id: ''
   });
+  const [companyValueOpts, setCompanyValueOpts] = useState({ All: {} });
 
   useEffect(() => {
     fetchGroups(activeProject?.id, true);
@@ -662,20 +663,30 @@ function AccountProfiles({
     $6signal: '$6Signal_name'
   };
 
-  const companyValueOpts = useMemo(() => {
-    const companyValues = { All: [] };
-    Object.entries(groupToCompanyPropMap).forEach(([group, prop]) => {
-      if (groupOpts.find((elem) => elem.group_name === group))
-        fetchGroupPropertyValues(activeProject.id, group, prop)
-          .then((res) => {
-            companyValues[group] = [...res.data];
-            companyValues['All'].push(...res.data);
-          })
-          .catch((err) => {
+  useEffect(() => {
+    const fetchData = async () => {
+      const newCompanyValues = { All: {} };
+      for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
+        if (groupOpts.find((elem) => elem.group_name === group)) {
+          try {
+            const res = await fetchGroupPropertyValues(
+              activeProject.id,
+              group,
+              prop
+            );
+            newCompanyValues[group] = { ...res.data };
+            newCompanyValues['All'] = {
+              ...newCompanyValues['All'],
+              ...res.data
+            };
+          } catch (err) {
             console.log(err);
-          });
-    });
-    return companyValues;
+          }
+        }
+      }
+      setCompanyValueOpts(newCompanyValues);
+    };
+    fetchData();
   }, [activeProject.id, groupOpts]);
 
   const onApplyClick = (val) => {
@@ -733,11 +744,14 @@ function AccountProfiles({
     <div className='absolute top-0'>
       {searchDDOpen ? (
         <FaSelect
+          placeholder='Search Accounts'
           multiSelect
           options={
-            companyValueOpts[accountPayload?.source]?.map((item) => [item]) ||
-            []
+            companyValueOpts?.[accountPayload?.source]
+              ? Object.entries(companyValueOpts[accountPayload?.source])
+              : []
           }
+          displayNames={companyValueOpts?.[accountPayload?.source]}
           applClick={(val) => onApplyClick(val)}
           onClickOutside={() => setSearchDDOpen(false)}
           selectedOpts={listSearchItems}
@@ -761,7 +775,7 @@ function AccountProfiles({
           <Input
             size='large'
             value={listSearchItems ? listSearchItems.join(', ') : null}
-            placeholder={'Search reports'}
+            placeholder={'Search Accounts'}
             style={{ width: '240px', 'border-radius': '5px' }}
             prefix={<SVG name='search' size={16} color={'grey'} />}
             onClick={() => setSearchDDOpen(true)}

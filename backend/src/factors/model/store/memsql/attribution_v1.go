@@ -156,6 +156,19 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 		queryStartTime = time.Now().UTC().Unix()
 	}
 
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"Attribution": "Debug", "sessions": userData}).Info("Attribution sessions after AppendOTPSessions")
+	}
+
+	userData, _ = model.FilterNoneKeyForKeywordReport(userData, query.AttributionKey)
+
+	if C.GetAttributionDebug() == 1 && query.AttributionKey == model.AttributionKeyKeyword {
+		log.WithFields(log.Fields{"Attribution": "Debug",
+			"Method":   "ExecuteAttributionQueryV0",
+			"sessions": userData}).Info("Attribution sessions after FilterNoneKeyForKeywordReport")
+
+	}
+
 	attributionData, isCompare, err2 := store.GetAttributionDataV1(projectID, query, userData, marketingReports, kpiData, logCtx)
 
 	if err2 != nil {

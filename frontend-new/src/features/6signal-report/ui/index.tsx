@@ -10,10 +10,11 @@ import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import QuickFilter from './components/QuickFilter';
 import SideDrawer from './components/SideDrawer';
 import {
-  generateFirstAndLastDayOfLastWeeks,
+  generateUnsavedReportDateRanges,
   getFormattedRange,
   getPublicUrl,
-  parseResultGroupResponse
+  parseResultGroupResponse,
+  parseSavedReportDates
 } from '../utils';
 import FaSelect from 'Components/FaSelect';
 import {
@@ -21,11 +22,13 @@ import {
   WeekStartEnd,
   ShareData,
   ReportApiResponse,
-  ReportApiResponseData
+  ReportApiResponseData,
+  SavedReportDatesApiResponse
 } from '../types';
 import ReportTable from './components/ReportTable';
 import { CHANNEL_QUICK_FILTERS, SHARE_QUERY_PARAMS } from '../const';
 import {
+  getSavedReportDates,
   getSixSignalReportData,
   getSixSignalReportPublicData,
   shareSixSignalReport
@@ -45,7 +48,12 @@ const SixSignalReport = () => {
   const [campaigns, setCampaigns] = useState<string[]>([]);
   const [isCampaignSelectVisible, setIsCampaignSelectVisible] = useState(false);
   const [seletedCampaigns, setSelectedCampaigns] = useState([]);
-  const [dateSelected, setDateSelected] = useState<string>('');
+  const [dateValues, setDateValues] = useState<WeekStartEnd[]>(
+    generateUnsavedReportDateRanges()
+  );
+  const [dateSelected, setDateSelected] = useState<string>(
+    dateValues[0].formattedRange
+  );
   const [isDateSelectionOpen, setIsDateSelectionOpen] =
     useState<boolean>(false);
   const [pageMode, setPageMode] = useState<'in-app' | 'public'>('in-app');
@@ -53,6 +61,7 @@ const SixSignalReport = () => {
     useState<boolean>(false);
   const [loadingShareData, setLoadingShareData] = useState<boolean>(false);
   const [shareData, setShareData] = useState<ShareData | null>(null);
+
   const { isLoggedIn } = useAgentInfo();
   const {
     active_project,
@@ -79,8 +88,6 @@ const SixSignalReport = () => {
   const hideDrawer = () => {
     setDrawerVisible(false);
   };
-
-  const dateValues = useMemo(() => generateFirstAndLastDayOfLastWeeks(5), []);
 
   const dispatch = useDispatch();
 
@@ -150,7 +157,8 @@ const SixSignalReport = () => {
           from: dateObj.from,
           to: dateObj.to,
           timezone: active_project?.time_zone || 'Asia/Kolkata',
-          domain: active_project?.name
+          domain: active_project?.name,
+          projectId: active_project.id
         });
         setShareModalVisibility(true);
       } else {
@@ -192,6 +200,27 @@ const SixSignalReport = () => {
     };
   }, [dispatch]);
 
+  //Effect for fetching dates
+  useEffect(() => {
+    if (!active_project?.id) return;
+    const getSavedReports = async () => {
+      try {
+        const res = (await getSavedReportDates(
+          active_project.id
+        )) as SavedReportDatesApiResponse;
+        if (res?.data) {
+          setDateValues([
+            ...generateUnsavedReportDateRanges(),
+            ...parseSavedReportDates(res.data)
+          ]);
+        }
+      } catch (error) {
+        logger.error('Error in fetching dates', error);
+      }
+    };
+    getSavedReports();
+  }, [active_project?.id]);
+
   //Effect for fetching the data when relevant query params are available
   useEffect(() => {
     const fetchPublicData = async () => {
@@ -232,13 +261,6 @@ const SixSignalReport = () => {
       history.push('/login');
     }
   }, [paramQueryId, paramProjectId, isLoggedIn]);
-
-  //Effect for selecting the selected date as default date
-  useEffect(() => {
-    if (isLoggedIn && isSixSignalActivated && dateValues && !paramQueryId) {
-      setDateSelected(dateValues[0].formattedRange);
-    }
-  }, [isLoggedIn, dateValues, isSixSignalActivated, paramQueryId]);
 
   //Effect for getting data from API when date is selected or changed
   useEffect(() => {

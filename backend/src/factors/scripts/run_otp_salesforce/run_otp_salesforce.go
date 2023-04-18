@@ -44,37 +44,74 @@ func (es *EnrichStatus) AddEnrichStatus(status []IntSalesforce.Status, hasFailur
 	}
 }
 
-func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProject int, enrichStatus *EnrichStatus, salesforceProjectSettings *model.SalesforceProjectSettings) {
-	defer wg.Done()
+func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]interface{}, bool) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "worder_index": workerIndex})
-	logCtx.Info("OTP Enrichment started for given project.")
+	projectIDList := configs["project_ids"].(string)
+	disabledProjectIDList := configs["disabled_project_ids"].(string)
+	defaultHealthcheckPingID := configs["health_check_ping_id"].(string)
+	overrideHealthcheckPingID := configs["override_healthcheck_ping_id"].(string)
+	numProjectRoutines := configs["num_project_routines"].(int)
 
-	//accessToken, instanceURL, err := IntSalesforce.GetAccessToken(salesforceProjectSettings, H.GetSalesforceRedirectURL())
-	//if err != nil || accessToken == "" || instanceURL == "" {
-	//	log.WithField("project_id", salesforceProjectSettings.ProjectID).Errorf("Failed to get salesforce access token: %s", err)
-	//	enrichStatus.AddEnrichStatus([]IntSalesforce.Status{{ProjectID: projectID, Message: err.Error()}}, false)
-	//	return
-	//}
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
-	status, hasFailure := IntSalesforce.EnrichV1(projectID)
-	enrichStatus.AddEnrichStatus(status, hasFailure)
-	logCtx.Info("Processing completed for given project.")
+	SalesforceEnabledProjectSettings, errCode := store.GetStore().GetAllSalesforceProjectSettings()
+	if errCode != http.StatusFound {
+		log.Panic("No projects enabled Salesforce integration.")
+	}
+
+	anyFailure := false
+	panicError := true
+	jobStatus := make(map[string]interface{})
+	defer func() {
+		if panicError || anyFailure {
+			C.PingHealthcheckForFailure(healthcheckPingID, jobStatus)
+		} else {
+			C.PingHealthcheckForSuccess(healthcheckPingID, jobStatus)
+		}
+	}()
+	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
+		projectIDList, disabledProjectIDList)
+	if !allProjects {
+		log.WithField("projects", allowedProjects).Info("Running only for the given list of projects.")
+	}
+	if len(disabledProjects) > 0 {
+		log.WithField("excluded_projects", disabledProjectIDList).Info("Running with exclusion of projects.")
+	}
+	projectIDs := make([]int64, 0, 0)
+	for _, settings := range SalesforceEnabledProjectSettings {
+		if exists := disabledProjects[settings.ProjectID]; exists {
+			continue
+		}
+		if !allProjects {
+			if _, exists := allowedProjects[settings.ProjectID]; !exists {
+				continue
+			}
+		}
+		projectIDs = append(projectIDs, settings.ProjectID)
+		log.WithFields(log.Fields{"projects": projectIDs}).Info("all project list")
+	}
+	// Runs enrichment for list of project_ids as batch using go routines.
+	batches := U.GetInt64ListAsBatch(projectIDs, numProjectRoutines)
+	log.WithFields(log.Fields{"project_batches": batches}).Info("Running for batches.")
+
+	for bi := range batches {
+		batch := batches[bi]
+		var wg sync.WaitGroup
+		for pi := range batch {
+
+			wg.Add(1)
+			go IntSalesforce.WorkerForSfOtp(batch[pi], &wg)
+		}
+		wg.Wait()
+	}
+
+	panicError = false
+	return jobStatus, true
+
 }
 
 func allowProjectByProjectIDList(projectID int64, allProjects bool, allowedProjects, disabledProjects map[int64]bool) bool {
 	return !disabledProjects[projectID] && (allProjects || allowedProjects[projectID])
-}
-
-func overrideLastSyncTimestampIfRequired(overrideSyncTimestamp int64, syncInfo map[string]int64) map[string]int64 {
-	if overrideSyncTimestamp > 0 {
-
-		for typ := range syncInfo {
-			syncInfo[typ] = overrideSyncTimestamp
-		}
-	}
-
-	return syncInfo
 }
 
 func main() {
@@ -135,8 +172,8 @@ func main() {
 
 	flag.Parse()
 	defaultAppName := "otp_salesforce_job"
-	//todo parthG change healthcheckpingid
-	defaultHealthcheckPingID := C.HealthcheckSalesforceEnrichPingID
+
+	defaultHealthcheckPingID := C.HealthcheckOTPSalesforcePingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	appName := C.GetAppName(defaultAppName, *overrideAppName)
 
@@ -214,11 +251,6 @@ func main() {
 
 	db := C.GetServices().Db
 	defer db.Close()
-	//
-	//syncInfo, status := store.GetStore().GetSalesforceSyncInfo()
-	//if status != http.StatusFound {
-	//	log.Panicf("Failed to get salesforce syncinfo: %d", status)
-	//}
 
 	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
 		*projectIDList, *disabledProjectIDList)
@@ -226,42 +258,7 @@ func main() {
 		log.WithField("projects", allowedProjects).Info("Running only for the given list of projects.")
 	}
 
-	//var syncStatus salesforceSyncStatus
-	//var propertyDetailSyncStatus []IntSalesforce.Status
 	anyFailure := false
-
-	//if !*enrichOnly {
-	//	for pid, projectSettings := range syncInfo.ProjectSettings {
-	//		if !allowProjectByProjectIDList(pid, allProjects, allowedProjects, disabledProjects) {
-	//			continue
-	//		}
-	//
-	//		accessToken, instanceURL, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
-	//		if err != nil {
-	//			log.WithField("project_id", pid).Errorf("Failed to get salesforce access token: %s", err)
-	//			continue
-	//		}
-	//
-	//		syncInfo.LastSyncInfo[pid] = overrideLastSyncTimestampIfRequired(*overrideLastSyncTimestamp, syncInfo.LastSyncInfo[pid])
-	//
-	//		objectStatus := IntSalesforce.SyncDocuments(projectSettings, syncInfo.LastSyncInfo[pid], accessToken)
-	//		for i := range objectStatus {
-	//			if objectStatus[i].Status != U.CRM_SYNC_STATUS_SUCCESS {
-	//				syncStatus.Failures = append(syncStatus.Failures, objectStatus[i])
-	//				anyFailure = true
-	//			} else {
-	//				syncStatus.Success = append(syncStatus.Success, objectStatus[i])
-	//			}
-	//		}
-	//
-	//		failure, propertyDetailSync := IntSalesforce.SyncDatetimeAndNumericalProperties(pid, accessToken, instanceURL)
-	//		if failure {
-	//			anyFailure = true
-	//		}
-	//
-	//		propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailSync...)
-	//	}
-	//}
 
 	var jobStatus salesforceJobStatus
 
@@ -292,36 +289,27 @@ func main() {
 		allowedProjectIDs = append(allowedProjectIDs, salesforceEnabledProjects[i].ProjectID)
 	}
 
-	// Runs enrichment for list of project_ids as batch using go routines.
-	batches := U.GetInt64ListAsBatch(allowedProjectIDs, *numProjectRoutines)
-	enrichStatus := EnrichStatus{}
-	workerIndex := 0
-	log.Info("project batches: %v", batches)
-	for bi := range batches {
-		batch := batches[bi]
+	configsEnrich := make(map[string]interface{})
+	configsEnrich["project_ids"] = *projectIDList
+	configsEnrich["disabled_project_ids"] = *disabledProjectIDList
+	configsEnrich["num_unique_doc_routines"] = *numDocRoutines
+	configsEnrich["health_check_ping_id"] = defaultHealthcheckPingID
+	configsEnrich["override_healthcheck_ping_id"] = *overrideHealthcheckPingID
+	configsEnrich["num_project_routines"] = *numProjectRoutines
 
-		var wg sync.WaitGroup
-		for pi := range batch {
-			wg.Add(1)
-			go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus, allowedSalesforceProjectSettings[batch[pi]])
-			workerIndex++
-		}
-		wg.Wait()
-	}
+	configsDistributer := make(map[string]interface{})
+	configsDistributer["health_check_ping_id"] = ""
 
-	jobStatus.EnrichStatus = enrichStatus.Status
-	if enrichStatus.HasFailure {
-		anyFailure = true
-	}
+	var notifyMessage string
 
-	//jobStatus.SyncStatus = syncStatus
-	//jobStatus.PropertyDetailStatus = propertyDetailSyncStatus
+	RunOTPSalesForceForProjects(configsEnrich)
+
+	notifyMessage = fmt.Sprintf("enrichment for otp hubspot successful for %s - %s projects.", *projectIDList, *disabledProjectIDList)
 
 	if anyFailure {
 		C.PingHealthcheckForFailure(healthcheckPingID, jobStatus)
 		return
 	}
 
-	C.PingHealthcheckForSuccess(healthcheckPingID, jobStatus)
-	log.WithFields(log.Fields{"jobStatus": jobStatus}).Info("Job completed.")
+	C.PingHealthcheckForSuccess(healthcheckPingID, notifyMessage)
 }

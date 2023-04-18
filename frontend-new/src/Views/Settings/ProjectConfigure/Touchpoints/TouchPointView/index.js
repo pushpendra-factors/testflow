@@ -4,12 +4,14 @@ import { bindActionCreators } from 'redux';
 import { Text, SVG } from 'factorsComponents';
 import { Row, Col, Button, Radio, Input, Select, Tooltip } from 'antd';
 
-import { getEventProperties } from 'Reducers/coreQuery/middleware';
+import {
+  getEventProperties,
+  getEventPropertyValues
+} from 'Reducers/coreQuery/middleware';
 
 import FaFilterSelect from 'Components/FaFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 
-import { fetchEventPropertyValues } from 'Reducers/coreQuery/services';
 import FaSelect from '../../../../../components/FaSelect';
 
 import {
@@ -49,7 +51,9 @@ const TouchpointView = ({
   userProperties,
   rule,
   onCancel,
-  onSave
+  onSave,
+  getEventPropertyValues,
+  propertyValuesMap
 }) => {
   const { eventPropNames } = useSelector((state) => state.coreQuery);
 
@@ -203,7 +207,7 @@ const TouchpointView = ({
         const eventToCall = getEventToCall();
         const prop = filt.props;
         const propToCall = prop.length > 3 ? prop[1] : prop[0];
-        return await fetchEventPropertyValues(
+        return await getEventPropertyValues(
           activeProject.id,
           eventToCall,
           propToCall
@@ -225,15 +229,7 @@ const TouchpointView = ({
     if (dropDownValues[propToCall]?.length >= 1) {
       return null;
     }
-    fetchEventPropertyValues(activeProject.id, eventToCall, propToCall)
-      .then((res) => {
-        setPropData(propToCall, res.data);
-      })
-      .catch((err) => {
-        const ddValues = Object.assign({}, dropDownValues);
-        ddValues[propToCall] = ['$none'];
-        setDropDownValues(ddValues);
-      });
+    getEventPropertyValues(activeProject.id, eventToCall, propToCall);
   };
 
   const getEventToCall = () => {
@@ -336,7 +332,7 @@ const TouchpointView = ({
                 filter={filter}
                 propOpts={filterDropDownOptions.props}
                 operatorOpts={filterDropDownOptions.operator}
-                valueOpts={dropDownValues}
+                valueOpts={propertyValuesMap}
                 applyFilter={(filt) => applyFilter(filt, index)}
                 setValuesByProps={setValuesByProps}
               ></FaFilterSelect>
@@ -362,7 +358,7 @@ const TouchpointView = ({
               <FaFilterSelect
                 propOpts={filterDropDownOptions.props}
                 operatorOpts={filterDropDownOptions.operator}
-                valueOpts={dropDownValues}
+                valueOpts={propertyValuesMap}
                 applyFilter={(filt) => applyFilter(filt, -1)}
                 setValuesByProps={setValuesByProps}
               ></FaFilterSelect>
@@ -583,7 +579,7 @@ const TouchpointView = ({
     const propMap = Object.assign({}, propertyMap);
     propMap['$type']['va'] = val[0].toLowerCase();
     setPropertyMap(propMap);
-    setTypeSelectorOpen(false);
+    // setTypeSelectorOpen(false);
   };
 
   const setPropVal = (val, key) => {
@@ -936,12 +932,14 @@ const TouchpointView = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   eventProperties: state.coreQuery.eventProperties,
-  userProperties: state.coreQuery.userProperties
+  userProperties: state.coreQuery.userProperties,
+  propertyValuesMap: state.coreQuery.propertyValuesMap
 });
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      getEventProperties
+      getEventProperties,
+      getEventPropertyValues
     },
     dispatch
   );

@@ -105,6 +105,7 @@ function UserProfiles({
     source: 'web',
     filters: []
   });
+  const [userValueOpts, setUserValueOpts] = useState({});
 
   useEffect(() => {
     if (currentProjectSettings?.timelines_config) {
@@ -658,16 +659,15 @@ function UserProfiles({
     </Button>
   );
 
-  const userValueOpts = useMemo(() => {
-    const userValues = [];
+  useEffect(() => {
     fetchUserPropertyValues(activeProject.id, '$user_id')
       .then((res) => {
-        userValues.push(...res.data);
+        setUserValueOpts({ ...res.data });
       })
       .catch((err) => {
         console.log(err);
+        setUserValueOpts({});
       });
-    return userValues;
   }, [activeProject.id]);
 
   const onApplyClick = (val) => {
@@ -688,7 +688,8 @@ function UserProfiles({
       {searchDDOpen ? (
         <FaSelect
           multiSelect
-          options={userValueOpts.map((item) => [item])}
+          options={userValueOpts ? Object.entries(userValueOpts) : []}
+          displayNames={userValueOpts}
           applClick={(val) => onApplyClick(val)}
           onClickOutside={() => setSearchDDOpen(false)}
           selectedOpts={listSearchItems}

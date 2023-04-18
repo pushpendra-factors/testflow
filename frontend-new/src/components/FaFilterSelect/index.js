@@ -630,7 +630,7 @@ const FaFilterSelect = ({
           }
           options={
             valueOpts?.[propState?.name]
-              ? Object.entries(valueOpts[propState.name])
+              ? Object.keys(valueOpts[propState.name]).map((value)=>[value])
               : []
           }
           displayNames={valueDisplayNames}

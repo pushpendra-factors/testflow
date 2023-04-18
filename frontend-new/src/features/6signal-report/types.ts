@@ -88,4 +88,9 @@ export interface ShareData extends ShareApiData {
   to?: number;
   timezone?: string;
   domain?: string;
+  projectId: string;
+}
+
+export interface SavedReportDatesApiResponse extends APIResponse {
+  data: string[];
 }
