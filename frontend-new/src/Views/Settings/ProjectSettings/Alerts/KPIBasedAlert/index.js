@@ -38,6 +38,7 @@ import {
 import SelectChannels from '../SelectChannels';
 import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
+import { featureLock } from '../../../../../routes/feature';
 
 const { Option } = Select;
 
@@ -179,6 +180,14 @@ const KPIBasedAlert = ({
       }
     }
 
+    if (viewAlertDetails?.alert_configuration?.teams_channel_config?.teams_channel_list) {
+      setTeamsViewSelectedChannels(viewAlertDetails?.alert_configuration?.teams_channel_config?.teams_channel_list);
+      if (alertState.state === 'edit') {
+        setTeamsSaveSelectedChannel(viewAlertDetails?.alert_configuration?.teams_channel_config?.teams_channel_list);
+        setTeamsSelectedChannel(viewAlertDetails?.alert_configuration?.teams_channel_config?.teams_channel_list);
+      }
+    }
+
     if (alertState?.state === 'edit') {
       let queryData = [];
       queryData.push({
@@ -200,6 +209,7 @@ const KPIBasedAlert = ({
       setValue(viewAlertDetails?.alert_description?.value);
       setEmailEnabled(viewAlertDetails?.alert_configuration?.email_enabled);
       setSlackEnabled(viewAlertDetails?.alert_configuration?.slack_enabled);
+      setTeamsEnabled(viewAlertDetails?.alert_configuration?.teams_enabled);
     }
   }, [alertState?.state, viewAlertDetails]);
 
@@ -314,8 +324,8 @@ const KPIBasedAlert = ({
     const size = arr?.length;
     if (
       queries.length > 0 &&
-      (emailEnabled || slackEnabled) &&
-      (emails.length > 0 || size > 0)
+      (emailEnabled || slackEnabled || teamsEnabled) &&
+      (emails.length > 0 || size > 0 || teamsSaveSelectedChannel.length > 0)
     ) {
       let payload = {
         alert_name: data?.alert_name,
@@ -345,7 +355,13 @@ const KPIBasedAlert = ({
           email_enabled: emailEnabled,
           slack_enabled: slackEnabled,
           emails: emails,
-          slack_channels_and_user_groups: slackChannels
+          slack_channels_and_user_groups: slackChannels,
+          teams_enabled: teamsEnabled,
+          teams_channel_config: {
+              teams_id: selectedWorkspace?.id,
+              teams_name: selectedWorkspace?.name,
+              teams_channel_list: teamsSaveSelectedChannel
+          }
         }
       };
 
@@ -395,7 +411,7 @@ const KPIBasedAlert = ({
         });
       }
 
-      if (!emailEnabled && !slackEnabled) {
+      if (!emailEnabled && !slackEnabled && !teamsEnabled) {
         notification.error({
           message: 'Error',
           description:
@@ -414,6 +430,13 @@ const KPIBasedAlert = ({
         notification.error({
           message: 'Error',
           description: 'Empty Email List'
+        });
+      }
+
+      if (teamsEnabled && teamsSaveSelectedChannel.length === 0) {
+        notification.error({
+          message: 'Error',
+          description: 'Empty Teams Channel List'
         });
       }
     }
@@ -532,12 +555,19 @@ const KPIBasedAlert = ({
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
-    if (projectSettings?.int_teams) {
+    if (projectSettings?.int_teams && teamsEnabled) {
       fetchTeamsWorkspace(activeProject.id)
         .then((res) => {
           if (res.ok) {
-            setTeamsWorkspaceOpts(res?.data?.value);
-          }
+            let tempArr = [];
+            for (let i = 0; i < res?.data?.value?.length; i++) {
+              tempArr.push({
+                label: res?.data?.value[i]?.displayName,
+                value: slack[i]?.id
+              });
+            }
+            setTeamsWorkspaceOpts(tempArr);
+            }
         })
         .catch((err) => {
           message.error(err?.data?.error);
@@ -1130,7 +1160,7 @@ const KPIBasedAlert = ({
               </Row>
             )}
           </div>
-
+          {featureLock(agent_details?.email) &&
           <div className='border rounded mt-3'>
             <div style={{ backgroundColor: '#fafafa' }}>
               <Row className={'ml-2'}>
@@ -1272,7 +1302,7 @@ const KPIBasedAlert = ({
                 )}
               </div>
             )}
-          </div>
+          </div>}
         </Form>
       </>
     );
@@ -1803,7 +1833,7 @@ const KPIBasedAlert = ({
               </Row>
             )}
           </div>
-
+          {featureLock(agent_details?.email) &&
           <div className='border rounded mt-3'>
             <div style={{ backgroundColor: '#fafafa' }}>
               <Row className={'ml-2'}>
@@ -1945,7 +1975,7 @@ const KPIBasedAlert = ({
                 )}
               </div>
             )}
-          </div>
+          </div>}
         </Form>
       </>
     );
@@ -2309,7 +2339,7 @@ const KPIBasedAlert = ({
             <Col span={8}>{emailView()}</Col>
           </Row>
         </div>
-
+        {featureLock(agent_details?.email) &&
         <div className='border rounded mt-3'>
           <div style={{ backgroundColor: '#fafafa' }}>
             <Row className={'ml-2'}>
@@ -2405,7 +2435,7 @@ const KPIBasedAlert = ({
                 </Row>
               </div>
             )}
-        </div>
+        </div>}
 
         <Row className={'mt-2'}>
           <Col span={24}>
@@ -2539,8 +2569,8 @@ const KPIBasedAlert = ({
                 options={teamsWorkspaceOpts}
                 placeholder='Select Workspace'
                 showSearch
-                onChange={(value) => {
-                  setSelectedWorkspace(value);
+                onChange={(value, op) => {
+                  setSelectedWorkspace({name: op?.label, id: value});
                 }}
               ></Select>
             </Col>
