@@ -61,10 +61,10 @@ type UserActivity struct {
 }
 
 type TimelinePayload struct {
-	Source       string          `json:"source"`
-	SegmentId    string          `json:"segment_id"`
-	Filters      []QueryProperty `json:"filters"`
-	SearchFilter []QueryProperty `json:"search_filter"`
+	Source       string                     `json:"source"`
+	SegmentId    string                     `json:"segment_id"`
+	Filters      map[string][]QueryProperty `json:"filters"`
+	SearchFilter map[string][]QueryProperty `json:"search_filter"`
 }
 
 type AccountDetails struct {
@@ -91,6 +91,14 @@ const PROFILE_TYPE_ACCOUNT = "account"
 // Profile type for Segment Events
 const USER_PROFILE_CALLER = "user_profiles"
 const ACCOUNT_PROFILE_CALLER = "account_profiles"
+
+// Source number to source name map
+var SourceGroupUser = map[int]string{
+	UserSourceSalesforce: U.GROUP_NAME_SALESFORCE_ACCOUNT,
+	UserSourceHubspot:    U.GROUP_NAME_HUBSPOT_COMPANY,
+	UserSourceSixSignal:  U.GROUP_NAME_SIX_SIGNAL,
+	UserSourceDomains:    U.GROUP_NAME_DOMAINS,
+}
 
 // Hover Events Property Map
 var HOVER_EVENTS_NAME_PROPERTY_MAP = map[string][]string{

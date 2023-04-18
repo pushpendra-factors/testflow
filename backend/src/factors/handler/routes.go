@@ -281,7 +281,7 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.POST("/:project_id/v1/profiles/users", responseWrapper(V1.GetProfileUsersHandler))
 	featuresGatesRouteGroup.GET("/:project_id/v1/profiles/users/:id", responseWrapper(V1.GetProfileUserDetailsHandler))
 	featuresGatesRouteGroup.POST("/:project_id/v1/profiles/accounts", responseWrapper(V1.GetProfileAccountsHandler))
-	featuresGatesRouteGroup.GET("/:project_id/v1/profiles/accounts/:id", responseWrapper(V1.GetProfileAccountDetailsHandler))
+	featuresGatesRouteGroup.GET("/:project_id/v1/profiles/accounts/:group/:id", responseWrapper(V1.GetProfileAccountDetailsHandler))
 	featuresGatesRouteGroup.POST("/:project_id/segments", CreateSegmentHandler)
 	featuresGatesRouteGroup.GET("/:project_id/segments", responseWrapper(GetSegmentsHandler))
 	featuresGatesRouteGroup.GET("/:project_id/segments/:id", responseWrapper(GetSegmentByIdHandler))

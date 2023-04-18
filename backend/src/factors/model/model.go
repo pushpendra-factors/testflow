@@ -809,9 +809,14 @@ type Model interface {
 	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int)
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
-	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
+	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int)
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 	GetAssociatedGroup(projectID int64, userID string, groupName string) (string, error)
+	GetGroupNameIDMap(projectID int64) (map[string]int, int)
+	GetAccountsAssociatedToDomain(projectID int64, id string, domainGroupId int) ([]model.User, int)
+	GetSourceStringForAccountsV2(projectID int64, source string) (string, int, int)
+	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (string, map[string]interface{}, int)
+	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, int)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)

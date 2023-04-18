@@ -269,6 +269,7 @@ type Configuration struct {
 	BlockedEmailList                                   []string
 	BlockedIPList                                      []string
 	BlockedEmailDomainList                             []string
+	AllAccountsProjectId                               string
 	DBMaxAllowedPacket                                 int64
 	AllowIdentificationOverwriteUsingSourceByProjectID string
 	AllowHubspotPastEventsEnrichmentByProjectID        string
@@ -2079,6 +2080,15 @@ func IsIPBlockingFeatureEnabled(projectID int64) bool {
 		}
 	}
 
+	return false
+}
+
+// IsDomainEnabled - Checks if $domain is enabled for given project_id in all accounts
+func IsDomainEnabled(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllAccountsProjectId, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
 	return false
 }
 
