@@ -556,7 +556,7 @@ func (store *MemSQL) GetGroupsForUserTimeline(projectID int64, userDetails model
 			continue
 		}
 
-		groupInfo := model.GroupsInfo{GroupName: groupsMap[i]}
+		groupInfo := model.GroupsInfo{GroupName: U.STANDARD_GROUP_DISPLAY_NAMES[groupsMap[i]]}
 
 		userIDField := reflect.ValueOf(userDetails).FieldByName(fmt.Sprintf("Group%dUserID", i)) // Get the group_x_user_id field for the group
 		if userIDField.String() != "" {

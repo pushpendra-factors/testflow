@@ -152,17 +152,8 @@ function EventGroupBlock({
 
   const getIcon = (groupByEvent) => {
     const { property, prop_category } = groupByEvent || {};
-
     if (!property) return null;
-
-    const iconName =
-      prop_category === 'group' ||
-      property.startsWith('$salesforce') ||
-      property.startsWith('$hubspot') ||
-      property.startsWith('$6Signal')
-        ? 'profile'
-        : prop_category;
-
+    const iconName = prop_category === 'group' ? 'user' : prop_category;
     return <SVG name={iconName} size={16} color={'purple'} />;
   };
 

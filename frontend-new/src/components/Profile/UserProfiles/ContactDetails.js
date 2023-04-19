@@ -363,11 +363,11 @@ function ContactDetails({
           </Text>
           {userDetails?.data?.group_infos?.map((group) => {
             return (
-              <div className='flex flex-col items-start'>
-                <Text type='title' level={7} extraClass='m-0 mb-2'>
+              <div className='flex flex-col items-start mb-2'>
+                <Text type='title' level={7} extraClass='m-0'>
                   {group?.group_name}
                 </Text>
-                <Text type='title' level={7} extraClass='m-0 mb-2'>
+                <Text type='title' level={7} extraClass='m-0' color='grey'>
                   {group?.associated_group || '-'}
                 </Text>
               </div>

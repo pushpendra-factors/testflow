@@ -99,7 +99,7 @@ function GroupSelect2({
       return 'leadSquared';
     }
     if (checkIcon?.includes('group')) {
-      return 'profile';
+      return 'user';
     }
     return icon;
   };
