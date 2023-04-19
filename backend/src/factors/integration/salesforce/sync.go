@@ -1067,6 +1067,161 @@ func syncActivities(ps *model.SalesforceProjectSettings, accessToken, objectName
 	return nil, 0, 0, 0, errors.New("Invalid docType in syncActivities.")
 }
 
+type PicklistValue struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
+type PropertyReferenceField struct {
+	Name             string          `json:"name"`
+	Label            string          `json:"label"`
+	PicklistValues   []PicklistValue `json:"picklistValues"`
+	RelationshipName string          `json:"relationshipName"`
+}
+
+func SyncPropertiesPicklistValues(projectID int64, propertiesMetaMap map[string][]PropertyReferenceField) bool {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	failures := false
+	for docType, propertiesMeta := range propertiesMetaMap {
+		for _, property := range propertiesMeta {
+			for i := range property.PicklistValues {
+				if property.PicklistValues[i].Value == "" || property.PicklistValues[i].Label == "" {
+					continue
+				}
+
+				propertyKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, docType, property.Name)
+				status := store.GetStore().CreateOrUpdateDisplayNameLabel(projectID, model.SmartCRMEventSourceSalesforce, propertyKey, property.PicklistValues[i].Value, property.PicklistValues[i].Label)
+				if status == http.StatusBadRequest || status == http.StatusInternalServerError {
+					logCtx.WithFields(log.Fields{"doc_type": docType, "key": propertyKey, "value": property.PicklistValues[i].Value, "label": property.PicklistValues[i].Label}).
+						Error("Failed to create or update display name label from reference field")
+					failures = true
+					continue
+				}
+			}
+		}
+	}
+
+	return failures
+}
+
+func SyncUserReferenceFields(projectID int64, propertiesMetaMap map[string][]PropertyReferenceField) bool {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	failures := false
+
+	userRecords, errCode := store.GetStore().GetSalesforceDocumentsByTypeForSync(projectID, model.SalesforceDocumentTypeUser, 0, 0)
+	if errCode != http.StatusNotFound && errCode != http.StatusFound {
+		logCtx.WithField("doc_type", model.SalesforceDocumentTypeUser).Error("Failed to get salesforce user document for sync.")
+		return true
+	} else if errCode == http.StatusNotFound {
+		logCtx.WithField("doc_type", model.SalesforceDocumentTypeUser).Warning("No salesforce user document available for sync.")
+		return false
+	}
+
+	for _, document := range userRecords {
+		for docType, propertiesMeta := range propertiesMetaMap {
+			for _, property := range propertiesMeta {
+				value, err := U.DecodePostgresJsonb(document.Value)
+				if err != nil {
+					logCtx.WithFields(log.Fields{"doc_type": docType, "user_doc_id": document.ID, "timestamp": document.Timestamp}).
+						WithError(err).Error("Error occured during unmarshal of salesforce user document")
+					failures = true
+					continue
+				}
+
+				propertyKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, docType, property.Name)
+				ownerId := U.GetPropertyValueAsString((*value)["OwnerId"])
+
+				firstName := U.GetPropertyValueAsString((*value)["FirstName"])
+				lastName := U.GetPropertyValueAsString((*value)["LastName"])
+				label := strings.TrimSpace(firstName + " " + lastName)
+				if label == "" {
+					continue
+				}
+
+				errCode = store.GetStore().CreateOrUpdateDisplayNameLabel(projectID, U.CRM_SOURCE_NAME_SALESFORCE, propertyKey, ownerId, label)
+				if errCode != http.StatusCreated && errCode != http.StatusConflict && errCode != http.StatusAccepted {
+					logCtx.WithFields(log.Fields{"key": propertyKey, "value": ownerId, "label": label}).
+						Error("Failed to create or update display name label from reference field")
+					failures = true
+					continue
+				}
+			}
+		}
+
+		errCode = store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, &document, "", "", "", true)
+		if errCode != http.StatusAccepted {
+			logCtx.WithFields(log.Fields{"user_doc_id": document.ID, "timestamp": document.Timestamp}).Error("Failed to update salesforce user document as synced.")
+			failures = true
+			continue
+		}
+	}
+
+	return failures
+}
+
+func SyncReferenceField(projectID int64, accessToken, instanceURL string) bool {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	failures := false
+
+	relationshipRecords := make(map[string][]PropertyReferenceField, 0)
+	propertiesPicklistValues := make(map[string][]PropertyReferenceField)
+	for _, docType := range model.GetSalesforceAllowedObjects(projectID) {
+		docTypeAlias := model.GetSalesforceAliasByDocType(docType)
+
+		describe, err := getSalesforceObjectDescription(projectID, docTypeAlias, accessToken, instanceURL)
+		if err != nil {
+			logCtx.WithField("doc_type", docTypeAlias).WithError(err).Error("Failed to sync reference fields")
+			failures = true
+			continue
+		}
+
+		for i := range describe.Fields {
+			var referenceField PropertyReferenceField
+			err = U.DecodeInterfaceMapToStructType(describe.Fields[i], &referenceField)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to decode interface to PropertyReferenceField on SyncReferenceField")
+				failures = true
+				continue
+			}
+
+			if referenceField.RelationshipName != "Owner" && len(referenceField.PicklistValues) == 0 {
+				logCtx.WithField("key", referenceField.Name).Warning("No picklistValues in SyncReferenceField")
+				continue
+			} else if referenceField.RelationshipName == "Owner" {
+				if _, exists := relationshipRecords[docTypeAlias]; !exists {
+					relationshipRecords[docTypeAlias] = make([]PropertyReferenceField, 0)
+				}
+				relationshipRecords[docTypeAlias] = append(relationshipRecords[docTypeAlias], referenceField)
+				continue
+			} else {
+				if _, exists := propertiesPicklistValues[docTypeAlias]; !exists {
+					propertiesPicklistValues[docTypeAlias] = make([]PropertyReferenceField, 0)
+				}
+				propertiesPicklistValues[docTypeAlias] = append(propertiesPicklistValues[docTypeAlias], referenceField)
+				continue
+			}
+		}
+	}
+
+	if len(propertiesPicklistValues) > 0 {
+		propertyOptionsFailures := SyncPropertiesPicklistValues(projectID, propertiesPicklistValues)
+		if propertyOptionsFailures {
+			failures = true
+		}
+	}
+
+	if len(relationshipRecords) > 0 {
+		ownerReferenceFieldsFailures := SyncUserReferenceFields(projectID, relationshipRecords)
+		if ownerReferenceFieldsFailures {
+			failures = true
+		}
+	}
+
+	return failures
+}
+
 func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName string, timestamp int64) (ObjectStatus, error) {
 	var salesforceObjectStatus ObjectStatus
 	salesforceObjectStatus.ProjetID = ps.ProjectID

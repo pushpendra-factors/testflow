@@ -276,6 +276,23 @@ func main() {
 				}
 			}
 
+			if C.AllowSyncReferenceFields(pid) {
+				log.Info(fmt.Sprintf("Starting sync reference fields for project %d", pid))
+
+				accessToken, instanceURL, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
+				if err != nil {
+					log.WithField("project_id", pid).Errorf("Failed to get salesforce access token for sync reference fields: %s", err)
+					continue
+				}
+
+				failure := IntSalesforce.SyncReferenceField(pid, accessToken, instanceURL)
+				if failure {
+					anyFailure = true
+				}
+
+				log.Info(fmt.Sprintf("Synced reference fields for project %d", pid))
+			}
+
 			failure, propertyDetailSync := IntSalesforce.SyncDatetimeAndNumericalProperties(pid, accessToken, instanceURL)
 			if failure {
 				anyFailure = true
