@@ -226,11 +226,7 @@ func BuildFunnelQuery(projectId int64, query model.Query, groupIds []int, enable
 		return "", nil, errors.New("funnel on events occurrence is not supported")
 	}
 
-	if enableFunnelV2 {
-		return buildUniqueUsersFunnelQueryV2(projectId, query, groupIds, enableFilterOpt, scopeGroupID)
-	}
-
-	return buildUniqueUsersFunnelQuery(projectId, query, groupIds, enableFilterOpt)
+	return buildUniqueUsersFunnelQueryV2(projectId, query, groupIds, enableFilterOpt, scopeGroupID)
 }
 
 func translateNullToZeroOnFunnelResult(result *model.QueryResult) {
@@ -768,6 +764,7 @@ func buildNoneHandledGroupKeys(groupProps []model.QueryGroupByProperty) string {
 }
 
 /*
+buildUniqueUsersFunnelQuery depreciated, use buildUniqueUsersFunnelQueryV2
 Funner Query for:
 Events:
 	$session

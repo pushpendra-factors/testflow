@@ -118,6 +118,7 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	syncOnly := flag.Bool("sync_only", false, "Run only sync.")
 	projectIDList := flag.String("project_ids", "*", "List of project_id to run for.")
+	skippedOtpProjectIDs := flag.String("skipped_otp_project_ids", "", "List of project_id to be skip for otp job.")
 	disabledProjectIDList := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
 	enrichOnly := flag.Bool("enrich_only", false, "Run only enrichment.")
 	allowedCampaignEnrichmentByProjectID := flag.String("allowed_campaign_enrichment_by_project_id", "", "Campaign enrichment by project_id.")
@@ -197,6 +198,7 @@ func main() {
 		AllowedCampaignEnrichmentByProjectID:   *allowedCampaignEnrichmentByProjectID,
 		UseOpportunityAssociationByProjectID:   *useOpportunityAssociationByProjectID,
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
+		SkippedOtpProjectIDs:                   C.GetTokensFromStringListAsUint64(*skippedOtpProjectIDs),
 		AllowedSalesforceGroupsByProjectIDs:    *enableSalesforceGroupsByProjectIDs,
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
