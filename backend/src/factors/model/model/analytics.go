@@ -64,6 +64,7 @@ const (
 )
 
 const PropertyValueNone = "$none"
+const PropertyValueZero = "0"
 const ChannelGroupValueDirect = "Direct"
 
 // FilterOptLimit - Limit used for preloading with non-json filters as part of optimisation.
