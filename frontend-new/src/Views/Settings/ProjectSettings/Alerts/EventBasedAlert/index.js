@@ -835,7 +835,7 @@ const EventBasedAlert = ({
   }, [activeProject, agent_details, teams]);
 
   const handleOk = () => {
-    setTeamsSaveSelectedChannel(teamsSelectedChannel);
+    setSaveSelectedChannel(selectedChannel);
     setShowSelectChannelsModal(false);
   };
 
