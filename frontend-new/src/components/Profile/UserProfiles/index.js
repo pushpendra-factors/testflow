@@ -688,7 +688,11 @@ function UserProfiles({
       {searchDDOpen ? (
         <FaSelect
           multiSelect
-          options={userValueOpts ? Object.entries(userValueOpts) : []}
+          options={
+            userValueOpts
+              ? Object.keys(userValueOpts).map((value) => [value])
+              : []
+          }
           displayNames={userValueOpts}
           applClick={(val) => onApplyClick(val)}
           onClickOutside={() => setSearchDDOpen(false)}
