@@ -161,7 +161,8 @@ function GroupSelect2({
                           optionClick(
                             group.label ? group.label : group.icon,
                             val,
-                            group.category
+                            group.category,
+                            group
                           )
                         }
                       >

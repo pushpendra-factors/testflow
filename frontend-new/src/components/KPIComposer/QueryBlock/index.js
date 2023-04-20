@@ -73,7 +73,7 @@ function QueryBlock({
     setPageUrlDD(false);
   };
 
-  const onChange = (value, group, category, type) => {
+  const onChange = (value, group, category, original_group) => {
     let qt;
     for (let item of kpi?.config) {
       for (let it of item.metrics) {
@@ -86,6 +86,7 @@ function QueryBlock({
     newEvent.metricType = get(value, '2', '');
     newEvent.group = group;
     newEvent.qt = qt;
+    newEvent.icon = original_group.icon;
     if (category) {
       newEvent.category = category;
     }
@@ -130,8 +131,8 @@ function QueryBlock({
             <GroupSelect2
               groupedProperties={kpiEvents ? kpiEvents : []}
               placeholder='Select Event'
-              optionClick={(group, val, category) =>
-                onChange(val, group, category)
+              optionClick={(group, val, category, original_group) =>
+                onChange(val, group, category, original_group)
               }
               onClickOutside={() => setDDVisible(false)}
               allowEmpty={true}
@@ -514,7 +515,6 @@ function QueryBlock({
       </div>
     );
   }
-
   let KPIFilterOptions = [
     [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
   ];
@@ -569,7 +569,7 @@ function QueryBlock({
               color={TOOLTIP_CONSTANTS.DARK}
             >
               <Button
-                // icon={<SVG name='mouseevent' size={16} color={'purple'} />}
+                icon={<SVG name={event.icon} />}
                 className={`fa-button--truncate fa-button--truncate-lg btn-total-round`}
                 type='link'
                 onClick={triggerDropDown}
