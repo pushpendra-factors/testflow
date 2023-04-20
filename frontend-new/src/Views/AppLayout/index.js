@@ -50,6 +50,7 @@ import './index.css';
 import _ from 'lodash';
 import logger from 'Utils/logger';
 import { useHistory, useLocation } from 'react-router-dom';
+import { APP_LAYOUT_ROUTES } from 'Routes/constants';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -145,7 +146,7 @@ function AppLayout({
           (res?.data?.int_factors_six_signal_key ||
             res?.data?.int_client_six_signal_key)
         ) {
-          history.push('/reports/6_signal');
+          history.push(APP_LAYOUT_ROUTES.VisitorIdentificationReport.path);
         }
       }
       setDataLoading(false);

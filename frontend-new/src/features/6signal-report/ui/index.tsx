@@ -202,7 +202,7 @@ const SixSignalReport = () => {
 
   //Effect for fetching dates
   useEffect(() => {
-    if (!active_project?.id) return;
+    if (!active_project?.id || !isSixSignalActivated) return;
     const getSavedReports = async () => {
       try {
         const res = (await getSavedReportDates(
@@ -219,7 +219,7 @@ const SixSignalReport = () => {
       }
     };
     getSavedReports();
-  }, [active_project?.id]);
+  }, [active_project?.id, isSixSignalActivated]);
 
   //Effect for fetching the data when relevant query params are available
   useEffect(() => {
@@ -288,8 +288,20 @@ const SixSignalReport = () => {
         setData(null);
       }
     };
-    if (active_project && active_project?.id && dateSelected) fetchData();
-  }, [active_project, dateSelected, dateValues, getDateObjFromSelectedDate]);
+    if (
+      active_project &&
+      active_project?.id &&
+      dateSelected &&
+      isSixSignalActivated
+    )
+      fetchData();
+  }, [
+    active_project,
+    dateSelected,
+    dateValues,
+    getDateObjFromSelectedDate,
+    isSixSignalActivated
+  ]);
 
   //Effect for formatting data when api data is available.
   useEffect(() => {
@@ -440,7 +452,7 @@ const SixSignalReport = () => {
           ) : (
             <>
               <ReportTable
-                data={data?.result_group[0]}
+                data={isSixSignalActivated ? data?.result_group[0] : null}
                 selectedChannel={filterValue}
                 selectedCampaigns={seletedCampaigns}
                 isSixSignalActivated={isSixSignalActivated}
