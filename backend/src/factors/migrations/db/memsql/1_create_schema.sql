@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at timestamp(6) NOT NULL,
     source int,
     customer_user_id_source int,
+    event_aggregate json,
     -- COLUMNSTORE key is sort key, can we add an incremental numerical column to the end?
     -- Initial parts of the indices are still useful when don't use the last column which is an incremental value.
     KEY (project_id, source, join_timestamp) USING CLUSTERED COLUMNSTORE,
@@ -459,10 +460,12 @@ CREATE TABLE IF NOT EXISTS project_settings (
     integration_bits varchar(32) DEFAULT '00000000000000000000000000000000',
     project_currency varchar(10),
     is_path_analysis_enabled boolean,
+    acc_score_weights json;
     filter_ips JSON,
     is_deanonymization_requested boolean,
     is_onboarding_completed boolean,
     sixsignal_email_list string,
+
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)

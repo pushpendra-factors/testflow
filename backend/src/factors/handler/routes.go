@@ -301,6 +301,12 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.POST("/:project_id/v1/explainV2/job", responseWrapper(V1.CreateExplainV2EntityHandler))
 	featuresGatesRouteGroup.DELETE("/:project_id/v1/explainV2/:id", V1.DeleteSavedExplainV2EntityHandler)
 
+	//acc scoring
+	featuresGatesRouteGroup.PUT("/:project_id/v1/accscore/weights", responseWrapper(V1.UpdateAccScoreWeights))
+	featuresGatesRouteGroup.GET("/:project_id/v1/accscore/score/user", responseWrapper(V1.GetUserScore))
+	featuresGatesRouteGroup.GET("/:project_id/v1/accscore/score/user/all", responseWrapper(V1.GetAllUsersScores))
+	featuresGatesRouteGroup.GET("/:project_id/v1/accscore/score/account", responseWrapper(V1.GetAccountScores))
+
 	// event trigger alert
 	featuresGatesRouteGroup.GET("/:project_id/v1/eventtriggeralert", responseWrapper(V1.GetEventTriggerAlertsByProjectHandler))
 	featuresGatesRouteGroup.POST("/:project_id/v1/eventtriggeralert", responseWrapper(V1.CreateEventTriggerAlertHandler))
@@ -360,6 +366,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/v1/weeklyinsights", mid.SetLoggedInAgentInternalOnly(), UpdateWeeklyInsightsHandler)
 	authRouteGroup.PUT("/:project_id/v1/explain", mid.SetLoggedInAgentInternalOnly(), UpdateExplainHandler)
 	authRouteGroup.PUT("/:project_id/v1/pathanalysis", mid.SetLoggedInAgentInternalOnly(), UpdatePathAnalysisHandler)
+
 	// feature gate
 	featuresGatesRouteGroup.POST("/:project_id/v1/feature_gates", mid.SetLoggedInAgentInternalOnly(), V1.UpdateFeatureStatusHandler)
 

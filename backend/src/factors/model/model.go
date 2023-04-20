@@ -431,6 +431,7 @@ type Model interface {
 	GetAllPathAnalysisEnabledProjects() ([]int64, error)
 	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
 	GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error)
+	UpdateAccScoreWeights(projectId int64, weights model.AccWeights) error
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
 
@@ -898,6 +899,14 @@ type Model interface {
 	GetPropertyMappingsByProjectIdAndSectionBitMap(projectID int64, sectionBitMap int64) ([]*model.PropertyMapping, string, int)
 	DeletePropertyMappingByID(projectID int64, id string) int
 
+	//account scoring
+	GetWeightsByProject(project_id int64) (*model.AccWeights, int)
+	UpdateUserEventsCount(ev []model.EventsCountScore) error
+	UpdateGroupEventsCount(ev []model.EventsCountScore) error
+	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, error)
+	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
+	GetAllUserScore(project_id int64, debug bool) ([]model.AllUsersScore, error)
+
 	// Slack
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
@@ -907,6 +916,7 @@ type Model interface {
 	SetAuthTokenforTeamsIntegration(projectID int64, agentUUID string, authTokens model.TeamsAccessTokens) error
 	GetTeamsAuthTokens(projectID int64, agentUUID string) (model.TeamsAccessTokens, error)
 	DeleteTeamsIntegration(projectID int64, agentUUID string) error
+
 	// Currency
 	CreateCurrencyDetails(currency string, date int64, value float64) error
 	GetCurrencyDetails(currency string, date int64) ([]model.Currency, error)

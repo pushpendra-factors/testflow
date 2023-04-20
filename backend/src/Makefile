@@ -140,6 +140,14 @@ upload-explain: export IMAGE_NAME=explain-job
 upload-explain: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/explain-job:$(TAG)
 
+
+pack-acc-scoring:
+	docker build -t us.gcr.io/factors-$(ENV)/acc-scoring:$(TAG) -f Dockerfile.acc_scoring_job .
+
+upload-acc-scoring: export IMAGE_NAME=acc-scoring
+upload-acc-scoring: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/acc-scoring:$(TAG)
+
 pack-add-session:
 	docker build -t us.gcr.io/factors-$(ENV)/add-session-job:$(TAG) -f Dockerfile.add_session_job .
 

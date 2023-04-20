@@ -368,6 +368,23 @@ func (sd *S3Driver) GetSixSignalAnalysisTempFilePathAndName(id string, projectId
 	return path, "results.txt"
 }
 
+func (sd *S3Driver) GetAccScoreDir(projectId int64) string {
+	proj_path := sd.GetProjectDir(projectId)
+	path := fmt.Sprintf("%saccscore", proj_path)
+	return path
+}
+
+func (sd *S3Driver) GetAccScoreUsers(projectId int64) string {
+	dirPath := sd.GetAccScoreDir(projectId)
+	path := fmt.Sprintf("%susers/", dirPath)
+	return path
+}
+
+func (sd *S3Driver) GetAccScoreAccounts(projectId int64) string {
+	dirPath := sd.GetAccScoreDir(projectId)
+	path := fmt.Sprintf("%sgroups/", dirPath)
+	return path
+}
 func (sd *S3Driver) GetEventsTempFilesDir(projectId int64, startTimestamp, endTimestamp int64, group int) string {
 	path, name := sd.GetEventsGroupFilePathAndName(projectId, startTimestamp, endTimestamp, group)
 	path = pb.Join(path, strings.Replace(name, ".txt", "", 1))
