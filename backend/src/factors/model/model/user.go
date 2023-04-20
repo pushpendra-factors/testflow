@@ -125,27 +125,30 @@ type IdentifyMeta struct {
 type UserPropertiesMeta map[string]IdentifyMeta
 
 const (
-	UserSourceWeb              = 1
-	UserSourceHubspot          = 2
-	UserSourceSalesforce       = 3
-	UserSourceHubspotString    = "hubspot"
-	UserSourceSalesforceString = "salesforce"
-	UserSourceMarketo          = "marketo"
-	UserSourceLeadSquared      = U.CRM_SOURCE_NAME_LEADSQUARED
-	UserSourceSixSignalString  = "6signal"
-	UserSourceSixSignal        = 8
-	UserSourceDomainsString    = "domains"
-	UserSourceDomains          = 9
+	UserSourceWeb                   = 1
+	UserSourceHubspot               = 2
+	UserSourceSalesforce            = 3
+	UserSourceHubspotString         = "hubspot"
+	UserSourceSalesforceString      = "salesforce"
+	UserSourceMarketo               = "marketo"
+	UserSourceLeadSquared           = U.CRM_SOURCE_NAME_LEADSQUARED
+	UserSourceSixSignalString       = "6signal"
+	UserSourceSixSignal             = 8
+	UserSourceDomainsString         = "domains"
+	UserSourceDomains               = 9
+	UserSourceLinkedinCompany       = 10
+	UserSourceLinkedinCompanyString = "linkedin_company"
 )
 
 var UserSourceMap = map[string]int{
-	"web":                      1,
-	UserSourceHubspotString:    2,
-	UserSourceSalesforceString: 3,
-	UserSourceMarketo:          6,
-	UserSourceLeadSquared:      7,
-	UserSourceSixSignalString:  UserSourceSixSignal,
-	UserSourceDomainsString:    UserSourceDomains,
+	"web":                           1,
+	UserSourceHubspotString:         2,
+	UserSourceSalesforceString:      3,
+	UserSourceMarketo:               6,
+	UserSourceLeadSquared:           7,
+	UserSourceSixSignalString:       UserSourceSixSignal,
+	UserSourceDomainsString:         UserSourceDomains,
+	UserSourceLinkedinCompanyString: UserSourceLinkedinCompany,
 }
 
 var UserSourceCRM = map[string]int{
@@ -162,6 +165,7 @@ var GroupUserSource = map[string]int{
 	U.GROUP_NAME_HUBSPOT_DEAL:           UserSourceHubspot,
 	U.GROUP_NAME_SIX_SIGNAL:             UserSourceSixSignal,
 	U.GROUP_NAME_DOMAINS:                UserSourceDomains,
+	U.GROUP_NAME_LINKEDIN_COMPANY:       UserSourceLinkedinCompany,
 }
 
 const USERS = "users"

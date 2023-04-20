@@ -1,369 +1,364 @@
-.fa-select{
-    .ant-select-selector
-    {
-        border: thin solid $fa-color--mono-2 !important;
-        border-radius: 6px !important;
-        }
+.fa-select {
+  .ant-select-selector {
+    border: thin solid $fa-color--mono-2 !important;
+    border-radius: 6px !important;
+  }
 
-    &:hover,&:active,&:focus{
-        .ant-select-selector
-        { 
-            border-color: $fa-color--brand-6 !important;
-            box-shadow: 0 0 0 2px rgba($fa-color--brand-6, 0.2) !important;
-        }
+  &:hover,
+  &:active,
+  &:focus {
+    .ant-select-selector {
+      border-color: $fa-color--brand-6 !important;
+      box-shadow: 0 0 0 2px rgba($fa-color--brand-6, 0.2) !important;
     }
-    &.ant-input-disabled{
-        &:focus, &:hover, &:active{ 
-            border: thin solid $fa-color--mono-2 !important;
-            box-shadow: none !important
-        } 
+  }
+  &.ant-input-disabled {
+    &:focus,
+    &:hover,
+    &:active {
+      border: thin solid $fa-color--mono-2 !important;
+      box-shadow: none !important;
     }
+  }
 }
 
 .fa-grp_noshadow {
-    box-shadow: none !important;
+  box-shadow: none !important;
 }
 
 .fa-grp_pos-btn {
-    top: 34px !important;
-    margin-left: 0;
+  top: 34px !important;
+  margin-left: 0;
 }
 
-.fa-select--group-select{
+.fa-select--group-select {
+  animation-name: fa-fadeInDown;
+  animation-timing-function: ease-in-out;
+  animation-duration: 0.2s;
 
-    animation-name: fa-fadeInDown; 
-    animation-timing-function: ease-in-out;
-    animation-duration: 0.2s;
+  position: relative;
+  width: 400px;
+  max-height: 583px;
+  padding: 15px 9px;
+  background: #ffffff;
+  box-shadow: 0px 6px 20px $fa-color--mono-2;
+  border-radius: 5px;
+  z-index: 75;
+  overflow-y: auto;
+  overflow-x: hidden;
 
-        position: relative;
-        width: 400px;
-        max-height: 583px;
-        padding: 15px 9px;
-        background: #FFFFFF;
-        box-shadow: 0px 6px 20px $fa-color--mono-2;
-        border-radius: 5px;
-        z-index: 75;
-        overflow-y: auto;
-        overflow-x: hidden;
+  .fa-select-group-select--options {
+    padding: 10px 15px 10px 30px;
+    color: $fa-color--mono-5;
+    font-weight: $font-weight--regular;
+    cursor: pointer;
+    display: inline-flex;
+    margin-bottom: 4px;
 
-        .fa-select-group-select--options
-        {
-            padding: 10px 15px 10px 30px;
-            color: $fa-color--mono-5;
-            font-weight: $font-weight--regular;
-            cursor: pointer;
-            display: inline-flex;
-            margin-bottom: 4px;
-
-            &:hover{
-                background-color: rgba($fa-color--brand-1, 1);
-            }
-
-            h4 {
-                overflow: hidden;
-                text-overflow: ellipsis;
-                overflow-wrap: normal;
-                height: 22px;
-                min-width: 48px;
-            }
-        }
-
-        .fa-select--options
-        {
-            padding: 10px 15px;
-            color: $fa-color--mono-5;
-            font-weight: $font-weight--regular;
-            cursor: pointer;
-            display: inline-flex;
-            margin-bottom: 4px;
-            
-            &:hover{
-                background-color: rgba($fa-color--brand-1, 1);
-            }
-
-            h4 {
-                overflow: hidden;
-                text-overflow: ellipsis;
-                overflow-wrap: normal;
-                height: 22px;
-                min-width: 48px;
-            }
-        }
-
-        .fa-select--buttons{
-            padding: 0px;
-            color: $fa-color--mono-5;
-            font-weight: $font-weight--regular;
-            cursor: pointer;
-            display: inline-flex;
-            margin-bottom: 4px;
-            
-            &:hover{
-                background-color: rgba($fa-color--brand-1, 1);
-            }
-
-            h4 {
-                overflow: hidden;
-                text-overflow: ellipsis;
-                overflow-wrap: normal;
-                height: 22px;
-                min-width: 48px;
-            }
-        }
-
-        .fa-select-group-select--content
-        {
-            display: flex;
-            flex-direction: column;
-        }
-        .fa-select-group-select--option-group
-        {
-            padding: 20px 8px 12px 8px;
-            border-bottom: 1px solid $fa-color--mono-2;
-            display: flex;
-            justify-content: space-between;
-            color: #5949BC;
-            h4 {
-                font-size: 14px;
-                font-weight: 900;
-                color:  $fa-color--mono-5;
-                text-transform: capitalize;
-            }
-            div {
-                display: flex;
-            }
-        }
-
-
-    .ant-input-affix-wrapper{
-        position: sticky;
-        max-width: 374px;
-        left: calc(50% - 374px/2);
-        top: 0px;
-        background: #f5f6f8;
-        padding: 8px;
-        border-radius: 10px;
-        border: 1px solid #eee!important;
-        box-shadow: none !important;
-        input.ant-input{
-            height: 30px !important;
-            background-color: #f5f6f8;
-        }
-        &:focus, &:hover, &:active{ 
-            border: 1px solid #d9d9d9 !important;
-            border-radius: 8px;
-            box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.3) !important;
-            transition: all 0.3s;
-        } 
+    &:hover {
+      background-color: rgba($fa-color--brand-1, 1);
     }
+
+    h4 {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      overflow-wrap: normal;
+      height: 22px;
+      min-width: 48px;
+    }
+  }
+
+  .fa-select--options {
+    padding: 10px 15px;
+    color: $fa-color--mono-5;
+    font-weight: $font-weight--regular;
+    cursor: pointer;
+    display: inline-flex;
+    margin-bottom: 4px;
+
+    &:hover {
+      background-color: rgba($fa-color--brand-1, 1);
+    }
+
+    h4 {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      overflow-wrap: normal;
+      height: 22px;
+      min-width: 48px;
+    }
+  }
+
+  .fa-select--buttons {
+    padding: 0px;
+    color: $fa-color--mono-5;
+    font-weight: $font-weight--regular;
+    cursor: pointer;
+    display: inline-flex;
+    margin-bottom: 4px;
+
+    &:hover {
+      background-color: rgba($fa-color--brand-1, 1);
+    }
+
+    h4 {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      overflow-wrap: normal;
+      height: 22px;
+      min-width: 48px;
+    }
+  }
+
+  .fa-select-group-select--content {
+    display: flex;
+    flex-direction: column;
+  }
+  .fa-select-group-select--option-group {
+    padding: 20px 8px 12px 8px;
+    border-bottom: 1px solid $fa-color--mono-2;
+    display: flex;
+    justify-content: space-between;
+    color: #5949bc;
+    h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: $fa-color--mono-5;
+      text-transform: capitalize;
+    }
+    div {
+      display: flex;
+    }
+  }
+
+  .ant-input-affix-wrapper {
+    position: sticky;
+    max-width: 374px;
+    left: calc(50% - 374px / 2);
+    top: 0px;
+    background: #f5f6f8;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid #eee !important;
+    box-shadow: none !important;
+    input.ant-input {
+      height: 30px !important;
+      background-color: #f5f6f8;
+    }
+    &:focus,
+    &:hover,
+    &:active {
+      border: 1px solid #d9d9d9 !important;
+      border-radius: 8px;
+      box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.3) !important;
+      transition: all 0.3s;
+    }
+  }
 }
 
 .fa-select--group-select-sm {
-    @extend .fa-select--group-select;
-    width: 300px;
+  @extend .fa-select--group-select;
+  width: 300px;
 }
 
 .fa-select--group-select-mini {
-    @extend .fa-select--group-select;
-    width: 232px;
-    padding: 12px 8px;
+  @extend .fa-select--group-select;
+  width: 232px;
+  padding: 12px 8px;
 }
 
-.fa-search-select{
-    padding-bottom: 4px;
+.fa-search-select {
+  padding-bottom: 4px;
 }
 
-.fa-select-ghost--highlight-text
-{
-    .ant-select-selection-item{
-        color: $fa-color--brand-color;
-    }
+.fa-select-ghost--highlight-text {
+  .ant-select-selection-item {
+    color: $fa-color--brand-color;
+  }
 }
-.fa-select-ghost--bold
-{
-    .ant-select-selection-item{
-        font-weight: bold;
-        color: $fa-color--mono-color
-
-    }
+.fa-select-ghost--bold {
+  .ant-select-selection-item {
+    font-weight: bold;
+    color: $fa-color--mono-color;
+  }
 }
 
 .group-select {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    padding: 0px 9px;
-    animation-name: fa-fadeInDown;
-    animation-timing-function: ease-in-out;
-    animation-duration: 0.2s;
-    width: 400px;
-    max-height: var(--height-var, 576px);
-    background: #FFFFFF;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  padding: 0px 9px;
+  animation-name: fa-fadeInDown;
+  animation-timing-function: ease-in-out;
+  animation-duration: 0.2s;
+  width: 400px;
+  max-height: var(--height-var, 576px);
+  background: #ffffff;
+  box-shadow: 0px 6px 20px $fa-color--mono-2;
+  border-radius: 5px;
+  z-index: 75;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &.placement-bottom {
+    top: 0;
     box-shadow: 0px 6px 20px $fa-color--mono-2;
-    border-radius: 5px;
-    z-index: 75;
-    overflow-y: auto;
-    overflow-x: hidden;
+  }
 
-    &.placement-bottom {
-        top: 0;
-        box-shadow: 0px 6px 20px $fa-color--mono-2;
-    }
+  &.placement-top {
+    bottom: 32px;
+    box-shadow: 5px -2px 20px $fa-color--mono-2;
+  }
 
-    &.placement-top {
-        bottom: 32px;
-        box-shadow: 5px -2px 20px $fa-color--mono-2;
-    }
+  .ant-select-selector {
+    border: thin solid $fa-color--mono-2 !important;
+    border-radius: 6px !important;
+  }
 
+  &:hover,
+  &:active,
+  &:focus {
     .ant-select-selector {
-        border: thin solid $fa-color--mono-2 !important;
-        border-radius: 6px !important;
+      border-color: $fa-color--brand-6 !important;
+      box-shadow: 0 0 0 2px rgba($fa-color--brand-6, 0.2) !important;
     }
+  }
 
+  &.ant-input-disabled {
+    &:focus,
     &:hover,
-    &:active,
-    &:focus {
-        .ant-select-selector {
-            border-color: $fa-color--brand-6 !important;
-            box-shadow: 0 0 0 2px rgba($fa-color--brand-6, 0.2) !important;
+    &:active {
+      border: thin solid $fa-color--mono-2 !important;
+      box-shadow: none !important;
+    }
+  }
+
+  .ant-input-affix-wrapper {
+    position: sticky;
+    max-width: 374px;
+    left: calc(50% - 374px / 2);
+    top: 0px;
+    background: #f5f6f8;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid #eee !important;
+    box-shadow: none !important;
+
+    input.ant-input {
+      height: 30px !important;
+      background-color: #f5f6f8;
+    }
+
+    &:focus,
+    &:hover,
+    &:active {
+      border: 1px solid #d9d9d9 !important;
+      border-radius: 8px;
+      box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.3) !important;
+      transition: all 0.3s;
+    }
+  }
+
+  &__input {
+    position: sticky;
+    top: 0;
+    padding-top: 15px;
+    background-color: white;
+    z-index: 10;
+  }
+
+  &__content {
+    padding-top: 8px;
+    overflow-y: scroll;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    .group {
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+
+      &__header {
+        padding: 12px 8px;
+        border-bottom: 1px solid $fa-color--mono-2;
+        display: flex;
+        justify-content: space-between;
+        color: #5949bc;
+
+        h4 {
+          font-size: 14px;
+          font-weight: 900;
+          color: $fa-color--mono-5;
+          text-transform: capitalize;
         }
-    }
 
-    &.ant-input-disabled {
-        &:focus,
-        &:hover,
-        &:active {
-            border: thin solid $fa-color--mono-2 !important;
-            box-shadow: none !important
+        div {
+          display: flex;
         }
-    }
+      }
 
-    .ant-input-affix-wrapper {
-        position: sticky;
-        max-width: 374px;
-        left: calc(50% - 374px/2);
-        top: 0px;
-        background: #f5f6f8;
-        padding: 8px;
-        border-radius: 10px;
-        border: 1px solid #eee !important;
-        box-shadow: none !important;
+      &__options {
+        display: flex;
+        flex-direction: column;
 
-        input.ant-input {
-            height: 30px !important;
-            background-color: #f5f6f8;
+        .option {
+          padding: 12px 15px 12px 30px;
+          color: $fa-color--mono-5;
+          font-weight: $font-weight--regular;
+          cursor: pointer;
+          display: inline-flex;
+
+          &:hover {
+            background-color: rgba($fa-color--brand-1, 1);
+          }
+
+          h4 {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            overflow-wrap: normal;
+            height: 22px;
+            min-width: 48px;
+          }
         }
-
-        &:focus,
-        &:hover,
-        &:active {
-            border: 1px solid #d9d9d9 !important;
-            border-radius: 8px;
-            box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.3) !important;
-            transition: all 0.3s;
-        }
+      }
     }
+  }
 
-    &__input {
-        position: sticky;
-        top: 0;
-        padding-top: 15px;
-        background-color: white;
-        z-index: 10;
-    }
+  &__additionalAction {
+    position: sticky;
+    bottom: 0;
+    padding: 9px 0 0 0;
+    background-color: white;
+    z-index: 10;
+  }
 
-    &__content {
-        padding-top: 8px;
-        overflow-y: scroll;
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-
-        &::-webkit-scrollbar {
-            display: none;
-        }
-
-        .group {
-            display: flex;
-            flex-direction: column;
-            padding: 0;
-
-            &__header {
-                padding: 12px 8px;
-                border-bottom: 1px solid $fa-color--mono-2;
-                display: flex;
-                justify-content: space-between;
-                color: #5949BC;
-
-                h4 {
-                    font-size: 14px;
-                    font-weight: 900;
-                    color: $fa-color--mono-5;
-                    text-transform: capitalize;
-                }
-
-                div {
-                    display: flex;
-                }
-            }
-
-            &__options {
-                display: flex;
-                flex-direction: column;
-
-                .option {
-                    padding: 12px 15px 12px 30px;
-                    color: $fa-color--mono-5;
-                    font-weight: $font-weight--regular;
-                    cursor: pointer;
-                    display: inline-flex;
-
-                    &:hover {
-                        background-color: rgba($fa-color--brand-1, 1);
-                    }
-
-                    h4 {
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        overflow-wrap: normal;
-                        height: 22px;
-                        min-width: 48px;
-                    }
-                }
-            }
-        }
-    }
-
-    &__additionalAction {
-        position: sticky;
-        bottom: 0;
-        padding: 9px 0 0 0;
-        background-color: white;
-        z-index: 10;
-    }
-
-    &__hd_overlay {
-        background-color: transparent;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        display: block;
-        z-index: 10;
-    }
+  &__hd_overlay {
+    background-color: transparent;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: block;
+    z-index: 10;
+  }
 }
 
 .show-hide-btn {
-    color: #5949bc;
-    padding-left: 0px;
-    margin-left: 30px;
-    // margin-bottom: 10px;
-    text-align: left !important;
-    font-weight: normal !important;
+  color: #5949bc;
+  padding-left: 0px;
+  margin-left: 30px;
+  // margin-bottom: 10px;
+  text-align: left !important;
+  font-weight: normal !important;
 
-    &:hover,
-    &:focus {
-        background: #fff !important;
-        color: #5949bc !important;
-    }
+  &:hover,
+  &:focus {
+    background: #fff !important;
+    color: #5949bc !important;
+  }
 }

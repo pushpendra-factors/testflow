@@ -28,13 +28,13 @@ function GroupBlock({
     {
       label: 'User Properties',
       icon: 'user',
-      values: [],
+      values: []
     },
     {
       label: 'Group Properties',
       icon: 'group',
-      values: [],
-    },
+      values: []
+    }
   ]);
 
   useEffect(() => {
@@ -129,14 +129,14 @@ function GroupBlock({
     const propOpts = {
       numerical: [
         ['original values', null, 'raw_values'],
-        ['bucketed values', null, 'with_buckets'],
+        ['bucketed values', null, 'with_buckets']
       ],
       datetime: [
         ['hour', null, 'hour'],
         ['date', null, 'day'],
         ['week', null, 'week'],
-        ['month', null, 'month'],
-      ],
+        ['month', null, 'month']
+      ]
     };
 
     const getProp = (opt) => {
@@ -181,6 +181,13 @@ function GroupBlock({
     );
   };
 
+  const getIcon = (groupByEvent) => {
+    const { property, prop_category } = groupByEvent || {};
+    if (!property) return null;
+    const iconName = prop_category === 'group' ? 'user' : prop_category;
+    return <SVG name={iconName} size={16} color={'purple'} />;
+  };
+
   const renderGroupDisplayName = (opt, index) => {
     let propertyName = '';
     if (opt.property && opt.prop_category === 'user') {
@@ -199,7 +206,7 @@ function GroupBlock({
     return (
       <Tooltip title={propertyName} color={TOOLTIP_CONSTANTS.DARK}>
         <Button
-          icon={<SVG name={opt.prop_category} size={16} color={'purple'} />}
+          icon={getIcon(opt)}
           className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
           type='link'
           onClick={() => triggerDropDown(index)}
@@ -260,14 +267,14 @@ const mapStateToProps = (state) => ({
   groupProperties: state.coreQuery.groupProperties,
   userPropNames: state.coreQuery.userPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
-  groupByState: state.coreQuery.groupBy,
+  groupByState: state.coreQuery.groupBy
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setGroupBy,
-      delGroupBy,
+      delGroupBy
     },
     dispatch
   );

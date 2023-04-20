@@ -10,7 +10,9 @@ import {
   message,
   notification,
   Checkbox,
-  Modal
+  Modal,
+  Switch,
+  Avatar
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { PlusOutlined } from '@ant-design/icons';
@@ -36,6 +38,7 @@ import {
 import SelectChannels from '../SelectChannels';
 import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
+import { featureLock } from '../../../../../routes/feature';
 
 const { Option } = Select;
 
@@ -177,6 +180,14 @@ const KPIBasedAlert = ({
       }
     }
 
+    if (viewAlertDetails?.alert_configuration?.teams_channel_config?.teams_channel_list) {
+      setTeamsViewSelectedChannels(viewAlertDetails?.alert_configuration?.teams_channel_config?.teams_channel_list);
+      if (alertState.state === 'edit') {
+        setTeamsSaveSelectedChannel(viewAlertDetails?.alert_configuration?.teams_channel_config?.teams_channel_list);
+        setTeamsSelectedChannel(viewAlertDetails?.alert_configuration?.teams_channel_config?.teams_channel_list);
+      }
+    }
+
     if (alertState?.state === 'edit') {
       let queryData = [];
       queryData.push({
@@ -198,6 +209,7 @@ const KPIBasedAlert = ({
       setValue(viewAlertDetails?.alert_description?.value);
       setEmailEnabled(viewAlertDetails?.alert_configuration?.email_enabled);
       setSlackEnabled(viewAlertDetails?.alert_configuration?.slack_enabled);
+      setTeamsEnabled(viewAlertDetails?.alert_configuration?.teams_enabled);
     }
   }, [alertState?.state, viewAlertDetails]);
 
@@ -312,8 +324,8 @@ const KPIBasedAlert = ({
     const size = arr?.length;
     if (
       queries.length > 0 &&
-      (emailEnabled || slackEnabled) &&
-      (emails.length > 0 || size > 0)
+      (emailEnabled || slackEnabled || teamsEnabled) &&
+      (emails.length > 0 || size > 0 || teamsSaveSelectedChannel.length > 0)
     ) {
       let payload = {
         alert_name: data?.alert_name,
@@ -343,7 +355,13 @@ const KPIBasedAlert = ({
           email_enabled: emailEnabled,
           slack_enabled: slackEnabled,
           emails: emails,
-          slack_channels_and_user_groups: slackChannels
+          slack_channels_and_user_groups: slackChannels,
+          teams_enabled: teamsEnabled,
+          teams_channel_config: {
+              teams_id: selectedWorkspace?.id,
+              teams_name: selectedWorkspace?.name,
+              teams_channel_list: teamsSaveSelectedChannel
+          }
         }
       };
 
@@ -393,7 +411,7 @@ const KPIBasedAlert = ({
         });
       }
 
-      if(!emailEnabled && !slackEnabled) {
+      if (!emailEnabled && !slackEnabled && !teamsEnabled) {
         notification.error({
           message: 'Error',
           description:
@@ -404,16 +422,21 @@ const KPIBasedAlert = ({
       if (slackEnabled && size === 0) {
         notification.error({
           message: 'Error',
-          description:
-            'Empty Slack Channel List'
+          description: 'Empty Slack Channel List'
         });
       }
 
       if (emailEnabled && emails.length === 0) {
         notification.error({
           message: 'Error',
-          description:
-            'Empty Email List'
+          description: 'Empty Email List'
+        });
+      }
+
+      if (teamsEnabled && teamsSaveSelectedChannel.length === 0) {
+        notification.error({
+          message: 'Error',
+          description: 'Empty Teams Channel List'
         });
       }
     }
@@ -532,24 +555,36 @@ const KPIBasedAlert = ({
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
-    if (projectSettings?.int_teams) {
+    if (projectSettings?.int_teams && teamsEnabled) {
       fetchTeamsWorkspace(activeProject.id)
-      .then((res) => {
-        if(res.ok) {
-          setTeamsWorkspaceOpts(res?.data?.value)
-        }
-      }).catch((err) => {
-        message.error(err?.data?.error);
-      });
+        .then((res) => {
+          if (res.ok) {
+            let tempArr = [];
+            for (let i = 0; i < res?.data?.value?.length; i++) {
+              tempArr.push({
+                label: res?.data?.value[i]?.displayName,
+                value: slack[i]?.id
+              });
+            }
+            setTeamsWorkspaceOpts(tempArr);
+            }
+        })
+        .catch((err) => {
+          message.error(err?.data?.error);
+        });
     }
   }, [activeProject, projectSettings?.int_teams, teamsEnabled]);
-
 
   useEffect(() => {
     if (projectSettings?.int_teams && selectedWorkspace) {
       fetchTeamsChannels(activeProject.id, selectedWorkspace);
     }
-  }, [activeProject, projectSettings?.int_teams, teamsEnabled, selectedWorkspace]);
+  }, [
+    activeProject,
+    projectSettings?.int_teams,
+    teamsEnabled,
+    selectedWorkspace
+  ]);
 
   useEffect(() => {
     if (slack?.length > 0) {
@@ -800,9 +835,9 @@ const KPIBasedAlert = ({
             )}
           </Row>
 
-          <Row className={'mt-2'}>
+          <Row className={''}>
             <Col span={24}>
-              <div className={'border-top--thin-2 pt-2 mt-2'} />
+              <div className={'border-top--thin-2 pb-6 mt-6'} />
               <Text
                 type={'title'}
                 level={7}
@@ -815,294 +850,459 @@ const KPIBasedAlert = ({
             </Col>
           </Row>
 
-          <Row className={'mt-2 ml-2'}>
-            <Col span={4}>
-              <Form.Item name='email_enabled' className={'m-0'}>
-                <Checkbox
-                  defaultChecked={emailEnabled}
-                  onChange={(e) => setEmailEnabled(e.target.checked)}
-                >
-                  Email
-                </Checkbox>
-              </Form.Item>
-            </Col>
-          </Row>
-          {emailEnabled && (
-            <Row className={'mt-4'}>
-              <Col span={8}>
-                <Form.Item
-                  label={null}
-                  name={'email'}
-                  validateTrigger={['onChange', 'onBlur']}
-                  rules={[
-                    {
-                      type: 'email',
-                      message: 'Please enter a valid e-mail'
-                    },
-                    { required: true, message: 'Please enter email' }
-                  ]}
-                  className={'m-0'}
-                >
-                  <Input
-                    className={'fa-input'}
-                    placeholder={'yourmail@gmail.com'}
-                  />
-                </Form.Item>
-              </Col>
-              <Form.List name='emails'>
-                {(fields, { add, remove }) => (
-                  <>
-                    {fields.map((field, index) => (
-                      <Col span={21}>
-                        <Form.Item required={false} key={field.key}>
-                          <Row className={'mt-4'}>
-                            <Col span={9}>
-                              <Form.Item
-                                label={null}
-                                {...field}
-                                name={[field.name, 'email']}
-                                validateTrigger={['onChange', 'onBlur']}
-                                rules={[
-                                  {
-                                    type: 'email',
-                                    message: 'Please enter a valid e-mail'
-                                  },
-                                  {
-                                    required: true,
-                                    message: 'Please enter email'
-                                  }
-                                ]}
-                                className={'m-0'}
-                              >
-                                <Input
-                                  className={'fa-input'}
-                                  placeholder={'yourmail@gmail.com'}
-                                />
-                              </Form.Item>
-                            </Col>
-                            {fields.length > 0 ? (
-                              <Col span={1}>
-                                <Button
-                                  style={{ backgroundColor: 'white' }}
-                                  className={'mt-0.5 ml-2'}
-                                  onClick={() => remove(field.name)}
-                                >
-                                  <SVG name={'Trash'} size={20} color='gray' />
-                                </Button>
-                              </Col>
-                            ) : null}
-                          </Row>
-                        </Form.Item>
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'slack'} size={40} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
+                      />
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
+                        <Text
+                          type='title'
+                          level={7}
+                          weight='medium'
+                          extraClass='m-0'
+                        >
+                          Slack
+                        </Text>
+                      </div>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        Post to slack when events you care about happen.
+                        Motivate the right actions.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='slack_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          onChange={(checked) => setSlackEnabled(checked)}
+                          checked={slackEnabled}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
+            {slackEnabled && !projectSettings?.int_slack && (
+              <div className='p-4'>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Text
+                      type={'title'}
+                      level={6}
+                      color={'grey'}
+                      extraClass={'m-0'}
+                    >
+                      Slack is not integrated, Do you want to integrate with
+                      your slack account now?
+                    </Text>
+                  </Col>
+                </Row>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Button onClick={onConnectSlack}>
+                      <SVG name={'Slack'} />
+                      Connect to slack
+                    </Button>
+                  </Col>
+                </Row>
+              </div>
+            )}
+            {slackEnabled && projectSettings?.int_slack && (
+              <div className='p-4'>
+                {saveSelectedChannel.length > 0 && (
+                  <div>
+                    <Row>
+                      <Col>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          weight={'regular'}
+                          extraClass={'m-0 mt-2 ml-2'}
+                        >
+                          {saveSelectedChannel.length > 1
+                            ? 'Selected Channels'
+                            : 'Selected Channel'}
+                        </Text>
                       </Col>
-                    ))}
-                    <Col span={20} className={'mt-3'}>
-                      {fields.length === 4 ? null : (
-                        <Button
-                          type={'text'}
-                          icon={
-                            <PlusOutlined
-                              style={{
-                                color: 'gray',
-                                fontSize: '18px'
-                              }}
-                            />
-                          }
-                          onClick={() => add()}
-                        >
-                          Add Email
-                        </Button>
-                      )}
-                    </Col>
-                  </>
+                    </Row>
+                    <Row
+                      className={'rounded border border-gray-200 ml-2 w-2/6'}
+                    >
+                      <Col className={'m-0'}>
+                        {saveSelectedChannel.map((channel, index) => (
+                          <div key={index}>
+                            <Text
+                              type={'title'}
+                              level={7}
+                              color={'grey'}
+                              extraClass={'m-0 ml-4 my-2'}
+                            >
+                              {'#' + channel.name}
+                            </Text>
+                          </div>
+                        ))}
+                      </Col>
+                    </Row>
+                  </div>
                 )}
-              </Form.List>
-            </Row>
-          )}
-          <Row className={'mt-2 ml-2'}>
-            <Col className={'m-0'}>
-              <Form.Item name='slack_enabled' className={'m-0'}>
-                <Checkbox
-                  defaultChecked={slackEnabled}
-                  onChange={(e) => setSlackEnabled(e.target.checked)}
-                >
-                  Slack
-                </Checkbox>
-              </Form.Item>
-            </Col>
-          </Row>
-          {slackEnabled && !projectSettings?.int_slack && (
-            <>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    color={'grey'}
-                    extraClass={'m-0'}
+                {!saveSelectedChannel.length > 0 ? (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setShowSelectChannelsModal(true)}
+                      >
+                        Select Channel
+                      </Button>
+                    </Col>
+                  </Row>
+                ) : (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setShowSelectChannelsModal(true)}
+                      >
+                        {saveSelectedChannel.length > 1
+                          ? 'Manage Channels'
+                          : 'Manage Channel'}
+                      </Button>
+                    </Col>
+                  </Row>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'Email'} size={38} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
+                      />
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
+                        <Text
+                          type='title'
+                          level={7}
+                          weight='medium'
+                          extraClass='m-0'
+                        >
+                          Email
+                        </Text>
+                      </div>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        When this alert happens, send this information to the
+                        selected mails.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='email_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          onChange={(checked) => setEmailEnabled(checked)}
+                          checked={emailEnabled}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
+            {emailEnabled && (
+              <Row className={'p-4 mt-2 ml-2'}>
+                <Col span={8}>
+                  <Form.Item
+                    label={null}
+                    name={'email'}
+                    validateTrigger={['onChange', 'onBlur']}
+                    rules={[
+                      {
+                        type: 'email',
+                        message: 'Please enter a valid e-mail'
+                      },
+                      { required: true, message: 'Please enter email' }
+                    ]}
+                    className={'m-0'}
                   >
-                    Slack is not integrated, Do you want to integrate with your
-                    slack account now?
-                  </Text>
+                    <Input
+                      className={'fa-input'}
+                      placeholder={'yourmail@gmail.com'}
+                    />
+                  </Form.Item>
+                </Col>
+                <Form.List name='emails'>
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map((field, index) => (
+                        <Col span={21}>
+                          <Form.Item required={false} key={field.key}>
+                            <Row className={'mt-4'}>
+                              <Col span={9}>
+                                <Form.Item
+                                  label={null}
+                                  {...field}
+                                  name={[field.name, 'email']}
+                                  validateTrigger={['onChange', 'onBlur']}
+                                  rules={[
+                                    {
+                                      type: 'email',
+                                      message: 'Please enter a valid e-mail'
+                                    },
+                                    {
+                                      required: true,
+                                      message: 'Please enter email'
+                                    }
+                                  ]}
+                                  className={'m-0'}
+                                >
+                                  <Input
+                                    className={'fa-input'}
+                                    placeholder={'yourmail@gmail.com'}
+                                  />
+                                </Form.Item>
+                              </Col>
+                              {fields.length > 0 ? (
+                                <Col span={1}>
+                                  <Button
+                                    style={{ backgroundColor: 'white' }}
+                                    className={'mt-0.5 ml-2'}
+                                    onClick={() => remove(field.name)}
+                                  >
+                                    <SVG
+                                      name={'Trash'}
+                                      size={20}
+                                      color='gray'
+                                    />
+                                  </Button>
+                                </Col>
+                              ) : null}
+                            </Row>
+                          </Form.Item>
+                        </Col>
+                      ))}
+                      <Col span={20} className={'mt-3'}>
+                        {fields.length === 4 ? null : (
+                          <Button
+                            type={'text'}
+                            icon={
+                              <PlusOutlined
+                                style={{
+                                  color: 'gray',
+                                  fontSize: '18px'
+                                }}
+                              />
+                            }
+                            onClick={() => add()}
+                          >
+                            Add Email
+                          </Button>
+                        )}
+                      </Col>
+                    </>
+                  )}
+                </Form.List>
+              </Row>
+            )}
+          </div>
+          {featureLock(agent_details?.email) &&
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'MSTeam'} size={40} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
+                      />
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
+                        <Text
+                          type='title'
+                          level={7}
+                          weight='medium'
+                          extraClass='m-0'
+                        >
+                          Teams
+                        </Text>
+                      </div>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        Post to teams when events you care about happen.
+                        Motivate the right actions.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='teams_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          onChange={(checked) => setTeamsEnabled(checked)}
+                          checked={teamsEnabled}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
                 </Col>
               </Row>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Button onClick={onConnectSlack}>
-                    <SVG name={'Slack'} />
-                    Connect to slack
-                  </Button>
-                </Col>
-              </Row>
-            </>
-          )}
-          {slackEnabled && projectSettings?.int_slack && (
-            <>
-              {saveSelectedChannel.length > 0 && (
-                <Row
-                  className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
-                >
-                  <Col className={'m-0'}>
+            </div>
+            {teamsEnabled && !projectSettings?.int_teams && (
+              <div className='p-4'>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
                     <Text
                       type={'title'}
                       level={6}
-                      color={'grey-2'}
-                      extraClass={'m-0 mt-2 ml-2'}
+                      color={'grey'}
+                      extraClass={'m-0'}
                     >
-                      Selected Channels
+                      Teams is not integrated, Do you want to integrate with
+                      your Microsoft Teams account now?
                     </Text>
-                    {saveSelectedChannel.map((channel, index) => (
-                      <div key={index}>
-                        <Text
-                          type={'title'}
-                          level={7}
-                          color={'grey'}
-                          extraClass={'m-0 ml-2 my-1'}
-                        >
-                          {'#' + channel.name}
-                        </Text>
-                      </div>
-                    ))}
                   </Col>
                 </Row>
-              )}
-              {!saveSelectedChannel.length > 0 ? (
                 <Row className={'mt-2 ml-2'}>
                   <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setShowSelectChannelsModal(true)}
-                    >
-                      Select Channels
+                    <Button onClick={onConnectMSTeams}>
+                      <SVG name={'MSTeam'} size={20} />
+                      Connect to Teams
                     </Button>
                   </Col>
                 </Row>
-              ) : (
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setShowSelectChannelsModal(true)}
-                    >
-                      Manage Channels
-                    </Button>
-                  </Col>
-                </Row>
-              )}
-            </>
-          )}
-          {['junaid@factors.ai'].includes(agent_details?.email) &&
-          <Row className={'mt-2 ml-2'}>
-            <Col className={'m-0'}>
-              <Form.Item name='slack_enabled' className={'m-0'}>
-                <Checkbox
-                  defaultChecked={teamsEnabled}
-                  onChange={(e) => setTeamsEnabled(e.target.checked)}
-                >
-                  Teams
-                </Checkbox>
-              </Form.Item>
-            </Col>
-          </Row>}
-          {teamsEnabled && !projectSettings?.int_teams && (
-            <>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    color={'grey'}
-                    extraClass={'m-0'}
+              </div>
+            )}
+            {teamsEnabled && projectSettings?.int_teams && (
+              <div className='p-4'>
+                {teamsSaveSelectedChannel.length > 0 && (
+                  <Row
+                    className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
                   >
-                    Teams is not integrated, Do you want to integrate with your
-                    Microsoft Teams account now?
-                  </Text>
-                </Col>
-              </Row>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Button onClick={onConnectMSTeams}>
-                    <SVG name={'MSTeam'} size={20} />
-                    Connect to Teams
-                  </Button>
-                </Col>
-              </Row>
-            </>
-          )}
-          {teamsEnabled && projectSettings?.int_teams && (
-            <>
-              {teamsSaveSelectedChannel.length > 0 && (
-                <Row
-                  className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
-                >
-                  <Col className={'m-0'}>
-                    <Text
-                      type={'title'}
-                      level={6}
-                      color={'grey-2'}
-                      extraClass={'m-0 mt-2 ml-2'}
-                    >
-                      Selected Channels
-                    </Text>
-                    {teamsSaveSelectedChannel.map((channel, index) => (
-                      <div key={index}>
-                        <Text
-                          type={'title'}
-                          level={7}
-                          color={'grey'}
-                          extraClass={'m-0 ml-2 my-1'}
-                        >
-                          {'#' + channel.name}
-                        </Text>
-                      </div>
-                    ))}
-                  </Col>
-                </Row>
-              )}
-              {!teamsSaveSelectedChannel.length > 0 ? (
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setTeamsShowSelectChannelsModal(true)}
-                    >
-                      Select Channels
-                    </Button>
-                  </Col>
-                </Row>
-              ) : (
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setTeamsShowSelectChannelsModal(true)}
-                    >
-                      Manage Channels
-                    </Button>
-                  </Col>
-                </Row>
-              )}
-            </>
-          )}
+                    <Col className={'m-0'}>
+                      <Text
+                        type={'title'}
+                        level={6}
+                        color={'grey-2'}
+                        extraClass={'m-0 mt-2 ml-2'}
+                      >
+                        Selected Channels
+                      </Text>
+                      {teamsSaveSelectedChannel.map((channel, index) => (
+                        <div key={index}>
+                          <Text
+                            type={'title'}
+                            level={7}
+                            color={'grey'}
+                            extraClass={'m-0 ml-2 my-1'}
+                          >
+                            {'#' + channel.name}
+                          </Text>
+                        </div>
+                      ))}
+                    </Col>
+                  </Row>
+                )}
+                {!teamsSaveSelectedChannel.length > 0 ? (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setTeamsShowSelectChannelsModal(true)}
+                      >
+                        Select Channels
+                      </Button>
+                    </Col>
+                  </Row>
+                ) : (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setTeamsShowSelectChannelsModal(true)}
+                      >
+                        Manage Channels
+                      </Button>
+                    </Col>
+                  </Row>
+                )}
+              </div>
+            )}
+          </div>}
         </Form>
       </>
     );
@@ -1321,9 +1521,9 @@ const KPIBasedAlert = ({
             )}
           </Row>
 
-          <Row className={'mt-2'}>
+          <Row className={''}>
             <Col span={24}>
-              <div className={'border-top--thin-2 pt-2 mt-2'} />
+              <div className={'border-top--thin-2 pb-6 mt-6'} />
               <Text
                 type={'title'}
                 level={7}
@@ -1336,282 +1536,446 @@ const KPIBasedAlert = ({
             </Col>
           </Row>
 
-          <Row className={'mt-2 ml-2'}>
-            <Col span={4}>
-              <Form.Item name='email_enabled' className={'m-0'}>
-                <Checkbox
-                  checked={emailEnabled}
-                  onChange={(e) => setEmailEnabled(e.target.checked)}
-                >
-                  Email
-                </Checkbox>
-              </Form.Item>
-            </Col>
-          </Row>
-          {emailEnabled && (
-            <Row className={'mt-1'}>
-              <Form.List
-                name='emails'
-                initialValue={viewAlertDetails?.alert_configuration?.emails}
-              >
-                {(fields, { add, remove }) => (
-                  <>
-                    {fields.map((field, index) => (
-                      <Col span={21}>
-                        <Form.Item required={false} key={field.key}>
-                          <Row className={'mt-4'}>
-                            <Col span={9}>
-                              <Form.Item
-                                label={null}
-                                initialValue={
-                                  viewAlertDetails?.alert_configuration?.emails[
-                                    field.name
-                                  ]
-                                }
-                                {...field}
-                                name={[field.name, 'email']}
-                                validateTrigger={['onChange', 'onBlur']}
-                                rules={[
-                                  {
-                                    type: 'email',
-                                    message: 'Please enter a valid e-mail'
-                                  },
-                                  {
-                                    required: true,
-                                    message: 'Please enter email'
-                                  }
-                                ]}
-                                className={'m-0'}
-                              >
-                                <Input
-                                  className={'fa-input'}
-                                  placeholder={'yourmail@gmail.com'}
-                                />
-                              </Form.Item>
-                            </Col>
-                            {fields.length > 0 ? (
-                              <Col span={1}>
-                                <Button
-                                  style={{ backgroundColor: 'white' }}
-                                  className={'mt-0.5 ml-2'}
-                                  onClick={() => remove(field.name)}
-                                >
-                                  <SVG name={'Trash'} size={20} color='gray' />
-                                </Button>
-                              </Col>
-                            ) : null}
-                          </Row>
-                        </Form.Item>
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'slack'} size={40} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
+                      />
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
+                        <Text
+                          type='title'
+                          level={7}
+                          weight='medium'
+                          extraClass='m-0'
+                        >
+                          Slack
+                        </Text>
+                      </div>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        Post to slack when events you care about happen.
+                        Motivate the right actions.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='slack_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          onChange={(checked) => setSlackEnabled(checked)}
+                          checked={slackEnabled}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
+            {slackEnabled && !projectSettings?.int_slack && (
+              <div className='p-4'>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Text
+                      type={'title'}
+                      level={6}
+                      color={'grey'}
+                      extraClass={'m-0'}
+                    >
+                      Slack is not integrated, Do you want to integrate with
+                      your slack account now?
+                    </Text>
+                  </Col>
+                </Row>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
+                    <Button onClick={onConnectSlack}>
+                      <SVG name={'Slack'} />
+                      Connect to slack
+                    </Button>
+                  </Col>
+                </Row>
+              </div>
+            )}
+            {slackEnabled && projectSettings?.int_slack && (
+              <div className='p-4'>
+                {saveSelectedChannel.length > 0 && (
+                  <div>
+                    <Row>
+                      <Col>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          weight={'regular'}
+                          extraClass={'m-0 mt-2 ml-2'}
+                        >
+                          {saveSelectedChannel.length > 1
+                            ? 'Selected Channels'
+                            : 'Selected Channel'}
+                        </Text>
                       </Col>
-                    ))}
-                    <Col span={20} className={'mt-3'}>
-                      {fields.length >= 5 ? null : (
-                        <Button
-                          type={'text'}
-                          icon={
-                            <PlusOutlined
-                              style={{
-                                color: 'gray',
-                                fontSize: '18px'
-                              }}
-                            />
-                          }
-                          onClick={() => add()}
-                        >
-                          Add Email
-                        </Button>
-                      )}
-                    </Col>
-                  </>
+                    </Row>
+                    <Row
+                      className={'rounded border border-gray-200 ml-2 w-2/6'}
+                    >
+                      <Col className={'m-0'}>
+                        {saveSelectedChannel.map((channel, index) => (
+                          <div key={index}>
+                            <Text
+                              type={'title'}
+                              level={7}
+                              color={'grey'}
+                              extraClass={'m-0 ml-4 my-2'}
+                            >
+                              {'#' + channel.name}
+                            </Text>
+                          </div>
+                        ))}
+                      </Col>
+                    </Row>
+                  </div>
                 )}
-              </Form.List>
-            </Row>
-          )}
-          <Row className={'mt-2 ml-2'}>
-            <Col className={'m-0'}>
-              <Form.Item name='slack_enabled' className={'m-0'}>
-                <Checkbox
-                  checked={slackEnabled}
-                  onChange={(e) => setSlackEnabled(e.target.checked)}
-                >
-                  Slack
-                </Checkbox>
-              </Form.Item>
-            </Col>
-          </Row>
-          {slackEnabled && !projectSettings?.int_slack && (
-            <>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    color={'grey'}
-                    extraClass={'m-0'}
-                  >
-                    Slack is not integrated, Do you want to integrate with your
-                    slack account now?
-                  </Text>
+                {!saveSelectedChannel.length > 0 ? (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setShowSelectChannelsModal(true)}
+                      >
+                        Select Channel
+                      </Button>
+                    </Col>
+                  </Row>
+                ) : (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setShowSelectChannelsModal(true)}
+                      >
+                        {saveSelectedChannel.length > 1
+                          ? 'Manage Channels'
+                          : 'Manage Channel'}
+                      </Button>
+                    </Col>
+                  </Row>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'Email'} size={38} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
+                      />
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
+                        <Text
+                          type='title'
+                          level={7}
+                          weight='medium'
+                          extraClass='m-0'
+                        >
+                          Email
+                        </Text>
+                      </div>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        When this alert happens, send this information to the
+                        selected mails.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='email_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          onChange={(checked) => setEmailEnabled(checked)}
+                          checked={emailEnabled}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
                 </Col>
               </Row>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Button onClick={onConnectSlack}>
-                    <SVG name={'Slack'} />
-                    Connect to slack
-                  </Button>
+            </div>
+            {emailEnabled && (
+              <Row className={'p-4 ml-2'}>
+                <Form.List
+                  name='emails'
+                  initialValue={viewAlertDetails?.alert_configuration?.emails}
+                >
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map((field, index) => (
+                        <Col span={21}>
+                          <Form.Item required={false} key={field.key}>
+                            <Row className={'mt-2'}>
+                              <Col span={9}>
+                                <Form.Item
+                                  label={null}
+                                  initialValue={
+                                    viewAlertDetails?.alert_configuration
+                                      ?.emails[field.name]
+                                  }
+                                  {...field}
+                                  name={[field.name, 'email']}
+                                  validateTrigger={['onChange', 'onBlur']}
+                                  rules={[
+                                    {
+                                      type: 'email',
+                                      message: 'Please enter a valid e-mail'
+                                    },
+                                    {
+                                      required: true,
+                                      message: 'Please enter email'
+                                    }
+                                  ]}
+                                  className={'m-0'}
+                                >
+                                  <Input
+                                    className={'fa-input'}
+                                    placeholder={'yourmail@gmail.com'}
+                                  />
+                                </Form.Item>
+                              </Col>
+                              {fields.length > 0 ? (
+                                <Col span={1}>
+                                  <Button
+                                    style={{ backgroundColor: 'white' }}
+                                    className={'mt-0.5 ml-2'}
+                                    onClick={() => remove(field.name)}
+                                  >
+                                    <SVG
+                                      name={'Trash'}
+                                      size={20}
+                                      color='gray'
+                                    />
+                                  </Button>
+                                </Col>
+                              ) : null}
+                            </Row>
+                          </Form.Item>
+                        </Col>
+                      ))}
+                      <Col span={20} className={'mt-3'}>
+                        {fields.length >= 5 ? null : (
+                          <Button
+                            type={'text'}
+                            icon={
+                              <PlusOutlined
+                                style={{
+                                  color: 'gray',
+                                  fontSize: '18px'
+                                }}
+                              />
+                            }
+                            onClick={() => add()}
+                          >
+                            Add Email
+                          </Button>
+                        )}
+                      </Col>
+                    </>
+                  )}
+                </Form.List>
+              </Row>
+            )}
+          </div>
+          {featureLock(agent_details?.email) &&
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'MSTeam'} size={40} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
+                      />
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
+                        <Text
+                          type='title'
+                          level={7}
+                          weight='medium'
+                          extraClass='m-0'
+                        >
+                          Teams
+                        </Text>
+                      </div>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        Post to teams when events you care about happen.
+                        Motivate the right actions.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='teams_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          onChange={(checked) => setTeamsEnabled(checked)}
+                          checked={teamsEnabled}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
                 </Col>
               </Row>
-            </>
-          )}
-          {slackEnabled && projectSettings?.int_slack && (
-            <>
-              {saveSelectedChannel.length > 0 && (
-                <Row
-                  className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
-                >
-                  <Col className={'m-0'}>
+            </div>
+            {teamsEnabled && !projectSettings?.int_teams && (
+              <div className='p-4'>
+                <Row className={'mt-2 ml-2'}>
+                  <Col span={10} className={'m-0'}>
                     <Text
                       type={'title'}
                       level={6}
-                      color={'grey-2'}
-                      extraClass={'m-0 mt-2 ml-2'}
+                      color={'grey'}
+                      extraClass={'m-0'}
                     >
-                      Selected Channels
+                      Teams is not integrated, Do you want to integrate with
+                      your Microsoft Teams account now?
                     </Text>
-                    {saveSelectedChannel.map((channel, index) => (
-                      <div key={index}>
-                        <Text
-                          type={'title'}
-                          level={7}
-                          color={'grey'}
-                          extraClass={'m-0 ml-2 my-1'}
-                        >
-                          {'#' + channel.name}
-                        </Text>
-                      </div>
-                    ))}
                   </Col>
                 </Row>
-              )}
-              {!saveSelectedChannel.length > 0 ? (
                 <Row className={'mt-2 ml-2'}>
                   <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setShowSelectChannelsModal(true)}
-                    >
-                      Select Channels
+                    <Button onClick={onConnectMSTeams}>
+                      <SVG name={'MSTeam'} size={20} />
+                      Connect to Teams
                     </Button>
                   </Col>
                 </Row>
-              ) : (
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setShowSelectChannelsModal(true)}
-                    >
-                      Manage Channels
-                    </Button>
-                  </Col>
-                </Row>
-              )}
-            </>
-          )}
-          {['junaid@factors.ai'].includes(agent_details?.email) &&
-          <Row className={'mt-2 ml-2'}>
-            <Col className={'m-0'}>
-              <Form.Item name='slack_enabled' className={'m-0'}>
-                <Checkbox
-                  checked={teamsEnabled}
-                  onChange={(e) => setTeamsEnabled(e.target.checked)}
-                >
-                  Teams
-                </Checkbox>
-              </Form.Item>
-            </Col>
-          </Row>}
-          {teamsEnabled && !projectSettings?.int_teams && (
-            <>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    color={'grey'}
-                    extraClass={'m-0'}
+              </div>
+            )}
+            {teamsEnabled && projectSettings?.int_teams && (
+              <div className='p-4'>
+                {teamsSaveSelectedChannel.length > 0 && (
+                  <Row
+                    className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
                   >
-                    Teams is not integrated, Do you want to integrate with your
-                    Microsoft Teams account now?
-                  </Text>
-                </Col>
-              </Row>
-              <Row className={'mt-2 ml-2'}>
-                <Col span={10} className={'m-0'}>
-                  <Button onClick={onConnectMSTeams}>
-                    <SVG name={'MSTeam'} size={20} />
-                    Connect to Teams
-                  </Button>
-                </Col>
-              </Row>
-            </>
-          )}
-          {teamsEnabled && projectSettings?.int_teams && (
-            <>
-              {teamsSaveSelectedChannel.length > 0 && (
-                <Row
-                  className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
-                >
-                  <Col className={'m-0'}>
-                    <Text
-                      type={'title'}
-                      level={6}
-                      color={'grey-2'}
-                      extraClass={'m-0 mt-2 ml-2'}
-                    >
-                      Selected Channels
-                    </Text>
-                    {teamsSaveSelectedChannel.map((channel, index) => (
-                      <div key={index}>
-                        <Text
-                          type={'title'}
-                          level={7}
-                          color={'grey'}
-                          extraClass={'m-0 ml-2 my-1'}
-                        >
-                          {'#' + channel.name}
-                        </Text>
-                      </div>
-                    ))}
-                  </Col>
-                </Row>
-              )}
-              {!teamsSaveSelectedChannel.length > 0 ? (
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setTeamsShowSelectChannelsModal(true)}
-                    >
-                      Select Channels
-                    </Button>
-                  </Col>
-                </Row>
-              ) : (
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button
-                      type={'link'}
-                      onClick={() => setTeamsShowSelectChannelsModal(true)}
-                    >
-                      Manage Channels
-                    </Button>
-                  </Col>
-                </Row>
-              )}
-            </>
-          )}
+                    <Col className={'m-0'}>
+                      <Text
+                        type={'title'}
+                        level={6}
+                        color={'grey-2'}
+                        extraClass={'m-0 mt-2 ml-2'}
+                      >
+                        Selected Channels
+                      </Text>
+                      {teamsSaveSelectedChannel.map((channel, index) => (
+                        <div key={index}>
+                          <Text
+                            type={'title'}
+                            level={7}
+                            color={'grey'}
+                            extraClass={'m-0 ml-2 my-1'}
+                          >
+                            {'#' + channel.name}
+                          </Text>
+                        </div>
+                      ))}
+                    </Col>
+                  </Row>
+                )}
+                {!teamsSaveSelectedChannel.length > 0 ? (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setTeamsShowSelectChannelsModal(true)}
+                      >
+                        Select Channels
+                      </Button>
+                    </Col>
+                  </Row>
+                ) : (
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button
+                        type={'link'}
+                        onClick={() => setTeamsShowSelectChannelsModal(true)}
+                      >
+                        Manage Channels
+                      </Button>
+                    </Col>
+                  </Row>
+                )}
+              </div>
+            )}
+          </div>}
         </Form>
       </>
     );
@@ -1785,9 +2149,9 @@ const KPIBasedAlert = ({
           )}
         </Row>
 
-        <Row className={'mt-2'}>
+        <Row className={''}>
           <Col span={24}>
-            <div className={'border-top--thin-2 pt-2 mt-2'} />
+            <div className={'border-top--thin-2 pb-6 mt-6'} />
             <Text
               type={'title'}
               level={7}
@@ -1800,96 +2164,279 @@ const KPIBasedAlert = ({
           </Col>
         </Row>
 
-        <Row className={'mt-2 ml-2'}>
-          <Col span={4}>
-            <Checkbox
-              disabled={true}
-              checked={viewAlertDetails?.alert_configuration?.email_enabled}
-            >
-              Email
-            </Checkbox>
-          </Col>
-        </Row>
-        <Row className={'mt-4'}>
-          <Col span={8}>{emailView()}</Col>
-        </Row>
-        <Row className={'mt-2 ml-2'}>
-          <Col span={4}>
-            <Checkbox
-              disabled={true}
-              checked={viewAlertDetails?.alert_configuration?.slack_enabled}
-            >
-              Slack
-            </Checkbox>
-          </Col>
-        </Row>
-        {viewAlertDetails?.alert_configuration?.slack_enabled &&
-          viewAlertDetails?.alert_configuration
-            ?.slack_channels_and_user_groups && (
-            <Row className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}>
-              <Col className={'m-0'}>
-                <Text
-                  type={'title'}
-                  level={6}
-                  color={'grey-2'}
-                  extraClass={'m-0 mt-2 ml-2'}
-                >
-                  Selected Channels
-                </Text>
-                {viewSelectedChannels.map((channel, index) => (
-                  <div key={index}>
+        <div className='border rounded mt-3'>
+          <div style={{ backgroundColor: '#fafafa' }}>
+            <Row className={'ml-2'}>
+              <Col span={20}>
+                <div className='flex justify-between p-3'>
+                  <div className='flex'>
+                    <Avatar
+                      size={40}
+                      shape='square'
+                      icon={<SVG name={'slack'} size={40} color='purple' />}
+                      style={{ backgroundColor: '#F5F6F8' }}
+                    />
+                  </div>
+                  <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                    <div className='flex flex-row items-center justify-start'>
+                      <Text
+                        type='title'
+                        level={7}
+                        weight='medium'
+                        extraClass='m-0'
+                      >
+                        Slack
+                      </Text>
+                    </div>
+                    <Text
+                      type='paragraph'
+                      mini
+                      extraClass='m-0'
+                      color='grey'
+                      lineHeight='medium'
+                    >
+                      Post to slack when events you care about happen. Motivate
+                      the right actions.
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+              <Col className={'m-0 mt-4'}>
+                <Form.Item name='slack_enabled' className={'m-0'}>
+                  <div span={24} className={'flex flex-start items-center'}>
                     <Text
                       type={'title'}
                       level={7}
-                      color={'grey'}
-                      extraClass={'m-0 ml-2 my-1'}
+                      weight='medium'
+                      extraClass={'m-0 mr-2'}
                     >
-                      {'#' + channel.name}
+                      Enable
                     </Text>
+                    <span style={{ width: '50px' }}>
+                      <Switch
+                        checkedChildren='On'
+                        unCheckedChildren='OFF'
+                        disabled
+                        checked={
+                          viewAlertDetails?.alert_configuration?.slack_enabled
+                        }
+                      />
+                    </span>{' '}
                   </div>
-                ))}
+                </Form.Item>
               </Col>
             </Row>
-          )}
-        {['junaid@factors.ai'].includes(agent_details?.email) &&
-        <Row className={'mt-2 ml-2'}>
-          <Col span={4}>
-            <Checkbox
-              disabled={true}
-              checked={viewAlertDetails?.alert_configuration?.teams_enabled}
-            >
-              Teams
-            </Checkbox>
-          </Col>
-        </Row>}
-        {viewAlertDetails?.alert_configuration?.teams_enabled &&
-          viewAlertDetails?.alert_configuration
-            ?.teams_channels_and_user_groups && (
-            <Row className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}>
-              <Col className={'m-0'}>
-                <Text
-                  type={'title'}
-                  level={6}
-                  color={'grey-2'}
-                  extraClass={'m-0 mt-2 ml-2'}
-                >
-                  Selected Channels
-                </Text>
-                {teamsViewSelectedChannels.map((channel, index) => (
-                  <div key={index}>
+          </div>
+
+          {viewAlertDetails?.alert_configuration?.slack_enabled &&
+            viewAlertDetails?.alert_configuration
+              ?.slack_channels_and_user_groups && (
+              <div className='p-4'>
+                {viewSelectedChannels.length > 0 && (
+                  <div>
+                    <Row>
+                      <Col>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          weight={'regular'}
+                          extraClass={'m-0 mt-2 ml-2'}
+                        >
+                          {viewSelectedChannels.length > 1
+                            ? 'Selected Channels'
+                            : 'Selected Channel'}
+                        </Text>
+                      </Col>
+                    </Row>
+                    <Row
+                      className={'rounded border border-gray-200 ml-2 w-2/6'}
+                    >
+                      <Col className={'m-0'}>
+                        {viewSelectedChannels.map((channel, index) => (
+                          <div key={index}>
+                            <Text
+                              type={'title'}
+                              level={7}
+                              color={'grey'}
+                              extraClass={'m-0 ml-4 my-2'}
+                            >
+                              {'#' + channel.name}
+                            </Text>
+                          </div>
+                        ))}
+                      </Col>
+                    </Row>
+                  </div>
+                )}
+              </div>
+            )}
+        </div>
+
+        <div className='border rounded mt-3'>
+          <div style={{ backgroundColor: '#fafafa' }}>
+            <Row className={'ml-2'}>
+              <Col span={20}>
+                <div className='flex justify-between p-3'>
+                  <div className='flex'>
+                    <Avatar
+                      size={40}
+                      shape='square'
+                      icon={<SVG name={'Email'} size={38} color='purple' />}
+                      style={{ backgroundColor: '#F5F6F8' }}
+                    />
+                  </div>
+                  <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                    <div className='flex flex-row items-center justify-start'>
+                      <Text
+                        type='title'
+                        level={7}
+                        weight='medium'
+                        extraClass='m-0'
+                      >
+                        Email
+                      </Text>
+                    </div>
+                    <Text
+                      type='paragraph'
+                      mini
+                      extraClass='m-0'
+                      color='grey'
+                      lineHeight='medium'
+                    >
+                      When this alert happens, send this information to the
+                      selected mails.
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+              <Col className={'m-0 mt-4'}>
+                <Form.Item name='email_enabled' className={'m-0'}>
+                  <div span={24} className={'flex flex-start items-center'}>
                     <Text
                       type={'title'}
                       level={7}
-                      color={'grey'}
-                      extraClass={'m-0 ml-2 my-1'}
+                      weight='medium'
+                      extraClass={'m-0 mr-2'}
                     >
-                      {'#' + channel.name}
+                      Enable
                     </Text>
+                    <span style={{ width: '50px' }}>
+                      <Switch
+                        checkedChildren='On'
+                        unCheckedChildren='OFF'
+                        disabled
+                        checked={
+                          viewAlertDetails?.alert_configuration?.email_enabled
+                        }
+                      />
+                    </span>{' '}
                   </div>
-                ))}
+                </Form.Item>
               </Col>
             </Row>
-          )}
+          </div>
+          <Row className={'p-4 ml-2 mt-3'}>
+            <Col span={8}>{emailView()}</Col>
+          </Row>
+        </div>
+        {featureLock(agent_details?.email) &&
+        <div className='border rounded mt-3'>
+          <div style={{ backgroundColor: '#fafafa' }}>
+            <Row className={'ml-2'}>
+              <Col span={20}>
+                <div className='flex justify-between p-3'>
+                  <div className='flex'>
+                    <Avatar
+                      size={40}
+                      shape='square'
+                      icon={<SVG name={'MSTeam'} size={40} color='purple' />}
+                      style={{ backgroundColor: '#F5F6F8' }}
+                    />
+                  </div>
+                  <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                    <div className='flex flex-row items-center justify-start'>
+                      <Text
+                        type='title'
+                        level={7}
+                        weight='medium'
+                        extraClass='m-0'
+                      >
+                        Teams
+                      </Text>
+                    </div>
+                    <Text
+                      type='paragraph'
+                      mini
+                      extraClass='m-0'
+                      color='grey'
+                      lineHeight='medium'
+                    >
+                      Post to teams when events you care about happen. Motivate
+                      the right actions.
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+              <Col className={'m-0 mt-4'}>
+                <Form.Item name='teams_enabled' className={'m-0'}>
+                  <div span={24} className={'flex flex-start items-center'}>
+                    <Text
+                      type={'title'}
+                      level={7}
+                      weight='medium'
+                      extraClass={'m-0 mr-2'}
+                    >
+                      Enable
+                    </Text>
+                    <span style={{ width: '50px' }}>
+                      <Switch
+                        checkedChildren='On'
+                        unCheckedChildren='OFF'
+                        disabled
+                        checked={
+                          viewAlertDetails?.alert_configuration?.teams_enabled
+                        }
+                      />
+                    </span>{' '}
+                  </div>
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
+          {viewAlertDetails?.alert_configuration?.teams_enabled &&
+            viewAlertDetails?.alert_configuration
+              ?.teams_channels_and_user_groups && (
+              <div className='p-4'>
+                <Row
+                  className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
+                >
+                  <Col className={'m-0'}>
+                    <Text
+                      type={'title'}
+                      level={6}
+                      color={'grey-2'}
+                      extraClass={'m-0 mt-2 ml-2'}
+                    >
+                      Selected Channels
+                    </Text>
+                    {teamsViewSelectedChannels.map((channel, index) => (
+                      <div key={index}>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          color={'grey'}
+                          extraClass={'m-0 ml-2 my-1'}
+                        >
+                          {'#' + channel.name}
+                        </Text>
+                      </div>
+                    ))}
+                  </Col>
+                </Row>
+              </div>
+            )}
+        </div>}
+
         <Row className={'mt-2'}>
           <Col span={24}>
             <div className={'border-top--thin-2 mt-2 mb-4'} />
@@ -2022,11 +2569,10 @@ const KPIBasedAlert = ({
                 options={teamsWorkspaceOpts}
                 placeholder='Select Workspace'
                 showSearch
-                onChange={(value) => {
-                  setSelectedWorkspace(value);
+                onChange={(value, op) => {
+                  setSelectedWorkspace({name: op?.label, id: value});
                 }}
-              >
-              </Select>
+              ></Select>
             </Col>
           </Row>
           <Row>

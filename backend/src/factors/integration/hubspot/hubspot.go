@@ -1056,6 +1056,89 @@ func SyncReferenceField(projectID int64, apiKey, refreshToken string, hubspotAll
 		}
 	}
 
+	log.Info(fmt.Sprintf("Starting sync engagement call disposition for project %d", projectID))
+	callDispositionFailures := SyncHubspotEngagementCallDispositions(projectID, apiKey, refreshToken)
+	if callDispositionFailures {
+		failures = true
+	}
+	log.Info(fmt.Sprintf("Synced engagement call disposition for project %d", projectID))
+
+	return failures
+}
+
+type EngagementCallDisposition struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
+func GetHubspotEngagementCallDispositions(apiKey, refreshToken string) ([]EngagementCallDisposition, error) {
+	if apiKey == "" && refreshToken == "" {
+		return nil, errors.New("missing api key and refresh token on GetHubspotEngagementDispositions")
+	}
+
+	var accessToken string
+	var err error
+	if refreshToken != "" {
+		accessToken, err = model.GetHubspotAccessToken(refreshToken, C.GetHubspotAppID(), C.GetHubspotAppSecret())
+		if err != nil {
+			return nil, err
+		}
+		apiKey = ""
+	}
+
+	url := "https://api.hubapi.com/calling/v1/dispositions?"
+	resp, err := model.ActionHubspotRequestHandler("GET", url, apiKey, accessToken, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		var body interface{}
+		json.NewDecoder(resp.Body).Decode(&body)
+		log.WithFields(log.Fields{"resp_body": body}).Error("Failed to GetHubspotEngagementDispositions")
+		return nil, fmt.Errorf("error while query data %s ", body)
+	}
+
+	var callDispositions []EngagementCallDisposition
+	err = json.NewDecoder(resp.Body).Decode(&callDispositions)
+	if err != nil {
+		return nil, err
+	}
+
+	return callDispositions, nil
+}
+
+func SyncHubspotEngagementCallDispositions(projectID int64, apiKey, refreshToken string) bool {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	failures := false
+
+	if projectID == 0 || (apiKey == "" && refreshToken == "") {
+		logCtx.Error("Invalid parameters on syncDispositionLabels")
+		return true
+	}
+
+	callDispositions, err := GetHubspotEngagementCallDispositions(apiKey, refreshToken)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get engagement call dispositions.")
+		return true
+	}
+
+	for i := range callDispositions {
+		if callDispositions[i].ID == "" || callDispositions[i].Label == "" {
+			continue
+		}
+
+		propertyKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameEngagement, "disposition")
+		status := store.GetStore().CreateOrUpdateDisplayNameLabel(projectID, model.SmartCRMEventSourceHubspot, propertyKey, callDispositions[i].ID, callDispositions[i].Label)
+		if status == http.StatusBadRequest || status == http.StatusInternalServerError {
+			logCtx.WithFields(log.Fields{"key": propertyKey, "value": callDispositions[i].ID, "label": callDispositions[i].Label}).
+				Error("Failed to create or update display name label from engagement call disposition")
+			failures = true
+			continue
+		}
+	}
+
 	return failures
 }
 

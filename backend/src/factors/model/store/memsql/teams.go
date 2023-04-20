@@ -61,7 +61,7 @@ func (store *MemSQL) GetTeamsAuthTokens(projectID int64, agentUUID string) (mode
 		return model.TeamsAccessTokens{}, errors.New("No Teams auth token found")
 	}
 
-	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
+	err = U.DecodePostgresJsonbToStructType(agent.TeamsAccessTokens, &token)
 	if err != nil && err.Error() != "Empty jsonb object" {
 		log.Error(err)
 		return model.TeamsAccessTokens{}, err

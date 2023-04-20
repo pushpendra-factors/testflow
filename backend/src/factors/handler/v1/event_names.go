@@ -11,10 +11,10 @@ import (
 
 	C "factors/config"
 
+	"bytes"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
-	"encoding/json"
-	"bytes"
 )
 
 var FORCED_EVENT_NAMES = map[int64][]string{
@@ -154,7 +154,7 @@ func GetEventNamesByTypeHandler(c *gin.Context) {
 }
 
 type UploadRequest struct {
-	Payload []byte `json:"payload"`
+	Payload  []byte `json:"payload"`
 	FileName string `json:"file_name"`
 }
 
@@ -166,7 +166,7 @@ func UploadListForFilters(c *gin.Context) {
 	}
 
 	fileReference := U.GetUUID()
-	result := make([]string, 0 )
+	result := make([]string, 0)
 
 	var payload UploadRequest
 	r := c.Request
@@ -186,7 +186,7 @@ func UploadListForFilters(c *gin.Context) {
 		fileReference = fmt.Sprintf("%s_%s_%s", U.GetUUID(), fileName, fileNameSplit[len(fileNameSplit)-1])
 	}
 	payloadString := string(payload.Payload)
-	if(strings.Contains(payloadString, "\r\n")){
+	if strings.Contains(payloadString, "\r\n") {
 		result = strings.Split(payloadString, "\r\n")
 	} else {
 		result = strings.Split(payloadString, "\n")
@@ -194,12 +194,12 @@ func UploadListForFilters(c *gin.Context) {
 
 	resultTrimmed := make([]string, 0)
 	for _, data := range result {
-		if(data != ""){
+		if data != "" {
 			resultTrimmed = append(resultTrimmed, data)
 		}
 	}
-	if(len(resultTrimmed) <= 0){
-		c.JSON(http.StatusInternalServerError,  gin.H{"error": "EmptyFile"})
+	if len(resultTrimmed) <= 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "EmptyFile"})
 		return
 	}
 
@@ -216,5 +216,6 @@ func UploadListForFilters(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+	store.GetStore().UploadFilterFile(fileReference, projectId)
 	c.JSON(http.StatusOK, gin.H{"file_reference": fileReference})
 }

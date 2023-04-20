@@ -1054,7 +1054,7 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 	return nil
 }
 
-func buildPropertiesInfoFromInput(sortedCloudManager, modelCloudManager *filestore.FileManager, projectId int64, modelId uint64, eventNames []string, efCloudPath, efCloudName string) (*P.UserAndEventsInfo, map[string]P.PropertiesCount, error) {
+func buildPropertiesInfoFromInput(sortedCloudManager, modelCloudManager *filestore.FileManager, projectId int64, modelId uint64, eventNames []string, efCloudPath, efCloudName string, startTimestamp, endTimestamp int64) (*P.UserAndEventsInfo, map[string]P.PropertiesCount, error) {
 	userAndEventsInfo := P.NewUserAndEventsInfo()
 	eMap := *userAndEventsInfo.EventPropertiesInfoMap
 	for _, eventName := range eventNames {
@@ -1090,7 +1090,7 @@ func buildPropertiesInfoFromInput(sortedCloudManager, modelCloudManager *filesto
 		return userAndEventsInfo, nil, err
 	}
 
-	allProperty, err := P.CollectPropertiesInfoFiltered(projectId, scanner, userAndEventsInfo, upCount, epCount)
+	allProperty, err := P.CollectPropertiesInfoFiltered(projectId, scanner, userAndEventsInfo, upCount, epCount, startTimestamp, endTimestamp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1659,7 +1659,7 @@ func writeEncodedEvent(eventName string, property string, propertyName string, p
 	return nil
 }
 
-func GetEventNamesAndType(efCloudPath, efCloudName string, sortedCloudManager, modelCloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int) ([]string, map[string]string, map[string]int, error) {
+func GetEventNamesAndType(efCloudPath, efCloudName string, sortedCloudManager, modelCloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int, startTimestamp, endTimestamp int64) ([]string, map[string]string, map[string]int, error) {
 	eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
@@ -1671,7 +1671,7 @@ func GetEventNamesAndType(efCloudPath, efCloudName string, sortedCloudManager, m
 	buf := make([]byte, maxCapacity)
 	scanner.Buffer(buf, maxCapacity)
 
-	eventNames, eventsCount, err := GetEventNamesFromFile(scanner, modelCloudManager, projectId, modelId, countsVersion)
+	eventNames, eventsCount, err := GetEventNamesFromFile(scanner, modelCloudManager, projectId, modelId, countsVersion, startTimestamp, endTimestamp)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath + efCloudName}).Error("Failed to read event names from file")
 		return nil, nil, nil, err
@@ -1840,7 +1840,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 	diskManager *serviceDisk.DiskDriver, numRoutines int, projectId int64,
 	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64,
 	countOccurence bool, campaignLimitCount int, beamConfig *merge.RunBeamConfig,
-	createMetadata bool, cAlgoProps P.CountAlgoProperties, hardPull bool, useBucketV2 bool) (int, error) {
+	createMetadata bool, cAlgoProps P.CountAlgoProperties, hardPull, useBucketV2, isTimeInProjectTimezone, checkDependency bool) (int, error) {
 
 	var err error
 	countsVersion := cAlgoProps.Counting_version
@@ -1853,12 +1853,15 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 		reader := bytes.NewReader(data)
 		diskManager.Create(metaDataDir, metaDataFileName, reader)
 	}
+	var efCloudPath, efCloudName string
 	if useBucketV2 {
-		if err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTime, endTime,
-			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0); err != nil {
+		if efCloudPath, efCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTime, endTime,
+			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, isTimeInProjectTimezone, checkDependency); err != nil {
 			mineLog.WithError(err).Error("Failed creating events file")
 			return 0, err
 		}
+	} else {
+		efCloudPath, efCloudName = (*sortedCloudManager).GetEventsFilePathAndName(projectId, startTime, endTime)
 	}
 
 	if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {
@@ -1866,7 +1869,6 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 	}
 
 	// download events file from cloud to local
-	efCloudPath, efCloudName := (*sortedCloudManager).GetEventsFilePathAndName(projectId, startTime, endTime)
 	efTmpPath, efTmpName := diskManager.GetEventsFilePathAndName(projectId, startTime, endTime)
 	tmpChunksDir := diskManager.GetPatternChunksDir(projectId, modelId)
 	if err := serviceDisk.MkdirAll(tmpChunksDir); err != nil {
@@ -1887,7 +1889,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 		log.Fatal("unable to create temp event directory")
 	}
 
-	eventNames, eventNamesWithType, events_count_v2, err := GetEventNamesAndType(efCloudPath, efCloudName, sortedCloudManager, modelCloudManager, projectId, modelId, countsVersion)
+	eventNames, eventNamesWithType, events_count_v2, err := GetEventNamesAndType(efCloudPath, efCloudName, sortedCloudManager, modelCloudManager, projectId, modelId, countsVersion, startTime, endTime)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get eventName and event type.")
 		return 0, err
@@ -1904,7 +1906,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 	}
 
 	mineLog.Debugf("job details :%v", cAlgoProps.Job)
-	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(sortedCloudManager, modelCloudManager, projectId, modelId, eventNames, efCloudPath, efCloudName)
+	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(sortedCloudManager, modelCloudManager, projectId, modelId, eventNames, efCloudPath, efCloudName, startTime, endTime)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		return 0, err
@@ -2794,7 +2796,7 @@ func GetEventNamesFromFile_(scanner *bufio.Scanner, projectId int64) ([]string, 
 }
 
 // GetEventNamesFromFile read unique eventNames from Event file
-func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int) ([]string, map[string]int, error) {
+func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int, startTimestamp, endTimestamp int64) ([]string, map[string]int, error) {
 	logCtx := log.WithField("project_id", projectId)
 	scanner.Split(bufio.ScanLines)
 	var txtline string
@@ -2819,6 +2821,9 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
+		}
+		if eventDetails.EventTimestamp < startTimestamp || eventDetails.EventTimestamp > endTimestamp {
+			continue
 		}
 		eventNameString := eventDetails.EventName
 		eventsCount[eventNameString] += 1

@@ -3,10 +3,10 @@ import { useSelector } from 'react-redux';
 import { Button } from 'antd';
 import { SVG } from '../../../factorsComponents';
 import { compareFilters } from '../../../../utils/global';
-import PropFilterBlock from './PropFilterBlock';
+import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 
 function PropertyFilter({
-  displayMode,
+  viewMode,
   filtersLimit = 3,
   profileType,
   source,
@@ -48,7 +48,7 @@ function PropertyFilter({
   }, [filters]);
 
   const delFilter = (index) => {
-    if (!displayMode) {
+    if (!viewMode) {
       const filtersSorted = [...filters];
       filtersSorted.sort(compareFilters);
       const fltrs = filtersSorted.filter((f, i) => i !== index);
@@ -56,7 +56,7 @@ function PropertyFilter({
     }
   };
   const editFilter = (id, filter) => {
-    if (!displayMode) {
+    if (!viewMode) {
       const filtersSorted = [...filters];
       filtersSorted.sort(compareFilters);
       const fltrs = filtersSorted.map((f, i) => (i === id ? filter : f));
@@ -64,7 +64,7 @@ function PropertyFilter({
     }
   };
   const addFilter = (filter) => {
-    if (!displayMode) {
+    if (!viewMode) {
       const fltrs = [...filters];
       fltrs.push(filter);
       setFilters(fltrs);
@@ -80,9 +80,10 @@ function PropertyFilter({
       filters.forEach((filter, id) => {
         list.push(
           <div key={id} className='m-0 mr-2 mb-2'>
-            <PropFilterBlock
-              displayMode={displayMode}
-              activeProject={activeProject}
+            <FilterWrapper
+              groupName={source}
+              viewMode={viewMode}
+              projectID={activeProject?.id}
               index={id}
               filter={filter}
               deleteFilter={delFilter}
@@ -97,9 +98,10 @@ function PropertyFilter({
         if (filterDD) {
           list.push(
             <div key={list.length} className='m-0 mr-2 mb-2'>
-              <PropFilterBlock
-                displayMode={displayMode}
-                activeProject={activeProject}
+              <FilterWrapper
+                groupName={source}
+                viewMode={viewMode}
+                projectID={activeProject?.id}
                 index={list.length}
                 deleteFilter={() => closeFilter()}
                 insertFilter={addFilter}
@@ -108,7 +110,7 @@ function PropertyFilter({
               />
             </div>
           );
-        } else if (!displayMode) {
+        } else if (!viewMode) {
           list.push(
             <div key={list.length} className='flex m-0 mr-2 mb-2'>
               <Button
@@ -124,7 +126,7 @@ function PropertyFilter({
         }
       }
       return (
-        <div className={`flex ${displayMode ? 'flex-col' : 'flex-wrap'}`}>
+        <div className={`flex ${viewMode ? 'flex-col' : 'flex-wrap'}`}>
           {list}
         </div>
       );

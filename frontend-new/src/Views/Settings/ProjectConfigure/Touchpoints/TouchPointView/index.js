@@ -4,12 +4,14 @@ import { bindActionCreators } from 'redux';
 import { Text, SVG } from 'factorsComponents';
 import { Row, Col, Button, Radio, Input, Select, Tooltip } from 'antd';
 
-import { getEventProperties } from 'Reducers/coreQuery/middleware';
+import {
+  getEventProperties,
+  getEventPropertyValues
+} from 'Reducers/coreQuery/middleware';
 
 import FaFilterSelect from 'Components/FaFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 
-import { fetchEventPropertyValues } from 'Reducers/coreQuery/services';
 import FaSelect from '../../../../../components/FaSelect';
 
 import {
@@ -33,11 +35,13 @@ import {
   EVENTS_MAP,
   ruleTypesNameMappingForSF,
   reverseRuleTypesNameMappingForSF,
-  DEFAULT_TIMESTAMPS
+  DEFAULT_TIMESTAMPS,
+  PROPERTY_MAP_OPTIONS
 } from '../utils';
 import { toCapitalCase } from 'Utils/global';
 import styles from './index.module.scss';
 import logger from 'Utils/logger';
+import { PropertySelect } from './PropertySelect';
 
 const TouchpointView = ({
   activeProject,
@@ -47,7 +51,9 @@ const TouchpointView = ({
   userProperties,
   rule,
   onCancel,
-  onSave
+  onSave,
+  getEventPropertyValues,
+  propertyValuesMap
 }) => {
   const { eventPropNames } = useSelector((state) => state.coreQuery);
 
@@ -115,13 +121,6 @@ const TouchpointView = ({
     ],
     operator: DEFAULT_OPERATOR_PROPS
   });
-
-  const [ruleSelectorOpen, setRuleSelectorOpen] = useState(false);
-  const [typeSelectorOpen, setTypeSelectorOpen] = useState(false);
-  const [sourceSelectorOpen, setSourceSelectorOpen] = useState(false);
-  const [campaignSelectorOpen, setCampaignSelectorOpen] = useState(false);
-  const [channelSelectorOpen, setChannelSelectorOpen] = useState(false);
-  const [extraPropSelectorOpen, setExtraPropSelectorOpen] = useState(false);
 
   const reInitialise = () => {
     setDefaultTimeStampValue();
@@ -208,7 +207,7 @@ const TouchpointView = ({
         const eventToCall = getEventToCall();
         const prop = filt.props;
         const propToCall = prop.length > 3 ? prop[1] : prop[0];
-        return await fetchEventPropertyValues(
+        return await getEventPropertyValues(
           activeProject.id,
           eventToCall,
           propToCall
@@ -230,15 +229,7 @@ const TouchpointView = ({
     if (dropDownValues[propToCall]?.length >= 1) {
       return null;
     }
-    fetchEventPropertyValues(activeProject.id, eventToCall, propToCall)
-      .then((res) => {
-        setPropData(propToCall, res.data);
-      })
-      .catch((err) => {
-        const ddValues = Object.assign({}, dropDownValues);
-        ddValues[propToCall] = ['$none'];
-        setDropDownValues(ddValues);
-      });
+    getEventPropertyValues(activeProject.id, eventToCall, propToCall);
   };
 
   const getEventToCall = () => {
@@ -341,7 +332,7 @@ const TouchpointView = ({
                 filter={filter}
                 propOpts={filterDropDownOptions.props}
                 operatorOpts={filterDropDownOptions.operator}
-                valueOpts={dropDownValues}
+                valueOpts={propertyValuesMap}
                 applyFilter={(filt) => applyFilter(filt, index)}
                 setValuesByProps={setValuesByProps}
               ></FaFilterSelect>
@@ -367,7 +358,7 @@ const TouchpointView = ({
               <FaFilterSelect
                 propOpts={filterDropDownOptions.props}
                 operatorOpts={filterDropDownOptions.operator}
-                valueOpts={dropDownValues}
+                valueOpts={propertyValuesMap}
                 applyFilter={(filt) => applyFilter(filt, -1)}
                 setValuesByProps={setValuesByProps}
               ></FaFilterSelect>
@@ -588,40 +579,18 @@ const TouchpointView = ({
     const propMap = Object.assign({}, propertyMap);
     propMap['$type']['va'] = val[0].toLowerCase();
     setPropertyMap(propMap);
-    setTypeSelectorOpen(false);
+    // setTypeSelectorOpen(false);
   };
 
-  const setPropSource = (val) => {
+  const setPropVal = (val, key) => {
     let propMap = Object.assign({}, propertyMap);
-    propMap['$source']['va'] = reversePropertyNameMap(val[0]);
+    propMap[key]['va'] = reversePropertyNameMap(val[0]);
     if (val[0].length !== 0 && isSearchedValue(val[0]))
-      propMap['$source']['ty'] = 'Constant';
-    else propMap['$source']['ty'] = 'Property';
+      propMap[key]['ty'] = 'Constant';
+    else propMap[key]['ty'] = 'Property';
     setPropertyMap(propMap);
-    setSourceSelectorOpen(false);
   };
 
-  const setPropCampaign = (val) => {
-    let propMap = Object.assign({}, propertyMap);
-    propMap['$campaign']['va'] = reversePropertyNameMap(val[0]);
-    if (val[0].length !== 0 && isSearchedValue(val[0]))
-      propMap['$campaign']['ty'] = 'Constant';
-    else propMap['$campaign']['ty'] = 'Property';
-
-    setPropertyMap(propMap);
-    setCampaignSelectorOpen(false);
-  };
-
-  const setPropChannel = (val) => {
-    let propMap = Object.assign({}, propertyMap);
-    propMap['$channel']['va'] = reversePropertyNameMap(val[0]);
-    if (val[0].length !== 0 && isSearchedValue(val[0]))
-      propMap['$channel']['ty'] = 'Constant';
-    else propMap['$channel']['ty'] = 'Property';
-
-    setPropertyMap(propMap);
-    setChannelSelectorOpen(false);
-  };
   const getStartsWith = () => {
     switch (tchRuleType) {
       case RULE_TYPE_HS_EMAILS:
@@ -678,23 +647,23 @@ const TouchpointView = ({
 
   const propertyNameMap = (val) => {
     const eventToCall = getEventToCall();
-    if (eventProperties[eventToCall] === undefined) return '';
+    if (eventProperties[eventToCall] === undefined) return val;
     const index = eventProperties[eventToCall]
       ?.map((prop) => prop[1])
       .indexOf(val);
     if (index === -1) return val;
     const name = eventProperties[eventToCall]?.[index]?.[0];
-    return name === undefined ? '' : name;
+    return name === undefined ? val : name;
   };
   const reversePropertyNameMap = (val) => {
     const eventToCall = getEventToCall();
-    if (eventProperties[eventToCall] === undefined) return '';
+    if (eventProperties[eventToCall] === undefined) return val;
     const index = eventProperties[eventToCall]
       ?.map((prop) => prop[0])
       .indexOf(val);
     if (index === -1) return val;
     const name = eventProperties[eventToCall]?.[index]?.[1];
-    return name === undefined ? '' : name;
+    return name === undefined ? val : name;
   };
 
   //To check if the value is new value entered by user.
@@ -716,6 +685,52 @@ const TouchpointView = ({
     return options;
   };
   const renderPropertyMap = () => {
+    const propertyMapRows = [];
+    PROPERTY_MAP_OPTIONS.forEach((property, index) => {
+      const propTitle = property[0];
+      const propKey = property[1];
+      if (propTitle === 'Type') {
+        propertyMapRows.push(
+          <Row key={index} className={'mt-10'}>
+            <Col span={7}>
+              <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
+                {propTitle}
+              </Text>
+            </Col>
+            <PropertySelect
+              title={
+                propertyMap['$type']['va'] === ''
+                  ? 'Select Type Property'
+                  : toCapitalCase(propertyMap['$type']['va'])
+              }
+              setPropValue={setPropType}
+              renderOptions={renderTypePropertyOptions}
+              allowSearch={false}
+            />
+          </Row>
+        );
+      } else {
+        propertyMapRows.push(
+          <Row key={index} className={'mt-4'}>
+            <Col span={7}>
+              <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
+                {propTitle}
+              </Text>
+            </Col>
+            <PropertySelect
+              title={
+                propertyMap[propKey]['va'] === ''
+                  ? 'Select Type Property'
+                  : propertyNameMap(propertyMap[propKey]['va'])
+              }
+              setPropValue={(val) => setPropVal(val, propKey)}
+              renderOptions={renderEventPropertyCampOptions}
+              allowSearch={true}
+            />
+          </Row>
+        );
+      }
+    });
     return (
       <div className={`border-top--thin pt-5 mt-8 `}>
         <Row>
@@ -724,178 +739,7 @@ const TouchpointView = ({
           </Text>
         </Row>
 
-        <Row className={`mt-10`}>
-          <Col span={7}>
-            <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
-              Type
-            </Text>
-          </Col>
-          <div
-            className={`flex flex-col relative items-center ${styles.dropdown}`}
-          >
-            <Tooltip
-              title={
-                propertyMap['$type']['va'] === ''
-                  ? 'Select Type Property'
-                  : toCapitalCase(propertyMap['$type']['va'])
-              }
-            >
-              <Button
-                className={`${styles.dropdownbtn}`}
-                type='text'
-                onClick={() => setTypeSelectorOpen(true)}
-              >
-                <div className={styles.dropdownbtntext + '  text-sm'}>
-                  {propertyMap['$type']['va'] === ''
-                    ? 'Select Type'
-                    : toCapitalCase(propertyMap['$type']['va'])}
-                </div>
-                <div className={styles.dropdownbtnicon}>
-                  <SVG name='caretDown' size={18} />
-                </div>
-              </Button>
-            </Tooltip>
-            {typeSelectorOpen && (
-              <FaSelect
-                options={renderTypePropertyOptions()}
-                optionClick={(val) => setPropType(val)}
-                onClickOutside={() => setTypeSelectorOpen(false)}
-                extraClass={`${styles.dropdownSelect}`}
-              ></FaSelect>
-            )}
-          </div>
-        </Row>
-
-        <Row className={`mt-4`}>
-          <Col span={7}>
-            <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
-              Source
-            </Text>
-          </Col>
-          <div
-            className={`flex flex-col relative items-center ${styles.dropdown}`}
-          >
-            <Tooltip
-              title={
-                propertyMap['$source']['va'] === ''
-                  ? 'Select Source Property'
-                  : propertyNameMap(propertyMap['$source']['va'])
-              }
-            >
-              <Button
-                className={`${styles.dropdownbtn}`}
-                type='text'
-                onClick={() => setSourceSelectorOpen(true)}
-              >
-                <div className={styles.dropdownbtntext + '  text-sm'}>
-                  {propertyMap['$source']['va'] === ''
-                    ? 'Select Source Property'
-                    : propertyNameMap(propertyMap['$source']['va'])}
-                </div>
-                <div className={styles.dropdownbtnicon}>
-                  <SVG name='caretDown' size={18} />
-                </div>
-              </Button>
-            </Tooltip>
-            {sourceSelectorOpen && (
-              <FaSelect
-                allowSearch
-                options={renderEventPropertyCampOptions()}
-                optionClick={(val) => setPropSource(val)}
-                onClickOutside={() => setSourceSelectorOpen(false)}
-                extraClass={`${styles.dropdownSelect}`}
-              ></FaSelect>
-            )}
-          </div>
-        </Row>
-
-        <Row className={`mt-4`}>
-          <Col span={7}>
-            <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
-              Campaign
-            </Text>
-          </Col>
-
-          <div
-            className={`flex flex-col relative items-center ${styles.dropdown}`}
-          >
-            <Tooltip
-              title={
-                propertyMap['$campaign']['va'] === ''
-                  ? 'Select Campaign Property'
-                  : propertyNameMap(propertyMap['$campaign']['va'])
-              }
-            >
-              <Button
-                className={`${styles.dropdownbtn}`}
-                type='text'
-                onClick={() => setCampaignSelectorOpen(true)}
-              >
-                <div className={styles.dropdownbtntext + '  text-sm'}>
-                  {propertyMap['$campaign']['va'] === ''
-                    ? 'Select Campaign Property'
-                    : propertyNameMap(propertyMap['$campaign']['va'])}
-                </div>
-                <div className={styles.dropdownbtnicon}>
-                  <SVG name='caretDown' size={18} />
-                </div>
-              </Button>
-            </Tooltip>
-            {campaignSelectorOpen && (
-              <FaSelect
-                allowSearch
-                options={renderEventPropertyCampOptions()}
-                optionClick={(val) => setPropCampaign(val)}
-                onClickOutside={() => setCampaignSelectorOpen(false)}
-                extraClass={`${styles.dropdownSelect}`}
-              ></FaSelect>
-            )}
-          </div>
-        </Row>
-
-        <Row className={`mt-4`}>
-          <Col span={7}>
-            <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
-              Channel
-            </Text>
-          </Col>
-
-          <div
-            className={`flex flex-col relative items-center ${styles.dropdown}`}
-          >
-            <Tooltip
-              title={
-                propertyMap['$channel']['va'] === ''
-                  ? 'Select Channel Property'
-                  : propertyNameMap(propertyMap['$channel']['va'])
-              }
-            >
-              <Button
-                className={`${styles.dropdownbtn}`}
-                type='text'
-                onClick={() => setChannelSelectorOpen(true)}
-              >
-                <div className={styles.dropdownbtntext + '  text-sm'}>
-                  {propertyMap['$channel']['va'] === ''
-                    ? 'Select Channel Property'
-                    : propertyNameMap(propertyMap['$channel']['va'])}
-                </div>
-                <div className={styles.dropdownbtnicon}>
-                  <SVG name='caretDown' size={18} />
-                </div>
-              </Button>
-            </Tooltip>
-            {channelSelectorOpen && (
-              <FaSelect
-                allowSearch
-                options={renderEventPropertyCampOptions()}
-                optionClick={(val) => setPropChannel(val)}
-                onClickOutside={() => setChannelSelectorOpen(false)}
-                extraClass={`${styles.dropdownSelect}`}
-              ></FaSelect>
-            )}
-          </div>
-        </Row>
+        {propertyMapRows}
       </div>
     );
   };
@@ -956,10 +800,9 @@ const TouchpointView = ({
   const ruleTypeSelect = (val) => {
     setTchRuleType(
       tchType === '2'
-        ? ruleTypesNameMappingForHS[val]
-        : ruleTypesNameMappingForSF[val]
+        ? ruleTypesNameMappingForHS[val[0]]
+        : ruleTypesNameMappingForSF[val[0]]
     );
-    setRuleSelectorOpen(false);
   };
   const renderTchRuleTypeOptions = () => {
     let ruleTypes = Object.keys(ruleTypesNameMappingForHS).map((type) => [
@@ -968,34 +811,7 @@ const TouchpointView = ({
     if (tchType === '3') {
       ruleTypes = Object.keys(ruleTypesNameMappingForSF).map((type) => [type]);
     }
-    return (
-      <div className={`flex flex-col relative items-center ${styles.dropdown}`}>
-        <Tooltip title='Change in Hubspot Contact Field Value'>
-          <Button
-            className={`${styles.dropdownbtn}`}
-            type='text'
-            onClick={() => setRuleSelectorOpen(true)}
-          >
-            <div className={styles.dropdownbtntext + '  text-sm'}>
-              {tchType === '2'
-                ? reverseRuleTypesNameMappingForHS[tchRuleType]
-                : reverseRuleTypesNameMappingForSF[tchRuleType]}{' '}
-            </div>
-            <div className={styles.dropdownbtnicon}>
-              <SVG name='caretDown' size={18} />
-            </div>
-          </Button>
-        </Tooltip>
-        {ruleSelectorOpen && (
-          <FaSelect
-            options={ruleTypes}
-            optionClick={(val) => ruleTypeSelect(val[0])}
-            onClickOutside={() => setRuleSelectorOpen(false)}
-            extraClass={`${styles.dropdownSelect}`}
-          ></FaSelect>
-        )}
-      </div>
-    );
+    return ruleTypes;
   };
   const renderTchRuleType = () => {
     return (
@@ -1005,7 +821,18 @@ const TouchpointView = ({
             Create a touchpoint using<sup>*</sup>
           </Text>
         </Row>
-        <Row className={`mt-4`}>{renderTchRuleTypeOptions()}</Row>
+        <Row className={`mt-4`}>
+          <PropertySelect
+            title={
+              tchType === '2'
+                ? reverseRuleTypesNameMappingForHS[tchRuleType]
+                : reverseRuleTypesNameMappingForSF[tchRuleType]
+            }
+            setPropValue={ruleTypeSelect}
+            renderOptions={renderTchRuleTypeOptions}
+            allowSearch={false}
+          />
+        </Row>
       </div>
     );
   };
@@ -1021,12 +848,11 @@ const TouchpointView = ({
   };
   const setExtraPropVal = (val, key) => {
     let propMap = Object.assign({}, extraPropMap);
-    propMap['$' + key]['va'] = reversePropertyNameMap(val[0]);
+    propMap[key]['va'] = reversePropertyNameMap(val[0]);
     if (val[0].length !== 0 && isSearchedValue(val[0]))
-      propMap['$' + key]['ty'] = 'Constant';
-    else propMap['$' + key]['ty'] = 'Property';
+      propMap[key]['ty'] = 'Constant';
+    else propMap[key]['ty'] = 'Property';
     setExtraPropMap(propMap);
-    setExtraPropSelectorOpen(false);
   };
   const renderAddExtraPropBtn = () => {
     return (
@@ -1055,7 +881,8 @@ const TouchpointView = ({
   const renderExtraPropMap = () => {
     const extraMapRows = [];
     Extra_PROP_SHOW_OPTIONS.forEach((key, index) => {
-      if (!Object.keys(extraPropMap).includes(`$` + key[2])) return null;
+      const propKey = '$' + key[2];
+      if (!Object.keys(extraPropMap).includes(propKey)) return null;
       extraMapRows.push(
         <Row key={index} className={`mt-4`}>
           <Col span={7}>
@@ -1063,35 +890,16 @@ const TouchpointView = ({
               {key[0]}
             </Text>
           </Col>
-          <div
-            className={`flex flex-col relative items-center ${styles.dropdown}`}
-          >
-            <Tooltip title='Select Property'>
-              <Button
-                className={`${styles.dropdownbtn}`}
-                type='text'
-                onClick={() => setExtraPropSelectorOpen(true)}
-              >
-                <div className={styles.dropdownbtntext + '  text-sm'}>
-                  {extraPropMap['$' + key[2]]['va'] === ''
-                    ? 'Select Property'
-                    : propertyNameMap(extraPropMap[`$` + key[2]]['va'])}
-                </div>
-                <div className={styles.dropdownbtnicon}>
-                  <SVG name='caretDown' size={18} />
-                </div>
-              </Button>
-            </Tooltip>
-            {extraPropSelectorOpen && (
-              <FaSelect
-                allowSearch
-                options={renderEventPropertyCampOptions()}
-                optionClick={(val) => setExtraPropVal(val, key[2])}
-                onClickOutside={() => setExtraPropSelectorOpen(false)}
-                extraClass={`${styles.dropdownSelect}`}
-              ></FaSelect>
-            )}
-          </div>
+          <PropertySelect
+            title={
+              extraPropMap[propKey]['va'] === ''
+                ? 'Select Property'
+                : propertyNameMap(extraPropMap[propKey]['va'])
+            }
+            setPropValue={(val) => setExtraPropVal(val, propKey)}
+            renderOptions={renderEventPropertyCampOptions}
+            allowSearch={true}
+          />
         </Row>
       );
     });
@@ -1124,12 +932,14 @@ const TouchpointView = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   eventProperties: state.coreQuery.eventProperties,
-  userProperties: state.coreQuery.userProperties
+  userProperties: state.coreQuery.userProperties,
+  propertyValuesMap: state.coreQuery.propertyValuesMap
 });
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      getEventProperties
+      getEventProperties,
+      getEventPropertyValues
     },
     dispatch
   );

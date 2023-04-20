@@ -361,11 +361,18 @@ function ContactDetails({
           <Text type='title' level={7} extraClass='m-0 my-2' color='grey'>
             Associated Groups:
           </Text>
-          {userDetails?.data?.group_infos?.map((group) => (
-            <Text type='title' level={7} extraClass='m-0 mb-2'>
-              {group.group_name}
-            </Text>
-          )) || '-'}
+          {userDetails?.data?.group_infos?.map((group) => {
+            return (
+              <div className='flex flex-col items-start mb-2'>
+                <Text type='title' level={7} extraClass='m-0'>
+                  {group?.group_name}
+                </Text>
+                <Text type='title' level={7} extraClass='m-0' color='grey'>
+                  {group?.associated_group || '-'}
+                </Text>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -102,7 +102,7 @@ function GroupSelect2({
                   level={8}
                   type={'title'}
                   extraClass={'m-0 ml-2'}
-                  weight={'bold'}
+                  weight={'600'}
                 >
                   {_.startCase(group.label)}
                 </Text>

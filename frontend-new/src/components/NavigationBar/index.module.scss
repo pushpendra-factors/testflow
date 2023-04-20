@@ -49,6 +49,9 @@
     max-width: 240px !important;
     height: 60px !important;
   }
+  & b {
+    font-weight: 600;
+  }
 }
 
 .popover {
@@ -70,7 +73,6 @@
 }
 
 .menuitems {
-
   margin: 8px 12px !important;
   padding: 6px !important;
   background: transparent;

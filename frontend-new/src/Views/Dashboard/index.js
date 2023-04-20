@@ -62,7 +62,6 @@ function Dashboard({
   useEffect(() => {
     fetchProjectSettingsV1(activeProject?.id)
       .then((res) => {
-        console.log(res);
         setSdkCheck(res?.data?.int_completed);
       })
       .catch((err) => {

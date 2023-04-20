@@ -6,7 +6,8 @@ export const getSixSignalReportData = async (
   projectId: string,
   from: number,
   to: number,
-  timezone: string
+  timezone: string,
+  isSaved: boolean
 ) => {
   try {
     if (!projectId || !from || !to || !timezone) {
@@ -18,7 +19,8 @@ export const getSixSignalReportData = async (
         {
           fr: from,
           to: to,
-          tz: timezone
+          tz: timezone,
+          isSaved
         }
       ]
     });
@@ -76,13 +78,22 @@ export const shareSixSignalReportToEmails = async (
   domain: string,
   from: number,
   to: number,
-  timezone: string
+  timezone: string,
+  projectId: string
 ) => {
   try {
-    if (!emails || !shareUrl || !domain || !from || !to || !timezone) {
+    if (
+      !emails ||
+      !shareUrl ||
+      !domain ||
+      !from ||
+      !to ||
+      !timezone ||
+      !projectId
+    ) {
       throw new Error('Invalid parameters passed');
     }
-    const url = `${host}projects/2/sixsignal/email`;
+    const url = `${host}projects/${projectId}/sixsignal/email`;
     return post(null, url, {
       email_ids: emails,
       url: shareUrl,
@@ -90,6 +101,33 @@ export const shareSixSignalReportToEmails = async (
       fr: from,
       to: to,
       tz: timezone
+    });
+  } catch (error) {
+    logger.error(error);
+    return null;
+  }
+};
+
+export const getSavedReportDates = async (projectId: string) => {
+  try {
+    const url = `${host}projects/${projectId}/sixsignal/date_list`;
+    return get(null, url);
+  } catch (error) {
+    logger.error('Error in fetching saved reports', error);
+  }
+};
+
+export const subscribeToVistorIdentificationEmails = async (
+  emails: string[],
+  projectId: string
+) => {
+  try {
+    if (!emails || !projectId) {
+      throw new Error('Invalid parameters passed');
+    }
+    const url = `${host}projects/${projectId}/sixsignal/add_email`;
+    return post(null, url, {
+      email_ids: emails
     });
   } catch (error) {
     logger.error(error);

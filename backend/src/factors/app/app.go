@@ -107,6 +107,8 @@ func main() {
 	loginTokenMap := flag.String("login_token_map", "", "Map of token and agent email to authenticate")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
+	useSentryRollup := flag.Bool("use_sentry_rollup", false, "Enables rollup support for sentry")
+	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 300, "Enables to send errors to sentry in given interval.")
 
 	skipTrackProjectIds := flag.String("skip_track_project_ids", "", "List or projects to skip track")
 	lookbackWindowForEventUserCache := flag.Int("lookback_window_event_user_cache",
@@ -210,6 +212,7 @@ func main() {
 	teamsAppClientID := flag.String("teams_app_client_id", "", "")
 	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
 	teamsApplicationID := flag.String("teams_application_id", "", "")
+	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -373,11 +376,14 @@ func main() {
 		EnableEventFiltersInSegments:                   *enableEventFiltersInSegments,
 		EnableFeatureGates:                             *enableFeatureGates,
 		EnableDBConnectionPool2:                        *enableDBConnectionPool2,
+		UseSentryRollup:                                *useSentryRollup,
+		SentryRollupSyncInSecs:                         *sentryRollupSyncInSecs,
 		TeamsAppTenantID:                               *teamsAppTenantID,
 		TeamsAppClientID:                               *teamsAppClientID,
 		TeamsAppClientSecret:                           *teamsAppClientSecret,
 		BlockedIPProjectIDs:                            *blockedIpProjectIds,
 		TeamsApplicationID:                             *teamsApplicationID,
+		EnableSyncReferenceFieldsByProjectID:           *enableSyncReferenceFieldsByProjectID,
 	}
 	C.InitConf(config)
 

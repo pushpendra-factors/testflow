@@ -8,6 +8,8 @@ import TableUnits from './TableUnits';
 import CardUnit from './CardUnit';
 import NoDataChart from '../../../components/NoDataChart';
 import { DASHBOARD_LAST_REFRESHED } from '../../../reducers/types';
+import ErrorBoundary from '../../../ErrorBoundary';
+import { FaErrorComp, FaErrorLog } from 'Components/factorsComponents';
 
 function WebsiteAnalytics({
   webAnalyticsUnits,
@@ -75,15 +77,15 @@ function WebsiteAnalytics({
 
   if (resultState.loading) {
     return (
-      <div className="flex justify-center items-center w-full h-64">
-        <Spin size="large" />
+      <div className='flex justify-center items-center w-full h-64'>
+        <Spin size='large' />
       </div>
     );
   }
 
   if (resultState.error) {
     return (
-      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
         <NoDataChart />
       </div>
     );
@@ -98,7 +100,17 @@ function WebsiteAnalytics({
     );
 
     return (
-      <>
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            size='small'
+            title='Widget Error'
+            subtitle='We are facing trouble loading this widget. Drop us a message on the in-app chat.'
+            className='h-full'
+          />
+        }
+        onError={FaErrorLog}
+      >
         {cardUnits.length ? (
           <CardUnit
             resultState={resultState}
@@ -115,7 +127,7 @@ function WebsiteAnalytics({
             data={resultState.data}
           />
         ) : null}
-      </>
+      </ErrorBoundary>
     );
   }
 

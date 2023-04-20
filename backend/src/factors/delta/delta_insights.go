@@ -275,6 +275,8 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 	tmpCloudManager := configs["tmpCloudManager"].(*filestore.FileManager)
 	sortedCloudManager := configs["sortedCloudManager"].(*filestore.FileManager)
 	useBucketV2 := configs["useBucketV2"].(bool)
+	hardPull := configs["hardPull"].(bool)
+	pulledMap := make(map[int64]map[string]bool)
 
 	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
 
@@ -294,6 +296,10 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			To:   configs["endTimestamp"].(int64),
 		},
 	}
+	for _, period := range periodCodesWithWeekNMinus1 {
+		pulledMap[period.From] = make(map[string]bool)
+	}
+
 	mailerRun := false
 	if configs["run_type"] != nil && configs["run_type"].(string) == "mailer" {
 		mailerRun = true
@@ -331,7 +337,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 				continue
 			}
 			if err := createKpiInsights(diskManager, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, periodCodesWithWeekNMinus1, projectId,
-				dashboardUnit.QueryId, kpiQuery, k, skipWpi, skipWpi2, mailerRun, beamConfig, useBucketV2, status); err != nil {
+				dashboardUnit.QueryId, kpiQuery, k, skipWpi, skipWpi2, mailerRun, beamConfig, useBucketV2, hardPull, pulledMap, status); err != nil {
 				deltaComputeLog.WithError(err).Error("KPI insights error query: ", dashboardUnit.QueryId)
 				status["error-kpi-query-"+queryIdString] = err
 				continue
@@ -342,7 +348,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			// TODO: This was changed from set to map
 			unionOfFeatures := make(map[string]map[string]bool)
 			deltaComputeLog.Info("1st pass: Scanning events file to get top-k base features for each period.")
-			err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, isEventOccurence, isMultiStep, skipWpi, skipWpi2, mailerRun, beamConfig, useBucketV2)
+			err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, isEventOccurence, isMultiStep, skipWpi, skipWpi2, mailerRun, beamConfig, useBucketV2, hardPull, pulledMap)
 			if err != nil {
 				deltaComputeLog.WithError(err).Error("failed to process wpi pass 1")
 				status["error-wpi-pass1-"+queryIdString] = err.Error()
@@ -350,7 +356,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			}
 			isDownloaded = true
 			deltaComputeLog.Info("2nd pass: Scanning events file again to compute counts for union of features.")
-			err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, isEventOccurence, isMultiStep, skipWpi, skipWpi2, mailerRun, beamConfig, useBucketV2)
+			err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, isEventOccurence, isMultiStep, skipWpi, skipWpi2, mailerRun, beamConfig, useBucketV2, hardPull, pulledMap)
 			if err != nil {
 				deltaComputeLog.WithError(err).Error("failed to process wpi pass 2")
 				status["error-wpi-pass2-"+queryIdString] = err.Error()
@@ -454,14 +460,14 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 	return nil
 }
 
-func processSeparatePeriods(projectId int64, periodCodes []Period, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, isEventOccurence bool, isMultiStep bool, skipWpi bool, skipWpi2 bool, mailerRun bool, beamConfig *merge.RunBeamConfig, useBucketV2 bool) error {
+func processSeparatePeriods(projectId int64, periodCodes []Period, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, isEventOccurence bool, isMultiStep bool, skipWpi bool, skipWpi2 bool, mailerRun bool, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) error {
 	earlierWeekMap := make(map[int64]bool)
 	earlierWeekMap[periodCodes[0].From] = periodCodes[0].From < periodCodes[1].From
 	earlierWeekMap[periodCodes[1].From] = periodCodes[0].From > periodCodes[1].From
 	for _, periodCode := range periodCodes {
 		fileDownloaded := false
 		if !skipWpi || (!earlierWeekMap[periodCode.From] && !skipWpi2) {
-			err := processSinglePeriodData(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, isEventOccurence, isMultiStep, mailerRun, beamConfig, useBucketV2)
+			err := processSinglePeriodData(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, isEventOccurence, isMultiStep, mailerRun, beamConfig, useBucketV2, hardPull, pulledMap)
 			if err != nil {
 				return err
 			}
@@ -486,7 +492,7 @@ func processSeparatePeriods(projectId int64, periodCodes []Period, archiveCloudM
 				}
 			}
 			if !fileDownloaded {
-				err := processSinglePeriodData(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, isEventOccurence, isMultiStep, mailerRun, beamConfig, useBucketV2)
+				err := processSinglePeriodData(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, isEventOccurence, isMultiStep, mailerRun, beamConfig, useBucketV2, hardPull, pulledMap)
 				if err != nil {
 					return err
 				}
@@ -496,8 +502,8 @@ func processSeparatePeriods(projectId int64, periodCodes []Period, archiveCloudM
 	return nil
 }
 
-func processSinglePeriodData(projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, isEventOccurence bool, isMultiStep bool, mailerRun bool, beamConfig *merge.RunBeamConfig, useBucketV2 bool) error {
-	scanner, err := GetEventFileScanner(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
+func processSinglePeriodData(projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, isEventOccurence bool, isMultiStep bool, mailerRun bool, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) error {
+	scanner, err := GetEventFileScanner(projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap)
 	if err != nil {
 		log.WithError(err).Error(fmt.Sprintf("Scanner initialization failed for period %v", periodCode))
 		return err

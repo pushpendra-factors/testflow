@@ -83,8 +83,9 @@ type ProjectSetting struct {
 	ProjectCurrency       string `json:"currency"`
 	IsPathAnalysisEnabled bool   `json:"is_path_analysis_enabled"`
 	// onboarding flow steps
-	IsDeanonymizationRequested bool `json:"is_deanonymization_requested"`
-	IsOnboardingCompleted     bool `json:"is_onboarding_completed"`
+	IsDeanonymizationRequested bool   `json:"is_deanonymization_requested"`
+	IsOnboardingCompleted      bool   `json:"is_onboarding_completed"`
+	SixSignalEmailList         string `gorm:"column:sixsignal_email_list" json:"sixsignal_email_list"`
 }
 
 /* Sample Attribution Setting

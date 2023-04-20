@@ -43,6 +43,7 @@ type Model interface {
 	GetPrimaryAgentOfProject(projectId int64) (uuid string, errCode int)
 	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
 	IsSlackIntegratedForProject(projectID int64, agentUUID string) (bool, int)
+	IsTeamsIntegratedForProject(projectID int64, agentUUID string) (bool, int)
 	UpdateLastLoggedOut(agentUUID string, timestamp int64) int
 
 	// analytics
@@ -326,7 +327,8 @@ type Model interface {
 	GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int)
 	GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
-
+	GetDomainData(projectID string) ([]model.DomainDataResponse, int)
+	UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error
 	//bingads document
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 
@@ -429,6 +431,8 @@ type Model interface {
 	GetAllPathAnalysisEnabledProjects() ([]int64, error)
 	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
 	GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error)
+	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
+	AddSixsignalEmailList(projectId int64, emailIds string) int
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
@@ -640,6 +644,8 @@ type Model interface {
 	GetDisplayNameLabel(projectID int64, source, propertyKey, value string) (*model.DisplayNameLabel, int, error)
 	GetDisplayNameLabelsByProjectIdAndSource(projectID int64, source string) ([]model.DisplayNameLabel, int)
 	GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID int64, source, propertyKey string) (map[string]string, error)
+	AddPropertyValueLabelToQueryResults(projectID int64, oldResults []model.QueryResult) ([]model.QueryResult, error)
+	TransformQueryResultsColumnValuesToLabel(projectID int64, result map[string]interface{}) (map[string]interface{}, error)
 
 	// task and task-execution
 	RegisterTaskWithDefaultConfiguration(taskName string, source string, frequency int, isProjectEnabled bool) (uint64, int, string)
@@ -758,6 +764,7 @@ type Model interface {
 	RevokeShareableURLsWithProjectID(projectId int64) (int, string)
 
 	CreateSharableURLAudit(sharableURL *model.ShareableURL, agentId string) int
+	ValidateCreateShareableURLRequest(params *model.ShareableURL, projectID int64, agentUUID string) (bool, string)
 
 	//crm
 	CreateCRMUser(crmUser *model.CRMUser) (int, error)
@@ -804,6 +811,7 @@ type Model interface {
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
+	GetAssociatedGroup(projectID int64, userID string, groupName string) (string, error)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
@@ -895,6 +903,8 @@ type Model interface {
 	GetTeamsAuthTokens(projectID int64, agentUUID string) (model.TeamsAccessTokens, error)
 	DeleteTeamsIntegration(projectID int64, agentUUID string) error
 	// Currency
-	CreateCurrencyDetails(currency string, date int64, value float64) (error)
+	CreateCurrencyDetails(currency string, date int64, value float64) error
 	GetCurrencyDetails(currency string, date int64) ([]model.Currency, error)
+	// UploadFile
+	UploadFilterFile(fileReference string, projectId int64)
 }

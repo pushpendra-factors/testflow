@@ -672,6 +672,29 @@ func AddObjectTypeToProperties(kpiConfig map[string]interface{}, value string) m
 	return kpiConfig
 }
 
+// This keeps the first map elements and discard the second.
+// Used in place where KPI event elements have the higher priority and to be considered.
+func MergeKPIPropertiesByConsiderElementsInFirst(first []map[string]string, second []map[string]string) []map[string]string {
+
+	mapOfElements := make(map[string]map[string]string)
+	for _, element := range first {
+		value := element["name"]
+		mapOfElements[value] = element
+	}
+
+	for _, element := range second {
+		value := element["name"]
+		if _, exists := mapOfElements[value]; !exists {
+			mapOfElements[value] = element
+		}
+	}
+	resultantArray := make([]map[string]string, 0)
+	for _, value := range mapOfElements {
+		resultantArray = append(resultantArray, value)
+	}
+	return resultantArray
+}
+
 func TransformEventPropertiesToKPIConfigProperties(properties map[string][]string, propertiesToDisplayNames map[string]string) []map[string]string {
 	var resultantKPIConfigProperties []map[string]string
 	var tempKPIConfigProperty map[string]string

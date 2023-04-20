@@ -20,7 +20,7 @@ func (store *MemSQL) GetKPIConfigsForWebsiteSessions(projectID int64, reqID stri
 	kpiPropertiesFromContentGroup := store.getWebsiteRelatedContentGroupPropertiesForKPI(projectID)
 	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
 	rProperties := append(model.KPIPropertiesForWebsiteSessions, kpiPropertiesFromContentGroup...)
-	rProperties = append(rProperties, standardUserProperties...)
+	rProperties = model.MergeKPIPropertiesByConsiderElementsInFirst(rProperties, standardUserProperties)
 	config["properties"] = rProperties
 
 	rMetrics := model.GetStaticallyDefinedMetricsForDisplayCategory(model.WebsiteSessionDisplayCategory)

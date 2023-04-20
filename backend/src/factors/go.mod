@@ -33,6 +33,7 @@ require (
 	github.com/evalphobia/logrus_sentry v0.8.2
 	github.com/gamebtc/devicedetector v0.0.0-20191029155033-2b1e13468d79
 	github.com/getsentry/raven-go v0.2.0 // indirect
+	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/cors v0.0.0-20170318125340-cf4846e6a636
 	github.com/gin-contrib/sessions v0.0.4
@@ -51,7 +52,6 @@ require (
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
 	github.com/gomodule/redigo v2.0.0+incompatible
-	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/google/martian/v3 v3.0.0 // indirect
 	github.com/google/pprof v0.0.0-20200905233945-acf8798be1f7 // indirect
 	github.com/google/uuid v1.1.1
@@ -71,10 +71,9 @@ require (
 	github.com/jinzhu/now v1.0.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.10.1 // indirect
-	github.com/lib/pq v1.10.3
+	github.com/lib/pq v1.10.3 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/manucorporat/stats v0.0.0-20180402194714-3ba42d56d227 // indirect
-	github.com/mattn/go-colorable v0.1.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
@@ -106,7 +105,7 @@ require (
 	github.com/ttacon/libphonenumber v1.1.0
 	github.com/urfave/cli v1.22.5 // indirect
 	github.com/urfave/cli/v2 v2.3.0 // indirect
-	github.com/x-cray/logrus-prefixed-formatter v0.5.2
+	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
 	github.com/xdg/stringprep v1.0.1-0.20180714160509-73f8eece6fdc // indirect
 	github.com/xuri/efp v0.0.0-20200605144744-ba689101faaf // indirect

@@ -11,7 +11,7 @@ const CONFIG = {
     linkedin_client_id: '861ix78kpo39ge',
     firstTimeDashboardTemplates: {
       webanalytics: '3de1776a-2b06-4223-adf3-a57012833ec5',
-      websitevisitoridentification: 'e742427d-f4d7-4a7f-842f-97bb3cde22f6',
+      websitevisitoridentification: 'd14c52fd-7856-4fda-9f2e-0f36c2dd0084',
       allpaidmarketing: '215d866d-129c-415a-a728-592672604cfa'
     }
   },
@@ -25,7 +25,7 @@ const CONFIG = {
     linkedin_client_id: '861ix78kpo39ge',
     firstTimeDashboardTemplates: {
       webanalytics: '3de1776a-2b06-4223-adf3-a57012833ec5',
-      websitevisitoridentification: 'e742427d-f4d7-4a7f-842f-97bb3cde22f6',
+      websitevisitoridentification: 'd14c52fd-7856-4fda-9f2e-0f36c2dd0084',
       allpaidmarketing: 'bf10934c-0128-4c1c-8948-772387c95502'
     }
   },

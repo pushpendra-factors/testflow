@@ -5,6 +5,7 @@ import { connect } from 'react-redux';
 import { getTimeZoneNameFromCity } from 'Utils/constants';
 import { Currency } from 'Utils/currency';
 import _ from 'lodash';
+import ExcludeIp from './IpBlocking/excludeIp';
 
 function ViewBasicSettings({
   activeProject,
@@ -161,7 +162,7 @@ function ViewBasicSettings({
             )}
           </Col>
         </Row>
-        <Row className={'mt-6'}>
+        <Row className={'mt-6 mb-10'}>
           <Col span={12}>
             <Text type={'title'} level={7} extraClass={'m-0'}>
               Time Zone
@@ -203,6 +204,9 @@ function ViewBasicSettings({
             )}
           </Col>
         </Row>
+        
+        
+        <ExcludeIp mode="view"></ExcludeIp>
       </div>
     </>
   );

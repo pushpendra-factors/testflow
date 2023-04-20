@@ -26,51 +26,6 @@ type UpdateShareableURLParams struct {
 	// AllowedUsers string `json:"allowed_users"`
 }
 
-func validateCreateShareableURLRequest(params *model.ShareableURL, projectID int64, agentUUID string) (bool, string) {
-
-	logCtx := log.WithFields(log.Fields{
-		"project_id":    projectID,
-		"agentUUID":     agentUUID,
-		"shareableURLs": params,
-	})
-
-	if params.EntityID == 0 {
-		return false, "Invalid entity id."
-	}
-
-	if !model.ValidShareEntityTypes[params.EntityType] {
-		return false, "Invalid entity type."
-	}
-
-	if !model.ValidShareTypes[params.ShareType] {
-		return false, "Invalid share type."
-	}
-
-	if params.EntityType == model.ShareableURLEntityTypeQuery || params.EntityType == model.ShareableURLEntityTypeSixSignal {
-		query, err := store.GetStore().GetQueryWithQueryId(projectID, params.EntityID)
-		logCtx.Info("Query fetched : ", query)
-		if err != http.StatusFound {
-			return false, "Invalid query id."
-		}
-
-		_, err = store.GetStore().GetShareableURLWithShareStringAndAgentID(projectID, query.IdText, agentUUID)
-		if err == http.StatusBadRequest || err == http.StatusInternalServerError {
-			return false, "Shareable query creation failed. DB error."
-		} else if err == http.StatusFound {
-			return false, "Shareable url already exists."
-		}
-
-		params.QueryID = query.IdText
-
-	} else if params.EntityType == model.ShareableURLEntityTypeDashboard {
-
-	} else if params.EntityType == model.ShareableURLEntityTypeTemplate {
-
-	}
-	logCtx.Info("Shareable URls is valid: ", params)
-	return true, ""
-}
-
 func GetShareableURLsHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
@@ -135,7 +90,7 @@ func CreateShareableURLHandler(c *gin.Context) {
 		shareableUrlRequest.ExpiresAt = time.Now().AddDate(0, 1, 0).Unix()
 	}
 
-	valid, errMsg := validateCreateShareableURLRequest(shareableUrlRequest, projectID, agentUUID)
+	valid, errMsg := store.GetStore().ValidateCreateShareableURLRequest(shareableUrlRequest, projectID, agentUUID)
 	if !valid {
 		logCtx.Error(errMsg)
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})

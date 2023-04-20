@@ -1,15 +1,25 @@
 /* eslint-disable */
-import { 
-  fetchEventsAction, fetchEventPropertiesAction, 
-  fetchUserPropertiesAction, setGroupByAction, 
-  delGroupByAction, deleteGroupByEventAction, 
-  setEventGoalAction, setMarketingTouchpointsAction, 
-  setAttributionModelsAction, setAttributionWindowAction, 
-  setAttrLinkEventsAction, setCampChannelAction, 
-  setMeasuresAction, getCampaignConfigAction, 
-  setCampFiltersAction, setCampGroupByAction, 
-  setAttrDateRangeAction, setCampDateRangeAction, 
-  setDefaultStateAction, setTouchPointFiltersAction,
+import {
+  fetchEventsAction,
+  fetchEventPropertiesAction,
+  fetchUserPropertiesAction,
+  setGroupByAction,
+  delGroupByAction,
+  deleteGroupByEventAction,
+  setEventGoalAction,
+  setMarketingTouchpointsAction,
+  setAttributionModelsAction,
+  setAttributionWindowAction,
+  setAttrLinkEventsAction,
+  setCampChannelAction,
+  setMeasuresAction,
+  getCampaignConfigAction,
+  setCampFiltersAction,
+  setCampGroupByAction,
+  setAttrDateRangeAction,
+  setCampDateRangeAction,
+  setDefaultStateAction,
+  setTouchPointFiltersAction,
   setAttributionQueryTypeAction,
   setTacticOfferTypeAction,
   setEventsDisplayAction,
@@ -18,21 +28,39 @@ import {
   setGroupPropertiesNamesAction,
   fetchGroupPropertiesAction,
   resetGroupByAction,
-  fetchEventsMapAction
+  fetchEventsMapAction,
+  FETCH_PROPERTY_VALUES
 } from './actions';
-import { getEventNames, fetchEventProperties, fetchUserProperties, fetchGroupProperties, fetchCampaignConfig } from './services';
-import { convertToEventOptions, convertPropsToOptions, convertCampaignConfig } from './utils';
+import {
+  getEventNames,
+  fetchEventProperties,
+  fetchUserProperties,
+  fetchGroupProperties,
+  fetchCampaignConfig,
+  fetchEventPropertyValues,
+  fetchGroupPropertyValues,
+  fetchUserPropertyValues
+} from './services';
+import {
+  convertToEventOptions,
+  convertPropsToOptions,
+  convertCampaignConfig
+} from './utils';
 
 export const fetchEventNames = (projectId) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       getEventNames(dispatch, projectId)
         .then((response) => {
-          dispatch(fetchEventsMapAction(response.data.event_names))
-          const options = convertToEventOptions(response.data.event_names, response.data.display_names);
-          dispatch(setEventsDisplayAction(response.data.display_names))
+          dispatch(fetchEventsMapAction(response.data.event_names));
+          const options = convertToEventOptions(
+            response.data.event_names,
+            response.data.display_names
+          );
+          dispatch(setEventsDisplayAction(response.data.display_names));
           resolve(dispatch(fetchEventsAction(options)));
-        }).catch((err) => {
+        })
+        .catch((err) => {
           resolve(dispatch(fetchEventsAction([])));
         });
     });
@@ -42,201 +70,227 @@ export const fetchEventNames = (projectId) => {
 export const getGroupProperties = (projectId, groupName) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      fetchGroupProperties(projectId, groupName).then((response) => {
-        const options = convertPropsToOptions(response.data?.properties, response.data?.display_names);
-        resolve(dispatch(setGroupPropertiesNamesAction(response.data?.display_names)));
-        resolve(dispatch(fetchGroupPropertiesAction(options, groupName)));
-      }).catch((err) => {
-        resolve(dispatch(fetchGroupPropertiesAction({})));
-      })
-    })
-  }
-}
- 
+      fetchGroupProperties(projectId, groupName)
+        .then((response) => {
+          const options = convertPropsToOptions(
+            response.data?.properties,
+            response.data?.display_names
+          );
+          resolve(
+            dispatch(
+              setGroupPropertiesNamesAction(response.data?.display_names)
+            )
+          );
+          resolve(dispatch(fetchGroupPropertiesAction(options, groupName)));
+        })
+        .catch((err) => {
+          resolve(dispatch(fetchGroupPropertiesAction({})));
+        });
+    });
+  };
+};
+
 export const getUserProperties = (projectId, queryType = '') => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      fetchUserProperties(projectId, queryType).then((response) => {
-        const options = convertPropsToOptions(response.data?.properties, response.data?.display_names);
-        resolve(dispatch(setUserPropertiesNamesAction(response.data?.display_names)));
-        resolve(dispatch(fetchUserPropertiesAction(options)));
-      }).catch((err) => {
-        // resolve(dispatch(fetchEventPropertiesAction({})));
-      })
-    })
-  }
-}
+      fetchUserProperties(projectId, queryType)
+        .then((response) => {
+          const options = convertPropsToOptions(
+            response.data?.properties,
+            response.data?.display_names
+          );
+          resolve(
+            dispatch(setUserPropertiesNamesAction(response.data?.display_names))
+          );
+          resolve(dispatch(fetchUserPropertiesAction(options)));
+        })
+        .catch((err) => {
+          // resolve(dispatch(fetchEventPropertiesAction({})));
+        });
+    });
+  };
+};
 
 export const getEventProperties = (projectId, eventName) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       fetchEventProperties(projectId, eventName)
         .then((response) => {
-          const options = convertPropsToOptions(response.data.properties, response.data?.display_names);
-          resolve(dispatch(setEventPropertiesNamesAction(response.data?.display_names)));
+          const options = convertPropsToOptions(
+            response.data.properties,
+            response.data?.display_names
+          );
+          resolve(
+            dispatch(
+              setEventPropertiesNamesAction(response.data?.display_names)
+            )
+          );
           resolve(dispatch(fetchEventPropertiesAction(options, eventName)));
-        }).catch((err) => {
+        })
+        .catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));
         });
     });
   };
-}
+};
 
 export const setGroupBy = (groupByType, groupBy, index) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(setGroupByAction(groupByType, groupBy, index)))
-    })
-  }
-}
+      resolve(dispatch(setGroupByAction(groupByType, groupBy, index)));
+    });
+  };
+};
 export const resetGroupBy = () => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(resetGroupByAction()))
-    })
-  }
-}
+      resolve(dispatch(resetGroupByAction()));
+    });
+  };
+};
 
 export const delGroupBy = (type, payload, index) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(delGroupByAction(type, payload, index)))
-    })
-  }
-}
+      resolve(dispatch(delGroupByAction(type, payload, index)));
+    });
+  };
+};
 
 export const deleteGroupByForEvent = (ev, index) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(deleteGroupByEventAction(ev, index)))
-    })
-  }
-}
+      resolve(dispatch(deleteGroupByEventAction(ev, index)));
+    });
+  };
+};
 
 export const setGoalEvent = (goalEvent) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(setEventGoalAction(goalEvent)))
-    })
-  }
-}
+      resolve(dispatch(setEventGoalAction(goalEvent)));
+    });
+  };
+};
 
 export const setTouchPoint = (touchpoint) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setMarketingTouchpointsAction(touchpoint)));
-    })
-  }
-}
+    });
+  };
+};
 
 export const setTouchPointFilters = (touchPointFilters) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setTouchPointFiltersAction(touchPointFilters)));
-    })
-  }
-}
+    });
+  };
+};
 
 export const setattrQueryType = (attrQueryType) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setAttributionQueryTypeAction(attrQueryType)));
-    })
-  }
-}
+    });
+  };
+};
 
 export const setTacticOfferType = (tacticOfferType) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setTacticOfferTypeAction(tacticOfferType)));
-    })
-  }
-}
+    });
+  };
+};
 
 export const setAttrDateRange = (dateRange) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setAttrDateRangeAction(dateRange)));
-    })
-  }
-}
+    });
+  };
+};
 
 export const setModels = (models) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(setAttributionModelsAction(models)))
-    })
-  }
-}
+      resolve(dispatch(setAttributionModelsAction(models)));
+    });
+  };
+};
 
 export const setWindow = (window) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(setAttributionWindowAction(window)))
-    })
-  }
-}
+      resolve(dispatch(setAttributionWindowAction(window)));
+    });
+  };
+};
 
 export const setLinkedEvents = (linkedEvents) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(setAttrLinkEventsAction(linkedEvents)))
-    })
-  }
-}
+      resolve(dispatch(setAttrLinkEventsAction(linkedEvents)));
+    });
+  };
+};
 
 export const setCampChannel = (channel) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(setCampChannelAction(channel)))
-    })
-  }
-}
+      resolve(dispatch(setCampChannelAction(channel)));
+    });
+  };
+};
 
 export const setCampMeasures = (measures) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(setMeasuresAction(measures)))
-    })
-  }
-}
+      resolve(dispatch(setMeasuresAction(measures)));
+    });
+  };
+};
 
 export const setCampFilters = (filters) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(setCampFiltersAction(filters)))
-    })
-  }
-}
+      resolve(dispatch(setCampFiltersAction(filters)));
+    });
+  };
+};
 
 export const setCampGroupBy = (groupBy) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(setCampGroupByAction(groupBy)))
-    })
-  }
-}
+      resolve(dispatch(setCampGroupByAction(groupBy)));
+    });
+  };
+};
 
 export const setCampDateRange = (dateRange) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setCampDateRangeAction(dateRange)));
-    })
-  }
-}
+    });
+  };
+};
 
 export const getCampaignConfigData = (projectId, channel) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      fetchCampaignConfig(projectId, channel).then(res => {
+      fetchCampaignConfig(projectId, channel)
+        .then((res) => {
           const payload = convertCampaignConfig(res.data.result);
           resolve(dispatch(getCampaignConfigAction(payload)));
-        }).catch((err) => {
+        })
+        .catch((err) => {
           console.log(err);
         });
-    })
-  }
-}
+    });
+  };
+};
 
 export const resetState = () => {
   return (dispatch) => {
@@ -244,6 +298,82 @@ export const resetState = () => {
       setDefaultStateAction();
     }).catch((err) => {
       console.log(err);
-    })
-  }
-}
+    });
+  };
+};
+
+export const getUserPropertyValues =
+  (projectId, propertyName) => (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchUserPropertyValues(projectId, propertyName).then((response) => {
+        resolve(
+          dispatch({
+            type: FETCH_PROPERTY_VALUES,
+            payload: response.data,
+            propName: propertyName
+          })
+        );
+      });
+    }).catch((err) => {
+      console.log(err);
+      resolve(
+        dispatch({
+          type: FETCH_PROPERTY_VALUES,
+          payload: {},
+          propName: propertyName
+        })
+      );
+    });
+  };
+
+export const getEventPropertyValues =
+  (projectId, eventName, propertyName) => (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchEventPropertyValues(projectId, eventName, propertyName).then(
+        (response) => {
+          resolve(
+            dispatch({
+              type: FETCH_PROPERTY_VALUES,
+              payload: response.data,
+              propName: propertyName
+            })
+          );
+        }
+      );
+    }).catch((err) => {
+      console.log(err);
+      resolve(
+        dispatch({
+          type: FETCH_PROPERTY_VALUES,
+          payload: {},
+          propName: propertyName
+        })
+      );
+    });
+  };
+
+export const getGroupPropertyValues =
+  (projectId, groupName, propertyName) => (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchGroupPropertyValues(projectId, groupName, propertyName).then(
+        (response) => {
+          resolve(
+            dispatch({
+              type: FETCH_PROPERTY_VALUES,
+              payload: response.data,
+              propName: propertyName
+            })
+          );
+        }
+      );
+    }).catch((err) => {
+      console.log(err);
+      resolve(
+        dispatch({
+          type: FETCH_PROPERTY_VALUES,
+          payload: {},
+          propName: propertyName
+        })
+      );
+    });
+  };

@@ -8,12 +8,16 @@ import (
 	"factors/pull"
 	serviceDisk "factors/services/disk"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 var peLog = taskLog.WithField("prefix", "Task#PullEvents")
+
+const DATA_FAILURE_ALERT_LIMIT = 2
 
 func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
@@ -58,71 +62,104 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 	logCtx := peLog.WithFields(log.Fields{"ProjectId": projectId,
 		"StartTime": startTimestampInProjectTimezone, "EndTime": endTimestampInProjectTimezone})
 
-	integrations := store.GetStore().IsIntegrationAvailable(projectId)
-
 	success := true
 
-	// EVENTS
-	if fileTypes[pull.FileType["events"]] {
-		exists := false
-		if !*hardPull {
-			if ok, _ := pull.CheckEventFileExists(cloudManager, projectId, startTimestamp, startTimestamp, endTimestamp); ok {
-				status["events-info"] = "File already exists"
-				exists = true
-			}
-		}
+	allIntegrationsSupported := []string{M.HUBSPOT, M.SALESFORCE, M.ADWORDS, M.BINGADS, M.FACEBOOK, M.LINKEDIN, M.GOOGLE_ORGANIC}
 
-		if !exists {
-			toPull := true
-			var errMsg string = "data not available for "
-			for _, channel := range []string{M.HUBSPOT, M.SALESFORCE} {
-				if !integrations[channel] {
-					status[channel+"-info"] = "Not Integrated"
+	var pullFileTypes = make(map[string]bool)
+	if integrationsStatus, err := store.GetStore().GetLatestDataStatus(allIntegrationsSupported, projectId, false); err != nil {
+		logCtx.WithError(err).Error("error getting integrations status")
+		status["error"] = err.Error()
+		return status, false
+	} else {
+		for fileType, fileTypeNum := range pull.FileType {
+			if !fileTypes[fileTypeNum] {
+				continue
+			}
+			if fileType == "events" {
+				if !*hardPull {
+					if ok, _ := pull.CheckEventFileExists(cloudManager, projectId, startTimestamp, startTimestamp, endTimestamp); ok {
+						status["events-info"] = "File already exists"
+						continue
+					}
+				}
+				pullFileTypes[fileType] = true
+				var eventsPull bool = true
+				var errStr string
+				for _, integration := range []string{M.HUBSPOT, M.SALESFORCE} {
+					intStatus := integrationsStatus[integration]
+					if !intStatus.IntegrationStatus {
+						status[integration+"-info"] = "Not Integrated"
+					} else {
+						if int64(intStatus.LatestData) < endTimestampInProjectTimezone {
+							eventsPull = false
+							success = false
+							errStr += integration + " "
+							noOfDaysFromNow := (U.TimeNowUnix() - int64(intStatus.LatestData)) / U.Per_day_epoch
+							var key string
+							if noOfDaysFromNow > DATA_FAILURE_ALERT_LIMIT {
+								key = integration + "-error"
+							} else {
+								key = integration + "-info"
+							}
+							status[key] = fmt.Sprintf("Data not available after %s", time.Unix(int64(intStatus.LatestData), 0).Format("01-02-2006 15:04:05"))
+						}
+					}
+				}
+				if !eventsPull {
+					status[fileType+"-info"] = errStr + "data availability error"
+					pullFileTypes[fileType] = false
+				}
+			} else if fileType == "users" {
+				pullFileTypes[fileType] = true
+			} else {
+				if !*hardPull {
+					if ok, _ := pull.CheckChannelFileExists(fileType, cloudManager, projectId, startTimestamp, startTimestamp, endTimestamp); ok {
+						status[fileType+"-info"] = "File already exists"
+						continue
+					}
+				}
+				intStatus := integrationsStatus[fileType]
+				pullFileTypes[fileType] = true
+				if !intStatus.IntegrationStatus {
+					pullFileTypes[fileType] = false
+					status[fileType+"-info"] = "Not Integrated"
 				} else {
-					if !store.GetStore().IsDataAvailable(projectId, channel, uint64(endTimestampInProjectTimezone)) {
-						errMsg += channel + " "
-						toPull = false
+					if int64(intStatus.LatestData) < endTimestampInProjectTimezone {
+						pullFileTypes[fileType] = false
+						success = false
+						noOfDays := (U.TimeNowUnix() - int64(intStatus.LatestData)) / U.Per_day_epoch
+						var key string
+						if noOfDays > DATA_FAILURE_ALERT_LIMIT {
+							key = fileType + "-error"
+						} else {
+							key = fileType + "-info"
+						}
+						status[key] = fmt.Sprintf("Data not available after %s", time.Unix(int64(intStatus.LatestData), 0).Format("01-02-2006 15:04:05"))
 					}
 				}
 			}
+		}
+	}
 
-			if toPull {
-				if _, ok := pull.PullEventsData(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, splitRangeProjectIds, noOfSplits, status, logCtx); !ok {
-					return status, false
-				}
-			} else {
-				success = false
-				status["events-error"] = errMsg
-			}
+	// EVENTS
+	if pullFileTypes["events"] {
+		if _, ok := pull.PullEventsData(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, splitRangeProjectIds, noOfSplits, status, logCtx); !ok {
+			return status, false
 		}
 	}
 
 	// AD REPORTS
 	for _, channel := range []string{M.ADWORDS, M.BINGADS, M.FACEBOOK, M.GOOGLE_ORGANIC, M.LINKEDIN} {
-		if fileTypes[pull.FileType[channel]] {
-			if !*hardPull {
-				if ok, _ := pull.CheckChannelFileExists(channel, cloudManager, projectId, startTimestamp, startTimestamp, endTimestamp); ok {
-					status[channel+"-info"] = "File already exists"
-					continue
-				}
-			}
-			if !integrations[channel] {
-				status[channel+"-info"] = "Not Integrated"
-			} else {
-				if store.GetStore().IsDataAvailable(projectId, channel, uint64(endTimestampInProjectTimezone)) {
-					if _, ok := pull.PullDataForChannel(channel, projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, status, logCtx); !ok {
-						return status, false
-					}
-				} else {
-					success = false
-					status[channel+"-error"] = "Data not available"
-				}
+		if pullFileTypes[channel] {
+			if _, ok := pull.PullDataForChannel(channel, projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, status, logCtx); !ok {
+				return status, false
 			}
 		}
 	}
 
 	//USERS
-	if fileTypes[pull.FileType["users"]] {
+	if pullFileTypes["users"] {
 		if _, ok := pull.PullUsersDataForCustomMetrics(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, hardPull, status, logCtx); !ok {
 			return status, false
 		}
@@ -157,9 +194,14 @@ func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}
 		return status, false
 	}
 
+	success := true
 	for ftype, _ := range fileTypes {
 		if ftype == pull.FileType["events"] {
-			merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0)
+			_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, false, false)
+			if err != nil {
+				status["events-error"] = err
+				success = false
+			}
 		} else if ftype == pull.FileType["users"] {
 			uniqueDateFileds := make(map[string]bool)
 			{
@@ -182,16 +224,24 @@ func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}
 				}
 			}
 			for dateField, _ := range uniqueDateFileds {
-				merge.MergeAndWriteSortedFile(projectId, U.DataTypeUser, dateField, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0)
+				_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeUser, dateField, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, false, false)
+				if err != nil {
+					status["users-"+dateField+"-error"] = err
+					success = false
+				}
 			}
 		} else {
 			for channel, ft := range pull.FileType {
 				if ft == ftype {
-					merge.MergeAndWriteSortedFile(projectId, U.DataTypeAdReport, channel, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0)
+					_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeAdReport, channel, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, false, false)
+					if err != nil {
+						status[channel+"-error"] = err
+						success = false
+					}
 				}
 			}
 		}
 	}
 
-	return status, true
+	return status, success
 }

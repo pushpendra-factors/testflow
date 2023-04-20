@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { connect, useSelector, useDispatch } from 'react-redux';
+import { connect, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Button, DatePicker, Tooltip } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
@@ -13,12 +13,12 @@ import {
   getUserProperties,
   getGroupProperties
 } from 'Reducers/coreQuery/middleware';
-import GLobalFilter from './GlobalFilter';
 import MomentTz from 'Components/MomentTz';
 import FaSelect from '../FaSelect';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import { fetchGroups } from 'Reducers/coreQuery/services';
+import GlobalFilter from 'Components/GlobalFilter';
 
 function ProfileComposer({
   queries,
@@ -245,11 +245,11 @@ function ProfileComposer({
           extraClass={`no-padding-l no-padding-r`}
         >
           <div key={0} className={'fa--query_block borderless no-padding '}>
-            <GLobalFilter
+            <GlobalFilter
               filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
               groupName={queryOptions.group_analysis}
-            ></GLobalFilter>
+            />
           </div>
         </ComposerBlock>
       );

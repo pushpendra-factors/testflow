@@ -44,8 +44,11 @@ const FactorsInsightsOld = lazyWithRetry(() =>
 const CoreQuery = lazyWithRetry(() => import('../Views/CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Views/Dashboard'));
 const Factors = lazyWithRetry(() => import('../Views/Factors'));
-const SixSignalReportComponent = lazyWithRetry(() =>
+const VisitorIdentificationReportComponent = lazyWithRetry(() =>
   import('../features/6signal-report/ui')
+);
+const SixSignalReportRedirection = lazyWithRetry(() =>
+  import('../features/6signal-report/ui/SixSignalRedirection')
 );
 
 const componentsLib = lazyWithRetry(() => import('../Views/componentsLib'));
@@ -284,12 +287,20 @@ export const APP_LAYOUT_ROUTES = {
     Private: true,
     Layout: AppLayout
   },
-  SixSignalReport: {
+  VisitorIdentificationReport: {
+    exact: true,
+    path: '/reports/visitor_report',
+    Layout: AppLayout,
+    Private: false,
+    Component: VisitorIdentificationReportComponent
+  },
+  //For backward compatibility for old url sent over mail
+  SixSignalReportRedirection: {
     exact: true,
     path: '/reports/6_signal',
     Layout: AppLayout,
     Private: false,
-    Component: SixSignalReportComponent
+    Component: SixSignalReportRedirection
   }
 };
 
@@ -298,7 +309,8 @@ export const WhiteListedAccounts = [
   'solutions@factors.ai',
   'sonali@factors.ai',
   'praveenr@factors.ai',
-  'janani@factors.ai'
+  'janani@factors.ai',
+  'junaid@factors.ai'
 ];
 
 export const TestEnvs = [

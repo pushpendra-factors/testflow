@@ -100,6 +100,8 @@ func main() {
 	salesforceAppSecret := flag.String("salesforce_app_secret", "", "")
 	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
+	useSentryRollup := flag.Bool("use_sentry_rollup", false, "Enables rollup support for sentry")
+	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 300, "Enables to send errors to sentry in given interval.")
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
@@ -180,24 +182,26 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:                                   *primaryDatastore,
-		APIDomain:                                          *apiDomain,
-		SentryDSN:                                          *sentryDSN,
-		SalesforceAppID:                                    *salesforceAppID,
-		SalesforceAppSecret:                                *salesforceAppSecret,
-		RedisHost:                                          *redisHost,
-		RedisPort:                                          *redisPort,
-		RedisHostPersistent:                                *redisHostPersistent,
-		RedisPortPersistent:                                *redisPortPersistent,
-		DryRunCRMSmartEvent:                                *dryRunSmartEvent,
-		CacheSortedSet:                                     *cacheSortedSet,
-		AllowedCampaignEnrichmentByProjectID:               *allowedCampaignEnrichmentByProjectID,
-		UseOpportunityAssociationByProjectID:               *useOpportunityAssociationByProjectID,
-		UseSourcePropertyOverwriteByProjectIDs:             *useSourcePropertyOverwriteByProjectID,
-		SkippedOtpProjectIDs:                               C.GetTokensFromStringListAsUint64(*skippedOtpProjectIDs),
-		AllowedSalesforceGroupsByProjectIDs:                *enableSalesforceGroupsByProjectIDs,
-		CaptureSourceInUsersTable:                          *captureSourceInUsersTable,
-		RestrictReusingUsersByCustomerUserId:               *restrictReusingUsersByCustomerUserId,
+		PrimaryDatastore:                       *primaryDatastore,
+		APIDomain:                              *apiDomain,
+		SentryDSN:                              *sentryDSN,
+		UseSentryRollup:                        *useSentryRollup,
+		SentryRollupSyncInSecs:                 *sentryRollupSyncInSecs,
+		SalesforceAppID:                        *salesforceAppID,
+		SalesforceAppSecret:                    *salesforceAppSecret,
+		RedisHost:                              *redisHost,
+		RedisPort:                              *redisPort,
+		RedisHostPersistent:                    *redisHostPersistent,
+		RedisPortPersistent:                    *redisPortPersistent,
+		DryRunCRMSmartEvent:                    *dryRunSmartEvent,
+		CacheSortedSet:                         *cacheSortedSet,
+		AllowedCampaignEnrichmentByProjectID:   *allowedCampaignEnrichmentByProjectID,
+		UseOpportunityAssociationByProjectID:   *useOpportunityAssociationByProjectID,
+		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
+		SkippedOtpProjectIDs:                   C.GetTokensFromStringListAsUint64(*skippedOtpProjectIDs),
+		AllowedSalesforceGroupsByProjectIDs:    *enableSalesforceGroupsByProjectIDs,
+		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
+		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
 		DisableCRMUniquenessConstraintsCheckByProjectID:    *disableCRMUniquenessConstraintsCheckByProjectID,
 		SalesforceBatchInsertBatchSize:                     *insertBatchSize,
 		ClearbitEnabled:                                    *clearbitEnabled,

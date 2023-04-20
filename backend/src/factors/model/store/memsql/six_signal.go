@@ -4,6 +4,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sync"
@@ -237,4 +238,35 @@ func validateSixSignalQueryProps(query *model.SixSignalQuery) (string, bool) {
 	}
 
 	return "", false
+}
+
+//SendSixSignalReportViaEmail send email to the given list of emailIds along with info provided in the request Payload
+func SendSixSignalReportViaEmail(requestPayload model.SixSignalEmailAndMessage) (string, []string) {
+
+	fromDate := U.GetDateFromTimestampAndTimezone(requestPayload.From, requestPayload.Timezone)
+	toDate := U.GetDateFromTimestampAndTimezone(requestPayload.To, requestPayload.Timezone)
+
+	var success, fail int
+	sendEmailFailIds := make([]string, 0)
+	sub := "Latest accounts that visited " + requestPayload.Domain + " from " + fromDate + " to " + toDate
+	html := U.GetSixSignalReportSharingTemplate(requestPayload.Url, requestPayload.Domain)
+	text := ""
+	for _, email := range requestPayload.EmailIDs {
+		err := C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), sub, html, text)
+		if err != nil {
+			fail++
+			sendEmailFailIds = append(sendEmailFailIds, email)
+			log.WithError(err).Error("failed to send email via SendSixSignalReportViaEmail method")
+			continue
+		}
+		success++
+	}
+	var msg string
+	if success < len(requestPayload.EmailIDs) {
+		msg = fmt.Sprintf("Email successfully sent to %d email id, failed to send email to %d", success, fail)
+	} else {
+		msg = "Email successfully sent to all the email ids"
+	}
+
+	return msg, sendEmailFailIds
 }

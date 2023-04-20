@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	C "factors/config"
 	"factors/handler/helpers"
+	IntHubspot "factors/integration/hubspot"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sort"
@@ -3506,7 +3508,7 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 		assert.Equal(t, "$custom_time", result.Headers[2])
 		// Grouping starts from sunday
 		assert.Equal(t, "2021-05-30T00:00:00+00:00", result.Rows[0][2].(string))
-	})	
+	})
 }
 
 func TestEventAnalyticsGroupsBreakdownByLatestUserProperty(t *testing.T) {
@@ -3586,4 +3588,592 @@ func TestEventAnalyticsGroupsBreakdownByLatestUserProperty(t *testing.T) {
 	userCount, status := querySingleEventTotalUserCount(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED, "a", nil, time.Now().Unix()-1000, time.Now().Unix()+1000)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, 2, userCount)
+}
+
+func TestEventPropertyValueLabels(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	startTimestamp := time.Now().Unix()
+
+	hubspotDisplayNameLabels := map[string]string{
+		"OFFFLINE":       "Offline",
+		"PAID_SEARCH":    "Paid Search",
+		"DIRECT_TRAFFIC": "Direct Traffic",
+		"ORGANIC_SEARCH": "Organic Search",
+		"SOCIAL_MEDIA":   "Social Media",
+	}
+
+	for value, label := range hubspotDisplayNameLabels {
+		status := store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_hs_latest_source", value, label)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+
+	// create new hubspot document
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  	"firstname": { "value": "%s" },
+		  	"lastname": { "value": "%s" },
+		  	"lastmodifieddate": { "value": "%d" },
+			"hs_latest_source": { "value": "%s" }
+		},
+		"identity-profiles": [
+			{
+				"vid": %d,
+				"identities": [
+					{
+					  "type": "EMAIL",
+					  "value": "%s"
+					},
+					{
+						"type": "LEAD_GUID",
+						"value": "%s"
+					}
+				]
+			}
+		]
+	}`
+
+	latestSources := []string{"ORGANIC_SEARCH", "DIRECT_TRAFFIC", "PAID_SOCIAL"}
+	hubspotDocuments := make([]*model.HubspotDocument, 0)
+	for i := 0; i < len(latestSources); i++ {
+		documentID := i
+		createdTime := startTimestamp*1000 + int64(i*100)
+		updatedTime := createdTime + 200
+		cuid := U.RandomString(10)
+		leadGUID := U.RandomString(15)
+		jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdTime, "Sample", fmt.Sprintf("Test %d", i), updatedTime, latestSources[i], documentID, cuid, leadGUID)
+
+		document := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Value:     &postgres.Jsonb{json.RawMessage(jsonContact)},
+		}
+		hubspotDocuments = append(hubspotDocuments, &document)
+	}
+
+	status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, hubspotDocuments, 3)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// execute sync job
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	eventsQueryGroup := model.QueryGroup{
+		Queries: []model.Query{
+			model.Query{
+				From: startTimestamp,
+				To:   startTimestamp + 500,
+				EventsWithProperties: []model.QueryEventWithProperties{
+					model.QueryEventWithProperties{
+						Name: U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+					},
+				},
+				GroupByProperties: []model.QueryGroupByProperty{
+					model.QueryGroupByProperty{
+						Entity:    model.PropertyEntityUser,
+						Property:  "$hubspot_contact_hs_latest_source",
+						EventName: U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+					},
+				},
+				Class: model.QueryClassEvents,
+
+				Type:            model.QueryTypeEventsOccurrence,
+				EventsCondition: model.EventCondEachGivenEvent,
+			},
+		},
+	}
+	eventsQueryGroupJson, err := U.EncodeStructTypeToPostgresJsonb(eventsQueryGroup)
+	assert.Nil(t, err)
+	assert.NotNil(t, eventsQueryGroupJson)
+
+	C.GetConfig().EnableSyncReferenceFieldsByProjectID = ""
+	w := sendEventsQueryHandler(r, project.ID, agent, &eventsQueryGroup)
+	jsonResponse, err := ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	var resultGroup model.ResultGroup
+	json.Unmarshal(jsonResponse, &resultGroup)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	results := resultGroup.Results
+	assert.NotNil(t, results)
+	assert.Equal(t, 1, len(results))
+
+	assert.Equal(t, "event_index", results[0].Headers[0])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(0), results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "event_name", results[0].Headers[1])
+	for i := range results[0].Rows {
+		assert.Contains(t, U.EVENT_NAME_HUBSPOT_CONTACT_CREATED, results[0].Rows[i][1])
+	}
+
+	assert.Equal(t, "$hubspot_contact_hs_latest_source", results[0].Headers[2])
+	for i := range results[0].Rows {
+		assert.Contains(t, latestSources, results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", results[0].Headers[3])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(1), results[0].Rows[i][3])
+	}
+
+	C.GetConfig().EnableSyncReferenceFieldsByProjectID = "*"
+	w = sendEventsQueryHandler(r, project.ID, agent, &eventsQueryGroup)
+	jsonResponse, err = ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	var resultFromCache model.ResultGroup
+	json.Unmarshal(jsonResponse, &resultFromCache)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	results = resultFromCache.Results
+	assert.NotNil(t, results)
+	assert.Equal(t, 1, len(results))
+
+	assert.Equal(t, "event_index", results[0].Headers[0])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(0), results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "event_name", results[0].Headers[1])
+	for i := range results[0].Rows {
+		assert.Contains(t, U.EVENT_NAME_HUBSPOT_CONTACT_CREATED, results[0].Rows[i][1])
+	}
+
+	assert.Equal(t, "$hubspot_contact_hs_latest_source", results[0].Headers[2])
+	for i := range results[0].Rows {
+		assert.Contains(t, []string{"Organic Search", "Direct Traffic", "PAID_SOCIAL"}, results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", results[0].Headers[3])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(1), results[0].Rows[i][3])
+	}
+
+	// Dashboard Cache Response
+	dashboard, statusCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: U.RandomString(5), Type: model.DashboardTypeProjectVisible})
+	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.NotNil(t, dashboard)
+
+	dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
+		ProjectID: project.ID,
+		Type:      model.QueryTypeDashboardQuery,
+		Query:     *eventsQueryGroupJson,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, dashboardQuery)
+
+	dashboardUnit, statusCode, errMsg := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
+		DashboardId:  dashboard.ID,
+		QueryId:      dashboardQuery.ID,
+		Presentation: model.PresentationLine,
+	})
+	assert.Equal(t, "", errMsg)
+	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.NotNil(t, dashboardUnit)
+
+	meta := model.CacheMeta{
+		Timezone:       string(U.TimeZoneStringIST),
+		From:           eventsQueryGroup.Queries[0].From,
+		To:             eventsQueryGroup.Queries[0].To,
+		RefreshedAt:    U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		Preset:         "",
+	}
+	for i := range resultGroup.Results {
+		resultGroup.Results[i].CacheMeta = meta
+	}
+	resultGroup.CacheMeta = meta
+
+	model.SetCacheResultByDashboardIdAndUnitId(resultGroup, project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone), meta)
+
+	shouldReturn, resCode, resMsgInt := helpers.GetResponseIfCachedDashboardQuery("", project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone))
+	assert.Equal(t, http.StatusOK, resCode)
+	assert.Equal(t, true, shouldReturn)
+	assert.NotNil(t, resMsgInt)
+
+	resMsgByte, err := json.Marshal(resMsgInt)
+	assert.Nil(t, err)
+	var cachedDashboardQueryResponse helpers.DashboardQueryResponsePayload
+	err = json.Unmarshal(resMsgByte, &cachedDashboardQueryResponse)
+	assert.Nil(t, err)
+
+	assert.NotNil(t, cachedDashboardQueryResponse)
+	assert.Equal(t, true, cachedDashboardQueryResponse.Cache)
+	assert.Equal(t, meta.RefreshedAt, cachedDashboardQueryResponse.RefreshedAt)
+	assert.Equal(t, meta.Timezone, cachedDashboardQueryResponse.TimeZone)
+	assert.NotNil(t, cachedDashboardQueryResponse.CacheMeta)
+	assert.NotNil(t, cachedDashboardQueryResponse.Result)
+
+	result, ok := cachedDashboardQueryResponse.Result.(map[string]interface{})
+	assert.Equal(t, true, ok)
+	assert.NotNil(t, result)
+
+	var responseResultGroup model.ResultGroup
+	err = U.DecodeInterfaceMapToStructType(result, &responseResultGroup)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "event_index", responseResultGroup.Results[0].Headers[0])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Equal(t, float64(0), responseResultGroup.Results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "event_name", responseResultGroup.Results[0].Headers[1])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Contains(t, U.EVENT_NAME_HUBSPOT_CONTACT_CREATED, responseResultGroup.Results[0].Rows[i][1])
+	}
+
+	assert.Equal(t, "$hubspot_contact_hs_latest_source", responseResultGroup.Results[0].Headers[2])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Contains(t, latestSources, responseResultGroup.Results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", responseResultGroup.Results[0].Headers[3])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Equal(t, float64(1), responseResultGroup.Results[0].Rows[i][3])
+	}
+
+	resMsgIntTransformed, err := helpers.TransformQueryCacheResponseColumnValuesToLabel(project.ID, resMsgInt)
+	assert.Nil(t, err)
+	assert.NotNil(t, resMsgIntTransformed)
+
+	resMsgTransformedByte, err := json.Marshal(resMsgIntTransformed)
+	assert.Nil(t, err)
+	cachedDashboardQueryResponse = helpers.DashboardQueryResponsePayload{}
+	err = json.Unmarshal(resMsgTransformedByte, &cachedDashboardQueryResponse)
+	assert.Nil(t, err)
+
+	assert.NotNil(t, cachedDashboardQueryResponse)
+	assert.Equal(t, true, cachedDashboardQueryResponse.Cache)
+	assert.Equal(t, meta.RefreshedAt, cachedDashboardQueryResponse.RefreshedAt)
+	assert.Equal(t, meta.Timezone, cachedDashboardQueryResponse.TimeZone)
+	assert.NotNil(t, cachedDashboardQueryResponse.CacheMeta)
+	assert.NotNil(t, cachedDashboardQueryResponse.Result)
+
+	result, ok = cachedDashboardQueryResponse.Result.(map[string]interface{})
+	assert.Equal(t, true, ok)
+	assert.NotNil(t, result)
+
+	responseResultGroup = model.ResultGroup{}
+	err = U.DecodeInterfaceMapToStructType(result, &responseResultGroup)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "event_index", responseResultGroup.Results[0].Headers[0])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Equal(t, float64(0), responseResultGroup.Results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "event_name", responseResultGroup.Results[0].Headers[1])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Contains(t, U.EVENT_NAME_HUBSPOT_CONTACT_CREATED, responseResultGroup.Results[0].Rows[i][1])
+	}
+
+	assert.Equal(t, "$hubspot_contact_hs_latest_source", responseResultGroup.Results[0].Headers[2])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Contains(t, []string{"Organic Search", "Direct Traffic", "PAID_SOCIAL"}, responseResultGroup.Results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", responseResultGroup.Results[0].Headers[3])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Equal(t, float64(1), responseResultGroup.Results[0].Rows[i][3])
+	}
+}
+
+func TestGroupPropertyValueLabels(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	startTimestamp := time.Now().Unix()
+
+	hubspotDisplayNameLabels := map[string]string{
+		"newbusiness":      "New Business",
+		"existingbusiness": "ExistingBusiness",
+	}
+
+	for value, label := range hubspotDisplayNameLabels {
+		status := store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_deal_dealtype", value, label)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	// create new hubspot document
+	jsonDealModel := `{
+		"dealId": %d,
+		"properties": {
+			"amount": { "value": "%d" },
+			"createdate": { "value": "%d" },
+			"hs_createdate": { "value": "%d" },
+		  	"dealname": { "value": "%s" },
+			"dealtype": { "value": "%s" },
+		  	"hs_lastmodifieddate": { "value": "%d" }
+		}
+	}`
+
+	dealTypes := []string{"newbusiness", "existingcustomer"}
+	hubspotDocuments := make([]*model.HubspotDocument, 0)
+	for i := 0; i < len(dealTypes); i++ {
+		documentID := i
+		createdTime := startTimestamp*1000 + int64(i*100)
+		updatedTime := createdTime + 200
+		amount := U.RandomIntInRange(1000, 2000)
+		jsonDeal := fmt.Sprintf(jsonDealModel, documentID, amount, createdTime, createdTime, fmt.Sprintf("Dealname %d", i), dealTypes[i], updatedTime)
+
+		document := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameDeal,
+			Value:     &postgres.Jsonb{json.RawMessage(jsonDeal)},
+		}
+		hubspotDocuments = append(hubspotDocuments, &document)
+	}
+
+	status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeDeal, hubspotDocuments, 2)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// execute sync job
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	eventsQueryGroup := model.QueryGroup{
+		Queries: []model.Query{
+			model.Query{
+				From: startTimestamp,
+				To:   startTimestamp + 500,
+				EventsWithProperties: []model.QueryEventWithProperties{
+					model.QueryEventWithProperties{
+						Name:          U.GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED,
+						GroupAnalysis: "Hubspot Deals",
+					},
+				},
+				GroupByProperties: []model.QueryGroupByProperty{
+					model.QueryGroupByProperty{
+						Entity:    model.PropertyEntityUser,
+						Property:  "$hubspot_deal_dealtype",
+						EventName: U.GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED,
+						Type:      "categorical",
+					},
+				},
+				Class: model.QueryClassEvents,
+
+				Type:            model.QueryTypeEventsOccurrence,
+				EventsCondition: model.EventCondEachGivenEvent,
+			},
+		},
+	}
+	eventsQueryGroupJson, err := U.EncodeStructTypeToPostgresJsonb(eventsQueryGroup)
+	assert.Nil(t, err)
+	assert.NotNil(t, eventsQueryGroupJson)
+
+	C.GetConfig().EnableSyncReferenceFieldsByProjectID = ""
+	w := sendEventsQueryHandler(r, project.ID, agent, &eventsQueryGroup)
+	jsonResponse, err := ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	var resultGroup model.ResultGroup
+	json.Unmarshal(jsonResponse, &resultGroup)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	results := resultGroup.Results
+	assert.NotNil(t, results)
+	assert.Equal(t, 1, len(results))
+
+	assert.Equal(t, "event_index", results[0].Headers[0])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(0), results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "event_name", results[0].Headers[1])
+	for i := range results[0].Rows {
+		assert.Contains(t, U.GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED, results[0].Rows[i][1])
+	}
+
+	assert.Equal(t, "$hubspot_deal_dealtype", results[0].Headers[2])
+	for i := range results[0].Rows {
+		assert.Contains(t, dealTypes, results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", results[0].Headers[3])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(1), results[0].Rows[i][3])
+	}
+
+	C.GetConfig().EnableSyncReferenceFieldsByProjectID = "*"
+	w = sendEventsQueryHandler(r, project.ID, agent, &eventsQueryGroup)
+	jsonResponse, err = ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	var resultFromCache model.ResultGroup
+	json.Unmarshal(jsonResponse, &resultFromCache)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	results = resultFromCache.Results
+	assert.NotNil(t, results)
+	assert.Equal(t, 1, len(results))
+
+	assert.Equal(t, "event_index", results[0].Headers[0])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(0), results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "event_name", results[0].Headers[1])
+	for i := range results[0].Rows {
+		assert.Contains(t, U.GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED, results[0].Rows[i][1])
+	}
+
+	assert.Equal(t, "$hubspot_deal_dealtype", results[0].Headers[2])
+	for i := range results[0].Rows {
+		assert.Contains(t, []string{"New Business", "existingcustomer"}, results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", results[0].Headers[3])
+	for i := range results[0].Rows {
+		assert.Equal(t, float64(1), results[0].Rows[i][3])
+	}
+
+	// Dashboard Cache Response
+	dashboard, statusCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: U.RandomString(5), Type: model.DashboardTypeProjectVisible})
+	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.NotNil(t, dashboard)
+
+	dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
+		ProjectID: project.ID,
+		Type:      model.QueryTypeDashboardQuery,
+		Query:     *eventsQueryGroupJson,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, dashboardQuery)
+
+	dashboardUnit, statusCode, errMsg := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
+		DashboardId:  dashboard.ID,
+		QueryId:      dashboardQuery.ID,
+		Presentation: model.PresentationLine,
+	})
+	assert.Equal(t, "", errMsg)
+	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.NotNil(t, dashboardUnit)
+
+	meta := model.CacheMeta{
+		Timezone:       string(U.TimeZoneStringIST),
+		From:           eventsQueryGroup.Queries[0].From,
+		To:             eventsQueryGroup.Queries[0].To,
+		RefreshedAt:    U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		Preset:         "",
+	}
+	for i := range resultGroup.Results {
+		resultGroup.Results[i].CacheMeta = meta
+	}
+	resultGroup.CacheMeta = meta
+
+	model.SetCacheResultByDashboardIdAndUnitId(resultGroup, project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone), meta)
+
+	shouldReturn, resCode, resMsgInt := helpers.GetResponseIfCachedDashboardQuery("", project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone))
+	assert.Equal(t, http.StatusOK, resCode)
+	assert.Equal(t, true, shouldReturn)
+	assert.NotNil(t, resMsgInt)
+
+	resMsgByte, err := json.Marshal(resMsgInt)
+	assert.Nil(t, err)
+	var cachedDashboardQueryResponse helpers.DashboardQueryResponsePayload
+	err = json.Unmarshal(resMsgByte, &cachedDashboardQueryResponse)
+	assert.Nil(t, err)
+
+	assert.NotNil(t, cachedDashboardQueryResponse)
+	assert.Equal(t, true, cachedDashboardQueryResponse.Cache)
+	assert.Equal(t, meta.RefreshedAt, cachedDashboardQueryResponse.RefreshedAt)
+	assert.Equal(t, meta.Timezone, cachedDashboardQueryResponse.TimeZone)
+	assert.NotNil(t, cachedDashboardQueryResponse.CacheMeta)
+	assert.NotNil(t, cachedDashboardQueryResponse.Result)
+
+	result, ok := cachedDashboardQueryResponse.Result.(map[string]interface{})
+	assert.Equal(t, true, ok)
+	assert.NotNil(t, result)
+
+	var responseResultGroup model.ResultGroup
+	err = U.DecodeInterfaceMapToStructType(result, &responseResultGroup)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "event_index", responseResultGroup.Results[0].Headers[0])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Equal(t, float64(0), responseResultGroup.Results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "event_name", responseResultGroup.Results[0].Headers[1])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Contains(t, U.GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED, responseResultGroup.Results[0].Rows[i][1])
+	}
+
+	assert.Equal(t, "$hubspot_deal_dealtype", responseResultGroup.Results[0].Headers[2])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Contains(t, dealTypes, responseResultGroup.Results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", responseResultGroup.Results[0].Headers[3])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Equal(t, float64(1), responseResultGroup.Results[0].Rows[i][3])
+	}
+
+	resMsgIntTransformed, err := helpers.TransformQueryCacheResponseColumnValuesToLabel(project.ID, resMsgInt)
+	assert.Nil(t, err)
+	assert.NotNil(t, resMsgIntTransformed)
+
+	resMsgTransformedByte, err := json.Marshal(resMsgIntTransformed)
+	assert.Nil(t, err)
+	cachedDashboardQueryResponse = helpers.DashboardQueryResponsePayload{}
+	err = json.Unmarshal(resMsgTransformedByte, &cachedDashboardQueryResponse)
+	assert.Nil(t, err)
+
+	assert.NotNil(t, cachedDashboardQueryResponse)
+	assert.Equal(t, true, cachedDashboardQueryResponse.Cache)
+	assert.Equal(t, meta.RefreshedAt, cachedDashboardQueryResponse.RefreshedAt)
+	assert.Equal(t, meta.Timezone, cachedDashboardQueryResponse.TimeZone)
+	assert.NotNil(t, cachedDashboardQueryResponse.CacheMeta)
+	assert.NotNil(t, cachedDashboardQueryResponse.Result)
+
+	result, ok = cachedDashboardQueryResponse.Result.(map[string]interface{})
+	assert.Equal(t, true, ok)
+	assert.NotNil(t, result)
+
+	responseResultGroup = model.ResultGroup{}
+	err = U.DecodeInterfaceMapToStructType(result, &responseResultGroup)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "event_index", responseResultGroup.Results[0].Headers[0])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Equal(t, float64(0), responseResultGroup.Results[0].Rows[i][0])
+	}
+
+	assert.Equal(t, "event_name", responseResultGroup.Results[0].Headers[1])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Contains(t, U.GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED, responseResultGroup.Results[0].Rows[i][1])
+	}
+
+	assert.Equal(t, "$hubspot_deal_dealtype", responseResultGroup.Results[0].Headers[2])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Contains(t, []string{"New Business", "existingcustomer"}, responseResultGroup.Results[0].Rows[i][2])
+	}
+
+	assert.Equal(t, "aggregate", responseResultGroup.Results[0].Headers[3])
+	for i := range responseResultGroup.Results[0].Rows {
+		assert.Equal(t, float64(1), responseResultGroup.Results[0].Rows[i][3])
+	}
 }

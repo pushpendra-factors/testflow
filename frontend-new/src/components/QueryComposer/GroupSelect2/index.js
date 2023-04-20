@@ -98,6 +98,9 @@ function GroupSelect2({
     if (checkIcon?.includes('leadsquared')) {
       return 'leadSquared';
     }
+    if (checkIcon?.includes('group')) {
+      return 'user';
+    }
     return icon;
   };
 

@@ -42,6 +42,7 @@ import RudderstackIntegration from './Rudderstack';
 import MSTeamIntegration from './MSTeam';
 
 import { ADWORDS_INTERNAL_REDIRECT_URI } from './util';
+import { featureLock } from '../../../../routes/feature';
 
 const IntegrationProviderData = [
   {
@@ -359,8 +360,6 @@ function IntegrationSettings({
     fetchProjectSettingsV1(activeProject.id);
   }, [activeProject]);
 
-  const whiteListedAccounts = ['solutions@factors.ai', 'junaid@factors.ai'];
-
   useEffect(() => {
     if (window.location.href.indexOf('?error=') > -1) {
       const searchParams = new URLSearchParams(window.location.search);
@@ -428,7 +427,7 @@ function IntegrationSettings({
                       // Flag for 6Signal Factors key
                       if (
                         (item.name === 'Factors Website De-anonymization' &&
-                        !whiteListedAccounts.includes(currentAgent.email)) || (item.name === 'Microsoft Teams' && !['junaid@factors.ai'].includes(currentAgent.email))
+                        !featureLock(currentAgent.email)) || (item.name === 'Microsoft Teams' && !featureLock(currentAgent.email))
                       ) {
                         return null;
                       }

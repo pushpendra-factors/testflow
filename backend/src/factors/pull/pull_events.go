@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"os"
 	"time"
 
@@ -30,6 +31,17 @@ var FileType = map[string]int64{
 
 // pull events(with Hubspot and Salesforce) data into files, and upload each local file to its proper cloud location
 func PullEventsData(projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, splitRangeProjectIds []int64, noOfSplits int, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
+
+	if yes, err := CheckIfAddSessionCompleted(projectId, endTimestampInProjectTimezone); !yes {
+		if err != nil {
+			logCtx.WithError(err).Error("checkIfAddSessionCompleted failed")
+			status["events-error"] = err.Error()
+			return err, false
+		}
+		logCtx.Error("add session job not completed")
+		status["events-error"] = "add session job not completed"
+		return fmt.Errorf("add session job not completed"), false
+	}
 
 	logCtx.Info("Pulling events.")
 	// Writing events to tmp file before upload.
@@ -371,4 +383,22 @@ func CheckEventFileExists(cloudManager *filestore.FileManager, projectId int64, 
 		return true, nil
 	}
 	return false, fmt.Errorf("file not found in cloud: %s", name)
+}
+
+func CheckIfAddSessionCompleted(projectID int64, endTimestamp int64) (bool, error) {
+	var eventsDownloadStartTimestamp int64
+	{
+		var errCode int
+		eventsDownloadStartTimestamp, errCode = store.GetStore().GetNextSessionStartTimestampForProject(projectID)
+		if errCode != http.StatusFound {
+			msg := fmt.Sprintf("failed to get last min session timestamp of user for project, errCode: %v", errCode)
+			log.Error(msg)
+			return false, fmt.Errorf("GetNextSessionStartTimestampForProject failed, errCode: %d", errCode)
+		}
+	}
+	if endTimestamp > eventsDownloadStartTimestamp {
+		log.Errorf("jobEndTime: %d, nextSessionTimestamp: %d, add session job not completed for given range", endTimestamp, eventsDownloadStartTimestamp)
+		return false, nil
+	}
+	return true, nil
 }

@@ -19,7 +19,7 @@ var channelValueFilterName = map[string]string{
 }
 
 func getAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2 bool) (*WithinPeriodInsightsKpi, error) {
+	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	wpi.MetricInfo = &MetricInfo{}
 	wpi.ScaleInfo = &MetricInfo{}
@@ -46,7 +46,7 @@ func getAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEv
 			continue
 		}
 
-		scanner, err := GetChannelFileScanner(channel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2)
+		scanner, err := GetChannelFileScanner(channel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap)
 		if err != nil {
 			log.WithError(err).Error("failed getting " + channel + " file scanner for all channel kpi")
 			continue
@@ -65,7 +65,7 @@ func getAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEv
 			newName := strings.Join([]string{objType, name}, "#")
 			newPropsToEval = append(newPropsToEval, newName)
 		}
-		wpiTmp, err := getCampaignMetricsInfo(metric, channel, scanner, newPropFilter, newPropsToEval)
+		wpiTmp, err := getCampaignMetricsInfo(metric, channel, scanner, newPropFilter, newPropsToEval, periodCode.From, periodCode.To)
 		if err != nil {
 			log.WithError(err).Error("error GetCampaignMetricInfo for all channel kpi for source " + channel)
 			continue

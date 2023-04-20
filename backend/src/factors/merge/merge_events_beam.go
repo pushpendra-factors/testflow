@@ -10,12 +10,9 @@ import (
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
-	U "factors/util"
 	"fmt"
 	"io"
-	"math"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -28,9 +25,9 @@ import (
 
 // create local file, write userIds map to it and upload to cloud
 func putUserIdsToGCP(projectId int64, userIds map[string]int64, tmpCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
-	startTime, endTime int64) error {
+	startTime, endTime int64, sortOnGroup int) error {
 
-	cDir, cName := (diskManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime)
+	cDir, cName := (diskManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime, sortOnGroup)
 	path := filepath.Join(cDir, cName)
 	err := (diskManager).Create(cDir, cName, bytes.NewReader([]byte("")))
 	if err != nil {
@@ -63,7 +60,7 @@ func putUserIdsToGCP(projectId int64, userIds map[string]int64, tmpCloudManager 
 		return fmt.Errorf("unable to open file : %s :%v", path, err)
 	}
 	r := bufio.NewReader(f)
-	gDir, gName := (*tmpCloudManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime)
+	gDir, gName := (*tmpCloudManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime, sortOnGroup)
 	err = (*tmpCloudManager).Create(gDir, gName, r)
 	if err != nil {
 		return err
@@ -74,10 +71,10 @@ func putUserIdsToGCP(projectId int64, userIds map[string]int64, tmpCloudManager 
 
 // get userIds pertaining to index between high and low from userIds file
 func getUserIdsFromFile(ctx context.Context, projectId int64, cloudManager *filestore.FileManager,
-	startTime, endTime int64, low, high int64) ([]string, error) {
+	startTime, endTime int64, low, high int64, sortOnGroup int) ([]string, error) {
 
 	beamlog.Infof(ctx, "getting users file :%d,%d,%d", projectId, low, high)
-	gDir, gName := (*cloudManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime)
+	gDir, gName := (*cloudManager).GetEventsArtifactFilePathAndName(projectId, startTime, endTime, sortOnGroup)
 	r, err := (*cloudManager).Get(gDir, gName)
 	if err != nil {
 		return nil, err
@@ -108,38 +105,17 @@ func getUserIdsFromFile(ctx context.Context, projectId int64, cloudManager *file
 }
 
 // read unsorted events file from cloud, pass some uids to each worker, workers sort events for the alloted uids and upload sorted part files
-func Pull_events_beam_controller(projectId int64, cloud_dir, cloud_file string,
-	batchSize int, userIdMap map[string]int, beamStruct *RunBeamConfig,
+func Pull_events_beam_controller(projectId int64,
+	startToEndIndex map[int]int, beamStruct *RunBeamConfig,
 	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTime, endTime int64, sortOnGroup int) error {
 
 	log.Infof(" Sorting pull events in beam Project Id :%d", projectId)
 	UIdsBeamString := make([]string, 0)
-	userIdsList := make([]string, 0)
-	userIdMapList := make(map[string]int64)
 
 	bucketName := (*cloudManager).GetBucketName()
-	cloudEventFileName := path.Join(cloud_dir, cloud_file)
-	log.Infof("bucket name %s cloud name:%s", bucketName, cloudEventFileName)
 
-	for userKey, _ := range userIdMap {
-		userIdsList = append(userIdsList, userKey)
-	}
-
-	for idx, uid := range userIdsList {
-		userIdMapList[uid] = int64(idx)
-	}
-
-	err := putUserIdsToGCP(projectId, userIdMapList, cloudManager, diskManager, startTime, endTime)
-	if err != nil {
-		return err
-	}
-
-	num_users := len(userIdsList)
-	numRoutines := int(math.Ceil(float64(num_users) / float64(batchSize)))
-	for i := 0; i < numRoutines; i++ {
+	for low, high := range startToEndIndex {
 		// Each worker gets a slice of patterns to count.
-		low := int(math.Min(float64(batchSize*i), float64(num_users)))
-		high := int(math.Min(float64(batchSize*(i+1)), float64(num_users))) - 1
 		tmp := CUserIdsBeam{projectId, int64(low), int64(high), bucketName, "", beamStruct.Env, startTime, endTime, "", sortOnGroup}
 
 		t, err := json.Marshal(tmp)
@@ -149,7 +125,7 @@ func Pull_events_beam_controller(projectId int64, cloud_dir, cloud_file string,
 		UIdsBeamString = append(UIdsBeamString, string(t))
 	}
 
-	err = SortUsersExecutor(beamStruct, UIdsBeamString)
+	err := SortUsersExecutor(beamStruct, UIdsBeamString)
 	if err != nil {
 		return err
 	}
@@ -237,12 +213,7 @@ func (f *SortUsDoFn) ProcessElement(ctx context.Context, cpString string) error 
 		}
 	}
 
-	userIDs, err := getUserIdsFromFile(ctx, projectId, &cloudManager, startTime, endTime, lowNum, highNum)
-	if err != nil {
-		return err
-	}
-
-	err = downloadAndSortEventsFile(ctx, projectId, &cloudManager, startTime, endTime, userIDs, lowNum, sortOnGroup)
+	err = downloadAndSortEventsFile(ctx, projectId, &cloudManager, startTime, endTime, lowNum, highNum, sortOnGroup)
 	if err != nil {
 		return err
 	}
@@ -251,23 +222,20 @@ func (f *SortUsDoFn) ProcessElement(ctx context.Context, cpString string) error 
 
 // read unsorted file, get events with given uids, sort and upload sorted part file to cloud
 func downloadAndSortEventsFile(ctx context.Context, projectId int64, cloudManager *filestore.FileManager, startTime, endTime int64,
-	userIds []string, lowNum int64, sortOnGroup int) error {
+	lowNum, highNum int64, sortOnGroup int) error {
 
 	beamlog.Infof(ctx, "Downloading and sorting events file")
-	userIDmap := make(map[string]int)
 	userIdEventsMap := make(map[string][]*P.CounterEventFormat)
-	for _, uid := range userIds {
-		userIDmap[uid] += 1
-	}
 
-	gcpPath, gcpFName := (*cloudManager).GetEventsGroupFilePathAndName(projectId, startTime, endTime, sortOnGroup)
-	gcpFName = "unsorted_" + gcpFName
-	rc, err := (*cloudManager).Get(gcpPath, gcpFName)
+	startIndex := int(lowNum)
+	endIndex := int(highNum)
+	cDir, cName := (*cloudManager).GetEventsPartFilePathAndName(projectId, startTime, endTime, false, startIndex, endIndex, sortOnGroup)
+	rc, err := (*cloudManager).Get(cDir, cName)
 	if err != nil {
 		return fmt.Errorf("unable to get file from cloud :%v", err)
 	}
+	beamlog.Infof(ctx, "Reading events from :%s%s", cDir, cName)
 
-	beamlog.Infof(ctx, "Reading events from :%s%s", gcpPath, gcpFName)
 	scannerEvents := bufio.NewScanner(rc)
 	buf := make([]byte, 0, 64*1024)
 	scannerEvents.Buffer(buf, 1024*1024)
@@ -283,9 +251,7 @@ func downloadAndSortEventsFile(ctx context.Context, projectId int64, cloudManage
 
 		uid = getAptId(event, sortOnGroup)
 
-		if _, ok := userIDmap[uid]; ok {
-			userIdEventsMap[uid] = append(userIdEventsMap[uid], event)
-		}
+		userIdEventsMap[uid] = append(userIdEventsMap[uid], event)
 	}
 
 	err = rc.Close()
@@ -293,9 +259,7 @@ func downloadAndSortEventsFile(ctx context.Context, projectId int64, cloudManage
 		beamlog.Errorf(ctx, "unable to close events file from gcp :%v", err)
 	}
 
-	cDir, cName := GetSortedFilePathAndName(*cloudManager, U.DataTypeEvent, "", projectId, startTime, endTime, sortOnGroup)
-	cDir = path.Join(cDir, "parts/"+strings.Replace(cName, ".txt", "", 1))
-	cName = fmt.Sprintf("%d_events", lowNum)
+	cDir, cName = (*cloudManager).GetEventsPartFilePathAndName(projectId, startTime, endTime, true, startIndex, endIndex, sortOnGroup)
 
 	cloudWriter, err := (*cloudManager).GetWriter(cDir, cName)
 	if err != nil {
@@ -349,8 +313,8 @@ func WriteSortedEventsWithUserIds(ctx context.Context, userIdMap map[string][]*P
 
 // merge all sorted part files to create one sorted file
 func ReadAndMergeEventPartFiles(projectId int64, partsDir string, sortedDir string, sortedName string,
-	tmpCloudManager, sortedCloudManager *filestore.FileManager) (int64, error) {
-	var countLines int64
+	tmpCloudManager, sortedCloudManager *filestore.FileManager) (int, error) {
+	var countLines int
 	cloudWriter, err := (*sortedCloudManager).GetWriter(sortedDir, sortedName)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -359,19 +323,19 @@ func ReadAndMergeEventPartFiles(projectId int64, partsDir string, sortedDir stri
 	}
 
 	log.Infof("Merging partFiles:%d", projectId)
-	partFilesDir := path.Join(partsDir, "parts/"+strings.Replace(sortedName, ".txt", "", 1))
-	listFiles := (*tmpCloudManager).ListFiles(partFilesDir)
+
+	listFiles := (*tmpCloudManager).ListFiles(partsDir)
 	for _, partFileFullName := range listFiles {
 		partFNamelist := strings.Split(partFileFullName, "/")
 		partFileName := partFNamelist[len(partFNamelist)-1]
 
-		log.Infof("Reading part file :%s, %s", partFilesDir, partFileName)
-		file, err := (*tmpCloudManager).Get(partFilesDir, partFileName)
+		log.Infof("Reading part file :%s, %s", partsDir, partFileName)
+		eReader, err := (*tmpCloudManager).Get(partsDir, partFileName)
 		if err != nil {
 			return 0, err
 		}
 
-		scanner := bufio.NewScanner(file)
+		scanner := bufio.NewScanner(eReader)
 		const maxCapacity = 30 * 1024 * 1024
 		buf := make([]byte, maxCapacity)
 		scanner.Buffer(buf, maxCapacity)

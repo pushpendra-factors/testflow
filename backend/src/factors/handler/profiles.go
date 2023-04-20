@@ -158,11 +158,19 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		model.SetDashboardCacheAnalytics(projectID, dashboardId, unitId, profileQueryGroup.From, profileQueryGroup.To, timezoneString)
 	}
 
+	allowSyncReferenceFields := C.AllowSyncReferenceFields(projectID)
+
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(0, 0, timezoneString, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
 			reqID, projectID, dashboardId, unitId, 0, 0, timezoneString)
 		if shouldReturn {
 			if resCode == http.StatusOK {
+				if allowSyncReferenceFields && resMsg != nil {
+					resMsg, err = H.TransformQueryCacheResponseColumnValuesToLabel(projectID, resMsg)
+					if err != nil {
+						logCtx.WithError(err).Error("Failed to set property value label.")
+					}
+				}
 				return resMsg, resCode, "", "", false
 			}
 		}
@@ -172,6 +180,12 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectID, &profileQueryGroup, cacheResult, false, reqID, false)
 	if shouldReturn {
 		if resCode == http.StatusOK {
+			if allowSyncReferenceFields && resMsg != nil {
+				resMsg, err = H.TransformQueryCacheResponseColumnValuesToLabel(projectID, resMsg)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to set property value label.")
+				}
+			}
 			return gin.H{"result": resMsg}, resCode, "", "", false
 		}
 		logCtx.Error("Query failed. Error Processing/Fetching data from Query cache")
@@ -201,5 +215,13 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	}
 	model.SetQueryCacheResult(projectID, &profileQueryGroup, resultGroup)
 	resultGroup.Query = profileQueryGroup
+
+	if allowSyncReferenceFields {
+		resultGroup.Results, err = store.GetStore().AddPropertyValueLabelToQueryResults(projectID, resultGroup.Results)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to set property value label.")
+		}
+	}
+
 	return resultGroup, http.StatusOK, "", "", false
 }

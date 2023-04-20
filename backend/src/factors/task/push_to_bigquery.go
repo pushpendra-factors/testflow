@@ -83,6 +83,13 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 		}
 	}
 
+	if yes, err := pull.CheckIfAddSessionCompleted(projectID, endTime.Unix()); !yes {
+		if err != nil {
+			return jobDetails, err
+		}
+		return jobDetails, fmt.Errorf("Add session job not completed for project id %d", projectID)
+	}
+
 	inProgressCount, status := store.GetStore().GetScheduledTaskInProgressCount(projectID, model.TASK_TYPE_EVENTS_ARCHIVAL)
 	if status != http.StatusFound {
 		return jobDetails, fmt.Errorf("Failed to in progress tasks count")

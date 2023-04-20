@@ -22,6 +22,7 @@ import {
 import sanitizeInputString from 'Utils/sanitizeInputString';
 import { Currency } from 'Utils/currency';
 import _ from 'lodash';
+import ExcludeIp from './IpBlocking/excludeIp';
 
 const { Option } = Select;
 
@@ -336,7 +337,7 @@ function EditBasicSettings({
           )}
         </Form>
 
-        <Row className={'mt-6'}>
+        <Row className={'mt-6 mb-10'}>
           <Col span={24}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Currency</Text>
             <Select className={'fa-select w-full'}
@@ -366,6 +367,9 @@ function EditBasicSettings({
             </Select>
           </Col>
         </Row>
+
+        
+        <ExcludeIp mode="edit"></ExcludeIp>
       </div>
     </>
   );

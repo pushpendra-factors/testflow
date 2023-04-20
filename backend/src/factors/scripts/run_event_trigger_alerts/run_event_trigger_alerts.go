@@ -95,17 +95,17 @@ func main() {
 	successCount, failureCount := 0, 0
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 	for _, projectID := range projectIDs {
-		projectSuccess := false 
+		projectSuccess := false
 		successCount, failureCount, projectSuccess = EventTriggerAlertsSender(projectID, conf)
 		if !projectSuccess {
 			log.Error("Event Trigger Alert job failing for projectID: ", projectID)
 		}
 		success = success && projectSuccess
-		if(successCount > 0){
-			finalStatus[fmt.Sprintf("Success-%v",projectID)] = successCount
+		if successCount > 0 {
+			finalStatus[fmt.Sprintf("Success-%v", projectID)] = successCount
 		}
-		if(failureCount > 0){
-			finalStatus[fmt.Sprintf("Failure-%v",projectID)] = failureCount
+		if failureCount > 0 {
+			finalStatus[fmt.Sprintf("Failure-%v", projectID)] = failureCount
 		}
 	}
 	if !success {
@@ -178,7 +178,7 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 			log.WithError(err).Error("Cannot remove alert by zrem")
 		}
 	}
-	return ok, len(allKeys)-ok, ok == len(allKeys)
+	return ok, len(allKeys) - ok, ok == len(allKeys)
 }
 
 func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEventTriggerAlert, alertID string) bool {

@@ -72,7 +72,6 @@ export const AppLayoutRoutes = ({
   useEffect(() => {
     if (featureLock(activeAgent)) {
       let allRoutes = [];
-      allRoutes.push('/reports/6_signal');
       allRoutes.push(ATTRIBUTION_ROUTES.base);
 
       dispatch({ type: UPDATE_ALL_ROUTES, payload: allRoutes });

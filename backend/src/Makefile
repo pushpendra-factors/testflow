@@ -682,3 +682,10 @@ pack-delete-sessions-job:
 upload-delete-sessions-job: export IMAGE_NAME=delete-sessions-job
 upload-delete-sessions-job: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/delete-sessions-job:$(TAG)
+
+pack-create-linkedin-group-user:
+	docker build -t us.gcr.io/factors-$(ENV)/create-linkedin-group-user-job:$(TAG) -f Dockerfile.create_linkedin_group_user_job .
+
+upload-create-linkedin-group-user: export IMAGE_NAME=create-linkedin-group-user-job
+upload-create-linkedin-group-user: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/create-linkedin-group-user-job:$(TAG)

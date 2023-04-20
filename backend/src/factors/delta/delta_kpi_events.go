@@ -35,7 +35,7 @@ func getMetricToCalcInfoMap(queryEvent string) map[string]EventMetricCalculation
 	}
 }
 
-func getEventMetricsInfo(metric string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
+func getEventMetricsInfo(metric string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, startTimestamp, endTimestamp int64) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	wpi.MetricInfo = &MetricInfo{}
 	wpi.ScaleInfo = &MetricInfo{}
@@ -48,7 +48,7 @@ func getEventMetricsInfo(metric string, queryEvent string, scanner *bufio.Scanne
 		log.WithError(err).Error("error GetEventMetricsInfo")
 		return &wpi, err
 	}
-	var GetEventMetric func(queryEvent, page string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, propsInfo []EventPropInfo, useUnique bool) (*MetricInfo, *MetricInfo, error)
+	var GetEventMetric func(queryEvent, page string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, propsInfo []EventPropInfo, useUnique bool, startTimestamp, endTimestamp int64) (*MetricInfo, *MetricInfo, error)
 	if len(metricCalcInfo.PropsInfo) == 1 {
 		GetEventMetric = getEventMetricSimple
 	} else if len(metricCalcInfo.PropsInfo) == 2 {
@@ -62,7 +62,7 @@ func getEventMetricsInfo(metric string, queryEvent string, scanner *bufio.Scanne
 		page = queryEvent
 		queryEvent = U.EVENT_NAME_SESSION
 	}
-	if info, scale, err := GetEventMetric(queryEvent, page, scanner, propFilter, propsToEval, metricCalcInfo.PropsInfo, metricCalcInfo.useUnique); err != nil {
+	if info, scale, err := GetEventMetric(queryEvent, page, scanner, propFilter, propsToEval, metricCalcInfo.PropsInfo, metricCalcInfo.useUnique, startTimestamp, endTimestamp); err != nil {
 		log.WithError(err).Error("error GetEventMetric")
 		return &wpi, err
 	} else {
@@ -73,7 +73,7 @@ func getEventMetricsInfo(metric string, queryEvent string, scanner *bufio.Scanne
 	return &wpi, nil
 }
 
-func getEventMetricSimple(queryEvent, page string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, propsInfo []EventPropInfo, useUnique bool) (*MetricInfo, *MetricInfo, error) {
+func getEventMetricSimple(queryEvent, page string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, propsInfo []EventPropInfo, useUnique bool, startTimestamp, endTimestamp int64) (*MetricInfo, *MetricInfo, error) {
 	var globalVal float64
 	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
@@ -92,6 +92,10 @@ func getEventMetricSimple(queryEvent, page string, scanner *bufio.Scanner, propF
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
+		}
+
+		if eventDetails.EventTimestamp < startTimestamp || eventDetails.EventTimestamp > endTimestamp {
+			continue
 		}
 
 		//check if event is session and contains all requiredProps(constraint)
@@ -129,7 +133,7 @@ func getEventMetricSimple(queryEvent, page string, scanner *bufio.Scanner, propF
 	return &info, &scale, nil
 }
 
-func getEventMetricComplex(queryEvent, page string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, propsInfo []EventPropInfo, useUnique bool) (*MetricInfo, *MetricInfo, error) {
+func getEventMetricComplex(queryEvent, page string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, propsInfo []EventPropInfo, useUnique bool, startTimestamp, endTimestamp int64) (*MetricInfo, *MetricInfo, error) {
 	var globalFrac Fraction
 	var globalVal float64
 	var globalScale float64
@@ -150,6 +154,9 @@ func getEventMetricComplex(queryEvent, page string, scanner *bufio.Scanner, prop
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
+		}
+		if eventDetails.EventTimestamp < startTimestamp || eventDetails.EventTimestamp > endTimestamp {
+			continue
 		}
 
 		//check if event is session and contains all requiredProps(constraint)

@@ -11,13 +11,13 @@ import {
   getEventProperties
 } from 'Reducers/coreQuery/middleware';
 import FaSelect from 'Components/FaSelect';
-import EventFilterWrapper from '../EventFilterWrapper';
 import GroupSelect2 from '../GroupSelect2';
 import EventGroupBlock from '../EventGroupBlock';
 import AliasModal from '../AliasModal';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
+import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 
 function QueryBlock({
   availableGroups = [],
@@ -52,7 +52,7 @@ function QueryBlock({
   const eventGroup = useMemo(() => {
     const group =
       availableGroups?.find((group) => group[1] === event.group) || [];
-    return group;
+    return group[1];
   }, [availableGroups, event]);
 
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
@@ -82,18 +82,18 @@ function QueryBlock({
     setDDVisible(false);
     eventChange(newEvent, index - 1);
   };
- 
+
   useEffect(() => {
     if (!event || event === undefined) {
       return;
-    } 
+    }
     if (!eventProperties[event.label]) {
       getEventProperties(activeProject?.id, event?.label);
     }
-    if (eventGroup?.length) {
-      getGroupProperties(activeProject?.id, eventGroup[1]);
+    if (eventGroup) {
+      getGroupProperties(activeProject?.id, eventGroup);
     }
-  }, [event]);
+  }, [activeProject?.id, event, eventGroup]);
 
   useEffect(() => {
     if (!event || event === undefined) {
@@ -101,7 +101,7 @@ function QueryBlock({
     }
     const assignFilterProps = { ...filterProps };
     if (eventGroup?.length) {
-      assignFilterProps.group = groupProperties[eventGroup[1]];
+      assignFilterProps.group = groupProperties[eventGroup];
       assignFilterProps.user = [];
     } else {
       assignFilterProps.user = userProperties;
@@ -109,7 +109,7 @@ function QueryBlock({
     }
     assignFilterProps.event = eventProperties[event.label] || [];
     setFilterProperties(assignFilterProps);
-  }, [eventProperties, groupProperties, userProperties]);
+  }, [event, eventGroup, eventProperties, groupProperties, userProperties]);
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -175,10 +175,11 @@ function QueryBlock({
     setOrFilterIndex(-1);
   };
   const selectEventFilter = (ind) => (
-    <EventFilterWrapper
-      eventGroup={eventGroup}
+    <FilterWrapper
+      hasPrefix
+      groupName={eventGroup}
       filterProps={filterProps}
-      activeProject={activeProject}
+      projectID={activeProject?.id}
       event={event}
       deleteFilter={closeFilter}
       insertFilter={insertFilters}
@@ -297,13 +298,14 @@ function QueryBlock({
           filters.push(
             <div className='fa--query_block--filters flex flex-row'>
               <div key={ind}>
-                <EventFilterWrapper
-                  eventGroup={eventGroup}
+                <FilterWrapper
+                  hasPrefix
+                  groupName={eventGroup}
                   index={ind}
                   filter={filter}
                   event={event}
                   filterProps={filterProps}
-                  activeProject={activeProject}
+                  projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
@@ -315,10 +317,11 @@ function QueryBlock({
               )}
               {ind === orFilterIndex && (
                 <div key='init'>
-                  <EventFilterWrapper
-                    eventGroup={eventGroup}
+                  <FilterWrapper
+                    hasPrefix
+                    groupName={eventGroup}
                     filterProps={filterProps}
-                    activeProject={activeProject}
+                    projectID={activeProject?.id}
                     event={event}
                     deleteFilter={closeFilter}
                     insertFilter={insertFilters}
@@ -335,13 +338,14 @@ function QueryBlock({
           filters.push(
             <div className='fa--query_block--filters flex flex-row'>
               <div key={ind}>
-                <EventFilterWrapper
-                  eventGroup={eventGroup}
+                <FilterWrapper
+                  hasPrefix
+                  groupName={eventGroup}
                   index={ind}
                   filter={filtersGr[0]}
                   event={event}
                   filterProps={filterProps}
-                  activeProject={activeProject}
+                  projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
@@ -349,13 +353,14 @@ function QueryBlock({
                 />
               </div>
               <div key={ind + 1}>
-                <EventFilterWrapper
-                  eventGroup={eventGroup}
+                <FilterWrapper
+                  hasPrefix
+                  groupName={eventGroup}
                   index={ind + 1}
                   filter={filtersGr[1]}
                   event={event}
                   filterProps={filterProps}
-                  activeProject={activeProject}
+                  projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
@@ -394,6 +399,7 @@ function QueryBlock({
           groupByEvents.push(
             <div key={gbpIndex} className='fa--query_block--filters'>
               <EventGroupBlock
+                eventGroup={eventGroup}
                 index={gbp.groupByIndex}
                 grpIndex={gbpIndex}
                 eventIndex={index}

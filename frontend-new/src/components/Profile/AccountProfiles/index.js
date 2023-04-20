@@ -7,7 +7,8 @@ import {
   Popover,
   Tabs,
   notification,
-  Divider
+  Divider,
+  Input
 } from 'antd';
 import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -45,7 +46,10 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from '../UserProfiles/SegmentModal';
 import EventsBlock from '../MyComponents/EventsBlock';
-import { fetchGroups } from 'Reducers/coreQuery/services';
+import {
+  fetchGroupPropertyValues,
+  fetchGroups
+} from 'Reducers/coreQuery/services';
 
 function AccountProfiles({
   activeProject,
@@ -69,6 +73,9 @@ function AccountProfiles({
     (state) => state.coreQuery.groupProperties
   );
 
+  const [searchBarOpen, setSearchBarOpen] = useState(false);
+  const [searchDDOpen, setSearchDDOpen] = useState(false);
+  const [listSearchItems, setListSearchItems] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isGroupDDVisible, setGroupDDVisible] = useState(false);
   const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
@@ -84,6 +91,7 @@ function AccountProfiles({
     filters: [],
     segment_id: ''
   });
+  const [companyValueOpts, setCompanyValueOpts] = useState({ All: {} });
 
   useEffect(() => {
     fetchGroups(activeProject?.id, true);
@@ -518,7 +526,7 @@ function AccountProfiles({
             index={index + 1}
             event={event}
             queries={listEvents}
-            displayMode
+            viewMode
           />
         </div>
       );
@@ -553,10 +561,10 @@ function AccountProfiles({
         <div className='content'>
           <PropertyFilter
             filtersLimit={10}
-            profileType='user'
+            profileType='account'
             source={accountPayload.source}
             filters={filters}
-            displayMode
+            viewMode
           ></PropertyFilter>
         </div>
       </div>
@@ -640,13 +648,151 @@ function AccountProfiles({
 
   const renderClearFilterButton = () => (
     <Button
-      className='dropdown-btn mr-2'
+      className='dropdown-btn large mr-2'
       type='text'
       icon={<SVG name='times_circle' size={16} />}
       onClick={clearFilters}
     >
       Clear Filters
     </Button>
+  );
+
+  const groupToCompanyPropMap = {
+    $hubspot_company: '$hubspot_company_name',
+    $salesforce_account: '$salesforce_account_name',
+    $6signal: '$6Signal_name'
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const newCompanyValues = { All: {} };
+      for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
+        if (groupOpts.find((elem) => elem.group_name === group)) {
+          try {
+            const res = await fetchGroupPropertyValues(
+              activeProject.id,
+              group,
+              prop
+            );
+            newCompanyValues[group] = { ...res.data };
+            newCompanyValues['All'] = {
+              ...newCompanyValues['All'],
+              ...res.data
+            };
+          } catch (err) {
+            console.log(err);
+          }
+        }
+      }
+      setCompanyValueOpts(newCompanyValues);
+    };
+    fetchData();
+  }, [activeProject.id, groupOpts]);
+
+  const onApplyClick = (val) => {
+    const parsedValues = val.map((vl) => JSON.parse(vl)[0]);
+    const searchFilter = [];
+    const lookIn =
+      accountPayload.source === 'All'
+        ? Object.entries(groupToCompanyPropMap)
+        : [
+            [
+              accountPayload.source,
+              groupToCompanyPropMap[accountPayload.source]
+            ]
+          ];
+    lookIn.forEach(([group, prop]) => {
+      searchFilter.push({
+        props: [prop, 'categorical', 'group'],
+        operator: 'equals',
+        values: parsedValues
+      });
+    });
+
+    const updatedPayload = {
+      ...accountPayload,
+      search_filter: formatFiltersForPayload(searchFilter)
+    };
+    updatedPayload.search_filter = updatedPayload.search_filter.map(
+      (filter, index) => {
+        const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
+        return isAnd ? filter : { ...filter, lop: 'OR' };
+      }
+    );
+
+    setListSearchItems(parsedValues);
+    setAccountPayload(updatedPayload);
+  };
+
+  const onSearchClose = () => {
+    setSearchBarOpen(false);
+    setSearchDDOpen(false);
+    if (accountPayload?.search_filter?.length) {
+      const payload = { ...accountPayload };
+      payload.search_filter = [];
+      setListSearchItems([]);
+      setAccountPayload(payload);
+    }
+  };
+
+  const onSearchOpen = () => {
+    setSearchBarOpen(true);
+    setSearchDDOpen(true);
+  };
+
+  const searchCompanies = () => (
+    <div className='absolute top-0'>
+      {searchDDOpen ? (
+        <FaSelect
+          placeholder='Search Accounts'
+          multiSelect
+          options={
+            companyValueOpts?.[accountPayload?.source]
+              ? Object.keys(companyValueOpts[accountPayload?.source]).map(
+                  (value) => [value]
+                )
+              : []
+          }
+          displayNames={companyValueOpts?.[accountPayload?.source]}
+          applClick={(val) => onApplyClick(val)}
+          onClickOutside={() => setSearchDDOpen(false)}
+          selectedOpts={listSearchItems}
+          style={{
+            top: '-2px',
+            left: '-60px',
+            padding: 0,
+            overflowX: 'hidden'
+          }}
+          allowSearch
+          posRight
+        />
+      ) : null}
+    </div>
+  );
+
+  const renderSearchSection = () => (
+    <div className='relative mr-2'>
+      {searchBarOpen ? (
+        <div className={'flex items-center justify-between'}>
+          <Input
+            size='large'
+            value={listSearchItems ? listSearchItems.join(', ') : null}
+            placeholder={'Search Accounts'}
+            style={{ width: '240px', 'border-radius': '5px' }}
+            prefix={<SVG name='search' size={16} color={'grey'} />}
+            onClick={() => setSearchDDOpen(true)}
+          />
+          <Button className='search-btn' onClick={onSearchClose}>
+            <SVG name={'close'} size={20} color={'grey'} />
+          </Button>
+        </div>
+      ) : (
+        <Button className='search-btn' onClick={onSearchOpen}>
+          <SVG name={'search'} size={20} color={'grey'} />
+        </Button>
+      )}
+      {searchCompanies()}
+    </div>
   );
 
   const renderTablePropsSelect = () => (
@@ -682,6 +828,7 @@ function AccountProfiles({
       </div>
       <div className='flex items-center justify-between'>
         {accountPayload.filters.length ? renderClearFilterButton() : null}
+        {renderSearchSection()}
         {renderTablePropsSelect()}
       </div>
     </div>
@@ -734,10 +881,7 @@ function AccountProfiles({
       footer={null}
       closable={null}
     >
-      <AccountDetails
-        accountId={activeModalKey}
-        onCancel={handleCancel}
-      />
+      <AccountDetails accountId={activeModalKey} onCancel={handleCancel} />
     </Modal>
   );
 

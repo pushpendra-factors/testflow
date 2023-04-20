@@ -19,6 +19,7 @@ type LinkedinDocument struct {
 	CreativeID          string          `json:"creative_id"`
 	Value               *postgres.Jsonb `json:"value"`
 	IsBackfilled        bool            `json:"is_backfilled"`
+	IsGroupUserCreated  bool            `json:"is_group_user_created"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
 }
@@ -41,6 +42,19 @@ type LinkedinDeleteDocumentsPayload struct {
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 	Timestamp           int64  `json:"timestamp"`
 	TypeAlias           string `json:"type_alias"`
+}
+type DomainDataResponse struct {
+	ProjectID           int64  `json:"project_id"`
+	CustomerAdAccountID string `json:"customer_ad_account_id"`
+	Timestamp           string `json:"timestamp"`
+	ID                  string `json:"id"`
+	VanityName          string `json:"vanity_name"`
+	LocalizedName       string `json:"localized_name"`
+	Domain              string `json:"domain"`
+	HeadQuarters        string `json:"headquarters"`
+	PreferredCountry    string `json:"preferred_country"`
+	Impressions         string `json:"impressions"`
+	Clicks              string `json:"clicks"`
 }
 
 const (

@@ -1,17 +1,12 @@
-import React, {
-  useState, useMemo, useEffect, memo
-} from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import isEmpty from 'lodash/isEmpty';
-import get from 'lodash/get';
-import isEqual from 'lodash/isEqual';
-import isArray from 'lodash/isArray';
 import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 import ComposerBlock from '../../QueryCommons/ComposerBlock';
 import GlobalFilter from '../GlobalFilter';
 import { getUserProperties } from '../../../reducers/coreQuery/middleware';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { areKpisInSameGroup } from '../../../utils/kpiQueryComposer.helpers'; 
+import { areKpisInSameGroup } from '../../../utils/kpiQueryComposer.helpers';
 
 const GlobalFilterBlock = ({
   queryType,
@@ -23,7 +18,7 @@ const GlobalFilterBlock = ({
   KPIConfigProps,
   setQueryOptions,
   DefaultQueryOptsVal,
-  getUserProperties, 
+  getUserProperties,
   propertyMaps
 }) => {
   const [filterBlockOpen, setFilterBlockOpen] = useState(true);
@@ -48,8 +43,7 @@ const GlobalFilterBlock = ({
   //       };
   //     });
   //   }
-  // }, []); 
-   
+  // }, []);
 
   if (isEmpty(queries)) {
     return null;
@@ -60,7 +54,7 @@ const GlobalFilterBlock = ({
   }
   if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
     return null;
-  } 
+  }
 
   return (
     <ComposerBlock
@@ -83,7 +77,7 @@ const GlobalFilterBlock = ({
           KPIConfigProps={KPIConfigProps}
           propertyMaps={propertyMaps}
           isSameKPIGrp={isSameKPIGrp}
-        ></GlobalFilter>
+        />
       </div>
     </ComposerBlock>
   );
@@ -91,13 +85,13 @@ const GlobalFilterBlock = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  propertyMaps: state.kpi.kpi_property_mapping,
+  propertyMaps: state.kpi.kpi_property_mapping
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      getUserProperties,
+      getUserProperties
     },
     dispatch
   );

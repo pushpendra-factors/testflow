@@ -206,6 +206,44 @@ func (store *MemSQL) GetFactors6SignalKeyFromProjectSetting(projectId int64) (st
 
 }
 
+func (store *MemSQL) GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int) {
+	db := C.GetServices().Db
+	logFields := log.Fields{"project_id": projectId}
+	logCtx := log.WithFields(logFields)
+
+	if valid := isValidProjectScope(projectId); !valid {
+		return "", http.StatusBadRequest
+	}
+
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id = ?", projectId).Select("sixsignal_email_list").Find(&projectSetting).Error; err != nil {
+		logCtx.WithError(err).Error("Getting project_setting failed in GetSixsignalEmailListFromProjectSetting.")
+
+		if gorm.IsRecordNotFoundError(err) {
+			return "", http.StatusNotFound
+		}
+		return "", http.StatusInternalServerError
+	}
+	return projectSetting.SixSignalEmailList, http.StatusFound
+}
+
+func (store *MemSQL) AddSixsignalEmailList(projectId int64, emailIds string) int {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"emailIds":   emailIds,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	logCtx := log.WithFields(logFields)
+
+	if err := db.Table("project_settings").Where("project_id = ?", projectId).Update("sixsignal_email_list", emailIds).Error; err != nil {
+		logCtx.WithError(err).Error("Setting sixsignal_email_list from project_setting failed")
+		return http.StatusInternalServerError
+	}
+	return http.StatusCreated
+}
+
 func (store *MemSQL) GetIntegrationBitsFromProjectSetting(projectId int64) (string, int) {
 	logFields := log.Fields{
 		"project_id": projectId,

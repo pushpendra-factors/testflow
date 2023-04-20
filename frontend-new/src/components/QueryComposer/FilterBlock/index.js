@@ -53,6 +53,8 @@ export default function FilterBlock({
     { ...DEFAULT_DATE_RANGE }
   ]);
 
+  console.log('dropdownVals: ', dropDownValues)
+
   const placeHolder = {
     props: 'Choose a property',
     operator: 'Choose an operator',
@@ -188,7 +190,8 @@ export default function FilterBlock({
             newFilterState.props[0]
           ).then((res) => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[newFilterState.props[0]] = [...res.data, '$none'];
+            const valuesList = Object.keys(res.data)
+            ddValues[newFilterState.props[0]] = [...valuesList];
             setDropDownValues(ddValues);
           });
         }
@@ -200,7 +203,8 @@ export default function FilterBlock({
             newFilterState.props[0]
           ).then((res) => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[newFilterState.props[0]] = [...res.data, '$none'];
+            const valuesList = Object.keys(res.data)
+            ddValues[newFilterState.props[0]] = [...valuesList];
             setDropDownValues(ddValues);
           });
         }

@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
-
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
-import EventFilterWrapper from 'Components/QueryComposer/EventFilterWrapper';
-
 import { Button, Tooltip } from 'antd';
-import { SVG, Text } from 'factorsComponents';
+import { SVG } from 'factorsComponents';
 import { isArray } from 'lodash';
 import FaSelect from 'Components/FaSelect';
 import styles from './index.module.scss';
+import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 
 function LinkedEventsBlock({
   linkEvent,
@@ -88,14 +85,14 @@ function LinkedEventsBlock({
 
   const selectEventFilter = () => {
     return (
-      <EventFilterWrapper
+      <FilterWrapper
         filterProps={filterProps}
         activeProject={activeProject}
         event={linkEvent}
         deleteFilter={() => closeFilter()}
         insertFilter={addFilter}
         closeFilter={closeFilter}
-      ></EventFilterWrapper>
+      />
     );
   };
 
@@ -110,7 +107,7 @@ function LinkedEventsBlock({
             : filter.values;
         filters.push(
           <div key={index} className={'fa--query_block--filters'}>
-            <EventFilterWrapper
+            <FilterWrapper
               index={index}
               filter={filterContent}
               filterProps={filterProps}
@@ -119,7 +116,7 @@ function LinkedEventsBlock({
               deleteFilter={delFilter}
               insertFilter={(val) => editFilter(index, val)}
               closeFilter={closeFilter}
-            ></EventFilterWrapper>
+            />
           </div>
         );
       });

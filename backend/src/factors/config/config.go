@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
 
@@ -56,6 +57,9 @@ const DEVELOPMENT = "development"
 const TEST = "test"
 const STAGING = "staging"
 const PRODUCTION = "production"
+
+const SENTRY_APP_KEY = "app_name"
+const SENTRY_OCCURRENCE_KEY = "occurences"
 
 // Warning: Any changes to the cookie name has to be
 // in sync with other services which uses the cookie.
@@ -284,6 +288,8 @@ type Configuration struct {
 	EnableDBConnectionPool2                            bool
 	FormFillIdentificationAllowedProjects              string
 	EnableEventFiltersInSegments                       bool
+	UseSentryRollup                                    bool
+	SentryRollupSyncInSecs                             int
 	EnableSixSignalGroupByProjectID                    string
 	EnableDebuggingForIP                               bool
 	TeamsAppTenantID                                   string
@@ -322,6 +328,8 @@ type Services struct {
 	DeviceDetector       *D.DeviceDetector
 	SentryHook           *logrus_sentry.SentryHook
 	MetricsExporter      *stackdriver.Exporter
+	logErrorsLock        sync.RWMutex
+	logErrors            map[string]*SentryPair
 	QueueRedis           *redis.Pool
 }
 
@@ -366,6 +374,7 @@ const (
 	HealthCheckSixSignalReportPingID             = "2508c4c3-b941-40bb-8f2b-a59e4bedf3e5"
 	HealthcheckCurrencyUploadPingID              = "29defb4f-c95e-4895-a515-591fb7c216f7"
 	HealthcheckEventTriggerAlertPingID           = "352760ec-66a2-4b5f-b52e-e2c3f434a567"
+	HealthcheckLinkedinGroupUserPingID           = "a8b221cd-6f14-4c9c-8ae7-cd26f585868b"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
@@ -1219,6 +1228,119 @@ func IsBeamPipeline() bool {
 	return configuration.IsBeamPipeline
 }
 
+type SentryPair struct {
+	logCtx     log.Entry
+	occurences int
+}
+
+type SentryErrorHook struct {
+	appName string
+}
+
+func (h *SentryErrorHook) Levels() []log.Level {
+	return []log.Level{
+		log.ErrorLevel,
+		log.PanicLevel,
+		log.FatalLevel,
+	}
+}
+
+func (h *SentryErrorHook) Fire(logCtx *log.Entry) error {
+	WriteToLogErrors(logCtx, h.appName)
+	return nil
+}
+
+func WriteToLogErrors(logCtx *log.Entry, appName string) {
+	services.logErrorsLock.RLock()
+	defer services.logErrorsLock.RUnlock()
+
+	_, errorExists := services.logErrors[logCtx.Message]
+	if !errorExists {
+		services.logErrors[logCtx.Message] = &SentryPair{logCtx: *logCtx, occurences: 1}
+	} else {
+		// increment the ocurences of the error message if it repeats
+		services.logErrors[logCtx.Message].occurences = services.logErrors[logCtx.Message].occurences + 1
+	}
+
+	// TODO: Add log fields receive every time to an array.
+
+	logCtx.Data[SENTRY_OCCURRENCE_KEY] = services.logErrors[logCtx.Message].occurences
+	logCtx.Data[SENTRY_APP_KEY] = appName
+}
+
+// ForkLogErrors() - Forks a new log rollup and returns the so far collected.
+func ForkLogErrors() map[string]SentryPair {
+	services.logErrorsLock.RLock()
+	defer services.logErrorsLock.RUnlock()
+
+	// Copy the logs so far.
+	forkedErrorLogs := make(map[string]SentryPair)
+	for k, v := range services.logErrors {
+		// Not using addresses to avoid any invalid referrences.
+		forkedErrorLogs[k] = *v
+	}
+
+	// Initialise a new rollup.
+	services.logErrors = make(map[string]*SentryPair)
+
+	return forkedErrorLogs
+}
+
+// Ticker is added to send errors to sentry periodically when sentry rollup flag is true
+func sendErrorsToSentry(appName string) {
+	if !configuration.UseSentryRollup {
+		return
+	}
+
+	ticker := time.NewTicker(time.Duration(configuration.SentryRollupSyncInSecs) * time.Second)
+	quit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				errorsMap := ForkLogErrors()
+				for message, Pair := range errorsMap {
+					sentry.NewScope().SetTags(map[string]string{
+						SENTRY_APP_KEY:        appName,
+						SENTRY_OCCURRENCE_KEY: strconv.Itoa(Pair.occurences),
+						"data_store":          GetPrimaryDatastore(),
+					})
+					sentry.CaptureMessage(message)
+				}
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+
+}
+
+func initSentryRollup(sentryDSN, appName string) {
+	if !configuration.UseSentryRollup {
+		log.Info("Sentry rollup not enabled but called.")
+		return
+	}
+
+	if services == nil {
+		services = &Services{logErrors: make(map[string]*SentryPair)}
+	}
+	if !configuration.UseSentryRollup {
+		return
+	}
+
+	// initalizing sentry client
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn: sentryDSN,
+	})
+	if err != nil {
+		log.Fatal("Sentry rollup initialization failed.")
+	}
+	// initalizing and adding the sentry hook with specified Levels() and Fire() mechanism
+	sentryHook := &SentryErrorHook{appName: appName}
+	log.AddHook(sentryHook)
+}
+
 // InitSentryLogging Adds sentry hook to capture error logs.
 func InitSentryLogging(sentryDSN, appName string) {
 	// Log as JSON instead of the default ASCII formatter.
@@ -1232,10 +1354,16 @@ func InitSentryLogging(sentryDSN, appName string) {
 		return
 	}
 
+	// Use rollup for sentry capturing.
+	if configuration.UseSentryRollup {
+		initSentryRollup(sentryDSN, appName)
+		sendErrorsToSentry(appName)
+		return
+	}
+
 	if services == nil {
 		services = &Services{}
 	}
-
 	sentryHook, err := logrus_sentry.NewAsyncSentryHook(sentryDSN, []log.Level{
 		log.PanicLevel,
 		log.FatalLevel,

@@ -2,21 +2,17 @@ import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
-import EventFilterWrapper from '../EventFilterWrapper';
-import { default as EventFilter } from 'Components/QueryComposer/EventFilterWrapper';
-
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
-import { before, isArray } from 'lodash';
-import FaSelect from 'Components/FaSelect';
+import { isArray } from 'lodash';
 import ORButton from '../../ORButton';
 import { getNormalizedKpi } from '../../../utils/kpiQueryComposer.helpers';
 import { compareFilters, groupFilters } from '../../../utils/global';
 import { fetchKPIConfigWithoutDerivedKPI } from 'Reducers/kpi';
-
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
+import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
+import EventFilterWrapper from 'Components/KPIComposer/EventFilterWrapper';
 
 const ConversionGoalBlock = ({
   eventGoal,
@@ -35,10 +31,7 @@ const ConversionGoalBlock = ({
 }) => {
   const [selectVisible, setSelectVisible] = useState(false);
   const [filterBlockVisible, setFilterBlockVisible] = useState(false);
-
-  const [moreOptions, setMoreOptions] = useState(false);
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
-
   const [filterProps, setFilterProperties] = useState({
     event: [],
     user: []
@@ -47,7 +40,7 @@ const ConversionGoalBlock = ({
   useEffect(() => {
     if (!group_analysis || group_analysis === 'users') {
       setEventPropsForUserGroup();
-    } else if(group_analysis === 'all') {
+    } else if (group_analysis === 'all') {
       setFilterPropsforKpiGroups();
     } else {
       setFilterPropsforKpiGroups();
@@ -75,27 +68,29 @@ const ConversionGoalBlock = ({
   const setFilterPropsforKpiGroups = () => {
     const assignFilterProps = Object.assign({}, filterProps);
     assignFilterProps.event = getKPIProps(group_analysis);
+    assignFilterProps.user = [];
     setFilterProperties(assignFilterProps);
   };
 
-  const setFilterPropsforKpiGroupsAll = () => {
-    const assignFilterProps = Object.assign({}, filterProps);
-    const hs_deals = getKPIProps()
-    assignFilterProps.event = getKPIProps(group_analysis);
-    setFilterProperties(assignFilterProps);
-  };
+  // const setFilterPropsforKpiGroupsAll = () => {
+  //   const assignFilterProps = Object.assign({}, filterProps);
+  //   const hs_deals = getKPIProps();
+  //   assignFilterProps.event = getKPIProps(group_analysis);
+  //   assignFilterProps.user = [];
+  //   setFilterProperties(assignFilterProps);
+  // };
 
   const getKPIProps = (groupName) => {
     let KPIlist = KPI_config || [];
     let selGroup = KPIlist.find((item) => {
-      return item?.display_category == groupName;
+      return item?.display_category === groupName;
     });
 
     let DDvalues = selGroup?.properties?.map((item) => {
-      if (item == null) return;
+      if (item === null) return null;
       let ddName = item.display_name ? item.display_name : item.name;
       let ddtype =
-        selGroup?.category == 'channels'
+        selGroup?.category === 'channels'
           ? item.object_type
           : item.entity
           ? item.entity
@@ -110,7 +105,7 @@ const ConversionGoalBlock = ({
       ? KPI_config
       : KPI_config_without_derived_kpi || [];
     let selGroup = KPIlist.find((item) => {
-      return item?.display_category == groupName;
+      return item?.display_category === groupName;
     });
 
     const group = ((selGroup) => {
@@ -124,7 +119,9 @@ const ConversionGoalBlock = ({
       ? KPI_config
       : KPI_config_without_derived_kpi || [];
     let selGroup = KPIlist.find((item) => {
-      return item?.display_category == 'hubspot_deals' || 'salesforce_opportunities';
+      return (
+        item?.display_category === 'hubspot_deals' || 'salesforce_opportunities'
+      );
     });
 
     const group = ((selGroup) => {
@@ -196,24 +193,32 @@ const ConversionGoalBlock = ({
           insertFilter={addFilter}
           closeFilter={closeFilter}
           refValue={index}
-        ></EventFilterWrapper>
+        />
       );
     } else {
       return (
-        <EventFilter
+        <FilterWrapper
+          hasPrefix
           filterProps={filterProps}
-          activeProject={activeProject}
+          projectID={activeProject.id}
           event={eventGoal}
           deleteFilter={() => closeFilter()}
           insertFilter={addFilter}
           closeFilter={closeFilter}
           refValue={index}
-        ></EventFilter>
+        />
       );
     }
   };
 
-  const renderFilterWrapper = (index, refValue, filter, showOr, inFilter, deleteFilter) =>
+  const renderFilterWrapper = (
+    index,
+    refValue,
+    filter,
+    showOr,
+    inFilter,
+    deleteFilter
+  ) =>
     group_analysis !== 'users' ? (
       <EventFilterWrapper
         index={index}
@@ -227,23 +232,23 @@ const ConversionGoalBlock = ({
         selectedMainCategory={eventGoal}
         showOr={showOr}
         refValue={refValue}
-      ></EventFilterWrapper>
+      />
     ) : (
-      <EventFilter
+      <FilterWrapper
+        hasPrefix
         index={index}
         filter={filter}
         event={eventGoal}
         filterProps={filterProps}
-        activeProject={activeProject}
+        projectID={activeProject.id}
         deleteFilter={deleteFilter}
         insertFilter={inFilter}
         closeFilter={closeFilter}
         selectedMainCategory={eventGoal}
         showOr={showOr}
         refValue={refValue}
-      ></EventFilter>
+      />
     );
-
   const eventFilters = () => {
     const filters = [];
     let index = 0;
@@ -256,19 +261,33 @@ const ConversionGoalBlock = ({
 
       filtersGroupedByRef.forEach((filtersGr) => {
         const refValue = filtersGr[0].ref;
-        if (filtersGr.length == 1) {
+        if (filtersGr.length === 1) {
           const filter = filtersGr[0];
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-                {renderFilterWrapper(index, refValue,filter,false,(val,index) => editFiler(index,val),delFilter)}
+                {renderFilterWrapper(
+                  index,
+                  refValue,
+                  filter,
+                  false,
+                  (val, index) => editFiler(index, val),
+                  delFilter
+                )}
               </div>
               {index !== orFilterIndex && (
                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex} />
               )}
               {index === orFilterIndex && (
                 <div key={'init'}>
-                  {renderFilterWrapper(undefined, refValue, undefined, true,addFilter,closeFilter)}
+                  {renderFilterWrapper(
+                    undefined,
+                    refValue,
+                    undefined,
+                    true,
+                    addFilter,
+                    closeFilter
+                  )}
                 </div>
               )}
             </div>
@@ -278,10 +297,24 @@ const ConversionGoalBlock = ({
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-                {renderFilterWrapper(index, refValue, filtersGr[0],false,(val,index) => editFiler(index,val),delFilter)}
+                {renderFilterWrapper(
+                  index,
+                  refValue,
+                  filtersGr[0],
+                  false,
+                  (val, index) => editFiler(index, val),
+                  delFilter
+                )}
               </div>
               <div key={index + 1}>
-                {renderFilterWrapper(index + 1, refValue, filtersGr[1],true,(val,index) => editFiler(index,val),delFilter)}
+                {renderFilterWrapper(
+                  index + 1,
+                  refValue,
+                  filtersGr[1],
+                  true,
+                  (val, index) => editFiler(index, val),
+                  delFilter
+                )}
               </div>
             </div>
           );
@@ -323,7 +356,6 @@ const ConversionGoalBlock = ({
     if (opt[1] === 'filter') {
       addFilterBlock();
     }
-    setMoreOptions(false);
   };
 
   const getMenu = (filterOptions) => (
@@ -361,18 +393,6 @@ const ConversionGoalBlock = ({
               <SVG name='filter'></SVG>
             </Button>
           </Tooltip>
-          {/* {moreOptions ? (
-            <FaSelect
-              options={[[`Filter By`, 'filter']]}
-              optionClick={(val) => {
-                addFilterBlock();
-                setMoreOptions(false);
-              }}
-              onClickOutside={() => setMoreOptions(false)}
-            ></FaSelect>
-          ) : (
-            false
-          )} */}
         </div>
         <Tooltip title='Delete this Attribute' color={TOOLTIP_CONSTANTS.DARK}>
           <Button
@@ -402,14 +422,13 @@ const ConversionGoalBlock = ({
   };
 
   const getGroupedProps = () => {
-    if(!group_analysis || group_analysis === 'users') return eventNameOptions;
-    if(group_analysis === 'all') {
+    if (!group_analysis || group_analysis === 'users') return eventNameOptions;
+    if (group_analysis === 'all') {
       return getKpiGroupListAll();
-    }
-    else {
+    } else {
       return getKpiGroupList(group_analysis);
     }
-  }
+  };
 
   const selectEvents = () => {
     const groupedProps = getGroupedProps();
@@ -424,7 +443,7 @@ const ConversionGoalBlock = ({
             }
             onClickOutside={() => setSelectVisible(false)}
             useCollapseView
-          ></GroupSelect2>
+          />
         ) : null}
       </div>
     );

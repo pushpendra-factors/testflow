@@ -25,7 +25,6 @@ import { Button, Tooltip } from 'antd';
 import MarkTouchpointBlock from './MarkTouchpointBlock';
 import AttributionOptions from './AttributionOptions';
 import LinkedEventsBlock from './LinkedEventsBlock';
-import { QUERY_TYPE_EVENT } from '../../utils/constants';
 import { SET_ATTR_QUERIES } from '../../reducers/coreQuery/actions';
 import { fetchGroups } from 'Reducers/coreQuery/services';
 
@@ -170,10 +169,10 @@ const AttrQueryComposer = ({
             eventGoalChange={goalChange}
             delEvent={goalDel}
             showDerivedKPI={false}
-          ></ConversionGoalBlock>
+          />
         );
       } else {
-        return <ConversionGoalBlock></ConversionGoalBlock>;
+        return <ConversionGoalBlock />;
       }
     } else {
       const qs = queries.map((query, index) => {
@@ -184,7 +183,7 @@ const AttrQueryComposer = ({
             delEvent={() => delQuery(index)}
             group_analysis={queryOptions.group_analysis}
             showDerivedKPI={false}
-          ></ConversionGoalBlock>
+          />
         );
       });
 
@@ -194,7 +193,7 @@ const AttrQueryComposer = ({
             eventGoalChange={(val) => setToQueries(val, -1)}
             group_analysis={queryOptions.group_analysis}
             showDerivedKPI={false}
-          ></ConversionGoalBlock>
+          />
         );
       }
 
@@ -207,7 +206,7 @@ const AttrQueryComposer = ({
       <MarkTouchpointBlock
         touchPoint={touchPoint}
         setTouchpoint={(tchPoint) => setTouchPoint(tchPoint)}
-      ></MarkTouchpointBlock>
+      />
     );
   };
 
@@ -218,7 +217,7 @@ const AttrQueryComposer = ({
         setModelOpt={(val) => setModels(val)}
         window={window}
         setWindowOpt={(win) => setWindow(win)}
-      ></AttributionOptions>
+      />
     );
   };
 
@@ -231,7 +230,7 @@ const AttrQueryComposer = ({
             linkEvent={ev}
             linkEventChange={(ev) => linkEventChange(ev, index)}
             delLinkEvent={() => linkEventDel(index)}
-          ></LinkedEventsBlock>
+          />
         );
       });
     }
@@ -239,7 +238,7 @@ const AttrQueryComposer = ({
     linkEventsList.push(
       <LinkedEventsBlock
         linkEventChange={(ev) => linkEventChange(ev, -1)}
-      ></LinkedEventsBlock>
+      />
     );
 
     return linkEventsList;
