@@ -352,6 +352,14 @@ upload-dashboard-caching: export IMAGE_NAME=dashboard-caching-job
 upload-dashboard-caching: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/dashboard-caching-job:$(TAG)
 
+pack-dashboard-db-precompute:
+	docker build -t us.gcr.io/factors-$(ENV)/dashboard-db-precompute:$(TAG) -f Dockerfile.dashboard_db_precompute .
+
+upload-dashboard-db-precompute: export IMAGE_NAME=dashboard-db-precompute
+upload-dashboard-db-precompute: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/dashboard-db-precompute:$(TAG)
+
+
 pack-monthly-dashboard-caching:
 	docker build -t us.gcr.io/factors-$(ENV)/monthly-dashboard-caching-job:$(TAG) -f Dockerfile.monthly_dashboard_caching_job .
 
