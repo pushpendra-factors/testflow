@@ -7,6 +7,7 @@ import useAutoFocus from '../../hooks/useAutoFocus';
 import { generateRandomKey } from 'Utils/global';
 import isEqual from 'lodash/isEqual';
 import sortBy from 'lodash/sortBy';
+import { filterURLValue } from 'Utils/filterURLValue';
 
 function FaSelect({
   options,
@@ -26,7 +27,7 @@ function FaSelect({
   showIcon = false,
   placement = 'bottom',
   style,
-  placeholder='Search'
+  placeholder = 'Search'
 }) {
   const [optClickArr, setOptClickArr] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,15 +124,7 @@ function FaSelect({
 
       options.forEach((op, index) => {
         isSelected = isSelectedCheck(op);
-        let st = searchTerm.toLowerCase();
-        // Regex to detect https/http is there or not as a protocol
-        let testURLRegex =
-          /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$/;
-        if (testURLRegex.test(st) > 0) {
-          st = st.split('://')[1];
-        }
-        st = st.replace(/\/$/, '');
-
+        let st = filterURLValue(searchTerm);
         if (
           op[0].toLowerCase().includes(st) ||
           (op[0] === '$none' && displayNames[op[0]].toLowerCase().includes(st))

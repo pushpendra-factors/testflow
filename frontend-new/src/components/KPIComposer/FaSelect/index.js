@@ -5,6 +5,7 @@ import { Input, Button, Spin } from 'antd';
 import { DISPLAY_PROP } from '../../../utils/constants';
 import useAutoFocus from '../../../hooks/useAutoFocus';
 import { generateRandomKey } from 'Utils/global';
+import { filterURLValue } from 'Utils/filterURLValue';
 
 function FaSelect({
   options,
@@ -110,13 +111,7 @@ function FaSelect({
 
       options.forEach((op, index) => {
         isSelected = isSelectedCheck(op);
-        let st = searchTerm.toLowerCase()
-        // Regex to detect https/http is there or not as a protocol
-        let testURLRegex = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$/
-        if(testURLRegex.test(st) > 0){
-          st = st.split('://')[1]
-        }
-        st = st.replace(/\/$/,"")
+        let st = filterURLValue(searchTerm);
 
         if (op[0].toLowerCase().includes(st)) {
           rendOpts.push(
@@ -149,44 +144,43 @@ function FaSelect({
         }
       });
     } else {
-      multiSelect && selectedOpts.forEach((op, index) => {
-        let is = isSelectedCheck([op])
-        if(!is){
-           return;
+      multiSelect &&
+        selectedOpts.forEach((op, index) => {
+          let is = isSelectedCheck([op]);
+          if (!is) {
+            return;
           }
-        
-        rendOpts.push(
-          <div
-            key={op ? op: generateRandomKey()}
-            className={`${
-              allowSearch
-                ? 'fa-select-group-select--options'
-                : 'fa-select--options'
-            } ${styles.fa_selected}`}
-            onClick={() => {
-              optClick(() => optionClick([op]), [op])
- 
-            }}
-          >
-            <span className={`ml-1 ${styles.optText}`}>
-              {DISPLAY_PROP[op] ? DISPLAY_PROP[op] : op}
-            </span>
-            <SVG
+
+          rendOpts.push(
+            <div
+              key={op ? op : generateRandomKey()}
+              className={`${
+                allowSearch
+                  ? 'fa-select-group-select--options'
+                  : 'fa-select--options'
+              } ${styles.fa_selected}`}
+              onClick={() => {
+                optClick(() => optionClick([op]), [op]);
+              }}
+            >
+              <span className={`ml-1 ${styles.optText}`}>
+                {DISPLAY_PROP[op] ? DISPLAY_PROP[op] : op}
+              </span>
+              <SVG
                 name='checkmark'
                 extraClass={'self-center'}
                 size={17}
                 color={'purple'}
               />
-          </div>
-        );
-      });
+            </div>
+          );
+        });
       options.forEach((op, index) => {
         isSelected = isSelectedCheck(op);
-        
+
         let is = selectedOpts.includes(op[0]) && isSelected;
-        if(is) return;
+        if (is) return;
         rendOpts.push(
-       
           <div
             key={op ? op[0] : generateRandomKey()}
             title={DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
@@ -263,7 +257,6 @@ function FaSelect({
       );
     }
 
-
     return rendOpts;
   };
 
@@ -277,7 +270,7 @@ function FaSelect({
         className={`${styles.selectInput} fa-filter-select fa-search-select`}
       >
         <Input
-          style={{overflow: "hidden"}}
+          style={{ overflow: 'hidden' }}
           prefix={<SVG name={'search'} />}
           size='large'
           placeholder={'Search'}
