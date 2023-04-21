@@ -200,7 +200,7 @@ function QueryBlock({
   const selectEventFilter = (ind) => (
     <FilterWrapper
       filterProps={filterProps}
-      activeProject={activeProject}
+      projectID={activeProject?.id}
       event={event}
       deleteFilter={closeFilter}
       insertFilter={insertFilters}
@@ -288,7 +288,7 @@ function QueryBlock({
                   filter={filter}
                   event={event}
                   filterProps={filterProps}
-                  activeProject={activeProject}
+                  projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
@@ -303,7 +303,7 @@ function QueryBlock({
                 <div key='init'>
                   <FilterWrapper
                     filterProps={filterProps}
-                    activeProject={activeProject}
+                    projectID={activeProject?.id}
                     event={event}
                     deleteFilter={closeFilter}
                     insertFilter={insertFilters}
@@ -326,7 +326,7 @@ function QueryBlock({
                   filter={filtersGr[0]}
                   event={event}
                   filterProps={filterProps}
-                  activeProject={activeProject}
+                  projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
@@ -340,7 +340,7 @@ function QueryBlock({
                   filter={filtersGr[1]}
                   event={event}
                   filterProps={filterProps}
-                  activeProject={activeProject}
+                  projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
