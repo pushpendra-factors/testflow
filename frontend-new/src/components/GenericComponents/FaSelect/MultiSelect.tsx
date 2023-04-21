@@ -19,29 +19,27 @@ export default function MultiSelect({
   allowSearch,
   searchOption
 }: MultiSelectProps) {
-  const [optionsClicked, setOptionsClicked] = useState(
-    selectedOptionsMapper(options, selectedOptions)
-  );
+  const [optionsClicked, setOptionsClicked] = useState(selectedOptions);
 
   const handleMultipleOptionClick = (op: OptionType) => {
     let newoptionsClicked = [...optionsClicked];
-    let index = optionsClicked.map((opt) => opt.value).indexOf(op.value);
+    let index = optionsClicked.indexOf(op.value);
     if (index > -1) {
       //Removing Option From Selected Options
       newoptionsClicked.splice(index, 1);
     } else {
       //Adding Option To Selected Options
-      newoptionsClicked.push(op);
+      newoptionsClicked.push(op.value);
     }
     setOptionsClicked(newoptionsClicked);
   };
 
   const checkIsOptionSelected = (value: string) => {
-    return optionsClicked.map((opt) => opt.value).includes(value);
+    return optionsClicked.includes(value);
   };
 
   const applyClick = () => {
-    optionClick(optionsClicked);
+    optionClick(selectedOptionsMapper(options, optionsClicked));
   };
 
   const clearAllClick = () => {
@@ -53,7 +51,7 @@ export default function MultiSelect({
     let isSearchTermSelected = checkIsOptionSelected(searchOption.value);
     rendOpts.push(
       <div
-        key={searchOption.value}
+        key={'search' + searchOption.value}
         className={`${
           allowSearch ? 'fa-select-group-select--options' : 'fa-select--options'
         } ${isSearchTermSelected ? styles.fa_selected : ''}`}
@@ -74,34 +72,45 @@ export default function MultiSelect({
       </div>
     );
   }
-  //Selected Options.
-  optionsClicked.forEach((op) =>
-    rendOpts.push(
-      <div
-        key={op.value}
-        onClick={() => {
-          handleMultipleOptionClick(op);
-        }}
-        className={`${
-          allowSearch ? 'fa-select-group-select--options' : 'fa-select--options'
-        } ${styles.fa_selected} `}
-      >
-        <span className={`ml-1 ${styles.optText}`}>
-          {op.labelNode ? op.labelNode : op.label}
-        </span>
-        <SVG
-          name='checkmark'
-          extraClass={'self-center'}
-          size={17}
-          color={'purple'}
-        />
-      </div>
-    )
-  );
-  //Unselected Options.
+  const optionsClickedMapped = selectedOptionsMapper(options, optionsClicked);
+  //Selected Options That Should be shown on Top.[These Options are present in both optionsClicked and SelectedOptions].
+  optionsClickedMapped.forEach((op) => {
+    if (selectedOptions.includes(op.value)) {
+      rendOpts.push(
+        <div
+          key={op.value}
+          onClick={() => {
+            handleMultipleOptionClick(op);
+          }}
+          className={`${
+            allowSearch
+              ? 'fa-select-group-select--options'
+              : 'fa-select--options'
+          } ${styles.fa_selected} `}
+        >
+          <span className={`ml-1 ${styles.optText}`}>
+            {op.labelNode ? op.labelNode : op.label}
+          </span>
+          <SVG
+            name='checkmark'
+            extraClass={'self-center'}
+            size={17}
+            color={'purple'}
+          />
+        </div>
+      );
+    }
+  });
   options.forEach((op) => {
-    let isSelected: boolean = checkIsOptionSelected(op.value);
-    if (!isSelected) {
+    const isSelectedInClickedOptions: boolean = checkIsOptionSelected(op.value);
+    const isSelectedInSelectedOptions: boolean = selectedOptions.includes(
+      op.value
+    );
+    if (
+      (!isSelectedInClickedOptions && !isSelectedInSelectedOptions) ||
+      (!isSelectedInClickedOptions && isSelectedInSelectedOptions)
+    ) {
+      //UnSelected Options.
       rendOpts.push(
         <div
           key={op.value}
@@ -117,6 +126,31 @@ export default function MultiSelect({
           <span className={`ml-1 ${styles.optText}`}>
             {op.labelNode ? op.labelNode : op.label}
           </span>
+        </div>
+      );
+    } else if (isSelectedInClickedOptions && !isSelectedInSelectedOptions) {
+      //Selected Options that should not be moved to Top.
+      rendOpts.push(
+        <div
+          key={op.value}
+          onClick={() => {
+            handleMultipleOptionClick(op);
+          }}
+          className={`${
+            allowSearch
+              ? 'fa-select-group-select--options'
+              : 'fa-select--options'
+          } ${styles.fa_selected} `}
+        >
+          <span className={`ml-1 ${styles.optText}`}>
+            {op.labelNode ? op.labelNode : op.label}
+          </span>
+          <SVG
+            name='checkmark'
+            extraClass={'self-center'}
+            size={17}
+            color={'purple'}
+          />
         </div>
       );
     }
