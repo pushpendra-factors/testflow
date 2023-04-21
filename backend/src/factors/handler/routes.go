@@ -186,6 +186,7 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/attribution/queries", stringifyWrapper(V1.GetAttributionQueriesHandler))
 	featuresGatesRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/attribution/queries", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(V1.CreateAttributionV1QueryAndSaveToDashboardHandler))
 	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/attribution/dashboards", stringifyWrapper(V1.GetOrCreateAttributionV1DashboardHandler))
+	featuresGatesRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/attribution/dashboards/:dashboard_id/units/:unit_id/query/:query_id", mid.SkipDemoProjectWriteAccess(), V1.DeleteAttributionDashboardUnitAndQueryHandler)
 
 	// v1 custom metrics - admin/settings side.
 	featuresGatesRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config/v1", V1.GetCustomMetricsConfigV1)
