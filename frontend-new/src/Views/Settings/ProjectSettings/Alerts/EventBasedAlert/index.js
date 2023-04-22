@@ -640,12 +640,12 @@ const EventBasedAlert = ({
         slack_channels: saveSelectedChannel,
         webhook: webhookEnabled,
         url: finalWebhookUrl,
-        teams: teamsEnabled,
-        teams_channels_config: {
-          teams_id: selectedWorkspace?.id,
-          teams_name: selectedWorkspace?.name,
-          teams_channel_list: teamsSaveSelectedChannel
-        }
+        // teams: teamsEnabled,
+        // teams_channels_config: {
+        //   teams_id: selectedWorkspace?.id,
+        //   teams_name: selectedWorkspace?.name,
+        //   teams_channel_list: teamsSaveSelectedChannel
+        // }
       };
 
       if (alertState?.state === 'edit') {

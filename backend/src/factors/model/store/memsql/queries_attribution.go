@@ -115,3 +115,30 @@ func (store *MemSQL) GetOrCreateAttributionV1Dashboard(projectId int64, agentUUI
 	}
 	return dashboard, http.StatusFound
 }
+
+// DeleteAttributionDashboardUnitAndQuery deletes query and corresponding dashboard unit for given project id
+func (store *MemSQL) DeleteAttributionDashboardUnitAndQuery(projectID int64, queryID int64, agentUUID string, dashboardId int64, unitId int64) (int, string) {
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query_id":   queryID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	errCode := store.DeleteDashboardUnit(projectID, agentUUID, dashboardId, unitId)
+	if errCode != http.StatusAccepted {
+		return errCode, "Failed to delete dashboard unit."
+	}
+
+	errCode, errMsg := deleteQuery(projectID, queryID, model.QueryTypeAttributionV1Query)
+	if errCode != http.StatusAccepted {
+		return errCode, errMsg
+	}
+
+	errCodeShareableUrl := store.DeleteShareableURLWithEntityIDandType(projectID, queryID, model.ShareableURLEntityTypeQuery)
+	if errCodeShareableUrl != http.StatusNotFound && errCodeShareableUrl != http.StatusAccepted {
+		return errCodeShareableUrl, "Failed to delete shareable urls."
+	}
+
+	return http.StatusAccepted, "Successfully deleted."
+}
