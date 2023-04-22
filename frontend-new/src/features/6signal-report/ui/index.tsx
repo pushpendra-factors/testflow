@@ -452,7 +452,7 @@ const SixSignalReport = () => {
           ) : (
             <>
               <ReportTable
-                data={isSixSignalActivated ? data?.result_group[0] : null}
+                data={data?.result_group[0]}
                 selectedChannel={filterValue}
                 selectedCampaigns={seletedCampaigns}
                 isSixSignalActivated={isSixSignalActivated}
