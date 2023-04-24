@@ -307,6 +307,7 @@ type Configuration struct {
 	CustomDateStart                                    int64
 	CustomDateEnd                                      int64
 	EnableFieldsSyncByProjectID                        string
+	EnableUserDomainsGroupByProjectID                  string
 }
 
 type Services struct {
@@ -2708,6 +2709,15 @@ func IsSalesforceDocTypeEnabledForSync(docType string) bool {
 
 func IsFieldsSyncAllowedForProjectID(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableFieldsSyncByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return projectIDsMap[projectID]
+}
+
+func EnableUserDomainsGroupByProjectID(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableUserDomainsGroupByProjectID, "")
 	if allProjects {
 		return true
 	}

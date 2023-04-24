@@ -122,6 +122,7 @@ func TestMain(m *testing.M) {
 		EnableDBConnectionPool2:                            *enableDBConnectionPool2,
 		EnableDomainsGroupByProjectID:                      "*",
 		EnableSyncReferenceFieldsByProjectID:               "*",
+		EnableUserDomainsGroupByProjectID:                  "*",
 	}
 	C.InitConf(config)
 

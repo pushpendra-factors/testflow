@@ -1438,6 +1438,14 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 			return errCode, &IdentifyResponse{Error: "Identification failed. User creation failed."}
 		}
 
+		if C.EnableUserDomainsGroupByProjectID(projectId) {
+			status := store.GetStore().AssociateUserDomainsGroup(projectId, createdUserID, "", "")
+			if status != http.StatusOK && status != http.StatusNotModified {
+				log.WithFields(log.Fields{"project_id": projectId, "user_id": createdUserID, "err_code": status}).
+					Error("Failed to AssociateUserDomainsGroup on Identify new user.")
+			}
+		}
+
 		return http.StatusOK, &IdentifyResponse{UserId: createdUserID,
 			Message: "User has been identified successfully"}
 
@@ -1464,6 +1472,14 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 	_, errCode = store.GetStore().UpdateUser(projectId, request.UserId, updateUser, request.Timestamp)
 	if errCode != http.StatusAccepted {
 		return errCode, &IdentifyResponse{Error: "Identification failed. Failed mapping customer_user to user"}
+	}
+
+	if C.EnableUserDomainsGroupByProjectID(projectId) {
+		status := store.GetStore().AssociateUserDomainsGroup(projectId, request.UserId, "", "")
+		if status != http.StatusOK && status != http.StatusNotModified {
+			log.WithFields(log.Fields{"project_id": projectId, "user_id": request.UserId, "err_code": status}).
+				Error("Failed to AssociateUserDomainsGroup on user Identify.")
+		}
 	}
 
 	return http.StatusOK, &IdentifyResponse{Message: "User has been identified successfully."}
@@ -2466,8 +2482,16 @@ func TrackUserAccountGroup(projectID int64, userID string, groupName string, gro
 
 	_, status = store.GetStore().UpdateUserGroup(projectID, userID, groupName, groupID, groupUserID, true)
 	if status != http.StatusAccepted && status != http.StatusNotModified {
-		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to update user association with group user on TrackUserGroup.")
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to update user association with group user on TrackUserAccountGroup.")
 		return http.StatusInternalServerError
+	}
+
+	if C.EnableUserDomainsGroupByProjectID(projectID) {
+		status = store.GetStore().AssociateUserDomainsGroup(projectID, userID, groupName, groupUserID)
+		if status != http.StatusOK && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to AssociateUserDomainsGroup on TrackUserAccountGroup.")
+			return http.StatusInternalServerError
+		}
 	}
 
 	return http.StatusOK

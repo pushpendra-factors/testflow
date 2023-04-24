@@ -84,6 +84,7 @@ func main() {
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	enableSixSignalGroupByProjectID := flag.String("enable_six_signal_group_by_project_id", "", "")
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
+	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
 
 	flag.Parse()
 
@@ -137,6 +138,7 @@ func main() {
 		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		EnableSixSignalGroupByProjectID:                    *enableSixSignalGroupByProjectID,
 		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
+		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
 	}
 	C.InitConf(config)
 

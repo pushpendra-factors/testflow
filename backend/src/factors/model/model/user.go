@@ -180,6 +180,12 @@ type OverwriteUserPropertiesByIDParams struct {
 	Source              string
 }
 
+var AccountGroupAssociationPrecedence = []string{
+	GROUP_NAME_SALESFORCE_ACCOUNT,
+	GROUP_NAME_HUBSPOT_COMPANY,
+	GROUP_NAME_SIX_SIGNAL,
+}
+
 func IsUserSourceCRM(source int) bool {
 	for _, crmSource := range UserSourceCRM {
 		if crmSource == source {
@@ -985,6 +991,24 @@ func GetGroupUserGroupID(groupUser *User, groupIndex int) (string, error) {
 	return groupID, nil
 }
 
+// GetGroupUserDomainsUserID gives domains user id from the group user
+func GetGroupUserDomainsUserID(groupUser *User, groupIndex int) (string, error) {
+	if groupUser.IsGroupUser == nil || !(*groupUser.IsGroupUser) {
+		return "", errors.New("not a group user")
+	}
+
+	groupUserID, err := GetUserGroupUserID(groupUser, groupIndex)
+	if err != nil {
+		return "", err
+	}
+
+	if groupUserID == "" {
+		return "", errors.New("failed to get domains user id for group user")
+	}
+
+	return groupUserID, nil
+}
+
 func GetUserGroupUserID(user *User, groupIndex int) (string, error) {
 	groupUserID := ""
 	if groupIndex != 0 {
@@ -1033,6 +1057,31 @@ func GetUserGroupColumn(user *User, searchColumn string) (string, error) {
 	}
 
 	return value, nil
+}
+
+func GetUserGroupUserIDsByGroupIDs(projectID int64, users []User, requiredGroupsIndex []int) (map[int]string, error) {
+	groupUserIDByGroupID := make(map[int]string)
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].JoinTimestamp < users[j].JoinTimestamp
+	})
+
+	for i := range users {
+		user := users[i]
+		for _, groupIndex := range requiredGroupsIndex {
+			groupUserID, err := GetUserGroupUserID(&user, groupIndex)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectID, "user_id": users[i]}).WithError(err).
+					Error("Failed to get group user id on GetUserGroupUserIDsByGroupIDs.")
+				return nil, err
+			}
+
+			if groupUserID != "" {
+				groupUserIDByGroupID[groupIndex] = groupUserID
+			}
+		}
+	}
+
+	return groupUserIDByGroupID, nil
 }
 
 func IsValidUserSource(source string) bool {
