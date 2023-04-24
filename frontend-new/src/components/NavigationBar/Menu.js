@@ -212,6 +212,12 @@ function SiderMenu({
       if (Object.values(ATTRIBUTION_ROUTES).includes(location.pathname))
         color = 'purple';
     }
+    if (
+      name === 'profile' &&
+      location.pathname === APP_LAYOUT_ROUTES.VisitorIdentificationReport.path
+    ) {
+      color = 'purple';
+    }
     return (
       <span className='anticon'>
         <SVG name={name} size={size} color={color} />
