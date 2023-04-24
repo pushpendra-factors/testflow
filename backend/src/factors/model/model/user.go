@@ -58,8 +58,8 @@ type User struct {
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	// source of the user record (1 = WEB, 2 = HUBSPOT, 3 = SALESFORCE)
-	Source          *int           `json:"source"`
-	EventsAggregate postgres.Jsonb `json:"event_aggregate"`
+	Source         *int           `json:"source"`
+	EventAggregate postgres.Jsonb `json:"event_aggregate"`
 }
 
 type LatestUserPropertiesFromSession struct {
