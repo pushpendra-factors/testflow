@@ -1585,7 +1585,7 @@ func syncSalesforcePropertyByType(projectID int64, doctTypeAlias string, fieldNa
 }
 
 func skipObjectEvent(docType int) bool {
-	return docType == model.SalesforceDocumentTypeOpportunityContactRole
+	return docType == model.SalesforceDocumentTypeOpportunityContactRole || docType == model.SalesforceDocumentTypeUser
 }
 
 // SyncDatetimeAndNumericalProperties sync datetime and numerical properties to the property_details table
