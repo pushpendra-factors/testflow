@@ -149,11 +149,15 @@ func GetPropertyValuesByGroupPropertyFromCache(projectID int64, groupName string
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	values, _, err := cacheRedis.GetIfExistsPersistent(groupPropertyValuesKey)
+	values, exists, _ := cacheRedis.GetIfExistsPersistent(groupPropertyValuesKey)
+	if !exists || values == "" {
+		return U.CachePropertyValueWithTimestamp{}, nil
+	}
+
 	var cacheValue U.CachePropertyValueWithTimestamp
 	err = json.Unmarshal([]byte(values), &cacheValue)
 	if err != nil {
-		logCtx.Error("Failed to unmarshal property value from cache.")
+		logCtx.WithError(err).Error("Failed to unmarshal property value from cache.")
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
 	return cacheValue, nil
