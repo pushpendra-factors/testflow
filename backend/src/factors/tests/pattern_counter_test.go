@@ -2235,47 +2235,6 @@ func TestCountPatternsWithSameTimeStamp4(t *testing.T) {
 	}
 }
 
-func TestCountPatternWithProperties1(t *testing.T) {
-	// project, err := SetupProjectReturnDAO()
-	projectId := int64(1)
-	var cAlgoProps P.CountAlgoProperties
-	cAlgoProps.Counting_version = 3
-	cAlgoProps.Hmine_support = 0.0001
-	cAlgoProps.Hmine_persist = 0
-	shouldCountOccurence := false
-
-	p1, _ := P.NewPattern([]string{"$session", "$form_submitted"}, nil)
-	// p2, _ := P.NewPattern([]string{"$form_submitted", "$session"}, nil)
-
-	patterns := []*P.Pattern{p1}
-	file, err := os.Open("./data/events_test.txt")
-	assert.Nil(t, err)
-	scanner := bufio.NewScanner(file)
-
-	err = P.CountPatterns(projectId, scanner, patterns, shouldCountOccurence, cAlgoProps)
-	assert.Nil(t, err)
-
-	var patsSlice []string = make([]string, 0)
-	for _, p := range patterns {
-		channel_count := 0
-		for _, pats := range p.EventPropertiesPatterns {
-			pats_string := strings.Join(pats.Items, "_")
-			if strings.Contains(pats_string, "$channel") {
-				fmt.Println(pats_string)
-				channel_count += 1
-			}
-			patsSlice = append(patsSlice, pats_string)
-		}
-		assert.Equal(t, 6, channel_count)
-
-	}
-
-	p := patterns[0]
-	eps := p.PerUserCount
-	assert.Equal(t, uint(1), eps, fmt.Sprintf("count of %v", p.EventNames))
-
-}
-
 func TestCountPatternWithProperties(t *testing.T) {
 	// project, err := SetupProjectReturnDAO()
 	projectId := int64(1)
