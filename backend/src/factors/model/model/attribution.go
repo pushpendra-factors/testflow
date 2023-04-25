@@ -140,14 +140,14 @@ const (
 
 	KeyDelimiter = ":-:"
 
-	ChannelAdwords    = "Google Ads"
-	ChannelBingads    = "Bing Ads"
-	ChannelFacebook   = "Facebook Ads"
-	ChannelLinkedin   = "LinkedIn Ads"
+	ChannelAdwords    = "adwords"
+	ChannelBingads    = "bingads"
+	ChannelFacebook   = "facebook"
+	ChannelLinkedin   = "linkedin"
 	ChannelGoogleAds  = "google_ads"
-	ChannelBingAds    = "Bing Ads"
-	ChannelCustomAds  = "Custom Ads"
-	SessionChannelOTP = "Offline Touch Point"
+	ChannelBingAds    = "bingads"
+	ChannelCustomAds  = "custom_ads"
+	SessionChannelOTP = "OfflineTouchPoint"
 
 	FieldChannelName      = "channel_name"
 	FieldCampaignName     = "campaign_name"
