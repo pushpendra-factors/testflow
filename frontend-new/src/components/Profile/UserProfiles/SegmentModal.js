@@ -280,6 +280,7 @@ function SegmentModal({
         list.push(
           <div key={id}>
             <FilterWrapper
+              groupName={segmentPayload?.type}
               projectID={activeProject?.id}
               index={id}
               filter={filter}
@@ -298,6 +299,7 @@ function SegmentModal({
           list.push(
             <div key={list.length}>
               <FilterWrapper
+                groupName={segmentPayload?.type}
                 projectID={activeProject?.id}
                 index={list.length}
                 deleteFilter={() => closeFilter()}
