@@ -7,7 +7,7 @@ import (
 	H "factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
-	slack "factors/slack_bot/handler"
+	slack "factors/integration/slack"
 	U "factors/util"
 	"fmt"
 	"math"

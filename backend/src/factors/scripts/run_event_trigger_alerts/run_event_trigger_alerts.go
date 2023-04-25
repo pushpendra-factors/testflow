@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	slack "factors/slack_bot/handler"
+	slack "factors/integration/slack"
 	webhook "factors/webhooks"
 
 	"github.com/jinzhu/gorm/dialects/postgres"

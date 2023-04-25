@@ -6,17 +6,13 @@ import (
 	V1 "factors/handler/v1"
 	mid "factors/middleware"
 	"factors/model/model"
-	teams "factors/ms_teams"
 	U "factors/util"
 	"fmt"
-	"net/http"
-	"reflect"
-
-	slack "factors/slack_bot/handler"
-
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"net/http"
+	"reflect"
 )
 
 const ROUTE_SDK_ROOT = "/sdk"
@@ -272,9 +268,9 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.PUT("/:project_id/v1/alerts/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.EditAlertHandler))
 
 	// slack
-	featuresGatesRouteGroup.POST("/:project_id/slack/auth", mid.SkipDemoProjectWriteAccess(), slack.SlackAuthRedirectHandler)
-	featuresGatesRouteGroup.GET("/:project_id/slack/channels", mid.SkipDemoProjectWriteAccess(), slack.GetSlackChannelsListHandler)
-	featuresGatesRouteGroup.DELETE("/:project_id/slack/delete", mid.SkipDemoProjectWriteAccess(), slack.DeleteSlackIntegrationHandler)
+	featuresGatesRouteGroup.POST("/:project_id/slack/auth", mid.SkipDemoProjectWriteAccess(), V1.SlackAuthRedirectHandler)
+	featuresGatesRouteGroup.GET("/:project_id/slack/channels", mid.SkipDemoProjectWriteAccess(), V1.GetSlackChannelsListHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/slack/delete", mid.SkipDemoProjectWriteAccess(), V1.DeleteSlackIntegrationHandler)
 	featuresGatesRouteGroup.POST("/:project_id/v1/alerts/send_now", mid.SkipDemoProjectWriteAccess(), V1.QuerySendNowHandler)
 
 	// Timeline
@@ -315,10 +311,10 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/test_wh", responseWrapper(V1.TestWebhookforEventTriggerAlerts))
 
 	// teams
-	featuresGatesRouteGroup.POST("/:project_id/teams/auth", mid.SkipDemoProjectWriteAccess(), teams.TeamsAuthRedirectHandler)
-	featuresGatesRouteGroup.GET("/:project_id/teams/get_teams", mid.SkipDemoProjectWriteAccess(), teams.GetAllTeamsHandler)
-	featuresGatesRouteGroup.GET("/:project_id/teams/channels", mid.SkipDemoProjectWriteAccess(), teams.GetTeamsChannelsHandler)
-	featuresGatesRouteGroup.DELETE("/:project_id/teams/delete", mid.SkipDemoProjectWriteAccess(), teams.DeleteTeamsIntegrationHandler)
+	featuresGatesRouteGroup.POST("/:project_id/teams/auth", mid.SkipDemoProjectWriteAccess(), V1.TeamsAuthRedirectHandler)
+	featuresGatesRouteGroup.GET("/:project_id/teams/get_teams", mid.SkipDemoProjectWriteAccess(), V1.GetAllTeamsHandler)
+	featuresGatesRouteGroup.GET("/:project_id/teams/channels", mid.SkipDemoProjectWriteAccess(), V1.GetTeamsChannelsHandler)
+	featuresGatesRouteGroup.DELETE("/:project_id/teams/delete", mid.SkipDemoProjectWriteAccess(), V1.DeleteTeamsIntegrationHandler)
 	// Upload
 	featuresGatesRouteGroup.POST("/:project_id/uploadlist", V1.UploadListForFilters)
 
@@ -501,9 +497,9 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SkipDemoProjectWriteAccess(),
 		IntDeleteHandler)
 
-	intRouteGroup.GET("/slack/callback", slack.SlackCallbackHandler)
+	intRouteGroup.GET("/slack/callback", V1.SlackCallbackHandler)
 
-	intRouteGroup.GET("/teams/callback", teams.TeamsCallbackHandler)
+	intRouteGroup.GET("/teams/callback", V1.TeamsCallbackHandler)
 
 }
 
