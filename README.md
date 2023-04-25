@@ -9,9 +9,10 @@ https://github.com/Slashbit-Technologies/factors/wiki/Development-Setup
 
 ## Development Setup (Mac)
 
-## Golang (Version 1.14.x)
-https://golang.org/dl/ - go for default installation using installer. Not the custom installation using source.
-https://golang.org/dl/go1.14.7.darwin-amd64.pkg - use this default installer for mac.
+## Golang (Version 1.20.3)
+Download</br>
+Mac - Apple 64bit Processor - https://go.dev/dl/go1.20.3.darwin-arm64.pkg</br>
+Mac - Intel 64bit Processor - https://go.dev/dl/go1.20.3.darwin-amd64.pkg</br>
 
 ## Postgresql Setup (Homebrew):
 ```
