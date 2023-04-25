@@ -37,6 +37,7 @@ import useAgentInfo from 'hooks/useAgentInfo';
 import ShareModal from './components/ShareModal';
 import useQuery from 'hooks/useQuery';
 import logger from 'Utils/logger';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 
 const SixSignalReport = () => {
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -194,11 +195,17 @@ const SixSignalReport = () => {
 
   //Effect for hiding the side panel and menu
   useEffect(() => {
-    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+    let hideSidePanel = false;
+    if (!isLoggedIn) {
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+      hideSidePanel = true;
+    }
+
     return () => {
-      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
+      if (hideSidePanel)
+        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     };
-  }, [dispatch]);
+  }, [dispatch, isLoggedIn]);
 
   //Effect for fetching dates
   useEffect(() => {
@@ -313,12 +320,15 @@ const SixSignalReport = () => {
 
   return (
     <div className='flex flex-col'>
-      <FaPublicHeader
-        showDrawer={showDrawer}
-        handleShareClick={handleShareClick}
-        showShareButton={showShareButton}
-      />
-      <div className='px-24 pt-16 mt-12'>
+      {!isLoggedIn && (
+        <FaPublicHeader
+          showDrawer={showDrawer}
+          handleShareClick={handleShareClick}
+          showShareButton={showShareButton}
+        />
+      )}
+
+      <div className={`${isLoggedIn ? 'px-20' : 'px-24'} pt-16 mt-12`}>
         <div className='flex justify-between align-middle'>
           <div className='flex align-middle gap-6'>
             <div className={style.mixChartContainer}>
@@ -365,7 +375,34 @@ const SixSignalReport = () => {
               </div>
             </div>
           </div>
-          <div>{/* match account */}</div>
+          <div>
+            {/* match account */}
+            <ControlledComponent controller={isLoggedIn}>
+              <Tooltip
+                placement='bottom'
+                title={`${
+                  showShareButton
+                    ? 'Share'
+                    : 'Only weekly visitor reports can be shared for easy access'
+                }`}
+              >
+                <Button
+                  onClick={handleShareClick}
+                  size='large'
+                  type='primary'
+                  icon={
+                    <SVG
+                      name={'link'}
+                      color={`${showShareButton ? '#fff' : '#b8b8b8'}`}
+                    />
+                  }
+                  disabled={!showShareButton}
+                >
+                  Share
+                </Button>
+              </Tooltip>
+            </ControlledComponent>
+          </div>
         </div>
         <Divider />
         <div className='flex align-middle gap-4'>
