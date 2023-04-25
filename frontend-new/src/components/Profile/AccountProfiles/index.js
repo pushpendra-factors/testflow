@@ -748,7 +748,9 @@ function AccountProfiles({
           multiSelect
           options={
             companyValueOpts?.[accountPayload?.source]
-              ? Object.entries(companyValueOpts[accountPayload?.source])
+              ? Object.keys(companyValueOpts[accountPayload?.source]).map(
+                  (value) => [value]
+                )
               : []
           }
           displayNames={companyValueOpts?.[accountPayload?.source]}

@@ -303,17 +303,8 @@ const FaFilterSelect = ({
 
   const getIcon = (propState) => {
     const { name, icon } = propState || {};
-
     if (!name) return null;
-
-    const iconName =
-      icon === 'group' ||
-      name.startsWith('$salesforce') ||
-      name.startsWith('$hubspot') ||
-      name.startsWith('$6Signal')
-        ? 'profile'
-        : icon;
-
+    const iconName = icon === 'group' ? 'user' : icon;
     return (
       <SVG name={iconName} size={16} color={viewMode ? 'grey' : 'purple'} />
     );
@@ -630,7 +621,7 @@ const FaFilterSelect = ({
           }
           options={
             valueOpts?.[propState?.name]
-              ? Object.keys(valueOpts[propState.name]).map((value)=>[value])
+              ? Object.keys(valueOpts[propState.name]).map((value) => [value])
               : []
           }
           displayNames={valueDisplayNames}
