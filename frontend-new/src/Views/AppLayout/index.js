@@ -146,8 +146,7 @@ function AppLayout({
           (res?.data?.int_factors_six_signal_key ||
             res?.data?.int_client_six_signal_key)
         ) {
-          //ToDo: uncomment below once side navigation is added to visitor report
-          // history.push(APP_LAYOUT_ROUTES.VisitorIdentificationReport.path);
+          history.push(APP_LAYOUT_ROUTES.VisitorIdentificationReport.path);
         }
       }
       setDataLoading(false);
