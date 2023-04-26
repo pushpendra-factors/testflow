@@ -24,7 +24,7 @@ func DropWebhook(url, secret string, payload interface{}) (map[string]interface{
 	if err != nil {
 		return nil, err
 	}
-	request, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonBody))
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, err
 	}
