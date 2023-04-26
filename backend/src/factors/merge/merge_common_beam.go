@@ -263,12 +263,14 @@ func ReadAndMergeDailyFilesForBeam(projectId int64, dataType, fileNamePrefix str
 			return startToEndIndex, indexMap, countLines, err
 		}
 	}
-	filesBroken, fileAdded, err := resizeUnsortedPartFilesForBeam(projectId, startTimestamp, endTimestamp, sortOnGroup, startToEndIndex, indexMap, tmpCloudManager)
-	if err != nil {
-		log.WithError(err).Error("error resizeUnsortedPartFilesForBeam")
-		return startToEndIndex, indexMap, countLines, err
+	if dataType == U.DataTypeEvent {
+		filesBroken, fileAdded, err := resizeUnsortedPartFilesForBeam(projectId, startTimestamp, endTimestamp, sortOnGroup, startToEndIndex, indexMap, tmpCloudManager)
+		if err != nil {
+			log.WithError(err).Error("error resizeUnsortedPartFilesForBeam")
+			return startToEndIndex, indexMap, countLines, err
+		}
+		log.Infof("%d large files split into %d small files", filesBroken, fileAdded)
 	}
-	log.Infof("%d large files split into %d small files", filesBroken, fileAdded)
 
 	return startToEndIndex, indexMap, countLines, nil
 }
