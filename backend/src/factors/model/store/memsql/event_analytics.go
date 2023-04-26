@@ -1088,7 +1088,6 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		} else if source == model.GROUP_NAME_SIX_SIGNAL && !sixSignalExists {
 			log.WithFields(logFields).Error("Six Signal Not Enabled for this project.")
 		} else {
-			addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=1)", selectVal)
 			if source == "All" {
 				var sourceArr, colArr []string
 				if hubspotExists {
@@ -1106,17 +1105,17 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 				sourceStr := strings.Join(sourceArr, " OR ")
 				colStr := strings.Join(colArr, " , ")
 				if sourceStr != "" {
-					addSourceStmt = addSourceStmt + fmt.Sprintf("AND (%s)", sourceStr)
+					addSourceStmt = fmt.Sprintf(" (%s)", sourceStr)
 					addColString = addColString + colStr
 				}
 			} else if (source == "All" || source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
-				addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, hubspotID)
+				addSourceStmt = " " + fmt.Sprintf("%s.group_%d_id IS NOT NULL", selectVal, hubspotID)
 				addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", hubspotID)
 			} else if (source == "All" || source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
-				addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, salesforceID)
+				addSourceStmt = " " + fmt.Sprintf("%s.group_%d_id IS NOT NULL", selectVal, salesforceID)
 				addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", salesforceID)
 			} else if (source == "All" || source == model.GROUP_NAME_SIX_SIGNAL) && sixSignalExists {
-				addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, sixSignalID)
+				addSourceStmt = " " + fmt.Sprintf("%s.group_%d_id IS NOT NULL", selectVal, sixSignalID)
 				addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", sixSignalID)
 			}
 			status = http.StatusOK

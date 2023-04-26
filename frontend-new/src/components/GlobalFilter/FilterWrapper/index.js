@@ -94,16 +94,21 @@ function FilterWrapper({
       } else if (newFilterState.props[2] === 'group') {
         let group = groupName;
         if (groupName === 'All') {
-          if (newFilterState.props[0].includes('hubspot'))
+          if (newFilterState.props[0].toLowerCase().includes('hubspot'))
             group = '$hubspot_company';
-          if (newFilterState.props[0].includes('salesforce'))
+          if (newFilterState.props[0].toLowerCase().includes('salesforce'))
             group = '$salesforce_account';
-          if (newFilterState.props[0].includes('6signal')) group = '$6signal';
+          if (newFilterState.props[0].toLowerCase().includes('6signal'))
+            group = '$6signal';
         }
         getGroupPropertyValues(projectID, group, newFilterState.props[0]);
       }
     }
-  }, [newFilterState]);
+  }, [
+    newFilterState.props[0],
+    newFilterState.props[1],
+    newFilterState.props[2]
+  ]);
 
   const delFilter = () => {
     deleteFilter(index);
@@ -125,9 +130,11 @@ function FilterWrapper({
       } else if (props[3] === 'group') {
         let group = groupName;
         if (groupName === 'All') {
-          if (props[1].includes('hubspot')) group = '$hubspot_company';
-          if (props[1].includes('salesforce')) group = '$salesforce_account';
-          if (props[1].includes('6signal')) group = '$6signal';
+          if (props[1].toLowerCase().includes('hubspot'))
+            group = '$hubspot_company';
+          if (props[1].toLowerCase().includes('salesforce'))
+            group = '$salesforce_account';
+          if (props[1].toLowerCase().includes('6signal')) group = '$6signal';
         }
         getGroupPropertyValues(projectID, group, props[1]);
       }
