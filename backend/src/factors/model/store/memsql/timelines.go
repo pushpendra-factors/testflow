@@ -99,7 +99,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 				if payload.Filters == nil {
 					payload.Filters = make(map[string][]model.QueryProperty)
 				}
-				payload.Filters[segment.Type] = append(payload.Filters[segment.Type], segmentQuery.GlobalUserProperties...)
+				payload.Filters["users"] = append(payload.Filters["users"], segmentQuery.GlobalUserProperties...)
 			}
 		}
 	} else {

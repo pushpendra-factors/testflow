@@ -156,7 +156,7 @@ function AccountProfiles({
   useEffect(() => {
     if (accountPayload.source && accountPayload.source !== '') {
       const opts = { ...accountPayload };
-      opts.filters = formatFiltersForPayload(opts.filters);
+      opts.filters = formatFiltersForPayload(opts.filters, false);
       getProfileAccounts(activeProject.id, opts);
     }
   }, [activeProject?.id, currentProjectSettings, accountPayload]);
@@ -424,6 +424,7 @@ function AccountProfiles({
   const onOptionClick = (_, data) => {
     const opts = { ...accountPayload };
     opts.segment_id = data[1];
+    opts.source = data[2].type;
     setActiveSegment(data[2]);
     setAccountPayload(opts);
     setSegmentDDVisible(false);
@@ -711,7 +712,7 @@ function AccountProfiles({
 
     const updatedPayload = {
       ...accountPayload,
-      search_filter: formatFiltersForPayload(searchFilter)
+      search_filter: formatFiltersForPayload(searchFilter, false)
     };
     updatedPayload.search_filter = updatedPayload.search_filter.map(
       (filter, index) => {

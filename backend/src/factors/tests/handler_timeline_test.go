@@ -178,7 +178,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	payload = model.TimelinePayload{
 		Source: "web",
 		Filters: map[string][]model.QueryProperty{
-			"web": {{
+			"users": {{
 				Entity:    "user_g",
 				Type:      "categorical",
 				Property:  "$country",
@@ -212,7 +212,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	payload = model.TimelinePayload{
 		Source: "web",
 		SearchFilter: map[string][]model.QueryProperty{
-			"web": {{
+			"users": {{
 				Entity:    "user_g",
 				Type:      "categorical",
 				Property:  "$user_id",
@@ -380,7 +380,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	payload = model.TimelinePayload{
 		Source: "web",
 		Filters: map[string][]model.QueryProperty{
-			"web": {
+			"users": {
 				{
 					Entity:    "user_g",
 					Type:      "categorical",

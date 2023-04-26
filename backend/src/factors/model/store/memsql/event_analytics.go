@@ -1043,7 +1043,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var addSourceStmt string
-	addColString := " " + "users.updated_at, users.is_group_user,"
+	addColString := " " + "users.updated_at,"
 	var selectVal string
 	if C.EnableOptimisedFilterOnEventUserQuery() {
 		selectVal = "_event_users_view"
@@ -1060,14 +1060,14 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		} else {
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.source=", selectVal) + strconv.Itoa(model.UserSourceMap[source])
 		}
-		addColString = addColString + " " + "users.source"
+		addColString = addColString + " users.is_group_user, users.source"
 		status = http.StatusOK
 	} else if caller == model.ACCOUNT_PROFILE_CALLER {
 		group, errCode := store.GetGroup(projectID, source)
 		if errCode != http.StatusFound || group == nil {
 			log.WithField("status", errCode).Error("Failed to get group while adding group info.")
 		}
-		addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=1) AND %s.source!=%d", selectVal, selectVal, model.UserSourceDomains)
+		addSourceStmt = " " + fmt.Sprintf("%s.source!=%d", selectVal, model.UserSourceDomains)
 		if model.IsAllowedAccountGroupNames(source) && source == group.Name {
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, group.ID)
 			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.source", group.ID)
