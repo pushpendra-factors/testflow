@@ -17,6 +17,8 @@ import ErrorBoundary from './ErrorBoundary';
 import * as Sentry from '@sentry/react';
 import { Integrations } from '@sentry/tracing';
 import 'react-pivottable/pivottable.css';
+import { BrowserRouter as Router } from 'react-router-dom';
+
 // import { TourProvider } from '@reactour/tour';
 // import steps from './steps';
 
@@ -58,7 +60,9 @@ ReactDOM.render(
       <PersistGate loading={null} persistor={persistor}>
         <ErrorBoundary>
           {/* <TourProvider steps={steps}> */}
-          <App />
+          <Router>
+            <App />
+          </Router>
           {/* </TourProvider> */}
         </ErrorBoundary>
       </PersistGate>
