@@ -356,10 +356,69 @@ func getPropsBlock(propMap U.PropertiesMap) string {
 	}
 	return propBlock
 }
+func getPropsBlockV2(propMap U.PropertiesMap) string {
 
+	var propBlock string
+	count := 0
+	for i := 0; i < len(propMap); i++ {
+		pp := propMap[fmt.Sprintf("%d", i)]
+		var mp model.MessagePropMapStruct
+		if pp != nil {
+			trans, ok := pp.(map[string]interface{})
+			if !ok {
+				log.Warn("cannot convert interface to map[string]interface{} type")
+				continue
+			}
+			err := U.DecodeInterfaceMapToStructType(trans, &mp)
+			if err != nil {
+				log.Warn("cannot convert interface map to struct type")
+				continue
+			}
+		}
+		var key1, key2 string
+		var prop1, prop2 interface{}
+		count++
+
+		if count == 1 {
+			key1 = mp.DisplayName
+			prop1 = mp.PropValue
+			if prop1 == "" {
+				prop1 = "<nil>"
+			}
+		} else if count == 2 {
+			key2 = mp.DisplayName
+			prop2 = mp.PropValue
+			if prop2 == "" {
+				prop2 = "<nil>"
+			}
+		}
+		// as slack template support only 2 columns hence adding check for count 2
+		if count == 2 {
+			propBlock += fmt.Sprintf(
+				`{
+					"type": "section",
+					"fields": [
+						{
+							"type": "mrkdwn",
+							"text": "%s \n %v"
+						},
+						{
+							"type": "mrkdwn",
+							"text": "%s \n %v",
+						}
+					]
+				},
+				{
+					"type": "divider"
+				},`, key1, strings.Replace(fmt.Sprintf("%v", prop1), "\"", "", -1), key2, strings.Replace(fmt.Sprintf("%v", prop2), "\"", "", -1))
+			count = 0
+		}
+	}
+	return propBlock
+}
 func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 
-	propBlock := getPropsBlock(msg.MessageProperty)
+	propBlock := getPropsBlockV2(msg.MessageProperty)
 
 	mainBlock := fmt.Sprintf(`[
 		{
