@@ -37,7 +37,7 @@ func GetDateOnlyFormatFromTimestampAndTimezone(timestamp int64, timezone TimeZon
 	return time.Unix(timestamp, 0).In(in).Format(DATETIME_FORMAT_YYYYMMDD)
 }
 
-//GetDateFormatFromTimestampAndTimezone Returns date in "02 Jan 2006" format for a given timestamp and timezone
+// GetDateFormatFromTimestampAndTimezone Returns date in "02 Jan 2006" format for a given timestamp and timezone
 func GetDateFromTimestampAndTimezone(timestamp int64, timezone TimeZoneString) string {
 	in := GetTimeLocationFor(timezone)
 	return time.Unix(timestamp, 0).In(in).Format("02 Jan")
@@ -82,7 +82,7 @@ func GetCurrentDayTimestamp() int64 {
 	return time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, currentTime.Location()).Unix()
 }
 
-//GetBeginningoftheDayEpochForDateAndTimezone provides the timestamp for the 00:00:00 hr of the given date and timezone
+// GetBeginningoftheDayEpochForDateAndTimezone provides the timestamp for the 00:00:00 hr of the given date and timezone
 func GetBeginningoftheDayEpochForDateAndTimezone(dateStr string, timezone string) int64 {
 	date, _ := time.Parse("20060102", dateStr)
 	loc, _ := time.LoadLocation(timezone)
@@ -92,7 +92,7 @@ func GetBeginningoftheDayEpochForDateAndTimezone(dateStr string, timezone string
 	return timestamp
 }
 
-//GetEndoftheDayEpochForDateAndTimezone provides the timestamp for the 23:59:59 hr of the given date and timezone
+// GetEndoftheDayEpochForDateAndTimezone provides the timestamp for the 23:59:59 hr of the given date and timezone
 func GetEndoftheDayEpochForDateAndTimezone(dateStr string, timezone string) int64 {
 	date, _ := time.Parse("20060102", dateStr)
 	loc, _ := time.LoadLocation(timezone)
@@ -493,6 +493,7 @@ func GetBatchRangeFromStartAndEndTimestamp(startTimestamp, endTimestamp, batchRa
 	return batchedTimestamp
 }
 
+// format: YYYYMMDD
 func GetBeginningDayTimestampFromDateString(date string) (int64, error) {
 	if len(date) != 8 {
 		return 0, fmt.Errorf("wrong datestring provided: %s", date)

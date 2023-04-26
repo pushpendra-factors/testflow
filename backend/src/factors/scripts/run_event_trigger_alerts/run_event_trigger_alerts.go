@@ -91,7 +91,7 @@ func main() {
 
 	conf := make(map[string]interface{})
 	finalStatus := make(map[string]interface{})
-	success := true
+	success := true	
 	successCount, failureCount := 0, 0
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 	for _, projectID := range projectIDs {
@@ -218,6 +218,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		log.Info(fmt.Printf("Webhook dropped for alert: %s. RESPONSE: %+v", alertID, response))
 		stat := response["status"]
 		if stat != "ok" {
+			log.Error(stat, response)
 			err := AddKeyToFailureSet(key, eta.ProjectID, "WH")
 			if err != nil {
 				log.WithError(err).Error("failed to put key in FailureSortedSet")

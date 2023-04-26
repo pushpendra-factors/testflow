@@ -427,7 +427,8 @@ function IntegrationSettings({
                       // Flag for 6Signal Factors key
                       if (
                         (item.name === 'Factors Website De-anonymization' &&
-                        !featureLock(currentAgent.email)) || (item.name === 'Microsoft Teams' && !featureLock(currentAgent.email))
+                        !featureLock(currentAgent.email)) || (item.name === 'Microsoft Teams' && !featureLock(currentAgent.email)) ||
+                        (item.name === 'Microsoft Teams' && activeProject?.id !== '1125899929000011')
                       ) {
                         return null;
                       }

@@ -94,7 +94,8 @@ func getEventMetricSimple(queryEvent, page string, scanner *bufio.Scanner, propF
 			return nil, nil, err
 		}
 
-		if eventDetails.EventTimestamp < startTimestamp || eventDetails.EventTimestamp > endTimestamp {
+		if !U.IsTimestampInRange(eventDetails.EventTimestamp, startTimestamp, endTimestamp, false) {
+			log.WithFields(log.Fields{"line": txtline}).Error("timestamp outside of required range")
 			continue
 		}
 
@@ -155,7 +156,8 @@ func getEventMetricComplex(queryEvent, page string, scanner *bufio.Scanner, prop
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		if eventDetails.EventTimestamp < startTimestamp || eventDetails.EventTimestamp > endTimestamp {
+		if !U.IsTimestampInRange(eventDetails.EventTimestamp, startTimestamp, endTimestamp, false) {
+			log.WithFields(log.Fields{"line": txtline}).Error("timestamp outside of required range")
 			continue
 		}
 

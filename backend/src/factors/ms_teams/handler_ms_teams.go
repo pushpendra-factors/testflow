@@ -73,9 +73,15 @@ func TeamsAuthRedirectHandler(c *gin.Context) {
 
 }
 func GetTeamsAuthorisationURL(tenantID, clientID, state string) string {
-	url := fmt.Sprintf(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=%s&response_type=code&response_mode=query&scope=https://graph.microsoft.com/.default offline_access&state=%s&redirect_uri=%s`, clientID, state, getTeamsCallbackURL())
+	url := fmt.Sprintf(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=%s&response_type=code&response_mode=query&scope=Team.ReadBasic.All Channel.ReadBasic.All ChannelMessage.Send User.Read offline_access&state=%s&redirect_uri=%s&prompt=consent`, clientID, state, getTeamsCallbackURL())
 	return url
 }
+
+// func GetTeamsAuthorisationURL(tenantID, clientID, state string) string {
+// 	url := fmt.Sprintf(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=%s&response_type=code&response_mode=query&scope=https://graph.microsoft.com/.default offline_access&state=%s&redirect_uri=%s`, clientID, state, getTeamsCallbackURL())
+// 	return url
+// }
+
 func TeamsCallbackHandler(c *gin.Context) {
 	// Extract the code from the query string
 	code := c.Query("code")
@@ -129,6 +135,7 @@ func TeamsCallbackHandler(c *gin.Context) {
 		redirectURL := buildRedirectURL("AUTH_ERROR")
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
+
 	if resp.StatusCode != http.StatusOK {
 		logCtx.Error("Error while requesting auth token ", string(body))
 		redirectURL := buildRedirectURL("AUTH_ERROR")
@@ -200,11 +207,11 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 		json.Unmarshal(body, &errorResponse)
 		errorCode, ok := errorResponse["error"].(map[string]interface{})["code"].(string)
 		if ok && errorCode == "InvalidAuthenticationToken" {
-			_, err := refreshAndGetTeamsAccessToken(projectID, agentUUID)
+			token, err := refreshAndGetTeamsAccessToken(projectID, agentUUID)
 			if err != nil {
 				return err
 			}
-			req.Header.Set("Authorization", "Bearer "+tokens.AccessToken)
+			req.Header.Set("Authorization", "Bearer "+token)
 
 			client := &http.Client{}
 			resp, err = client.Do(req)
@@ -237,14 +244,14 @@ func GetAllTeamsHandler(c *gin.Context) {
 
 	if err != nil {
 		logCtx.Error(err)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"errors": err})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"errors": err.Error()})
 	}
 
 	c.JSON(http.StatusFound, teams)
 }
 
 // func to get list of teams
-func getAllTeams(projectID int64, agentUUID string) ([]Team, error) {
+func getAllTeams(projectID int64, agentUUID string) (interface{}, error) {
 	tokens, err := store.GetStore().GetTeamsAuthTokens(projectID, agentUUID)
 	if err != nil {
 		return []Team{}, errors.New("Failed to get access tokens for teams")
@@ -272,23 +279,25 @@ func getAllTeams(projectID int64, agentUUID string) ([]Team, error) {
 		log.WithError(err).Error("Failed to read response body")
 		return nil, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get Teams teams: %v", resp.Status)
-	}
 	if resp.StatusCode == http.StatusUnauthorized {
 		var errorResponse map[string]interface{}
 		json.Unmarshal(body, &errorResponse)
 		errorCode, ok := errorResponse["error"].(map[string]interface{})["code"].(string)
 		if ok && errorCode == "InvalidAuthenticationToken" {
-			_, err := refreshAndGetTeamsAccessToken(projectID, agentUUID)
+			accessToken, err := refreshAndGetTeamsAccessToken(projectID, agentUUID)
 			if err != nil {
 				return nil, err
 			}
-			req.Header.Set("Authorization", "Bearer "+tokens.AccessToken)
+			req.Header.Set("Authorization", "Bearer "+accessToken)
 
 			client := &http.Client{}
 			resp, err = client.Do(req)
 			if err != nil {
+				return nil, err
+			}
+			body, err = ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.WithError(err).Error("Failed to read response body")
 				return nil, err
 			}
 
@@ -299,20 +308,21 @@ func getAllTeams(projectID int64, agentUUID string) ([]Team, error) {
 			return nil, errors.New("Error in making request to teams " + errorCode)
 		}
 	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get Teams teams: %v", resp.Status)
+	}
+
 	var teamList struct {
 		Value []Team `json:"value"`
 	}
-
-	err = json.NewDecoder(resp.Body).Decode(&teamList)
-	if err != nil {
-		return nil, err
+	if err := json.Unmarshal(body, &teamList); err != nil {
+		return "", err
 	}
-
 	return teamList.Value, nil
 }
 
 func GetTeamsChannelsHandler(c *gin.Context) {
-	teamID := c.Query("teams_id")
+	teamID := c.Query("team_id")
 	if teamID == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid team id"})
 		return
@@ -326,7 +336,7 @@ func GetTeamsChannelsHandler(c *gin.Context) {
 
 	channels, err := getTeamsChannels(projectID, loggedInAgentUUID, teamID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -371,15 +381,20 @@ func getTeamsChannels(projectID int64, agentUUID, teamID string) ([]Channel, err
 		json.Unmarshal(body, &errorResponse)
 		errorCode, ok := errorResponse["error"].(map[string]interface{})["code"].(string)
 		if ok && errorCode == "InvalidAuthenticationToken" {
-			_, err := refreshAndGetTeamsAccessToken(projectID, agentUUID)
+			token, err := refreshAndGetTeamsAccessToken(projectID, agentUUID)
 			if err != nil {
 				return nil, err
 			}
-			req.Header.Set("Authorization", "Bearer "+tokens.AccessToken)
+			req.Header.Set("Authorization", "Bearer "+token)
 
 			client := &http.Client{}
 			resp, err = client.Do(req)
 			if err != nil {
+				return nil, err
+			}
+			body, err = ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.WithError(err).Error("Failed to read response body")
 				return nil, err
 			}
 
@@ -394,8 +409,7 @@ func getTeamsChannels(projectID int64, agentUUID, teamID string) ([]Channel, err
 		Value []Channel `json:"value"`
 	}
 
-	err = json.NewDecoder(resp.Body).Decode(&channelList)
-	if err != nil {
+	if err := json.Unmarshal(body, &channelList); err != nil {
 		return nil, err
 	}
 

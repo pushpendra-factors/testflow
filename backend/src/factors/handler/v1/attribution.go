@@ -199,7 +199,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 
 	if err != nil {
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
-		logCtx.WithError(err).Error("Failed to process query from DB")
+		logCtx.Info("Failed to process query from DB - attributionv1", err.Error())
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, err.Error(), true
 	}
 	if result == nil {

@@ -228,7 +228,7 @@ func TestWebhookforEventTriggerAlerts(c *gin.Context) (interface{}, int, string,
 	response, err := webhooks.DropWebhook(webhook.Url, webhook.Secret, payload)
 	if err != nil {
 		errMsg := "failed to send test_webhook"
-		log.WithFields(log.Fields{"project_id": projectID, "response": response}).WithError(err).Error(errMsg)
+		log.WithFields(log.Fields{"project_id": projectID, "response": response, "url": webhook.Url}).WithError(err).Error(errMsg)
 		return nil, http.StatusBadRequest, PROCESSING_FAILED, errMsg, true
 	}
 

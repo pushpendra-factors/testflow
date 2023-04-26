@@ -615,14 +615,14 @@ func getSalesforceDocumentTimestampByEventV1(event eventIdToProperties) (int64, 
 
 	if event.Name == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
 
-		date, exists := event.EventProperties["salesforce_campaignmember_lastmodifieddate"]
+		date, exists := event.EventProperties[model.EP_SFCampaignMemberUpdated]
 		if !exists || date == nil {
 			return 0, errors.New("failed to get date")
 		}
 		return model.GetSalesforceDocumentTimestamp(date)
 	}
 
-	date, exists := event.EventProperties["salesforce_campaignmember_createddate"]
+	date, exists := event.EventProperties[model.EP_SFCampaignMemberCreated]
 	if !exists || date == nil {
 		return 0, errors.New("failed to get date")
 	}

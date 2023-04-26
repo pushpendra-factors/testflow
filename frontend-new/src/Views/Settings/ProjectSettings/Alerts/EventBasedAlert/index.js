@@ -273,21 +273,25 @@ const EventBasedAlert = ({
       }
     }
     if (
-      viewAlertDetails?.event_alert?.teams_channels_config?.teams_channel_list
+      viewAlertDetails?.event_alert?.teams_channels_config?.team_channel_list
     ) {
       setTeamsViewSelectedChannels(
-        viewAlertDetails?.event_alert?.teams_channels_config?.teams_channel_list
+        viewAlertDetails?.event_alert?.teams_channels_config?.team_channel_list
       );
       if (alertState?.state === 'edit') {
         setTeamsEnabled(viewAlertDetails?.event_alert?.teams);
         setTeamsSaveSelectedChannel(
           viewAlertDetails?.event_alert?.teams_channels_config
-            ?.teams_channel_list
+            ?.team_channel_list
         );
         setTeamsSelectedChannel(
           viewAlertDetails?.event_alert?.teams_channels_config
-            ?.teams_channel_list
+            ?.team_channel_list
         );
+        setSelectedWorkspace({
+          name: viewAlertDetails?.event_alert?.teams_channels_config?.team_name,
+          id: viewAlertDetails?.event_alert?.teams_channels_config?.team_id
+        });
       }
     }
     if (alertState?.state === 'edit') {
@@ -639,12 +643,12 @@ const EventBasedAlert = ({
         slack: slackEnabled,
         slack_channels: saveSelectedChannel,
         webhook: webhookEnabled,
-        url: finalWebhookUrl,
+        url: finalWebhookUrl
         // teams: teamsEnabled,
         // teams_channels_config: {
-        //   teams_id: selectedWorkspace?.id,
-        //   teams_name: selectedWorkspace?.name,
-        //   teams_channel_list: teamsSaveSelectedChannel
+        //   team_id: selectedWorkspace?.id,
+        //   team_name: selectedWorkspace?.name,
+        //   team_channel_list: teamsSaveSelectedChannel
         // }
       };
 
@@ -779,10 +783,10 @@ const EventBasedAlert = ({
         .then((res) => {
           if (res.ok) {
             let tempArr = [];
-            for (let i = 0; i < res?.data?.value?.length; i++) {
+            for (let i = 0; i < res?.data?.length; i++) {
               tempArr.push({
-                label: res?.data?.value[i]?.displayName,
-                value: slack[i]?.id
+                label: res?.data[i]?.displayName,
+                value: res?.data[i]?.id
               });
             }
             setTeamsWorkspaceOpts(tempArr);
@@ -796,7 +800,7 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     if (projectSettings?.int_teams && selectedWorkspace) {
-      fetchTeamsChannels(activeProject.id, selectedWorkspace);
+      fetchTeamsChannels(activeProject.id, selectedWorkspace?.id);
     }
   }, [
     activeProject,
@@ -820,12 +824,12 @@ const EventBasedAlert = ({
   }, [activeProject, agent_details, slack]);
 
   useEffect(() => {
-    if (teams?.value?.length > 0 && selectedWorkspace) {
+    if (teams?.length > 0 && selectedWorkspace) {
       let tempArr = [];
-      for (let i = 0; i < teams?.value?.length; i++) {
+      for (let i = 0; i < teams?.length; i++) {
         tempArr.push({
-          name: teams?.value?.[i]?.displayName,
-          id: teams?.value?.[i]?.id
+          name: teams?.[i]?.displayName,
+          id: teams?.[i]?.id
         });
       }
       setTeamsChannelOpts(tempArr);
@@ -1695,149 +1699,162 @@ const EventBasedAlert = ({
               </div>
             )}
           </div>
-          {featureLock(agent_details?.email) &&
-          <div className='border rounded mt-3'>
-            <div style={{ backgroundColor: '#fafafa' }}>
-              <Row className={'ml-2'}>
-                <Col span={20}>
-                  <div className='flex justify-between p-3'>
-                    <div className='flex'>
-                      <Avatar
-                        size={40}
-                        shape='square'
-                        icon={<SVG name={'MSTeam'} size={40} color='purple' />}
-                        style={{ backgroundColor: '#F5F6F8' }}
-                      />
-                    </div>
-                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
-                      <div className='flex flex-row items-center justify-start'>
+          {featureLock(agent_details?.email) && (
+            <div className='border rounded mt-3'>
+              <div style={{ backgroundColor: '#fafafa' }}>
+                <Row className={'ml-2'}>
+                  <Col span={20}>
+                    <div className='flex justify-between p-3'>
+                      <div className='flex'>
+                        <Avatar
+                          size={40}
+                          shape='square'
+                          icon={
+                            <SVG name={'MSTeam'} size={40} color='purple' />
+                          }
+                          style={{ backgroundColor: '#F5F6F8' }}
+                        />
+                      </div>
+                      <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                        <div className='flex flex-row items-center justify-start'>
+                          <Text
+                            type='title'
+                            level={7}
+                            weight='medium'
+                            extraClass='m-0'
+                          >
+                            Teams
+                          </Text>
+                        </div>
                         <Text
-                          type='title'
-                          level={7}
-                          weight='medium'
+                          type='paragraph'
+                          mini
                           extraClass='m-0'
+                          color='grey'
+                          lineHeight='medium'
                         >
-                          Teams
+                          Post to teams when events you care about happen.
+                          Motivate the right actions.
                         </Text>
                       </div>
-                      <Text
-                        type='paragraph'
-                        mini
-                        extraClass='m-0'
-                        color='grey'
-                        lineHeight='medium'
-                      >
-                        Post to teams when events you care about happen.
-                        Motivate the right actions.
-                      </Text>
                     </div>
-                  </div>
-                </Col>
-                <Col className={'m-0 mt-4'}>
-                  <Form.Item name='teams_enabled' className={'m-0'}>
-                    <div span={24} className={'flex flex-start items-center'}>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        weight='medium'
-                        extraClass={'m-0 mr-2'}
-                      >
-                        Enable
-                      </Text>
-                      <span style={{ width: '50px' }}>
-                        <Switch
-                          checkedChildren='On'
-                          unCheckedChildren='OFF'
-                          onChange={(checked) => setTeamsEnabled(checked)}
-                          checked={teamsEnabled}
-                        />
-                      </span>{' '}
-                    </div>
-                  </Form.Item>
-                </Col>
-              </Row>
-            </div>
-            {teamsEnabled && !projectSettings?.int_teams && (
-              <div className='p-4'>
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Text
-                      type={'title'}
-                      level={6}
-                      color={'grey'}
-                      extraClass={'m-0'}
-                    >
-                      Teams is not integrated, Do you want to integrate with
-                      your Microsoft Teams account now?
-                    </Text>
                   </Col>
-                </Row>
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button onClick={onConnectMSTeams}>
-                      <SVG name={'MSTeam'} size={20} />
-                      Connect to Teams
-                    </Button>
+                  <Col className={'m-0 mt-4'}>
+                    <Form.Item name='teams_enabled' className={'m-0'}>
+                      <div span={24} className={'flex flex-start items-center'}>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          weight='medium'
+                          extraClass={'m-0 mr-2'}
+                        >
+                          Enable
+                        </Text>
+                        <span style={{ width: '50px' }}>
+                          <Switch
+                            checkedChildren='On'
+                            unCheckedChildren='OFF'
+                            onChange={(checked) => setTeamsEnabled(checked)}
+                            checked={teamsEnabled}
+                          />
+                        </span>{' '}
+                      </div>
+                    </Form.Item>
                   </Col>
                 </Row>
               </div>
-            )}
-            {teamsEnabled && projectSettings?.int_teams && (
-              <div className='p-4'>
-                {teamsSaveSelectedChannel.length > 0 && (
-                  <Row
-                    className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
-                  >
-                    <Col className={'m-0'}>
+              {teamsEnabled && !projectSettings?.int_teams && (
+                <div className='p-4'>
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
                       <Text
                         type={'title'}
                         level={6}
-                        color={'grey-2'}
-                        extraClass={'m-0 mt-2 ml-2'}
+                        color={'grey'}
+                        extraClass={'m-0'}
                       >
-                        Selected Channels
+                        Teams is not integrated, Do you want to integrate with
+                        your Microsoft Teams account now?
                       </Text>
-                      {teamsSaveSelectedChannel.map((channel, index) => (
-                        <div key={index}>
+                    </Col>
+                  </Row>
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button onClick={onConnectMSTeams}>
+                        <SVG name={'MSTeam'} size={20} />
+                        Connect to Teams
+                      </Button>
+                    </Col>
+                  </Row>
+                </div>
+              )}
+              {teamsEnabled && projectSettings?.int_teams && (
+                <div className='p-4'>
+                  {teamsSaveSelectedChannel.length > 0 && (
+                    <div>
+                      <Row>
+                        <Col>
                           <Text
                             type={'title'}
                             level={7}
-                            color={'grey'}
-                            extraClass={'m-0 ml-2 my-1'}
+                            weight={'regular'}
+                            extraClass={'m-0 mt-2 ml-2'}
                           >
-                            {'#' + channel.name}
+                            {teamsSaveSelectedChannel.length > 1
+                              ? `Selected channels from the "${selectedWorkspace?.name}"`
+                              : `Selected channels from the "${selectedWorkspace?.name}"`}
                           </Text>
-                        </div>
-                      ))}
-                    </Col>
-                  </Row>
-                )}
-                {!teamsSaveSelectedChannel.length > 0 ? (
-                  <Row className={'mt-2 ml-2'}>
-                    <Col span={10} className={'m-0'}>
-                      <Button
-                        type={'link'}
-                        onClick={() => setTeamsShowSelectChannelsModal(true)}
+                        </Col>
+                      </Row>
+                      <Row
+                        className={'rounded border border-gray-200 ml-2 w-2/6'}
                       >
-                        Select Channels
-                      </Button>
-                    </Col>
-                  </Row>
-                ) : (
-                  <Row className={'mt-2 ml-2'}>
-                    <Col span={10} className={'m-0'}>
-                      <Button
-                        type={'link'}
-                        onClick={() => setTeamsShowSelectChannelsModal(true)}
-                      >
-                        Manage Channels
-                      </Button>
-                    </Col>
-                  </Row>
-                )}
-              </div>
-            )}
-          </div>}
+                        <Col className={'m-0'}>
+                          {teamsSaveSelectedChannel.map((channel, index) => (
+                            <div key={index}>
+                              <Text
+                                type={'title'}
+                                level={7}
+                                color={'grey'}
+                                extraClass={'m-0 ml-4 my-2'}
+                              >
+                                {'#' + channel.name}
+                              </Text>
+                            </div>
+                          ))}
+                        </Col>
+                      </Row>
+                    </div>
+                  )}
+                  {!teamsSaveSelectedChannel.length > 0 ? (
+                    <Row className={'mt-2 ml-2'}>
+                      <Col span={10} className={'m-0'}>
+                        <Button
+                          type={'link'}
+                          onClick={() => setTeamsShowSelectChannelsModal(true)}
+                        >
+                          Select Channel
+                        </Button>
+                      </Col>
+                    </Row>
+                  ) : (
+                    <Row className={'mt-2 ml-2'}>
+                      <Col span={10} className={'m-0'}>
+                        <Button
+                          type={'link'}
+                          onClick={() => setTeamsShowSelectChannelsModal(true)}
+                        >
+                          {teamsSaveSelectedChannel.length > 1
+                            ? 'Manage Channels'
+                            : 'Manage Channel'}
+                        </Button>
+                      </Col>
+                    </Row>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </Form>
       </>
     );
@@ -2618,149 +2635,162 @@ const EventBasedAlert = ({
               </div>
             )}
           </div>
-          {featureLock(agent_details?.email) &&
-          <div className='border rounded mt-3'>
-            <div style={{ backgroundColor: '#fafafa' }}>
-              <Row className={'ml-2'}>
-                <Col span={20}>
-                  <div className='flex justify-between p-3'>
-                    <div className='flex'>
-                      <Avatar
-                        size={40}
-                        shape='square'
-                        icon={<SVG name={'MSTeam'} size={40} color='purple' />}
-                        style={{ backgroundColor: '#F5F6F8' }}
-                      />
-                    </div>
-                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
-                      <div className='flex flex-row items-center justify-start'>
+          {featureLock(agent_details?.email) && (
+            <div className='border rounded mt-3'>
+              <div style={{ backgroundColor: '#fafafa' }}>
+                <Row className={'ml-2'}>
+                  <Col span={20}>
+                    <div className='flex justify-between p-3'>
+                      <div className='flex'>
+                        <Avatar
+                          size={40}
+                          shape='square'
+                          icon={
+                            <SVG name={'MSTeam'} size={40} color='purple' />
+                          }
+                          style={{ backgroundColor: '#F5F6F8' }}
+                        />
+                      </div>
+                      <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                        <div className='flex flex-row items-center justify-start'>
+                          <Text
+                            type='title'
+                            level={7}
+                            weight='medium'
+                            extraClass='m-0'
+                          >
+                            Teams
+                          </Text>
+                        </div>
                         <Text
-                          type='title'
-                          level={7}
-                          weight='medium'
+                          type='paragraph'
+                          mini
                           extraClass='m-0'
+                          color='grey'
+                          lineHeight='medium'
                         >
-                          Teams
+                          Post to teams when events you care about happen.
+                          Motivate the right actions.
                         </Text>
                       </div>
-                      <Text
-                        type='paragraph'
-                        mini
-                        extraClass='m-0'
-                        color='grey'
-                        lineHeight='medium'
-                      >
-                        Post to teams when events you care about happen.
-                        Motivate the right actions.
-                      </Text>
                     </div>
-                  </div>
-                </Col>
-                <Col className={'m-0 mt-4'}>
-                  <Form.Item name='teams_enabled' className={'m-0'}>
-                    <div span={24} className={'flex flex-start items-center'}>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        weight='medium'
-                        extraClass={'m-0 mr-2'}
-                      >
-                        Enable
-                      </Text>
-                      <span style={{ width: '50px' }}>
-                        <Switch
-                          checkedChildren='On'
-                          unCheckedChildren='OFF'
-                          onChange={(checked) => setTeamsEnabled(checked)}
-                          checked={teamsEnabled}
-                        />
-                      </span>{' '}
-                    </div>
-                  </Form.Item>
-                </Col>
-              </Row>
-            </div>
-            {teamsEnabled && !projectSettings?.int_teams && (
-              <div className='p-4'>
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Text
-                      type={'title'}
-                      level={6}
-                      color={'grey'}
-                      extraClass={'m-0'}
-                    >
-                      Teams is not integrated, Do you want to integrate with
-                      your Microsoft Teams account now?
-                    </Text>
                   </Col>
-                </Row>
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button onClick={onConnectMSTeams}>
-                      <SVG name={'MSTeam'} size={20} />
-                      Connect to Teams
-                    </Button>
+                  <Col className={'m-0 mt-4'}>
+                    <Form.Item name='teams_enabled' className={'m-0'}>
+                      <div span={24} className={'flex flex-start items-center'}>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          weight='medium'
+                          extraClass={'m-0 mr-2'}
+                        >
+                          Enable
+                        </Text>
+                        <span style={{ width: '50px' }}>
+                          <Switch
+                            checkedChildren='On'
+                            unCheckedChildren='OFF'
+                            onChange={(checked) => setTeamsEnabled(checked)}
+                            checked={teamsEnabled}
+                          />
+                        </span>{' '}
+                      </div>
+                    </Form.Item>
                   </Col>
                 </Row>
               </div>
-            )}
-            {teamsEnabled && projectSettings?.int_teams && (
-              <div className='p-4'>
-                {teamsSaveSelectedChannel.length > 0 && (
-                  <Row
-                    className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
-                  >
-                    <Col className={'m-0'}>
+              {teamsEnabled && !projectSettings?.int_teams && (
+                <div className='p-4'>
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
                       <Text
                         type={'title'}
                         level={6}
-                        color={'grey-2'}
-                        extraClass={'m-0 mt-2 ml-2'}
+                        color={'grey'}
+                        extraClass={'m-0'}
                       >
-                        Selected Channels
+                        Teams is not integrated, Do you want to integrate with
+                        your Microsoft Teams account now?
                       </Text>
-                      {teamsSaveSelectedChannel.map((channel, index) => (
-                        <div key={index}>
+                    </Col>
+                  </Row>
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button onClick={onConnectMSTeams}>
+                        <SVG name={'MSTeam'} size={20} />
+                        Connect to Teams
+                      </Button>
+                    </Col>
+                  </Row>
+                </div>
+              )}
+              {teamsEnabled && projectSettings?.int_teams && (
+                <div className='p-4'>
+                  {teamsSaveSelectedChannel.length > 0 && (
+                    <div>
+                      <Row>
+                        <Col>
                           <Text
                             type={'title'}
                             level={7}
-                            color={'grey'}
-                            extraClass={'m-0 ml-2 my-1'}
+                            weight={'regular'}
+                            extraClass={'m-0 mt-2 ml-2'}
                           >
-                            {'#' + channel.name}
+                            {teamsSaveSelectedChannel.length > 1
+                              ? `Selected channels from the "${selectedWorkspace?.name}"`
+                              : `Selected channels from the "${selectedWorkspace?.name}"`}
                           </Text>
-                        </div>
-                      ))}
-                    </Col>
-                  </Row>
-                )}
-                {!teamsSaveSelectedChannel.length > 0 ? (
-                  <Row className={'mt-2 ml-2'}>
-                    <Col span={10} className={'m-0'}>
-                      <Button
-                        type={'link'}
-                        onClick={() => setTeamsShowSelectChannelsModal(true)}
+                        </Col>
+                      </Row>
+                      <Row
+                        className={'rounded border border-gray-200 ml-2 w-2/6'}
                       >
-                        Select Channels
-                      </Button>
-                    </Col>
-                  </Row>
-                ) : (
-                  <Row className={'mt-2 ml-2'}>
-                    <Col span={10} className={'m-0'}>
-                      <Button
-                        type={'link'}
-                        onClick={() => setTeamsShowSelectChannelsModal(true)}
-                      >
-                        Manage Channels
-                      </Button>
-                    </Col>
-                  </Row>
-                )}
-              </div>
-            )}
-          </div>}
+                        <Col className={'m-0'}>
+                          {teamsSaveSelectedChannel.map((channel, index) => (
+                            <div key={index}>
+                              <Text
+                                type={'title'}
+                                level={7}
+                                color={'grey'}
+                                extraClass={'m-0 ml-4 my-2'}
+                              >
+                                {'#' + channel.name}
+                              </Text>
+                            </div>
+                          ))}
+                        </Col>
+                      </Row>
+                    </div>
+                  )}
+                  {!teamsSaveSelectedChannel.length > 0 ? (
+                    <Row className={'mt-2 ml-2'}>
+                      <Col span={10} className={'m-0'}>
+                        <Button
+                          type={'link'}
+                          onClick={() => setTeamsShowSelectChannelsModal(true)}
+                        >
+                          Select Channel
+                        </Button>
+                      </Col>
+                    </Row>
+                  ) : (
+                    <Row className={'mt-2 ml-2'}>
+                      <Col span={10} className={'m-0'}>
+                        <Button
+                          type={'link'}
+                          onClick={() => setTeamsShowSelectChannelsModal(true)}
+                        >
+                          {teamsSaveSelectedChannel.length > 1
+                            ? 'Manage Channels'
+                            : 'Manage Channel'}
+                        </Button>
+                      </Col>
+                    </Row>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </Form>
       </>
     );
@@ -3242,103 +3272,111 @@ const EventBasedAlert = ({
             </div>
           )}
         </div>
-        {featureLock(agent_details?.email) &&
-        <div className='border rounded mt-3'>
-          <div style={{ backgroundColor: '#fafafa' }}>
-            <Row className={'ml-2'}>
-              <Col span={20}>
-                <div className='flex justify-between p-3'>
-                  <div className='flex'>
-                    <Avatar
-                      size={40}
-                      shape='square'
-                      icon={<SVG name={'MSTeam'} size={40} color='purple' />}
-                      style={{ backgroundColor: '#F5F6F8' }}
-                    />
-                  </div>
-                  <div className='flex flex-col justify-start items-start ml-2 w-full'>
-                    <div className='flex flex-row items-center justify-start'>
-                      <Text
-                        type='title'
-                        level={7}
-                        weight='medium'
-                        extraClass='m-0'
-                      >
-                        Teams
-                      </Text>
-                    </div>
-                    <Text
-                      type='paragraph'
-                      mini
-                      extraClass='m-0'
-                      color='grey'
-                      lineHeight='medium'
-                    >
-                      Post to teams when events you care about happen. Motivate
-                      the right actions.
-                    </Text>
-                  </div>
-                </div>
-              </Col>
-              <Col className={'m-0 mt-4'}>
-                <Form.Item name='teams_enabled' className={'m-0'}>
-                  <div span={24} className={'flex flex-start items-center'}>
-                    <Text
-                      type={'title'}
-                      level={7}
-                      weight='medium'
-                      extraClass={'m-0 mr-2'}
-                    >
-                      Enable
-                    </Text>
-                    <span style={{ width: '50px' }}>
-                      <Switch
-                        checkedChildren='On'
-                        unCheckedChildren='OFF'
-                        disabled
-                        checked={
-                          viewAlertDetails?.alert_configuration?.teams_enabled
-                        }
+        {featureLock(agent_details?.email) && (
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'MSTeam'} size={40} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
                       />
-                    </span>{' '}
-                  </div>
-                </Form.Item>
-              </Col>
-            </Row>
-          </div>
-          {viewAlertDetails?.alert_configuration?.teams_enabled &&
-            viewAlertDetails?.alert_configuration
-              ?.teams_channels_and_user_groups && (
-              <div className='p-4'>
-                <Row
-                  className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}
-                >
-                  <Col className={'m-0'}>
-                    <Text
-                      type={'title'}
-                      level={6}
-                      color={'grey-2'}
-                      extraClass={'m-0 mt-2 ml-2'}
-                    >
-                      Selected Channels
-                    </Text>
-                    {teamsViewSelectedChannels.map((channel, index) => (
-                      <div key={index}>
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
                         <Text
-                          type={'title'}
+                          type='title'
                           level={7}
-                          color={'grey'}
-                          extraClass={'m-0 ml-2 my-1'}
+                          weight='medium'
+                          extraClass='m-0'
                         >
-                          {'#' + channel.name}
+                          Teams
                         </Text>
                       </div>
-                    ))}
-                  </Col>
-                </Row>
-              </div>
-            )}
-        </div>}
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        Post to teams when events you care about happen.
+                        Motivate the right actions.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='teams_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          disabled
+                          checked={viewAlertDetails?.event_alert?.teams}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
+            {viewAlertDetails?.event_alert?.teams &&
+              viewAlertDetails?.event_alert?.teams_channels_config && (
+                <div className='p-4'>
+                  {teamsViewSelectedChannels.length > 0 && (
+                    <div>
+                      <Row>
+                        <Col>
+                          <Text
+                            type={'title'}
+                            level={7}
+                            weight={'regular'}
+                            extraClass={'m-0 mt-2 ml-2'}
+                          >
+                            {teamsViewSelectedChannels.length > 1
+                              ? `Selected channels from the “${viewAlertDetails?.event_alert?.teams_channels_config?.team_name}”`
+                              : `Selected channels from the “${viewAlertDetails?.event_alert?.teams_channels_config?.team_name}”`}
+                          </Text>
+                        </Col>
+                      </Row>
+                      <Row
+                        className={'rounded border border-gray-200 ml-2 w-2/6'}
+                      >
+                        <Col className={'m-0'}>
+                          {teamsViewSelectedChannels.map((channel, index) => (
+                            <div key={index}>
+                              <Text
+                                type={'title'}
+                                level={7}
+                                color={'grey'}
+                                extraClass={'m-0 ml-4 my-2'}
+                              >
+                                {'#' + channel.name}
+                              </Text>
+                            </div>
+                          ))}
+                        </Col>
+                      </Row>
+                    </div>
+                  )}
+                </div>
+              )}
+          </div>
+        )}
 
         <Row className={'mt-2'}>
           <Col span={24}>
@@ -3477,6 +3515,14 @@ const EventBasedAlert = ({
                 options={teamsWorkspaceOpts}
                 placeholder='Select Workspace'
                 showSearch
+                value={
+                  selectedWorkspace
+                    ? {
+                        label: selectedWorkspace?.name,
+                        value: selectedWorkspace?.id
+                      }
+                    : null
+                }
                 onChange={(value, op) => {
                   setSelectedWorkspace({ name: op?.label, id: value });
                 }}

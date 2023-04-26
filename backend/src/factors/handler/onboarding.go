@@ -55,7 +55,7 @@ func onboardingMailModoAPICall(agent *model.Agent) int {
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		logCtx.Error("Failed to execute POST mail modo request 1.")
+		logCtx.WithField("status_code", resp.StatusCode).Error("Failed to execute POST mail modo request 1.")
 		return http.StatusInternalServerError
 	}
 
@@ -274,6 +274,7 @@ func onboardingHubspotOwner(agent *model.Agent) int {
 		logCtx.WithError(err).Error("Failed to decode Json request in hubspot create contact handler.")
 		return http.StatusInternalServerError
 	}
-	logCtx.Error(respBody)
+	logCtx.WithField("resp", respBody).Info("Onboarded hubspot owner.")
+
 	return http.StatusOK
 }

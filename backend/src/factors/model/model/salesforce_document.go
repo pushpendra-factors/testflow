@@ -125,6 +125,8 @@ const (
 	EP_SFCampaignMemberResponded                           = "$salesforce_campaignmember_hasresponded"
 	EP_SFCampaignMemberFirstRespondedDate                  = "$salesforce_campaignmember_firstrespondeddate"
 	EP_SFCampaignMemberStatus                              = "$salesforce_campaignmember_status"
+	EP_SFCampaignMemberUpdated                             = "$salesforce_campaignmember_lastmodifieddate"
+	EP_SFCampaignMemberCreated                             = "$salesforce_campaignmember_createddate"
 	SalesforceDocumentCreated             SalesforceAction = 1
 	SalesforceDocumentUpdated             SalesforceAction = 2
 

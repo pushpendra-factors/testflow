@@ -24,7 +24,7 @@ func DropWebhook(url, secret string, payload interface{}) (map[string]interface{
 	if err != nil {
 		return nil, err
 	}
-	request, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonBody))
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +46,9 @@ func DropWebhook(url, secret string, payload interface{}) (map[string]interface{
 	response := make(map[string]interface{})
 	if resp.StatusCode == 201 || resp.StatusCode == 200 {
 		response["status"] = "ok"
+	} else {	
+		response["error"] = resp
+		response["statuscode"] = resp.StatusCode
 	}
 	return response, nil
 }

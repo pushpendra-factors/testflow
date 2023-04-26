@@ -119,7 +119,13 @@ func GetCampaignMetricSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, p
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		if campaignDetails.Timestamp < startTimestamp || campaignDetails.Timestamp > endTimestamp {
+		timestampUnix, err := U.GetBeginningDayTimestampFromDateString(fmt.Sprintf("%d", campaignDetails.Timestamp))
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("parsing date failed")
+			return nil, nil, err
+		}
+		if !U.IsTimestampInRange(timestampUnix, startTimestamp, endTimestamp, false) {
+			log.WithFields(log.Fields{"line": txtline}).Error("timestamp outside of required range")
 			continue
 		}
 
@@ -216,7 +222,13 @@ func GetCampaignMetricComplex(scanner *bufio.Scanner, propFilter []M.KPIFilter, 
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		if campaignDetails.Timestamp < startTimestamp || campaignDetails.Timestamp > endTimestamp {
+		timestampUnix, err := U.GetBeginningDayTimestampFromDateString(fmt.Sprintf("%d", campaignDetails.Timestamp))
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("parsing date failed")
+			return nil, nil, err
+		}
+		if !U.IsTimestampInRange(timestampUnix, startTimestamp, endTimestamp, false) {
+			log.WithFields(log.Fields{"line": txtline}).Error("timestamp outside of required range")
 			continue
 		}
 

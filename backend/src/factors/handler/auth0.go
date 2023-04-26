@@ -199,15 +199,21 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 
 			errCode = onboardingMailModoAPICall(existingAgent)
 			if errCode != http.StatusOK {
-				log.WithField("email", existingAgent.Email).Error("Failed To Send Onboarding Mail")
+				log.WithField("email", existingAgent.Email).
+					WithField("status_code", errCode).
+					Error("Failed To Send Onboarding Mail")
 			}
 			errCode = onboardingHubspotOwner(existingAgent)
 			if errCode != http.StatusOK {
-				log.WithField("email", existingAgent.Email).Error("Failed To Create Hubspot Owner")
+				log.WithField("email", existingAgent.Email).
+					WithField("status_code", errCode).
+					Error("Failed To Create Hubspot Owner")
 			}
 			errCode = onboardingSlackAPICall(existingAgent)
 			if errCode != http.StatusOK {
-				log.WithField("email", existingAgent.Email).Error("Failed To Send Onboarding Slack")
+				log.WithField("email", existingAgent.Email).
+					WithField("status_code", errCode).
+					Error("Failed To Send Onboarding Slack")
 			}
 
 		} else if flow == SIGNIN_FLOW {

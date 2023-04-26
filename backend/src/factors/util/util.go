@@ -1642,3 +1642,12 @@ func SetBitAtPosition(input string, replacement string, index int) string {
 	return input[:index] + string(replacement) + input[index+1:]
 
 }
+
+// if isRangeInProjectTimezone is true, then check if timestamp lies within (including) range
+// if isRangeInProjectTimezone is false, return true
+func IsTimestampInRange(timetamp int64, start int64, end int64, isTimeInProjectTimezone bool) bool {
+	if isTimeInProjectTimezone && (timetamp < start || timetamp > end) {
+		return false
+	}
+	return true
+}

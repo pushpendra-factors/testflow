@@ -1063,63 +1063,17 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		addColString = addColString + " " + "users.source"
 		status = http.StatusOK
 	} else if caller == model.ACCOUNT_PROFILE_CALLER {
-		groups, errCode := store.GetGroups(projectID)
-		if errCode != http.StatusFound {
-			log.WithField("status", errCode).Error("Failed to get groups while adding group info.")
+		group, errCode := store.GetGroup(projectID, source)
+		if errCode != http.StatusFound || group == nil {
+			log.WithField("status", errCode).Error("Failed to get group while adding group info.")
 		}
-		groupNameIDMap := make(map[string]int)
-		if len(groups) > 0 {
-			for _, group := range groups {
-				if group.Name == model.GROUP_NAME_HUBSPOT_COMPANY || group.Name == model.GROUP_NAME_SALESFORCE_ACCOUNT {
-					groupNameIDMap[group.Name] = group.ID
-				}
-			}
-		}
-		hubspotID, hubspotExists := groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY]
-		salesforceID, salesforceExists := groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT]
-		sixSignalID, sixSignalExists := groupNameIDMap[model.GROUP_NAME_SIX_SIGNAL]
-
-		if !hubspotExists && !salesforceExists && !sixSignalExists {
-			log.WithFields(logFields).Error("No CRMs Enabled for this project.")
-		} else if source == model.GROUP_NAME_HUBSPOT_COMPANY && !hubspotExists {
-			log.WithFields(logFields).Error("Hubspot Not Enabled for this project.")
-		} else if source == model.GROUP_NAME_SALESFORCE_ACCOUNT && !salesforceExists {
-			log.WithFields(logFields).Error("Salesforce Not Enabled for this project.")
-		} else if source == model.GROUP_NAME_SIX_SIGNAL && !sixSignalExists {
-			log.WithFields(logFields).Error("Six Signal Not Enabled for this project.")
-		} else {
-			addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=1)", selectVal)
-			if source == "All" {
-				var sourceArr, colArr []string
-				if hubspotExists {
-					sourceArr = append(sourceArr, fmt.Sprintf("%s.group_%d_id IS NOT NULL ", selectVal, hubspotID))
-					colArr = append(colArr, fmt.Sprintf("users.group_%d_id", hubspotID))
-				}
-				if salesforceExists {
-					sourceArr = append(sourceArr, fmt.Sprintf("%s.group_%d_id IS NOT NULL ", selectVal, salesforceID))
-					colArr = append(colArr, fmt.Sprintf("users.group_%d_id", salesforceID))
-				}
-				if sixSignalExists {
-					sourceArr = append(sourceArr, fmt.Sprintf("%s.group_%d_id IS NOT NULL ", selectVal, sixSignalID))
-					colArr = append(colArr, fmt.Sprintf("users.group_%d_id", sixSignalID))
-				}
-				sourceStr := strings.Join(sourceArr, " OR ")
-				colStr := strings.Join(colArr, " , ")
-				if sourceStr != "" {
-					addSourceStmt = addSourceStmt + fmt.Sprintf("AND (%s)", sourceStr)
-					addColString = addColString + colStr
-				}
-			} else if (source == "All" || source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
-				addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, hubspotID)
-				addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", hubspotID)
-			} else if (source == "All" || source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
-				addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, salesforceID)
-				addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", salesforceID)
-			} else if (source == "All" || source == model.GROUP_NAME_SIX_SIGNAL) && sixSignalExists {
-				addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, sixSignalID)
-				addColString = addColString + " " + fmt.Sprintf("users.group_%d_id", sixSignalID)
-			}
+		addSourceStmt = " " + fmt.Sprintf("%s.source!=%d", selectVal, model.UserSourceDomains)
+		if model.IsAllowedAccountGroupNames(source) && source == group.Name {
+			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, group.ID)
+			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.source", group.ID)
 			status = http.StatusOK
+		} else {
+			log.WithFields(logFields).Error(fmt.Sprintf("%s not enabled for this project.", source))
 		}
 	}
 	return addSourceStmt, addColString, status
