@@ -196,10 +196,20 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 			c.JSON(status, gin.H{"error": err})
 			return
 		}
-		newChannels := jsonResponse["channels"].([]interface{})
-		channels = append(channels, newChannels...)
-		responseMetadata = jsonResponse["response_metadata"].(map[string]interface{})
-		nextCursor = responseMetadata["next_cursor"].(string)
+		if v, ok := jsonResponse["channels"]; ok {
+			newChannels := v.([]interface{})
+			channels = append(channels, newChannels...)
+			if metadata, ok := jsonResponse["response_metadata"]; ok {
+				responseMetadata = metadata.(map[string]interface{})
+				nextCursor = responseMetadata["next_cursor"].(string)
+			} else {
+				break
+			}
+
+		} else {
+			break
+		}
+
 	}
 
 	c.JSON(http.StatusOK, channels)
