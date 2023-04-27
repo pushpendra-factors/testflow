@@ -208,14 +208,14 @@ func (store *MemSQL) GetAttributionDashboardUnitsForProjectID(projectID int64) (
 
 	dashboard, errCode := store.GetAttributionV1DashboardByDashboardName(projectID, model.AttributionV1Name)
 	if errCode != http.StatusFound || dashboard == nil {
-		log.WithFields(log.Fields{"method": "GetAttributionV1DashboardByDashboardName", "dashboard": *dashboard}).Info("Failed to get Attribution dashboard")
+		log.WithFields(log.Fields{"method": "GetAttributionV1DashboardByDashboardName"}).Info("Failed to get Attribution dashboard")
 		return dashboardUnits, errCode
 	}
 
 	dashboardUnits, errCode = store.GetDashboardUnitByDashboardID(projectID, dashboard.ID)
 
 	if errCode != http.StatusFound || len(dashboardUnits) == 0 {
-		log.WithFields(log.Fields{"method": "GetAttributionV1DashboardByDashboardName", "dashboard": *dashboard}).Info("Failed to get dashboard units for Attribution V1 dashboard")
+		log.WithFields(log.Fields{"method": "GetAttributionV1DashboardByDashboardName", "dashboard": dashboard}).Info("Failed to get dashboard units for Attribution V1 dashboard")
 		return dashboardUnits, http.StatusInternalServerError
 	}
 
@@ -646,7 +646,6 @@ func (store *MemSQL) DBCacheAttributionDashboardUnitsForProjects(stringProjectsI
 		"string_projects_ids": stringProjectsIDs,
 		"exclude_project_ids": excludeProjectIDs,
 		"num_routines":        numRoutines,
-		"report_collector":    reportCollector,
 	}
 	logCtx := log.WithFields(logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
