@@ -852,7 +852,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true {
 
 		execute6SignalStatusChannel := make(chan int)
-		sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, UserId, clientIP)
+		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
 		if sixSignalExists {
 			// logCtx.Info("6Signal cache hit")
 		} else {
@@ -862,7 +862,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			select {
 			case ok := <-execute6SignalStatusChannel:
 				if ok == 1 {
-					six_signal.SetSixSignalCacheResult(projectId, UserId, clientIP)
+					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
 					// logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("SetSixSignalCacheResult using clients Key")
 
 				} else {
@@ -876,7 +876,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 		}
 	} else if projectSettings.Factors6SignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true {
 		execute6SignalStatusChannel := make(chan int)
-		sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, UserId, clientIP)
+		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
 		if sixSignalExists {
 			// logCtx.Info("6Signal cache hit")
 		} else {
@@ -886,9 +886,9 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			select {
 			case ok := <-execute6SignalStatusChannel:
 				if ok == 1 {
-					six_signal.SetSixSignalCacheResult(projectId, UserId, clientIP)
+					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
 					// Total hit counts
-					six_signal.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
+					model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
 
 					// logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("SetSixSignalCacheResult using Factors key")
 
@@ -1227,8 +1227,11 @@ func ShouldAllowIdentificationOverwrite(projectID int64, userID string,
 /*
 Identify :-
 If overwrite is false
+
 	user will be identified once and customer_user_id will be set as per source
+
 If overwrite is true
+
 	customer_user_id_source will be set/updated when user is re-identified
 		identification from sdk identfy source will always overwrite
 		if user only identified in web then it would continue to re-identify

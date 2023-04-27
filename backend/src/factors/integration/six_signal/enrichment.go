@@ -3,10 +3,12 @@ package six_signal
 import (
 	"encoding/json"
 	"errors"
+	"factors/model/model"
 	"factors/util"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type response struct {
@@ -147,7 +149,7 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 	if domain := result.Company.Domain; domain != "" {
 		if c, ok := (*properties)[util.SIX_SIGNAL_DOMAIN]; !ok || c == "" {
 			(*properties)[util.SIX_SIGNAL_DOMAIN] = domain
-			SetSixSignalAPICountCacheResult(projectId, util.TimeZoneStringIST)
+			model.SetSixSignalAPICountCacheResult(projectId, util.TimeZoneStringIST)
 		}
 	}
 
