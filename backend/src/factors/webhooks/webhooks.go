@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"io/ioutil"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -39,15 +40,17 @@ func DropWebhook(url, secret string, payload interface{}) (map[string]interface{
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {
-		log.Error("failed to make request for webhook")
+		log.WithError(err).Error("failed to make request for webhook")
 		return nil, err
 	}
 	defer resp.Body.Close()
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	response := make(map[string]interface{})
 	if resp.StatusCode == 201 || resp.StatusCode == 200 {
 		response["status"] = "ok"
 	} else {	
-		response["error"] = resp
+		log.Error("Request:", request)
+		response["error"] = string(bodyBytes)
 		response["statuscode"] = resp.StatusCode
 	}
 	return response, nil
