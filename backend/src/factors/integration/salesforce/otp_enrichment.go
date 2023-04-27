@@ -12,10 +12,6 @@ import (
 	"strings"
 	"sync"
 
-	"net/http"
-	"strings"
-	"sync"
-
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
