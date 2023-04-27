@@ -1194,7 +1194,7 @@ export function fetchTeamsChannels(projectId, teamId) {
     return new Promise((resolve, reject) => {
       get(
         dispatch,
-        host + 'projects/' + projectId + '/teams/channels?teams_id=' + teamId
+        host + 'projects/' + projectId + '/teams/channels?team_id=' + teamId
       )
         .then((r) => {
           if (r.ok) {

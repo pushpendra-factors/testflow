@@ -164,9 +164,12 @@ function IntegrationCard({ item, index, defaultOpen }) {
         return (
           <SegmentIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
         );
-      case 'Rudderstack' :
+      case 'Rudderstack':
         return (
-          <RudderstackIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+          <RudderstackIntegration
+            kbLink={item.kbLink}
+            setIsActive={setIsActive}
+          />
         );
       case 'Drift':
         return (
@@ -427,11 +430,28 @@ function IntegrationSettings({
                       // Flag for 6Signal Factors key
                       if (
                         (item.name === 'Factors Website De-anonymization' &&
-                        !featureLock(currentAgent.email)) || (item.name === 'Microsoft Teams' && !featureLock(currentAgent.email)) ||
-                        (item.name === 'Microsoft Teams' && activeProject?.id !== '1125899929000011')
+                          !featureLock(currentAgent.email)) ||
+                        (item.name === 'Microsoft Teams' &&
+                          !featureLock(currentAgent.email))
                       ) {
-                        return null;
+                        if (
+                          item.name === 'Microsoft Teams' &&
+                          activeProject?.id === '1125899929000011'
+                        ) {
+                          return (
+                            <IntegrationCard
+                              item={item}
+                              index={index}
+                              key={index}
+                              defaultOpen={defaultOpen}
+                              currentProjectSettings={currentProjectSettings}
+                            />
+                          );
+                        } else {
+                          return null;
+                        }
                       }
+
                       return (
                         <IntegrationCard
                           item={item}
