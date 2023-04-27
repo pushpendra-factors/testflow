@@ -19,6 +19,7 @@ const (
 	SLACK               = "slack"
 	WEBHOOK             = "webhook"
 	prefixNameforAlerts = "ETA"
+	TEAMS               = "teams"
 	counterIndex        = "Counter"
 	cacheExpiry         = 0
 	cacheCounterExpiry  = 24 * 60 * 60
@@ -58,6 +59,8 @@ type EventTriggerAlertConfig struct {
 	Webhook             bool            `json:"webhook"`
 	Secret              string          `json:"secret"`
 	WebhookURL          string          `json:"url"`
+	Teams               bool            `json:"teams"`
+	TeamsChannelsConfig *postgres.Jsonb `json:"teams_channels_config"`
 }
 
 type EventTriggerAlertInfo struct {
