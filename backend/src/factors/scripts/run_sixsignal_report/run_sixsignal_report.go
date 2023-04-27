@@ -2,15 +2,16 @@ package main
 
 import (
 	C "factors/config"
-	"factors/delta"
-	"factors/model/store"
-
 	"factors/filestore"
+	"factors/integration/six_signal"
+	"factors/model/store"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	U "factors/util"
 	"flag"
 	"fmt"
+
+	T "factors/task"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -114,10 +115,21 @@ func main() {
 	configs["hardPull"] = *hardPull
 	configs["sortOnGroup"] = *sortOnGroup
 
-	SixSignaljobReport := delta.SixSignalAnalysis(projectIdsArray, configs)
-	C.PingHealthcheckForSuccess(healthcheckPingID, SixSignaljobReport)
+	//Higher level map to contain run data from both SixSignalAnalysis and SendSixSignalEmailForSubscribe
+	jobReport := make(map[string]interface{})
 
-	SendEmailReport := delta.SendSixSignalEmailForSubscribe(projectIdsArray)
-	C.PingHealthcheckForSuccess(healthcheckPingID, SendEmailReport)
+	//Generating the sixsignal report
+	SixSignalReportFailures := T.SixSignalAnalysis(projectIdsArray, configs)
 
+	//Sending emails for weekly report generated for subscribed reports
+	SendEmailReportFailures := six_signal.SendSixSignalEmailForSubscribe(projectIdsArray)
+
+	jobReport["Six Signal Analysis Job Report"] = SixSignalReportFailures
+	jobReport["Send Six Signal Email Report"] = SendEmailReportFailures
+
+	if len(SixSignalReportFailures) > 0 || len(SendEmailReportFailures) > 0 {
+		C.PingHealthcheckForFailure(healthcheckPingID, jobReport)
+	} else {
+		C.PingHealthcheckForSuccess(healthcheckPingID, jobReport)
+	}
 }

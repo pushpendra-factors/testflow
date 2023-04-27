@@ -2,7 +2,6 @@ package memsql
 
 import (
 	cacheRedis "factors/cache/redis"
-	"factors/integration/six_signal"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -64,8 +63,8 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 			hubspotEvents, _ := GetEventsFromCacheByDocumentType(projId, "hubspot", dateKey)
 			linkedinEvents, _ := GetEventsFromCacheByDocumentType(projId, "linkedin", dateKey)
 			salesforceEvents, _ := GetEventsFromCacheByDocumentType(projId, "salesforce", dateKey)
-			sixSignalAPIHits := six_signal.GetSixSignalAPICountCacheResult(int64(projIdInt), uint64(dateKeyInt))
-			sixSignalAPITotalHits := six_signal.GetSixSignalAPITotalHitCountCacheResult(int64(projIdInt), uint64(dateKeyInt))
+			sixSignalAPIHits := model.GetSixSignalAPICountCacheResult(int64(projIdInt), uint64(dateKeyInt))
+			sixSignalAPITotalHits := model.GetSixSignalAPITotalHitCountCacheResult(int64(projIdInt), uint64(dateKeyInt))
 			result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
 				ProjectID:             int64(projIdInt),
 				TotalEvents:           uint64(totalEvents),
@@ -88,6 +87,7 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 
 	return result, nil
 }
+
 func (store *MemSQL) GetEventUserCountsMerged(projectIdsList []int64, lastNDays int, currentDate time.Time) (map[int64]*model.ProjectAnalytics, error) {
 	logFields := log.Fields{
 		"last_n_days": lastNDays,
