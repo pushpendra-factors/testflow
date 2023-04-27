@@ -1388,11 +1388,11 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 	// Both attribution V0 and V1 has same base class model.QueryClassAttribution
 	if baseQuery.GetClass() == model.QueryClassAttribution {
 
-		attributionQuery := baseQuery.(*model.AttributionQueryUnit)
+		attributionQuery := baseQuery.(*model.AttributionQueryUnitV1)
 		unitReport.Query = attributionQuery
 
 		channel := make(chan Result)
-		go store.runAttributionUnit(projectID, attributionQuery.Query, channel)
+		go store.runAttributionUnitV1(projectID, attributionQuery.Query, channel)
 
 		select {
 		case response := <-channel:
@@ -1750,7 +1750,7 @@ func (store *MemSQL) _cacheAttributionDashboardUnitForDateRange(cachePayload mod
 	errCode, errMsg, report := store.CacheAttributionDashboardUnitForDateRange(cachePayload, enableFilterOpt)
 	reportCollector.Store(model.GetCachingUnitReportUniqueKey(report), report)
 	if errCode != http.StatusOK {
-		logCtx.WithField("err_code", errCode).Errorf("Error while running query %s", errMsg)
+		logCtx.WithField("err_code", errCode).Errorf("Error while running attribution v1 query %s", errMsg)
 		return
 	}
 	logCtx.Info("Completed caching for Dashboard unit")
