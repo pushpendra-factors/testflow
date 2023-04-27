@@ -218,7 +218,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		log.Info(fmt.Printf("Webhook dropped for alert: %s. RESPONSE: %+v", alertID, response))
 		stat := response["status"]
 		if stat != "ok" {
-			log.Error(stat, response)
+			log.Error("Error details: ", stat, response)
 			err := AddKeyToFailureSet(key, eta.ProjectID, "WH")
 			if err != nil {
 				log.WithError(err).Error("failed to put key in FailureSortedSet")
