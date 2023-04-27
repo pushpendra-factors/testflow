@@ -62,6 +62,15 @@ function AttributionChart({
   const [tableData, setTableData] = useState([]);
   const [sorter, setSorter] = useState(defaultSortProp());
   const [visibleIndices, setVisibleIndices] = useState([]);
+  const [filtersVisible, setFiltersVisibility] = useState(false);
+  const [tableFilters, setAttributionTableFilters] = useState({});
+
+
+  const handleApplyFilters = 
+    (filters) => {
+      setAttributionTableFilters({ attributionTableFilters: filters });
+      setFiltersVisibility(false);
+    }
 
   const handleSorting = useCallback((prop) => {
     setSorter((currentSorter) => {
@@ -203,10 +212,13 @@ function AttributionChart({
           : MAX_ALLOWED_VISIBLE_PROPERTIES
       }
       attributionMetrics={attributionMetrics}
+      filtersVisible={filtersVisible}
       section={section}
       columns={columns}
       tableData={tableData}
       searchText={searchText}
+      appliedFilters={tableFilters.appliedFilters}
+      setAppliedFilters={handleApplyFilters}
       setSearchText={setSearchText}
     />
   );

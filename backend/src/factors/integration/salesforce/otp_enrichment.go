@@ -12,6 +12,10 @@ import (
 	"strings"
 	"sync"
 
+	"net/http"
+	"strings"
+	"sync"
+
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -24,8 +28,8 @@ var AllowedSfEventTypeForOTP = []string{
 	U.EVENT_NAME_SALESFORCE_TASK_UPDATED,
 	U.EVENT_NAME_SALESFORCE_EVENT_CREATED,
 	U.EVENT_NAME_SALESFORCE_EVENT_UPDATED,
-	U.EVENT_NAME_SALESFORCE_CONTACT_CREATED,
-	U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
+	U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+	U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
 }
 
 // WorkerForSfOtp sync salesforce Events to otp events
@@ -75,9 +79,7 @@ func WorkerForSfOtp(projectID int64, wg *sync.WaitGroup) {
 
 		switch eventName {
 		case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED:
-
 			RunSFOfflineTouchPointRuleForCampaignMember(project, &otpRules, startTime, endTime, eventName, logCtx)
-
 		case U.EVENT_NAME_SALESFORCE_TASK_UPDATED, U.EVENT_NAME_SALESFORCE_TASK_CREATED:
 			RunSFOfflineTouchPointRuleForTasks(project, &otpRules, &uniqueOTPEventKeys, startTime, endTime, eventName, logCtx)
 
@@ -616,14 +618,14 @@ func getSalesforceDocumentTimestampByEventV1(event eventIdToProperties) (int64, 
 
 	if event.Name == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
 
-		date, exists := event.EventProperties["salesforce_campaignmember_lastmodifieddate"]
+		date, exists := event.EventProperties[model.EP_SFCampaignMemberUpdated]
 		if !exists || date == nil {
 			return 0, errors.New("failed to get date")
 		}
 		return model.GetSalesforceDocumentTimestamp(date)
 	}
 
-	date, exists := event.EventProperties["salesforce_campaignmember_createddate"]
+	date, exists := event.EventProperties[model.EP_SFCampaignMemberCreated]
 	if !exists || date == nil {
 		return 0, errors.New("failed to get date")
 	}

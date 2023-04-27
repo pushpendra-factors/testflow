@@ -226,7 +226,7 @@ function MarkTouchpointBlock({
               <div className={'fa--query_block--filters flex flex-row'}>
                 <div key={index} className={`mt-2`}>
                   <FilterWrapper
-                    activeProject={activeProject}
+                    projectID={activeProject?.id}
                     index={index}
                     filter={filt}
                     deleteFilter={delFilter}
@@ -247,7 +247,7 @@ function MarkTouchpointBlock({
                 {index === orFilterIndex && (
                   <div key={'init'} className={`mt-2`}>
                     <FilterWrapper
-                      activeProject={activeProject}
+                      projectID={activeProject?.id}
                       index={index}
                       deleteFilter={closeFilter}
                       insertFilter={insertFilter}
@@ -266,7 +266,7 @@ function MarkTouchpointBlock({
               <div className={'fa--query_block--filters flex flex-row'}>
                 <div key={index} className={`mt-2`}>
                   <FilterWrapper
-                    activeProject={activeProject}
+                    projectID={activeProject?.id}
                     index={index}
                     filter={filtersGr[0]}
                     deleteFilter={delFilter}
@@ -278,7 +278,7 @@ function MarkTouchpointBlock({
                 </div>
                 <div key={index + 1} className={`mt-2`}>
                   <FilterWrapper
-                    activeProject={activeProject}
+                    projectID={activeProject?.id}
                     index={index + 1}
                     filter={filtersGr[1]}
                     deleteFilter={delFilter}
@@ -299,7 +299,7 @@ function MarkTouchpointBlock({
         filtrs.push(
           <div key={filtrs.length} className={`mt-2`}>
             <FilterWrapper
-              activeProject={activeProject}
+              projectID={activeProject?.id}
               filterProps={filterProps}
               insertFilter={insertFilter}
               deleteFilter={() => closeFilter()}

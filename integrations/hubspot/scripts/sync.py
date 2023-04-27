@@ -6,8 +6,6 @@ import urllib
 import sys
 import time
 
-from requests import status_codes
-
 parser = OptionParser()
 parser.add_option("--env", dest="env", default="development")
 parser.add_option("--dry", dest="dry", action="store_true", help="", default=False)
@@ -265,13 +263,13 @@ def get_hubspot_request_handler(project_id, refresh_token, api_key):
         return get_with_fallback_retry(project_id, url, request, json, headers)
     return hubspot_request_handler
 
-def get_with_fallback_retry(project_id, get_url, request = requests.get, json=None, headers = None):
+def get_with_fallback_retry(project_id, get_url, request = requests.get, json_object=None, headers = None):
     retries = 0
     start_time  = time.time()
     try:
         while True:
             try:
-                r = request(url=get_url, headers = headers, json=json, timeout=REQUEST_TIMEOUT)
+                r = request(url=get_url, headers = headers, json=json_object, timeout=REQUEST_TIMEOUT)
                 if r.status_code != 429:
                     if not r.ok:
                         if r.status_code== 414 or r.status_code == 404:
@@ -286,7 +284,7 @@ def get_with_fallback_retry(project_id, get_url, request = requests.get, json=No
                             retries += 1
                             continue
                         log.error("Retry exhausted. Failed to get data after %d retries",retries)
-                        raise Exception("Retry exhausted. Failed to get data after %d retries",retries)
+                        raise Exception("Retry exhausted. Failed to get data after "+str(retries)+" retries")
                     return r
                 res_json = r.json()
                 if res_json["errorType"] == API_ERROR_RATE_LIMIT:

@@ -4,6 +4,7 @@ import { SVG, Text } from 'factorsComponents';
 import { CaretDownOutlined, CaretUpOutlined } from '@ant-design/icons';
 import { HighlightSearchText } from '../../../utils/dataFormatter';
 import useAutoFocus from '../../../hooks/useAutoFocus';
+import { filterURLValue } from 'Utils/filterURLValue';
 
 function GroupSelect2({
   groupedProperties,
@@ -99,7 +100,7 @@ function GroupSelect2({
       return 'leadSquared';
     }
     if (checkIcon?.includes('group')) {
-      return 'profile';
+      return 'user';
     }
     return icon;
   };
@@ -112,9 +113,10 @@ function GroupSelect2({
     options?.forEach((group, grpIndex) => {
       const valuesOptions = [];
 
-      const groupValues = group?.values?.filter((val) =>
-        val[0]?.toLowerCase()?.includes(searchTerm.toLowerCase())
-      );
+      const groupValues = group?.values?.filter((val) => {
+        let st = filterURLValue(searchTerm);
+        return val[0]?.toLowerCase()?.includes(st.toLowerCase());
+      });
 
       const groupItem = (
         <div key={group.label} className={`group`}>

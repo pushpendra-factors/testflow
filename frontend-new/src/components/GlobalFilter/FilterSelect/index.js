@@ -286,17 +286,8 @@ const FilterSelect = ({
 
   const getIcon = (propState) => {
     const { name, icon } = propState || {};
-
     if (!name) return null;
-
-    const iconName =
-      icon === 'group' ||
-      name.startsWith('$salesforce') ||
-      name.startsWith('$hubspot') ||
-      name.startsWith('$6Signal')
-        ? 'profile'
-        : icon;
-
+    const iconName = icon === 'group' ? 'user' : icon;
     return <SVG name={iconName} size={16} color={'purple'} />;
   };
 

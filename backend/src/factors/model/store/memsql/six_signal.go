@@ -129,26 +129,28 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	eventNameID := " SELECT id FROM event_names WHERE project_id=? AND name='$session' "
-
-	maxSessionTimeQuery := "SELECT JSON_EXTRACT_STRING(events.user_properties,?) AS company, " +
-		"MAX(JSON_EXTRACT_BIGINT(events.properties,?)) AS time_spent FROM events "
-
-	maxSessionTimeStmnt := maxSessionTimeQuery + "WHERE project_id=? AND timestamp >= ? AND timestamp <= ? " +
-		" AND events.event_name_id IN ( " + eventNameID + " ) " + " AND company IS NOT NULL " +
-		" GROUP BY company "
-
-	qParams = append(qParams, U.SIX_SIGNAL_NAME, U.SP_SPENT_TIME, projectID, query.From, query.To, projectID)
-
 	caseSelectStmntEventProperties := "CASE WHEN JSON_EXTRACT_STRING(events.properties, ?) IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(events.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(events.properties, ?) END "
 
 	caseSelectStmntUserProperties := "CASE WHEN JSON_EXTRACT_STRING(events.user_properties, ?) IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(events.user_properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(events.user_properties, ?) END "
 
+	eventNameID := " SELECT id FROM event_names WHERE project_id=? AND name='$session' "
+
+	maxSessionTimeQuery := "SELECT JSON_EXTRACT_STRING(events.user_properties,?) AS company, " +
+		caseSelectStmntEventProperties + " AS time_spent FROM events "
+
+	maxSessionTimeStmnt := maxSessionTimeQuery + "WHERE project_id=? AND timestamp >= ? AND timestamp <= ? " +
+		" AND events.event_name_id IN ( " + eventNameID + " ) " + " AND company IS NOT NULL " +
+		" GROUP BY company "
+
+	qParams = append(qParams, U.SIX_SIGNAL_NAME,
+		U.SP_SPENT_TIME, model.PropertyValueZero, U.SP_SPENT_TIME, model.PropertyValueZero, U.SP_SPENT_TIME,
+		projectID, query.From, query.To, projectID)
+
 	sixSignalPropertiesQuery := "SELECT JSON_EXTRACT_STRING(events.user_properties,?) AS company, " +
-		"JSON_EXTRACT_BIGINT(events.properties,?) AS time_spent, " +
 		"JSON_EXTRACT_BIGINT(events.user_properties,?) AS page_count, " +
+		caseSelectStmntEventProperties + "AS time_spent, " +
 		caseSelectStmntUserProperties + "AS country, " +
 		caseSelectStmntUserProperties + "AS industry, " +
 		caseSelectStmntUserProperties + "AS emp_range, " +
@@ -162,7 +164,8 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 	sixSignalPropertiesStmnt := sixSignalPropertiesQuery + " WHERE project_id=? AND timestamp >= ? AND timestamp <= ?" +
 		" AND events.event_name_id IN ( " + eventNameID + " )"
 
-	qParams = append(qParams, U.SIX_SIGNAL_NAME, U.SP_SPENT_TIME, U.UP_PAGE_COUNT,
+	qParams = append(qParams, U.SIX_SIGNAL_NAME, U.UP_PAGE_COUNT,
+		U.SP_SPENT_TIME, model.PropertyValueZero, U.SP_SPENT_TIME, model.PropertyValueZero, U.SP_SPENT_TIME,
 		U.SIX_SIGNAL_COUNTRY, model.PropertyValueNone, U.SIX_SIGNAL_COUNTRY, model.PropertyValueNone, U.SIX_SIGNAL_COUNTRY,
 		U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY,
 		U.SIX_SIGNAL_EMPLOYEE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_EMPLOYEE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_EMPLOYEE_RANGE,

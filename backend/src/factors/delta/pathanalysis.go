@@ -128,8 +128,8 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId, true, true)
 			if err != nil {
 				store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
-				finalStatus[query.ID] = "Failed creating events file"
-				log.Error("Failed creating events file")
+				finalStatus[query.ID] = err.Error()
+				log.WithError(err).Error("Failed creating events file")
 				return finalStatus, false
 			}
 		} else {

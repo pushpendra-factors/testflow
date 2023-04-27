@@ -12,11 +12,12 @@ import (
 	T "factors/task"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -149,7 +150,13 @@ func SendSixSignalEmailForSubscribe(projectIdArray []int64) interface{} {
 			logCtx.Error("No email Ids for sixsignal report subscription is found.")
 			continue
 		}
+
 		emailIds := strings.Split(emailIdsString, ",")
+		if len(emailIds) == 0 {
+			logCtx.Warn("No email id present for subscribe feature")
+			continue
+		}
+
 		project, _ := store.GetStore().GetProject(projectId)
 		reqPayload := model.SixSignalEmailAndMessage{
 			EmailIDs: emailIds,

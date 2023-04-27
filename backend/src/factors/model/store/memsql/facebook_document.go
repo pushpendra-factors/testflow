@@ -660,7 +660,7 @@ func (store *MemSQL) GetDataCurrencyForFacebook(projectId int64) string {
 	for rows.Next() {
 
 		if err := rows.Scan(&currency); err != nil {
-			log.WithError(err).Error("Failed to get facebook currency details")
+			log.Info("Failed to get facebook currency details", err.Error())
 		}
 	}
 

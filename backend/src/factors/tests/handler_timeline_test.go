@@ -871,8 +871,8 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 			return true
 		})
 		assert.NotNil(t, resp.GroupInfos)
-		assert.Equal(t, resp.GroupInfos[0], model.GroupsInfo{GroupName: U.GROUP_NAME_HUBSPOT_COMPANY, AssociatedGroup: "Freshworks"})
-		assert.Equal(t, resp.GroupInfos[1], model.GroupsInfo{GroupName: U.GROUP_NAME_SALESFORCE_ACCOUNT, AssociatedGroup: ""})
+		assert.Equal(t, resp.GroupInfos[0], model.GroupsInfo{GroupName: U.STANDARD_GROUP_DISPLAY_NAMES[U.GROUP_NAME_HUBSPOT_COMPANY], AssociatedGroup: "Freshworks"})
+		assert.Equal(t, resp.GroupInfos[1], model.GroupsInfo{GroupName: U.STANDARD_GROUP_DISPLAY_NAMES[U.GROUP_NAME_SALESFORCE_ACCOUNT], AssociatedGroup: ""})
 		assert.NotNil(t, resp.UserActivity)
 		assert.Condition(t, func() bool {
 			for i, activity := range resp.UserActivity {

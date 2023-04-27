@@ -155,7 +155,6 @@ const EnrichCountries = ({
   };
 
   useEffect(() => {
-    if (!sixSignalConfig) return;
     let _data = null;
     if (
       sixSignalConfig?.country_exclude &&
@@ -180,7 +179,11 @@ const EnrichCountries = ({
       setData(selectedValues);
       countriesSet.current = true;
     }
-  }, [sixSignalConfig, mode]);
+  }, [
+    sixSignalConfig?.country_exclude,
+    sixSignalConfig?.country_include,
+    mode
+  ]);
 
   useEffect(() => {
     //fetching country list

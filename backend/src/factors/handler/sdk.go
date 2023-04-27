@@ -60,7 +60,7 @@ func SDKTrackHandler(c *gin.Context) {
 	var request SDK.TrackPayload
 
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&request); err != nil {
+	if err := decoder.Decode(&request); U.IsJsonError(err) {
 		logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			&SDK.TrackResponse{Error: "Tracking failed. Invalid payload."})
@@ -115,7 +115,7 @@ func SDKBulkEventHandler(c *gin.Context) {
 
 	var sdkTrackPayloads []SDK.TrackPayload
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&sdkTrackPayloads); err != nil {
+	if err := decoder.Decode(&sdkTrackPayloads); U.IsJsonError(err) {
 		logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			&SDK.TrackResponse{Error: "Tracking failed. Invalid payload."})
@@ -184,7 +184,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 	var request SDK.IdentifyPayload
 
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&request); err != nil {
+	if err := decoder.Decode(&request); U.IsJsonError(err) {
 		logCtx.WithError(err).Error("Identification failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			&SDK.IdentifyResponse{Error: "Identification failed. Invalid payload."})
@@ -228,7 +228,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 
 	var request SDK.AddUserPropertiesPayload
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&request); err != nil {
+	if err := decoder.Decode(&request); U.IsJsonError(err) {
 		logCtx.WithError(err).Error("Add user properties failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			&SDK.AddUserPropertiesResponse{Error: "Add user properties failed. Invalid payload."})
@@ -291,7 +291,7 @@ func SDKGetInfoHandler(c *gin.Context) {
 
 	var request sdkGetInfoPayload
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&request); err != nil {
+	if err := decoder.Decode(&request); U.IsJsonError(err) {
 		logCtx.WithError(err).Error("Failed decoding get info payload.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			&SDK.Response{Error: "Failed decoding get info payload. Invalid payload."})
@@ -374,7 +374,7 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 
 	var request SDK.UpdateEventPropertiesPayload
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&request); err != nil {
+	if err := decoder.Decode(&request); U.IsJsonError(err) {
 		logCtx.WithError(err).Error("Update event properties failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.UpdateEventPropertiesResponse{
 			Error: "Update event properties failed. Invalid payload."})
@@ -666,7 +666,7 @@ func SDKErrorHandler(c *gin.Context) {
 
 	decoder := json.NewDecoder(c.Request.Body)
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&request); err != nil {
+	if err := decoder.Decode(&request); U.IsJsonError(err) {
 		log.WithError(err).Error("Failed to unmarshal SDK Error.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -719,7 +719,7 @@ func SDKCaptureClickHandler(c *gin.Context) {
 
 	var request model.CaptureClickPayload
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&request); err != nil {
+	if err := decoder.Decode(&request); U.IsJsonError(err) {
 		logCtx.WithError(err).Error("Updating click failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, &model.CaptureClickResponse{
 			Error: "Updating click failed. Invalid payload."})
@@ -797,7 +797,7 @@ func SDKFormFillHandler(c *gin.Context) {
 
 	var request model.SDKFormFillPayload
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&request); err != nil {
+	if err := decoder.Decode(&request); U.IsJsonError(err) {
 		logCtx.WithError(err).Error("Form fill event failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, &model.CaptureFormFillResponse{
 			Error: "Form fill event failed. Invalid payload."})

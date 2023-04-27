@@ -1400,10 +1400,12 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, otpRules *[]mode
 		}
 
 		if memberDocuments[i].Synced == false {
-			err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, &memberDocuments[i], endTimestamp)
-			if err != nil {
-				// log and continue
-				logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Warn("failed creating SF offline touch point")
+			if !C.IsProjectIDSkippedForOtp(project.ID) {
+				err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, &memberDocuments[i], endTimestamp)
+				if err != nil {
+					// log and continue
+					logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Warn("failed creating SF offline touch point")
+				}
 			}
 		}
 
@@ -1620,12 +1622,13 @@ func enrichCampaignMember(project *model.Project, otpRules *[]model.OTPRule, doc
 		return http.StatusInternalServerError
 	}
 
-	err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, document, endTimestamp)
-	if err != nil {
-		// log and continue
-		logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Warn("Create SF offline touch point")
+	if !C.IsProjectIDSkippedForOtp(project.ID) {
+		err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, document, endTimestamp)
+		if err != nil {
+			// log and continue
+			logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Warn("Create SF offline touch point")
+		}
 	}
-
 	errCode := enrichCampaignMemberResponded(project, document, userID, *enCampaignMemberProperties)
 	if errCode != http.StatusOK {
 		logCtx.Error("Failed to enrich Responded to Campaign event.")
@@ -1785,12 +1788,13 @@ func enrichTask(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEven
 		return http.StatusInternalServerError
 	}
 
-	err = ApplySFOfflineTouchPointRuleForTasks(project, otpRules, uniqueOTPEventKeys, &finalPayload, document)
-	if err != nil {
-		// log and continue
-		logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Warn("Failed creating offline touch point event for SF Tasks")
+	if !C.IsProjectIDSkippedForOtp(project.ID) {
+		err = ApplySFOfflineTouchPointRuleForTasks(project, otpRules, uniqueOTPEventKeys, &finalPayload, document)
+		if err != nil {
+			// log and continue
+			logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Warn("Failed creating offline touch point event for SF Tasks")
+		}
 	}
-
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, eventID, userID, "", true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce task document as synced.")
@@ -1859,12 +1863,13 @@ func enrichEvent(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 		return http.StatusInternalServerError
 	}
 
-	err = ApplySFOfflineTouchPointRuleForEvents(project, otpRules, uniqueOTPEventKeys, &finalPayload, document)
-	if err != nil {
-		// log and continue
-		logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Warn("Failed creating offline touch point event for SF Events")
+	if !C.IsProjectIDSkippedForOtp(project.ID) {
+		err = ApplySFOfflineTouchPointRuleForEvents(project, otpRules, uniqueOTPEventKeys, &finalPayload, document)
+		if err != nil {
+			// log and continue
+			logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Warn("Failed creating offline touch point event for SF Events")
+		}
 	}
-
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, eventID, userID, "", true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce event document as synced.")
@@ -2301,10 +2306,6 @@ func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log
 func enrichCampaign(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64) int {
 	if project.ID == 0 || document == nil {
 		return http.StatusBadRequest
-	}
-
-	if document.Type == model.SalesforceDocumentTypeCampaign {
-		return enrichCampaignToAllCampaignMembers(project, otpRules, document, endTimestamp)
 	}
 
 	if document.Type == model.SalesforceDocumentTypeCampaignMember {

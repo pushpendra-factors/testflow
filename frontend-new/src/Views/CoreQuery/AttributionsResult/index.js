@@ -9,7 +9,10 @@ function AttributionsResult({
   currMetricsValue,
   renderedCompRef,
   chartType,
-  queryOptions
+  queryOptions,
+  appliedFilters,
+  setAttributionTableFilters,
+  v1=false
 }) {
   const {
     eventGoal,
@@ -41,6 +44,9 @@ function AttributionsResult({
       chartType={chartType}
       queryOptions={queryOptions}
       attrQueries={attrQueries}
+      appliedFilters={appliedFilters}
+      setAppliedFilters={setAttributionTableFilters}
+      v1={v1}
     />
   );
 }

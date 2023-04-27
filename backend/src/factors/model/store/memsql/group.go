@@ -252,16 +252,21 @@ func (store *MemSQL) GetPropertyValuesByGroupProperty(projectID int64, groupName
 	}
 	currentDate := model.OverrideCacheDateRangeForProjects(projectID)
 	values := make([]U.CachePropertyValueWithTimestamp, 0)
+
+	var lastError error
 	for i := 0; i < lastNDays; i++ {
 		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		value, err := model.GetPropertyValuesByGroupPropertyFromCache(projectID,
 			groupName, propertyName, currentDateOnlyFormat)
 		if err != nil {
-			logCtx.WithField("current_date", currentDateOnlyFormat).WithError(err).
-				Error("Failed to get group property values from cache for the given date.")
+			lastError = err
 			continue
 		}
 		values = append(values, value)
+	}
+
+	if len(values) == 0 {
+		logCtx.WithError(lastError).Error("No property values from cache for last N days.")
 	}
 
 	valueStrings := make([]string, 0)

@@ -82,7 +82,8 @@ func getCustomMetricsSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, pr
 		}
 		timestampFloat, _ := U.GetPropertyValueAsFloat64(userDetails.Properties[dateField])
 		timestamp := int64(U.GetTimestampInSecs(int(timestampFloat)))
-		if timestamp < startTimestamp || timestamp > endTimestamp {
+		if !U.IsTimestampInRange(timestamp, startTimestamp, endTimestamp, false) {
+			log.WithFields(log.Fields{"line": txtline}).Error("timestamp outside of required range")
 			continue
 		}
 
@@ -132,7 +133,8 @@ func getCustomMetricsComplex(scanner *bufio.Scanner, propFilter []M.KPIFilter, p
 		}
 		timestampFloat, _ := U.GetPropertyValueAsFloat64(userDetails.Properties[dateField])
 		timestamp := int64(U.GetTimestampInSecs(int(timestampFloat)))
-		if timestamp < startTimestamp || timestamp > endTimestamp {
+		if !U.IsTimestampInRange(timestamp, startTimestamp, endTimestamp, false) {
+			log.WithFields(log.Fields{"line": txtline}).Error("timestamp outside of required range")
 			continue
 		}
 

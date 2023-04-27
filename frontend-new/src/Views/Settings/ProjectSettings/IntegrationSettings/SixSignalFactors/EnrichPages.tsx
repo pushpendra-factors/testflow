@@ -164,7 +164,6 @@ const EnrichPages = ({
   };
 
   useEffect(() => {
-    if (!sixSignalConfig) return;
     let data = null;
     if (
       sixSignalConfig?.pages_exclude &&
@@ -182,7 +181,7 @@ const EnrichPages = ({
     if (data) {
       setData(data);
     }
-  }, [sixSignalConfig, mode]);
+  }, [sixSignalConfig.pages_exclude, sixSignalConfig.pages_include, mode]);
 
   return (
     <div>

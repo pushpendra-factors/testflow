@@ -111,16 +111,20 @@ function SegmentModal({
   };
 
   const setSegmentType = (val) => {
-    if (val[1] !== segmentPayload.type) {
-      const opts = { ...segmentPayload };
-      opts.type = val[1];
-      setSegmentPayload(opts);
-      if (profileType === 'account') {
-        const queryOpts = { ...queryOptions };
-        queryOpts.group_analysis = val[1];
-        setQueryOptions(queryOpts);
-      }
+    const [_, newType] = val;
+    if (newType === segmentPayload.type) {
+      return;
     }
+
+    const updatedSegmentPayload = { ...segmentPayload, type: newType };
+    setSegmentPayload(updatedSegmentPayload);
+    const queryOpts = { ...queryOptions };
+    if (profileType === 'account') {
+      queryOpts.group_analysis = newType;
+    } else if (profileType === 'user') {
+      queryOpts.source = newType;
+    }
+    setQueryOptions(queryOpts);
     setUserDDVisible(false);
   };
 
@@ -280,6 +284,7 @@ function SegmentModal({
         list.push(
           <div key={id}>
             <FilterWrapper
+              groupName={segmentPayload?.type}
               projectID={activeProject?.id}
               index={id}
               filter={filter}
@@ -298,6 +303,7 @@ function SegmentModal({
           list.push(
             <div key={list.length}>
               <FilterWrapper
+                groupName={segmentPayload?.type}
                 projectID={activeProject?.id}
                 index={list.length}
                 deleteFilter={() => closeFilter()}
