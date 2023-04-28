@@ -10,10 +10,11 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
+
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 type oauthState struct {
@@ -153,39 +154,41 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 	if err != nil {
 		c.JSON(status, gin.H{"error": err})
 	}
+
+	logCtx := log.WithField("project_id", projectID)
 	var channels []interface{}
 	if _, exists := jsonResponse["channels"]; !exists {
-		log.Error("Error while reading channels from json Response for Project ", projectID)
+		logCtx.Error("Error while reading channels from json Response for Project")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading channels from json Response"})
 		return
 	}
 	if jsonResponse["channels"] == nil {
-		log.Error("Error while reading channels from json Response for Project, nil response found ", projectID)
+		logCtx.Error("Error while reading channels from json Response for Project, nil response found")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading channels from json Response"})
 		return
 	}
 	if v, ok := jsonResponse["channels"].([]interface{}); ok {
 		channels = v
 	} else {
-		log.Error("Error while reading channels from json Response for Project ", projectID)
+		logCtx.Error("Error while reading channels from json Response for Project")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading channels from json Response"})
 		return
 	}
 	var responseMetadata map[string]interface{}
 	if _, exists := jsonResponse["response_metadata"]; !exists {
-		log.Error("Error while reading response metadata from json Response for Project ", projectID)
+		logCtx.Error("Error while reading response metadata from json Response for Project")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading response metadata from json Response"})
 		return
 	}
 	if jsonResponse["response_metadata"] == nil {
-		log.Error("Error while reading response metadata from json Response for Project, nil response found ", projectID)
+		logCtx.Error("Error while reading response metadata from json Response for Project, nil response found")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading response metadata from json Response"})
 		return
 	}
 	if v, ok := jsonResponse["response_metadata"].(map[string]interface{}); ok {
 		responseMetadata = v
 	} else {
-		log.Error("Error while reading response metadata from json Response for Project ", projectID)
+		logCtx.Error("Error while reading response metadata from json Response for Project")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while reading response metadata from json Response"})
 		return
 	}

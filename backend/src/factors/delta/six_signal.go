@@ -12,11 +12,12 @@ import (
 	T "factors/task"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -45,7 +46,7 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) i
 
 		resultGroup, errCode := store.GetStore().RunSixSignalGroupQuery(requestPayload.Queries, projectId)
 		if errCode != http.StatusOK {
-			logCtx.Error("Query failed. Failed to process query from DB with error: ", errCode)
+			logCtx.WithField("err_code", errCode).Error("Six signal group query failed in sinx signal analysis")
 			errMsg := fmt.Sprintf("%v", errCode)
 			errMsgToProjectIDMap[errMsg] = append(errMsgToProjectIDMap[errMsg], projectId)
 			continue
@@ -106,7 +107,7 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) i
 
 }
 
-//SendSixSignalEmailForSubscribe sends mail to all the email for which the sixsignal-report is subscribed on a weekly basis. The list of email id is fetched from the DB.
+// SendSixSignalEmailForSubscribe sends mail to all the email for which the sixsignal-report is subscribed on a weekly basis. The list of email id is fetched from the DB.
 func SendSixSignalEmailForSubscribe(projectIdArray []int64) interface{} {
 
 	projectIdToFailSendEmailIdsMap := make(map[int64][]string)
@@ -212,7 +213,7 @@ func WriteSixSignalResultsToCloud(cloudManager *filestore.FileManager, diskManag
 	return err
 }
 
-//CreateSixSignalShareableURL saves the query to the queries table and generate the queryID for public-URL for the given queryRequest and projectId
+// CreateSixSignalShareableURL saves the query to the queries table and generate the queryID for public-URL for the given queryRequest and projectId
 func CreateSixSignalShareableURL(queryRequest *model.Queries, projectId int64, agentUUID string) (string, int, string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectId,
@@ -269,7 +270,7 @@ func CreateSixSignalShareableURL(queryRequest *model.Queries, projectId int64, a
 	return share.QueryID, http.StatusCreated, "Shareable Query creation successful"
 }
 
-//isReportShared checks if the report has been already made public
+// isReportShared checks if the report has been already made public
 func isReportShared(projectID int64, idText string) (bool, string) {
 
 	share, err := store.GetStore().GetShareableURLWithShareStringWithLargestScope(projectID, idText, model.ShareableURLEntityTypeSixSignal)
