@@ -3989,6 +3989,19 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	assert.Empty(t, domainsGroup.Group3UserID)
 	assert.True(t, *domainsGroup.IsGroupUser)
 
+	/*
+		User domains check
+	*/
+	for _, contactID := range company1Contact {
+		documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{U.GetPropertyValueAsString(contactID)},
+			model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+		assert.Equal(t, http.StatusFound, status)
+		user, status := store.GetStore().GetUser(project.ID, documents[0].UserId)
+		assert.Equal(t, http.StatusFound, status)
+		domainUser, status := store.GetStore().GetUser(project.ID, user.Group3UserID)
+		assert.Equal(t, http.StatusFound, status)
+		assert.Equal(t, "abc.com", domainUser.Group3ID)
+	}
 }
 
 /*func TestHubspotOfflineTouchPoint(t *testing.T) {

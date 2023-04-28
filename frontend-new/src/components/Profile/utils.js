@@ -83,7 +83,7 @@ export const displayFilterOpts = {
   $salesforce_account: 'Salesforce Accounts'
 };
 
-export const formatFiltersForPayload = (filters = []) => {
+export const formatFiltersForPayload = (filters = [], returnArray) => {
   const filterProps = [];
   filters.forEach((fil) => {
     if (Array.isArray(fil.values)) {
@@ -108,7 +108,30 @@ export const formatFiltersForPayload = (filters = []) => {
       });
     }
   });
-  return filterProps;
+  
+  if (returnArray) {
+	return filterProps
+  }
+  
+  var filtersMap = {}
+  const groups = ["$hubspot_company", "$salesforce_account", "$6signal"]
+  filterProps.forEach((filter) => {
+    let group = filter.props[0]
+    let groupName = ""
+    groups.every((elem) => {
+      if (group.toLowerCase().includes(elem)) {
+        groupName = elem
+        return false
+      }
+      return true
+    });
+    groupName = groupName === ""? "users":groupName
+    if (filtersMap[groupName] === undefined){
+      filtersMap[groupName] = new Array()
+    }
+	filtersMap[groupName].push(filter)
+  });
+  return filtersMap
 };
 
 export const formatEventsFromSegment = (ewp) => {
@@ -484,7 +507,7 @@ export const getSegmentQuery = (queries, queryOptions, userType) => {
   query.to = period.to;
 
   query.ewp = getEventsWithProperties(queries);
-  query.gup = formatFiltersForPayload(queryOptions?.globalFilters);
+  query.gup = formatFiltersForPayload(queryOptions?.globalFilters, true);
 
   query.ec = EVENT_QUERY_USER_TYPE[userType];
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';

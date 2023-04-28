@@ -8,18 +8,18 @@ import (
 	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 const EmptyJsonStr = "{}"
 
 var AllowedSfEventTypeForOTP = []string{
-
 	U.EVENT_NAME_SALESFORCE_TASK_CREATED,
 	U.EVENT_NAME_SALESFORCE_TASK_UPDATED,
 	U.EVENT_NAME_SALESFORCE_EVENT_CREATED,
@@ -76,7 +76,6 @@ func WorkerForSfOtp(projectID int64, wg *sync.WaitGroup) {
 		switch eventName {
 		case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED:
 			RunSFOfflineTouchPointRuleForCampaignMember(project, &otpRules, startTime, endTime, eventName, logCtx)
-
 		case U.EVENT_NAME_SALESFORCE_TASK_UPDATED, U.EVENT_NAME_SALESFORCE_TASK_CREATED:
 			RunSFOfflineTouchPointRuleForTasks(project, &otpRules, &uniqueOTPEventKeys, startTime, endTime, eventName, logCtx)
 

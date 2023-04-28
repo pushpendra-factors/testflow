@@ -165,20 +165,39 @@ type Model interface {
 	CreateDashboardUnitForMultipleDashboards(dashboardIds []int64, projectId int64, agentUUID string, unitPayload model.DashboardUnitRequestPayload) ([]*model.DashboardUnit, int, string)
 	CreateMultipleDashboardUnits(requestPayload []model.DashboardUnitRequestPayload, projectId int64, agentUUID string, dashboardId int64) ([]*model.DashboardUnit, int, string)
 	GetDashboardUnitsForProjectID(projectID int64) ([]model.DashboardUnit, int)
+	GetAttributionDashboardUnitsForProjectID(projectID int64) ([]model.DashboardUnit, int)
 	GetDashboardUnits(projectID int64, agentUUID string, dashboardId int64) ([]model.DashboardUnit, int)
+	GetDashboardUnitByDashboardID(projectId int64, dashboardId int64) ([]model.DashboardUnit, int)
 	GetDashboardUnitByUnitID(projectID int64, unitID int64) (*model.DashboardUnit, int)
 	GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID int64, dashboardID int64, types []string) ([]model.DashboardUnit, int)
 	DeleteDashboardUnit(projectID int64, agentUUID string, dashboardId int64, id int64) int
 	DeleteMultipleDashboardUnits(projectID int64, agentUUID string, dashboardID int64, dashboardUnitIDs []int64) (int, string)
 	UpdateDashboardUnit(projectId int64, agentUUID string, dashboardId int64, id int64, unit *model.DashboardUnit) (*model.DashboardUnit, int)
 	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool, startTimeForCache int64)
+	DBCacheAttributionDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool, startTimeForCache int64)
 	CacheDashboardUnitsForProjectID(projectID int64, dashboardUnits []model.DashboardUnit, queryClasses []string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool, startTimeCache int64) int
+	CacheAttributionDashboardUnitsForProjectID(projectID int64, dashboardUnits []model.DashboardUnit, queryClasses []string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool, startTimeCache int64) int
+	CacheAttributionDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool, startCacheTime int64)
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool, startCacheTime int64)
+	RunCachingForLast3MonthsAttribution(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString, logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
+
+	// all dashboard runs for am unit
+	RunCustomQueryRangeCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,
+		logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
+	RunEverydayCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString, logCtx *log.Entry,
+		queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
+	RunCachingToBackFillRanges(dashboardUnit model.DashboardUnit, startTimeForCache int64,
+		timezoneString U.TimeZoneString, logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
+	RunEverydayCachingForAttribution(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,
+		logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
+
 	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string)
 	GetQueryAndClassFromQueryIdString(queryIdString string, projectId int64) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetQueryWithQueryIdString(projectID int64, queryIDString string) (*model.Queries, int)
+
 	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload, enableFilterOpt bool) (int, string, model.CachingUnitReport)
+	CacheAttributionDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload, enableFilterOpt bool) (int, string, model.CachingUnitReport)
 	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool)
 	GetDashboardUnitNamesByProjectIdTypeAndName(projectID int64, reqID string, typeOfQuery string, nameOfQuery string) ([]string, int)
 	GetDashboardUnitNamesByProjectIdTypeAndPropertyMappingName(projectID int64, reqID, propertyMappingName string) ([]string, int)
@@ -431,6 +450,7 @@ type Model interface {
 	GetAllPathAnalysisEnabledProjects() ([]int64, error)
 	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
 	GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error)
+	UpdateAccScoreWeights(projectId int64, weights model.AccWeights) error
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
 
@@ -579,6 +599,7 @@ type Model interface {
 	UpdateUserGroupProperties(projectID int64, userID string, newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int)
 	GetPropertiesUpdatedTimestampOfUser(projectId int64, id string) (int64, int)
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
+	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 
 	// web_analytics
 	GetWebAnalyticsQueriesFromDashboardUnits(projectID int64) (int64, *model.WebAnalyticsQueries, int)
@@ -810,9 +831,14 @@ type Model interface {
 	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int)
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
-	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
+	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int)
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 	GetAssociatedGroup(projectID int64, userID string, groupName string) (string, error)
+	GetGroupNameIDMap(projectID int64) (map[string]int, int)
+	GetAccountsAssociatedToDomain(projectID int64, id string, domainGroupId int) ([]model.User, int)
+	GetSourceStringForAccountsV2(projectID int64, source string) (string, int, int)
+	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (string, map[string]interface{}, int)
+	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, int)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
@@ -894,6 +920,14 @@ type Model interface {
 	GetPropertyMappingsByProjectIdAndSectionBitMap(projectID int64, sectionBitMap int64) ([]*model.PropertyMapping, string, int)
 	DeletePropertyMappingByID(projectID int64, id string) int
 
+	//account scoring
+	GetWeightsByProject(project_id int64) (*model.AccWeights, int)
+	UpdateUserEventsCount(ev []model.EventsCountScore) error
+	UpdateGroupEventsCount(ev []model.EventsCountScore) error
+	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, error)
+	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
+	GetAllUserScore(project_id int64, debug bool) ([]model.AllUsersScore, error)
+
 	// Slack
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
@@ -903,6 +937,7 @@ type Model interface {
 	SetAuthTokenforTeamsIntegration(projectID int64, agentUUID string, authTokens model.TeamsAccessTokens) error
 	GetTeamsAuthTokens(projectID int64, agentUUID string) (model.TeamsAccessTokens, error)
 	DeleteTeamsIntegration(projectID int64, agentUUID string) error
+
 	// Currency
 	CreateCurrencyDetails(currency string, date int64, value float64) error
 	GetCurrencyDetails(currency string, date int64) ([]model.Currency, error)

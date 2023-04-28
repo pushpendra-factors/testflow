@@ -1043,7 +1043,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var addSourceStmt string
-	addColString := " " + "users.updated_at, users.is_group_user,"
+	addColString := " " + "users.updated_at,"
 	var selectVal string
 	if C.EnableOptimisedFilterOnEventUserQuery() {
 		selectVal = "_event_users_view"
@@ -1060,7 +1060,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		} else {
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.source=", selectVal) + strconv.Itoa(model.UserSourceMap[source])
 		}
-		addColString = addColString + " " + "users.source"
+		addColString = addColString + " users.is_group_user, users.source"
 		status = http.StatusOK
 	} else if caller == model.ACCOUNT_PROFILE_CALLER {
 		group, errCode := store.GetGroup(projectID, source)

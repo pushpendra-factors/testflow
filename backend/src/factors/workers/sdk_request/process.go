@@ -66,6 +66,7 @@ func main() {
 	formFillIdentifyAllowedProjectIDs := flag.String("form_fill_identify_allowed_projects", "", "Form fill identification allowed project ids.")
 	enableSixSignalGroupByProjectID := flag.String("enable_six_signal_group_by_project_id", "", "")
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
+	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -117,6 +118,7 @@ func main() {
 		FormFillIdentificationAllowedProjects:              *formFillIdentifyAllowedProjectIDs,
 		EnableSixSignalGroupByProjectID:                    *enableSixSignalGroupByProjectID,
 		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
+		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
 	}
 	C.InitConf(config)
 

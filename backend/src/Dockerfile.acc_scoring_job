@@ -1,0 +1,11 @@
+FROM golang:1.14-buster
+WORKDIR /go/src/factors
+ADD /factors .
+
+# Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+
+ENV GOPATH /go
+RUN apt-get update -y && apt-get install -y ca-certificates && go build -o /go/bin/acc_scoring /go/src/factors/scripts/run_account_scoring/run_account_scoring.go
+
+ENTRYPOINT ["/go/bin/acc_scoring"]

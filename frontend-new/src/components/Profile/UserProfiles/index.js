@@ -323,7 +323,7 @@ function UserProfiles({
 
   useEffect(() => {
     const opts = { ...timelinePayload };
-    opts.filters = formatFiltersForPayload(timelinePayload.filters);
+    opts.filters = formatFiltersForPayload(timelinePayload.filters, false);
     getProfileUsers(activeProject.id, opts);
   }, [activeProject.id, timelinePayload, currentProjectSettings, segments]);
 
@@ -678,7 +678,7 @@ function UserProfiles({
     };
     const payload = { ...timelinePayload };
     searchFilter.values.push(...val.map((vl) => JSON.parse(vl)[0]));
-    payload.search_filter = formatFiltersForPayload([searchFilter]);
+    payload.search_filter = formatFiltersForPayload([searchFilter], false);
     setListSearchItems(searchFilter.values);
     setTimelinePayload(payload);
   };

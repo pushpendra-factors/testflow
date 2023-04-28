@@ -1,9 +1,7 @@
-package slack_alert
+package v1
 
-import (
-	"bytes"
+import(
 	"encoding/json"
-	"errors"
 	C "factors/config"
 	mid "factors/middleware"
 	"factors/model/model"
@@ -14,8 +12,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
+	slack "factors/integration/slack"
 )
-
 type oauthState struct {
 	ProjectID int64   `json:"project_id"`
 	AgentUUID *string `json:"agent_uuid"`
@@ -149,7 +147,7 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get slack auth token"})
 		return
 	}
-	jsonResponse, status, err := GetSlackChannels(accessTokens, "")
+	jsonResponse, status, err := slack.GetSlackChannels(accessTokens, "")
 	if err != nil {
 		c.JSON(status, gin.H{"error": err})
 	}
@@ -191,7 +189,7 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 	}
 	nextCursor := responseMetadata["next_cursor"].(string)
 	for nextCursor != "" {
-		jsonResponse, status, err = GetSlackChannels(accessTokens, nextCursor)
+		jsonResponse, status, err = slack.GetSlackChannels(accessTokens, nextCursor)
 		if err != nil {
 			c.JSON(status, gin.H{"error": err})
 			return
@@ -214,35 +212,6 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, channels)
 }
-func GetSlackChannels(accessTokens model.SlackAccessTokens, nextCursor string) (response map[string]interface{}, status int, err error) {
-	request, err := http.NewRequest("GET", fmt.Sprintf("https://slack.com/api/conversations.list"), nil)
-	if err != nil {
-		log.Error("Failed to create request to get slack channels list")
-		return nil, http.StatusInternalServerError, errors.New("Failed to create request to get slack channels list")
-	}
-	q := request.URL.Query()
-	q.Add("types", "public_channel,private_channel,mpim")
-	q.Add("limit", "2000")
-	if nextCursor != "" {
-		q.Add("cursor", nextCursor)
-	}
-	request.URL.RawQuery = q.Encode()
-	request.Header.Set("Content-Type", "application/json; charset=utf-8")
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.UserAccessToken))
-	client := &http.Client{}
-	resp, err := client.Do(request)
-	if err != nil {
-		log.Error("Failed to get slack channels list")
-		return nil, http.StatusInternalServerError, errors.New("Failed to get slack channels list")
-	}
-	var jsonResponse map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
-	if err != nil {
-		log.Error("failed to decode json response", err)
-		return jsonResponse, http.StatusInternalServerError, errors.New("failed to decode json response.")
-	}
-	return jsonResponse, http.StatusOK, nil
-}
 func DeleteSlackIntegrationHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
@@ -258,49 +227,4 @@ func DeleteSlackIntegrationHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": "Slack integration deleted successfully"})
-}
-func SendSlackAlert(projectID int64, message, agentUUID string, channel model.SlackChannel) (bool, error) {
-	// get the auth token for the agent uuid and then call the POST method to send the message
-	accessTokens, err := store.GetStore().GetSlackAuthToken(projectID, agentUUID)
-	if err != nil {
-		log.Error("Failed to get access token for slack")
-		return false, err
-	}
-	url := fmt.Sprintf("https://slack.com/api/chat.postMessage")
-	// create new http post request
-	reqBody := map[string]interface{}{
-		"channel":      channel.Id,
-		"blocks":       message,
-		"unfurl_links": false,
-	}
-	jsonBody, err := json.Marshal(reqBody)
-	if err != nil {
-		log.Error("Failed to marshal request body for slack")
-		return false, err
-	}
-	request, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-	request.Header.Set("Content-Type", "application/json; charset=utf-8")
-	if channel.IsPrivate {
-		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.UserAccessToken))
-	} else {
-		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.BotAccessToken))
-	}
-	client := &http.Client{}
-	resp, err := client.Do(request)
-	if err != nil {
-		log.Error("Failed to make request to slack for sending alert")
-		return false, err
-	}
-	var response map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
-		log.Error("Failed to decode response from slack")
-		return false, err
-	}
-	if response["ok"] == true {
-		return true, nil
-	}
-	log.Error("failed to send slack alert ", message, response)
-	defer resp.Body.Close()
-	return false, errors.New("Failed to send slack alert")
 }

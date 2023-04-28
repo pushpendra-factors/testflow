@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	C "factors/config"
-	"factors/delta"
+	"factors/integration/six_signal"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -23,7 +23,7 @@ const (
 	INVALID_INPUT   = "INVALID_INPUT"
 )
 
-//GetSixSignalReportHandler fetches the saved sixsignal report from cloud storage if the isSaved parameter in request payload is true
+// GetSixSignalReportHandler fetches the saved sixsignal report from cloud storage if the isSaved parameter in request payload is true
 //if the isSaved parameter is false the handler computes the result on the go.
 //The report fetched from the cloud are allowed to share and the result computed on the go is not allowed to share which is reflected
 //in the response parameter isShareable.
@@ -93,7 +93,7 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 	return result, http.StatusOK, "", "", false
 }
 
-//GetSixSignalPublicReportHandler fetches the sixsignal report from cloud storage for public URLs
+// GetSixSignalPublicReportHandler fetches the sixsignal report from cloud storage for public URLs
 func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
@@ -143,7 +143,7 @@ func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, 
 
 }
 
-//CreateSixSignalShareableURLHandler saves the query to the queries table and generate a queryID for shareable URL
+// CreateSixSignalShareableURLHandler saves the query to the queries table and generate a queryID for shareable URL
 func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, string, bool) {
 
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
@@ -197,7 +197,7 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 		Type:      model.QueryTypeSixSignalQuery,
 	}
 
-	queryId, errCode, errMsg := delta.CreateSixSignalShareableURL(queryRequest, projectID, agentUUID)
+	queryId, errCode, errMsg := six_signal.CreateSixSignalShareableURL(queryRequest, projectID, agentUUID)
 	if errCode != http.StatusCreated {
 		logCtx.Error(errMsg)
 		return nil, errCode, errMsg, true
@@ -211,7 +211,7 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 	return response, http.StatusCreated, "Shareable Query creation successful", false
 }
 
-//SendSixSignalReportViaEmailHandler SendSixSignalReportViaEmail sends mail to the emailIDs provided by clients
+// SendSixSignalReportViaEmailHandler SendSixSignalReportViaEmail sends mail to the emailIDs provided by clients
 func SendSixSignalReportViaEmailHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	r := c.Request
@@ -245,7 +245,7 @@ func SendSixSignalReportViaEmailHandler(c *gin.Context) (interface{}, int, strin
 
 }
 
-//AddSixSignalEmailIDHandler adds emailIDs provided by clients to the DB
+// AddSixSignalEmailIDHandler adds emailIDs provided by clients to the DB
 func AddSixSignalEmailIDHandler(c *gin.Context) (interface{}, int, string, bool) {
 	r := c.Request
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
@@ -294,7 +294,7 @@ func AddSixSignalEmailIDHandler(c *gin.Context) (interface{}, int, string, bool)
 	return "EmailID added successfully", http.StatusCreated, "", false
 }
 
-//FetchListofDatesForSixSignalReport fetches the list of dates for which the report is present in cloud storage
+// FetchListofDatesForSixSignalReport fetches the list of dates for which the report is present in cloud storage
 func FetchListofDatesForSixSignalReport(c *gin.Context) (interface{}, int, string, bool) {
 
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
@@ -338,7 +338,7 @@ func FetchListofDatesForSixSignalReport(c *gin.Context) (interface{}, int, strin
 	return dateList, http.StatusFound, "", false
 }
 
-//getFolderName generate folder name using from, to and timezone from sixsignal query
+// getFolderName generate folder name using from, to and timezone from sixsignal query
 func getFolderName(query model.SixSignalQuery) string {
 	commonQueryFrom := query.From
 	commonQueryTo := query.To
@@ -350,6 +350,7 @@ func getFolderName(query model.SixSignalQuery) string {
 	return folderName
 }
 
+// GetSixSignalAnalysisData fetches the sixsignal report cloud storage path and reads the report file.
 func GetSixSignalAnalysisData(projectId int64, id string) map[int]model.SixSignalResultGroup {
 
 	cloudManager := C.GetCloudManager(projectId, true)

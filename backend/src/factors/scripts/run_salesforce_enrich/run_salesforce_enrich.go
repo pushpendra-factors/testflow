@@ -148,6 +148,7 @@ func main() {
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
 	allowedSalesforceSyncDocTypes := flag.String("allowed_salesforce_doc_types_for_sync", "*", "")
 	enableFieldsSyncByProjectID := flag.String("enable_fields_sync_by_project_ids", "", "Use FIELDS() for sync if Request Header is Too Large")
+	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -216,6 +217,7 @@ func main() {
 		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
 		AllowedSalesforceSyncDocTypes:                      *allowedSalesforceSyncDocTypes,
 		EnableFieldsSyncByProjectID:                        *enableFieldsSyncByProjectID,
+		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
 	}
 
 	C.InitConf(config)
@@ -276,6 +278,23 @@ func main() {
 				} else {
 					syncStatus.Success = append(syncStatus.Success, objectStatus[i])
 				}
+			}
+
+			if C.AllowSyncReferenceFields(pid) {
+				log.Info(fmt.Sprintf("Starting sync reference fields for project %d", pid))
+
+				accessToken, instanceURL, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
+				if err != nil {
+					log.WithField("project_id", pid).Errorf("Failed to get salesforce access token for sync reference fields: %s", err)
+					continue
+				}
+
+				failure := IntSalesforce.SyncReferenceField(pid, accessToken, instanceURL)
+				if failure {
+					anyFailure = true
+				}
+
+				log.Info(fmt.Sprintf("Synced reference fields for project %d", pid))
 			}
 
 			failure, propertyDetailSync := IntSalesforce.SyncDatetimeAndNumericalProperties(pid, accessToken, instanceURL)

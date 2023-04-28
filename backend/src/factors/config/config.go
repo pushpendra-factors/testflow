@@ -269,6 +269,7 @@ type Configuration struct {
 	BlockedEmailList                                   []string
 	BlockedIPList                                      []string
 	BlockedEmailDomainList                             []string
+	AllAccountsProjectId                               string
 	DBMaxAllowedPacket                                 int64
 	AllowIdentificationOverwriteUsingSourceByProjectID string
 	AllowHubspotPastEventsEnrichmentByProjectID        string
@@ -306,6 +307,7 @@ type Configuration struct {
 	CustomDateStart                                    int64
 	CustomDateEnd                                      int64
 	EnableFieldsSyncByProjectID                        string
+	EnableUserDomainsGroupByProjectID                  string
 }
 
 type Services struct {
@@ -342,6 +344,7 @@ const (
 	HealthcheckBigqueryUploadPingID              = "03e0fba3-d660-4679-8595-29b6cd04e87c"
 	HealthcheckCleanupEventUserCachePingID       = "85e21b5c-5503-4172-af40-de918741a4d1"
 	HealthcheckDashboardCachingPingID            = "72e5eadc-b46e-45ca-ba78-29819532307d"
+	HealthcheckDashboardDBAttributionPingID      = "5dfce175-273d-4096-ad70-578270621e8c"
 	HealthcheckHubspotEnrichPingID               = "6f522e60-6bf8-4aea-99fe-f5a1c68a00e7"
 	HealthcheckOTPHubspotPingID                  = "c937adf4-a54d-4ee8-8ec9-3e5ed8a83e42"
 	HealthcheckOTPSalesforcePingID               = "4ffe2119-64bc-41d4-bc5a-64bea0f121b7"
@@ -2082,6 +2085,15 @@ func IsIPBlockingFeatureEnabled(projectID int64) bool {
 	return false
 }
 
+// IsDomainEnabled - Checks if $domain is enabled for given project_id in all accounts
+func IsDomainEnabled(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllAccountsProjectId, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
 // PingHealthcheckForSuccess Ping healthchecks.io for cron success.
 func PingHealthcheckForSuccess(healthcheckID string, message interface{}) {
 	log.Info("Job successful with message ", message)
@@ -2697,6 +2709,15 @@ func IsSalesforceDocTypeEnabledForSync(docType string) bool {
 
 func IsFieldsSyncAllowedForProjectID(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableFieldsSyncByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return projectIDsMap[projectID]
+}
+
+func EnableUserDomainsGroupByProjectID(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableUserDomainsGroupByProjectID, "")
 	if allProjects {
 		return true
 	}

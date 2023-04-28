@@ -2733,6 +2733,37 @@ func (store *MemSQL) UpdateGroupUserDomainsGroup(projectID int64, groupUserID, g
 	return store.updateUserGroup(projectID, user, groupUserID, group.ID, domainsGroupID, domainsUserID, overwrite)
 }
 
+func (store *MemSQL) updateUserDomainsGroup(projectID int64, userIDs []string, domainGroupIndex int, domainsUserID string) int {
+	logFields := log.Fields{
+		"project_id":         projectID,
+		"user_ids":           userIDs,
+		"domain_user_id":     domainsUserID,
+		"domain_group_index": domainGroupIndex,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || len(userIDs) == 0 || domainGroupIndex <= 0 || domainsUserID == "" {
+		logCtx.Error("Invalid parameters.")
+		return http.StatusBadRequest
+	}
+
+	groupUserIDColumn := fmt.Sprintf("group_%d_user_id", domainGroupIndex)
+
+	db := C.GetServices().Db
+	update := map[string]string{
+		groupUserIDColumn: domainsUserID,
+	}
+
+	err := db.Model(model.User{}).Where("project_id = ? AND id IN ( ? )", projectID, userIDs).Updates(update).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to updateUserDomainsGroup.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
 func (store *MemSQL) UpdateUserGroupProperties(projectID int64, userID string,
 	newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int) {
 	logFields := log.Fields{
@@ -2938,4 +2969,115 @@ func (store *MemSQL) PullUsersRowsForWIV1(projectID int64, startTime, endTime in
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err
+}
+
+func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int {
+
+	logFields := log.Fields{"project_id": projectID, "request_user_id": requestUserID, "request_group_name": requestGroupName,
+		"request_group_user_id": requestGroupUserID, "source": source}
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || requestUserID == "" || source == "" {
+		logCtx.Error("Invalid parameters.")
+		return http.StatusBadRequest
+	}
+
+	if requestGroupName != "" && !U.ContainsStringInArray(model.AccountGroupAssociationPrecedence, requestGroupName) {
+		logCtx.Error("Invalid group name on AssociateUserDomainsGroup.")
+		return http.StatusBadRequest
+	}
+
+	groups, status := store.GetGroups(projectID)
+	if status != http.StatusFound {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to get groups on AssociateUserDomainsGroup.")
+		return status
+	}
+
+	groupIDMap := make(map[string]int)
+	for i := range groups {
+		groupIDMap[groups[i].Name] = groups[i].ID
+	}
+
+	if groupIDMap[model.GROUP_NAME_DOMAINS] == 0 && requestGroupName != "" && groupIDMap[requestGroupName] == 0 {
+		logCtx.Error("Missing domains group or request group.")
+		return http.StatusBadRequest
+	}
+
+	requestUser, status := store.GetUserWithoutProperties(projectID, requestUserID)
+	if status != http.StatusFound {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to get user in AssociateUserDomainsGroup.")
+		return http.StatusInternalServerError
+	}
+
+	users := []model.User{*requestUser}
+	if requestUser.CustomerUserId != "" {
+		usersByCustomerUserID, status := store.GetUsersByCustomerUserID(projectID, requestUser.CustomerUserId)
+		if status != http.StatusFound {
+			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to get users by customers on AssociateUserDomainsGroup.")
+			return http.StatusInternalServerError
+		}
+
+		if len(users) > 100 {
+			logCtx.WithFields(log.Fields{"customer_user_id": requestUser.CustomerUserId}).Error("Number of users by customer user id exceeds 100 in AssociateUserDomainsGroup.")
+		}
+
+		users = usersByCustomerUserID
+	}
+
+	requiredGroupIDsByPrecedence := make([]int, 0)
+	for _, requiredGroup := range model.AccountGroupAssociationPrecedence {
+		if groupIDMap[requiredGroup] != 0 {
+			requiredGroupIDsByPrecedence = append(requiredGroupIDsByPrecedence, groupIDMap[requiredGroup])
+		}
+	}
+
+	userGroupUserIDs, err := model.GetUserGroupUserIDsByGroupIDs(projectID, users, requiredGroupIDsByPrecedence)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to GetUserGroupUserIDsByGroupIDs on AssociateUserDomainsGroup.")
+		return http.StatusInternalServerError
+	}
+
+	if requestGroupName != "" && requestGroupUserID != "" {
+		userGroupUserIDs[groupIDMap[requestGroupName]] = requestGroupUserID
+	}
+
+	leadingGroupUserID := ""
+	for i := range requiredGroupIDsByPrecedence {
+		if groupUserID, exist := userGroupUserIDs[requiredGroupIDsByPrecedence[i]]; exist && groupUserID != "" {
+			leadingGroupUserID = groupUserID
+			break
+		}
+	}
+
+	if leadingGroupUserID == "" {
+		logCtx.Warning("No leading group user id found.")
+		return http.StatusNotModified
+	}
+
+	groupUser, status := store.GetUser(projectID, leadingGroupUserID)
+	if status != http.StatusFound {
+		logCtx.WithFields(log.Fields{"group_user_id": leadingGroupUserID}).Error("Failed to get group user.")
+		return http.StatusInternalServerError
+	}
+
+	domainUserID, err := model.GetGroupUserDomainsUserID(groupUser, groupIDMap[model.GROUP_NAME_DOMAINS])
+	if err != nil || domainUserID == "" {
+		logCtx.WithFields(log.Fields{"group_user": groupUser, "domain_group_id": groupIDMap[model.GROUP_NAME_DOMAINS]}).WithError(err).
+			Error("Failed to get domains user id.")
+		return http.StatusInternalServerError
+	}
+
+	userIDs := []string{}
+	for i := range users {
+		userIDs = append(userIDs, users[i].ID)
+	}
+
+	status = store.updateUserDomainsGroup(projectID, userIDs, groupIDMap[model.GROUP_NAME_DOMAINS], domainUserID)
+	if status != http.StatusAccepted && status != http.StatusNotModified {
+		logCtx.WithFields(log.Fields{"user_id": userIDs, "domain_group_index": groupIDMap[model.GROUP_NAME_DOMAINS], "domain_user_id": domainUserID}).
+			Error("Failed to update domains user id on user.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
 }
