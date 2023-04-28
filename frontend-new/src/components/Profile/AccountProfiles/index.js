@@ -667,7 +667,7 @@ function AccountProfiles({
     const fetchData = async () => {
       const newCompanyValues = { All: {} };
       for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
-        if (groupOpts.find((elem) => elem.group_name === group)) {
+        if (groupOpts?.find((elem) => elem.group_name === group)) {
           try {
             const res = await fetchGroupPropertyValues(
               activeProject.id,

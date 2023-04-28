@@ -166,7 +166,7 @@ const EventBasedAlert = ({
   useEffect(() => {
     let DDCategory = [];
     const { group_name } =
-      groupOpts.find((group) => group?.group_name === queries[0]?.group) || [];
+      groupOpts?.find((group) => group?.group_name === queries[0]?.group) || [];
     for (const key of Object.keys(eventProperties)) {
       if (key === queries[0]?.label) {
         DDCategory = _.union(eventProperties[queries[0]?.label], DDCategory);
@@ -210,7 +210,7 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     const { group_name } =
-      groupOpts.find(
+      groupOpts?.find(
         (group) => group?.group_name === viewAlertDetails?.event_alert?.event
       ) || [];
     if (viewAlertDetails?.event_alert?.event) {

@@ -293,7 +293,7 @@ export default function FilterBlock({
           groupOpts = filterType === 'analytics' ? [options[0]] : options;
         }
 
-        groupOpts.forEach((group, grpIndex) => {
+        groupOpts?.forEach((group, grpIndex) => {
           const collState =
             groupCollapseState[grpIndex] || searchTerm.length > 0;
           renderOptions.push(
