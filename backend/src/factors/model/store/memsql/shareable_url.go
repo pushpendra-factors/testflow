@@ -328,7 +328,7 @@ func (store *MemSQL) ValidateCreateShareableURLRequest(params *model.ShareableUR
 		return false, "Invalid share type."
 	}
 
-	if params.EntityType == model.ShareableURLEntityTypeQuery || params.EntityType == model.ShareableURLEntityTypeSixSignal {
+	if params.EntityType == model.ShareableURLEntityTypeQuery {
 		query, err := store.GetQueryWithQueryId(projectID, params.EntityID)
 		logCtx.Info("Query fetched : ", query)
 		if err != http.StatusFound {
@@ -349,6 +349,7 @@ func (store *MemSQL) ValidateCreateShareableURLRequest(params *model.ShareableUR
 	} else if params.EntityType == model.ShareableURLEntityTypeTemplate {
 
 	}
+
 	logCtx.Info("Shareable URls is valid: ", params)
 	return true, ""
 }

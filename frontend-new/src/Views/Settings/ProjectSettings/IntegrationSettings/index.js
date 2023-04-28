@@ -436,7 +436,7 @@ function IntegrationSettings({
                       ) {
                         if (
                           item.name === 'Microsoft Teams' &&
-                          activeProject?.id === '1125899929000011'
+                          (activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007')
                         ) {
                           return (
                             <IntegrationCard

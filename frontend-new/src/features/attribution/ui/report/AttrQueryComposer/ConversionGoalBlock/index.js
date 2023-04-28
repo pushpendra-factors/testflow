@@ -14,6 +14,7 @@ import { compareFilters, groupFilters } from 'Utils/global';
 import { fetchKPIConfigWithoutDerivedKPI } from 'Reducers/kpi';
 
 import { TOOLTIP_CONSTANTS } from '../../../../../../constants/tooltips.constans';
+import EventFilterWrapper from 'Components/KPIComposer/EventFilterWrapper';
 
 function ConversionGoalBlock({
   eventGoal,
@@ -54,12 +55,10 @@ function ConversionGoalBlock({
   };
 
   useEffect(() => {
-    if (!group_analysis || group_analysis === 'users') {
-      setEventPropsForUserGroup();
-    } else {
+    if (eventGoal) {
       setFilterPropsforKpiGroups();
     }
-  }, [userProperties, eventProperties, group_analysis]);
+  }, [userProperties, eventProperties, group_analysis, eventGoal]);
 
   useEffect(() => {
     if (
@@ -106,10 +105,10 @@ function ConversionGoalBlock({
     setFilterProperties(assignFilterProps);
   };
 
-  const getKPIProps = (groupName) => {
+  const getKPIProps = () => {
     let KPIlist = KPI_config || [];
     let selGroup = KPIlist.find((item) => {
-      return item?.display_category == groupName;
+      return item?.display_category == eventGoal.group;
     });
 
     let DDvalues = selGroup?.properties?.map((item) => {
@@ -206,6 +205,30 @@ function ConversionGoalBlock({
     );
   };
 
+  const renderFilterWrapper = (
+    index,
+    refValue,
+    filter,
+    showOr,
+    inFilter,
+    deleteFilter
+  ) =>
+    (
+      <EventFilterWrapper
+        index={index}
+        filter={filter}
+        event={eventGoal}
+        filterProps={filterProps}
+        activeProject={activeProject}
+        deleteFilter={deleteFilter}
+        insertFilter={inFilter}
+        closeFilter={closeFilter}
+        selectedMainCategory={eventGoal}
+        showOr={showOr}
+        refValue={refValue}
+      />
+    );
+
   const eventFilters = () => {
     const filters = [];
     let index = 0;
@@ -228,33 +251,28 @@ function ConversionGoalBlock({
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-                <FilterWrapper
-                  index={index}
-                  filter={filter}
-                  filterProps={filterProps}
-                  projectID={activeProject?.id}
-                  deleteFilter={delFilter}
-                  insertFilter={(val, index) => editFiler(index, val)}
-                  closeFilter={closeFilter}
-                  event={eventGoal}
-                  refValue={refValue}
-                />
+              {renderFilterWrapper(
+                  index,
+                  refValue,
+                  filter,
+                  false,
+                  (val, index) => editFiler(index, val),
+                  delFilter
+                )}
               </div>
               {index !== orFilterIndex && (
                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex} />
               )}
               {index === orFilterIndex && (
                 <div key={'init'}>
-                  <FilterWrapper
-                    filterProps={filterProps}
-                    projectID={activeProject?.id}
-                    event={eventGoal}
-                    deleteFilter={() => closeFilter()}
-                    insertFilter={addFilter}
-                    closeFilter={closeFilter}
-                    refValue={refValue}
-                    showOr={true}
-                  />
+                  {renderFilterWrapper(
+                    undefined,
+                    refValue,
+                    undefined,
+                    true,
+                    addFilter,
+                    closeFilter
+                  )}
                 </div>
               )}
             </div>
@@ -264,31 +282,24 @@ function ConversionGoalBlock({
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-                <FilterWrapper
-                  index={index}
-                  filter={filtersGr[0]}
-                  filterProps={filterProps}
-                  projectID={activeProject?.id}
-                  deleteFilter={delFilter}
-                  insertFilter={(val, index) => editFiler(index, val)}
-                  closeFilter={closeFilter}
-                  event={eventGoal}
-                  refValue={refValue}
-                />
+              {renderFilterWrapper(
+                  index,
+                  refValue,
+                  filtersGr[0],
+                  false,
+                  (val, index) => editFiler(index, val),
+                  delFilter
+                )}
               </div>
               <div key={index + 1}>
-                <FilterWrapper
-                  index={index + 1}
-                  filter={filtersGr[1]}
-                  filterProps={filterProps}
-                  projectID={activeProject?.id}
-                  deleteFilter={delFilter}
-                  insertFilter={(val, index) => editFiler(index, val)}
-                  closeFilter={closeFilter}
-                  event={eventGoal}
-                  refValue={refValue}
-                  showOr={true}
-                />
+              {renderFilterWrapper(
+                  index + 1,
+                  refValue,
+                  filtersGr[1],
+                  true,
+                  (val, index) => editFiler(index, val),
+                  delFilter
+                )}
               </div>
             </div>
           );

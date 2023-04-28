@@ -27,6 +27,8 @@ spec:
             - $(ENV)
             - --bucket_name
             - $(BUCKET_NAME)
+            - --model_bucket_name
+            - factors-staging-models
             - --local_disk_tmp_dir
             - /tmp
             - --memsql_host
@@ -41,8 +43,17 @@ spec:
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
-            - --project_ids
-            - "399"
+            - --aws_region
+            - $(AWS_REGION)
+            - --aws_key
+            - $(AWS_KEY)
+            - --aws_secret
+            - $(AWS_SECRET)
+            - --email_sender
+            - $(EMAIL_SENDER)
+            - --app_domain
+            - $(APP_DOMAIN)
+            - --use_bucket_v2
             envFrom:
             - configMapRef:
                 name: config-env
@@ -52,4 +63,6 @@ spec:
                 name: config-memsql
             - secretRef:
                 name: secret-memsql
+            - secretRef:
+                name: secret-aws
           restartPolicy: OnFailure
