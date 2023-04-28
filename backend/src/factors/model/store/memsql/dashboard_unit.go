@@ -692,7 +692,9 @@ func (store *MemSQL) DBCacheAttributionDashboardUnitsForProjects(stringProjectsI
 				log.WithFields(logFields).Error("failed to get query class")
 				continue
 			}
-
+			// Overriding it because we need all attribution queries on QueryClassAttributionV1
+			// TODO after all queries are moved QueryClassAttributionV1
+			queryClass = model.QueryClassAttributionV1
 			// skip all other queries than attribution v1 query
 			if queryInfo.Type != model.QueryTypeAttributionV1Query {
 				continue
