@@ -181,7 +181,7 @@ const EnrichPages = ({
     if (data) {
       setData(data);
     }
-  }, [sixSignalConfig.pages_exclude, sixSignalConfig.pages_include, mode]);
+  }, [sixSignalConfig?.pages_exclude, sixSignalConfig?.pages_include, mode]);
 
   return (
     <div>
@@ -306,7 +306,7 @@ type ReduxProps = ConnectedProps<typeof connector>;
 type EnrichPage = {
   mode: FeatureModes;
   setMode: (value: FeatureModes) => void;
-  sixSignalConfig: SixSignalConfigType;
+  sixSignalConfig: SixSignalConfigType | null;
   projectId: string;
 };
 
