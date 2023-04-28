@@ -310,7 +310,7 @@ type ReduxProps = ConnectedProps<typeof connector>;
 type EnrichCountry = {
   mode: FeatureModes;
   setMode: (value: FeatureModes) => void;
-  sixSignalConfig: SixSignalConfigType;
+  sixSignalConfig: SixSignalConfigType | null;
   projectId: string;
 };
 
