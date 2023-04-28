@@ -73,7 +73,7 @@ func TeamsAuthRedirectHandler(c *gin.Context) {
 
 }
 func GetTeamsAuthorisationURL(tenantID, clientID, state string) string {
-	url := fmt.Sprintf(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=%s&response_type=code&response_mode=query&scope=Team.ReadBasic.All Channel.ReadBasic.All ChannelMessage.Send User.Read offline_access&state=%s&redirect_uri=%s&prompt=consent`, clientID, state, getTeamsCallbackURL())
+	url := fmt.Sprintf(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=%s&response_type=code&response_mode=query&scope=Team.ReadBasic.All Channel.ReadBasic.All ChannelMessage.Send User.Read offline_access&state=%s&redirect_uri=%s`, clientID, state, getTeamsCallbackURL())
 	return url
 }
 
