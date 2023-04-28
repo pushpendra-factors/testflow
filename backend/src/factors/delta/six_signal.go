@@ -215,27 +215,25 @@ func WriteSixSignalResultsToCloud(cloudManager *filestore.FileManager, diskManag
 
 // CreateSixSignalShareableURL saves the query to the queries table and generate the queryID for public-URL for the given queryRequest and projectId
 func CreateSixSignalShareableURL(queryRequest *model.Queries, projectId int64, agentUUID string) (string, int, string) {
+
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectId,
 		"query":      queryRequest,
 	})
+
+	isShared, _ := isReportShared(projectId, queryRequest.IdText)
+	if isShared {
+		logCtx.Info("Shareable query already shared.")
+		return queryRequest.IdText, http.StatusCreated, "Shareable Query already shared"
+	}
+
 	queries, errCode, errMsg := store.GetStore().CreateQuery(projectId, queryRequest)
 	if errCode != http.StatusCreated {
 		return "", errCode, errMsg
 	}
 
-	isShared, _ := isReportShared(projectId, queries.IdText)
-	if isShared {
-
-		logCtx.Info("Query Id if shared already: ", queries.IdText)
-		errCode1, errMsg1 := store.GetStore().DeleteQuery(projectId, queries.ID)
-		if errCode1 != http.StatusAccepted {
-			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg1)
-		}
-		return queries.IdText, http.StatusCreated, "Shareable Query already shared"
-	}
-
 	shareableUrlRequest := &model.ShareableURL{
+		QueryID:    queries.IdText,
 		EntityType: model.ShareableURLEntityTypeSixSignal,
 		EntityID:   queries.ID,
 		ShareType:  model.ShareableURLShareTypePublic,
@@ -244,25 +242,12 @@ func CreateSixSignalShareableURL(queryRequest *model.Queries, projectId int64, a
 		ExpiresAt:  time.Now().AddDate(0, 3, 0).Unix(),
 	}
 
-	valid, errMsg := store.GetStore().ValidateCreateShareableURLRequest(shareableUrlRequest, projectId, agentUUID)
-	if !valid {
-		logCtx.Error(errMsg)
-		errCode2, errMsg2 := store.GetStore().DeleteQuery(projectId, queries.ID)
-		if errCode2 != http.StatusAccepted {
-			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg2)
-			return "", http.StatusBadRequest, errMsg2
-		}
-		return "", http.StatusBadRequest, errMsg
-	}
-
-	logCtx.Info("Shareable urls after validation: ", shareableUrlRequest)
-	shareableUrlRequest.QueryID = queries.IdText
 	share, err := store.GetStore().CreateShareableURL(shareableUrlRequest)
 	if err != http.StatusCreated {
 		logCtx.Error("Failed to create shareable query")
-		errCode3, errMsg3 := store.GetStore().DeleteQuery(projectId, queries.ID)
-		if errCode3 != http.StatusAccepted {
-			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg3)
+		errCode, errMsg = store.GetStore().DeleteQuery(projectId, queries.ID)
+		if errCode != http.StatusAccepted {
+			logCtx.Warn("Failed to Delete Query in CreateSixSignalShareableURLHandler: ", errMsg)
 		}
 		return "", http.StatusInternalServerError, "Shareable query creation failed."
 	}
