@@ -149,6 +149,7 @@ const (
 	StartsWith              = "startsWith"
 	EndsWith                = "endsWith"
 	InList                  = "inList"
+	NotInList               = "notInList"
 )
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.

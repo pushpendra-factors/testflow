@@ -157,7 +157,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	}
 
 	for _, filter := range (*alertConfig).Filter {
-		if filter.Operator == model.InList {
+		if filter.Operator == model.InList || filter.Operator == model.NotInList {
 			// Get the cloud file that is there for the reference value
 			path, file := C.GetCloudManager(projectID, true).GetListReferenceFileNameAndPathFromCloud(projectID, filter.Value)
 			reader, err := C.GetCloudManager(projectID, true).Get(path, file)
