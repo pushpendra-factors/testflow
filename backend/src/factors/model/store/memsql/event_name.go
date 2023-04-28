@@ -361,9 +361,14 @@ func (store *MemSQL) GetEventName(name string, projectId int64) (*model.EventNam
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// Input Validation. (ID is to be auto generated)
-	if name == "" || name == "null" || projectId == 0 {
+	if name == "" || projectId == 0 {
 		log.Error("GetEventName Failed. Missing name or projectId")
 		return nil, http.StatusBadRequest
+	}
+
+	// invalid event names from frontend state issues.
+	if name == "null" || name == "undefined" {
+		return nil, http.StatusNotFound
 	}
 
 	var eventName model.EventName
@@ -371,11 +376,11 @@ func (store *MemSQL) GetEventName(name string, projectId int64) (*model.EventNam
 	if err := db.Limit(1).
 		Where("project_id = ? AND name = ?", projectId, name).
 		Find(&eventName).Error; err != nil {
-		log.WithFields(log.Fields{"projectId": projectId, "Name": name}).
-			WithError(err).Error("Getting eventName failed on GetEventName")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
+
+		log.WithFields(logFields).WithError(err).Error("Failed to get event_name.")
 		return nil, http.StatusInternalServerError
 	}
 	return &eventName, http.StatusFound
@@ -609,7 +614,7 @@ func getPropertyValuesByEventPropertyFromCache(projectID int64, eventName string
 }
 
 // We fetch properties from Cache and filter the required properties based on the eventName provided.
- 
+
 func (store *MemSQL) GetEventPropertiesAndModifyResultsForNonExplain(projectId int64, eventName string) (map[string][]string, int) {
 
 	logCtx := log.WithFields(log.Fields{

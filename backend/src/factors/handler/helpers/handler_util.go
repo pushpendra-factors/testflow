@@ -97,14 +97,10 @@ func AddPropertyLabelsToDashboardQueryResponsePayload(projectID int64, record Da
 	var err error
 	switch result := record.Result.(type) {
 	case []interface{}:
-		log.Error("Inside []interface{} in AddPropertyLabelsToDashboardQueryResponsePayload")
 		record.Result, err = AddPropertyLabelsToQueryCacheInterfaceArrayResponse(projectID, result)
 		return record, err
 	case map[string]interface{}:
-		log.Error("Inside map[string]interface{} in AddPropertyLabelsToDashboardQueryResponsePayload")
-		log.WithField("record_before", record).Warning("Record before AddPropertyLabelsToDashboardQueryResponsePayload")
 		record.Result, err = AddPropertyLabelsToQueryCacheResultGroupResponse(projectID, result)
-		log.WithField("record_after", record).Warning("Record before AddPropertyLabelsToDashboardQueryResponsePayload")
 		return record, err
 	default:
 		return record, errors.New("invalid record type on AddPropertyLabelsToDashboardQueryResponsePayload")
@@ -114,13 +110,10 @@ func AddPropertyLabelsToDashboardQueryResponsePayload(projectID int64, record Da
 func TransformQueryCacheResponseColumnValuesToLabel(projectID int64, recordsInt interface{}) (interface{}, error) {
 	switch records := recordsInt.(type) {
 	case DashboardQueryResponsePayload:
-		log.Error("Inside DashboardQueryResponsePayload in TransformQueryCacheResponseColumnValuesToLabel")
 		return AddPropertyLabelsToDashboardQueryResponsePayload(projectID, records)
 	case []interface{}:
-		log.Error("Inside []interface{} in TransformQueryCacheResponseColumnValuesToLabel")
 		return AddPropertyLabelsToQueryCacheInterfaceArrayResponse(projectID, records)
 	case map[string]interface{}:
-		log.Error("Inside map[string]interface{} in TransformQueryCacheResponseColumnValuesToLabel")
 		return AddPropertyLabelsToQueryCacheResultGroupResponse(projectID, records)
 	default:
 		return nil, errors.New("invalid record type on TransformQueryCacheResponseColumnValuesToLabel")

@@ -202,7 +202,9 @@ const Alerts = ({
             dop:
               (item.alert_configuration.email_enabled ? 'Email' : '') +
               ' ' +
-              (item.alert_configuration.slack_enabled ? 'Slack' : ''),
+              (item.alert_configuration.slack_enabled ? 'Slack' : '') +
+              ' ' +
+              (item.alert_configuration.teams_enabled ? 'Teams' : ''),
             actions: item
           });
         });
@@ -357,7 +359,7 @@ const mapStateToProps = (state) => ({
   agent_details: state.agent.agent_details,
   slack: state.global.slack,
   projectSettings: state.global.projectSettingsV1,
-  currentAgent: state.agent.agent_details,
+  currentAgent: state.agent.agent_details
 });
 
 export default connect(mapStateToProps, {

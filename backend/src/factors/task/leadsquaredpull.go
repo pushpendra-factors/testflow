@@ -661,104 +661,106 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 			break
 		}
 	}
-	if documentType == model.LEADSQUARED_LEAD {
-		indexNumber, _, isDone := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, documentType, "incremental_sync_created_at")
-		index = 0
-		if indexNumber == 0 {
-			index = 1
-		} else {
-			index = indexNumber
-		}
-		log.Info("Starting for all records created after the lookback")
-		StartDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp), 0).Format("2006-01-02 15:04:05"))
-		log.Info(fmt.Sprintf("Starting Historical Sync with date > %v", StartDateinLeadSquaredFormat))
-		for {
-			if(isDone == true){
-				log.Info("Done. Skipping - " + documentType)
-				break
-			}
-			request := model.SearchLeadsByCriteriaRequest{
-				Parameter: model.LeadSearchParameterObj{
-					LookupName:  "CreatedOn",
-					LookupValue: StartDateinLeadSquaredFormat,
-					SqlOperator: ">",
-				},
-				Paging: model.PagingObj{
-					PageIndex: index,
-					PageSize:  pageSize,
-				},
-				Columns: model.ColumnsObj{
-					IncludeCSV: columns,
-				},
-				Sorting: model.SortingObj{
-					ColumnName: "CreatedOn",
-					Direction:  "1",
-				},
-			}
-			headers := map[string]string{
-				"Content-Type": "application/json",
-			}
-			statusCode, responseHistSyncData, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), histSyncEndpoint, headers, request, "POST", urlParams)
-			if statusCode != http.StatusOK || errorObj != nil {
-				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
-					ProjectID:   projectId,
-					Delta:       executionTimestamp,
-					Document:    documentType,
-					Tag:         "incremental_sync_created_at",
-					IndexNumber: index,
-				})
-				return nil, true, errorObj.Error()
-			}
-			byteSliceHistSync, err := json.Marshal(responseHistSyncData)
-			if err != nil {
-				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
-					ProjectID:   projectId,
-					Delta:       executionTimestamp,
-					Document:    documentType,
-					Tag:         "incremental_sync_created_at",
-					IndexNumber: index,
-				})
-				return nil, true, err.Error()
-			}
-			histSyncData := make([]interface{}, 0)
-			err = json.Unmarshal(byteSliceHistSync, &histSyncData)
-			if err != nil {
-				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
-					ProjectID:   projectId,
-					Delta:       executionTimestamp,
-					Document:    documentType,
-					Tag:         "incremental_sync_created_at",
-					IndexNumber: index,
-				})
-				return nil, true, err.Error()
-			}
-			log.Info(fmt.Sprintf("ModifiedOn - Inserting %v rows with index %v no of records %v", pageSize, index, len(histSyncData)))
-			errorStatus, msg := insertBigQueryRow(datasetID, tableId, client, histSyncData, propertyMetadataList, ctx)
-			if errorStatus != false {
-				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
-					ProjectID:   projectId,
-					Delta:       executionTimestamp,
-					Document:    documentType,
-					Tag:         "incremental_sync_created_at",
-					IndexNumber: index,
-				})
-				return nil, true, msg
-			}
-			index++
-			totalRecordCountCreatedOn = totalRecordCountCreatedOn + len(histSyncData)
-			if len(histSyncData) < pageSize {
-				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
-					ProjectID:   projectId,
-					Delta:       executionTimestamp,
-					Document:    documentType,
-					Tag:         "incremental_sync_created_at",
-					IndexNumber: index,
-					IsDone: 	 true,
-				})
-				break
-			}
-		}
-	}
+	// Commenting out these since updated_At includes created_at as well
+	// Keeping the code - so that i can remove once verified
+	// if documentType == model.LEADSQUARED_LEAD {
+	// 	indexNumber, _, isDone := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, documentType, "incremental_sync_created_at")
+	// 	index = 0
+	// 	if indexNumber == 0 {
+	// 		index = 1
+	// 	} else {
+	// 		index = indexNumber
+	// 	}
+	// 	log.Info("Starting for all records created after the lookback")
+	// 	StartDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp), 0).Format("2006-01-02 15:04:05"))
+	// 	log.Info(fmt.Sprintf("Starting Historical Sync with date > %v", StartDateinLeadSquaredFormat))
+	// 	for {
+	// 		if(isDone == true){
+	// 			log.Info("Done. Skipping - " + documentType)
+	// 			break
+	// 		}
+	// 		request := model.SearchLeadsByCriteriaRequest{
+	// 			Parameter: model.LeadSearchParameterObj{
+	// 				LookupName:  "CreatedOn",
+	// 				LookupValue: StartDateinLeadSquaredFormat,
+	// 				SqlOperator: ">",
+	// 			},
+	// 			Paging: model.PagingObj{
+	// 				PageIndex: index,
+	// 				PageSize:  pageSize,
+	// 			},
+	// 			Columns: model.ColumnsObj{
+	// 				IncludeCSV: columns,
+	// 			},
+	// 			Sorting: model.SortingObj{
+	// 				ColumnName: "CreatedOn",
+	// 				Direction:  "1",
+	// 			},
+	// 		}
+	// 		headers := map[string]string{
+	// 			"Content-Type": "application/json",
+	// 		}
+	// 		statusCode, responseHistSyncData, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), histSyncEndpoint, headers, request, "POST", urlParams)
+	// 		if statusCode != http.StatusOK || errorObj != nil {
+	// 			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+	// 				ProjectID:   projectId,
+	// 				Delta:       executionTimestamp,
+	// 				Document:    documentType,
+	// 				Tag:         "incremental_sync_created_at",
+	// 				IndexNumber: index,
+	// 			})
+	// 			return nil, true, errorObj.Error()
+	// 		}
+	// 		byteSliceHistSync, err := json.Marshal(responseHistSyncData)
+	// 		if err != nil {
+	// 			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+	// 				ProjectID:   projectId,
+	// 				Delta:       executionTimestamp,
+	// 				Document:    documentType,
+	// 				Tag:         "incremental_sync_created_at",
+	// 				IndexNumber: index,
+	// 			})
+	// 			return nil, true, err.Error()
+	// 		}
+	// 		histSyncData := make([]interface{}, 0)
+	// 		err = json.Unmarshal(byteSliceHistSync, &histSyncData)
+	// 		if err != nil {
+	// 			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+	// 				ProjectID:   projectId,
+	// 				Delta:       executionTimestamp,
+	// 				Document:    documentType,
+	// 				Tag:         "incremental_sync_created_at",
+	// 				IndexNumber: index,
+	// 			})
+	// 			return nil, true, err.Error()
+	// 		}
+	// 		log.Info(fmt.Sprintf("ModifiedOn - Inserting %v rows with index %v no of records %v", pageSize, index, len(histSyncData)))
+	// 		errorStatus, msg := insertBigQueryRow(datasetID, tableId, client, histSyncData, propertyMetadataList, ctx)
+	// 		if errorStatus != false {
+	// 			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+	// 				ProjectID:   projectId,
+	// 				Delta:       executionTimestamp,
+	// 				Document:    documentType,
+	// 				Tag:         "incremental_sync_created_at",
+	// 				IndexNumber: index,
+	// 			})
+	// 			return nil, true, msg
+	// 		}
+	// 		index++
+	// 		totalRecordCountCreatedOn = totalRecordCountCreatedOn + len(histSyncData)
+	// 		if len(histSyncData) < pageSize {
+	// 			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+	// 				ProjectID:   projectId,
+	// 				Delta:       executionTimestamp,
+	// 				Document:    documentType,
+	// 				Tag:         "incremental_sync_created_at",
+	// 				IndexNumber: index,
+	// 				IsDone: 	 true,
+	// 			})
+	// 			break
+	// 		}
+	// 	}
+	// }
 	resultStatus := make(map[string]interface{})
 	resultStatus["ModifiedOnRecords"] = totalRecordCountModifiedOn
 	resultStatus["CreatedOnRecords"] = totalRecordCountCreatedOn

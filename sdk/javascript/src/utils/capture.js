@@ -218,15 +218,17 @@ function bindAllClickableElements(appInstance, processCallback) {
                 logger.debug("Executing callback on click of anchor as part of click capture.", false);
 
                 var anchor = null;
+                // Path is not a standard, composedPath is the standard and path can be backup
+                var path = e.composedPath ? e.composedPath() : e.path;
                 if (e.target && e.target.nodeName == 'A')
                     anchor = e.target;
-                else if (e.path) {
+                else if (path) {
                     // Any element can be encapsulated by anchor, on click of the 
                     // element the target received will be the internal element 
                     // rather than anchor. Anchor will available on the node path stack.
-                    for(var p=0; p<e.path; p++) {
-                        if (e.path[p].nodeName == 'A') {
-                            anchor = e.path[p];
+                    for(var p=0; p<path; p++) {
+                        if (path[p].nodeName == 'A') {
+                            anchor = path[p];
                             break;
                         }
                     }

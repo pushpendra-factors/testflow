@@ -87,7 +87,7 @@ function LinkedEventsBlock({
     return (
       <FilterWrapper
         filterProps={filterProps}
-        activeProject={activeProject}
+        projectID={activeProject?.id}
         event={linkEvent}
         deleteFilter={() => closeFilter()}
         insertFilter={addFilter}
@@ -111,7 +111,7 @@ function LinkedEventsBlock({
               index={index}
               filter={filterContent}
               filterProps={filterProps}
-              activeProject={activeProject}
+              projectID={activeProject?.id}
               event={linkEvent}
               deleteFilter={delFilter}
               insertFilter={(val) => editFilter(index, val)}

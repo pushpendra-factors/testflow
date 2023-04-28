@@ -60,17 +60,6 @@ const EnrichFeature = ({
   };
 
   useEffect(() => {
-    //checking for page type
-    if (type === 'page') {
-      if (
-        (six_signal_config?.pages_exclude &&
-          six_signal_config.pages_exclude?.length > 0) ||
-        (six_signal_config?.pages_include &&
-          six_signal_config.pages_include?.length > 0)
-      ) {
-        setMode('view');
-      }
-    }
     //checking for country type
     if (type === 'country') {
       if (
@@ -82,7 +71,29 @@ const EnrichFeature = ({
         setMode('view');
       }
     }
-  }, [six_signal_config, type]);
+  }, [
+    six_signal_config?.country_exclude,
+    six_signal_config?.country_include,
+    type
+  ]);
+
+  useEffect(() => {
+    //checking for page type
+    if (type === 'page') {
+      if (
+        (six_signal_config?.pages_exclude &&
+          six_signal_config.pages_exclude?.length > 0) ||
+        (six_signal_config?.pages_include &&
+          six_signal_config.pages_include?.length > 0)
+      ) {
+        setMode('view');
+      }
+    }
+  }, [
+    type,
+    six_signal_config?.pages_exclude,
+    six_signal_config?.pages_include
+  ]);
   return (
     <div className='flex flex-col border-bottom--thin py-4'>
       <div

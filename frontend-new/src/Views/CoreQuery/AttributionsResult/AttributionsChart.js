@@ -67,7 +67,9 @@ const AttributionsChartComponent = forwardRef(
       attributionMetrics,
       appliedFilters,
       setAttributionMetrics,
-      updateCoreQueryReducer
+      updateCoreQueryReducer,
+      setAppliedFilters,
+      v1=false
     },
     ref
   ) => {
@@ -150,7 +152,12 @@ const AttributionsChartComponent = forwardRef(
 
     const handleApplyFilters = useCallback(
       (filters) => {
-        updateCoreQueryReducer({ attributionTableFilters: filters });
+        if(v1) {
+          setAppliedFilters(filters)
+        } else {
+          updateCoreQueryReducer({ attributionTableFilters: filters });
+        }
+        
         setFiltersVisibility(false);
       },
       [updateCoreQueryReducer]
@@ -464,7 +471,8 @@ const AttributionsChart = (props) => {
       comparison_data={comparison_data}
       comparison_duration={comparison_duration}
       updateCoreQueryReducer={updateCoreQueryReducer}
-      appliedFilters={attributionTableFilters}
+      appliedFilters={rest.v1? rest.appliedFilters : attributionTableFilters}
+      setAppliedFilters={rest.setAppliedFilters}
       ref={renderedCompRef}
       {...rest}
     />

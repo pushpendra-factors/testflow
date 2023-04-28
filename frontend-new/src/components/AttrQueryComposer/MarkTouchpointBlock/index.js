@@ -230,7 +230,7 @@ const MarkTouchpointBlock = ({
               <div className={'fa--query_block--filters flex flex-row'}>
                 <div key={index} className={`mt-2`}>
                   <FilterWrapper
-                    activeProject={activeProject}
+                    projectID={activeProject.id}
                     index={index}
                     blockType={'event'}
                     filterType={'channel'}
@@ -255,7 +255,7 @@ const MarkTouchpointBlock = ({
                 {index === orFilterIndex && (
                   <div key={'init'} className={`mt-2`}>
                     <FilterWrapper
-                      activeProject={activeProject}
+                      projectID={activeProject.id}
                       index={index}
                       blockType={'event'}
                       filterType={'channel'}
@@ -279,7 +279,7 @@ const MarkTouchpointBlock = ({
               <div className={'fa--query_block--filters flex flex-row'}>
                 <div key={index} className={`mt-2`}>
                   <FilterWrapper
-                    activeProject={activeProject}
+                    projectID={activeProject.id}
                     index={index}
                     blockType={'event'}
                     filterType={'channel'}
@@ -295,7 +295,7 @@ const MarkTouchpointBlock = ({
                 </div>
                 <div key={index + 1} className={`mt-2`}>
                   <FilterWrapper
-                    activeProject={activeProject}
+                    projectID={activeProject.id}
                     index={index + 1}
                     blockType={'event'}
                     filterType={'channel'}
@@ -320,7 +320,7 @@ const MarkTouchpointBlock = ({
         filtrs.push(
           <div key={filtrs.length} className={`mt-2`}>
             <FilterWrapper
-              activeProject={activeProject}
+              projectID={activeProject.id}
               blockType={'event'}
               filterType={'channel'}
               delBtnClass={styles.filterDelBtn}

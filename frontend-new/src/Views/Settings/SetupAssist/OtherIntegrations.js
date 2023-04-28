@@ -14,6 +14,7 @@ import SlackIntegration from '../ProjectSettings/IntegrationSettings/Slack';
 import MSTeamIntegration from '../ProjectSettings/IntegrationSettings/MSTeam';
 import SixSignalIntegration from '../ProjectSettings/IntegrationSettings/SixSignal';
 import RudderstackIntegration from '../ProjectSettings/IntegrationSettings/Rudderstack';
+import { featureLock } from '../../../routes/feature';
 
 const IntegrationProviderData = [
   {
@@ -248,7 +249,7 @@ function IntegrationSettings({
               <Skeleton active paragraph={{ rows: 4 }} />
             ) : (
               IntegrationProviderData.map((item, index) => {
-                if(item.name === 'Microsoft Teams' && !['junaid@factors.ai'].includes(currentAgent.email)) {
+                if(item.name === 'Microsoft Teams' && !featureLock(currentAgent.email)) {
                   return null;
                 }
                 return (

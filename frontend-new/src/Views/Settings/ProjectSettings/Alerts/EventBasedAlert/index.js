@@ -39,7 +39,10 @@ import { getEventsWithProperties, getStateFromFiltersEvent } from '../utils';
 import {
   fetchSlackChannels,
   fetchProjectSettingsV1,
-  enableSlackIntegration
+  enableSlackIntegration,
+  enableTeamsIntegration,
+  fetchTeamsWorkspace,
+  fetchTeamsChannels
 } from 'Reducers/global';
 import SelectChannels from '../SelectChannels';
 import {
@@ -54,6 +57,7 @@ import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import _ from 'lodash';
 import { fetchGroups } from 'Reducers/coreQuery/services';
+import { featureLock } from '../../../../../routes/feature';
 
 const { Option } = Select;
 
@@ -69,6 +73,9 @@ const EventBasedAlert = ({
   fetchProjectSettingsV1,
   projectSettings,
   enableSlackIntegration,
+  enableTeamsIntegration,
+  fetchTeamsWorkspace,
+  fetchTeamsChannels,
   viewAlertDetails,
   alertState,
   setAlertState,
@@ -88,12 +95,16 @@ const EventBasedAlert = ({
   getEventProperties,
   fetchGroups,
   groupOpts,
-  testWebhhookUrl
+  testWebhhookUrl,
+  teams
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [alertName, setAlertName] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
   const [webhookEnabled, setWebhookEnabled] = useState(false);
   const [slackEnabled, setSlackEnabled] = useState(false);
+  const [teamsEnabled, setTeamsEnabled] = useState(false);
   const [notRepeat, setNotRepeat] = useState(false);
   const [notifications, setNotifications] = useState(false);
   const [alertLimit, setAlertLimit] = useState(5);
@@ -104,6 +115,17 @@ const EventBasedAlert = ({
   const [saveSelectedChannel, setSaveSelectedChannel] = useState([]);
   const [showSelectChannelsModal, setShowSelectChannelsModal] = useState(false);
   const [viewSelectedChannels, setViewSelectedChannels] = useState([]);
+
+  const [teamsWorkspaceOpts, setTeamsWorkspaceOpts] = useState([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
+  const [teamsChannelOpts, setTeamsChannelOpts] = useState([]);
+  const [teamsSelectedChannel, setTeamsSelectedChannel] = useState([]);
+  const [teamsSaveSelectedChannel, setTeamsSaveSelectedChannel] = useState([]);
+  const [teamsShowSelectChannelsModal, setTeamsShowSelectChannelsModal] =
+    useState(false);
+  const [teamsViewSelectedChannels, setTeamsViewSelectedChannels] = useState(
+    []
+  );
 
   const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
@@ -250,6 +272,28 @@ const EventBasedAlert = ({
         setSelectedChannel(viewAlertDetails?.event_alert?.slack_channels);
       }
     }
+    if (
+      viewAlertDetails?.event_alert?.teams_channels_config?.team_channel_list
+    ) {
+      setTeamsViewSelectedChannels(
+        viewAlertDetails?.event_alert?.teams_channels_config?.team_channel_list
+      );
+      if (alertState?.state === 'edit') {
+        setTeamsEnabled(viewAlertDetails?.event_alert?.teams);
+        setTeamsSaveSelectedChannel(
+          viewAlertDetails?.event_alert?.teams_channels_config
+            ?.team_channel_list
+        );
+        setTeamsSelectedChannel(
+          viewAlertDetails?.event_alert?.teams_channels_config
+            ?.team_channel_list
+        );
+        setSelectedWorkspace({
+          name: viewAlertDetails?.event_alert?.teams_channels_config?.team_name,
+          id: viewAlertDetails?.event_alert?.teams_channels_config?.team_id
+        });
+      }
+    }
     if (alertState?.state === 'edit') {
       let queryData = [];
       queryData.push({
@@ -269,7 +313,7 @@ const EventBasedAlert = ({
       messageProperty.forEach((property) => pushGroupBy(property));
 
       // webhook settings
-      if(viewAlertDetails?.event_alert?.webhook) {
+      if (viewAlertDetails?.event_alert?.webhook) {
         setWebhookEnabled(viewAlertDetails?.event_alert?.webhook);
         setWebhookUrl(viewAlertDetails?.event_alert?.url);
         setFinalWebhookUrl(viewAlertDetails?.event_alert?.url);
@@ -569,8 +613,10 @@ const EventBasedAlert = ({
 
     if (
       queries.length > 0 &&
-      (slackEnabled || webhookEnabled) &&
-      (saveSelectedChannel.length > 0 || finalWebhookUrl !== '')
+      (slackEnabled || webhookEnabled || teamsEnabled) &&
+      (saveSelectedChannel.length > 0 ||
+        finalWebhookUrl !== '' ||
+        teamsSaveSelectedChannel.length > 0)
     ) {
       let payload = {
         title: data?.alert_name,
@@ -598,6 +644,12 @@ const EventBasedAlert = ({
         slack_channels: saveSelectedChannel,
         webhook: webhookEnabled,
         url: finalWebhookUrl
+        // teams: teamsEnabled,
+        // teams_channels_config: {
+        //   team_id: selectedWorkspace?.id,
+        //   team_name: selectedWorkspace?.name,
+        //   team_channel_list: teamsSaveSelectedChannel
+        // }
       };
 
       if (alertState?.state === 'edit') {
@@ -645,7 +697,7 @@ const EventBasedAlert = ({
           description: 'Please select Event to send alert.'
         });
       }
-      if (!slackEnabled || !webhookEnabled) {
+      if (!slackEnabled && !webhookEnabled && !teamsEnabled) {
         notification.error({
           message: 'Error',
           description:
@@ -664,6 +716,12 @@ const EventBasedAlert = ({
           description: 'Empty Webhook Url'
         });
       }
+      if (teamsEnabled && teamsSaveSelectedChannel.length === 0) {
+        notification.error({
+          message: 'Error',
+          description: 'Empty Teams Channel List'
+        });
+      }
     }
   };
 
@@ -679,6 +737,21 @@ const EventBasedAlert = ({
       })
       .catch((err) => {
         console.log('Slack error-->', err);
+      });
+  };
+
+  const onConnectMSTeams = () => {
+    enableTeamsIntegration(activeProject.id)
+      .then((r) => {
+        if (r.status == 200) {
+          window.open(r.data.redirectURL, '_blank');
+        }
+        if (r.status >= 400) {
+          message.error('Error fetching teams redirect url');
+        }
+      })
+      .catch((err) => {
+        console.log('Teams error-->', err);
       });
   };
 
@@ -704,6 +777,39 @@ const EventBasedAlert = ({
   }, [activeProject, projectSettings?.int_slack, slackEnabled]);
 
   useEffect(() => {
+    fetchProjectSettingsV1(activeProject.id);
+    if (projectSettings?.int_teams && teamsEnabled) {
+      fetchTeamsWorkspace(activeProject.id)
+        .then((res) => {
+          if (res.ok) {
+            let tempArr = [];
+            for (let i = 0; i < res?.data?.length; i++) {
+              tempArr.push({
+                label: res?.data[i]?.displayName,
+                value: res?.data[i]?.id
+              });
+            }
+            setTeamsWorkspaceOpts(tempArr);
+          }
+        })
+        .catch((err) => {
+          message.error(err?.data?.error);
+        });
+    }
+  }, [activeProject, projectSettings?.int_teams, teamsEnabled]);
+
+  useEffect(() => {
+    if (projectSettings?.int_teams && selectedWorkspace) {
+      fetchTeamsChannels(activeProject.id, selectedWorkspace?.id);
+    }
+  }, [
+    activeProject,
+    projectSettings?.int_teams,
+    teamsEnabled,
+    selectedWorkspace
+  ]);
+
+  useEffect(() => {
     if (slack?.length > 0) {
       let tempArr = [];
       for (let i = 0; i < slack.length; i++) {
@@ -717,6 +823,21 @@ const EventBasedAlert = ({
     }
   }, [activeProject, agent_details, slack]);
 
+  useEffect(() => {
+    if (teams?.length > 0 && selectedWorkspace) {
+      let tempArr = [];
+      for (let i = 0; i < teams?.length; i++) {
+        tempArr.push({
+          name: teams?.[i]?.displayName,
+          id: teams?.[i]?.id
+        });
+      }
+      setTeamsChannelOpts(tempArr);
+    } else {
+      setTeamsChannelOpts([]);
+    }
+  }, [activeProject, agent_details, teams]);
+
   const handleOk = () => {
     setSaveSelectedChannel(selectedChannel);
     setShowSelectChannelsModal(false);
@@ -727,21 +848,33 @@ const EventBasedAlert = ({
     setShowSelectChannelsModal(false);
   };
 
+  const handleOkTeams = () => {
+    setTeamsSaveSelectedChannel(teamsSelectedChannel);
+    setTeamsShowSelectChannelsModal(false);
+  };
+
+  const handleCancelTeams = () => {
+    setTeamsSelectedChannel(teamsSaveSelectedChannel);
+    setTeamsShowSelectChannelsModal(false);
+  };
+
   // Webhook settings
   const handleTestWebhook = () => {
     const payload = {
-      title: 'Sample Alert',
-      event: '$session',
-      message_property: [
-        {
-          en: 'event',
-          ena: '$session',
-          eni: 1,
-          pr: '$session_latest_page_url',
-          pty: 'categorical'
-        }
-      ],
-      message: 'This is a sample payload to confirm your webhook URL endpoint',
+      title: alertName,
+      event: queries[0]?.label,
+      message_property:
+        groupBy && groupBy.length && groupBy[0] && groupBy[0].property
+          ? getGroupByFromProperties(
+              groupBy
+                .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+                .filter(
+                  (gbp) =>
+                    gbp.eventName === queries[0]?.label && gbp.eventIndex === 1
+                )
+            )
+          : [],
+      message: alertMessage,
       url: webhookUrl,
       secret: ''
     };
@@ -878,6 +1011,7 @@ const EventBasedAlert = ({
                 <Input
                   className={'fa-input'}
                   placeholder={'Enter name'}
+                  onChange={(e) => setAlertName(e.target.value)}
                   ref={inputComponentRef}
                 />
               </Form.Item>
@@ -1016,6 +1150,129 @@ const EventBasedAlert = ({
             </Col>
           </Row>
 
+          <Row className={'mt-4'}>
+            <Col span={18}>
+              <Text
+                type={'title'}
+                level={7}
+                weight={'bold'}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Add a payload
+              </Text>
+            </Col>
+          </Row>
+          <Row className='m-0'>
+            <Col span={24}>
+              <Text
+                type='paragraph'
+                mini
+                extraClass='m-0'
+                color='grey'
+                lineHeight='medium'
+              >
+                To send this event to other apps, choose what values and
+                properties will be made available. Add a custom message if you
+                need one.
+              </Text>
+            </Col>
+          </Row>
+          <Row className={'mt-2'}>
+            <Col span={8} className={'ml-4'}>
+              <div>
+                <Text type={'title'} level={7} extraClass={'m-0 inline'}>
+                  Add a message
+                </Text>
+                <Popover
+                  placement='rightTop'
+                  overlayInnerStyle={{ width: '340px' }}
+                  title={null}
+                  content={
+                    <div className='m-0 m-2'>
+                      <p className='m-0 text-gray-900 text-base font-bold'>
+                        Your notification inside slack
+                      </p>
+                      <p className='m-0 mb-2 text-gray-700'>
+                        As events across your marketing activities happen, get
+                        alerts that motivate actions right inside Slack
+                      </p>
+                      <img
+                        className='m-0'
+                        src='../../../../../assets/icons/Slackmock.svg'
+                      ></img>
+                    </div>
+                  }
+                >
+                  <div className='inline ml-1'>
+                    <SVG
+                      name='InfoCircle'
+                      size={18}
+                      color='#8692A3'
+                      extraClass={'inline'}
+                    />
+                  </div>
+                </Popover>
+              </div>
+              <Form.Item name='message' className={'m-0'}>
+                <TextArea
+                  className={'fa-input'}
+                  placeholder={'Enter Message (max 300 characters)'}
+                  onChange={(e) => setAlertMessage(e.target.value)}
+                  maxLength={300}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {queries.length > 0 && (
+            <Row className={'mt-4'}>
+              <Col span={12} className={'ml-4'}>
+                <div>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    extraClass={'m-0 inline mb-1 mr-1'}
+                  >
+                    Choose properties to use as a payload to other apps
+                  </Text>
+                  <Popover
+                    placement='rightTop'
+                    overlayInnerStyle={{ width: '300px' }}
+                    title={null}
+                    content={
+                      <p className='m-0 m-2 text-gray-700'>
+                        In Slack, you’ll get these values on your channel. With
+                        a webhook, use these properties to power your own
+                        workflows.
+                      </p>
+                    }
+                  >
+                    <div className='inline'>
+                      <SVG
+                        name='InfoCircle'
+                        size={18}
+                        color='#8692A3'
+                        extraClass={'inline'}
+                      />
+                    </div>
+                  </Popover>
+                </div>
+                <div className='fa--query_block_section borderless no-padding mt-0'>
+                  {groupByItems()}
+                </div>
+                <Button
+                  type='text'
+                  style={{ color: '#8692A3' }}
+                  icon={<SVG name='plus' color='#8692A3' />}
+                  onClick={() => addGroupBy()}
+                >
+                  Add a Property
+                </Button>
+              </Col>
+            </Row>
+          )}
+
           <Row className={''}>
             <Col span={24}>
               <div className={'border-top--thin-2 pb-6 mt-6'} />
@@ -1039,8 +1296,8 @@ const EventBasedAlert = ({
                 color='grey'
                 lineHeight='medium'
               >
-                Choose the destinations for your alerts. Attach text and any
-                properties along with it below
+                Choose the destinations for your alerts. The properties you
+                added above will be made available in these destinations.
               </Text>
             </Col>
           </Row>
@@ -1250,6 +1507,14 @@ const EventBasedAlert = ({
                         <Switch
                           checkedChildren='On'
                           unCheckedChildren='OFF'
+                          disabled={
+                            !(
+                              groupBy &&
+                              groupBy.length &&
+                              groupBy[0] &&
+                              groupBy[0].property
+                            )
+                          }
                           onChange={(checked) => setWebhookEnabled(checked)}
                           checked={webhookEnabled}
                         />
@@ -1416,115 +1681,179 @@ const EventBasedAlert = ({
                     </Col>
                   </Row>
                 )}
+                <Row className='mt-3 ml-2'>
+                  <Col>
+                    <Text
+                      type='paragraph'
+                      mini
+                      extraClass='m-0'
+                      color='grey'
+                      lineHeight='medium'
+                    >
+                      Note that if you edit this alert or its payload in the
+                      future, you must reconfigure the flows to support these
+                      changes
+                    </Text>
+                  </Col>
+                </Row>
               </div>
             )}
           </div>
-
-          <Row className={'mt-4'}>
-            <Col span={18}>
-              <Text
-                type={'title'}
-                level={7}
-                weight={'bold'}
-                color={'grey-2'}
-                extraClass={'m-0'}
-              >
-                Configure your payload
-              </Text>
-            </Col>
-          </Row>
-          <Row className={'mt-4'}>
-            <Col span={8} className={'ml-4'}>
-              <div>
-                <Text type={'title'} level={7} extraClass={'m-0 inline'}>
-                  Add a message
-                </Text>
-                <Popover
-                  placement='rightTop'
-                  overlayInnerStyle={{ width: '340px' }}
-                  title={null}
-                  content={
-                    <div className='m-0 m-2'>
-                      <p className='m-0 text-gray-900 text-base font-bold'>
-                        Your notification inside slack
-                      </p>
-                      <p className='m-0 mb-2 text-gray-700'>
-                        As events across your marketing activities happen, get
-                        alerts that motivate actions right inside Slack
-                      </p>
-                      <img
-                        className='m-0'
-                        src='../../../../../assets/icons/Slackmock.svg'
-                      ></img>
+          {featureLock(agent_details?.email) && (
+            <div className='border rounded mt-3'>
+              <div style={{ backgroundColor: '#fafafa' }}>
+                <Row className={'ml-2'}>
+                  <Col span={20}>
+                    <div className='flex justify-between p-3'>
+                      <div className='flex'>
+                        <Avatar
+                          size={40}
+                          shape='square'
+                          icon={
+                            <SVG name={'MSTeam'} size={40} color='purple' />
+                          }
+                          style={{ backgroundColor: '#F5F6F8' }}
+                        />
+                      </div>
+                      <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                        <div className='flex flex-row items-center justify-start'>
+                          <Text
+                            type='title'
+                            level={7}
+                            weight='medium'
+                            extraClass='m-0'
+                          >
+                            Teams
+                          </Text>
+                        </div>
+                        <Text
+                          type='paragraph'
+                          mini
+                          extraClass='m-0'
+                          color='grey'
+                          lineHeight='medium'
+                        >
+                          Post to teams when events you care about happen.
+                          Motivate the right actions.
+                        </Text>
+                      </div>
                     </div>
-                  }
-                >
-                  <div className='inline ml-1'>
-                    <SVG
-                      name='InfoCircle'
-                      size={18}
-                      color='#8692A3'
-                      extraClass={'inline'}
-                    />
-                  </div>
-                </Popover>
+                  </Col>
+                  <Col className={'m-0 mt-4'}>
+                    <Form.Item name='teams_enabled' className={'m-0'}>
+                      <div span={24} className={'flex flex-start items-center'}>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          weight='medium'
+                          extraClass={'m-0 mr-2'}
+                        >
+                          Enable
+                        </Text>
+                        <span style={{ width: '50px' }}>
+                          <Switch
+                            checkedChildren='On'
+                            unCheckedChildren='OFF'
+                            onChange={(checked) => setTeamsEnabled(checked)}
+                            checked={teamsEnabled}
+                          />
+                        </span>{' '}
+                      </div>
+                    </Form.Item>
+                  </Col>
+                </Row>
               </div>
-              <Form.Item name='message' className={'m-0'}>
-                <TextArea
-                  className={'fa-input'}
-                  placeholder={'Enter Message (max 300 characters)'}
-                  maxLength={300}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {queries.length > 0 && (
-            <Row className={'mt-4'}>
-              <Col span={12} className={'ml-4'}>
-                <div>
-                  <Text
-                    type={'title'}
-                    level={7}
-                    extraClass={'m-0 inline mb-1 mr-1'}
-                  >
-                    Attach properties for your payload
-                  </Text>
-                  <Popover
-                    placement='rightTop'
-                    overlayInnerStyle={{ width: '300px' }}
-                    title={null}
-                    content={
-                      <p className='m-0 m-2 text-gray-700'>
-                        In Slack, you’ll get these values on your channel. With
-                        a webhook, use these properties to power your own
-                        workflows.
-                      </p>
-                    }
-                  >
-                    <div className='inline'>
-                      <SVG
-                        name='InfoCircle'
-                        size={18}
-                        color='#8692A3'
-                        extraClass={'inline'}
-                      />
+              {teamsEnabled && !projectSettings?.int_teams && (
+                <div className='p-4'>
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Text
+                        type={'title'}
+                        level={6}
+                        color={'grey'}
+                        extraClass={'m-0'}
+                      >
+                        Teams is not integrated, Do you want to integrate with
+                        your Microsoft Teams account now?
+                      </Text>
+                    </Col>
+                  </Row>
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button onClick={onConnectMSTeams}>
+                        <SVG name={'MSTeam'} size={20} />
+                        Connect to Teams
+                      </Button>
+                    </Col>
+                  </Row>
+                </div>
+              )}
+              {teamsEnabled && projectSettings?.int_teams && (
+                <div className='p-4'>
+                  {teamsSaveSelectedChannel.length > 0 && (
+                    <div>
+                      <Row>
+                        <Col>
+                          <Text
+                            type={'title'}
+                            level={7}
+                            weight={'regular'}
+                            extraClass={'m-0 mt-2 ml-2'}
+                          >
+                            {teamsSaveSelectedChannel.length > 1
+                              ? `Selected channels from the "${selectedWorkspace?.name}"`
+                              : `Selected channels from the "${selectedWorkspace?.name}"`}
+                          </Text>
+                        </Col>
+                      </Row>
+                      <Row
+                        className={'rounded border border-gray-200 ml-2 w-2/6'}
+                      >
+                        <Col className={'m-0'}>
+                          {teamsSaveSelectedChannel.map((channel, index) => (
+                            <div key={index}>
+                              <Text
+                                type={'title'}
+                                level={7}
+                                color={'grey'}
+                                extraClass={'m-0 ml-4 my-2'}
+                              >
+                                {'#' + channel.name}
+                              </Text>
+                            </div>
+                          ))}
+                        </Col>
+                      </Row>
                     </div>
-                  </Popover>
+                  )}
+                  {!teamsSaveSelectedChannel.length > 0 ? (
+                    <Row className={'mt-2 ml-2'}>
+                      <Col span={10} className={'m-0'}>
+                        <Button
+                          type={'link'}
+                          onClick={() => setTeamsShowSelectChannelsModal(true)}
+                        >
+                          Select Channel
+                        </Button>
+                      </Col>
+                    </Row>
+                  ) : (
+                    <Row className={'mt-2 ml-2'}>
+                      <Col span={10} className={'m-0'}>
+                        <Button
+                          type={'link'}
+                          onClick={() => setTeamsShowSelectChannelsModal(true)}
+                        >
+                          {teamsSaveSelectedChannel.length > 1
+                            ? 'Manage Channels'
+                            : 'Manage Channel'}
+                        </Button>
+                      </Col>
+                    </Row>
+                  )}
                 </div>
-                <div className='fa--query_block_section borderless no-padding mt-0'>
-                  {groupByItems()}
-                </div>
-                <Button
-                  type='text'
-                  style={{ color: '#8692A3' }}
-                  icon={<SVG name='plus' color='#8692A3' />}
-                  onClick={() => addGroupBy()}
-                >
-                  Add a Property
-                </Button>
-              </Col>
-            </Row>
+              )}
+            </div>
           )}
         </Form>
       </>
@@ -1614,6 +1943,7 @@ const EventBasedAlert = ({
                 <Input
                   className={'fa-input'}
                   placeholder={'Enter name'}
+                  onChange={(e) => setAlertName(e.target.value)}
                   ref={inputComponentRef}
                 />
               </Form.Item>
@@ -1754,6 +2084,131 @@ const EventBasedAlert = ({
             </Col>
           </Row>
 
+          <Row className={'mt-4'}>
+            <Col span={18}>
+              <Text
+                type={'title'}
+                level={7}
+                weight={'bold'}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Add a payload
+              </Text>
+            </Col>
+          </Row>
+          <Row className='m-0'>
+            <Col span={24}>
+              <Text
+                type='paragraph'
+                mini
+                extraClass='m-0'
+                color='grey'
+                lineHeight='medium'
+              >
+                To send this event to other apps, choose what values and
+                properties will be made available. Add a custom message if you
+                need one.
+              </Text>
+            </Col>
+          </Row>
+          <Row className={'mt-2'}>
+            <Col span={8} className={'ml-4'}>
+              <div>
+                <Text type={'title'} level={7} extraClass={'m-0 inline'}>
+                  Add a message
+                </Text>
+                <Popover
+                  placement='rightTop'
+                  overlayInnerStyle={{ width: '340px' }}
+                  title={null}
+                  content={
+                    <div className='m-0 m-2'>
+                      <p className='m-0 text-gray-900 text-base font-bold'>
+                        Your notification inside slack
+                      </p>
+                      <p className='m-0 mb-2 text-gray-700'>
+                        As events across your marketing activities happen, get
+                        alerts that motivate actions right inside Slack
+                      </p>
+                      <img
+                        className='m-0'
+                        src='../../../../../assets/icons/Slackmock.svg'
+                      ></img>
+                    </div>
+                  }
+                >
+                  <div className='inline ml-1'>
+                    <SVG
+                      name='InfoCircle'
+                      size={18}
+                      color='#8692A3'
+                      extraClass={'inline'}
+                    />
+                  </div>
+                </Popover>
+              </div>
+              <Form.Item
+                name='message'
+                initialValue={viewAlertDetails?.event_alert?.message}
+                className={'m-0'}
+              >
+                <TextArea
+                  className={'fa-input'}
+                  placeholder={'Enter Message (max 300 characters)'}
+                  onChange={(e) => setAlertMessage(e.target.value)}
+                  maxLength={300}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {queries.length > 0 && (
+            <Row className={'mt-4'}>
+              <Col span={12} className={'ml-4'}>
+                <div>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    extraClass={'m-0 inline mb-1 mr-1'}
+                  >
+                    Choose properties to use as a payload to other apps
+                  </Text>
+                  <Popover
+                    placement='rightTop'
+                    overlayInnerStyle={{ width: '300px' }}
+                    title={null}
+                    content={
+                      <p className='m-0 m-2 text-gray-700'>
+                        In Slack, you’ll get these values on your channel. With
+                        a webhook, use these properties to power your own
+                        workflows.
+                      </p>
+                    }
+                  >
+                    <div className='inline'>
+                      <SVG
+                        name='InfoCircle'
+                        size={18}
+                        color='#8692A3'
+                        extraClass={'inline'}
+                      />
+                    </div>
+                  </Popover>
+                </div>
+                <div>{groupByItems()}</div>
+                <Button
+                  type='text'
+                  style={{ color: '#8692A3' }}
+                  icon={<SVG name='plus' color='#8692A3' />}
+                  onClick={() => addGroupBy()}
+                >
+                  Add a Property
+                </Button>
+              </Col>
+            </Row>
+          )}
+
           <Row className={''}>
             <Col span={24}>
               <div className={'border-top--thin-2 pb-6 mt-6'} />
@@ -1777,8 +2232,8 @@ const EventBasedAlert = ({
                 color='grey'
                 lineHeight='medium'
               >
-                Choose the destinations for your alerts. Attach text and any
-                properties along with it below
+                Choose the destinations for your alerts. The properties you
+                added above will be made available in these destinations.
               </Text>
             </Col>
           </Row>
@@ -1988,6 +2443,14 @@ const EventBasedAlert = ({
                         <Switch
                           checkedChildren='On'
                           unCheckedChildren='OFF'
+                          disabled={
+                            !(
+                              groupBy &&
+                              groupBy.length &&
+                              groupBy[0] &&
+                              groupBy[0].property
+                            )
+                          }
                           onChange={(checked) => setWebhookEnabled(checked)}
                           checked={webhookEnabled}
                         />
@@ -2154,117 +2617,179 @@ const EventBasedAlert = ({
                     </Col>
                   </Row>
                 )}
+                <Row className='mt-3 ml-2'>
+                  <Col>
+                    <Text
+                      type='paragraph'
+                      mini
+                      extraClass='m-0'
+                      color='grey'
+                      lineHeight='medium'
+                    >
+                      Note that if you edit this alert or its payload in the
+                      future, you must reconfigure the flows to support these
+                      changes
+                    </Text>
+                  </Col>
+                </Row>
               </div>
             )}
           </div>
-
-          <Row className={'mt-4'}>
-            <Col span={18}>
-              <Text
-                type={'title'}
-                level={7}
-                weight={'bold'}
-                color={'grey-2'}
-                extraClass={'m-0'}
-              >
-                Configure your payload
-              </Text>
-            </Col>
-          </Row>
-          <Row className={'mt-4'}>
-            <Col span={8} className={'ml-4'}>
-              <div>
-                <Text type={'title'} level={7} extraClass={'m-0 inline'}>
-                  Add a message
-                </Text>
-                <Popover
-                  placement='rightTop'
-                  overlayInnerStyle={{ width: '340px' }}
-                  title={null}
-                  content={
-                    <div className='m-0 m-2'>
-                      <p className='m-0 text-gray-900 text-base font-bold'>
-                        Your notification inside slack
-                      </p>
-                      <p className='m-0 mb-2 text-gray-700'>
-                        As events across your marketing activities happen, get
-                        alerts that motivate actions right inside Slack
-                      </p>
-                      <img
-                        className='m-0'
-                        src='../../../../../assets/icons/Slackmock.svg'
-                      ></img>
+          {featureLock(agent_details?.email) && (
+            <div className='border rounded mt-3'>
+              <div style={{ backgroundColor: '#fafafa' }}>
+                <Row className={'ml-2'}>
+                  <Col span={20}>
+                    <div className='flex justify-between p-3'>
+                      <div className='flex'>
+                        <Avatar
+                          size={40}
+                          shape='square'
+                          icon={
+                            <SVG name={'MSTeam'} size={40} color='purple' />
+                          }
+                          style={{ backgroundColor: '#F5F6F8' }}
+                        />
+                      </div>
+                      <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                        <div className='flex flex-row items-center justify-start'>
+                          <Text
+                            type='title'
+                            level={7}
+                            weight='medium'
+                            extraClass='m-0'
+                          >
+                            Teams
+                          </Text>
+                        </div>
+                        <Text
+                          type='paragraph'
+                          mini
+                          extraClass='m-0'
+                          color='grey'
+                          lineHeight='medium'
+                        >
+                          Post to teams when events you care about happen.
+                          Motivate the right actions.
+                        </Text>
+                      </div>
                     </div>
-                  }
-                >
-                  <div className='inline ml-1'>
-                    <SVG
-                      name='InfoCircle'
-                      size={18}
-                      color='#8692A3'
-                      extraClass={'inline'}
-                    />
-                  </div>
-                </Popover>
+                  </Col>
+                  <Col className={'m-0 mt-4'}>
+                    <Form.Item name='teams_enabled' className={'m-0'}>
+                      <div span={24} className={'flex flex-start items-center'}>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          weight='medium'
+                          extraClass={'m-0 mr-2'}
+                        >
+                          Enable
+                        </Text>
+                        <span style={{ width: '50px' }}>
+                          <Switch
+                            checkedChildren='On'
+                            unCheckedChildren='OFF'
+                            onChange={(checked) => setTeamsEnabled(checked)}
+                            checked={teamsEnabled}
+                          />
+                        </span>{' '}
+                      </div>
+                    </Form.Item>
+                  </Col>
+                </Row>
               </div>
-              <Form.Item
-                name='message'
-                initialValue={viewAlertDetails?.event_alert?.message}
-                className={'m-0'}
-              >
-                <TextArea
-                  className={'fa-input'}
-                  placeholder={'Enter Message (max 300 characters)'}
-                  maxLength={300}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {queries.length > 0 && (
-            <Row className={'mt-4'}>
-              <Col span={12} className={'ml-4'}>
-                <div>
-                  <Text
-                    type={'title'}
-                    level={7}
-                    extraClass={'m-0 inline mb-1 mr-1'}
-                  >
-                    Attach properties for your payload
-                  </Text>
-                  <Popover
-                    placement='rightTop'
-                    overlayInnerStyle={{ width: '300px' }}
-                    title={null}
-                    content={
-                      <p className='m-0 m-2 text-gray-700'>
-                        In Slack, you’ll get these values on your channel. With
-                        a webhook, use these properties to power your own
-                        workflows.
-                      </p>
-                    }
-                  >
-                    <div className='inline'>
-                      <SVG
-                        name='InfoCircle'
-                        size={18}
-                        color='#8692A3'
-                        extraClass={'inline'}
-                      />
-                    </div>
-                  </Popover>
+              {teamsEnabled && !projectSettings?.int_teams && (
+                <div className='p-4'>
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Text
+                        type={'title'}
+                        level={6}
+                        color={'grey'}
+                        extraClass={'m-0'}
+                      >
+                        Teams is not integrated, Do you want to integrate with
+                        your Microsoft Teams account now?
+                      </Text>
+                    </Col>
+                  </Row>
+                  <Row className={'mt-2 ml-2'}>
+                    <Col span={10} className={'m-0'}>
+                      <Button onClick={onConnectMSTeams}>
+                        <SVG name={'MSTeam'} size={20} />
+                        Connect to Teams
+                      </Button>
+                    </Col>
+                  </Row>
                 </div>
-                <div>{groupByItems()}</div>
-                <Button
-                  type='text'
-                  style={{ color: '#8692A3' }}
-                  icon={<SVG name='plus' color='#8692A3' />}
-                  onClick={() => addGroupBy()}
-                >
-                  Add a Property
-                </Button>
-              </Col>
-            </Row>
+              )}
+              {teamsEnabled && projectSettings?.int_teams && (
+                <div className='p-4'>
+                  {teamsSaveSelectedChannel.length > 0 && (
+                    <div>
+                      <Row>
+                        <Col>
+                          <Text
+                            type={'title'}
+                            level={7}
+                            weight={'regular'}
+                            extraClass={'m-0 mt-2 ml-2'}
+                          >
+                            {teamsSaveSelectedChannel.length > 1
+                              ? `Selected channels from the "${selectedWorkspace?.name}"`
+                              : `Selected channels from the "${selectedWorkspace?.name}"`}
+                          </Text>
+                        </Col>
+                      </Row>
+                      <Row
+                        className={'rounded border border-gray-200 ml-2 w-2/6'}
+                      >
+                        <Col className={'m-0'}>
+                          {teamsSaveSelectedChannel.map((channel, index) => (
+                            <div key={index}>
+                              <Text
+                                type={'title'}
+                                level={7}
+                                color={'grey'}
+                                extraClass={'m-0 ml-4 my-2'}
+                              >
+                                {'#' + channel.name}
+                              </Text>
+                            </div>
+                          ))}
+                        </Col>
+                      </Row>
+                    </div>
+                  )}
+                  {!teamsSaveSelectedChannel.length > 0 ? (
+                    <Row className={'mt-2 ml-2'}>
+                      <Col span={10} className={'m-0'}>
+                        <Button
+                          type={'link'}
+                          onClick={() => setTeamsShowSelectChannelsModal(true)}
+                        >
+                          Select Channel
+                        </Button>
+                      </Col>
+                    </Row>
+                  ) : (
+                    <Row className={'mt-2 ml-2'}>
+                      <Col span={10} className={'m-0'}>
+                        <Button
+                          type={'link'}
+                          onClick={() => setTeamsShowSelectChannelsModal(true)}
+                        >
+                          {teamsSaveSelectedChannel.length > 1
+                            ? 'Manage Channels'
+                            : 'Manage Channel'}
+                        </Button>
+                      </Col>
+                    </Row>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </Form>
       </>
@@ -2440,6 +2965,73 @@ const EventBasedAlert = ({
           </Col>
         </Row>
 
+        <Row className={'mt-4'}>
+          <Col span={18}>
+            <Text
+              type={'title'}
+              level={7}
+              weight={'bold'}
+              color={'grey-2'}
+              extraClass={'m-0'}
+            >
+              Add a payload
+            </Text>
+          </Col>
+        </Row>
+        <Row className='m-0'>
+          <Col span={24}>
+            <Text
+              type='paragraph'
+              mini
+              extraClass='m-0'
+              color='grey'
+              lineHeight='medium'
+            >
+              To send this event to other apps, choose what values and
+              properties will be made available. Add a custom message if you
+              need one.
+            </Text>
+          </Col>
+        </Row>
+        <Row className={'mt-2'}>
+          <Col span={8} className={'ml-4'}>
+            <Text type={'title'} level={7} extraClass={'m-0'}>
+              Add a message
+            </Text>
+            <TextArea
+              disabled={true}
+              className={'fa-input'}
+              maxLength={300}
+              value={viewAlertDetails?.event_alert?.message}
+            />
+          </Col>
+        </Row>
+        {viewAlertDetails?.event_alert?.message_property?.length > 0 && (
+          <Row className={'mt-4'}>
+            <Col span={12} className={'ml-4'}>
+              <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>
+                Choose properties to use as a payload to other apps
+              </Text>
+              <div className='fa--query_block_section borderless no-padding mt-0'>
+                {viewGroupByItems(
+                  viewAlertDetails?.event_alert?.message_property &&
+                    viewAlertDetails?.event_alert?.message_property.length &&
+                    viewAlertDetails?.event_alert?.message_property[0] &&
+                    getGroupByFromState(
+                      viewAlertDetails?.event_alert?.message_property
+                        .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+                        .filter(
+                          (gbp) =>
+                            gbp.ena === viewAlertDetails?.event_alert?.event &&
+                            gbp.eni === 1
+                        )
+                    )
+                )}
+              </div>
+            </Col>
+          </Row>
+        )}
+
         <Row className={''}>
           <Col span={24}>
             <div className={'border-top--thin-2 pb-6 mt-6'} />
@@ -2463,8 +3055,8 @@ const EventBasedAlert = ({
               color='grey'
               lineHeight='medium'
             >
-              Choose the destinations for your alerts. Attach text and any
-              properties along with it below
+              Choose the destinations for your alerts. The properties you added
+              above will be made available in these destinations.
             </Text>
           </Col>
         </Row>
@@ -2680,58 +3272,112 @@ const EventBasedAlert = ({
             </div>
           )}
         </div>
-
-        <Row className={'mt-4'}>
-          <Col span={18}>
-            <Text
-              type={'title'}
-              level={7}
-              weight={'bold'}
-              color={'grey-2'}
-              extraClass={'m-0'}
-            >
-              Configure your payload
-            </Text>
-          </Col>
-        </Row>
-        <Row className={'mt-4'}>
-          <Col span={8} className={'ml-4'}>
-            <Text type={'title'} level={7} extraClass={'m-0'}>
-              Add a message
-            </Text>
-            <TextArea
-              disabled={true}
-              className={'fa-input'}
-              maxLength={300}
-              value={viewAlertDetails?.event_alert?.message}
-            />
-          </Col>
-        </Row>
-        {viewAlertDetails?.event_alert?.message_property?.length > 0 && (
-          <Row className={'mt-4'}>
-            <Col span={12} className={'ml-4'}>
-              <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>
-                Attach properties for your payload
-              </Text>
-              <div className='fa--query_block_section borderless no-padding mt-0'>
-                {viewGroupByItems(
-                  viewAlertDetails?.event_alert?.message_property &&
-                    viewAlertDetails?.event_alert?.message_property.length &&
-                    viewAlertDetails?.event_alert?.message_property[0] &&
-                    getGroupByFromState(
-                      viewAlertDetails?.event_alert?.message_property
-                        .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-                        .filter(
-                          (gbp) =>
-                            gbp.ena === viewAlertDetails?.event_alert?.event &&
-                            gbp.eni === 1
-                        )
-                    )
-                )}
-              </div>
-            </Col>
-          </Row>
+        {featureLock(agent_details?.email) && (
+          <div className='border rounded mt-3'>
+            <div style={{ backgroundColor: '#fafafa' }}>
+              <Row className={'ml-2'}>
+                <Col span={20}>
+                  <div className='flex justify-between p-3'>
+                    <div className='flex'>
+                      <Avatar
+                        size={40}
+                        shape='square'
+                        icon={<SVG name={'MSTeam'} size={40} color='purple' />}
+                        style={{ backgroundColor: '#F5F6F8' }}
+                      />
+                    </div>
+                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
+                      <div className='flex flex-row items-center justify-start'>
+                        <Text
+                          type='title'
+                          level={7}
+                          weight='medium'
+                          extraClass='m-0'
+                        >
+                          Teams
+                        </Text>
+                      </div>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        Post to teams when events you care about happen.
+                        Motivate the right actions.
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col className={'m-0 mt-4'}>
+                  <Form.Item name='teams_enabled' className={'m-0'}>
+                    <div span={24} className={'flex flex-start items-center'}>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        weight='medium'
+                        extraClass={'m-0 mr-2'}
+                      >
+                        Enable
+                      </Text>
+                      <span style={{ width: '50px' }}>
+                        <Switch
+                          checkedChildren='On'
+                          unCheckedChildren='OFF'
+                          disabled
+                          checked={viewAlertDetails?.event_alert?.teams}
+                        />
+                      </span>{' '}
+                    </div>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
+            {viewAlertDetails?.event_alert?.teams &&
+              viewAlertDetails?.event_alert?.teams_channels_config && (
+                <div className='p-4'>
+                  {teamsViewSelectedChannels.length > 0 && (
+                    <div>
+                      <Row>
+                        <Col>
+                          <Text
+                            type={'title'}
+                            level={7}
+                            weight={'regular'}
+                            extraClass={'m-0 mt-2 ml-2'}
+                          >
+                            {teamsViewSelectedChannels.length > 1
+                              ? `Selected channels from the “${viewAlertDetails?.event_alert?.teams_channels_config?.team_name}”`
+                              : `Selected channels from the “${viewAlertDetails?.event_alert?.teams_channels_config?.team_name}”`}
+                          </Text>
+                        </Col>
+                      </Row>
+                      <Row
+                        className={'rounded border border-gray-200 ml-2 w-2/6'}
+                      >
+                        <Col className={'m-0'}>
+                          {teamsViewSelectedChannels.map((channel, index) => (
+                            <div key={index}>
+                              <Text
+                                type={'title'}
+                                level={7}
+                                color={'grey'}
+                                extraClass={'m-0 ml-4 my-2'}
+                              >
+                                {'#' + channel.name}
+                              </Text>
+                            </div>
+                          ))}
+                        </Col>
+                      </Row>
+                    </div>
+                  )}
+                </div>
+              )}
+          </div>
         )}
+
         <Row className={'mt-2'}>
           <Col span={24}>
             <div className={'border-top--thin-2 mt-2 mb-4'} />
@@ -2823,6 +3469,77 @@ const EventBasedAlert = ({
           </Row>
         </div>
       </Modal>
+      <Modal
+        title={null}
+        visible={teamsShowSelectChannelsModal}
+        centered={true}
+        zIndex={1005}
+        width={700}
+        onCancel={handleCancelTeams}
+        onOk={handleOkTeams}
+        className={'fa-modal--regular p-4 fa-modal--slideInDown'}
+        closable={true}
+        okText={'Save'}
+        cancelText={'Close'}
+        transitionName=''
+        maskTransitionName=''
+        okButtonProps={{ size: 'large' }}
+        cancelButtonProps={{ size: 'large' }}
+      >
+        <div>
+          <Row>
+            <Col span={24}>
+              <Text
+                type={'title'}
+                level={4}
+                weight={'bold'}
+                size={'grey'}
+                extraClass={'m-0'}
+              >
+                Select Teams channels
+              </Text>
+            </Col>
+          </Row>
+          <Row className='my-3'>
+            <Col span={24}>
+              <Text
+                type={'title'}
+                level={6}
+                color={'grey-2'}
+                extraClass={'m-0 inline mr-2'}
+              >
+                Workspace
+              </Text>
+              <Select
+                className={'fa-select inline'}
+                options={teamsWorkspaceOpts}
+                placeholder='Select Workspace'
+                showSearch
+                value={
+                  selectedWorkspace
+                    ? {
+                        label: selectedWorkspace?.name,
+                        value: selectedWorkspace?.id
+                      }
+                    : null
+                }
+                onChange={(value, op) => {
+                  setSelectedWorkspace({ name: op?.label, id: value });
+                }}
+              ></Select>
+            </Col>
+          </Row>
+          <Row>
+            <Col span={24}>
+              <SelectChannels
+                channelOpts={teamsChannelOpts}
+                selectedChannel={teamsSelectedChannel}
+                setSelectedChannel={setTeamsSelectedChannel}
+              />
+            </Col>
+          </Row>
+        </div>
+      </Modal>
     </div>
   );
 };
@@ -2832,6 +3549,7 @@ const mapStateToProps = (state) => ({
   savedEventAlerts: state.global.eventAlerts,
   agent_details: state.agent.agent_details,
   slack: state.global.slack,
+  teams: state.global.teams,
   projectSettings: state.global.projectSettingsV1,
   groupBy: state.coreQuery.groupBy.event,
   groupByMagic: state.coreQuery.groupBy,
@@ -2860,5 +3578,8 @@ export default connect(mapStateToProps, {
   getGroupProperties,
   getEventProperties,
   fetchGroups,
-  testWebhhookUrl
+  testWebhhookUrl,
+  enableTeamsIntegration,
+  fetchTeamsWorkspace,
+  fetchTeamsChannels
 })(EventBasedAlert);

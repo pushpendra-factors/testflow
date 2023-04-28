@@ -7,6 +7,7 @@ import (
 	"github.com/mssola/user_agent"
 
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 // SetScope sets scope to the context with a key/value.
@@ -118,4 +119,10 @@ func IsBotUserAgent(userAgent string) bool {
 // projects (Including factors) upto Dec 29, 2022.
 func IsBotEventByPrefix(eventName string) bool {
 	return strings.HasPrefix(eventName, "gtm-msr.appspot.com")
+}
+
+func IsJsonError(err error) bool {
+	log.WithError(err).Warn("Invalid json payload.")
+	// "unexpected EOF" error happens when json payload is "null" or "".
+	return err != nil && err.Error() != "unexpected EOF"
 }

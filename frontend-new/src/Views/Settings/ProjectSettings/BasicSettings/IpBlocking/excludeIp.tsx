@@ -14,16 +14,17 @@ const ExcludeIpBlock = ({
 }: ExcludeIpBlockProps) => {
 
     const activeProject = useSelector((state) => state.global.active_project);
+    const currentProjectSettings = useSelector((state) => state.global.currentProjectSettings);
     const [filterIps, setFilterIps] = useState<FilterIps | null>(null)
     const [ipToExclude, setIpToExclude] = useState<string>('');
     const [errorState, setErrorState] = useState<string | undefined>(undefined);
 
     useEffect(() => {
-        if (activeProject) {
-            const excludedIpList = activeProject?.filter_ips?.block_ips
+        if (currentProjectSettings) {
+            const excludedIpList = currentProjectSettings?.filter_ips?.block_ips
             setFilterIps(new FilterIps(excludedIpList));
         }
-    }, [activeProject])
+    }, [currentProjectSettings])
 
     const renderIpList = () => {
         const chunks = filterIps?.getFilterIpsByChunks(6);

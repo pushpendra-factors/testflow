@@ -1975,11 +1975,11 @@ func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SD
 	return trackResponse, nil
 }
 
-// Returns true or false if the otpKey (userID+ruleID+keyID) is not present in uniqueOTPEventKeys i.e. Unique OTP key.
+// IsOTPKeyUnique Returns true or false if the otpKey (userID+ruleID+keyID) is not present in uniqueOTPEventKeys i.e. Unique OTP key.
 func IsOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string, logCtx *log.Entry) bool {
 	isUnique := !U.StringValueIn(otpUniqueKey, *uniqueOTPEventKeys)
 	if !isUnique {
-		logCtx.Warn("The OTP Key is not unique.")
+		log.WithField("uniqueOTPEventKeys", uniqueOTPEventKeys).WithField("otpUniqueKey", otpUniqueKey).Warn("The OTP Key is not unique.")
 	}
 	return isUnique
 }

@@ -102,15 +102,21 @@ func SignUp(c *gin.Context) {
 
 	code = onboardingMailModoAPICall(agent)
 	if code != http.StatusOK {
-		log.WithField("email", email).Error("Failed To Send Onboarding Mail")
+		log.WithField("status_code", code).
+			WithField("email", email).
+			Error("Failed To Send Onboarding Mail")
 	}
 	code = onboardingHubspotOwner(agent)
 	if code != http.StatusOK {
-		log.WithField("email", email).Error("Failed To Create Hubspot Owner")
+		log.WithField("email", email).
+			WithField("status_code", code).
+			Error("Failed To Create Hubspot Owner")
 	}
 	code = onboardingSlackAPICall(agent)
 	if code != http.StatusOK {
-		log.WithField("email", email).Error("Failed To Send Onboarding Slack")
+		log.WithField("email", email).
+			WithField("status_code", code).
+			Error("Failed To Send Onboarding Slack")
 	}
 
 	// Set Cookie with exp 1 day. After that the agent will be forced to set password
