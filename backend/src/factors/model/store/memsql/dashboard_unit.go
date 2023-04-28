@@ -1392,6 +1392,7 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 		unitReport.Query = attributionQuery
 
 		channel := make(chan Result)
+		logCtx.Info("Running attribution V1 caching")
 		go store.runAttributionUnitV1(projectID, attributionQuery.Query, channel)
 
 		select {
@@ -1741,7 +1742,7 @@ func (store *MemSQL) _cacheAttributionDashboardUnitForDateRange(cachePayload mod
 	dashboardUnitID := dashboardUnit.ID
 	from, to := baseQuery.GetQueryDateRange()
 	logCtx := log.WithFields(log.Fields{
-		"Method":          "cacheDashboardUnitForDateRange",
+		"Method":          "_cacheAttributionDashboardUnitForDateRange",
 		"ProjectID":       projectID,
 		"DashboardID":     dashboardID,
 		"DashboardUnitID": dashboardUnitID,
