@@ -18,7 +18,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-/*Sample Timeline Listing Queries:
+/*
+Sample Timeline Listing Queries:
 
 // Users Listing Without Filters
 SELECT MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at FROM (SELECT updated_at FROM users WHERE project_id=11000005 AND (is_group_user=0 OR is_group_user IS NULL) AND (source=1 OR source IS NULL) AND updated_at < '2022-09-15 13:07:24.336972' ORDER BY updated_at DESC LIMIT 100000);
@@ -59,12 +60,13 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		if status != http.StatusFound {
 			return nil, http.StatusBadRequest
 		}
-		payload.Source = segment.Type
 		segmentQuery := &model.Query{}
 		err := U.DecodePostgresJsonbToStructType(segment.Query, segmentQuery)
 		if err != nil {
 			return nil, http.StatusInternalServerError
 		}
+		payload.Source = segment.Type
+		segmentQuery.Source = segment.Type
 		tableProps = segmentQuery.TableProps
 		segmentQuery.From = U.TimeNowZ().AddDate(0, 0, -28).Unix()
 		segmentQuery.To = U.TimeNowZ().Unix()
@@ -128,7 +130,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 				log.WithField("err_code", errCode).Error("Failed to get groups while adding group info.")
 				return nil, http.StatusBadRequest
 			}
-			sourceString, status = GetSourceStringForAccountsV1(groupNameIDMap, source)
+			sourceString, status = GetSourceStringForAccountsV1(groupNameIDMap, payload.Source)
 		}
 		if status != http.StatusOK {
 			return nil, status

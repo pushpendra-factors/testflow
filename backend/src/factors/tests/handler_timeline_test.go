@@ -2219,7 +2219,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 			Source:          "salesforce",
 			TableProps:      []string{"$country", "$page_count"},
 		},
-		Type: "web",
+		Type: "salesforce",
 	}
 	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
 	assert.Equal(t, http.StatusCreated, status)
@@ -2228,7 +2228,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 	segments, status = store.GetStore().GetAllSegments(project.ID)
 	assert.Equal(t, http.StatusFound, status)
 
-	for _, segment := range segments["web"] {
+	for _, segment := range segments["salesforce"] {
 		if segment.Name == segmentPayload.Name {
 			id = segment.Id
 		}

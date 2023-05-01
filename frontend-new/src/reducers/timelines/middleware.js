@@ -40,10 +40,10 @@ export const getProfileAccounts = (projectId, payload) => (dispatch) => {
 };
 
 export const getProfileAccountDetails =
-  (projectId, id, config) => (dispatch) => {
+  (projectId, id, source, config) => (dispatch) => {
     dispatch({ type: 'FETCH_PROFILE_ACCOUNT_DETAILS_LOADING' });
     return new Promise((resolve) => {
-      fetchProfileAccountDetails(projectId, id)
+      fetchProfileAccountDetails(projectId, id, source)
         .then((response) => {
           const data = formatAccountTimeline(response.data, config);
           resolve(
