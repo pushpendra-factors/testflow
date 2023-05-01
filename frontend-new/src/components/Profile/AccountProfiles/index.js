@@ -843,6 +843,7 @@ function AccountProfiles({
             getProfileAccountDetails(
               activeProject.id,
               account.identity,
+			  accountPayload.source,
               currentProjectSettings?.timelines_config
             );
             setActiveModalKey(account.identity);
@@ -882,7 +883,7 @@ function AccountProfiles({
       footer={null}
       closable={null}
     >
-      <AccountDetails accountId={activeModalKey} onCancel={handleCancel} />
+      <AccountDetails accountId={activeModalKey} source={accountPayload.source} onCancel={handleCancel} />
     </Modal>
   );
 
