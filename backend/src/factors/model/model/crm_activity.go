@@ -60,3 +60,16 @@ func GetCRMActivityBatchedOrderedRecordsByID(records []CRMActivity, batchSize in
 
 	return batchedRecordsByID
 }
+
+const EmptyJsonStr = "{}"
+
+type EventIdToProperties struct {
+	ID                         string                 `gorm:"primary_key:true;type:uuid" json:"id"`
+	ProjectId                  int64                  `gorm:"primary_key:true;" json:"project_id"`
+	UserId                     string                 `json:"user_id"`
+	Name                       string                 `json:"name"`
+	PropertiesUpdatedTimestamp int64                  `gorm:"not null;default:0" json:"properties_updated_timestamp,omitempty"`
+	EventProperties            map[string]interface{} `json:"event_properties"`
+	UserProperties             map[string]interface{} `json:"user_properties"`
+	Timestamp                  int64                  `json:"timestamp"`
+}

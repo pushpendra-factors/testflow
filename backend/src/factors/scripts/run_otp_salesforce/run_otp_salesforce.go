@@ -51,6 +51,7 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 	defaultHealthcheckPingID := configs["health_check_ping_id"].(string)
 	overrideHealthcheckPingID := configs["override_healthcheck_ping_id"].(string)
 	numProjectRoutines := configs["num_project_routines"].(int)
+	numDaysBackfill := configs["num_days_backfill"].(int64)
 
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
@@ -100,7 +101,9 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 		for pi := range batch {
 
 			wg.Add(1)
-			go IntSalesforce.WorkerForSfOtp(batch[pi], &wg)
+			endTime := U.TimeNowUnix()
+			startTime := endTime - (numDaysBackfill * model.SecsInADay)
+			go IntSalesforce.WorkerForSfOtp(batch[pi], startTime, endTime, &wg)
 		}
 		wg.Wait()
 	}
@@ -158,6 +161,7 @@ func main() {
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 	disableCRMUniquenessConstraintsCheckByProjectID := flag.String("disable_crm_unique_constraint_check_by_project_id", "", "")
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
+	numDaysBackfill := flag.Int("num_days_backfill", 93, "Number of days to backfill from now")
 	insertBatchSize := flag.Int("insert_batch_size", 1, "Number of unique document go routines per project")
 	//overrideLastSyncTimestamp := flag.Int64("override_last_sync_timestamp", 0, "Override last sync timestamp")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
@@ -296,6 +300,7 @@ func main() {
 	configsEnrich["health_check_ping_id"] = defaultHealthcheckPingID
 	configsEnrich["override_healthcheck_ping_id"] = *overrideHealthcheckPingID
 	configsEnrich["num_project_routines"] = *numProjectRoutines
+	configsEnrich["num_days_backfill"] = *numDaysBackfill
 
 	configsDistributer := make(map[string]interface{})
 	configsDistributer["health_check_ping_id"] = ""

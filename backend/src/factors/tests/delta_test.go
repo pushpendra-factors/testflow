@@ -26,6 +26,7 @@ func TestGetCampaignMetricSimple(t *testing.T) {
 		PropertyDataType: U.PropertyTypeCategorical,
 		Condition:        M.EqualsOpStr,
 		Value:            "val11",
+		LogicalOp:        M.LOGICAL_OP_AND,
 	}}
 	propsToEvalFiltered := []string{"campaign#prop1", "campaign#prop2", "campaign#prop3", "campaign#prop4", "ad_group#prop4", "ad_group#prop5", "ad_group#prop6", "ad#prop6"}
 	queryLevel := 3
@@ -79,7 +80,7 @@ func TestGetCampaignMetricSimple(t *testing.T) {
 			log.Fatal(err)
 		}
 		scanner := bufio.NewScanner(file)
-		if info, _, err := D.GetCampaignMetricSimple(scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap); err != nil {
+		if info, _, err := D.GetCampaignMetricSimple(scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap, 20220400, 20220800); err != nil {
 			log.WithError(err).Error("error GetCampaignMetric for kpi " + metric)
 		} else {
 			assert.Equal(t, globalExpected[i], info.Global)
@@ -97,7 +98,7 @@ func TestGetCampaignMetricSimple(t *testing.T) {
 			log.Fatal(err)
 		}
 		scanner := bufio.NewScanner(file)
-		if info, _, err := D.GetCampaignMetricComplex(scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap); err != nil {
+		if info, _, err := D.GetCampaignMetricComplex(scanner, propFilter, propsToEvalFiltered, queryLevel, metricCalcInfo, docTypeAlias, requiredDocTypes, infoMap, 20220400, 20220800); err != nil {
 			log.WithError(err).Error("error GetCampaignMetric for kpi " + metric)
 		} else {
 			assert.Equal(t, globalExpected[i], info.Global)

@@ -63,6 +63,7 @@ func main() {
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	recordProcessLimit := flag.Int("record_process_limit", 50000, "Number of records to process per project.")
+	numDaysBackfill := flag.Int("num_days_backfill", 93, "Number of days to backfill from now")
 	disableNonMarketingContactByProjectID := flag.String("disable_non_marketing_contact_by_project_id", "", "Disable hubspot non marketing contacts from processing")
 	hubspotAppID := flag.String("hubspot_app_id", "", "Hubspot app id for oauth integration")
 	hubspotAppSecret := flag.String("hubspot_app_secret", "", "Hubspot app secret for oauth integration")
@@ -158,6 +159,7 @@ func main() {
 	configsEnrich["max_record_created_at"] = *hubspotMaxCreatedAt
 	configsEnrich["enrich_heavy"] = *enrichHeavy
 	configsEnrich["record_process_limit_per_project"] = *recordProcessLimit
+	configsEnrich["num_days_backfill"] = *numDaysBackfill
 
 	configsDistributer := make(map[string]interface{})
 	configsDistributer["health_check_ping_id"] = ""

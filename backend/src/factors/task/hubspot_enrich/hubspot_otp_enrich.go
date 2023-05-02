@@ -9,7 +9,6 @@ import (
 	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -17,8 +16,6 @@ import (
 	"sync"
 	"time"
 )
-
-const EmptyJsonStr = "{}"
 
 var AllowedHsEventTypeForOTP = []string{
 
@@ -32,7 +29,7 @@ var AllowedHsEventTypeForOTP = []string{
 	U.EVENT_NAME_HUBSPOT_CONTACT_LIST,
 }
 
-func filterCheckGeneralV1(rule model.OTPRule, event eventIdToProperties, logCtx *log.Entry) bool {
+func filterCheckGeneralV1(rule model.OTPRule, event model.EventIdToProperties, logCtx *log.Entry) bool {
 	var ruleFilters []model.TouchPointFilter
 	err := U.DecodePostgresJsonbToStructType(&rule.Filters, &ruleFilters)
 	if err != nil {
@@ -81,65 +78,6 @@ func filterCheckGeneralV1(rule model.OTPRule, event eventIdToProperties, logCtx 
 	return false
 }
 
-func PullEventIdsWithEventName(projectId int64, startTimestamp int64, endTimestamp int64, eventName string) ([]string, map[string]eventIdToProperties, error) {
-	db := C.GetServices().Db
-
-	events := make(map[string]eventIdToProperties, 0)
-	eventsIds := make([]string, 0)
-
-	rows, _ := db.Raw("SELECT events.id, events.user_id , event_names.name, events.timestamp, events.properties FROM events"+
-		" "+"LEFT JOIN event_names ON event_names.id = events.event_name_id"+
-		" "+"WHERE events.project_id = ? AND event_names.name = ? AND events.timestamp >= ? AND events.timestamp <= ? ORDER BY events.timestamp, events.created_at ASC", projectId, eventName, startTimestamp, endTimestamp).Rows()
-
-	rowNum := 0
-	for rows.Next() {
-		var id string
-		var userId string
-		var name string
-		var timestamp int64
-		var properties *postgres.Jsonb
-
-		if err := rows.Scan(&id, &userId, &name, &timestamp, &properties); err != nil {
-			log.WithError(err).Error("Failed to scan rows")
-			return nil, nil, err
-		}
-
-		var eventPropertiesBytes interface{}
-		var err error
-		if properties != nil {
-			eventPropertiesBytes, err = properties.Value()
-			if err != nil {
-				log.WithError(err).Error("Failed to read event properties")
-				return nil, nil, err
-			}
-		} else {
-			eventPropertiesBytes = []byte(EmptyJsonStr)
-		}
-
-		var eventPropertiesMap map[string]interface{}
-		err = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
-		if err != nil {
-			log.WithError(err).Error("Failed to marshal event properties")
-			return nil, nil, err
-		}
-
-		eventsIds = append(eventsIds, id)
-
-		events[id] = eventIdToProperties{
-			ID:              id,
-			UserId:          userId,
-			ProjectId:       projectId,
-			Name:            name,
-			EventProperties: eventPropertiesMap,
-			Timestamp:       timestamp,
-		}
-
-		rowNum++
-	}
-
-	return eventsIds, events, nil
-}
-
 func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interface{}, bool) {
 
 	projectIDList := configs["project_ids"].(string)
@@ -147,6 +85,7 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 	defaultHealthcheckPingID := configs["health_check_ping_id"].(string)
 	overrideHealthcheckPingID := configs["override_healthcheck_ping_id"].(string)
 	numProjectRoutines := configs["num_project_routines"].(int)
+	numDaysBackfill := configs["num_days_backfill"].(int64)
 
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
@@ -207,7 +146,9 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 		for pi := range batch {
 			wg.Add(1)
 
-			go syncWorkerForOTP(batch[pi], &wg)
+			endTime := U.TimeNowUnix()
+			startTime := endTime - (numDaysBackfill * model.SecsInADay)
+			go syncWorkerForOTP(batch[pi], startTime, endTime, &wg)
 		}
 		wg.Wait()
 	}
@@ -224,7 +165,7 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 
 }
 
-func syncWorkerForOTP(projectID int64, wg *sync.WaitGroup) {
+func syncWorkerForOTP(projectID int64, startTime, endTime int64, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
@@ -233,12 +174,6 @@ func syncWorkerForOTP(projectID int64, wg *sync.WaitGroup) {
 	otpRules, errCode := store.GetStore().GetALLOTPRuleWithProjectId(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		logCtx.WithField("err_code", errCode).Error("Failed to get otp Rules for Project")
-		return
-	}
-
-	uniqueOTPEventKeys, errCode := store.GetStore().GetUniqueKeyPropertyForOTPEventForLast3Months(projectID)
-	if errCode != http.StatusFound && errCode != http.StatusNotFound {
-		logCtx.WithField("err_code", errCode).Error("Failed to get OTP Unique Keys for Project")
 		return
 	}
 
@@ -254,39 +189,61 @@ func syncWorkerForOTP(projectID int64, wg *sync.WaitGroup) {
 		return
 	}
 
-	startTime, endTime, _ := U.GetQueryRangePresetYesterdayIn(timezoneString)
+	OtpEventName, _ := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
 
-	for _, eventName := range AllowedHsEventTypeForOTP {
+	_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
 
-		switch eventName {
-
-		case U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED:
-
-			RunHSOfflineTouchContact(project, otpRules, uniqueOTPEventKeys, projectID, startTime, endTime, logCtx)
-
-		case U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:
-
-			RunHSOfflineTouchForms(project, otpRules, uniqueOTPEventKeys, projectID, startTime, endTime, logCtx)
-
-		case U.EVENT_NAME_HUBSPOT_CONTACT_LIST:
-
-			RunHSOfflineTouchContactList(project, otpRules, uniqueOTPEventKeys, projectID, startTime, endTime, logCtx)
-
-		case U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED,
-			U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
-			U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED:
-
-			RunHSOfflineTouchEngagement(project, otpRules, uniqueOTPEventKeys, projectID, startTime, endTime, eventName, logCtx)
-
-		}
-
+	if errCode == http.StatusFound {
+		startTime = _startTime
 	}
 
+	//batch time range day-wise
+
+	daysTimeRange, _ := U.GetAllDaysAsTimestamp(startTime, endTime, string(timezoneString))
+
+	for _, timeRange := range daysTimeRange {
+
+		uniqueOTPEventKeys, errCode := store.GetStore().GetUniqueKeyPropertyForOTPEventForLast3Months(projectID)
+		if errCode != http.StatusFound && errCode != http.StatusNotFound {
+			logCtx.WithField("err_code", errCode).Error("Failed to get OTP Unique Keys for Project")
+			return
+		}
+
+		for _, eventName := range AllowedHsEventTypeForOTP {
+
+			logCtx.Info(fmt.Sprintf("event name  %s", eventName))
+
+			eventDetails, _ := store.GetStore().GetEventNameIDFromEventName(eventName, project.ID)
+
+			switch eventName {
+
+			case U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED:
+
+				RunHSOfflineTouchContact(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()-model.SecsInADay-1, eventDetails.ID, logCtx)
+
+			case U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:
+
+				RunHSOfflineTouchForms(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()-model.SecsInADay-1, eventDetails.ID, logCtx)
+
+			case U.EVENT_NAME_HUBSPOT_CONTACT_LIST:
+
+				RunHSOfflineTouchContactList(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()-model.SecsInADay-1, eventDetails.ID, logCtx)
+
+			case U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED,
+				U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
+				U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED:
+
+				RunHSOfflineTouchEngagement(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()-model.SecsInADay-1, eventDetails.ID, logCtx)
+
+			}
+
+		}
+	}
 }
 
-func RunHSOfflineTouchContact(project *model.Project, otpRules []model.OTPRule, uniqueOTPEventKeys []string, projectID, startTime, endTime int64, logCtx *log.Entry) {
+func RunHSOfflineTouchContact(project *model.Project, otpRules []model.OTPRule, uniqueOTPEventKeys []string, projectID, startTime, endTime int64, eventNameId string, logCtx *log.Entry) {
 
-	eventsIds, events, err := PullEventIdsWithEventName(projectID, startTime, endTime, U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED)
+	eventsIds, events, err := store.GetStore().PullEventIdsWithEventNameId(projectID, startTime, endTime, eventNameId)
 	if err != nil {
 		logCtx.Warn("Failed to get events")
 		return
@@ -298,10 +255,6 @@ func RunHSOfflineTouchContact(project *model.Project, otpRules []model.OTPRule, 
 	}
 
 	for ei := range events {
-
-		eventName := events[ei].Name
-
-		logCtx.Info(fmt.Sprintf("event name  %s", eventName))
 
 		errCode := ApplyHSOfflineTouchPointRuleV1(project, &otpRules, &uniqueOTPEventKeys, events[ei], events[ei].Timestamp)
 		if errCode != nil {
@@ -311,9 +264,9 @@ func RunHSOfflineTouchContact(project *model.Project, otpRules []model.OTPRule, 
 
 }
 
-func RunHSOfflineTouchForms(project *model.Project, otpRules []model.OTPRule, uniqueOTPEventKeys []string, projectID, startTime, endTime int64, logCtx *log.Entry) {
+func RunHSOfflineTouchForms(project *model.Project, otpRules []model.OTPRule, uniqueOTPEventKeys []string, projectID, startTime, endTime int64, eventNameId string, logCtx *log.Entry) {
 
-	eventsIds, events, err := PullEventIdsWithEventName(projectID, startTime, endTime, U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION)
+	eventsIds, events, err := store.GetStore().PullEventIdsWithEventNameId(projectID, startTime, endTime, eventNameId)
 	if err != nil {
 		logCtx.Warn("Failed to get events")
 		return
@@ -325,10 +278,6 @@ func RunHSOfflineTouchForms(project *model.Project, otpRules []model.OTPRule, un
 	}
 
 	for ei := range events {
-
-		eventName := events[ei].Name
-
-		logCtx.Info(fmt.Sprintf("event name  %s", eventName))
 
 		errCode := ApplyHSOfflineTouchPointRuleForFormsV1(project, &otpRules, &uniqueOTPEventKeys, events[ei], events[ei].Timestamp)
 		if errCode != nil {
@@ -338,9 +287,9 @@ func RunHSOfflineTouchForms(project *model.Project, otpRules []model.OTPRule, un
 
 }
 
-func RunHSOfflineTouchContactList(project *model.Project, otpRules []model.OTPRule, uniqueOTPEventKeys []string, projectID, startTime, endTime int64, logCtx *log.Entry) {
+func RunHSOfflineTouchContactList(project *model.Project, otpRules []model.OTPRule, uniqueOTPEventKeys []string, projectID, startTime, endTime int64, eventNameId string, logCtx *log.Entry) {
 
-	eventsIds, events, err := PullEventIdsWithEventName(projectID, startTime, endTime, U.EVENT_NAME_HUBSPOT_CONTACT_LIST)
+	eventsIds, events, err := store.GetStore().PullEventIdsWithEventNameId(projectID, startTime, endTime, eventNameId)
 	if err != nil {
 		logCtx.Warn("Failed to get events")
 		return
@@ -352,10 +301,6 @@ func RunHSOfflineTouchContactList(project *model.Project, otpRules []model.OTPRu
 	}
 
 	for ei := range events {
-
-		eventName := events[ei].Name
-
-		logCtx.Info(fmt.Sprintf("event name  %s", eventName))
 
 		errCode := ApplyHSOfflineTouchPointRuleForContactListV1(project, &otpRules, &uniqueOTPEventKeys, events[ei])
 		if errCode != nil {
@@ -365,9 +310,9 @@ func RunHSOfflineTouchContactList(project *model.Project, otpRules []model.OTPRu
 
 }
 
-func RunHSOfflineTouchEngagement(project *model.Project, otpRules []model.OTPRule, uniqueOTPEventKeys []string, projectID, startTime, endTime int64, eventName string, logCtx *log.Entry) {
+func RunHSOfflineTouchEngagement(project *model.Project, otpRules []model.OTPRule, uniqueOTPEventKeys []string, projectID, startTime, endTime int64, eventNameId string, logCtx *log.Entry) {
 
-	eventsIds, events, err := PullEventIdsWithEventName(projectID, startTime, endTime, eventName)
+	eventsIds, events, err := store.GetStore().PullEventIdsWithEventNameId(projectID, startTime, endTime, eventNameId)
 	if err != nil {
 		logCtx.Warn("Failed to get events")
 		return
@@ -380,7 +325,6 @@ func RunHSOfflineTouchEngagement(project *model.Project, otpRules []model.OTPRul
 
 	for ei := range events {
 
-		logCtx.Info(fmt.Sprintf("event name  %s", eventName))
 		engagementType := events[ei].EventProperties[U.EP_HUBSPOT_ENGAGEMENT_TYPE]
 		errCode := ApplyHSOfflineTouchPointRuleForEngagementV1(project, &otpRules, &uniqueOTPEventKeys, events[ei], fmt.Sprint(engagementType))
 		if errCode != nil {
@@ -390,19 +334,8 @@ func RunHSOfflineTouchEngagement(project *model.Project, otpRules []model.OTPRul
 
 }
 
-type eventIdToProperties struct {
-	ID                         string                 `gorm:"primary_key:true;type:uuid" json:"id"`
-	ProjectId                  int64                  `gorm:"primary_key:true;" json:"project_id"`
-	UserId                     string                 `json:"user_id"`
-	Name                       string                 `json:"name"`
-	PropertiesUpdatedTimestamp int64                  `gorm:"not null;default:0" json:"properties_updated_timestamp,omitempty"`
-	EventProperties            map[string]interface{} `json:"event_properties"`
-	UserProperties             map[string]interface{} `json:"user_properties"`
-	Timestamp                  int64                  `json:"timestamp"`
-}
-
-//ApplyHSOfflineTouchPointRuleV1 - Check if the condition are satisfied for creating OTP events for each rule for HS Contact
-func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, event eventIdToProperties, eventTimestamp int64) error {
+// ApplyHSOfflineTouchPointRuleV1 - Check if the condition are satisfied for creating OTP events for each rule for HS Contact
+func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, event model.EventIdToProperties, eventTimestamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRule",
 		"document_action": fmt.Sprint("Contact")})
@@ -444,7 +377,7 @@ func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OT
 }
 
 // CreateTouchPointEventForFormsAndContactsV1 - Creates offline touch-point for HS create/update events with given rule for HS Contacts and Forms
-func CreateTouchPointEventForFormsAndContactsV1(project *model.Project, event eventIdToProperties,
+func CreateTouchPointEventForFormsAndContactsV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, eventTimestamp int64, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent"})
@@ -520,8 +453,8 @@ func CreateTouchPointEventForFormsAndContactsV1(project *model.Project, event ev
 	return trackResponse, nil
 }
 
-//Creates a unique key using ruleID, userID and eventID as keyID for Forms and contacts
-func createOTPUniqueKeyForFormsAndContactsV1(rule model.OTPRule, event eventIdToProperties) (string, int) {
+// Creates a unique key using ruleID, userID and eventID as keyID for Forms and contacts
+func createOTPUniqueKeyForFormsAndContactsV1(rule model.OTPRule, event model.EventIdToProperties) (string, int) {
 
 	ruleID := rule.ID
 	userID := event.UserId
@@ -533,8 +466,8 @@ func createOTPUniqueKeyForFormsAndContactsV1(rule model.OTPRule, event eventIdTo
 
 }
 
-//ApplyHSOfflineTouchPointRuleForEngagementV1 -Check if the condition are satisfied for creating OTP events for each rule for HS Engagements - Meetings/Calls/Emails
-func ApplyHSOfflineTouchPointRuleForEngagementV1(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, event eventIdToProperties, engagementType string) error {
+// ApplyHSOfflineTouchPointRuleForEngagementV1 -Check if the condition are satisfied for creating OTP events for each rule for HS Engagements - Meetings/Calls/Emails
+func ApplyHSOfflineTouchPointRuleForEngagementV1(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, event model.EventIdToProperties, engagementType string) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRuleForEngagement", "event": event})
 
@@ -568,8 +501,8 @@ func ApplyHSOfflineTouchPointRuleForEngagementV1(project *model.Project, otpRule
 	return nil
 }
 
-//Creates a unique key using ruleID, userID and engagementID as keyID for Engagements {Emails, Calls and Meetings}
-func createOTPUniqueKeyForEngagementsV1(rule model.OTPRule, event eventIdToProperties, engagementType string, logCtx *log.Entry) (string, int) {
+// Creates a unique key using ruleID, userID and engagementID as keyID for Engagements {Emails, Calls and Meetings}
+func createOTPUniqueKeyForEngagementsV1(rule model.OTPRule, event model.EventIdToProperties, engagementType string, logCtx *log.Entry) (string, int) {
 
 	ruleID := rule.ID
 	userID := event.UserId
@@ -596,7 +529,7 @@ func createOTPUniqueKeyForEngagementsV1(rule model.OTPRule, event eventIdToPrope
 }
 
 // CreateTouchPointEventForEngagementV1 - Creates offline touch-point for HS engagements (calls, meetings, forms, emails) with give rule
-func CreateTouchPointEventForEngagementV1(project *model.Project, event eventIdToProperties,
+func CreateTouchPointEventForEngagementV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, engagementType string, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent",
@@ -694,7 +627,7 @@ func CreateTouchPointEventForEngagementV1(project *model.Project, event eventIdT
 	return trackResponse, nil
 }
 
-//isEmailEngagementAlreadyTrackedV1 - Checks if the Email (a type of Engagement) is already tracked for creating OTP event.
+// isEmailEngagementAlreadyTrackedV1 - Checks if the Email (a type of Engagement) is already tracked for creating OTP event.
 func isEmailEngagementAlreadyTrackedV1(projectID int64, ruleID string, threadID string, logCtx *log.Entry) (bool, error) {
 
 	en, status := store.GetStore().CreateOrGetOfflineTouchPointEventName(projectID)
@@ -729,8 +662,8 @@ func isEmailEngagementAlreadyTrackedV1(projectID int64, ruleID string, threadID 
 	return false, nil
 }
 
-//ApplyHSOfflineTouchPointRuleForContactListV1 - Check if the condition are satisfied for creating OTP events for each rule for HS Contact list
-func ApplyHSOfflineTouchPointRuleForContactListV1(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, event eventIdToProperties) error {
+// ApplyHSOfflineTouchPointRuleForContactListV1 - Check if the condition are satisfied for creating OTP events for each rule for HS Contact list
+func ApplyHSOfflineTouchPointRuleForContactListV1(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, event model.EventIdToProperties) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRuleForContactList", "event": event})
 
@@ -768,7 +701,7 @@ func ApplyHSOfflineTouchPointRuleForContactListV1(project *model.Project, otpRul
 	return nil
 }
 
-func createOTPUniqueKeyForContactListV1(rule model.OTPRule, event eventIdToProperties, logCtx *log.Entry) (string, int) {
+func createOTPUniqueKeyForContactListV1(rule model.OTPRule, event model.EventIdToProperties, logCtx *log.Entry) (string, int) {
 	ruleID := rule.ID
 	userID := event.UserId
 	var keyID string
@@ -787,7 +720,7 @@ func createOTPUniqueKeyForContactListV1(rule model.OTPRule, event eventIdToPrope
 }
 
 // CreateTouchPointEventForListsV1 - Creates OTP for HS lists
-func CreateTouchPointEventForListsV1(project *model.Project, event eventIdToProperties,
+func CreateTouchPointEventForListsV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForLists"})
@@ -862,8 +795,8 @@ func CreateTouchPointEventForListsV1(project *model.Project, event eventIdToProp
 	return trackResponse, nil
 }
 
-//ApplyHSOfflineTouchPointRuleForFormsV1 - Check if the condition are satisfied for creating OTP events for each rule for HS Forms Submission
-func ApplyHSOfflineTouchPointRuleForFormsV1(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, event eventIdToProperties, formTimestamp int64) error {
+// ApplyHSOfflineTouchPointRuleForFormsV1 - Check if the condition are satisfied for creating OTP events for each rule for HS Forms Submission
+func ApplyHSOfflineTouchPointRuleForFormsV1(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, event model.EventIdToProperties, formTimestamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRuleForForms", "event": event})
 
