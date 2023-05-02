@@ -51,7 +51,7 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 	defaultHealthcheckPingID := configs["health_check_ping_id"].(string)
 	overrideHealthcheckPingID := configs["override_healthcheck_ping_id"].(string)
 	numProjectRoutines := configs["num_project_routines"].(int)
-	numDaysBackfill := configs["num_days_backfill"].(int64)
+	numDaysBackfill := configs["num_days_backfill"].(int)
 
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
@@ -102,7 +102,7 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 
 			wg.Add(1)
 			endTime := U.TimeNowUnix()
-			startTime := endTime - (numDaysBackfill * model.SecsInADay)
+			startTime := endTime - (int64(numDaysBackfill) * model.SecsInADay)
 			go IntSalesforce.WorkerForSfOtp(batch[pi], startTime, endTime, &wg)
 		}
 		wg.Wait()
