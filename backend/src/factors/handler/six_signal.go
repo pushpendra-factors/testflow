@@ -10,12 +10,13 @@ import (
 	"factors/model/store/memsql"
 	U "factors/util"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -24,9 +25,9 @@ const (
 )
 
 // GetSixSignalReportHandler fetches the saved sixsignal report from cloud storage if the isSaved parameter in request payload is true
-//if the isSaved parameter is false the handler computes the result on the go.
-//The report fetched from the cloud are allowed to share and the result computed on the go is not allowed to share which is reflected
-//in the response parameter isShareable.
+// if the isSaved parameter is false the handler computes the result on the go.
+// The report fetched from the cloud are allowed to share and the result computed on the go is not allowed to share which is reflected
+// in the response parameter isShareable.
 func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	r := c.Request
 
@@ -73,7 +74,7 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 
 		resultGroup, errCode := store.GetStore().RunSixSignalGroupQuery(requestPayload.Queries, projectId)
 		if errCode != http.StatusOK {
-			logCtx.Error("Query failed. Failed to process query from DB with error: ", errCode)
+			logCtx.WithField("err_code", errCode).Error("Six signal group query failed on report handler")
 			return nil, http.StatusInternalServerError, "", "Failed to process Query", true
 		}
 		resultGroup.Query = requestPayload

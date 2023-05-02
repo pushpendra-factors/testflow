@@ -27,6 +27,7 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 
 function AccountDetails({
   accountId,
+  source,
   onCancel,
   accountDetails,
   activeProject,
@@ -125,6 +126,7 @@ function AccountDetails({
         getProfileAccountDetails(
           activeProject.id,
           accountId,
+		  source,
           currentProjectSettings?.timelines_config
         )
       );
@@ -179,6 +181,7 @@ function AccountDetails({
       getProfileAccountDetails(
         activeProject.id,
         accountId,
+		source,
         currentProjectSettings?.timelines_config
       )
     );
@@ -249,6 +252,7 @@ function AccountDetails({
         getProfileAccountDetails(
           activeProject.id,
           accountId,
+		  source,
           currentProjectSettings?.timelines_config
         )
       );

@@ -30,6 +30,11 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
+	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
+	awsRegion := flag.String("aws_region", "us-east-1", "")
+	awsAccessKeyId := flag.String("aws_key", "dummy", "")
+	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
+	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
 	//lookback := flag.Int("lookback", 1, "lookback_for_delta lookup")
@@ -64,6 +69,11 @@ func main() {
 			AppName:     appName,
 		},
 		PrimaryDatastore:    *primaryDatastore,
+		APPDomain:           *appDomain,
+		AWSKey:              *awsAccessKeyId,
+		AWSSecret:           *awsSecretAccessKey,
+		AWSRegion:           *awsRegion,
+		EmailSender:         *factorsEmailSender,
 		RedisHost:           *redisHost,
 		RedisPort:           *redisPort,
 		RedisHostPersistent: *redisHostPersistent,
@@ -72,6 +82,8 @@ func main() {
 	defaultHealthcheckPingID := C.HealthCheckSixSignalReportPingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	C.InitConf(config)
+	C.InitSenderEmail(C.GetFactorsSenderEmail())
+	C.InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
 	err := C.InitDB(*config)
 	if err != nil {
 		log.Fatal("Init failed.")

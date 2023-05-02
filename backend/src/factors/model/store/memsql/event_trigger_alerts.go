@@ -95,6 +95,13 @@ func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []mode
 				deliveryOption += "& Webhook"
 			}
 		}
+		if alert.Teams{
+			if deliveryOption == "" {
+				deliveryOption += "Teams"
+			} else {
+				deliveryOption += "& Teams"
+			}
+		}
 		e := model.EventTriggerAlertInfo{
 			ID:                obj.ID,
 			Title:             obj.Title,
@@ -157,7 +164,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	}
 
 	for _, filter := range (*alertConfig).Filter {
-		if filter.Operator == model.InList {
+		if filter.Operator == model.InList || filter.Operator == model.NotInList {
 			// Get the cloud file that is there for the reference value
 			path, file := C.GetCloudManager(projectID, true).GetListReferenceFileNameAndPathFromCloud(projectID, filter.Value)
 			reader, err := C.GetCloudManager(projectID, true).Get(path, file)
@@ -225,7 +232,7 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 	if alert.Event == "" {
 		return false, http.StatusBadRequest, "event can not be empty"
 	}
-	if !alert.Slack && !alert.Webhook {
+	if !alert.Slack && !alert.Webhook &&!alert.Teams{
 		return false, http.StatusBadRequest, "Choose atleast one delivery option"
 	}
 	if alert.Slack && (alert.SlackChannels == nil || U.IsEmptyPostgresJsonb(alert.SlackChannels)) {
@@ -238,6 +245,14 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 	}
 	if alert.Slack && !isSlackIntegrated {
 		return false, http.StatusBadRequest, "Slack integration is not enabled for this project"
+	}
+	isTeamsIntegrated, errCode := store.IsTeamsIntegratedForProject(projectID, agentID)
+	if errCode != http.StatusOK {
+		log.WithFields(log.Fields{"agentUUID": agentID, "event_trigger_alert": alert}).Error("failed to check teams integration")
+		return false, errCode, "failed to check teams integration"
+	}
+	if alert.Teams && !isTeamsIntegrated {
+		return false, http.StatusBadRequest, "Teams integration is not enabled for this project"
 	}
 	return true, http.StatusOK, ""
 }

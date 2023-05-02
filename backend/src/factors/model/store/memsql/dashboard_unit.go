@@ -159,7 +159,9 @@ func (store *MemSQL) updateDashboardUnitPresentation(unit *model.DashboardUnit) 
 	logCtx := log.WithFields(logFields)
 	queryInfo, errC := store.GetQueryWithQueryId(unit.ProjectID, unit.QueryId)
 	if errC != http.StatusFound {
-		logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", unit.QueryId)
+		logCtx.WithField("err_code", errC).
+			WithField("query_id", unit.QueryId).
+			Error("Failed to fetch query from query_id")
 	}
 	// request is received from new UI updating Presentation
 	settings := make(map[string]string)
@@ -690,7 +692,9 @@ func (store *MemSQL) DBCacheAttributionDashboardUnitsForProjects(stringProjectsI
 				log.WithFields(logFields).Error("failed to get query class")
 				continue
 			}
-
+			// Overriding it because we need all attribution queries on QueryClassAttributionV1
+			// TODO after all queries are moved QueryClassAttributionV1
+			queryClass = model.QueryClassAttributionV1
 			// skip all other queries than attribution v1 query
 			if queryInfo.Type != model.QueryTypeAttributionV1Query {
 				continue
@@ -844,7 +848,7 @@ func (store *MemSQL) GetQueryAndClassFromQueryIdString(queryIdString string, pro
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	savedQuery, errCode := store.GetQueryWithQueryIdString(projectId, queryIdString)
 	if errCode != http.StatusFound {
-		errMsg = fmt.Sprintf("Failed to fetch query from query_id %v", queryIdString)
+		errMsg = fmt.Sprintf("Failed to fetch query from query_id", queryIdString)
 		return "", nil, errMsg
 	}
 
@@ -1123,7 +1127,9 @@ func (store *MemSQL) RunCustomQueryRangeCaching(dashboardUnit model.DashboardUni
 
 	queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
 	if errC != http.StatusFound {
-		logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+		logCtx.WithField("err_code", errC).
+			WithField("query_id", dashboardUnit.QueryId).
+			Error("Failed to fetch query from query_id")
 		return
 	}
 
@@ -1193,7 +1199,9 @@ func (store *MemSQL) RunEverydayCaching(dashboardUnit model.DashboardUnit, timez
 
 		queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
 		if errC != http.StatusFound {
-			logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+			logCtx.WithField("err_code", errC).
+				WithField("query", dashboardUnit.QueryId).
+				Error("Failed to fetch query from query_id", dashboardUnit.QueryId)
 			continue
 		}
 
@@ -1274,7 +1282,8 @@ func (store *MemSQL) RunCachingToBackFillRanges(dashboardUnit model.DashboardUni
 
 		queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
 		if errC != http.StatusFound {
-			logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+			logCtx.WithField("err_code", errC).
+				WithField("query_id", dashboardUnit.QueryId).Errorf("Failed to fetch query from query_id")
 			continue
 		}
 
@@ -1392,6 +1401,7 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 		unitReport.Query = attributionQuery
 
 		channel := make(chan Result)
+		logCtx.Info("Running attribution V1 caching")
 		go store.runAttributionUnitV1(projectID, attributionQuery.Query, channel)
 
 		select {
@@ -1741,7 +1751,7 @@ func (store *MemSQL) _cacheAttributionDashboardUnitForDateRange(cachePayload mod
 	dashboardUnitID := dashboardUnit.ID
 	from, to := baseQuery.GetQueryDateRange()
 	logCtx := log.WithFields(log.Fields{
-		"Method":          "cacheDashboardUnitForDateRange",
+		"Method":          "_cacheAttributionDashboardUnitForDateRange",
 		"ProjectID":       projectID,
 		"DashboardID":     dashboardID,
 		"DashboardUnitID": dashboardUnitID,
@@ -1819,7 +1829,9 @@ func (store *MemSQL) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectID
 		for _, dashboardUnit := range dashboardUnits {
 			queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
 			if errC != http.StatusFound {
-				logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+				logCtx.WithField("err_code", errC).
+					WithField("query_id", dashboardUnit.QueryId).
+					Error("Failed to fetch query from query_id")
 				continue
 			}
 

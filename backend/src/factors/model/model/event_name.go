@@ -572,7 +572,6 @@ We use PROPERTY_VALUE_ANY const in backend for CRM rule validation
 $none will be converted to ANY with logic
 value != $none  -->> value == PROPERTY_VALUE_ANY
 value == $none  ->-> value != PROPERTY_VALUE_ANY
-
 */
 func HandleSmartEventNoneTypeValue(filterExpr *SmartCRMEventFilter) {
 	for _, filter := range filterExpr.Filters {
@@ -592,7 +591,6 @@ We use PROPERTY_VALUE_ANY const in backend for CRM rule validation
 ANY will be converted to $none with logic
 value == PROPERTY_VALUE_ANY -->> value != $none
 value != PROPERTY_VALUE_ANY -->> value == $none
-
 */
 func HandleSmartEventAnyTypeValue(filterExpr *SmartCRMEventFilter) {
 	for _, filter := range filterExpr.Filters {
@@ -787,7 +785,7 @@ func GetPropertiesByEventCategoryRollUpCacheKey(projectId int64, event_name stri
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, event_name), date)
 }
 
-func GetListCacheKey(projectId int64, keyReference string)(*cacheRedis.Key, error) {
+func GetListCacheKey(projectId int64, keyReference string) (*cacheRedis.Key, error) {
 	prefix := "LIST"
 	return cacheRedis.NewKey(projectId, prefix, keyReference)
 }
@@ -952,7 +950,7 @@ func IsGroupSmartEventName(projectID int64, eventName *EventName) (string, bool)
 	}
 	smartEventFilter, err := GetDecodedSmartEventFilterExp(eventName.FilterExpr)
 	if err != nil {
-		logCtx.Error("Failed to GetDecodedSmartEventFilterExp")
+		logCtx.WithError(err).Error("Failed to GetDecodedSmartEventFilterExp")
 		return "", false
 	}
 

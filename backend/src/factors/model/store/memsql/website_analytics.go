@@ -156,7 +156,8 @@ func (store *MemSQL) GetWebAnalyticsQueriesFromDashboardUnits(projectID int64) (
 
 		savedQuery, errCode := store.GetQueryWithQueryId(projectID, dunit.QueryId)
 		if errCode != http.StatusFound {
-			logCtx.Errorf("Failed to fetch query from query_id %d", dunit.QueryId)
+			logCtx.WithField("err_code", errCode).
+				WithField("query_id", dunit.QueryId).Error("Failed to fetch query from query_id")
 			continue
 		}
 

@@ -34,6 +34,7 @@ func main() {
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
+	attributionDebug := flag.Int("attribution_debug", 0, "Enables debug logging for attribution queries")
 
 	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
 	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
@@ -116,6 +117,7 @@ func main() {
 		EnableFilterOptimisation:              *enableFilterOptimisation,
 		AllowProfilesGroupSupport:             *allowProfilesGroupSupport,
 		FilterPropertiesStartTimestamp:        *filterPropertiesStartTimestamp,
+		AttributionDebug:                      *attributionDebug,
 		IsRunningForMemsql:                    *runningForMemsql,
 		SkipEventNameStepByProjectID:          *skipEventNameStepByProjectID,
 		SkipUserJoinInEventQueryByProjectID:   *skipUserJoinInEventQueryByProjectID,

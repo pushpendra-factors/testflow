@@ -15,6 +15,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
 func (store *MemSQL) GetAlertById(id string, projectID int64) (model.Alert, int) {
 	logFields := log.Fields{
 		"id":         id,
@@ -286,7 +287,7 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 	if err != nil {
 		return false, http.StatusInternalServerError, "failed to decode jsonb to alert configuration"
 	}
-	if !alertConfiguration.IsEmailEnabled && !alertConfiguration.IsSlackEnabled {
+	if !alertConfiguration.IsEmailEnabled && !alertConfiguration.IsSlackEnabled && !alertConfiguration.IsTeamsEnabled{
 		logCtx.Error("Select at least one notification method")
 		return false, http.StatusBadRequest, "Select at least one notification method"
 	}
@@ -301,6 +302,14 @@ func (store *MemSQL) validateAlertBody(projectID int64, alert model.Alert) (bool
 	if alertConfiguration.IsSlackEnabled && !isSlackIntegrated {
 		logCtx.Error("Slack integration is not enabled for this project")
 		return false, http.StatusBadRequest, "Slack integration is not enabled for this project"
+	}
+	isTeamsIntegrated, errCode := store.IsTeamsIntegratedForProject(projectID, alert.CreatedBy)
+	if errCode != http.StatusOK {
+		return false, errCode, "failed to check teams integration"
+	}
+	if alertConfiguration.IsTeamsEnabled && !isTeamsIntegrated {
+		logCtx.Error("Teams integration is not enabled for this project")
+		return false, http.StatusBadRequest, "Teams integration is not enabled for this project"
 	}
 	if alertConfiguration.IsSlackEnabled {
 

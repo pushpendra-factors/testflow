@@ -5,22 +5,21 @@ import (
 	"errors"
 	C "factors/config"
 	H "factors/handler/helpers"
+	slack "factors/integration/slack"
+	teams "factors/integration/ms_teams"
 	"factors/model/model"
 	"factors/model/store"
-	slack "factors/integration/slack"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
 	qc "factors/quickchart"
-
-	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/jinzhu/now"
-	log "github.com/sirupsen/logrus"
 )
 
 type Message struct {
@@ -181,6 +180,9 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 			}
 			if alertConfiguration.IsSlackEnabled {
 				sendSlackAlert(alert.ProjectID, alert.CreatedBy, msg, dateRange, timezoneString, alertConfiguration.SlackChannelsAndUserGroups)
+			}
+			if alertConfiguration.IsTeamsEnabled {
+				sendTeamsAlert(alert.ProjectID, alert.CreatedBy, msg, dateRange, timezoneString, alertConfiguration.TeamsChannelConfig)
 			}
 		}
 		alert.LastAlertSent = true
@@ -630,7 +632,118 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 
 	return slackMsg
 }
+func sendTeamsAlert(projectID int64, agentUUID string, msg Message, dateRange dateRanges, timezone U.TimeZoneString, config *postgres.Jsonb) {
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+		"agent_uuid": agentUUID,
+	})
+	var msteams model.Team
+	err := U.DecodePostgresJsonbToStructType(config, &msteams)
+	if err != nil {
+		log.WithError(err).Error("failed to decode slack channels")
+		return
+	}
+	var success, fail int
+	teamsMsg := getTeamsMessage(msg, dateRange, timezone)
+	dryRunFlag := C.GetConfig().EnableDryRunAlerts
+	if dryRunFlag {
+		log.Info("Dry run mode enabled. No alerts will be sent")
+		log.Info(teamsMsg, projectID)
+		return
+	}
+	for _, channel := range msteams.TeamsChannelList {
+		log.Info(channel)
+		err := teams.SendTeamsMessage(projectID, agentUUID, msteams.TeamsId, channel.ChannelId, teamsMsg)
+		if err != nil {
+			fail++
+			logCtx.WithError(err).Error("failed to send teams alert ", teamsMsg)
+			continue
+		}
+		success++
+	}
 
+	logCtx.Info("sent teams alert to ", success, " failed to send teams alert to ", fail)
+}
+func getTeamsMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneString) string {
+	fromTime := time.Unix(dateRange.from, 0)
+	toTime := time.Unix(dateRange.to, 0)
+
+	fromTime = U.ConvertTimeIn(fromTime, timezone)
+	toTime = U.ConvertTimeIn(toTime, timezone)
+
+	from := fromTime.Format("02 Jan 2006")
+	to := toTime.Format("02 Jan 2006")
+
+	if msg.Operator == model.INCREASED_OR_DECREASED_BY_MORE_THAN || msg.Operator == model.PERCENTAGE_HAS_INCREASED_OR_DECREASED_BY_MORE_THAN {
+		if msg.ActualValue > msg.ComparedValue {
+			if msg.Operator == model.INCREASED_OR_DECREASED_BY_MORE_THAN {
+				msg.Operator = model.INCREASED_BY_MORE_THAN
+			} else {
+				msg.Operator = model.PERCENTAGE_HAS_INCREASED_BY_MORE_THAN
+			}
+		} else {
+			if msg.Operator == model.INCREASED_OR_DECREASED_BY_MORE_THAN {
+				msg.Operator = model.DECREASED_BY_MORE_THAN
+			} else {
+				msg.Operator = model.PERCENTAGE_HAS_DECREASED_BY_MORE_THAN
+			}
+		}
+	}
+	percentageSymbol := ""
+	if msg.Operator == model.PERCENTAGE_HAS_INCREASED_BY_MORE_THAN || msg.Operator == model.PERCENTAGE_HAS_DECREASED_BY_MORE_THAN {
+		percentageSymbol = "%"
+		if msg.Operator == model.PERCENTAGE_HAS_INCREASED_BY_MORE_THAN {
+			msg.Operator = model.INCREASED_BY_MORE_THAN
+		} else {
+			msg.Operator = model.DECREASED_BY_MORE_THAN
+		}
+	}
+	var actualValue string
+	if msg.CategoryType == model.MetricsDateType {
+		actualValue = convertTimeFromSeconds(msg.ActualValue)
+	} else {
+		actualValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
+		actualValue = AddCommaToNumber(actualValue)
+	}
+	var teamsMsg string
+	comparedToStatement := ""
+	ComparedValue := ""
+	if msg.AlertType == 2 {
+		comparedToStatement = "compared to previous period "
+		if msg.CategoryType == model.MetricsDateType {
+			ComparedValue = convertTimeFromSeconds(msg.ComparedValue)
+		} else {
+			ComparedValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
+			ComparedValue = AddCommaToNumber(ComparedValue)
+		}
+		ComparedValue = " (" + ComparedValue + ") "
+	}
+	teamsMsg = fmt.Sprintf(`{
+		"contentType": "application/vnd.microsoft.teams.card.o365connector",
+  		"content": {
+			"@type": "MessageCard",
+			"@context": "http://schema.org/extensions",
+			"themeColor": "0076D7",
+			"summary": "KPI Alert for last week",
+			"sections": [{
+				"activityText": "For the %s (%s - %s) %s",
+				"activityTitle": "%s %s %s%s ",
+				"activitySubtitle": "%s %s",
+				"markdown": true
+			}],
+			"potentialAction": [{
+				"@type": "OpenUri",
+				"name": "Go to Factors.ai",
+				"targets": [{
+					"os": "default",
+					"uri": "https://app.factors.ai/"
+				}]
+			}]
+		}
+	}`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, comparedToStatement, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue)
+
+	return teamsMsg
+}
 func getGBTForKPIQuery(dateRangeType string) string {
 	if dateRangeType == model.LAST_WEEK {
 		return model.GroupByTimestampWeek
@@ -1340,7 +1453,7 @@ func buildTableConfigForSavedQuerySharing(alert model.Alert, queryClass, reportT
 					case int64:
 						value = (float64(value.(int64)))
 					}
-					if flag{
+					if flag {
 						value = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", value), "0"), ".")
 						value = AddCommaToNumber(fmt.Sprint(value))
 					}
@@ -1386,7 +1499,7 @@ func buildTableConfigForSavedQuerySharing(alert model.Alert, queryClass, reportT
 			for idx, row := range rows {
 				key := ColumnMapToDataIndex[idx]
 				value := row
-				flag:= true
+				flag := true
 				switch value.(type) {
 				case string:
 					if _, exists := displayNameEvents[value.(string)]; exists {

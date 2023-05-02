@@ -14,8 +14,8 @@ import (
 	"time"
 
 	slack "factors/integration/slack"
+	teams "factors/integration/ms_teams"
 	webhook "factors/webhooks"
-
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -91,7 +91,7 @@ func main() {
 
 	conf := make(map[string]interface{})
 	finalStatus := make(map[string]interface{})
-	success := true	
+	success := true
 	successCount, failureCount := 0, 0
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 	for _, projectID := range projectIDs {
@@ -197,6 +197,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 	}
 
 	slackSuccess := true
+	teamsSuccess := true
 	whSuccess := true
 
 	msg := alert.Message
@@ -204,6 +205,15 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		slackSuccess = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels)
 		if !slackSuccess {
 			err := AddKeyToFailureSet(key, eta.ProjectID, "Slack")
+			if err != nil {
+				log.WithError(err).Error("failed to put key in FailureSortedSet")
+			}
+		}
+	}
+	if alertConfiguration.Teams {
+		teamsSuccess = sendTeamsAlertForEventTriggerAlert(eta.ProjectID, eta.CreatedBy, msg, alertConfiguration.TeamsChannelsConfig)
+		if !teamsSuccess {
+			err := AddKeyToFailureSet(key, eta.ProjectID, "Teams")
 			if err != nil {
 				log.WithError(err).Error("failed to put key in FailureSortedSet")
 			}
@@ -227,7 +237,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 	}
 
-	if slackSuccess || whSuccess {
+	if slackSuccess || whSuccess || teamsSuccess {
 		status, err := store.GetStore().UpdateEventTriggerAlertField(eta.ProjectID, eta.ID,
 			map[string]interface{}{"last_alert_at": time.Now()})
 		if status != http.StatusAccepted || err != nil {
@@ -235,7 +245,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 	}
 
-	return slackSuccess && whSuccess
+	return slackSuccess && whSuccess && teamsSuccess
 }
 
 func AddKeyToFailureSet(key *cacheRedis.Key, projectID int64, failPoint string) error {
@@ -440,4 +450,136 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 	]`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock)
 
 	return mainBlock
+}
+func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string, msg model.EventTriggerAlertMessage, Tchannels *postgres.Jsonb) bool {
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+		"agent_uuid": agentUUID,
+	})
+	var teamsChannels model.Team
+
+	err := U.DecodePostgresJsonbToStructType(Tchannels, &teamsChannels)
+	if err != nil {
+		log.WithError(err).Error("failed to decode teams channels")
+		return false
+	}
+
+	wetRun := true
+	if wetRun {
+
+		for _, channel := range teamsChannels.TeamsChannelList {
+			message := getTeamsMessageTemp(msg)
+			err := teams.SendTeamsMessage(projectID, agentUUID, teamsChannels.TeamsId, channel.ChannelId, message)
+			if err != nil {
+				logCtx.WithError(err).Error("failed to send teams message ", msg)
+				return false
+			}
+
+			logCtx.Info("teams alert sent: ", channel, message)
+		}
+
+	} else {
+		log.Info("Dry run mode enabled. No alerts will be sent")
+		log.Info("*****", msg, projectID)
+		return true
+	}
+
+	return true
+}
+
+func getPropsJsonForTeams(propMap U.PropertiesMap) string {
+	propsBlock := ``
+	for i := 0; i < len(propMap); i++ {
+		pp := propMap[fmt.Sprintf("%d", i)]
+		var mp model.MessagePropMapStruct
+		if pp != nil {
+			trans, ok := pp.(map[string]interface{})
+			if !ok {
+				log.Warn("cannot convert interface to map[string]interface{} type")
+				continue
+			}
+			err := U.DecodeInterfaceMapToStructType(trans, &mp)
+			if err != nil {
+				log.Warn("cannot convert interface map to struct type")
+				continue
+			}
+			key := mp.DisplayName
+			prop := mp.PropValue
+			if prop == "" {
+				prop = "<nil>"
+			}
+
+			propsBlock += fmt.Sprintf(`{
+				"name": %s,
+				"value": %v"
+			}`, key, strings.Replace(fmt.Sprintf("%v", prop), "\"", "", -1))
+
+			if i != len(propMap)-1 {
+				propsBlock += ","
+			}
+		}
+	}
+	return propsBlock
+}
+
+func getTeamsMessageJson(message model.EventTriggerAlertMessage) string {
+	msg := fmt.Sprintf(`{
+		"@type": "MessageCard",
+		"@context": "http://schema.org/extensions",
+		"themeColor": "0076D7",
+		"summary": %s,
+		"sections": [{
+			"activityTitle": %s,
+			"activitySubtitle": %s,
+			"activityImage": "https://teamsnodesample.azurewebsites.net/static/img/image5.png",
+			"facts": [%s],
+		"potentialAction": [{
+			"@type": "OpenUri",
+			"name": "Know More",
+			"targets": [{
+				"os": "default",
+				"uri": "https://app.factors.ai/profiles/people"
+			}]
+		}]
+	}`, strings.Replace(message.Message, "\"", "", -1), strings.Replace(message.Title, "\"", "", -1), strings.Replace(message.Message, "\"", "", -1), getPropsJsonForTeams(message.MessageProperty))
+	return msg
+}
+
+func getTeamsMessageTemp(message model.EventTriggerAlertMessage) string {
+	msg := fmt.Sprintf(`
+		%s 
+		%s 
+	`,strings.Replace(message.Title, "\"", "", -1),strings.Replace(message.Message, "\"", "", -1))
+	propMap := message.MessageProperty
+	for i := 0; i < len(propMap); i++ {
+		pp := propMap[fmt.Sprintf("%d", i)]
+		var mp model.MessagePropMapStruct
+		if pp != nil {
+			trans, ok := pp.(map[string]interface{})
+			if !ok {
+				log.Warn("cannot convert interface to map[string]interface{} type")
+				continue
+			}
+			err := U.DecodeInterfaceMapToStructType(trans, &mp)
+			if err != nil {
+				log.Warn("cannot convert interface map to struct type")
+				continue
+			}
+			key := mp.DisplayName
+			prop := mp.PropValue
+			if prop == "" {
+				prop = "<nil>"
+			}
+
+			msg += fmt.Sprintf(`{
+				"name": %s,
+				"value": %v"
+			}`, key, strings.Replace(fmt.Sprintf("%v", prop), "\"", "", -1))
+
+			if i != len(propMap)-1 {
+				msg += ","
+			}
+		}
+	}
+	return msg
 }

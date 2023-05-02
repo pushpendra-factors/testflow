@@ -82,8 +82,8 @@ export const fetchProfileAccounts = (projectId, reqBody) => {
   return post(null, url, reqBody);
 };
 
-export const fetchProfileAccountDetails = (projectId, id) => {
-  const url = `${host}projects/${projectId}/v1/profiles/accounts/${id}`;
+export const fetchProfileAccountDetails = (projectId, id, group) => {
+  const url = `${host}projects/${projectId}/v1/profiles/accounts/${group}/${id}`;
   return get(null, url);
 };
 

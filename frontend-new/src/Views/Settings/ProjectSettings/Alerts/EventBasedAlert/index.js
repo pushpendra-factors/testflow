@@ -643,13 +643,13 @@ const EventBasedAlert = ({
         slack: slackEnabled,
         slack_channels: saveSelectedChannel,
         webhook: webhookEnabled,
-        url: finalWebhookUrl
-        // teams: teamsEnabled,
-        // teams_channels_config: {
-        //   team_id: selectedWorkspace?.id,
-        //   team_name: selectedWorkspace?.name,
-        //   team_channel_list: teamsSaveSelectedChannel
-        // }
+        url: finalWebhookUrl,
+        teams: teamsEnabled,
+        teams_channels_config: {
+          team_id: selectedWorkspace?.id,
+          team_name: selectedWorkspace?.name,
+          team_channel_list: teamsSaveSelectedChannel
+        }
       };
 
       if (alertState?.state === 'edit') {
@@ -1699,7 +1699,8 @@ const EventBasedAlert = ({
               </div>
             )}
           </div>
-          {featureLock(agent_details?.email) && (
+          {(featureLock(agent_details?.email) ||
+            activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
             <div className='border rounded mt-3'>
               <div style={{ backgroundColor: '#fafafa' }}>
                 <Row className={'ml-2'}>
@@ -2635,7 +2636,8 @@ const EventBasedAlert = ({
               </div>
             )}
           </div>
-          {featureLock(agent_details?.email) && (
+          {(featureLock(agent_details?.email) ||
+            activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
             <div className='border rounded mt-3'>
               <div style={{ backgroundColor: '#fafafa' }}>
                 <Row className={'ml-2'}>
@@ -3272,7 +3274,8 @@ const EventBasedAlert = ({
             </div>
           )}
         </div>
-        {featureLock(agent_details?.email) && (
+        {(featureLock(agent_details?.email) ||
+            activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
           <div className='border rounded mt-3'>
             <div style={{ backgroundColor: '#fafafa' }}>
               <Row className={'ml-2'}>
