@@ -81,6 +81,9 @@ func main() {
 	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	enableDebuggingForIP := flag.Bool("enable_debugging_for_ip", false, "Enables log for $ip and other properties added by $ip")
 
+	blockedIpProjectIds := flag.String("blocked_ip_project_ids",
+		"", "List of projectIds to enable feature of IP based blocking for all sdk requests.")
+
 	flag.Parse()
 
 	appName := "sdk_server"
@@ -124,6 +127,7 @@ func main() {
 		ClearbitEnabled:      *clearbitEnabled,
 		SixSignalEnabled:     *sixSignalEnabled,
 		EnableDebuggingForIP: *enableDebuggingForIP,
+		BlockedIPProjectIDs:  *blockedIpProjectIds,
 	}
 	C.InitConf(config)
 

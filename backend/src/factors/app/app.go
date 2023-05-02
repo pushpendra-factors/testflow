@@ -201,8 +201,6 @@ func main() {
 	enableIPBlocking := flag.Bool("enable_IP_blocking", true, "Blocks access from IPs in the blocked_IP_list")
 	blockedEmailList := flag.String("blocked_email_list", "", "List containing all the blocked emails")
 	blockedIPList := flag.String("blocked_IP_list", "", "List containing all the blocked IP address")
-	blockedIpProjectIds := flag.String("blocked_ip_project_ids",
-		"", "List of projectIds to enable feature of IP based blocking for all sdk requests.")
 	blockedEmailDomainList := flag.String("blocked_email_domain_list", "", "List containing all blocked email domains")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
@@ -381,7 +379,6 @@ func main() {
 		TeamsAppTenantID:                               *teamsAppTenantID,
 		TeamsAppClientID:                               *teamsAppClientID,
 		TeamsAppClientSecret:                           *teamsAppClientSecret,
-		BlockedIPProjectIDs:                            *blockedIpProjectIds,
 		TeamsApplicationID:                             *teamsApplicationID,
 		EnableSyncReferenceFieldsByProjectID:           *enableSyncReferenceFieldsByProjectID,
 	}
