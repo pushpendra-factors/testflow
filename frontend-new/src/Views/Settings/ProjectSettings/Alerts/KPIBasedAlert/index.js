@@ -653,6 +653,13 @@ const KPIBasedAlert = ({
     setTeamsShowSelectChannelsModal(false);
   };
 
+  const whiteListedProjects = [
+    '1125899929000011',
+    '2251799842000007',
+    '2251799840000009',
+    '12384898989000028'
+  ];
+
   const renderKPIForm = () => {
     return (
       <>
@@ -1179,7 +1186,7 @@ const KPIBasedAlert = ({
             )}
           </div>
           {(featureLock(agent_details?.email) ||
-            activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
+            whiteListedProjects.includes(activeProject?.id)) && (
             <div className='border rounded mt-3'>
               <div style={{ backgroundColor: '#fafafa' }}>
                 <Row className={'ml-2'}>
@@ -1866,7 +1873,7 @@ const KPIBasedAlert = ({
             )}
           </div>
           {(featureLock(agent_details?.email) ||
-            activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
+            whiteListedProjects.includes(activeProject?.id)) && (
             <div className='border rounded mt-3'>
               <div style={{ backgroundColor: '#fafafa' }}>
                 <Row className={'ml-2'}>
@@ -2389,7 +2396,7 @@ const KPIBasedAlert = ({
           </Row>
         </div>
         {(featureLock(agent_details?.email) ||
-          activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
+          whiteListedProjects.includes(activeProject?.id)) && (
           <div className='border rounded mt-3'>
             <div style={{ backgroundColor: '#fafafa' }}>
               <Row className={'ml-2'}>

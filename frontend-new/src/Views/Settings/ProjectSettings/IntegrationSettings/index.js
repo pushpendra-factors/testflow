@@ -391,6 +391,13 @@ function IntegrationSettings({
     }
   }, []);
 
+  const whiteListedProjects = [
+    '1125899929000011',
+    '2251799842000007',
+    '2251799840000009',
+    '12384898989000028'
+  ];
+
   return (
     <ErrorBoundary
       fallback={
@@ -436,7 +443,7 @@ function IntegrationSettings({
                       ) {
                         if (
                           item.name === 'Microsoft Teams' &&
-                          (activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007')
+                          whiteListedProjects.includes(activeProject?.id)
                         ) {
                           return (
                             <IntegrationCard
