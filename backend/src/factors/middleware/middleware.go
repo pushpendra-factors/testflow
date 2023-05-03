@@ -118,21 +118,22 @@ func SetScopeProjectToken() gin.HandlerFunc {
 
 func IsBlockedIPByProject() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		projectID := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
-		if !C.IsIPBlockingFeatureEnabled(projectID) {
+		token := U.GetScopeByKeyAsString(c, SCOPE_PROJECT_TOKEN)
+		if !C.IsIPBlockingFeatureEnabled(token) {
 			return
 		}
-		token := U.GetScopeByKeyAsString(c, SCOPE_PROJECT_TOKEN)
+
 		if token == "" {
-			log.WithFields(log.Fields{"error": "Invalid token", "project_id": projectID}).
+			log.WithFields(log.Fields{"error": "Invalid token", "token": token}).
 				Error("Request failed because of invalid token.")
 			return
 		}
 
+		logCtx := log.WithFields(log.Fields{"token": token})
+
 		settings, errCode := store.GetStore().GetProjectSettingByTokenWithCacheAndDefault(token)
 		if errCode != http.StatusFound {
-			log.WithFields(log.Fields{"token": token, "project_id": projectID}).
-				Error("Request failed. Project info not found.")
+			logCtx.Error("Request failed. Project info not found.")
 			return
 		}
 		checkListJson := settings.FilterIps
@@ -143,8 +144,7 @@ func IsBlockedIPByProject() gin.HandlerFunc {
 		var filterIpsMap model.FilterIps
 		err := U.DecodePostgresJsonbToStructType(checkListJson, &filterIpsMap)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err, "project_id": projectID}).
-				Error("Internal server error. Couldn't decode json.")
+			logCtx.WithError(err).Error("Internal server error. Couldn't decode json.")
 			return
 		}
 		// Checks for IP-Address string in http-request and for IP Address
