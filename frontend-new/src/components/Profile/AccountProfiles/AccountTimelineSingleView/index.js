@@ -6,8 +6,7 @@ import {
   eventsFormattedForGranularity,
   getEventCategory,
   getIconForCategory,
-  iconColors,
-  timestampToString
+  iconColors
 } from '../../utils';
 import { SVG } from 'Components/factorsComponents';
 import EventInfoCard from 'Components/Profile/MyComponents/EventInfoCard';
@@ -16,7 +15,6 @@ import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage
 function AccountTimelineSingleView({
   timelineEvents = [],
   timelineUsers = [],
-  milestones,
   loading = false,
   eventNamesMap,
   listProperties
@@ -27,18 +25,11 @@ function AccountTimelineSingleView({
     setFormattedData(data);
   }, [timelineEvents]);
 
-  const formattedMilestones = useMemo(() => {
-    return Object.entries(milestones || {}).map(([key, value]) => [
-      key,
-      timestampToString['Daily'](value)
-    ]);
-  }, [milestones]);
-
-  const UsernameWithIcon = ({ username, isAnonymous }) => (
+  const UsernameWithIcon = ({ title, subtitle, isAnonymous }) => (
     <div className='user-card'>
-      <div className='inline-flex gap--8 items-center'>
+      <div className='inline-flex gap--8 items-center w-full'>
         {isAnonymous ? (
-          <SVG name={`TrackedUser${username.match(/\d/g)[0]}`} size={32} />
+          <SVG name={`TrackedUser1`} size={32} />
         ) : (
           <Avatar
             size={32}
@@ -46,16 +37,25 @@ function AccountTimelineSingleView({
             style={{
               backgroundColor: `${
                 iconColors[
-                  ALPHANUMSTR.indexOf(username.charAt(0).toUpperCase()) % 8
+                  ALPHANUMSTR.indexOf(title.charAt(0).toUpperCase()) % 8
                 ]
               }`,
               fontSize: '16px'
             }}
           >
-            {username.charAt(0).toUpperCase()}
+            {title.charAt(0).toUpperCase()}
           </Avatar>
         )}
-        <h2 className='m-0'>{username}</h2>
+        <div className='top-section'>
+          {subtitle ? (
+            <div className='heading-with-sub'>
+              <div className='main'>{title}</div>
+              <div className='sub'>{subtitle}</div>
+            </div>
+          ) : (
+            <div className='heading'>{title}</div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -71,24 +71,12 @@ function AccountTimelineSingleView({
         </thead>
         <tbody>
           {Object.entries(data).map(([timestamp, allEvents]) => {
-            const milestones = formattedMilestones.filter(
-              (milestone) => milestone[1] === timestamp
-            );
             return (
               <tr>
                 <td>
                   <div className='timestamp top-40'>{timestamp}</div>
-                  {/* {milestones.length ? (
-                    <div className='milestone-section'>
-                      {milestones.map((milestone) => (
-                        <div className='green-stripe'>
-                          <div className='text'>{milestone[0]}</div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null} */}
                 </td>
-                <td className={`bg-none pt-6 pb-${milestones.length * 0}`}>
+                <td className={`bg-none pt-6`}>
                   {Object.entries(allEvents).map(([user, data]) => {
                     const currentUser = timelineUsers.find(
                       (obj) => obj.userId === user
@@ -98,7 +86,8 @@ function AccountTimelineSingleView({
                       <div className='relative'>
                         <div className='user-card--wrapper'>
                           <UsernameWithIcon
-                            username={user}
+                            title={currentUser.title}
+                            subtitle={currentUser.subtitle}
                             isAnonymous={currentUser.isAnonymous}
                           />
                         </div>
@@ -125,13 +114,6 @@ function AccountTimelineSingleView({
                       </div>
                     );
                   })}
-                  {/* {milestones.length ? (
-                    <div className='milestone-section'>
-                      {milestones.map((milestone) => (
-                        <div className={`green-stripe opaque`} />
-                      ))}
-                    </div>
-                  ) : null} */}
                 </td>
               </tr>
             );

@@ -16,8 +16,8 @@ import {
 } from '../../../reducers/global';
 import { getProfileAccountDetails } from '../../../reducers/timelines/middleware';
 import {
-  formatUserPropertiesToCheckList,
-  getActivitiesWithEnableKeyConfig
+  addEnabledFlagToActivities,
+  formatUserPropertiesToCheckList
 } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
@@ -85,7 +85,7 @@ function AccountDetails({
   }, [activeProject]);
 
   useEffect(() => {
-    const listActivities = getActivitiesWithEnableKeyConfig(
+    const listActivities = addEnabledFlagToActivities(
       accountDetails.data?.account_events,
       currentProjectSettings.timelines_config?.disabled_events
     );
@@ -314,7 +314,7 @@ function AccountDetails({
       const propDisplayName = groupPropNames[prop]
         ? groupPropNames[prop]
         : PropTextFormat(prop);
-      const value = props[prop] || '-';
+      const value = props[prop];
       propsList.push(
         <div key={index}>
           <LeftPanePropBlock
@@ -464,7 +464,6 @@ function AccountDetails({
           activities?.filter((activity) => activity.enabled === true) || []
         }
         timelineUsers={accountDetails.data?.account_users || []}
-        milestones={accountDetails.data?.milestones}
         collapseAll={collapseAll}
         setCollapseAll={setCollapseAll}
         granularity={granularity}

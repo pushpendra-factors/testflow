@@ -830,7 +830,7 @@ type Model interface {
 	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int)
 	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int)
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
-	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
+	GetUserActivities(projectID int64, identity string, userId string) ([]model.UserActivity, error)
 	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int)
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 	GetAssociatedGroup(projectID int64, userID string, groupName string) (string, error)

@@ -26,8 +26,8 @@ import {
 } from '../../../reducers/global';
 import { getProfileUserDetails } from '../../../reducers/timelines/middleware';
 import {
-  formatUserPropertiesToCheckList,
-  getActivitiesWithEnableKeyConfig
+  addEnabledFlagToActivities,
+  formatUserPropertiesToCheckList
 } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
@@ -96,7 +96,7 @@ function ContactDetails({
   };
 
   useEffect(() => {
-    const listActivities = getActivitiesWithEnableKeyConfig(
+    const listActivities = addEnabledFlagToActivities(
       userDetails?.data?.user_activities,
       currentProjectSettings.timelines_config?.disabled_events
     );

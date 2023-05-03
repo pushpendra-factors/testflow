@@ -432,9 +432,9 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		return nil, http.StatusBadRequest
 	}
 
-	userId := "customer_user_id"
+	userId := model.COLUMN_NAME_CUSTOMER_USER_ID
 	if isAnonymous == "true" {
-		userId = "id"
+		userId = model.COLUMN_NAME_ID
 	}
 
 	db := C.GetServices().Db
@@ -486,21 +486,22 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		uniqueUser.Milestones = GetMilestonesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
 	}
 
-	activities, _ := store.GetUserActivitiesAndSessionCount(projectID, identity, userId)
-	uniqueUser.UserActivity = activities
+	if activities, err := store.GetUserActivities(projectID, identity, userId); err == nil {
+		uniqueUser.UserActivity = activities
+	}
+
 	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
 
 	return &uniqueUser, http.StatusFound
 }
 
-func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64) {
+func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId string) ([]model.UserActivity, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         identity,
 	}
 
 	var userActivities []model.UserActivity
-	webSessionCount := 0
 
 	eventNamesToExclude := []string{
 		U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
@@ -515,6 +516,10 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		U.EVENT_NAME_SALESFORCE_EVENT_UPDATED,
 		U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
 		U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
+		U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+		U.GROUP_EVENT_NAME_HUBSPOT_DEAL_UPDATED,
+		U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
 	}
 
 	eventNamesToExcludePlaceholders := strings.Repeat("?,", len(eventNamesToExclude)-1) + "?"
@@ -534,8 +539,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		LIMIT 5000) AS events1 
 	LEFT JOIN event_names
 	ON events1.event_name_id=event_names.id 
-	AND event_names.project_id=? 
-	ORDER BY timestamp DESC;`, userId, eventNamesToExcludePlaceholders)
+	AND event_names.project_id=?;`, userId, eventNamesToExcludePlaceholders)
 
 	excludedEventNamesArgs := make([]interface{}, len(eventNamesToExclude))
 	for i, name := range eventNamesToExclude {
@@ -556,7 +560,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 
 	if err != nil || rows.Err() != nil {
 		log.WithFields(logFields).WithError(err).WithError(rows.Err()).Error("Failed to get events")
-		return []model.UserActivity{}, uint64(webSessionCount)
+		return []model.UserActivity{}, err
 	}
 
 	// User Activity
@@ -570,11 +574,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		var userActivity model.UserActivity
 		if err := db.ScanRows(rows, &userActivity); err != nil {
 			log.WithFields(logFields).WithError(err).Error("Failed scanning events list")
-			return []model.UserActivity{}, uint64(webSessionCount)
-		}
-		// Session Count workaround
-		if userActivity.EventName == U.EVENT_NAME_SESSION {
-			webSessionCount += 1
+			return []model.UserActivity{}, err
 		}
 
 		properties, err := U.DecodePostgresJsonb(userActivity.Properties)
@@ -643,7 +643,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		userActivities = append(userActivities, userActivity)
 	}
 
-	return userActivities, uint64(webSessionCount)
+	return userActivities, nil
 }
 
 func (store *MemSQL) GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo {
@@ -757,16 +757,19 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	}
 
 	var groupUserString string
-	propertiesDecoded := make(map[string]interface{}, 0)
+	propertiesDecoded := make(map[string]interface{})
 	var status int
+
 	if C.IsDomainEnabled(projectID) {
 		groupUserString, propertiesDecoded, status = store.AccountPropertiesForDomainsEnabledV2(projectID, id, groupName)
 	} else {
 		groupUserString, propertiesDecoded, status = store.AccountPropertiesForDomainsDisabledV1(projectID, id)
 	}
+
 	if status != http.StatusOK {
 		return nil, status
 	}
+
 	accountDetails := FormatAccountDetails(projectID, propertiesDecoded, groupName)
 
 	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
@@ -782,6 +785,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	if additionalProp != "" {
 		selectStrAdditionalProp = fmt.Sprintf("JSON_EXTRACT_STRING(properties, '%s') as additional_prop,", additionalProp)
 	}
+
 	// Timeline Query
 	query := fmt.Sprintf(`SELECT COALESCE(JSON_EXTRACT_STRING(properties, '%s'), customer_user_id, id) AS user_name, %s
 		COALESCE(customer_user_id, id) AS user_id, 
@@ -800,32 +804,91 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		return nil, http.StatusInternalServerError
 	}
 	defer U.CloseReadQuery(rows, nil)
+
 	var accountTimeline []model.UserTimeline
-	usersCount := 0
+
+	var numUsers int // Counter for the number of users processed
+
 	for rows.Next() {
-		usersCount += 1
-		// Error log for Count of Users
-		if usersCount == 26 {
-			log.WithFields(logFields).Error("Number of users greater than 25")
-			break
-		}
 		var userTimeline model.UserTimeline
 		if err := db.ScanRows(rows, &userTimeline); err != nil {
 			log.WithFields(logFields).WithError(err).Error("Error scanning associated users list")
 			return nil, http.StatusInternalServerError
 		}
+
+		// Determine column to use as the user ID based on IsAnonymous
 		var userIDStr string
 		if userTimeline.IsAnonymous {
-			userIDStr = "id"
+			userIDStr = model.COLUMN_NAME_ID
 		} else {
-			userIDStr = "customer_user_id"
+			userIDStr = model.COLUMN_NAME_CUSTOMER_USER_ID
 		}
-		activities, _ := store.GetUserActivitiesAndSessionCount(projectID, userTimeline.UserId, userIDStr)
-		userTimeline.UserActivities = activities
+
+		// Get the user's activities
+		if activities, err := store.GetUserActivities(projectID, userTimeline.UserId, userIDStr); err == nil {
+			userTimeline.UserActivities = activities
+		}
+
 		accountTimeline = append(accountTimeline, userTimeline)
+
+		// Increment the number of users processed
+		numUsers++
 	}
+
+	// Log a warning if users are greater than 25
+	if numUsers > 25 {
+		log.WithFields(logFields).Warn("Number of users greater than 25")
+	}
+
 	accountDetails.AccountTimeline = accountTimeline
+
+	intentTimeline, err := store.GetIntentTimeline(projectID, groupName, id)
+	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("Error retrieving intent timeline")
+	} else {
+		accountDetails.AccountTimeline = append(accountDetails.AccountTimeline, intentTimeline)
+	}
+
 	return &accountDetails, http.StatusFound
+}
+
+func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error) {
+	intentTimeline := model.UserTimeline{
+		UserId:         id,
+		IsAnonymous:    false,
+		UserName:       model.GROUP_ACTIVITY_USERNAME,
+		AdditionalProp: groupName,
+		UserActivities: []model.UserActivity{},
+	}
+
+	if groupName == "All" || groupName == U.GROUP_NAME_DOMAINS {
+		groupNameIDMap, status := store.GetGroupNameIDMap(projectID)
+		if status != http.StatusFound {
+			return intentTimeline, fmt.Errorf("failed to retrieve GroupNameID map")
+		}
+		// Fetch accounts associated with the domain
+		associatedAccounts, status := store.GetAccountsAssociatedToDomain(projectID, id, groupNameIDMap[model.GROUP_NAME_DOMAINS])
+		if status != http.StatusFound {
+			return intentTimeline, fmt.Errorf("failed to fetch associated accounts for domain ID %v", id)
+		}
+		// Fetch user activities for each associated account
+		for _, user := range associatedAccounts {
+			intentActivities, err := store.GetUserActivities(projectID, user.ID, model.COLUMN_NAME_ID)
+			if err != nil {
+				return intentTimeline, fmt.Errorf("failed to retrieve user activities for user ID %v", user.ID)
+			}
+			intentTimeline.UserActivities = append(intentTimeline.UserActivities, intentActivities...)
+		}
+	} else {
+		// Fetch user activities for the given user ID
+		intentActivities, err := store.GetUserActivities(projectID, id, model.COLUMN_NAME_ID)
+		if err != nil {
+			return intentTimeline, fmt.Errorf("failed to retrieve user activities for user ID %v", id)
+		}
+		intentTimeline.UserActivities = intentActivities
+	}
+
+	return intentTimeline, nil
 }
 
 func FormatTimeToString(time time.Time) string {

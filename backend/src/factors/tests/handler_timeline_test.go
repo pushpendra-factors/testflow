@@ -151,27 +151,24 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		err = json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
 		assert.Equal(t, len(resp), count)
-		assert.Condition(t, func() bool {
-			for i, user := range resp {
-				if source == "All" {
-					if i < 10 {
-						assert.Equal(t, user.IsAnonymous, false)
-					} else {
-						assert.Equal(t, user.IsAnonymous, true)
-					}
-				} else {
+		for i, user := range resp {
+			if source == "All" {
+				if i < 10 {
 					assert.Equal(t, user.IsAnonymous, false)
+				} else {
+					assert.Equal(t, user.IsAnonymous, true)
 				}
-				for _, prop := range timelinesConfig.UserConfig.TableProps {
-					assert.NotNil(t, user.TableProps[prop])
-				}
-				assert.NotNil(t, user.LastActivity)
-				if i > 0 {
-					assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
-				}
+			} else {
+				assert.Equal(t, user.IsAnonymous, false)
 			}
-			return true
-		})
+			for _, prop := range timelinesConfig.UserConfig.TableProps {
+				assert.NotNil(t, user.TableProps[prop])
+			}
+			assert.NotNil(t, user.LastActivity)
+			if i > 0 {
+				assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
+			}
+		}
 	}
 
 	// 2. UserSourceWeb (1 filter, no segment applied)
@@ -195,18 +192,15 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 3)
-	assert.Condition(t, func() bool {
-		for i, user := range resp {
-			for _, prop := range timelinesConfig.UserConfig.TableProps {
-				assert.NotNil(t, user.TableProps[prop])
-			}
-			assert.NotNil(t, user.LastActivity)
-			if i > 0 {
-				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
-			}
+	for i, user := range resp {
+		for _, prop := range timelinesConfig.UserConfig.TableProps {
+			assert.NotNil(t, user.TableProps[prop])
 		}
-		return true
-	})
+		assert.NotNil(t, user.LastActivity)
+		if i > 0 {
+			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
+		}
+	}
 
 	// 2. UserSourceWeb (1 search filter applied)
 	payload = model.TimelinePayload{
@@ -231,13 +225,10 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
 	assert.Equal(t, resp[0].Identity, "user2@example.com")
-	assert.Condition(t, func() bool {
-		for _, prop := range timelinesConfig.UserConfig.TableProps {
-			assert.NotNil(t, resp[0].TableProps[prop])
-		}
-		assert.NotNil(t, resp[0].LastActivity)
-		return true
-	})
+	for _, prop := range timelinesConfig.UserConfig.TableProps {
+		assert.NotNil(t, resp[0].TableProps[prop])
+	}
+	assert.NotNil(t, resp[0].LastActivity)
 
 	// 3. UserSourceWeb (Segment Applied, no filters)
 	// creating a segment
@@ -278,23 +269,20 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 4)
-	assert.Condition(t, func() bool {
-		for i, user := range resp {
-			if i == 3 {
-				assert.Equal(t, user.IsAnonymous, true)
-			} else {
-				assert.Equal(t, user.IsAnonymous, false)
-			}
-			for _, prop := range timelinesConfig.UserConfig.TableProps {
-				assert.NotNil(t, user.TableProps[prop])
-			}
-			assert.NotNil(t, user.LastActivity)
-			if i > 0 {
-				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
-			}
+	for i, user := range resp {
+		if i == 3 {
+			assert.Equal(t, user.IsAnonymous, true)
+		} else {
+			assert.Equal(t, user.IsAnonymous, false)
 		}
-		return true
-	})
+		for _, prop := range timelinesConfig.UserConfig.TableProps {
+			assert.NotNil(t, user.TableProps[prop])
+		}
+		assert.NotNil(t, user.LastActivity)
+		if i > 0 {
+			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
+		}
+	}
 
 	// 4. UserSourceWeb (Segment with multiple filters applied, no filters)
 	segmentPayload = &model.SegmentPayload{
@@ -358,23 +346,20 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 4)
-	assert.Condition(t, func() bool {
-		for i, user := range resp {
-			if i < 2 {
-				assert.Equal(t, user.IsAnonymous, false)
-			} else {
-				assert.Equal(t, user.IsAnonymous, true)
-			}
-			for _, prop := range timelinesConfig.UserConfig.TableProps {
-				assert.NotNil(t, user.TableProps[prop])
-			}
-			assert.NotNil(t, user.LastActivity)
-			if i > 0 {
-				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
-			}
+	for i, user := range resp {
+		if i < 2 {
+			assert.Equal(t, user.IsAnonymous, false)
+		} else {
+			assert.Equal(t, user.IsAnonymous, true)
 		}
-		return true
-	})
+		for _, prop := range timelinesConfig.UserConfig.TableProps {
+			assert.NotNil(t, user.TableProps[prop])
+		}
+		assert.NotNil(t, user.LastActivity)
+		if i > 0 {
+			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
+		}
+	}
 
 	// 5. UserSourceWeb (Segment with multiple filters applied, 1 filter)
 	payload = model.TimelinePayload{
@@ -400,23 +385,21 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 2)
-	assert.Condition(t, func() bool {
-		for i, user := range resp {
-			if i == 0 {
-				assert.Equal(t, user.IsAnonymous, false)
-			} else {
-				assert.Equal(t, user.IsAnonymous, true)
-			}
-			for _, prop := range timelinesConfig.UserConfig.TableProps {
-				assert.NotNil(t, user.TableProps[prop])
-			}
-			assert.NotNil(t, user.LastActivity)
-			if i > 0 {
-				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
-			}
+	for i, user := range resp {
+		if i == 0 {
+			assert.Equal(t, user.IsAnonymous, false)
+		} else {
+			assert.Equal(t, user.IsAnonymous, true)
 		}
-		return true
-	})
+		for _, prop := range timelinesConfig.UserConfig.TableProps {
+			assert.NotNil(t, user.TableProps[prop])
+		}
+		assert.NotNil(t, user.LastActivity)
+		if i > 0 {
+			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
+		}
+	}
+
 }
 
 func sendGetProfileUserRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
@@ -861,81 +844,70 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		userProps := user.Properties
 		userPropsDecoded, err := U.DecodePostgresJsonb(&userProps)
 		assert.Nil(t, err)
-		assert.Condition(t, func() bool {
-			for i, property := range resp.LeftPaneProps {
-				assert.Equal(t, (*userPropsDecoded)[i], property)
-			}
-			for i, property := range resp.Milestones {
-				assert.Equal(t, (*userPropsDecoded)[i], property)
-			}
-			return true
-		})
+		for i, property := range resp.LeftPaneProps {
+			assert.Equal(t, (*userPropsDecoded)[i], property)
+		}
+		for i, property := range resp.Milestones {
+			assert.Equal(t, (*userPropsDecoded)[i], property)
+		}
+
 		assert.NotNil(t, resp.GroupInfos)
 		assert.Equal(t, resp.GroupInfos[0], model.GroupsInfo{GroupName: U.STANDARD_GROUP_DISPLAY_NAMES[U.GROUP_NAME_HUBSPOT_COMPANY], AssociatedGroup: "Freshworks"})
 		assert.Equal(t, resp.GroupInfos[1], model.GroupsInfo{GroupName: U.STANDARD_GROUP_DISPLAY_NAMES[U.GROUP_NAME_SALESFORCE_ACCOUNT], AssociatedGroup: ""})
 		assert.NotNil(t, resp.UserActivity)
-		assert.Condition(t, func() bool {
-			for i, activity := range resp.UserActivity {
-				assert.NotNil(t, activity.EventName)
-				assert.NotNil(t, activity.DisplayName)
-				eventFromMap, eventExistsInMap := model.HOVER_EVENTS_NAME_PROPERTY_MAP[activity.EventName]
-				if activity.EventName == randomURL {
-					assert.Equal(t, activity.DisplayName, "Page View")
-					assert.Equal(t, activity.AliasName, "")
-				} else if eventExistsInMap {
-					assert.Equal(t, activity.DisplayName, U.STANDARD_EVENTS_DISPLAY_NAMES[activity.EventName])
-					if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
-						assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
-					} else if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
-						assert.Equal(t, activity.AliasName, fmt.Sprintf("Responded to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
-					} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
-						assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE]))
-					} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
-						assert.Equal(t, activity.AliasName, fmt.Sprintf("%s: %s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TYPE], eventProperties[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT]))
-					} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
-						activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED {
-						assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TITLE]))
-					} else if activity.EventName == U.EVENT_NAME_SALESFORCE_TASK_CREATED {
-						assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Task - %s", eventProperties[U.EP_SF_TASK_SUBJECT]))
-					} else if activity.EventName == U.EVENT_NAME_SALESFORCE_EVENT_CREATED {
-						assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Event - %s", eventProperties[U.EP_SF_EVENT_SUBJECT]))
-					} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_LIST {
-						assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to Hubspot List - %s", eventProperties[U.EP_HUBSPOT_CONTACT_LIST_LIST_NAME]))
-					}
-				} else if model.IsEventNameTypeSmartEvent(activity.EventType) {
-					assert.Equal(t, activity.EventName, "Smart Event Name 0")
-					assert.Equal(t, activity.DisplayName, "Smart Event Name 0")
-					assert.NotNil(t, activity.Properties)
+		for _, activity := range resp.UserActivity {
+			assert.NotNil(t, activity.EventName)
+			assert.NotNil(t, activity.DisplayName)
+			eventFromMap, eventExistsInMap := model.HOVER_EVENTS_NAME_PROPERTY_MAP[activity.EventName]
+			if activity.EventName == randomURL {
+				assert.Equal(t, activity.DisplayName, "Page View")
+				assert.Equal(t, activity.AliasName, "")
+			} else if eventExistsInMap {
+				assert.Equal(t, activity.DisplayName, U.STANDARD_EVENTS_DISPLAY_NAMES[activity.EventName])
+				if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+					assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
+				} else if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
+					assert.Equal(t, activity.AliasName, fmt.Sprintf("Responded to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
+				} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
+					assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE]))
+				} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
+					assert.Equal(t, activity.AliasName, fmt.Sprintf("%s: %s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TYPE], eventProperties[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT]))
+				} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
+					activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED {
+					assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TITLE]))
+				} else if activity.EventName == U.EVENT_NAME_SALESFORCE_TASK_CREATED {
+					assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Task - %s", eventProperties[U.EP_SF_TASK_SUBJECT]))
+				} else if activity.EventName == U.EVENT_NAME_SALESFORCE_EVENT_CREATED {
+					assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Event - %s", eventProperties[U.EP_SF_EVENT_SUBJECT]))
+				} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_LIST {
+					assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to Hubspot List - %s", eventProperties[U.EP_HUBSPOT_CONTACT_LIST_LIST_NAME]))
 				}
-				assert.NotNil(t, activity.Timestamp)
-				assert.Condition(t, func() bool { return activity.Timestamp <= uint64(time.Now().UTC().Unix()) })
-				if i > 1 {
-					if resp.UserActivity[i].Timestamp > resp.UserActivity[i-1].Timestamp {
-						return false
-					}
-				}
-				assert.Condition(t, func() bool {
-					if activity.DisplayName == "Page View" || eventExistsInMap {
-						var lookInProps []string
-						if activity.DisplayName == "Page View" {
-							lookInProps = model.PAGE_VIEW_HOVERPROPS_LIST
-						} else if eventExistsInMap {
-							lookInProps = eventFromMap
-						}
-						assert.NotNil(t, activity.Properties)
-						properties, err := U.DecodePostgresJsonb(activity.Properties)
-						assert.Nil(t, err)
-						for key := range *properties {
-							sort.Strings(lookInProps)
-							i := sort.SearchStrings(lookInProps, key)
-							assert.Condition(t, func() bool { return i < len(lookInProps) })
-						}
-					}
-					return true
-				})
+			} else if model.IsEventNameTypeSmartEvent(activity.EventType) {
+				assert.Equal(t, activity.EventName, "Smart Event Name 0")
+				assert.Equal(t, activity.DisplayName, "Smart Event Name 0")
+				assert.NotNil(t, activity.Properties)
 			}
-			return true
-		})
+			assert.NotNil(t, activity.Timestamp)
+			assert.True(t, activity.Timestamp <= uint64(time.Now().UTC().Unix()))
+			if activity.DisplayName == "Page View" || eventExistsInMap {
+				var lookInProps []string
+				if activity.DisplayName == "Page View" {
+					lookInProps = model.PAGE_VIEW_HOVERPROPS_LIST
+				} else if eventExistsInMap {
+					lookInProps = eventFromMap
+				}
+				assert.NotNil(t, activity.Properties)
+				properties, err := U.DecodePostgresJsonb(activity.Properties)
+				assert.Nil(t, err)
+				for key := range *properties {
+					sort.Strings(lookInProps)
+					i := sort.SearchStrings(lookInProps, key)
+					assert.True(t, i < len(lookInProps))
+				}
+			}
+
+		}
+
 	})
 }
 
@@ -981,16 +953,16 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 
 	// Properties Map
 	propertiesMap := []map[string]interface{}{
-		{"$salesforce_account_name": "Pepper Content", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "peppercontent.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
-		{"$salesforce_account_name": "o9 Solutions", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "o9solutions.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
-		{"$salesforce_account_name": "GoLinks Reporting", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "golinks.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
-		{"$salesforce_account_name": "Cin7", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "cin7.com", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC"},
-		{"$salesforce_account_name": "Repair Desk", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "repairdesk.co", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US", "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Mad Street Den", "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Clientjoy Ads", "$hubspot_company_country": "India", "$hubspot_company_domain": "clientjoy.io", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "IT Services", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Adapt.IO", "$hubspot_company_country": "India", "$hubspot_company_domain": "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "Pepper Content", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "peppercontent.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "o9 Solutions", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "o9solutions.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "GoLinks Reporting", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "golinks.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "Cin7", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "cin7.com", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "Repair Desk", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "repairdesk.co", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer", "$browser": "Chrome", "$device_type": "PC"},
 		{U.SIX_SIGNAL_NAME: "AdPushup", U.SIX_SIGNAL_COUNTRY: "US", U.SIX_SIGNAL_DOMAIN: "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$browser": "Chrome"},
 		{U.SIX_SIGNAL_NAME: "Mad Street Den", U.SIX_SIGNAL_COUNTRY: "US", U.SIX_SIGNAL_DOMAIN: "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$browser": "Chrome"},
 		{U.SIX_SIGNAL_NAME: "Heyflow", U.SIX_SIGNAL_COUNTRY: "Germany", U.SIX_SIGNAL_DOMAIN: "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development", "$browser": "Chrome"},
@@ -999,30 +971,83 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	}
 
 	// Creating domain Account and Group
-	domProperties := postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
+	groupDomain, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, groupDomain)
+
 	source := model.GetRequestSourcePointer(model.UserSourceDomains)
 	groupUser := true
 	accounts := make([]model.User, 0)
-
 	domID, _ := store.GetStore().CreateUser(&model.User{
 		ProjectId:      project.ID,
 		Source:         source,
 		Group1ID:       "1",
 		CustomerUserId: "domainuser",
-		Properties:     domProperties,
+		Properties:     postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
 		IsGroupUser:    &groupUser,
 	})
 	_, errCode = store.GetStore().GetUser(project.ID, domID)
 	assert.Equal(t, http.StatusFound, errCode)
 
-	group, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
+	// Create 5 Hubspot Companies
+	groupHubspot, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
-	assert.NotNil(t, group)
+	assert.NotNil(t, groupHubspot)
 
-	// Create 5 Salesforce Accounts
 	numUsers := 5
 	for i := 0; i < numUsers; i++ {
 		propertiesJSON, err := json.Marshal(propertiesMap[i])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties := postgres.Jsonb{RawMessage: propertiesJSON}
+		source := model.GetRequestSourcePointer(model.UserSourceHubspot)
+
+		createdUserID, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         source,
+			Group2ID:       "2",
+			Group1ID:       "1",
+			Group1UserID:   domID,
+			CustomerUserId: fmt.Sprintf("hsuser%d@%s", i+1, propertiesMap[i+5]["$hubspot_company_domain"]),
+			Properties:     properties,
+			IsGroupUser:    &groupUser,
+		})
+		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
+		accounts = append(accounts, *account)
+	}
+	assert.Equal(t, len(accounts), 5)
+
+	var payload model.TimelinePayload
+
+	payload.Source = U.GROUP_NAME_HUBSPOT_COMPANY
+	w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	resp := make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 5)
+	for i, user := range resp {
+		assert.Equal(t, user.Name, propertiesMap[4-i][U.GP_HUBSPOT_COMPANY_NAME])
+		assert.Equal(t, user.HostName, propertiesMap[4-i][U.GP_HUBSPOT_COMPANY_DOMAIN])
+		assert.NotNil(t, user.LastActivity)
+		if i > 0 {
+			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
+		}
+		for _, prop := range timelinesConfig.UserConfig.TableProps {
+			assert.NotNil(t, user.TableProps[prop])
+		}
+	}
+
+	// Create 5 Salesforce Accounts
+	groupSalesforce, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.NotNil(t, groupSalesforce)
+	assert.Equal(t, http.StatusCreated, status)
+
+	for i := 0; i < numUsers; i++ {
+		propertiesJSON, err := json.Marshal(propertiesMap[i+5])
 		if err != nil {
 			log.WithError(err).Fatal("Marshal error.")
 		}
@@ -1044,34 +1069,13 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		accounts = append(accounts, *account)
 	}
 
-	// Create 5 Hubspot Companies
-	for i := 0; i < numUsers; i++ {
-		propertiesJSON, err := json.Marshal(propertiesMap[i+5])
-		if err != nil {
-			log.WithError(err).Fatal("Marshal error.")
-		}
-		properties := postgres.Jsonb{RawMessage: propertiesJSON}
-		source := model.GetRequestSourcePointer(model.UserSourceHubspot)
-
-		createdUserID, _ := store.GetStore().CreateUser(&model.User{
-			ProjectId:      project.ID,
-			Source:         source,
-			Group2ID:       "2",
-			Group1ID:       "1",
-			Group1UserID:   domID,
-			CustomerUserId: fmt.Sprintf("hsuser%d@%s", i+1, propertiesMap[i+5]["$hubspot_company_domain"]),
-			Properties:     properties,
-			IsGroupUser:    &groupUser,
-		})
-		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
-		assert.Equal(t, http.StatusFound, errCode)
-		accounts = append(accounts, *account)
-	}
-	assert.Equal(t, len(accounts), 10)
-
 	// Create 5 Six Signal Domains
+	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL, model.AllowedGroupNames)
+	assert.NotNil(t, group3)
+	assert.Equal(t, http.StatusCreated, status)
+
 	for i := 0; i < numUsers; i++ {
-		propertiesJSON, err := json.Marshal(propertiesMap[i+5])
+		propertiesJSON, err := json.Marshal(propertiesMap[i+10])
 		if err != nil {
 			log.WithError(err).Fatal("Marshal error.")
 		}
@@ -1092,46 +1096,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	}
 	assert.Equal(t, len(accounts), 15)
 
-	var payload model.TimelinePayload
-
-	// Test Cases :-
-
-	// Source: $hubspot_company, 2 group exists
-	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.NotNil(t, group1)
-
-	payload.Source = "$hubspot_company"
-	w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
-	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
-	resp := make([]model.Profile, 0)
-	err = json.Unmarshal(jsonResponse, &resp)
-	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 5)
-	assert.Condition(t, func() bool {
-		for i, user := range resp {
-			assert.Equal(t, user.Name, propertiesMap[9-i][U.GP_HUBSPOT_COMPANY_NAME])
-			assert.Equal(t, user.HostName, propertiesMap[9-i][U.GP_HUBSPOT_COMPANY_DOMAIN])
-			assert.NotNil(t, user.LastActivity)
-			if i > 0 {
-				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
-			}
-			for _, prop := range timelinesConfig.UserConfig.TableProps {
-				assert.NotNil(t, user.TableProps[prop])
-			}
-		}
-		return true
-	})
-
-	// 2 more groups
-	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
-	assert.NotNil(t, group2)
-	assert.Equal(t, http.StatusCreated, status)
-	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL, model.AllowedGroupNames)
-	assert.NotNil(t, group3)
-	assert.Equal(t, http.StatusCreated, status)
-
 	// 1. Accounts from Different Sources (No filter, no segment applied)
 	sourceToUserCountMap := map[string]int{"All": 1, U.GROUP_NAME_HUBSPOT_COMPANY: 5, U.GROUP_NAME_SALESFORCE_ACCOUNT: 5, U.GROUP_NAME_SIX_SIGNAL: 5}
 
@@ -1144,34 +1108,32 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		err = json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
 		assert.Equal(t, len(resp), count)
-		assert.Condition(t, func() bool {
-			for i, user := range resp {
-				if source == "All" {
-					assert.NotEmpty(t, user.Name)
-					assert.NotEmpty(t, user.HostName)
-				}
-				if source == U.GROUP_NAME_HUBSPOT_COMPANY {
-					assert.Equal(t, user.Name, propertiesMap[count+4-i]["$hubspot_company_name"])
-					assert.Equal(t, user.HostName, propertiesMap[count+4-i]["$hubspot_company_domain"])
-				}
-				if source == U.GROUP_NAME_SALESFORCE_ACCOUNT {
-					assert.Equal(t, user.Name, propertiesMap[count-i-1]["$salesforce_account_name"])
-					assert.Equal(t, user.HostName, propertiesMap[count-i-1]["$salesforce_account_website"])
-				}
-				if source == U.GROUP_NAME_SIX_SIGNAL {
-					assert.Equal(t, user.Name, propertiesMap[count+9-i][U.SIX_SIGNAL_NAME])
-					assert.Equal(t, user.HostName, propertiesMap[count+9-i][U.SIX_SIGNAL_DOMAIN])
-				}
-				assert.NotNil(t, user.LastActivity)
-				if i > 0 {
-					assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
-				}
-				for _, prop := range timelinesConfig.UserConfig.TableProps {
-					assert.NotNil(t, user.TableProps[prop])
-				}
+		for i, user := range resp {
+			if source == "All" {
+				assert.NotEmpty(t, user.Name)
+				assert.NotEmpty(t, user.HostName)
 			}
-			return true
-		})
+			if source == U.GROUP_NAME_HUBSPOT_COMPANY {
+				assert.Equal(t, user.Name, propertiesMap[count-i-1]["$hubspot_company_name"])
+				assert.Equal(t, user.HostName, propertiesMap[count-i-1]["$hubspot_company_domain"])
+			}
+			if source == U.GROUP_NAME_SALESFORCE_ACCOUNT {
+				assert.Equal(t, user.Name, propertiesMap[count+4-i]["$salesforce_account_name"])
+				assert.Equal(t, user.HostName, propertiesMap[count+4-i]["$salesforce_account_website"])
+			}
+			if source == U.GROUP_NAME_SIX_SIGNAL {
+				assert.Equal(t, user.Name, propertiesMap[count+9-i][U.SIX_SIGNAL_NAME])
+				assert.Equal(t, user.HostName, propertiesMap[count+9-i][U.SIX_SIGNAL_DOMAIN])
+			}
+			assert.NotNil(t, user.LastActivity)
+			if i > 0 {
+				assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
+			}
+			for _, prop := range timelinesConfig.UserConfig.TableProps {
+				assert.NotNil(t, user.TableProps[prop])
+			}
+		}
+
 	}
 
 	// 3. Segment with multiple $hubspot_company filters
@@ -1236,27 +1198,17 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 3)
-	assert.Condition(t, func() bool {
-		filteredCompaniesNameHostNameMap := map[string]string{"Adapt.IO": "adapt.io", "Clientjoy Ads": "clientjoy.io", "AdPushup": "adpushup.com"}
-		for i, user := range resp {
-			assert.Condition(t, func() bool {
-				for name, hostName := range filteredCompaniesNameHostNameMap {
-					if name == user.Name && hostName == user.HostName {
-						return true
-					}
-				}
-				return false
-			})
-			assert.NotNil(t, user.LastActivity)
-			if i > 0 {
-				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
-			}
-			for _, prop := range timelinesConfig.UserConfig.TableProps {
-				assert.NotNil(t, user.TableProps[prop])
-			}
+	filteredCompaniesNameHostNameMap := map[string]string{"Adapt.IO": "adapt.io", "Clientjoy Ads": "clientjoy.io", "AdPushup": "adpushup.com"}
+	for i, user := range resp {
+		assert.Contains(t, filteredCompaniesNameHostNameMap, user.Name, user.HostName)
+		assert.NotNil(t, user.LastActivity)
+		if i > 0 {
+			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
 		}
-		return true
-	})
+		for _, prop := range timelinesConfig.UserConfig.TableProps {
+			assert.NotNil(t, user.TableProps[prop])
+		}
+	}
 
 	// 5. Accounts from All Sources (filters applied)
 
@@ -1301,7 +1253,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
-
 }
 
 func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
@@ -1392,7 +1343,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	assert.NotNil(t, group1)
 
 	// account associated to domain
-	createdUserID, _ := store.GetStore().CreateUser(&model.User{
+	createdUserID1, _ := store.GetStore().CreateUser(&model.User{
 		ProjectId:      project.ID,
 		Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
 		Group1ID:       "1",
@@ -1403,13 +1354,42 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		IsGroupUser:    &isGroupUser,
 	})
 	projectID := project.ID
-	accountID := createdUserID
-	user, errCode := store.GetStore().GetUser(projectID, accountID)
-	assert.Equal(t, user.ID, accountID)
+	user, errCode := store.GetStore().GetUser(projectID, createdUserID1)
+	assert.Equal(t, user.ID, createdUserID1)
 	assert.Equal(t, http.StatusFound, errCode)
 	group2, status := store.GetStore().CreateGroup(projectID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group2)
+
+	// Hubspot Group Events
+	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+	trackPayload := SDK.TrackPayload{
+		UserId:        createdUserID1,
+		CreateUser:    false,
+		IsNewUser:     false,
+		Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+		Timestamp:     timestamp,
+		ProjectId:     project.ID,
+		Auto:          false,
+		RequestSource: model.UserSourceHubspot,
+	}
+	status, response := SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotEmpty(t, response)
+	assert.Equal(t, http.StatusOK, status)
+
+	trackPayload = SDK.TrackPayload{
+		UserId:        createdUserID1,
+		CreateUser:    false,
+		IsNewUser:     false,
+		Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+		Timestamp:     timestamp,
+		ProjectId:     project.ID,
+		Auto:          false,
+		RequestSource: model.UserSourceHubspot,
+	}
+	status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotEmpty(t, response)
+	assert.Equal(t, http.StatusOK, status)
 
 	// account associated to domain
 	createdUserID2, _ := store.GetStore().CreateUser(&model.User{
@@ -1428,6 +1408,35 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	group3, status := store.GetStore().CreateGroup(projectID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group3)
+
+	// Salesforce Group Events
+	trackPayload = SDK.TrackPayload{
+		UserId:        createdUserID2,
+		CreateUser:    false,
+		IsNewUser:     false,
+		Name:          U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		Timestamp:     timestamp,
+		ProjectId:     project.ID,
+		Auto:          false,
+		RequestSource: model.UserSourceSalesforce,
+	}
+	status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotEmpty(t, response)
+	assert.Equal(t, http.StatusOK, status)
+
+	trackPayload = SDK.TrackPayload{
+		UserId:        createdUserID2,
+		CreateUser:    false,
+		IsNewUser:     false,
+		Name:          U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		Timestamp:     timestamp,
+		ProjectId:     project.ID,
+		Auto:          false,
+		RequestSource: model.UserSourceSalesforce,
+	}
+	status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotEmpty(t, response)
+	assert.Equal(t, http.StatusOK, status)
 
 	// 10  Associated Users
 	m := map[string]string{"$name": "Some Name"}
@@ -1500,7 +1509,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			Properties:     userPropsEncoded,
 			IsGroupUser:    &isGroupUser,
 			Group2ID:       "2",
-			Group2UserID:   accountID,
+			Group2UserID:   createdUserID1,
 			CustomerUserId: customerUserID,
 			Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
 		})
@@ -1757,20 +1766,25 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
-		assert.Equal(t, len(resp.AccountTimeline), 9)
+		assert.Equal(t, len(resp.AccountTimeline), 10)
 		assert.NotNil(t, resp.LeftPaneProps)
-		assert.Condition(t, func() bool {
-			for i, property := range resp.LeftPaneProps {
-				assert.Equal(t, props[i], property)
+		for i, property := range resp.LeftPaneProps {
+			assert.Equal(t, props[i], property)
+		}
+		for i, property := range resp.Milestones {
+			assert.Equal(t, props[i], property)
+		}
+		for _, userTimeline := range resp.AccountTimeline {
+			if userTimeline.UserName == model.INTENT_ACTIVITY_USERNAME {
+				assert.Equal(t, userTimeline.AdditionalProp, "All")
+				assert.Equal(t, userTimeline.IsAnonymous, false)
+				assert.Equal(t, len(userTimeline.UserActivities), 2)
 			}
-			for i, property := range resp.Milestones {
-				assert.Equal(t, props[i], property)
-			}
-			return true
-		})
+		}
+
 	})
 	t.Run("Success", func(t *testing.T) {
-		w := sendGetProfileAccountDetailsRequest(r, projectID, agent, accountID, model.GROUP_NAME_HUBSPOT_COMPANY)
+		w := sendGetProfileAccountDetailsRequest(r, projectID, agent, createdUserID1, model.GROUP_NAME_HUBSPOT_COMPANY)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		resp := &model.AccountDetails{}
@@ -1778,84 +1792,84 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.HostName, "google.com")
-		assert.Equal(t, len(resp.AccountTimeline), 9)
+		assert.Equal(t, len(resp.AccountTimeline), 10)
 		assert.NotNil(t, resp.LeftPaneProps)
-		assert.Condition(t, func() bool {
-			for i, property := range resp.LeftPaneProps {
-				assert.Equal(t, props[i], property)
-			}
-			for i, property := range resp.Milestones {
-				assert.Equal(t, props[i], property)
-			}
-			return true
-		})
-		assert.Condition(t, func() bool {
-			assert.Condition(t, func() bool { return len(resp.AccountTimeline) > 0 })
-			for _, userTimeline := range resp.AccountTimeline {
-				assert.Condition(t, func() bool {
-					assert.NotNil(t, userTimeline.UserId)
-					assert.NotNil(t, userTimeline.UserName)
-					for i, activity := range userTimeline.UserActivities {
-						assert.NotNil(t, activity.EventName)
-						assert.NotNil(t, activity.DisplayName)
-						eventFromMap, eventExistsInMap := model.HOVER_EVENTS_NAME_PROPERTY_MAP[activity.EventName]
-						if activity.EventName == randomURL {
-							assert.Equal(t, activity.DisplayName, "Page View")
-							assert.Equal(t, activity.AliasName, "")
-						} else if eventExistsInMap {
-							assert.Equal(t, activity.DisplayName, U.STANDARD_EVENTS_DISPLAY_NAMES[activity.EventName])
-							if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
-								assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
-							} else if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
-								assert.Equal(t, activity.AliasName, fmt.Sprintf("Responded to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
-							} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
-								assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE]))
-							} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
-								assert.Equal(t, activity.AliasName, fmt.Sprintf("%s: %s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TYPE], eventProperties[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT]))
-							} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
-								activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED {
-								assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TITLE]))
-							} else if activity.EventName == U.EVENT_NAME_SALESFORCE_TASK_CREATED {
-								assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Task - %s", eventProperties[U.EP_SF_TASK_SUBJECT]))
-							} else if activity.EventName == U.EVENT_NAME_SALESFORCE_EVENT_CREATED {
-								assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Event - %s", eventProperties[U.EP_SF_EVENT_SUBJECT]))
-							} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_LIST {
-								assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to Hubspot List - %s", eventProperties[U.EP_HUBSPOT_CONTACT_LIST_LIST_NAME]))
-							}
-						}
-						assert.NotNil(t, activity.Timestamp)
-						assert.Condition(t, func() bool { return activity.Timestamp <= uint64(time.Now().UTC().Unix()) })
-						if i > 1 {
-							if userTimeline.UserActivities[i].Timestamp > userTimeline.UserActivities[i-1].Timestamp {
-								return false
-							}
-						}
-						assert.Condition(t, func() bool {
-							if activity.DisplayName == "Page View" || eventExistsInMap {
-								var lookInProps []string
-								if activity.DisplayName == "Page View" {
-									lookInProps = model.PAGE_VIEW_HOVERPROPS_LIST
-								} else if eventExistsInMap {
-									lookInProps = eventFromMap
-								}
-								assert.NotNil(t, activity.Properties)
-								properties, err := U.DecodePostgresJsonb(activity.Properties)
-								assert.Nil(t, err)
-								for key := range *properties {
-									sort.Strings(lookInProps)
-									i := sort.SearchStrings(lookInProps, key)
-									assert.Condition(t, func() bool { return i < len(lookInProps) })
-								}
-							}
-							return true
-						})
-					}
-					return true
-				})
-			}
-			return true
-		})
+		for i, property := range resp.LeftPaneProps {
+			assert.Equal(t, props[i], property)
+		}
+		for i, property := range resp.Milestones {
+			assert.Equal(t, props[i], property)
+		}
 
+		assert.True(t, len(resp.AccountTimeline) > 0)
+
+		// Loop through the AccountTimeline and perform assertions on each User Timeline
+		for index, userTimeline := range resp.AccountTimeline {
+			assert.NotNil(t, userTimeline.UserId)
+			assert.NotNil(t, userTimeline.UserName)
+
+			// Separate check the 10th element (Intent Activity)
+			if index == 9 {
+				assert.Equal(t, userTimeline.UserName, model.INTENT_ACTIVITY_USERNAME)
+				assert.Equal(t, userTimeline.AdditionalProp, model.GROUP_NAME_HUBSPOT_COMPANY)
+				assert.Equal(t, userTimeline.IsAnonymous, false)
+				assert.Equal(t, len(userTimeline.UserActivities), 1)
+				continue
+			}
+
+			// Loop through UserActivities and perform assertions
+			for _, activity := range userTimeline.UserActivities {
+				assert.NotNil(t, activity.EventName)
+				assert.NotNil(t, activity.DisplayName)
+				assert.NotNil(t, activity.Timestamp)
+				assert.True(t, activity.Timestamp <= uint64(time.Now().UTC().Unix()))
+
+				eventFromMap, eventExistsInMap := model.HOVER_EVENTS_NAME_PROPERTY_MAP[activity.EventName]
+				if activity.EventName == randomURL {
+					assert.Equal(t, activity.DisplayName, "Page View")
+					assert.Equal(t, activity.AliasName, "")
+				} else if eventExistsInMap {
+					assert.Equal(t, activity.DisplayName, U.STANDARD_EVENTS_DISPLAY_NAMES[activity.EventName])
+					// Check alias name based on event name
+					switch activity.EventName {
+					case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED:
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
+					case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN:
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("Responded to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
+					case U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE]))
+					case U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL:
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("%s: %s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TYPE], eventProperties[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT]))
+					case U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED:
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TITLE]))
+					case U.EVENT_NAME_SALESFORCE_TASK_CREATED:
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Task - %s", eventProperties[U.EP_SF_TASK_SUBJECT]))
+					case U.EVENT_NAME_SALESFORCE_EVENT_CREATED:
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("Created Event - %s", eventProperties[U.EP_SF_EVENT_SUBJECT]))
+					case U.EVENT_NAME_HUBSPOT_CONTACT_LIST:
+						assert.Equal(t, activity.AliasName, fmt.Sprintf("Added to Hubspot List - %s", eventProperties[U.EP_HUBSPOT_CONTACT_LIST_LIST_NAME]))
+					}
+				}
+
+				if activity.DisplayName == "Page View" || eventExistsInMap {
+					var lookInProps []string
+					if activity.DisplayName == "Page View" {
+						lookInProps = model.PAGE_VIEW_HOVERPROPS_LIST
+					} else if eventExistsInMap {
+						lookInProps = eventFromMap
+					}
+					assert.NotNil(t, activity.Properties)
+					properties, err := U.DecodePostgresJsonb(activity.Properties)
+					assert.Nil(t, err)
+					for key := range *properties {
+						sort.Strings(lookInProps)
+						i := sort.SearchStrings(lookInProps, key)
+						assert.True(t, i < len(lookInProps))
+					}
+				}
+
+			}
+		}
 	})
 }
 

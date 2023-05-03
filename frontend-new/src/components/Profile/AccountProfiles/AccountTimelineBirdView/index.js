@@ -20,7 +20,6 @@ import { useSelector } from 'react-redux';
 function AccountTimelineBirdView({
   timelineEvents = [],
   timelineUsers = [],
-  milestones,
   granularity,
   collapseAll,
   setCollapseAll,
@@ -170,10 +169,7 @@ function AccountTimelineBirdView({
               <th scope='col' className='truncate'>
                 <div className='inline-flex gap--8 items-center'>
                   {user?.isAnonymous ? (
-                    <SVG
-                      name={`TrackedUser${user.title.match(/\d/g)[0]}`}
-                      size={32}
-                    />
+                    <SVG name='TrackedUser1' size={32} />
                   ) : (
                     <Avatar
                       size={32}

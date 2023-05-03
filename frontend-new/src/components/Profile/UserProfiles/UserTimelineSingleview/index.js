@@ -1,11 +1,10 @@
 import { Spin } from 'antd';
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   eventIconsColorMap,
   getEventCategory,
   getIconForCategory,
-  groups,
-  timestampToString
+  groups
 } from '../../utils';
 import _ from 'lodash';
 import EventInfoCard from 'Components/Profile/MyComponents/EventInfoCard';
@@ -13,7 +12,6 @@ import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage
 
 function AccountTimelineSingleView({
   activities = [],
-  milestones,
   loading = false,
   eventNamesMap,
   listProperties
