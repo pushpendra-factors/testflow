@@ -99,9 +99,9 @@ function AccountProfiles({
 
   const groupsList = useMemo(() => {
     const groups = [];
-    if (groupOpts?.length > 1) groups.push(['All Accounts', 'All']);
-    groupOpts?.forEach((elem) => {
-      groups.push([elem.display_name, elem.group_name]);
+    if (Object.entries(groupOpts)?.length > 1) groups.push(['All Accounts', 'All']);
+    Object.entries(groupOpts|| {}).forEach(([group_name, display_name]) => {
+      groups.push([display_name, group_name]);
     });
     return groups;
   }, [groupOpts]);
@@ -123,9 +123,9 @@ function AccountProfiles({
 
   useEffect(() => {
     const payload = { ...accountPayload };
-    payload.source = groupOpts?.[0]?.group_name;
+    payload.source = groupsList?.[0]?.[1];
     setAccountPayload(payload);
-  }, [groupOpts]);
+  }, [groupsList]);
 
   useEffect(() => {
     if (currentProjectSettings?.timelines_config) {
@@ -668,7 +668,7 @@ function AccountProfiles({
     const fetchData = async () => {
       const newCompanyValues = { All: {} };
       for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
-        if (groupOpts.find((elem) => elem.group_name === group)) {
+        if (groupOpts[group]) {
           try {
             const res = await fetchGroupPropertyValues(
               activeProject.id,

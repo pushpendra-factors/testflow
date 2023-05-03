@@ -596,7 +596,8 @@ export const ProfileMapper = {
   'All Companies': 'hubspot',
   'Marketo Person': 'marketo',
   'LeadSquared Person': 'leadsquared',
-  'All Domains': '6signal'
+  'All Domains': '6signal',
+  'All Engagements':'linkedin'
 };
 
 export const ReverseProfileMapper = {
@@ -613,7 +614,8 @@ export const ReverseProfileMapper = {
   },
   marketo: { users: 'Marketo Person' },
   leadsquared: { users: 'LeadSquared Person' },
-  '6signal': { $6signal: 'All Domains' }
+  '6signal': { $6signal: 'All Domains' },
+  linkedin: { $linkedin_company: 'All Engagements' }
 };
 
 export const profileOptions = {
@@ -628,7 +630,8 @@ export const profileOptions = {
   $hubspot_deal: [['All Deals']],
   $salesforce_account: [['All Accounts']],
   $hubspot_company: [['All Companies']],
-  $6signal: [['All Domains']]
+  $6signal: [['All Domains']],
+  $linkedin_company:[['All Engagements']]
 };
 
 export const DISPLAY_PROP = { $none: '(Not Set)' };
