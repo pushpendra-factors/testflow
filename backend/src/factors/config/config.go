@@ -274,8 +274,6 @@ type Configuration struct {
 	AllowIdentificationOverwriteUsingSourceByProjectID string
 	AllowHubspotPastEventsEnrichmentByProjectID        string
 	AllowHubspotContactListInsertByProjectID           string
-	NewCloudManager                                    filestore.FileManager
-	ProjectIdsV2                                       []int64
 	IngestionTimezoneEnabledProjectIDs                 []string
 	LinkedinMemberCompanyConfigProjectIDs              []string
 	AllowedSalesforceActivityTasksByProjectIDs         string
@@ -2292,13 +2290,7 @@ func GetAppName(defaultAppName, overrideAppName string) string {
 	return defaultAppName
 }
 
-func GetCloudManager(projectId int64, skipProjectIdDependency bool) filestore.FileManager {
-	if skipProjectIdDependency {
-		return configuration.NewCloudManager
-	}
-	if U.ContainsInt64InArray(configuration.ProjectIdsV2, projectId) {
-		return configuration.NewCloudManager
-	}
+func GetCloudManager() filestore.FileManager {
 	return configuration.CloudManager
 }
 

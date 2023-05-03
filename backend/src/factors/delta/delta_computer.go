@@ -1243,26 +1243,24 @@ func PublishDeltaInsights(topSortedInsights CrossPeriodInsights, filePath string
 
 // GetEventFileScanner Return handle to events file scanner
 func GetEventFileScanner(projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2 bool, hardPull bool, pulledMap map[int64]map[string]bool) (*bufio.Scanner, error) {
+	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, hardPull bool, useSortedFiles bool, pulledMap map[int64]map[string]bool) (*bufio.Scanner, error) {
 	var err error
 	var efCloudPath, efCloudName string
-	if useBucketV2 {
-		if yes, ok := pulledMap[periodCode.From][U.DataTypeEvent]; yes {
-			hardPull = false
-		} else if ok {
-			return nil, fmt.Errorf("previously failed merging events file")
-		}
-		if efCloudPath, efCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", periodCode.From, periodCode.To,
-			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, false, false); err != nil {
-			deltaComputeLog.WithError(err).Error("Failed creating events file")
-			pulledMap[periodCode.From][U.DataTypeEvent] = false
-			return nil, err
-		} else {
-			pulledMap[periodCode.From][U.DataTypeEvent] = true
-		}
-	} else {
-		efCloudPath, efCloudName = (*sortedCloudManager).GetEventsFilePathAndName(projectId, periodCode.From, periodCode.To)
+
+	if yes, ok := pulledMap[periodCode.From][U.DataTypeEvent]; yes {
+		hardPull = false
+	} else if ok {
+		return nil, fmt.Errorf("previously failed merging events file")
 	}
+	if efCloudPath, efCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", periodCode.From, periodCode.To,
+		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFiles, false, false); err != nil {
+		deltaComputeLog.WithError(err).Error("Failed creating events file")
+		pulledMap[periodCode.From][U.DataTypeEvent] = false
+		return nil, err
+	} else {
+		pulledMap[periodCode.From][U.DataTypeEvent] = true
+	}
+
 	deltaComputeLog.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
 		"eventFileCloudName": efCloudName}).Info("Getting events file reader from cloud.")
 	eReader, err := (*sortedCloudManager).Get(efCloudPath, efCloudName)
@@ -1282,25 +1280,22 @@ func GetEventFileScanner(projectId int64, periodCode Period, archiveCloudManager
 
 // GetEventFileScanner Return handle to events file scanner
 func GetChannelFileScanner(channel string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2 bool, hardPull bool, pulledMap map[int64]map[string]bool) (*bufio.Scanner, error) {
+	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, hardPull, useSortedFiles bool, pulledMap map[int64]map[string]bool) (*bufio.Scanner, error) {
 	var err error
 	var cfCloudPath, cfCloudName string
-	if useBucketV2 {
-		if yes, ok := pulledMap[periodCode.From][channel]; yes {
-			hardPull = false
-		} else if ok {
-			return nil, fmt.Errorf("previously failed merging %s file", channel)
-		}
-		if cfCloudPath, cfCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeAdReport, channel, periodCode.From, periodCode.To,
-			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, false, false); err != nil {
-			log.WithError(err).Error("Failed creating " + channel + " file")
-			pulledMap[periodCode.From][channel] = false
-			return nil, err
-		} else {
-			pulledMap[periodCode.From][channel] = true
-		}
+
+	if yes, ok := pulledMap[periodCode.From][channel]; yes {
+		hardPull = false
+	} else if ok {
+		return nil, fmt.Errorf("previously failed merging %s file", channel)
+	}
+	if cfCloudPath, cfCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeAdReport, channel, periodCode.From, periodCode.To,
+		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFiles, false, false); err != nil {
+		log.WithError(err).Error("Failed creating " + channel + " file")
+		pulledMap[periodCode.From][channel] = false
+		return nil, err
 	} else {
-		cfCloudPath, cfCloudName = (*sortedCloudManager).GetChannelFilePathAndName(channel, projectId, periodCode.From, periodCode.To)
+		pulledMap[periodCode.From][channel] = true
 	}
 	deltaComputeLog.WithFields(log.Fields{"channelFileCloudPath": cfCloudPath,
 		"channelFileCloudName": cfCloudName}).Info("Getting " + channel + " file reader from cloud.")
@@ -1320,25 +1315,22 @@ func GetChannelFileScanner(channel string, projectId int64, periodCode Period, a
 
 // GetFileScanner Return handle to file scanner
 func GetUserFileScanner(dateField string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2 bool, hardPull bool, pulledMap map[int64]map[string]bool) (*bufio.Scanner, error) {
+	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, hardPull, useSortedFiles bool, pulledMap map[int64]map[string]bool) (*bufio.Scanner, error) {
 	var err error
 	var ufCloudPath, ufCloudName string
-	if useBucketV2 {
-		if yes, ok := pulledMap[periodCode.From][dateField]; yes {
-			hardPull = false
-		} else if ok {
-			return nil, fmt.Errorf("previously failed merging %s file", dateField)
-		}
-		if ufCloudPath, ufCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeUser, dateField, periodCode.From, periodCode.To,
-			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, false, false); err != nil {
-			log.WithError(err).Error("Failed creating " + dateField + " file")
-			pulledMap[periodCode.From][dateField] = false
-			return nil, err
-		} else {
-			pulledMap[periodCode.From][dateField] = true
-		}
+
+	if yes, ok := pulledMap[periodCode.From][dateField]; yes {
+		hardPull = false
+	} else if ok {
+		return nil, fmt.Errorf("previously failed merging %s file", dateField)
+	}
+	if ufCloudPath, ufCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeUser, dateField, periodCode.From, periodCode.To,
+		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFiles, false, false); err != nil {
+		log.WithError(err).Error("Failed creating " + dateField + " file")
+		pulledMap[periodCode.From][dateField] = false
+		return nil, err
 	} else {
-		ufCloudPath, ufCloudName = (*sortedCloudManager).GetUsersFilePathAndName(dateField, projectId, periodCode.From, periodCode.To)
+		pulledMap[periodCode.From][dateField] = true
 	}
 
 	deltaComputeLog.WithFields(log.Fields{"userFileCloudPath": ufCloudPath,

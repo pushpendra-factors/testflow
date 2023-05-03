@@ -70,7 +70,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 	tmpCloudManager := configs["tmpCloudManager"].(*filestore.FileManager)
 	hardPull := configs["hardPull"].(bool)
 	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
-	useBucketV2 := configs["useBucketV2"].(bool)
+	useSortedFilesMerge := configs["useSortedFilesMerge"].(bool)
 
 	finalStatus := make(map[string]interface{})
 	processedQueries := make([]string, 0)
@@ -121,20 +121,15 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			}
 		}
 
-		var err error
-		var cfCloudPath, cfCloudName string
-		if useBucketV2 {
-			cfCloudPath, cfCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", actualQuery.StartTimestamp, actualQuery.EndTimestamp,
-				archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId, true, true)
-			if err != nil {
-				store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
-				finalStatus[query.ID] = err.Error()
-				log.WithError(err).Error("Failed creating events file")
-				return finalStatus, false
-			}
-		} else {
-			cfCloudPath, cfCloudName = (*sortedCloudManager).GetEventsGroupFilePathAndName(projectId, actualQuery.StartTimestamp, actualQuery.EndTimestamp, groupId)
+		cfCloudPath, cfCloudName, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", actualQuery.StartTimestamp, actualQuery.EndTimestamp,
+			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId, useSortedFilesMerge, true, true)
+		if err != nil {
+			store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
+			finalStatus[query.ID] = err.Error()
+			log.WithError(err).Error("Failed creating events file")
+			return finalStatus, false
 		}
+
 		log.Info("Processing Query ID: ", query.ID, " query: ", actualQuery)
 		log.Info("Starting cloud events file get")
 		// "projects/2251799829000005/", "events.txt"
@@ -495,9 +490,9 @@ func RemoveFromArray(events []string, key string) []string {
 }
 
 func GetPathAnalysisData(projectId int64, id string) map[int]map[string]int {
-	path, _ := C.GetCloudManager(projectId, false).GetPathAnalysisTempFilePathAndName(id, projectId)
+	path, _ := C.GetCloudManager().GetPathAnalysisTempFilePathAndName(id, projectId)
 	fmt.Println(path)
-	reader, err := C.GetCloudManager(projectId, false).Get(path, "result.txt")
+	reader, err := C.GetCloudManager().Get(path, "result.txt")
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")

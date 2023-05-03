@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"encoding/json"
+
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -166,8 +167,8 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	for _, filter := range (*alertConfig).Filter {
 		if filter.Operator == model.InList || filter.Operator == model.NotInList {
 			// Get the cloud file that is there for the reference value
-			path, file := C.GetCloudManager(projectID, true).GetListReferenceFileNameAndPathFromCloud(projectID, filter.Value)
-			reader, err := C.GetCloudManager(projectID, true).Get(path, file)
+			path, file := C.GetCloudManager().GetListReferenceFileNameAndPathFromCloud(projectID, filter.Value)
+			reader, err := C.GetCloudManager().Get(path, file)
 			if err != nil {
 				log.WithFields(logFields).WithError(err).Error("List File Missing")
 				return nil, http.StatusInternalServerError, "List File Missing"

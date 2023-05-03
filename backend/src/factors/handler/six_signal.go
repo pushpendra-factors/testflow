@@ -315,7 +315,7 @@ func FetchListofDatesForSixSignalReport(c *gin.Context) (interface{}, int, strin
 	}
 
 	path := fmt.Sprintf("projects/%d/sixSignal", projectId) //path= "projects/2/sixSignal"
-	cloudManager := C.GetCloudManager(projectId, true)
+	cloudManager := C.GetCloudManager()
 	//filenames contains the complete path for the reports file
 	//filenames=["projects/2/sixSignal/20230212-20230219/results.txt","projects/2/sixSignal/20230220-20230227/results.txt",...]
 	filenames := cloudManager.ListFiles(path)
@@ -354,7 +354,7 @@ func getFolderName(query model.SixSignalQuery) string {
 // GetSixSignalAnalysisData fetches the sixsignal report cloud storage path and reads the report file.
 func GetSixSignalAnalysisData(projectId int64, id string) map[int]model.SixSignalResultGroup {
 
-	cloudManager := C.GetCloudManager(projectId, true)
+	cloudManager := C.GetCloudManager()
 	path, _ := cloudManager.GetSixSignalAnalysisTempFilePathAndName(id, projectId)
 	fmt.Println(path)
 	reader, err := cloudManager.Get(path, "result.txt")

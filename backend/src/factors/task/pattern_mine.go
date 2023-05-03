@@ -1840,7 +1840,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 	diskManager *serviceDisk.DiskDriver, numRoutines int, projectId int64,
 	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64,
 	countOccurence bool, campaignLimitCount int, beamConfig *merge.RunBeamConfig,
-	createMetadata bool, cAlgoProps P.CountAlgoProperties, hardPull, useBucketV2, isTimeInProjectTimezone, checkDependency bool) (int, error) {
+	createMetadata bool, cAlgoProps P.CountAlgoProperties, hardPull, useSortedFilesMerge, isTimeInProjectTimezone, checkDependency bool) (int, error) {
 
 	var err error
 	countsVersion := cAlgoProps.Counting_version
@@ -1853,15 +1853,12 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 		reader := bytes.NewReader(data)
 		diskManager.Create(metaDataDir, metaDataFileName, reader)
 	}
+
 	var efCloudPath, efCloudName string
-	if useBucketV2 {
-		if efCloudPath, efCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTime, endTime,
-			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, isTimeInProjectTimezone, checkDependency); err != nil {
-			mineLog.WithError(err).Error("Failed creating events file")
-			return 0, err
-		}
-	} else {
-		efCloudPath, efCloudName = (*sortedCloudManager).GetEventsFilePathAndName(projectId, startTime, endTime)
+	if efCloudPath, efCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTime, endTime,
+		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFilesMerge, isTimeInProjectTimezone, checkDependency); err != nil {
+		mineLog.WithError(err).Error("Failed creating events file")
+		return 0, err
 	}
 
 	if cAlgoProps.Counting_version == EXPLAIN_V2_VERSION {

@@ -53,11 +53,10 @@ func mainRunNumericalBucketing() {
 
 	envFlag := flag.String("env", "development", "")
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
-	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
+
 	tmpBucketNameFlag := flag.String("bucket_name_tmp", "/usr/local/var/factors/cloud_storage_tmp", "--bucket_name=/usr/local/var/factors/cloud_storage_tmp pass bucket name for tmp artifacts")
 	archiveBucketNameFlag := flag.String("archive_bucket_name", "/usr/local/var/factors/cloud_storage_archive", "--bucket_name=/usr/local/var/factors/cloud_storage_archive pass archive bucket name")
 	sortedBucketNameFlag := flag.String("sorted_bucket_name", "/usr/local/var/factors/cloud_storage_sorted", "--bucket_name=/usr/local/var/factors/cloud_storage_sorted pass sorted bucket name")
-	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
@@ -76,6 +75,7 @@ func mainRunNumericalBucketing() {
 	propertiesTypeCacheSize := flag.Int("property_details_cache_size", 0, "Cache size for in memory property detail.")
 
 	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
+	useSortedFilesMerge := flag.Bool("use_sorted_merge", false, "whether to use sorted files(if possible) or archive files")
 	runBeam := flag.Int("run_beam", 1, "run build seq on beam ")
 	numWorkersFlag := flag.Int("num_beam_workers", 100, "Num of beam workers")
 
@@ -148,7 +148,7 @@ func mainRunNumericalBucketing() {
 	log.WithFields(log.Fields{
 		"Env":             *envFlag,
 		"localDiskTmpDir": *localDiskTmpDirFlag,
-		"Bucket":          *bucketName,
+		"Bucket":          *sortedBucketNameFlag,
 	}).Infoln("Initialising")
 
 	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize, *whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
@@ -185,50 +185,32 @@ func mainRunNumericalBucketing() {
 		}
 	}
 	configs["tmpCloudManager"] = &cloudManagerTmp
-	if *useBucketV2 {
-		var archiveCloudManager filestore.FileManager
-		var sortedCloudManager filestore.FileManager
-		if *envFlag == "development" {
-			archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
-			sortedCloudManager = serviceDisk.New(*sortedBucketNameFlag)
-		} else {
-			archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init archive cloud manager")
-			}
-			sortedCloudManager, err = serviceGCS.New(*sortedBucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init sorted data cloud manager")
-			}
-		}
-		configs["archiveCloudManager"] = &archiveCloudManager
-		configs["sortedCloudManager"] = &sortedCloudManager
+
+	var archiveCloudManager filestore.FileManager
+	var sortedCloudManager filestore.FileManager
+	if *envFlag == "development" {
+		archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
+		sortedCloudManager = serviceDisk.New(*sortedBucketNameFlag)
 	} else {
-		var cloudManager filestore.FileManager
-		if *envFlag == "development" {
-			cloudManager = serviceDisk.New(*bucketName)
-		} else {
-			cloudManager, err = serviceGCS.New(*bucketName)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init cloud manager.")
-			}
+		archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
+		if err != nil {
+			log.WithField("error", err).Fatal("Failed to init archive cloud manager")
 		}
-		configs["archiveCloudManager"] = &cloudManager
-		configs["sortedCloudManager"] = &cloudManager
+		sortedCloudManager, err = serviceGCS.New(*sortedBucketNameFlag)
+		if err != nil {
+			log.WithField("error", err).Fatal("Failed to init sorted data cloud manager")
+		}
 	}
+	configs["archiveCloudManager"] = &archiveCloudManager
+	configs["sortedCloudManager"] = &sortedCloudManager
 
 	configs["diskManager"] = diskManager
 	configs["hardPull"] = *hardPull
+	configs["useSortedFilesMerge"] = *useSortedFilesMerge
 	configs["beamConfig"] = &beamConfig
-	configs["useBucketV2"] = *useBucketV2
 
-	var taskName string
-	if *useBucketV2 {
-		taskName = "NumericalBucketingWeeklyV2"
-	} else {
-		taskName = "NumericalBucketingWeekly"
-	}
 	if *isWeeklyEnabled {
+		taskName := "NumericalBucketingWeeklyV2"
 		configs["modelType"] = T.ModelTypeWeek
 		status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, T.NumericalBucketing, configs)
 		log.Info(status)

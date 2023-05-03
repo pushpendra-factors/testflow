@@ -31,21 +31,16 @@ func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[st
 	startTimestamp := configs["startTimestamp"].(int64)
 	endTimestamp := configs["endTimestamp"].(int64)
 	hardPull := configs["hardPull"].(bool)
-	useBucketV2 := configs["useBucketV2"].(bool)
+	useSortedFilesMerge := configs["useSortedFilesMerge"].(bool)
 	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
 	status := make(map[string]interface{})
 
-	var efCloudPath, efCloudName string
-	var err error
-	if useBucketV2 {
-		if efCloudPath, efCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp,
-			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, false, false); err != nil {
-			mineLog.Error("Failed creating events file")
-			status["error"] = err
-			return status, false
-		}
-	} else {
-		efCloudPath, efCloudName = (*sortedCloudManager).GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
+	efCloudPath, efCloudName, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp,
+		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFilesMerge, false, false)
+	if err != nil {
+		mineLog.Error("Failed creating events file")
+		status["error"] = err
+		return status, false
 	}
 
 	//Download master file

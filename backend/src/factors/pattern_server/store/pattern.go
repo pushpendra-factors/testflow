@@ -13,8 +13,6 @@ import (
 	"runtime/debug"
 	"time"
 
-	U "factors/util"
-
 	cache "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
 )
@@ -24,10 +22,8 @@ const (
 )
 
 type PatternStore struct {
-	cloudFileManger     filestore.FileManager
-	newCloudFileManager filestore.FileManager
-	diskFileManger      filestore.FileManager
-	projectIdsV2        []int64
+	cloudFileManger filestore.FileManager
+	diskFileManger  filestore.FileManager
 
 	modelChunkCache     *cache.Cache
 	modelEventInfoCache *cache.Cache
@@ -38,7 +34,7 @@ type PatternWithMeta struct {
 	RawPattern    json.RawMessage `json:"rp"`
 }
 
-func New(chunkCacheSize, eventInfoCacheSize int, diskManager, cloudManager, newCloudManager filestore.FileManager, projectIdsV2 []int64) (*PatternStore, error) {
+func New(chunkCacheSize, eventInfoCacheSize int, diskManager, cloudManager filestore.FileManager) (*PatternStore, error) {
 	modelChunkCache, err := cache.New(chunkCacheSize)
 	if err != nil {
 		return nil, err
@@ -54,8 +50,6 @@ func New(chunkCacheSize, eventInfoCacheSize int, diskManager, cloudManager, newC
 		modelEventInfoCache: modelEventInfoCache,
 		diskFileManger:      diskManager,
 		cloudFileManger:     cloudManager,
-		newCloudFileManager: newCloudManager,
-		projectIdsV2:        projectIdsV2,
 	}, nil
 }
 
@@ -75,13 +69,7 @@ func getModelChunkCacheKey(projectId int64, modelId uint64, chunkId string) stri
 	return fmt.Sprintf("%s%s%s", "chunk_", IdSeparator, GetChunkKey(projectId, modelId, chunkId))
 }
 
-func (ps *PatternStore) GetCloudManager(projectId int64, skipProjectIdDependency bool) filestore.FileManager {
-	if(skipProjectIdDependency){
-		return ps.newCloudFileManager	
-	}
-	if U.ContainsInt64InArray(ps.projectIdsV2, projectId) {
-		return ps.newCloudFileManager
-	}
+func (ps *PatternStore) GetCloudManager() filestore.FileManager {
 	return ps.cloudFileManger
 }
 
@@ -175,11 +163,11 @@ func (ps *PatternStore) getModelEventInfoFromCloud(projectId int64, modelId uint
 		"mid": modelId,
 	}).Debugln("[PatternStore] getModelEventInfoFromCloud")
 
-	return getModelEventInfoFromFileManager(ps.GetCloudManager(projectId, false), projectId, modelId)
+	return getModelEventInfoFromFileManager(ps.GetCloudManager(), projectId, modelId)
 }
 
 func (ps *PatternStore) PutModelEventInfoInCloud(projectId int64, modelId uint64, eventInfo pattern.UserAndEventsInfo) error {
-	return putModelEventInfoToFileManager(ps.GetCloudManager(projectId, false), projectId, modelId, eventInfo)
+	return putModelEventInfoToFileManager(ps.GetCloudManager(), projectId, modelId, eventInfo)
 }
 
 func (ps *PatternStore) GetModelEventInfo(projectId int64, modelId uint64) (pattern.UserAndEventsInfo, error) {
@@ -246,7 +234,7 @@ func (ps *PatternStore) getPatternsWithMetaFromCloud(projectId int64, modelId ui
 		"cid": chunkId,
 	}).Debugln("[PatternStore] getPatternsFromCloud")
 
-	return getPatternsFromFileManager(ps.GetCloudManager(projectId, false), projectId, modelId, chunkId)
+	return getPatternsFromFileManager(ps.GetCloudManager(), projectId, modelId, chunkId)
 }
 
 func (ps *PatternStore) PutPatternsWithMetaInCloud(projectId int64, modelId uint64, chunkId string, patterns []*PatternWithMeta) error {
@@ -261,7 +249,7 @@ func (ps *PatternStore) PutPatternsWithMetaInCloud(projectId int64, modelId uint
 		return err
 	}
 
-	cloudManager := ps.GetCloudManager(projectId, false)
+	cloudManager := ps.GetCloudManager()
 
 	path, fName := cloudManager.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
 

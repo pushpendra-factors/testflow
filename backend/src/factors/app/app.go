@@ -6,13 +6,9 @@ import (
 	H "factors/handler"
 	mid "factors/middleware"
 	"factors/model/model"
-	"factors/model/store"
-	serviceDisk "factors/services/disk"
-	serviceGCS "factors/services/gcstorage"
 	session "factors/session/store"
 	U "factors/util"
 	"flag"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -145,10 +141,6 @@ func main() {
 		"Disable direct execution of query from dashboard, if not available on cache.")
 
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
-	bucketNameV2 := flag.String("bucket_name_v2", "/usr/local/var/factors/cloud_storage_models", "")
-	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
-	projectIdV2 := flag.String("project_ids_v2", "",
-		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 
 	enableFilterOptimisation := flag.Bool("enable_filter_optimisation", false,
 		"Enables filter optimisation changes for memsql implementation.")
@@ -218,24 +210,6 @@ func main() {
 
 	defaultAppName := "app_server"
 	appName := C.GetAppName(defaultAppName, *overrideAppName)
-
-	projectIdsToRunV2 := make(map[int64]bool, 0)
-	var allProjects bool
-	allProjects, projectIdsToRunV2, _ = C.GetProjectsFromListWithAllProjectSupport(*projectIdV2, "")
-	if allProjects {
-		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
-		if errCode != http.StatusFound {
-			log.Fatal("Failed to get all projects and project_ids set to '*'.")
-		}
-		for _, projectID := range projectIDs {
-			projectIdsToRunV2[projectID] = true
-		}
-	}
-
-	projectIdsArrayV2 := make([]int64, 0)
-	for projectId, _ := range projectIdsToRunV2 {
-		projectIdsArrayV2 = append(projectIdsArrayV2, projectId)
-	}
 
 	config := &C.Configuration{
 		GCPProjectID:       *gcpProjectID,
@@ -373,7 +347,6 @@ func main() {
 		BlockedEmailDomainList:                         C.GetBlockedEmailDomainFromStringListAsString(*blockedEmailDomainList),
 		AllAccountsProjectId:                           *allAccountsProjectId,
 		IngestionTimezoneEnabledProjectIDs:             C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
-		ProjectIdsV2:                                   projectIdsArrayV2,
 		IncreaseKPILimitForProjectIDs:                  *IncreaseKPILimitForProjectIDs,
 		EnableEventFiltersInSegments:                   *enableEventFiltersInSegments,
 		EnableFeatureGates:                             *enableFeatureGates,
@@ -400,22 +373,6 @@ func main() {
 	C.InitMonitoringAPIServices(config)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitFilemanager(*bucketName, *env, config)
-	var bucket string
-	if *useBucketV2 {
-		bucket = *bucketNameV2
-	} else {
-		bucket = *bucketName
-	}
-	if *env == "development" {
-		config.NewCloudManager = serviceDisk.New(bucket)
-	} else {
-		var err error
-		config.NewCloudManager, err = serviceGCS.New(bucket)
-		if err != nil {
-			log.WithError(err).Errorln("Failed to init New GCS Client")
-			panic(err)
-		}
-	}
 
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)
