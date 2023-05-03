@@ -87,13 +87,13 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, wg *sync.WaitGroup) {
 			switch eventName {
 
 			case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED:
-				RunSFOfflineTouchPointRuleForCampaignMember(project, &otpRules, timeRange.Unix(), timeRange.Unix()-model.SecsInADay-1, eventDetails.ID, logCtx)
+				RunSFOfflineTouchPointRuleForCampaignMember(project, &otpRules, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, logCtx)
 
 			case U.EVENT_NAME_SALESFORCE_TASK_UPDATED, U.EVENT_NAME_SALESFORCE_TASK_CREATED:
-				RunSFOfflineTouchPointRuleForTasks(project, &otpRules, &uniqueOTPEventKeys, timeRange.Unix(), timeRange.Unix()-model.SecsInADay-1, eventDetails.ID, logCtx)
+				RunSFOfflineTouchPointRuleForTasks(project, &otpRules, &uniqueOTPEventKeys, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, logCtx)
 
 			case U.EVENT_NAME_SALESFORCE_EVENT_CREATED, U.EVENT_NAME_SALESFORCE_EVENT_UPDATED:
-				RunSFOfflineTouchPointRuleForEvents(project, &otpRules, &uniqueOTPEventKeys, timeRange.Unix(), timeRange.Unix()-model.SecsInADay-1, eventDetails.ID, logCtx)
+				RunSFOfflineTouchPointRuleForEvents(project, &otpRules, &uniqueOTPEventKeys, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, logCtx)
 			default:
 				continue
 

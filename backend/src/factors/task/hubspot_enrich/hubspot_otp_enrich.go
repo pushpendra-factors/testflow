@@ -85,7 +85,9 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 	defaultHealthcheckPingID := configs["health_check_ping_id"].(string)
 	overrideHealthcheckPingID := configs["override_healthcheck_ping_id"].(string)
 	numProjectRoutines := configs["num_project_routines"].(int)
-	numDaysBackfill := configs["num_days_backfill"].(int64)
+	numDaysBackfill := configs["num_days_backfill"].(int)
+	backfillStartTime := configs["backfill_start_timestamp"].(int)
+	backfillEndTime := configs["backfill_end_timestamp"].(int)
 
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
@@ -135,6 +137,17 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 
 	}
 
+	endTime := U.TimeNowUnix()
+	startTime := endTime - (int64(numDaysBackfill) * model.SecsInADay)
+
+	//if backfill startTime and endTime is assigned
+
+	if (backfillStartTime <= backfillEndTime) && backfillEndTime != 0 {
+
+		startTime = int64(backfillStartTime)
+		endTime = int64(backfillEndTime)
+	}
+
 	// Runs enrichment for list of project_ids as batch using go routines.
 	batches := U.GetInt64ListAsBatch(projectIDs, numProjectRoutines)
 	log.WithFields(log.Fields{"project_batches": batches}).Info("Running for batches.")
@@ -146,8 +159,6 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 		for pi := range batch {
 			wg.Add(1)
 
-			endTime := U.TimeNowUnix()
-			startTime := endTime - (numDaysBackfill * model.SecsInADay)
 			go syncWorkerForOTP(batch[pi], startTime, endTime, &wg)
 		}
 		wg.Wait()
@@ -219,21 +230,21 @@ func syncWorkerForOTP(projectID int64, startTime, endTime int64, wg *sync.WaitGr
 
 			case U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED:
 
-				RunHSOfflineTouchContact(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()-model.SecsInADay-1, eventDetails.ID, logCtx)
+				RunHSOfflineTouchContact(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, logCtx)
 
 			case U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:
 
-				RunHSOfflineTouchForms(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()-model.SecsInADay-1, eventDetails.ID, logCtx)
+				RunHSOfflineTouchForms(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, logCtx)
 
 			case U.EVENT_NAME_HUBSPOT_CONTACT_LIST:
 
-				RunHSOfflineTouchContactList(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()-model.SecsInADay-1, eventDetails.ID, logCtx)
+				RunHSOfflineTouchContactList(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, logCtx)
 
 			case U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED,
 				U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
 				U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED:
 
-				RunHSOfflineTouchEngagement(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()-model.SecsInADay-1, eventDetails.ID, logCtx)
+				RunHSOfflineTouchEngagement(project, otpRules, uniqueOTPEventKeys, projectID, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, logCtx)
 
 			}
 

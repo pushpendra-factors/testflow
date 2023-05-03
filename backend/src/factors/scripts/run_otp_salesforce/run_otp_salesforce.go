@@ -52,6 +52,8 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 	overrideHealthcheckPingID := configs["override_healthcheck_ping_id"].(string)
 	numProjectRoutines := configs["num_project_routines"].(int)
 	numDaysBackfill := configs["num_days_backfill"].(int)
+	backfillStartTime := configs["backfill_start_timestamp"].(int)
+	backfillEndTime := configs["backfill_end_timestamp"].(int)
 
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
@@ -95,14 +97,24 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 	batches := U.GetInt64ListAsBatch(projectIDs, numProjectRoutines)
 	log.WithFields(log.Fields{"project_batches": batches}).Info("Running for batches.")
 
+	endTime := U.TimeNowUnix()
+	startTime := endTime - (int64(numDaysBackfill) * model.SecsInADay)
+
+	//if backfill startTime and endTime is assigned
+
+	if (backfillStartTime <= backfillEndTime) && backfillEndTime != 0 {
+
+		startTime = int64(backfillStartTime)
+		endTime = int64(backfillEndTime)
+	}
+
 	for bi := range batches {
 		batch := batches[bi]
 		var wg sync.WaitGroup
 		for pi := range batch {
 
 			wg.Add(1)
-			endTime := U.TimeNowUnix()
-			startTime := endTime - (int64(numDaysBackfill) * model.SecsInADay)
+
 			go IntSalesforce.WorkerForSfOtp(batch[pi], startTime, endTime, &wg)
 		}
 		wg.Wait()
@@ -162,6 +174,8 @@ func main() {
 	disableCRMUniquenessConstraintsCheckByProjectID := flag.String("disable_crm_unique_constraint_check_by_project_id", "", "")
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 	numDaysBackfill := flag.Int("num_days_backfill", 93, "Number of days to backfill from now")
+	backfillStartTimestamp := flag.Int("backfill_start_timestamp", 0, "startTimestamp for backfill")
+	backfillEndTimestamp := flag.Int("backfill_end_timestamp", 0, "endTimestamp for backfill")
 	insertBatchSize := flag.Int("insert_batch_size", 1, "Number of unique document go routines per project")
 	//overrideLastSyncTimestamp := flag.Int64("override_last_sync_timestamp", 0, "Override last sync timestamp")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
@@ -301,9 +315,8 @@ func main() {
 	configsEnrich["override_healthcheck_ping_id"] = *overrideHealthcheckPingID
 	configsEnrich["num_project_routines"] = *numProjectRoutines
 	configsEnrich["num_days_backfill"] = *numDaysBackfill
-
-	configsDistributer := make(map[string]interface{})
-	configsDistributer["health_check_ping_id"] = ""
+	configsEnrich["backfill_start_timestamp"] = *backfillStartTimestamp
+	configsEnrich["backfill_end_timestamp"] = *backfillEndTimestamp
 
 	var notifyMessage string
 
