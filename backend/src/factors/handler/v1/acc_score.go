@@ -142,7 +142,7 @@ func GetUserScore(c *gin.Context) (interface{}, int, string, string, bool) {
 	perAccScore, err := store.GetStore().GetUserScore(projectId, userId, dateString, debug, is_anonymus)
 	if err != nil {
 		errMsg := "Unable to get user score."
-		logCtx.Error(errMsg)
+		logCtx.WithError(err).Error(errMsg)
 		return nil, http.StatusInternalServerError, "", "", true
 	}
 	UsersScores.AccResult = make([]model.PerUserScoreOnDay, 0)
