@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	slack "factors/integration/slack"
 	teams "factors/integration/ms_teams"
+	slack "factors/integration/slack"
 	webhook "factors/webhooks"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -370,43 +370,62 @@ func getPropsBlock(propMap U.PropertiesMap) string {
 func getPropsBlockV2(propMap U.PropertiesMap) string {
 
 	var propBlock string
-	count := 0
-	for i := 0; i < len(propMap); i++ {
-		pp := propMap[fmt.Sprintf("%d", i)]
-		var mp model.MessagePropMapStruct
-		if pp != nil {
-			trans, ok := pp.(map[string]interface{})
-			if !ok {
-				log.Warn("cannot convert interface to map[string]interface{} type")
-				continue
-			}
-			err := U.DecodeInterfaceMapToStructType(trans, &mp)
-			if err != nil {
-				log.Warn("cannot convert interface map to struct type")
-				continue
-			}
-		}
+	length := len(propMap)
+	i := 0
+	for i < length {
 		var key1, key2 string
 		var prop1, prop2 interface{}
-		count++
-
-		if count == 1 {
-			key1 = mp.DisplayName
-			prop1 = mp.PropValue
+		prop1 = ""
+		prop2 = ""
+		if i < length {
+			pp1 := propMap[fmt.Sprintf("%d", i)]
+			i++
+			var mp1 model.MessagePropMapStruct
+			if pp1 != nil {
+				trans, ok := pp1.(map[string]interface{})
+				if !ok {
+					log.Warn("cannot convert interface to map[string]interface{} type")
+					continue
+				}
+				err := U.DecodeInterfaceMapToStructType(trans, &mp1)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
+			}
+			key1 = mp1.DisplayName
+			prop1 = mp1.PropValue
 			if prop1 == "" {
 				prop1 = "<nil>"
 			}
-		} else if count == 2 {
-			key2 = mp.DisplayName
-			prop2 = mp.PropValue
+		}
+		if i < length {
+			pp2 := propMap[fmt.Sprintf("%d", i)]
+			i++
+			var mp2 model.MessagePropMapStruct
+			if pp2 != nil {
+				trans, ok := pp2.(map[string]interface{})
+				if !ok {
+					log.Warn("cannot convert interface to map[string]interface{} type")
+					continue
+				}
+				err := U.DecodeInterfaceMapToStructType(trans, &mp2)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
+			}
+			key2 = mp2.DisplayName
+			prop2 = mp2.PropValue
 			if prop2 == "" {
 				prop2 = "<nil>"
 			}
 		}
+
 		// as slack template support only 2 columns hence adding check for count 2
-		if count == 2 {
-			propBlock += fmt.Sprintf(
-				`{
+
+		propBlock += fmt.Sprintf(
+			`{
 					"type": "section",
 					"fields": [
 						{
@@ -422,8 +441,6 @@ func getPropsBlockV2(propMap U.PropertiesMap) string {
 				{
 					"type": "divider"
 				},`, key1, strings.Replace(fmt.Sprintf("%v", prop1), "\"", "", -1), key2, strings.Replace(fmt.Sprintf("%v", prop2), "\"", "", -1))
-			count = 0
-		}
 	}
 	return propBlock
 }
@@ -549,7 +566,7 @@ func getTeamsMessageTemp(message model.EventTriggerAlertMessage) string {
 	msg := fmt.Sprintf(`
 		%s 
 		%s 
-	`,strings.Replace(message.Title, "\"", "", -1),strings.Replace(message.Message, "\"", "", -1))
+	`, strings.Replace(message.Title, "\"", "", -1), strings.Replace(message.Message, "\"", "", -1))
 	propMap := message.MessageProperty
 	for i := 0; i < len(propMap); i++ {
 		pp := propMap[fmt.Sprintf("%d", i)]
