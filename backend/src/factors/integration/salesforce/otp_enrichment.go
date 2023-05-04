@@ -550,7 +550,12 @@ func getSalesforceDocumentTimestampByEventV1(event model.EventIdToProperties) (i
 		if !exists || date == nil {
 			return 0, errors.New("failed to get date")
 		}
-		return date.(int64), nil
+		timestamp, ok := date.(float64)
+		if !ok || timestamp == 0 {
+			return 0, errors.New("invalid timestamp")
+		}
+
+		return int64(timestamp), nil
 	}
 
 	date, exists := event.EventProperties[model.EP_SFCampaignMemberCreated]
@@ -558,6 +563,11 @@ func getSalesforceDocumentTimestampByEventV1(event model.EventIdToProperties) (i
 		return 0, errors.New("failed to get date")
 	}
 
-	return date.(int64), nil
+	timestamp, ok := date.(float64)
+	if !ok || timestamp == 0 {
+		return 0, errors.New("invalid timestamp")
+	}
+
+	return int64(timestamp), nil
 
 }
