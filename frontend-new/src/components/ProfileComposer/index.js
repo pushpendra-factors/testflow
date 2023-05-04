@@ -79,7 +79,7 @@ function ProfileComposer({
   };
 
   const resetLabel = (group) => {
-    const labelMap = ['salesforce', 'hubspot', '6signal', 'linkedin'];
+    const labelMap = ['salesforce', 'hubspot', '6signal', 'linkedin_company'];
     const label =
       labelMap.find((key) => group.toLowerCase().includes(key)) || 'web';
     const query = { ...queries, label, alias: '', filters: [] };
