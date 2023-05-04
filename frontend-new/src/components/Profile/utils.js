@@ -113,10 +113,10 @@ export const formatFiltersForPayload = (filters = [], returnArray) => {
 	return filterProps
   }
   
-  var filtersMap = {}
-  const groups = ["$hubspot_company", "$salesforce_account", "$6signal"]
+  const filtersMap = {}
+  const groups = ["$hubspot_company", "$salesforce_account", "$6signal", "$linkedin_company"]
   filterProps.forEach((filter) => {
-    let group = filter.props[0]
+    let group = filter.pr
     let groupName = ""
     groups.every((elem) => {
       if (group.toLowerCase().includes(elem)) {

@@ -597,7 +597,7 @@ export const ProfileMapper = {
   'Marketo Person': 'marketo',
   'LeadSquared Person': 'leadsquared',
   'All Domains': '6signal',
-  'All Engagements':'linkedin'
+  'All Engagements':'linkedin_company'
 };
 
 export const ReverseProfileMapper = {
@@ -615,7 +615,7 @@ export const ReverseProfileMapper = {
   marketo: { users: 'Marketo Person' },
   leadsquared: { users: 'LeadSquared Person' },
   '6signal': { $6signal: 'All Domains' },
-  linkedin: { $linkedin_company: 'All Engagements' }
+  linkedin_company: { $linkedin_company: 'All Engagements' }
 };
 
 export const profileOptions = {
