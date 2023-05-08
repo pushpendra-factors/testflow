@@ -306,6 +306,7 @@ type Configuration struct {
 	CustomDateEnd                                      int64
 	EnableFieldsSyncByProjectID                        string
 	EnableUserDomainsGroupByProjectID                  string
+	UseHubspotCompaniesV3APIByProjectID                string
 }
 
 type Services struct {
@@ -2715,4 +2716,13 @@ func EnableUserDomainsGroupByProjectID(projectID int64) bool {
 	}
 
 	return projectIDsMap[projectID]
+}
+
+func AllowHubspotCompaniesv3APIByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotCompaniesV3APIByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }

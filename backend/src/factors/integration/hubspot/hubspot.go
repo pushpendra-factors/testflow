@@ -85,6 +85,14 @@ type Company struct {
 	Properties map[string]Property `json:"properties"`
 }
 
+// CompanyV3 definition
+type CompanyV3 struct {
+	CompanyId int64 `json:"id"`
+	// not part of hubspot response. added to company on download.
+	ContactIds []int64           `json:"contactIds"`
+	Properties map[string]string `json:"properties"`
+}
+
 // Option definition
 type Option struct {
 	Value string `json:"value"`
@@ -1510,7 +1518,7 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 	return http.StatusOK
 }
 
-//Check if the condition are satisfied for creating OTP events for each rule for HS Contact
+// Check if the condition are satisfied for creating OTP events for each rule for HS Contact
 func ApplyHSOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, lastModifiedTimeStamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRule",
@@ -1559,7 +1567,7 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPR
 	return nil
 }
 
-//Check if the condition are satisfied for creating OTP events for each rule for HS Forms Submission
+// Check if the condition are satisfied for creating OTP events for each rule for HS Forms Submission
 func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, formTimestamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRuleForForms",
@@ -1604,7 +1612,7 @@ func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]mo
 	return nil
 }
 
-//Check if the condition are satisfied for creating OTP events for each rule for HS Engagements - Meetings/Calls/Emails
+// Check if the condition are satisfied for creating OTP events for each rule for HS Engagements - Meetings/Calls/Emails
 func ApplyHSOfflineTouchPointRuleForEngagement(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload,
 	document *model.HubspotDocument, engagement Engagements, engagementType string) error {
 
@@ -1645,7 +1653,7 @@ func ApplyHSOfflineTouchPointRuleForEngagement(project *model.Project, otpRules 
 	return nil
 }
 
-//Check if the condition are satisfied for creating OTP events for each rule for HS Contact list
+// Check if the condition are satisfied for creating OTP events for each rule for HS Contact list
 func ApplyHSOfflineTouchPointRuleForContactList(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload, document *model.HubspotDocument) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRuleForContactList",
@@ -1841,7 +1849,7 @@ func CreateTouchPointEventForLists(project *model.Project, trackPayload *SDK.Tra
 	return trackResponse, nil
 }
 
-//isEmailEngagementAlreadyTracked- Checks if the Email (a type of Engagement) is already tracked for creating OTP event.
+// isEmailEngagementAlreadyTracked- Checks if the Email (a type of Engagement) is already tracked for creating OTP event.
 func isEmailEngagementAlreadyTracked(projectID int64, ruleID string, threadID string, engagement Engagements, logCtx *log.Entry) (bool, error) {
 
 	en, status := store.GetStore().CreateOrGetOfflineTouchPointEventName(projectID)
@@ -1984,7 +1992,7 @@ func IsOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string, logCtx *l
 	return isUnique
 }
 
-//Creates a unique key using ruleID, userID and engagementID as keyID for Engagements {Emails, Calls and Meetings}
+// Creates a unique key using ruleID, userID and engagementID as keyID for Engagements {Emails, Calls and Meetings}
 func createOTPUniqueKeyForEngagements(rule model.OTPRule, trackPayload *SDK.TrackPayload, engagementType string, logCtx *log.Entry) (string, int) {
 
 	ruleID := rule.ID
@@ -2011,7 +2019,7 @@ func createOTPUniqueKeyForEngagements(rule model.OTPRule, trackPayload *SDK.Trac
 	return uniqueKey, http.StatusCreated
 }
 
-//Creates a unique key using ruleID, userID and eventID as keyID for Forms and contacts
+// Creates a unique key using ruleID, userID and eventID as keyID for Forms and contacts
 func createOTPUniqueKeyForFormsAndContacts(rule model.OTPRule, trackPayload *SDK.TrackPayload) (string, int) {
 
 	ruleID := rule.ID
@@ -2024,7 +2032,7 @@ func createOTPUniqueKeyForFormsAndContacts(rule model.OTPRule, trackPayload *SDK
 
 }
 
-//Creates a unique key using ruleID, userID and contact lists list ID  as keyID for Contact Lists
+// Creates a unique key using ruleID, userID and contact lists list ID  as keyID for Contact Lists
 func createOTPUniqueKeyForContactList(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) (string, int) {
 	ruleID := rule.ID
 	userID := trackPayload.UserId
@@ -2043,7 +2051,7 @@ func createOTPUniqueKeyForContactList(rule model.OTPRule, trackPayload *SDK.Trac
 
 }
 
-//canCreateHSEngagementTouchPoint- Checks if the rule type of OTP rule is in accordance with the engagement type.
+// canCreateHSEngagementTouchPoint- Checks if the rule type of OTP rule is in accordance with the engagement type.
 func canCreateHSEngagementTouchPoint(engagementType string, ruleType string) bool {
 
 	switch engagementType {
@@ -2066,7 +2074,7 @@ func canCreateHSEngagementTouchPoint(engagementType string, ruleType string) boo
 	return false
 }
 
-//canCreateHSTouchPoint- Returns true if the document action type is Updated for HS Contacts.
+// canCreateHSTouchPoint- Returns true if the document action type is Updated for HS Contacts.
 func canCreateHSTouchPoint(documentActionType int) bool {
 	// Ignore doc types other than HubspotDocumentActionUpdated
 	if documentActionType != model.HubspotDocumentActionUpdated {
@@ -2075,7 +2083,7 @@ func canCreateHSTouchPoint(documentActionType int) bool {
 	return true
 }
 
-//filterCheck- Checks if all the filters applied are passed and checks HS documents for HS Contacts
+// filterCheck- Checks if all the filters applied are passed and checks HS documents for HS Contacts
 func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, prevDoc *model.HubspotDocument, logCtx *log.Entry) bool {
 
 	var ruleFilters []model.TouchPointFilter
@@ -2163,7 +2171,7 @@ func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, document *m
 	return false
 }
 
-//filterCheckGeneral- Returns true if all the filters applied are passed.
+// filterCheckGeneral- Returns true if all the filters applied are passed.
 func filterCheckGeneral(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
 
 	var ruleFilters []model.TouchPointFilter
@@ -2357,8 +2365,27 @@ func getCompanyNameAndDomainName(document *model.HubspotDocument) (string, strin
 	if document.Type != model.HubspotDocumentTypeCompany {
 		return "", "", errors.New("invalid document type")
 	}
+
+	isCompanyV3, err := checkIfCompanyV3(document)
+	if err != nil {
+		return "", "", err
+	}
+
+	if isCompanyV3 {
+		var company CompanyV3
+		err = json.Unmarshal(document.Value.RawMessage, &company)
+		if err != nil {
+			return "", "", err
+		}
+
+		companyName := company.Properties["name"]
+		domainName := company.Properties["domain"]
+
+		return companyName, domainName, nil
+	}
+
 	var company Company
-	err := json.Unmarshal(document.Value.RawMessage, &company)
+	err = json.Unmarshal(document.Value.RawMessage, &company)
 	if err != nil {
 		return "", "", err
 	}
@@ -2388,8 +2415,17 @@ func getCompanyProperties(projectID int64, document *model.HubspotDocument) (map
 		return nil, errors.New("invalid document type")
 	}
 
+	isCompanyV3, err := checkIfCompanyV3(document)
+	if err != nil {
+		return nil, err
+	}
+
+	if isCompanyV3 {
+		return getCompanyPropertiesV3(projectID, document)
+	}
+
 	var company Company
-	err := json.Unmarshal((document.Value).RawMessage, &company)
+	err = json.Unmarshal((document.Value).RawMessage, &company)
 	if err != nil {
 		return nil, err
 	}
@@ -2418,7 +2454,44 @@ func getCompanyProperties(projectID int64, document *model.HubspotDocument) (map
 	return userProperties, nil
 }
 
+func checkIfCompanyV3(document *model.HubspotDocument) (bool, error) {
+	value, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return false, err
+	}
+
+	if _, ok := (*value)["id"]; ok { // Company V3 (New payload)
+		return true, nil
+	}
+
+	if _, ok := (*value)["companyId"]; ok { // Company V2 (Old payload)
+		return false, nil
+	}
+
+	return false, errors.New("invalid company document")
+}
+
 func syncCompany(projectID int64, document *model.HubspotDocument) int {
+	var value interface{}
+	err := U.DecodePostgresJsonbToStructType(document.Value, &value)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID})
+		return http.StatusInternalServerError
+	}
+
+	isCompanyV3, err := checkIfCompanyV3(document)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("failed to check type of company record")
+	}
+
+	if isCompanyV3 {
+		return syncCompanyV3(projectID, document)
+	}
+
+	return syncCompanyV2(projectID, document)
+}
+
+func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 	if document.Type != model.HubspotDocumentTypeCompany {
 		return http.StatusInternalServerError
 	}
@@ -2533,10 +2606,166 @@ func syncCompany(projectID int64, document *model.HubspotDocument) int {
 	return http.StatusOK
 }
 
-func getHubspotDateTimestampAsMidnightTimeZoneTimestamp(dateUTCMS interface{}, timeZone string) (int64, error) {
-	timestamp, err := model.ReadHubspotTimestamp(dateUTCMS)
+func getCompanyPropertiesV3(projectID int64, document *model.HubspotDocument) (map[string]interface{}, error) {
+	if projectID < 1 || document == nil {
+		return nil, errors.New("invalid parameters")
+	}
+
+	if document.Type != model.HubspotDocumentTypeCompany {
+		return nil, errors.New("invalid document type")
+	}
+
+	var company CompanyV3
+	err := json.Unmarshal((document.Value).RawMessage, &company)
 	if err != nil {
-		return 0, err
+		return nil, err
+	}
+
+	// build user properties from properties.
+	// make sure company name exist.
+	userProperties := make(map[string]interface{}, 0)
+	for key, value := range company.Properties {
+		// add company name to user default property.
+		if key == "name" {
+			userProperties[U.UP_COMPANY] = value
+		}
+
+		propertyKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+			model.HubspotDocumentTypeNameCompany, key)
+		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED, propertyKey,
+			value, model.HubspotDocumentTypeCompany, document.GetDateProperties(), string(document.GetTimeZone()))
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectID, "property_key": propertyKey}).WithError(err).Error("Failed to get property value.")
+			continue
+		}
+
+		userProperties[propertyKey] = value
+	}
+
+	return userProperties, nil
+}
+
+func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
+	if document.Type != model.HubspotDocumentTypeCompany {
+		return http.StatusInternalServerError
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID,
+		"doc_timestamp": document.Timestamp})
+
+	var company CompanyV3
+	err := json.Unmarshal((document.Value).RawMessage, &company)
+	if err != nil {
+		logCtx.WithError(err).Error("Falied to unmarshal hubspot company document.")
+		return http.StatusInternalServerError
+	}
+
+	contactIds := make([]string, 0, 0)
+	for i := range company.ContactIds {
+		contactIds = append(contactIds, strconv.FormatInt(company.ContactIds[i], 10))
+	}
+
+	userProperties, err := getCompanyPropertiesV3(projectID, document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get company properties")
+		return http.StatusInternalServerError
+	}
+
+	var companyUserID string
+	var companyGroupID string
+	if C.IsAllowedHubspotGroupsByProjectID(projectID) && document.GroupUserId == "" {
+		companyUserID, companyGroupID, err = syncGroupCompany(projectID, document, &userProperties)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to update company group properties")
+		}
+	}
+
+	if len(company.ContactIds) == 0 {
+		logCtx.Warning("Skipped company sync. No contacts associated to company.")
+		// No sync_id as no event or user or one user property created.
+		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update hubspot deal document as synced.")
+			return http.StatusInternalServerError
+		}
+		return http.StatusOK
+	}
+
+	var contactDocuments []model.HubspotDocument
+	var errCode int
+	if len(contactIds) > 0 {
+		contactDocuments, errCode = store.GetStore().GetHubspotDocumentByTypeAndActions(projectID,
+			contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+		if errCode == http.StatusInternalServerError {
+			logCtx.Error("Failed to get hubspot documents by type and action on sync company.")
+			return errCode
+		}
+	}
+
+	if C.DisableHubspotNonMarketingContactsByProjectID(projectID) && len(contactDocuments) == 0 {
+		logCtx.Warning("No marketing contacts found for hubspot company.")
+	}
+
+	// update $hubspot_company_name and other company
+	// properties on each associated contact user.
+	isContactsUpdateFailed := false
+	contactUpdateCount := 0
+	for _, contactDocument := range contactDocuments {
+		if contactDocument.SyncId != "" {
+			_, contactSyncEventUserId, errCode := store.GetStore().GetUserIdFromEventId(projectID, contactDocument.SyncId, "")
+			if errCode == http.StatusFound {
+				status := store.GetStore().IsUserExistByID(projectID, contactSyncEventUserId)
+				if status != http.StatusFound {
+					logCtx.WithField("user_id", contactSyncEventUserId).Error(
+						"Failed to get user by contact event user update user properties with company properties.")
+					isContactsUpdateFailed = true
+					continue
+				}
+
+				if C.IsAllowedHubspotGroupsByProjectID(projectID) {
+					logCtx.Info("Updating user company group user id.")
+					_, status = store.GetStore().UpdateUserGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID, false)
+					if status != http.StatusAccepted && status != http.StatusNotModified {
+						logCtx.Error("Failed to update user group id.")
+					}
+				}
+
+				if C.EnableUserDomainsGroupByProjectID(projectID) {
+					status = store.GetStore().AssociateUserDomainsGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyUserID)
+					if status != http.StatusOK && status != http.StatusNotModified {
+						logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to AssociateUserDomainsGroup on hubspot sync company.")
+					}
+				}
+
+				if contactUpdateCount > 100 {
+					continue
+				}
+			}
+		}
+	}
+
+	if isContactsUpdateFailed {
+		logCtx.Error("Failed to update some hubspot company properties on user properties.")
+		return http.StatusInternalServerError
+	}
+
+	// No sync_id as no event or user or one user property created.
+	errCode = store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update hubspot deal document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
+func getHubspotDateTimestampAsMidnightTimeZoneTimestamp(dateUTCMS interface{}, timeZone string) (int64, error) {
+	timestamp, err := model.GetTimestampFromPropertiesByKeyV3(dateUTCMS)
+	if err != nil {
+		timestamp, err = model.ReadHubspotTimestamp(dateUTCMS)
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	loc, err := time.LoadLocation(timeZone)
@@ -2575,9 +2804,9 @@ func getHubspotMappedDataTypeValue(projectID int64, eventName, enKey string, val
 	if ptype == U.PropertyTypeDateTime {
 		datetime, err := U.GetPropertyValueAsFloat64(value)
 		if err != nil {
-			formatedTime, err := time.Parse(model.HubspotDateTimeLayout, U.GetPropertyValueAsString(value))
+			formatedTime, err := model.GetTimestampFromPropertiesByKeyV3(value)
 			if err == nil {
-				return formatedTime.Unix(), nil
+				return getEventTimestamp(formatedTime), nil
 			}
 
 			log.WithError(err).Error("Failed convert datetime property.")

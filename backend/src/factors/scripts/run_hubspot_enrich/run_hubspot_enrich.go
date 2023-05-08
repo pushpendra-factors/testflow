@@ -75,6 +75,7 @@ func main() {
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
 	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
+	useHubspotCompaniesv3APIByProjectID := flag.String("use_hubspot_companies_v3_by_project_id", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -130,6 +131,7 @@ func main() {
 		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
 		EnableSyncReferenceFieldsByProjectID:               *enableSyncReferenceFieldsByProjectID,
 		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
+		UseHubspotCompaniesV3APIByProjectID:                *useHubspotCompaniesv3APIByProjectID,
 	}
 
 	C.InitConf(config)
