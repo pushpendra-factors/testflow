@@ -43,6 +43,7 @@ import MSTeamIntegration from './MSTeam';
 
 import { ADWORDS_INTERNAL_REDIRECT_URI } from './util';
 import { featureLock } from '../../../../routes/feature';
+import { whiteListedProjects } from '../../../../routes/constants';
 
 const IntegrationProviderData = [
   {
@@ -390,17 +391,6 @@ function IntegrationSettings({
       }
     }
   }, []);
-
-  const whiteListedProjects = [
-    '1125899929000011',
-    '2251799842000007',
-    '2251799840000009',
-    '12384898989000028',
-    '2251799840000015',
-    '2251799842000000',
-    '12384898989000019',
-    '1125899936000001'
-  ];
 
   return (
     <ErrorBoundary

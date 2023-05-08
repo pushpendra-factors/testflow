@@ -58,6 +58,7 @@ import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import _ from 'lodash';
 import { fetchGroups } from 'Reducers/coreQuery/services';
 import { featureLock } from '../../../../../routes/feature';
+import { whiteListedProjects } from '../../../../../routes/constants';
 
 const { Option } = Select;
 
@@ -165,8 +166,6 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     let DDCategory = [];
-    const { group_name } =
-      groupOpts?.find((group) => group?.group_name === queries[0]?.group) || [];
     for (const key of Object.keys(eventProperties)) {
       if (key === queries[0]?.label) {
         DDCategory = _.union(eventProperties[queries[0]?.label], DDCategory);
@@ -209,10 +208,6 @@ const EventBasedAlert = ({
   };
 
   useEffect(() => {
-    const { group_name } =
-      groupOpts?.find(
-        (group) => group?.group_name === viewAlertDetails?.event_alert?.event
-      ) || [];
     if (viewAlertDetails?.event_alert?.event) {
       getGroupProperties(activeProject.id, viewAlertDetails?.event_alert?.event);
     }
@@ -909,17 +904,6 @@ const EventBasedAlert = ({
       setTestMessageBtn(false);
     }
   }, [webhookUrl, finalWebhookUrl]);
-
-  const whiteListedProjects = [
-    '1125899929000011',
-    '2251799842000007',
-    '2251799840000009',
-    '12384898989000028',
-    '2251799840000015',
-    '2251799842000000',
-    '12384898989000019',
-    '1125899936000001'
-  ];
 
   const propOption = (item) => {
     return (

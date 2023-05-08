@@ -39,6 +39,7 @@ import SelectChannels from '../SelectChannels';
 import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import { featureLock } from '../../../../../routes/feature';
+import { whiteListedProjects } from '../../../../../routes/constants';
 
 const { Option } = Select;
 
@@ -652,17 +653,6 @@ const KPIBasedAlert = ({
     setTeamsSelectedChannel(teamsSaveSelectedChannel);
     setTeamsShowSelectChannelsModal(false);
   };
-
-  const whiteListedProjects = [
-    '1125899929000011',
-    '2251799842000007',
-    '2251799840000009',
-    '12384898989000028',
-    '2251799840000015',
-    '2251799842000000',
-    '12384898989000019',
-    '1125899936000001'
-  ];
 
   const renderKPIForm = () => {
     return (
