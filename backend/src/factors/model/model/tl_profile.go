@@ -15,6 +15,7 @@ type Profile struct {
 	IsAnonymous  bool                   `json:"is_anonymous"`
 	LastActivity time.Time              `json:"last_activity"`
 	TableProps   map[string]interface{} `json:"table_props"`
+	Score        float64                `json:"score"`
 }
 
 type ContactDetails struct {

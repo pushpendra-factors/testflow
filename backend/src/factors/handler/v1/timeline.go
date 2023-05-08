@@ -8,6 +8,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -22,6 +23,14 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 	if projectId == 0 {
 		logCtx.Error("Invalid project_id.")
 		return "", http.StatusBadRequest, "", "invalid project_id", true
+	}
+	score := c.Query("score")
+	get_score, err := strconv.ParseBool(score)
+	debug := c.Query("debug")
+	get_debug, err := strconv.ParseBool(debug)
+	if err != nil {
+		logCtx.Error("Invalid score.")
+		return "", http.StatusBadRequest, "", "invalid score", true
 	}
 
 	r := c.Request
@@ -39,13 +48,42 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 	}
 
 	profileUsersList, errCode := store.GetStore().GetProfilesListByProjectId(projectId, payload, model.PROFILE_TYPE_USER)
-
 	if errCode != http.StatusFound {
 		logCtx.Error("User profiles not found.")
 		return nil, errCode, "", "", true
 	}
 
+	if get_score {
+		// add score to the response based on the user scores from acc scoring
+		var userIdsUnknown []string = make([]string, 0)
+		var userIdsKnown []string = make([]string, 0)
+		for _, profile := range profileUsersList {
+			if profile.IsAnonymous {
+				userIdsUnknown = append(userIdsUnknown, profile.Identity)
+			} else {
+				userIdsKnown = append(userIdsKnown, profile.Identity)
+			}
+		}
+		ScoresPerUser, err := store.GetStore().GetUserScoreOnIds(projectId, userIdsUnknown, userIdsKnown, get_debug)
+		if err != nil {
+			logCtx.Error("Error while fetching user scores.")
+			return nil, http.StatusInternalServerError, "", "", true
+		}
+
+		updateProfileUserScores(&profileUsersList, ScoresPerUser)
+	}
+
 	return profileUsersList, http.StatusOK, "", "", false
+}
+
+func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser map[string]model.PerUserScoreOnDay) {
+	for _, profile := range *profileUsersList {
+		if prof, ok := scoresPerUser[profile.Identity]; ok {
+			profile.Score = float64(prof.Score)
+		} else {
+			profile.Score = 0
+		}
+	}
 }
 
 func GetProfileUserDetailsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
@@ -99,6 +137,15 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		logCtx.Error("Invalid project_id.")
 		return "", http.StatusBadRequest, "", "invalid project_id", true
 	}
+	score := c.Query("score")
+	get_score, err := strconv.ParseBool(score)
+	if err != nil {
+		logCtx.Error("Invalid score.")
+		return "", http.StatusBadRequest, "", "invalid score", true
+	}
+
+	debug := c.Query("debug")
+	get_debug, err := strconv.ParseBool(debug)
 
 	r := c.Request
 	var payload model.TimelinePayload
@@ -118,6 +165,23 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 	if errCode != http.StatusFound {
 		logCtx.Error("Account profiles not found.")
 		return "", errCode, "", "", true
+	}
+
+	// add accounts scores to the response based on account scoring enabled
+	if get_score {
+		// get score for accountsIds from acc scoring
+
+		var accountIds []string = make([]string, 0)
+		for _, profile := range profileAccountsList {
+			accountIds = append(accountIds, profile.Identity)
+		}
+		ScoresPerAccount, err := store.GetStore().GetAccountScoreOnIds(projectId, accountIds, get_debug)
+		if err != nil {
+			logCtx.Error("Error while fetching account scores.")
+			return nil, http.StatusInternalServerError, "", "", true
+		}
+		updateProfileUserScores(&profileAccountsList, ScoresPerAccount)
+
 	}
 
 	return profileAccountsList, http.StatusOK, "", "", false

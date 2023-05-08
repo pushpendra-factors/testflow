@@ -338,9 +338,6 @@ func WriteUserCountsToDB(projectId int64, startTime int64,
 		}
 	}
 
-	// log.Infof("user Data:%v", evdata)
-	// log.Infof("group Data:%v", gpdata)
-
 	if len(evdata) > 0 {
 		err := store.GetStore().UpdateUserEventsCount(evdata)
 		if err != nil {
