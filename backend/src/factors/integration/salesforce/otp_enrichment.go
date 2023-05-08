@@ -6,16 +6,10 @@ import (
 	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
-<<<<<<< HEAD
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-=======
->>>>>>> staging
 	"net/http"
 	"strings"
 	"sync"
 
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -70,17 +64,9 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, wg *sync.WaitGroup) {
 		startTime = _startTime
 	}
 
-<<<<<<< HEAD
 	//batch time range day-wise
 
 	daysTimeRange, _ := U.GetAllDaysAsTimestamp(startTime, endTime, string(timezoneString))
-=======
-		switch eventName {
-		case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED:
-			RunSFOfflineTouchPointRuleForCampaignMember(project, &otpRules, startTime, endTime, eventName, logCtx)
-		case U.EVENT_NAME_SALESFORCE_TASK_UPDATED, U.EVENT_NAME_SALESFORCE_TASK_CREATED:
-			RunSFOfflineTouchPointRuleForTasks(project, &otpRules, &uniqueOTPEventKeys, startTime, endTime, eventName, logCtx)
->>>>>>> staging
 
 	for _, timeRange := range daysTimeRange {
 
