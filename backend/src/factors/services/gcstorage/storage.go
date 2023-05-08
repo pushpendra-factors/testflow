@@ -490,6 +490,23 @@ func (gcsd *GCSDriver) GetSixSignalAnalysisTempFilePathAndName(id string, projec
 	return path, "results.txt"
 }
 
+func (gcsd *GCSDriver) GetAccScoreDir(projectId int64) string {
+	proj_path := gcsd.GetProjectDir(projectId)
+	path := fmt.Sprintf("%saccscore", proj_path)
+	return path
+}
+
+func (gcsd *GCSDriver) GetAccScoreUsers(projectId int64) string {
+	dirPath := gcsd.GetAccScoreDir(projectId)
+	path := fmt.Sprintf("%s/users/", dirPath)
+	return path
+}
+
+func (gcsd *GCSDriver) GetAccScoreAccounts(projectId int64) string {
+	dirPath := gcsd.GetAccScoreDir(projectId)
+	path := fmt.Sprintf("%s/groups/", dirPath)
+	return path
+}
 func (gcsd *GCSDriver) GetEventsTempFilesDir(projectId int64, startTimestamp, endTimestamp int64, group int) string {
 	path, name := gcsd.GetEventsGroupFilePathAndName(projectId, startTimestamp, endTimestamp, group)
 	path = pb.Join(path, strings.Replace(name, ".txt", "", 1))

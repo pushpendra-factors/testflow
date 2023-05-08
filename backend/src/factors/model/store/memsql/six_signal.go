@@ -5,10 +5,11 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) RunSixSignalGroupQuery(queriesOriginal []model.SixSignalQuery,
@@ -240,7 +241,7 @@ func validateSixSignalQueryProps(query *model.SixSignalQuery) (string, bool) {
 	return "", false
 }
 
-//SendSixSignalReportViaEmail send email to the given list of emailIds along with info provided in the request Payload
+// SendSixSignalReportViaEmail send email to the given list of emailIds along with info provided in the request Payload
 func SendSixSignalReportViaEmail(requestPayload model.SixSignalEmailAndMessage) (string, []string) {
 
 	fromDate := U.GetDateFromTimestampAndTimezone(requestPayload.From, requestPayload.Timezone)

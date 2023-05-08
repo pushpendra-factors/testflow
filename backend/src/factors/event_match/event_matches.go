@@ -191,6 +191,23 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 				}
 			}
 		}
+		if value.Operator == M.NotInList{
+			cacheKeyList, err := M.GetListCacheKey(projectId, value.Value)
+			if err != nil {
+				results[i] = false
+			} else {
+				score, err := cacheRedis.ZScorePersistent(cacheKeyList, propertyValue)
+				if err != nil {
+					results[i] = false
+				} else {
+					if(score == 1){
+						results[i] = false
+					} else {
+						results[i] = true
+					}
+				}
+			}
+		}
 	}
 	var soFar bool
 	var op string

@@ -58,7 +58,7 @@ func TestAPIGroupsHandler(t *testing.T) {
 		w := sendGetGroupsRequest(project.ID, isAccount, agent, r)
 		assert.Equal(t, http.StatusFound, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
-		groupsList := make([]model.Group, 0)
+		groupsList := make(map[string]string)
 		json.Unmarshal(jsonResponse, &groupsList)
 		assert.Equal(t, 0, len(groupsList))
 	}
@@ -74,7 +74,7 @@ func TestAPIGroupsHandler(t *testing.T) {
 		w := sendGetGroupsRequest(project.ID, isAccount, agent, r)
 		assert.Equal(t, http.StatusFound, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
-		groupsList := make([]model.Group, 0)
+		groupsList := make(map[string]string)
 		json.Unmarshal(jsonResponse, &groupsList)
 		NoOfGroups := 2
 		if isAccount == "true" || isAccount == "false" {
@@ -98,7 +98,7 @@ func TestAPIGroupsHandler(t *testing.T) {
 		w := sendGetGroupsRequest(project.ID, isAccount, agent, r)
 		assert.Equal(t, http.StatusFound, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
-		groupsList := make([]model.Group, 0)
+		groupsList := make(map[string]string)
 		json.Unmarshal(jsonResponse, &groupsList)
 		NoOfGroups := 5
 		if isAccount == "true" {
@@ -109,7 +109,6 @@ func TestAPIGroupsHandler(t *testing.T) {
 		}
 		assert.Equal(t, NoOfGroups, len(groupsList))
 	}
-
 }
 
 func TestAPIGroupPropertiesAndValuesHandler(t *testing.T) {

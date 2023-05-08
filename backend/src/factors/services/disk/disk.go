@@ -495,6 +495,23 @@ func (dd *DiskDriver) GetSixSignalAnalysisTempFilePathAndName(id string, project
 	return path, "results.txt"
 }
 
+func (dd *DiskDriver) GetAccScoreDir(projectId int64) string {
+	proj_dir := dd.GetProjectDir(projectId)
+	path := fmt.Sprintf("%saccscore/", proj_dir)
+	return path
+}
+
+func (dd *DiskDriver) GetAccScoreUsers(projectId int64) string {
+	dirPath := dd.GetAccScoreDir(projectId)
+	path := fmt.Sprintf("%susers/", dirPath)
+	return path
+}
+
+func (dd *DiskDriver) GetAccScoreAccounts(projectId int64) string {
+	dirPath := dd.GetAccScoreDir(projectId)
+	path := fmt.Sprintf("%sgroups/", dirPath)
+	return path
+}
 func (dd *DiskDriver) GetEventsTempFilesDir(projectId int64, startTimestamp, endTimestamp int64, group int) string {
 	path, name := dd.GetEventsGroupFilePathAndName(projectId, startTimestamp, endTimestamp, group)
 	path = pb.Join(path, strings.Replace(name, ".txt", "", 1))

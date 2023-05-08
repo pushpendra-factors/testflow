@@ -202,6 +202,7 @@ func main() {
 	blockedEmailList := flag.String("blocked_email_list", "", "List containing all the blocked emails")
 	blockedIPList := flag.String("blocked_IP_list", "", "List containing all the blocked IP address")
 	blockedEmailDomainList := flag.String("blocked_email_domain_list", "", "List containing all blocked email domains")
+	allAccountsProjectId := flag.String("all_accounts_project_id", "", "List of projectIds to enable domain.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
 	enableEventFiltersInSegments := flag.Bool("enable_event_filters_in_segments", false, "Enables adding event filters in segment query")
@@ -368,6 +369,7 @@ func main() {
 		BlockedEmailList:                               C.GetBlockedEmailFromStringListAsString(*blockedEmailList),
 		BlockedIPList:                                  C.GetBlockedIPFromStringListAsString(*blockedIPList),
 		BlockedEmailDomainList:                         C.GetBlockedEmailDomainFromStringListAsString(*blockedEmailDomainList),
+		AllAccountsProjectId:                           *allAccountsProjectId,
 		IngestionTimezoneEnabledProjectIDs:             C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		ProjectIdsV2:                                   projectIdsArrayV2,
 		IncreaseKPILimitForProjectIDs:                  *IncreaseKPILimitForProjectIDs,

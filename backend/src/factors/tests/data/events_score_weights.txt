@@ -1,0 +1,1 @@
+{"weightConfig":{"$session":{"wid":"","weight":10.0,"is_deleted":false},"$hubspot_contact_updated":{"wid":"","weight":20.0,"is_deleted":false},"www.acme.com":{"wid":"","weight":2.0,"is_deleted":false},"$hubspot_company_updated":{"wid":"","weight":4.0,"is_deleted":false},"www.acme.com/product":{"wid":"","weight":4.0,"is_deleted":false}},"salewindow":10}

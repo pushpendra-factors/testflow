@@ -79,9 +79,10 @@ type ProjectSetting struct {
 	IsExplainEnabled              bool            `json:"is_explain_enabled"`
 	IntegrationBits               string          `json: "-"`
 	// Rudderstack integration settings.
-	IntRudderstack        *bool  `gorm:"not null;default:false" json:"int_rudderstack,omitempty"`
-	ProjectCurrency       string `json:"currency"`
-	IsPathAnalysisEnabled bool   `json:"is_path_analysis_enabled"`
+	IntRudderstack        *bool           `gorm:"not null;default:false" json:"int_rudderstack,omitempty"`
+	ProjectCurrency       string          `json:"currency"`
+	IsPathAnalysisEnabled bool            `json:"is_path_analysis_enabled"`
+	Acc_score_weights     *postgres.Jsonb `json:"acc_score_weights"`
 	// onboarding flow steps
 	IsDeanonymizationRequested bool   `json:"is_deanonymization_requested"`
 	IsOnboardingCompleted      bool   `json:"is_onboarding_completed"`

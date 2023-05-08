@@ -143,8 +143,18 @@ func GetProfileAccountDetailsHandler(c *gin.Context) (interface{}, int, string, 
 		logCtx.Error("Invalid userId.")
 		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid userId", true
 	}
+	group := c.Params.ByName("group")
+	logCtx = log.WithFields(log.Fields{
+		"projectId": projectId,
+		"userId":    id,
+		"group":     group,
+	})
+	if group == "" {
+		logCtx.Error("Invalid group name.")
+		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid group name", true
+	}
 
-	accountDetails, errCode := store.GetStore().GetProfileAccountDetailsByID(projectId, id)
+	accountDetails, errCode := store.GetStore().GetProfileAccountDetailsByID(projectId, id, group)
 	if errCode != http.StatusFound {
 		logCtx.Error("Account details not found.")
 		return nil, errCode, PROCESSING_FAILED, "Failed to get account details", true

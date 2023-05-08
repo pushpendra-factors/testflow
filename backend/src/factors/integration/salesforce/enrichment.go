@@ -1208,6 +1208,14 @@ func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string
 		return http.StatusInternalServerError
 	}
 
+	if C.EnableUserDomainsGroupByProjectID(projectID) {
+		status = store.GetStore().AssociateUserDomainsGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_ACCOUNT, groupUserID)
+		if status != http.StatusOK && status != http.StatusNotModified {
+			log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "group_user_id": groupUserID, "err_code": status}).
+				Error("Failed to AssociateUserDomainsGroup on salesforce enrich account.")
+		}
+	}
+
 	return http.StatusOK
 }
 

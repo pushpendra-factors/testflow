@@ -159,6 +159,16 @@ func TestSDK6SignalGroup(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, groupUser1.ID, user.Group1UserID)
 	assert.Equal(t, groupUser1.Group1ID, user.Group1ID)
+	// User domains check
+	domainsGroup, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_DOMAINS)
+	assert.Equal(t, http.StatusFound, status)
+	domainsUserID, err := model.GetUserGroupUserID(user, domainsGroup.ID)
+	assert.Nil(t, err)
+	domainUser, status := store.GetStore().GetUser(project.ID, domainsUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainName, err := model.GetGroupUserGroupID(domainUser, domainsGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "abc.com", domainName)
 
 	// track again should not create new group user
 	status = SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, U.TimeNowUnix())
@@ -211,6 +221,14 @@ func TestSDK6SignalGroup(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, groupUser2.ID, user.Group1UserID) // existing assocation overwriten
 	assert.Equal(t, groupUser2.Group1ID, user.Group1ID)
+	// new user domains updated to new company
+	domainsUserID, err = model.GetUserGroupUserID(user, domainsGroup.ID)
+	assert.Nil(t, err)
+	domainUser, status = store.GetStore().GetUser(project.ID, domainsUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainName, err = model.GetGroupUserGroupID(domainUser, domainsGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "abc2.com", domainName)
 
 	// existing company2 with existing user who is already associated with another group should update association with existing user
 	(*groupProperties)[U.SIX_SIGNAL_DOMAIN] = "abc2.com"
@@ -220,6 +238,14 @@ func TestSDK6SignalGroup(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, groupUser2.ID, user.Group1UserID) // existing assocation overwriten
 	assert.Equal(t, groupUser2.Group1ID, user.Group1ID)
+	// existing user domains update to abc2.com
+	domainsUserID, err = model.GetUserGroupUserID(user, domainsGroup.ID)
+	assert.Nil(t, err)
+	domainUser, status = store.GetStore().GetUser(project.ID, domainsUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainName, err = model.GetGroupUserGroupID(domainUser, domainsGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "abc2.com", domainName)
 }
 
 func TestSDKDomainsGroup(t *testing.T) {
@@ -3681,5 +3707,180 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 				t.Errorf("applySixSignalFilters() got = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestSDKUserDomainReAssociation(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// Create users by source with same customer user id
+	cuid := getRandomEmail()
+	userWeb, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: cuid})
+	assert.Equal(t, http.StatusCreated, errCode)
+	userHubspot, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceHubspot), CustomerUserId: cuid})
+	assert.Equal(t, http.StatusCreated, errCode)
+	userSalesforce, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceSalesforce), CustomerUserId: cuid})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	/*
+		First update: six signal.
+		Should update all users domain group with six signal domain user id
+	*/
+	sixSignalAccountGroupUserID1, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_SIX_SIGNAL, "www.sixsignal1.com",
+		map[string]interface{}{"company": "www.sixsignal1.com"}, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userWeb, model.GROUP_NAME_SIX_SIGNAL, "", sixSignalAccountGroupUserID1, true)
+	assert.Equal(t, http.StatusAccepted, status)
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userHubspot, model.GROUP_NAME_SIX_SIGNAL, sixSignalAccountGroupUserID1)
+	assert.Equal(t, http.StatusOK, status)
+	domainGroup, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_DOMAINS)
+	assert.Equal(t, http.StatusFound, status)
+	users, status := store.GetStore().GetUsersByCustomerUserID(project.ID, cuid)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, users, 3)
+	// check all users domain user id
+	for i := range users {
+		domainUserID, err := model.GetUserGroupUserID(&users[i], domainGroup.ID)
+		assert.Nil(t, err)
+		domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+		assert.Equal(t, http.StatusFound, status)
+		domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+		assert.Nil(t, err)
+		assert.Equal(t, "sixsignal1.com", domainName)
+	}
+
+	/*
+		2nd update: hubspot company.
+		Should update all users domain group with hubspot company domain user id
+	*/
+	hubspotAccountGroupUserID1, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "www.hubspot1.com",
+		map[string]interface{}{"company": "www.hubspot1.com"}, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userHubspot, model.GROUP_NAME_HUBSPOT_COMPANY, "", hubspotAccountGroupUserID1, true)
+	assert.Equal(t, http.StatusAccepted, status)
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userHubspot, model.GROUP_NAME_HUBSPOT_COMPANY, hubspotAccountGroupUserID1)
+	assert.Equal(t, http.StatusOK, status)
+	users, status = store.GetStore().GetUsersByCustomerUserID(project.ID, cuid)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, users, 3)
+	// check all users domain user id
+	for i := range users {
+		domainUserID, err := model.GetUserGroupUserID(&users[i], domainGroup.ID)
+		assert.Nil(t, err)
+		domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+		assert.Equal(t, http.StatusFound, status)
+		domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+		assert.Nil(t, err)
+		assert.Equal(t, "hubspot1.com", domainName)
+	}
+
+	/*
+	 Updating again with six signal will not update domain user id
+	 Sixsignal group user id will be updated for 1 user.
+	*/
+	sixSignalAccountGroupUserID2, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_SIX_SIGNAL, "www.sixsignal2.com",
+		map[string]interface{}{"company": "www.sixsignal2.com"}, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	// updating user sixsignal group
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userWeb, model.GROUP_NAME_HUBSPOT_COMPANY, "", sixSignalAccountGroupUserID2, true)
+	assert.Equal(t, http.StatusAccepted, status)
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userWeb, model.GROUP_NAME_SIX_SIGNAL, sixSignalAccountGroupUserID2)
+	assert.Equal(t, http.StatusOK, status)
+	domainGroup, status = store.GetStore().GetGroup(project.ID, model.GROUP_NAME_DOMAINS)
+	assert.Equal(t, http.StatusFound, status)
+	users, status = store.GetStore().GetUsersByCustomerUserID(project.ID, cuid)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, users, 3)
+	for i := range users {
+		domainUserID, err := model.GetUserGroupUserID(&users[i], domainGroup.ID)
+		assert.Nil(t, err)
+		domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+		assert.Equal(t, http.StatusFound, status)
+		domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+		assert.Nil(t, err)
+		assert.Equal(t, "hubspot1.com", domainName) // hubspot is still used
+	}
+
+	/*
+	 Updating with salesforce account will take priority and update domain user id
+	*/
+	salesforceAccountGroupUserID1, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, "www.salesforce1.com",
+		map[string]interface{}{"company": "www.salesforce1.com"}, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userSalesforce, model.GROUP_NAME_SALESFORCE_ACCOUNT, "", salesforceAccountGroupUserID1, true)
+	assert.Equal(t, http.StatusAccepted, status)
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userSalesforce, model.GROUP_NAME_SALESFORCE_ACCOUNT, salesforceAccountGroupUserID1)
+	assert.Equal(t, http.StatusOK, status)
+	users, status = store.GetStore().GetUsersByCustomerUserID(project.ID, cuid)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, users, 3)
+	for i := range users {
+		domainUserID, err := model.GetUserGroupUserID(&users[i], domainGroup.ID)
+		assert.Nil(t, err)
+		domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+		assert.Equal(t, http.StatusFound, status)
+		domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+		assert.Nil(t, err)
+		assert.Equal(t, "salesforce1.com", domainName)
+	}
+
+	/*
+		Updating again with hubspot company will be blocked as salesforce taken priority
+	*/
+	hubspotAccountGroupUserID2, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "www.hubspot2.com",
+		map[string]interface{}{"company": "www.hubspot2.com"}, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userHubspot, model.GROUP_NAME_HUBSPOT_COMPANY, "", hubspotAccountGroupUserID2, true)
+	assert.Equal(t, http.StatusAccepted, status)
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userHubspot, model.GROUP_NAME_HUBSPOT_COMPANY, hubspotAccountGroupUserID2)
+	assert.Equal(t, http.StatusOK, status)
+	users, status = store.GetStore().GetUsersByCustomerUserID(project.ID, cuid)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, users, 3)
+	for i := range users {
+		domainUserID, err := model.GetUserGroupUserID(&users[i], domainGroup.ID)
+		assert.Nil(t, err)
+		domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+		assert.Equal(t, http.StatusFound, status)
+		domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+		assert.Nil(t, err)
+		assert.Equal(t, "salesforce1.com", domainName)
+	}
+
+	/*
+		Identify flow
+		User with different customer user id and salesforce account group is identified with existing customer user id
+	*/
+	userWeb2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	salesforceAccountGroupUserID2, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, "www.salesforce2.com",
+		map[string]interface{}{"company": "www.salesforce2.com"}, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userWeb2, model.GROUP_NAME_SALESFORCE_ACCOUNT, "", salesforceAccountGroupUserID2, true)
+	assert.Equal(t, http.StatusAccepted, status)
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId:         userWeb2,
+		CustomerUserId: cuid,
+		JoinTimestamp:  U.TimeNowUnix(),
+		RequestSource:  model.UserSourceWeb,
+	}, true)
+	assert.Equal(t, http.StatusOK, status)
+	users, status = store.GetStore().GetUsersByCustomerUserID(project.ID, cuid)
+	assert.Equal(t, http.StatusFound, status)
+	// total users 4
+	assert.Len(t, users, 4)
+	for i := range users {
+		domainUserID, err := model.GetUserGroupUserID(&users[i], domainGroup.ID)
+		assert.Nil(t, err)
+		domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+		assert.Equal(t, http.StatusFound, status)
+		domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+		assert.Nil(t, err)
+		assert.Equal(t, "salesforce2.com", domainName)
 	}
 }

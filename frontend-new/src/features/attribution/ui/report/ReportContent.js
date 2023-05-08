@@ -54,11 +54,15 @@ function ReportContent({
   let groupAnalysis = 'all';
   let metricsDropdown = <div className='mr-0' />;
 
+  const [attributionTableFilters, setAttributionTableFilters] = useState([]);
+
   const {
     coreQueryState: { chartTypes }
   } = useContext(CoreQueryContext);
 
   const { attrQueries } = useSelector((state) => state.coreQuery);
+
+  
 
   const chartType = useMemo(
     () =>
@@ -174,6 +178,9 @@ function ReportContent({
           renderedCompRef={renderedCompRef}
           chartType={chartType}
           queryOptions={queryOptions}
+          appliedFilters={attributionTableFilters}
+          setAttributionTableFilters={setAttributionTableFilters}
+          v1={true}
         />
       );
 
