@@ -1,0 +1,46 @@
+<html>
+    <head>
+        <script>
+            setTimeout(() => {
+                const message = {
+                    origin: 'factors',
+                    type: '$form_submitted',
+                    message:{
+                        '$email': 'someemail@factors.com',
+                        '$formType': 'demo-booking'
+                    },
+                };
+                window.parent.postMessage(message);
+            }, 1000);
+
+            setTimeout(() => {
+                // No email or phone scenario
+                const message = {
+                    origin: 'factors',
+                    type: '$form_submitted',
+                    message:{
+                        '$formType': 'demo-booking'
+                    },
+                };
+                window.parent.postMessage(message);
+            }, 100);
+
+            setTimeout(() => {
+                // incorrect email scenario
+                const message = {
+                    origin: 'factors',
+                    type: '$form_submitted',
+                    message:{
+                        '$email': 'incorrectemail',
+                        '$formType': 'demo-booking'
+                    },
+                };
+                window.parent.postMessage(message);
+            }, 100);
+            
+
+        </script>
+    </head>
+    <body>
+        </body>
+    </html> 
