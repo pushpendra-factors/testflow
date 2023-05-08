@@ -98,17 +98,17 @@ export const formatUserPropertiesToCheckList = (
   userProps,
   activeProps = []
 ) => {
-  const userPropsWithEnableKey = userProps?.map((userProp) => {
-    const retObj = {
-      display_name: userProp[0],
-      prop_name: userProp[1],
-      type: userProp[2],
-      enabled: false
-    };
-    if (activeProps?.includes(userProp[1])) {
-      retObj.enabled = true;
-    }
-    return retObj;
-  });
-  return userPropsWithEnableKey?.sort((a, b) => b.enabled - a.enabled);
+  const userPropsWithEnableKey = userProps
+    ? userProps.map((userProp) => {
+        const [displayName, propName, type] = userProp;
+        return {
+          display_name: displayName,
+          prop_name: propName,
+          type: type,
+          enabled: activeProps ? activeProps.includes(propName) : false
+        };
+      })
+    : [];
+
+  return userPropsWithEnableKey.sort((a, b) => b.enabled - a.enabled);
 };

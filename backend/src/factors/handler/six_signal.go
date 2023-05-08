@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	C "factors/config"
-	"factors/delta"
+	"factors/integration/six_signal"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -198,7 +198,7 @@ func CreateSixSignalShareableURLHandler(c *gin.Context) (interface{}, int, strin
 		Type:      model.QueryTypeSixSignalQuery,
 	}
 
-	queryId, errCode, errMsg := delta.CreateSixSignalShareableURL(queryRequest, projectID, agentUUID)
+	queryId, errCode, errMsg := six_signal.CreateSixSignalShareableURL(queryRequest, projectID, agentUUID)
 	if errCode != http.StatusCreated {
 		logCtx.Error(errMsg)
 		return nil, errCode, errMsg, true
@@ -351,6 +351,7 @@ func getFolderName(query model.SixSignalQuery) string {
 	return folderName
 }
 
+// GetSixSignalAnalysisData fetches the sixsignal report cloud storage path and reads the report file.
 func GetSixSignalAnalysisData(projectId int64, id string) map[int]model.SixSignalResultGroup {
 
 	cloudManager := C.GetCloudManager(projectId, true)

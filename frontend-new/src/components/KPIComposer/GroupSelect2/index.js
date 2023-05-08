@@ -89,14 +89,20 @@ function GroupSelect2({
       let hasSearchTerm = false;
       const valuesOptions = [];
 
-      const icon = group?.icon
-        ? group.icon.toLowerCase().split(' ').join('_')
-        : group.icon;
+      // const icon = group?.icon
+      //   ? group.icon.toLowerCase().split(' ').join('_')
+      //   : group.icon;
       const groupItem = (
         <div key={group.label} className={`fa-select-group-select--content`}>
           {!hideTitle && (
             <div className={'fa-select-group-select--option-group'}>
               <div>
+                <SVG
+                  name={group.icon}
+                  size={24}
+                  // color={iconColor}
+                  // extraClass={'self-center'}
+                ></SVG>
                 {/* <SVG name={icon} color={'purple'} extraClass={'self-center'}></SVG> */}
                 <Text
                   level={8}
@@ -128,7 +134,12 @@ function GroupSelect2({
                           title={val[0]}
                           className={`fa-select-group-select--options`}
                           onClick={() =>
-                            optionClick(group.label, val, group?.category)
+                            optionClick(
+                              group.label,
+                              val,
+                              group?.category,
+                              group
+                            )
                           }
                         >
                           {searchTerm.length > 0}

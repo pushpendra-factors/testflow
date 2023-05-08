@@ -3768,7 +3768,7 @@ func TestSalesforceGroups(t *testing.T) {
 	assert.Equal(t, float64(3), result["A"])
 	assert.Equal(t, float64(3), result["B"])
 
-	for id, docType := range map[string]int{
+	idTypes := map[string]int{
 		leadID1:                             model.SalesforceDocumentTypeLead,
 		leadID2:                             model.SalesforceDocumentTypeLead,
 		leadID2_3:                           model.SalesforceDocumentTypeLead,
@@ -3782,7 +3782,8 @@ func TestSalesforceGroups(t *testing.T) {
 		opportunityID2:                      model.SalesforceDocumentTypeOpportunity,
 		opportunityID3:                      model.SalesforceDocumentTypeOpportunity,
 		opportunityID4:                      model.SalesforceDocumentTypeOpportunity,
-	} {
+	}
+	for id, docType := range idTypes {
 		documents, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(id)}, docType, 0)
 		assert.Equal(t, http.StatusFound, status)
 		latestDocument := documents[len(documents)-1]
@@ -3944,6 +3945,25 @@ func TestSalesforceGroups(t *testing.T) {
 	assert.Equal(t, false, *groupUser.IsGroupUser)
 	assert.Equal(t, "account3", groupUser.Group1ID)
 	assert.Equal(t, account3GroupUserID, groupUser.Group1UserID)
+
+	/*
+		User domains check
+	*/
+	for docID, domainName := range map[string]string{
+		leadID1:    "abc.com",
+		leadID2:    "abc2.com",
+		leadID2_3:  "abc2.com",
+		contactID1: "abc.com",
+		contactID2: "abc2.com",
+	} {
+		documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{docID}, idTypes[docID], false)
+		assert.Equal(t, http.StatusFound, status)
+		user, status := store.GetStore().GetUser(project.ID, documents[0].UserID)
+		assert.Equal(t, http.StatusFound, status)
+		domainUser, status := store.GetStore().GetUser(project.ID, user.Group3UserID)
+		assert.Equal(t, http.StatusFound, status)
+		assert.Equal(t, domainName, domainUser.Group3ID)
+	}
 }
 
 func TestSalesforceUserPropertiesOverwrite(t *testing.T) {

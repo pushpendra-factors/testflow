@@ -4,14 +4,15 @@ import { SVG, Text } from '../factorsComponents';
 import { Input, Button, Spin, Checkbox, Radio } from 'antd';
 import { DISPLAY_PROP } from '../../utils/constants';
 import useAutoFocus from '../../hooks/useAutoFocus';
+import { filterURLValue } from 'Utils/filterURLValue';
 
 class FaSelectOption {
   index = 0;
   label = '';
   value = '';
-  icon='';
+  icon = '';
   subOptions = [];
-  checked=false;
+  checked = false;
 
   constructor(value) {
     this.value = value;
@@ -22,7 +23,6 @@ class FaSelectOption {
   toggle() {
     this.checked = !this.checked;
   }
-  
 }
 
 function FaSelect2({
@@ -63,7 +63,7 @@ function FaSelect2({
       opt.label = op[0];
       opt.value = [op[1]];
       opt.icon = op[1];
-      opt.subOptions = [new FaSelectOption('campaign')]
+      opt.subOptions = [new FaSelectOption('campaign')];
       opts2.push(opt);
     });
     setSelctOpts(opts2);
@@ -100,39 +100,52 @@ function FaSelect2({
       <SVG size={16} name='ChevronDown' />
     ) : (
       <SVG size={16} name='ChevronUp' />
-    )
-
-  }
+    );
+  };
 
   const option2Click = (option) => {
     const opts2 = [...selectOpts];
     opts2.map((opt) => {
-      if(opt.index === option.index) {
+      if (opt.index === option.index) {
         opt.toggle();
       }
       return opt;
-    })
+    });
     setSelctOpts(opts2);
-  }
+  };
 
   const renderSubOptions = (options = []) => {
-    return options?.map((option) => <Checkbox key={option.index + option.value} value={option.value}
-      checked={option.checked} className={`${styles.select2_option__suboptions__options}`}
-    >{option.label}</Checkbox>);
-  }
+    return options?.map((option) => (
+      <Checkbox
+        key={option.index + option.value}
+        value={option.value}
+        checked={option.checked}
+        className={`${styles.select2_option__suboptions__options}`}
+      >
+        {option.label}
+      </Checkbox>
+    ));
+  };
 
   const renderOption = (option = new FaSelectOption()) => {
     return (
-      <div onClick={() => option2Click(option)} className={`${styles.select2_option} ${option.index >0 && styles.select2_option__bordered}`}>
+      <div
+        onClick={() => option2Click(option)}
+        className={`${styles.select2_option} ${
+          option.index > 0 && styles.select2_option__bordered
+        }`}
+      >
         <div className={`${styles.select2_option__header}`}>
           <Radio value={option.value}>{option.label}</Radio>
-          {option.subOptions && option.subOptions.length>0? renderExpandOption(option.checked): null}
+          {option.subOptions && option.subOptions.length > 0
+            ? renderExpandOption(option.checked)
+            : null}
         </div>
         <div className={`${styles.select2_option__suboptions}`}>
-          {option.checked? renderSubOptions(option.subOptions) : null}
+          {option.checked ? renderSubOptions(option.subOptions) : null}
         </div>
       </div>
-    )
+    );
 
     // return (    <div
     //   key={option.index}
@@ -170,8 +183,7 @@ function FaSelect2({
     //     />
     //   ) : null}
     // </div>)
-    
-  }
+  };
 
   const renderOptions = () => {
     let rendOpts = [];
@@ -222,21 +234,10 @@ function FaSelect2({
 
       options.forEach((op, index) => {
         isSelected = isSelectedCheck(op);
-        let st = searchTerm.toLowerCase()
-        // Regex to detect https/http is there or not as a protocol
-        let testURLRegex = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$/
-        if(testURLRegex.test(st) > 0){
-          st = st.split('://')[1]
-        }
-        st = st.replace(/\/$/,"")
-
-        
+        let st = filterURLValue(searchTerm);
         if (
           op[0].toLowerCase().includes(st) ||
-          (op[0] === '$none' &&
-            DISPLAY_PROP[op[0]]
-              .toLowerCase()
-              .includes(st))
+          (op[0] === '$none' && DISPLAY_PROP[op[0]].toLowerCase().includes(st))
         ) {
           rendOpts.push(
             <div

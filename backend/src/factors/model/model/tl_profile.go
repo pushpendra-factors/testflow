@@ -61,10 +61,10 @@ type UserActivity struct {
 }
 
 type TimelinePayload struct {
-	Source       string          `json:"source"`
-	SegmentId    string          `json:"segment_id"`
-	Filters      []QueryProperty `json:"filters"`
-	SearchFilter []QueryProperty `json:"search_filter"`
+	Source       string                     `json:"source"`
+	SegmentId    string                     `json:"segment_id"`
+	Filters      map[string][]QueryProperty `json:"filters"`
+	SearchFilter map[string][]QueryProperty `json:"search_filter"`
 }
 
 type AccountDetails struct {
@@ -91,6 +91,35 @@ const PROFILE_TYPE_ACCOUNT = "account"
 // Profile type for Segment Events
 const USER_PROFILE_CALLER = "user_profiles"
 const ACCOUNT_PROFILE_CALLER = "account_profiles"
+
+// Source number to source name map
+var SourceGroupUser = map[int]string{
+	UserSourceSalesforce:      U.GROUP_NAME_SALESFORCE_ACCOUNT,
+	UserSourceHubspot:         U.GROUP_NAME_HUBSPOT_COMPANY,
+	UserSourceSixSignal:       U.GROUP_NAME_SIX_SIGNAL,
+	UserSourceLinkedinCompany: U.GROUP_NAME_LINKEDIN_COMPANY,
+	UserSourceDomains:         U.GROUP_NAME_DOMAINS,
+}
+
+// source name to hostname
+var HostNameGroup = map[string]string{
+	U.GROUP_NAME_SALESFORCE_ACCOUNT: U.GP_SALESFORCE_ACCOUNT_WEBSITE,
+	U.GROUP_NAME_HUBSPOT_COMPANY:    U.GP_HUBSPOT_COMPANY_DOMAIN,
+	U.GROUP_NAME_SIX_SIGNAL:         U.SIX_SIGNAL_DOMAIN,
+	U.GROUP_NAME_LINKEDIN_COMPANY:   U.LI_DOMAIN,
+}
+
+// source name to company name
+var AccountNames = map[string]string{
+	U.GROUP_NAME_SALESFORCE_ACCOUNT: U.GP_SALESFORCE_ACCOUNT_NAME,
+	U.GROUP_NAME_HUBSPOT_COMPANY:    U.GP_HUBSPOT_COMPANY_NAME,
+	U.GROUP_NAME_SIX_SIGNAL:         U.SIX_SIGNAL_NAME,
+	U.GROUP_NAME_LINKEDIN_COMPANY:   U.LI_LOCALIZED_NAME,
+}
+
+// host and company name list
+var NameProps []string = []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME, U.LI_LOCALIZED_NAME}
+var HostNameProps []string = []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE, U.SIX_SIGNAL_DOMAIN, U.LI_DOMAIN}
 
 // Hover Events Property Map
 var HOVER_EVENTS_NAME_PROPERTY_MAP = map[string][]string{

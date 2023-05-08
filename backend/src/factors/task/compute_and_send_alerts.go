@@ -5,22 +5,21 @@ import (
 	"errors"
 	C "factors/config"
 	H "factors/handler/helpers"
+	slack "factors/integration/slack"
+	teams "factors/integration/ms_teams"
 	"factors/model/model"
 	"factors/model/store"
-	teams "factors/ms_teams"
-	qc "factors/quickchart"
-	slack "factors/slack_bot/handler"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/jinzhu/now"
-	log "github.com/sirupsen/logrus"
+	qc "factors/quickchart"
 )
 
 type Message struct {
@@ -652,17 +651,17 @@ func sendTeamsAlert(projectID int64, agentUUID string, msg Message, dateRange da
 		log.Info(teamsMsg, projectID)
 		return
 	}
-		for _, channel := range msteams.TeamsChannelList {
-			log.Info(channel)
-			err := teams.SendTeamsMessage(projectID, agentUUID, msteams.TeamsId, channel.ChannelId, teamsMsg)
-			if err != nil {
-				fail++
-				logCtx.WithError(err).Error("failed to send teams alert ", teamsMsg)
-				continue
-			}
-			success++
+	for _, channel := range msteams.TeamsChannelList {
+		log.Info(channel)
+		err := teams.SendTeamsMessage(projectID, agentUUID, msteams.TeamsId, channel.ChannelId, teamsMsg)
+		if err != nil {
+			fail++
+			logCtx.WithError(err).Error("failed to send teams alert ", teamsMsg)
+			continue
 		}
-	
+		success++
+	}
+
 	logCtx.Info("sent teams alert to ", success, " failed to send teams alert to ", fail)
 }
 func getTeamsMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneString) string {

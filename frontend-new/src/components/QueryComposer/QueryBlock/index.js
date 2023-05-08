@@ -19,6 +19,7 @@ import ORButton from '../../ORButton';
 import { compareFilters, groupFilters } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
+import { getQueryComposerGroupIcon } from 'Utils/getQueryComposerGroupIcons';
 
 function QueryBlock({
   availableGroups,
@@ -111,8 +112,9 @@ function QueryBlock({
     eventChange(newEvent, index - 1, 'filters_updated');
   };
 
-  const onChange = (group, value) => {
-    const newEvent = { alias: '', label: '', filters: [], group: '' };
+  const onChange = (group, value, original_group) => {
+    const newEvent = { alias: '', label: '', filters: [], group: '', icon: '' };
+    newEvent.icon = original_group?.icon;
     newEvent.label = value;
     newEvent.group = group;
     setDDVisible(false);
@@ -133,9 +135,9 @@ function QueryBlock({
         <GroupSelect2
           groupedProperties={showGroups}
           placeholder='Select Event'
-          optionClick={(group, val) =>
-            onChange(group, val[1] ? val[1] : val[0])
-          }
+          optionClick={(group, val, a, original_group) => {
+            onChange(group, val[1] ? val[1] : val[0], original_group);
+          }}
           onClickOutside={() => setDDVisible(false)}
           allowEmpty
           useCollapseView
@@ -536,7 +538,12 @@ function QueryBlock({
               }
             >
               <Button
-                icon={<SVG name='mouseevent' size={16} color='purple' />}
+                icon={
+                  <SVG
+                    name={getQueryComposerGroupIcon(event?.icon)}
+                    size={16}
+                  />
+                }
                 className='fa-button--truncate fa-button--truncate-lg btn-total-round'
                 type='link'
                 onClick={triggerDropDown}

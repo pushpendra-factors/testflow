@@ -19,15 +19,16 @@ import (
 )
 
 const (
-	QueryClassEvents      = "events"
-	QueryClassInsights    = "insights"
-	QueryClassFunnel      = "funnel"
-	QueryClassChannel     = "channel"
-	QueryClassChannelV1   = "channel_v1"
-	QueryClassAttribution = "attribution"
-	QueryClassWeb         = "web"
-	QueryClassKPI         = "kpi"
-	QueryClassProfiles    = "profiles"
+	QueryClassEvents        = "events"
+	QueryClassInsights      = "insights"
+	QueryClassFunnel        = "funnel"
+	QueryClassChannel       = "channel"
+	QueryClassChannelV1     = "channel_v1"
+	QueryClassAttribution   = "attribution"
+	QueryClassAttributionV1 = "attribution_v1"
+	QueryClassWeb           = "web"
+	QueryClassKPI           = "kpi"
+	QueryClassProfiles      = "profiles"
 
 	PresentationScatterPlot   = "sp"
 	PresentationLine          = "pl"
@@ -149,6 +150,7 @@ const (
 	StartsWith              = "startsWith"
 	EndsWith                = "endsWith"
 	InList                  = "inList"
+	NotInList               = "notInList"
 )
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
@@ -785,6 +787,10 @@ func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery
 		baseQuery = &query
 	case QueryClassAttribution:
 		var query AttributionQueryUnit
+		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
+		baseQuery = &query
+	case QueryClassAttributionV1:
+		var query AttributionQueryUnitV1
 		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
 		baseQuery = &query
 	case QueryClassChannel:

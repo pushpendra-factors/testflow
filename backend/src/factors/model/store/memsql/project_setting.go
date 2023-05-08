@@ -1615,3 +1615,55 @@ func (store *MemSQL) GetTimelineConfigOfProject(projectID int64) (model.Timeline
 	}
 	return tlConfigDecoded, nil
 }
+
+func (store *MemSQL) UpdateAccScoreWeights(projectId int64, weights model.AccWeights) error {
+
+	weightjsonb, err := U.EncodeStructTypeToPostgresJsonb(weights)
+	if err != nil {
+		log.WithError(err).Error("Error creating postgres jsonb in acc score")
+		return err
+	}
+
+	db := C.GetServices().Db
+	if err := db.Model(&model.ProjectSetting{}).
+		Where("project_id = ?", projectId).
+		Update("acc_score_weights", weightjsonb).Error; err != nil {
+		log.WithError(err).Error("Updating is_explain_enabled config failed")
+		return err
+	}
+	return err
+}
+
+func (store *MemSQL) GetWeightsByProject(project_id int64) (*model.AccWeights, int) {
+	logFields := log.Fields{
+		"project_id": project_id,
+	}
+	logCtx := log.WithFields(logFields)
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	db := C.GetServices().Db
+
+	var project_settings model.ProjectSetting
+	var weights model.AccWeights
+
+	if err := db.Table("project_settings").Limit(1).Where("project_id = ?", project_id).Find(&project_settings).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			logCtx.WithError(err).Error("Unable to fetch weights from DB")
+			return nil, http.StatusNotFound
+		}
+		return &model.AccWeights{}, http.StatusInternalServerError
+	}
+
+	if project_settings.Acc_score_weights == nil {
+		return nil, http.StatusBadRequest
+	} else {
+		err := U.DecodePostgresJsonbToStructType(project_settings.Acc_score_weights, &weights)
+		if err != nil {
+			log.WithError(err).Error("Unable to decode weights")
+			return nil, http.StatusInternalServerError
+		}
+	}
+
+	return &weights, http.StatusFound
+}

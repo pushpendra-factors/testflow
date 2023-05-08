@@ -2504,6 +2504,13 @@ func syncCompany(projectID int64, document *model.HubspotDocument) int {
 					}
 				}
 
+				if C.EnableUserDomainsGroupByProjectID(projectID) {
+					status = store.GetStore().AssociateUserDomainsGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyUserID)
+					if status != http.StatusOK && status != http.StatusNotModified {
+						logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to AssociateUserDomainsGroup on hubspot sync company.")
+					}
+				}
+
 				if contactUpdateCount > 100 {
 					continue
 				}

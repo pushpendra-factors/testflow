@@ -3,7 +3,7 @@ package task
 import (
 	"context"
 	"encoding/json"
-	L "factors/leadsquared"
+	L "factors/integration/leadsquared"
 	"factors/model/model"
 	"factors/model/store"
 	BQ "factors/services/bigquery"

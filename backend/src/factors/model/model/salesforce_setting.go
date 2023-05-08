@@ -121,6 +121,10 @@ func GetSalesforceAllowedObjects(projectID int64) []int {
 		docTypes = append(docTypes, SalesforceDocumentTypeEvent)
 	}
 
+	if C.AllowSyncReferenceFields(projectID) {
+		docTypes = append(docTypes, SalesforceDocumentTypeUser)
+	}
+
 	return docTypes
 }
 

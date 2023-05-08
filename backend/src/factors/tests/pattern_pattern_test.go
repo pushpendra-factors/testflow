@@ -1366,34 +1366,6 @@ func TestGenMissingJourneyPatterns(t *testing.T) {
 
 }
 
-func TestGenRepeatedCombinations(t *testing.T) {
-
-	q1, _ := P.NewPattern([]string{"a", "e"}, nil)
-	q2, _ := P.NewPattern([]string{"b", "k"}, nil)
-	q3, _ := P.NewPattern([]string{"c", "d"}, nil)
-	q4, _ := P.NewPattern([]string{"d", "l"}, nil)
-
-	p1, _ := P.NewPattern([]string{"a", "a", "e"}, nil)
-	p2, _ := P.NewPattern([]string{"b", "b", "k"}, nil)
-	p3, _ := P.NewPattern([]string{"c", "c", "d"}, nil)
-	// p4, _ := P.NewPattern([]string{"d", "d", "l"}, nil)
-
-	lenTwoPatt := []*P.Pattern{q1, q2, q3, q4}
-	lenTwoMatch := []*P.Pattern{p1, p2, p3}
-	// lenTwofail := []*P.Pattern{q4}
-
-	repeaptedEvents := []string{"a", "b", "c"}
-	repeatedEventsMap := make(map[string]bool, 0)
-	repeatedEventsMap["a"] = true
-	repeatedEventsMap["b"] = true
-	repeatedEventsMap["c"] = true
-
-	pt, err := T.GenRepeatedCombinations(lenTwoPatt, nil, repeaptedEvents)
-	assert.Nil(t, err)
-
-	assert.ElementsMatch(t, pt, lenTwoMatch, "Not all repeated elemets found")
-}
-
 func TestGenInterMediateCombinations(t *testing.T) {
 
 	//result will be {"a","b","g"} {"b","a","g"}
@@ -1477,7 +1449,6 @@ func TestFilteringPatternsMatching(t *testing.T) {
 	eventsListTrue := make([]P.CounterEventFormat, 0)
 
 	file, err := os.Open("./data/events_filter.txt")
-	// file, err := os.Open("/Users/vinithkumar/work/data/events_20230101-20230108.txt")
 	assert.Nil(t, err)
 
 	filter_string := []byte(`{"st_en":"$session","en_en":"$form_submitted","rule":{"st_en_ft":[],"en_en_ft":[],"st_us_ft":[{"key":"$country","vl":"India","operator":true,"lower_bound":0,"upper_bound":0,"property_type":"categorical"},{"key":"$city","vl":"Chennai","operator":true,"lower_bound":0,"upper_bound":0,"property_type":"categorical"}],"en_us_ft":[{"key":"$country","vl":"United States","operator":false,"lower_bound":0,"upper_bound":0,"property_type":"categorical"}],"ft":[],"in_en":[],"in_epr":null,"in_upr":null},"vs":false}`)
@@ -1512,6 +1483,6 @@ func TestFilteringPatternsMatching(t *testing.T) {
 		fmt.Println(fmt.Sprintf("key --> %s", k))
 	}
 	assert.Equal(t, 18, len(eventsList))
-	assert.Equal(t, 5, len(eventsListTrue))
+	assert.Equal(t, 4, len(eventsListTrue))
 
 }

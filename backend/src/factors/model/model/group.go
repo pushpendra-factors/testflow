@@ -51,14 +51,6 @@ var AllowedGroupToDomainsGroup = map[string]bool{
 	GROUP_NAME_LINKEDIN_COMPANY:   true,
 }
 
-var GroupIsAccountMap = map[string]bool{
-	GROUP_NAME_HUBSPOT_COMPANY:        true,
-	GROUP_NAME_HUBSPOT_DEAL:           false,
-	GROUP_NAME_SALESFORCE_ACCOUNT:     true,
-	GROUP_NAME_SALESFORCE_OPPORTUNITY: false,
-	GROUP_NAME_SIX_SIGNAL:             true,
-}
-
 var GroupsGroupIDPropertyKey = map[string]string{
 	GROUP_NAME_SIX_SIGNAL: U.SIX_SIGNAL_DOMAIN,
 }

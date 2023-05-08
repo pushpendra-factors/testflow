@@ -85,11 +85,14 @@ type FileManager interface {
 	GetSixSignalAnalysisTempFileDir(id string, projectId int64) string
 	GetSixSignalAnalysisTempFilePathAndName(id string, projectId int64) (string, string)
 
-	GetEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, endTimestmap int64) (string, string)
+	//acc scoring
+	GetAccScoreDir(project_id int64) string
+	GetAccScoreUsers(project_id int64) string
+	GetAccScoreAccounts(project_id int64) string
 
+	GetEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, endTimestmap int64) (string, string)
 	GetAdsDataDir(projectId int64) string
 	GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string)
-
 	GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string)
 
 	// Remove(path, filename string) error
