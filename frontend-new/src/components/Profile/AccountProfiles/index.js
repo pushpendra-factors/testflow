@@ -727,7 +727,7 @@ function AccountProfiles({
   const onSearchClose = () => {
     setSearchBarOpen(false);
     setSearchDDOpen(false);
-    if (accountPayload?.search_filter?.length) {
+    if (accountPayload?.search_filter?.users?.length) {
       const payload = { ...accountPayload };
       payload.search_filter = {};
       setListSearchItems([]);
