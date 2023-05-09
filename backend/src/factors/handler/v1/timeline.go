@@ -24,13 +24,25 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 		logCtx.Error("Invalid project_id.")
 		return "", http.StatusBadRequest, "", "invalid project_id", true
 	}
+
 	score := c.Query("score")
+	if score == "" {
+		score = "false"
+	}
 	get_score, err := strconv.ParseBool(score)
+	if err != nil {
+		logCtx.Error("Invalid score flag .")
+		get_score = false
+	}
+
 	debug := c.Query("debug")
+	if debug == "" {
+		debug = "false"
+	}
 	get_debug, err := strconv.ParseBool(debug)
 	if err != nil {
-		logCtx.Error("Invalid score.")
-		return "", http.StatusBadRequest, "", "invalid score", true
+		logCtx.Error("Invalid debug flag.")
+		get_debug = false
 	}
 
 	r := c.Request
@@ -138,14 +150,25 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		return "", http.StatusBadRequest, "", "invalid project_id", true
 	}
 	score := c.Query("score")
+	if score == "" {
+		score = "false"
+	}
 	get_score, err := strconv.ParseBool(score)
 	if err != nil {
-		logCtx.Error("Invalid score.")
-		return "", http.StatusBadRequest, "", "invalid score", true
+		logCtx.Error("Invalid score flag.")
+		get_score = false
 	}
 
 	debug := c.Query("debug")
+	if debug == "" {
+		debug = "false"
+	}
 	get_debug, err := strconv.ParseBool(debug)
+	if err != nil {
+		logCtx.Error("Invalid debug flag.")
+		get_debug = false
+
+	}
 
 	r := c.Request
 	var payload model.TimelinePayload
