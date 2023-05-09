@@ -1015,6 +1015,13 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	_, errCode = store.GetStore().GetUser(project.ID, domID)
 	assert.Equal(t, http.StatusFound, errCode)
 
+	var payload model.TimelinePayload
+
+	// Test :- No CRMs enabled
+	payload.Source = "$hubspot_company"
+	w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, w.Code, http.StatusBadRequest)
+
 	group, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group)
@@ -1092,8 +1099,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	}
 	assert.Equal(t, len(accounts), 15)
 
-	var payload model.TimelinePayload
-
 	// Test Cases :-
 
 	// Source: $hubspot_company, 2 group exists
@@ -1102,7 +1107,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.NotNil(t, group1)
 
 	payload.Source = "$hubspot_company"
-	w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	resp := make([]model.Profile, 0)
