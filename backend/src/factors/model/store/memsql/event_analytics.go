@@ -851,13 +851,23 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	aggregatePropertyDetails.Entity = q.AggregateEntity
 	var aggregateSelect string
 	var aggregateParams []interface{}
+	steps := make([]string, 0, 0)
 
 	if q.Caller == model.USER_PROFILE_CALLER {
 		commonSelect = fmt.Sprintf("COALESCE(users.customer_user_id, events.user_id) as coal_user_id%%, users.updated_at as last_activity, ISNULL(users.customer_user_id) AS is_anonymous, users.properties as properties")
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 	} else if q.Caller == model.ACCOUNT_PROFILE_CALLER {
-		commonSelect = fmt.Sprintf("events.user_id as identity%%, users.updated_at as last_activity, users.properties as properties")
-		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
+		group, errCode := store.GetGroup(projectID, q.Source)
+		if errCode != http.StatusFound || group == nil {
+			log.WithField("status", errCode).Error("Failed to get group while adding group info.")
+			return steps, stepsToKeysMap, errors.New("group not found")
+		}
+		if model.IsAllowedAccountGroupNames(q.Source) && q.Source == group.Name {
+			commonSelect = fmt.Sprintf("users.group_%d_user_id as identity%%, users.updated_at as last_activity, users.properties as properties", group.ID)
+			commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
+		} else {
+			return steps, stepsToKeysMap, errors.New("CRMs not enabled for accounts timeline")
+		}
 	} else {
 		if q.GetGroupByTimestamp() != "" {
 			selectTimestamp := getSelectTimestampByType(q.GetGroupByTimestamp(), q.Timezone)
@@ -905,7 +915,6 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		commonOrderBy = "coal_user_id%s, events.timestamp ASC"
 	}
 
-	steps := make([]string, 0, 0)
 	// Adding source string
 	var addSourceStmt, addColsString string
 	var status int
@@ -1070,7 +1079,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		addSourceStmt = " " + fmt.Sprintf("%s.source!=%d", selectVal, model.UserSourceDomains)
 		if model.IsAllowedAccountGroupNames(source) && source == group.Name {
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, group.ID)
-			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.source", group.ID)
+			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.source, users.group_%d_user_id", group.ID, group.ID)
 			status = http.StatusOK
 		} else {
 			log.WithFields(logFields).Error(fmt.Sprintf("%s not enabled for this project.", source))
@@ -1223,9 +1232,9 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	}
 
 	if query.Caller == model.USER_PROFILE_CALLER {
-		aggregateSelect = fmt.Sprintf("SELECT DISTINCT(coal_user_id) as identity, is_anonymous, last_activity, properties FROM %s", aggregateFromStepName)
+		aggregateSelect = fmt.Sprintf("SELECT DISTINCT(coal_user_id) as identity, is_anonymous, last_activity, properties FROM %s GROUP BY identity", aggregateFromStepName)
 	} else if query.Caller == model.ACCOUNT_PROFILE_CALLER {
-		aggregateSelect = fmt.Sprintf("SELECT DISTINCT(identity) as identity, last_activity, properties FROM %s", aggregateFromStepName)
+		aggregateSelect = fmt.Sprintf("SELECT DISTINCT(identity) as identity, last_activity, properties FROM %s GROUP BY identity", aggregateFromStepName)
 	}
 	aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
 	*qStmnt = appendStatement(*qStmnt, aggregateSelect)
@@ -1310,6 +1319,7 @@ Example: Query with date.
 Group By: user_properties, event_properties
 
 Sample query with ewp:
+
 	$session
 		"en": "event", "pr": "$source", "op": "equals", "va": "google", "ty": "categorical","lop": "AND"
 		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
@@ -1319,27 +1329,30 @@ Sample query with ewp:
 	www.livspace.com/in/hire-a-designer
 		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
 		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+
 gbp: [
+
 	"pr": "$source","en": "event","pty": "categorical","ena": "$session","eni": 1
 	"pr": "$campaign","en": "event","pty": "categorical","ena": "$session","eni": 1
 	"pr": "$campaign","en": "event","pty": "categorical","ena": "MagazineViews","eni": 2
 	"pr": "$city","en": "user","pty": "categorical","ena": "www.livspace.com/in/hire-a-designer","eni": 3
 	"pr": "$country","en": "user","pty": "categorical"
+
 ]
 gbt: "date"
 
 QUERY:
 
-WITH
+# WITH
 
 step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND name='$session'),
 
 step_0 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0, _group_key_1, date_trunc('day',
 to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta')) COALESCE(users.customer_user_id,events.user_id)
 as coal_user_id, CASE WHEN events.properties->>'$source' IS NULL THEN '$none' WHEN
-events.properties->>'$source' = '' THEN '$none' ELSE events.properties->>'$source' END AS
+events.properties->>'$source' = ” THEN '$none' ELSE events.properties->>'$source' END AS
 _group_key_0, CASE WHEN events.properties->>'$campaign' IS NULL THEN '$none' WHEN
-events.properties->>'$campaign' = '' THEN '$none' ELSE events.properties->>'$campaign'
+events.properties->>'$campaign' = ” THEN '$none' ELSE events.properties->>'$campaign'
 END AS _group_key_1, date_trunc('day', to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta')
 as datetime, events.user_id as event_user_id, '$session'::text AS event_name  FROM events JOIN
 users ON events.user_id=users.id LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
@@ -1352,7 +1365,7 @@ step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='
 name='MagazineViews'), step_1 AS (SELECT DISTINCT ON(coal_user_id, _group_key_2, date_trunc('day',
 to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta')) COALESCE(users.customer_user_id,
 events.user_id) as coal_user_id, CASE WHEN events.properties->>'$campaign' IS NULL THEN '$none'
-WHEN events.properties->>'$campaign' = '' THEN '$none' ELSE events.properties->>'$campaign'
+WHEN events.properties->>'$campaign' = ” THEN '$none' ELSE events.properties->>'$campaign'
 END AS _group_key_2, date_trunc('day', to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta')
 as datetime, events.user_id as event_user_id, 'MagazineViews'::text AS event_name  FROM events
 JOIN users ON events.user_id=users.id LEFT JOIN user_properties ON
@@ -1368,7 +1381,7 @@ name='www.livspace.com/in/hire-a-designer'),
 step_2 AS (SELECT DISTINCT ON(coal_user_id, _group_key_3, date_trunc('day', to_timestamp(timestamp)
 AT TIME ZONE 'Asia/Calcutta')) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
 CASE WHEN user_properties.properties->>'$city' IS NULL THEN '$none' WHEN
-user_properties.properties->>'$city' = '' THEN '$none' ELSE user_properties.properties->>'$city'
+user_properties.properties->>'$city' = ” THEN '$none' ELSE user_properties.properties->>'$city'
 END AS _group_key_3, date_trunc('day', to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as
 datetime, events.user_id as event_user_id, 'www.livspace.com/in/hire-a-designer'::text AS
 event_name  FROM events JOIN users ON events.user_id=users.id LEFT JOIN user_properties ON
@@ -1378,19 +1391,18 @@ project_id='204' AND name='www.livspace.com/in/hire-a-designer') AND ( events.pr
 = 'google' AND user_properties.properties->>'$country' = 'India' ) ORDER BY coal_user_id, _group_key_3,
 datetime, events.timestamp ASC),
 
-
 each_events_union AS (SELECT step_0.event_name as event_name, step_0.coal_user_id as coal_user_id,
 step_0.event_user_id as event_user_id, datetime , _group_key_0 as _group_key_0,  _group_key_1 as
-_group_key_1,  ''  as _group_key_2,  ''  as _group_key_3 FROM step_0 UNION ALL SELECT
+_group_key_1,  ”  as _group_key_2,  ”  as _group_key_3 FROM step_0 UNION ALL SELECT
 step_1.event_name as event_name, step_1.coal_user_id as coal_user_id, step_1.event_user_id as
-event_user_id, datetime ,  ''  as _group_key_0,  ''  as  _group_key_1, _group_key_2 as _group_key_2,
-''  as _group_key_3 FROM step_1 UNION ALL SELECT step_2.event_name as event_name, step_2.coal_user_id
-as coal_user_id, step_2.event_user_id as event_user_id, datetime ,  ''  as _group_key_0,  ''
-as  _group_key_1,  ''  as _group_key_2, _group_key_3 as _group_key_3 FROM step_2) ,
+event_user_id, datetime ,  ”  as _group_key_0,  ”  as  _group_key_1, _group_key_2 as _group_key_2,
+”  as _group_key_3 FROM step_1 UNION ALL SELECT step_2.event_name as event_name, step_2.coal_user_id
+as coal_user_id, step_2.event_user_id as event_user_id, datetime ,  ”  as _group_key_0,  ”
+as  _group_key_1,  ”  as _group_key_2, _group_key_3 as _group_key_3 FROM step_2) ,
 
 each_users_union AS (SELECT each_events_union.event_user_id,  each_events_union.event_name,
 CASE WHEN user_properties.properties->>'$country' IS NULL THEN '$none' WHEN
-user_properties.properties->>'$country' = '' THEN '$none' ELSE user_properties.properties->>'$country'
+user_properties.properties->>'$country' = ” THEN '$none' ELSE user_properties.properties->>'$country'
 END AS _group_key_4, _group_key_0, _group_key_1, _group_key_2, _group_key_3, datetime FROM each_events_union
 LEFT JOIN users ON each_events_union.event_user_id=users.id LEFT JOIN user_properties ON
 users.id=user_properties.user_id AND user_properties.id=users.properties_id)
@@ -1454,15 +1466,16 @@ func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
 	return qStmnt, qParams, nil
 }
 
-/* getKeysForStep returns column keys for select query for the given step with values and
-  empty string ('') for all other step's breakdowns
-  for ex:
-	breakdown for e1: k0
-	breakdown for e2: k1, k2
-	breakdown for e3: k3, k4
-	key for e1: gk0, '', '',  '', ''
-	key for e2: '', gk1, gk2, '', ''
-    key for e3: '', '',  '',  gk3, gk4
+/*
+	 getKeysForStep returns column keys for select query for the given step with values and
+	  empty string ('') for all other step's breakdowns
+	  for ex:
+		breakdown for e1: k0
+		breakdown for e2: k1, k2
+		breakdown for e3: k3, k4
+		key for e1: gk0, '', '',  '', ''
+		key for e2: '', gk1, gk2, '', ''
+	    key for e3: '', '',  '',  gk3, gk4
 */
 func getKeysForStep(step string, steps []string, keysMap map[string][]string, totalKeys int) string {
 	logFields := log.Fields{
@@ -1504,9 +1517,12 @@ Group by: user_properties, event_properties
 Example: Query without date and with group by properties.
 
 Sample query with ewp:
+
 	View Project
 	Fund Project
+
 gbp:
+
 	user_property -> $present -> $session_count (numerical)
 	event_property -> 2. $session -> $hour_of_day (numerical)
 	user_property -> 2. $session -> $platform
@@ -1516,17 +1532,17 @@ WITH
 step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
 
 step_0 AS (SELECT DISTINCT ON(coal_user_id, _group_key_3) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
-CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN user_properties.properties->>'' = '' THEN '$none'
-ELSE user_properties.properties->>'' END AS _group_key_3, events.user_id as event_user_id FROM events JOIN users ON
+CASE WHEN user_properties.properties->>” IS NULL THEN '$none' WHEN user_properties.properties->>” = ” THEN '$none'
+ELSE user_properties.properties->>” END AS _group_key_3, events.user_id as event_user_id FROM events JOIN users ON
 events.user_id=users.id JOIN user_properties on events.user_properties_id=user_properties.id WHERE events.project_id='3'
 AND timestamp>='1393612200' AND timestamp<='1396290599' AND events.event_name_id IN (SELECT id FROM step_0_names
 WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id, _group_key_3, events.timestamp ASC),
 
 step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='Fund Project'),
 step_1 AS (SELECT DISTINCT ON(coal_user_id, _group_key_1, _group_key_2) COALESCE(users.customer_user_id,events.user_id)
-as coal_user_id, CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none'
-ELSE events.properties->>'' END AS _group_key_1, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none'
-WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_2,
+as coal_user_id, CASE WHEN events.properties->>” IS NULL THEN '$none' WHEN events.properties->>” = ” THEN '$none'
+ELSE events.properties->>” END AS _group_key_1, CASE WHEN user_properties.properties->>” IS NULL THEN '$none'
+WHEN user_properties.properties->>” = ” THEN '$none' ELSE user_properties.properties->>” END AS _group_key_2,
 events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id JOIN user_properties on
 events.user_properties_id=user_properties.id WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599'
 AND events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='3' AND name='Fund Project')
@@ -1535,13 +1551,14 @@ ORDER BY coal_user_id, _group_key_1, _group_key_2, events.timestamp ASC),
 events_intersect AS (SELECT step_0.event_user_id as event_user_id, step_0.coal_user_id as coal_user_id, step_1._group_key_1, step_1._group_key_2,
 step_0._group_key_3 FROM step_0  JOIN step_1 ON step_1.coal_user_id = step_0.coal_user_id) ,
 
-all_users_intersect AS (SELECT events_intersect.event_user_id, events_intersect.coal_user_id, CASE WHEN user_properties.properties->>'' IS NULL THEN
-'$none' WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_0,
+all_users_intersect AS (SELECT events_intersect.event_user_id, events_intersect.coal_user_id, CASE WHEN user_properties.properties->>” IS NULL THEN
+'$none' WHEN user_properties.properties->>” = ” THEN '$none' ELSE user_properties.properties->>” END AS _group_key_0,
 _group_key_1, _group_key_2, _group_key_3 FROM events_intersect LEFT JOIN users ON events_intersect.event_user_id=users.id
 LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
 _group_key_0_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_0::numeric) + 0.00001 AS lbound, percentile_disc(0.98)
- WITHIN GROUP(ORDER BY _group_key_0::numeric) AS ubound FROM all_users_intersect WHERE _group_key_0 != '$none'),
+
+	WITHIN GROUP(ORDER BY _group_key_0::numeric) AS ubound FROM all_users_intersect WHERE _group_key_0 != '$none'),
 
 _group_key_1_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_1::numeric) + 0.00001 AS lbound, percentile_disc(0.98)
 WITHIN GROUP(ORDER BY _group_key_1::numeric) AS ubound FROM all_users_intersect WHERE _group_key_1 != '$none'),
@@ -1562,6 +1579,7 @@ Example: Query with date
 
 WITH
 step0 AS (
+
 	-- DISTINCT ON user_id, date preserves users on each date --
 	SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
 	(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
@@ -1569,22 +1587,26 @@ step0 AS (
 	AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='localhost:3000/#/core')
 	ORDER BY events.user_id, date, events.timestamp ASC
 	-- Order by user_id, timestamp is not possible as we need to preserve unique user with date using DISTINCT ON (user_id, date) --
+
 ),
 step1 AS (
+
 	SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
 	(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
 	WHERE events.project_id='1' AND timestamp>='1561091973' AND timestamp<='1561178373'
 	AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='run_query')
 	ORDER BY events.user_id, date, events.timestamp ASC
+
 ),
 users_intersect AS (
+
 	-- Users who have done all the steps on each date. Join by user, date. --
 	SELECT step0.event_user_id as event_user_id, step0.date as date FROM step0
 	JOIN step1 ON step0.event_user_id = step1.event_user_id AND step0.date = step1.date
+
 )
 SELECT date, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) AS count FROM users_intersect
 LEFT JOIN users ON users_intersect.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
-
 */
 func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 	query model.Query, enableFilterOpt bool) (string, []interface{}, error) {
@@ -1661,9 +1683,12 @@ Group By: user_properties, event_properties
 Example: Query without date and with group by properties.
 
 Sample query with ewp:
+
 	View Project
 	Fund Project
+
 gbp:
+
 	event_property -> $browser
 	event_property -> $hour_of_day (numerical)
 	user_property -> $session_count (numerical)
@@ -1672,26 +1697,26 @@ WITH
 step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
 
 step_0 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0, _group_key_1) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
-CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END
-AS _group_key_0, CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE
-events.properties->>'' END AS _group_key_1, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id
+CASE WHEN events.properties->>” IS NULL THEN '$none' WHEN events.properties->>” = ” THEN '$none' ELSE events.properties->>” END
+AS _group_key_0, CASE WHEN events.properties->>” IS NULL THEN '$none' WHEN events.properties->>” = ” THEN '$none' ELSE
+events.properties->>” END AS _group_key_1, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id
 WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND events.event_name_id IN (SELECT id
 FROM step_0_names WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id, _group_key_0, _group_key_1, events.timestamp ASC),
 
 step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='Fund Project'),
 
 step_1 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0, _group_key_1) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
-CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END
-AS _group_key_0, CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE
-events.properties->>'' END AS _group_key_1, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id
+CASE WHEN events.properties->>” IS NULL THEN '$none' WHEN events.properties->>” = ” THEN '$none' ELSE events.properties->>” END
+AS _group_key_0, CASE WHEN events.properties->>” IS NULL THEN '$none' WHEN events.properties->>” = ” THEN '$none' ELSE
+events.properties->>” END AS _group_key_1, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id
 WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND events.event_name_id IN (SELECT id FROM
 step_1_names WHERE project_id='3' AND name='Fund Project') ORDER BY coal_user_id, _group_key_0, _group_key_1, events.timestamp ASC),
 
 events_union AS (SELECT step_0.event_user_id as event_user_id, _group_key_0, _group_key_1 FROM step_0 UNION ALL
 SELECT step_1.event_user_id as event_user_id, _group_key_0, _group_key_1 FROM step_1) ,
 
-any_users_union AS (SELECT events_union.event_user_id, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none'
-WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_2, _group_key_0,
+any_users_union AS (SELECT events_union.event_user_id, CASE WHEN user_properties.properties->>” IS NULL THEN '$none'
+WHEN user_properties.properties->>” = ” THEN '$none' ELSE user_properties.properties->>” END AS _group_key_2, _group_key_0,
 _group_key_1 FROM events_union LEFT JOIN users ON events_union.event_user_id=users.id LEFT JOIN user_properties
 ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
@@ -1716,28 +1741,29 @@ ORDER BY _group_key_1_bucket, _group_key_2_bucket LIMIT 100000
 Example: Query with date.
 
 WITH
-	step0 AS (
-		-- DISTINCT ON user_id, date preserves users on each date --
-		SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
-		(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
-		WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
-		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='View Project')
-		ORDER BY events.user_id, date, events.timestamp ASC
-		-- Order by user_id, timestamp is not possible as we need to preserve unique user with date using DISTINCT ON (user_id, date) --
-	),
-	step1 AS (
-		SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
-		(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
-		WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
-		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='Fund Project')
-		ORDER BY events.user_id, date, events.timestamp ASC
-	),
-	users_union AS (
-		SELECT step0.event_user_id as event_user_id, step0.date as date FROM step0 UNION ALL
-    	SELECT step1.event_user_id as event_user_id, step1.date as date FROM step1
-	)
-	SELECT date, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) AS count FROM users_union
-	LEFT JOIN users ON users_union.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
+
+		step0 AS (
+			-- DISTINCT ON user_id, date preserves users on each date --
+			SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
+			(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
+			WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
+			AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='View Project')
+			ORDER BY events.user_id, date, events.timestamp ASC
+			-- Order by user_id, timestamp is not possible as we need to preserve unique user with date using DISTINCT ON (user_id, date) --
+		),
+		step1 AS (
+			SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
+			(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
+			WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
+			AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='Fund Project')
+			ORDER BY events.user_id, date, events.timestamp ASC
+		),
+		users_union AS (
+			SELECT step0.event_user_id as event_user_id, step0.date as date FROM step0 UNION ALL
+	    	SELECT step1.event_user_id as event_user_id, step1.date as date FROM step1
+		)
+		SELECT date, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) AS count FROM users_union
+		LEFT JOIN users ON users_union.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
 */
 func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 	query model.Query, enableFilterOpt bool) (string, []interface{}, error) {
@@ -1797,8 +1823,11 @@ func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 /*
 buildUniqueUsersSingleEventQuery
 Sample query for ewp ALL:
+
 	View Project
+
 Group By:
+
 	event_property -> 1. View Project -> $hour_of_day
 	user_property -> $present -> $campaign
 
@@ -1806,13 +1835,13 @@ WITH
 step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
 
 step_0 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
-CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>''
+CASE WHEN events.properties->>” IS NULL THEN '$none' WHEN events.properties->>” = ” THEN '$none' ELSE events.properties->>”
 END AS _group_key_0, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id WHERE
 events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND events.event_name_id IN (SELECT id FROM
 step_0_names WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id, _group_key_0, events.timestamp ASC),
 
-all_users_intersect AS (SELECT step_0.event_user_id, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none'
-WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_1,
+all_users_intersect AS (SELECT step_0.event_user_id, CASE WHEN user_properties.properties->>” IS NULL THEN '$none'
+WHEN user_properties.properties->>” = ” THEN '$none' ELSE user_properties.properties->>” END AS _group_key_1,
 _group_key_0 FROM step_0 LEFT JOIN users ON step_0.event_user_id=users.id LEFT JOIN user_properties ON
 users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
@@ -1858,9 +1887,12 @@ buildEventsOccurrenceWithGivenEventQuery builds query for any given event and si
 Group by: user_properties, event_properties.
 
 Sample query for ewp:
+
 	View Project
 	Fund Project
+
 gbp:
+
 	event_property -> $hour_of_day (numeric)
 	event_property -> $day_of_week (categoric)
 	user_property -> $session_count (numeric)
@@ -1868,25 +1900,25 @@ gbp:
 WITH
 step0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
 
-step0 AS (SELECT events.id as event_id, events.user_id as event_user_id, CASE WHEN events.properties->>'' IS NULL THEN '$none'
-WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END AS _group_key_0, CASE WHEN events.properties->>'' IS NULL
-THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END AS _group_key_1, 'View Project'::text
+step0 AS (SELECT events.id as event_id, events.user_id as event_user_id, CASE WHEN events.properties->>” IS NULL THEN '$none'
+WHEN events.properties->>” = ” THEN '$none' ELSE events.properties->>” END AS _group_key_0, CASE WHEN events.properties->>” IS NULL
+THEN '$none' WHEN events.properties->>” = ” THEN '$none' ELSE events.properties->>” END AS _group_key_1, 'View Project'::text
 AS event_name  FROM events  WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND
 events.event_name_id IN (SELECT id FROM step0_names WHERE project_id='3' AND name='View Project')),
 
 step1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='Fund Project'),
 
-step1 AS (SELECT events.id as event_id, events.user_id as event_user_id, CASE WHEN events.properties->>'' IS NULL THEN '$none'
-WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END AS _group_key_0, CASE WHEN events.properties->>'' IS NULL
-THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END AS _group_key_1, 'Fund Project'::text
+step1 AS (SELECT events.id as event_id, events.user_id as event_user_id, CASE WHEN events.properties->>” IS NULL THEN '$none'
+WHEN events.properties->>” = ” THEN '$none' ELSE events.properties->>” END AS _group_key_0, CASE WHEN events.properties->>” IS NULL
+THEN '$none' WHEN events.properties->>” = ” THEN '$none' ELSE events.properties->>” END AS _group_key_1, 'Fund Project'::text
 AS event_name  FROM events  WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND
 events.event_name_id IN (SELECT id FROM step1_names WHERE project_id='3' AND name='Fund Project')),
 
 any_event AS ( SELECT event_id, event_user_id, event_name, _group_key_0, _group_key_1 FROM step0 UNION ALL
 SELECT event_id, event_user_id, event_name, _group_key_0, _group_key_1 FROM step1),
 
-users_any_event AS (SELECT event_name, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN
-user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_2,
+users_any_event AS (SELECT event_name, CASE WHEN user_properties.properties->>” IS NULL THEN '$none' WHEN
+user_properties.properties->>” = ” THEN '$none' ELSE user_properties.properties->>” END AS _group_key_2,
 _group_key_0, _group_key_1, event_user_id FROM any_event LEFT JOIN users ON any_event.event_user_id=users.id
 LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
@@ -2038,6 +2070,7 @@ Example: Query with date.
 Group By: user_properties, event_properties
 
 Sample query with ewp:
+
 	$session
 		"en": "event", "pr": "$source", "op": "equals", "va": "google", "ty": "categorical","lop": "AND"
 		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
@@ -2047,26 +2080,29 @@ Sample query with ewp:
 	www.livspace.com/in/hire-a-designer
 		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
 		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+
 gbp: [
+
 	"pr": "$source","en": "event","pty": "categorical","ena": "$session","eni": 1
 	"pr": "$campaign","en": "event","pty": "categorical","ena": "$session","eni": 1
 	"pr": "$campaign","en": "event","pty": "categorical","ena": "MagazineViews","eni": 2
 	"pr": "$city","en": "user","pty": "categorical","ena": "www.livspace.com/in/hire-a-designer","eni": 3
 	"pr": "$country","en": "user","pty": "categorical"
+
 ]
 gbt: "date"
 
 QUERY:
 
-WITH
+# WITH
 
 step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND name='$session'),
 
 step_0 AS (SELECT events.id as event_id, events.user_id as event_user_id, date_trunc('day',
 to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, '$session'::text AS event_name ,
-CASE WHEN events.properties->>'$source' IS NULL THEN '$none' WHEN events.properties->>'$source' = ''
+CASE WHEN events.properties->>'$source' IS NULL THEN '$none' WHEN events.properties->>'$source' = ”
 THEN '$none' ELSE events.properties->>'$source' END AS _group_key_0, CASE WHEN
-events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ''
+events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ”
 THEN '$none' ELSE events.properties->>'$campaign' END AS _group_key_1 FROM events JOIN users ON
 events.user_id=users.id LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
 WHERE events.project_id='204' AND timestamp>='1583001000' AND timestamp<='1585679399' AND
@@ -2078,7 +2114,7 @@ step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='
 
 step_1 AS (SELECT events.id as event_id, events.user_id as event_user_id, date_trunc('day',
 to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, 'MagazineViews'::text AS event_name ,
-CASE WHEN events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ''
+CASE WHEN events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ”
 THEN '$none' ELSE events.properties->>'$campaign' END AS _group_key_2 FROM events JOIN users ON
 events.user_id=users.id LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
 WHERE events.project_id='204' AND timestamp>='1583001000' AND timestamp<='1585679399' AND
@@ -2086,14 +2122,13 @@ events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='204' AND 
 AND ( events.properties->>'$source' = 'google' AND user_properties.properties->>'$country' = 'India' )
 ORDER BY event_id, _group_key_2, events.timestamp ASC),
 
-
 step_2_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND
 name='www.livspace.com/in/hire-a-designer'),
 
 step_2 AS (SELECT events.id as event_id, events.user_id as event_user_id, date_trunc('day',
 to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime,
 'www.livspace.com/in/hire-a-designer'::text AS event_name , CASE WHEN user_properties.properties->>'$city'
-IS NULL THEN '$none' WHEN user_properties.properties->>'$city' = '' THEN '$none' ELSE
+IS NULL THEN '$none' WHEN user_properties.properties->>'$city' = ” THEN '$none' ELSE
 user_properties.properties->>'$city' END AS _group_key_3 FROM events JOIN users ON events.user_id=users.id
 LEFT JOIN user_properties ON events.user_properties_id=user_properties.id WHERE events.project_id='204'
 AND timestamp>='1583001000' AND timestamp<='1585679399' AND events.event_name_id IN (SELECT id FROM
@@ -2103,16 +2138,16 @@ ORDER BY event_id, _group_key_3, events.timestamp ASC),
 
 each_events_union AS (SELECT step_0.event_name as event_name, step_0.event_id as event_id,
 step_0.event_user_id as event_user_id, datetime , _group_key_0 as _group_key_0,  _group_key_1 as
-_group_key_1,  ''  as _group_key_2,  ''  as _group_key_3 FROM step_0 UNION ALL SELECT step_1.event_name
+_group_key_1,  ”  as _group_key_2,  ”  as _group_key_3 FROM step_0 UNION ALL SELECT step_1.event_name
 as event_name, step_1.event_id as event_id, step_1.event_user_id as event_user_id, datetime ,
-''  as _group_key_0,  ''  as  _group_key_1, _group_key_2 as _group_key_2,  ''  as _group_key_3
+”  as _group_key_0,  ”  as  _group_key_1, _group_key_2 as _group_key_2,  ”  as _group_key_3
 FROM step_1 UNION ALL SELECT step_2.event_name as event_name, step_2.event_id as event_id,
-step_2.event_user_id as event_user_id, datetime ,  ''  as _group_key_0,  ''  as  _group_key_1,  ''
+step_2.event_user_id as event_user_id, datetime ,  ”  as _group_key_0,  ”  as  _group_key_1,  ”
 as _group_key_2, _group_key_3 as _group_key_3 FROM step_2) ,
 
 each_users_union AS (SELECT each_events_union.event_user_id, each_events_union.event_id,
 each_events_union.event_name, CASE WHEN user_properties.properties->>'$country' IS NULL THEN '$none'
-WHEN user_properties.properties->>'$country' = '' THEN '$none' ELSE user_properties.properties->>'$country'
+WHEN user_properties.properties->>'$country' = ” THEN '$none' ELSE user_properties.properties->>'$country'
 END AS _group_key_4, _group_key_0, _group_key_1, _group_key_2, _group_key_3, datetime FROM
 each_events_union LEFT JOIN users ON each_events_union.event_user_id=users.id LEFT JOIN user_properties
 ON users.id=user_properties.user_id AND user_properties.id=users.properties_id)
@@ -2188,21 +2223,27 @@ func (store *MemSQL) buildEventCountForEachGivenEventsQueryNEW(projectID int64, 
 	return qStmnt, qParams, nil
 }
 
-/* addEventFilterStepsForEventCountQuery builds step queries for each event including their filter
- and breakdown
-	for ex:
+/*
+	 addEventFilterStepsForEventCountQuery builds step queries for each event including their filter
+	 and breakdown
+		for ex:
+
 Sample query with ewp:
+
 	$session
 		"en": "event", "pr": "$source", "op": "equals", "va": "google", "ty": "categorical","lop": "AND"
 		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
 	MagazineViews
 		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
 		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+
 gbp: [
+
 	"pr": "$source","en": "event","pty": "categorical","ena": "$session","eni": 1
 	"pr": "$campaign","en": "event","pty": "categorical","ena": "$session","eni": 1
 	"pr": "$campaign","en": "event","pty": "categorical","ena": "MagazineViews","eni": 2
 	"pr": "$country","en": "user","pty": "categorical"
+
 ]
 gbt: "date"
 
@@ -2212,9 +2253,9 @@ step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='
 
 step_0 AS (SELECT events.id as event_id, events.user_id as event_user_id, date_trunc('day',
 to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, '$session'::text AS event_name ,
-CASE WHEN events.properties->>'$source' IS NULL THEN '$none' WHEN events.properties->>'$source' = ''
+CASE WHEN events.properties->>'$source' IS NULL THEN '$none' WHEN events.properties->>'$source' = ”
 THEN '$none' ELSE events.properties->>'$source' END AS _group_key_0, CASE WHEN
-events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ''
+events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ”
 THEN '$none' ELSE events.properties->>'$campaign' END AS _group_key_1 FROM events JOIN users ON
 events.user_id=users.id LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
 WHERE events.project_id='204' AND timestamp>='1583001000' AND timestamp<='1585679399' AND
@@ -2226,7 +2267,7 @@ step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='
 
 step_1 AS (SELECT events.id as event_id, events.user_id as event_user_id, date_trunc('day',
 to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, 'MagazineViews'::text AS event_name ,
-CASE WHEN events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ''
+CASE WHEN events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ”
 THEN '$none' ELSE events.properties->>'$campaign' END AS _group_key_2 FROM events JOIN users ON
 events.user_id=users.id LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
 WHERE events.project_id='204' AND timestamp>='1583001000' AND timestamp<='1585679399' AND
@@ -2367,18 +2408,23 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 	addEventCountAggregationQuery applies global breakdown of user properties on each event query
 	and presents query for selecting the final set of columns (data) from derived queries.
 	for ex:
+
 Sample query with ewp:
+
 	$session
 		"en": "event", "pr": "$source", "op": "equals", "va": "google", "ty": "categorical","lop": "AND"
 		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
 	MagazineViews
 		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
 		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+
 gbp: [
+
 	"pr": "$source","en": "event","pty": "categorical","ena": "$session","eni": 1
 	"pr": "$campaign","en": "event","pty": "categorical","ena": "$session","eni": 1
 	"pr": "$campaign","en": "event","pty": "categorical","ena": "MagazineViews","eni": 2
 	"pr": "$country","en": "user","pty": "categorical"
+
 ]
 gbt: "date"
 
@@ -2386,7 +2432,7 @@ The union query and final select columns query are:
 
 each_users_union AS (SELECT each_events_union.event_user_id, each_events_union.event_id,
 each_events_union.event_name, CASE WHEN user_properties.properties->>'$country' IS NULL THEN '$none'
-WHEN user_properties.properties->>'$country' = '' THEN '$none' ELSE user_properties.properties->>'$country'
+WHEN user_properties.properties->>'$country' = ” THEN '$none' ELSE user_properties.properties->>'$country'
 END AS _group_key_4, _group_key_0, _group_key_1, _group_key_2, _group_key_3, datetime FROM
 each_events_union LEFT JOIN users ON each_events_union.event_user_id=users.id LEFT JOIN user_properties
 ON users.id=user_properties.user_id AND user_properties.id=users.properties_id)
@@ -2394,7 +2440,6 @@ ON users.id=user_properties.user_id AND user_properties.id=users.properties_id)
 SELECT datetime, event_name, _group_key_0, _group_key_1, _group_key_2, _group_key_3, _group_key_4,
 COUNT(event_id) AS count FROM each_users_union GROUP BY event_name, _group_key_0, _group_key_1,
 _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
-
 */
 func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *string,
 	qParams *[]interface{}, refStep string) {
