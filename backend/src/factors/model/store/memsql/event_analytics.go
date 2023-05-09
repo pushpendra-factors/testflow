@@ -863,7 +863,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			return steps, stepsToKeysMap, errors.New("group not found")
 		}
 		if model.IsAllowedAccountGroupNames(q.Source) && q.Source == group.Name {
-			commonSelect = fmt.Sprintf("users.group_%d_user_id as identity%%, users.updated_at as last_activity, users.properties as properties", group.ID)
+			commonSelect = fmt.Sprintf("CASE WHEN users.is_group_user = 1 THEN events.user_id ELSE users.group_%d_user_id END AS identity%%, users.updated_at as last_activity, users.properties as properties", group.ID)
 			commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 		} else {
 			return steps, stepsToKeysMap, errors.New("CRMs not enabled for accounts timeline")
@@ -1079,7 +1079,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 		addSourceStmt = " " + fmt.Sprintf("%s.source!=%d", selectVal, model.UserSourceDomains)
 		if model.IsAllowedAccountGroupNames(source) && source == group.Name {
 			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, group.ID)
-			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.source, users.group_%d_user_id", group.ID, group.ID)
+			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.source, users.group_%d_user_id, users.is_group_user", group.ID, group.ID)
 			status = http.StatusOK
 		} else {
 			log.WithFields(logFields).Error(fmt.Sprintf("%s not enabled for this project.", source))

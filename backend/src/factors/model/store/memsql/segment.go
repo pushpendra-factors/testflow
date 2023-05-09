@@ -110,7 +110,7 @@ func (store *MemSQL) GetAllSegments(projectId int64) (map[string][]model.Segment
 
 	db := C.GetServices().Db
 	var segments []model.Segment
-	err := db.Table("segments").Where("project_id = ?", projectId).Find(&segments).Error
+	err := db.Table("segments").Where("project_id = ?", projectId).Limit("1000").Find(&segments).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed while getting all segments by ProjectId.")
 		return nil, http.StatusInternalServerError
