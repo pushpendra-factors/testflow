@@ -715,7 +715,7 @@ function UserProfiles({
     setSearchDDOpen(false);
     if (timelinePayload?.search_filter?.length) {
       const payload = { ...timelinePayload };
-      payload.search_filter = [];
+      payload.search_filter = {};
       setListSearchItems([]);
       setTimelinePayload(payload);
     }

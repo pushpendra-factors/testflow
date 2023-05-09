@@ -709,14 +709,16 @@ function AccountProfiles({
 
     const updatedPayload = {
       ...accountPayload,
-      search_filter: formatFiltersForPayload(searchFilter, false)
+      search_filter: formatFiltersForPayload(searchFilter, true)
     };
-    updatedPayload.search_filter = updatedPayload.search_filter.map(
-      (filter, index) => {
-        const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
-        return isAnd ? filter : { ...filter, lop: 'OR' };
-      }
-    );
+    const search_filter_map = {}
+    search_filter_map["users"] = updatedPayload.search_filter.map(
+        (filter, index) => {
+          const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
+          return isAnd ? filter : { ...filter, lop: 'OR' };
+        }
+      );
+    updatedPayload.search_filter = search_filter_map
 
     setListSearchItems(parsedValues);
     setAccountPayload(updatedPayload);
@@ -727,7 +729,7 @@ function AccountProfiles({
     setSearchDDOpen(false);
     if (accountPayload?.search_filter?.length) {
       const payload = { ...accountPayload };
-      payload.search_filter = [];
+      payload.search_filter = {};
       setListSearchItems([]);
       setAccountPayload(payload);
     }
