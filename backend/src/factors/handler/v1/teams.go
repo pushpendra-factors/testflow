@@ -19,7 +19,6 @@ import (
 	"strings"
 )
 
-
 func TeamsAuthRedirectHandler(c *gin.Context) {
 	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
@@ -43,7 +42,7 @@ func TeamsAuthRedirectHandler(c *gin.Context) {
 
 }
 func GetTeamsAuthorisationURL(tenantID, clientID, state string) string {
-	url := fmt.Sprintf(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=%s&response_type=code&response_mode=query&scope=https://graph.microsoft.com/.default offline_access&state=%s&redirect_uri=%s`, clientID, state, getTeamsCallbackURL())
+	url := fmt.Sprintf(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=%s&response_type=code&response_mode=query&scope=Team.ReadBasic.All Channel.ReadBasic.All ChannelMessage.Send User.Read offline_access&state=%s&redirect_uri=%s`, clientID, state, getTeamsCallbackURL())
 	return url
 }
 func TeamsCallbackHandler(c *gin.Context) {
@@ -158,14 +157,14 @@ func GetAllTeamsHandler(c *gin.Context) {
 
 	if err != nil {
 		logCtx.Error(err)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"errors": err})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"errors": err.Error()})
 	}
 
 	c.JSON(http.StatusFound, teams)
 }
 
 func GetTeamsChannelsHandler(c *gin.Context) {
-	teamID := c.Query("teams_id")
+	teamID := c.Query("team_id")
 	if teamID == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid team id"})
 		return
@@ -179,7 +178,7 @@ func GetTeamsChannelsHandler(c *gin.Context) {
 
 	channels, err := teams.GetTeamsChannels(projectID, loggedInAgentUUID, teamID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
