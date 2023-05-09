@@ -1232,11 +1232,12 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	}
 
 	if query.Caller == model.USER_PROFILE_CALLER {
-		aggregateSelect = fmt.Sprintf("SELECT DISTINCT(coal_user_id) as identity, is_anonymous, last_activity, properties FROM %s GROUP BY identity", aggregateFromStepName)
+		aggregateSelect = fmt.Sprintf("SELECT coal_user_id as identity, is_anonymous, last_activity, properties FROM %s GROUP BY identity ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
 	} else if query.Caller == model.ACCOUNT_PROFILE_CALLER {
-		aggregateSelect = fmt.Sprintf("SELECT DISTINCT(identity) as identity, last_activity, properties FROM %s GROUP BY identity", aggregateFromStepName)
+		aggregateSelect = fmt.Sprintf("SELECT identity, last_activity, properties FROM %s GROUP BY identity ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
+	} else {
+		aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
 	}
-	aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
 	*qStmnt = appendStatement(*qStmnt, aggregateSelect)
 }
 
