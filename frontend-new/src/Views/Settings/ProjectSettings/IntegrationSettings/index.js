@@ -43,6 +43,7 @@ import MSTeamIntegration from './MSTeam';
 
 import { ADWORDS_INTERNAL_REDIRECT_URI } from './util';
 import { featureLock } from '../../../../routes/feature';
+import { whiteListedProjects } from '../../../../routes/constants';
 
 const IntegrationProviderData = [
   {
@@ -436,7 +437,7 @@ function IntegrationSettings({
                       ) {
                         if (
                           item.name === 'Microsoft Teams' &&
-                          (activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007')
+                          whiteListedProjects.includes(activeProject?.id)
                         ) {
                           return (
                             <IntegrationCard

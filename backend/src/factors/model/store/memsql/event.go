@@ -2,6 +2,7 @@ package memsql
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
@@ -2432,8 +2433,8 @@ func (store *MemSQL) IsSmartEventAlreadyExist(projectID int64, userID, eventName
 }
 
 /*
-	SELECT * FROM events WHERE project_id = ? AND user_id = ? AND session_id IS NOT NULL AND timestamp < ?
-	ORDER BY timestamp, created_at DESC LIMIT 1;
+SELECT * FROM events WHERE project_id = ? AND user_id = ? AND session_id IS NOT NULL AND timestamp < ?
+ORDER BY timestamp, created_at DESC LIMIT 1;
 */
 func (store *MemSQL) GetLastEventWithSessionByUser(projectId int64, userId string, firstEventTimestamp int64) (*model.Event, int) {
 	logFields := log.Fields{
@@ -2625,4 +2626,90 @@ func (store *MemSQL) DeleteSessionsAndAssociationForTimerange(projectID, startTi
 	}
 
 	return delSessionExec.RowsAffected, removeAssociationsExec.RowsAffected, http.StatusAccepted
+}
+
+func (store *MemSQL) PullEventIdsWithEventNameId(projectId int64, startTimestamp int64, endTimestamp int64, eventNameId string) ([]string, map[string]model.EventIdToProperties, error) {
+	db := C.GetServices().Db
+
+	events := make(map[string]model.EventIdToProperties, 0)
+	eventsIds := make([]string, 0)
+
+	rows, _ := db.Raw("SELECT events.id, events.user_id , events.timestamp, events.properties FROM events "+
+		"WHERE events.project_id = ? AND events.event_name_id = ? AND events.timestamp >= ? AND events.timestamp <= ?"+
+		" ORDER BY events.timestamp, events.created_at ASC", projectId, eventNameId, startTimestamp, endTimestamp).Rows()
+
+	rowNum := 0
+	for rows.Next() {
+		var id string
+		var userId string
+		var timestamp int64
+		var properties *postgres.Jsonb
+
+		if err := rows.Scan(&id, &userId, &timestamp, &properties); err != nil {
+			log.WithError(err).Error("Failed to scan rows")
+			return nil, nil, err
+		}
+
+		var eventPropertiesBytes interface{}
+		var err error
+		if properties != nil {
+			eventPropertiesBytes, err = properties.Value()
+			if err != nil {
+				log.WithError(err).Error("Failed to read event properties")
+				return nil, nil, err
+			}
+		} else {
+			eventPropertiesBytes = []byte(model.EmptyJsonStr)
+		}
+
+		var eventPropertiesMap map[string]interface{}
+		err = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+		if err != nil {
+			log.WithError(err).Error("Failed to marshal event properties")
+			return nil, nil, err
+		}
+
+		eventsIds = append(eventsIds, id)
+
+		events[id] = model.EventIdToProperties{
+			ID:              id,
+			UserId:          userId,
+			ProjectId:       projectId,
+			EventProperties: eventPropertiesMap,
+			Timestamp:       timestamp,
+		}
+
+		rowNum++
+	}
+
+	return eventsIds, events, nil
+}
+
+func (store *MemSQL) GetLatestEventTimeStampByEventNameId(projectId int64, eventNameId string,
+	startTimestamp int64, endTimestamp int64) (int64, int) {
+
+	if endTimestamp == 0 {
+		return 0, http.StatusInternalServerError
+	}
+
+	db := C.GetServices().Db
+
+	var timestamp int64
+
+	rows, _ := db.Raw("SELECT MAX(timestamp ) FROM events "+
+		"WHERE events.project_id = ? AND events.event_name_id = ? "+
+		"AND events.timestamp >= ? AND events.timestamp <= ?", projectId, eventNameId, startTimestamp, endTimestamp).Rows()
+
+	rowNum := 0
+	for rows.Next() {
+
+		if err := rows.Scan(&timestamp); err != nil {
+			log.WithError(err).Error("Failed to scan rows")
+			return 0, http.StatusNotFound
+		}
+
+		rowNum++
+	}
+
+	return timestamp, http.StatusFound
 }

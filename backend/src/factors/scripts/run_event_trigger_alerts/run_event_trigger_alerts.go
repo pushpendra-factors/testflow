@@ -44,6 +44,10 @@ func main() {
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+	teamsAppTenantID := flag.String("teams_app_tenant_id", "", "")
+	teamsAppClientID := flag.String("teams_app_client_id", "", "")
+	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
+	teamsApplicationID := flag.String("teams_application_id", "", "")
 
 	flag.Parse()
 
@@ -73,6 +77,10 @@ func main() {
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *redisPortPersistent,
 		SentryDSN:           *sentryDSN,
+		TeamsAppTenantID:     *teamsAppTenantID,
+		TeamsAppClientID:     *teamsAppClientID,
+		TeamsAppClientSecret: *teamsAppClientSecret,
+		TeamsApplicationID:   *teamsApplicationID,
 	}
 	defaultHealthcheckPingID := C.HealthcheckEventTriggerAlertPingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)

@@ -50,7 +50,6 @@ func main() {
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
-	overrideHubspotProjectDistributerHealthcheckPingID := flag.String("project_distributer_healthcheck_ping_id", "", "Override default project distributer healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	enableHubspotGroupsByProjectID := flag.String("enable_hubspot_groups_by_project_id", "", "Enable hubspot groups for projects.")
 	useSourcePropertyOverwriteByProjectID := flag.String("use_source_property_overwrite_by_project_id", "", "")
@@ -58,11 +57,13 @@ func main() {
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 	enableHubspotFormEventsByProjectID := flag.String("enable_hubspot_form_events_by_project_id", "", "")
 	hubspotMaxCreatedAt := flag.Int64("huspot_max_created_at", time.Now().Unix(), "max created_at for records to process.")
-	lightProjectsCountThreshold := flag.Int("light_projects_count_threshold", 50000, "Threshold on count for distribution across jobs")
 	enrichHeavy := flag.Bool("enrich_heavy", false, "Run heavy projects")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	recordProcessLimit := flag.Int("record_process_limit", 50000, "Number of records to process per project.")
+	numDaysBackfill := flag.Int("num_days_backfill", 93, "Number of days to backfill from now")
+	backfillStartTimestamp := flag.Int("backfill_start_timestamp", 0, "startTimestamp for backfill")
+	backfillEndTimestamp := flag.Int("backfill_end_timestamp", 0, "endTimestamp for backfill")
 	disableNonMarketingContactByProjectID := flag.String("disable_non_marketing_contact_by_project_id", "", "Disable hubspot non marketing contacts from processing")
 	hubspotAppID := flag.String("hubspot_app_id", "", "Hubspot app id for oauth integration")
 	hubspotAppSecret := flag.String("hubspot_app_secret", "", "Hubspot app secret for oauth integration")
@@ -158,12 +159,9 @@ func main() {
 	configsEnrich["max_record_created_at"] = *hubspotMaxCreatedAt
 	configsEnrich["enrich_heavy"] = *enrichHeavy
 	configsEnrich["record_process_limit_per_project"] = *recordProcessLimit
-
-	configsDistributer := make(map[string]interface{})
-	configsDistributer["health_check_ping_id"] = ""
-	configsDistributer["max_record_created_at"] = *hubspotMaxCreatedAt
-	configsDistributer["override_healthcheck_ping_id"] = *overrideHubspotProjectDistributerHealthcheckPingID
-	configsDistributer["light_projects_count_threshold"] = *lightProjectsCountThreshold
+	configsEnrich["num_days_backfill"] = *numDaysBackfill
+	configsEnrich["backfill_start_timestamp"] = *backfillStartTimestamp
+	configsEnrich["backfill_end_timestamp"] = *backfillEndTimestamp
 
 	var notifyMessage string
 

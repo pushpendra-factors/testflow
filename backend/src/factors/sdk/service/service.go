@@ -81,6 +81,9 @@ func main() {
 	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	enableDebuggingForIP := flag.Bool("enable_debugging_for_ip", false, "Enables log for $ip and other properties added by $ip")
 
+	blockedIPProjectTokens := flag.String("blocked_ip_project_tokens",
+		"", "List of tokens to enable feature of IP based blocking for all sdk request types.")
+
 	flag.Parse()
 
 	appName := "sdk_server"
@@ -121,9 +124,10 @@ func main() {
 		UseSentryRollup:         *useSentryRollup,
 		SentryRollupSyncInSecs:  *sentryRollupSyncInSecs,
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
-		ClearbitEnabled:      *clearbitEnabled,
-		SixSignalEnabled:     *sixSignalEnabled,
-		EnableDebuggingForIP: *enableDebuggingForIP,
+		ClearbitEnabled:        *clearbitEnabled,
+		SixSignalEnabled:       *sixSignalEnabled,
+		EnableDebuggingForIP:   *enableDebuggingForIP,
+		BlockedIPProjectTokens: *blockedIPProjectTokens,
 	}
 	C.InitConf(config)
 

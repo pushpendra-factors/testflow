@@ -574,3 +574,33 @@ func TestPrependEvent(t *testing.T) {
 	assert.Equal(t, "e1", events[1].ID)
 	assert.Equal(t, "e2", events[2].ID)
 }
+
+func TestGetLatestTimestampByEventNameId(t *testing.T) {
+	// Initialize a project, user and  the event.
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	start := time.Now()
+
+	for i := 0; i < 5; i++ {
+
+		start = start.AddDate(0, 0, 1)
+
+		newEvent := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+			UserId: userId, Timestamp: start.Unix(),
+			Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "The Impact of Using Emojis 😄 😍 💗 in Push Notifications"}`)}}
+
+		_, errCode := store.GetStore().CreateEvent(newEvent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
+	}
+
+	latestTimestamp, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(projectId, eventNameId, start.Unix()-10*U.SECONDS_IN_A_DAY, start.Unix()+10*U.SECONDS_IN_A_DAY)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, start.Unix(), latestTimestamp)
+
+	latestTimestamp1, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(projectId, eventNameId, start.Unix()+20*U.SECONDS_IN_A_DAY, start.Unix()+30*U.SECONDS_IN_A_DAY)
+	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Equal(t, int64(0), latestTimestamp1)
+
+}

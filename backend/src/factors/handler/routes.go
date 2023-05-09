@@ -392,6 +392,11 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	r.GET(ROUTE_SDK_ROOT+"/service/status", SDKStatusHandler)
 	r.POST(ROUTE_SDK_ROOT+"/service/error", SDKErrorHandler)
 
+	// Robots.txt added to disallow crawling.
+	r.GET("/robots.txt", func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/plain", []byte("User-agent: *\nDisallow: *"))
+	})
+
 	// Todo(Dinesh): Check integrity of token using encrytion/decryption
 	// with secret, on middleware, to avoid spamming queue.
 
