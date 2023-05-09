@@ -26,6 +26,7 @@ func TestGetCampaignMetric(t *testing.T) {
 		PropertyDataType: U.PropertyTypeCategorical,
 		Condition:        M.EqualsOpStr,
 		Value:            "val11",
+		LogicalOp:        M.LOGICAL_OP_AND,
 	}}
 	propsToEvalFiltered := []string{"campaign#prop1", "campaign#prop2", "campaign#prop3", "campaign#prop4", "ad_group#prop4", "ad_group#prop5", "ad_group#prop6", "ad#prop6"}
 	queryLevel := 3

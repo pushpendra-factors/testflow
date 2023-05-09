@@ -1,957 +1,533 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Table,
-  Button,
-  Modal,
-  Spin,
-  Popover,
-  Tabs,
-  notification,
-  Divider,
-  Input
-} from 'antd';
-import { connect, useSelector } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import { Button, Dropdown, Menu, notification, Popover, Tabs } from 'antd';
 import { bindActionCreators } from 'redux';
+import { connect, useSelector } from 'react-redux';
 import { Text, SVG } from '../../factorsComponents';
-import MomentTz from '../../MomentTz';
-import AccountDetails from './AccountDetails';
-import PropertyFilter from '../MyComponents/PropertyFilter';
-import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
-import FaSelect from '../../FaSelect';
+import AccountTimelineBirdView from './AccountTimelineBirdView';
 import {
   DEFAULT_TIMELINE_CONFIG,
-  displayFilterOpts,
-  formatEventsFromSegment,
-  formatFiltersForPayload,
-  formatPayloadForFilters,
-  formatSegmentsObjToGroupSelectObj,
   getHost,
   getPropType,
-  propValueFormat
+  granularityOptions
 } from '../utils';
 import {
-  getProfileAccounts,
-  getProfileAccountDetails,
-  createNewSegment,
-  getSavedSegments,
-  updateSegmentForId
-} from '../../../reducers/timelines/middleware';
-import {
-  fetchProjectSettings,
-  udpateProjectSettings
-} from '../../../reducers/global';
-import SearchCheckList from 'Components/SearchCheckList';
-import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import { PropTextFormat } from 'Utils/dataFormatter';
-import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
-import SegmentModal from '../UserProfiles/SegmentModal';
-import EventsBlock from '../MyComponents/EventsBlock';
-import {
-  fetchGroupPropertyValues,
-  fetchGroups
-} from 'Reducers/coreQuery/services';
-import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
-
-function AccountProfiles({
-  activeProject,
-  groupOpts,
-  accounts,
-  segments,
-  createNewSegment,
-  getSavedSegments,
-  accountDetails,
-  fetchProjectSettings,
-  fetchGroups,
   udpateProjectSettings,
+  fetchProjectSettings
+} from '../../../reducers/global';
+import { getProfileAccountDetails } from '../../../reducers/timelines/middleware';
+import {
+  formatUserPropertiesToCheckList,
+  getActivitiesWithEnableKeyConfig
+} from '../../../reducers/timelines/utils';
+import SearchCheckList from '../../SearchCheckList';
+import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
+import GroupSelect2 from '../../QueryComposer/GroupSelect2';
+import AccountTimelineSingleView from './AccountTimelineSingleView';
+import { PropTextFormat } from 'Utils/dataFormatter';
+
+function AccountDetails({
+  accountId,
+  source,
+  onCancel,
+  accountDetails,
+  activeProject,
   currentProjectSettings,
-  getProfileAccounts,
+  fetchProjectSettings,
+  udpateProjectSettings,
   getProfileAccountDetails,
-  getGroupProperties,
-  updateSegmentForId
+  userProperties,
+  groupProperties,
+  eventNamesMap
 }) {
-  const { groupPropNames } = useSelector((state) => state.coreQuery);
-  const groupProperties = useSelector(
-    (state) => state.coreQuery.groupProperties
-  );
-
-  const [searchBarOpen, setSearchBarOpen] = useState(false);
-  const [searchDDOpen, setSearchDDOpen] = useState(false);
-  const [listSearchItems, setListSearchItems] = useState([]);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isGroupDDVisible, setGroupDDVisible] = useState(false);
-  const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
-  const [showSegmentModal, setShowSegmentModal] = useState(false);
-  const [activeSegment, setActiveSegment] = useState({});
+  const [granularity, setGranularity] = useState('Daily');
+  const [collapseAll, setCollapseAll] = useState(true);
+  const [activities, setActivities] = useState([]);
+  const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [listProperties, setListProperties] = useState([]);
-  const [activeModalKey, setActiveModalKey] = useState('');
-  const [showPopOver, setShowPopOver] = useState(false);
-  const [checkListAccountProps, setCheckListAccountProps] = useState([]);
+  const [checkListMilestones, setCheckListMilestones] = useState([]);
+  const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
-  const [accountPayload, setAccountPayload] = useState({
-    source: '',
-    filters: [],
-    segment_id: ''
-  });
-  const [companyValueOpts, setCompanyValueOpts] = useState({ All: {} });
+  const { TabPane } = Tabs;
+
+  const { groupPropNames } = useSelector((state) => state.coreQuery);
 
   useEffect(() => {
-    fetchGroups(activeProject?.id, true);
-  }, [activeProject]);
-
-  const groupsList = useMemo(() => {
-    const groups =
-      groupOpts?.map(({ display_name, group_name }) => [
-        display_name,
-        group_name
-      ]) || [];
-    if (groups.length > 1) {
-      groups.unshift(['All Accounts', 'All']);
-    }
-    return groups;
-  }, [groupOpts]);
-
-  const filterPropsMap = {
-    $hubspot_company: 'hubspot',
-    $salesforce_account: 'salesforce',
-    $6signal: '6Signal',
-    All: ''
-  };
-
-  const displayTableProps = useMemo(() => {
-    const tableProps = accountPayload.segment_id
-      ? activeSegment.query.table_props
-      : currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
-          (item) => item.includes(filterPropsMap[accountPayload?.source])
-        );
-
-    return tableProps !== null && tableProps !== undefined ? tableProps : [];
-  }, [currentProjectSettings, accountPayload, activeSegment]);
+    const lsitDatetimeProperties = listProperties.filter(
+      (item) => item[2] === 'datetime'
+    );
+    const propsWithEnableKey = formatUserPropertiesToCheckList(
+      lsitDatetimeProperties,
+      currentProjectSettings.timelines_config?.account_config?.milestones
+    );
+    setCheckListMilestones(propsWithEnableKey);
+  }, [currentProjectSettings, listProperties]);
 
   useEffect(() => {
-    if (!groupOpts?.[0]?.group_name) return;
-
-    setAccountPayload((prevPayload) => ({
-      ...prevPayload,
-      source: groupOpts[0].group_name
-    }));
-  }, [groupOpts]);
-
-  useEffect(() => {
-    if (!currentProjectSettings?.timelines_config) return;
-
-    const {
-      timelines_config: { disabled_events, user_config, account_config }
-    } = currentProjectSettings;
-
-    setTLConfig({
-      disabled_events: [...disabled_events],
-      user_config: { ...DEFAULT_TIMELINE_CONFIG.user_config, ...user_config },
-      account_config: {
+    if (currentProjectSettings?.timelines_config) {
+      const timelinesConfig = {};
+      timelinesConfig.disabled_events = [
+        ...currentProjectSettings?.timelines_config?.disabled_events
+      ];
+      timelinesConfig.user_config = {
+        ...DEFAULT_TIMELINE_CONFIG.user_config,
+        ...currentProjectSettings?.timelines_config?.user_config
+      };
+      timelinesConfig.account_config = {
         ...DEFAULT_TIMELINE_CONFIG.account_config,
-        ...account_config
-      }
-    });
+        ...currentProjectSettings?.timelines_config?.account_config
+      };
+      setTLConfig(timelinesConfig);
+    }
   }, [currentProjectSettings]);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
-    getSavedSegments(activeProject.id);
-    getGroupProperties(activeProject.id, '$hubspot_company');
-    getGroupProperties(activeProject.id, '$salesforce_account');
-    getGroupProperties(activeProject.id, '$6signal');
-  }, [activeProject.id]);
+  }, [activeProject]);
 
   useEffect(() => {
-    if (accountPayload.source && accountPayload.source !== '') {
-      const formattedFilters = formatFiltersForPayload(accountPayload.filters, false);
-      getProfileAccounts(activeProject.id, {
-        ...accountPayload,
-        filters: formattedFilters
-      });
-    }
-  }, [activeProject?.id, currentProjectSettings, accountPayload]);
-
-  useEffect(() => {
-    const getListProperties = () => {
-      if (!accountPayload || !groupProperties) {
-        return [];
-      }
-      if (accountPayload.source === 'All') {
-        const hubspotProps = groupProperties.$hubspot_company
-          ? groupProperties.$hubspot_company
-          : [];
-        const salesforceProps = groupProperties.$salesforce_account
-          ? groupProperties.$salesforce_account
-          : [];
-        const sixsignalProps = groupProperties.$6signal
-          ? groupProperties.$6signal
-          : [];
-        return [...hubspotProps, ...salesforceProps, ...sixsignalProps];
-      } else {
-        return groupProperties?.[accountPayload.source]
-          ? groupProperties[accountPayload.source]
-          : [];
-      }
-    };
-
-    const listProps = getListProperties();
-    setListProperties(listProps);
-  }, [groupProperties, accountPayload?.source]);
-
-  useEffect(() => {
-    const tableProps = accountPayload.segment_id
-      ? activeSegment.query.table_props
-      : currentProjectSettings.timelines_config?.account_config?.table_props;
-    const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
-      listProperties,
-      tableProps
+    const listActivities = getActivitiesWithEnableKeyConfig(
+      accountDetails.data?.account_events,
+      currentProjectSettings.timelines_config?.disabled_events
     );
-    setCheckListAccountProps(accountPropsWithEnableKey);
-  }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
+    setActivities(listActivities);
+  }, [currentProjectSettings, accountDetails]);
 
-  const headerClassStr =
-    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
-
-  const getTablePropColumn = (prop) => {
-    const propDisplayName = groupPropNames[prop]
-      ? groupPropNames[prop]
-      : PropTextFormat(prop);
-    const propType = getPropType(listProperties, prop);
-    return {
-      title: (
-        <Text
-          type='title'
-          level={7}
-          color='grey-2'
-          weight='bold'
-          className='m-0'
-          truncate
-        >
-          {propDisplayName}
-        </Text>
-      ),
-      dataIndex: prop,
-      key: prop,
-      width: 300,
-      render: (value) => (
-        <Text type='title' level={7} className='m-0' truncate>
-          {value ? propValueFormat(prop, value, propType) : '-'}
-        </Text>
-      )
-    };
-  };
-
-  const getColumns = () => {
-    const columns = [
-      {
-        // Company Name Column
-        title: <div className={headerClassStr}>Company Name</div>,
-        dataIndex: 'account',
-        key: 'account',
-        width: 300,
-        fixed: 'left',
-        ellipsis: true,
-        render: (item) =>
-          (
-            <div className='flex items-center'>
-              <img
-                src={`https://logo.uplead.com/${getHost(item.host)}`}
-                onError={(e) => {
-                  if (
-                    e.target.src !==
-                    'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
-                  ) {
-                    e.target.src =
-                      'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
-                  }
-                }}
-                alt=''
-                width='20'
-                height='20'
-              />
-              <span className='ml-2'>{item.name}</span>
-            </div>
-          ) || '-'
-      }
+  useEffect(() => {
+    const mergeGroupedProps = [
+      ...(groupProperties.$hubspot_company
+        ? groupProperties.$hubspot_company
+        : []),
+      ...(groupProperties.$salesforce_account
+        ? groupProperties.$salesforce_account
+        : []),
+      ...(groupProperties.$6signal ? groupProperties.$6signal : [])
     ];
-    // Table Prop Columns
-    displayTableProps?.forEach((prop) => {
-      columns.push(getTablePropColumn(prop));
-    });
-    // Last Activity Column
-    columns.push({
-      title: <div className={headerClassStr}>Last Activity</div>,
-      dataIndex: 'last_activity',
-      key: 'last_activity',
-      width: 250,
-      align: 'right',
-      render: (item) => MomentTz(item).fromNow()
-    });
-    return columns;
-  };
+    setListProperties(mergeGroupedProps);
+  }, [groupProperties]);
 
-  const getTableData = (data) => {
-    const sortedData = data.sort(
-      (a, b) => new Date(b.last_activity) - new Date(a.last_activity)
+  useEffect(() => {
+    const userPropsWithEnableKey = formatUserPropertiesToCheckList(
+      userProperties,
+      [currentProjectSettings.timelines_config?.account_config?.user_prop]
     );
-    return sortedData.map((row) => ({
-      ...row,
-      ...row?.table_props
-    }));
-  };
-
-  const showModal = () => {
-    setIsModalVisible(true);
-  };
-
-  const handleCancel = () => {
-    setIsModalVisible(false);
-  };
-
-  const onChange = (val) => {
-    if (val !== accountPayload.source) {
-      const opts = { ...accountPayload };
-      opts.source = val;
-      opts.filters = [];
-      opts.segment_id = '';
-      setActiveSegment({});
-      setAccountPayload(opts);
-    }
-    setGroupDDVisible(false);
-  };
-
-  const setFilters = (filters) => {
-    const opts = { ...accountPayload };
-    opts.filters = filters;
-    setAccountPayload(opts);
-  };
-
-  const clearFilters = () => {
-    const opts = { ...accountPayload };
-    opts.filters = [];
-    setAccountPayload(opts);
-  };
-
-  const selectGroup = () => (
-    <div className='absolute top-0'>
-      {isGroupDDVisible ? (
-        <FaSelect
-          options={groupsList}
-          onClickOutside={() => setGroupDDVisible(false)}
-          optionClick={(val) => onChange(val[1])}
-        />
-      ) : null}
-    </div>
-  );
+    setCheckListUserProps(userPropsWithEnableKey);
+  }, [currentProjectSettings, userProperties]);
 
   const handlePropChange = (option) => {
     if (
-      option.enabled ||
-      checkListAccountProps.filter((item) => item.enabled === true).length < 8
+      option.prop_name !==
+      currentProjectSettings.timelines_config.account_config.user_prop
     ) {
-      const checkListProps = [...checkListAccountProps];
+      const timelinesConfig = { ...currentProjectSettings.timelines_config };
+      timelinesConfig.account_config.user_prop = option.prop_name;
+      udpateProjectSettings(activeProject.id, {
+        timelines_config: { ...timelinesConfig }
+      }).then(() =>
+        getProfileAccountDetails(
+          activeProject.id,
+          accountId,
+		  source,
+          currentProjectSettings?.timelines_config
+        )
+      );
+    }
+  };
+
+  const handleEventsChange = (option) => {
+    const timelinesConfig = { ...currentProjectSettings.timelines_config };
+    if (option.enabled) {
+      timelinesConfig.disabled_events.push(option.display_name);
+    } else if (!option.enabled) {
+      timelinesConfig.disabled_events.splice(
+        timelinesConfig.disabled_events.indexOf(option.display_name),
+        1
+      );
+    }
+    udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...timelinesConfig }
+    });
+  };
+
+  const handleMilestonesChange = (option) => {
+    if (
+      option.enabled ||
+      checkListMilestones.filter((item) => item.enabled === true).length < 5
+    ) {
+      const checkListProps = [...checkListMilestones];
       const optIndex = checkListProps.findIndex(
         (obj) => obj.prop_name === option.prop_name
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListAccountProps(
+      setCheckListMilestones(
         checkListProps.sort((a, b) => b.enabled - a.enabled)
       );
     } else {
       notification.error({
         message: 'Error',
-        description: 'Maximum Table Properties Selection Reached.',
+        description: 'Maximum of 5 Milestones Selection Reached.',
         duration: 2
       });
     }
   };
 
-  const applyTableProps = () => {
-    if (accountPayload?.segment_id?.length) {
-      const updatedQuery = {
-        ...activeSegment.query,
-        table_props: checkListAccountProps
-          .filter(({ enabled }) => enabled)
-          .map(({ prop_name }) => prop_name)
-      };
-
-      updateSegmentForId(activeProject.id, accountPayload.segment_id, {
-        query: updatedQuery
-      })
-        .then(() => getSavedSegments(activeProject.id))
-        .then(() =>
-          setActiveSegment((segment) => ({ ...segment, query: updatedQuery }))
-        )
-        .finally(() => setShowPopOver(false));
-    } else {
-      const filteredProps = tlConfig.account_config.table_props.filter(
-        (item) =>
-          !checkListAccountProps.some(({ prop_name }) => prop_name === item)
-      );
-      const enabledProps = checkListAccountProps
-        .filter(({ enabled }) => enabled)
-        .map(({ prop_name }) => prop_name);
-
-      const updatedConfig = {
-        ...tlConfig,
-        account_config: {
-          ...tlConfig.account_config,
-          table_props: [...filteredProps, ...enabledProps]
-        }
-      };
-
-      udpateProjectSettings(activeProject.id, {
-        timelines_config: updatedConfig
-      }).finally(() => setShowPopOver(false));
-    }
+  const applyMilestones = () => {
+    const timelinesConfig = { ...tlConfig };
+    timelinesConfig.account_config.milestones = checkListMilestones
+      .filter((item) => item.enabled === true)
+      .map((item) => item?.prop_name);
+    udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...timelinesConfig }
+    }).then(() =>
+      getProfileAccountDetails(
+        activeProject.id,
+        accountId,
+		source,
+        currentProjectSettings?.timelines_config
+      )
+    );
   };
 
-  const popoverContent = () => (
+  const controlsPopover = () => (
     <Tabs defaultActiveKey='events' size='small'>
-      <Tabs.TabPane
-        tab={
-          <span className='fa-activity-filter--tabname'>Table Properties</span>
-        }
-        key='props'
+      <TabPane
+        tab={<span className='fa-activity-filter--tabname'>Events</span>}
+        key='events'
+      >
+        <SearchCheckList
+          placeholder='Search Events'
+          mapArray={activities}
+          titleKey='display_name'
+          checkedKey='enabled'
+          onChange={handleEventsChange}
+        />
+      </TabPane>
+      <TabPane
+        tab={<span className='fa-activity-filter--tabname'>Properties</span>}
+        key='properties'
       >
         <SearchCheckList
           placeholder='Search Properties'
-          mapArray={checkListAccountProps}
+          mapArray={checkListUserProps}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handlePropChange}
+        />
+      </TabPane>
+      <Tabs.TabPane
+        tab={<span className='fa-activity-filter--tabname'>Milestones</span>}
+        key='milestones'
+      >
+        <SearchCheckList
+          placeholder='Select Upto 5 Milestones'
+          mapArray={checkListMilestones}
+          titleKey='display_name'
+          checkedKey='enabled'
+          onChange={handleMilestonesChange}
           showApply
-          onApply={applyTableProps}
+          onApply={applyMilestones}
         />
       </Tabs.TabPane>
     </Tabs>
   );
 
-  const generateSegmentsList = () => {
-    const segmentsList = [];
+  const granularityMenu = (
+    <Menu>
+      {granularityOptions.map((option) => (
+        <Menu.Item key={option} onClick={(key) => setGranularity(key.key)}>
+          <div className='flex items-center'>
+            <span className='mr-3'>{option}</span>
+          </div>
+        </Menu.Item>
+      ))}
+    </Menu>
+  );
 
-    if (accountPayload.source === 'All') {
-      const allowedGroups = [
-        '$hubspot_company',
-        '$salesforce_account',
-        '$6signal'
-      ];
-
-      Object.entries(segments)
-        .filter(([group]) => allowedGroups.includes(group))
-        .map(([group, vals]) => formatSegmentsObjToGroupSelectObj(group, vals))
-        .forEach((obj) => segmentsList.push(obj));
-    } else {
-      const obj = formatSegmentsObjToGroupSelectObj(
-        accountPayload.source,
-        segments[accountPayload.source]
+  const handleOptionClick = (group, value) => {
+    const timelinesConfig = { ...tlConfig };
+    if (!timelinesConfig.account_config.leftpane_props.includes(value[1])) {
+      timelinesConfig.account_config.leftpane_props.push(value[1]);
+      udpateProjectSettings(activeProject.id, {
+        timelines_config: { ...timelinesConfig }
+      }).then(() =>
+        getProfileAccountDetails(
+          activeProject.id,
+          accountId,
+		  source,
+          currentProjectSettings?.timelines_config
+        )
       );
-      segmentsList.push(obj);
     }
-    return segmentsList;
+    setPropSelectOpen(false);
   };
 
-  const onOptionClick = (_, data) => {
-    const opts = { ...accountPayload };
-    opts.segment_id = data[1];
-    opts.source = data[2].type;
-    setActiveSegment(data[2]);
-    setAccountPayload(opts);
-    setSegmentDDVisible(false);
-  };
-
-  const handleSaveSegment = async (segmentPayload) => {
-    try {
-      const response = await createNewSegment(activeProject.id, segmentPayload);
-      if (response.type === 'SEGMENT_CREATION_FULFILLED') {
-        notification.success({
-          message: 'Success!',
-          description: response?.payload?.message,
-          duration: 3
-        });
-        setShowSegmentModal(false);
-        setSegmentDDVisible(false);
-      }
-      await getSavedSegments(activeProject.id);
-    } catch (err) {
-      notification.error({
-        message: 'Error',
-        description: 'Segment Creation Failed. Invalid Parameters.',
-        duration: 3
-      });
-    }
-  };
-
-  const clearSegment = () => {
-    const opts = { ...accountPayload };
-    opts.segment_id = '';
-    setActiveSegment({});
-    setAccountPayload(opts);
-    setSegmentDDVisible(false);
-  };
-
-  const renderAdditionalActionsInSegment = () => (
-    <div className='mb-2'>
-      <Divider className='divider-margin' />
-      <div className='flex items-center flex-col'>
-        {accountPayload.segment_id && (
-          <Button
-            size='large'
-            type='text'
-            className='w-full mb-2'
-            onClick={clearSegment}
-            icon={<SVG name='remove' />}
-          >
-            Clear Segment
-          </Button>
-        )}
-        <Button
-          type='link'
-          size='large'
-          className='w-full'
-          icon={<SVG name='plus' color='purple' />}
-          onClick={() => setShowSegmentModal(true)}
-        >
-          Add New Segment
-        </Button>
-      </div>
-      <SegmentModal
-        profileType='account'
-        activeProject={activeProject}
-        type={accountPayload.source}
-        typeOptions={groupsList.filter((group) => group[1] !== 'All')}
-        visible={showSegmentModal}
-        segment={{}}
-        onSave={handleSaveSegment}
-        onCancel={() => setShowSegmentModal(false)}
-        caller={'account_profiles'}
-        tableProps={
-          currentProjectSettings.timelines_config?.account_config?.table_props
-        }
-      />
-    </div>
-  );
-
-  const selectSegment = () => (
-    <div className='absolute top-8'>
-      {isSegmentDDVisible ? (
-        <GroupSelect2
-          groupedProperties={generateSegmentsList()}
-          placeholder='Search Segments'
-          optionClick={onOptionClick}
-          onClickOutside={() => setSegmentDDVisible(false)}
-          additionalActions={renderAdditionalActionsInSegment()}
-        />
-      ) : null}
-    </div>
-  );
-
-  const eventsList = (listEvents) => {
-    const blockList = listEvents.map((event, index) => (
-      <div key={index} className='m-0 mr-2 mb-2'>
-        <EventsBlock
-          availableGroups={groupsList}
-          index={index + 1}
-          event={event}
-          queries={listEvents}
-          viewMode
-        />
-      </div>
-    ));
-
-    if (!blockList.length) {
-      return null;
-    }
-    return (
-      <div className='segment-query_block'>
-        <h2
-          className={`title ${
-            activeSegment?.query?.gup?.length ? '' : 'width-unset'
-          }`}
-        >
-          Performed Events
-        </h2>
-        <div className='content'>{blockList}</div>
-      </div>
+  const onDelete = (option) => {
+    const timelinesConfig = { ...tlConfig };
+    timelinesConfig.account_config.leftpane_props.splice(
+      timelinesConfig.account_config.leftpane_props.indexOf(option),
+      1
     );
-  };
-
-  const filtersList = (filters) => {
-    return (
-      <div className='segment-query_block'>
-        <h2
-          className={`title ${
-            activeSegment?.query?.ewp?.length ? '' : 'width-unset'
-          }`}
-        >
-          Properties
-        </h2>
-        <div className='content'>
-          <PropertyFilter
-            filtersLimit={10}
-            profileType='account'
-            source={accountPayload.source}
-            filters={filters}
-            viewMode
-          ></PropertyFilter>
-        </div>
-      </div>
-    );
-  };
-
-  const segmentInfo = () => {
-    if (!activeSegment.query) {
-      return null;
-    }
-
-    return (
-      <div className='p-3'>
-        {activeSegment.query.ewp && activeSegment.query.ewp.length
-          ? eventsList(formatEventsFromSegment(activeSegment.query.ewp))
-          : null}
-        {activeSegment.query.gup && activeSegment.query.gup.length
-          ? filtersList(formatPayloadForFilters(activeSegment.query.gup))
-          : null}
-        <h2 className='whitespace-no-wrap italic line-height-8 m-0 mr-2'>
-          {`*Shows ${displayFilterOpts[activeSegment.type]} from last 28 days.`}
-        </h2>
-      </div>
-    );
-  };
-
-  const renderGroupSelectDD = () => (
-    <div className='relative mr-2'>
-      <Button
-        className='dropdown-btn'
-        type='text'
-        icon={<SVG name='user_friends' size={16} />}
-        onClick={() => setGroupDDVisible(!isGroupDDVisible)}
-      >
-        {
-          groupsList?.find(
-            ([_, groupName]) => groupName === accountPayload?.source
-          )?.[0]
-        }
-        <SVG name='caretDown' size={16} />
-      </Button>
-      {selectGroup()}
-    </div>
-  );
-
-  const renderSegmentSelect = () => (
-    <div className='relative mr-2'>
-      <Popover
-        overlayClassName='fa-custom-popover'
-        placement='bottomLeft'
-        trigger={activeSegment.query ? 'hover' : ''}
-        content={segmentInfo}
-        mouseEnterDelay={0.5}
-      >
-        <Button
-          className='dropdown-btn'
-          type='text'
-          onClick={() => setSegmentDDVisible(!isSegmentDDVisible)}
-        >
-          {Object.keys(activeSegment).length
-            ? activeSegment.name
-            : 'Select Segment'}
-          <SVG name='caretDown' size={16} />
-        </Button>
-      </Popover>
-      {selectSegment()}
-    </div>
-  );
-
-  const renderPropertyFilter = () => (
-    <div key={0} className='max-w-3xl'>
-      <PropertyFilter
-        profileType='account'
-        source={accountPayload.source}
-        filters={accountPayload.filters}
-        setFilters={setFilters}
-      />
-    </div>
-  );
-
-  const renderClearFilterButton = () => (
-    <Button
-      className='dropdown-btn large mr-2'
-      type='text'
-      icon={<SVG name='times_circle' size={16} />}
-      onClick={clearFilters}
-    >
-      Clear Filters
-    </Button>
-  );
-
-  const groupToCompanyPropMap = {
-    $hubspot_company: '$hubspot_company_name',
-    $salesforce_account: '$salesforce_account_name',
-    $6signal: '$6Signal_name'
-  };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const newCompanyValues = { All: {} };
-      for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
-        if (groupOpts.find((elem) => elem.group_name === group)) {
-          try {
-            const res = await fetchGroupPropertyValues(
-              activeProject.id,
-              group,
-              prop
-            );
-            newCompanyValues[group] = { ...res.data };
-            newCompanyValues['All'] = {
-              ...newCompanyValues['All'],
-              ...res.data
-            };
-          } catch (err) {
-            console.log(err);
-          }
-        }
-      }
-      setCompanyValueOpts(newCompanyValues);
-    };
-    fetchData();
-  }, [activeProject.id, groupOpts]);
-
-  const onApplyClick = (val) => {
-    const parsedValues = val.map((vl) => JSON.parse(vl)[0]);
-    const searchFilter = [];
-    const lookIn =
-      accountPayload.source === 'All'
-        ? Object.entries(groupToCompanyPropMap)
-        : [
-            [
-              accountPayload.source,
-              groupToCompanyPropMap[accountPayload.source]
-            ]
-          ];
-    lookIn.forEach(([group, prop]) => {
-      searchFilter.push({
-        props: [prop, 'categorical', 'group'],
-        operator: 'equals',
-        values: parsedValues
-      });
+    udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...timelinesConfig }
     });
-
-    const updatedPayload = {
-      ...accountPayload,
-      search_filter: formatFiltersForPayload(searchFilter, false)
-    };
-    updatedPayload.search_filter = updatedPayload.search_filter.map(
-      (filter, index) => {
-        const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
-        return isAnd ? filter : { ...filter, lop: 'OR' };
-      }
-    );
-
-    setListSearchItems(parsedValues);
-    setAccountPayload(updatedPayload);
   };
 
-  const onSearchClose = () => {
-    setSearchBarOpen(false);
-    setSearchDDOpen(false);
-    if (accountPayload?.search_filter?.length) {
-      const payload = { ...accountPayload };
-      payload.search_filter = [];
-      setListSearchItems([]);
-      setAccountPayload(payload);
-    }
-  };
-
-  const onSearchOpen = () => {
-    setSearchBarOpen(true);
-    setSearchDDOpen(true);
-  };
-
-  const searchCompanies = () => (
-    <div className='absolute top-0'>
-      {searchDDOpen ? (
-        <FaSelect
-          placeholder='Search Accounts'
-          multiSelect
-          options={
-            companyValueOpts?.[accountPayload?.source]
-              ? Object.keys(companyValueOpts[accountPayload?.source]).map(
-                  (value) => [value]
-                )
-              : []
-          }
-          displayNames={companyValueOpts?.[accountPayload?.source]}
-          applClick={(val) => onApplyClick(val)}
-          onClickOutside={() => setSearchDDOpen(false)}
-          selectedOpts={listSearchItems}
-          style={{
-            top: '-2px',
-            left: '-60px',
-            padding: 0,
-            overflowX: 'hidden'
+  const renderModalHeader = () => (
+    <div className='fa-timeline-modal--header'>
+      <div className='flex items-center'>
+        <Button
+          style={{ padding: 0 }}
+          type='text'
+          icon={<SVG name='brand' size={36} />}
+          size='large'
+          onClick={() => {
+            onCancel();
+            setGranularity('Daily');
+            setCollapseAll(true);
+            setPropSelectOpen(false);
           }}
-          allowSearch
-          posRight
         />
-      ) : null}
-    </div>
-  );
-
-  const renderSearchSection = () => (
-    <div className='relative mr-2'>
-      {searchBarOpen ? (
-        <div className={'flex items-center justify-between'}>
-          <Input
-            size='large'
-            value={listSearchItems ? listSearchItems.join(', ') : null}
-            placeholder={'Search Accounts'}
-            style={{ width: '240px', 'border-radius': '5px' }}
-            prefix={<SVG name='search' size={16} color={'grey'} />}
-            onClick={() => setSearchDDOpen(true)}
-          />
-          <Button className='search-btn' onClick={onSearchClose}>
-            <SVG name={'close'} size={20} color={'grey'} />
-          </Button>
-        </div>
-      ) : (
-        <Button className='search-btn' onClick={onSearchOpen}>
-          <SVG name={'search'} size={20} color={'grey'} />
-        </Button>
-      )}
-      {searchCompanies()}
-    </div>
-  );
-
-  const renderTablePropsSelect = () => (
-    <Popover
-      overlayClassName='fa-activity--filter'
-      placement='bottomLeft'
-      visible={showPopOver}
-      onVisibleChange={(visible) => {
-        setShowPopOver(visible);
-      }}
-      onClick={() => {
-        setShowPopOver(true);
-      }}
-      trigger='click'
-      content={popoverContent}
-    >
+        <Text type='title' level={4} weight='bold' extraClass='m-0'>
+          Account Details
+        </Text>
+      </div>
       <Button
         size='large'
-        icon={<SVG name='activity_filter' />}
-        className='relative'
-      >
-        Configure
-      </Button>
-    </Popover>
-  );
-
-  const renderActions = () => (
-    <div className='flex justify-between items-start my-4'>
-      <div className='flex justify-between'>
-        {renderGroupSelectDD()}
-        {renderSegmentSelect()}
-        {renderPropertyFilter()}
-      </div>
-      <div className='flex items-center justify-between'>
-        {accountPayload.filters.length ? renderClearFilterButton() : null}
-        {renderSearchSection()}
-        {renderTablePropsSelect()}
-      </div>
-    </div>
-  );
-
-  const renderTable = () => (
-    <div>
-      <Table
-        onRow={(account) => ({
-          onClick: () => {
-            getProfileAccountDetails(
-              activeProject.id,
-              account.identity,
-			  accountPayload.source,
-              currentProjectSettings?.timelines_config
-            );
-            setActiveModalKey(account.identity);
-            showModal();
-          }
-        })}
-        className='fa-table--userlist'
-        dataSource={getTableData(accounts.data)}
-        columns={getColumns()}
-        rowClassName='cursor-pointer'
-        pagination={{ position: ['bottom', 'left'], defaultPageSize: '25' }}
-        scroll={{
-          x: displayTableProps?.length * 300
+        type='text'
+        onClick={() => {
+          onCancel();
+          setGranularity('Daily');
+          setCollapseAll(true);
+          setPropSelectOpen(false);
         }}
-        footer={() => (
-          <div className='text-right'>
-            <a
-              className='font-size--small'
-              href='https://www.uplead.com'
-              target='_blank'
-              rel='noopener noreferrer'
-            >
-              Logos provided by UpLead
-            </a>
-          </div>
-        )}
+        icon={<SVG name='times' />}
       />
     </div>
   );
 
-  const renderAccountDetailsModal = () => (
-    <Modal
-      title={null}
-      visible={isModalVisible}
-      className='fa-modal--full-width'
-      footer={null}
-      closable={null}
-    >
-      <AccountDetails accountId={activeModalKey} source={accountPayload.source} onCancel={handleCancel} />
-    </Modal>
+  const listLeftPaneProps = (props = []) => {
+    const propsList = [];
+    const showProps =
+      currentProjectSettings?.timelines_config?.account_config
+        ?.leftpane_props || [];
+    showProps.forEach((prop, index) => {
+      const propType = getPropType(listProperties, prop);
+      const propDisplayName = groupPropNames[prop]
+        ? groupPropNames[prop]
+        : PropTextFormat(prop);
+      const value = props[prop] || '-';
+      propsList.push(
+        <div key={index}>
+          <LeftPanePropBlock
+            property={prop}
+            type={propType}
+            displayName={propDisplayName}
+            value={value}
+            onDelete={onDelete}
+          />
+        </div>
+      );
+    });
+    return propsList;
+  };
+
+  const generateAccountProps = () => {
+    const groupProps = [
+      { label: 'Account Properties', icon: 'users', values: [] }
+    ];
+    groupProps[0].values = listProperties;
+    return groupProps;
+  };
+
+  const selectProps = () =>
+    propSelectOpen && (
+      <div className='relative'>
+        <GroupSelect2
+          groupedProperties={generateAccountProps()}
+          placeholder='Select Property'
+          optionClick={handleOptionClick}
+          onClickOutside={() => setPropSelectOpen(false)}
+        />
+      </div>
+    );
+
+  const renderAddNewProp = () =>
+    !currentProjectSettings?.timelines_config?.account_config?.leftpane_props ||
+    currentProjectSettings?.timelines_config?.account_config?.leftpane_props
+      ?.length < 8 ? (
+      <div>
+        <Button
+          type='link'
+          icon={<SVG name='plus' color='purple' />}
+          onClick={() => setPropSelectOpen(!propSelectOpen)}
+        >
+          Add property
+        </Button>
+        {selectProps()}
+      </div>
+    ) : null;
+
+  const renderLeftPane = () => (
+    <div className='leftpane'>
+      <div className='user'>
+        <img
+          src={`https://logo.uplead.com/${getHost(accountDetails?.data?.host)}`}
+          onError={(e) => {
+            if (
+              e.target.src !==
+              'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
+            ) {
+              e.target.src =
+                'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
+            }
+          }}
+          alt=''
+          height={96}
+          width={96}
+        />
+        <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
+          {accountDetails?.data?.name}
+        </Text>
+      </div>
+      <div className='props'>
+        {listLeftPaneProps(accountDetails.data.left_pane_props)}
+        <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
+      </div>
+      <div className='logo_attr'>
+        <a
+          className='font-size--small'
+          href='https://www.uplead.com'
+          target='_blank'
+        >
+          Brand Logo provided by UpLead
+        </a>
+      </div>
+    </div>
   );
 
+  const renderSingleTimelineView = () => (
+    <AccountTimelineSingleView
+      timelineEvents={
+        activities?.filter((activity) => activity.enabled === true) || []
+      }
+      timelineUsers={accountDetails.data?.account_users || []}
+      milestones={accountDetails.data?.milestones}
+      loading={accountDetails?.isLoading}
+      eventNamesMap={eventNamesMap}
+      listProperties={[...listProperties, ...userProperties]}
+    />
+  );
+
+  const renderBirdviewWithActions = () => (
+    <div className='flex flex-col'>
+      <div className='timeline-actions flex-row-reverse'>
+        <div className='timeline-actions__group'>
+          <div className='timeline-actions__group__collapse'>
+            <Button
+              className='collapse-btn collapse-btn--left'
+              type='text'
+              onClick={() => setCollapseAll(false)}
+            >
+              <SVG name='line_height' size={22} />
+            </Button>
+            <Button
+              className='collapse-btn collapse-btn--right'
+              type='text'
+              onClick={() => setCollapseAll(true)}
+            >
+              <SVG name='grip_lines' size={22} />
+            </Button>
+          </div>
+          <Popover
+            overlayClassName='fa-activity--filter'
+            placement='bottomLeft'
+            trigger='hover'
+            content={controlsPopover}
+          >
+            <Button
+              size='large'
+              className='fa-btn--custom mx-2 relative'
+              type='text'
+            >
+              <SVG name='activity_filter' />
+            </Button>
+          </Popover>
+          <Dropdown overlay={granularityMenu} placement='bottomRight'>
+            <Button type='text' className='flex items-center'>
+              {granularity}
+              <SVG name='caretDown' size={16} extraClass='ml-1' />
+            </Button>
+          </Dropdown>
+        </div>
+      </div>
+      <AccountTimelineBirdView
+        timelineEvents={
+          activities?.filter((activity) => activity.enabled === true) || []
+        }
+        timelineUsers={accountDetails.data?.account_users || []}
+        milestones={accountDetails.data?.milestones}
+        collapseAll={collapseAll}
+        setCollapseAll={setCollapseAll}
+        granularity={granularity}
+        loading={accountDetails?.isLoading}
+        eventNamesMap={eventNamesMap}
+        listProperties={[...listProperties, ...userProperties]}
+      />
+    </div>
+  );
+
+  const renderTimelineView = () => {
+    return (
+      <div className='timeline-view'>
+        <Tabs
+          defaultActiveKey='birdview'
+          size='small'
+          onChange={() => setGranularity(granularity)}
+        >
+          <TabPane
+            tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
+            key='timeline'
+          >
+            {renderSingleTimelineView()}
+          </TabPane>
+          <TabPane
+            tab={<span className='fa-activity-filter--tabname'>Birdview</span>}
+            key='birdview'
+          >
+            {renderBirdviewWithActions()}
+          </TabPane>
+        </Tabs>
+      </div>
+    );
+  };
+
   return (
-    <div className='list-container'>
-      <Text type='title' level={3} weight='bold' extraClass='mt-12'>
-        Account Profiles
-      </Text>
-      {renderActions()}
-      {accounts.isLoading ? (
-        <Spin size='large' className='fa-page-loader' />
-      ) : accounts.data.length ? (
-        renderTable()
-      ) : (
-        <NoDataWithMessage message={'No Accounts Found'} />
-      )}
-      {renderAccountDetailsModal()}
+    <div>
+      {renderModalHeader()}
+      <div className='fa-timeline'>
+        {renderLeftPane()}
+        {renderTimelineView()}
+      </div>
     </div>
   );
 }
+
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  groupOpts: state.groups.data,
-  accounts: state.timelines.accounts,
-  segments: state.timelines.segments,
+  currentProjectSettings: state.global.currentProjectSettings,
   accountDetails: state.timelines.accountDetails,
-  currentProjectSettings: state.global.currentProjectSettings
+  userProperties: state.coreQuery.userProperties,
+  groupProperties: state.coreQuery.groupProperties,
+  eventNamesMap: state.coreQuery.eventNamesMap
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      fetchGroups,
-      getProfileAccounts,
       getProfileAccountDetails,
-      createNewSegment,
-      getSavedSegments,
-      getGroupProperties,
       fetchProjectSettings,
-      udpateProjectSettings,
-      updateSegmentForId
+      udpateProjectSettings
     },
     dispatch
   );
 
-export default connect(mapStateToProps, mapDispatchToProps)(AccountProfiles);
+export default connect(mapStateToProps, mapDispatchToProps)(AccountDetails);

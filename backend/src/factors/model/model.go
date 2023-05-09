@@ -279,6 +279,7 @@ type Model interface {
 	CreateEvent(event *model.Event) (*model.Event, int)
 	GetEvent(projectID int64, userId string, id string) (*model.Event, int)
 	GetEventById(projectID int64, id, userID string) (*model.Event, int)
+	GetLatestEventTimeStampByEventNameId(projectId int64, eventNameId string, startTimestamp int64, endTimestamp int64) (int64, int)
 	GetLatestEventOfUserByEventNameId(projectID int64, userId string, eventNameId string, startTimestamp int64, endTimestamp int64) (*model.Event, int)
 	GetEventsByEventNameId(projectID int64, eventNameId string, startTimestamp int64, endTimestamp int64) ([]model.Event, int)
 	GetRecentEventPropertyKeysWithLimits(projectID int64, eventName string, starttime int64, endtime int64, eventsLimit int) ([]U.Property, error)
@@ -321,6 +322,7 @@ type Model interface {
 	DeleteSessionsAndAssociationForTimerange(projectID, startTimestamp, endTimestamp int64) (int64, int64, int)
 	GetEventsByEventNameIDANDTimeRange(projectID int64, eventNameID string,
 		startTimestamp int64, endTimestamp int64) ([]model.Event, int)
+	PullEventIdsWithEventNameId(projectId int64, startTimestamp int64, endTimestamp int64, eventNameID string) ([]string, map[string]model.EventIdToProperties, error)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)

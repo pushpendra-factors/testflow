@@ -322,7 +322,11 @@ func GetSourceStringForAccountsV1(groupNameIDMap map[string]int, source string) 
 	var crmNames []string
 	var crmIDs []int
 	var crmExists []bool
-	for _, crmName := range []string{model.GROUP_NAME_HUBSPOT_COMPANY, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.GROUP_NAME_SIX_SIGNAL} {
+	crmGroups := make([]string, 0, len(model.AllowedGroupNames))
+	for key := range model.AllowedGroupNames {
+		crmGroups = append(crmGroups, key)
+	}
+	for _, crmName := range crmGroups {
 		crmID, exists := groupNameIDMap[crmName]
 		crmIDs = append(crmIDs, crmID)
 		crmNames = append(crmNames, crmName)
@@ -348,10 +352,11 @@ func GetSourceStringForAccountsV1(groupNameIDMap map[string]int, source string) 
 			}
 		}
 	}
-	sourceStr := strings.Join(sourceArr, " OR ")
-	if sourceStr != "" {
-		sourceString = fmt.Sprintf("AND (%s)", sourceStr)
+	if len(sourceArr) == 0 {
+		return "", http.StatusBadRequest
 	}
+	sourceStr := strings.Join(sourceArr, " OR ")
+	sourceString = fmt.Sprintf("AND (%s)", sourceStr)
 
 	return sourceString, http.StatusOK
 }
@@ -362,8 +367,8 @@ func FormatProfilesStruct(profiles []model.Profile, profileType string, tablePro
 	}
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
-		companyNameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME}
-		hostNameProps := []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE, U.SIX_SIGNAL_DOMAIN}
+		companyNameProps := model.NameProps
+		hostNameProps := model.HostNameProps
 
 		for index, profile := range profiles {
 			filterTableProps := make(map[string]interface{}, 0)
@@ -1024,20 +1029,14 @@ func FormatAccountDetails(projectID int64, propertiesDecoded map[string]interfac
 	var nameProps, hostNameProps []string
 	var accountDetails model.AccountDetails
 	if C.IsDomainEnabled(projectID) && groupName != "All" {
-		if groupName == model.GROUP_NAME_HUBSPOT_COMPANY {
-			hostNameProps = []string{U.GP_HUBSPOT_COMPANY_DOMAIN}
-			nameProps = []string{U.GP_HUBSPOT_COMPANY_NAME}
-		} else if groupName == model.GROUP_NAME_SALESFORCE_ACCOUNT {
-			hostNameProps = []string{U.GP_SALESFORCE_ACCOUNT_WEBSITE}
-			nameProps = []string{U.GP_SALESFORCE_ACCOUNT_NAME}
-		} else if groupName == model.GROUP_NAME_SIX_SIGNAL {
-			hostNameProps = []string{U.SIX_SIGNAL_DOMAIN}
-			nameProps = []string{U.SIX_SIGNAL_NAME}
+		if model.IsAllowedAccountGroupNames(groupName) {
+			hostNameProps = []string{model.HostNameGroup[groupName]}
+			nameProps = []string{model.AccountNames[groupName]}
 		}
 		nameProps = append(nameProps, U.UP_COMPANY)
 	} else {
-		nameProps = []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME}
-		hostNameProps = []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE, U.SIX_SIGNAL_DOMAIN}
+		nameProps = model.NameProps
+		hostNameProps = model.HostNameProps
 	}
 	for _, prop := range nameProps {
 		if name, exists := (propertiesDecoded)[prop]; exists {

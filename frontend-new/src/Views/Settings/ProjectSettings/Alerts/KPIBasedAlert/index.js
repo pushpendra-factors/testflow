@@ -39,6 +39,7 @@ import SelectChannels from '../SelectChannels';
 import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import { featureLock } from '../../../../../routes/feature';
+import { whiteListedProjects } from '../../../../../routes/constants';
 
 const { Option } = Select;
 
@@ -1179,7 +1180,7 @@ const KPIBasedAlert = ({
             )}
           </div>
           {(featureLock(agent_details?.email) ||
-            activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
+            whiteListedProjects.includes(activeProject?.id)) && (
             <div className='border rounded mt-3'>
               <div style={{ backgroundColor: '#fafafa' }}>
                 <Row className={'ml-2'}>
@@ -1866,7 +1867,7 @@ const KPIBasedAlert = ({
             )}
           </div>
           {(featureLock(agent_details?.email) ||
-            activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
+            whiteListedProjects.includes(activeProject?.id)) && (
             <div className='border rounded mt-3'>
               <div style={{ backgroundColor: '#fafafa' }}>
                 <Row className={'ml-2'}>
@@ -2389,7 +2390,7 @@ const KPIBasedAlert = ({
           </Row>
         </div>
         {(featureLock(agent_details?.email) ||
-          activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
+          whiteListedProjects.includes(activeProject?.id)) && (
           <div className='border rounded mt-3'>
             <div style={{ backgroundColor: '#fafafa' }}>
               <Row className={'ml-2'}>

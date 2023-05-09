@@ -2,6 +2,8 @@
 
 const logger = require("./utils/logger");
 var App = require("./app");
+// const { EV_FORM_SUBMITTED } = require("./properties");
+const Properties = require("./properties");
 
 // Global reference.
 var app = new App();
@@ -126,7 +128,22 @@ function processQueue() {
         try{
             while(factors.q.length > 0) {
                 logger.debug("Processing Queue", false);
+                // q[0] indicates first item of the queue;
+                // a indicates list of arguments;
                 switch(factors.q[0].k) {
+                    case 'message': {
+                        if(factors.q[0].a[0] === Properties.EV_FORM_SUBMITTED) {
+                            var properties = factors.q[0].a[1];
+                            if (!Properties.hasEmailOrPhone(properties)) {
+                                logger.debug("No email and phone, skipping form submit.", false);
+                                factors.q.shift();
+                                break;
+                            }
+                            track(factors.q[0].a[0], factors.q[0].a[1]);
+                            factors.q.shift();
+                        }
+                        break;
+                    }
                     case 'track': {
                         track(factors.q[0].a[0], factors.q[0].a[1], factors.q[0].a[2]);
                         factors.q.shift();

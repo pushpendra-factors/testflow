@@ -74,7 +74,7 @@ func main() {
 
 	flag.Parse()
 
-	taskID := "dashboard_caching"
+	taskID := "db_dashboard_caching"
 	if *overrideAppName != "" {
 		taskID = *overrideAppName
 	}

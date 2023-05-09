@@ -165,7 +165,7 @@ type Configuration struct {
 	SegmentRequestQueueProjectTokens               []string
 	UseDefaultProjectSettingForSDK                 bool
 	BlockedSDKRequestProjectTokens                 []string
-	BlockedIPProjectIDs                            string
+	BlockedIPProjectTokens                         string
 	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
 	CacheLookUpRangeProjects                map[int64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
 	LookbackWindowForEventUserCache         int
@@ -2063,20 +2063,19 @@ func IsBlockedSDKRequestProjectToken(projectToken string) bool {
 }
 
 // IsIPBlockingFeatureEnabled - Enables the feature of blocking
-// IP for a project, based on given project_id and list of block_ip_project_ids.
-func IsIPBlockingFeatureEnabled(projectID int64) bool {
-	if configuration.BlockedIPProjectIDs == "" {
+// IP for a project, based on given token and list of blocked_ip_project_tokens.
+func IsIPBlockingFeatureEnabled(token string) bool {
+	if configuration.BlockedIPProjectTokens == "" {
 		return false
 	}
 
-	if configuration.BlockedIPProjectIDs == "*" {
+	if configuration.BlockedIPProjectTokens == "*" {
 		return true
 	}
 
-	projectIDstr := fmt.Sprintf("%d", projectID)
-	projectIDs := strings.Split(configuration.BlockedIPProjectIDs, ",")
-	for i := range projectIDs {
-		if projectIDs[i] == projectIDstr {
+	enabledTokens := strings.Split(configuration.BlockedIPProjectTokens, ",")
+	for i := range enabledTokens {
+		if strings.TrimSpace(enabledTokens[i]) == token {
 			return true
 		}
 	}

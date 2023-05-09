@@ -129,7 +129,20 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 	if query.AnalyzeType == model.AnalyzeTypeUserKPI {
 
 		var duplicatedRequest model.KPIQueryGroup
+
+		// Making sure the internal KPI group queries have same from to as parent attribution query
+		for index := range query.KPI.Queries {
+			query.KPI.Queries[index].From = from
+			query.KPI.Queries[index].To = to
+		}
+
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
+
+		// Making sure the internal KPI group queries have same from to as parent attribution query
+		for index := range duplicatedRequest.Queries {
+			duplicatedRequest.Queries[index].From = from
+			duplicatedRequest.Queries[index].To = to
+		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("UserKPI-Attribution result received")

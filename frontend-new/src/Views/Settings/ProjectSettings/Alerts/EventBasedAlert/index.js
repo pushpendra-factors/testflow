@@ -58,6 +58,7 @@ import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import _ from 'lodash';
 import { fetchGroups } from 'Reducers/coreQuery/services';
 import { featureLock } from '../../../../../routes/feature';
+import { whiteListedProjects } from '../../../../../routes/constants';
 
 const { Option } = Select;
 
@@ -165,17 +166,15 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     let DDCategory = [];
-    const { group_name } =
-      groupOpts.find((group) => group?.group_name === queries[0]?.group) || [];
     for (const key of Object.keys(eventProperties)) {
       if (key === queries[0]?.label) {
         DDCategory = _.union(eventProperties[queries[0]?.label], DDCategory);
       }
     }
-    if (group_name) {
+    if (groupOpts[queries[0]?.group]) {
       for (const key of Object.keys(groupProperties)) {
-        if (key === group_name) {
-          DDCategory = _.union(DDCategory, groupProperties[group_name]);
+        if (key === queries[0]?.group) {
+          DDCategory = _.union(DDCategory, groupProperties[groupOpts[queries[0]?.group]]);
         }
       }
     } else {
@@ -209,12 +208,8 @@ const EventBasedAlert = ({
   };
 
   useEffect(() => {
-    const { group_name } =
-      groupOpts.find(
-        (group) => group?.group_name === viewAlertDetails?.event_alert?.event
-      ) || [];
     if (viewAlertDetails?.event_alert?.event) {
-      getGroupProperties(activeProject.id, group_name);
+      getGroupProperties(activeProject.id, viewAlertDetails?.event_alert?.event);
     }
     if (viewAlertDetails?.event_alert?.event) {
       getEventProperties(
@@ -1700,7 +1695,7 @@ const EventBasedAlert = ({
             )}
           </div>
           {(featureLock(agent_details?.email) ||
-            activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
+            whiteListedProjects.includes(activeProject?.id)) && (
             <div className='border rounded mt-3'>
               <div style={{ backgroundColor: '#fafafa' }}>
                 <Row className={'ml-2'}>
@@ -2637,7 +2632,7 @@ const EventBasedAlert = ({
             )}
           </div>
           {(featureLock(agent_details?.email) ||
-            activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
+            whiteListedProjects.includes(activeProject?.id)) && (
             <div className='border rounded mt-3'>
               <div style={{ backgroundColor: '#fafafa' }}>
                 <Row className={'ml-2'}>
@@ -3275,7 +3270,7 @@ const EventBasedAlert = ({
           )}
         </div>
         {(featureLock(agent_details?.email) ||
-            activeProject?.id === '1125899929000011' || activeProject?.id === '2251799842000007') && (
+          whiteListedProjects.includes(activeProject?.id)) && (
           <div className='border rounded mt-3'>
             <div style={{ backgroundColor: '#fafafa' }}>
               <Row className={'ml-2'}>

@@ -375,6 +375,11 @@ function getPropertiesFromInputs(inputs) {
     return properties; 
 }
 
+function hasEmailOrPhone(properties) {
+    if(!properties[EMAIL] && !properties[PHONE]) return false;
+    if(Capture.isEmail(properties[EMAIL]) || Capture.isPhone(properties[PHONE]))  return true;
+}
+
 function getPageScrollPercent() {
     var h = document.documentElement, 
         b = document.body,
@@ -397,6 +402,7 @@ module.exports = {
     getFormMetaAttributes: getFormMetaAttributes,
     getPageScrollPercent: getPageScrollPercent,
     getPropertiesFromAllNonFormInputs: getPropertiesFromAllNonFormInputs,
+    hasEmailOrPhone: hasEmailOrPhone,
 
     PAGE_SPENT_TIME: PAGE_SPENT_TIME,
     PAGE_LOAD_TIME: PAGE_LOAD_TIME,
