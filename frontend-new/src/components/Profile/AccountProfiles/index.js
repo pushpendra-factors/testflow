@@ -99,11 +99,9 @@ function AccountProfiles({
   }, [activeProject]);
 
   const groupsList = useMemo(() => {
-    const groups =
-      groupOpts?.map(({ display_name, group_name }) => [
-        display_name,
-        group_name
-      ]) || [];
+    const groups = Object.entries(groupOpts || {}).map(
+      ([group_name, display_name]) => [display_name, group_name]
+    );
     if (groups.length > 1) {
       groups.unshift(['All Accounts', 'All']);
     }
@@ -118,48 +116,54 @@ function AccountProfiles({
   };
 
   const displayTableProps = useMemo(() => {
+    const filterPropsMap = {
+      $hubspot_company: 'hubspot',
+      $salesforce_account: 'salesforce',
+      $6signal: '6Signal',
+      $linkedin_company: '$li_',
+      All: ''
+    };
+    const source = filterPropsMap[accountPayload?.source];
     const tableProps = accountPayload.segment_id
-      ? activeSegment.query.table_props
+      ? activeSegment?.query?.table_props
       : currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
-          (item) => item.includes(filterPropsMap[accountPayload?.source])
+          (item) => item.includes(source)
         );
-
-    return tableProps !== null && tableProps !== undefined ? tableProps : [];
+    return tableProps || [];
   }, [currentProjectSettings, accountPayload, activeSegment]);
 
   useEffect(() => {
-    if (!groupOpts?.[0]?.group_name) return;
-
-    setAccountPayload((prevPayload) => ({
-      ...prevPayload,
-      source: groupOpts[0].group_name
-    }));
-  }, [groupOpts]);
+    const source = groupsList?.[0]?.[1] || '';
+    setAccountPayload((payload) => ({ ...payload, source }));
+  }, [groupsList]);
 
   useEffect(() => {
     if (!currentProjectSettings?.timelines_config) return;
 
-    const {
-      timelines_config: { disabled_events, user_config, account_config }
-    } = currentProjectSettings;
-
-    setTLConfig({
+    const { disabled_events, user_config, account_config } =
+      currentProjectSettings.timelines_config;
+    const timelinesConfig = {
       disabled_events: [...disabled_events],
       user_config: { ...DEFAULT_TIMELINE_CONFIG.user_config, ...user_config },
       account_config: {
         ...DEFAULT_TIMELINE_CONFIG.account_config,
         ...account_config
       }
-    });
+    };
+
+    setTLConfig(timelinesConfig);
   }, [currentProjectSettings]);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
     getSavedSegments(activeProject.id);
-    getGroupProperties(activeProject.id, '$hubspot_company');
-    getGroupProperties(activeProject.id, '$salesforce_account');
-    getGroupProperties(activeProject.id, '$6signal');
   }, [activeProject.id]);
+
+  useEffect(() => {
+    Object.keys(groupOpts || {}).forEach((group) =>
+      getGroupProperties(activeProject.id, group)
+    );
+  }, [activeProject.id, groupOpts]);
 
   useEffect(() => {
     if (accountPayload.source && accountPayload.source !== '') {
@@ -172,29 +176,16 @@ function AccountProfiles({
   }, [activeProject?.id, currentProjectSettings, accountPayload]);
 
   useEffect(() => {
-    const getListProperties = () => {
-      if (!accountPayload || !groupProperties) {
-        return [];
-      }
-      if (accountPayload.source === 'All') {
-        const hubspotProps = groupProperties.$hubspot_company
-          ? groupProperties.$hubspot_company
-          : [];
-        const salesforceProps = groupProperties.$salesforce_account
-          ? groupProperties.$salesforce_account
-          : [];
-        const sixsignalProps = groupProperties.$6signal
-          ? groupProperties.$6signal
-          : [];
-        return [...hubspotProps, ...salesforceProps, ...sixsignalProps];
-      } else {
-        return groupProperties?.[accountPayload.source]
-          ? groupProperties[accountPayload.source]
-          : [];
-      }
-    };
-
-    const listProps = getListProperties();
+    let listProps = [];
+    if (accountPayload?.source === 'All') {
+      listProps = Object.keys(groupOpts || {}).reduce((acc, property) => {
+        return groupProperties[property]
+          ? acc.concat(groupProperties[property])
+          : acc;
+      }, []);
+    } else {
+      listProps = groupProperties?.[accountPayload?.source] || [];
+    }
     setListProperties(listProps);
   }, [groupProperties, accountPayload?.source]);
 
@@ -694,7 +685,7 @@ function AccountProfiles({
     const fetchData = async () => {
       const newCompanyValues = { All: {} };
       for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
-        if (groupOpts.find((elem) => elem.group_name === group)) {
+        if (groupOpts[group]) {
           try {
             const res = await fetchGroupPropertyValues(
               activeProject.id,
@@ -869,7 +860,7 @@ function AccountProfiles({
             getProfileAccountDetails(
               activeProject.id,
               account.identity,
-			  accountPayload.source,
+              accountPayload.source,
               currentProjectSettings?.timelines_config
             );
             setActiveModalKey(account.identity);
@@ -908,7 +899,11 @@ function AccountProfiles({
       footer={null}
       closable={null}
     >
-      <AccountDetails accountId={activeModalKey} source={accountPayload.source} onCancel={handleCancel} />
+      <AccountDetails
+        accountId={activeModalKey}
+        source={accountPayload.source}
+        onCancel={handleCancel}
+      />
     </Modal>
   );
 
@@ -955,3 +950,4 @@ const mapDispatchToProps = (dispatch) =>
   );
 
 export default connect(mapStateToProps, mapDispatchToProps)(AccountProfiles);
+

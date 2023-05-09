@@ -125,18 +125,21 @@ export const formatUsersTimeline = (data, config) => {
   return returnData;
 };
 
-const formatUserPropertyToCheckListItem = (userProp, activeProps) => ({
-  display_name: userProp[0],
-  prop_name: userProp[1],
-  type: userProp[2],
-  enabled: activeProps ? activeProps.includes(userProp[1]) : false
-});
-
-export const formatUserPropertiesToCheckList = (userProps, activeProps) => {
+export const formatUserPropertiesToCheckList = (
+  userProps,
+  activeProps = []
+) => {
   const userPropsWithEnableKey = userProps
-    ? userProps.map((userProp) =>
-        formatUserPropertyToCheckListItem(userProp, activeProps)
-      )
+    ? userProps.map((userProp) => {
+        const [displayName, propName, type] = userProp;
+        return {
+          display_name: displayName,
+          prop_name: propName,
+          type: type,
+          enabled: activeProps ? activeProps.includes(propName) : false
+        };
+      })
     : [];
+
   return userPropsWithEnableKey.sort((a, b) => b.enabled - a.enabled);
 };
