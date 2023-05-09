@@ -258,10 +258,13 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
 		for index := range duplicatedRequest.Queries {
 			duplicatedRequest.Queries[index].LimitNotApplicable = true
+			// Making sure the internal KPI group queries have same from to as parent attribution query
+			duplicatedRequest.Queries[index].From = query.From
+			duplicatedRequest.Queries[index].To = query.To
 		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
+		log.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest, "ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
 		if statusCode != http.StatusOK {
 			logCtx.WithField("err_code", statusCode).Error("failed to get KPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
@@ -298,10 +301,13 @@ func (store *MemSQL) RunKPIGroupQueryV1(projectID int64, query *model.Attributio
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
 		for index := range duplicatedRequest.Queries {
 			duplicatedRequest.Queries[index].LimitNotApplicable = true
+			// Making sure the internal KPI group queries have same from to as parent attribution query
+			duplicatedRequest.Queries[index].From = from
+			duplicatedRequest.Queries[index].To = to
 		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
+		log.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest, "ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
 		if statusCode != http.StatusOK {
 			logCtx.WithField("err_code", statusCode).Error("failed to get KPI result for attribution query")
 			if statusCode == http.StatusPartialContent {

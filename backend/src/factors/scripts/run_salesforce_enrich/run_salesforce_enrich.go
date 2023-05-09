@@ -149,6 +149,7 @@ func main() {
 	allowedSalesforceSyncDocTypes := flag.String("allowed_salesforce_doc_types_for_sync", "*", "")
 	enableFieldsSyncByProjectID := flag.String("enable_fields_sync_by_project_ids", "", "Use FIELDS() for sync if Request Header is Too Large")
 	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
+	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -218,6 +219,7 @@ func main() {
 		AllowedSalesforceSyncDocTypes:                      *allowedSalesforceSyncDocTypes,
 		EnableFieldsSyncByProjectID:                        *enableFieldsSyncByProjectID,
 		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
+		EnableSyncReferenceFieldsByProjectID:               *enableSyncReferenceFieldsByProjectID,
 	}
 
 	C.InitConf(config)

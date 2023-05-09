@@ -49,15 +49,10 @@ func GetGroupsHandler(c *gin.Context) {
 
 	// isAccount : true, false, ""
 	var filteredGroups []model.Group
-	if isAccount == "true" {
+	if isAccount == "true" || isAccount == "false" {
+		isTrue := (isAccount == "true")
 		for _, group := range groups {
-			if model.GroupIsAccountMap[group.Name] {
-				filteredGroups = append(filteredGroups, group)
-			}
-		}
-	} else if isAccount == "false" {
-		for _, group := range groups {
-			if !model.GroupIsAccountMap[group.Name] {
+			if model.AccountGroupNames[group.Name] == isTrue {
 				filteredGroups = append(filteredGroups, group)
 			}
 		}
@@ -66,24 +61,23 @@ func GetGroupsHandler(c *gin.Context) {
 	}
 
 	// remove $domains group
-	for i := range filteredGroups {
-		if filteredGroups[i].Name == model.GROUP_NAME_DOMAINS {
+	for i, group := range filteredGroups {
+		if group.Name == model.GROUP_NAME_DOMAINS {
 			filteredGroups = append(filteredGroups[:i], filteredGroups[i+1:]...)
 			break
 		}
 	}
 
-	var response []map[string]string
+	response := make(map[string]string)
 	for _, group := range filteredGroups {
-		resp := make(map[string]string)
-		resp["group_name"] = group.Name
-		if value, exists := U.STANDARD_GROUP_DISPLAY_NAMES[group.Name]; exists {
-			resp["display_name"] = value
-		} else {
-			resp["display_name"] = group.Name
+		name := group.Name
+		displayName, exists := U.STANDARD_GROUP_DISPLAY_NAMES[name]
+		if !exists {
+			displayName = name
 		}
-		response = append(response, resp)
+		response[name] = displayName
 	}
+
 	c.JSON(http.StatusFound, response)
 }
 

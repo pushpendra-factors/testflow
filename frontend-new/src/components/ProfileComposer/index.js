@@ -39,7 +39,6 @@ function ProfileComposer({
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showDatePickerStr, setShowDatePickerStr] = useState('Select Date');
   const [profileBlockOpen, setProfileBlockOpen] = useState(true);
   const [filterBlockOpen, setFilterBlockOpen] = useState(true);
   const [groupBlockOpen, setGroupBlockOpen] = useState(true);
@@ -51,8 +50,8 @@ function ProfileComposer({
 
   const groupsList = useMemo(() => {
     let groups = [['Users', 'users']];
-    groupOpts?.forEach((elem) => {
-      groups.push([elem.display_name, elem.group_name]);
+    Object.entries(groupOpts || {}).forEach(([group_name, display_name]) => {
+      groups.push([display_name, group_name]);
     });
     return groups;
   }, [groupOpts]);
@@ -80,16 +79,10 @@ function ProfileComposer({
   };
 
   const resetLabel = (group) => {
-    const query = Object.assign({}, queries);
-    query.label = group.toLowerCase().includes('salesforce')
-      ? 'salesforce'
-      : group.toLowerCase().includes('hubspot')
-      ? 'hubspot'
-      : group.toLowerCase().includes('6signal')
-      ? '6signal'
-      : 'web';
-    query.alias = '';
-    query.filters = [];
+    const labelMap = ['salesforce', 'hubspot', '6signal', 'linkedin_company'];
+    const label =
+      labelMap.find((key) => group.toLowerCase().includes(key)) || 'web';
+    const query = { ...queries, label, alias: '', filters: [] };
     setQueries([query]);
   };
 
@@ -288,7 +281,6 @@ function ProfileComposer({
     dateT = MomentTz(val).startOf('day');
     dateValue['from'] = dateT.toDate().getTime();
     queryOptionsState.date_range.from = dateValue.from;
-    setShowDatePickerStr(MomentTz(val).format('MMM DD, YYYY'));
     setQueryOptions(queryOptionsState);
     setShowDatePicker(false);
   };

@@ -69,8 +69,8 @@ function QueryComposer({
 
   const groupsList = useMemo(() => {
     let groups = [['Users', 'users']];
-    groupOpts?.forEach((elem) => {
-      groups.push([elem.display_name, elem.group_name]);
+    Object.entries(groupOpts|| {}).forEach(([group_name, display_name]) => {
+      groups.push([display_name, group_name]);
     });
     return groups;
   }, [groupOpts]);

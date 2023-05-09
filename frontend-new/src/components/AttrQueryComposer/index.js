@@ -76,9 +76,9 @@ const AttrQueryComposer = ({
       $hubspot_deal: 'hubspot_deals',
       $salesforce_opportunity: 'salesforce_opportunities'
     };
-    groupOpts?.forEach((elem) => {
-      groups.push([elem.display_name, valueMap[elem.group_name]]);
-    });
+    Object.entries(groupOpts|| {}).forEach(([group_name, display_name])=>{
+      groups.push([display_name, valueMap[group_name]]);
+    })
     return groups;
   }, [groupOpts]);
 

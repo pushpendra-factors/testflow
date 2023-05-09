@@ -9,7 +9,7 @@ export default function (state = inititalState, action) {
     case FETCH_GROUPS_FULFILLED:
       return { ...inititalState, data: action.payload };
     case FETCH_GROUPS_REJECTED:
-      return { ...inititalState, data: [] };
+      return { ...inititalState, data: {} };
     default:
       return state;
   }

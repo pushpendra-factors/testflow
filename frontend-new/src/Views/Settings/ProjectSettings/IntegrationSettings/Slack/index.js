@@ -128,7 +128,7 @@ const SlackIntegration = ({
                   <Popover
                     content={
                       <Text type={'title'} size={10} extraClass={'max-w-xs'}>
-                        The feature is only accessable to
+                        The feature is only accessible to
                         <span className={'font-bold text-slate-500'}>
                           {' ' +
                             agent_details.first_name +

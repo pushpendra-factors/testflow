@@ -3,6 +3,7 @@ package util
 import (
 	"errors"
 	"fmt"
+	"github.com/jinzhu/now"
 	"math"
 	"strconv"
 	"time"
@@ -605,4 +606,38 @@ func GetAllWeeksFromStartTime(startTime int64, zoneString TimeZoneString) []Cust
 		toNew = fromNew + (7 * 24 * 60 * 60) - 1
 	}
 	return allRanges
+}
+
+func GetAllDaysAsTimestamp(fromUnix int64, toUnix int64, timezone string) ([]time.Time, []string) {
+	rTimestamps := make([]time.Time, 0, 0)
+	rTimezoneOffsets := make([]string, 0, 0)
+
+	from, err := GetTimeFromUnixTimestampWithZone(fromUnix, timezone)
+	if err != nil {
+		return rTimestamps, rTimezoneOffsets
+	}
+	from = now.New(from).BeginningOfDay()
+
+	to, err := GetTimeFromUnixTimestampWithZone(toUnix, timezone)
+	if err != nil {
+		return rTimestamps, rTimezoneOffsets
+	}
+	to = now.New(to).BeginningOfDay()
+
+	toStr := GetTimestampAsStrWithTimezone(to, timezone)
+	for t, tStr := from, ""; tStr != toStr; {
+		offset := GetTimezoneOffsetFromString(t, timezone)
+		currTimeStrFromOffset := GetTimestampAsStrWithTimezoneGivenOffset(t, offset)
+		currTimeFromOffset := GetTimeFromParseTimeStr(currTimeStrFromOffset)
+
+		tStr = GetTimestampAsStrWithTimezone(currTimeFromOffset, timezone)
+		rTimestamps = append(rTimestamps, currTimeFromOffset)
+		rTimezoneOffsets = append(rTimezoneOffsets, offset)
+
+		t = t.AddDate(0, 0, 1) // next day.
+		t, _ = GetTimeFromUnixTimestampWithZone(t.Unix(), timezone)
+		t = now.New(t).BeginningOfDay()
+	}
+
+	return rTimestamps, rTimezoneOffsets
 }
