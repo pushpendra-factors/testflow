@@ -7,6 +7,7 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
+const DEFAULT_EVENT string = "all_events"
 const LAST_EVENT string = "LAST_EVENT"
 
 type AccScoreResult struct {

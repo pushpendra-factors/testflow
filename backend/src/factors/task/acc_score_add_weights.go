@@ -2,6 +2,7 @@ package task
 
 import (
 	"encoding/json"
+	"factors/model/model"
 	M "factors/model/model"
 	P "factors/pattern"
 	U "factors/util"
@@ -31,6 +32,11 @@ func DeduplicateWeights(weights M.AccWeights) (M.AccWeights, error) {
 	var err error
 	for _, wid := range wt {
 		var w_id_hash string
+		// if event name is empty, set it to all_events
+		// filter will be applied to all events
+		if wid.EventName == "" {
+			wid.EventName = model.DEFAULT_EVENT
+		}
 		w_val := weightfilter{wid.EventName, wid.Rule}
 		w_id_hash = wid.WeightId
 		if w_id_hash == "" {
@@ -68,6 +74,33 @@ func FilterEvents(event *P.CounterEventFormat, mweights map[string][]M.AccEventW
 	// currently not adding
 	if rules, ok := mweights[event_name]; ok {
 
+		for _, individual_rule := range rules {
+
+			r := individual_rule.Rule
+
+			if r.Type == "event" {
+				id_, match := evalProperty(event.EventProperties, individual_rule)
+				if match {
+					ids = append(ids, id_)
+				}
+			} else if r.Type == "user" {
+
+				id_, match := evalProperty(event.UserProperties, individual_rule)
+				if match {
+					ids = append(ids, id_)
+				}
+
+			}
+
+			if r.Key == "" {
+				ids = append(ids, individual_rule.WeightId)
+			}
+
+		}
+
+	}
+
+	if rules, ok := mweights[M.DEFAULT_EVENT]; ok {
 		for _, individual_rule := range rules {
 
 			r := individual_rule.Rule

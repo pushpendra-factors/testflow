@@ -96,12 +96,12 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 
 }
 
+// CreateweightMap creates a map of event name to list of rules for easy lookup
 func CreateweightMap(w *M.AccWeights) (map[string][]M.AccEventWeight, int64) {
 	var mwt map[string][]M.AccEventWeight = make(map[string][]M.AccEventWeight)
+	// create map of event name to rules for easy lookup
 	wt := w.WeightConfig
-
 	for _, e := range wt {
-
 		if _, ok := mwt[e.EventName]; !ok {
 			mwt[e.EventName] = make([]M.AccEventWeight, 0)
 		}
@@ -217,14 +217,19 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 		}
 
 		if val, ok := userGroupCount[event.UserId]; ok {
+			// get rule_ids from filter events
 			rule_ids := FilterEvents(event, mweights)
 
+			// get rule_ids from filter events
+			// if rule_ids is already present in val.EventsCount
+			// then increment the count
+			// else create a new entry in val.EventsCount
 			for _, rule_id := range rule_ids {
 				if _, ok := val.EventsCount[rule_id]; !ok {
 					var ev M.EventAgg
 					ev.EventName = event.EventName
 					ev.EventId = rule_id
-					ev.EventCount = 0
+					ev.EventCount = 0 // if eventsCount does not contain the rule id then create an entry with count 0
 					userGroupCount[event.UserId].Is_group = false
 					val.EventsCount[rule_id] = &ev
 
