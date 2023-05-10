@@ -122,12 +122,28 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 			var eventCardinality uint
 			var eventProperties *postgres.Jsonb
 			var userProperties *postgres.Jsonb
+			var is_group_user bool
 			var group_1_user_id_null sql.NullString
 			var group_2_user_id_null sql.NullString
 			var group_3_user_id_null sql.NullString
 			var group_4_user_id_null sql.NullString
+			var group_5_user_id_null sql.NullString
+			var group_6_user_id_null sql.NullString
+			var group_7_user_id_null sql.NullString
+			var group_8_user_id_null sql.NullString
+			var group_1_id_null sql.NullString
+			var group_2_id_null sql.NullString
+			var group_3_id_null sql.NullString
+			var group_4_id_null sql.NullString
+			var group_5_id_null sql.NullString
+			var group_6_id_null sql.NullString
+			var group_7_id_null sql.NullString
+			var group_8_id_null sql.NullString
 			if err = rows.Scan(&userID, &eventName, &eventTimestamp, &eventCardinality, &eventProperties, &userJoinTimestamp, &userProperties,
-				&group_1_user_id_null, &group_2_user_id_null, &group_3_user_id_null, &group_4_user_id_null); err != nil {
+				&is_group_user, &group_1_user_id_null, &group_2_user_id_null, &group_3_user_id_null, &group_4_user_id_null,
+				&group_5_user_id_null, &group_6_user_id_null, &group_7_user_id_null, &group_8_user_id_null,
+				&group_1_id_null, &group_2_id_null, &group_3_id_null, &group_4_id_null,
+				&group_5_id_null, &group_6_id_null, &group_7_id_null, &group_8_id_null); err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
 				return 0, err
 			}
@@ -182,6 +198,19 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 			group_2_user_id := U.IfThenElse(group_2_user_id_null.Valid, group_2_user_id_null.String, "").(string)
 			group_3_user_id := U.IfThenElse(group_3_user_id_null.Valid, group_3_user_id_null.String, "").(string)
 			group_4_user_id := U.IfThenElse(group_4_user_id_null.Valid, group_4_user_id_null.String, "").(string)
+			group_5_user_id := U.IfThenElse(group_5_user_id_null.Valid, group_5_user_id_null.String, "").(string)
+			group_6_user_id := U.IfThenElse(group_6_user_id_null.Valid, group_6_user_id_null.String, "").(string)
+			group_7_user_id := U.IfThenElse(group_7_user_id_null.Valid, group_7_user_id_null.String, "").(string)
+			group_8_user_id := U.IfThenElse(group_8_user_id_null.Valid, group_8_user_id_null.String, "").(string)
+
+			group_1_id := U.IfThenElse(group_1_id_null.Valid, group_1_id_null.String, "").(string)
+			group_2_id := U.IfThenElse(group_2_id_null.Valid, group_2_id_null.String, "").(string)
+			group_3_id := U.IfThenElse(group_3_id_null.Valid, group_3_id_null.String, "").(string)
+			group_4_id := U.IfThenElse(group_4_id_null.Valid, group_4_id_null.String, "").(string)
+			group_5_id := U.IfThenElse(group_5_id_null.Valid, group_5_id_null.String, "").(string)
+			group_6_id := U.IfThenElse(group_6_id_null.Valid, group_6_id_null.String, "").(string)
+			group_7_id := U.IfThenElse(group_7_id_null.Valid, group_7_id_null.String, "").(string)
+			group_8_id := U.IfThenElse(group_8_id_null.Valid, group_8_id_null.String, "").(string)
 
 			event := P.CounterEventFormat{
 				UserId:            userID,
@@ -191,10 +220,23 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 				EventCardinality:  eventCardinality,
 				EventProperties:   eventPropertiesMap,
 				UserProperties:    userPropertiesMap,
+				IsGroupUser:       is_group_user,
 				Group1UserId:      group_1_user_id,
 				Group2UserId:      group_2_user_id,
 				Group3UserId:      group_3_user_id,
 				Group4UserId:      group_4_user_id,
+				Group5UserId:      group_5_user_id,
+				Group6UserId:      group_6_user_id,
+				Group7UserId:      group_7_user_id,
+				Group8UserId:      group_8_user_id,
+				Group1Id:          group_1_id,
+				Group2Id:          group_2_id,
+				Group3Id:          group_3_id,
+				Group4Id:          group_4_id,
+				Group5Id:          group_5_id,
+				Group6Id:          group_6_id,
+				Group7Id:          group_7_id,
+				Group8Id:          group_8_id,
 			}
 
 			if rowCount == 0 && i == 0 {

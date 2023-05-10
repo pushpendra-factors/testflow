@@ -31,10 +31,23 @@ type CounterEventFormat struct {
 	EventCardinality  uint                   `json:"ecd"`
 	EventProperties   map[string]interface{} `json:"epr"`
 	UserProperties    map[string]interface{} `json:"upr"`
+	IsGroupUser       bool                   `json:"igu"`
 	Group1UserId      string                 `json:"g1ui"`
 	Group2UserId      string                 `json:"g2ui"`
 	Group3UserId      string                 `json:"g3ui"`
 	Group4UserId      string                 `json:"g4ui"`
+	Group5UserId      string                 `json:"g5ui"`
+	Group6UserId      string                 `json:"g6ui"`
+	Group7UserId      string                 `json:"g7ui"`
+	Group8UserId      string                 `json:"g8ui"`
+	Group1Id          string                 `json:"g1i"`
+	Group2Id          string                 `json:"g2i"`
+	Group3Id          string                 `json:"g3i"`
+	Group4Id          string                 `json:"g4i"`
+	Group5Id          string                 `json:"g5i"`
+	Group6Id          string                 `json:"g6i"`
+	Group7Id          string                 `json:"g7i"`
+	Group8Id          string                 `json:"g8i"`
 }
 
 type PropertiesInfo struct {
