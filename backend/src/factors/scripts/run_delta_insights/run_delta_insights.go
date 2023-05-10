@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/apache/beam/sdks/go/pkg/beam"
 	_ "github.com/jinzhu/gorm"
@@ -62,6 +63,9 @@ func mainRunDeltaInsights() {
 	runBeam := flag.Int("run_beam", 1, "run build seq on beam ")
 	numWorkersFlag := flag.Int("num_beam_workers", 100, "Num of beam workers")
 	useSortedFilesMerge := flag.Bool("use_sorted_merge", false, "whether to use sorted files (if possible) or achive files")
+
+	fileTypesFlag := flag.String("file_types", "*",
+		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to pull.FileType map
 
 	isWeeklyEnabled := flag.Bool("weekly_enabled", false, "")
 
@@ -124,6 +128,7 @@ func mainRunDeltaInsights() {
 
 	// init Config and DB.
 	var appName = "compute_delta_insights"
+
 	config := &C.Configuration{
 		AppName: appName,
 		Env:     *envFlag,
@@ -247,16 +252,38 @@ func mainRunDeltaInsights() {
 	configs["skipWpi2"] = (*skipWpi2)
 	configs["runKpi"] = (*runKpi)
 
+	healthcheckPingID := C.HealthCheckWeeklyInsightsPingID
+	defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
+	C.PingHealthcheckForStart(healthcheckPingID)
+
+	fileTypesList := strings.TrimSpace(*fileTypesFlag)
+	var fileTypes []int64
+	if fileTypesList == "*" {
+		fileTypes = []int64{1, 2, 3, 4, 5, 6, 7}
+	} else {
+		fileTypes = C.GetTokensFromStringListAsUint64(fileTypesList)
+	}
+	fileTypesMap := make(map[int64]bool)
+	for _, i := range fileTypes {
+		fileTypesMap[i] = true
+	}
+	configs["fileTypes"] = fileTypesMap
+
 	// This job has dependency on pull_data
 	if *isWeeklyEnabled && !(*isMailerRun) {
 		taskName := "WIWeeklyV2"
 		status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)
 		log.Info(status)
+		C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)
 	}
+
+	C.PingHealthcheckForStart(healthcheckPingID)
+
 	if *isWeeklyEnabled && *isMailerRun {
 		taskName := "WIWeeklyMailerV2"
 		configs["run_type"] = "mailer"
 		status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)
 		log.Info(status)
+		C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)
 	}
 }

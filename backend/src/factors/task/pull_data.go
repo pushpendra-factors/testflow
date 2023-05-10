@@ -17,8 +17,9 @@ import (
 
 var peLog = taskLog.WithField("prefix", "Task#PullEvents")
 
-const DATA_FAILURE_ALERT_LIMIT = 2
+const DATA_FAILURE_ALERT_LIMIT = 2 //number of days after which data unavailability is considered to be an error
 
+// Pull daily data (created_at in a day) into respective folders(based on timestamp) in archive bucket
 func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
 	startTimestamp := configs["startTimestamp"].(int64)
@@ -65,19 +66,55 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 	success := true
 
 	allIntegrationsSupported := []string{M.HUBSPOT, M.SALESFORCE, M.ADWORDS, M.BINGADS, M.FACEBOOK, M.LINKEDIN, M.GOOGLE_ORGANIC}
+	var pullFileTypes map[string]bool
+	var err error
+	pullFileTypes, success, err = checkIntegrationsDataAvailabilityAndHardPull(allIntegrationsSupported, projectId, startTimestamp, endTimestamp, endTimestampInProjectTimezone, cloudManager, fileTypes, *hardPull, status, logCtx)
+	if err != nil {
+		return status, false
+	}
 
+	// EVENTS
+	if pullFileTypes["events"] {
+		if _, ok := pull.PullDataForEvents(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, splitRangeProjectIds, noOfSplits, status, logCtx); !ok {
+			return status, false
+		}
+	}
+
+	// AD REPORTS
+	for _, channel := range []string{M.ADWORDS, M.BINGADS, M.FACEBOOK, M.GOOGLE_ORGANIC, M.LINKEDIN} {
+		if pullFileTypes[channel] {
+			if _, ok := pull.PullDataForChannel(channel, projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, status, logCtx); !ok {
+				return status, false
+			}
+		}
+	}
+
+	//USERS
+	if pullFileTypes[M.USERS] {
+		if _, ok := pull.PullUsersDataForCustomMetrics(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, hardPull, status, logCtx); !ok {
+			return status, false
+		}
+	}
+
+	return status, success
+}
+
+// Check which integrations are present, whether data is available and if the required file already exists or not
+// Return a bool map (pullFileTypes) telling which files to actually pull from db and a bool (success) telling whether job is successful till now
+func checkIntegrationsDataAvailabilityAndHardPull(allIntegrationsSupported []string, projectId, startTimestamp, endTimestamp, endTimestampInProjectTimezone int64, cloudManager *filestore.FileManager, fileTypes map[int64]bool, hardPull bool, status map[string]interface{}, logCtx *log.Entry) (map[string]bool, bool, error) {
 	var pullFileTypes = make(map[string]bool)
+	success := true
 	if integrationsStatus, err := store.GetStore().GetLatestDataStatus(allIntegrationsSupported, projectId, false); err != nil {
 		logCtx.WithError(err).Error("error getting integrations status")
 		status["error"] = err.Error()
-		return status, false
+		return pullFileTypes, false, err
 	} else {
 		for fileType, fileTypeNum := range pull.FileType {
 			if !fileTypes[fileTypeNum] {
 				continue
 			}
 			if fileType == "events" {
-				if !*hardPull {
+				if !hardPull {
 					if ok, _ := pull.CheckEventFileExists(cloudManager, projectId, startTimestamp, startTimestamp, endTimestamp); ok {
 						status["events-info"] = "File already exists"
 						continue
@@ -113,7 +150,7 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 			} else if fileType == "users" {
 				pullFileTypes[fileType] = true
 			} else {
-				if !*hardPull {
+				if !hardPull {
 					if ok, _ := pull.CheckChannelFileExists(fileType, cloudManager, projectId, startTimestamp, startTimestamp, endTimestamp); ok {
 						status[fileType+"-info"] = "File already exists"
 						continue
@@ -141,31 +178,7 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 			}
 		}
 	}
-
-	// EVENTS
-	if pullFileTypes["events"] {
-		if _, ok := pull.PullEventsData(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, splitRangeProjectIds, noOfSplits, status, logCtx); !ok {
-			return status, false
-		}
-	}
-
-	// AD REPORTS
-	for _, channel := range []string{M.ADWORDS, M.BINGADS, M.FACEBOOK, M.GOOGLE_ORGANIC, M.LINKEDIN} {
-		if pullFileTypes[channel] {
-			if _, ok := pull.PullDataForChannel(channel, projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, status, logCtx); !ok {
-				return status, false
-			}
-		}
-	}
-
-	//USERS
-	if pullFileTypes["users"] {
-		if _, ok := pull.PullUsersDataForCustomMetrics(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, hardPull, status, logCtx); !ok {
-			return status, false
-		}
-	}
-
-	return status, success
+	return pullFileTypes, success, nil
 }
 
 func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {

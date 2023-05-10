@@ -185,7 +185,6 @@ func main() {
 	configs["noOfSplits"] = *noOfSplits
 
 	C.PingHealthcheckForStart(healthcheckPingID)
-
 	var statusEvents map[string]interface{}
 	if *pullEventsDaily {
 		fileTypesMapOnlyEvents := make(map[int64]bool)
@@ -193,54 +192,13 @@ func main() {
 		configs["fileTypes"] = fileTypesMapOnlyEvents
 		statusEvents = taskWrapper.TaskFuncWithProjectId("PullEventsDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
 		log.Info("events only: ", statusEvents)
-		var isSuccess bool = true
-		for reason, message := range statusEvents {
-			if message == false {
-				for key, val := range statusEvents[reason[6:]].(map[string]interface{}) {
-					if strings.Contains(key, "error") {
-						if strings.HasPrefix(val.(string), "invalid end timestamp") {
-							continue
-						}
-						isSuccess = false
-						break
-					}
-				}
-				if !isSuccess {
-					break
-				}
-			}
-		}
-		if isSuccess {
-			C.PingHealthcheckForSuccess(healthcheckPingID, statusEvents)
-		} else {
-			C.PingHealthcheckForFailure(healthcheckPingID, statusEvents)
-		}
+		C.PingHealthCheckBasedOnStatus(statusEvents, healthcheckPingID)
 	}
 
+	C.PingHealthcheckForStart(healthcheckPingID)
 	configs["fileTypes"] = fileTypesMap
 	status := taskWrapper.TaskFuncWithProjectId("PullDataDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
+	C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)
 	log.Info("all data: ", status)
-	isSuccess := true
-	for reason, message := range status {
-		if message == false {
-			for key, val := range status[reason[6:]].(map[string]interface{}) {
-				if strings.Contains(key, "error") {
-					if strings.HasPrefix(val.(string), "invalid end timestamp") {
-						continue
-					}
-					isSuccess = false
-					break
-				}
-			}
-			if !isSuccess {
-				break
-			}
-		}
-	}
-	if isSuccess {
-		C.PingHealthcheckForSuccess(healthcheckPingID, status)
-	} else {
-		C.PingHealthcheckForFailure(healthcheckPingID, status)
-	}
 	log.Info("events only: ", statusEvents)
 }

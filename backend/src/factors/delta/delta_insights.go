@@ -275,6 +275,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 	tmpCloudManager := configs["tmpCloudManager"].(*filestore.FileManager)
 	sortedCloudManager := configs["sortedCloudManager"].(*filestore.FileManager)
 	hardPull := configs["hardPull"].(bool)
+	fileTypes := configs["fileTypes"].(map[int64]bool)
 	pulledMap := make(map[int64]map[string]bool)
 	useSortedFilesMerge := configs["useSortedFilesMerge"].(bool)
 
@@ -337,7 +338,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 				continue
 			}
 			if err := createKpiInsights(diskManager, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, periodCodesWithWeekNMinus1, projectId,
-				dashboardUnit.QueryId, kpiQuery, k, skipWpi, skipWpi2, mailerRun, beamConfig, hardPull, useSortedFilesMerge, pulledMap, status); err != nil {
+				dashboardUnit.QueryId, kpiQuery, k, skipWpi, skipWpi2, fileTypes, mailerRun, beamConfig, hardPull, useSortedFilesMerge, pulledMap, status); err != nil {
 				deltaComputeLog.WithError(err).Error("KPI insights error query: ", dashboardUnit.QueryId)
 				status["error-kpi-query-"+queryIdString] = err
 				continue

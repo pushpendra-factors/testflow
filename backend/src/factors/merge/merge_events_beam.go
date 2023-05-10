@@ -110,7 +110,7 @@ func Pull_events_beam_controller(projectId int64,
 	startIndexToFileInfoMap map[int][]*partFileInfo, beamStruct *RunBeamConfig,
 	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTime, endTime int64, sortOnGroup int) error {
 
-	log.Infof(" Sorting pull events in beam Project Id :%d", projectId)
+	log.Infof("Sorting pull events in beam Project Id :%d", projectId)
 	UIdsBeamString := make([]string, 0)
 
 	bucketName := (*cloudManager).GetBucketName()

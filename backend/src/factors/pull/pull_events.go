@@ -26,11 +26,11 @@ var FileType = map[string]int64{
 	M.BINGADS:        4,
 	M.LINKEDIN:       5,
 	M.GOOGLE_ORGANIC: 6,
-	"users":          7,
+	M.USERS:          7,
 }
 
-// pull events(with Hubspot and Salesforce) data into files, and upload each local file to its proper cloud location
-func PullEventsData(projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, splitRangeProjectIds []int64, noOfSplits int, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
+// check if add session job is completed, then pull events(with Hubspot and Salesforce) data into cloud files with proper logging
+func PullDataForEvents(projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, splitRangeProjectIds []int64, noOfSplits int, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
 
 	if yes, err := CheckIfAddSessionCompleted(projectId, endTimestampInProjectTimezone); !yes {
 		if err != nil {
@@ -43,24 +43,22 @@ func PullEventsData(projectId int64, cloudManager *filestore.FileManager, startT
 		return fmt.Errorf("add session job not completed"), false
 	}
 
-	logCtx.Info("Pulling events.")
-	// Writing events to tmp file before upload.
-	_, cName := (*cloudManager).GetDailyEventArchiveFilePathAndName(projectId, 0, startTimestamp, endTimestamp)
 	var splitRange bool = false
 	if U.ContainsInt64InArray(splitRangeProjectIds, projectId) {
 		splitRange = true
 	}
+
+	logCtx.Info("Pulling events.")
+	_, cName := (*cloudManager).GetDailyEventArchiveFilePathAndName(projectId, 0, startTimestamp, endTimestamp)
 	startAt := time.Now().UnixNano()
-	eventsCount, err := pullEvents(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, endTimestamp, splitRange, noOfSplits)
+	eventsCount, err := pullEventsData(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, endTimestamp, splitRange, noOfSplits)
 	if err != nil {
-		logCtx.WithField("error", err).Error("Pull events failed. Pull and write events failed.")
+		logCtx.WithError(err).Error("Pull events failed. Pull and write events failed.")
 		status["events-error"] = err.Error()
 		return err, false
 	}
 	timeTakenToPullEvents := (time.Now().UnixNano() - startAt) / 1000000
-	logCtx = logCtx.WithField("TimeTakenToPullEvents", timeTakenToPullEvents)
 
-	// Zero events. Returns eventCount as 0.
 	if eventsCount == 0 {
 		logCtx.Info("No events found.")
 		status["events-info"] = "No events found."
@@ -75,8 +73,8 @@ func PullEventsData(projectId int64, cloudManager *filestore.FileManager, startT
 	return nil, true
 }
 
-// pull event rows from db and generate local files w.r.t timestamp and return map with (key,value) as (timestamp,path)
-func pullEvents(projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64, splitRange bool, noOfSplits int) (int, error) {
+// pull events(rows) from db into cloud files
+func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64, splitRange bool, noOfSplits int) (int, error) {
 
 	var firstEventTimestamp, lastEventTimestamp int64
 	var writerMap = make(map[int64]*io.WriteCloser)
@@ -106,7 +104,7 @@ func pullEvents(projectID int64, startTimeTimezone, endTimeTimezone int64, fileN
 		startSplit = []int64{startTimeTimezone}
 		endSplit = []int64{endTimeTimezone}
 	}
-	for i, _ := range startSplit {
+	for i := range startSplit {
 		pullStartTime := startSplit[i]
 		pullEndTime := endSplit[i]
 		log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime}).Infof("Executing split %d out of %d", i+1, len(startSplit))
