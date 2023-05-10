@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import ReactDOMServer from 'react-dom/server';
 import moment from 'moment';
 import ScatterPlotChart from '../../../components/ScatterPlotChart';
-import { getScatterPlotChartData, getAxisMetricOptions } from './utils';
+import { getScatterPlotChartData, getAxisMetricOptions, getScatterPlotChartDataV1 } from './utils';
 import { REPORT_SECTION, DATE_FORMATS } from '../../../utils/constants';
 import AxisOptionsContainer from '../../../components/AxisOptionsContainer';
 import chartStyles from '../../../components/ScatterPlotChart/styles.module.scss';
@@ -32,7 +32,8 @@ function AttributionsScatterPlot({
   comparison_duration = {},
   cardSize = 1,
   height,
-  chartId = 'scatterPlot'
+  chartId = 'scatterPlot',
+  v1=false
 }) {
   const { eventNames } = useSelector((state) => state.coreQuery);
   const [xAxisMetric, setXAxisMetric] = useState('Conversion');
@@ -41,7 +42,14 @@ function AttributionsScatterPlot({
   );
 
   const chartData = useMemo(() => {
-    return getScatterPlotChartData(
+    return v1? getScatterPlotChartDataV1(selectedTouchpoint,
+      attr_dimensions,
+      content_groups,
+      data,
+      visibleIndices,
+      xAxisMetric,
+      yAxisMetric,
+      !!comparison_data.data) : getScatterPlotChartData(
       selectedTouchpoint,
       attr_dimensions,
       content_groups,

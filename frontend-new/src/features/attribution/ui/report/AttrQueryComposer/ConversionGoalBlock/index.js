@@ -12,8 +12,8 @@ import ORButton from 'Components/ORButton';
 import { getNormalizedKpi } from 'Utils/kpiQueryComposer.helpers';
 import { compareFilters, groupFilters } from 'Utils/global';
 import { fetchKPIConfigWithoutDerivedKPI } from 'Reducers/kpi';
+import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 
-import { TOOLTIP_CONSTANTS } from '../../../../../../constants/tooltips.constans';
 import EventFilterWrapper from 'Components/KPIComposer/EventFilterWrapper';
 
 function ConversionGoalBlock({
@@ -212,22 +212,21 @@ function ConversionGoalBlock({
     showOr,
     inFilter,
     deleteFilter
-  ) =>
-    (
-      <EventFilterWrapper
-        index={index}
-        filter={filter}
-        event={eventGoal}
-        filterProps={filterProps}
-        activeProject={activeProject}
-        deleteFilter={deleteFilter}
-        insertFilter={inFilter}
-        closeFilter={closeFilter}
-        selectedMainCategory={eventGoal}
-        showOr={showOr}
-        refValue={refValue}
-      />
-    );
+  ) => (
+    <EventFilterWrapper
+      index={index}
+      filter={filter}
+      event={eventGoal}
+      filterProps={filterProps}
+      activeProject={activeProject}
+      deleteFilter={deleteFilter}
+      insertFilter={inFilter}
+      closeFilter={closeFilter}
+      selectedMainCategory={eventGoal}
+      showOr={showOr}
+      refValue={refValue}
+    />
+  );
 
   const eventFilters = () => {
     const filters = [];
@@ -251,7 +250,7 @@ function ConversionGoalBlock({
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-              {renderFilterWrapper(
+                {renderFilterWrapper(
                   index,
                   refValue,
                   filter,
@@ -282,7 +281,7 @@ function ConversionGoalBlock({
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-              {renderFilterWrapper(
+                {renderFilterWrapper(
                   index,
                   refValue,
                   filtersGr[0],
@@ -292,7 +291,7 @@ function ConversionGoalBlock({
                 )}
               </div>
               <div key={index + 1}>
-              {renderFilterWrapper(
+                {renderFilterWrapper(
                   index + 1,
                   refValue,
                   filtersGr[1],

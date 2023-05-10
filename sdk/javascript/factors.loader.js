@@ -43,6 +43,14 @@ window.factors = window.factors||(function(){
         this.q.push(callMap);
         window.dispatchEvent(factorsQueuedEvent);
     }
+    this.message = function(){
+        window.addEventListener('message', function(e) {
+            if(e.data.origin === 'factors'){
+                addToQueue('message', [e.data.type, e.data.message]);
+            }
+        });
+    }
+    this.message();
     this.init("${projectToken}");
     return this;
 })();

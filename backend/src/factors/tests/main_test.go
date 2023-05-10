@@ -123,6 +123,8 @@ func TestMain(m *testing.M) {
 		EnableDomainsGroupByProjectID:                      "*",
 		EnableSyncReferenceFieldsByProjectID:               "*",
 		EnableUserDomainsGroupByProjectID:                  "*",
+		EnableEventFiltersInSegments:                       true,
+		AllAccountsProjectId:                               "*",
 	}
 	C.InitConf(config)
 

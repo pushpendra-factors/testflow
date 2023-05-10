@@ -254,6 +254,9 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 	if alert.Teams && !isTeamsIntegrated {
 		return false, http.StatusBadRequest, "Teams integration is not enabled for this project"
 	}
+	if alert.Webhook && alert.WebhookURL == "" {
+		return false, http.StatusBadRequest, "webhook url must not be empty"
+	}
 	return true, http.StatusOK, ""
 }
 

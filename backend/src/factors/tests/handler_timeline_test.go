@@ -1015,6 +1015,13 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	_, errCode = store.GetStore().GetUser(project.ID, domID)
 	assert.Equal(t, http.StatusFound, errCode)
 
+	var payload model.TimelinePayload
+
+	// Test :- No CRMs enabled
+	payload.Source = "$hubspot_company"
+	w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, w.Code, http.StatusBadRequest)
+
 	group, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group)
@@ -1092,8 +1099,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	}
 	assert.Equal(t, len(accounts), 15)
 
-	var payload model.TimelinePayload
-
 	// Test Cases :-
 
 	// Source: $hubspot_company, 2 group exists
@@ -1102,7 +1107,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.NotNil(t, group1)
 
 	payload.Source = "$hubspot_company"
-	w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	resp := make([]model.Profile, 0)
@@ -2395,7 +2400,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 	groupUser := true
 	accounts := make([]model.User, 0)
 
-	domID, _ := store.GetStore().CreateUser(&model.User{
+	domID1, _ := store.GetStore().CreateUser(&model.User{
 		ProjectId:      project.ID,
 		Source:         domSource,
 		Group1ID:       "1",
@@ -2403,9 +2408,32 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		Properties:     domProperties,
 		IsGroupUser:    &groupUser,
 	})
-	_, errCode := store.GetStore().GetUser(project.ID, domID)
+	_, errCode := store.GetStore().GetUser(project.ID, domID1)
 	assert.Equal(t, http.StatusFound, errCode)
 
+	domID2, _ := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		Source:         domSource,
+		Group1ID:       "1",
+		CustomerUserId: "domainuser2",
+		Properties:     domProperties,
+		IsGroupUser:    &groupUser,
+	})
+	_, errCode = store.GetStore().GetUser(project.ID, domID2)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	domID3, _ := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		Source:         domSource,
+		Group1ID:       "1",
+		CustomerUserId: "domainuser2",
+		Properties:     domProperties,
+		IsGroupUser:    &groupUser,
+	})
+	_, errCode = store.GetStore().GetUser(project.ID, domID3)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	domArray := []string{domID1, domID2, domID3}
 	// Create 5 Salesforce Accounts
 	numUsers = 5
 	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
@@ -2417,12 +2445,13 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		properties := postgres.Jsonb{RawMessage: propertiesJSON}
 		source := model.GetRequestSourcePointer(model.UserSourceSalesforce)
 
+		domID := domArray[(i % 3)]
 		createdUserID, _ := store.GetStore().CreateUser(&model.User{
 			ProjectId:      project.ID,
 			Source:         source,
 			Group3ID:       "3",
 			Group1ID:       "1",
-			Group1UserID:   domID,
+			Group3UserID:   domID,
 			CustomerUserId: fmt.Sprintf("sfuser%d@%s", i+1, propertiesMap[i]["$salesforce_account_website"]),
 			Properties:     properties,
 			IsGroupUser:    &groupUser,
@@ -2441,12 +2470,13 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		properties := postgres.Jsonb{RawMessage: propertiesJSON}
 		source := model.GetRequestSourcePointer(model.UserSourceHubspot)
 
+		domID := domArray[(i % 3)]
 		createdUserID, _ := store.GetStore().CreateUser(&model.User{
 			ProjectId:      project.ID,
 			Source:         source,
 			Group2ID:       "2",
 			Group1ID:       "1",
-			Group1UserID:   domID,
+			Group2UserID:   domID,
 			CustomerUserId: fmt.Sprintf("hsuser%d@%s", i+1, propertiesMap[i+5]["$hubspot_company_domain"]),
 			Properties:     properties,
 			IsGroupUser:    &groupUser,
