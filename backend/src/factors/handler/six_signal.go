@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -55,6 +56,8 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Empty query group.", true
 	}
 
+	pageView := requestPayload.Queries[0].PageView
+
 	result := make(map[int]model.SixSignalResultGroup)
 	if requestPayload.Queries[0].IsSaved == true {
 
@@ -70,6 +73,13 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 			return result, http.StatusOK, "", "Data is not present for this date range", false
 		}
 
+		if len(pageView) > 0 && pageView != nil {
+			res, err := FilterRowsForSixSignalPageView(projectId, requestPayload.Queries[0], result[1].Results[0])
+			if err != http.StatusOK {
+				return nil, err, "", "Failed fetching 6Signal company name for page view filter", false
+			}
+			result[1].Results[0] = res
+		}
 	} else {
 
 		resultGroup, errCode := store.GetStore().RunSixSignalGroupQuery(requestPayload.Queries, projectId)
@@ -90,6 +100,13 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 		resultGroup.CacheMeta = meta
 
 		result[1] = resultGroup
+		if len(pageView) > 0 && pageView != nil {
+			res, err := FilterRowsForSixSignalPageView(projectId, requestPayload.Queries[0], result[1].Results[0])
+			if err != http.StatusOK {
+				return nil, err, "", "Failed fetching 6Signal company name for page view filter", false
+			}
+			result[1].Results[0] = res
+		}
 	}
 	return result, http.StatusOK, "", "", false
 }
@@ -129,6 +146,7 @@ func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, 
 		return nil, http.StatusNotFound, "", "Failed to unmarshal query", true
 	}
 
+	pageView := sixSignalQuery.PageView
 	folderName := getFolderName(sixSignalQuery)
 	logCtx.WithFields(log.Fields{"folder name": folderName}).Info("Folder name for reading the result")
 
@@ -139,6 +157,14 @@ func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, 
 	} else if len(result[1].Results[0].Rows) == 0 {
 		logCtx.Warn("Data is not present for this date range")
 		return result, http.StatusOK, "", "Data is not present for this date range", false
+	}
+
+	if len(pageView) > 0 && pageView != nil {
+		res, err := FilterRowsForSixSignalPageView(projectId, sixSignalQuery, result[1].Results[0])
+		if err != http.StatusOK {
+			return nil, err, "", "Failed fetching 6Signal company name for page view filter", false
+		}
+		result[1].Results[0] = res
 	}
 	return result, http.StatusOK, "", "", false
 
@@ -339,6 +365,36 @@ func FetchListofDatesForSixSignalReport(c *gin.Context) (interface{}, int, strin
 	return dateList, http.StatusFound, "", false
 }
 
+// GetPageViewForSixSignalReport fetches the page_view event from the DB for both app-login and public-url.
+func GetPageViewForSixSignalReport(c *gin.Context) (interface{}, int, string, string, bool) {
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		return nil, http.StatusBadRequest, INVALID_PROJECT, "Invalid project.", true
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+
+	eventNames, err := store.GetStore().GetMostFrequentlyEventNamesByType(projectId, model.FilterValuesOrEventNamesLimit, C.GetLookbackWindowForEventUserCache(), "page_views")
+	if err != nil {
+		logCtx.WithError(err).Error("get event names ordered by occurence and recency")
+		return nil, http.StatusInternalServerError, "", "Failed fetching page views", true
+	}
+
+	if len(eventNames) == 0 {
+		logCtx.WithError(err).Error(fmt.Sprintf("No Events Returned - ProjectID - %d", projectId))
+	}
+
+	// Force add specific events.
+	if fNames, pExists := FORCED_EVENT_NAMES[projectId]; pExists {
+		eventNames = append(eventNames, fNames...)
+	}
+
+	return eventNames, http.StatusOK, "", "", false
+}
+
 // getFolderName generate folder name using from, to and timezone from sixsignal query
 func getFolderName(query model.SixSignalQuery) string {
 	commonQueryFrom := query.From
@@ -377,4 +433,52 @@ func GetSixSignalAnalysisData(projectId int64, id string) map[int]model.SixSigna
 	}
 
 	return result
+}
+
+func FilterRowsForSixSignalPageView(projectId int64, reqPayload model.SixSignalQuery, result model.SixSignalQueryResult) (model.SixSignalQueryResult, int) {
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectId,
+		"reqPayload": reqPayload,
+	})
+
+	rows := result.Rows
+	filteredRes := model.SixSignalQueryResult{Headers: result.Headers,
+		Query: result.Query}
+
+	companyList, err, _ := store.GetStore().RunSixSignalPageViewQuery(projectId, reqPayload)
+	if err != http.StatusOK {
+		logCtx.Error("Failed fetching 6Signal company name for page view filter")
+		return filteredRes, err
+	}
+
+	companyMap := make(map[string]bool)
+	for _, company := range companyList {
+		companyMap[company] = true
+	}
+
+	var filteredRows [][]interface{}
+	for _, row := range rows {
+		if _, ok := companyMap[row[0].(string)]; ok {
+			filteredRows = append(filteredRows, row)
+		}
+	}
+
+	sortIndex := getIndexForPageCount(filteredRes.Headers)
+	if sortIndex != -1 {
+		sort.Slice(filteredRows, func(i, j int) bool {
+			return filteredRows[i][sortIndex].(int) > filteredRows[j][sortIndex].(int)
+		})
+	}
+	filteredRes.Rows = filteredRows
+	return filteredRes, http.StatusOK
+}
+
+func getIndexForPageCount(headers []string) int {
+	for i, v := range headers {
+		if v == "page_count" {
+			return i
+		}
+	}
+	return -1
 }
