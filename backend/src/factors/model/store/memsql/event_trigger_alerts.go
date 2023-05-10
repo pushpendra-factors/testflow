@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -71,6 +72,7 @@ func (store *MemSQL) GetEventTriggerAlertByID(id string) (*model.EventTriggerAle
 		}
 		return nil, http.StatusInternalServerError
 	}
+
 	return &alert, http.StatusFound
 }
 
@@ -96,7 +98,7 @@ func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []mode
 				deliveryOption += "& Webhook"
 			}
 		}
-		if alert.Teams{
+		if alert.Teams {
 			if deliveryOption == "" {
 				deliveryOption += "Teams"
 			} else {
@@ -137,7 +139,7 @@ func (store *MemSQL) DeleteEventTriggerAlert(projectID int64, id string) (int, s
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser string) (*model.EventTriggerAlert, int, string) {
+func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string) (*model.EventTriggerAlert, int, string) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"event_trigger_alert": alertConfig,
@@ -215,6 +217,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 		UpdatedAt:                transTime,
 		IsDeleted:                false,
 		SlackChannelAssociatedBy: slackTokenUser,
+		TeamsChannelAssociatedBy: teamTokenUser,
 	}
 
 	if err := db.Create(&alert).Error; err != nil {
@@ -233,7 +236,7 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 	if alert.Event == "" {
 		return false, http.StatusBadRequest, "event can not be empty"
 	}
-	if !alert.Slack && !alert.Webhook &&!alert.Teams{
+	if !alert.Slack && !alert.Webhook && !alert.Teams {
 		return false, http.StatusBadRequest, "Choose atleast one delivery option"
 	}
 	if alert.Slack && (alert.SlackChannels == nil || U.IsEmptyPostgresJsonb(alert.SlackChannels)) {
@@ -693,7 +696,7 @@ func getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(projectID int64, 
 	coolDownTime, unixtime int64, alertID string, breakdownProps *map[string]interface{}) (bool,
 	*cacheRedis.Key, cacheRedis.SortedSetKeyValueTuple, error) {
 
-	key, err := model.GetEventTriggerAlertCacheKey(projectID, unixtime, alertID, breakdownProps)
+	key, err := model.GetEventTriggerAlertCacheKey(projectID, unixtime, alertID)
 	if err != nil {
 		log.WithError(err).Error("error while getting cache Key")
 		return false, nil, cacheRedis.SortedSetKeyValueTuple{}, err
@@ -701,7 +704,7 @@ func getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(projectID int64, 
 
 	check := true
 	if dontRepeatAlerts {
-		check, err = isCoolDownTimeExhausted(key, coolDownTime, unixtime)
+		check, err = isCoolDownTimeExhausted(key, coolDownTime, unixtime, breakdownProps)
 		if err != nil {
 			log.WithError(err).Error("error while getting coolDownTime diff")
 			return false, key, cacheRedis.SortedSetKeyValueTuple{}, nil
@@ -728,9 +731,26 @@ func getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(projectID int64, 
 	return check, key, sortedSetTuple, nil
 }
 
-func isCoolDownTimeExhausted(key *cacheRedis.Key, coolDownTime, unixtime int64) (bool, error) {
+func isCoolDownTimeExhausted(key *cacheRedis.Key, coolDownTime, unixtime int64, breakdownProps *map[string]interface{}) (bool, error) {
+	
+	// coolDownKeyCounter structure = ETA:CoolDown:pid:<project_id>:<alert_id>:<prop>:<value>:....
+	// remove the unixtime from the alert cache key
+	// sort and stringify the breakdownProps 
+	// create the coolDown cacheKey from the alert key by adding breakdownProps
+	// INCR the coolDown cacheKey
+	// if the INCR returns value 1 then set the expiry as coolDownTime and return true
+	// else return false for isCoolDownTimeExhausted
 
-	suffix := strings.TrimRight(key.Suffix, fmt.Sprintf(":%d", unixtime))
+	suffix := strings.TrimRight(key.Suffix, fmt.Sprintf("%d", unixtime))
+	props := make([]string, 0, len(*breakdownProps))
+	for p := range *breakdownProps {
+		props = append(props, p)
+	}
+	sort.Strings(props)
+	for _, prop := range props {
+		suffix = fmt.Sprintf("%s:%s:%v", suffix, prop, (*breakdownProps)[prop])
+	}
+
 	cdKey, err := cacheRedis.NewKey(key.ProjectID, CoolDownPrefix, suffix)
 	if err != nil {
 		log.WithError(err).Error("error while getting redis key")
@@ -759,15 +779,16 @@ func isCoolDownTimeExhausted(key *cacheRedis.Key, coolDownTime, unixtime int64) 
 
 func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, event *model.Event, eventName *model.EventName) bool {
 
-	//Adding alert to cache
-	//INCR the counter key
-	//If the counterKey is present, continue
-	//Else set the counter key with one day of expiry
-	//If the counter key has count less than daily limit, then
-	//Get sorted set keys from where all the alert keys for a particular projectID are retrieved
-	//Get the alert key as well
-	//Add the alert key to the sorted set and cache
-	//Else return
+	// Adding alert to cache
+	// Check for cooldown against the breakdown properties
+	// Get sorted set keys from where all the alert keys for a particular projectID are retrieved
+	// Get the alert key as well
+	// If coolDown is not exhausted then return
+	// INCR the counter key
+	// If the counterKey is present, continue
+	// Else set the counter key with one day of expiry
+	// If the counter key has count less than daily limit, then
+	// Add the alert key to the sorted set and cache
 
 	logFields := log.Fields{
 		"project_id":          alert.ProjectID,
@@ -784,6 +805,24 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 	tt := time.Now()
 	timestamp := tt.UnixNano()
 	date := tt.UTC().Format(U.DATETIME_FORMAT_YYYYMMDD)
+
+	messageProps, breakdownProps, err := store.GetMessageAndBreakdownPropertiesMap(event, &eta, eventName)
+	if err != nil {
+		log.WithError(err).Error("key and sortedTuple fetching error")
+		return false
+	}
+
+	isCoolDownTimeExpired, key, sortedSetTuple, err := getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(
+		event.ProjectId, eta.DontRepeatAlerts, eta.CoolDownTime, timestamp, alert.ID, &breakdownProps)
+	if err != nil {
+		log.WithError(err).Error("key and sortedTuple fetching error")
+		return false
+	}
+
+	if !isCoolDownTimeExpired {
+		log.WithFields(logFields).Info("Alert sending cancelled due to cool down timer")
+		return true
+	}
 
 	counterKey, err := model.GetEventTriggerAlertCacheCounterKey(event.ProjectId, alert.ID, date)
 	if err != nil {
@@ -806,46 +845,22 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 		}
 	}
 
-	addToCache := true
 	if eta.SetAlertLimit && count > eta.AlertLimit {
-		addToCache = false
+		log.WithFields(logFields).
+			Info("Alert was not sent for current EventTriggerAlert as daily AlertLimit has been reached.")
+
+		return true
+	}
+	_, err = cacheRedis.ZincrPersistentBatch(true, sortedSetTuple)
+	if err != nil {
+		log.WithError(err).Error("error while getting zincr")
+		return false
 	}
 
-	if addToCache {
-		messageProps, breakdownProps, err := store.GetMessageAndBreakdownPropertiesMap(event, &eta, eventName)
-		if err != nil {
-			log.WithError(err).Error("key and sortedTuple fetching error")
-			return false
-		}
-
-		check, key, sortedSetTuple, err := getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(
-			event.ProjectId, eta.DontRepeatAlerts, eta.CoolDownTime, timestamp, alert.ID, &breakdownProps)
-		if err != nil {
-			log.WithError(err).Error("key and sortedTuple fetching error")
-			return false
-		}
-
-		if !check {
-			log.WithFields(log.Fields{"project_id": event.ProjectId, "event_trigger_alert": alert}).
-				Info("Alert sending cancelled due to cool down timer")
-			return true
-		}
-		_, err = cacheRedis.ZincrPersistentBatch(true, sortedSetTuple)
-		if err != nil {
-			log.WithError(err).Error("error while getting zincr")
-			return false
-		}
-
-		successCode, err := store.AddAlertToCache(&eta, &messageProps, key)
-		if err != nil || successCode != http.StatusCreated {
-			log.WithFields(log.Fields{"project_id": event.ProjectId,
-				"event_trigger_alert": alert, log.ErrorKey: err}).Error("Failed to send alert.")
-			return false
-		}
-
-	} else {
-		log.WithFields(log.Fields{"project_id": event.ProjectId, "event_trigger_alert": *alert}).
-			Info("Alert was not sent for current EventTriggerAlert as daily AlertLimit has been reached.")
+	successCode, err := store.AddAlertToCache(&eta, &messageProps, key)
+	if err != nil || successCode != http.StatusCreated {
+		log.WithFields(logFields).Error("Failed to send alert.")
+		return false
 	}
 
 	return true

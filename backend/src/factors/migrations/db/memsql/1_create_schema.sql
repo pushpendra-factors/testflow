@@ -1205,6 +1205,7 @@ CREATE TABLE IF NOT EXISTS event_trigger_alerts(
     title text,
     created_by text,
     slack_channel_associated_by text,
+    teams_channel_associated_by text,
     event_trigger_alert json,
     last_alert_at timestamp(6),
     created_at timestamp(6) NOT NULL,
