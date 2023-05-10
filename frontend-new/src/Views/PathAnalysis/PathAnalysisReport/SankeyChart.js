@@ -105,7 +105,7 @@ function Sankey({
         }
     }
     const transformDataFn = (data, isReverse) => { 
-        console.log('input chart data-->', data); 
+        // console.log('input chart data-->', data); 
         if (data) {
             let results = data;
             let finalArr = [];
@@ -129,7 +129,7 @@ function Sankey({
                     }
                 }
             }
-            console.log('transformed chart data-->', finalArr); 
+            // console.log('transformed chart data-->', finalArr); 
             return finalArr
         }
         return null;

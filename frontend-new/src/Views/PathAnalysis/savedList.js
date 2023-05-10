@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, SVG } from 'factorsComponents';
 import { Button, Table, Avatar, Menu, Dropdown, Modal, message, Badge, Input } from 'antd';
 import { useHistory } from 'react-router-dom';
-import { fetchSavedPathAnalysis, removeSavedQuery, fetchPathAnalysisInsights,setActiveInsightQuery } from 'Reducers/pathAnalysis';
+import { fetchSavedPathAnalysis, removeSavedQuery, fetchPathAnalysisInsights, setActiveInsightQuery } from 'Reducers/pathAnalysis';
 import { connect } from 'react-redux';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import moment from 'moment';
@@ -10,10 +10,16 @@ import moment from 'moment';
 
 const { confirm } = Modal;
 
-
-
-
-const SavedGoals = ({ savedQuery, setShowReport, SetfetchingIngishts,setActiveInsightQuery, removeSavedQuery, fetchSavedPathAnalysis, activeProject, fetchPathAnalysisInsights }) => {
+const SavedGoals = ({
+  savedQuery,
+  setShowReport,
+  SetfetchingIngishts,
+  setActiveInsightQuery,
+  removeSavedQuery,
+  fetchSavedPathAnalysis,
+  activeProject,
+  fetchPathAnalysisInsights
+}) => {
 
   const [loadingTable, SetLoadingTable] = useState(true);
   const [dataSource, setdataSource] = useState(null);
@@ -28,7 +34,7 @@ const SavedGoals = ({ savedQuery, setShowReport, SetfetchingIngishts,setActiveIn
     setSearchTerm(term);
     let searchResults = dataSource.filter((item) => {
       return item?.title?.toLowerCase().includes(term.toLowerCase());
-    }); 
+    });
     setTableData(searchResults);
   };
 
@@ -42,7 +48,7 @@ const SavedGoals = ({ savedQuery, setShowReport, SetfetchingIngishts,setActiveIn
     );
   };
 
-  const getInsights = (data) => { 
+  const getInsights = (data) => {
     SetfetchingIngishts(true);
     setActiveInsightQuery(data);
     const getData = async () => {
@@ -79,10 +85,10 @@ const SavedGoals = ({ savedQuery, setShowReport, SetfetchingIngishts,setActiveIn
       key: 'data',
       width: '350px',
       render: (data) => <Text type={'title'} level={7} truncate={true}
-      // extraClass={`${(data?.status == 'saved' || data?.status == 'building') ? "" : "cursor-pointer"} m-0`} 
-      // onClick={(data?.status == 'saved' || data?.status == 'building') ? "" : () => getInsights(data)}
-      extraClass={`cursor-pointer m-0`} 
-      onClick={() => getInsights(data)}
+        // extraClass={`${(data?.status == 'saved' || data?.status == 'building') ? "" : "cursor-pointer"} m-0`} 
+        // onClick={(data?.status == 'saved' || data?.status == 'building') ? "" : () => getInsights(data)}
+        extraClass={`cursor-pointer m-0`}
+        onClick={() => getInsights(data)}
       >{data?.title}</Text>
     },
     {
@@ -144,31 +150,27 @@ const SavedGoals = ({ savedQuery, setShowReport, SetfetchingIngishts,setActiveIn
     setdataSource(null);
     if (savedQuery) {
       const formattedArray = [];
-      savedQuery.map((data, index) => {
+      for (const key of Object.keys(savedQuery)) {
+        let data = savedQuery[key][0];
         let createdUser = '';
         formattedArray.push({
-          key: index,
+          key: data?.title,
           title: data?.title,
           status: data?.status,
           author: data?.created_by,
           created_at: data?.date,
-          data: data
+          data: { ...data, referenceid: key }
         });
         setdataSource(formattedArray);
-      });
-      SetLoadingTable(false);
+        SetLoadingTable(false);
+      }
     }
-    else{
+    else {
       setdataSource([]);
       SetLoadingTable(false);
     }
   }, [savedQuery]);
-
-
-  //   useEffect(()=>{
-  //     fetchSavedPathAnalysis(activeProject?.id)
-  //   },[]);
-
+ 
   return (<div>
     <div className='flex items-end justify-between mt-10 mb-2'>
       <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>{'Saved Paths'}</Text>
@@ -179,7 +181,7 @@ const SavedGoals = ({ savedQuery, setShowReport, SetfetchingIngishts,setActiveIn
           {showSearch ? (
             <Input
               autoFocus
-              onChange={(e)=>searchReport(e)} 
+              onChange={(e) => searchReport(e)}
               placeholder={'Search reports'}
               style={{ width: '220px', 'border-radius': '5px' }}
               prefix={

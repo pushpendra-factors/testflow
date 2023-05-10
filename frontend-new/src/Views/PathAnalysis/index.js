@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react'; 
-import { Row, Col, Button, Spin, Tag } from 'antd';  
-import { connect, useSelector } from 'react-redux'; 
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Button, Spin, Tag } from 'antd';
+import { connect, useSelector } from 'react-redux';
 import _, { isEmpty } from 'lodash';
 
 import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
-import { ErrorBoundary } from 'react-error-boundary'; 
+import { ErrorBoundary } from 'react-error-boundary';
 import { useHistory } from 'react-router-dom';
-import { fetchSavedPathAnalysis,removeSavedQuery, fetchPathAnalysisInsights } from 'Reducers/pathAnalysis';
+import { fetchSavedPathAnalysis, removeSavedQuery, fetchPathAnalysisInsights } from 'Reducers/pathAnalysis';
 import PathAnalysisReport from './PathAnalysisReport';
 import PathAnalysisLP from './landingPage'
 
-const Factors = ({ 
-  activeProject,  
+
+const Factors = ({
+  activeProject,
   fetchSavedPathAnalysis,
   currentProjectSettings
 }) => {
@@ -20,17 +21,17 @@ const Factors = ({
   const [showReport, setShowReport] = useState(false);
   const history = useHistory();
   const [loading, setLoading] = useState(true);
+  const [durationObj, setDurationObj] = useState();
 
-
-  useEffect(()=>{
-    if(!currentProjectSettings?.is_path_analysis_enabled){
+  useEffect(() => {
+    if (!currentProjectSettings?.is_path_analysis_enabled) {
       history.push('/')
     }
 
-    fetchSavedPathAnalysis(activeProject?.id).then(()=>{
-        setLoading(false);
+    fetchSavedPathAnalysis(activeProject?.id).then(() => {
+      setLoading(false);
     })
-  },[activeProject]);
+  }, [activeProject]);
 
   if (loading) {
     return (
@@ -39,42 +40,37 @@ const Factors = ({
       </div>
     );
   }
- 
-    return (
-      <>
-        <ErrorBoundary
-          fallback={
-            <FaErrorComp
-              size={'medium'}
-              title={'Path Analysis Error '}
-              subtitle={
-                'We are facing trouble loading Path Analysis. Drop us a message on the in-app chat.'
-              }
-            />
-          }
-          onError={FaErrorLog}
-        > 
-
-        
-
-          {fetchingIngishts ? (
-            <Spin size={'large'} className={'fa-page-loader'} />
-          ) : ( <> 
+  return (
+    <>
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            size={'medium'}
+            title={'Path Analysis Error '}
+            subtitle={
+              'We are facing trouble loading Path Analysis. Drop us a message on the in-app chat.'
+            }
+          />
+        }
+        onError={FaErrorLog}
+      >
+        {fetchingIngishts ? (
+          <Spin size={'large'} className={'fa-page-loader'} />
+        ) : (<>
           <PathAnalysisLP
-           SetfetchingIngishts={SetfetchingIngishts}
-           setShowReport={setShowReport}
-            />
-            </>
-          )} 
-
-        </ErrorBoundary>
-      </>
-    );
+            SetfetchingIngishts={SetfetchingIngishts}
+            setShowReport={setShowReport}
+          />
+        </>
+        )}
+      </ErrorBoundary>
+    </>
+  );
 };
 const mapStateToProps = (state) => {
   return {
-    activeProject: state.global.active_project, 
+    activeProject: state.global.active_project,
     currentProjectSettings: state.global.currentProjectSettings
   };
 };
-export default connect(mapStateToProps, {fetchSavedPathAnalysis})(Factors);
+export default connect(mapStateToProps, { fetchSavedPathAnalysis })(Factors);
