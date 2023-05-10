@@ -919,6 +919,9 @@ const SALESFORCE_PROPERTY_PREFIX = "$salesforce_"
 const MARKETO_PROPERTY_PREFIX = "$marketo_"
 const LEADSQUARED_PROPERTY_PREFIX = "$leadsquared_"
 
+var CRMEventPrefixes = [...]string {
+	"$hubspot", "$salesforce", "$sf", "$leadsquared", "$marketo",
+}
 var AllowedCRMPropertyPrefix = map[string]bool{
 	HUBSPOT_PROPERTY_PREFIX:     true,
 	SALESFORCE_PROPERTY_PREFIX:  true,

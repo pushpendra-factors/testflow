@@ -16,7 +16,7 @@ const (
 	LimitPathAnalysisEntityList = 1000
 )
 
-func (store *MemSQL) GetAllPathAnalysisEntityByProject(projectID int64) ([]model.PathAnalysisEntityInfo, int) {
+func (store *MemSQL) GetAllPathAnalysisEntityByProject(projectID int64) (map[string][]model.PathAnalysisEntityInfo, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -67,9 +67,9 @@ func (store *MemSQL) GetPathAnalysisEntity(projectID int64, id string) (model.Pa
 	return entity, http.StatusFound
 }
 
-func (store *MemSQL) convertPathAnalysisToPathAnalysisEntityInfo(list []model.PathAnalysis, names map[string]string) []model.PathAnalysisEntityInfo {
+func (store *MemSQL) convertPathAnalysisToPathAnalysisEntityInfo(list []model.PathAnalysis, names map[string]string) map[string][]model.PathAnalysisEntityInfo {
 
-	res := make([]model.PathAnalysisEntityInfo, 0)
+	res := make(map[string][]model.PathAnalysisEntityInfo)
 
 	for _, obj := range list {
 		var entity model.PathAnalysisQuery
@@ -77,6 +77,10 @@ func (store *MemSQL) convertPathAnalysisToPathAnalysisEntityInfo(list []model.Pa
 		if err != nil {
 			log.WithError(err).Error("Problem deserializing pathanalysis query.")
 			return nil
+		}
+		_, exist := res[obj.ReferenceID]
+		if(!exist){
+			res[obj.ReferenceID] = make([]model.PathAnalysisEntityInfo, 0)
 		}
 		e := model.PathAnalysisEntityInfo{
 			Id:                obj.ID,
@@ -86,12 +90,13 @@ func (store *MemSQL) convertPathAnalysisToPathAnalysisEntityInfo(list []model.Pa
 			Date:              obj.UpdatedAt,
 			PathAnalysisQuery: entity,
 		}
-		res = append(res, e)
+		res[obj.ReferenceID] = append(res[obj.ReferenceID], e)
+		
 	}
 	return res
 }
 
-func (store *MemSQL) CreatePathAnalysisEntity(userID string, projectId int64, entity *model.PathAnalysisQuery) (*model.PathAnalysis, int, string) {
+func (store *MemSQL) CreatePathAnalysisEntity(userID string, projectId int64, entity *model.PathAnalysisQuery, referenceId string) (*model.PathAnalysis, int, string) {
 	logFields := log.Fields{
 		"project_id":   projectId,
 		"pathanalysis": entity,
@@ -129,6 +134,12 @@ func (store *MemSQL) CreatePathAnalysisEntity(userID string, projectId int64, en
 		UpdatedAt:         transTime,
 		PathAnalysisQuery: query,
 		IsDeleted:         false,
+	}
+
+	if(referenceId == ""){
+		obj.ReferenceID = obj.ID
+	} else {
+		obj.ReferenceID = referenceId
 	}
 
 	if err := db.Create(&obj).Error; err != nil {

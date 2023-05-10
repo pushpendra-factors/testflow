@@ -881,9 +881,9 @@ type Model interface {
 	UpdatePathAnalysisEntity(projectID int64, id string, status string) (int, string)
 	GetAllSavedPathAnalysisEntityByProject(projectID int64) ([]model.PathAnalysis, int)
 	//path analysis
-	GetAllPathAnalysisEntityByProject(projectID int64) ([]model.PathAnalysisEntityInfo, int)
+	GetAllPathAnalysisEntityByProject(projectID int64) (map[string][]model.PathAnalysisEntityInfo, int)
 	GetPathAnalysisEntity(projectID int64, id string) (model.PathAnalysis, int)
-	CreatePathAnalysisEntity(userID string, projectId int64, entity *model.PathAnalysisQuery) (*model.PathAnalysis, int, string)
+	CreatePathAnalysisEntity(userID string, projectId int64, entity *model.PathAnalysisQuery, referenceId string) (*model.PathAnalysis, int, string)
 	DeletePathAnalysisEntity(projectID int64, id string) (int, string)
 	GetProjectCountWithStatus(projectID int64, status []string) (int, int, string)
 
