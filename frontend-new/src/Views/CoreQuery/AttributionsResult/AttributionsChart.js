@@ -65,14 +65,15 @@ const AttributionsChartComponent = forwardRef(
       comparison_duration,
       savedQuerySettings,
       attributionMetrics,
-      appliedFilters,
       setAttributionMetrics,
       updateCoreQueryReducer,
+      appliedFilters,
       setAppliedFilters,
-      v1=false
+      v1=false,
     },
     ref
   ) => {
+   
     const { eventNames } = useSelector((state) => state.coreQuery);
 
     const [aggregateData, setAggregateData] = useState({
@@ -361,6 +362,7 @@ const AttributionsChartComponent = forwardRef(
         durationObj={durationObj}
         comparison_duration={comparison_duration}
         comparison_data={comparison_data}
+        v1={v1}
       />
     );
 
@@ -463,6 +465,7 @@ const AttributionsChart = (props) => {
     updateCoreQueryReducer
   } = useContext(CoreQueryContext);
 
+  const applFilters = rest.v1? rest.appliedFilters : attributionTableFilters;
   return (
     <AttributionsChartMemoized
       setAttributionMetrics={setAttributionMetrics}
@@ -471,7 +474,7 @@ const AttributionsChart = (props) => {
       comparison_data={comparison_data}
       comparison_duration={comparison_duration}
       updateCoreQueryReducer={updateCoreQueryReducer}
-      appliedFilters={rest.v1? rest.appliedFilters : attributionTableFilters}
+      appliedFilters={applFilters}
       setAppliedFilters={rest.setAppliedFilters}
       ref={renderedCompRef}
       {...rest}
