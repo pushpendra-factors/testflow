@@ -322,18 +322,20 @@ func GetSourceStringForAccountsV1(groupNameIDMap map[string]int, source string) 
 	var crmNames []string
 	var crmIDs []int
 	var crmExists []bool
-	crmGroups := make([]string, 0, len(model.AllowedGroupNames))
+	crmGroups := make([]string, 0, len(model.AccountGroupNames))
 	for key := range model.AllowedGroupNames {
 		crmGroups = append(crmGroups, key)
 	}
 	for _, crmName := range crmGroups {
 		crmID, exists := groupNameIDMap[crmName]
-		crmIDs = append(crmIDs, crmID)
-		crmNames = append(crmNames, crmName)
-		crmExists = append(crmExists, exists)
+		if exists {
+			crmIDs = append(crmIDs, crmID)
+			crmNames = append(crmNames, crmName)
+			crmExists = append(crmExists, exists)
+		}
 	}
 
-	if !crmExists[0] && !crmExists[1] && !crmExists[2] {
+	if len(crmExists) == 0 {
 		log.WithFields(logFields).Error("No CRMs Enabled for this project.")
 		return sourceString, http.StatusBadRequest
 	}

@@ -33,7 +33,7 @@ const (
 	salesforceAPIVersion54 = "v54.0"
 )
 
-//Salesforce API structs
+// Salesforce API structs
 type field map[string]interface{}
 
 // Describe structure for salesforce describe API
@@ -1131,7 +1131,7 @@ func SyncUserReferenceFields(projectID int64, propertiesMetaMap map[string][]Pro
 				}
 
 				propertyKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, docType, property.Name)
-				ownerId := U.GetPropertyValueAsString((*value)["OwnerId"])
+				ownerId := U.GetPropertyValueAsString((*value)["Id"])
 
 				firstName := U.GetPropertyValueAsString((*value)["FirstName"])
 				lastName := U.GetPropertyValueAsString((*value)["LastName"])

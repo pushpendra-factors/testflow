@@ -197,6 +197,7 @@ function AttributionChart({
       cardSize={cardSize}
       height={DASHBOARD_WIDGET_SCATTERPLOT_CHART_HEIGHT}
       chartId={`scatterPlot-${unitId}`}
+      v1={true}
     />
   );
 

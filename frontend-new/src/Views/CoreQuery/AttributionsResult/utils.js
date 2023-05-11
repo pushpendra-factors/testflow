@@ -1211,6 +1211,71 @@ export const getScatterPlotChartData = (
   return finalResult;
 };
 
+export const getScatterPlotChartDataV1 = (
+  selectedTouchPoint,
+  attr_dimensions,
+  content_groups,
+  data,
+  visibleIndices,
+  xAxisMetric,
+  yAxisMetric,
+  isComparisonApplied
+) => {
+  const listDimensions = isLandingPageOrAllPageViewSelected(selectedTouchPoint)
+    ? content_groups.slice()
+    : attr_dimensions.slice();
+  const enabledDimensions = listDimensions.filter(
+    (d) => d.touchPoint === selectedTouchPoint && d.enabled
+  );
+  const visibleData = data.filter((d) => visibleIndices.indexOf(d.index) > -1);
+  const categories = [];
+  const comparisonPlotData = [];
+  const plotData = visibleData.map((d) => {
+    const category = [];
+    if (enabledDimensions.length) {
+      for (const dimension of enabledDimensions) {
+        category.push(d[dimension.title]);
+      }
+    } else {
+      category.push(d[selectedTouchPoint]);
+    }
+
+    categories.push(category.join(', '));
+    const metricKeys = Object.keys(d);
+    const xAxisIndex = metricKeys.findIndex((conv)=>{return conv.split('-')?.[1] === ` ${xAxisMetric}`})
+    const yAxisIndex = metricKeys.findIndex((conv)=>{return conv.split('-')?.[1] === ` ${yAxisMetric}`})
+
+    if (isComparisonApplied) {
+      comparisonPlotData.push([
+        Number(d[xAxisMetric].compare_value),
+        Number(d[yAxisMetric].compare_value)
+      ]);
+      return [Number(d[xAxisMetric].value), Number(d[yAxisMetric].value)];
+    }
+    
+    return [Number(d[metricKeys[xAxisIndex]]), Number(d[metricKeys[yAxisIndex]])];
+  });
+
+  const finalResult = {
+    series: [
+      {
+        color: CHART_COLOR_1,
+        data: plotData
+      }
+    ],
+    categories
+  };
+
+  if (isComparisonApplied) {
+    finalResult.series.push({
+      color: CHART_COLOR_8,
+      data: comparisonPlotData
+    });
+  }
+
+  return finalResult;
+};
+
 export const getAxisMetricOptions = (
   selectedTouchPoint,
   linkedEvents,
@@ -1219,7 +1284,7 @@ export const getAxisMetricOptions = (
   eventNames
 ) => {
   const result = getResultantMetrics(selectedTouchPoint, ATTRIBUTION_METRICS)
-    .filter((metric) => !metric.isEventMetric)
+    .filter((metric) => !metric.isEventMetric && metric.enabled)
     .map((metric) => ({
       title: metric.title,
       value: metric.title

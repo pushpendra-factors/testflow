@@ -65,6 +65,7 @@ jobs:
           channelId: live
           target: staging
           entrypoint: ./sdk/javascript
+          firebaseToolsVersion: 11.30.0
 
       - name: Firebase Deployement APP
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -75,6 +76,7 @@ jobs:
           channelId: live
           target: staging
           entrypoint: ./frontend-new
+          firebaseToolsVersion: 11.30.0
 
       - name: Build Size Validation 1
         run: cd $GITHUB_WORKSPACE/frontend-new && node sdk-monitor.js stage 2;

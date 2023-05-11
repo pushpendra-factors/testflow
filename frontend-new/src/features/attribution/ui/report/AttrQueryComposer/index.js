@@ -85,33 +85,6 @@ const AttrQueryComposer = ({
     });
   }, [linkedEvents]);
 
-  const goalChange = (eventGoal) => {
-    setGoalEvent(eventGoal);
-    dispatch({
-      type: SET_ATTR_QUERIES,
-      payload: []
-    });
-  };
-
-  const linkEventChange = (linkEvent, index) => {
-    const currLinkedEvs = [...linkedEvents];
-    if (index === undefined || index < 0) {
-      currLinkedEvs.push(linkEvent);
-    } else {
-      currLinkedEvs[index] = linkEvent;
-    }
-    setLinkedEvents(currLinkedEvs);
-  };
-
-  const goalDel = () => {
-    setGoalEvent({});
-  };
-
-  const linkEventDel = (index) => {
-    const currLinkedEvs = linkedEvents.filter((ev, i) => i !== index);
-    setLinkedEvents(currLinkedEvs);
-  };
-
   const setToQueries = (val, index) => {
     const qs = [...attrQueries];
     if (qs[index]) {
