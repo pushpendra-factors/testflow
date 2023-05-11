@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Table,
   Button,
@@ -36,6 +36,7 @@ import ProfileBeforeIntegration from '../ProfileBeforeIntegration';
 import {
   ALPHANUMSTR,
   DEFAULT_TIMELINE_CONFIG,
+  EngagementTag,
   formatEventsFromSegment,
   formatFiltersForPayload,
   formatPayloadForFilters,
@@ -236,6 +237,29 @@ function UserProfiles({
         )
       }
     ];
+    // Engagement Column
+    const engagementExists = contacts.data?.[0]?.engagement;
+    if (engagementExists) {
+      columns.push({
+        title: <div className={headerClassStr}>Engagement</div>,
+        width: 150,
+        dataIndex: 'engagement',
+        key: 'engagement',
+        fixed: 'left',
+        render: (status) => (
+          <div
+            className='engagement-tag'
+            style={{ '--bg-color': EngagementTag[status]?.bgColor }}
+          >
+            <SVG name={EngagementTag[status]?.icon} />
+            <Text type='title' level={6} extraClass='m-0'>
+              {status}
+            </Text>
+          </div>
+        )
+      });
+    }
+
     const tableProps = timelinePayload.segment_id
       ? activeSegment.query.table_props
       : currentProjectSettings?.timelines_config?.user_config?.table_props;
@@ -251,7 +275,7 @@ function UserProfiles({
             level={7}
             color='grey-2'
             weight='bold'
-            className='m-0'
+            extraClass='m-0'
             truncate
           >
             {propDisplayName}
@@ -259,9 +283,9 @@ function UserProfiles({
         ),
         dataIndex: prop,
         key: prop,
-        width: 300,
+        width: 250,
         render: (value) => (
-          <Text type='title' level={7} className='m-0' truncate>
+          <Text type='title' level={7} extraClass='m-0' truncate>
             {value ? propValueFormat(prop, value, propType) : '-'}
           </Text>
         )
@@ -269,9 +293,9 @@ function UserProfiles({
     });
     columns.push({
       title: <div className={headerClassStr}>Last Activity</div>,
-      dataIndex: 'last_activity',
-      key: 'last_activity',
-      width: 250,
+      dataIndex: 'lastActivity',
+      key: 'lastActivity',
+      width: 200,
       align: 'right',
       render: (item) => MomentTz(item).fromNow()
     });
@@ -282,7 +306,7 @@ function UserProfiles({
     const tableData = data?.map((row) => {
       return {
         ...row,
-        ...row?.table_props
+        ...row?.tableProps
       };
     });
     return tableData.sort(
@@ -814,7 +838,7 @@ function UserProfiles({
         scroll={{
           x:
             currentProjectSettings?.timelines_config?.user_config?.table_props
-              ?.length * 300
+              ?.length * 250
         }}
       />
       <div className='flex flex-row-reverse mt-4'></div>

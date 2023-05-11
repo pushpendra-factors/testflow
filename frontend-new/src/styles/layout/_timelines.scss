@@ -832,3 +832,15 @@
     height: 40px;
     width: 40px;
 }
+
+.engagement-tag {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    width: fit-content;
+    align-items: center;
+    padding: 4px 14px;
+    gap: 6px;
+    background: var(--bg-color);
+    border-radius: 16px;
+}

@@ -7,7 +7,9 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
+	"math"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -25,33 +27,24 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 		return "", http.StatusBadRequest, "", "invalid project_id", true
 	}
 
-	score := c.Query("score")
-	if score == "" {
-		score = "false"
-	}
-	get_score, err := strconv.ParseBool(score)
+	req := c.Request
+
+	getScore, err := getBoolQueryParam(c.Query("score"))
 	if err != nil {
 		logCtx.Error("Invalid score flag .")
-		get_score = false
 	}
 
-	debug := c.Query("debug")
-	if debug == "" {
-		debug = "false"
-	}
-	get_debug, err := strconv.ParseBool(debug)
+	getDebug, err := getBoolQueryParam(c.Query("debug"))
 	if err != nil {
 		logCtx.Error("Invalid debug flag.")
-		get_debug = false
 	}
 
-	r := c.Request
 	var payload model.TimelinePayload
 	logCtx = log.WithFields(log.Fields{
 		"projectId": projectId,
 		"payload":   payload,
 	})
-	decoder := json.NewDecoder(r.Body)
+	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
 		logCtx.Error("Json decode failed.")
@@ -65,7 +58,7 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 		return nil, errCode, "", "", true
 	}
 
-	if get_score {
+	if getScore {
 		// add score to the response based on the user scores from acc scoring
 		var userIdsUnknown []string = make([]string, 0)
 		var userIdsKnown []string = make([]string, 0)
@@ -76,7 +69,7 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 				userIdsKnown = append(userIdsKnown, profile.Identity)
 			}
 		}
-		ScoresPerUser, err := store.GetStore().GetUserScoreOnIds(projectId, userIdsUnknown, userIdsKnown, get_debug)
+		ScoresPerUser, err := store.GetStore().GetUserScoreOnIds(projectId, userIdsUnknown, userIdsKnown, getDebug)
 		if err != nil {
 			logCtx.Error("Error while fetching user scores.")
 			return nil, http.StatusInternalServerError, "", "", true
@@ -88,14 +81,56 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 	return profileUsersList, http.StatusOK, "", "", false
 }
 
+func getBoolQueryParam(value string) (bool, error) {
+	if value == "" {
+		return false, nil
+	}
+	status, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("invalid boolean value: %s", value)
+	}
+	return status, nil
+}
+
 func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser map[string]model.PerUserScoreOnDay) {
-	for _, profile := range *profileUsersList {
-		if prof, ok := scoresPerUser[profile.Identity]; ok {
-			profile.Score = float64(prof.Score)
+	var scores []float64
+	for i := range *profileUsersList {
+		if prof, ok := scoresPerUser[(*profileUsersList)[i].Identity]; ok {
+			(*profileUsersList)[i].Score = float64(prof.Score)
+			scores = append(scores, float64(prof.Score))
 		} else {
-			profile.Score = 0
+			(*profileUsersList)[i].Score = 0
+			scores = append(scores, 0)
 		}
 	}
+
+	engagementLevels := GetEngagementLevels(scores)
+
+	for i := range *profileUsersList {
+		if prof, ok := scoresPerUser[(*profileUsersList)[i].Identity]; ok {
+			(*profileUsersList)[i].Engagement = engagementLevels[float64(prof.Score)]
+		} else {
+			(*profileUsersList)[i].Engagement = ""
+		}
+	}
+}
+
+func GetEngagementLevels(scores []float64) map[float64]string {
+	sort.Float64s(scores)
+	result := make(map[float64]string)
+	top10PercentIdx := int(math.Round(float64(len(scores)) * 0.9))
+	top30PercentIdx := int(math.Round(float64(len(scores)) * 0.7))
+
+	for i, score := range scores {
+		if i >= top10PercentIdx {
+			result[score] = "Hot"
+		} else if i >= top30PercentIdx {
+			result[score] = "Warm"
+		} else {
+			result[score] = "Cool"
+		}
+	}
+	return result
 }
 
 func GetProfileUserDetailsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
@@ -149,34 +184,32 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		logCtx.Error("Invalid project_id.")
 		return "", http.StatusBadRequest, "", "invalid project_id", true
 	}
-	score := c.Query("score")
-	if score == "" {
-		score = "false"
-	}
-	get_score, err := strconv.ParseBool(score)
+
+	req := c.Request
+	scoreWindow := req.Header.Get("Score") == "true"
+	debugWindow := req.Header.Get("Score-Debug") == "true"
+
+	getScore, err := getBoolQueryParam(c.Query("score"))
 	if err != nil {
-		logCtx.Error("Invalid score flag.")
-		get_score = false
+		logCtx.Error("Invalid score flag .")
+	}
+	if !scoreWindow {
+		getScore = false
 	}
 
-	debug := c.Query("debug")
-	if debug == "" {
-		debug = "false"
-	}
-	get_debug, err := strconv.ParseBool(debug)
+	getDebug, err := getBoolQueryParam(c.Query("debug"))
 	if err != nil {
 		logCtx.Error("Invalid debug flag.")
-		get_debug = false
-
 	}
-
-	r := c.Request
+	if !debugWindow {
+		getDebug = false
+	}
 	var payload model.TimelinePayload
 	logCtx = log.WithFields(log.Fields{
 		"projectId": projectId,
 		"payload":   payload,
 	})
-	decoder := json.NewDecoder(r.Body)
+	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
 		logCtx.Error("Json decode failed.")
@@ -191,14 +224,14 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 	}
 
 	// add accounts scores to the response based on account scoring enabled
-	if get_score {
+	if getScore {
 		// get score for accountsIds from acc scoring
 
 		var accountIds []string = make([]string, 0)
 		for _, profile := range profileAccountsList {
 			accountIds = append(accountIds, profile.Identity)
 		}
-		ScoresPerAccount, err := store.GetStore().GetAccountScoreOnIds(projectId, accountIds, get_debug)
+		ScoresPerAccount, err := store.GetStore().GetAccountScoreOnIds(projectId, accountIds, getDebug)
 		if err != nil {
 			logCtx.Error("Error while fetching account scores.")
 			return nil, http.StatusInternalServerError, "", "", true

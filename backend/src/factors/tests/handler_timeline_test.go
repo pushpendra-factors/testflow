@@ -415,7 +415,6 @@ func sendGetProfileUserRequest(r *gin.Engine, projectId int64, agent *model.Agen
 			Value:  cookieData,
 			MaxAge: 1000,
 		})
-
 	w := httptest.NewRecorder()
 	req, err := rb.Build()
 	if err != nil {
@@ -1775,7 +1774,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			assert.Equal(t, props[i], property)
 		}
 		for _, userTimeline := range resp.AccountTimeline {
-			if userTimeline.UserName == model.INTENT_ACTIVITY_USERNAME {
+			if userTimeline.UserName == model.GROUP_ACTIVITY_USERNAME {
 				assert.Equal(t, userTimeline.AdditionalProp, "All")
 				assert.Equal(t, userTimeline.IsAnonymous, false)
 				assert.Equal(t, len(userTimeline.UserActivities), 2)
@@ -1810,7 +1809,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 			// Separate check the 10th element (Intent Activity)
 			if index == 9 {
-				assert.Equal(t, userTimeline.UserName, model.INTENT_ACTIVITY_USERNAME)
+				assert.Equal(t, userTimeline.UserName, model.GROUP_ACTIVITY_USERNAME)
 				assert.Equal(t, userTimeline.AdditionalProp, model.GROUP_NAME_HUBSPOT_COMPANY)
 				assert.Equal(t, userTimeline.IsAnonymous, false)
 				assert.Equal(t, len(userTimeline.UserActivities), 1)
@@ -1867,7 +1866,6 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 						assert.True(t, i < len(lookInProps))
 					}
 				}
-
 			}
 		}
 	})

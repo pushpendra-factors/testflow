@@ -109,30 +109,35 @@ export const formatFiltersForPayload = (filters = [], returnArray) => {
       });
     }
   });
-  
+
   if (returnArray) {
-	return filterProps
+    return filterProps;
   }
-  
-  const filtersMap = {}
-  const groups = ["$hubspot_company", "$salesforce_account", "$6signal", "$linkedin_company"]
+
+  const filtersMap = {};
+  const groups = [
+    '$hubspot_company',
+    '$salesforce_account',
+    '$6signal',
+    '$linkedin_company'
+  ];
   filterProps.forEach((filter) => {
-    let group = filter.pr
-    let groupName = ""
+    let group = filter.pr;
+    let groupName = '';
     groups.every((elem) => {
       if (group.toLowerCase().includes(elem)) {
-        groupName = elem
-        return false
+        groupName = elem;
+        return false;
       }
-      return true
+      return true;
     });
-    groupName = groupName === ""? "users":groupName
-    if (filtersMap[groupName] === undefined){
-      filtersMap[groupName] = new Array()
+    groupName = groupName === '' ? 'users' : groupName;
+    if (filtersMap[groupName] === undefined) {
+      filtersMap[groupName] = new Array();
     }
-	filtersMap[groupName].push(filter)
+    filtersMap[groupName].push(filter);
   });
-  return filtersMap
+  return filtersMap;
 };
 
 export const formatEventsFromSegment = (ewp) => {
@@ -546,3 +551,19 @@ export const timestampToString = {
       .startOf('month')
       .format('MMM YYYY')
 };
+
+export const EngagementTag = {
+  Hot: {
+    bgColor: '#FEE9E9',
+    icon: 'fire'
+  },
+  Warm: {
+    bgColor: '#F9C06E33',
+    icon: 'sun'
+  },
+  Cool: {
+    bgColor: '#F5F5F5',
+    icon: 'snowflake'
+  }
+};
+

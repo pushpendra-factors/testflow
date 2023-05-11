@@ -21,6 +21,7 @@ import FaSelect from '../../FaSelect';
 import {
   DEFAULT_TIMELINE_CONFIG,
   displayFilterOpts,
+  EngagementTag,
   formatEventsFromSegment,
   formatFiltersForPayload,
   formatPayloadForFilters,
@@ -107,13 +108,6 @@ function AccountProfiles({
     }
     return groups;
   }, [groupOpts]);
-
-  const filterPropsMap = {
-    $hubspot_company: 'hubspot',
-    $salesforce_account: 'salesforce',
-    $6signal: '6Signal',
-    All: ''
-  };
 
   const displayTableProps = useMemo(() => {
     const filterPropsMap = {
@@ -263,8 +257,31 @@ function AccountProfiles({
               <span className='ml-2'>{item.name}</span>
             </div>
           ) || '-'
-      }
+      },
+
     ];
+    // Engagement Column
+    const engagementExists = accounts.data?.[0]?.engagement;
+    if (engagementExists) {
+      columns.push({
+        title: <div className={headerClassStr}>Engagement</div>,
+        width: 150,
+        dataIndex: 'engagement',
+        key: 'engagement',
+        fixed: 'left',
+        render: (status) => (
+          <div
+            className='engagement-tag'
+            style={{ '--bg-color': EngagementTag[status]?.bgColor }}
+          >
+            <img src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`} alt=''/>
+            <Text type='title' level={6} extraClass='m-0'>
+              {status}
+            </Text>
+          </div>
+        )
+      });
+    }
     // Table Prop Columns
     displayTableProps?.forEach((prop) => {
       columns.push(getTablePropColumn(prop));
@@ -272,9 +289,9 @@ function AccountProfiles({
     // Last Activity Column
     columns.push({
       title: <div className={headerClassStr}>Last Activity</div>,
-      dataIndex: 'last_activity',
-      key: 'last_activity',
-      width: 250,
+      dataIndex: 'lastActivity',
+      key: 'lastActivity',
+      width: 200,
       align: 'right',
       render: (item) => MomentTz(item).fromNow()
     });
@@ -287,7 +304,7 @@ function AccountProfiles({
     );
     return sortedData.map((row) => ({
       ...row,
-      ...row?.table_props
+      ...row?.tableProps
     }));
   };
 
