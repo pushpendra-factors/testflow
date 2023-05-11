@@ -83,7 +83,7 @@ func (store *MemSQL) GetALLOTPRuleWithProjectId(projectID int64) ([]model.OTPRul
 	return otpRules, http.StatusFound
 }
 
-// Returns the list of $otp_unique_key property for the last 3 months for offline touch point events.
+// GetUniqueKeyPropertyForOTPEventForLast3Months Returns the list of $otp_unique_key property for the last 3 months for offline touch point events.
 func (store *MemSQL) GetUniqueKeyPropertyForOTPEventForLast3Months(projectID int64) ([]string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -132,6 +132,37 @@ func (store *MemSQL) GetUniqueKeyPropertyForOTPEventForLast3Months(projectID int
 		uniqueOTPEventKeys = append(uniqueOTPEventKeys, otpUniqueKey)
 	}
 	return uniqueOTPEventKeys, http.StatusFound
+}
+
+// IsOTPKeyUniqueWithQuery IsOTPKeyUnique check if $otp_unique_key property for offline touch point events exists.
+func (store *MemSQL) IsOTPKeyUniqueWithQuery(projectID int64, userID string, eventNameId string, otpUniqueKey string) (bool, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	//check if otp event is unique
+	rows, err1 := db.Table("events").Limit(1).Select("id").
+		Where("project_id=? AND event_name_id=? AND user_id = ?  AND "+
+			"JSON_EXTRACT_STRING(properties,?) = ?", projectID, eventNameId, userID, U.EP_OTP_UNIQUE_KEY, otpUniqueKey).Rows()
+
+	if err1 != nil {
+		if gorm.IsRecordNotFoundError(err1) {
+			return true, http.StatusNotFound
+		}
+	}
+	var uniqueOtpKey string
+	rows.Next()
+	err := rows.Scan(&uniqueOtpKey)
+	if err != nil {
+
+		if uniqueOtpKey == "" {
+			return true, http.StatusNotFound
+		}
+
+	}
+	return false, http.StatusFound
 }
 
 // GetAllRulesDeletedNotDeleted fetching deleted, non-deleted rules.

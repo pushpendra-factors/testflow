@@ -308,6 +308,7 @@ type Configuration struct {
 	CustomDateEnd                                      int64
 	EnableFieldsSyncByProjectID                        string
 	EnableUserDomainsGroupByProjectID                  string
+	OtpKeyWithQueryCheckEnabled                        bool
 }
 
 type Services struct {
@@ -1946,6 +1947,10 @@ func GetAttributionDebug() int {
 
 func GetClearbitEnabled() int {
 	return configuration.ClearbitEnabled
+}
+
+func GetOtpKeyWithQueryCheckEnabled() bool {
+	return configuration.OtpKeyWithQueryCheckEnabled
 }
 
 func Get6SignalEnabled() int {
