@@ -40,6 +40,7 @@ type EventTriggerAlert struct {
 	LastAlertAt              time.Time       `json:"last_alert_at"`
 	CreatedAt                time.Time       `gorm:"column:created_at; autoCreateTime" json:"created_at"`
 	UpdatedAt                time.Time       `gorm:"column:updated_at; autoUpdateTime" json:"updated_at"`
+	LastFailDetails          *postgres.Jsonb `gorm:"column:last_fail_details" json:"last_fail_details"`
 	IsDeleted                bool            `gorm:"column:is_deleted; not null; default:false" json:"is_deleted"`
 }
 
@@ -93,6 +94,12 @@ type EventTriggerWebhook struct {
 type MessagePropMapStruct struct {
 	DisplayName string
 	PropValue   interface{}
+}
+
+type LastFailDetails struct {
+	FailTime time.Time `json:"fail_time"`
+	FailedAt string    `json:"failed_at"`
+	Details  string    `json:"details"`
 }
 
 func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTriggerAlert) error {

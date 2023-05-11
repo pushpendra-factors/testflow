@@ -1208,6 +1208,7 @@ CREATE TABLE IF NOT EXISTS event_trigger_alerts(
     teams_channel_associated_by text,
     event_trigger_alert json,
     last_alert_at timestamp(6),
+    last_fail_details json,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     is_deleted boolean NOT NULL DEFAULT FALSE
