@@ -30,7 +30,7 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, listProperties }) => (
       />
     </div>
     <div className='card'>
-      <div className='top-section'>
+      <div className='top-section mb-2'>
         {event.alias_name ? (
           <div className='heading-with-sub'>
             <div className='sub'>{PropTextFormat(event.display_name)}</div>

@@ -75,6 +75,7 @@ const (
 	HubspotDocumentTypeNameOwner          = "owner"
 
 	HubspotDateTimeLayout   = "2006-01-02T15:04:05.000Z"
+	HubspotDateLayout       = "2006-01-02"
 	HubspotDataTypeDate     = "date"
 	HubspotDataTypeDatetime = "datetime"
 )
@@ -295,13 +296,29 @@ func GetHubspotObjectTypeByDocumentType(docType string) string {
 	return ""
 }
 
+func GetTimestampFromPropertiesByKeyV3(propertyValue interface{}) (int64, error) {
+	tm, err := time.Parse(HubspotDateTimeLayout, U.GetPropertyValueAsString(propertyValue))
+	if err != nil {
+		timestamp, err := time.Parse(HubspotDateLayout, U.GetPropertyValueAsString(propertyValue))
+		if err != nil {
+			return 0, errors.New("failed to convert timestamp inside getTimestampFromPropertiesByKeyV3")
+		}
+		return timestamp.UnixNano() / int64(time.Millisecond), nil
+	}
+	return tm.UnixNano() / int64(time.Millisecond), nil
+}
+
 func getTimestampFromPropertiesByKey(propertiesMap map[string]interface{}, key string) (int64, error) {
 	propertyValue, exists := propertiesMap[key]
 	if !exists || propertyValue == nil {
 		return 0, errors.New("failed to get timestamp from property key")
 	}
 
-	propertyValueMap := propertyValue.(map[string]interface{})
+	propertyValueMap, ok := propertyValue.(map[string]interface{})
+	if !ok {
+		return GetTimestampFromPropertiesByKeyV3(propertyValue)
+	}
+
 	timestamp, err := ReadHubspotTimestamp(propertyValueMap["value"])
 	if err == nil {
 		return timestamp, nil
@@ -390,7 +407,10 @@ func GetHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error
 			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
 		}
 
-		propertyUpdateAtMap := propertyUpdateAt.(map[string]interface{})
+		propertyUpdateAtMap, ok := propertyUpdateAt.(map[string]interface{})
+		if !ok {
+			return GetTimestampFromPropertiesByKeyV3(propertyUpdateAt)
+		}
 		value, exists := propertyUpdateAtMap["value"]
 		if !exists || value == nil {
 			return 0, errorFailedToGetUpdatedAtFromHubspotDocument

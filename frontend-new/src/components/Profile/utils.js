@@ -80,7 +80,8 @@ export const TimelineHoverPropDisplayNames = {
 export const displayFilterOpts = {
   All: 'All Accounts',
   $hubspot_company: 'Hubspot Companies',
-  $salesforce_account: 'Salesforce Accounts'
+  $salesforce_account: 'Salesforce Accounts',
+  $6signal: '6Signal Domain'
 };
 
 export const formatFiltersForPayload = (filters = [], returnArray) => {
@@ -108,30 +109,35 @@ export const formatFiltersForPayload = (filters = [], returnArray) => {
       });
     }
   });
-  
+
   if (returnArray) {
-	return filterProps
+    return filterProps;
   }
-  
-  const filtersMap = {}
-  const groups = ["$hubspot_company", "$salesforce_account", "$6signal", "$linkedin_company"]
+
+  const filtersMap = {};
+  const groups = [
+    '$hubspot_company',
+    '$salesforce_account',
+    '$6signal',
+    '$linkedin_company'
+  ];
   filterProps.forEach((filter) => {
-    let group = filter.pr
-    let groupName = ""
+    let group = filter.pr;
+    let groupName = '';
     groups.every((elem) => {
       if (group.toLowerCase().includes(elem)) {
-        groupName = elem
-        return false
+        groupName = elem;
+        return false;
       }
-      return true
+      return true;
     });
-    groupName = groupName === ""? "users":groupName
-    if (filtersMap[groupName] === undefined){
-      filtersMap[groupName] = new Array()
+    groupName = groupName === '' ? 'users' : groupName;
+    if (filtersMap[groupName] === undefined) {
+      filtersMap[groupName] = new Array();
     }
-	filtersMap[groupName].push(filter)
+    filtersMap[groupName].push(filter);
   });
-  return filtersMap
+  return filtersMap;
 };
 
 export const formatEventsFromSegment = (ewp) => {
@@ -267,15 +273,17 @@ export const getHost = (urlstr) => {
 };
 
 export const getUniqueItemsByKeyAndSearchTerm = (activities, searchTerm) => {
+  const isNotMilestone = (event) =>
+    event.user !== 'milestone' && event.event_type !== 'milestone';
+  const isUnique = (value, index, self) =>
+    index === self.findIndex((t) => t.display_name === value.display_name);
+  const matchesSearchTerm = (value) =>
+    value.display_name.toLowerCase().includes(searchTerm.toLowerCase());
+
   return activities
-    ?.filter((event) => event.user !== 'milestone')
-    ?.filter((event) => event.event_type !== 'milestone')
-    ?.filter(
-      (value, index, self) =>
-        index ===
-          self.findIndex((t) => t.display_name === value.display_name) &&
-        value.display_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    ?.filter(isNotMilestone)
+    ?.filter(isUnique)
+    ?.filter(matchesSearchTerm);
 };
 
 export const getPropType = (propsList, searchProp) => {
@@ -312,24 +320,24 @@ export const propValueFormat = (searchKey, value, type) => {
 };
 
 export const formatSegmentsObjToGroupSelectObj = (group, vals) => {
-  const obj = {
-    label:
-      ReverseProfileMapper[group]?.users || PropTextFormat(group) || 'Others',
-    icon: '',
-    values: []
-  };
-  obj.values = vals?.map((val) => [
-    val?.name,
-    val?.id,
-    {
-      name: val?.name,
-      description: val?.description,
-      type: val?.type,
-      query: val?.query
-    }
+  const label =
+    ReverseProfileMapper[group]?.users ||
+    displayFilterOpts[group] ||
+    PropTextFormat(group) ||
+    'Others';
+  const values = vals?.map(({ name, id, description, type, query }) => [
+    name,
+    id,
+    { name, description, type, query }
   ]);
-  return obj;
+
+  return {
+    label,
+    icon: '',
+    values: values || []
+  };
 };
+
 export const getEventCategory = (event, eventNamesMap) => {
   let category = 'others';
   Object.entries(eventNamesMap).forEach(([groupName, events]) => {
@@ -345,19 +353,21 @@ export const getEventCategory = (event, eventNamesMap) => {
 };
 
 export const getIconForCategory = (category) => {
-  if (category.toLowerCase().includes('hubspot')) {
+  const source = category.toLowerCase();
+
+  if (source.includes('hubspot')) {
     return 'hubspot';
   }
-  if (category.toLowerCase().includes('salesforce')) {
+  if (source.includes('salesforce')) {
     return 'salesforce';
   }
-  if (category.toLowerCase().includes('leadsquared')) {
+  if (source.includes('leadsquared')) {
     return 'leadsquared';
   }
-  if (category.toLowerCase().includes('marketo')) {
+  if (source.includes('marketo')) {
     return 'marketo';
   }
-  if (category === 'website') {
+  if (source === 'website') {
     return 'globe';
   }
   return 'events_blue';
@@ -542,7 +552,18 @@ export const timestampToString = {
       .format('MMM YYYY')
 };
 
-export const getElemenetHeight = (elem) => {
-  const divElement = document.getElementById(elem);
-  return divElement.offsetHeight;
+export const EngagementTag = {
+  Hot: {
+    bgColor: '#FEE9E9',
+    icon: 'fire'
+  },
+  Warm: {
+    bgColor: '#F9C06E33',
+    icon: 'sun'
+  },
+  Cool: {
+    bgColor: '#F5F5F5',
+    icon: 'snowflake'
+  }
 };
+

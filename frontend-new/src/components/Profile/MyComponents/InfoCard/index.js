@@ -21,7 +21,7 @@ function InfoCard({
 }) {
   const popoverContent = () => (
     <div className='fa-popupcard'>
-      <div className='top-section'>
+      <div className='top-section mb-2'>
         {title ? (
           <div className='heading-with-sub'>
             <div className='sub'>{PropTextFormat(eventSource)}</div>

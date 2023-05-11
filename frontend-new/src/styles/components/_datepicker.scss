@@ -11,13 +11,28 @@
 {
     .ant-dropdown-menu
     {
-        padding: 1.2em 1em;
-        border-radius: 10px;
+        padding: 1em 0.7em;
+        border-radius: 5px;
         .ant-dropdown-menu-item
         {
             border-radius: 10px;
             padding: 0.5em 1.2em;
             min-width: 180px;
+        }
+    }
+}
+.fa-custom-datepicker--parent
+{
+    .ant-dropdown-menu
+    {
+        // padding: 1.2em 1em;
+        border-radius: 5px;
+        
+        .ant-dropdown-menu-item
+        {
+            border-radius: 0px;
+            padding: 0.8em 1.2em;
+            min-width: 325px !important;
         }
     }
 }

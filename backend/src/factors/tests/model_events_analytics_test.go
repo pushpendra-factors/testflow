@@ -160,13 +160,13 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 	response := DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID1, stepTimestamp+10, "B", 4321)
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s", "$initial_source1": "B?"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID1, stepTimestamp+10, "B", 4321)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s1", createdUserID1, stepTimestamp+20, "B", 4321)
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s", "$initial_source1": "B?"}, "event_properties":{"$campaign_id":%d}}`, "s1", createdUserID1, stepTimestamp+20, "B", 4321)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
@@ -184,13 +184,13 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 	response = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID3, stepTimestamp, "B", 4321)
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s", "$initial_source1": "B?"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID3, stepTimestamp, "B", 4321)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s1", createdUserID3, stepTimestamp+10, "B", 4321)
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s", "$initial_source1": "B?"}, "event_properties":{"$campaign_id":%d}}`, "s1", createdUserID3, stepTimestamp+10, "B", 4321)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
@@ -472,6 +472,49 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 	})
+
+	t.Run("TestContainsWithEscapedCharacterQuestionMark", func(t *testing.T) {
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "B",
+						},
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "_$initial_source1",
+							Operator:  "contains",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "B?",
+						},
+					},
+				},
+			},
+			Class: model.QueryClassEvents,
+
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+		log.Warn("kark1")
+		log.Warn("result")
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "event_name", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[1])
+		assert.Equal(t, len(result.Rows), 2)
+
+	})
+
 }
 
 func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {

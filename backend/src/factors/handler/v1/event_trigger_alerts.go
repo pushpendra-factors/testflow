@@ -48,7 +48,7 @@ func CreateEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, s
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 	oldID := ""
-	obj, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, oldID, projectID, &alert, userID)
+	obj, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, oldID, projectID, &alert, userID, userID)
 	if errCode != http.StatusCreated {
 		log.WithFields(log.Fields{"document": alert, "err-message": errMsg}).Error("Failed to create alert in handler.")
 		return nil, errCode, PROCESSING_FAILED, errMsg, true
@@ -155,7 +155,46 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 		slackAssociatedUserId = userID
 	}
 
-	eta, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, id, projectID, &alert, slackAssociatedUserId)
+	var existingTeamChannels model.Team
+	if existingAlertPayload.Teams {
+		errObj = U.DecodePostgresJsonbToStructType(existingAlertPayload.TeamsChannelsConfig, &existingTeamChannels)
+		if errObj != nil {
+			log.WithError(errObj).Error("failed to decode team channels")
+			return nil, http.StatusBadRequest, "failed to decode team channels", "", true
+		}
+	}
+	var newTeamChannels model.Team
+	if alert.Teams {
+		errObj = U.DecodePostgresJsonbToStructType(alert.TeamsChannelsConfig, &newTeamChannels)
+		if errObj != nil {
+			log.WithError(errObj).Error("failed to decode new team channels")
+			return nil, http.StatusBadRequest, "failed to decode new team channels", "", true
+		}
+	}
+	teamAssociatedUserId := existingAlert.TeamsChannelAssociatedBy
+	if len(existingTeamChannels.TeamsChannelList) == len(newTeamChannels.TeamsChannelList) {
+		existingChannelNameMap := make(map[string]bool)
+		existingChannelIDMap := make(map[string]bool)
+		for _, channel := range existingTeamChannels.TeamsChannelList {
+			existingChannelNameMap[channel.ChannelName] = true
+			existingChannelIDMap[channel.ChannelId] = true
+
+		}
+		for _, channel := range newTeamChannels.TeamsChannelList {
+			if existingChannelNameMap[channel.ChannelName] == false {
+				teamAssociatedUserId = userID
+				break
+			}
+			if existingChannelIDMap[channel.ChannelId] == false {
+				teamAssociatedUserId = userID
+				break
+			}
+		}
+	} else {
+		teamAssociatedUserId = userID
+	}
+
+	eta, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, id, projectID, &alert, slackAssociatedUserId, teamAssociatedUserId)
 	if errMsg != "" || errCode != http.StatusCreated || eta == nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Edit TriggerAlert failed while updating db"})
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true

@@ -22,16 +22,17 @@ import (
 )
 
 type CUserIdsBeam struct {
-	ProjectID  int64  `json:"pid"`
-	LowNum     int64  `json:"ln"`
-	HighNum    int64  `json:"hn"`
-	BucketName string `json:"bnm"`
-	ScopeName  string `json:"ScopeName"`
-	Env        string `json:"Env"`
-	StartTime  int64  `json:"ts"`
-	EndTime    int64  `json:"end"`
-	Channel    string `json:"ch"`
-	Group      int    `json:"gr"`
+	ProjectID     int64  `json:"pid"`
+	LowNum        int64  `json:"ln"`
+	HighNum       int64  `json:"hn"`
+	FileTimeIndex int    `json:"fti"`
+	BucketName    string `json:"bnm"`
+	ScopeName     string `json:"ScopeName"`
+	Env           string `json:"Env"`
+	StartTime     int64  `json:"ts"`
+	EndTime       int64  `json:"end"`
+	Channel       string `json:"ch"`
+	Group         int    `json:"gr"`
 }
 
 type RunBeamConfig struct {
@@ -49,10 +50,15 @@ type UidMap struct {
 	Index  int64  `json:"idx"`
 }
 
+type fileNameSortInfo struct {
+	fileName    string
+	sortIndices []int64
+}
+
 const MAX_FILESIZE_PER_WORKER_FOR_BEAM = 2 * 1024 * 1024 * 1024
 const MIN_FILESIZE_FOR_BEAM = 512 * 1024 * 1024
 
-func SortDataOnBeam(projectId int64, dataType string, channel string, startToEndIndex map[int]int, indexMap map[string]int64, beamConfig *RunBeamConfig, sorted_cloud_dir, sorted_cloud_name string,
+func SortDataOnBeam(projectId int64, dataType string, channel string, startIndexToFileInfoMap map[int][]*partFileInfo, indexMap map[string]int64, beamConfig *RunBeamConfig, sorted_cloud_dir, sorted_cloud_name string,
 	tmpCloudManager, sortedCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTime, endTime int64, sortOnGroup int) (int, error) {
 	var err error
 	var numLines int
@@ -62,7 +68,7 @@ func SortDataOnBeam(projectId int64, dataType string, channel string, startToEnd
 			return 0, err
 		}
 
-		err = Pull_events_beam_controller(projectId, startToEndIndex, beamConfig, tmpCloudManager, diskManager, startTime, endTime, sortOnGroup)
+		err = Pull_events_beam_controller(projectId, startIndexToFileInfoMap, beamConfig, tmpCloudManager, diskManager, startTime, endTime, sortOnGroup)
 		if err != nil {
 			return 0, err
 		}
@@ -78,7 +84,7 @@ func SortDataOnBeam(projectId int64, dataType string, channel string, startToEnd
 		if err != nil {
 			return 0, err
 		}
-		err = Pull_channel_beam_controller(projectId, channel, startToEndIndex, beamConfig, tmpCloudManager, diskManager, startTime, endTime)
+		err = Pull_channel_beam_controller(projectId, channel, startIndexToFileInfoMap, beamConfig, tmpCloudManager, diskManager, startTime, endTime)
 		if err != nil {
 			return 0, err
 		}
@@ -137,7 +143,7 @@ func writeSortedFileToGCP(ctx context.Context, projectId int64, startTime, endTi
 	return nil
 }
 
-// read daily data files from cloud between startTimestamp and endTimestamp, merge all and create merged file locally at local_dir+unsortedFileName, also
+// read daily data files from cloud between startTimestamp and endTimestamp, merge all and create merged part files in cloud to be distributed to each worker on beam, also
 // get userIdMap,countLines as output
 //
 // OUTPUTS
@@ -150,11 +156,10 @@ func writeSortedFileToGCP(ctx context.Context, projectId int64, startTime, endTi
 // fileNamePrefix - all daily files only with this prefix are read (give "events" for events, channel name for ad_reports and dateField for users),
 // getIdMap - whether to generate userIdMap
 func ReadAndMergeDailyFilesForBeam(projectId int64, dataType, fileNamePrefix string, startTimestamp, endTimestamp int64,
-	archiveCloudManager, tmpCloudManager *filestore.FileManager, sortOnGroup int, numberOfUsersPerFile int) (map[int]int, map[string]int64, int, error) {
+	archiveCloudManager, tmpCloudManager *filestore.FileManager, sortOnGroup int, numberOfUsersPerFile int) (map[int][]*partFileInfo, map[string]int64, int, error) {
 
 	var countLines int
-	var startIndexToWriterMap = make(map[int]*io.WriteCloser)
-	var startToEndIndex = make(map[int]int)
+	var startIndexToFileInfoMap = make(map[int][]*partFileInfo)
 	var indexMap = make(map[string]int64)
 	var keyCount int64 = 0
 	var getUids bool
@@ -181,7 +186,7 @@ func ReadAndMergeDailyFilesForBeam(projectId int64, dataType, fileNamePrefix str
 			log.Infof("Reading daily file :%s, %s", partFilesDir, partFileName)
 			file, err := (*archiveCloudManager).Get(partFilesDir, partFileName)
 			if err != nil {
-				return startToEndIndex, indexMap, 0, err
+				return startIndexToFileInfoMap, indexMap, 0, err
 			}
 
 			scanner := bufio.NewScanner(file)
@@ -197,7 +202,7 @@ func ReadAndMergeDailyFilesForBeam(projectId int64, dataType, fileNamePrefix str
 					var event *P.CounterEventFormat
 					err = json.Unmarshal([]byte(line), &event)
 					if err != nil {
-						return startToEndIndex, indexMap, countLines, err
+						return startIndexToFileInfoMap, indexMap, countLines, err
 					}
 					userID := getAptId(event, sortOnGroup)
 					if _, ok := indexMap[userID]; !ok {
@@ -206,25 +211,26 @@ func ReadAndMergeDailyFilesForBeam(projectId int64, dataType, fileNamePrefix str
 					}
 					uidIndex := int(indexMap[userID])
 					startIndex := (uidIndex / numberOfUsersPerFile) * numberOfUsersPerFile
-					if _, ok := startIndexToWriterMap[startIndex]; !ok {
+					if _, ok := startIndexToFileInfoMap[startIndex]; !ok {
 						endIndex := startIndex + numberOfUsersPerFile - 1
-						startToEndIndex[startIndex] = endIndex
-						cDir, cName := (*tmpCloudManager).GetEventsPartFilePathAndName(projectId, startTimestamp, endTimestamp, false, startIndex, endIndex, sortOnGroup)
+						cDir, cName := (*tmpCloudManager).GetEventsPartFilePathAndName(projectId, startTimestamp, endTimestamp, false, startIndex, endIndex, sortOnGroup, 0)
 						cloudWriter, err := (*tmpCloudManager).GetWriter(cDir, cName)
 						if err != nil {
-							log.Errorf("unable to get writer for file:%s", cDir+cName)
-							return startToEndIndex, indexMap, 0, err
+							log.WithFields(log.Fields{"fileDir": cDir, "fileName": cName}).Error("unable to get writer for file")
+							return startIndexToFileInfoMap, indexMap, 0, err
 						}
-						startIndexToWriterMap[startIndex] = &cloudWriter
+						startIndexToFileInfoMap[startIndex] = make([]*partFileInfo, 0)
+						fileInfo := partFileInfo{name: cName, dir: cDir, startUserIndex: startIndex, endUserIndex: endIndex, fileTimestampIndex: 0, writer: &cloudWriter}
+						startIndexToFileInfoMap[startIndex] = append(startIndexToFileInfoMap[startIndex], &fileInfo)
 					}
-					reqWriter = startIndexToWriterMap[startIndex]
+					reqWriter = startIndexToFileInfoMap[startIndex][0].writer
 				}
 
 				if getDoctypes {
 					var doc *pull.CounterCampaignFormat
 					err = json.Unmarshal([]byte(line), &doc)
 					if err != nil {
-						return startToEndIndex, indexMap, countLines, err
+						return startIndexToFileInfoMap, indexMap, countLines, err
 					}
 					docType := doc.Doctype
 					docTypeStr := fmt.Sprintf("%d", docType)
@@ -233,57 +239,72 @@ func ReadAndMergeDailyFilesForBeam(projectId int64, dataType, fileNamePrefix str
 						keyCount++
 					}
 					docTypeIndex := int(indexMap[docTypeStr])
-					if _, ok := startIndexToWriterMap[docTypeIndex]; !ok {
-						startToEndIndex[docTypeIndex] = docTypeIndex
-						cDir, cName := (*tmpCloudManager).GetChannelPartFilePathAndName(fileNamePrefix, projectId, startTimestamp, endTimestamp, false, docTypeIndex)
+					if _, ok := startIndexToFileInfoMap[docTypeIndex]; !ok {
+						cDir, cName := (*tmpCloudManager).GetChannelPartFilePathAndName(fileNamePrefix, projectId, startTimestamp, endTimestamp, false, docTypeIndex, 0)
 						cloudWriter, err := (*tmpCloudManager).GetWriter(cDir, cName)
 						if err != nil {
-							log.Errorf("unable to get writer for file:%s", cDir+cName)
-							return startToEndIndex, indexMap, 0, err
+							log.WithFields(log.Fields{"fileDir": cDir, "fileName": cName}).Error("unable to get writer for file")
+							return startIndexToFileInfoMap, indexMap, 0, err
 						}
-						startIndexToWriterMap[docTypeIndex] = &cloudWriter
+						startIndexToFileInfoMap[docTypeIndex] = make([]*partFileInfo, 0)
+						fileInfo := partFileInfo{name: cName, dir: cDir, startUserIndex: docTypeIndex, endUserIndex: docTypeIndex, fileTimestampIndex: 0, writer: &cloudWriter}
+						startIndexToFileInfoMap[docTypeIndex] = append(startIndexToFileInfoMap[docTypeIndex], &fileInfo)
 					}
-					reqWriter = startIndexToWriterMap[docTypeIndex]
+					reqWriter = startIndexToFileInfoMap[docTypeIndex][0].writer
 				}
 
 				_, err = io.WriteString(*reqWriter, line+"\n")
 				if err != nil {
 					log.Errorf("Unable to write to file :%v", err)
-					return startToEndIndex, indexMap, countLines, err
+					return startIndexToFileInfoMap, indexMap, countLines, err
 				}
 				countLines += 1
 			}
 		}
 		timestamp += U.Per_day_epoch
 	}
-	for i, writer := range startIndexToWriterMap {
-		err := (*writer).Close()
-		if err != nil {
-			log.WithError(err).Errorf("Unable to close writer with index: %d-%d", i, startToEndIndex[i])
-			return startToEndIndex, indexMap, countLines, err
+	for _, fileInfoList := range startIndexToFileInfoMap {
+		for _, fileInfo := range fileInfoList {
+			writer := fileInfo.writer
+			err := (*writer).Close()
+			if err != nil {
+				log.WithError(err).Errorf("Unable to close writer for: %s", fileInfo.name)
+				return startIndexToFileInfoMap, indexMap, countLines, err
+			}
 		}
 	}
 	if dataType == U.DataTypeEvent {
-		filesBroken, fileAdded, err := resizeUnsortedPartFilesForBeam(projectId, startTimestamp, endTimestamp, sortOnGroup, startToEndIndex, indexMap, tmpCloudManager)
+		filesBroken, fileAdded, err := resizeUnsortedPartFilesForBeamByUid(projectId, startTimestamp, endTimestamp, sortOnGroup, startIndexToFileInfoMap, indexMap, tmpCloudManager)
 		if err != nil {
-			log.WithError(err).Error("error resizeUnsortedPartFilesForBeam")
-			return startToEndIndex, indexMap, countLines, err
+			log.WithError(err).Error("error resizeUnsortedPartFilesForBeamByUid")
+			return startIndexToFileInfoMap, indexMap, countLines, err
 		}
-		log.Infof("%d large files split into %d small files", filesBroken, fileAdded)
+		log.Infof("%d large files split into %d small files by user id", filesBroken, fileAdded)
+		filesBroken, fileAdded, err = resizeUnsortedPartFilesForBeamByTimestamp(projectId, startTimestamp, endTimestamp, sortOnGroup, startIndexToFileInfoMap, tmpCloudManager)
+		if err != nil {
+			log.WithError(err).Error("error resizeUnsortedPartFilesForBeamByTimestamp")
+			return startIndexToFileInfoMap, indexMap, countLines, err
+		}
+		log.Infof("%d large files split into %d small files by timestamp", filesBroken, fileAdded)
 	}
 
-	return startToEndIndex, indexMap, countLines, nil
+	return startIndexToFileInfoMap, indexMap, countLines, nil
 }
 
-func resizeUnsortedPartFilesForBeam(projectId, startTimestamp, endTimestamp int64, sortOnGroup int, startToEndIndex map[int]int, indexMap map[string]int64, cloudManager *filestore.FileManager) (int, int, error) {
+func resizeUnsortedPartFilesForBeamByUid(projectId, startTimestamp, endTimestamp int64, sortOnGroup int, startIndexToFileInfoMap map[int][]*partFileInfo, indexMap map[string]int64, cloudManager *filestore.FileManager) (int, int, error) {
 	noOfFilesBroken := 0
 	noOfFilesAdded := 0
-	addedStartToEndEndex := make(map[int]int)
-	for start, end := range startToEndIndex {
-		unsortedPartFilesDir, unsortedPartFilesName := (*cloudManager).GetEventsPartFilePathAndName(projectId, startTimestamp, endTimestamp, false, start, end, sortOnGroup)
+	addedStartToEndEndex := make(map[int][]*partFileInfo)
+	for start, fileInfoList := range startIndexToFileInfoMap {
+		if len(fileInfoList) != 1 {
+			continue
+		}
+		fileInfo := fileInfoList[0]
+		end := fileInfo.endUserIndex
+		unsortedPartFilesDir, unsortedPartFilesName := (*cloudManager).GetEventsPartFilePathAndName(projectId, startTimestamp, endTimestamp, false, start, end, sortOnGroup, 0)
 		fileSize, err := (*cloudManager).GetObjectSize(unsortedPartFilesDir, unsortedPartFilesName)
 		if err != nil {
-			log.Errorf("Failed to get file size: %s %s", unsortedPartFilesDir, unsortedPartFilesName)
+			log.WithFields(log.Fields{"fileDir": unsortedPartFilesDir, "fileName": unsortedPartFilesName}).Error("failed to get file size")
 			return noOfFilesBroken, noOfFilesAdded, err
 		}
 		if fileSize > MAX_FILESIZE_PER_WORKER_FOR_BEAM {
@@ -308,13 +329,15 @@ func resizeUnsortedPartFilesForBeam(projectId, startTimestamp, endTimestamp int6
 				} else {
 					endIndex = startIndex + noOfUidsAfterSplit - 1
 				}
-				addedStartToEndEndex[startIndex] = endIndex
-				cDir, cName := (*cloudManager).GetEventsPartFilePathAndName(projectId, startTimestamp, endTimestamp, false, startIndex, endIndex, sortOnGroup)
+				cDir, cName := (*cloudManager).GetEventsPartFilePathAndName(projectId, startTimestamp, endTimestamp, false, startIndex, endIndex, sortOnGroup, 0)
 				cloudWriter, err := (*cloudManager).GetWriter(cDir, cName)
 				if err != nil {
-					log.Errorf("unable to get writer for file:%s", cDir+cName)
+					log.WithFields(log.Fields{"fileDir": cDir, "fileName": cName}).Error("unable to get writer for file")
 					return noOfFilesBroken, noOfFilesAdded, err
 				}
+				fileInfo := partFileInfo{name: cName, dir: cDir, startUserIndex: startIndex, endUserIndex: endIndex, fileTimestampIndex: fileInfo.fileTimestampIndex, writer: &cloudWriter}
+				addedStartToEndEndex[startIndex] = make([]*partFileInfo, 0)
+				addedStartToEndEndex[startIndex] = append(addedStartToEndEndex[startIndex], &fileInfo)
 				splitToFileMap[i] = &cloudWriter
 				startIndex = endIndex + 1
 			}
@@ -359,15 +382,110 @@ func resizeUnsortedPartFilesForBeam(projectId, startTimestamp, endTimestamp int6
 			noOfFilesBroken++
 		}
 	}
+
 	if noOfFilesBroken > 0 {
-		broken, added, err := resizeUnsortedPartFilesForBeam(projectId, startTimestamp, endTimestamp, sortOnGroup, addedStartToEndEndex, indexMap, cloudManager)
+		broken, added, err := resizeUnsortedPartFilesForBeamByUid(projectId, startTimestamp, endTimestamp, sortOnGroup, addedStartToEndEndex, indexMap, cloudManager)
 		noOfFilesAdded = noOfFilesAdded + added - broken
 		if err != nil {
 			log.WithError(err).Errorf("error resizeUnsortedPartFilesForBeam")
 			return noOfFilesBroken, noOfFilesAdded, err
 		}
-		for start, end := range addedStartToEndEndex {
-			startToEndIndex[start] = end
+		for start, fileInfoList := range addedStartToEndEndex {
+			startIndexToFileInfoMap[start] = fileInfoList
+		}
+	}
+	return noOfFilesBroken, noOfFilesAdded, nil
+}
+
+func resizeUnsortedPartFilesForBeamByTimestamp(projectId, startTimestamp, endTimestamp int64, sortOnGroup int, startIndexToFileInfoMap map[int][]*partFileInfo, cloudManager *filestore.FileManager) (int, int, error) {
+	noOfFilesBroken := 0
+	noOfFilesAdded := 0
+	addedStartToEndEndex := make(map[int][]*partFileInfo)
+	for start, fileInfoList := range startIndexToFileInfoMap {
+		if len(fileInfoList) != 1 {
+			continue
+		}
+		fileInfo := fileInfoList[0]
+		end := fileInfo.endUserIndex
+		unsortedPartFilesDir, unsortedPartFilesName := (*cloudManager).GetEventsPartFilePathAndName(projectId, startTimestamp, endTimestamp, false, start, end, sortOnGroup, 0)
+		fileSize, err := (*cloudManager).GetObjectSize(unsortedPartFilesDir, unsortedPartFilesName)
+		if err != nil {
+			log.WithFields(log.Fields{"fileDir": unsortedPartFilesDir, "fileName": unsortedPartFilesName}).Error("failed to get file size")
+			return noOfFilesBroken, noOfFilesAdded, err
+		}
+		if fileSize > MAX_FILESIZE_PER_WORKER_FOR_BEAM {
+
+			addedStartToEndEndex[start] = make([]*partFileInfo, 0)
+
+			noOfSplits := (int(fileSize) / MAX_FILESIZE_PER_WORKER_FOR_BEAM) + 1
+			rangeAfterSplit := int64(int(endTimestamp+1-startTimestamp) / noOfSplits)
+
+			var splitToFileMap = make(map[int]*io.WriteCloser)
+			startTime := startTimestamp
+			for i := 0; i < noOfSplits; i++ {
+				var endTime int64
+				if i == noOfSplits-1 {
+					endTime = endTimestamp
+				} else {
+					endTime = startTime + rangeAfterSplit - 1
+				}
+				cDir, cName := (*cloudManager).GetEventsPartFilePathAndName(projectId, startTimestamp, endTimestamp, false, start, end, sortOnGroup, i)
+				cloudWriter, err := (*cloudManager).GetWriter(cDir, cName)
+				if err != nil {
+					log.WithFields(log.Fields{"fileDir": cDir, "fileName": cName}).Error("unable to get writer for file")
+					return noOfFilesBroken, noOfFilesAdded, err
+				}
+				partInfo := partFileInfo{name: cName, dir: cDir, startUserIndex: start, endUserIndex: end, fileTimestampIndex: i, writer: &cloudWriter}
+				addedStartToEndEndex[start] = append(addedStartToEndEndex[start], &partInfo)
+				splitToFileMap[i] = &cloudWriter
+				startTime = endTime + 1
+			}
+
+			file, err := (*cloudManager).Get(unsortedPartFilesDir, unsortedPartFilesName)
+			if err != nil {
+				return noOfFilesBroken, noOfFilesAdded, err
+			}
+			scanner := bufio.NewScanner(file)
+			const maxCapacity = 30 * 1024 * 1024
+			buf := make([]byte, maxCapacity)
+			scanner.Buffer(buf, maxCapacity)
+			for scanner.Scan() {
+				line := scanner.Text()
+				var event *P.CounterEventFormat
+				err = json.Unmarshal([]byte(line), &event)
+				if err != nil {
+					return noOfFilesBroken, noOfFilesAdded, err
+				}
+				splitNum := int(event.EventTimestamp-startTimestamp) / int(rangeAfterSplit)
+				if splitNum == noOfSplits {
+					splitNum = noOfSplits - 1
+				}
+				if reqWriter, ok := splitToFileMap[splitNum]; !ok {
+					log.WithFields(log.Fields{"eventTimetamp": event.EventTimestamp, "split": splitNum, "numberOfSplits": noOfSplits}).Error("required writer not found")
+					continue
+				} else {
+					_, err = io.WriteString(*reqWriter, line+"\n")
+					if err != nil {
+						log.Errorf("Unable to write to file :%v", err)
+						return noOfFilesBroken, noOfFilesAdded, err
+					}
+				}
+			}
+			for i, writer := range splitToFileMap {
+				err := (*writer).Close()
+				if err != nil {
+					log.WithError(err).Errorf("Unable to close writer with index: %d-%d, split-%d", start, end, i)
+					return noOfFilesBroken, noOfFilesAdded, err
+				}
+				noOfFilesAdded++
+			}
+			noOfFilesBroken++
+		}
+	}
+
+	if noOfFilesBroken > 0 {
+		for start, fileInfoList := range addedStartToEndEndex {
+			startIndexToFileInfoMap[start] = fileInfoList
 		}
 	}
 	return noOfFilesBroken, noOfFilesAdded, nil

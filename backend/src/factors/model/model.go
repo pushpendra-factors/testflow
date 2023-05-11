@@ -224,6 +224,7 @@ type Model interface {
 
 	//six_signal
 	RunSixSignalGroupQuery(queriesOriginal []model.SixSignalQuery, projectId int64) (model.SixSignalResultGroup, int)
+	RunSixSignalPageViewQuery(projectId int64, query model.SixSignalQuery) ([]string, int, string)
 
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
@@ -832,7 +833,7 @@ type Model interface {
 	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int)
 	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int)
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
-	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
+	GetUserActivities(projectID int64, identity string, userId string) ([]model.UserActivity, error)
 	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int)
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 	GetAssociatedGroup(projectID int64, userID string, groupName string) (string, error)
@@ -880,9 +881,9 @@ type Model interface {
 	UpdatePathAnalysisEntity(projectID int64, id string, status string) (int, string)
 	GetAllSavedPathAnalysisEntityByProject(projectID int64) ([]model.PathAnalysis, int)
 	//path analysis
-	GetAllPathAnalysisEntityByProject(projectID int64) ([]model.PathAnalysisEntityInfo, int)
+	GetAllPathAnalysisEntityByProject(projectID int64) (map[string][]model.PathAnalysisEntityInfo, int)
 	GetPathAnalysisEntity(projectID int64, id string) (model.PathAnalysis, int)
-	CreatePathAnalysisEntity(userID string, projectId int64, entity *model.PathAnalysisQuery) (*model.PathAnalysis, int, string)
+	CreatePathAnalysisEntity(userID string, projectId int64, entity *model.PathAnalysisQuery, referenceId string) (*model.PathAnalysis, int, string)
 	DeletePathAnalysisEntity(projectID int64, id string) (int, string)
 	GetProjectCountWithStatus(projectID int64, status []string) (int, int, string)
 
@@ -892,7 +893,7 @@ type Model interface {
 
 	// Event Trigger Alerts
 	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int)
-	CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser string) (*model.EventTriggerAlert, int, string)
+	CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string) (*model.EventTriggerAlert, int, string)
 	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
 	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)
 	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
@@ -929,6 +930,8 @@ type Model interface {
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
 	GetAllUserScore(project_id int64, debug bool) ([]model.AllUsersScore, error)
+	GetUserScoreOnIds(projectId int64, knowUsers, unknownUsers []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
+	GetAccountScoreOnIds(projectId int64, accountIds []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 
 	// Slack
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error

@@ -13,10 +13,10 @@ import {
 } from '../../utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { useSelector } from 'react-redux';
+import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 
 function UserTimelineBirdview({
   activities = [],
-  milestones,
   granularity,
   collapse,
   setCollapse,
@@ -25,9 +25,7 @@ function UserTimelineBirdview({
   listProperties
 }) {
   const [showAll, setShowAll] = useState([]);
-  const { userPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
+  const { userPropNames } = useSelector((state) => state.coreQuery);
 
   const groupedActivities = _.groupBy(activities, groups[granularity]);
 
@@ -132,12 +130,7 @@ function UserTimelineBirdview({
 
   const renderTimeline = (data) =>
     !Object.entries(data).length ? (
-      <div className='ant-empty ant-empty-normal'>
-        <div className='ant-empty-image'>
-          <SVG name='nodata' />
-        </div>
-        <div className='ant-empty-description'>No Activity</div>
-      </div>
+      <NoDataWithMessage message={'No Activity'} />
     ) : (
       <div className='table-scroll'>
         <table>

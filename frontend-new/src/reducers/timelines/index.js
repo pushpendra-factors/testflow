@@ -67,8 +67,28 @@ export default function (state = initialState, action) {
   }
 }
 
+const getURLWithQueryParams = (projectId, profileType) => {
+  const queryParams = [];
+
+  if (window.SCORE) {
+    queryParams.push('score=true');
+  }
+
+  if (window.SCORE_DEBUG) {
+    queryParams.push('debug=true');
+  }
+
+  const queryString = queryParams.join('&');
+
+  const url = `${host}projects/${projectId}/v1/profiles/${profileType}${
+    queryString ? `?${queryString}` : ''
+  }`;
+
+  return url;
+};
+
 export const fetchProfileUsers = (projectId, reqBody) => {
-  const url = `${host}projects/${projectId}/v1/profiles/users`;
+  let url = getURLWithQueryParams(projectId, 'users');
   return post(null, url, reqBody);
 };
 
@@ -78,7 +98,7 @@ export const fetchProfileUserDetails = (projectId, id, isAnonymous) => {
 };
 
 export const fetchProfileAccounts = (projectId, reqBody) => {
-  const url = `${host}projects/${projectId}/v1/profiles/accounts`;
+  const url = getURLWithQueryParams(projectId, 'accounts');
   return post(null, url, reqBody);
 };
 

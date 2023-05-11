@@ -85,6 +85,9 @@ func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 	switch document.Type {
 	case model.HubspotDocumentTypeCompany:
 		idKey = "companyId"
+		if _, ok := (*documentMap)["id"]; ok {
+			idKey = "id"
+		}
 	case model.HubspotDocumentTypeContact:
 		idKey = "vid"
 		if document.Action == model.HubspotDocumentActionDeleted {

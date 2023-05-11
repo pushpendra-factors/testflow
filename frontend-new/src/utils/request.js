@@ -53,6 +53,14 @@ function request(dispatch, method, url, headers, data) {
     if (window.FUNNEL_V2 && window.FUNNEL_V2 != "") {
       options.headers["Funnel-V2"] = true;
     }
+
+    if (window.SCORE && window.SCORE != ""){
+      options.headers["Score"] = true
+    }
+
+    if (window.SCORE_DEBUG && window.SCORE_DEBUG != ""){
+      options.headers["Score-Debug"] = true
+    }
   
     return fetch(url, options)
       .then((response) => {

@@ -7,6 +7,7 @@ import { connect } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import AppModal from '../AppModal';
+import { meetLink } from 'Utils/hubspot';
 const { Option } = Select;
 
 const ShareToSlackModal = ({visible, onSubmit, isLoading, channelOpts, setShowShareToSlackModal, queryTitle}) => {
@@ -153,7 +154,7 @@ const ShareToSlackModal = ({visible, onSubmit, isLoading, channelOpts, setShowSh
                                     <div className={'flex flex-col border-top--thin my-4 w-full'} />
                                     <Col span={23}>
                                         <div className={'w-full mb-3'}>
-                                            <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>Not getting our messages? <a href='#!'>Let us know</a></Text>
+                                            <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>Not getting our messages? <a href={meetLink()} target='_blank'>Let us know</a></Text>
                                         </div>
                                     </Col>
                                     <Col span={24}>

@@ -32,7 +32,7 @@ var channelToPullMap = map[string]func(int64, int64, int64) (*sql.Rows, *sql.Tx,
 	M.GOOGLE_ORGANIC: store.GetStore().PullGoogleOrganicRowsV2,
 }
 
-// pull channel data into files, and upload each local file to its proper cloud location
+// pull ad reports data for a channel into cloud files with proper logging
 func PullDataForChannel(channel string, projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
 
 	logCtx.Info("Pulling " + channel)
@@ -62,7 +62,7 @@ func PullDataForChannel(channel string, projectId int64, cloudManager *filestore
 	return nil, true
 }
 
-// pull ad reports(rows) from db and generate local files w.r.t timestamp and return map with (key,value) as (timestamp,path)
+// pull ad reports(rows) from db for channel into cloud files
 func pullChannelData(channel string, projectID int64, startTimestampTimezone, endTimestampTimezone int64, cName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64) (int, error) {
 
 	rows, tx, err := channelToPullMap[channel](projectID, startTimestampTimezone, endTimestampTimezone)
@@ -155,9 +155,9 @@ func pullChannelData(channel string, projectID int64, startTimestampTimezone, en
 		rowCount++
 	}
 
-	if rowCount > M.EventsPullLimit {
+	if rowCount > M.AdReportsPullLimit {
 		// Todo(Dinesh): notify
-		return rowCount, fmt.Errorf("ad reports count has exceeded the %d limit", M.EventsPullLimit)
+		return rowCount, fmt.Errorf("ad reports count has exceeded the %d limit", M.AdReportsPullLimit)
 	}
 
 	for _, writer := range writerMap {

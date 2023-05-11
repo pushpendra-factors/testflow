@@ -28,6 +28,7 @@ type PathAnalysis struct {
 	CreatedBy         string          `gorm:"column:created_by" json:"created_by"`
 	CreatedAt         time.Time       `gorm:"column:created_at; autoCreateTime" json:"created_at"`
 	UpdatedAt         time.Time       `gorm:"column:updated_at; autoUpdateTime" json:"updated_at"`
+	ReferenceID       string 		  `gorm:"column:reference_id" json:"reference_id"`
 }
 
 type PathAnalysisQuery struct {
@@ -38,10 +39,16 @@ type PathAnalysisQuery struct {
 	NumberOfSteps       int                 `json:"steps"`
 	IncludeEvents       []PathAnalysisEvent `json:"include_events"`
 	ExcludeEvents       []PathAnalysisEvent `json:"exclude_events"`
+	IncludeGroup        []PathAnalysisEvent `json:"include_group"`
 	StartTimestamp      int64               `json:"starttimestamp"`
 	EndTimestamp        int64               `json:"endtimestamp"`
 	AvoidRepeatedEvents bool                `json:"avoid_repeated_events"`
 	Filter              []QueryProperty     `json:"filter"`
+}
+
+type PathAnalysisQueryWithReference struct {
+	Query PathAnalysisQuery `json:"query"`
+	ReferenceId string `json:"referenceId"`
 }
 
 type PathAnalysisEvent struct {
@@ -49,6 +56,7 @@ type PathAnalysisEvent struct {
 	Alias  string          `json:"alias"`
 	Label  string          `json:"label"`
 	Group  string          `json:"group"`
+	ExpandProperty []QueryGroupByProperty `json:"expand_property"`
 }
 
 type PathAnalysisEntityInfo struct {

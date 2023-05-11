@@ -49,7 +49,7 @@ func CreatePathAnalysisEntityHandler(c *gin.Context) (interface{}, int, string, 
 	}
 	log.Info("Create function handler triggered.")
 
-	var entity model.PathAnalysisQuery
+	var entity model.PathAnalysisQueryWithReference
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&entity); err != nil {
@@ -58,7 +58,7 @@ func CreatePathAnalysisEntityHandler(c *gin.Context) (interface{}, int, string, 
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 
-	if len(entity.IncludeEvents) != 0 && len(entity.ExcludeEvents) != 0 {
+	if len(entity.Query.IncludeEvents) != 0 && len(entity.Query.ExcludeEvents) != 0 {
 		return nil, http.StatusBadRequest, PROCESSING_FAILED, "Provide either IncludeEvents or ExcludeEvents", true
 	}
 
@@ -67,7 +67,7 @@ func CreatePathAnalysisEntityHandler(c *gin.Context) (interface{}, int, string, 
 		return nil, http.StatusBadRequest, PROCESSING_FAILED, "Build limit reached for creating pathanalysis", true
 	}
 
-	_, errCode, errMsg := store.GetStore().CreatePathAnalysisEntity(userID, projectID, &entity)
+	_, errCode, errMsg := store.GetStore().CreatePathAnalysisEntity(userID, projectID, &entity.Query, entity.ReferenceId)
 	if errCode != http.StatusCreated {
 		log.WithFields(log.Fields{"document": entity, "err-message": errMsg}).Error("Failed to create path analysis in handler.")
 		return nil, errCode, PROCESSING_FAILED, errMsg, true
@@ -136,7 +136,7 @@ func GetPathAnalysisData(c *gin.Context) (interface{}, int, string, string, bool
 	result := delta.GetPathAnalysisData(projectID, id)
 	finalResult := filterNodes(result, int(noOfNodes), actualQuery.EventType == "startswith")
 	if(version == "2"){
-		return convertToArray(finalResult), http.StatusOK, "", "", false
+		return convertToArray(finalResult, actualQuery.EventType == "startswith"), http.StatusOK, "", "", false
 	}
 	return finalResult, http.StatusOK, "", "", false
 }
@@ -144,9 +144,10 @@ func GetPathAnalysisData(c *gin.Context) (interface{}, int, string, string, bool
 type ResultStruct struct {
 	Key string
 	Count int
+	Percentage float64
 }
 
-func convertToArray(resultMap map[int]map[string]int) []ResultStruct {
+func convertToArray(resultMap map[int]map[string]int, startsWith bool) []ResultStruct {
 	resultArray := make([]ResultStruct, 0)
 	for i := 1; i <= len(resultMap) ; i++ {
 		othersArray := make([]ResultStruct, 0)
@@ -154,10 +155,17 @@ func convertToArray(resultMap map[int]map[string]int) []ResultStruct {
 			continue
 		}
 		for key, count := range resultMap[i] {
-			if strings.Contains(key, "OTHERS"){
-				othersArray = append(othersArray, ResultStruct{Key: key, Count: count})
+			percentage := 0.0
+			if( i != 1){
+				rootElement := returnRootElement(key, startsWith)
+				percentage = float64(resultMap[i][rootElement] * 100 / count)
 			} else {
-				resultArray = append(resultArray, ResultStruct{Key: key, Count: count})
+				percentage = float64(100)
+			}
+			if strings.Contains(key, "OTHERS"){
+				othersArray = append(othersArray, ResultStruct{Key: key, Count: count, Percentage: percentage})
+			} else {
+				resultArray = append(resultArray, ResultStruct{Key: key, Count: count, Percentage: percentage})
 			}
 		}
 		resultArray = append(resultArray, othersArray...)
@@ -192,31 +200,7 @@ func filterNodes(result map[int]map[string]int, n int, startsWith bool)map[int]m
 				if strings.Contains(labelCount.label, "OTHERS") {
 					continue
 				} else {
-					labelEvents := strings.Split(labelCount.label, ",")
-					rootEvent := ""
-					if startsWith == true {
-						for it, event := range labelEvents {
-							if it == len(labelEvents)-1 {
-								break
-							}
-							if rootEvent == "" {
-								rootEvent = event
-							} else {
-								rootEvent = rootEvent + "," + event
-							}
-						}
-					} else {
-						for it, event := range labelEvents {
-							if it == 0 {
-								continue
-							}
-							if rootEvent == "" {
-								rootEvent = event
-							} else {
-								rootEvent = rootEvent + "," + event
-							}
-						}
-					}
+					rootEvent := returnRootElement(labelCount.label, startsWith)
 					if totalSelectedCount > n || finalResult[i-1][rootEvent] == 0 {
 						continue
 					}
@@ -262,4 +246,33 @@ func filterNodes(result map[int]map[string]int, n int, startsWith bool)map[int]m
 		}
 	}
 	return finalResult
+}
+
+func returnRootElement(label string, startsWith bool)string{
+	labelEvents := strings.Split(label, ",")
+	rootEvent := ""
+	if startsWith == true {
+		for it, event := range labelEvents {
+			if it == len(labelEvents)-1 {
+				break
+			}
+			if rootEvent == "" {
+				rootEvent = event
+			} else {
+				rootEvent = rootEvent + "," + event
+			}
+		}
+	} else {
+		for it, event := range labelEvents {
+			if it == 0 {
+				continue
+			}
+			if rootEvent == "" {
+				rootEvent = event
+			} else {
+				rootEvent = rootEvent + "," + event
+			}
+		}
+	}
+	return rootEvent
 }

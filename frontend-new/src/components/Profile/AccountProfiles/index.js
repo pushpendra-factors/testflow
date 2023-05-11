@@ -21,6 +21,7 @@ import FaSelect from '../../FaSelect';
 import {
   DEFAULT_TIMELINE_CONFIG,
   displayFilterOpts,
+  EngagementTag,
   formatEventsFromSegment,
   formatFiltersForPayload,
   formatPayloadForFilters,
@@ -50,6 +51,7 @@ import {
   fetchGroupPropertyValues,
   fetchGroups
 } from 'Reducers/coreQuery/services';
+import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 
 function AccountProfiles({
   activeProject,
@@ -159,9 +161,11 @@ function AccountProfiles({
 
   useEffect(() => {
     if (accountPayload.source && accountPayload.source !== '') {
-      const opts = { ...accountPayload };
-      opts.filters = formatFiltersForPayload(opts.filters, false);
-      getProfileAccounts(activeProject.id, opts);
+      const formattedFilters = formatFiltersForPayload(accountPayload.filters, false);
+      getProfileAccounts(activeProject.id, {
+        ...accountPayload,
+        filters: formattedFilters
+      });
     }
   }, [activeProject?.id, currentProjectSettings, accountPayload]);
 
@@ -181,7 +185,7 @@ function AccountProfiles({
 
   useEffect(() => {
     const tableProps = accountPayload.segment_id
-      ? activeSegment.query.table_p_props
+      ? activeSegment.query.table_props
       : currentProjectSettings.timelines_config?.account_config?.table_props;
     const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
       listProperties,
@@ -193,9 +197,39 @@ function AccountProfiles({
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
 
+  const getTablePropColumn = (prop) => {
+    const propDisplayName = groupPropNames[prop]
+      ? groupPropNames[prop]
+      : PropTextFormat(prop);
+    const propType = getPropType(listProperties, prop);
+    return {
+      title: (
+        <Text
+          type='title'
+          level={7}
+          color='grey-2'
+          weight='bold'
+          className='m-0'
+          truncate
+        >
+          {propDisplayName}
+        </Text>
+      ),
+      dataIndex: prop,
+      key: prop,
+      width: 300,
+      render: (value) => (
+        <Text type='title' level={7} className='m-0' truncate>
+          {value ? propValueFormat(prop, value, propType) : '-'}
+        </Text>
+      )
+    };
+  };
+
   const getColumns = () => {
     const columns = [
       {
+        // Company Name Column
         title: <div className={headerClassStr}>Company Name</div>,
         dataIndex: 'account',
         key: 'account',
@@ -223,41 +257,41 @@ function AccountProfiles({
               <span className='ml-2'>{item.name}</span>
             </div>
           ) || '-'
-      }
+      },
+
     ];
-    displayTableProps?.forEach((prop) => {
-      const propDisplayName = groupPropNames[prop]
-        ? groupPropNames[prop]
-        : PropTextFormat(prop);
-      const propType = getPropType(listProperties, prop);
+    // Engagement Column
+    const engagementExists = accounts.data?.[0]?.engagement;
+    if (engagementExists) {
       columns.push({
-        title: (
-          <Text
-            type='title'
-            level={7}
-            color='grey-2'
-            weight='bold'
-            className='m-0'
-            truncate
+        title: <div className={headerClassStr}>Engagement</div>,
+        width: 150,
+        dataIndex: 'engagement',
+        key: 'engagement',
+        fixed: 'left',
+        render: (status) => (
+          <div
+            className='engagement-tag'
+            style={{ '--bg-color': EngagementTag[status]?.bgColor }}
           >
-            {propDisplayName}
-          </Text>
-        ),
-        dataIndex: prop,
-        key: prop,
-        width: 300,
-        render: (value) => (
-          <Text type='title' level={7} className='m-0' truncate>
-            {value ? propValueFormat(prop, value, propType) : '-'}
-          </Text>
+            <img src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`} alt=''/>
+            <Text type='title' level={6} extraClass='m-0'>
+              {status}
+            </Text>
+          </div>
         )
       });
+    }
+    // Table Prop Columns
+    displayTableProps?.forEach((prop) => {
+      columns.push(getTablePropColumn(prop));
     });
+    // Last Activity Column
     columns.push({
       title: <div className={headerClassStr}>Last Activity</div>,
-      dataIndex: 'last_activity',
-      key: 'last_activity',
-      width: 250,
+      dataIndex: 'lastActivity',
+      key: 'lastActivity',
+      width: 200,
       align: 'right',
       render: (item) => MomentTz(item).fromNow()
     });
@@ -265,17 +299,13 @@ function AccountProfiles({
   };
 
   const getTableData = (data) => {
-    const tableData = data.map((row) => {
-      return {
-        ...row,
-        ...row?.table_props
-      };
-    });
-    return tableData.sort(
-      (a, b) =>
-        parseInt((new Date(b.last_activity).getTime() / 1000).toFixed(0)) -
-        parseInt((new Date(a.last_activity).getTime() / 1000).toFixed(0))
+    const sortedData = data.sort(
+      (a, b) => new Date(b.last_activity) - new Date(a.last_activity)
     );
+    return sortedData.map((row) => ({
+      ...row,
+      ...row?.tableProps
+    }));
   };
 
   const showModal = () => {
@@ -346,32 +376,42 @@ function AccountProfiles({
 
   const applyTableProps = () => {
     if (accountPayload?.segment_id?.length) {
-      const query = { ...activeSegment.query };
-      query.table_props = checkListAccountProps
-        .filter((item) => item.enabled === true)
-        .map((item) => item?.prop_name);
+      const updatedQuery = {
+        ...activeSegment.query,
+        table_props: checkListAccountProps
+          .filter(({ enabled }) => enabled)
+          .map(({ prop_name }) => prop_name)
+      };
+
       updateSegmentForId(activeProject.id, accountPayload.segment_id, {
-        query: { ...query }
+        query: updatedQuery
       })
         .then(() => getSavedSegments(activeProject.id))
-        .then(() => setActiveSegment({ ...activeSegment, query }));
-    } else {
-      const config = { ...tlConfig };
-      config.account_config.table_props = tlConfig.account_config.table_props
-        .filter(
-          (item) =>
-            !checkListAccountProps.map((item) => item?.prop_name).includes(item)
+        .then(() =>
+          setActiveSegment((segment) => ({ ...segment, query: updatedQuery }))
         )
-        .concat(
-          ...checkListAccountProps
-            .filter((item) => item.enabled === true)
-            .map((item) => item?.prop_name)
-        );
+        .finally(() => setShowPopOver(false));
+    } else {
+      const filteredProps = tlConfig.account_config.table_props.filter(
+        (item) =>
+          !checkListAccountProps.some(({ prop_name }) => prop_name === item)
+      );
+      const enabledProps = checkListAccountProps
+        .filter(({ enabled }) => enabled)
+        .map(({ prop_name }) => prop_name);
+
+      const updatedConfig = {
+        ...tlConfig,
+        account_config: {
+          ...tlConfig.account_config,
+          table_props: [...filteredProps, ...enabledProps]
+        }
+      };
+
       udpateProjectSettings(activeProject.id, {
-        timelines_config: { ...config }
-      });
+        timelines_config: updatedConfig
+      }).finally(() => setShowPopOver(false));
     }
-    setShowPopOver(false);
   };
 
   const popoverContent = () => (
@@ -397,17 +437,18 @@ function AccountProfiles({
 
   const generateSegmentsList = () => {
     const segmentsList = [];
+
     if (accountPayload.source === 'All') {
+      const allowedGroups = [
+        '$hubspot_company',
+        '$salesforce_account',
+        '$6signal'
+      ];
+
       Object.entries(segments)
-        .filter((segment) =>
-          ['$hubspot_company', '$salesforce_account', '$6signal'].includes(
-            segment[0]
-          )
-        )
-        .forEach(([group, vals]) => {
-          const obj = formatSegmentsObjToGroupSelectObj(group, vals);
-          segmentsList.push(obj);
-        });
+        .filter(([group]) => allowedGroups.includes(group))
+        .map(([group, vals]) => formatSegmentsObjToGroupSelectObj(group, vals))
+        .forEach((obj) => segmentsList.push(obj));
     } else {
       const obj = formatSegmentsObjToGroupSelectObj(
         accountPayload.source,
@@ -427,27 +468,26 @@ function AccountProfiles({
     setSegmentDDVisible(false);
   };
 
-  const handleSaveSegment = (segmentPayload) => {
-    createNewSegment(activeProject.id, segmentPayload)
-      .then((response) => {
-        if (response.type === 'SEGMENT_CREATION_FULFILLED') {
-          notification.success({
-            message: 'Success!',
-            description: response?.payload?.message,
-            duration: 3
-          });
-          setShowSegmentModal(false);
-          setSegmentDDVisible(false);
-        }
-      })
-      .then(() => getSavedSegments(activeProject.id))
-      .catch((err) => {
-        notification.error({
-          message: 'Error',
-          description: 'Segment Creation Failed. Invalid Parameters.',
+  const handleSaveSegment = async (segmentPayload) => {
+    try {
+      const response = await createNewSegment(activeProject.id, segmentPayload);
+      if (response.type === 'SEGMENT_CREATION_FULFILLED') {
+        notification.success({
+          message: 'Success!',
+          description: response?.payload?.message,
           duration: 3
         });
+        setShowSegmentModal(false);
+        setSegmentDDVisible(false);
+      }
+      await getSavedSegments(activeProject.id);
+    } catch (err) {
+      notification.error({
+        message: 'Error',
+        description: 'Segment Creation Failed. Invalid Parameters.',
+        duration: 3
       });
+    }
   };
 
   const clearSegment = () => {
@@ -515,32 +555,30 @@ function AccountProfiles({
   );
 
   const eventsList = (listEvents) => {
-    const blockList = [];
-    listEvents.forEach((event, index) => {
-      blockList.push(
-        <div key={index} className='m-0 mr-2 mb-2'>
-          <EventsBlock
-            availableGroups={groupsList}
-            index={index + 1}
-            event={event}
-            queries={listEvents}
-            viewMode
-          />
-        </div>
-      );
-    });
+    const blockList = listEvents.map((event, index) => (
+      <div key={index} className='m-0 mr-2 mb-2'>
+        <EventsBlock
+          availableGroups={groupsList}
+          index={index + 1}
+          event={event}
+          queries={listEvents}
+          viewMode
+        />
+      </div>
+    ));
 
+    if (!blockList.length) {
+      return null;
+    }
     return (
       <div className='segment-query_block'>
-        {blockList.length ? (
-          <h2
-            className={`title ${
-              activeSegment?.query?.gup?.length ? '' : 'width-unset'
-            }`}
-          >
-            Performed Events
-          </h2>
-        ) : null}
+        <h2
+          className={`title ${
+            activeSegment?.query?.gup?.length ? '' : 'width-unset'
+          }`}
+        >
+          Performed Events
+        </h2>
         <div className='content'>{blockList}</div>
       </div>
     );
@@ -570,24 +608,23 @@ function AccountProfiles({
   };
 
   const segmentInfo = () => {
-    if (activeSegment.query) {
-      return (
-        <div className='p-3'>
-          {activeSegment.query.ewp && activeSegment.query.ewp.length
-            ? eventsList(formatEventsFromSegment(activeSegment.query.ewp))
-            : null}
-          {activeSegment.query.gup && activeSegment.query.gup.length
-            ? filtersList(formatPayloadForFilters(activeSegment.query.gup))
-            : null}
-          <h2 className='whitespace-no-wrap italic line-height-8 m-0 mr-2'>
-            {`*Shows ${
-              displayFilterOpts[activeSegment.type]
-            } from last 28 days.`}
-          </h2>
-        </div>
-      );
+    if (!activeSegment.query) {
+      return null;
     }
-    return null;
+
+    return (
+      <div className='p-3'>
+        {activeSegment.query.ewp && activeSegment.query.ewp.length
+          ? eventsList(formatEventsFromSegment(activeSegment.query.ewp))
+          : null}
+        {activeSegment.query.gup && activeSegment.query.gup.length
+          ? filtersList(formatPayloadForFilters(activeSegment.query.gup))
+          : null}
+        <h2 className='whitespace-no-wrap italic line-height-8 m-0 mr-2'>
+          {`*Shows ${displayFilterOpts[activeSegment.type]} from last 28 days.`}
+        </h2>
+      </div>
+    );
   };
 
   const renderGroupSelectDD = () => (
@@ -855,9 +892,7 @@ function AccountProfiles({
         rowClassName='cursor-pointer'
         pagination={{ position: ['bottom', 'left'], defaultPageSize: '25' }}
         scroll={{
-          x:
-            currentProjectSettings?.timelines_config?.account_config
-              ?.table_props?.length * 300
+          x: displayTableProps?.length * 300
         }}
         footer={() => (
           <div className='text-right'>
@@ -865,6 +900,7 @@ function AccountProfiles({
               className='font-size--small'
               href='https://www.uplead.com'
               target='_blank'
+              rel='noopener noreferrer'
             >
               Logos provided by UpLead
             </a>
@@ -901,12 +937,7 @@ function AccountProfiles({
       ) : accounts.data.length ? (
         renderTable()
       ) : (
-        <div className='ant-empty ant-empty-normal'>
-          <div className='ant-empty-image'>
-            <SVG name='nodata' size={150} />
-          </div>
-          <div className='ant-empty-description'>No Accounts Found</div>
-        </div>
+        <NoDataWithMessage message={'No Accounts Found'} />
       )}
       {renderAccountDetailsModal()}
     </div>
@@ -938,3 +969,4 @@ const mapDispatchToProps = (dispatch) =>
   );
 
 export default connect(mapStateToProps, mapDispatchToProps)(AccountProfiles);
+

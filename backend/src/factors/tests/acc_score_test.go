@@ -90,8 +90,12 @@ func TestFilterAndCountEvents(t *testing.T) {
 	e2 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Australia"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
 	e3 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$form_submitted", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome", "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Australia"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
 	e4 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$session", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Australia"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e5 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$session_1", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome", "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Kenya"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e6 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview_1", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Kenya"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e7 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$form_submitted_1", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome", "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Kenya"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e8 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$session_3", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Brazil"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
 
-	ev := []string{e1, e2, e3, e4}
+	ev := []string{e1, e2, e3, e4, e5, e6, e7, e8}
 	var events []*P.CounterEventFormat = make([]*P.CounterEventFormat, 0)
 
 	for _, e := range ev {
@@ -110,8 +114,10 @@ func TestFilterAndCountEvents(t *testing.T) {
 	w4 := M.AccEventWeight{WeightId: "5", Weight_value: 10.0, Is_deleted: false, EventName: "www.acme.com", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Australia", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
 	w5 := M.AccEventWeight{WeightId: "6", Weight_value: 11.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Australia", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
 	w6 := M.AccEventWeight{WeightId: "7", Weight_value: 8.0, Is_deleted: false, EventName: "$session"}
+	w7 := M.AccEventWeight{WeightId: "8", Weight_value: 11.0, Is_deleted: false, EventName: "", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Kenya", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
+	w8 := M.AccEventWeight{WeightId: "9", Weight_value: 11.0, Is_deleted: false, EventName: "", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Brazil", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
 
-	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5, w6}
+	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5, w6, w7, w8}
 	finalWeights.WeightConfig = weightRules
 	finalWeights.SaleWindow = 10
 
@@ -119,9 +125,17 @@ func TestFilterAndCountEvents(t *testing.T) {
 	ev_r2 := []string{"1", "2"}
 	ev_r3 := []string{"4"}
 	ev_r4 := []string{"3", "7"}
-	ev_rules := [][]string{ev_r1, ev_r2, ev_r3, ev_r4}
+	ev_r5 := []string{"8"}
+	ev_r6 := []string{"8"}
+	ev_r7 := []string{"8"}
+	ev_r8 := []string{"9"}
+
+	ev_rules := [][]string{ev_r1, ev_r2, ev_r3, ev_r4, ev_r5, ev_r6, ev_r7, ev_r8}
 	cr, err := T.DeduplicateWeights(finalWeights) //new ids will not be added, as weight id is already filled
 	assert.Nil(t, err)
+	for _, w := range cr.WeightConfig {
+		log.Debug(w)
+	}
 	weightmap, _ := T.CreateweightMap(&cr)
 	log.Debug(weightmap)
 	for idx, ev := range events {
@@ -130,7 +144,7 @@ func TestFilterAndCountEvents(t *testing.T) {
 		assert.ElementsMatch(t, ids, ev_rules[idx], fmt.Sprintf("events :%d", idx))
 
 	}
-	assert.Equal(t, 5, len(weightmap))
+	assert.Equal(t, 6, len(weightmap))
 }
 
 func TestFilterAndCountEventsFromFile(t *testing.T) {

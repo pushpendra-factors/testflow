@@ -116,9 +116,9 @@ const Welcome = ({
 
   const switchProject = () => {
     fetchDemoProject().then((res) => {
-      let id = res.data[0];
-      let selectedProject = projects.filter((project) => project?.id === id);
-      selectedProject = selectedProject[0];
+      let id = res?.data?.[0];
+      let selectedProject = projects?.filter((project) => project?.id === id);
+      selectedProject = selectedProject?.[0];
       localStorage.setItem('activeProject', selectedProject?.id);
       setActiveProject(selectedProject);
       history.push('/');

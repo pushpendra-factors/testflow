@@ -1,25 +1,30 @@
 import React, { ReactNode } from 'react';
 import styles from './index.module.scss';
 import { Text } from '../../factorsComponents';
-import { OptionType, handleOptionFunctionType } from './types';
+import { OptionType, SingleSelectOptionClickCallbackType } from './types';
+import { filterSearchFunction } from './utils';
 
 interface SingleSelectProps {
   options: OptionType[];
-  optionClick: handleOptionFunctionType;
+  optionClickCallback?: SingleSelectOptionClickCallbackType;
   allowSearch: boolean;
   searchOption: OptionType | null;
+  allowSearchTextSelection: boolean;
+  searchTerm: string;
 }
 export default function SingleSelect({
   options,
-  optionClick,
+  optionClickCallback,
   allowSearch,
-  searchOption
+  searchOption,
+  allowSearchTextSelection,
+  searchTerm
 }: SingleSelectProps) {
   const handleOptionClick = (op: OptionType) => {
-    optionClick(op);
+    if (optionClickCallback) optionClickCallback(op);
   };
   let rendOpts: ReactNode[] = [];
-  if (searchOption) {
+  if (searchOption && allowSearchTextSelection) {
     // Adding Select Option Based On SearchTerm
     rendOpts.push(
       <div
@@ -36,20 +41,24 @@ export default function SingleSelect({
       </div>
     );
   }
-  options.forEach((op, index) => {
-    rendOpts.push(
-      <div
-        key={'op' + index}
-        onClick={() => {
-          handleOptionClick(op);
-        }}
-        className={`${
-          allowSearch ? 'fa-select-group-select--options' : 'fa-select--options'
-        }`}
-      >
-        {op.labelNode ? op.labelNode : op.label}
-      </div>
-    );
-  });
+  options
+    .filter((op) => filterSearchFunction(op, searchTerm))
+    .forEach((op, index) => {
+      rendOpts.push(
+        <div
+          key={'op' + index}
+          onClick={() => {
+            handleOptionClick(op);
+          }}
+          className={`${
+            allowSearch
+              ? 'fa-select-group-select--options'
+              : 'fa-select--options'
+          }`}
+        >
+          {op.labelNode ? op.labelNode : op.label}
+        </div>
+      );
+    });
   return <>{rendOpts}</>;
 }

@@ -18,7 +18,8 @@ import (
 )
 
 // get within period insights for a week for custom kpi
-func getCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) (*WithinPeriodInsightsKpi, error) {
+func getCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
+	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, hardPull, useSortedFilesMerge bool, pulledMap map[int64]map[string]bool) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	wpi.MetricInfo = &MetricInfo{}
 	wpi.ScaleInfo = &MetricInfo{}
@@ -39,7 +40,7 @@ func getCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval [
 	newPropFilter := append(propFilter, transformation.Filters...)
 
 	//get file scanner
-	scanner, err := GetUserFileScanner(transformation.DateField, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap)
+	scanner, err := GetUserFileScanner(transformation.DateField, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, useSortedFilesMerge, pulledMap)
 	if err != nil {
 		log.WithError(err).Error("failed getting " + transformation.DateField + " file scanner for custom kpi")
 		return &wpi, err
@@ -238,7 +239,7 @@ func addToScaleUser(globalScale *float64, scaleMap map[string]map[string]float64
 
 // get union of topK properties from both files
 func getPropKeysToEvalForCustomMetric(metric string, projectId int64, periodCodes []Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) (map[string]bool, error) {
+	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, hardPull, useSortedFilesMerge bool, pulledMap map[int64]map[string]bool) (map[string]bool, error) {
 
 	var finalProps = make(map[string]bool)
 
@@ -260,14 +261,14 @@ func getPropKeysToEvalForCustomMetric(metric string, projectId int64, periodCode
 	}
 
 	//add topK props from second week
-	err := addTopKPropKeys(finalProps, datefield, projectId, periodCodes[1], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2, hardPull, pulledMap)
+	err := addTopKPropKeys(finalProps, datefield, projectId, periodCodes[1], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, hardPull, useSortedFilesMerge, pulledMap)
 	if err != nil {
 		log.WithField("err", err).Error("Failed in getting topk keys")
 		return nil, err
 	}
 
 	//add topK props from first week
-	err = addTopKPropKeys(finalProps, datefield, projectId, periodCodes[0], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2, hardPull, pulledMap)
+	err = addTopKPropKeys(finalProps, datefield, projectId, periodCodes[0], archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, hardPull, useSortedFilesMerge, pulledMap)
 	if err != nil {
 		log.WithField("err", err).Error("Failed in getting topk keys")
 		return nil, err
@@ -277,11 +278,11 @@ func getPropKeysToEvalForCustomMetric(metric string, projectId int64, periodCode
 
 // get user file and get topK keys(top K keys meaning unique keys from top K [key,value] pairs)
 func addTopKPropKeys(finalProps map[string]bool, datefield string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) error {
+	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, hardPull, useSortedFilesMerge bool, pulledMap map[int64]map[string]bool) error {
 	//get counts map in proper format to use in functions built for events wi
 	var propsPerWeek = make(Level3CatRatioDist)
 	{
-		scanner, err := GetUserFileScanner(datefield, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap)
+		scanner, err := GetUserFileScanner(datefield, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, useSortedFilesMerge, pulledMap)
 		if err != nil {
 			log.WithError(err).Error("failed getting " + datefield + " file scanner for custom kpi")
 			return err
@@ -356,9 +357,9 @@ func getCountsMapFromUserScanner(scanner *bufio.Scanner, startTimestamp, endTime
 
 // get union of topk prop keys from both files and filter through kpiProperties
 func getFilteredKpiPropertiesForCustomMetric(kpiProperties []map[string]string, metric string, projectId int64, periodCodes []Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) ([]map[string]string, error) {
+	diskManager *serviceDisk.DiskDriver, topK int, beamConfig *merge.RunBeamConfig, hardPull, useSortedFilesMerge bool, pulledMap map[int64]map[string]bool) ([]map[string]string, error) {
 	filteredKpiProperties := make([]map[string]string, 0)
-	propKeys, err := getPropKeysToEvalForCustomMetric(metric, projectId, periodCodes, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, useBucketV2, hardPull, pulledMap)
+	propKeys, err := getPropKeysToEvalForCustomMetric(metric, projectId, periodCodes, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, hardPull, useSortedFilesMerge, pulledMap)
 	if err != nil {
 		err := fmt.Errorf("error getting topK keys from 1st scan")
 		log.WithError(err).Error("error getPropKeysToEvalForCustomMetric")

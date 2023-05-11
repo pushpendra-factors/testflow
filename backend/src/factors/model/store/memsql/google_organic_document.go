@@ -744,7 +744,7 @@ func (store *MemSQL) PullGoogleOrganicRowsV2(projectID int64, startTime, endTime
 		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND sp.object_id = JSON_EXTRACT_STRING(gooDocs.value, 'id')"+
 		"WHERE gooDocs.project_id = %d AND UNIX_TIMESTAMP(gooDocs.created_at) BETWEEN %d AND %d "+
 		"LIMIT %d",
-		projectID, model.ChannelGoogleAds, projectID, startTime, endTime, model.GoggleOrganicPullLimit+1)
+		projectID, model.ChannelGoogleAds, projectID, startTime, endTime, model.AdReportsPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err
@@ -777,7 +777,7 @@ func (store *MemSQL) PullGoogleOrganicRowsV1(projectID int64, startTime, endTime
 		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND sp.object_id = JSON_EXTRACT_STRING(gooDocs.value, 'id')"+
 		"WHERE gooDocs.project_id = %d AND gooDocs.timestamp BETWEEN %d AND %d "+
 		"ORDER BY gooDocs.type, timestamp LIMIT %d",
-		projectID, model.ChannelGoogleAds, projectID, start, end, model.GoggleOrganicPullLimit+1)
+		projectID, model.ChannelGoogleAds, projectID, start, end, model.AdReportsPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err

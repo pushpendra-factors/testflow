@@ -528,9 +528,9 @@ func (dd *DiskDriver) GetEventsPartFilesDir(projectId int64, startTimestamp, end
 	return path
 }
 
-func (dd *DiskDriver) GetEventsPartFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, sorted bool, startIndex, endIndex int, group int) (string, string) {
+func (dd *DiskDriver) GetEventsPartFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, sorted bool, startIndex, endIndex int, group int, timeIndex int) (string, string) {
 	path := dd.GetEventsPartFilesDir(projectId, startTimestamp, endTimestamp, sorted, group)
-	name := fmt.Sprintf("%d-%d_uids.txt", startIndex, endIndex)
+	name := fmt.Sprintf("%d-%d_uids_%d.txt", startIndex, endIndex, timeIndex)
 	return path, name
 }
 
@@ -550,8 +550,8 @@ func (dd *DiskDriver) GetChannelPartFilesDir(channel string, projectId int64, st
 	return path
 }
 
-func (dd *DiskDriver) GetChannelPartFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool, index int) (string, string) {
+func (dd *DiskDriver) GetChannelPartFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool, index, timeIndex int) (string, string) {
 	path := dd.GetChannelPartFilesDir(channel, projectId, startTimestamp, endTimestamp, sorted)
-	name := fmt.Sprintf("%d_doctype.txt", index)
+	name := fmt.Sprintf("%d_doctype_%d.txt", index, timeIndex)
 	return path, name
 }
