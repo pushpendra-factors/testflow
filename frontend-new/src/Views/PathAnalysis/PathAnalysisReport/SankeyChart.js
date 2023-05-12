@@ -87,7 +87,7 @@ function Sankey({
     useEffect(() => {
         let isReverse = activeQuery?.query?.event_type == "startswith" ? false : true
         setReverseChart(isReverse)
-        setChartData(transformDataFn(sankeyData, isReverse)) 
+        setChartData(transformDataFn(sankeyData, isReverse, 2)) 
     }, [activeQuery, sankeyData])
 
     if (typeof Highcharts === 'object') {
@@ -104,31 +104,53 @@ function Sankey({
             }
         }
     }
-    const transformDataFn = (data, isReverse) => { 
+    const transformDataFn = (data, isReverse, version = 1) => { 
         // console.log('input chart data-->', data); 
         if (data) {
             let results = data;
             let finalArr = [];
             let final = [];
             let title = '';
-            for (const index of Object.keys(results)) {
-                if (index != '1') {
-                    if (results[index]) {
-                        for (const key of Object.keys(results[index])) {
-                            let arr = key.split(',');
-                            if (isReverse) {
-                                final = [arr[0], arr[1], results[index][key]]
-                            } else {
-                                let last2count = arr.length - 2;
-                                let last2El = arr.slice(last2count);
-                                final = [...last2El, results[index][key]];
+
+            if(version==2){
+
+                data?.map((item,index)=>{
+                    if(index!=0){
+                        let arr = item?.Key.split(',');  
+                        if (isReverse) {
+                            final = [arr[0], arr[1], item?.Count]
+                           finalArr = [...finalArr, [...final]];
+                        } else {
+                            let last2count = arr.length - 2;
+                            let last2El = arr.slice(last2count); 
+                            final = [...last2El, item?.Count];
+                           finalArr = [...finalArr, [...final]];
+                        }
+                    }
+                });
+            }
+            else{
+
+                for (const index of Object.keys(results)) {
+                    if (index != '1') {
+                        if (results[index]) {
+                            for (const key of Object.keys(results[index])) {
+                                let arr = key.split(',');
+                                if (isReverse) {
+                                    final = [arr[0], arr[1], results[index][key]]
+                                } else {
+                                    let last2count = arr.length - 2;
+                                    let last2El = arr.slice(last2count);
+                                    final = [...last2El, results[index][key]];
+                                }
+                                finalArr = [...finalArr, [...final]];
+                                //   console.log("finalArr",finalArr)
                             }
-                            finalArr = [...finalArr, [...final]];
-                            //   console.log("finalArr",finalArr)
                         }
                     }
                 }
             }
+
             // console.log('transformed chart data-->', finalArr); 
             return finalArr
         }
