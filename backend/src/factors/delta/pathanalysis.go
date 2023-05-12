@@ -71,13 +71,22 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 	hardPull := configs["hardPull"].(bool)
 	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
 	useBucketV2 := configs["useBucketV2"].(bool)
+	blacklistedQueries := configs["blacklistedQueries"].([]string)
+	blacklistedQueriesMap := make(map[string]bool)
+	for _, id := range blacklistedQueries {
+		blacklistedQueriesMap[id] = true
+	}
 
 	finalStatus := make(map[string]interface{})
 	processedQueries := make([]string, 0)
 	queries, _ := store.GetStore().GetAllSavedPathAnalysisEntityByProject(projectId)
 	queryCountMap := make(map[string]int)
 	for _, query := range queries {
-
+		_, isBlacklisted := blacklistedQueriesMap[query.ID]
+		if(isBlacklisted){
+			finalStatus[query.ID] = "skipped - blacklisted"
+			continue
+		}
 		timeNow := U.TimeNowZ().Unix()
 		lastUpdated := query.UpdatedAt.Unix()
 		lastCreated := query.CreatedAt.Unix()
