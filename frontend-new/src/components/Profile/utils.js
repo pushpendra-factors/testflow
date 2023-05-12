@@ -81,7 +81,8 @@ export const displayFilterOpts = {
   All: 'All Accounts',
   $hubspot_company: 'Hubspot Companies',
   $salesforce_account: 'Salesforce Accounts',
-  $6signal: '6Signal Domain'
+  $6signal: '6Signal Domains',
+  $linkedin_company: 'Linkedin Company Engagements'
 };
 
 export const formatFiltersForPayload = (filters = [], returnArray) => {
@@ -457,6 +458,11 @@ export const eventIconsColorMap = {
     iconColor: '#00A1E0',
     bgColor: '#E8F8FF',
     borderColor: '#CDF0FF'
+  },
+  linkedin: {
+    iconColor: '#0A66C2',
+    bgColor: '#E6F7FF',
+    borderColor: '#91D5FF'
   },
   window: {
     iconColor: '#FF85C0',

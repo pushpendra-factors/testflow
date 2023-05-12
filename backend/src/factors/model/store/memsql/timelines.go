@@ -638,6 +638,8 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 				userActivity.Icon = "hubspot"
 			} else if strings.Contains(userActivity.EventName, "salesforce_") || strings.Contains(userActivity.EventName, "sf_") {
 				userActivity.Icon = "salesforce"
+			} else if strings.Contains(userActivity.EventName, "linkedin_") || strings.Contains(userActivity.EventName, "li_") {
+				userActivity.Icon = "linkedin"
 			}
 			// Default Icon
 			if userActivity.Icon == "" {
@@ -864,11 +866,11 @@ func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id str
 		UserId:         id,
 		IsAnonymous:    false,
 		UserName:       model.GROUP_ACTIVITY_USERNAME,
-		AdditionalProp: groupName,
 		UserActivities: []model.UserActivity{},
 	}
 
 	if groupName == "All" || groupName == U.GROUP_NAME_DOMAINS {
+		intentTimeline.AdditionalProp = "All"
 		groupNameIDMap, status := store.GetGroupNameIDMap(projectID)
 		if status != http.StatusFound {
 			return intentTimeline, fmt.Errorf("failed to retrieve GroupNameID map")
@@ -887,7 +889,12 @@ func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id str
 			intentTimeline.UserActivities = append(intentTimeline.UserActivities, intentActivities...)
 		}
 	} else {
-		// Fetch user activities for the given user ID
+		if groupDisplayName, exists := U.STANDARD_GROUP_DISPLAY_NAMES[groupName]; exists {
+			intentTimeline.AdditionalProp = groupDisplayName
+		} else {
+			intentTimeline.AdditionalProp = groupName
+		}
+		// Fetch user activities for the given account ID
 		intentActivities, err := store.GetUserActivities(projectID, id, model.COLUMN_NAME_ID)
 		if err != nil {
 			return intentTimeline, fmt.Errorf("failed to retrieve user activities for user ID %v", id)
