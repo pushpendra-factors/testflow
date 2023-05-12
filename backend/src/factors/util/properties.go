@@ -658,7 +658,7 @@ var CLR_COMPANY_LEGALNAME = "$clr_company_legalname"
 var CLR_COMPANY_TECH = "$clr_company_tech"
 var CLR_COMPANY_TAGS = "$clr_company_tags"
 
-//6Signal Properties
+// 6Signal Properties
 var SIX_SIGNAL_PROPERTIES_PREFIX = "$6Signal_"
 var SIX_SIGNAL_ZIP = "$6Signal_zip"
 var SIX_SIGNAL_NAICS_DESCRIPTION = "$6Signal_naics_description"
@@ -680,7 +680,7 @@ var SIX_SIGNAL_NAICS = "$6Signal_naics"
 var SIX_SIGNAL_ANNUAL_REVENUE = "$6Signal_annual_revenue"
 var SIX_SIGNAL_SIC_DESCRIPTION = "$6Signal_sic_description"
 
-//LinkedinCompany properties
+// LinkedinCompany properties
 var LI_PROPERTIES_PREFIX = "$li_"
 var LI_DOMAIN = "$li_domain"
 var LI_HEADQUARTER = "$li_headquarter"
@@ -3729,6 +3729,38 @@ func GetPropertyValueAsString(value interface{}) string {
 	}
 }
 
+func GetPropertyValueAsInt64(value interface{}) (int64, error) {
+	if value == nil {
+		return 0, nil
+	}
+
+	switch valueType := value.(type) {
+	case float64:
+		return int64(value.(float64)), nil
+	case float32:
+		return int64(value.(float32)), nil
+	case int:
+		return int64(value.(int)), nil
+	case int32:
+		return int64(value.(int32)), nil
+	case int64:
+		return value.(int64), nil
+	case string:
+		valueString := value.(string)
+		if valueString == "" {
+			return 0, nil
+		}
+
+		intValue, err := strconv.ParseInt(valueString, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+		return intValue, err
+	default:
+		return 0, fmt.Errorf("invalid property value type %v", valueType)
+	}
+}
+
 func GetPropertyValueAsFloat64(value interface{}) (float64, error) {
 	if value == nil {
 		return 0, nil
@@ -3995,7 +4027,7 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	return sorted
 }
 
-//AggregatePropertyValuesAcrossDate values are stored by date and this method aggregates the count and last seen value and returns
+// AggregatePropertyValuesAcrossDate values are stored by date and this method aggregates the count and last seen value and returns
 // no filtering is done
 func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp) []NameCountTimestampCategory {
 	valuesAggregated := make(map[string]CountTimestampTuple)
@@ -4018,7 +4050,7 @@ func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp)
 	return propertyValueAggregatedSlice
 }
 
-//AggregatePropertyAcrossDate values are stored by date and this method aggregates the count and last seen value and returns
+// AggregatePropertyAcrossDate values are stored by date and this method aggregates the count and last seen value and returns
 // no filtering is done
 func AggregatePropertyAcrossDate(properties []CachePropertyWithTimestamp) []NameCountTimestampCategory {
 	propertiesAggregated := make(map[string]PropertyWithTimestamp)
