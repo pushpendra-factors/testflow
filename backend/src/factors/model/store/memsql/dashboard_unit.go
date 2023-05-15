@@ -6,6 +6,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"reflect"
 	"strings"
@@ -949,10 +950,10 @@ func (store *MemSQL) CacheAttributionDashboardUnit(dashboardUnit model.Dashboard
 	}
 
 	// Running standrad caching attribution
-	store.RunEverydayCachingForAttribution(dashboardUnit, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
+	// store.RunEverydayCachingForAttribution(dashboardUnit, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
 
 	// Todo (Anil) backfilled 3 months version of attribution run
-	// store.RunCachingForLast3MonthsAttribution(dashboardUnit, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
+	store.RunCachingForLast3MonthsAttribution(dashboardUnit, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
 }
 
 func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.DashboardUnit,
@@ -1456,7 +1457,13 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 		Preset:         preset,
 	}
+
 	if C.IsLastComputedWhitelisted(projectID) {
+		errCode, errMsg := store.CreateResultInDB(result, projectID, dashboardID, dashboardUnitID, dashboardUnit.QueryId, preset,
+			from, to, timezoneString, meta)
+		if errCode != http.StatusCreated {
+			logCtx.WithFields(log.Fields{"ErrorCode": errCode, "ErrorMsg": errMsg}).Error("Failed to crease database entry")
+		}
 		model.SetCacheResultByDashboardIdAndUnitIdWithPreset(result, projectID, dashboardID, dashboardUnitID, preset,
 			from, to, timezoneString, meta)
 	} else {
@@ -1469,6 +1476,52 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 	unitReport.TimeTaken = timeTaken
 	unitReport.TimeTakenStr = timeTakenString
 	return http.StatusOK, "", unitReport
+}
+
+// CreateResultInDB inserts the computed dashboard query into DB under table DBQueryResult
+func (store *MemSQL) CreateResultInDB(result interface{}, projectId int64, dashboardId int64, unitId int64, queryId int64,
+	preset string, from, to int64, timezoneString U.TimeZoneString, meta interface{}) (int, string) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId,
+		"dashboard_id": dashboardId, "dashboard_unit_id": unitId,
+		"preset": preset, "from": from, "to": to,
+	})
+
+	if projectId == 0 || dashboardId == 0 || unitId == 0 {
+		logCtx.Error("Invalid scope ids.")
+		return http.StatusInternalServerError, "Invalid scope Ids"
+	}
+	db := C.GetServices().Db
+
+	resMarshalled, err := json.Marshal(result)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult.")
+		return http.StatusInternalServerError, "Failed to encode dashboardCacheResult."
+	}
+	resJson := &postgres.Jsonb{json.RawMessage(resMarshalled)}
+
+	resultWarpper := model.DBQueryResult{
+		ID:              U.GetUUID(),
+		ProjectID:       projectId,
+		DashboardID:     dashboardId,
+		DashboardUnitID: unitId,
+		QueryID:         queryId,
+		From:            from,
+		To:              to,
+		Result:          *resJson,
+		IsDeleted:       false,
+		ComputedAt:      U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		//Timezone:    string(timezoneString)
+	}
+
+	if err := db.Create(&resultWarpper).Error; err != nil {
+		errMsg := "Failed to insert rule."
+		log.WithFields(log.Fields{"Result": result,
+			"project_id": projectId}).WithError(err).Error(errMsg)
+		return http.StatusInternalServerError, errMsg
+	}
+	return http.StatusCreated, ""
+
 }
 
 // CacheDashboardUnitForDateRange To cache a dashboard unit for the given range.
