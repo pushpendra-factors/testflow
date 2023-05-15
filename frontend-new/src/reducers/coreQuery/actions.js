@@ -1,5 +1,7 @@
 /* eslint-disable */
 
+import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
+
 export const FETCH_EVENTS = 'FETCH_EVENTS';
 export const FETCH_EVENTS_MAP = 'FETCH_EVENTS_MAP';
 export const FETCH_EVENT_PROPERTIES = 'FETCH_EVENT_PROPERTIES';
@@ -161,4 +163,11 @@ export const setDefaultStateAction = () => {
 
 export const setEventGroupBy = (payload) => {
   return { type: SET_EVENT_GROUPBY, payload };
+};
+
+export const setShowAnalyticsResult = (payload) => {
+  return {
+    type: SHOW_ANALYTICS_RESULT,
+    payload
+  };
 };
