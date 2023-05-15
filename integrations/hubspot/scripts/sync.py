@@ -1213,11 +1213,13 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
     if sync_all:
         url = "https://api.hubapi.com/crm/v3/objects/companies?"
         headers = None
+        request = requests.get
         json_data = None
         log.warning("Downloading all companies for project_id : "+ str(project_id) + ".")
     else:
         url = "https://api.hubapi.com/crm/v3/objects/companies/search?"  # both created and modified.
         headers = {'Content-Type': 'application/json'}
+        request = requests.post
         json_data = {
             "filterGroups":[
                 {
@@ -1267,7 +1269,7 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
             json_data["properties"] = properties
 
         log.warning("Downloading companies for project_id %d from url %s.", project_id, get_url)
-        r = hubspot_request_handler(project_id, get_url, json=json_data, headers=headers)
+        r = hubspot_request_handler(project_id, get_url, request=request, json=json_data, headers=headers)
         if not r.ok:
             log.error("Failure response %d from hubspot on sync_companies", r.status_code)
             break
