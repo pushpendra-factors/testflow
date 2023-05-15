@@ -4,7 +4,7 @@ import * as highchartsSankey from 'highcharts/modules/sankey';
 import { Timeline, Empty, Button } from 'antd';
 import ReactDOMServer from 'react-dom/server';
 import _ from 'lodash';
-import { SVG, Text } from 'factorsComponents';
+import { SVG, Text, Number } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
 
 const StepArraowGenerator = (activeQuery) => {
@@ -71,8 +71,10 @@ const CustomTooltip = ({ data }) => {
         <Text type={'title'} level={7} extraClass={'m-0'}>{StripUrl(fromName)}</Text>
         <Text type={'title'} level={7} extraClass={'m-0'}>{`${fromNodeweight}`}</Text>
       </div>
-      <div className='flex items-center fa-sankey-timeline--dashed '>
-        <Text type={'title'} level={7} extraClass={'m-0'}>{`${percentage}%`}</Text>
+      <div className='flex items-center fa-sankey-timeline--dashed '> 
+        <Text type={'title'} level={7} extraClass={'m-0'}>
+            <Number suffix={'%'} number={percentage} /> 
+        </Text>
       </div>
       <div className='flex flex-col items-start'>
         <Text type={'title'} level={7} extraClass={'m-0'}>{StripUrl(toName)}</Text>
@@ -127,14 +129,14 @@ function Sankey({
 
                 data?.map((item, index) => {
                     if (index != 0) {
-                        let arr = item?.Key.split(',');
+                        let arr = item?.key.split(',');
                         if (isReverse) {
-                            final = [arr[0], arr[1], item.Count, item.Percentage]
+                            final = [arr[0], arr[1], item.count, item.percentage]
                             finalArr = [...finalArr, [...final]];
                         } else {
                             let last2count = arr.length - 2;
                             let last2El = arr.slice(last2count);
-                            final = [...last2El, item.Count, item.Percentage];
+                            final = [...last2El, item.count, item.percentage];
                             finalArr = [...finalArr, [...final]];
                         }
                     }
