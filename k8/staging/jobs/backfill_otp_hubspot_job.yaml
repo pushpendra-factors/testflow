@@ -1,0 +1,75 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: factors-staging-node-pool
+  name: backfill-otp-hubspot-job
+spec:
+  schedule: "0 21 * * *" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: factors-staging-node-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+            - name: backfill-otp-hubspot-job
+              image: us.gcr.io/factors-staging/otp-hubspot-job:1.0
+              imagePullPolicy: IfNotPresent
+              args:
+                - --env
+                - $(ENV)
+                - --memsql_host
+                - $(MEMSQL_HOST)
+                - --memsql_port
+                - $(MEMSQL_PORT)
+                - --memsql_name
+                - $(MEMSQL_DB)
+                - --memsql_user
+                - $(MEMSQL_HEAVY_USER)
+                - --memsql_pass
+                - $(MEMSQL_PASSWORD)
+                - --memsql_cert
+                - $(MEMSQL_CERTIFICATE)
+                - --redis_host
+                - $(REDIS_HOST)
+                - --redis_port
+                - $(REDIS_PORT)
+                - --redis_host_ps
+                - $(PERSISTENT_REDIS_HOST)
+                - --redis_port_ps
+                - $(PERSISTENT_REDIS_PORT)
+                - --sentry_dsn
+                - $(SENTRY_DSN)
+                - --gcp_project_id
+                - $(GCP_PROJECT_ID)
+                - --gcp_project_location
+                - $(GCP_PROJECT_LOCATION)
+                - --hubspot_app_id
+                - $(HUBSPOT_APP_ID)
+                - --hubspot_app_secret
+                - $(HUBSPOT_APP_SECRET)
+                - --query_otpkey_check_enabled
+                - "true"
+              envFrom:
+                - configMapRef:
+                    name: config-env
+                - configMapRef:
+                    name: config-memsql
+                - secretRef:
+                    name: secret-memsql
+                - configMapRef:
+                    name: config-redis
+                - secretRef:
+                    name: secret-sentry
+                - configMapRef:
+                    name: config-persistent-redis
+                - secretRef:
+                    name: secret-hubspot
+          restartPolicy: OnFailure
