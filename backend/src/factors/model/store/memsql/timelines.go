@@ -217,7 +217,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 	if profileType == model.PROFILE_TYPE_ACCOUNT && isDomainGroup {
 		whereForUserQuery := fmt.Sprintf("WHERE project_id=%d ", projectID) + sourceString
-		runQueryString = BuildQueryStringForDomains(filterString, whereForUserQuery, domainGroupId, timeAndRecordsLimit)
+		runQueryString = BuildQueryStringForDomains(filterString, whereForUserQuery, domainGroupId, timeAndRecordsLimit, payload.Filters)
 	} else {
 		runQueryString = fmt.Sprintf("SELECT %s FROM %s %s %s ORDER BY last_activity DESC LIMIT 1000;", selectString, fromStr, filterString, groupByStr)
 	}
@@ -264,13 +264,39 @@ func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string
 	return sourceString, domainGroupId, http.StatusOK
 }
 
+func SelectFilterAndHavingStringsForAccounts(filtersMap map[string][]model.QueryProperty) (string, string) {
+	index := 1
+	filterArray := make([]string, 0)
+	havingArray := make([]string, 0)
+	propMap := make(map[string]bool)
+	for _, filterArr := range filtersMap {
+		for _, filter := range filterArr {
+			if exists := propMap[filter.Property]; exists {
+				continue
+			}
+			filterStr := fmt.Sprintf("MAX(JSON_EXTRACT_STRING(properties, '%s')) as filter_key_%d", filter.Property, index)
+			filterArray = append(filterArray, filterStr)
+			havingArray = append(havingArray, fmt.Sprintf("filter_key_%d IS NOT NULL", index))
+			index += 1
+			propMap[filter.Property] = true
+		}
+	}
+	var selectFilterString, havingString string
+	if len(filterArray) > 0 {
+		selectFilterString = strings.Join(filterArray, ", ")
+		havingString = "HAVING " + strings.Join(havingArray, " AND ")
+	}
+	return selectFilterString, havingString
+}
+
 // SELECT domain_groups.id as identity, users.properties as properties, domain_groups.updated_at as last_activity FROM (
 // SELECT properties, group_6_user_id FROM users WHERE project_id=2 AND source != 9 AND group_6_user_id IS NOT NULL
 // AND updated_at BETWEEN '2023-03-07 14:38:54.494786' AND '2023-04-07 14:38:54.494786' LIMIT 1000000) AS users JOIN (
 // SELECT id, updated_at FROM users WHERE project_id = 2 AND source = 9 AND is_group_user = 1 AND group_6_id IS NOT NULL
 // ) AS domain_groups ON users.group_6_user_id = domain_groups.id WHERE JSON_EXTRACT_STRING(users.properties, "$6signal_city") = "Delhi"
 // GROUP BY identity ORDER BY last_activity DESC LIMIT 1000;
-func BuildQueryStringForDomains(filterString string, whereForUserQuery string, domainGroupId int, userTimeAndRecordsLimit string) string {
+func BuildQueryStringForDomains(filterString string, whereForUserQuery string, domainGroupId int,
+	userTimeAndRecordsLimit string, filters map[string][]model.QueryProperty) string {
 	whereForDomainGroupQuery := fmt.Sprintf(strings.Replace(whereForUserQuery, "source!=", "source=",
 		1) + " AND is_group_user = 1")
 	if filterString != "" {
@@ -284,13 +310,22 @@ func BuildQueryStringForDomains(filterString string, whereForUserQuery string, d
 	onCondition := fmt.Sprintf("ON users.group_%d_user_id = domain_groups.id", domainGroupId)
 	groupByStr := "GROUP BY identity"
 	selectString := "domain_groups.id AS identity, users.properties as properties, domain_groups.updated_at AS last_activity"
+	var selectFilterString, havingString string
+	selectFilterString, havingString = SelectFilterAndHavingStringsForAccounts(filters)
+	if selectFilterString != "" {
+		selectString = selectString + ", " + selectFilterString
+	}
 	queryString := "SELECT " + selectString + " FROM " + userQueryString + " JOIN " + domainGroupQueryString + " " +
 		onCondition
 
 	if filterString != "" {
 		queryString = queryString + " WHERE " + filterString
 	}
-	queryString = queryString + " " + groupByStr + " ORDER BY last_activity DESC LIMIT 1000;"
+	if selectFilterString != "" {
+		queryString = queryString + " " + groupByStr + " " + havingString + " ORDER BY last_activity DESC LIMIT 1000;"
+	} else {
+		queryString = queryString + " " + groupByStr + " ORDER BY last_activity DESC LIMIT 1000;"
+	}
 	return queryString
 }
 

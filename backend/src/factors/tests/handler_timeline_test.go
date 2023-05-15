@@ -981,7 +981,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 
 	// Properties Map
 	propertiesMap := []map[string]interface{}{
-		{"$salesforce_account_name": "Pepper Content", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "peppercontent.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "Adapt.IO", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "adapt.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
 		{"$salesforce_account_name": "o9 Solutions", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "o9solutions.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
 		{"$salesforce_account_name": "GoLinks Reporting", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "golinks.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
 		{"$salesforce_account_name": "Cin7", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "cin7.com", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC"},
@@ -1307,6 +1307,77 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
 
+	// 6. Accounts from All Sources (filters applied)
+
+	payload = model.TimelinePayload{
+		Source: "All",
+		Filters: map[string][]model.QueryProperty{
+			"salesforce_account": {
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$salesforce_account_name",
+					Operator:  "equals",
+					Value:     "Adapt.IO",
+					LogicalOp: "AND",
+				},
+			},
+			"$hubspot_company": {
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "India",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "Pakistan",
+					LogicalOp: "OR",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "Germany",
+					LogicalOp: "OR",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$hubspot_company_num_associated_contacts",
+					Operator:  "equals",
+					Value:     "50",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$hubspot_company_num_associated_contacts",
+					Operator:  "equals",
+					Value:     "150",
+					LogicalOp: "OR",
+				},
+			},
+		},
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 1)
+	assert.Equal(t, resp[0].Identity, domID)
+	assert.NotNil(t, resp[0].LastActivity)
+	assert.Equal(t, resp[0].Name, propertiesMap[9][U.GP_HUBSPOT_COMPANY_NAME])
+	assert.Equal(t, resp[0].HostName, propertiesMap[9][U.GP_HUBSPOT_COMPANY_DOMAIN])
 }
 
 func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
