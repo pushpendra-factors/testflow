@@ -408,7 +408,7 @@ func sendGetProfileUserRequest(r *gin.Engine, projectId int64, agent *model.Agen
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/profiles/users", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/profiles/users?score=true&debug=true", projectId)).
 		WithPostParams(payload).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -1124,12 +1124,12 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				assert.NotEmpty(t, user.HostName)
 			}
 			if source == U.GROUP_NAME_HUBSPOT_COMPANY {
-				assert.Equal(t, user.Name, propertiesMap[count-i-1]["$hubspot_company_name"])
-				assert.Equal(t, user.HostName, propertiesMap[count-i-1]["$hubspot_company_domain"])
+				assert.Equal(t, user.Name, propertiesMap[count+4-i]["$hubspot_company_name"])
+				assert.Equal(t, user.HostName, propertiesMap[count+4-i]["$hubspot_company_domain"])
 			}
 			if source == U.GROUP_NAME_SALESFORCE_ACCOUNT {
-				assert.Equal(t, user.Name, propertiesMap[count+4-i]["$salesforce_account_name"])
-				assert.Equal(t, user.HostName, propertiesMap[count+4-i]["$salesforce_account_website"])
+				assert.Equal(t, user.Name, propertiesMap[count-i-1]["$salesforce_account_name"])
+				assert.Equal(t, user.HostName, propertiesMap[count-i-1]["$salesforce_account_website"])
 			}
 			if source == U.GROUP_NAME_SIX_SIGNAL {
 				assert.Equal(t, user.Name, propertiesMap[count+9-i][U.SIX_SIGNAL_NAME])
@@ -1271,7 +1271,7 @@ func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.A
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/profiles/accounts", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/profiles/accounts?score=true&debug=true", projectId)).
 		WithPostParams(payload).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
