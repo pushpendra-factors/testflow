@@ -19,19 +19,19 @@ const IntegrationProviderData = [
     name: 'Google Ads',
     desc: 'Integrate reporting from Google Search, Youtube and Display Network',
     icon: 'Google_ads',
-    kbLink:'https://help.factors.ai/en/articles/5099504-google-ads',
+    kbLink:'https://help.factors.ai/en/articles/7283695-google-ads-integration',
   },
   {
     name: 'Facebook',
     desc: 'Pull in reports from Facebook, Instagram and Facebook Audience Network',
     icon: 'Facebook_ads',
-    kbLink:'https://help.factors.ai/en/articles/5099507-facebook-ads'
+    kbLink:'https://help.factors.ai/en/articles/7283696-facebook-ads-integration'
   },
   {
     name: 'LinkedIn',
     desc: 'Sync LinkedIn ads reports with Factors for performance reporting',
     icon: 'Linkedin_ads',
-    kbLink:'https://help.factors.ai/en/articles/5099508-linkedin',
+    kbLink:'https://help.factors.ai/en/articles/7283729-linkedin-ads-integration',
   },
   {
     name: 'Bing Ads',

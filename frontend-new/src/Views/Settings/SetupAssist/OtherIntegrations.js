@@ -27,7 +27,7 @@ const IntegrationProviderData = [
     name: 'Google Search Console',
     desc: 'Track organic search impressions, clicks and position from Google Search',
     icon: 'Google',
-    kbLink: 'https://help.factors.ai/en/articles/5576963-google-search-console'
+    kbLink: 'https://help.factors.ai/en/articles/7283784-google-search-console-integration'
   },
   {
     name: 'Clearbit Reveal',

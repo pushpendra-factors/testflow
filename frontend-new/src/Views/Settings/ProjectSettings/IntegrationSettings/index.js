@@ -50,7 +50,7 @@ const IntegrationProviderData = [
     name: 'Segment',
     desc: 'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Segment_ads',
-    kbLink: 'https://help.factors.ai/en/articles/5835006-segment'
+    kbLink: 'https://help.factors.ai/en/articles/7261994-segment-integration'
   },
   {
     name: 'Rudderstack',
@@ -80,31 +80,31 @@ const IntegrationProviderData = [
     name: 'Hubspot',
     desc: 'Sync your Contact, Company and Deal objects with Factors on a daily basis',
     icon: 'Hubspot_ads',
-    kbLink: 'https://help.factors.ai/en/articles/5099532-hubspot'
+    kbLink: 'https://help.factors.ai/en/articles/7261985-hubspot-integration'
   },
   {
     name: 'Salesforce',
     desc: 'Sync your Leads, Contact, Account, Opportunity and Campaign objects with Factors on a daily basis',
     icon: 'Salesforce_ads',
-    kbLink: 'https://help.factors.ai/en/articles/5099533-salesforce'
+    kbLink: 'https://help.factors.ai/en/articles/7261989-salesforce-integration'
   },
   {
     name: 'Google Ads',
     desc: 'Integrate reporting from Google Search, Youtube and Display Network',
     icon: 'Google_ads',
-    kbLink: 'https://help.factors.ai/en/articles/5099504-google-ads'
+    kbLink: 'https://help.factors.ai/en/articles/7283695-google-ads-integration'
   },
   {
     name: 'Facebook',
     desc: 'Pull in reports from Facebook, Instagram and Facebook Audience Network',
     icon: 'Facebook_ads',
-    kbLink: 'https://help.factors.ai/en/articles/5099507-facebook-ads'
+    kbLink: 'https://help.factors.ai/en/articles/7283696-facebook-ads-integration'
   },
   {
     name: 'LinkedIn',
     desc: 'Sync LinkedIn ads reports with Factors for performance reporting',
     icon: 'Linkedin_ads',
-    kbLink: 'https://help.factors.ai/en/articles/5099508-linkedin'
+    kbLink: 'https://help.factors.ai/en/articles/7283729-linkedin-ads-integration'
   },
   {
     name: 'Drift',
@@ -116,7 +116,7 @@ const IntegrationProviderData = [
     name: 'Google Search Console',
     desc: 'Track organic search impressions, clicks and position from Google Search',
     icon: 'Google',
-    kbLink: 'https://help.factors.ai/en/articles/5576963-google-search-console'
+    kbLink: 'https://help.factors.ai/en/articles/7283784-google-search-console-integration'
   },
   {
     name: 'Bing Ads',
