@@ -1210,6 +1210,7 @@ def fill_contacts_for_companies_v3(project_id, companies, hubspot_request_handle
 def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, sync_all=False):
     log.info("Using sync_companies_v3 for project_id : "+str(project_id)+".")
 
+    limit = PAGE_SIZE
     if sync_all:
         url = "https://api.hubapi.com/crm/v3/objects/companies?"
         headers = None
@@ -1237,7 +1238,8 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
                     "propertyName": COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE,
                     "direction": "ASCENDING"
                 }
-            ]
+            ],
+            "limit": limit
         }
         log.warning("Downloading recently created or modified companies for project_id : "+ str(project_id) + ".")
 
@@ -1251,7 +1253,7 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
     max_timestamp = 0
 
     count = 0
-    parameter_dict = {"limit": PAGE_SIZE}
+    parameter_dict = {"limit": limit}
 
     properties, ok = get_all_properties_by_doc_type(project_id, "companies", hubspot_request_handler)
     if not ok:
@@ -1261,10 +1263,10 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
     has_more = True
     while has_more:
         parameters = urllib.parse.urlencode(parameter_dict)
-        get_url = url + parameters
+        get_url = url
         
         if sync_all:
-            get_url = get_url + '&' + build_properties_param_str(properties)
+            get_url = get_url + parameters + '&' + build_properties_param_str(properties)
         else:
             json_data["properties"] = properties
 
@@ -1281,11 +1283,14 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
         
         paging_after = ""
         if "paging" in response_dict and "next" in response_dict["paging"] and "after" in response_dict["paging"]["next"]:
-            paging_after = response_dict["paging"]["next"]
+            paging_after = response_dict["paging"]["next"]["after"]
 
         if paging_after != "":
             has_more = True
-            parameter_dict["after"] = paging_after
+            if sync_all:
+                parameter_dict["after"] = paging_after
+            else:
+                json_data["after"] = str(limit)
         else:
             has_more = False
         
