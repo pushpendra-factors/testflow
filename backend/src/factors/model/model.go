@@ -180,6 +180,7 @@ type Model interface {
 	CacheAttributionDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool, startCacheTime int64)
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool, startCacheTime int64)
 	RunCachingForLast3MonthsAttribution(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString, logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
+	CreateResultInDB(result interface{}, projectId int64, dashboardId int64, unitId int64, queryId int64, preset string, from, to int64, timezoneString U.TimeZoneString, meta interface{}) (int, string)
 
 	// all dashboard runs for am unit
 	RunCustomQueryRangeCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,

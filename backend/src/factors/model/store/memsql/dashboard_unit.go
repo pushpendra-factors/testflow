@@ -1375,6 +1375,7 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 		ProjectId:   projectID,
 		DashboardID: dashboardID,
 		UnitID:      dashboardUnitID,
+		QueryID:     dashboardUnit.QueryId,
 		QueryClass:  baseQuery.GetClass(),
 		Status:      model.CachingUnitStatusNotComputed,
 		From:        from,
@@ -1447,7 +1448,7 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 
 	timeTaken := U.TimeNowUnix() - startTime
 	timeTakenString := U.SecondsToHMSString(timeTaken)
-	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).Info("Done caching unit for range")
+	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).Info("Done caching for attribution dashbaord unit for range")
 
 	meta := model.CacheMeta{
 		Timezone:       string(timezoneString),
@@ -1458,17 +1459,14 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 		Preset:         preset,
 	}
 
-	if C.IsLastComputedWhitelisted(projectID) {
-		errCode, errMsg := store.CreateResultInDB(result, projectID, dashboardID, dashboardUnitID, dashboardUnit.QueryId, preset,
-			from, to, timezoneString, meta)
-		if errCode != http.StatusCreated {
-			logCtx.WithFields(log.Fields{"ErrorCode": errCode, "ErrorMsg": errMsg}).Error("Failed to crease database entry")
-		}
-		model.SetCacheResultByDashboardIdAndUnitIdWithPreset(result, projectID, dashboardID, dashboardUnitID, preset,
-			from, to, timezoneString, meta)
+	model.SetCacheResultByDashboardIdAndUnitIdWithPreset(result, projectID, dashboardID, dashboardUnitID, preset,
+		from, to, timezoneString, meta)
+	errCode, errMsg = store.CreateResultInDB(result, projectID, dashboardID, dashboardUnitID, dashboardUnit.QueryId, preset,
+		from, to, timezoneString, meta)
+	if errCode != http.StatusCreated {
+		logCtx.WithFields(log.Fields{"ErrorCode": errCode, "ErrorMsg": errMsg}).Error("Failed to crease database entry")
 	} else {
-		model.SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID,
-			from, to, timezoneString, meta)
+		logCtx.WithFields(log.Fields{"ErrorCode": errCode}).Info("Added result in DB")
 	}
 	// Set in query cache result as well in case someone runs the same query from query handler.
 	model.SetQueryCacheResult(projectID, baseQuery, result)
@@ -1515,7 +1513,7 @@ func (store *MemSQL) CreateResultInDB(result interface{}, projectId int64, dashb
 	}
 
 	if err := db.Create(&resultWarpper).Error; err != nil {
-		errMsg := "Failed to insert rule."
+		errMsg := "Failed to insert result."
 		logCtx.WithError(err).Error(errMsg)
 		return http.StatusInternalServerError, errMsg
 	}
