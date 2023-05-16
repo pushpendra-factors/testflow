@@ -203,7 +203,7 @@ function EventFilterWrapper({
   };
 
   return (
-    <div className={`flex items-center relative ${!showOr ? 'ml-10' : ''}`}>
+    <div className={`flex items-center relative ${!showOr ? 'ml-10' : 'ml-10'}`}>
       {!showOr && (index >= 1 ? (
         <Text level={8} type={'title'} extraClass={'m-0 mr-16'} weight={'thin'}>
           and
@@ -214,7 +214,7 @@ function EventFilterWrapper({
         </Text>
       ))}
       {showOr && (
-        <Text level={8} type={'title'} extraClass={'m-0 mr-2 ml-2'} weight={'thin'}>
+        <Text level={8} type={'title'} extraClass={'m-0 mr-16 my-3'} weight={'thin'}>
           or
         </Text>
       )}

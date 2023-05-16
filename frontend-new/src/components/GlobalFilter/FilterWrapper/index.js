@@ -160,7 +160,7 @@ function FilterWrapper({
   return (
     <div
       className={`flex items-center relative ${
-        caller === 'profiles' ? 'mb-2' : ''
+        caller === 'profiles' ? 'mb-2' : 'mb-2'
       }`}
     >
       {!showOr &&
