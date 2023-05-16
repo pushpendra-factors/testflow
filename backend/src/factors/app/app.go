@@ -16,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 
-	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
@@ -397,8 +396,6 @@ func main() {
 	C.InitMonitoringAPIServices(config)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitFilemanager(*bucketName, *env, config)
-	C.InitSentry(*sentryDSN)
-
 	var bucket string
 	if *useBucketV2 {
 		bucket = *bucketNameV2
@@ -430,7 +427,6 @@ func main() {
 	r.Use(mid.RequestIdGenerator())
 	r.Use(mid.Logger())
 	r.Use(mid.Recovery())
-	r.Use(sentrygin.New(sentrygin.Options{Repanic: true}))
 
 	// Initialize routes.
 	if config.Env == C.DEVELOPMENT {

@@ -225,7 +225,6 @@ github.com/getsentry/raven-go
 # github.com/getsentry/sentry-go v0.11.0
 ## explicit
 github.com/getsentry/sentry-go
-github.com/getsentry/sentry-go/gin
 github.com/getsentry/sentry-go/internal/crypto/randutil
 github.com/getsentry/sentry-go/internal/debug
 github.com/getsentry/sentry-go/internal/ratelimit

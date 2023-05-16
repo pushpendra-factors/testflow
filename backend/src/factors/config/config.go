@@ -332,7 +332,7 @@ type Services struct {
 	SentryHook           *logrus_sentry.SentryHook
 	MetricsExporter      *stackdriver.Exporter
 	logErrorsLock        sync.RWMutex
-	logErrors            map[string]*SentryInfo
+	logErrors            map[string]*SentryPair
 	QueueRedis           *redis.Pool
 }
 
@@ -1233,10 +1233,9 @@ func IsBeamPipeline() bool {
 	return configuration.IsBeamPipeline
 }
 
-type SentryInfo struct {
+type SentryPair struct {
 	logCtx     log.Entry
 	occurences int
-	Fields     log.Fields
 }
 
 type SentryErrorHook struct {
@@ -1262,7 +1261,7 @@ func WriteToLogErrors(logCtx *log.Entry, appName string) {
 
 	_, errorExists := services.logErrors[logCtx.Message]
 	if !errorExists {
-		services.logErrors[logCtx.Message] = &SentryInfo{logCtx: *logCtx, occurences: 1, Fields: logCtx.Data}
+		services.logErrors[logCtx.Message] = &SentryPair{logCtx: *logCtx, occurences: 1}
 	} else {
 		// increment the ocurences of the error message if it repeats
 		services.logErrors[logCtx.Message].occurences = services.logErrors[logCtx.Message].occurences + 1
@@ -1272,24 +1271,22 @@ func WriteToLogErrors(logCtx *log.Entry, appName string) {
 
 	logCtx.Data[SENTRY_OCCURRENCE_KEY] = services.logErrors[logCtx.Message].occurences
 	logCtx.Data[SENTRY_APP_KEY] = appName
-	services.logErrors[logCtx.Message].Fields = logCtx.Data
-
 }
 
 // ForkLogErrors() - Forks a new log rollup and returns the so far collected.
-func ForkLogErrors() map[string]SentryInfo {
+func ForkLogErrors() map[string]SentryPair {
 	services.logErrorsLock.RLock()
 	defer services.logErrorsLock.RUnlock()
 
 	// Copy the logs so far.
-	forkedErrorLogs := make(map[string]SentryInfo)
+	forkedErrorLogs := make(map[string]SentryPair)
 	for k, v := range services.logErrors {
 		// Not using addresses to avoid any invalid referrences.
 		forkedErrorLogs[k] = *v
 	}
 
 	// Initialise a new rollup.
-	services.logErrors = make(map[string]*SentryInfo)
+	services.logErrors = make(map[string]*SentryPair)
 
 	return forkedErrorLogs
 }
@@ -1307,17 +1304,12 @@ func sendErrorsToSentry(appName string) {
 			select {
 			case <-ticker.C:
 				errorsMap := ForkLogErrors()
-				for message, Info := range errorsMap {
+				for message, Pair := range errorsMap {
 					sentry.NewScope().SetTags(map[string]string{
 						SENTRY_APP_KEY:        appName,
-						SENTRY_OCCURRENCE_KEY: strconv.Itoa(Info.occurences),
+						SENTRY_OCCURRENCE_KEY: strconv.Itoa(Pair.occurences),
 						"data_store":          GetPrimaryDatastore(),
 					})
-					for key, value := range Info.Fields {
-						ctx := context.Background()
-						hub := sentry.GetHubFromContext(ctx)
-						hub.Scope().SetTag(key, value.(string))
-					}
 					sentry.CaptureMessage(message)
 				}
 			case <-quit:
@@ -1336,7 +1328,7 @@ func initSentryRollup(sentryDSN, appName string) {
 	}
 
 	if services == nil {
-		services = &Services{logErrors: make(map[string]*SentryInfo)}
+		services = &Services{logErrors: make(map[string]*SentryPair)}
 	}
 	if !configuration.UseSentryRollup {
 		return
@@ -1352,24 +1344,6 @@ func initSentryRollup(sentryDSN, appName string) {
 	// initalizing and adding the sentry hook with specified Levels() and Fire() mechanism
 	sentryHook := &SentryErrorHook{appName: appName}
 	log.AddHook(sentryHook)
-}
-
-func IsInitialized(currentHub *sentry.Hub) bool {
-	return currentHub.Client() != nil
-}
-func InitSentry(sentryDSN string) {
-
-	// to check if sentry is initialized already  or not
-	if IsInitialized(sentry.CurrentHub()) {
-		return
-	}
-	if err := sentry.Init(sentry.ClientOptions{
-		Dsn: sentryDSN,
-		// TracesSampleRate is set to to 1.0 to capture 100% of transactions for performance monitoring.
-		TracesSampleRate: 1.0,
-	}); err != nil {
-		log.WithError(err).Error("Sentry initialization failed.")
-	}
 }
 
 // InitSentryLogging Adds sentry hook to capture error logs.
