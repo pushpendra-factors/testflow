@@ -114,6 +114,8 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 // GetSixSignalPublicReportHandler fetches the sixsignal report from cloud storage for public URLs
 func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
+	r := c.Request
+
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		log.Error("Query failed. Invalid project.")
@@ -126,6 +128,15 @@ func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, 
 		"project_id": projectId,
 		"queryID":    queryID,
 	})
+
+	// reqPayload will contain the page_url filters list applied on the public url.
+	var reqPayload model.SixSignalQuery
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&reqPayload); err != nil {
+		logCtx.WithError(err).Error("Query failed. Json decode failed.")
+		return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+	}
 
 	share, errCode := store.GetStore().GetShareableURLWithShareStringWithLargestScope(projectId, queryID, model.ShareableURLEntityTypeSixSignal)
 	if errCode != http.StatusFound {
@@ -146,7 +157,7 @@ func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, 
 		return nil, http.StatusNotFound, "", "Failed to unmarshal query", true
 	}
 
-	pageView := sixSignalQuery.PageView
+	pageView := reqPayload.PageView
 	folderName := getFolderName(sixSignalQuery)
 	logCtx.WithFields(log.Fields{"folder name": folderName}).Info("Folder name for reading the result")
 

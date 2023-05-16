@@ -265,6 +265,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 	teamsSuccess := true
 	whSuccess := true
 	updateLastAlert := false
+	errMsg := ""
 
 	msg := alert.Message
 
@@ -275,7 +276,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 				Error("failed to check slack integration")
 		}
 		if isSlackIntergrated {
-			slackSuccess, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels)
+			slackSuccess, errMsg = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels)
 			if !slackSuccess {
 				err := EventTriggerDeliveryFailureExecution(key, eta, "Slack", errMsg)
 				if err != nil {
@@ -298,7 +299,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 				Error("failed to check teams integration")
 		}
 		if isTeamsIntergrated {
-			teamsSuccess, errMsg := sendTeamsAlertForEventTriggerAlert(eta.ProjectID, eta.TeamsChannelAssociatedBy, msg, alertConfiguration.TeamsChannelsConfig)
+			teamsSuccess, errMsg = sendTeamsAlertForEventTriggerAlert(eta.ProjectID, eta.TeamsChannelAssociatedBy, msg, alertConfiguration.TeamsChannelsConfig)
 			if !teamsSuccess {
 				err := EventTriggerDeliveryFailureExecution(key, eta, "Teams", errMsg)
 				if err != nil {
@@ -330,7 +331,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 			errMsg := fmt.Sprintf("%+v", response)
 			sendReport.WebhookFail++
 
-			err := EventTriggerDeliveryFailureExecution(key, eta, "Webhook", errMsg)
+			err := EventTriggerDeliveryFailureExecution(key, eta, "WH", errMsg)
 			if err != nil {
 				log.WithError(err).Error("failed while updating teams-fail flow")
 			}
@@ -760,9 +761,6 @@ func RetryFailedEventTriggerAlerts(projectID int64) SendReportLogCount {
 		if err != nil {
 			log.WithError(err).Error("unable to parse int in event_trigger_alerts_job")
 		}
-		if cc == 1 {
-			continue
-		}
 
 		orgKey := strings.SplitAfterN(key, ":", 2)
 
@@ -775,6 +773,12 @@ func RetryFailedEventTriggerAlerts(projectID int64) SendReportLogCount {
 
 		cacheKeySplit := strings.Split(cacheKey.Suffix, ":")
 		alertID := cacheKeySplit[0]
+		areMoreAlertPresent := false
+		for kk := range allKeys {
+			if strings.Contains(kk, alertID) {
+				areMoreAlertPresent = true
+			}
+		}
 		firstTry := cacheKeySplit[len(cacheKeySplit)-1]
 		retryTime, err := strconv.ParseInt(firstTry, 0, 64)
 		if err != nil {
@@ -817,13 +821,15 @@ func RetryFailedEventTriggerAlerts(projectID int64) SendReportLogCount {
 		success, sendReport := sendHelperForEventTriggerAlert(cacheKey, &msg, alertID, true, sendTo)
 
 		if success {
-			err = cacheRedis.DelPersistent(cacheKey)
-			if err != nil {
-				log.WithFields(log.Fields{"alert_key": *cacheKey}).WithError(err).Error("Cannot remove alert from cache")
-			}
 			cc, err := cacheRedis.ZRemPersistent(ssKey, true, key)
 			if err != nil || cc != 1 {
 				log.WithFields(log.Fields{"alert_key": *cacheKey}).WithError(err).Error("Cannot remove alert by zrem")
+			}
+			if !areMoreAlertPresent {
+				err = cacheRedis.DelPersistent(cacheKey)
+				if err != nil {
+					log.WithFields(log.Fields{"alert_key": *cacheKey}).WithError(err).Error("Cannot remove alert from cache")
+				}
 			}
 		}
 		sendReportForProject.addToSendReport(sendReport)

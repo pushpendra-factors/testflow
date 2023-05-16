@@ -28,7 +28,8 @@ import {
   formatSegmentsObjToGroupSelectObj,
   getHost,
   getPropType,
-  propValueFormat
+  propValueFormat,
+  sortColumn
 } from '../utils';
 import {
   getProfileAccounts,
@@ -161,7 +162,10 @@ function AccountProfiles({
 
   useEffect(() => {
     if (accountPayload.source && accountPayload.source !== '') {
-      const formattedFilters = formatFiltersForPayload(accountPayload.filters, false);
+      const formattedFilters = formatFiltersForPayload(
+        accountPayload.filters,
+        false
+      );
       getProfileAccounts(activeProject.id, {
         ...accountPayload,
         filters: formattedFilters
@@ -209,17 +213,19 @@ function AccountProfiles({
           level={7}
           color='grey-2'
           weight='bold'
-          className='m-0'
+          extraClass='m-0'
           truncate
+          charLimit={25}
         >
           {propDisplayName}
         </Text>
       ),
       dataIndex: prop,
       key: prop,
-      width: 300,
+      width: 280,
+      sorter: (a, b) => sortColumn(a[prop], b[prop]),
       render: (value) => (
-        <Text type='title' level={7} className='m-0' truncate>
+        <Text type='title' level={7} extraClass='m-0' truncate>
           {value ? propValueFormat(prop, value, propType) : '-'}
         </Text>
       )
@@ -236,6 +242,7 @@ function AccountProfiles({
         width: 300,
         fixed: 'left',
         ellipsis: true,
+        sorter: (a, b) => sortColumn(a.account.name, b.account.name),
         render: (item) =>
           (
             <div className='flex items-center'>
@@ -257,8 +264,7 @@ function AccountProfiles({
               <span className='ml-2'>{item.name}</span>
             </div>
           ) || '-'
-      },
-
+      }
     ];
     // Engagement Column
     const engagementExists = accounts.data?.[0]?.engagement;
@@ -269,12 +275,16 @@ function AccountProfiles({
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
+        sorter: (a, b) => sortColumn(a.engagement, b.engagement),
         render: (status) => (
           <div
             className='engagement-tag'
             style={{ '--bg-color': EngagementTag[status]?.bgColor }}
           >
-            <img src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`} alt=''/>
+            <img
+              src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
+              alt=''
+            />
             <Text type='title' level={6} extraClass='m-0'>
               {status}
             </Text>
@@ -293,6 +303,7 @@ function AccountProfiles({
       key: 'lastActivity',
       width: 200,
       align: 'right',
+      sorter: (a, b) => sortColumn(a.lastActivity, b.lastActivity),
       render: (item) => MomentTz(item).fromNow()
     });
     return columns;
@@ -969,4 +980,3 @@ const mapDispatchToProps = (dispatch) =>
   );
 
 export default connect(mapStateToProps, mapDispatchToProps)(AccountProfiles);
-

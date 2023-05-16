@@ -11,6 +11,7 @@ export const getAccountActivitiesWithEnableKeyConfig = (
       return {
         ...activity,
         user: user.is_anonymous ? 'new_user' : user.user_id,
+        id:user.user_id,
         enabled: isEnabled
       };
     });
@@ -58,7 +59,9 @@ export const formatAccountTimeline = (data, config) => {
     : [];
 
   const non_anonymous_users = account_timeline
-    .filter((user) => !user.is_anonymous)
+    .filter(
+      (user) => !user.is_anonymous && user.user_name !== 'Channel Activity'
+    )
     .sort((a, b) =>
       compareObjTimestampsDesc(a.user_activities[0], b.user_activities[0])
     )

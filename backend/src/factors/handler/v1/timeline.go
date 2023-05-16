@@ -58,10 +58,11 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 		return nil, errCode, "", "", true
 	}
 
+	// Add user scores to the response if scoring is enabled
 	if getScore {
-		// add score to the response based on the user scores from acc scoring
-		var userIdsUnknown []string = make([]string, 0)
-		var userIdsKnown []string = make([]string, 0)
+		// Separate anonymous and known user IDs
+		var userIdsUnknown []string
+		var userIdsKnown []string
 		for _, profile := range profileUsersList {
 			if profile.IsAnonymous {
 				userIdsUnknown = append(userIdsUnknown, profile.Identity)
@@ -69,13 +70,14 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 				userIdsKnown = append(userIdsKnown, profile.Identity)
 			}
 		}
-		ScoresPerUser, err := store.GetStore().GetUserScoreOnIds(projectId, userIdsUnknown, userIdsKnown, getDebug)
+		// Retrieve user scores
+		scoresPerUser, err := store.GetStore().GetUserScoreOnIds(projectId, userIdsUnknown, userIdsKnown, getDebug)
 		if err != nil {
 			logCtx.Error("Error while fetching user scores.")
-			return nil, http.StatusInternalServerError, "", "", true
+		} else {
+			// Update user scores in the users list
+			updateProfileUserScores(&profileUsersList, scoresPerUser)
 		}
-
-		updateProfileUserScores(&profileUsersList, ScoresPerUser)
 	}
 
 	return profileUsersList, http.StatusOK, "", "", false
@@ -186,24 +188,17 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 	}
 
 	req := c.Request
-	scoreWindow := req.Header.Get("Score") == "true"
-	debugWindow := req.Header.Get("Score-Debug") == "true"
 
 	getScore, err := getBoolQueryParam(c.Query("score"))
 	if err != nil {
 		logCtx.Error("Invalid score flag .")
-	}
-	if !scoreWindow {
-		getScore = false
 	}
 
 	getDebug, err := getBoolQueryParam(c.Query("debug"))
 	if err != nil {
 		logCtx.Error("Invalid debug flag.")
 	}
-	if !debugWindow {
-		getDebug = false
-	}
+
 	var payload model.TimelinePayload
 	logCtx = log.WithFields(log.Fields{
 		"projectId": projectId,
@@ -223,21 +218,20 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		return "", errCode, "", "", true
 	}
 
-	// add accounts scores to the response based on account scoring enabled
+	// Add account scores to the response if scoring is enabled
 	if getScore {
-		// get score for accountsIds from acc scoring
-
-		var accountIds []string = make([]string, 0)
+		// Retrieve scores for account IDs
+		var accountIds []string
 		for _, profile := range profileAccountsList {
 			accountIds = append(accountIds, profile.Identity)
 		}
-		ScoresPerAccount, err := store.GetStore().GetAccountScoreOnIds(projectId, accountIds, getDebug)
+		scoresPerAccount, err := store.GetStore().GetAccountScoreOnIds(projectId, accountIds, getDebug)
 		if err != nil {
 			logCtx.Error("Error while fetching account scores.")
-			return nil, http.StatusInternalServerError, "", "", true
+		} else {
+			// Update account scores in the accounts list
+			updateProfileUserScores(&profileAccountsList, scoresPerAccount)
 		}
-		updateProfileUserScores(&profileAccountsList, ScoresPerAccount)
-
 	}
 
 	return profileAccountsList, http.StatusOK, "", "", false

@@ -54,7 +54,7 @@ export function fetchSavedPathAnalysis(projectID) {
 export function fetchPathAnalysisInsights(projectID,query_id) {
   return function(dispatch) {
     return new Promise((resolve,reject) => {
-      get(dispatch, host + "projects/"+projectID+"/v1/pathanalysis/"+ query_id)
+      get(dispatch, host + "projects/"+projectID+"/v1/pathanalysis/"+ query_id+"?version=2")
         .then((response)=>{        
           dispatch({type:"FETCH_SAVED_PATHINSIGHTS_FULFILLED", payload: response.data});
           resolve(response)

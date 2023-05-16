@@ -71,7 +71,7 @@ type Model interface {
 	PullConvertedUsers(projectID int64, query *model.AttributionQuery, conversionFrom int64, conversionTo int64,
 		eventNameToIDList map[string][]interface{},
 		debugQueryKey string, enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
-		logCtx *log.Entry) (map[string]int64, []model.UserEventInfo, map[string]model.KPIInfo, []string, error)
+		logCtx *log.Entry) (map[string]int64, []model.UserEventInfo, map[string]model.KPIInfo, []string, []string, []string, error)
 	GetAttributionData(query *model.AttributionQuery, sessions map[string]map[string]model.UserSessionData,
 		usersToBeAttributed []model.UserEventInfo, coalUserIdConversionTimestamp map[string]int64, marketingReports *model.MarketingReports,
 		kpiData map[string]model.KPIInfo, logCtx *log.Entry) (*map[string]*model.AttributionData, bool, error)
@@ -79,7 +79,7 @@ type Model interface {
 		marketingReports *model.MarketingReports, contentGroupNamesList []string, logCtx *log.Entry) (map[string]map[string]model.UserSessionData, error)
 	ExecuteKPIForAttribution(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 		logCtx log.Entry, enableOptimisedFilterOnProfileQuery bool,
-		enableOptimisedFilterOnEventUserQuery bool) (map[string]model.KPIInfo, error)
+		enableOptimisedFilterOnEventUserQuery bool) (map[string]model.KPIInfo, []string, []string, error)
 
 	GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom, queryTo int64,
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},

@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import Highcharts from 'highcharts'; 
+import Highcharts from 'highcharts';
 import * as highchartsSankey from 'highcharts/modules/sankey';
-import { Timeline, Empty, Button} from 'antd'; 
-import ReactDOMServer from 'react-dom/server'; 
+import { Timeline, Empty, Button } from 'antd';
+import ReactDOMServer from 'react-dom/server';
 import _ from 'lodash';
-import { SVG, Text } from 'factorsComponents'; 
+import { SVG, Text, Number } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
 
 const StepArraowGenerator = (activeQuery) => {
@@ -31,13 +31,13 @@ const DataBuildMessage = () => {
 
     const history = useHistory();
     const routeChange = (url) => {
-      history.push(url);
+        history.push(url);
     };
 
     return <div className='flex flex-col items-center justify-center mt-20'>
-        <img style={{maxWidth: '200px',height: 'auto' }} src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/report-building.png' />
+        <img style={{ maxWidth: '200px', height: 'auto' }} src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/report-building.png' />
         <Text type={'title'} weight={'bold'} extraClass={'mt-4'} level={6}>Your report is being built</Text>
-        <Text type={'title'} weight={'thin'} level={7}>This might take a while.</Text> 
+        <Text type={'title'} weight={'thin'} level={7}>This might take a while.</Text>
     </div>
 }
 
@@ -55,19 +55,32 @@ const StripUrl = (url) => {
 }
 
 const CustomTooltip = ({ data }) => {
-    // console.log('inside CustomTooltip-->',data)
-    const fromName = data?.point?.from
-    const toName = data?.point?.to
-    const value = data?.point?.weight
+    // console.log('inside CustomTooltip-->', data)
+    const fromName = data?.point?.from;
+    const toName = data?.point?.to;
+    const value = data?.point?.weight;
+    const percentage = data?.point?.percentage;
+    const fromNodeweight = data?.point?.fromNode?.sum;
     if (fromName && toName) {
         return (
             <div className='fa-sankey--tooltip'>
                 <div className='fa-sankey--tooltip-wrapper'>
-                    <Timeline>
-                        <Timeline.Item><p>{StripUrl(fromName)}</p></Timeline.Item>
-                        <Timeline.Item><p>{StripUrl(toName)}</p></Timeline.Item>
-                        <p style={{ fontWeight: 'bold', fontSize: '14px' }}>{value}</p>
-                    </Timeline>
+
+                <div className='flex flex-col items-start fa-sankey-timeline--custom'>
+      <div className='flex flex-col items-start'>
+        <Text type={'title'} level={7} extraClass={'m-0'}>{StripUrl(fromName)}</Text>
+        <Text type={'title'} level={7} extraClass={'m-0'}>{`${fromNodeweight}`}</Text>
+      </div>
+      <div className='flex items-center fa-sankey-timeline--dashed '> 
+        <Text type={'title'} level={7} extraClass={'m-0'}>
+            <Number suffix={'%'} number={percentage} /> 
+        </Text>
+      </div>
+      <div className='flex flex-col items-start'>
+        <Text type={'title'} level={7} extraClass={'m-0'}>{StripUrl(toName)}</Text>
+        <Text type={'title'} level={7} extraClass={'m-0'}>{`${value}`}</Text>
+      </div>
+    </div> 
                 </div>
             </div>)
     }
@@ -87,7 +100,7 @@ function Sankey({
     useEffect(() => {
         let isReverse = activeQuery?.query?.event_type == "startswith" ? false : true
         setReverseChart(isReverse)
-        setChartData(transformDataFn(sankeyData, isReverse)) 
+        setChartData(transformDataFn(sankeyData, isReverse, 2))
     }, [activeQuery, sankeyData])
 
     if (typeof Highcharts === 'object') {
@@ -104,32 +117,54 @@ function Sankey({
             }
         }
     }
-    const transformDataFn = (data, isReverse) => { 
+    const transformDataFn = (data, isReverse, version = 1) => {
         // console.log('input chart data-->', data); 
         if (data) {
             let results = data;
             let finalArr = [];
             let final = [];
             let title = '';
-            for (const index of Object.keys(results)) {
-                if (index != '1') {
-                    if (results[index]) {
-                        for (const key of Object.keys(results[index])) {
-                            let arr = key.split(',');
-                            if (isReverse) {
-                                final = [arr[0], arr[1], results[index][key]]
-                            } else {
-                                let last2count = arr.length - 2;
-                                let last2El = arr.slice(last2count);
-                                final = [...last2El, results[index][key]];
-                            }
+
+            if (version == 2) {
+
+                data?.map((item, index) => {
+                    if (index != 0) {
+                        let arr = item?.key.split(',');
+                        if (isReverse) {
+                            final = [arr[0], arr[1], item.count, item.percentage]
                             finalArr = [...finalArr, [...final]];
-                            //   console.log("finalArr",finalArr)
+                        } else {
+                            let last2count = arr.length - 2;
+                            let last2El = arr.slice(last2count);
+                            final = [...last2El, item.count, item.percentage];
+                            finalArr = [...finalArr, [...final]];
+                        }
+                    }
+                });
+            }
+            else {
+
+                for (const index of Object.keys(results)) {
+                    if (index != '1') {
+                        if (results[index]) {
+                            for (const key of Object.keys(results[index])) {
+                                let arr = key.split(',');
+                                if (isReverse) {
+                                    final = [arr[0], arr[1], results[index][key]]
+                                } else {
+                                    let last2count = arr.length - 2;
+                                    let last2El = arr.slice(last2count);
+                                    final = [...last2El, results[index][key]];
+                                }
+                                finalArr = [...finalArr, [...final]];
+                                //   console.log("finalArr",finalArr)
+                            }
                         }
                     }
                 }
             }
-            // console.log('transformed chart data-->', finalArr); 
+
+            // console.log('transformed chart data-->', finalArr);
             return finalArr
         }
         return null;
@@ -147,9 +182,9 @@ function Sankey({
                     '{index}. {point.from} to {point.to}, {point.weight}.',
             },
         },
-        chart:{
+        chart: {
             overflowY: 'scroll',
-            height: chartData ? (chartData.length*8 < 500 ? 500 :  chartData.length* 8) : 500,
+            height: chartData ? (chartData.length * 8 < 500 ? 500 : chartData.length * 8) : 500,
         },
 
         plotOptions: {
@@ -181,8 +216,11 @@ function Sankey({
                     nodeFormatter() {
                         let url = StripUrl(this.key);
                         let finalUrl = truncateString(url, 25);
+                        // console.log("point details-->>", this)
                         // let checkIfNode1 = this.point.column == 0 ? TotalCount : this.point.sum;
-                        let checkIfNode1 = this.point.sum;
+                        let value = this.point.sum;
+                        let percentage = this.point.percentage;
+                        // let fromNodeweight = this.point.fromNode.sum;
                         return ReactDOMServer.renderToString(
                             <div
                                 style={{
@@ -201,7 +239,7 @@ function Sankey({
                                     {finalUrl}
                                 </h1>
                                 <h1 style={{ fontSize: '8px', margin: '0px' }}>
-                                    {checkIfNode1}
+                                    {value}
                                 </h1>
                             </div>
                         );
@@ -212,7 +250,7 @@ function Sankey({
                         mouseOver: false,
                     },
                 },
-  
+
 
                 //   label:{
                 //       useHTML: true,
@@ -250,13 +288,14 @@ function Sankey({
         series: [
             {
                 type: 'sankey',
-                keys: reverseChart ? ['to', 'from', 'weight'] : ['from', 'to', 'weight'],
+                keys: reverseChart ? ['to', 'from', 'weight', 'percentage'] : ['from', 'to', 'weight', 'percentage'],
                 // keys: ['from', 'to', 'weight'],
                 data: chartData ? chartData : [],
                 // data: transformDataFn(sankeyData),
-                clip:false,
+                clip: false,
                 centerInCategory: true,
                 className: "fa-sankey-diagram",
+                stacking: 'normal'
 
                 // tooltip: {
                 //     headerFormat: undefined,
@@ -276,38 +315,37 @@ function Sankey({
 
 
 
- 
-    const drawChart = useCallback(() => { 
+
+    const drawChart = useCallback(() => {
         Highcharts.chart("fa-sankey-container", {
             ...options
         })
     });
 
     useEffect(() => {
-        if (chartData && !_.isEmpty(chartData))
-        {
+        if (chartData && !_.isEmpty(chartData)) {
             drawChart();
         }
-      }, [reverseChart, chartData ]);
+    }, [reverseChart, chartData]);
 
     return (
-        <> 
-                    <div className='mt-16 mb-10'>
+        <>
+            <div className='mt-16 mb-10'>
 
-                        {/* {StepArraowGenerator(activeQuery)} */}
+                {/* {StepArraowGenerator(activeQuery)} */}
 
 
-                        {/* <HighchartsReact
+                {/* <HighchartsReact
                             highcharts={Highcharts}
                             options={options}
                         /> */}
 
-                        {(chartData && _.isEmpty(chartData)) ?  (activeQuery?.status == 'building' || activeQuery?.status == 'saved') ? <DataBuildMessage /> : <Empty /> : 
+                {(chartData && _.isEmpty(chartData)) ? (activeQuery?.status == 'building' || activeQuery?.status == 'saved') ? <DataBuildMessage /> : <Empty /> :
                     <div className='fa-sankey-container' id="fa-sankey-container" />
-                        }
+                }
 
 
-                    </div> 
+            </div>
         </>
     );
 }

@@ -142,9 +142,9 @@ func GetPathAnalysisData(c *gin.Context) (interface{}, int, string, string, bool
 }
 
 type ResultStruct struct {
-	Key string
-	Count int
-	Percentage float64
+	Key string `json:"key"`
+	Count int `json:"count"`
+	Percentage float64 `json:"percentage"`
 }
 
 func convertToArray(resultMap map[int]map[string]int, startsWith bool) []ResultStruct {
@@ -158,7 +158,7 @@ func convertToArray(resultMap map[int]map[string]int, startsWith bool) []ResultS
 			percentage := 0.0
 			if( i != 1){
 				rootElement := returnRootElement(key, startsWith)
-				percentage = float64(resultMap[i][rootElement] * 100 / count)
+				percentage = float64(count) * 100.0 / float64(resultMap[i-1][rootElement])
 			} else {
 				percentage = float64(100)
 			}

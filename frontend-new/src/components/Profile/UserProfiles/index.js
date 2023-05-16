@@ -43,7 +43,8 @@ import {
   formatSegmentsObjToGroupSelectObj,
   getPropType,
   iconColors,
-  propValueFormat
+  propValueFormat,
+  sortColumn
 } from '../utils';
 import {
   getProfileUsers,
@@ -206,6 +207,7 @@ function UserProfiles({
         key: 'identity',
         fixed: 'left',
         ellipsis: true,
+        sorter: (a, b) => sortColumn(a.identity.id, b.identity.id),
         render: (identity) => (
           <div className='flex items-center'>
             {identity.isAnonymous ? (
@@ -246,6 +248,8 @@ function UserProfiles({
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
+        align: 'center',
+        sorter: (a, b) => sortColumn(a.engagement, b.engagement),
         render: (status) => (
           <div
             className='engagement-tag'
@@ -277,13 +281,15 @@ function UserProfiles({
             weight='bold'
             extraClass='m-0'
             truncate
+            charLimit={25}
           >
             {propDisplayName}
           </Text>
         ),
         dataIndex: prop,
         key: prop,
-        width: 250,
+        width: 260,
+        sorter: (a, b) => sortColumn(a[prop], b[prop]),
         render: (value) => (
           <Text type='title' level={7} extraClass='m-0' truncate>
             {value ? propValueFormat(prop, value, propType) : '-'}
@@ -297,6 +303,8 @@ function UserProfiles({
       key: 'lastActivity',
       width: 200,
       align: 'right',
+      sorter: (a, b) => sortColumn(a.lastActivity, b.lastActivity),
+      defaultSortOrder: 'ascend',
       render: (item) => MomentTz(item).fromNow()
     });
     return columns;
@@ -309,11 +317,7 @@ function UserProfiles({
         ...row?.tableProps
       };
     });
-    return tableData.sort(
-      (a, b) =>
-        parseInt((new Date(b.last_activity).getTime() / 1000).toFixed(0)) -
-        parseInt((new Date(a.last_activity).getTime() / 1000).toFixed(0))
-    );
+    return tableData;
   };
 
   const showModal = () => {

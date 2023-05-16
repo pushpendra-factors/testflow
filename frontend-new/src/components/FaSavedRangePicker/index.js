@@ -576,7 +576,7 @@ const FaDatepicker = ({
                 <RangePicker
                   disabled={disabled}
                   format="MMM DD YYYY"
-                  disabledDate={(d) => !d || (todayPicker ? d.isAfter(MomentTz()) : d.isAfter(MomentTz().subtract(3, 'days')))}
+                  disabledDate={(d) => !d || (todayPicker ? d.isAfter(MomentTz()) : d.isAfter(MomentTz().subtract(5, 'days')))}
                   dropdownClassName="fa-custom-datepicker--datepicker"
                   size="small"
                   suffixIcon={null}

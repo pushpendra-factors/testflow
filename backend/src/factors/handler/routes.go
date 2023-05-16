@@ -115,7 +115,7 @@ func InitAppRoutes(r *gin.Engine) {
 	shareSixSignalRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	shareSixSignalRouteGroup.Use(mid.ValidateAccessToSharedEntity(model.ShareableURLEntityTypeSixSignal))
 	shareSixSignalRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/sixsignal", responseWrapper(GetSixSignalReportHandler))
-	shareSixSignalRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/sixsignal/publicreport", responseWrapper(GetSixSignalPublicReportHandler))
+	shareSixSignalRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/sixsignal/publicreport", responseWrapper(GetSixSignalPublicReportHandler))
 	shareSixSignalRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/sixsignal/report/pageviews", responseWrapper(GetPageViewForSixSignalReport))
 	featuresGatesRouteGroup.POST("/:project_id/sixsignal/share", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(CreateSixSignalShareableURLHandler))
 	featuresGatesRouteGroup.POST("/:project_id/sixsignal/add_email", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(AddSixSignalEmailIDHandler))
