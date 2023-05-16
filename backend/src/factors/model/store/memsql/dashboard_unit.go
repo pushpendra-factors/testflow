@@ -1516,8 +1516,7 @@ func (store *MemSQL) CreateResultInDB(result interface{}, projectId int64, dashb
 
 	if err := db.Create(&resultWarpper).Error; err != nil {
 		errMsg := "Failed to insert rule."
-		log.WithFields(log.Fields{"Result": result,
-			"project_id": projectId}).WithError(err).Error(errMsg)
+		logCtx.WithError(err).Error(errMsg)
 		return http.StatusInternalServerError, errMsg
 	}
 	return http.StatusCreated, ""
