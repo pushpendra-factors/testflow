@@ -86,7 +86,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 					return nil, errCode
 				}
 				// Get Table Content
-				returnData, err := FormatProfilesStruct(profiles, profileType, tableProps)
+				returnData, err := FormatProfilesStruct(profiles, profileType, tableProps, payload.Source)
 				if err != nil {
 					log.WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
 					return nil, http.StatusInternalServerError
@@ -228,8 +228,24 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusInternalServerError
 	}
 
+	// Get merged properties for all accounts
+	if profileType == model.PROFILE_TYPE_ACCOUNT && isDomainGroup {
+		for index, profile := range profiles {
+			_, propertiesDecoded, status := store.AccountPropertiesForDomainsEnabledV2(projectID, profile.Identity, payload.Source)
+			if status != http.StatusOK {
+				return nil, status
+			}
+			props, err := U.EncodeStructTypeToPostgresJsonb(&propertiesDecoded)
+			if err != nil {
+				log.WithFields(logFields).Error("Failed to merge all accounts properties.")
+				return nil, http.StatusInternalServerError
+			}
+			profiles[index].Properties = props
+		}
+	}
+
 	// Get Table Content
-	returnData, err := FormatProfilesStruct(profiles, profileType, tableProps)
+	returnData, err := FormatProfilesStruct(profiles, profileType, tableProps, payload.Source)
 	if err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
 		return nil, http.StatusInternalServerError
@@ -398,14 +414,20 @@ func GetSourceStringForAccountsV1(groupNameIDMap map[string]int, source string) 
 	return sourceString, http.StatusOK
 }
 
-func FormatProfilesStruct(profiles []model.Profile, profileType string, tableProps []string) ([]model.Profile, error) {
+func FormatProfilesStruct(profiles []model.Profile, profileType string, tableProps []string, source string) ([]model.Profile, error) {
 	logFields := log.Fields{
 		"profile_type": profileType,
 	}
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
-		companyNameProps := model.NameProps
-		hostNameProps := model.HostNameProps
+		var companyNameProps, hostNameProps []string
+		if model.IsAllowedAccountGroupNames(source) {
+			hostNameProps = []string{model.HostNameGroup[source]}
+			companyNameProps = []string{model.AccountNames[source], U.UP_COMPANY}
+		} else {
+			companyNameProps = model.NameProps
+			hostNameProps = model.HostNameProps
+		}
 
 		for index, profile := range profiles {
 			filterTableProps := make(map[string]interface{}, 0)

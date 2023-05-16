@@ -984,11 +984,11 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		{"$salesforce_account_name": "Adapt.IO", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "adapt.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
 		{"$salesforce_account_name": "o9 Solutions", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "o9solutions.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
 		{"$salesforce_account_name": "GoLinks Reporting", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "golinks.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
-		{"$salesforce_account_name": "Cin7", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "cin7.com", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "Cin7", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "cin7.com", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC", "$salesforce_city": "New Delhi"},
 		{"$salesforce_account_name": "Repair Desk", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "repairdesk.co", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US", "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Mad Street Den", "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC"},
-		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC"},
+		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC", "$hubspot_company_is_public": "true"},
 		{"$hubspot_company_name": "Clientjoy Ads", "$hubspot_company_country": "India", "$hubspot_company_domain": "clientjoy.io", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "IT Services", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Adapt.IO", "$hubspot_company_country": "India", "$hubspot_company_domain": "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services", "$browser": "Chrome", "$device_type": "PC"},
 		{U.SIX_SIGNAL_NAME: "AdPushup", U.SIX_SIGNAL_COUNTRY: "US", U.SIX_SIGNAL_DOMAIN: "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$browser": "Chrome"},
@@ -1078,7 +1078,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 
 	// Create 5 Six Signal Domains
 	for i := 0; i < numUsers; i++ {
-		propertiesJSON, err := json.Marshal(propertiesMap[i+5])
+		propertiesJSON, err := json.Marshal(propertiesMap[i+10])
 		if err != nil {
 			log.WithError(err).Fatal("Marshal error.")
 		}
@@ -1268,7 +1268,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	payload = model.TimelinePayload{
 		Source: "All",
 		Filters: map[string][]model.QueryProperty{
-			"All": {
+			"$salesforce_account": {
 				{
 					Entity:    "user_g",
 					Type:      "categorical",
@@ -1307,12 +1307,25 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
 
+	timelinesConfig = &model.TimelinesConfig{
+		AccountConfig: model.AccountConfig{
+			TableProps: []string{"$salesforce_account_billingcountry", "$hubspot_company_country", U.SIX_SIGNAL_COUNTRY, "$salesforce_city", "$hubspot_company_is_public"},
+		},
+	}
+
+	tlConfigEncoded, err = U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+	assert.Nil(t, err)
+
+	_, errCode = store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
+	assert.Equal(t, errCode, http.StatusAccepted)
+
 	// 6. Accounts from All Sources (filters applied)
 
 	payload = model.TimelinePayload{
 		Source: "All",
 		Filters: map[string][]model.QueryProperty{
-			"salesforce_account": {
+			"$salesforce_account": {
 				{
 					Entity:    "user_g",
 					Type:      "categorical",
@@ -1367,6 +1380,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		},
 	}
 
+	filteredCompaniesNameHostNameMap := map[string]string{"Adapt.IO": "adapt.io", "o9 Solutions": "o9solutions.com", "GoLinks Reporting": "golinks.io", "Clientjoy Ads": "clientjoy.io", "Cin7": "cin7.com", "Repair Desk": "repairdesk.co", "AdPushup": "adpushup.com", "Mad Street Den": "madstreetden.com", "Heyflow": "heyflow.app"}
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -1376,8 +1390,10 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.Equal(t, len(resp), 1)
 	assert.Equal(t, resp[0].Identity, domID)
 	assert.NotNil(t, resp[0].LastActivity)
-	assert.Equal(t, resp[0].Name, propertiesMap[9][U.GP_HUBSPOT_COMPANY_NAME])
-	assert.Equal(t, resp[0].HostName, propertiesMap[9][U.GP_HUBSPOT_COMPANY_DOMAIN])
+	assert.Contains(t, filteredCompaniesNameHostNameMap, resp[0].Name)
+	assert.Equal(t, resp[0].HostName, filteredCompaniesNameHostNameMap[resp[0].Name])
+	assert.Equal(t, resp[0].TableProps["$salesforce_city"], "New Delhi")
+	assert.Equal(t, resp[0].TableProps["$hubspot_company_is_public"], "true")
 }
 
 func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
