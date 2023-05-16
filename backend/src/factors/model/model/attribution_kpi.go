@@ -80,7 +80,7 @@ func MergeDataRowsHavingSameKeyKPIV1(rows [][]interface{}, keyIndex int, attribu
 	return resultRows
 }
 
-//MergeTwoDataRowsKPI adds values of two data rows for KPI attribution queries
+// MergeTwoDataRowsKPI adds values of two data rows for KPI attribution queries
 func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, analyzeType string, conversionFunTypes []string) []interface{} {
 
 	if analyzeType != AnalyzeTypeHSDeals && analyzeType != AnalyzeTypeSFOpportunities && analyzeType != AnalyzeTypeUserKPI {
@@ -158,7 +158,7 @@ func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, a
 	return row1
 }
 
-//MergeTwoDataRowsKPIV1 adds values of two data rows for KPI attribution queries
+// MergeTwoDataRowsKPIV1 adds values of two data rows for KPI attribution queries
 func MergeTwoDataRowsKPIV1(row1 []interface{}, row2 []interface{}, keyIndex int, conversionFunTypes []string) []interface{} {
 
 	row1[keyIndex+1] = row1[keyIndex+1].(int64) + row2[keyIndex+1].(int64)     // Impressions.
