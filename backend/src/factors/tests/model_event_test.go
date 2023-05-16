@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"database/sql"
 	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
@@ -16,6 +17,94 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestPullEventRowsV2(t *testing.T) {
+	// Initialize a project, user and  the event.
+	start := time.Now()
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	// Test successful CreateEvent.
+	newEvent := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: 101,
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "1😄"}`)}}
+	event, errCode := store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.True(t, event.CreatedAt.After(start))
+
+	newEvent = &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: 102,
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "2😄"}`)}}
+	event, errCode = store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.True(t, event.CreatedAt.After(start))
+
+	newEvent = &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: 103,
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "3😄"}`)}}
+	event, errCode = store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.True(t, event.CreatedAt.After(start))
+
+	newEvent = &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: 104,
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "4😄"}`)}}
+	event, errCode = store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.True(t, event.CreatedAt.After(start))
+
+	newEvent = &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: 105,
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "5😄"}`)}}
+	event, errCode = store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.True(t, event.CreatedAt.After(start))
+	assert.True(t, time.Now().Unix() >= start.Unix())
+	rows, tx, err := store.GetStore().PullEventRowsV2(projectId, start.Unix()+19800, time.Now().Unix()+19800+2)
+	assert.Nil(t, err)
+
+	numRows := 0
+	for rows.Next() {
+		var userID string
+		var eventName string
+		var eventTimestamp int64
+		var userJoinTimestamp int64
+		var eventCardinality uint
+		var eventProperties *postgres.Jsonb
+		var userProperties *postgres.Jsonb
+		var is_group_user_null sql.NullBool
+		var group_1_user_id_null sql.NullString
+		var group_2_user_id_null sql.NullString
+		var group_3_user_id_null sql.NullString
+		var group_4_user_id_null sql.NullString
+		var group_5_user_id_null sql.NullString
+		var group_6_user_id_null sql.NullString
+		var group_7_user_id_null sql.NullString
+		var group_8_user_id_null sql.NullString
+		var group_1_id_null sql.NullString
+		var group_2_id_null sql.NullString
+		var group_3_id_null sql.NullString
+		var group_4_id_null sql.NullString
+		var group_5_id_null sql.NullString
+		var group_6_id_null sql.NullString
+		var group_7_id_null sql.NullString
+		var group_8_id_null sql.NullString
+		err = rows.Scan(&userID, &eventName, &eventTimestamp, &eventCardinality, &eventProperties, &userJoinTimestamp, &userProperties,
+			&is_group_user_null, &group_1_user_id_null, &group_2_user_id_null, &group_3_user_id_null, &group_4_user_id_null,
+			&group_5_user_id_null, &group_6_user_id_null, &group_7_user_id_null, &group_8_user_id_null,
+			&group_1_id_null, &group_2_id_null, &group_3_id_null, &group_4_id_null,
+			&group_5_id_null, &group_6_id_null, &group_7_id_null, &group_8_id_null)
+		assert.Nil(t, err)
+
+		assert.InDelta(t, 103, eventTimestamp, 3)
+		numRows++
+	}
+
+	err = rows.Err()
+	assert.Nil(t, err)
+	U.CloseReadQuery(rows, tx)
+	assert.Equal(t, 5, numRows)
+}
 
 func TestDBCreateAndGetEvent(t *testing.T) {
 	// Initialize a project, user and  the event.

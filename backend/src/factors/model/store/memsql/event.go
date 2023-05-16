@@ -2360,10 +2360,10 @@ func (store *MemSQL) PullEventRowsV2(projectID int64, startTime, endTime int64) 
 	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
 		" events.properties, users.join_timestamp, events.user_properties, users.is_group_user , users.group_1_user_id, users.group_2_user_id, users.group_3_user_id, users.group_4_user_id,"+
 		" users.group_5_user_id, users.group_6_user_id, users.group_7_user_id, users.group_8_user_id,users.group_1_id, users.group_2_id, users.group_3_id, users.group_4_id,users.group_5_id,"+
-		" users.group_6_id, users.group_7_id, users.group_8_id, FROM events "+
+		" users.group_6_id, users.group_7_id, users.group_8_id FROM events "+
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
 		"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
-		"WHERE events.project_id = %d AND UNIX_TIMESTAMP(events.created_at) BETWEEN  %d AND %d "+
+		"WHERE events.project_id = %d AND UNIX_TIMESTAMP(events.created_at) BETWEEN %d AND %d "+
 		"LIMIT %d",
 		projectID, projectID, startTime, endTime, model.EventsPullLimit+1)
 
