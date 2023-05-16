@@ -80,6 +80,10 @@ export default function MultiSelect({
     return localOptions.filter((option) => option?.isSelected).length;
   }, [localOptions]);
 
+  const propsOptionsSelectedCount = useMemo(() => {
+    return options.filter((option) => option?.isSelected).length;
+  }, [options]);
+
   const applyClick = () => {
     if (applyClickCallback)
       applyClickCallback(
@@ -175,8 +179,7 @@ export default function MultiSelect({
       <div key={'apply_opt'} className={`fa-select--buttons `}>
         <Button
           disabled={
-            localSelectedOptionCount === 0 &&
-            options.filter((op) => op?.isSelected).length === 0
+            localSelectedOptionCount === 0 && propsOptionsSelectedCount === 0
           }
           type='primary'
           onClick={applyClick}

@@ -7,7 +7,8 @@ export const getSixSignalReportData = async (
   from: number,
   to: number,
   timezone: string,
-  isSaved: boolean
+  isSaved: boolean,
+  pageViews: string[]
 ) => {
   try {
     if (!projectId || !from || !to || !timezone) {
@@ -20,7 +21,8 @@ export const getSixSignalReportData = async (
           fr: from,
           to: to,
           tz: timezone,
-          isSaved
+          isSaved,
+          pageView: pageViews?.length ? pageViews : undefined
         }
       ]
     });
@@ -58,14 +60,18 @@ export const shareSixSignalReport = async (
 
 export const getSixSignalReportPublicData = async (
   projectId: string,
-  queryId: string
+  queryId: string,
+  pageViews?: string[]
 ) => {
   try {
     if (!queryId || !projectId) {
       throw new Error('Invalid parameters passed');
     }
     const url = `${host}projects/${projectId}/v1/sixsignal/publicreport?query_id=${queryId}`;
-    return get(null, url);
+    // return get(null, url);
+    return post(null, url, {
+      pageView: pageViews?.length ? pageViews : []
+    });
   } catch (error) {
     logger.error(error);
     return null;
@@ -129,6 +135,21 @@ export const subscribeToVistorIdentificationEmails = async (
     return post(null, url, {
       email_ids: emails
     });
+  } catch (error) {
+    logger.error(error);
+    return null;
+  }
+};
+
+export const fetchPageViewUrls = async (
+  projectId: string,
+  queryId?: string
+) => {
+  try {
+    if (!projectId) throw new Error('Project Id not passed');
+    let url = `${host}projects/${projectId}/v1/sixsignal/report/pageviews`;
+    if (queryId) url += `?query_id=${queryId}`;
+    return get(null, url);
   } catch (error) {
     logger.error(error);
     return null;

@@ -1,5 +1,5 @@
 import { DISPLAY_PROP } from 'Utils/constants';
-
+import { cloneDeep } from 'lodash';
 import { OptionType } from './types';
 
 export const selectedOptionsMapper = (
@@ -18,8 +18,9 @@ export const selectedOptionsMapper = (
 };
 
 export const moveSelectedOptionsToTop = (options: OptionType[]) => {
-  const selectedOptions = options.filter((option) => option?.isSelected);
-  const unselectedOptions = options.filter((option) => !option?.isSelected);
+  const _options = cloneDeep(options) as OptionType[];
+  const selectedOptions = _options.filter((option) => option?.isSelected);
+  const unselectedOptions = _options.filter((option) => !option?.isSelected);
   return [...selectedOptions, ...unselectedOptions];
 };
 
