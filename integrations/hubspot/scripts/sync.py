@@ -1183,7 +1183,7 @@ def get_batch_documents_max_timestamp_v3(project_id, docs, object_type, max_time
             return max_timestamp
         
         last_modified_date = datetime.strptime(object_properties[last_modified_key], "%Y-%m-%dT%H:%M:%S.%fZ")
-        doc_last_modified_timestamp = int(last_modified_date.timestamp(last_modified_date))
+        doc_last_modified_timestamp = int(last_modified_date.timestamp())
         
         if max_timestamp== 0 :
             max_timestamp = doc_last_modified_timestamp
