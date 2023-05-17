@@ -1,6 +1,7 @@
 package salesforce
 
 import (
+	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	SDK "factors/sdk"
@@ -320,6 +321,12 @@ func ApplySFOfflineTouchPointRuleForTasksV1(project *model.Project, otpRules *[]
 	if otpRules == nil || project == nil {
 		return nil
 	}
+
+	otpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
+	if err != nil {
+		return err
+	}
+
 	for _, rule := range *otpRules {
 
 		otpUniqueKey, err := createOTPUniqueKeyForTasksV1(rule, sfEvent, logCtx)
@@ -340,9 +347,20 @@ func ApplySFOfflineTouchPointRuleForTasksV1(project *model.Project, otpRules *[]
 			continue
 		}
 
-		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
-			continue
+		if C.GetOtpKeyWithQueryCheckEnabled() {
+
+			//Checks if the otpUniqueKey is already present in other OTP Event Properties
+			isUnique, _ := store.GetStore().IsOTPKeyUniqueWithQuery(project.ID, sfEvent.UserId, otpEventName.ID, otpUniqueKey)
+			if !isUnique {
+				continue
+			}
+
+		} else {
+			//Checks if the otpUniqueKey is already present in other OTP Event Properties
+			if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+				continue
+			}
+
 		}
 
 		_, err1 := CreateTouchPointEventForTasksAndEventsV1(project, sfEvent, rule, otpUniqueKey)
@@ -384,6 +402,12 @@ func ApplySFOfflineTouchPointRuleForEventsV1(project *model.Project, otpRules *[
 	if otpRules == nil || project == nil {
 		return nil
 	}
+
+	otpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
+	if err != nil {
+		return err
+	}
+
 	for _, rule := range *otpRules {
 
 		otpUniqueKey, err := createOTPUniqueKeyForEventsV1(rule, sfEvent, logCtx)
@@ -405,8 +429,20 @@ func ApplySFOfflineTouchPointRuleForEventsV1(project *model.Project, otpRules *[
 		}
 
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
-			continue
+		if C.GetOtpKeyWithQueryCheckEnabled() {
+
+			//Checks if the otpUniqueKey is already present in other OTP Event Properties
+			isUnique, _ := store.GetStore().IsOTPKeyUniqueWithQuery(project.ID, sfEvent.UserId, otpEventName.ID, otpUniqueKey)
+			if !isUnique {
+				continue
+			}
+
+		} else {
+			//Checks if the otpUniqueKey is already present in other OTP Event Properties
+			if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+				continue
+			}
+
 		}
 
 		_, err1 := CreateTouchPointEventForTasksAndEventsV1(project, sfEvent, rule, otpUniqueKey)
@@ -500,7 +536,7 @@ func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model
 
 	if rule.TouchPointTimeRef == model.SFCampaignMemberResponded {
 		if val, exists := sfEvent.EventProperties[model.EP_SFCampaignMemberFirstRespondedDate]; exists {
-			if tt, ok := val.(int64); ok {
+			if tt, err := U.GetPropertyValueAsInt64(val); err != nil {
 				payload.Timestamp = tt
 			} else {
 				logCtx.WithError(err).Error("failed to set timestamp for SF for offline touch point - First responded time.")

@@ -67,6 +67,7 @@ func main() {
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+	blacklistedQueries := flag.String("blacklisted_queries", "", "")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -179,6 +180,8 @@ func main() {
 	configs["hardPull"] = *hardPull
 	configs["sortOnGroup"] = *sortOnGroup
 	configs["useSortedFilesMerge"] = *useSortedFilesMerge
+
+	configs["blacklistedQueries"] = C.GetTokensFromStringListAsString(*blacklistedQueries)
 
 	var result bool
 	finalStatus := make(map[int64]interface{})

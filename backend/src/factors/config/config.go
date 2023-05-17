@@ -307,6 +307,7 @@ type Configuration struct {
 	EnableFieldsSyncByProjectID                        string
 	EnableUserDomainsGroupByProjectID                  string
 	UseHubspotCompaniesV3APIByProjectID                string
+	OtpKeyWithQueryCheckEnabled                        bool
 }
 
 type Services struct {
@@ -1972,6 +1973,10 @@ func GetAttributionDebug() int {
 
 func GetClearbitEnabled() int {
 	return configuration.ClearbitEnabled
+}
+
+func GetOtpKeyWithQueryCheckEnabled() bool {
+	return configuration.OtpKeyWithQueryCheckEnabled
 }
 
 func Get6SignalEnabled() int {
