@@ -13,8 +13,6 @@ import {
 } from './types';
 import SingleSelect from './SingleSelect';
 import MultiSelect from './MultiSelect';
-import { InfoCircleOutlined } from '@ant-design/icons';
-
 interface FaSelectProps {
   options: OptionType[];
   optionClickCallback?: SingleSelectOptionClickCallbackType;
@@ -48,8 +46,6 @@ export default function FaSelect({
 }: FaSelectProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const inputComponentRef = useAutoFocus(allowSearch);
-  const [showMaxLimitWarning, setShowMaxLimitWarning] =
-    useState<boolean>(false);
   const renderSearchInput = () => {
     return (
       <div
@@ -65,14 +61,6 @@ export default function FaSelect({
           }}
           ref={inputComponentRef}
         ></Input>
-        {showMaxLimitWarning && (
-          <div className='flex gap-2 my-2 items-center'>
-            <InfoCircleOutlined style={{ color: '#8C8C8C', fontSize: 14 }} />
-            <Text type={'paragraph'} mini extraClass='m-0' color='grey'>
-              You can only add up to {maxAllowedSelection} items at a time
-            </Text>
-          </div>
-        )}
       </div>
     );
   };
@@ -122,7 +110,6 @@ export default function FaSelect({
           allowSearch={allowSearch}
           searchOption={searchOption}
           maxAllowedSelection={maxAllowedSelection}
-          setShowMaxLimitWarning={setShowMaxLimitWarning}
           allowSearchTextSelection={allowSearchTextSelection}
           searchTerm={searchTerm}
         />
