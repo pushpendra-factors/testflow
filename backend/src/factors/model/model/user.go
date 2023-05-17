@@ -280,7 +280,7 @@ func GetValuesByUserPropertyCacheKey(projectId int64, property_name string, valu
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, property_name), fmt.Sprintf("%s:%s", dateKey, value))
 }
 
-//sorted sets
+// sorted sets
 func GetUserPropertiesCategoryByProjectCacheKeySortedSet(projectId int64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "SS:US:PC"
 	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s", dateKey))
@@ -425,9 +425,9 @@ func AnyPropertyChanged(propertyValuesMap map[string][]interface{}, numUsers int
 
 // Initializes merged properties with the one being updated which will be the last of `userPropertiesRecords`.
 // Now for every user, add value if:
-//     1. Not set already from the one being updated.
-//     2. User property is not merged before i.e. $merge_timestamp is not set.
-//     3. Value is greater than the value already set. Add the difference then. (This should ideally not happen)
+//  1. Not set already from the one being updated.
+//  2. User property is not merged before i.e. $merge_timestamp is not set.
+//  3. Value is greater than the value already set. Add the difference then. (This should ideally not happen)
 func MergeAddTypeUserProperties(mergedProperties *map[string]interface{}, existingProperties []postgres.Jsonb) {
 	// Last record in the array would be the latest one.
 	latestProperties := existingProperties[len(existingProperties)-1]
@@ -873,7 +873,7 @@ func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomi
 	return overwriteProperties, nil
 }
 
-//  List of constants to be upadated for each CRM
+// List of constants to be upadated for each CRM
 var (
 	// List of property key which tracks update in the object. Property key without prefixes
 	SourceUserPropertiesOverwritePropertyKeys = map[string]map[string]string{
@@ -991,6 +991,8 @@ func GetGroupUserGroupID(groupUser *User, groupIndex int) (string, error) {
 	return groupID, nil
 }
 
+var ErrMissingDomainUserID = errors.New("failed to get domains user id for group user")
+
 // GetGroupUserDomainsUserID gives domains user id from the group user
 func GetGroupUserDomainsUserID(groupUser *User, groupIndex int) (string, error) {
 	if groupUser.IsGroupUser == nil || !(*groupUser.IsGroupUser) {
@@ -1003,7 +1005,7 @@ func GetGroupUserDomainsUserID(groupUser *User, groupIndex int) (string, error) 
 	}
 
 	if groupUserID == "" {
-		return "", errors.New("failed to get domains user id for group user")
+		return "", ErrMissingDomainUserID
 	}
 
 	return groupUserID, nil

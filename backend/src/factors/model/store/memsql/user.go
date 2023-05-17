@@ -3042,9 +3042,17 @@ func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID st
 	}
 
 	leadingGroupUserID := ""
+	leadingGroupName := ""
 	for i := range requiredGroupIDsByPrecedence {
 		if groupUserID, exist := userGroupUserIDs[requiredGroupIDsByPrecedence[i]]; exist && groupUserID != "" {
 			leadingGroupUserID = groupUserID
+
+			for groupName, groupIndex := range groupIDMap {
+				if groupIndex == requiredGroupIDsByPrecedence[i] {
+					leadingGroupName = groupName
+				}
+			}
+
 			break
 		}
 	}
@@ -3061,10 +3069,34 @@ func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID st
 	}
 
 	domainUserID, err := model.GetGroupUserDomainsUserID(groupUser, groupIDMap[model.GROUP_NAME_DOMAINS])
-	if err != nil || domainUserID == "" {
+	if err != nil && err != model.ErrMissingDomainUserID {
 		logCtx.WithFields(log.Fields{"group_user": groupUser, "domain_group_id": groupIDMap[model.GROUP_NAME_DOMAINS]}).WithError(err).
 			Error("Failed to get domains user id.")
 		return http.StatusInternalServerError
+	}
+
+	if domainUserID == "" {
+		// backfill domain user if available in properties
+		var groupID string
+		domainUserID, groupID, status = store.createOrGetDomainUserIDByProperties(projectID, requestGroupName, groupUser.Properties)
+		if status != http.StatusFound && status != http.StatusCreated && status != http.StatusNotFound {
+			logCtx.WithFields(log.Fields{"group_user": groupUser, "domain_group_id": groupIDMap[model.GROUP_NAME_DOMAINS]}).WithError(err).
+				Error("Failed to get domains user id after createOrGetDomainUserIDByProperties.")
+			return http.StatusInternalServerError
+		}
+
+		// in case no domain property present skip processing
+		if status == http.StatusNotFound {
+			return http.StatusOK
+		}
+
+		// associate domain user id to group user to avoid going through fallback logic later.
+		_, status = store.UpdateGroupUserDomainsGroup(projectID, groupUser.ID, leadingGroupName, domainUserID, groupID, true)
+		if status != http.StatusAccepted && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"domain_user_id": domainUserID, "group_user_id": groupUser.ID, "group_name": leadingGroupName, "group_id": groupID}).
+				WithError(err).Error("Failed to update group user association with domains group user on AssociateUserDomainsGroup.")
+			return http.StatusInternalServerError
+		}
 	}
 
 	userIDs := []string{}
@@ -3080,4 +3112,46 @@ func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID st
 	}
 
 	return http.StatusOK
+}
+
+func (store *MemSQL) createOrGetDomainUserIDByProperties(projectID int64, groupName string, properties postgres.Jsonb) (string, string, int) {
+
+	logFields := log.Fields{"project_id": projectID, "group_name": groupName}
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || groupName == "" || U.IsEmptyPostgresJsonb(&properties) {
+		logCtx.Error("Invalid parameters")
+		return "", "", http.StatusBadRequest
+	}
+
+	propertyKey := model.GetDomainNameSourcePropertyKey(groupName)
+	if propertyKey == "" {
+		logCtx.Error("Empty property key on createOrGetDomainUserIDByProperties.")
+		return "", "", http.StatusInternalServerError
+	}
+
+	propertiesMap, err := U.DecodePostgresJsonbAsPropertiesMap(&properties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to decode properties in createOrGetDomainUserIDByProperties.")
+		return "", "", http.StatusInternalServerError
+	}
+
+	domainName := U.GetPropertyValueAsString((*propertiesMap)[propertyKey])
+	if domainName == "" {
+		logCtx.WithFields(log.Fields{"properties": propertiesMap}).Warn("No domain name found. Skip processing domain.")
+		return "", "", http.StatusNotFound
+	}
+
+	cleanedDomainName := U.GetDomainGroupDomainName(domainName)
+	if cleanedDomainName == "" {
+		logCtx.WithFields(log.Fields{"properties": propertiesMap}).Error("No domain name found after domain name cleaining. Skip processing domain.")
+		return "", "", http.StatusNotFound
+	}
+
+	groupUserID, status := store.CreateOrGetDomainGroupUser(projectID, groupName, cleanedDomainName, U.TimeNowUnix(), model.GetGroupUserSourceByGroupName(groupName))
+	if status != http.StatusCreated && status != http.StatusFound {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for group user by group id in createOrGetDomainUserIDByProperties.")
+		return "", "", http.StatusInternalServerError
+	}
+
+	return groupUserID, cleanedDomainName, status
 }

@@ -24,7 +24,7 @@ import (
 	U "factors/util"
 )
 
-//Test6SignalEnrichmentInSDKTrackHandler tests 6Signal enrichment in track call
+// Test6SignalEnrichmentInSDKTrackHandler tests 6Signal enrichment in track call
 func Test6SignalEnrichmentInSDKTrackHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitSDKServiceRoutes(r)
@@ -3883,4 +3883,109 @@ func TestSDKUserDomainReAssociation(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "salesforce2.com", domainName)
 	}
+}
+
+func TestSDKBackfillDomainUser(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+
+	_, status = store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+
+	_, status = store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+
+	userWeb, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	userHubspot, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	userSalesforce, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	sixSignalDomain := "abc.com"
+	properties := map[string]interface{}{U.SIX_SIGNAL_DOMAIN: "abc.com"}
+	propertiesJSONB, err := U.EncodeToPostgresJsonb(&properties)
+	assert.Nil(t, err)
+	sixSignalGroupUserID, status := store.GetStore().CreateGroupUser(&model.User{
+		ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix(), Source: model.GetRequestSourcePointer(model.UserSourceSixSignal),
+		Properties: *propertiesJSONB,
+	}, model.GROUP_NAME_SIX_SIGNAL, sixSignalDomain)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userWeb, model.GROUP_NAME_SIX_SIGNAL, "", sixSignalGroupUserID, true)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	hubspotDomain := "abc1.com"
+	properties = map[string]interface{}{"$hubspot_company_website": "abc2.com"}
+	propertiesJSONB, err = U.EncodeToPostgresJsonb(&properties)
+	assert.Nil(t, err)
+	hubspotGroupUserID, status := store.GetStore().CreateGroupUser(&model.User{
+		ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix(), Source: model.GetRequestSourcePointer(model.UserSourceHubspot),
+		Properties: *propertiesJSONB,
+	}, model.GROUP_NAME_HUBSPOT_COMPANY, hubspotDomain)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userHubspot, model.GROUP_NAME_HUBSPOT_COMPANY, "", hubspotGroupUserID, true)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	salesforceDomain := "abc2.com"
+	properties = map[string]interface{}{"$salesforce_account_website": "abc3.com"}
+	propertiesJSONB, err = U.EncodeToPostgresJsonb(&properties)
+	assert.Nil(t, err)
+	salesforceGroupUserID, status := store.GetStore().CreateGroupUser(&model.User{
+		ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix(), Source: model.GetRequestSourcePointer(model.UserSourceSalesforce),
+		Properties: *propertiesJSONB,
+	}, model.GROUP_NAME_SALESFORCE_ACCOUNT, salesforceDomain)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userSalesforce, model.GROUP_NAME_SALESFORCE_ACCOUNT, "", salesforceGroupUserID, true)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	domainGroup, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userWeb, model.GROUP_NAME_SIX_SIGNAL, sixSignalGroupUserID)
+	assert.Equal(t, http.StatusOK, status)
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userHubspot, model.GROUP_NAME_HUBSPOT_COMPANY, hubspotGroupUserID)
+	assert.Equal(t, http.StatusOK, status)
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userSalesforce, model.GROUP_NAME_SALESFORCE_ACCOUNT, salesforceGroupUserID)
+	assert.Equal(t, http.StatusOK, status)
+	user, status := store.GetStore().GetUser(project.ID, userWeb)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err := model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, domainUserID)
+
+	user, status = store.GetStore().GetUser(project.ID, userHubspot)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, domainUserID)
+
+	user, status = store.GetStore().GetUser(project.ID, userSalesforce)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, domainUserID)
+
+	user, status = store.GetStore().GetUser(project.ID, sixSignalGroupUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, domainUserID)
+
+	user, status = store.GetStore().GetUser(project.ID, hubspotGroupUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, domainUserID)
+
+	user, status = store.GetStore().GetUser(project.ID, salesforceGroupUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, domainUserID)
+
 }
