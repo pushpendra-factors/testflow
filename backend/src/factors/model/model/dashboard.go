@@ -74,8 +74,8 @@ type DashQueryResult struct {
 	DashboardID     int64          `gorm:"not null" json:"dashboard_id"`
 	DashboardUnitID int64          `gorm:"not null" json:"dashboard_unit_id"`
 	QueryID         int64          `gorm:"not null" json:"query_id"`
-	From            int64          `gorm:"not null" json:"from_t"`
-	To              int64          `gorm:"not null" json:"to_t"`
+	FromT           int64          `gorm:"not null" json:"from_t"`
+	ToT             int64          `gorm:"not null" json:"to_t"`
 	Result          postgres.Jsonb `gorm:"not null" json:"result"`
 	IsDeleted       bool           `gorm:"not null;default:false" json:"is_deleted"`
 	ComputedAt      int64          `gorm:"not null" json:"computed_at"`
