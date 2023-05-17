@@ -843,6 +843,7 @@ type Model interface {
 	GetSourceStringForAccountsV2(projectID int64, source string) (string, int, int)
 	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (string, map[string]interface{}, int)
 	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, int)
+	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)

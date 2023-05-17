@@ -230,17 +230,9 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	// Get merged properties for all accounts
 	if profileType == model.PROFILE_TYPE_ACCOUNT && isDomainGroup {
-		for index, profile := range profiles {
-			_, propertiesDecoded, status := store.AccountPropertiesForDomainsEnabledV2(projectID, profile.Identity, payload.Source)
-			if status != http.StatusOK {
-				return nil, status
-			}
-			props, err := U.EncodeStructTypeToPostgresJsonb(&propertiesDecoded)
-			if err != nil {
-				log.WithFields(logFields).Error("Failed to merge all accounts properties.")
-				return nil, http.StatusInternalServerError
-			}
-			profiles[index].Properties = props
+		profiles, status = store.AccountPropertiesForDomainsEnabled(projectID, profiles)
+		if status != http.StatusOK {
+			return nil, status
 		}
 	}
 
@@ -253,6 +245,68 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	return returnData, http.StatusFound
 }
 
+func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if len(profiles) < 1 {
+		logCtx.Error("No domain account found.")
+		return nil, http.StatusBadRequest
+	}
+
+	domainGroup, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if status != http.StatusFound {
+		logCtx.Error("Domain group not found.")
+		return nil, status
+	}
+
+	domainIDs := make([]string, len(profiles))
+	for i, profile := range profiles {
+		domainIDs[i] = profile.Identity
+	}
+
+	// Fetching accounts associated to the domain
+	// SELECT group_6_user_id as identity, properties FROM `users`  WHERE (project_id='15000001' AND source!='9' AND
+	// is_group_user=1 AND group_6_user_id IN ('4f88f40d-c571-4bee-b456-298c533d7ef9', 'ed68f40d-c571-4bee-b456-298c533d7ef9'));
+	var accountGroupDetails []model.Profile
+	db := C.GetServices().Db
+	err := db.Table("users").Select(fmt.Sprintf("group_%d_user_id as identity, properties", domainGroup.ID)).
+		Where("project_id=? AND source!=? AND is_group_user=1 AND "+fmt.Sprintf("group_%d_user_id", domainGroup.ID)+" IN (?)",
+			projectID, model.UserSourceDomains, domainIDs).Find(&accountGroupDetails).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get accounts associated to domains.")
+		return nil, http.StatusInternalServerError
+	}
+
+	// map of domain ids and their decoded merged properties
+	domainsIDPropsMap := make(map[string]map[string]interface{})
+	for _, accountDetails := range accountGroupDetails {
+		propertiesDecoded, err := U.DecodePostgresJsonb(accountDetails.Properties)
+		if err != nil {
+			log.Error("Unable to decode account properties.")
+			return nil, http.StatusInternalServerError
+		}
+		if _, exists := domainsIDPropsMap[accountDetails.Identity]; !exists {
+			domainsIDPropsMap[accountDetails.Identity] = (*propertiesDecoded)
+		} else {
+			domainsIDPropsMap[accountDetails.Identity] = U.MergeJSONMaps(domainsIDPropsMap[accountDetails.Identity], *propertiesDecoded)
+		}
+	}
+
+	for index, id := range domainIDs {
+		mergedProps := domainsIDPropsMap[id]
+		propsEncoded, err := U.EncodeToPostgresJsonb(&mergedProps)
+		if err != nil {
+			log.WithFields(logFields).Error("Failed to encode account properties.")
+			return nil, http.StatusInternalServerError
+		}
+		profiles[index].Properties = propsEncoded
+	}
+	return profiles, http.StatusOK
+}
 func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string) (string, int, int) {
 	var sourceString string
 	var domainGroupId int
