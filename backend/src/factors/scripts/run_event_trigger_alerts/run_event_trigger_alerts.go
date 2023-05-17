@@ -773,12 +773,6 @@ func RetryFailedEventTriggerAlerts(projectID int64) SendReportLogCount {
 
 		cacheKeySplit := strings.Split(cacheKey.Suffix, ":")
 		alertID := cacheKeySplit[0]
-		areMoreAlertPresent := false
-		for kk := range allKeys {
-			if strings.Contains(kk, alertID) {
-				areMoreAlertPresent = true
-			}
-		}
 		firstTry := cacheKeySplit[len(cacheKeySplit)-1]
 		retryTime, err := strconv.ParseInt(firstTry, 0, 64)
 		if err != nil {
@@ -824,6 +818,13 @@ func RetryFailedEventTriggerAlerts(projectID int64) SendReportLogCount {
 			cc, err := cacheRedis.ZRemPersistent(ssKey, true, key)
 			if err != nil || cc != 1 {
 				log.WithFields(log.Fields{"alert_key": *cacheKey}).WithError(err).Error("Cannot remove alert by zrem")
+			}
+			allKeys[key] = "-1"
+			areMoreAlertPresent := false
+			for kk := range allKeys {
+				if kk != key && strings.Contains(kk, alertID) && allKeys[kk] != "-1" {
+					areMoreAlertPresent = true
+				}
 			}
 			if !areMoreAlertPresent {
 				err = cacheRedis.DelPersistent(cacheKey)
