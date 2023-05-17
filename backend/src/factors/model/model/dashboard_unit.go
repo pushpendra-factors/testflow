@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	cacheRedis "factors/cache/redis"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	log "github.com/sirupsen/logrus"
@@ -324,14 +325,15 @@ func GetFailedUnitsByProject(cacheReports []CachingUnitReport) map[int64][]Faile
 
 	projectFailedUnits := make(map[int64][]FailedDashboardUnitReport)
 	for _, unit := range cacheReports {
+		timezone, _ := store.GetStore().GetTimezoneForProject(unit.ProjectId)
 		if unit.Status == CachingUnitStatusFailed {
 			failedUnit := FailedDashboardUnitReport{
 				DashboardID: unit.DashboardID,
 				UnitID:      unit.UnitID,
 				QueryClass:  unit.QueryClass,
 				QueryRange:  unit.QueryRange,
-				From:        U.GetDateOnlyFormatFromTimestampAndTimezone(unit.From, U.TimeZoneString(unit.TimeTakenStr)),
-				To:          U.GetDateOnlyFormatFromTimestampAndTimezone(unit.To, U.TimeZoneString(unit.TimeTakenStr)),
+				From:        U.GetDateOnlyFormatFromTimestampAndTimezone(unit.From, timezone),
+				To:          U.GetDateOnlyFormatFromTimestampAndTimezone(unit.To, timezone),
 			}
 			if value, exists := projectFailedUnits[unit.ProjectId]; exists {
 				projectFailedUnits[unit.ProjectId] = append(value, failedUnit)
@@ -355,14 +357,15 @@ func GetTimedOutUnitsByProject(cacheReports []CachingUnitReport) map[int64][]Fai
 
 	projectTimedOutUnits := make(map[int64][]FailedDashboardUnitReport)
 	for _, unit := range cacheReports {
+		timezone, _ := store.GetStore().GetTimezoneForProject(unit.ProjectId)
 		if unit.Status == CachingUnitStatusTimeout {
 			timedOutUnit := FailedDashboardUnitReport{
 				DashboardID: unit.DashboardID,
 				UnitID:      unit.UnitID,
 				QueryClass:  unit.QueryClass,
 				QueryRange:  unit.QueryRange,
-				From:        U.GetDateOnlyFormatFromTimestampAndTimezone(unit.From, U.TimeZoneString(unit.TimeTakenStr)),
-				To:          U.GetDateOnlyFormatFromTimestampAndTimezone(unit.To, U.TimeZoneString(unit.TimeTakenStr)),
+				From:        U.GetDateOnlyFormatFromTimestampAndTimezone(unit.From, timezone),
+				To:          U.GetDateOnlyFormatFromTimestampAndTimezone(unit.To, timezone),
 			}
 			if value, exists := projectTimedOutUnits[unit.ProjectId]; exists {
 				projectTimedOutUnits[unit.ProjectId] = append(value, timedOutUnit)
