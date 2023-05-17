@@ -3078,7 +3078,7 @@ func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID st
 	if domainUserID == "" {
 		// backfill domain user if available in properties
 		var groupID string
-		domainUserID, groupID, status = store.createOrGetDomainUserIDByProperties(projectID, requestGroupName, groupUser.Properties)
+		domainUserID, groupID, status = store.createOrGetDomainUserIDByProperties(projectID, leadingGroupName, groupUser.Properties)
 		if status != http.StatusFound && status != http.StatusCreated && status != http.StatusNotFound {
 			logCtx.WithFields(log.Fields{"group_user": groupUser, "domain_group_id": groupIDMap[model.GROUP_NAME_DOMAINS]}).WithError(err).
 				Error("Failed to get domains user id after createOrGetDomainUserIDByProperties.")
