@@ -1387,7 +1387,7 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, timezoneString, false) {
 		return http.StatusOK, "", unitReport
 	}
-	logCtx.Info("Starting to cache unit for date range")
+	logCtx.Info("Starting to cache attribution v1 unit for date range")
 	startTime := U.TimeNowUnix()
 
 	var result interface{}
@@ -1422,7 +1422,7 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 				logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut", "Error": response.err}).Info("Failed for the attribution unit - Result is nil")
 				errCode = http.StatusInternalServerError
 			} else {
-				logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut"}).Info("Success for the attribution unit")
+				logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "Success"}).Info("Success for the attribution unit")
 				errCode = http.StatusOK
 			}
 		case <-time.After(180 * 60 * time.Second):
@@ -1783,6 +1783,7 @@ func (store *MemSQL) WrapperForExecuteAttributionQueryV0(projectID int64, queryO
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 }
 
+// _cacheAttributionDashboardUnitForDateRange acts as collector to the core query caching method for Attribution V1 ###8
 func (store *MemSQL) _cacheAttributionDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,
 	waitGroup *sync.WaitGroup, reportCollector *sync.Map, enableFilterOpt bool) {
 	logFields := log.Fields{
@@ -1813,7 +1814,7 @@ func (store *MemSQL) _cacheAttributionDashboardUnitForDateRange(cachePayload mod
 		logCtx.WithField("err_code", errCode).Errorf("Error while running attribution v1 query %s", errMsg)
 		return
 	}
-	logCtx.Info("Completed caching for Dashboard unit")
+	logCtx.Info("Completed caching for AttributionV1 Dashboard unit")
 }
 
 func (store *MemSQL) cacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,
