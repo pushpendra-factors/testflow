@@ -1476,7 +1476,7 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 	return http.StatusOK, "", unitReport
 }
 
-// CreateResultInDB inserts the computed dashboard query into DB under table DBQueryResult
+// CreateResultInDB inserts the computed dashboard query into DB under table DashQueryResult
 func (store *MemSQL) CreateResultInDB(result interface{}, projectId int64, dashboardId int64, unitId int64, queryId int64,
 	preset string, from, to int64, timezoneString U.TimeZoneString, meta interface{}) (int, string) {
 
@@ -1498,7 +1498,7 @@ func (store *MemSQL) CreateResultInDB(result interface{}, projectId int64, dashb
 	}
 	resJson := &postgres.Jsonb{json.RawMessage(resMarshalled)}
 
-	resultWarpper := model.DBQueryResult{
+	resultWarpper := model.DashQueryResult{
 		ID:              U.GetUUID(),
 		ProjectID:       projectId,
 		DashboardID:     dashboardId,

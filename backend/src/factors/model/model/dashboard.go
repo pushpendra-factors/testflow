@@ -67,7 +67,7 @@ type DashboardCacheResult struct {
 	Timezone    string      `json:"timezone"`
 }
 
-type DBQueryResult struct {
+type DashQueryResult struct {
 	// Composite primary key, id + project_id.
 	ID              string         `gorm:"not null" json:"id"`
 	ProjectID       int64          `gorm:"not null" json:"project_id"`

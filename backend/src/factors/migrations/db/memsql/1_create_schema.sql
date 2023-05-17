@@ -1333,7 +1333,7 @@ CREATE TABLE IF NOT EXISTS display_name_labels (
     UNIQUE KEY(project_id, source, id, property_key, value) USING HASH
 );
 
-CREATE TABLE IF NOT EXISTS query_results (
+CREATE TABLE IF NOT EXISTS dash_query_results (
     id text,
     project_id bigint,
     dashboard_id bigint,
