@@ -182,7 +182,7 @@ func main() {
 	})
 
 	slowUnits := model.GetNSlowestUnits(allUnitReports, 3)
-	failedUnits := model.GetFailedUnitsByProject(allUnitReports)
+	failedUnits := store.GetStore().GetFailedUnitsByProject(allUnitReports)
 	timedOutUnits := model.GetTimedOutUnitsByProject(allUnitReports)
 	slowProjects := model.GetNSlowestProjects(allUnitReports, 5)
 	failed, passed, notComputed := model.GetTotalFailedComputedNotComputed(allUnitReports)
@@ -223,13 +223,13 @@ func main() {
 
 /*
 The Attribution DB Precompute methods flow:
-1. DBCacheAttributionDashboardUnitsForProjects
-2. CacheAttributionDashboardUnitsForProjectID
-3. CacheAttributionDashboardUnit
-4. i. RunEverydayCachingForAttribution
-   ii. RunCachingForLast3MonthsAttribution
-5. _cacheAttributionDashboardUnitForDateRange
-5. CacheAttributionDashboardUnitForDateRange
+ 1. DBCacheAttributionDashboardUnitsForProjects
+ 2. CacheAttributionDashboardUnitsForProjectID
+ 3. CacheAttributionDashboardUnit
+ 4. i. RunEverydayCachingForAttribution
+    ii. RunCachingForLast3MonthsAttribution
+ 5. _cacheAttributionDashboardUnitForDateRange
+ 5. CacheAttributionDashboardUnitForDateRange
 */
 func cacheDashboardUnitsForProjectsAttr(projectIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup, startTimeForCache int64) {
 

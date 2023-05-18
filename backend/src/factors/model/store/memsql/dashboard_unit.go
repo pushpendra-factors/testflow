@@ -6,12 +6,14 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	"github.com/jinzhu/gorm"
 	"github.com/rs/xid"
@@ -1939,4 +1941,68 @@ func (store *MemSQL) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectID
 			}
 		}
 	}
+}
+
+func (store *MemSQL) GetFailedUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport {
+
+	var units []model.CachingUnitReport
+	U.DeepCopy(&cacheReports, &units)
+
+	sort.Slice(units, func(i, j int) bool {
+		return units[i].TimeTaken > units[j].TimeTaken
+	})
+
+	projectFailedUnits := make(map[int64][]model.FailedDashboardUnitReport)
+	for _, unit := range cacheReports {
+		timezone, _ := store.GetTimezoneForProject(unit.ProjectId)
+		if unit.Status == model.CachingUnitStatusFailed {
+			failedUnit := model.FailedDashboardUnitReport{
+				DashboardID: unit.DashboardID,
+				UnitID:      unit.UnitID,
+				QueryClass:  unit.QueryClass,
+				QueryRange:  unit.QueryRange,
+				From:        U.GetDateOnlyFormatFromTimestampAndTimezone(unit.From, timezone),
+				To:          U.GetDateOnlyFormatFromTimestampAndTimezone(unit.To, timezone),
+			}
+			if value, exists := projectFailedUnits[unit.ProjectId]; exists {
+				projectFailedUnits[unit.ProjectId] = append(value, failedUnit)
+			} else {
+				failedUnits := []model.FailedDashboardUnitReport{failedUnit}
+				projectFailedUnits[unit.ProjectId] = failedUnits
+			}
+		}
+	}
+	return projectFailedUnits
+}
+
+func (store *MemSQL) GetTimedOutUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport {
+
+	var units []model.CachingUnitReport
+	U.DeepCopy(&cacheReports, &units)
+
+	sort.Slice(units, func(i, j int) bool {
+		return units[i].TimeTaken > units[j].TimeTaken
+	})
+
+	projectTimedOutUnits := make(map[int64][]model.FailedDashboardUnitReport)
+	for _, unit := range cacheReports {
+		timezone, _ := store.GetTimezoneForProject(unit.ProjectId)
+		if unit.Status == model.CachingUnitStatusTimeout {
+			timedOutUnit := model.FailedDashboardUnitReport{
+				DashboardID: unit.DashboardID,
+				UnitID:      unit.UnitID,
+				QueryClass:  unit.QueryClass,
+				QueryRange:  unit.QueryRange,
+				From:        U.GetDateOnlyFormatFromTimestampAndTimezone(unit.From, timezone),
+				To:          U.GetDateOnlyFormatFromTimestampAndTimezone(unit.To, timezone),
+			}
+			if value, exists := projectTimedOutUnits[unit.ProjectId]; exists {
+				projectTimedOutUnits[unit.ProjectId] = append(value, timedOutUnit)
+			} else {
+				failedUnits := []model.FailedDashboardUnitReport{timedOutUnit}
+				projectTimedOutUnits[unit.ProjectId] = failedUnits
+			}
+		}
+	}
+	return projectTimedOutUnits
 }
