@@ -634,6 +634,72 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 
 	return mainBlock
 }
+func getTeamsMsgBlock(msg model.EventTriggerAlertMessage) string {
+	propBlock := getPropBlocksForTeams(msg.MessageProperty)
+	mainBlock := fmt.Sprintf(`<h3>%s</h3><h3>%s</h3><table>%s</table><a href=https://app.factors.ai>Know More </a>`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock)
+	return mainBlock
+}
+func getPropBlocksForTeams(propMap U.PropertiesMap) string {
+	var propBlock string
+	length := len(propMap)
+	i := 0
+	for i < length {
+		var key1, key2 string
+		var prop1, prop2 interface{}
+		prop1 = ""
+		prop2 = ""
+		if i < length {
+			pp1 := propMap[fmt.Sprintf("%d", i)]
+			i++
+			var mp1 model.MessagePropMapStruct
+			if pp1 != nil {
+				trans, ok := pp1.(map[string]interface{})
+				if !ok {
+					log.Warn("cannot convert interface to map[string]interface{} type")
+					continue
+				}
+				err := U.DecodeInterfaceMapToStructType(trans, &mp1)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
+			}
+			key1 = mp1.DisplayName
+			prop1 = mp1.PropValue
+			if prop1 == "" {
+				prop1 = "<nil>"
+			}
+		}
+		if i < length {
+			pp2 := propMap[fmt.Sprintf("%d", i)]
+			i++
+			var mp2 model.MessagePropMapStruct
+			if pp2 != nil {
+				trans, ok := pp2.(map[string]interface{})
+				if !ok {
+					log.Warn("cannot convert interface to map[string]interface{} type")
+					continue
+				}
+				err := U.DecodeInterfaceMapToStructType(trans, &mp2)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
+			}
+			key2 = mp2.DisplayName
+			prop2 = mp2.PropValue
+			if prop2 == "" {
+				prop2 = "<nil>"
+			}
+		}
+
+		// as slack template support only 2 columns hence adding check for count 2
+
+		propBlock += fmt.Sprintf(
+			`<tr><td>%s&nbsp&nbsp</td><td>%s</td></tr><tr><td>%s&nbsp&nbsp</td><td>%s</td></tr>`, key1, strings.Replace(fmt.Sprintf("%v", prop1), "\"", "", -1), key2, strings.Replace(fmt.Sprintf("%v", prop2), "\"", "", -1))
+	}
+	return propBlock
+}
 func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string, msg model.EventTriggerAlertMessage, Tchannels *postgres.Jsonb) (bool, string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
@@ -653,7 +719,7 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 	if wetRun {
 
 		for _, channel := range teamsChannels.TeamsChannelList {
-			message := getTeamsMessageTemp(msg)
+			message := getTeamsMsgBlock(msg)
 			err := teams.SendTeamsMessage(projectID, agentUUID, teamsChannels.TeamsId, channel.ChannelId, message)
 			if err != nil {
 				errMsg := err.Error()
