@@ -60,6 +60,7 @@ func main() {
 	teamsAppClientID := flag.String("teams_app_client_id", "", "")
 	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
 	teamsApplicationID := flag.String("teams_application_id", "", "")
+	blacklistedAlerts := flag.String("blacklisted_alerts", "", "")
 
 	flag.Parse()
 
@@ -114,9 +115,15 @@ func main() {
 	success := true
 	sendReportForProject := SendReportLogCount{}
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
+	blockedAlerts := C.GetTokensFromStringListAsString(*blacklistedAlerts)
+	blockedAlertMap := make(map[string]bool)
+	for _, id := range blockedAlerts {
+		blockedAlertMap[id] = true
+	}
+
 	for _, projectID := range projectIDs {
 		projectSuccess := false
-		sendReportForProject, projectSuccess = EventTriggerAlertsSender(projectID, conf)
+		sendReportForProject, projectSuccess = EventTriggerAlertsSender(projectID, conf, blockedAlertMap)
 		if !projectSuccess {
 			log.WithFields(log.Fields{"project_id": projectID}).Error("Event Trigger Alert job failing")
 		}
@@ -144,7 +151,7 @@ func main() {
 
 		min := time.Now().Minute()
 		if min < 5 {
-			sendReportForProject := RetryFailedEventTriggerAlerts(projectID)
+			sendReportForProject := RetryFailedEventTriggerAlerts(projectID, blockedAlertMap)
 			if sendReportForProject.SlackSuccess > 0 {
 				finalStatus[fmt.Sprintf("Retry Success-SLACK-%v", projectID)] = sendReportForProject.SlackSuccess
 			}
@@ -182,7 +189,7 @@ func getSortedSetCacheKey(prefix string, projectId int64) (*cacheRedis.Key, erro
 	return key, err
 }
 
-func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (SendReportLogCount, bool) {
+func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}, blockedAlert map[string]bool) (SendReportLogCount, bool) {
 
 	ok := int(0)
 	sendReportForProject := SendReportLogCount{}
@@ -206,6 +213,12 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 		}
 
 		alertID := strings.Split(cacheKey.Suffix, ":")[0]
+		if blockedAlert[alertID] {
+			log.WithFields(log.Fields{"alert_id": alertID, "project_id": projectID}).
+				Info("Alert skipped because of the blacklist tag")
+			continue
+		}
+
 		cacheStr, err := cacheRedis.GetPersistent(cacheKey)
 		if err != nil {
 			log.WithError(err).Error("failed to find message for the alert ", alertID)
@@ -741,7 +754,7 @@ func getTeamsMessageTemp(message model.EventTriggerAlertMessage) string {
 	return msg
 }
 
-func RetryFailedEventTriggerAlerts(projectID int64) SendReportLogCount {
+func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]bool) SendReportLogCount {
 	sendReportForProject := SendReportLogCount{}
 	ssKey, err := getSortedSetCacheKey(FailureSortedSetPrefix, projectID)
 	if err != nil {
@@ -773,6 +786,12 @@ func RetryFailedEventTriggerAlerts(projectID int64) SendReportLogCount {
 
 		cacheKeySplit := strings.Split(cacheKey.Suffix, ":")
 		alertID := cacheKeySplit[0]
+		if blockedAlerts[alertID] {
+			log.WithFields(log.Fields{"alert_id": alertID, "project_id": projectID}).
+				Info("Alert skipped because of the blacklist tag")
+			continue
+		}
+
 		firstTry := cacheKeySplit[len(cacheKeySplit)-1]
 		retryTime, err := strconv.ParseInt(firstTry, 0, 64)
 		if err != nil {
