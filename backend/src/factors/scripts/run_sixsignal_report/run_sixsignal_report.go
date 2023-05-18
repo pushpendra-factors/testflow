@@ -18,9 +18,8 @@ import (
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
-	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
 	modelBucketNameFlag := flag.String("model_bucket_name", "/usr/local/var/factors/cloud_storage_models", "--bucket_name=/usr/local/var/factors/cloud_storage_models pass models bucket name")
-	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
+
 	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory.")
 	sortOnGroup := flag.Int("sort_group", 0, "sort events based on group (0 for uid)")
@@ -98,32 +97,19 @@ func main() {
 	//Initialized configs
 	configs := make(map[string]interface{})
 
-	if *useBucketV2 {
-		var modelCloudManager filestore.FileManager
-		if *env == "development" {
-			modelCloudManager = serviceDisk.New(*modelBucketNameFlag)
-		} else {
-			modelCloudManager, err = serviceGCS.New(*modelBucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init cloud manager.")
-			}
-		}
-		configs["modelCloudManager"] = &modelCloudManager
+	var modelCloudManager filestore.FileManager
+	if *env == "development" {
+		modelCloudManager = serviceDisk.New(*modelBucketNameFlag)
 	} else {
-		var cloudManager filestore.FileManager
-		if *env == "development" {
-			cloudManager = serviceDisk.New(*bucketNameFlag)
-		} else {
-			cloudManager, err = serviceGCS.New(*bucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init cloud manager.")
-			}
+		modelCloudManager, err = serviceGCS.New(*modelBucketNameFlag)
+		if err != nil {
+			log.WithField("error", err).Fatal("Failed to init cloud manager.")
 		}
-		configs["modelCloudManager"] = &cloudManager
 	}
+	configs["modelCloudManager"] = &modelCloudManager
+
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 	configs["diskManager"] = diskManager
-	configs["useBucketV2"] = *useBucketV2
 	configs["hardPull"] = *hardPull
 	configs["sortOnGroup"] = *sortOnGroup
 

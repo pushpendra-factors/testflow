@@ -101,7 +101,7 @@ func TestGetPutModelEventInfo(t *testing.T) {
 	actualEventInfoMap, err := CreatePatternEventInfoFromScanner(scanner)
 	assert.Nil(t, err)
 
-	store, err := New(5, 5, diskManager, cloudManager, cloudManager, nil)
+	store, err := New(5, 5, diskManager, cloudManager)
 	assert.Nil(t, err)
 
 	projectId := int64(time.Now().Unix())
@@ -151,7 +151,7 @@ func TestGetPutPatterns(t *testing.T) {
 	actualPatterns, err := CreatePatternsWithMetaFromScanner(scanner)
 	assert.Nil(t, err)
 
-	store, err := New(5, 5, diskManager, cloudManager, cloudManager, nil)
+	store, err := New(5, 5, diskManager, cloudManager)
 	assert.Nil(t, err)
 
 	// should not be present in cloud

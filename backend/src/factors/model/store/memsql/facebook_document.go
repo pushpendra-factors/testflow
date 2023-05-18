@@ -1431,7 +1431,7 @@ func (store *MemSQL) PullFacebookRowsV2(projectID int64, startTime, endTime int6
 		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(fb.value, 'ad_set_id') OR sp.object_id = JSON_EXTRACT_STRING(fb.value, 'base_ad_set_id')))) "+
 		"WHERE fb.project_id = %d AND UNIX_TIMESTAMP(fb.created_at) BETWEEN %d AND %d "+
 		"LIMIT %d",
-		projectID, model.ChannelFacebook, projectID, startTime, endTime, model.FacebookPullLimit+1)
+		projectID, model.ChannelFacebook, projectID, startTime, endTime, model.AdReportsPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err
@@ -1466,7 +1466,7 @@ func (store *MemSQL) PullFacebookRowsV1(projectID int64, startTime, endTime int6
 		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(fb.value, 'ad_set_id') OR sp.object_id = JSON_EXTRACT_STRING(fb.value, 'base_ad_set_id')))) "+
 		"WHERE fb.project_id = %d AND fb.timestamp BETWEEN %d AND %d "+
 		"ORDER BY fb.type, fb.timestamp LIMIT %d",
-		projectID, model.ChannelFacebook, projectID, start, end, model.FacebookPullLimit+1)
+		projectID, model.ChannelFacebook, projectID, start, end, model.AdReportsPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err

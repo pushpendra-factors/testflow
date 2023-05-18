@@ -13,24 +13,26 @@ import (
 // ExecuteUserKPIForAttribution Executes the KPI sub-query for Attribution
 func (store *MemSQL) ExecuteUserKPIForAttribution(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 	logCtx log.Entry, enableOptimisedFilterOnProfileQuery bool,
-	enableOptimisedFilterOnEventUserQuery bool) (map[string]model.KPIInfo, error) {
+	enableOptimisedFilterOnEventUserQuery bool) (map[string]model.KPIInfo, []string, []string, error) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	kpiData := make(map[string]model.KPIInfo)
 	var kpiKeys []string
+	var kpiHeaders []string
+	var kpiAggFunctionType []string
 	var err error
-	err, kpiKeys = store.RunUserKPIGroupQuery(projectID, query, &kpiData, enableOptimisedFilterOnProfileQuery,
+	err, kpiKeys, kpiHeaders, kpiAggFunctionType = store.RunUserKPIGroupQuery(projectID, query, &kpiData, enableOptimisedFilterOnProfileQuery,
 		enableOptimisedFilterOnEventUserQuery, debugQueryKey, logCtx)
 	if err != nil {
-		return kpiData, err
+		return kpiData, kpiHeaders, kpiAggFunctionType, err
 	}
 	logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
 		"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports after RunUserKPIGroupQuery")
 
 	err = store.AddCoalUserIDinKPIData(&kpiData)
 	if err != nil {
-		return kpiData, err
+		return kpiData, kpiHeaders, kpiAggFunctionType, err
 	}
 	if C.GetAttributionDebug() == 1 {
 		logCtx.Info("done pulling group user list ids for Deal or Opportunity")
@@ -39,35 +41,37 @@ func (store *MemSQL) ExecuteUserKPIForAttribution(projectID int64, query *model.
 	}
 	err = store.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
 	if err != nil {
-		return kpiData, err
+		return kpiData, kpiHeaders, kpiAggFunctionType, err
 	}
 	logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
 		"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports 2")
 
-	return kpiData, nil
+	return kpiData, kpiHeaders, kpiAggFunctionType, nil
 }
 
 // ExecuteUserKPIForAttributionV1 Executes the KPI sub-query for Attribution
 func (store *MemSQL) ExecuteUserKPIForAttributionV1(projectID int64, query *model.AttributionKPIQueries, from int64, to int64, debugQueryKey string,
 	logCtx log.Entry, enableOptimisedFilterOnProfileQuery bool,
-	enableOptimisedFilterOnEventUserQuery bool) (map[string]model.KPIInfo, error) {
+	enableOptimisedFilterOnEventUserQuery bool) (map[string]model.KPIInfo, []string, []string, error) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	kpiData := make(map[string]model.KPIInfo)
 	var kpiKeys []string
+	var kpiHeaders []string
+	var kpiAggFunctionType []string
 	var err error
-	err, kpiKeys = store.RunUserKPIGroupQueryV1(projectID, query, from, to, &kpiData, enableOptimisedFilterOnProfileQuery,
+	err, kpiKeys, kpiHeaders, kpiAggFunctionType = store.RunUserKPIGroupQueryV1(projectID, query, from, to, &kpiData, enableOptimisedFilterOnProfileQuery,
 		enableOptimisedFilterOnEventUserQuery, debugQueryKey, logCtx)
 	if err != nil {
-		return kpiData, err
+		return kpiData, kpiHeaders, kpiAggFunctionType, err
 	}
 	logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
 		"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports after RunUserKPIGroupQuery")
 
 	err = store.AddCoalUserIDinKPIData(&kpiData)
 	if err != nil {
-		return kpiData, err
+		return kpiData, kpiHeaders, kpiAggFunctionType, err
 	}
 	if C.GetAttributionDebug() == 1 {
 		logCtx.Info("done pulling group user list ids for Deal or Opportunity")
@@ -76,17 +80,17 @@ func (store *MemSQL) ExecuteUserKPIForAttributionV1(projectID int64, query *mode
 	}
 	err = store.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
 	if err != nil {
-		return kpiData, err
+		return kpiData, kpiHeaders, kpiAggFunctionType, err
 	}
 	logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
 		"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports 2")
 
-	return kpiData, nil
+	return kpiData, kpiHeaders, kpiAggFunctionType, nil
 }
 
 //RunUserKPIGroupQuery runs kpi group query and adds the result in kpiData
 func (store *MemSQL) RunUserKPIGroupQuery(projectID int64, query *model.AttributionQuery, kpiData *map[string]model.KPIInfo,
-	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) (error, []string) {
+	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) (error, []string, []string, []string) {
 
 	var kpiQueryResult model.QueryResult
 	if query.AnalyzeType == model.AnalyzeTypeUserKPI {
@@ -99,9 +103,9 @@ func (store *MemSQL) RunUserKPIGroupQuery(projectID int64, query *model.Attribut
 		if statusCode != http.StatusOK {
 			logCtx.WithField("err_code", statusCode).Error("failed to get userKPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
-				return errors.New("failed to get userKPI result for attribution query - StatusPartialContent"), nil
+				return errors.New("failed to get userKPI result for attribution query - StatusPartialContent"), nil, nil, nil
 			}
-			return errors.New("failed to get userKPI result for attribution query"), nil
+			return errors.New("failed to get userKPI result for attribution query"), nil, nil, nil
 		}
 		for _, res := range resultGroup {
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
@@ -113,17 +117,17 @@ func (store *MemSQL) RunUserKPIGroupQuery(projectID int64, query *model.Attribut
 		}
 		if kpiQueryResult.Headers == nil || len(kpiQueryResult.Headers) == 0 {
 			logCtx.Error("no-valid result for userKPI query")
-			return errors.New("no-valid result for userKPI query"), nil
+			return errors.New("no-valid result for userKPI query"), nil, nil, nil
 		}
-
-		return nil, store.GetDataFromUserKPIResult(kpiQueryResult, kpiData, query, logCtx)
+		kpiKeys, kpiHeaders, kpiAggFunctionType := store.GetDataFromKPIResult(projectID, kpiQueryResult, kpiData, query, logCtx)
+		return nil, kpiKeys, kpiHeaders, kpiAggFunctionType
 	}
-	return errors.New("not a valid type of query for userKPI Attribution"), nil
+	return errors.New("not a valid type of query for userKPI Attribution"), nil, nil, nil
 }
 
 //RunUserKPIGroupQueryV1 runs kpi group query and adds the result in kpiData
 func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.AttributionKPIQueries, from int64, to int64, kpiData *map[string]model.KPIInfo,
-	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) (error, []string) {
+	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) (error, []string, []string, []string) {
 
 	var kpiQueryResult model.QueryResult
 	if query.AnalyzeType == model.AnalyzeTypeUserKPI {
@@ -149,9 +153,9 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 		if statusCode != http.StatusOK {
 			logCtx.WithField("err_code", statusCode).Error("failed to get userKPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
-				return errors.New("failed to get userKPI result for attribution query - StatusPartialContent"), nil
+				return errors.New("failed to get userKPI result for attribution query - StatusPartialContent"), nil, nil, nil
 			}
-			return errors.New("failed to get userKPI result for attribution query"), nil
+			return errors.New("failed to get userKPI result for attribution query"), nil, nil, nil
 		}
 		for _, res := range resultGroup {
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
@@ -163,16 +167,16 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 		}
 		if kpiQueryResult.Headers == nil || len(kpiQueryResult.Headers) == 0 {
 			logCtx.Error("no-valid result for userKPI query")
-			return errors.New("no-valid result for userKPI query"), nil
+			return errors.New("no-valid result for userKPI query"), nil, nil, nil
 		}
-
-		return nil, store.GetDataFromUserKPIResultV1(kpiQueryResult, kpiData, from, to, logCtx)
+		kpiKeys, kpiHeaders, kpiAggFunctionType := store.GetDataFromUserKPIResultV1(kpiQueryResult, kpiData, from, to, logCtx)
+		return nil, kpiKeys, kpiHeaders, kpiAggFunctionType
 	}
-	return errors.New("not a valid type of query for userKPI Attribution"), nil
+	return errors.New("not a valid type of query for userKPI Attribution"), nil, nil, nil
 }
 
 // GetDataFromUserKPIResult adds values in kpiData from kpiQueryResult
-func (store *MemSQL) GetDataFromUserKPIResult(kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, query *model.AttributionQuery, logCtx log.Entry) []string {
+func (store *MemSQL) GetDataFromUserKPIResult(kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, query *model.AttributionQuery, logCtx log.Entry) ([]string, []string, []string) {
 
 	datetimeIdx := 0
 	keyIdx := 1
@@ -186,7 +190,7 @@ func (store *MemSQL) GetDataFromUserKPIResult(kpiQueryResult model.QueryResult, 
 	}
 
 	if len(kpiValueHeaders) == 0 {
-		return nil
+		return nil, nil, nil
 	}
 
 	for i := range kpiValueHeaders {
@@ -195,11 +199,12 @@ func (store *MemSQL) GetDataFromUserKPIResult(kpiQueryResult model.QueryResult, 
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
 	}
-	return model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, query.From, query.To, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
+	kpiKeys := model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, query.From, query.To, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
+	return kpiKeys, kpiValueHeaders, kpiAggFunctionType
 }
 
 // GetDataFromUserKPIResultV1 adds values in kpiData from kpiQueryResult
-func (store *MemSQL) GetDataFromUserKPIResultV1(kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, from int64, to int64, logCtx log.Entry) []string {
+func (store *MemSQL) GetDataFromUserKPIResultV1(kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, from int64, to int64, logCtx log.Entry) ([]string, []string, []string) {
 
 	datetimeIdx := 0
 	keyIdx := 1
@@ -213,7 +218,7 @@ func (store *MemSQL) GetDataFromUserKPIResultV1(kpiQueryResult model.QueryResult
 	}
 
 	if len(kpiValueHeaders) == 0 {
-		return nil
+		return nil, nil, nil
 	}
 
 	for i := range kpiValueHeaders {
@@ -222,7 +227,8 @@ func (store *MemSQL) GetDataFromUserKPIResultV1(kpiQueryResult model.QueryResult
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
 	}
-	return model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, from, to, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
+	kpiKeys := model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, from, to, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
+	return kpiKeys, kpiValueHeaders, kpiAggFunctionType
 }
 
 func (store *MemSQL) AddCoalUserIDinKPIData(kpiData *map[string]model.KPIInfo) error {

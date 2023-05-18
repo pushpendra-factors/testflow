@@ -5,7 +5,6 @@ import (
 	"errors"
 	cacheRedis "factors/cache/redis"
 	"fmt"
-	"sort"
 	"time"
 
 	U "factors/util"
@@ -24,10 +23,10 @@ const (
 	cacheExpiry         = 0
 	cacheCounterExpiry  = 24 * 60 * 60
 
-	// cachekey structure = ETA:pid:<project_id>:<alert_id>:<prop>:<value>:....:<UnixTime>
+	// cachekey structure = ETA:pid:<project_id>:<alert_id>:<UnixTime>
 	// cacheCounterKey structure = ETA:Counter:pid:<project_id>:<alert_id>:<YYYYMMDD>
 	// sortedset key structure = ETA:pid:<project_id>
-	// coolDownKeyCounter structure = ETA:CoolDown:pid:<project_id>:<alert_id>:<prop>:<value>:....:<UnixTime>
+	// coolDownKeyCounter structure = ETA:CoolDown:pid:<project_id>:<alert_id>:<prop>:<value>:....:
 )
 
 type EventTriggerAlert struct {
@@ -37,9 +36,11 @@ type EventTriggerAlert struct {
 	EventTriggerAlert        *postgres.Jsonb `json:"event_trigger_alert"`
 	CreatedBy                string          `gorm:"column:created_by" json:"created_by"`
 	SlackChannelAssociatedBy string          `gorm:"column:slack_channel_associated_by" json:"slack_channel_associated_by"`
+	TeamsChannelAssociatedBy string          `gorm:"column:teams_channel_associated_by" json:"teams_channel_associated_by"`
 	LastAlertAt              time.Time       `json:"last_alert_at"`
 	CreatedAt                time.Time       `gorm:"column:created_at; autoCreateTime" json:"created_at"`
 	UpdatedAt                time.Time       `gorm:"column:updated_at; autoUpdateTime" json:"updated_at"`
+	LastFailDetails          *postgres.Jsonb `gorm:"column:last_fail_details" json:"last_fail_details"`
 	IsDeleted                bool            `gorm:"column:is_deleted; not null; default:false" json:"is_deleted"`
 }
 
@@ -95,6 +96,12 @@ type MessagePropMapStruct struct {
 	PropValue   interface{}
 }
 
+type LastFailDetails struct {
+	FailTime time.Time `json:"fail_time"`
+	FailedAt string    `json:"failed_at"`
+	Details  string    `json:"details"`
+}
+
 func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTriggerAlert) error {
 	if cacheETA == nil {
 		log.Error("Nil cache event on setCacheUserLastEventTriggerAlert")
@@ -116,23 +123,10 @@ func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTrig
 	return err
 }
 
-func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string, breakdownProps *map[string]interface{}) (*cacheRedis.Key, error) {
+func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string) (*cacheRedis.Key, error) {
 
-	props := make([]string, 0, len(*breakdownProps))
-	for p := range *breakdownProps {
-		props = append(props, p)
-	}
-	sort.Strings(props)
-	suffix := alertID
-
-	for _, prop := range props {
-		suffix = fmt.Sprintf("%s:%s:%v", suffix, prop, (*breakdownProps)[prop])
-	}
-	suffix = fmt.Sprintf("%s:%d", suffix, timestamp)
-	log.Info(suffix)
+	suffix := fmt.Sprintf("%s:%d", alertID, timestamp)
 	prefix := prefixNameforAlerts
-
-	log.Info("Fetching redisKey, inside GetEventTriggerAlertCacheKey.")
 
 	key, err := cacheRedis.NewKey(projectId, prefix, suffix)
 	if err != nil || key == nil {

@@ -52,7 +52,7 @@ func BuildSequential(projectId int64, configs map[string]interface{}) (map[strin
 	hmineSupport := configs["hmineSupport"].(float32)
 	hmine_persist := configs["hminePersist"].(int)
 	hardPull := configs["hardPull"].(bool)
-	useBucketV2 := configs["useBucketV2"].(bool)
+	useSortedFilesMerge := configs["useSortedFilesMerge"].(bool)
 
 	createMetadata := configs["create_metadata"].(bool)
 	status := make(map[string]interface{})
@@ -84,7 +84,7 @@ func BuildSequential(projectId int64, configs map[string]interface{}) (map[strin
 	numChunks, err := PatternMine(db, etcdClient, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManager,
 		noOfPatternWorkers, projectId, modelId, modelType,
 		startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
-		beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2, false, false)
+		beamConfig, createMetadata, count_algo_props, hardPull, useSortedFilesMerge, false, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to mine patterns.")
 		status["error"] = "Failed to mine patterns."
@@ -121,7 +121,7 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 	hmineSupport := configs["hmineSupport"].(float32)
 	hmine_persist := configs["hminePersist"].(int)
 	hardPull := configs["hardPull"].(bool)
-	useBucketV2 := configs["useBucketV2"].(bool)
+	useSortedFilesMerge := configs["useSortedFilesMerge"].(bool)
 
 	createMetadata := configs["create_metadata"].(bool)
 	status := make(map[string]interface{})
@@ -197,12 +197,12 @@ func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[str
 		// numChunks, err := PatternMine(db, etcdClient, cloudManager, cloudManager, cloudManager, cloudManager, diskManger,
 		// 	noOfPatternWorkers, projectId, modelId, modelType,
 		// 	startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
-		// 	beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2)
+		// 	beamConfig, createMetadata, count_algo_props, hardPull,isTimeInProjectTimezone, checkDependency)
 
 		numChunks, err := PatternMine(db, etcdClient, archiveCloudManager, tmpCloudManager, sortedCloudManager, modelCloudManager, diskManger,
 			noOfPatternWorkers, projectId, modelId, modelType,
 			startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
-			beamConfig, createMetadata, count_algo_props, hardPull, useBucketV2, true, true)
+			beamConfig, createMetadata, count_algo_props, hardPull, useSortedFilesMerge, true, true)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to mine patterns.")
 			status["error"] = "Failed to mine patterns."

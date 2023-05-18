@@ -26,11 +26,11 @@ var FileType = map[string]int64{
 	M.BINGADS:        4,
 	M.LINKEDIN:       5,
 	M.GOOGLE_ORGANIC: 6,
-	"users":          7,
+	M.USERS:          7,
 }
 
-// pull events(with Hubspot and Salesforce) data into files, and upload each local file to its proper cloud location
-func PullEventsData(projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, splitRangeProjectIds []int64, noOfSplits int, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
+// check if add session job is completed, then pull events(with Hubspot and Salesforce) data into cloud files with proper logging
+func PullDataForEvents(projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, splitRangeProjectIds []int64, noOfSplits int, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
 
 	if yes, err := CheckIfAddSessionCompleted(projectId, endTimestampInProjectTimezone); !yes {
 		if err != nil {
@@ -43,24 +43,22 @@ func PullEventsData(projectId int64, cloudManager *filestore.FileManager, startT
 		return fmt.Errorf("add session job not completed"), false
 	}
 
-	logCtx.Info("Pulling events.")
-	// Writing events to tmp file before upload.
-	_, cName := (*cloudManager).GetDailyEventArchiveFilePathAndName(projectId, 0, startTimestamp, endTimestamp)
 	var splitRange bool = false
 	if U.ContainsInt64InArray(splitRangeProjectIds, projectId) {
 		splitRange = true
 	}
+
+	logCtx.Info("Pulling events.")
+	_, cName := (*cloudManager).GetDailyEventArchiveFilePathAndName(projectId, 0, startTimestamp, endTimestamp)
 	startAt := time.Now().UnixNano()
-	eventsCount, err := pullEvents(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, endTimestamp, splitRange, noOfSplits)
+	eventsCount, err := pullEventsData(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, endTimestamp, splitRange, noOfSplits)
 	if err != nil {
-		logCtx.WithField("error", err).Error("Pull events failed. Pull and write events failed.")
+		logCtx.WithError(err).Error("Pull events failed. Pull and write events failed.")
 		status["events-error"] = err.Error()
 		return err, false
 	}
 	timeTakenToPullEvents := (time.Now().UnixNano() - startAt) / 1000000
-	logCtx = logCtx.WithField("TimeTakenToPullEvents", timeTakenToPullEvents)
 
-	// Zero events. Returns eventCount as 0.
 	if eventsCount == 0 {
 		logCtx.Info("No events found.")
 		status["events-info"] = "No events found."
@@ -75,8 +73,8 @@ func PullEventsData(projectId int64, cloudManager *filestore.FileManager, startT
 	return nil, true
 }
 
-// pull event rows from db and generate local files w.r.t timestamp and return map with (key,value) as (timestamp,path)
-func pullEvents(projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64, splitRange bool, noOfSplits int) (int, error) {
+// pull events(rows) from db into cloud files
+func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64, splitRange bool, noOfSplits int) (int, error) {
 
 	var firstEventTimestamp, lastEventTimestamp int64
 	var writerMap = make(map[int64]*io.WriteCloser)
@@ -106,7 +104,7 @@ func pullEvents(projectID int64, startTimeTimezone, endTimeTimezone int64, fileN
 		startSplit = []int64{startTimeTimezone}
 		endSplit = []int64{endTimeTimezone}
 	}
-	for i, _ := range startSplit {
+	for i := range startSplit {
 		pullStartTime := startSplit[i]
 		pullEndTime := endSplit[i]
 		log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime}).Infof("Executing split %d out of %d", i+1, len(startSplit))
@@ -124,12 +122,28 @@ func pullEvents(projectID int64, startTimeTimezone, endTimeTimezone int64, fileN
 			var eventCardinality uint
 			var eventProperties *postgres.Jsonb
 			var userProperties *postgres.Jsonb
+			var is_group_user bool
 			var group_1_user_id_null sql.NullString
 			var group_2_user_id_null sql.NullString
 			var group_3_user_id_null sql.NullString
 			var group_4_user_id_null sql.NullString
+			var group_5_user_id_null sql.NullString
+			var group_6_user_id_null sql.NullString
+			var group_7_user_id_null sql.NullString
+			var group_8_user_id_null sql.NullString
+			var group_1_id_null sql.NullString
+			var group_2_id_null sql.NullString
+			var group_3_id_null sql.NullString
+			var group_4_id_null sql.NullString
+			var group_5_id_null sql.NullString
+			var group_6_id_null sql.NullString
+			var group_7_id_null sql.NullString
+			var group_8_id_null sql.NullString
 			if err = rows.Scan(&userID, &eventName, &eventTimestamp, &eventCardinality, &eventProperties, &userJoinTimestamp, &userProperties,
-				&group_1_user_id_null, &group_2_user_id_null, &group_3_user_id_null, &group_4_user_id_null); err != nil {
+				&is_group_user, &group_1_user_id_null, &group_2_user_id_null, &group_3_user_id_null, &group_4_user_id_null,
+				&group_5_user_id_null, &group_6_user_id_null, &group_7_user_id_null, &group_8_user_id_null,
+				&group_1_id_null, &group_2_id_null, &group_3_id_null, &group_4_id_null,
+				&group_5_id_null, &group_6_id_null, &group_7_id_null, &group_8_id_null); err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
 				return 0, err
 			}
@@ -184,6 +198,19 @@ func pullEvents(projectID int64, startTimeTimezone, endTimeTimezone int64, fileN
 			group_2_user_id := U.IfThenElse(group_2_user_id_null.Valid, group_2_user_id_null.String, "").(string)
 			group_3_user_id := U.IfThenElse(group_3_user_id_null.Valid, group_3_user_id_null.String, "").(string)
 			group_4_user_id := U.IfThenElse(group_4_user_id_null.Valid, group_4_user_id_null.String, "").(string)
+			group_5_user_id := U.IfThenElse(group_5_user_id_null.Valid, group_5_user_id_null.String, "").(string)
+			group_6_user_id := U.IfThenElse(group_6_user_id_null.Valid, group_6_user_id_null.String, "").(string)
+			group_7_user_id := U.IfThenElse(group_7_user_id_null.Valid, group_7_user_id_null.String, "").(string)
+			group_8_user_id := U.IfThenElse(group_8_user_id_null.Valid, group_8_user_id_null.String, "").(string)
+
+			group_1_id := U.IfThenElse(group_1_id_null.Valid, group_1_id_null.String, "").(string)
+			group_2_id := U.IfThenElse(group_2_id_null.Valid, group_2_id_null.String, "").(string)
+			group_3_id := U.IfThenElse(group_3_id_null.Valid, group_3_id_null.String, "").(string)
+			group_4_id := U.IfThenElse(group_4_id_null.Valid, group_4_id_null.String, "").(string)
+			group_5_id := U.IfThenElse(group_5_id_null.Valid, group_5_id_null.String, "").(string)
+			group_6_id := U.IfThenElse(group_6_id_null.Valid, group_6_id_null.String, "").(string)
+			group_7_id := U.IfThenElse(group_7_id_null.Valid, group_7_id_null.String, "").(string)
+			group_8_id := U.IfThenElse(group_8_id_null.Valid, group_8_id_null.String, "").(string)
 
 			event := P.CounterEventFormat{
 				UserId:            userID,
@@ -193,10 +220,23 @@ func pullEvents(projectID int64, startTimeTimezone, endTimeTimezone int64, fileN
 				EventCardinality:  eventCardinality,
 				EventProperties:   eventPropertiesMap,
 				UserProperties:    userPropertiesMap,
+				IsGroupUser:       is_group_user,
 				Group1UserId:      group_1_user_id,
 				Group2UserId:      group_2_user_id,
 				Group3UserId:      group_3_user_id,
 				Group4UserId:      group_4_user_id,
+				Group5UserId:      group_5_user_id,
+				Group6UserId:      group_6_user_id,
+				Group7UserId:      group_7_user_id,
+				Group8UserId:      group_8_user_id,
+				Group1Id:          group_1_id,
+				Group2Id:          group_2_id,
+				Group3Id:          group_3_id,
+				Group4Id:          group_4_id,
+				Group5Id:          group_5_id,
+				Group6Id:          group_6_id,
+				Group7Id:          group_7_id,
+				Group8Id:          group_8_id,
 			}
 
 			if rowCount == 0 && i == 0 {

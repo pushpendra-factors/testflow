@@ -22,6 +22,141 @@ import (
 const mergeDependencyTaskName = "PullEventsDaily"
 const mergeDependencyOffset = 2
 
+type sortedFileInfo struct {
+	name       string
+	dir        string
+	startDay   time.Time
+	endDay     time.Time
+	daysToSkip int
+}
+
+type partFileInfo struct {
+	name               string
+	dir                string
+	startUserIndex     int
+	endUserIndex       int
+	fileTimestampIndex int
+	writer             *io.WriteCloser
+}
+
+func createDataFileFromSortedFiles(projectId int64, fileNamePrefix string, sorted_cloud_dir, sorted_cloud_name string, startTimestamp, endTimestamp int64, cloudManager *filestore.FileManager) (int64, bool, error) {
+	var numLines int64
+	// var fileCreated bool
+	var reqFile *sortedFileInfo
+	{
+		tmp := 1
+		if strings.HasSuffix(sorted_cloud_dir, "/") {
+			tmp++
+		}
+		sortedCloudDirSplit := strings.Split(sorted_cloud_dir, "/")
+		dataTypeDir := strings.Join(sortedCloudDirSplit[0:len(sortedCloudDirSplit)-tmp], "/") + "/"
+		listAllFiles := (*cloudManager).ListFiles(dataTypeDir)
+		log.Info("listDirs: %v", listAllFiles)
+		endDateStr := U.GetDateOnlyFromTimestampZ(endTimestamp)
+		endDate, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, endDateStr)
+		if err != nil {
+			log.WithError(err).WithFields(log.Fields{"endDateStr": endDateStr}).Error("error parsing endDate")
+			return 0, false, err
+		}
+		startDateStr := U.GetDateOnlyFromTimestampZ(startTimestamp)
+		startDate, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, startDateStr)
+		if err != nil {
+			log.WithError(err).WithFields(log.Fields{"startDateStr": startDateStr}).Error("error parsing startDate")
+			return 0, false, err
+		}
+
+		for _, filePath := range listAllFiles {
+			fNamelist := strings.Split(filePath, "/")
+			fileName := fNamelist[len(fNamelist)-1]
+			fileDir := strings.Join(fNamelist[0:len(fNamelist)-1], "/") + "/"
+			if !strings.HasPrefix(fileName, fileNamePrefix) {
+				continue
+			}
+			fileNameSplit := strings.Split(fileName, "_")
+			startAndEndDateTxt := fileNameSplit[len(fileNameSplit)-1]
+			startAndEndDate := strings.Replace(startAndEndDateTxt, ".txt", "", 1)
+			startAndEndDateSplit := strings.Split(startAndEndDate, "-")
+			fileStartDateStr := startAndEndDateSplit[0]
+			fileStartDate, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, fileStartDateStr)
+			if err != nil {
+				log.WithError(err).WithFields(log.Fields{"startDateStr": fileStartDateStr, "fileName": fileName}).Error("error parsing file startDate")
+				continue
+			}
+			fileEndDateStr := startAndEndDateSplit[1]
+			fileEndDate, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, fileEndDateStr)
+			if err != nil {
+				log.WithError(err).WithFields(log.Fields{"endDateStr": fileEndDateStr, "fileName": fileName}).Error("error parsing file endDate")
+				continue
+			}
+			if !(fileStartDate.After(startDate) || fileEndDate.Before(endDate)) {
+				filesDaysToSkip := (int(fileEndDate.Sub(endDate).Hours()) / 24) + (int(startDate.Sub(fileStartDate).Hours()) / 24)
+				if (reqFile == nil || reqFile.daysToSkip > filesDaysToSkip) && filesDaysToSkip > 0 {
+					fileInfo := sortedFileInfo{fileName, fileDir, fileStartDate, fileEndDate, filesDaysToSkip}
+					reqFile = &fileInfo
+				}
+			}
+		}
+	}
+
+	if reqFile != nil {
+		cloudWriter, err := (*cloudManager).GetWriter(sorted_cloud_dir, sorted_cloud_name)
+		if err != nil {
+			log.WithFields(log.Fields{"fileDir": sorted_cloud_dir, "fileName": sorted_cloud_name}).Error("unable to get writer for file")
+			return 0, false, err
+		}
+		projectDetails, _ := store.GetStore().GetProject(projectId)
+		startTimestampInProjectTimezone := startTimestamp
+		endTimestampInProjectTimezone := endTimestamp
+		if projectDetails.TimeZone != "" {
+			// Input time is in UTC. We need the same time in the other timezone
+			// if 2021-08-30 00:00:00 is UTC then we need the epoch equivalent in 2021-08-30 00:00:00 IST(project time zone)
+			offset := U.FindOffsetInUTC(U.TimeZoneString(projectDetails.TimeZone))
+			startTimestampInProjectTimezone = startTimestamp - int64(offset)
+			endTimestampInProjectTimezone = endTimestamp - int64(offset)
+		}
+		log.WithFields(log.Fields{"fileDir": reqFile.dir, "fileName": reqFile.name}).Info("Reading file")
+		reader, err := (*cloudManager).Get(reqFile.dir, reqFile.name)
+		if err != nil {
+			log.WithFields(log.Fields{"fileDir": reqFile.dir, "fileName": reqFile.name}).Error("error reading file")
+			return 0, false, err
+		}
+		defer reader.Close()
+
+		scanner := bufio.NewScanner(reader)
+		const maxCapacity = 30 * 1024 * 1024
+		buf := make([]byte, maxCapacity)
+		scanner.Buffer(buf, maxCapacity)
+		for scanner.Scan() {
+
+			line := scanner.Text()
+
+			var eventDetails P.CounterEventFormat
+			if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
+				log.WithFields(log.Fields{"line": line, "err": err}).Error("Unmarshal failed")
+				return numLines, false, err
+			}
+
+			if eventDetails.EventTimestamp < startTimestampInProjectTimezone || eventDetails.EventTimestamp > endTimestampInProjectTimezone {
+				continue
+			}
+
+			_, err = io.WriteString(cloudWriter, line+"\n")
+			if err != nil {
+				log.WithError(err).WithFields(log.Fields{"line": line, "fileDir": sorted_cloud_dir, "fileName": sorted_cloud_dir}).Error("Unable to write to file")
+				return numLines, false, err
+			}
+			numLines++
+		}
+		err = cloudWriter.Close()
+		if err != nil {
+			log.WithError(err).WithFields(log.Fields{"fileDir": sorted_cloud_dir, "fileName": sorted_cloud_dir}).Error("Unable to close writer")
+			return numLines, false, err
+		}
+		return numLines, true, nil
+	}
+	return 0, false, nil
+}
+
 func getApproxFileSize(dataType, fileNamePrefix string, projectId, startTimestamp, endTimestamp int64, cloudManager *filestore.FileManager) (int, error) {
 	var totalFileSize int
 	timestamp := startTimestamp
@@ -82,7 +217,12 @@ func checkDependencyForEventsFile(projectId int64, startTimestamp, endTimestamp 
 // beamConfig - pass beam configs to sort using beam
 // timestampsInProjectTimezone - whether timestamps are in utc or project's timezone
 func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield string, startTimestamp, endTimestamp int64,
-	archiveCloudManager, tmpCloudManager, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, beamConfig *RunBeamConfig, hardPull bool, sortOnGroup int, timestampsInProjectTimezone, checkDependency bool) (string, string, error) {
+	archiveCloudManager, tmpCloudManager, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, beamConfig *RunBeamConfig, hardPull bool, sortOnGroup int, useSortedFiles, timestampsInProjectTimezone, checkDependency bool) (string, string, error) {
+
+	if dataType != U.DataTypeEvent && channelOrDatefield == "" {
+		log.Error("merge failed as channelOrDatefield is empty")
+		return "", "", fmt.Errorf("empty channelOrDatefield")
+	}
 
 	if timestampsInProjectTimezone {
 		projectDetails, _ := store.GetStore().GetProject(projectId)
@@ -97,6 +237,7 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 	var err error
 	startDayTimestamp := U.GetBeginningOfDayTimestamp(startTimestamp)
 	endDayTimestamp := U.GetBeginningOfDayTimestamp(endTimestamp)
+
 	if checkDependency && dataType == U.DataTypeEvent {
 		if ok, err := checkDependencyForEventsFile(projectId, startDayTimestamp, endDayTimestamp); !ok {
 			if err != nil {
@@ -105,10 +246,6 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 			}
 			return "", "", fmt.Errorf("%s not completed for given range", mergeDependencyTaskName)
 		}
-	}
-	if dataType != U.DataTypeEvent && channelOrDatefield == "" {
-		log.Error("merge failed as channelOrDatefield is empty")
-		return "", "", fmt.Errorf("empty channelOrDatefield")
 	}
 
 	sorted_cloud_dir, sorted_cloud_name := GetSortedFilePathAndName(*cloudManager, dataType, channelOrDatefield, projectId, startDayTimestamp, endDayTimestamp, sortOnGroup)
@@ -126,7 +263,17 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 		fileNamePrefix = channelOrDatefield
 	}
 
-	approxFileSize, err := getApproxFileSize(dataType, fileNamePrefix, projectId, startTimestamp, endTimestamp, archiveCloudManager)
+	if useSortedFiles {
+		if numLines, ok, err := createDataFileFromSortedFiles(projectId, fileNamePrefix, sorted_cloud_dir, sorted_cloud_name, startDayTimestamp, endDayTimestamp, cloudManager); err != nil {
+			log.WithError(err).Error("error in creating file using sorted files")
+			return sorted_cloud_dir, sorted_cloud_name, err
+		} else if ok {
+			log.Info("created file using existing sorted files - numLines: ", numLines)
+			return sorted_cloud_dir, sorted_cloud_name, nil
+		}
+	}
+
+	approxFileSize, err := getApproxFileSize(dataType, fileNamePrefix, projectId, startDayTimestamp, endDayTimestamp, archiveCloudManager)
 	if err != nil {
 		log.WithError(err).Error("unable to get approx file size")
 		return sorted_cloud_dir, sorted_cloud_name, err
@@ -139,11 +286,11 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 
 	var unsortedLinesCount int
 	var indexMap map[string]int64
-	var startToEndIndex map[int]int
+	var startIndexToFileInfoMap = make(map[int][]*partFileInfo)
 	var unsorted_cloud_dir, unsorted_cloud_name string
 	if useBeam {
 		batchSize := beamConfig.NumWorker
-		startToEndIndex, indexMap, unsortedLinesCount, err = ReadAndMergeDailyFilesForBeam(projectId, dataType, fileNamePrefix, startDayTimestamp, endDayTimestamp, archiveCloudManager, tmpCloudManager, sortOnGroup, batchSize)
+		startIndexToFileInfoMap, indexMap, unsortedLinesCount, err = ReadAndMergeDailyFilesForBeam(projectId, dataType, fileNamePrefix, startDayTimestamp, endDayTimestamp, archiveCloudManager, tmpCloudManager, sortOnGroup, batchSize)
 		if err != nil {
 			log.WithError(err).Error("unable to read daily part files and merge")
 			return sorted_cloud_dir, sorted_cloud_name, err
@@ -165,7 +312,7 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 
 	var sortedLinesCount int
 	if useBeam {
-		sortedLinesCount, err = SortDataOnBeam(projectId, dataType, channelOrDatefield, startToEndIndex, indexMap, beamConfig, sorted_cloud_dir, sorted_cloud_name,
+		sortedLinesCount, err = SortDataOnBeam(projectId, dataType, channelOrDatefield, startIndexToFileInfoMap, indexMap, beamConfig, sorted_cloud_dir, sorted_cloud_name,
 			tmpCloudManager, cloudManager, diskManager, startDayTimestamp, endDayTimestamp, sortOnGroup)
 		if err != nil {
 			log.WithError(err).Error("error sorting (beam)")
@@ -189,16 +336,14 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 	return sorted_cloud_dir, sorted_cloud_name, nil
 }
 
-// read daily data files from cloud between startTimestamp and endTimestamp, merge all and create merged file locally at local_dir+unsortedFileName, also
-// get userIdMap,countLines as output
+// read daily data files from cloud between startTimestamp and endTimestamp, merge all and create merged file in cloud at unsortedDir+unsortedFileName, also
+// get countLines as output
 //
 // OUTPUTS
-// userIdMap - (all ids present in merged file as keys and value 1) for use when sorting in beam afterwards (get docTypes as keys for ad_reports)
 // countLines - number of lines in merged file
 //
 // INPUTS
 // dataType - events, ad_reports or users,
-// sortOnGroup - decides which id to get for events dataType(0:uid, i:group_i_id),
 // fileNamePrefix - all daily files only with this prefix are read (give "events" for events, channel name for ad_reports and dateField for users),
 // getIdMap - whether to generate userIdMap
 func ReadAndMergeDailyFiles(projectId int64, dataType, fileNamePrefix string, unsortedDir, unsortedFileName string, startTimestamp, endTimestamp int64,

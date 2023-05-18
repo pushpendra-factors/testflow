@@ -106,7 +106,7 @@ func getDoctypeFromFile(channel string, ctx context.Context, projectId int64, cl
 }
 
 // read unsorted channel file from cloud, pass some docTypes to a worker, workers sort ad reports for the alloted docType and upload sorted part files
-func Pull_channel_beam_controller(projectId int64, channel string, startToEndIndex map[int]int, beamStruct *RunBeamConfig,
+func Pull_channel_beam_controller(projectId int64, channel string, startIndexToFileInfoMap map[int][]*partFileInfo, beamStruct *RunBeamConfig,
 	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTime, endTime int64) error {
 
 	log.Infof(" Sorting pull %s in beam Project Id :%d", channel, projectId)
@@ -114,17 +114,18 @@ func Pull_channel_beam_controller(projectId int64, channel string, startToEndInd
 
 	bucketName := (*cloudManager).GetBucketName()
 
-	for low, high := range startToEndIndex {
-		// Each worker gets a docType to sort.
-		tmp := CUserIdsBeam{projectId, int64(low), int64(high), bucketName, "", beamStruct.Env, startTime, endTime, channel, 0}
+	for low, fileInfoList := range startIndexToFileInfoMap {
+		for _, fileInfo := range fileInfoList {
+			// Each worker gets a docType to sort.
+			tmp := CUserIdsBeam{projectId, int64(low), int64(fileInfo.endUserIndex), fileInfo.fileTimestampIndex, bucketName, "", beamStruct.Env, startTime, endTime, channel, 0}
 
-		t, err := json.Marshal(tmp)
-		if err != nil {
-			return fmt.Errorf("unable to encode string : %v", err)
+			t, err := json.Marshal(tmp)
+			if err != nil {
+				return fmt.Errorf("unable to encode string : %v", err)
+			}
+			docTypesBeamString = append(docTypesBeamString, string(t))
 		}
-		docTypesBeamString = append(docTypesBeamString, string(t))
 	}
-
 	err := SortDoctypesExecutor(beamStruct, docTypesBeamString)
 	if err != nil {
 		return err
@@ -193,6 +194,7 @@ func (f *SortAdDoFn) ProcessElement(ctx context.Context, cpString string) error 
 	projectId := up.ProjectID
 	lowNum := up.LowNum
 	highNum := up.HighNum
+	fileTimeIndex := up.FileTimeIndex
 	startTime := up.StartTime
 	endTime := up.EndTime
 	bucketName := up.BucketName
@@ -213,7 +215,7 @@ func (f *SortAdDoFn) ProcessElement(ctx context.Context, cpString string) error 
 		}
 	}
 
-	err = downloadAndSortChannelFile(channel, ctx, projectId, &cloudManager, startTime, endTime, lowNum)
+	err = downloadAndSortChannelFile(channel, ctx, projectId, &cloudManager, startTime, endTime, lowNum, fileTimeIndex)
 	if err != nil {
 		return err
 	}
@@ -222,12 +224,12 @@ func (f *SortAdDoFn) ProcessElement(ctx context.Context, cpString string) error 
 
 // read unsorted file, get ad reports with given docType, sort and upload sorted part file to cloud
 func downloadAndSortChannelFile(channel string, ctx context.Context, projectId int64, cloudManager *filestore.FileManager, startTime, endTime int64,
-	docTypeIndex int64) error {
+	docTypeIndex int64, fileTimeIndex int) error {
 
 	beamlog.Infof(ctx, "Downloading and sorting events file")
 	adReports := make([]*pull.CounterCampaignFormat, 0)
 
-	cDir, cName := (*cloudManager).GetChannelPartFilePathAndName(channel, projectId, startTime, endTime, false, int(docTypeIndex))
+	cDir, cName := (*cloudManager).GetChannelPartFilePathAndName(channel, projectId, startTime, endTime, false, int(docTypeIndex), fileTimeIndex)
 	rc, err := (*cloudManager).Get(cDir, cName)
 	if err != nil {
 		return fmt.Errorf("unable to get file from cloud :%v", err)
@@ -255,7 +257,7 @@ func downloadAndSortChannelFile(channel string, ctx context.Context, projectId i
 		beamlog.Errorf(ctx, "unable to close events file from gcp :%v", err)
 	}
 
-	cDir, cName = (*cloudManager).GetChannelPartFilePathAndName(channel, projectId, startTime, endTime, true, int(docTypeIndex))
+	cDir, cName = (*cloudManager).GetChannelPartFilePathAndName(channel, projectId, startTime, endTime, true, int(docTypeIndex), fileTimeIndex)
 	cloudWriter, err := (*cloudManager).GetWriter(cDir, cName)
 	if err != nil {
 		beamlog.Error(ctx, "Failed to pull events. Upload failed.")
@@ -276,7 +278,7 @@ func downloadAndSortChannelFile(channel string, ctx context.Context, projectId i
 	return nil
 }
 
-// merge all sorted part files to create one sorted file
+// read all sorted part files from cloud and merge to create one sorted file in cloud
 func ReadAndMergeChannelPartFiles(projectId int64, partsDir string, sortedDir string, sortedName string,
 	tmpCloudManager, sortedCloudManager *filestore.FileManager) (int, error) {
 	var countLines int
@@ -287,24 +289,29 @@ func ReadAndMergeChannelPartFiles(projectId int64, partsDir string, sortedDir st
 		return 0, err
 	}
 
-	log.Infof("Merging partFiles:%d", projectId)
+	log.Infof("Merging partFiles for project: %d", projectId)
 	listFiles := (*tmpCloudManager).ListFiles(partsDir)
-	fileNames := make([]string, 0)
+	filesInfo := make([]fileNameSortInfo, 0)
 	for _, partFileFullName := range listFiles {
 		partFNamelist := strings.Split(partFileFullName, "/")
 		partFileName := partFNamelist[len(partFNamelist)-1]
-		fileNames = append(fileNames, partFileName)
+		fileNameArr := strings.SplitN(partFileName, "_", 2)
+		docType, _ := strconv.ParseInt(fileNameArr[0], 10, 64)
+		filesInfo = append(filesInfo, fileNameSortInfo{fileName: partFileName, sortIndices: []int64{docType}})
 	}
-	sort.Slice(fileNames, func(i, j int) bool {
-		fileNameArr := strings.SplitN(fileNames[i], "_", 2)
-		docType_i, _ := strconv.ParseInt(fileNameArr[0], 10, 64)
-		fileNameArr = strings.SplitN(fileNames[j], "_", 2)
-		docType_j, _ := strconv.ParseInt(fileNameArr[0], 10, 64)
-		return docType_i <= docType_j
+	sort.Slice(filesInfo, func(i, j int) bool {
+		for k := range filesInfo[i].sortIndices {
+			if filesInfo[i].sortIndices[k] == filesInfo[j].sortIndices[k] {
+				continue
+			}
+			return filesInfo[i].sortIndices[k] < filesInfo[j].sortIndices[k]
+		}
+		return false
 	})
 
-	for _, partFileName := range fileNames {
+	for _, partFileInfo := range filesInfo {
 
+		partFileName := partFileInfo.fileName
 		log.Infof("Reading part file :%s, %s", partsDir, partFileName)
 		file, err := (*tmpCloudManager).Get(partsDir, partFileName)
 		if err != nil {

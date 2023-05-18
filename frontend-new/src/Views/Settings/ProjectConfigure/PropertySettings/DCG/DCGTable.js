@@ -90,14 +90,22 @@ const DCGTable = ({
                   <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mr-1"}>{item.logical_operator}</Text>
                   }
                   <Tag>{`${item.property} ${returnSymbols(item.condition)} ${item.value}`}</Tag> */}
-                <Tag>{`${matchEventName(item?.props[0])} ${
-                  item?.operator
-                } ${_.join(
-                  item?.values.map((vl) =>
-                    DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
-                  ),
-                  [', ']
-                )}`}</Tag>
+                <Button type='default'>
+                  <Text
+                    type={'title'}
+                    weight={'thin'}
+                    color={'grey'}
+                    level={8}
+                    truncate
+                  >{`${matchEventName(item?.props[0])} ${
+                    item?.operator
+                  } ${_.join(
+                    item?.values.map((vl) =>
+                      DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
+                    ),
+                    [', ']
+                  )}`}</Text>
+                </Button>
                 {queryMap.length != index + 1 && (
                   <Text
                     type={'title'}

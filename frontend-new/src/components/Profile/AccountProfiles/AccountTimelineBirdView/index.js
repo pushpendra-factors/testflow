@@ -20,7 +20,6 @@ import { useSelector } from 'react-redux';
 function AccountTimelineBirdView({
   timelineEvents = [],
   timelineUsers = [],
-  milestones,
   granularity,
   collapseAll,
   setCollapseAll,
@@ -59,36 +58,40 @@ function AccountTimelineBirdView({
     const eventIcon = eventIconsColorMap[event.icon]
       ? event.icon
       : 'calendar-star';
+    const { borderColor, bgColor } = eventIconsColorMap[eventIcon] || {};
+    const isTrackedUser = event.user === 'new_user';
+    const iconContent = isTrackedUser ? (
+      <SVG name={`TrackedUser${event.id.match(/\d/g)[0]}`} size={20} />
+    ) : (
+      <img
+        src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
+        alt=''
+        height={16}
+        width={16}
+        loading='lazy'
+      />
+    );
+
     return (
       <div
         className='icon'
-        style={{
-          '--border-color': `${eventIconsColorMap[eventIcon]?.borderColor}`,
-          '--bg-color': `${eventIconsColorMap[eventIcon]?.bgColor}`
-        }}
+        style={{ '--border-color': borderColor, '--bg-color': bgColor }}
       >
-        <img
-          src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
-          alt=''
-          height={16}
-          width={16}
-          loading='lazy'
-        />
+        {iconContent}
       </div>
     );
   };
 
   const renderInfoCard = (event) => {
-    const eventName = event.alias_name
-      ? event.alias_name
-      : event.display_name !== 'Page View'
-      ? PropTextFormat(event.display_name)
-      : event.event_name;
+    const eventName =
+      event.alias_name ||
+      (event.display_name !== 'Page View' &&
+        PropTextFormat(event.display_name)) ||
+      event.event_name;
     const hoverConditionals =
       hoverEvents.includes(event.event_name) ||
       event.display_name === 'Page View' ||
-      event.event_type === 'CH' ||
-      event.event_type === 'CS';
+      ['CH', 'CS'].includes(event.event_type);
     const category = getEventCategory(event, eventNamesMap);
     const icon = getIconForCategory(category);
 
@@ -170,26 +173,29 @@ function AccountTimelineBirdView({
               <th scope='col' className='truncate'>
                 <div className='inline-flex gap--8 items-center'>
                   {user?.isAnonymous ? (
-                    <SVG
-                      name={`TrackedUser${user.title.match(/\d/g)[0]}`}
-                      size={32}
-                    />
+                    <SVG name='TrackedUser1' size={32} />
                   ) : (
                     <Avatar
                       size={32}
                       className='userlist-avatar'
                       style={{
                         backgroundColor: `${
-                          iconColors[
-                            ALPHANUMSTR.indexOf(
-                              user.title.charAt(0).toUpperCase()
-                            ) % 8
-                          ]
+                          user?.title === 'Channel Activity'
+                            ? '#BAE7FF'
+                            : iconColors[
+                                ALPHANUMSTR.indexOf(
+                                  user.title.charAt(0).toUpperCase()
+                                ) % 8
+                              ]
                         }`,
                         fontSize: '16px'
                       }}
                     >
-                      {user.title.charAt(0).toUpperCase()}
+                      {user?.title === 'Channel Activity' ? (
+                        <SVG name='focus' size={20} />
+                      ) : (
+                        user.title.charAt(0).toUpperCase()
+                      )}
                     </Avatar>
                   )}
                   <div className='flex items-start flex-col'>

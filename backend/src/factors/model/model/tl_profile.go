@@ -15,6 +15,8 @@ type Profile struct {
 	IsAnonymous  bool                   `json:"is_anonymous"`
 	LastActivity time.Time              `json:"last_activity"`
 	TableProps   map[string]interface{} `json:"table_props"`
+	Score        float64                `json:"score"`
+	Engagement   string                 `json:"engagement"`
 }
 
 type ContactDetails struct {
@@ -87,6 +89,9 @@ type UserTimeline struct {
 // Constants
 const PROFILE_TYPE_USER = "user"
 const PROFILE_TYPE_ACCOUNT = "account"
+const COLUMN_NAME_ID = "id"
+const COLUMN_NAME_CUSTOMER_USER_ID = "customer_user_id"
+const GROUP_ACTIVITY_USERNAME = "Channel Activity"
 
 // Profile type for Segment Events
 const USER_PROFILE_CALLER = "user_profiles"

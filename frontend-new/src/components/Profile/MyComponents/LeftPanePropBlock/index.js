@@ -3,13 +3,7 @@ import React from 'react';
 import { Text, SVG } from '../../../factorsComponents';
 import { propValueFormat } from '../../utils';
 
-function LeftPanePropBlock({
-  property,
-  type,
-  displayName,
-  value = 0,
-  onDelete
-}) {
+function LeftPanePropBlock({ property, type, displayName, value, onDelete }) {
   return (
     <div className='leftpane-prop'>
       <div className='flex flex-col items-start truncate'>
@@ -24,7 +18,7 @@ function LeftPanePropBlock({
           {`${displayName}:`}
         </Text>
         <Text type='title' level={7} truncate charLimit={25} extraClass='m-0'>
-          {propValueFormat(property, value, type)}
+          {value ? propValueFormat(property, value, type) : '-'}
         </Text>
       </div>
 

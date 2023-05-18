@@ -117,17 +117,16 @@ func PullUsersDataForCustomMetrics(projectId int64, cloudManager *filestore.File
 	return nil, true
 }
 
-// pull users data for given datefield into files, and upload each local file to its proper cloud location
+// pull users data for a datefield into cloud files with proper logging
 func pullDataForUsers(projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64,
 	dateField string, source int, group int, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
 
 	logCtx.Infof("Pulling users for %s", dateField)
 
-	// Writing users data to tmp file before upload.
 	_, cName := (*cloudManager).GetDailyUsersArchiveFilePathAndName(dateField, projectId, 0, startTimestamp, endTimestamp)
 	startAt := time.Now().UnixNano()
 
-	count, err := pullUsersData(dateField, source, group, projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, endTimestamp)
+	count, err := pullUsersDataFromDB(dateField, source, group, projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, endTimestamp)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Pull users failed for" + dateField + ". Pull and write failed.")
 		status["users-"+dateField+"-error"] = err.Error()
@@ -137,7 +136,6 @@ func pullDataForUsers(projectId int64, cloudManager *filestore.FileManager, star
 
 	status["users-RowsCount"] = count
 	status["users-TimeTakenToPull"] = timeTaken
-	// Zero events. Returns eventCount as 0.
 	if count == 0 {
 		logCtx.Info("No users data found for " + dateField)
 		status["users-"+dateField+"-info"] = "No users data found."
@@ -147,8 +145,8 @@ func pullDataForUsers(projectId int64, cloudManager *filestore.FileManager, star
 	return nil, true
 }
 
-// pull user rows from db and generate local files w.r.t timestamp and return map with (key,value) as (timestamp,path)
-func pullUsersData(dateField string, source int, group int, projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64) (int, error) {
+// pull users(rows) for a datefield from db into cloud files
+func pullUsersDataFromDB(dateField string, source int, group int, projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64) (int, error) {
 
 	rows, tx, err := store.GetStore().PullUsersRowsForWIV2(projectID, startTimeTimezone, endTimeTimezone, dateField, source, group)
 	if err != nil {

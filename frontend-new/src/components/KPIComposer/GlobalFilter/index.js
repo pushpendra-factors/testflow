@@ -81,7 +81,7 @@ const GLobalFilter = ({
         if(filtersGr.length == 1){
           const filt = filtersGr[0]; 
         filtrs.push(
-          <div className={'fa--query_block--filters flex flex-row'}>
+          <div className={`fa--query_block--filters flex flex-wrap`}>
             <div key={index} className={`mt-2`}>
               <GlobalFilterBlock
                 isSameKPIGrp={isSameKPIGrp}
@@ -132,7 +132,7 @@ const GLobalFilter = ({
         index+=1;
     }else{
       filtrs.push(
-        <div className={'fa--query_block--filters flex flex-row'}>
+        <div className={'fa--query_block--filters flex flex-wrap'}>
           <div key={index} className={`mt-2`}>
               <GlobalFilterBlock
                 isSameKPIGrp={isSameKPIGrp}

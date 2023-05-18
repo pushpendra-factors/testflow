@@ -193,3 +193,13 @@ padding-top: 15px;
 }
 }
  
+
+
+.fa-sankey-timeline--custom{
+  .fa-sankey-timeline--dashed{
+    height: 50px;
+    border-left: 2px dashed $fa-color--mono-4;
+    padding-left: 15px;
+    margin: 4px 6px;
+  }
+}

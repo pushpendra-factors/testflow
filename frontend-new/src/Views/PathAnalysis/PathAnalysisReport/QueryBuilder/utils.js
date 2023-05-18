@@ -7,8 +7,8 @@ import {
 
 export const getGlobalFilters = (globalFilters = []) => {
   const filterProps = [];
-  
-  const filtersGroupedByRef = Object.values(groupFilters(globalFilters, 'ref')); 
+
+  const filtersGroupedByRef = Object.values(groupFilters(globalFilters, 'ref'));
 
   filtersGroupedByRef.forEach((filtersGr) => {
     if (filtersGr.length === 1) {
@@ -124,3 +124,55 @@ export const getGlobalFiltersfromSavedState = (savedFilterArr = []) => {
   }
   return globalFilters;
 };
+
+
+export const getExpandBy = (appliedGroupBy = []) => { 
+  let expandByArr = appliedGroupBy?.map((opt) => {
+    let gbpReq = {};
+    if (opt.eventIndex) {
+      gbpReq = {
+        pr: opt.property,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
+        pty: opt.prop_type,
+        ena: opt.eventName,
+        eni: opt.eventIndex
+      };
+    } else {
+      gbpReq = {
+        pr: opt.property,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
+        pty: opt.prop_type,
+        ena: opt.eventName
+      };
+    }
+    if (opt.prop_type === 'datetime') {
+      opt.grn ? (gbpReq.grn = opt.grn) : (gbpReq.grn = 'day');
+    }
+    if (opt.prop_type === 'numerical') {
+      opt.gbty ? (gbpReq.gbty = opt.gbty) : (gbpReq.gbty = '');
+    }
+    return gbpReq;
+  }); 
+  return expandByArr
+}
+
+export const getExpandByFromState = (appliedGroupBy = []) => {
+  let expandByArr = appliedGroupBy?.map((opt, index) => {
+    let appGbp = {};
+    appGbp = {
+      property: opt.pr,
+      prop_category: opt.en === 'group' ? 'user' : opt.en,
+      prop_type: opt.pty ? opt.pty : '',
+      eventName: opt?.ena ? opt?.ena : '',
+      eventIndex: index
+    };
+    // if (opt.prDaTy === 'datetime') {
+    //   opt.grn ? (appGbp.grn = opt.grn) : (appGbp.grn = 'day');
+    // }
+    // if (opt.prDaTy === 'numerical') {
+    //   opt.gbty ? (appGbp.gbty = opt.gbty) : (appGbp.gbty = '');
+    // }
+    return appGbp;
+  });
+  return expandByArr
+}

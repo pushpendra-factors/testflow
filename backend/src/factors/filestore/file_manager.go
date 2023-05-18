@@ -67,11 +67,11 @@ type FileManager interface {
 	GetEventsArtifactFilePathAndName(projectId int64, startTimestamp int64, endTimestmap int64, group int) (string, string)
 	GetEventsTempFilesDir(projectId int64, startTimestamp, endTimestamp int64, group int) string
 	GetEventsPartFilesDir(projectId int64, startTimestamp, endTimestamp int64, sorted bool, group int) string
-	GetEventsPartFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, sorted bool, startIndex, endIndex int, group int) (string, string)
+	GetEventsPartFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, sorted bool, startIndex, endIndex int, group int, timeIndex int) (string, string)
 	GetChannelArtifactFilePathAndName(channel string, projectId int64, startTimestamp int64, endTimestmap int64) (string, string)
 	GetChannelTempFilesDir(channel string, projectId int64, startTimestamp, endTimestamp int64) string
 	GetChannelPartFilesDir(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool) string
-	GetChannelPartFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool, index int) (string, string)
+	GetChannelPartFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool, index int, timeIndex int) (string, string)
 
 	//path analysis
 	GetPathAnalysisTempFileDir(id string, projectId int64) string

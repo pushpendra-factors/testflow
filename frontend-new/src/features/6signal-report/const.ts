@@ -11,6 +11,7 @@ export const INDUSTRY_KEY = 'industry';
 export const EMP_RANGE_KEY = 'emp_range';
 export const REVENUE_RANGE_KEY = 'revenue_range';
 export const DOMAIN_KEY = 'domain';
+export const ALL_CHANNEL = 'All';
 export const KEY_LABELS = {
   [COMPANY_KEY]: 'Company Name',
   [COUNTRY_KEY]: 'Country',

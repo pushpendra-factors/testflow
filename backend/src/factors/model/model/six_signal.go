@@ -29,6 +29,7 @@ type SixSignalQuery struct {
 	From     int64               `json:"fr"`
 	To       int64               `json:"to"`
 	IsSaved  bool                `json:"isSaved"`
+	PageView []string            `json:"pageView"`
 }
 
 type SixSignalResultGroup struct {

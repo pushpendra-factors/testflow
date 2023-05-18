@@ -3,41 +3,46 @@ import styles from './index.module.scss';
 import { Input, Spin } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import useAutoFocus from 'hooks/useAutoFocus';
-import { DISPLAY_PROP } from 'Utils/constants';
 
 import {
+  ApplyClickCallbackType,
   OptionType,
   PlacementType,
-  Variant,
-  handleOptionFunctionType
+  SingleSelectOptionClickCallbackType,
+  Variant
 } from './types';
 import SingleSelect from './SingleSelect';
 import MultiSelect from './MultiSelect';
-
 interface FaSelectProps {
   options: OptionType[];
-  optionClick: handleOptionFunctionType;
-  selectType?: Variant;
+  optionClickCallback?: SingleSelectOptionClickCallbackType;
+  applyClickCallback?: ApplyClickCallbackType;
+  variant?: Variant;
   onClickOutside: any;
-  selectedOptions?: string[];
   allowSearch?: boolean;
   loadingState?: boolean;
   children?: ReactNode;
   extraClass?: string;
   placement?: PlacementType;
+  // for multi select feature
+  maxAllowedSelection?: number;
+  // for allowing to select the search option
+  allowSearchTextSelection?: boolean;
 }
 
 export default function FaSelect({
   options,
-  optionClick,
-  selectType = 'Single',
+  optionClickCallback,
+  applyClickCallback,
+  variant = 'Single',
   onClickOutside,
-  selectedOptions = [],
   allowSearch = false,
-  loadingState = true,
+  loadingState = false,
   children,
   extraClass = '',
-  placement = 'BottomLeft'
+  placement = 'BottomLeft',
+  maxAllowedSelection = 0,
+  allowSearchTextSelection = true
 }: FaSelectProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const inputComponentRef = useAutoFocus(allowSearch);
@@ -95,41 +100,29 @@ export default function FaSelect({
     }
     let searchOption: OptionType | null = null;
     if (searchTerm.length) {
-      //Reducing Options Based On Search.
-      options = options.filter((op) => {
-        let searchTermLowerCase = searchTerm.toLowerCase();
-        // Regex to detect https/http is there or not as a protocol
-        let testURLRegex =
-          /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$/;
-        if (testURLRegex.test(searchTermLowerCase)) {
-          searchTermLowerCase = searchTermLowerCase.split('://')[1];
-        }
-        searchTermLowerCase = searchTermLowerCase.replace(/\/$/, '');
-        return (
-          op.label.toLowerCase().includes(searchTermLowerCase) ||
-          (op.label === '$none' &&
-            DISPLAY_PROP[op.label].toLowerCase().includes(searchTermLowerCase))
-        );
-      });
       searchOption = { value: searchTerm, label: searchTerm };
     }
-    if (selectType === 'Multi') {
+    if (variant === 'Multi') {
       return (
         <MultiSelect
           options={options}
-          selectedOptions={selectedOptions}
-          optionClick={optionClick}
+          applyClickCallback={applyClickCallback}
           allowSearch={allowSearch}
           searchOption={searchOption}
+          maxAllowedSelection={maxAllowedSelection}
+          allowSearchTextSelection={allowSearchTextSelection}
+          searchTerm={searchTerm}
         />
       );
     }
     return (
       <SingleSelect
         options={options}
-        optionClick={optionClick}
+        optionClickCallback={optionClickCallback}
         allowSearch={allowSearch}
         searchOption={searchOption}
+        allowSearchTextSelection={allowSearchTextSelection}
+        searchTerm={searchTerm}
       />
     );
   };

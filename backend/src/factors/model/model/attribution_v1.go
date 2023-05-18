@@ -231,7 +231,7 @@ func AddHeadersByAttributionKeyV1(result *QueryResult, query *AttributionQueryV1
 	}
 }
 
-//MergeTwoDataRowsV1 adds values of two data rows
+// MergeTwoDataRowsV1 adds values of two data rows
 func MergeTwoDataRowsV1(row1 []interface{}, row2 []interface{}, keyIndex int, attributionKey string, conversionFunTypes []string) []interface{} {
 
 	if attributionKey == AttributionKeyLandingPage {
@@ -610,18 +610,18 @@ func AddTheAddedKeysAndMetricsV1(attributionData *map[string]*AttributionData, q
 }
 
 // ProcessQueryKPILandingPageUrlV1 converts attribution data into result
-func ProcessQueryKPILandingPageUrlV1(query *AttributionQueryV1, attributionData *map[string]*AttributionData, logCtx log.Entry, kpiData map[string]KPIInfo, isCompare bool) *QueryResult {
+func ProcessQueryKPILandingPageUrlV1(query *AttributionQueryV1, attributionData *map[string]*AttributionData, logCtx log.Entry, kpiData map[string]KPIInfo, kpiHeaders []string, kpiAggFunctionType []string, isCompare bool) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQueryKPILandingPageUrl"}
 	logCtx = *logCtx.WithFields(logFields)
-	dataRows := GetRowsByMapsKPILandingPage(query.AttributionContentGroups, attributionData, isCompare)
+
+	var goalEvents []string
+	goalEvents = kpiHeaders
+
+	dataRows := GetRowsByMapsKPILandingPage(query.AttributionContentGroups, attributionData, goalEvents, isCompare)
 	logCtx.Info("Done GetRowsByMapsKPILandingPage")
 	result := &QueryResult{}
-	var goalEvents []string
-	for _, value := range kpiData {
-		goalEvents = value.KpiHeaderNames
-	}
 
-	AddHeadersByAttributionKeyV1(result, query, goalEvents, nil)
+	AddHeadersByAttributionKeyV1(result, query, goalEvents, kpiAggFunctionType)
 
 	result.Rows = dataRows
 
@@ -659,18 +659,18 @@ func ProcessQueryKPILandingPageUrlV1(query *AttributionQueryV1, attributionData 
 }
 
 // ProcessQueryKPIPageUrlV1 converts attribution data into result
-func ProcessQueryKPIPageUrlV1(query *AttributionQueryV1, attributionData *map[string]*AttributionData, logCtx log.Entry, kpiData map[string]KPIInfo, isCompare bool) *QueryResult {
+func ProcessQueryKPIPageUrlV1(query *AttributionQueryV1, attributionData *map[string]*AttributionData, logCtx log.Entry, kpiData map[string]KPIInfo, kpiHeaders []string, kpiAggFunctionType []string, isCompare bool) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQueryKPILandingPageUrl"}
 	logCtx = *logCtx.WithFields(logFields)
-	dataRows := GetRowsByMapsKPIPage(query.AttributionKey, query.AttributionContentGroups, attributionData, isCompare)
+
+	var goalEvents []string
+	goalEvents = kpiHeaders
+
+	dataRows := GetRowsByMapsKPIPage(query.AttributionKey, query.AttributionContentGroups, attributionData, goalEvents, isCompare)
 	logCtx.Info("Done GetRowsByMapsKPIPage")
 	result := &QueryResult{}
-	var goalEvents []string
-	for _, value := range kpiData {
-		goalEvents = value.KpiHeaderNames
-	}
 
-	AddHeadersByAttributionKeyV1(result, query, goalEvents, nil)
+	AddHeadersByAttributionKeyV1(result, query, goalEvents, kpiAggFunctionType)
 
 	result.Rows = dataRows
 
@@ -788,9 +788,13 @@ func GetUpdatedRowsByDimensionsV1(result *QueryResult, query *AttributionQueryV1
 
 // ProcessQueryKPIV1 converts attribution data into result
 func ProcessQueryKPIV1(query *AttributionQueryV1, attributionData *map[string]*AttributionData,
-	marketingReports *MarketingReports, isCompare bool, kpiData map[string]KPIInfo) *QueryResult {
+	marketingReports *MarketingReports, isCompare bool, kpiData map[string]KPIInfo, kpiHeaders []string, kpiAggFunctionType []string) *QueryResult {
 
 	logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug"})
+
+	// get the headers for KPI
+	var goalEvents []string
+	goalEvents = kpiHeaders
 
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData}).Info("KPI Attribution data")
@@ -810,32 +814,16 @@ func ProcessQueryKPIV1(query *AttributionQueryV1, attributionData *map[string]*A
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData}).Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
 	}
-	// for KPI queries, use the kpiData.KpiAggFunctionTypes as ConvAggFunctionType
-	var convAggFunctionType []string
-	for _, val := range kpiData {
-		if len(val.KpiAggFunctionTypes) > 0 {
-			convAggFunctionType = val.KpiAggFunctionTypes
-			break
-		}
-	}
+
 	for key, _ := range *attributionData {
-		(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
+		(*attributionData)[key].ConvAggFunctionType = kpiAggFunctionType
 	}
 
 	// Attribution data to rows
-	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
+	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, goalEvents, isCompare)
 	result := &QueryResult{}
 
-	// get the headers for KPI
-	var goalEvents []string
-	var goalEventAggFuncTypes []string
-	for _, value := range kpiData {
-		goalEvents = value.KpiHeaderNames
-		goalEventAggFuncTypes = value.KpiAggFunctionTypes
-		break
-	}
-
-	AddHeadersByAttributionKeyV1(result, query, goalEvents, goalEventAggFuncTypes)
+	AddHeadersByAttributionKeyV1(result, query, goalEvents, kpiAggFunctionType)
 	result.Rows = dataRows
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "result": result}).Info("Done GetRowsByMaps AddHeadersByAttributionKey")
@@ -846,7 +834,7 @@ func ProcessQueryKPIV1(query *AttributionQueryV1, attributionData *map[string]*A
 		return nil
 	}
 
-	result.Rows = MergeDataRowsHavingSameKeyKPIV1(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, goalEventAggFuncTypes, *logCtx)
+	result.Rows = MergeDataRowsHavingSameKeyKPIV1(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, kpiAggFunctionType, *logCtx)
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
 	}
@@ -883,7 +871,7 @@ func ProcessQueryKPIV1(query *AttributionQueryV1, attributionData *map[string]*A
 		return true
 	})
 
-	result.Rows = AddGrandTotalRowKPI(result.Rows, GetLastKeyValueIndex(result.Headers), goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	result.Rows = AddGrandTotalRowKPI(result.Rows, GetLastKeyValueIndex(result.Headers), kpiAggFunctionType, query.AttributionMethodology, query.AttributionMethodologyCompare)
 
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
@@ -911,7 +899,7 @@ func AddCustomDimensionsV1(attributionData *map[string]*AttributionData, query *
 	}
 }
 
-//isExtraDimensionRequiredV1 checks if extra dimensions are required
+// isExtraDimensionRequiredV1 checks if extra dimensions are required
 func isExtraDimensionRequiredV1(query *AttributionQueryV1) bool {
 	defaultDimensionsMap := make(map[string]int)
 	defaultDimensionsMap[FieldCampaignName] = 1
