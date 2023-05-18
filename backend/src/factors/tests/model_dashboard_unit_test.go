@@ -1359,7 +1359,6 @@ func TestEventsFunnelKPICacheDashboardUnitsForHardRefresh(t *testing.T) {
 				f, _ := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(from, to)
 				if f == 0 {
 					continue
-					assert.Nil(t, errCode)
 				}
 			}
 			assertMsg := fmt.Sprintf("Failed for class:%s:range:%s", queryClass, rangeString)
@@ -1462,7 +1461,6 @@ func TestAttributionCacheDashboardUnitsForHardRefresh(t *testing.T) {
 				f, _ := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(from, to)
 				if f == 0 {
 					continue
-					assert.Nil(t, errCode)
 				}
 			}
 			assertMsg := fmt.Sprintf("Failed for class:%s:range:%s", queryClass, rangeString)

@@ -2,23 +2,25 @@ name: run_unit_tests
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, staging, release ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, staging, release ]
 
 jobs:
 
   build:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v2
-      
-    - name: Set up Go
-      uses: actions/setup-go@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v4
       with:
-        go-version: 1.17
-    
+        go-version: '1.20.2'
+
+    - name: check compilation
+      working-directory: backend/src/factors/tests
+      run: go vet -composites=false .
+
     - name: run tests
       working-directory: backend/src/factors/tests/gha_tests
-      run: go test -timeout 30s 
-
+      run: go test -timeout 30s
