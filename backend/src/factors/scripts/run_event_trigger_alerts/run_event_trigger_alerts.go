@@ -37,6 +37,11 @@ type SendReportLogCount struct {
 	WebhookFail    int
 }
 
+type BlockedAlertList struct {
+	alertID []string
+	keys    []string
+}
+
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 
@@ -114,6 +119,7 @@ func main() {
 	finalStatus := make(map[string]interface{})
 	success := true
 	sendReportForProject := SendReportLogCount{}
+	blockedAlertList := BlockedAlertList{}
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 	blockedAlerts := C.GetTokensFromStringListAsString(*blacklistedAlerts)
 	blockedAlertMap := make(map[string]bool)
@@ -123,7 +129,7 @@ func main() {
 
 	for _, projectID := range projectIDs {
 		projectSuccess := false
-		sendReportForProject, projectSuccess = EventTriggerAlertsSender(projectID, conf, blockedAlertMap)
+		sendReportForProject, blockedAlertList, projectSuccess = EventTriggerAlertsSender(projectID, conf, blockedAlertMap)
 		if !projectSuccess {
 			log.WithFields(log.Fields{"project_id": projectID}).Error("Event Trigger Alert job failing")
 		}
@@ -148,10 +154,14 @@ func main() {
 		if sendReportForProject.WebhookFail > 0 {
 			finalStatus[fmt.Sprintf("Failure-WEBHOOK-%v", projectID)] = sendReportForProject.WebhookFail
 		}
+		if len(blockedAlertList.alertID) > 0 {
+			finalStatus[fmt.Sprintf("Blocked-alert-ids-%v", projectID)] = blockedAlertList.alertID
+			finalStatus[fmt.Sprintf("Blocked-alert-keys-%v", projectID)] = blockedAlertList.keys
+		}
 
 		min := time.Now().Minute()
 		if min < 5 {
-			sendReportForProject := RetryFailedEventTriggerAlerts(projectID, blockedAlertMap)
+			sendReportForProject, blockedAlertList := RetryFailedEventTriggerAlerts(projectID, blockedAlertMap)
 			if sendReportForProject.SlackSuccess > 0 {
 				finalStatus[fmt.Sprintf("Retry Success-SLACK-%v", projectID)] = sendReportForProject.SlackSuccess
 			}
@@ -169,6 +179,10 @@ func main() {
 			}
 			if sendReportForProject.WebhookFail > 0 {
 				finalStatus[fmt.Sprintf("Retry Failure-WEBHOOK-%v", projectID)] = sendReportForProject.WebhookFail
+			}
+			if len(blockedAlertList.alertID) > 0 {
+				finalStatus[fmt.Sprintf("Blocked-alert-ids-%v", projectID)] = blockedAlertList.alertID
+				finalStatus[fmt.Sprintf("Blocked-alert-keys-%v", projectID)] = blockedAlertList.keys
 			}
 		}
 	}
@@ -189,20 +203,21 @@ func getSortedSetCacheKey(prefix string, projectId int64) (*cacheRedis.Key, erro
 	return key, err
 }
 
-func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}, blockedAlert map[string]bool) (SendReportLogCount, bool) {
+func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}, blockedAlert map[string]bool) (SendReportLogCount, BlockedAlertList, bool) {
 
 	ok := int(0)
 	sendReportForProject := SendReportLogCount{}
+	blockedAlertList := BlockedAlertList{}
 	ssKey, err := getSortedSetCacheKey(SortedSetKeyPrefix, projectID)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch cacheKey for sortedSet")
-		return sendReportForProject, false
+		return sendReportForProject, blockedAlertList, false
 	}
 
 	allKeys, err := cacheRedis.ZrangeWithScoresPersistent(true, ssKey)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all alert keys for project: ", projectID)
-		return sendReportForProject, false
+		return sendReportForProject, blockedAlertList, false
 	}
 
 	for key := range allKeys {
@@ -214,8 +229,9 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}, b
 
 		alertID := strings.Split(cacheKey.Suffix, ":")[0]
 		if blockedAlert[alertID] {
-			log.WithFields(log.Fields{"alert_id": alertID, "project_id": projectID}).
-				Info("Alert skipped because of the blacklist tag")
+			blockedAlertList.alertID = append(blockedAlertList.alertID, alertID)
+			blockedAlertList.keys = append(blockedAlertList.keys, key)
+			ok++
 			continue
 		}
 
@@ -247,7 +263,7 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}, b
 
 		sendReportForProject.addToSendReport(sendReport)
 	}
-	return sendReportForProject, ok == len(allKeys)
+	return sendReportForProject, blockedAlertList, ok == len(allKeys)
 }
 
 func (projReport *SendReportLogCount) addToSendReport(alertReport SendReportLogCount) {
@@ -754,18 +770,19 @@ func getTeamsMessageTemp(message model.EventTriggerAlertMessage) string {
 	return msg
 }
 
-func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]bool) SendReportLogCount {
+func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]bool) (SendReportLogCount, BlockedAlertList) {
 	sendReportForProject := SendReportLogCount{}
+	blockedAlertList := BlockedAlertList{}
 	ssKey, err := getSortedSetCacheKey(FailureSortedSetPrefix, projectID)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch cacheKey for sortedSet")
-		return sendReportForProject
+		return sendReportForProject, blockedAlertList
 	}
 
 	allKeys, err := cacheRedis.ZrangeWithScoresPersistent(true, ssKey)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all alert keys for project: ", projectID)
-		return sendReportForProject
+		return sendReportForProject, blockedAlertList
 	}
 
 	for key, count := range allKeys {
@@ -787,8 +804,8 @@ func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]boo
 		cacheKeySplit := strings.Split(cacheKey.Suffix, ":")
 		alertID := cacheKeySplit[0]
 		if blockedAlerts[alertID] {
-			log.WithFields(log.Fields{"alert_id": alertID, "project_id": projectID}).
-				Info("Alert skipped because of the blacklist tag")
+			blockedAlertList.alertID = append(blockedAlertList.alertID, alertID)
+			blockedAlertList.keys = append(blockedAlertList.keys, orgKey[1])
 			continue
 		}
 
@@ -870,5 +887,5 @@ func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]boo
 			}
 		}
 	}
-	return sendReportForProject
+	return sendReportForProject, blockedAlertList
 }
