@@ -1135,6 +1135,7 @@ var TLDList = map[string]bool{
 	".immo":                     true,
 	".immobilien":               true,
 	".in":                       true,
+	".ac.in":                    true,
 	".5g.in":                    true,
 	".6g.in":                    true,
 	".ahmdabad.in":              true,

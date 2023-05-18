@@ -87,7 +87,7 @@ type Company struct {
 
 // CompanyV3 definition
 type CompanyV3 struct {
-	CompanyId int64 `json:"id"`
+	CompanyId string `json:"id"`
 	// not part of hubspot response. added to company on download.
 	ContactIds []int64           `json:"contactIds"`
 	Properties map[string]string `json:"properties"`
@@ -2502,7 +2502,7 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 	var company Company
 	err := json.Unmarshal((document.Value).RawMessage, &company)
 	if err != nil {
-		logCtx.WithError(err).Error("Falied to unmarshal hubspot company document.")
+		logCtx.WithError(err).Error("Failed to unmarshal hubspot company document.")
 		return http.StatusInternalServerError
 	}
 
@@ -2656,7 +2656,7 @@ func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
 	var company CompanyV3
 	err := json.Unmarshal((document.Value).RawMessage, &company)
 	if err != nil {
-		logCtx.WithError(err).Error("Falied to unmarshal hubspot company document.")
+		logCtx.WithError(err).Error("Failed to unmarshal hubspot company document.")
 		return http.StatusInternalServerError
 	}
 

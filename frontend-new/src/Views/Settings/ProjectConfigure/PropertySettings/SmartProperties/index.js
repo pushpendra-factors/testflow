@@ -318,9 +318,7 @@ function SmartProperties({
         )
       ];
       rulesToUpdate.push(rule);
-      // setRulesState(rulesToUpdate);
       setShowModalVisible(false);
-      // setSelectedRule(null);
       if (formState === 'view') {
         const smrtProp = new SmartPropertyClass(
           smartPropState.id,
@@ -330,6 +328,9 @@ function SmartProperties({
           rulesToUpdate
         );
         updateForm(smrtProp);
+      } else {
+        setRulesState(rulesToUpdate);
+        setSelectedRule(null);
       }
     }
   };

@@ -47,6 +47,7 @@ func main() {
 
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
 	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
+	useQueueRedis := flag.Bool("use_queue_redis", false, "Use queue redis for caching.")
 
 	duplicateQueueRedisHost := flag.String("dup_queue_redis_host", "localhost", "")
 	duplicateQueueRedisPort := flag.Int("dup_queue_redis_port", 6379, "")
@@ -108,6 +109,7 @@ func main() {
 		RedisPort:                        *redisPort,
 		QueueRedisHost:                   *queueRedisHost,
 		QueueRedisPort:                   *queueRedisPort,
+		UseQueueRedis:                    *useQueueRedis,
 		PrimaryDatastore:                 *primaryDatastore,
 		SDKRequestQueueProjectTokens:     C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
 		SegmentRequestQueueProjectTokens: C.GetTokensFromStringListAsString(*segmentRequestQueueProjectTokens),

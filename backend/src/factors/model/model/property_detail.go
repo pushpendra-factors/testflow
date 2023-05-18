@@ -241,6 +241,11 @@ func ValidateDateTimeProperty(key string, value interface{}) error {
 		return nil
 	}
 
+	_, err = time.Parse(HubspotDateTimeWithoutMilliSecondsLayout, U.GetPropertyValueAsString(value))
+	if err == nil {
+		return nil
+	}
+
 	_, err = time.Parse(HubspotDateLayout, U.GetPropertyValueAsString(value))
 	if err == nil {
 		return nil

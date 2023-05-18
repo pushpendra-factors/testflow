@@ -162,9 +162,9 @@ func main() {
 
 	if C.GetIsRunningForMemsql() == 0 {
 		waitGroup.Add(1)
-		go cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup, *startTimestampForWeekMonth)
+		go cacheDashboardUnitsForProjectsAttr(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup, *startTimestampForWeekMonth)
 	} else {
-		cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup, *startTimestampForWeekMonth)
+		cacheDashboardUnitsForProjectsAttr(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup, *startTimestampForWeekMonth)
 	}
 
 	if C.GetIsRunningForMemsql() == 0 {
@@ -231,7 +231,7 @@ The Attribution DB Precompute methods flow:
 5. _cacheAttributionDashboardUnitForDateRange
 5. CacheAttributionDashboardUnitForDateRange
 */
-func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup, startTimeForCache int64) {
+func cacheDashboardUnitsForProjectsAttr(projectIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup, startTimeForCache int64) {
 
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()

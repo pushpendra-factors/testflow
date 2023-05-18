@@ -17,13 +17,13 @@ const IntegrationProviderData = [
     name: 'Hubspot',
     desc: 'Sync your Contact, Company and Deal objects with Factors on a daily basis',
     icon: 'Hubspot_ads',
-    kbLink: 'https://help.factors.ai/en/articles/5099532-hubspot',
+    kbLink: 'https://help.factors.ai/en/articles/7261985-hubspot-integration',
   },
   {
     name: 'Salesforce',
     desc: 'Sync your Leads, Contact, Account, Opportunity and Campaign objects with Factors on a daily basis',
     icon: 'Salesforce_ads',
-    kbLink: 'https://help.factors.ai/en/articles/5099533-salesforce',
+    kbLink: 'https://help.factors.ai/en/articles/7261989-salesforce-integration',
   },
   {
     name: 'LeadSquared',

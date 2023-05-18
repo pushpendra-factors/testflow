@@ -235,6 +235,7 @@ func getCustomerUserIDFromProperties(projectID int64, properties map[string]inte
 
 /*
 TrackSalesforceEventByDocumentType tracks salesforce events by action
+
 	for action created -> create both created and updated events with date created timestamp
 	for action updated -> create on updated event with last modified timestamp
 */
@@ -1879,7 +1880,7 @@ func enrichEvent(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 	return http.StatusOK
 }
 
-//Check if the condition are satisfied for creating OTP events for each rule for SF Tasks Updated.
+// Check if the condition are satisfied for creating OTP events for each rule for SF Tasks Updated.
 func ApplySFOfflineTouchPointRuleForTasks(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRuleForTasks",
@@ -1923,7 +1924,7 @@ func ApplySFOfflineTouchPointRuleForTasks(project *model.Project, otpRules *[]mo
 	return nil
 }
 
-//Check if the condition are satisfied for creating OTP events for each rule for SF Event Updated.
+// Check if the condition are satisfied for creating OTP events for each rule for SF Event Updated.
 func ApplySFOfflineTouchPointRuleForEvents(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRuleForEvents",
@@ -1967,7 +1968,7 @@ func ApplySFOfflineTouchPointRuleForEvents(project *model.Project, otpRules *[]m
 	return nil
 }
 
-//Check if the condition are satisfied for creating OTP events for each rule for SF Campaign.
+// Check if the condition are satisfied for creating OTP events for each rule for SF Campaign.
 func ApplySFOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPRule, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRule",
@@ -2116,7 +2117,7 @@ func CreateTouchPointEventForTasksAndEvents(project *model.Project, trackPayload
 
 }
 
-//CreateTouchPointEvent- Creates offline touch point event for SF Campaign
+// CreateTouchPointEvent- Creates offline touch point event for SF Campaign
 func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, rule model.OTPRule) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent", "document_id": document.ID, "document_action": document.Action})
@@ -2192,7 +2193,7 @@ func isSalesforceOTPKeyUnique(otpUniqueKey string, uniqueOTPEventKeys *[]string,
 	return isUnique
 }
 
-//Creates a unique key using ruleID, userID and salesforce task activity ID  as keyID for Salesforce Tasks.
+// Creates a unique key using ruleID, userID and salesforce task activity ID  as keyID for Salesforce Tasks.
 func createOTPUniqueKeyForTasks(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) (string, int) {
 
 	ruleID := rule.ID
@@ -2211,7 +2212,7 @@ func createOTPUniqueKeyForTasks(rule model.OTPRule, trackPayload *SDK.TrackPaylo
 	return uniqueKey, http.StatusCreated
 }
 
-//Creates a unique key using ruleID, userID and salesforce Event activity ID  as keyID for Salesforce Tasks.
+// Creates a unique key using ruleID, userID and salesforce Event activity ID  as keyID for Salesforce Tasks.
 func createOTPUniqueKeyForEvents(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) (string, int) {
 
 	ruleID := rule.ID
@@ -2243,7 +2244,7 @@ func canCreateSFTouchPoint(touchPointTimeRef string, documentActionType model.Sa
 	return true
 }
 
-//filterCheck- Returns true if all the filters applied are passed.
+// filterCheck- Returns true if all the filters applied are passed.
 func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
 
 	var ruleFilters []model.TouchPointFilter
@@ -2296,6 +2297,7 @@ func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log
 			]
 		}
 	}
+
 	CampaignMember{
 		ID:
 		CampaignID:

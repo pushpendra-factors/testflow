@@ -74,10 +74,11 @@ const (
 	HubspotDocumentTypeOwner              = 8
 	HubspotDocumentTypeNameOwner          = "owner"
 
-	HubspotDateTimeLayout   = "2006-01-02T15:04:05.000Z"
-	HubspotDateLayout       = "2006-01-02"
-	HubspotDataTypeDate     = "date"
-	HubspotDataTypeDatetime = "datetime"
+	HubspotDateTimeLayout                    = "2006-01-02T15:04:05.000Z"
+	HubspotDateTimeWithoutMilliSecondsLayout = "2006-01-02T15:04:05Z"
+	HubspotDateLayout                        = "2006-01-02"
+	HubspotDataTypeDate                      = "date"
+	HubspotDataTypeDatetime                  = "datetime"
 )
 
 var (
@@ -298,14 +299,20 @@ func GetHubspotObjectTypeByDocumentType(docType string) string {
 
 func GetTimestampFromPropertiesByKeyV3(propertyValue interface{}) (int64, error) {
 	tm, err := time.Parse(HubspotDateTimeLayout, U.GetPropertyValueAsString(propertyValue))
-	if err != nil {
-		timestamp, err := time.Parse(HubspotDateLayout, U.GetPropertyValueAsString(propertyValue))
-		if err != nil {
-			return 0, errors.New("failed to convert timestamp inside getTimestampFromPropertiesByKeyV3")
-		}
-		return timestamp.UnixNano() / int64(time.Millisecond), nil
+	if err == nil {
+		return tm.UnixNano() / int64(time.Millisecond), nil
 	}
-	return tm.UnixNano() / int64(time.Millisecond), nil
+
+	tm, err = time.Parse(HubspotDateTimeWithoutMilliSecondsLayout, U.GetPropertyValueAsString(propertyValue))
+	if err == nil {
+		return tm.UnixNano() / int64(time.Millisecond), nil
+	}
+
+	tm, err = time.Parse(HubspotDateLayout, U.GetPropertyValueAsString(propertyValue))
+	if err == nil {
+		return tm.UnixNano() / int64(time.Millisecond), nil
+	}
+	return 0, errors.New("failed to convert timestamp inside getTimestampFromPropertiesByKeyV3")
 }
 
 func getTimestampFromPropertiesByKey(propertiesMap map[string]interface{}, key string) (int64, error) {

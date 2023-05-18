@@ -111,6 +111,9 @@ type FailedDashboardUnitReport struct {
 	UnitID      int64
 	QueryClass  string
 	QueryRange  string
+	From        string
+	To          string
+	Preset      string
 }
 
 func GetDashboardUnitQueryResultCacheKeyWithPreset(projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
@@ -327,6 +330,8 @@ func GetFailedUnitsByProject(cacheReports []CachingUnitReport) map[int64][]Faile
 				UnitID:      unit.UnitID,
 				QueryClass:  unit.QueryClass,
 				QueryRange:  unit.QueryRange,
+				From:        U.GetDateOnlyFormatFromTimestampAndTimezone(unit.From, U.TimeZoneString(unit.TimeTakenStr)),
+				To:          U.GetDateOnlyFormatFromTimestampAndTimezone(unit.To, U.TimeZoneString(unit.TimeTakenStr)),
 			}
 			if value, exists := projectFailedUnits[unit.ProjectId]; exists {
 				projectFailedUnits[unit.ProjectId] = append(value, failedUnit)
@@ -356,6 +361,8 @@ func GetTimedOutUnitsByProject(cacheReports []CachingUnitReport) map[int64][]Fai
 				UnitID:      unit.UnitID,
 				QueryClass:  unit.QueryClass,
 				QueryRange:  unit.QueryRange,
+				From:        U.GetDateOnlyFormatFromTimestampAndTimezone(unit.From, U.TimeZoneString(unit.TimeTakenStr)),
+				To:          U.GetDateOnlyFormatFromTimestampAndTimezone(unit.To, U.TimeZoneString(unit.TimeTakenStr)),
 			}
 			if value, exists := projectTimedOutUnits[unit.ProjectId]; exists {
 				projectTimedOutUnits[unit.ProjectId] = append(value, timedOutUnit)

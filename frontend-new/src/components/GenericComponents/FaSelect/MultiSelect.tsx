@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect, useMemo, useState } from 'react';
+import React, { ReactNode, useMemo, useState } from 'react';
 import styles from './index.module.scss';
 import { Button } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
@@ -10,7 +10,6 @@ interface MultiSelectProps {
   allowSearch: boolean;
   searchOption: OptionType | null;
   maxAllowedSelection?: number;
-  setShowMaxLimitWarning: (state: boolean) => void;
   allowSearchTextSelection: boolean;
   searchTerm: string;
 }
@@ -21,7 +20,6 @@ export default function MultiSelect({
   allowSearch,
   searchOption,
   maxAllowedSelection = 0,
-  setShowMaxLimitWarning,
   allowSearchTextSelection,
   searchTerm
 }: MultiSelectProps) {
@@ -46,6 +44,7 @@ export default function MultiSelect({
         updateFlag = false;
       } else {
         if (!updatedItem.isSelected) count += 1;
+        else count -= 1;
         updatedItem.isSelected = !updatedItem?.isSelected;
 
         updatedLocalOptions = [
@@ -55,12 +54,20 @@ export default function MultiSelect({
         ];
         updateFlag = true;
       }
-    } else {
-      updatedLocalOptions = [
-        { ...op, isSelected: true },
-        ...updatedLocalOptions
-      ];
-      updateFlag = true;
+    } else if (allowSearchTextSelection) {
+      //For Custom Value.
+      if (
+        maxAllowedSelection &&
+        localSelectedOptionCount >= maxAllowedSelection
+      ) {
+        updateFlag = false;
+      } else {
+        updatedLocalOptions = [
+          { ...op, isSelected: true },
+          ...updatedLocalOptions
+        ];
+        updateFlag = true;
+      }
     }
     //finding count for selected options
     if (maxAllowedSelection && count >= maxAllowedSelection) {
@@ -72,6 +79,11 @@ export default function MultiSelect({
         return option;
       });
       updateFlag = true;
+    } else if (maxAllowedSelection && updateFlag) {
+      //enabling all the disabled options
+      updatedLocalOptions = updatedLocalOptions.map((option) => {
+        return { ...option, isDisabled: false };
+      });
     }
     if (updateFlag) setLocalOptions(updatedLocalOptions);
   };
@@ -95,43 +107,62 @@ export default function MultiSelect({
   };
 
   const clearAllClick = () => {
-    if (applyClickCallback) applyClickCallback(options, []);
+    let updatedLocalOptions = [...localOptions];
+
+    updatedLocalOptions = updatedLocalOptions.map((option) => {
+      return { ...option, isSelected: false, isDisabled: false };
+    });
+    setLocalOptions(updatedLocalOptions);
   };
 
-  // For showing or hiding max limit warning
-  useEffect(() => {
-    if (
-      maxAllowedSelection &&
-      localSelectedOptionCount >= maxAllowedSelection
-    ) {
-      setShowMaxLimitWarning(true);
-    } else {
-      setShowMaxLimitWarning(false);
-    }
-  }, [
-    maxAllowedSelection,
-    localOptions,
-    setShowMaxLimitWarning,
-    localSelectedOptionCount
-  ]);
-
   let rendOpts: ReactNode[] = [];
+
+  if (maxAllowedSelection !== 0) {
+    //Clear Button.
+    rendOpts.push(
+      <div key={'clear_opt'} className={`${styles.dropdown__clear_opt}`}>
+        <Text
+          level={7}
+          type={'title'}
+          extraClass={'ml-4 mb-0'}
+          weight={'thin'}
+          color={'grey'}
+        >
+          {localSelectedOptionCount}/{maxAllowedSelection}
+        </Text>
+        <Button
+          disabled={localSelectedOptionCount === 0}
+          onClick={clearAllClick}
+          type='link'
+        >
+          Clear all
+        </Button>
+      </div>
+    );
+  }
+
   if (searchOption && allowSearchTextSelection) {
     // Adding Select Option Based On SearchTerm
-    let isSearchTermSelected = searchOption?.isSelected;
     rendOpts.push(
       <div
         key={'search' + searchOption.value}
         className={`${
           allowSearch ? 'fa-select-group-select--options' : 'fa-select--options'
-        } ${isSearchTermSelected ? styles.fa_selected : ''}`}
+        } ${
+          searchOption?.isSelected
+            ? `${styles.fa_selected}`
+            : maxAllowedSelection !== 0 &&
+              localSelectedOptionCount >= maxAllowedSelection
+            ? `${styles.dropdown__disabled_opt}`
+            : ''
+        } `}
         onClick={() => handleMultipleOptionClick(searchOption)}
       >
         <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
           Select:
         </Text>
         <span className={`ml-1 ${styles.optText}`}>{searchOption.label}</span>
-        {isSearchTermSelected ? (
+        {searchOption?.isSelected ? (
           <SVG
             name='checkmark'
             extraClass={'self-center'}
@@ -151,12 +182,17 @@ export default function MultiSelect({
           onClick={() => {
             handleMultipleOptionClick(option);
           }}
-          style={{ cursor: option?.isDisabled ? 'not-allowed' : 'pointer' }}
           className={`${
             allowSearch
               ? 'fa-select-group-select--options'
               : 'fa-select--options'
-          } ${option?.isSelected ? `${styles.fa_selected}` : ''} `}
+          } ${
+            option?.isSelected
+              ? `${styles.fa_selected}`
+              : option?.isDisabled
+              ? `${styles.dropdown__disabled_opt}`
+              : ''
+          } `}
         >
           <span className={`ml-1 ${styles.optText}`}>
             {option.labelNode ? option.labelNode : option.label}
@@ -173,7 +209,7 @@ export default function MultiSelect({
       );
     });
 
-  //Apply and Clear Button.
+  //Apply Button.
   rendOpts.push(
     <div className={`${styles.dropdown__apply_opt}`} key={'actions'}>
       <div key={'apply_opt'} className={`fa-select--buttons `}>
@@ -188,22 +224,24 @@ export default function MultiSelect({
           Apply
         </Button>
       </div>
-      <div key={'clear_opt'} className={`fa-select--buttons`}>
-        <Button
-          disabled={localSelectedOptionCount === 0}
-          onClick={clearAllClick}
-          className={'w-full'}
-        >
-          <SVG
-            name='times'
-            size={17}
-            color={
-              localSelectedOptionCount === 0 ? 'rgba(0, 0, 0, 0.251)' : 'grey'
-            }
-          />
-          Clear All
-        </Button>
-      </div>
+      {!maxAllowedSelection && (
+        <div key={'clear_opt'} className={`fa-select--buttons`}>
+          <Button
+            disabled={localSelectedOptionCount === 0}
+            onClick={clearAllClick}
+            className={'w-full'}
+          >
+            <SVG
+              name='times'
+              size={17}
+              color={
+                localSelectedOptionCount === 0 ? 'rgba(0, 0, 0, 0.251)' : 'grey'
+              }
+            />
+            Clear All
+          </Button>
+        </div>
+      )}
     </div>
   );
   return <>{rendOpts}</>;

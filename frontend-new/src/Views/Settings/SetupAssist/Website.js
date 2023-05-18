@@ -26,7 +26,7 @@ const IntegrationProviderData = [
     name: 'Segment',
     desc: 'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Segment_ads',
-    kbLink: 'https://help.factors.ai/en/articles/5835006-segment'
+    kbLink: 'https://help.factors.ai/en/articles/7261994-segment-integration'
   }
 ];
 

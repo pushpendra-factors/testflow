@@ -51,12 +51,14 @@ var AllowedGroupToDomainsGroup = map[string]bool{
 	GROUP_NAME_LINKEDIN_COMPANY:   true,
 }
 
-var GroupsGroupIDPropertyKey = map[string]string{
-	GROUP_NAME_SIX_SIGNAL: U.SIX_SIGNAL_DOMAIN,
+var DomainNameSourcePropertyKey = map[string]string{
+	GROUP_NAME_SIX_SIGNAL:         U.SIX_SIGNAL_DOMAIN,
+	GROUP_NAME_HUBSPOT_COMPANY:    "$hubspot_company_website",
+	GROUP_NAME_SALESFORCE_ACCOUNT: "$salesforce_account_website",
 }
 
-func GetGroupsGroupIDPropertyKey(groupName string) string {
-	return GroupsGroupIDPropertyKey[groupName]
+func GetDomainNameSourcePropertyKey(groupName string) string {
+	return DomainNameSourcePropertyKey[groupName]
 }
 
 // AllowedGroups total groups allowed per project

@@ -180,6 +180,7 @@ type Model interface {
 	CacheAttributionDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool, startCacheTime int64)
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool, startCacheTime int64)
 	RunCachingForLast3MonthsAttribution(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString, logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
+	CreateResultInDB(result interface{}, projectId int64, dashboardId int64, unitId int64, queryId int64, preset string, from, to int64, timezoneString U.TimeZoneString, meta interface{}) (int, string)
 
 	// all dashboard runs for am unit
 	RunCustomQueryRangeCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,
@@ -508,6 +509,7 @@ type Model interface {
 	CreateOTPRule(projectId int64, rule *model.OTPRule) (*model.OTPRule, int, string)
 	GetALLOTPRuleWithProjectId(projectID int64) ([]model.OTPRule, int)
 	GetUniqueKeyPropertyForOTPEventForLast3Months(projectID int64) ([]string, int)
+	IsOTPKeyUniqueWithQuery(projectID int64, userID string, eventNameId string, otpUniqueKey string) (bool, int)
 	GetAllRulesDeletedNotDeleted(projectID int64) ([]model.OTPRule, int)
 	GetOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)
 	GetAnyOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)
@@ -842,6 +844,7 @@ type Model interface {
 	GetSourceStringForAccountsV2(projectID int64, source string) (string, int, int)
 	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (string, map[string]interface{}, int)
 	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, int)
+	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)

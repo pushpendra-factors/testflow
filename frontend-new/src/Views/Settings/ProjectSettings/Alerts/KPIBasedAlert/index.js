@@ -2640,6 +2640,8 @@ const KPIBasedAlert = ({
                 }
                 onChange={(value, op) => {
                   setSelectedWorkspace({ name: op?.label, id: value });
+                  setTeamsSaveSelectedChannel([]);
+                  setTeamsSelectedChannel([]);
                 }}
               ></Select>
             </Col>

@@ -120,7 +120,9 @@ function AccountProfiles({
     };
     const source = filterPropsMap[accountPayload?.source];
     const tableProps = accountPayload.segment_id
-      ? activeSegment?.query?.table_props
+      ? activeSegment?.query?.table_props?.filter((item) =>
+          item.includes(source)
+        )
       : currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
           (item) => item.includes(source)
         );
@@ -403,10 +405,15 @@ function AccountProfiles({
         )
         .finally(() => setShowPopOver(false));
     } else {
-      const filteredProps = tlConfig.account_config.table_props.filter(
-        (item) =>
-          !checkListAccountProps.some(({ prop_name }) => prop_name === item)
-      );
+      const filteredProps =
+        accountPayload.source !== 'All'
+          ? tlConfig.account_config.table_props.filter(
+              (item) =>
+                !checkListAccountProps.some(
+                  ({ prop_name }) => prop_name === item
+                )
+            )
+          : [];
       const enabledProps = checkListAccountProps
         .filter(({ enabled }) => enabled)
         .map(({ prop_name }) => prop_name);
@@ -759,14 +766,14 @@ function AccountProfiles({
       ...accountPayload,
       search_filter: formatFiltersForPayload(searchFilter, true)
     };
-    const search_filter_map = {}
-    search_filter_map["users"] = updatedPayload.search_filter.map(
-        (filter, index) => {
-          const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
-          return isAnd ? filter : { ...filter, lop: 'OR' };
-        }
-      );
-    updatedPayload.search_filter = search_filter_map
+    const search_filter_map = {};
+    search_filter_map['users'] = updatedPayload.search_filter.map(
+      (filter, index) => {
+        const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
+        return isAnd ? filter : { ...filter, lop: 'OR' };
+      }
+    );
+    updatedPayload.search_filter = search_filter_map;
 
     setListSearchItems(parsedValues);
     setAccountPayload(updatedPayload);

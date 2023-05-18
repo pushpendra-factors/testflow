@@ -693,3 +693,47 @@ func TestGetLatestTimestampByEventNameId(t *testing.T) {
 	assert.Equal(t, int64(0), latestTimestamp1)
 
 }
+
+func TestIsOTPKeyUniqueWithQuery(t *testing.T) {
+	// Initialize a project, user and  the event.
+	projectId, _, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	start := time.Now()
+
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("OTPKeyIsUnique", func(t *testing.T) {
+		ruleID := U.RandomLowerAphaNumString(6)
+		eventID := U.RandomLowerAphaNumString(6)
+		otpUniqueKey := createdUserID + ruleID + eventID
+
+		newEvent := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+			UserId: createdUserID, Timestamp: start.Unix(),
+			Properties: postgres.Jsonb{RawMessage: []byte(fmt.Sprintf(`{"$otp_unique_key":123}`))}}
+
+		_, errCode = store.GetStore().CreateEvent(newEvent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		isUnique, _ := store.GetStore().IsOTPKeyUniqueWithQuery(projectId, createdUserID, eventNameId, otpUniqueKey)
+		assert.Equal(t, true, isUnique)
+	})
+
+	t.Run("OTPKeyIsNotUnique", func(t *testing.T) {
+		ruleID := U.RandomLowerAphaNumString(6)
+		eventID := U.RandomLowerAphaNumString(6)
+		otpUniqueKey := createdUserID + ruleID + eventID
+
+		newEvent := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+			UserId: createdUserID, Timestamp: start.Unix(),
+			Properties: postgres.Jsonb{RawMessage: []byte(fmt.Sprintf(`{"%s":"%s"}`, U.EP_OTP_UNIQUE_KEY, otpUniqueKey))}}
+
+		_, errCode = store.GetStore().CreateEvent(newEvent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		isUnique, _ := store.GetStore().IsOTPKeyUniqueWithQuery(projectId, createdUserID, eventNameId, otpUniqueKey)
+		assert.Equal(t, false, isUnique)
+	})
+
+}

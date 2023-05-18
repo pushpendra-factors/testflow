@@ -1290,7 +1290,7 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
             if sync_all:
                 parameter_dict["after"] = paging_after
             else:
-                json_data["after"] = str(limit)
+                json_data["after"] = paging_after
         else:
             has_more = False
         

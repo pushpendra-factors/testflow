@@ -6285,7 +6285,7 @@ func TestHubspotCompanyV3(t *testing.T) {
 	companyV3UpdatedDate := companyV3CreatedDate.AddDate(0, 0, 1)
 
 	companyV3 := IntHubspot.CompanyV3{
-		CompanyId:  2,
+		CompanyId:  "2",
 		ContactIds: []int64{1},
 		Properties: map[string]string{
 			"createdate":             time.Unix(companyV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),

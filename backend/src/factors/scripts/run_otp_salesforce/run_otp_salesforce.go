@@ -52,8 +52,8 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 	overrideHealthcheckPingID := configs["override_healthcheck_ping_id"].(string)
 	numProjectRoutines := configs["num_project_routines"].(int)
 	numDaysBackfill := configs["num_days_backfill"].(int)
-	backfillStartTime := configs["backfill_start_timestamp"].(int)
-	backfillEndTime := configs["backfill_end_timestamp"].(int)
+	backfillStartTime := configs["backfill_start_timestamp"].(int64)
+	backfillEndTime := configs["backfill_end_timestamp"].(int64)
 
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
@@ -104,8 +104,8 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 
 	if (backfillStartTime <= backfillEndTime) && backfillEndTime != 0 {
 
-		startTime = int64(backfillStartTime)
-		endTime = int64(backfillEndTime)
+		startTime = backfillStartTime
+		endTime = backfillEndTime
 	}
 
 	for bi := range batches {
@@ -174,11 +174,12 @@ func main() {
 	disableCRMUniquenessConstraintsCheckByProjectID := flag.String("disable_crm_unique_constraint_check_by_project_id", "", "")
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 	numDaysBackfill := flag.Int("num_days_backfill", 93, "Number of days to backfill from now")
-	backfillStartTimestamp := flag.Int("backfill_start_timestamp", 0, "startTimestamp for backfill")
-	backfillEndTimestamp := flag.Int("backfill_end_timestamp", 0, "endTimestamp for backfill")
+	backfillStartTimestamp := flag.Int64("backfill_start_timestamp", 0, "startTimestamp for backfill")
+	backfillEndTimestamp := flag.Int64("backfill_end_timestamp", 0, "endTimestamp for backfill")
 	insertBatchSize := flag.Int("insert_batch_size", 1, "Number of unique document go routines per project")
 	//overrideLastSyncTimestamp := flag.Int64("override_last_sync_timestamp", 0, "Override last sync timestamp")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
+	otpKeyWithQueryCheckEnabled := flag.Bool("query_otpkey_check_enabled", false, "To check unique otp key using query")
 	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	useSalesforceV54APIByProjectID := flag.String("use_salesforce_v54_api_by_project_id", "", "Use v54 api for query salesforce data")
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
@@ -239,6 +240,7 @@ func main() {
 		DisableCRMUniquenessConstraintsCheckByProjectID:    *disableCRMUniquenessConstraintsCheckByProjectID,
 		SalesforceBatchInsertBatchSize:                     *insertBatchSize,
 		ClearbitEnabled:                                    *clearbitEnabled,
+		OtpKeyWithQueryCheckEnabled:                        *otpKeyWithQueryCheckEnabled,
 		SixSignalEnabled:                                   *sixSignalEnabled,
 		UseSalesforceV54APIByProjectID:                     *useSalesforceV54APIByProjectID,
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,

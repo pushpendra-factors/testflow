@@ -2469,7 +2469,7 @@ func TrackUserAccountGroup(projectID int64, userID string, groupName string, gro
 		return http.StatusBadRequest
 	}
 
-	groupIDPropertyKey := model.GetGroupsGroupIDPropertyKey(groupName)
+	groupIDPropertyKey := model.GetDomainNameSourcePropertyKey(groupName)
 	groupID := U.GetDomainGroupDomainName(U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKey]))
 
 	if groupID == "" {
