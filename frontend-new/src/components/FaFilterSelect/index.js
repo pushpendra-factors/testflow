@@ -51,7 +51,8 @@ const FaFilterSelect = ({
   dropdownPlacement,
   dropdownMaxHeight,
   uploadList,
-  showInList = false
+  showInList = false,
+  minEntriesPerGroup
 }) => {
   const [propState, setPropState] = useState({
     icon: '',
@@ -339,8 +340,9 @@ const FaFilterSelect = ({
           <div className={styles.filter__event_selector}>
             <GroupSelect2
               groupedProperties={propOpts}
+              minEntriesPerGroup={minEntriesPerGroup}
               placeholder='Select Property'
-              optionClick={(group, val) => propSelect([...val, group])}
+              optionClick={(_, val, __, icon) => propSelect([...val, icon])}
               onClickOutside={() => setPropSelectOpen(false)}
               placement={dropdownPlacement}
               height={dropdownMaxHeight}

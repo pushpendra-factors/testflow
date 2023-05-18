@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { connect, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 
 import styles from './index.module.scss';
 import { SVG } from 'Components/factorsComponents';
@@ -24,16 +24,14 @@ const GlobalFilter = ({
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
   useEffect(() => {
-    const props = Object.assign({}, filterProps);
+    const props = {};
     if (event?.label) {
       props.event = eventProperties[event.label];
     }
     if (groupName === 'users') {
       props.user = userProperties;
-      props.group = [];
     } else {
-      props.user = [];
-      props.group = groupProperties[groupName];
+      props[groupName] = groupProperties[groupName];
     }
     setFilterProperties(props);
   }, [userProperties, groupProperties, eventProperties, event, groupName]);

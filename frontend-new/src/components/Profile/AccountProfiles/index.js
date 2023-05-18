@@ -618,8 +618,9 @@ function AccountProfiles({
             profileType='account'
             source={accountPayload.source}
             filters={filters}
+            availableGroups={Object.keys(groupOpts || {})}
             viewMode
-          ></PropertyFilter>
+          />
         </div>
       </div>
     );
@@ -638,9 +639,13 @@ function AccountProfiles({
         {activeSegment.query.gup && activeSegment.query.gup.length
           ? filtersList(formatPayloadForFilters(activeSegment.query.gup))
           : null}
-        <h2 className='whitespace-no-wrap italic line-height-8 m-0 mr-2'>
-          {`*Shows ${displayFilterOpts[activeSegment.type]} from last 28 days.`}
-        </h2>
+        {activeSegment.query.ewp && activeSegment.query.ewp.length ? (
+          <h2 className='whitespace-no-wrap italic line-height-8 m-0 mr-2'>
+            {`*Shows ${
+              displayFilterOpts[activeSegment.type]
+            } from last 28 days.`}
+          </h2>
+        ) : null}
       </div>
     );
   };
@@ -695,6 +700,7 @@ function AccountProfiles({
         source={accountPayload.source}
         filters={accountPayload.filters}
         setFilters={setFilters}
+        availableGroups={Object.keys(groupOpts || {})}
       />
     </div>
   );

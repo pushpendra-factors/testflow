@@ -62,10 +62,7 @@ function SegmentModal({
     DEFAULT_SEGMENT_QUERY_OPTIONS
   );
   const [criteria, setCriteria] = useState('any');
-  const [filterProperties, setFilterProperties] = useState({
-    user: [],
-    group: []
-  });
+  const [filterProperties, setFilterProperties] = useState({});
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
@@ -80,7 +77,7 @@ function SegmentModal({
   useEffect(() => {
     const props = { ...filterProperties };
     if (profileType === 'account') {
-      props.group = groupProperties[segmentPayload.type];
+      props[segmentPayload.type] = groupProperties[segmentPayload.type];
     } else if (profileType === 'user') props.user = userProperties;
     setFilterProperties(props);
   }, [userProperties, groupProperties, segmentPayload.type, profileType]);

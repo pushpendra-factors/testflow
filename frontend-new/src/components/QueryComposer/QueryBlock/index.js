@@ -74,25 +74,21 @@ function QueryBlock({
   }, [eventOptions, groupAnalysis, availableGroups]);
 
   const filterProperties = useMemo(() => {
-    if (!event || event === undefined) {
-      return [];
-    }
-    const assignFilterProps = {};
-    assignFilterProps.event = eventProperties[event.label] || [];
+    if (!event) return {};
+
+    const props = {
+      event: eventProperties[event.label] || []
+    };
     if (eventGroup) {
-      assignFilterProps.group = groupProperties[eventGroup];
-      assignFilterProps.user = [];
+      props[eventGroup] = groupProperties[eventGroup];
     } else {
-      assignFilterProps.user = userProperties;
-      assignFilterProps.group = [];
+      props.user = userProperties;
     }
-    return assignFilterProps;
+    return props;
   }, [event, eventGroup, eventProperties, groupProperties, userProperties]);
 
   useEffect(() => {
-    if (!event || event === undefined) {
-      return;
-    }
+    if (!event) return;
     if (eventGroup?.length) {
       getGroupProperties(activeProject.id, eventGroup);
     }
@@ -112,9 +108,9 @@ function QueryBlock({
     eventChange(newEvent, index - 1, 'filters_updated');
   };
 
-  const onChange = (group, value, original_group) => {
+  const onChange = (group, value, icon) => {
     const newEvent = { alias: '', label: '', filters: [], group: '', icon: '' };
-    newEvent.icon = original_group?.icon;
+    newEvent.icon = icon;
     newEvent.label = value;
     newEvent.group = group;
     setDDVisible(false);
@@ -135,8 +131,8 @@ function QueryBlock({
         <GroupSelect2
           groupedProperties={showGroups}
           placeholder='Select Event'
-          optionClick={(group, val, a, original_group) => {
-            onChange(group, val[1] ? val[1] : val[0], original_group);
+          optionClick={(group, val, a, icon) => {
+            onChange(group, val[1] ? val[1] : val[0], icon);
           }}
           onClickOutside={() => setDDVisible(false)}
           allowEmpty

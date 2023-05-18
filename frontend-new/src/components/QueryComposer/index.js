@@ -69,7 +69,7 @@ function QueryComposer({
 
   const groupsList = useMemo(() => {
     let groups = [['Users', 'users']];
-    Object.entries(groupOpts|| {}).forEach(([group_name, display_name]) => {
+    Object.entries(groupOpts || {}).forEach(([group_name, display_name]) => {
       groups.push([display_name, group_name]);
     });
     return groups;
@@ -80,6 +80,11 @@ function QueryComposer({
       getUserProperties(activeProject.id, queryType);
     }
   }, [activeProject, fetchEventNames, getUserProperties, queryType]);
+
+  useEffect(() => {
+    if (queryOptions.group_analysis === 'users') return;
+    getGroupProperties(activeProject.id, queryOptions.group_analysis);
+  }, [activeProject.id, queryOptions.group_analysis]);
 
   useEffect(() => {
     queries.forEach((ev) => {
@@ -170,7 +175,9 @@ function QueryComposer({
   };
 
   const onGroupChange = (value) => {
-    setGroupAnalysis(value);
+    if (value !== queryOptions.group_analysis) {
+      setGroupAnalysis(value);
+    }
     setGroupDDVisible(false);
   };
 

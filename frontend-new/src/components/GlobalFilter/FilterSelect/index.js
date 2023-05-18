@@ -313,7 +313,7 @@ const FilterSelect = ({
             <GroupSelect2
               groupedProperties={propOpts}
               placeholder='Select Property'
-              optionClick={(group, val) => propSelect([...val, group])}
+              optionClick={(_, val,__, icon) => propSelect([...val, icon])}
               onClickOutside={() => setPropSelectOpen(false)}
             ></GroupSelect2>
           </div>

@@ -45,18 +45,20 @@ function AccountDetails({
   const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [listProperties, setListProperties] = useState([]);
   const [checkListMilestones, setCheckListMilestones] = useState([]);
+  const [filterProperties, setFilterProperties] = useState([]);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
+  const availableGroups = useSelector((state) => state.groups.data);
 
   useEffect(() => {
-    const lsitDatetimeProperties = listProperties.filter(
+    const listDatetimeProperties = listProperties.filter(
       (item) => item[2] === 'datetime'
     );
     const propsWithEnableKey = formatUserPropertiesToCheckList(
-      lsitDatetimeProperties,
+      listDatetimeProperties,
       currentProjectSettings.timelines_config?.account_config?.milestones
     );
     setCheckListMilestones(propsWithEnableKey);
@@ -93,17 +95,23 @@ function AccountDetails({
   }, [currentProjectSettings, accountDetails]);
 
   useEffect(() => {
-    const mergeGroupedProps = [
-      ...(groupProperties.$hubspot_company
-        ? groupProperties.$hubspot_company
-        : []),
-      ...(groupProperties.$salesforce_account
-        ? groupProperties.$salesforce_account
-        : []),
-      ...(groupProperties.$6signal ? groupProperties.$6signal : [])
-    ];
-    setListProperties(mergeGroupedProps);
-  }, [groupProperties]);
+    const mergedProps = [];
+    const filterProps = {};
+
+    Object.keys(availableGroups).forEach((group) => {
+      mergedProps.push(...groupProperties[group]);
+      filterProps[group] = groupProperties[group];
+    });
+
+    const groupProps = Object.entries(filterProps).map(([group, values]) => ({
+      label: `${PropTextFormat(group)} Properties`,
+      icon: group,
+      values
+    }));
+
+    setListProperties(mergedProps);
+    setFilterProperties(groupProps);
+  }, [groupProperties, availableGroups]);
 
   useEffect(() => {
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
@@ -126,7 +134,7 @@ function AccountDetails({
         getProfileAccountDetails(
           activeProject.id,
           accountId,
-		  source,
+          source,
           currentProjectSettings?.timelines_config
         )
       );
@@ -181,7 +189,7 @@ function AccountDetails({
       getProfileAccountDetails(
         activeProject.id,
         accountId,
-		source,
+        source,
         currentProjectSettings?.timelines_config
       )
     );
@@ -252,7 +260,7 @@ function AccountDetails({
         getProfileAccountDetails(
           activeProject.id,
           accountId,
-		  source,
+          source,
           currentProjectSettings?.timelines_config
         )
       );
@@ -330,19 +338,11 @@ function AccountDetails({
     return propsList;
   };
 
-  const generateAccountProps = () => {
-    const groupProps = [
-      { label: 'Account Properties', icon: 'users', values: [] }
-    ];
-    groupProps[0].values = listProperties;
-    return groupProps;
-  };
-
   const selectProps = () =>
     propSelectOpen && (
       <div className='relative'>
         <GroupSelect2
-          groupedProperties={generateAccountProps()}
+          groupedProperties={filterProperties}
           placeholder='Select Property'
           optionClick={handleOptionClick}
           onClickOutside={() => setPropSelectOpen(false)}
