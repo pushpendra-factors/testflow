@@ -452,7 +452,7 @@ const AttributionsChartComponent = forwardRef(
 const AttributionsChartMemoized = memo(AttributionsChartComponent);
 
 const AttributionsChart = (props) => {
-  const { renderedCompRef, ...rest } = props;
+  const { renderedCompRef, appliedFilters, setAppliedFilters, ...rest } = props;
   const {
     coreQueryState: {
       comparison_data,
@@ -465,7 +465,7 @@ const AttributionsChart = (props) => {
     updateCoreQueryReducer
   } = useContext(CoreQueryContext);
 
-  const applFilters = rest.v1? rest.appliedFilters : attributionTableFilters;
+  const applFilters = rest.v1? appliedFilters : attributionTableFilters;
   return (
     <AttributionsChartMemoized
       setAttributionMetrics={setAttributionMetrics}
@@ -475,7 +475,7 @@ const AttributionsChart = (props) => {
       comparison_duration={comparison_duration}
       updateCoreQueryReducer={updateCoreQueryReducer}
       appliedFilters={applFilters}
-      setAppliedFilters={rest.setAppliedFilters}
+      setAppliedFilters={setAppliedFilters}
       ref={renderedCompRef}
       {...rest}
     />
