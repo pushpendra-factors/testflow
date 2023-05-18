@@ -19,7 +19,7 @@ var channelValueFilterName = map[string]string{
 }
 
 func getAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, archiveCloudManager, tmpCloudManager, sortedCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, useBucketV2, hardPull bool, pulledMap map[int64]map[string]bool) (*WithinPeriodInsightsKpi, error) {
+	diskManager *serviceDisk.DiskDriver, beamConfig *merge.RunBeamConfig, hardPull, useSortedFilesMerge bool, pulledMap map[int64]map[string]bool) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	wpi.MetricInfo = &MetricInfo{}
 	wpi.ScaleInfo = &MetricInfo{}
@@ -46,7 +46,7 @@ func getAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEv
 			continue
 		}
 
-		scanner, err := GetChannelFileScanner(channel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, useBucketV2, hardPull, pulledMap)
+		scanner, err := GetChannelFileScanner(channel, projectId, periodCode, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, useSortedFilesMerge, pulledMap)
 		if err != nil {
 			log.WithError(err).Error("failed getting " + channel + " file scanner for all channel kpi")
 			continue

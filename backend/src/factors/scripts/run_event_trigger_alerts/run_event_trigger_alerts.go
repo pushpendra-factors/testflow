@@ -10,12 +10,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	teams "factors/integration/ms_teams"
 	slack "factors/integration/slack"
 	webhook "factors/webhooks"
+
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -23,7 +25,22 @@ import (
 const (
 	SortedSetKeyPrefix     = "ETA"
 	FailureSortedSetPrefix = "ETA:Fail"
+	RetryLimit             = 10
 )
+
+type SendReportLogCount struct {
+	SlackSuccess   int
+	SlackFail      int
+	TeamsSuccess   int
+	TeamsFail      int
+	WebhookSuccess int
+	WebhookFail    int
+}
+
+type BlockedAlertList struct {
+	alertID []string
+	keys    []string
+}
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
@@ -48,6 +65,7 @@ func main() {
 	teamsAppClientID := flag.String("teams_app_client_id", "", "")
 	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
 	teamsApplicationID := flag.String("teams_application_id", "", "")
+	blacklistedAlerts := flag.String("blacklisted_alerts", "", "")
 
 	flag.Parse()
 
@@ -73,10 +91,10 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
-		SentryDSN:           *sentryDSN,
+		PrimaryDatastore:     *primaryDatastore,
+		RedisHostPersistent:  *redisHostPersistent,
+		RedisPortPersistent:  *redisPortPersistent,
+		SentryDSN:            *sentryDSN,
 		TeamsAppTenantID:     *teamsAppTenantID,
 		TeamsAppClientID:     *teamsAppClientID,
 		TeamsAppClientSecret: *teamsAppClientSecret,
@@ -100,20 +118,72 @@ func main() {
 	conf := make(map[string]interface{})
 	finalStatus := make(map[string]interface{})
 	success := true
-	successCount, failureCount := 0, 0
+	sendReportForProject := SendReportLogCount{}
+	blockedAlertList := BlockedAlertList{}
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
+	blockedAlerts := C.GetTokensFromStringListAsString(*blacklistedAlerts)
+	blockedAlertMap := make(map[string]bool)
+	for _, id := range blockedAlerts {
+		blockedAlertMap[id] = true
+	}
+
 	for _, projectID := range projectIDs {
 		projectSuccess := false
-		successCount, failureCount, projectSuccess = EventTriggerAlertsSender(projectID, conf)
+		sendReportForProject, blockedAlertList, projectSuccess = EventTriggerAlertsSender(projectID, conf, blockedAlertMap)
 		if !projectSuccess {
-			log.Error("Event Trigger Alert job failing for projectID: ", projectID)
+			log.WithFields(log.Fields{"project_id": projectID}).Error("Event Trigger Alert job failing")
 		}
+
 		success = success && projectSuccess
-		if successCount > 0 {
-			finalStatus[fmt.Sprintf("Success-%v", projectID)] = successCount
+
+		if sendReportForProject.SlackSuccess > 0 {
+			finalStatus[fmt.Sprintf("Success-SLACK-%v", projectID)] = sendReportForProject.SlackSuccess
 		}
-		if failureCount > 0 {
-			finalStatus[fmt.Sprintf("Failure-%v", projectID)] = failureCount
+		if sendReportForProject.TeamsSuccess > 0 {
+			finalStatus[fmt.Sprintf("Success-TEAMS-%v", projectID)] = sendReportForProject.TeamsSuccess
+		}
+		if sendReportForProject.WebhookSuccess > 0 {
+			finalStatus[fmt.Sprintf("Success-WEBHOOK-%v", projectID)] = sendReportForProject.WebhookSuccess
+		}
+		if sendReportForProject.SlackFail > 0 {
+			finalStatus[fmt.Sprintf("Failure-SLACK-%v", projectID)] = sendReportForProject.SlackFail
+		}
+		if sendReportForProject.TeamsFail > 0 {
+			finalStatus[fmt.Sprintf("Failure-TEAMS-%v", projectID)] = sendReportForProject.TeamsFail
+		}
+		if sendReportForProject.WebhookFail > 0 {
+			finalStatus[fmt.Sprintf("Failure-WEBHOOK-%v", projectID)] = sendReportForProject.WebhookFail
+		}
+		if len(blockedAlertList.alertID) > 0 {
+			finalStatus[fmt.Sprintf("Blocked-alert-ids-%v", projectID)] = blockedAlertList.alertID
+			finalStatus[fmt.Sprintf("Blocked-alert-keys-%v", projectID)] = blockedAlertList.keys
+		}
+
+		min := time.Now().Minute()
+		if min < 5 {
+			sendReportForProject, blockedAlertList := RetryFailedEventTriggerAlerts(projectID, blockedAlertMap)
+			if sendReportForProject.SlackSuccess > 0 {
+				finalStatus[fmt.Sprintf("Retry Success-SLACK-%v", projectID)] = sendReportForProject.SlackSuccess
+			}
+			if sendReportForProject.TeamsSuccess > 0 {
+				finalStatus[fmt.Sprintf("Retry Success-TEAMS-%v", projectID)] = sendReportForProject.TeamsSuccess
+			}
+			if sendReportForProject.WebhookSuccess > 0 {
+				finalStatus[fmt.Sprintf("Retry Success-WEBHOOK-%v", projectID)] = sendReportForProject.WebhookSuccess
+			}
+			if sendReportForProject.SlackFail > 0 {
+				finalStatus[fmt.Sprintf("Retry Failure-SLACK-%v", projectID)] = sendReportForProject.SlackFail
+			}
+			if sendReportForProject.TeamsFail > 0 {
+				finalStatus[fmt.Sprintf("Retry Failure-TEAMS-%v", projectID)] = sendReportForProject.TeamsFail
+			}
+			if sendReportForProject.WebhookFail > 0 {
+				finalStatus[fmt.Sprintf("Retry Failure-WEBHOOK-%v", projectID)] = sendReportForProject.WebhookFail
+			}
+			if len(blockedAlertList.alertID) > 0 {
+				finalStatus[fmt.Sprintf("Blocked-alert-ids-%v", projectID)] = blockedAlertList.alertID
+				finalStatus[fmt.Sprintf("Blocked-alert-keys-%v", projectID)] = blockedAlertList.keys
+			}
 		}
 	}
 	if !success {
@@ -133,20 +203,21 @@ func getSortedSetCacheKey(prefix string, projectId int64) (*cacheRedis.Key, erro
 	return key, err
 }
 
-func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (int, int, bool) {
+func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}, blockedAlert map[string]bool) (SendReportLogCount, BlockedAlertList, bool) {
 
 	ok := int(0)
-
+	sendReportForProject := SendReportLogCount{}
+	blockedAlertList := BlockedAlertList{}
 	ssKey, err := getSortedSetCacheKey(SortedSetKeyPrefix, projectID)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch cacheKey for sortedSet")
-		return -1, -1, false
+		return sendReportForProject, blockedAlertList, false
 	}
 
 	allKeys, err := cacheRedis.ZrangeWithScoresPersistent(true, ssKey)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all alert keys for project: ", projectID)
-		return -1, -1, false
+		return sendReportForProject, blockedAlertList, false
 	}
 
 	for key := range allKeys {
@@ -156,9 +227,14 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 			continue
 		}
 
-		log.Info("Key found: ", cacheKey)
-
 		alertID := strings.Split(cacheKey.Suffix, ":")[0]
+		if blockedAlert[alertID] {
+			blockedAlertList.alertID = append(blockedAlertList.alertID, alertID)
+			blockedAlertList.keys = append(blockedAlertList.keys, key)
+			ok++
+			continue
+		}
+
 		cacheStr, err := cacheRedis.GetPersistent(cacheKey)
 		if err != nil {
 			log.WithError(err).Error("failed to find message for the alert ", alertID)
@@ -171,8 +247,7 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 			continue
 		}
 
-		log.Info("Proceeding with sendHelper function.")
-		success := sendHelperForEventTriggerAlert(cacheKey, &msg, alertID)
+		success, sendReport := sendHelperForEventTriggerAlert(cacheKey, &msg, alertID, false, "")
 
 		if success {
 			err = cacheRedis.DelPersistent(cacheKey)
@@ -185,49 +260,92 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{}) (
 		if err != nil || cc != 1 {
 			log.WithError(err).Error("Cannot remove alert by zrem")
 		}
+
+		sendReportForProject.addToSendReport(sendReport)
 	}
-	return ok, len(allKeys) - ok, ok == len(allKeys)
+	return sendReportForProject, blockedAlertList, ok == len(allKeys)
 }
 
-func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEventTriggerAlert, alertID string) bool {
+func (projReport *SendReportLogCount) addToSendReport(alertReport SendReportLogCount) {
+	projReport.SlackFail += alertReport.SlackFail
+	projReport.SlackSuccess += alertReport.SlackSuccess
+	projReport.TeamsFail += alertReport.TeamsFail
+	projReport.TeamsSuccess += alertReport.TeamsSuccess
+	projReport.WebhookFail += alertReport.WebhookFail
+	projReport.WebhookSuccess += alertReport.WebhookSuccess
+}
 
+func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEventTriggerAlert, alertID string, retry bool, sendTo string) (bool, SendReportLogCount) {
+	var sendReport SendReportLogCount
 	eta, errCode := store.GetStore().GetEventTriggerAlertByID(alertID)
 	if errCode != http.StatusFound || eta == nil {
 		log.Error("Failed to fetch alert from db, ", errCode)
-		return false
+		return false, sendReport
 	}
 
 	var alertConfiguration model.EventTriggerAlertConfig
 	err := U.DecodePostgresJsonbToStructType(eta.EventTriggerAlert, &alertConfiguration)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode Jsonb to struct type")
-		return false
+		return false, sendReport
 	}
 
 	slackSuccess := true
 	teamsSuccess := true
 	whSuccess := true
+	updateLastAlert := false
+	errMsg := ""
 
 	msg := alert.Message
-	if alertConfiguration.Slack {
-		slackSuccess = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels)
-		if !slackSuccess {
-			err := AddKeyToFailureSet(key, eta.ProjectID, "Slack")
-			if err != nil {
-				log.WithError(err).Error("failed to put key in FailureSortedSet")
+
+	if (retry && strings.EqualFold("Slack", sendTo)) || (!retry && alertConfiguration.Slack) {
+		isSlackIntergrated, errCode := store.GetStore().IsSlackIntegratedForProject(eta.ProjectID, eta.SlackChannelAssociatedBy)
+		if errCode != http.StatusOK {
+			log.WithFields(log.Fields{"agentID": eta.SlackChannelAssociatedBy, "event_trigger_alert_id": eta.ID}).
+				Error("failed to check slack integration")
+		}
+		if isSlackIntergrated {
+			slackSuccess, errMsg = sendSlackAlertForEventTriggerAlert(eta.ProjectID, eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels)
+			if !slackSuccess {
+				err := EventTriggerDeliveryFailureExecution(key, eta, "Slack", errMsg)
+				if err != nil {
+					log.WithError(err).Error("failed while updating slack-fail flow")
+				}
+				sendReport.SlackFail++
+			} else {
+				updateLastAlert = true
+				sendReport.SlackSuccess++
 			}
+		} else {
+			log.WithFields(log.Fields{"alert_id": alertID}).Error("integration not found for slack configuration")
 		}
 	}
-	if alertConfiguration.Teams {
-		teamsSuccess = sendTeamsAlertForEventTriggerAlert(eta.ProjectID, eta.CreatedBy, msg, alertConfiguration.TeamsChannelsConfig)
-		if !teamsSuccess {
-			err := AddKeyToFailureSet(key, eta.ProjectID, "Teams")
-			if err != nil {
-				log.WithError(err).Error("failed to put key in FailureSortedSet")
+
+	if (retry && strings.EqualFold("Teams", sendTo)) || (!retry && alertConfiguration.Teams) {
+		isTeamsIntergrated, errCode := store.GetStore().IsTeamsIntegratedForProject(eta.ProjectID, eta.TeamsChannelAssociatedBy)
+		if errCode != http.StatusOK {
+			log.WithFields(log.Fields{"agentID": eta.TeamsChannelAssociatedBy, "event_trigger_alert": alert}).
+				Error("failed to check teams integration")
+		}
+		if isTeamsIntergrated {
+			teamsSuccess, errMsg = sendTeamsAlertForEventTriggerAlert(eta.ProjectID, eta.TeamsChannelAssociatedBy, msg, alertConfiguration.TeamsChannelsConfig)
+			if !teamsSuccess {
+				err := EventTriggerDeliveryFailureExecution(key, eta, "Teams", errMsg)
+				if err != nil {
+					log.WithError(err).Error("failed while updating teams-fail flow")
+				}
+
+				sendReport.TeamsFail++
+			} else {
+				updateLastAlert = true
+				sendReport.TeamsSuccess++
 			}
+		} else {
+			log.WithFields(log.Fields{"alert_id": alertID}).Error("integration not found for teams configuration")
 		}
 	}
-	if alertConfiguration.Webhook {
+
+	if (retry && strings.EqualFold("WH", sendTo)) || (!retry && alertConfiguration.Webhook) {
 		response, err := webhook.DropWebhook(alertConfiguration.WebhookURL, alertConfiguration.Secret, alert.Message)
 		if err != nil {
 			log.WithFields(log.Fields{"alert_id": alertID, "server_response": response}).
@@ -237,23 +355,58 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		stat := response["status"]
 		if stat != "ok" {
 			log.Error("Error details: ", stat, response)
-			err := AddKeyToFailureSet(key, eta.ProjectID, "WH")
-			if err != nil {
-				log.WithError(err).Error("failed to put key in FailureSortedSet")
-			}
+
 			whSuccess = false
+			errMsg := fmt.Sprintf("%+v", response)
+			sendReport.WebhookFail++
+
+			err := EventTriggerDeliveryFailureExecution(key, eta, "WH", errMsg)
+			if err != nil {
+				log.WithError(err).Error("failed while updating teams-fail flow")
+			}
+		} else {
+			updateLastAlert = true
+			sendReport.WebhookSuccess++
 		}
 	}
 
-	if slackSuccess || whSuccess || teamsSuccess {
+	if updateLastAlert {
 		status, err := store.GetStore().UpdateEventTriggerAlertField(eta.ProjectID, eta.ID,
 			map[string]interface{}{"last_alert_at": time.Now()})
 		if status != http.StatusAccepted || err != nil {
-			log.Fatalf("Failed to update db field")
+			log.WithError(err).Error("Failed to update db field")
 		}
 	}
 
-	return slackSuccess && whSuccess && teamsSuccess
+	return slackSuccess && whSuccess && teamsSuccess, sendReport
+}
+
+func EventTriggerDeliveryFailureExecution(key *cacheRedis.Key, eta *model.EventTriggerAlert, failPoint, errMsg string) error {
+	err := AddKeyToFailureSet(key, eta.ProjectID, failPoint)
+	if err != nil {
+		log.WithError(err).Error("failed to put key in FailureSortedSet")
+		return err
+	}
+
+	errDetails := model.LastFailDetails{
+		FailTime: time.Now(),
+		FailedAt: failPoint,
+		Details:  errMsg,
+	}
+	errJson, err := U.EncodeStructTypeToPostgresJsonb(errDetails)
+	if err != nil {
+		log.WithError(err).Error("failed to encode struct to jsonb")
+		return err
+	}
+
+	status, err := store.GetStore().UpdateEventTriggerAlertField(eta.ProjectID, eta.ID,
+		map[string]interface{}{"last_fail_details": errJson})
+	if status != http.StatusAccepted || err != nil {
+		log.WithError(err).Error("Failed to update db field")
+		return err
+	}
+
+	return nil
 }
 
 func AddKeyToFailureSet(key *cacheRedis.Key, projectID int64, failPoint string) error {
@@ -283,17 +436,19 @@ func AddKeyToFailureSet(key *cacheRedis.Key, projectID int64, failPoint string) 
 	return nil
 }
 
-func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg model.EventTriggerAlertMessage, Schannels *postgres.Jsonb) bool {
+func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg model.EventTriggerAlertMessage, Schannels *postgres.Jsonb) (bool, string) {
 	logCtx := log.WithFields(log.Fields{
-		"project_id": projectID,
-		"agent_uuid": agentUUID,
+		"project_id":  projectID,
+		"agent_uuid":  agentUUID,
+		"alert_title": msg.Title,
 	})
 	var slackChannels []model.SlackChannel
 
 	err := U.DecodePostgresJsonbToStructType(Schannels, &slackChannels)
 	if err != nil {
-		log.WithError(err).Error("failed to decode slack channels")
-		return false
+		errMsg := "failed to decode slack channels"
+		log.WithError(err).Error(errMsg)
+		return false, errMsg
 	}
 
 	wetRun := true
@@ -302,17 +457,18 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 
 			status, err := slack.SendSlackAlert(projectID, getSlackMsgBlock(msg), agentUUID, channel)
 			if err != nil || !status {
-				logCtx.WithError(err).Error("failed to send slack alert ", msg)
-				return false
+				errMsg := err.Error()
+				logCtx.WithError(err).Error("failed to send slack alert: ", errMsg)
+				return false, errMsg
 			}
 		}
 	} else {
 		log.Info("Dry run mode enabled. No alerts will be sent")
 		log.Info("*****", msg, projectID)
-		return true
+		return true, ""
 	}
 
-	return true
+	return true, ""
 }
 
 func returnSlackMessage(actualmsg string) string {
@@ -375,6 +531,7 @@ func getPropsBlock(propMap U.PropertiesMap) string {
 	}
 	return propBlock
 }
+
 func getPropsBlockV2(propMap U.PropertiesMap) string {
 
 	var propBlock string
@@ -452,6 +609,7 @@ func getPropsBlockV2(propMap U.PropertiesMap) string {
 	}
 	return propBlock
 }
+
 func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 
 	propBlock := getPropsBlockV2(msg.MessageProperty)
@@ -476,17 +634,19 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 
 	return mainBlock
 }
-func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string, msg model.EventTriggerAlertMessage, Tchannels *postgres.Jsonb) bool {
+func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string, msg model.EventTriggerAlertMessage, Tchannels *postgres.Jsonb) (bool, string) {
 	logCtx := log.WithFields(log.Fields{
-		"project_id": projectID,
-		"agent_uuid": agentUUID,
+		"project_id":  projectID,
+		"agent_uuid":  agentUUID,
+		"alert_title": msg.Title,
 	})
 	var teamsChannels model.Team
 
 	err := U.DecodePostgresJsonbToStructType(Tchannels, &teamsChannels)
 	if err != nil {
-		log.WithError(err).Error("failed to decode teams channels")
-		return false
+		errMsg := err.Error()
+		log.WithError(err).Error(errMsg)
+		return false, errMsg
 	}
 
 	wetRun := true
@@ -496,8 +656,9 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 			message := getTeamsMessageTemp(msg)
 			err := teams.SendTeamsMessage(projectID, agentUUID, teamsChannels.TeamsId, channel.ChannelId, message)
 			if err != nil {
-				logCtx.WithError(err).Error("failed to send teams message ", msg)
-				return false
+				errMsg := err.Error()
+				logCtx.WithError(err).Error("failed to send teams message: ", errMsg)
+				return false, errMsg
 			}
 
 			logCtx.Info("teams alert sent: ", channel, message)
@@ -506,10 +667,10 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string, msg m
 	} else {
 		log.Info("Dry run mode enabled. No alerts will be sent")
 		log.Info("*****", msg, projectID)
-		return true
+		return true, ""
 	}
 
-	return true
+	return true, ""
 }
 
 func getPropsJsonForTeams(propMap U.PropertiesMap) string {
@@ -607,4 +768,124 @@ func getTeamsMessageTemp(message model.EventTriggerAlertMessage) string {
 		}
 	}
 	return msg
+}
+
+func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]bool) (SendReportLogCount, BlockedAlertList) {
+	sendReportForProject := SendReportLogCount{}
+	blockedAlertList := BlockedAlertList{}
+	ssKey, err := getSortedSetCacheKey(FailureSortedSetPrefix, projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch cacheKey for sortedSet")
+		return sendReportForProject, blockedAlertList
+	}
+
+	allKeys, err := cacheRedis.ZrangeWithScoresPersistent(true, ssKey)
+	if err != nil {
+		log.WithError(err).Error("Failed to get all alert keys for project: ", projectID)
+		return sendReportForProject, blockedAlertList
+	}
+
+	for key, count := range allKeys {
+		//Get the key from failed set
+		cc, err := strconv.ParseInt(count, 0, 64)
+		if err != nil {
+			log.WithError(err).Error("unable to parse int in event_trigger_alerts_job")
+		}
+
+		orgKey := strings.SplitAfterN(key, ":", 2)
+
+		cacheKey, err := cacheRedis.KeyFromStringWithPid(orgKey[1])
+		if err != nil {
+			log.WithFields(log.Fields{"alert_key": orgKey[1]}).
+				Error("failed to get cacheKey from the key string, retry failed")
+			continue
+		}
+
+		cacheKeySplit := strings.Split(cacheKey.Suffix, ":")
+		alertID := cacheKeySplit[0]
+		if blockedAlerts[alertID] {
+			blockedAlertList.alertID = append(blockedAlertList.alertID, alertID)
+			blockedAlertList.keys = append(blockedAlertList.keys, orgKey[1])
+			continue
+		}
+
+		firstTry := cacheKeySplit[len(cacheKeySplit)-1]
+		retryTime, err := strconv.ParseInt(firstTry, 0, 64)
+		if err != nil {
+			log.WithError(err).Error("unable to parse int from string in event_trigger_alerts_job")
+		}
+
+		now := time.Now().UnixNano()
+		expBackoff := cc * (cc + 1) / 2
+		if now-retryTime < expBackoff*60*60*1000000000 {
+			log.Info("Skipping retry for alert: ", orgKey[1], ", because retry coolDown condition is false")
+			continue
+		}
+
+		cacheStr, err := cacheRedis.GetPersistent(cacheKey)
+		if err != nil {
+			log.WithFields(log.Fields{"alert_key": orgKey[1]}).WithError(err).
+				Error("failed to find message for the alert, retry failed")
+			continue
+		}
+		//Get the cached alert
+		var msg model.CachedEventTriggerAlert
+		err = U.DecodeJSONStringToStructType(cacheStr, &msg)
+		if err != nil {
+			log.WithFields(log.Fields{"alert_key": orgKey[1]}).WithError(err).
+				Error("failed to decode alert for event_trigger_alert, retry failed")
+			continue
+		}
+
+		sendTo := ""
+		if strings.Contains(orgKey[0], "Slack") {
+			sendTo = "Slack"
+		}
+		if strings.Contains(orgKey[0], "WH") {
+			sendTo = "WH"
+		}
+		if strings.Contains(orgKey[0], "Teams") {
+			sendTo = "Teams"
+		}
+
+		success, sendReport := sendHelperForEventTriggerAlert(cacheKey, &msg, alertID, true, sendTo)
+
+		if success {
+			cc, err := cacheRedis.ZRemPersistent(ssKey, true, key)
+			if err != nil || cc != 1 {
+				log.WithFields(log.Fields{"alert_key": *cacheKey}).WithError(err).Error("Cannot remove alert by zrem")
+			}
+			allKeys[key] = "-1"
+			areMoreAlertPresent := false
+			for kk := range allKeys {
+				if kk != key && strings.Contains(kk, alertID) && allKeys[kk] != "-1" {
+					areMoreAlertPresent = true
+				}
+			}
+			if !areMoreAlertPresent {
+				err = cacheRedis.DelPersistent(cacheKey)
+				if err != nil {
+					log.WithFields(log.Fields{"alert_key": *cacheKey}).WithError(err).Error("Cannot remove alert from cache")
+				}
+			}
+		}
+		sendReportForProject.addToSendReport(sendReport)
+
+		if allKeys[key] == fmt.Sprintf("%d", RetryLimit-1) {
+			cc, err := cacheRedis.ZRemPersistent(ssKey, true, key)
+			if err != nil || cc != 1 {
+				log.WithFields(log.Fields{"alert_key": key}).WithError(err).
+					Error("Cannot remove alert by zrem")
+			}
+			log.WithFields(log.Fields{"alert_key": *cacheKey}).
+				Error("Retry limit reached. Removing the key completely from the cache")
+
+			err = cacheRedis.DelPersistent(cacheKey)
+			if err != nil {
+				log.WithFields(log.Fields{"alert_key": key}).WithError(err).
+					Error("Cannot remove alert from cache")
+			}
+		}
+	}
+	return sendReportForProject, blockedAlertList
 }

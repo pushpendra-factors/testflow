@@ -22,9 +22,9 @@ const ProfileBeforeIntegration = ({
   const switchProject = () => {
     setLoading(true);
     fetchDemoProject().then((res) => {
-      let id = res.data[0];
-      let selectedProject = projects.filter((project) => project?.id === id);
-      selectedProject = selectedProject[0];
+      let id = res?.data?.[0];
+      let selectedProject = projects?.filter((project) => project?.id === id);
+      selectedProject = selectedProject?.[0];
       localStorage.setItem('activeProject', selectedProject?.id);
       setActiveProject(selectedProject);
       history.push('/');
@@ -128,7 +128,7 @@ const ProfileBeforeIntegration = ({
                       size={'middle'}
                       className={'ml-6 mb-4'}
                       loading={loading}
-                      onClick={() => switchProject}
+                      onClick={() => switchProject()}
                     >
                       {/* <SVG name={"PlayButton"} size={25} /> */}
                       View Demo Project

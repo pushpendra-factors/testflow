@@ -129,7 +129,7 @@ const linkedinCampaignMetadataFetchQueryStr = "select campaign_information.campa
 	"ON campaign_information.campaign_id_1 = campaign_latest_timestamp_id.campaign_id_1 AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp "
 const insertLinkedinStr = "INSERT INTO linkedin_documents (project_id,customer_ad_account_id,type,timestamp,id,campaign_group_id,campaign_id,creative_id,value,created_at,updated_at,is_backfilled) VALUES "
 
-//  we are not deleting many records. Hence taken the direct approach.
+// we are not deleting many records. Hence taken the direct approach.
 const deleteDocumentQuery = "Delete from linkedin_documents where project_id = ? and customer_ad_account_id = ? and type = ? and timestamp = ?"
 
 func (store *MemSQL) satisfiesLinkedinDocumentForeignConstraints(linkedinDocument model.LinkedinDocument) int {
@@ -210,11 +210,12 @@ func getLinkedinDocumentTypeAliasByType() map[int]string {
 }
 
 /*
-	Backfill logic: get min timestamp in last 30 days where is_backfilled is false
-	This will be our backfill start date.
-	Corner case: min(timestamp) returns nil if data is not present
-		In this case we return backfill timestamp as 0, which means we don't have to refer to this data while backfilling
-		we'll only look at the last sync info timestamp and treat timestamp <= t-8 as backfill and > t-8 as normal run
+Backfill logic: get min timestamp in last 30 days where is_backfilled is false
+This will be our backfill start date.
+Corner case: min(timestamp) returns nil if data is not present
+
+	In this case we return backfill timestamp as 0, which means we don't have to refer to this data while backfilling
+	we'll only look at the last sync info timestamp and treat timestamp <= t-8 as backfill and > t-8 as normal run
 */
 func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int) {
 	logFields := log.Fields{
@@ -1569,7 +1570,7 @@ func (store *MemSQL) PullLinkedInRowsV2(projectID int64, startTime, endTime int6
 		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND ((COALESCE(sp.object_type,1) = 1 AND sp.object_id = linDocs.campaign_group_id) OR (COALESCE(sp.object_type,2) = 2 AND sp.object_id = linDocs.campaign_id))"+
 		"WHERE linDocs.project_id = %d AND UNIX_TIMESTAMP(linDocs.created_at) BETWEEN %d AND %d "+
 		"LIMIT %d",
-		projectID, model.ChannelLinkedin, projectID, startTime, endTime, model.LinkedInPullLimit+1)
+		projectID, model.ChannelLinkedin, projectID, startTime, endTime, model.AdReportsPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err
@@ -1602,7 +1603,7 @@ func (store *MemSQL) PullLinkedInRowsV1(projectID int64, startTime, endTime int6
 		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND ((COALESCE(sp.object_type,1) = 1 AND sp.object_id = linDocs.campaign_group_id) OR (COALESCE(sp.object_type,2) = 2 AND sp.object_id = linDocs.campaign_id))"+
 		"WHERE linDocs.project_id = %d AND linDocs.timestamp BETWEEN %d AND %d "+
 		"ORDER BY linDocs.type, linDocs.timestamp LIMIT %d",
-		projectID, model.ChannelLinkedin, projectID, start, end, model.LinkedInPullLimit+1)
+		projectID, model.ChannelLinkedin, projectID, start, end, model.AdReportsPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err

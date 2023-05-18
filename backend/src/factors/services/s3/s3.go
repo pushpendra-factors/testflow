@@ -401,9 +401,9 @@ func (sd *S3Driver) GetEventsPartFilesDir(projectId int64, startTimestamp, endTi
 	return path
 }
 
-func (sd *S3Driver) GetEventsPartFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, sorted bool, startIndex, endIndex int, group int) (string, string) {
+func (sd *S3Driver) GetEventsPartFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, sorted bool, startIndex, endIndex int, group int, timeIndex int) (string, string) {
 	path := sd.GetEventsPartFilesDir(projectId, startTimestamp, endTimestamp, sorted, group)
-	name := fmt.Sprintf("%d-%d_uids.txt", startIndex, endIndex)
+	name := fmt.Sprintf("%d-%d_uids_%d.txt", startIndex, endIndex, timeIndex)
 	return path, name
 }
 
@@ -423,8 +423,8 @@ func (sd *S3Driver) GetChannelPartFilesDir(channel string, projectId int64, star
 	return path
 }
 
-func (sd *S3Driver) GetChannelPartFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool, index int) (string, string) {
+func (sd *S3Driver) GetChannelPartFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool, index, timeIndex int) (string, string) {
 	path := sd.GetChannelPartFilesDir(channel, projectId, startTimestamp, endTimestamp, sorted)
-	name := fmt.Sprintf("%d_doctype.txt", index)
+	name := fmt.Sprintf("%d_doctype_%d.txt", index, timeIndex)
 	return path, name
 }

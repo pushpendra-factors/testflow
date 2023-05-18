@@ -986,7 +986,7 @@ func (store *MemSQL) PullBingAdsRowsV2(projectID int64, startTime, endTime int64
 		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(bing.value, 'ad_group_id') OR sp.object_id = JSON_EXTRACT_STRING(bing.value, 'base_ad_group_id')))) "+
 		"WHERE bing.project_id = %d AND UNIX_TIMESTAMP(bing.created_at) BETWEEN %d AND %d "+
 		"LIMIT %d",
-		projectID, model.ChannelBingAds, projectID, startTime, endTime, model.BingPullLimit+1)
+		projectID, model.ChannelBingAds, projectID, startTime, endTime, model.AdReportsPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err
@@ -1021,7 +1021,7 @@ func (store *MemSQL) PullBingAdsRowsV1(projectID int64, startTime, endTime int64
 		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(bing.value, 'ad_group_id') OR sp.object_id = JSON_EXTRACT_STRING(bing.value, 'base_ad_group_id')))) "+
 		"WHERE bing.project_id = %d AND bing.timestamp BETWEEN %d AND %d "+
 		"ORDER BY bing.document_type, bing.timestamp LIMIT %d",
-		projectID, model.ChannelBingAds, projectID, start, end, model.BingPullLimit+1)
+		projectID, model.ChannelBingAds, projectID, start, end, model.AdReportsPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err

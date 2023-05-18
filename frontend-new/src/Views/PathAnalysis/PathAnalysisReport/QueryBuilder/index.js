@@ -9,7 +9,9 @@ import {
   Tooltip,
   Modal,
   Form,
-  Input
+  Input,
+  Dropdown,
+  Menu
 } from 'antd';
 import styles from './index.module.scss';
 import { connect } from 'react-redux';
@@ -21,17 +23,21 @@ import {
 } from 'Reducers/coreQuery/middleware';
 import {
   fetchSavedPathAnalysis,
-  createPathPathAnalysisQuery
+  createPathPathAnalysisQuery,
+  fetchPathAnalysisInsights
 } from 'Reducers/pathAnalysis';
 import { useHistory } from 'react-router-dom';
 import FaDatepicker from 'Components/FaDatepicker';
+import FaSavedRangePicker from 'Components/FaSavedRangePicker';
 import { useEffect } from 'react';
 import moment from 'moment';
-import { getGlobalFilters, getGlobalFiltersfromSavedState } from './utils';
+import { getGlobalFilters, getGlobalFiltersfromSavedState, getExpandBy, getExpandByFromState } from './utils';
 import _ from 'lodash';
 import FaSelect from 'Components/FaSelect';
 import { fetchGroups } from 'Reducers/coreQuery/services';
 import GlobalFilter from 'Components/GlobalFilter';
+import EventFilter from './EventFilter';
+import ExpandBy from './ExpandBy';
 
 const QueryBuilder = ({
   queryOptions = {},
@@ -43,7 +49,10 @@ const QueryBuilder = ({
   activeQuery,
   groupOpts,
   getGroupProperties,
-  getUserProperties
+  getUserProperties,
+  eventOptions,
+  savedQuery,
+  fetchPathAnalysisInsights
 }) => {
   const [singleQueries, setSingleQueries] = useState([]);
   const [globalFilters, setGlobalFilters] = useState([]);
@@ -59,6 +68,8 @@ const QueryBuilder = ({
   const [groupCategory, setGroupCategory] = useState('users');
   const [collapse, setCollapse] = useState(false);
   const [showCollapseBtn, setCollapseBtn] = useState(false);
+  const [considerEventArr, setConsiderEventArr] = useState([]);
+  const [savedRanges, setSavedRanges] = useState(null);
 
   const history = useHistory();
 
@@ -66,8 +77,15 @@ const QueryBuilder = ({
     fetchGroups(activeProject.id);
   }, [activeProject?.id]);
 
+  // useEffect(() => {
+  //   console.log("exclude events triggered", excludeEvents)
+  //   if(excludeEvents != activeQuery?.exclude_events){
+  //     setConsiderEventArr([]);
+  //     setMultipleQueries([]);
+  //   }
+  // }, [excludeEvents]);
+
   useEffect(() => {
-    console.log('groupCategory: ', groupCategory);
     if (groupCategory === 'users') {
       getUserProperties(activeProject?.id);
     } else {
@@ -77,7 +95,7 @@ const QueryBuilder = ({
 
   const groupsList = useMemo(() => {
     let groups = [['Users', 'users']];
-    Object.entries(groupOpts|| {}).forEach(([group_name, display_name]) => {
+    Object.entries(groupOpts || {}).forEach(([group_name, display_name]) => {
       groups.push([display_name, group_name]);
     });
     return groups;
@@ -100,22 +118,52 @@ const QueryBuilder = ({
     } else return null;
   };
 
+  const separateEventsArr = () => {
+    let Arr = considerEventArr.filter(item => item.type == "eventOnly")
+    let payload = Arr.map(item => {
+      return {
+        alias: item.value?.split(",")[1],
+        label: item.value?.split(",")[0],
+        group: item.value?.split(",")[2],
+        filter: item?.filter ? getGlobalFilters(item?.filter) : null,
+        expand_property: item?.expand_property ? getExpandBy(item?.expand_property) : null
+      }
+    })
+    return payload
+  }
+  const separateGroupArr = () => {
+    let Arr = considerEventArr.filter(item => item.type == "eventType")
+    let payload = Arr.map(item => {
+      return {
+        alias: "",
+        label: item.value,
+        filter: item?.filter ? getGlobalFilters(item?.filter) : null,
+        expand_property: item?.expand_property ? getExpandBy(item?.expand_property) : null
+      }
+    })
+    return payload
+  }
+
+
   const buildPathAnalysisQuery = (data) => {
     setLoading(true);
     let payload = {
-      title: data?.title,
-      event_type: pathCondition,
-      group: groupCategory,
-      event: transformIndividualFilter(singleQueries),
-      steps: Number(pathStepCount),
-      include_events: excludeEvents == 'false' ? multipleQueries : null,
-      exclude_events: excludeEvents == 'true' ? multipleQueries : null,
-      starttimestamp: moment(selectedDateRange.startDate).unix(),
-      endtimestamp: moment(selectedDateRange.endDate).unix(),
-      avoid_repeated_events: repetativeStep,
-      filter: globalFilters ? getGlobalFilters(globalFilters) : null
+      "query": {
+        title: data?.title,
+        event_type: pathCondition,
+        group: groupCategory,
+        event: transformIndividualFilter(singleQueries),
+        steps: Number(pathStepCount),
+        include_events: excludeEvents == 'false' ? separateEventsArr() : null,
+        exclude_events: excludeEvents == 'true' ? multipleQueries : null,
+        include_group: separateGroupArr(),
+        starttimestamp: moment(selectedDateRange.startDate).unix(),
+        endtimestamp: moment(selectedDateRange.endDate).unix(),
+        avoid_repeated_events: repetativeStep,
+        filter: globalFilters ? getGlobalFilters(globalFilters) : null
+      },
+      referenceid: activeQuery ? activeQuery?.referenceid : ''
     };
-
     createPathPathAnalysisQuery(activeProject?.id, payload)
       .then(() => {
         fetchSavedPathAnalysis(activeProject?.id);
@@ -131,43 +179,79 @@ const QueryBuilder = ({
   };
 
   useEffect(() => {
-    if (activeQuery) {
+    let activeQueryItem = activeQuery?.query;
+    if (activeQueryItem) {
+
+
       setCollapseBtn(true);
       setCollapse(true);
-      setRepetativeStep(activeQuery?.avoid_repeated_events);
-      setPathCondition(`${activeQuery?.event_type}`);
-      setPathStepCount(`${activeQuery?.steps}`);
-      setExcludeEvents(`${activeQuery?.include_events ? 'false' : 'true'}`);
+      setRepetativeStep(activeQueryItem?.avoid_repeated_events);
+      setPathCondition(`${activeQueryItem?.event_type}`);
+      setPathStepCount(`${activeQueryItem?.steps}`);
+      setExcludeEvents(`${activeQueryItem?.include_events ? 'false' : 'true'}`);
 
+
+      let includeGroupFromState = activeQueryItem?.include_group?.map((item) => {
+        return {
+          ...item,
+          value: item?.label,
+          type: "eventType",
+          filter: item?.filter ? getGlobalFiltersfromSavedState(item?.filter) : null,
+          expand_property: item?.expand_property ? getExpandByFromState(item?.expand_property) : null
+        }
+      })
+      let includeEventsFromState = activeQueryItem?.include_events?.map((item) => {
+        return {
+          ...item,
+          type: "eventOnly",
+          value: `${item?.label},${item?.alias},${item?.group},`,
+          filter: item?.filter ? getGlobalFiltersfromSavedState(item?.filter) : null,
+          expand_property: item?.expand_property ? getExpandByFromState(item?.expand_property) : null
+        }
+      })
+      let considerEventsFromState = [...includeGroupFromState, ...includeEventsFromState];
+
+      setConsiderEventArr(considerEventsFromState)
       let eventFromState = {
-        ...activeQuery?.event,
+        ...activeQueryItem?.event,
         //adding filters key for filters to work
-        filters: activeQuery?.event?.filter
-          ? getGlobalFiltersfromSavedState(activeQuery?.event?.filter)
+        filters: activeQueryItem?.event?.filter
+          ? getGlobalFiltersfromSavedState(activeQueryItem?.event?.filter)
           : null
       };
       setSingleQueries([eventFromState]);
       setMultipleQueries(
-        activeQuery?.include_events
-          ? activeQuery?.include_events
-            ? activeQuery?.include_events
+        activeQueryItem?.include_events
+          ? activeQueryItem?.include_events
+            ? activeQueryItem?.include_events
             : []
-          : activeQuery?.exclude_events
-          ? activeQuery?.exclude_events
-          : []
+          : activeQueryItem?.exclude_events
+            ? activeQueryItem?.exclude_events
+            : []
       );
 
       let defaultDate = {
-        startDate: moment.unix(activeQuery?.starttimestamp),
-        endDate: moment.unix(activeQuery?.endtimestamp)
+        startDate: moment.unix(activeQueryItem?.starttimestamp),
+        endDate: moment.unix(activeQueryItem?.endtimestamp)
       };
 
       setGlobalFilters(
-        activeQuery?.filter
-          ? getGlobalFiltersfromSavedState(activeQuery?.filter)
+        activeQueryItem?.filter
+          ? getGlobalFiltersfromSavedState(activeQueryItem?.filter)
           : null
       );
       setSelectedDateRange(defaultDate);
+
+      let referenceid = activeQuery?.referenceid;
+      let savedReferences = savedQuery[referenceid];
+      if (savedReferences?.length > 1) {
+        let savedRangesArr = savedReferences?.map((item) => {
+          return {
+            startDate: item?.query?.starttimestamp, endDate: item?.query?.endtimestamp, status: item?.status, id: item?.id
+          }
+        })
+        setSavedRanges(savedRangesArr)
+      }
     }
   }, [activeQuery]);
 
@@ -301,13 +385,13 @@ const QueryBuilder = ({
     let isSingleEvent = type === 'singleEvent' ? true : false;
     let filterConfig = isSingleEvent
       ? {
-          eventLimit: 1,
-          extraActions: true
-        }
+        eventLimit: 1,
+        extraActions: true
+      }
       : {
-          eventLimit: 15,
-          extraActions: false
-        };
+        eventLimit: 15,
+        extraActions: false
+      };
 
     const blockList = [];
     let queryArr = isSingleEvent ? singleQueries : multipleQueries;
@@ -392,6 +476,207 @@ const QueryBuilder = ({
     }
   };
 
+  const CustomPath = ({ item, index }) => {
+
+    const [eventType, setEventType] = useState('eventOnly');
+    const [eventLevelFilter, setEventLevelFilter] = useState([]);
+    const [filterDD, setFilterDD] = useState(false);
+    const [expandByDD, setExpandByDD] = useState([false]);
+    const [eventLevelExpandBy, setEventLevelExpandBy] = useState([]);
+
+
+    useEffect(() => {
+      //reset filter when event type changes
+      setEventLevelFilter([]);
+      setEventLevelExpandBy([]);
+    }, [eventType]);
+
+    const setValOnChange = (val) => {
+      let mainArr = considerEventArr;
+      mainArr[index] = {
+        ...mainArr[index],
+        type: mainArr[index]?.type ? mainArr[index]?.type : 'eventOnly',
+        value: val
+      }
+      setConsiderEventArr(mainArr)
+    }
+    const setOnTypeChange = (val) => {
+      setEventType(val);
+      let mainArr = considerEventArr;
+      mainArr[index] = {
+        ...mainArr[index],
+        type: val,
+      }
+      setConsiderEventArr(mainArr)
+    }
+    const removeItem = (indexVal) => {
+      let newArr = considerEventArr?.filter((item, index) => index != indexVal)
+      setConsiderEventArr(newArr);
+    }
+
+    const setFilterChange = (val) => {
+      setEventLevelFilter(val)
+      let mainArr = considerEventArr;
+      mainArr[index] = {
+        ...mainArr[index],
+        filter: val
+      }
+      setConsiderEventArr(mainArr)
+    }
+
+    const setExpandByChange = (val) => {
+      setEventLevelExpandBy(val)
+      let mainArr = considerEventArr;
+      mainArr[index] = {
+        ...mainArr[index],
+        expand_property: val
+      }
+      setConsiderEventArr(mainArr)
+    }
+
+    const DDMenuItems = (eventType) => {
+      return (
+        <Menu>
+          {eventType != 'eventOnly' &&
+            <Menu.Item key='0' disabled={eventLevelFilter?.length >= 1} onClick={() => setFilterDD(true)}>
+              <a disabled={eventLevelFilter?.length >= 1}> Add Filter</a>
+            </Menu.Item>}
+          <Menu.Item key='1' disabled={eventLevelExpandBy?.length >= 1} onClick={() => setExpandByDD([true])}>
+            <a disabled={eventLevelExpandBy?.length >= 1}>Expand by property</a>
+          </Menu.Item>
+        </Menu>
+      );
+    };
+
+    const DDEventTypes = [
+      {
+        value: 'Page Views',
+        label: 'Page Views',
+      },
+      {
+        value: 'CRM Events',
+        label: 'CRM Events',
+      },
+      {
+        value: 'Button Clicks',
+        label: 'Button Clicks',
+      },
+      {
+        value: 'Sessions',
+        label: 'Sessions',
+      },
+    ]
+
+
+    let DDValues = eventOptions.map((item) => {
+      let optionsVal = item?.values.map((val) => {
+        return { label: val[0], value: `${val[1]},${val[0]},${item?.label}` }
+      })
+      return {
+        label: item?.label,
+        options: optionsVal
+      }
+    });
+
+    let typeCheck = considerEventArr[index]?.type ? considerEventArr[index]?.type : 'eventOnly';
+    return (
+      <div className='flex flex-col'>
+        <div className='flex items-center mt-2'>
+          <div className=''>
+            <Select
+              style={{ minWidth: 185 }}
+              className={'fa-select'}
+              defaultActiveFirstOption={true}
+              defaultValue={typeCheck}
+              onChange={(val) => setOnTypeChange(val)}
+              options={[
+                { value: 'eventOnly', label: 'If the event equals' },
+                { value: 'eventType', label: 'If the event is of type' },
+              ]}
+            />
+          </div>
+          <div className='ml-2'>
+            {typeCheck == 'eventOnly' ?
+              <Select
+                showSearch
+                style={{ minWidth: 285 }}
+                className={'fa-select'}
+                options={DDValues}
+                placeholder={'Select event'}
+                allowClear={true}
+                // defaultActiveFirstOption={true}
+                onChange={(val) => setValOnChange(val)}
+                defaultValue={considerEventArr[index]?.value?.split(",")[1]}
+              /> :
+              <Select
+                style={{ minWidth: 245 }}
+                options={DDEventTypes}
+                className={'fa-select'}
+                placeholder={'Select type'}
+                // defaultActiveFirstOption={true}
+                onChange={(val) => setValOnChange(val)}
+                defaultValue={considerEventArr[index]?.value}
+              />
+            }
+          </div>
+          <div className='ml-2'>
+            <Dropdown overlay={() => DDMenuItems(eventType)} trigger={['click']} >
+              <Button type={'text'} icon={<SVG name={'Threedot'} size={16} color='gray' />} />
+            </Dropdown>
+
+            <Button type={'text'} icon={<SVG
+              name={'Trash'}
+              size={16}
+              color='gray'
+            />}
+              onClick={() => removeItem(index)} />
+          </div>
+
+
+
+        </div>
+        <EventFilter
+          filters={item?.filter ? item?.filter : eventLevelFilter}
+          setGlobalFilters={(val) => setFilterChange(val)}
+          groupName={groupCategory}
+          filterDD={filterDD}
+          setFilterDD={setFilterDD}
+        />
+
+        <ExpandBy isDDVisible={expandByDD} setDDVisible={setExpandByDD}
+          eventLevelExpandBy={item?.expand_property ? item?.expand_property : eventLevelExpandBy} setEventLevelExpandBy={setExpandByChange}
+        />
+      </div>
+    )
+  }
+
+
+  const addEventFn = () => {
+    try {
+
+
+
+      return (
+        <div className={`mt-4`}>
+          {considerEventArr?.map((item, index) => {
+            return (
+              <CustomPath item={item} index={index} />
+            )
+          })}
+
+          <Button type={'text'} className={considerEventArr?.length > 0 ? 'mt-4' : ''}
+            onClick={() => setConsiderEventArr([...considerEventArr, {}])
+            }
+            icon={<SVG name='plus' />}
+          >Add New</Button>
+
+        </div>
+      );
+    } catch (err) {
+      console.log("error caught-->>>", err);
+    }
+  };
+
   const renderMultiEventList = () => {
     try {
       return (
@@ -420,7 +705,7 @@ const QueryBuilder = ({
               />
             </div>
 
-            {queryList()}
+            {excludeEvents == 'true' ? queryList() : addEventFn()}
           </div>
         </>
       );
@@ -609,12 +894,49 @@ const QueryBuilder = ({
       //   return null;
       // } else {
 
+      const smoothScroll = (element) => {
+        document.querySelector(element).scrollIntoView({
+          behavior: 'smooth'
+        });
+      };
+
+      const onSelectSavedRangeFn = (data) => {
+        setLoading(true);
+        fetchPathAnalysisInsights(activeProject?.id, data?.id).then(() => {
+          smoothScroll('#fa-report-container');
+          setLoading(false);
+        }).catch((err) => {
+          setLoading(false);
+          console.log('path analysis saved range err->', err);
+          message.error(err.data.error);
+        });
+      }
+
       return (
         <div
           // className={ !collapse ? styles.composer_footer : styles.composer_footer_right }
           className='flex justify-between w-100 mt-6 pt-6 mb-6 border-top--thin-2'
         >
-          <FaDatepicker
+
+          <FaSavedRangePicker
+            todayPicker={false}
+            customPicker
+            presetRange
+            monthPicker
+            quarterPicker
+            placement='topLeft'
+            buttonSize={'large'}
+            range={{
+              startDate: selectedDateRange.startDate,
+              endDate: selectedDateRange.endDate
+            }}
+            savedRanges={savedRanges}
+            onSelect={setDateRange}
+            onSelectSavedRange={onSelectSavedRangeFn}
+          />
+
+          {/* <FaDatepicker
+            todayPicker={false}
             customPicker
             presetRange
             monthPicker
@@ -626,7 +948,7 @@ const QueryBuilder = ({
               endDate: selectedDateRange.endDate
             }}
             onSelect={setDateRange}
-          />
+          /> */}
 
           <div className='flex justify-end items-center'>
             {showCollapseBtn && (
@@ -663,10 +985,8 @@ const QueryBuilder = ({
       <div className={'relative'}>
         {
           <div
-            className={`query_card_cont mb-10 ${
-              !collapse ? `query_card_open` : `query_card_close`
-            }`}
-            // onClick={(e) => setCollapse(false)}
+            className={`query_card_cont mb-10 ${!collapse ? `query_card_open` : `query_card_close`
+              }`}
           >
             {renderGroupSection()}
             {renderPathCondition()}
@@ -695,8 +1015,10 @@ const QueryBuilder = ({
 
 const mapStateToProps = (state) => {
   return {
-    // savedQuery: state.pathAnalysis.savedQuery,
+    savedQuery: state.pathAnalysis?.savedQuery,
+    activeQuery: state.pathAnalysis?.activeQuery,
     activeProject: state.global.active_project,
+    eventOptions: state.coreQuery.eventOptions,
     groupOpts: state.groups.data
   };
 };
@@ -706,5 +1028,6 @@ export default connect(mapStateToProps, {
   createPathPathAnalysisQuery,
   fetchGroups,
   getGroupProperties,
-  getUserProperties
+  getUserProperties,
+  fetchPathAnalysisInsights
 })(QueryBuilder);

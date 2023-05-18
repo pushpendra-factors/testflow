@@ -5,6 +5,7 @@ import json
 import urllib
 import sys
 import time
+from datetime import datetime
 
 parser = OptionParser()
 parser.add_option("--env", dest="env", default="development")
@@ -36,6 +37,7 @@ parser.add_option("--enable_contact_list_sync_by_project_id", dest="enable_conta
 parser.add_option("--allowed_doc_types_sync", dest="allowed_doc_types_sync", help="", default="*")
 parser.add_option("--use_sync_contact_list_v2", dest="use_sync_contact_list_v2",action="store_true", help="", default=False)
 parser.add_option("--enable_owner_sync_by_project_id", dest="enable_owner_sync_by_project_id", help="", default="")
+parser.add_option("--enable_sync_company_v3_by_project_id", dest="enable_sync_company_v3_by_project_id", help="Use API v3 to overcome 10K limit", default="")
 
 APP_NAME = "hubspot_sync"
 PAGE_SIZE = 100
@@ -1091,6 +1093,11 @@ def fill_contacts_for_companies_v1(project_id, docs, hubspot_request_handler):
     return docs, company_contacts_api_calls
 
 def sync_companies(project_id, refresh_token, api_key,last_sync_timestamp, sync_all=False):
+    if use_sync_company_v3_by_project_id(project_id):
+        return sync_companies_v3(project_id, refresh_token, api_key,last_sync_timestamp, sync_all)
+    return sync_companies_v2(project_id, refresh_token, api_key,last_sync_timestamp, sync_all)
+
+def sync_companies_v2(project_id, refresh_token, api_key,last_sync_timestamp, sync_all=False):
     limit_key = ""
     if sync_all:
         urls = [ "https://api.hubapi.com/companies/v2/companies/paged?" ]
@@ -1162,6 +1169,146 @@ def sync_companies(project_id, refresh_token, api_key,last_sync_timestamp, sync_
                 create_all_documents(project_id, 'company', docs)
                 log.warning("Downloaded and created %d companies. total %d.", len(docs), count)
     create_all_company_documents_with_buffer([],False) ## flush any remaining docs in memory
+    return companies_api_calls, companies_contacts_api_calls, max_timestamp
+
+def get_batch_documents_max_timestamp_v3(project_id, docs, object_type, max_timestamp):
+    last_modified_key = ""
+    if object_type == "companies":
+        last_modified_key = COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE
+
+    for doc in docs:
+        object_properties = doc[RECORD_PROPERTIES_KEY]
+        if last_modified_key not in object_properties:
+            log.error("Missing lastmodified in %s for project_id %d.", object_type, project_id)
+            return max_timestamp
+        
+        last_modified_date = datetime.strptime(object_properties[last_modified_key], "%Y-%m-%dT%H:%M:%S.%fZ")
+        doc_last_modified_timestamp = int(last_modified_date.timestamp())
+        
+        if max_timestamp== 0 :
+            max_timestamp = doc_last_modified_timestamp
+        elif max_timestamp < doc_last_modified_timestamp:
+            max_timestamp = doc_last_modified_timestamp
+    
+    return max_timestamp
+
+def fill_contacts_for_companies_v3(project_id, companies, hubspot_request_handler):
+    companies_ids = []
+    for company in companies:
+        companies_ids.append(company["id"])
+    
+    associations, api_calls = get_associations(project_id, "company", companies_ids, "contact", hubspot_request_handler)
+    for i in range(len(companies)):
+        company_id = str(companies[i]["id"])
+        if company_id in associations:
+            contact_ids = []
+            for id in associations[company_id]:
+                contact_ids.append(int(id)) ## store as integer
+            companies[i]["contactIds"] = contact_ids
+    return companies, api_calls
+
+def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, sync_all=False):
+    log.info("Using sync_companies_v3 for project_id : "+str(project_id)+".")
+
+    limit = PAGE_SIZE
+    if sync_all:
+        url = "https://api.hubapi.com/crm/v3/objects/companies?"
+        headers = None
+        request = requests.get
+        json_data = None
+        log.warning("Downloading all companies for project_id : "+ str(project_id) + ".")
+    else:
+        url = "https://api.hubapi.com/crm/v3/objects/companies/search?"  # both created and modified.
+        headers = {'Content-Type': 'application/json'}
+        request = requests.post
+        json_data = {
+            "filterGroups":[
+                {
+                    "filters":[
+                        {
+                            "propertyName": COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE,
+                            "operator": "GTE",
+                            "value": str(last_sync_timestamp)
+                        }
+                    ]
+                }
+            ],
+            "sorts": [
+                {
+                    "propertyName": COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE,
+                    "direction": "ASCENDING"
+                }
+            ],
+            "limit": limit
+        }
+        log.warning("Downloading recently created or modified companies for project_id : "+ str(project_id) + ".")
+
+    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
+    create_all_company_documents_with_buffer = get_create_all_documents_with_buffer(project_id, "company", buffer_size)
+
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
+
+    companies_api_calls = 0
+    companies_contacts_api_calls = 0
+    max_timestamp = 0
+
+    count = 0
+    parameter_dict = {"limit": limit}
+
+    properties, ok = get_all_properties_by_doc_type(project_id, "companies", hubspot_request_handler)
+    if not ok:
+        log.error("Failure loading properties for project_id %d on sync_companies", project_id)
+        return 0, 0, 0
+
+    has_more = True
+    while has_more:
+        parameters = urllib.parse.urlencode(parameter_dict)
+        get_url = url
+        
+        if sync_all:
+            get_url = get_url + parameters + '&' + build_properties_param_str(properties)
+        else:
+            json_data["properties"] = properties
+
+        log.warning("Downloading companies for project_id %d from url %s.", project_id, get_url)
+        r = hubspot_request_handler(project_id, get_url, request=request, json=json_data, headers=headers)
+        if not r.ok:
+            log.error("Failure response %d from hubspot on sync_companies", r.status_code)
+            break
+        
+        companies_api_calls +=1
+        response_dict = json.loads(r.text)
+
+        docs = response_dict['results']
+        
+        paging_after = ""
+        if "paging" in response_dict and "next" in response_dict["paging"] and "after" in response_dict["paging"]["next"]:
+            paging_after = response_dict["paging"]["next"]["after"]
+
+        if paging_after != "":
+            has_more = True
+            if sync_all:
+                parameter_dict["after"] = paging_after
+            else:
+                json_data["after"] = paging_after
+        else:
+            has_more = False
+        
+        max_timestamp = get_batch_documents_max_timestamp_v3(project_id, docs, "companies", max_timestamp)
+        
+        # fills contact ids for each comapany under 'contactIds'.
+        _, api_calls = fill_contacts_for_companies_v3(project_id, docs, hubspot_request_handler)
+        companies_contacts_api_calls += api_calls
+        count = count + len(docs)
+        
+        if allow_buffer_before_insert_by_project_id(project_id):
+            create_all_company_documents_with_buffer(docs, has_more)
+            log.warning("Downloaded %d companies. total %d.", len(docs), count)
+        else:
+            create_all_documents(project_id, 'company', docs)
+            log.warning("Downloaded and created %d companies. total %d.", len(docs), count)
+    
+    create_all_company_documents_with_buffer([], False) ## flush any remaining docs in memory
     return companies_api_calls, companies_contacts_api_calls, max_timestamp
 
 def sync_forms(project_id, refresh_token, api_key):
@@ -1398,6 +1545,14 @@ def allowed_doc_types_sync(doc_type):
     if all_doc_typ:
         return True
     return doc_type in allowed_doc_types
+
+def use_sync_company_v3_by_project_id(project_id):
+    if not options.enable_sync_company_v3_by_project_id:
+        return False
+    all_projects, allowed_projects,_ = get_allowed_list_with_all_element_support(options.enable_sync_company_v3_by_project_id)
+    if all_projects:
+        return True
+    return str(project_id) in allowed_projects
 
 def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False):
     next_sync_info = []

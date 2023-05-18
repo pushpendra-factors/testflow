@@ -204,7 +204,7 @@ function SmartProperties({
 
   useEffect(() => {
     const columData = [];
-    rulesState.forEach((rl) => {
+    rulesState?.forEach((rl) => {
       columData.push({
         value: rl.value,
         source: rl.source,
@@ -260,6 +260,7 @@ function SmartProperties({
         setRulesState(smrtProp.rules);
         setFormState('view');
         setShowModalVisible(false);
+        setSelectedRule(null);
         notification.success({
           message: 'Success',
           description: 'Custom Dimension rules updated successfully ',
@@ -317,9 +318,7 @@ function SmartProperties({
         )
       ];
       rulesToUpdate.push(rule);
-      setRulesState(rulesToUpdate);
       setShowModalVisible(false);
-      setSelectedRule(null);
       if (formState === 'view') {
         const smrtProp = new SmartPropertyClass(
           smartPropState.id,
@@ -329,6 +328,9 @@ function SmartProperties({
           rulesToUpdate
         );
         updateForm(smrtProp);
+      } else {
+        setRulesState(rulesToUpdate);
+        setSelectedRule(null);
       }
     }
   };

@@ -6,14 +6,14 @@ import {
   KEY_LABELS,
   PAGE_COUNT_KEY,
   CHANNEL_KEY,
-  CHANNEL_QUICK_FILTERS,
   COMPANY_KEY,
   CAMPAIGN_KEY,
   SHARE_QUERY_PARAMS,
   DEFAULT_COLUMNS,
   EMP_RANGE_KEY,
   REVENUE_RANGE_KEY,
-  INDUSTRY_KEY
+  INDUSTRY_KEY,
+  ALL_CHANNEL
 } from './const';
 import { ResultGroup, StringObject, WeekStartEnd, ShareApiData } from './types';
 import momentTz from 'moment-timezone';
@@ -250,7 +250,7 @@ export const getTableData = (
     return rowObj;
   });
   //filtering table data with selected Channel filter
-  if (selectedChannel && selectedChannel !== CHANNEL_QUICK_FILTERS[0].id) {
+  if (selectedChannel && selectedChannel !== ALL_CHANNEL) {
     dataSource = dataSource?.filter((data: StringObject) =>
       data?.[CHANNEL_KEY] === selectedChannel ? true : false
     );
@@ -311,4 +311,26 @@ export const getPublicUrl = (obj: ShareApiData, project_id: string): string => {
     window.location.host +
     `${APP_LAYOUT_ROUTES.VisitorIdentificationReport.path}?${SHARE_QUERY_PARAMS.queryId}=${obj.query_id}&${SHARE_QUERY_PARAMS.projectId}=${project_id}&${SHARE_QUERY_PARAMS.routeVersion}=${obj.route_version}`
   );
+};
+
+export const generateEllipsisOption = (values: string[], charLimit = 35) => {
+  let text = '';
+  values.every((value, i) => {
+    text += value + `${i < values.length - 1 ? ', ' : ''}`;
+    if (text.length > charLimit) {
+      text = createEllipsis(text, charLimit, values.length - (i + 1));
+      return false;
+    }
+    return true;
+  });
+  return text;
+};
+
+const createEllipsis = (text: string, charLimit: number, countLeft = 0) => {
+  if (text.length < charLimit) return text;
+  else if (text.length > charLimit && countLeft) {
+    return `${text.slice(0, charLimit)}...${countLeft}more`;
+  } else {
+    return `${text.slice(0, charLimit)}...`;
+  }
 };

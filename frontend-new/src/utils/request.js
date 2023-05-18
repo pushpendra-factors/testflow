@@ -53,7 +53,7 @@ function request(dispatch, method, url, headers, data) {
     if (window.FUNNEL_V2 && window.FUNNEL_V2 != "") {
       options.headers["Funnel-V2"] = true;
     }
-  
+
     return fetch(url, options)
       .then((response) => {
  

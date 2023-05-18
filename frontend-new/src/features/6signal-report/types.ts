@@ -94,3 +94,7 @@ export interface ShareData extends ShareApiData {
 export interface SavedReportDatesApiResponse extends APIResponse {
   data: string[];
 }
+
+export interface PageViewUrlApiResponse extends APIResponse {
+  data: string[];
+}

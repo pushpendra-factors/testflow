@@ -54,12 +54,11 @@ func main() {
 	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp",
 		"--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
-	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
 	tmpBucketNameFlag := flag.String("bucket_name_tmp", "/usr/local/var/factors/cloud_storage_tmp", "--bucket_name=/usr/local/var/factors/cloud_storage_tmp pass bucket name for tmp artifacts")
 	archiveBucketNameFlag := flag.String("archive_bucket_name", "/usr/local/var/factors/cloud_storage_archive", "--bucket_name=/usr/local/var/factors/cloud_storage_archive pass archive bucket name")
 	sortedBucketNameFlag := flag.String("sorted_bucket_name", "/usr/local/var/factors/cloud_storage_sorted", "--bucket_name=/usr/local/var/factors/cloud_storage_sorted pass sorted data bucket name")
 	modelBucketNameFlag := flag.String("model_bucket_name", "/usr/local/var/factors/cloud_storage_models", "--bucket_name=/usr/local/var/factors/cloud_storage_models pass model bucket name")
-	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
+
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
 	numWorkersFlag := flag.Int("num_beam_workers", 100, "Num of beam workers")
 
@@ -98,6 +97,7 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
+	useSortedFilesMerge := flag.Bool("use_sorted_merge", false, "whether to use sorted files(if possible) or archive files")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	createMetadata := flag.Bool("create_metadata", false, "")
 	flag.Parse()
@@ -186,7 +186,7 @@ func main() {
 		"Env":             *envFlag,
 		"EtcdEndpoints":   *etcd,
 		"localDiskTmpDir": *localDiskTmpDirFlag,
-		"Bucket":          *bucketName,
+		"Bucket":          *modelBucketNameFlag,
 		"NumRoutines":     *numRoutinesFlag,
 	}).Infoln("Initialising")
 
@@ -231,45 +231,31 @@ func main() {
 		}
 	}
 	configs["tmpCloudManager"] = &cloudManagerTmp
-	if *useBucketV2 {
-		var archiveCloudManager filestore.FileManager
-		var sortedCloudManager filestore.FileManager
-		var modelCloudManager filestore.FileManager
-		if *envFlag == "development" {
-			modelCloudManager = serviceDisk.New(*modelBucketNameFlag)
-			archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
-			sortedCloudManager = serviceDisk.New(*sortedBucketNameFlag)
-		} else {
-			modelCloudManager, err = serviceGCS.New(*modelBucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init cloud manager.")
-			}
-			archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init archive cloud manager")
-			}
-			sortedCloudManager, err = serviceGCS.New(*sortedBucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init sorted data cloud manager")
-			}
-		}
-		configs["modelCloudManager"] = &modelCloudManager
-		configs["archiveCloudManager"] = &archiveCloudManager
-		configs["sortedCloudManager"] = &sortedCloudManager
+
+	var archiveCloudManager filestore.FileManager
+	var sortedCloudManager filestore.FileManager
+	var modelCloudManager filestore.FileManager
+	if *envFlag == "development" {
+		modelCloudManager = serviceDisk.New(*modelBucketNameFlag)
+		archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
+		sortedCloudManager = serviceDisk.New(*sortedBucketNameFlag)
 	} else {
-		var cloudManager filestore.FileManager
-		if *envFlag == "development" {
-			cloudManager = serviceDisk.New(*bucketName)
-		} else {
-			cloudManager, err = serviceGCS.New(*bucketName)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init cloud manager.")
-			}
+		modelCloudManager, err = serviceGCS.New(*modelBucketNameFlag)
+		if err != nil {
+			log.WithField("error", err).Fatal("Failed to init cloud manager.")
 		}
-		configs["modelCloudManager"] = &cloudManager
-		configs["archiveCloudManager"] = &cloudManager
-		configs["sortedCloudManager"] = &cloudManager
+		archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
+		if err != nil {
+			log.WithField("error", err).Fatal("Failed to init archive cloud manager")
+		}
+		sortedCloudManager, err = serviceGCS.New(*sortedBucketNameFlag)
+		if err != nil {
+			log.WithField("error", err).Fatal("Failed to init sorted data cloud manager")
+		}
 	}
+	configs["modelCloudManager"] = &modelCloudManager
+	configs["archiveCloudManager"] = &archiveCloudManager
+	configs["sortedCloudManager"] = &sortedCloudManager
 
 	configs["env"] = *envFlag
 	configs["db"] = db
@@ -286,22 +272,17 @@ func main() {
 	configs["hmineSupport"] = float32(*hmineSupport)
 	configs["hminePersist"] = *hmine_persist
 	configs["hardPull"] = *hardPull
-	configs["useBucketV2"] = *useBucketV2
 	configs["start_event"] = *start_event_v2
 	configs["end_event"] = *end_event_v2
 	configs["included_events"] = *include_events_v2
+	configs["useSortedFilesMerge"] = *useSortedFilesMerge
 
 	log.Infof("configs :%v", configs)
 	// profiling
 
 	// This job has dependency on pull_events
 	if *isWeeklyEnabled {
-		var taskName string
-		if *useBucketV2 {
-			taskName = "PatternMineWeeklyV2"
-		} else {
-			taskName = "PatternMineWeekly"
-		}
+		var taskName string = "PatternMineWeeklyV2"
 		C.PingHealthcheckForStart(healthcheckPingID)
 		configs["modelType"] = T.ModelTypeWeek
 		status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, T.BuildSequential, configs)
@@ -320,12 +301,7 @@ func main() {
 	}
 
 	if *isMonthlyEnabled {
-		var taskName string
-		if *useBucketV2 {
-			taskName = "PatternMineMonthlyV2"
-		} else {
-			taskName = "PatternMineMonthly"
-		}
+		var taskName string = "PatternMineMonthlyV2"
 		C.PingHealthcheckForStart(healthcheckPingID)
 		configs["modelType"] = T.ModelTypeMonth
 		status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, T.BuildSequential, configs)
@@ -344,12 +320,7 @@ func main() {
 	}
 
 	if *isQuarterlyEnabled {
-		var taskName string
-		if *useBucketV2 {
-			taskName = "PatternMineQuarterlyV2"
-		} else {
-			taskName = "PatternMineQuarterly"
-		}
+		var taskName string = "PatternMineQuarterlyV2"
 		C.PingHealthcheckForStart(healthcheckPingID)
 		configs["modelType"] = T.ModelTypeQuarter
 		status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, T.BuildSequential, configs)

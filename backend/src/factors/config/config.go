@@ -274,8 +274,6 @@ type Configuration struct {
 	AllowIdentificationOverwriteUsingSourceByProjectID string
 	AllowHubspotPastEventsEnrichmentByProjectID        string
 	AllowHubspotContactListInsertByProjectID           string
-	NewCloudManager                                    filestore.FileManager
-	ProjectIdsV2                                       []int64
 	IngestionTimezoneEnabledProjectIDs                 []string
 	LinkedinMemberCompanyConfigProjectIDs              []string
 	AllowedSalesforceActivityTasksByProjectIDs         string
@@ -308,6 +306,7 @@ type Configuration struct {
 	CustomDateEnd                                      int64
 	EnableFieldsSyncByProjectID                        string
 	EnableUserDomainsGroupByProjectID                  string
+	UseHubspotCompaniesV3APIByProjectID                string
 	OtpKeyWithQueryCheckEnabled                        bool
 }
 
@@ -370,6 +369,7 @@ const (
 	HealthcheckAdsImportPingID                   = "c392e3b4-4883-47ae-b5ff-63743d5d0c78"
 	HealthcheckComputeAndSendAlertsPingID        = "8345e798-1622-4881-942e-99fdd638ddf0"
 	HealthcheckMailWIPingID                      = "950b628b-d623-4666-be39-952516e543c0"
+	HealthCheckWeeklyInsightsPingID              = "56c0ba58-3d1f-4408-924a-3e6588d4ad5c"
 	HealthcheckPatternMinePingID                 = "04e9ba3d-5b07-4325-ad28-6ac7cf15971b"
 	HealthcheckPullEventsPingID                  = "088cc760-f350-4eb1-bbb6-c2bbde66b530"
 	HealthcheckPathAnalysisPingID                = "9f71b930-9233-4e58-9935-5de0434d8fa8"
@@ -386,6 +386,32 @@ const (
 	HealthcheckDatabaseHealthMemSQLPingID = "763baa99-61bf-4721-b293-e62eb1027987"
 	HealthcheckSDKHealthPingID            = "bb2c4757-9fa4-48eb-bd08-42a16996a61b"
 )
+
+func PingHealthCheckBasedOnStatus(status map[string]interface{}, healthcheckPingID string) bool {
+	isSuccess := true
+	for reason, message := range status {
+		if message == false {
+			for key, val := range status[reason[6:]].(map[string]interface{}) {
+				if strings.Contains(key, "error") {
+					if strings.HasPrefix(val.(string), "invalid end timestamp") {
+						continue
+					}
+					isSuccess = false
+					break
+				}
+			}
+			if !isSuccess {
+				break
+			}
+		}
+	}
+	if isSuccess {
+		PingHealthcheckForSuccess(healthcheckPingID, status)
+	} else {
+		PingHealthcheckForFailure(healthcheckPingID, status)
+	}
+	return isSuccess
+}
 
 func (service *Services) GetPatternServerAddresses() []string {
 	service.patternServersLock.RLock()
@@ -2297,13 +2323,7 @@ func GetAppName(defaultAppName, overrideAppName string) string {
 	return defaultAppName
 }
 
-func GetCloudManager(projectId int64, skipProjectIdDependency bool) filestore.FileManager {
-	if skipProjectIdDependency {
-		return configuration.NewCloudManager
-	}
-	if U.ContainsInt64InArray(configuration.ProjectIdsV2, projectId) {
-		return configuration.NewCloudManager
-	}
+func GetCloudManager() filestore.FileManager {
 	return configuration.CloudManager
 }
 
@@ -2728,4 +2748,13 @@ func EnableUserDomainsGroupByProjectID(projectID int64) bool {
 	}
 
 	return projectIDsMap[projectID]
+}
+
+func AllowHubspotCompaniesv3APIByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotCompaniesV3APIByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }

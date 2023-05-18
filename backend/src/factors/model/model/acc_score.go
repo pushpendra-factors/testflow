@@ -1,10 +1,14 @@
 package model
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
+
+const DEFAULT_EVENT string = "all_events"
+const LAST_EVENT string = "LAST_EVENT"
 
 type AccScoreResult struct {
 	ProjectId int64             `json:"projectid"`
@@ -89,17 +93,17 @@ type GroupEventsCountResult struct {
 }
 
 type PerAccountScore struct {
-	Id        string         `json:"id"`
-	Score     float32        `json:"score"`
-	Timestamp string         `json:"timestamp"`
-	Debug     map[string]int `json:"debug"`
+	Id        string           `json:"id"`
+	Score     float32          `json:"score"`
+	Timestamp string           `json:"timestamp"`
+	Debug     map[string]int64 `json:"debug"`
 }
 
 type PerUserScoreOnDay struct {
-	Id        string         `json:"id"`
-	Score     float32        `json:"score"`
-	Timestamp string         `json:"timestamp"`
-	Debug     map[string]int `json:"debug"`
+	Id        string           `json:"id"`
+	Score     float32          `json:"score"`
+	Timestamp string           `json:"timestamp"`
+	Debug     map[string]int64 `json:"debug"`
 }
 
 type AllUsersScore struct {
@@ -126,4 +130,20 @@ type PerUserScore struct {
 
 type PerDayScore struct {
 	PerEventScore map[string]int `json:"dayscore"`
+}
+
+type LatestScore struct {
+	Date        int64            `json:"date"`
+	EventsCount map[string]int64 `json:"events"`
+}
+
+func GetDateFromString(ts string) int64 {
+	year := ts[0:4]
+	month := ts[4:6]
+	date := ts[6:8]
+	t, _ := strconv.ParseInt(year, 10, 64)
+	t1, _ := strconv.ParseInt(month, 10, 64)
+	t2, _ := strconv.ParseInt(date, 10, 64)
+	t3 := time.Date(int(t), time.Month(t1), int(t2), 0, 0, 0, 0, time.UTC).Unix()
+	return t3
 }

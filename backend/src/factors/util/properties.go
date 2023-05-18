@@ -919,6 +919,9 @@ const SALESFORCE_PROPERTY_PREFIX = "$salesforce_"
 const MARKETO_PROPERTY_PREFIX = "$marketo_"
 const LEADSQUARED_PROPERTY_PREFIX = "$leadsquared_"
 
+var CRMEventPrefixes = [...]string{
+	"$hubspot", "$salesforce", "$sf", "$leadsquared", "$marketo",
+}
 var AllowedCRMPropertyPrefix = map[string]bool{
 	HUBSPOT_PROPERTY_PREFIX:     true,
 	SALESFORCE_PROPERTY_PREFIX:  true,
@@ -1533,7 +1536,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_HUBSPOT_DEAL:           "Hubspot Deals",
 	GROUP_NAME_SALESFORCE_ACCOUNT:     "Salesforce Accounts",
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
-	GROUP_NAME_SIX_SIGNAL:             "6Signal Domain",
+	GROUP_NAME_SIX_SIGNAL:             "6Signal Domains",
 	GROUP_NAME_LINKEDIN_COMPANY:       "Linkedin Company Engagements",
 }
 

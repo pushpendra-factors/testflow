@@ -1,0 +1,1 @@
+alter table event_trigger_alerts add column last_fail_details json;

@@ -17,9 +17,10 @@ import (
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 
+	"factors/model/store"
+
 	"github.com/apache/beam/sdks/go/pkg/beam"
 	log "github.com/sirupsen/logrus"
-	"factors/model/store"
 )
 
 func registerStructs() {
@@ -40,13 +41,12 @@ func registerStructs() {
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
-	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
 	tmpBucketNameFlag := flag.String("bucket_name_tmp", "/usr/local/var/factors/cloud_storage_tmp", "--bucket_name=/usr/local/var/factors/cloud_storage_tmp pass bucket name for tmp artifacts")
 	archiveBucketNameFlag := flag.String("archive_bucket_name", "/usr/local/var/factors/cloud_storage_archive", "--bucket_name=/usr/local/var/factors/cloud_storage_archive pass archive bucket name")
 	sortedBucketNameFlag := flag.String("sorted_bucket_name", "/usr/local/var/factors/cloud_storage_sorted", "--bucket_name=/usr/local/var/factors/cloud_storage_sorted pass sorted bucket name")
 	modelBucketNameFlag := flag.String("model_bucket_name", "/usr/local/var/factors/cloud_storage_models", "--bucket_name=/usr/local/var/factors/cloud_storage_models pass models bucket name")
-	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
 	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
+	useSortedFilesMerge := flag.Bool("use_sorted_merge", false, "whether to use sorted files(if possible) or archive files")
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory.")
 
 	numWorkersFlag := flag.Int("num_beam_workers", 100, "Num of beam workers")
@@ -134,7 +134,7 @@ func main() {
 	//Initialized configs
 
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
-	
+
 	// Get All the Projects for which the path analysis has pending items
 	configs := make(map[string]interface{})
 	// Init cloud manager.
@@ -148,53 +148,38 @@ func main() {
 		}
 	}
 	configs["tmpCloudManager"] = &cloudManagerTmp
-	if *useBucketV2 {
-		var archiveCloudManager filestore.FileManager
-		var sortedCloudManager filestore.FileManager
-		var modelCloudManager filestore.FileManager
-		if *env == "development" {
-			modelCloudManager = serviceDisk.New(*modelBucketNameFlag)
-			archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
-			sortedCloudManager = serviceDisk.New(*sortedBucketNameFlag)
-		} else {
-			modelCloudManager, err = serviceGCS.New(*modelBucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init cloud manager.")
-			}
-			archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init archive cloud manager")
-			}
-			sortedCloudManager, err = serviceGCS.New(*sortedBucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init sorted data cloud manager")
-			}
-		}
-		configs["modelCloudManager"] = &modelCloudManager
-		configs["archiveCloudManager"] = &archiveCloudManager
-		configs["sortedCloudManager"] = &sortedCloudManager
+	var archiveCloudManager filestore.FileManager
+	var sortedCloudManager filestore.FileManager
+	var modelCloudManager filestore.FileManager
+	if *env == "development" {
+		modelCloudManager = serviceDisk.New(*modelBucketNameFlag)
+		archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
+		sortedCloudManager = serviceDisk.New(*sortedBucketNameFlag)
 	} else {
-		var cloudManager filestore.FileManager
-		if *env == "development" {
-			cloudManager = serviceDisk.New(*bucketNameFlag)
-		} else {
-			cloudManager, err = serviceGCS.New(*bucketNameFlag)
-			if err != nil {
-				log.WithField("error", err).Fatal("Failed to init cloud manager.")
-			}
+		modelCloudManager, err = serviceGCS.New(*modelBucketNameFlag)
+		if err != nil {
+			log.WithField("error", err).Fatal("Failed to init cloud manager.")
 		}
-		configs["modelCloudManager"] = &cloudManager
-		configs["archiveCloudManager"] = &cloudManager
-		configs["sortedCloudManager"] = &cloudManager
+		archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
+		if err != nil {
+			log.WithField("error", err).Fatal("Failed to init archive cloud manager")
+		}
+		sortedCloudManager, err = serviceGCS.New(*sortedBucketNameFlag)
+		if err != nil {
+			log.WithField("error", err).Fatal("Failed to init sorted data cloud manager")
+		}
 	}
+	configs["modelCloudManager"] = &modelCloudManager
+	configs["archiveCloudManager"] = &archiveCloudManager
+	configs["sortedCloudManager"] = &sortedCloudManager
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
 	configs["diskManager"] = diskManager
-	configs["useBucketV2"] = *useBucketV2
 	configs["beamConfig"] = &beamConfig
 	configs["hardPull"] = *hardPull
 	configs["sortOnGroup"] = *sortOnGroup
+	configs["useSortedFilesMerge"] = *useSortedFilesMerge
 
 	configs["blacklistedQueries"] = C.GetTokensFromStringListAsString(*blacklistedQueries)
 
@@ -203,10 +188,10 @@ func main() {
 	for _, projectId := range projectIDs {
 		status := make(map[string]interface{})
 		status, result = D.PathAnalysis(projectId, configs)
-		if(len(status) > 0){
+		if len(status) > 0 {
 			finalStatus[projectId] = status
 		}
-		if(result == false){
+		if result == false {
 			break
 		}
 	}

@@ -567,10 +567,10 @@
 }
 
 .top-section {
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
 
     .heading {
         width: 80%;
@@ -718,7 +718,6 @@
         .ant-table-cell {
             font-weight: $font-weight--bold;
             font-size: 12px;
-            padding: 11px 12px;
             color: $fa-color--mono-5;
         }
     }
@@ -831,4 +830,16 @@
     padding: 8px;
     height: 40px;
     width: 40px;
+}
+
+.engagement-tag {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    width: fit-content;
+    align-items: center;
+    padding: 4px 14px;
+    gap: 6px;
+    background: var(--bg-color);
+    border-radius: 16px;
 }

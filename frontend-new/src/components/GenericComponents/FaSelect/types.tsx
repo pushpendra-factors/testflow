@@ -4,11 +4,20 @@ export type OptionType = {
   value: string;
   label: string;
   labelNode?: ReactNode;
+  isSelected?: boolean;
+  isDisabled?: boolean;
 };
 export type Variant = 'Single' | 'Multi';
-export type handleOptionFunctionType = (
-  options: OptionType | OptionType[]
+
+export type SingleSelectOptionClickCallbackType = (
+  selectedOption: OptionType
 ) => void;
+
+export type ApplyClickCallbackType = (
+  updatedOptions: OptionType[],
+  selectedOptions: string[]
+) => void;
+
 export type PlacementType =
   | 'Top'
   | 'Bottom'

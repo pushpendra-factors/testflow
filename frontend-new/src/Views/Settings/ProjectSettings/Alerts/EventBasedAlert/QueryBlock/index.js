@@ -281,7 +281,7 @@ function QueryBlock({
         if (filtersGr.length === 1) {
           const filter = filtersGr[0];
           filters.push(
-            <div className='fa--query_block--filters flex flex-row'>
+            <div className='fa--query_block--filters flex flex-wrap'>
               <div key={ind}>
                 <FilterWrapper
                   index={ind}
@@ -319,7 +319,7 @@ function QueryBlock({
           ind += 1;
         } else {
           filters.push(
-            <div className='fa--query_block--filters flex flex-row'>
+            <div className='fa--query_block--filters flex flex-wrap'>
               <div key={ind}>
                 <FilterWrapper
                   index={ind}

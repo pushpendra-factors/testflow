@@ -523,9 +523,9 @@ func (gcsd *GCSDriver) GetEventsPartFilesDir(projectId int64, startTimestamp, en
 	return path
 }
 
-func (gcsd *GCSDriver) GetEventsPartFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, sorted bool, startIndex int, endIndex int, group int) (string, string) {
+func (gcsd *GCSDriver) GetEventsPartFilePathAndName(projectId int64, startTimestamp, endTimestamp int64, sorted bool, startIndex int, endIndex int, group int, timeIndex int) (string, string) {
 	path := gcsd.GetEventsPartFilesDir(projectId, startTimestamp, endTimestamp, sorted, group)
-	name := fmt.Sprintf("%d-%d_uids.txt", startIndex, endIndex)
+	name := fmt.Sprintf("%d-%d_uids_%d.txt", startIndex, endIndex, timeIndex)
 	return path, name
 }
 
@@ -545,8 +545,8 @@ func (gcsd *GCSDriver) GetChannelPartFilesDir(channel string, projectId int64, s
 	return path
 }
 
-func (gcsd *GCSDriver) GetChannelPartFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool, index int) (string, string) {
+func (gcsd *GCSDriver) GetChannelPartFilePathAndName(channel string, projectId int64, startTimestamp, endTimestamp int64, sorted bool, index int, timeIndex int) (string, string) {
 	path := gcsd.GetChannelPartFilesDir(channel, projectId, startTimestamp, endTimestamp, sorted)
-	name := fmt.Sprintf("%d_doctype.txt", index)
+	name := fmt.Sprintf("%d_doctype_%d.txt", index, timeIndex)
 	return path, name
 }

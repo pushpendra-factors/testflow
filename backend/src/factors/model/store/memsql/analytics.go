@@ -170,9 +170,11 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 					// categorical property type.
 					pValue := p.Value
 					if p.Operator == model.ContainsOpStr {
+						pValue = strings.Replace(pValue, "?", "\\?", -1)
 						pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) %s ?", propertyEntity, propertyOp)
 						rParams = append(rParams, p.Property, pValue)
 					} else if !hasNoneFilter && p.Operator == model.NotContainsOpStr {
+						pValue = strings.Replace(pValue, "?", "\\?", -1)
 						pStmnt1 := fmt.Sprintf(" ( JSON_EXTRACT_STRING(%s, ?) %s ? ", propertyEntity, propertyOp)
 						rParams = append(rParams, p.Property, pValue)
 						pStmnt2 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) = '' ", propertyEntity)

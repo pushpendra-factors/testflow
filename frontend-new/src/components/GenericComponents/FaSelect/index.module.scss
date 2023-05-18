@@ -58,6 +58,30 @@
   &__empty_opt {
     height: 54px;
   }
+
+  &__clear_opt {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    background-color: #ffffff;
+    align-items: center;
+    padding-top: 4px;
+    margin-bottom: 4px;
+    z-index: 1;
+    Button {
+      background-color: #ffffff !important;
+      border-color: #ffffff !important;
+    }
+  }
+  &__disabled_opt {
+    pointer-events: none;
+    cursor: not-allowed;
+    box-shadow: none !important;
+    opacity: 0.7;
+  }
 }
 
 .fa_selected {

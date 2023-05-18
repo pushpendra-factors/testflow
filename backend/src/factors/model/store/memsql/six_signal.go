@@ -212,6 +212,91 @@ func (store *MemSQL) ExecSixSignalSQLQuery(stmnt string, params []interface{}) (
 	return result, nil, reqID
 }
 
+func (store *MemSQL) RunSixSignalPageViewQuery(projectId int64, query model.SixSignalQuery) ([]string, int, string) {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"query":      query,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	stmt, params := store.buildSixSignalPageViewQuery(projectId, query)
+
+	logCtx := log.WithFields(logFields)
+	if stmt == "" || len(params) == 0 {
+		logCtx.Error("Failed generating SQL query.")
+		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+	}
+
+	result, err, _ := store.ExecSixSignalPageViewQuery(stmt, params) //reqID marked as _
+	if err != nil {
+		logCtx.WithError(err).Error("Failed executing SQL query generated.")
+		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+	}
+
+	return result, http.StatusOK, "Successfully executed query"
+
+}
+
+func (store *MemSQL) buildSixSignalPageViewQuery(projectId int64, query model.SixSignalQuery) (string, []interface{}) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	qParams := make([]interface{}, 0, 0)
+	var qStmt string
+
+	eventName, errCode := store.GetEventNamesByNames(projectId, query.PageView)
+	if errCode != http.StatusFound {
+		logCtx.WithField("err_code", errCode).Error("failed to find event names")
+		return qStmt, qParams
+	}
+
+	var eventNameId []string
+	for i := range eventName {
+		if eventName[i].Type == model.TYPE_AUTO_TRACKED_EVENT_NAME {
+			eventNameId = append(eventNameId, eventName[i].ID)
+		}
+	}
+
+	qStmt = "SELECT DISTINCT JSON_EXTRACT_STRING(events.user_properties,?) AS Company " + " FROM events " +
+		" WHERE events.event_name_id IN ( ?) AND project_id=? AND timestamp>= ? AND timestamp<= ? ;"
+
+	qParams = append(qParams, U.SIX_SIGNAL_NAME, eventNameId, projectId, query.From, query.To)
+
+	return qStmt, qParams
+}
+
+func (store *MemSQL) ExecSixSignalPageViewQuery(stmt string, params []interface{}) ([]string, error, string) {
+	logFields := log.Fields{
+		"stmt":   stmt,
+		"params": params,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+
+	logCtx := log.WithFields(logFields)
+	rows, tx, err, reqID := store.ExecQueryWithContext(stmt, params)
+	if err != nil {
+		return nil, err, reqID
+	}
+
+	defer U.CloseReadQuery(rows, tx)
+	var companyList []string
+	for rows.Next() {
+		err = rows.Scan(&companyList)
+		if err != nil {
+			logCtx.Error("Error while scanning row")
+			return companyList, err, reqID
+		}
+	}
+
+	return companyList, nil, reqID
+}
+
 // buildSixSignalErrorResult takes the failure msg and wraps it into a model.SixSignalQueryResult object
 func buildSixSignalErrorResult(errMsg string) *model.SixSignalQueryResult {
 	logFields := log.Fields{

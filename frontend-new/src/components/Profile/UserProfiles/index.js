@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Table,
   Button,
@@ -36,13 +36,15 @@ import ProfileBeforeIntegration from '../ProfileBeforeIntegration';
 import {
   ALPHANUMSTR,
   DEFAULT_TIMELINE_CONFIG,
+  EngagementTag,
   formatEventsFromSegment,
   formatFiltersForPayload,
   formatPayloadForFilters,
   formatSegmentsObjToGroupSelectObj,
   getPropType,
   iconColors,
-  propValueFormat
+  propValueFormat,
+  sortColumn
 } from '../utils';
 import {
   getProfileUsers,
@@ -205,6 +207,7 @@ function UserProfiles({
         key: 'identity',
         fixed: 'left',
         ellipsis: true,
+        sorter: (a, b) => sortColumn(a.identity.id, b.identity.id),
         render: (identity) => (
           <div className='flex items-center'>
             {identity.isAnonymous ? (
@@ -236,6 +239,31 @@ function UserProfiles({
         )
       }
     ];
+    // Engagement Column
+    const engagementExists = contacts.data?.[0]?.engagement;
+    if (engagementExists) {
+      columns.push({
+        title: <div className={headerClassStr}>Engagement</div>,
+        width: 150,
+        dataIndex: 'engagement',
+        key: 'engagement',
+        fixed: 'left',
+        align: 'center',
+        sorter: (a, b) => sortColumn(a.engagement, b.engagement),
+        render: (status) => (
+          <div
+            className='engagement-tag'
+            style={{ '--bg-color': EngagementTag[status]?.bgColor }}
+          >
+            <SVG name={EngagementTag[status]?.icon} />
+            <Text type='title' level={6} extraClass='m-0'>
+              {status}
+            </Text>
+          </div>
+        )
+      });
+    }
+
     const tableProps = timelinePayload.segment_id
       ? activeSegment.query.table_props
       : currentProjectSettings?.timelines_config?.user_config?.table_props;
@@ -251,17 +279,19 @@ function UserProfiles({
             level={7}
             color='grey-2'
             weight='bold'
-            className='m-0'
+            extraClass='m-0'
             truncate
+            charLimit={25}
           >
             {propDisplayName}
           </Text>
         ),
         dataIndex: prop,
         key: prop,
-        width: 300,
+        width: 260,
+        sorter: (a, b) => sortColumn(a[prop], b[prop]),
         render: (value) => (
-          <Text type='title' level={7} className='m-0' truncate>
+          <Text type='title' level={7} extraClass='m-0' truncate>
             {value ? propValueFormat(prop, value, propType) : '-'}
           </Text>
         )
@@ -269,10 +299,12 @@ function UserProfiles({
     });
     columns.push({
       title: <div className={headerClassStr}>Last Activity</div>,
-      dataIndex: 'last_activity',
-      key: 'last_activity',
-      width: 250,
+      dataIndex: 'lastActivity',
+      key: 'lastActivity',
+      width: 200,
       align: 'right',
+      sorter: (a, b) => sortColumn(a.lastActivity, b.lastActivity),
+      defaultSortOrder: 'ascend',
       render: (item) => MomentTz(item).fromNow()
     });
     return columns;
@@ -282,14 +314,10 @@ function UserProfiles({
     const tableData = data?.map((row) => {
       return {
         ...row,
-        ...row?.table_props
+        ...row?.tableProps
       };
     });
-    return tableData.sort(
-      (a, b) =>
-        parseInt((new Date(b.last_activity).getTime() / 1000).toFixed(0)) -
-        parseInt((new Date(a.last_activity).getTime() / 1000).toFixed(0))
-    );
+    return tableData;
   };
 
   const showModal = () => {
@@ -814,7 +842,7 @@ function UserProfiles({
         scroll={{
           x:
             currentProjectSettings?.timelines_config?.user_config?.table_props
-              ?.length * 300
+              ?.length * 250
         }}
       />
       <div className='flex flex-row-reverse mt-4'></div>
