@@ -706,6 +706,7 @@ func initAppServerServices(config *Configuration) error {
 	}
 
 	InitRedis(config.RedisHost, config.RedisPort)
+	InitQueueRedis(config.QueueRedisHost, config.QueueRedisPort)
 
 	err = InitEtcd(config.EtcdEndpoints)
 	if err != nil {

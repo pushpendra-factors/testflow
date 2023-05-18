@@ -1,6 +1,6 @@
 
 
-CREATE TABLE IF NOT EXISTS query_results (
+CREATE TABLE IF NOT EXISTS dash_query_results (
     id text,
     project_id bigint,
     dashboard_id bigint,

@@ -357,6 +357,11 @@ func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OT
 
 	eventTimestamp = U.CheckAndGetStandardTimestamp(eventTimestamp)
 
+	otpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
+	if err != nil {
+		return err
+	}
+
 	for _, rule := range *otpRules {
 
 		otpUniqueKey, err := createOTPUniqueKeyForFormsAndContactsV1(rule, event)
@@ -370,9 +375,20 @@ func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OT
 			continue
 		}
 
-		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !IntHubspot.IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
-			continue
+		if C.GetOtpKeyWithQueryCheckEnabled() {
+
+			//Checks if the otpUniqueKey is already present in other OTP Event Properties
+			isUnique, _ := store.GetStore().IsOTPKeyUniqueWithQuery(project.ID, event.UserId, otpEventName.ID, otpUniqueKey)
+			if !isUnique {
+				continue
+			}
+
+		} else {
+			//Checks if the otpUniqueKey is already present in other OTP Event Properties
+			if !IntHubspot.IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+				continue
+			}
+
 		}
 
 		_, err1 := CreateTouchPointEventForFormsAndContactsV1(project, event, rule, eventTimestamp, otpUniqueKey)
@@ -486,6 +502,11 @@ func ApplyHSOfflineTouchPointRuleForEngagementV1(project *model.Project, otpRule
 		logCtx.Error("something is empty")
 		return nil
 	}
+	otpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
+	if err != nil {
+		return err
+	}
+
 	for _, rule := range *otpRules {
 
 		otpUniqueKey, err := createOTPUniqueKeyForEngagementsV1(rule, event, engagementType, logCtx)
@@ -498,8 +519,19 @@ func ApplyHSOfflineTouchPointRuleForEngagementV1(project *model.Project, otpRule
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !IntHubspot.IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
-			continue
+		if C.GetOtpKeyWithQueryCheckEnabled() {
+
+			isUnique, _ := store.GetStore().IsOTPKeyUniqueWithQuery(project.ID, event.UserId, otpEventName.ID, otpUniqueKey)
+			if !isUnique {
+				continue
+			}
+
+		} else {
+
+			if !IntHubspot.IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+				continue
+			}
+
 		}
 
 		_, err1 := CreateTouchPointEventForEngagementV1(project, event, rule, engagementType, otpUniqueKey)
@@ -682,6 +714,12 @@ func ApplyHSOfflineTouchPointRuleForContactListV1(project *model.Project, otpRul
 		logCtx.Error("something is empty")
 		return nil
 	}
+
+	otpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
+	if err != nil {
+		return err
+	}
+
 	for _, rule := range *otpRules {
 
 		otpUniqueKey, err := createOTPUniqueKeyForContactListV1(rule, event, logCtx)
@@ -699,9 +737,22 @@ func ApplyHSOfflineTouchPointRuleForContactListV1(project *model.Project, otpRul
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !IntHubspot.IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
-			continue
+		if C.GetOtpKeyWithQueryCheckEnabled() {
+
+			//Checks if the otpUniqueKey is already present in other OTP Event Properties
+			isUnique, _ := store.GetStore().IsOTPKeyUniqueWithQuery(project.ID, event.UserId, otpEventName.ID, otpUniqueKey)
+			if !isUnique {
+				continue
+			}
+
+		} else {
+			//Checks if the otpUniqueKey is already present in other OTP Event Properties
+			if !IntHubspot.IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+				continue
+			}
+
 		}
+
 		_, err1 := CreateTouchPointEventForListsV1(project, event, rule, otpUniqueKey)
 		if err1 != nil {
 			logCtx.WithError(err1).Error("failed to create touch point for hubspot lists.")
@@ -815,6 +866,12 @@ func ApplyHSOfflineTouchPointRuleForFormsV1(project *model.Project, otpRules *[]
 		logCtx.Error("something is empty")
 		return nil
 	}
+
+	otpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
+	if err != nil {
+		return err
+	}
+
 	logCtx.WithFields(log.Fields{"ProjectID": project.ID}).Info("Inside method ApplyHSOfflineTouchPointRuleForForms")
 	formTimestamp = U.CheckAndGetStandardTimestamp(formTimestamp)
 
@@ -835,8 +892,19 @@ func ApplyHSOfflineTouchPointRuleForFormsV1(project *model.Project, otpRules *[]
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if !IntHubspot.IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
-			continue
+		if C.GetOtpKeyWithQueryCheckEnabled() {
+
+			isUnique, _ := store.GetStore().IsOTPKeyUniqueWithQuery(project.ID, event.UserId, otpEventName.ID, otpUniqueKey)
+			if !isUnique {
+				continue
+			}
+
+		} else {
+
+			if !IntHubspot.IsOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+				continue
+			}
+
 		}
 
 		logCtx.WithFields(log.Fields{"ProjectID": project.ID, "rule": rule}).Info("Invoking method CreateTouchPointEvent")

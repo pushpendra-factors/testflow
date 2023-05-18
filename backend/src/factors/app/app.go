@@ -68,9 +68,10 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
-	// Flags for Monitoring API
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
 	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
+	useQueueRedis := flag.Bool("use_queue_redis", false, "Use queue redis for sdk related caching.")
+
 	duplicateQueueRedisHost := flag.String("dup_queue_redis_host", "localhost", "")
 	duplicateQueueRedisPort := flag.Int("dup_queue_redis_port", 6379, "")
 	sdkQueueThreshold := flag.Int("sdk_queue_threshold", 10000, "Threshold to report sdk queue size")
@@ -79,8 +80,6 @@ func main() {
 	enableSDKAndIntegrationRequestQueueDuplication := flag.Bool("enable_sdk_and_integration_request_queue_duplication",
 		false, "Enables SDK and Integration request queue duplication monitoring.")
 	monitoringAPIToken := flag.String("monitoring_api_token", "", "enter  monitoring api token")
-
-	useQueueRedis := flag.Bool("use_queue_redis", false, "")
 
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")

@@ -1081,7 +1081,7 @@ function JavascriptSDK({
             JavaScript SDK please refer to our
           </span>
           <a
-            href='https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website'
+            href='https://help.factors.ai/en/articles/7260638-placing-factors-sdk'
             target='_blank'
             rel='noreferrer'
             style={{ margin: '0 5px' }}

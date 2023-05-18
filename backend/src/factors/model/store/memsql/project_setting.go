@@ -508,7 +508,12 @@ func delCacheProjectSetting(tokenKey, tokenValue string) int {
 		return http.StatusInternalServerError
 	}
 
-	err = cacheRedis.Del(key)
+	if C.UseQueueRedis() {
+		err = cacheRedis.DelQueueRedis(key)
+	} else {
+		err = cacheRedis.Del(key)
+	}
+
 	if err != nil && err != redis.ErrNil {
 		logCtx.WithError(err).Error("Failed to del cache on delCacheProjectSetting")
 		return http.StatusInternalServerError

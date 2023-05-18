@@ -52,8 +52,8 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 	overrideHealthcheckPingID := configs["override_healthcheck_ping_id"].(string)
 	numProjectRoutines := configs["num_project_routines"].(int)
 	numDaysBackfill := configs["num_days_backfill"].(int)
-	backfillStartTime := configs["backfill_start_timestamp"].(int)
-	backfillEndTime := configs["backfill_end_timestamp"].(int)
+	backfillStartTime := configs["backfill_start_timestamp"].(int64)
+	backfillEndTime := configs["backfill_end_timestamp"].(int64)
 
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
@@ -104,8 +104,8 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 
 	if (backfillStartTime <= backfillEndTime) && backfillEndTime != 0 {
 
-		startTime = int64(backfillStartTime)
-		endTime = int64(backfillEndTime)
+		startTime = backfillStartTime
+		endTime = backfillEndTime
 	}
 
 	for bi := range batches {

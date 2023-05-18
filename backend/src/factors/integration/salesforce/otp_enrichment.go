@@ -536,9 +536,11 @@ func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model
 
 	if rule.TouchPointTimeRef == model.SFCampaignMemberResponded {
 		if val, exists := sfEvent.EventProperties[model.EP_SFCampaignMemberFirstRespondedDate]; exists {
-			if tt, err := U.GetPropertyValueAsInt64(val); err != nil {
-				payload.Timestamp = tt
+
+			if tt, ok := val.(float64); ok {
+				payload.Timestamp = int64(tt)
 			} else {
+				logCtx.WithFields(log.Fields{"value": val})
 				logCtx.WithError(err).Error("failed to set timestamp for SF for offline touch point - First responded time.")
 			}
 		}
