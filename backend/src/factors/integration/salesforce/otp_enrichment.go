@@ -87,7 +87,7 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, wg *sync.WaitGroup) {
 
 			switch eventName {
 
-			case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED:
+			case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN:
 				RunSFOfflineTouchPointRuleForCampaignMember(project, &otpRules, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, logCtx)
 
 			case U.EVENT_NAME_SALESFORCE_TASK_UPDATED, U.EVENT_NAME_SALESFORCE_TASK_CREATED:
@@ -527,7 +527,7 @@ func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model
 
 	var timestamp int64
 
-	timestamp, err = getSalesforceDocumentTimestampByEventV1(sfEvent)
+	timestamp, err = GetSalesforceDocumentTimestampByEventV1(sfEvent)
 	if err != nil {
 		logCtx.WithError(err).Error("failed to timestamp for SF for offline touch point.")
 		return trackResponse, err
@@ -579,8 +579,8 @@ func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model
 	return trackResponse, nil
 }
 
-// getSalesforceDocumentTimestampByEventV1 returns created or last modified timestamp by SalesforceAction
-func getSalesforceDocumentTimestampByEventV1(event model.EventIdToProperties) (int64, error) {
+// GetSalesforceDocumentTimestampByEventV1 getSalesforceDocumentTimestampByEventV1 returns created or last modified timestamp by SalesforceAction
+func GetSalesforceDocumentTimestampByEventV1(event model.EventIdToProperties) (int64, error) {
 
 	if event.Name == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
 
@@ -588,21 +588,33 @@ func getSalesforceDocumentTimestampByEventV1(event model.EventIdToProperties) (i
 		if !exists || date == nil {
 			return 0, errors.New("failed to get date")
 		}
-		timestamp, ok := date.(float64)
-		if !ok || timestamp == 0 {
+
+		timestamp, err := U.GetPropertyValueAsFloat64(date)
+		if err != nil || timestamp == 0 {
+			return 0, errors.New("invalid timestamp")
+		}
+
+		return int64(timestamp), nil
+	} else if event.Name == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
+
+		date, exists := event.EventProperties[model.EP_SFCampaignMemberFirstRespondedDate]
+		if !exists || date == nil {
+			return 0, errors.New("failed to get date")
+		}
+		timestamp, err := U.GetPropertyValueAsFloat64(date)
+		if err != nil || timestamp == 0 {
 			return 0, errors.New("invalid timestamp")
 		}
 
 		return int64(timestamp), nil
 	}
-
 	date, exists := event.EventProperties[model.EP_SFCampaignMemberCreated]
 	if !exists || date == nil {
 		return 0, errors.New("failed to get date")
 	}
 
-	timestamp, ok := date.(float64)
-	if !ok || timestamp == 0 {
+	timestamp, err := U.GetPropertyValueAsFloat64(date)
+	if err != nil || timestamp == 0 {
 		return 0, errors.New("invalid timestamp")
 	}
 
