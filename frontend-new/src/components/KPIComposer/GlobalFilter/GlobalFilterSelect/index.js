@@ -310,10 +310,7 @@ const GlobalFilterSelect = ({
         {operSelectOpen && (
           <FaSelect
             options={operatorOpts[propState.type]
-              .filter((op) => {
-                // Only include the operator if showInList is true or it's not 'inList'
-                return false || op !== OPERATORS['inList'];
-              })
+              .filter((op) => false || (op !== OPERATORS['inList'] && op !== OPERATORS['notInList']))
               .map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
@@ -534,7 +531,9 @@ const GlobalFilterSelect = ({
   const formatCsvUploadValue = (value) => {
     if (
       operatorState === OPERATORS['inList'] ||
-      operatorState?.[0] === OPERATORS['inList']
+      operatorState?.[0] === OPERATORS['inList'] ||
+      operatorState === OPERATORS['notInList'] ||
+      operatorState?.[0] === OPERATORS['notInList']
     ) {
       const vl = value.split('_');
       let data = '';
