@@ -175,7 +175,6 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 	hardPull := configs["hardPull"].(bool)
 	beamConfig := configs["beamConfig"].(*merge.RunBeamConfig)
 	useSortedFilesMerge := configs["useSortedFilesMerge"].(bool)
-	useBucketV2 := configs["useBucketV2"].(bool)
 	blacklistedQueries := configs["blacklistedQueries"].([]string)
 	blacklistedQueriesMap := make(map[string]bool)
 	for _, id := range blacklistedQueries {
