@@ -269,7 +269,9 @@ function AccountProfiles({
       }
     ];
     // Engagement Column
-    const engagementExists = accounts.data?.[0]?.engagement;
+    const engagementExists = accounts.data?.find(
+      (item) => item.engagement !== ''
+    );
     if (engagementExists) {
       columns.push({
         title: <div className={headerClassStr}>Engagement</div>,
@@ -278,20 +280,23 @@ function AccountProfiles({
         key: 'engagement',
         fixed: 'left',
         sorter: (a, b) => sortColumn(a.engagement, b.engagement),
-        render: (status) => (
-          <div
-            className='engagement-tag'
-            style={{ '--bg-color': EngagementTag[status]?.bgColor }}
-          >
-            <img
-              src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
-              alt=''
-            />
-            <Text type='title' level={6} extraClass='m-0'>
-              {status}
-            </Text>
-          </div>
-        )
+        render: (status) =>
+          status ? (
+            <div
+              className='engagement-tag'
+              style={{ '--bg-color': EngagementTag[status]?.bgColor }}
+            >
+              <img
+                src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
+                alt=''
+              />
+              <Text type='title' level={6} extraClass='m-0'>
+                {status}
+              </Text>
+            </div>
+          ) : (
+            '-'
+          )
       });
     }
     // Table Prop Columns
