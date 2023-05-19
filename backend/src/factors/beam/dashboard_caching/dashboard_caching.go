@@ -136,7 +136,7 @@ func ReportOverallJobSummary(commonKey int64, values func(*CacheResponse) bool) 
 	message := "Overall time taken: " + overallTimeTaken + " | " + unitsSummary + " | " + webSummary
 
 	slowUnits := model.GetNSlowestUnits(allUnitReports, 3)
-	failedUnits := model.GetFailedUnitsByProject(allUnitReports)
+	failedUnits := store.GetStore().GetFailedUnitsByProject(allUnitReports)
 	slowProjects := model.GetNSlowestProjects(allUnitReports, 5)
 	failed, passed, notComputed := model.GetTotalFailedComputedNotComputed(allUnitReports)
 
@@ -158,7 +158,7 @@ func ReportOverallJobSummary(commonKey int64, values func(*CacheResponse) bool) 
 	}
 
 	slowUnits = model.GetNSlowestUnits(allUnitReports, 20)
-	failedUnits = model.GetFailedUnitsByProject(allUnitReports)
+	failedUnits = store.GetStore().GetFailedUnitsByProject(allUnitReports)
 	slowProjects = model.GetNSlowestProjects(allUnitReports, 10)
 	log.WithFields(log.Fields{
 		"Summary":                       message,

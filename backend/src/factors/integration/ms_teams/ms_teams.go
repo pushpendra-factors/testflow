@@ -25,7 +25,8 @@ type oauthState struct {
 }
 type TeamsMessage struct {
 	Body struct {
-		Content string `json:"content"`
+		ContentType string `json:"contentType"`
+		Content     string `json:"content"`
 	} `json:"body"`
 }
 
@@ -53,8 +54,10 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 		return errors.New("Failed to get access tokens for teams")
 	}
 	teamsMessage := TeamsMessage{Body: struct {
-		Content string "json:\"content\""
-	}{Content: message}}
+		ContentType string "json:\"contentType\""
+		Content     string "json:\"content\""
+	}{ContentType: "html",
+		Content: message}}
 
 	jsonMessage, err := json.Marshal(teamsMessage)
 	if err != nil {

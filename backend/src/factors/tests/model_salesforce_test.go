@@ -5702,3 +5702,49 @@ func TestSalesforceGetSyncedSalesforceDocumentByType(t *testing.T) {
 		idx++
 	}
 }
+
+func TestGetSalesforceDocumentTimestampByEventV1(t *testing.T) {
+
+	var sfEvent = model.EventIdToProperties{}
+	var eventPropertiesMap map[string]interface{}
+	err := json.Unmarshal([]byte(`{"$salesforce_campaignmember_firstrespondeddate": "100",
+									"$salesforce_campaignmember_lastmodifieddate": "100",
+										"$salesforce_campaignmember_createddate": "100"}`), &eventPropertiesMap)
+	assert.Equal(t, err, nil)
+
+	t.Run("TestForCampaignMemberUpdated", func(t *testing.T) {
+		sfEvent := model.EventIdToProperties{
+			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+			EventProperties: eventPropertiesMap,
+		}
+
+		timestamp, err := IntSalesforce.GetSalesforceDocumentTimestampByEventV1(sfEvent)
+		assert.Equal(t, err, nil)
+		assert.Equal(t, timestamp, int64(100))
+
+	})
+
+	t.Run("TestForCampaignMemberUpdated", func(t *testing.T) {
+		sfEvent = model.EventIdToProperties{
+			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+			EventProperties: eventPropertiesMap,
+		}
+
+		timestamp, err := IntSalesforce.GetSalesforceDocumentTimestampByEventV1(sfEvent)
+		assert.Equal(t, err, nil)
+		assert.Equal(t, timestamp, int64(100))
+
+	})
+
+	t.Run("TestForCampaignMemberUpdated", func(t *testing.T) {
+		sfEvent = model.EventIdToProperties{
+			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
+			EventProperties: eventPropertiesMap,
+		}
+		timestamp, err := IntSalesforce.GetSalesforceDocumentTimestampByEventV1(sfEvent)
+		assert.Equal(t, err, nil)
+		assert.Equal(t, timestamp, int64(100))
+
+	})
+
+}

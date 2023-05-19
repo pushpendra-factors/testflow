@@ -478,7 +478,9 @@ func FilterRowsForSixSignalPageView(projectId int64, reqPayload model.SixSignalQ
 	sortIndex := getIndexForPageCount(filteredRes.Headers)
 	if sortIndex != -1 {
 		sort.Slice(filteredRows, func(i, j int) bool {
-			return filteredRows[i][sortIndex].(int) > filteredRows[j][sortIndex].(int)
+			countI, _ := filteredRows[i][sortIndex].(int)
+			countJ, _ := filteredRows[j][sortIndex].(int)
+			return countI > countJ
 		})
 	}
 	filteredRes.Rows = filteredRows
