@@ -127,6 +127,7 @@ func TestMain(m *testing.M) {
 		EnableDomainsGroupByProjectID:                      "*",
 		EnableSyncReferenceFieldsByProjectID:               "*",
 		EnableUserDomainsGroupByProjectID:                  "*",
+		AllowEventAnalyticsGroupsByProjectID:               "*",
 		EnableEventFiltersInSegments:                       true,
 		AllAccountsProjectId:                               "*",
 	}

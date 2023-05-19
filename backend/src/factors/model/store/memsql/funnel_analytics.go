@@ -51,7 +51,7 @@ func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFi
 	scopeGroupID := 0
 	if query.GroupAnalysis != "" {
 		var valid bool
-		scopeGroupID, valid = store.IsValidFunnelGroupQueryIfExists(projectId, &query, groupIds)
+		scopeGroupID, valid = store.IsValidAnalyticsGroupQueryIfExists(projectId, &query, groupIds)
 		if !valid {
 			return nil, http.StatusBadRequest, model.ErrMsgFunnelQueryV2Failure
 		}
@@ -767,20 +767,24 @@ func buildNoneHandledGroupKeys(groupProps []model.QueryGroupByProperty) string {
 buildUniqueUsersFunnelQuery depreciated, use buildUniqueUsersFunnelQueryV2
 Funner Query for:
 Events:
+
 	$session
 	View Project
+
 Group By:
+
 	event_property -> 1. $session -> $day_of_week (categorical)
 	user_property -> $present -> $session_count (numerical)
+
 Query:
 WITH
-step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name=''),
+step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name=”),
 
 step_0 AS (SELECT DISTINCT ON(COALESCE(users.customer_user_id,events.user_id)) COALESCE(users.customer_user_id,events.user_id)
-as coal_user_id, events.user_id, events.timestamp, 1 as step_0, CASE WHEN events.properties->>'' IS NULL THEN '$none'
-WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END AS _group_key_0 FROM events JOIN users
+as coal_user_id, events.user_id, events.timestamp, 1 as step_0, CASE WHEN events.properties->>” IS NULL THEN '$none'
+WHEN events.properties->>” = ” THEN '$none' ELSE events.properties->>” END AS _group_key_0 FROM events JOIN users
 ON events.user_id=users.id WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND
-events.event_name_id IN (SELECT id FROM step_0_names WHERE project_id='3' AND name='') ORDER BY coal_user_id, events.timestamp ASC),
+events.event_name_id IN (SELECT id FROM step_0_names WHERE project_id='3' AND name=”) ORDER BY coal_user_id, events.timestamp ASC),
 
 step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
 
@@ -791,9 +795,9 @@ events.timestamp ASC), step_1_step_0_users AS (SELECT DISTINCT ON(step_1.coal_us
 step_1.user_id,step_1.timestamp, step_1 FROM step_0 LEFT JOIN step_1 ON step_0.coal_user_id = step_1.coal_user_id WHERE
 step_1.timestamp > step_0.timestamp ORDER BY step_1.coal_user_id, timestamp ASC),
 
-funnel AS (SELECT step_0, step_1, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN
-user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_1,
-CASE WHEN _group_key_0 IS NULL THEN '$none' WHEN _group_key_0 = '' THEN '$none' ELSE _group_key_0 END AS
+funnel AS (SELECT step_0, step_1, CASE WHEN user_properties.properties->>” IS NULL THEN '$none' WHEN
+user_properties.properties->>” = ” THEN '$none' ELSE user_properties.properties->>” END AS _group_key_1,
+CASE WHEN _group_key_0 IS NULL THEN '$none' WHEN _group_key_0 = ” THEN '$none' ELSE _group_key_0 END AS
 _group_key_0 FROM step_0 LEFT JOIN users on step_0.user_id=users.id LEFT JOIN user_properties on
 users.properties_id=user_properties.id  LEFT JOIN step_1_step_0_users ON step_0.coal_user_id=step_1_step_0_users.coal_user_id),
 
@@ -944,7 +948,7 @@ func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int,
 
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
 	userGroupProps = removeEventSpecificUserGroupBys(userGroupProps)
-	ugSelect, ugParams, _ := buildGroupKeys(projectId, userGroupProps, q.Timezone)
+	ugSelect, ugParams, _ := buildGroupKeys(projectId, userGroupProps, q.Timezone, false)
 
 	propertiesJoinStmnt := ""
 	if hasGroupEntity(q.GroupByProperties, model.PropertyEntityUser) {
@@ -1001,7 +1005,7 @@ func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int,
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
 		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
 	} else {
-		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties, q.Timezone)
+		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties, q.Timezone, false)
 		aggregateSelectKeys = groupKeys + ", "
 		aggregateFromName = stepFunnelName
 		aggregateGroupBys = groupKeys
@@ -1111,12 +1115,13 @@ SUM(step_1) AS step_1 FROM bucketed GROUP BY _group_key_0, _group_key_1_bucket O
 Funnel Group query for group_1 column
 s0 -> s0
 Global Group by
+
 	'group_1_id' property
 
 WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as group_user_id, FIRST(step_0_event_users_view.timestamp,
 FROM_UNIXTIME(step_0_event_users_view.timestamp)) as timestamp, 1 as step_0 , CASE WHEN JSON_EXTRACT_STRING(FIRST(group_properties,
 FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'group1_id') IS NULL THEN '$none' WHEN JSON_EXTRACT_STRING(FIRST(group_properties,
-FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'group1_id') = '' THEN '$none' ELSE JSON_EXTRACT_STRING(FIRST(group_properties,
+FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'group1_id') = ” THEN '$none' ELSE JSON_EXTRACT_STRING(FIRST(group_properties,
 FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'group1_id') END AS _group_key_0 FROM  (SELECT events.project_id, events.id,
 events.event_name_id, events.user_id, events.timestamp , events.properties as event_properties, events.user_properties as event_user_properties,
 user_groups.group_1_user_id as group_user_id , group_users.properties as group_properties FROM events  LEFT JOIN users ON events.user_id = users.id
@@ -1323,9 +1328,9 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
 	userGroupProps = removeEventSpecificUserGroupBys(userGroupProps)
 	if !isFunnelGroupQuery {
-		ugSelect, ugParams, _ = buildGroupKeys(projectId, userGroupProps, q.Timezone)
+		ugSelect, ugParams, _ = buildGroupKeys(projectId, userGroupProps, q.Timezone, false)
 	} else {
-		_, _, ugGroupKeys = buildGroupKeys(projectId, userGroupProps, q.Timezone)
+		_, _, ugGroupKeys = buildGroupKeys(projectId, userGroupProps, q.Timezone, false)
 	}
 
 	propertiesJoinStmnt := ""
@@ -1389,7 +1394,7 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
 		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
 	} else {
-		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties, q.Timezone)
+		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties, q.Timezone, false)
 		aggregateSelectKeys = groupKeys + ", "
 		aggregateFromName = stepFunnelName
 		aggregateGroupBys = groupKeys
@@ -1476,7 +1481,7 @@ func buildGroupKeyForStepForFunnel(projectID int64, eventWithProperties *model.Q
 	if ewpIndex == 1 {
 		groupSelect, groupSelectParams, groupKeys = buildGroupKeysWithFirst(projectID, groupPropsByStep, timezoneString)
 	} else {
-		groupSelect, groupSelectParams, groupKeys = buildGroupKeys(projectID, groupPropsByStep, timezoneString)
+		groupSelect, groupSelectParams, groupKeys = buildGroupKeys(projectID, groupPropsByStep, timezoneString, false)
 	}
 	return groupSelect, groupSelectParams, groupKeys, groupByUserProperties
 }

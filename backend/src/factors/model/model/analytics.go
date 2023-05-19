@@ -62,6 +62,7 @@ const (
 	PropertyEntityUser       = "user"
 	PropertyEntityEvent      = "event"
 	PropertyEntityUserGlobal = "user_g"
+	PropertyEntityGroup      = "group"
 )
 
 const PropertyValueNone = "$none"
