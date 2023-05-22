@@ -176,6 +176,10 @@ func GetHubspotMappedDataType(dataType string) string {
 }
 
 func GetHubspotEngagementId(documentMap map[string]interface{}, idKey string) (string, error) {
+	if _, exists := documentMap["id"]; exists { // Engagement V3
+		return U.GetPropertyValueAsString(documentMap["id"]), nil
+	}
+
 	engagementInterface, engagementExists := documentMap["engagement"]
 	if !engagementExists {
 		return "", errors.New("engagement not found on results document type")
@@ -297,7 +301,7 @@ func GetHubspotObjectTypeByDocumentType(docType string) string {
 	return ""
 }
 
-func GetTimestampFromPropertiesByKeyV3(propertyValue interface{}) (int64, error) {
+func GetTimestampForV3Records(propertyValue interface{}) (int64, error) {
 	tm, err := time.Parse(HubspotDateTimeLayout, U.GetPropertyValueAsString(propertyValue))
 	if err == nil {
 		return tm.UnixNano() / int64(time.Millisecond), nil
@@ -323,7 +327,7 @@ func getTimestampFromPropertiesByKey(propertiesMap map[string]interface{}, key s
 
 	propertyValueMap, ok := propertyValue.(map[string]interface{})
 	if !ok {
-		return GetTimestampFromPropertiesByKeyV3(propertyValue)
+		return GetTimestampForV3Records(propertyValue)
 	}
 
 	timestamp, err := ReadHubspotTimestamp(propertyValueMap["value"])
@@ -360,6 +364,24 @@ func GetHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error
 	}
 
 	if document.Type == HubspotDocumentTypeEngagement {
+		if engagementV3Interface, engagementV3Exists := (*value)["properties"]; engagementV3Exists {
+			engagementV3Map, isConverted := engagementV3Interface.(map[string]interface{})
+			if !isConverted {
+				log.Error("interface has not converted to map")
+			}
+
+			value, exists := engagementV3Map["hs_lastmodifieddate"]
+			if !exists || value == nil {
+				return 0, errorFailedToGetUpdatedAtFromHubspotDocument
+			}
+
+			valueInInt64, ok := GetTimestampForV3Records(value)
+			if ok != nil {
+				return 0, errors.New("failed to convert interface into float64")
+			}
+			return valueInInt64, nil
+		}
+
 		engagementInterface, engagementExists := (*value)["engagement"]
 		if !engagementExists {
 			return 0, errors.New("engagement not found on results document type")
@@ -416,7 +438,7 @@ func GetHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error
 
 		propertyUpdateAtMap, ok := propertyUpdateAt.(map[string]interface{})
 		if !ok {
-			return GetTimestampFromPropertiesByKeyV3(propertyUpdateAt)
+			return GetTimestampForV3Records(propertyUpdateAt)
 		}
 		value, exists := propertyUpdateAtMap["value"]
 		if !exists || value == nil {
@@ -471,6 +493,24 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 	}
 
 	if document.Type == HubspotDocumentTypeEngagement {
+		if engagementV3Interface, engagementV3Exists := (*value)["properties"]; engagementV3Exists {
+			engagementV3Map, isConverted := engagementV3Interface.(map[string]interface{})
+			if !isConverted {
+				log.Error("interface has not converted to map")
+			}
+
+			value, exists := engagementV3Map["hs_createdate"]
+			if !exists || value == nil {
+				return 0, errorFailedToGetCreatedAtFromHubspotDocument
+			}
+
+			valueInInt64, ok := GetTimestampForV3Records(value)
+			if ok != nil {
+				return 0, errors.New("failed to convert interface into float64 for engagement_V3")
+			}
+			return valueInInt64, nil
+		}
+
 		engagementInterface, engagementExists := (*value)["engagement"]
 		if !engagementExists {
 			return 0, errors.New("engagement not found on results document type")

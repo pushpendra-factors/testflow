@@ -307,6 +307,7 @@ type Configuration struct {
 	EnableFieldsSyncByProjectID                        string
 	EnableUserDomainsGroupByProjectID                  string
 	UseHubspotCompaniesV3APIByProjectID                string
+	UseHubspotEngagementsV3APIByProjectID              string
 	AllowEventAnalyticsGroupsByProjectID               string
 	OtpKeyWithQueryCheckEnabled                        bool
 }
@@ -2753,6 +2754,19 @@ func EnableUserDomainsGroupByProjectID(projectID int64) bool {
 
 func AllowHubspotCompaniesv3APIByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotCompaniesV3APIByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func AllowHubspotEngagementsv3APIByProjectID(projectID int64) bool {
+	if !AllowHubspotEngagementsByProjectID(projectID) {
+		return false
+	}
+
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotEngagementsV3APIByProjectID, "")
 	if allProjects {
 		return true
 	}
