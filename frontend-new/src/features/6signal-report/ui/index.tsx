@@ -46,6 +46,7 @@ import {
   initialState,
   visitorReportReducer
 } from './localStateReducer';
+import usePrevious from 'hooks/usePrevious';
 
 const SixSignalReport = ({
   setShowAnalyticsResult
@@ -53,6 +54,9 @@ const SixSignalReport = ({
   const [state, localDispatch] = useReducer(visitorReportReducer, initialState);
   const reportData = state.reportData.data;
   const reportDataLoading = state.reportData.loading;
+
+  const prevCampaigns = usePrevious(state.campaigns);
+  const prevChannels = usePrevious(state.channels);
 
   const { isLoggedIn, email } = useAgentInfo();
   const {
@@ -118,6 +122,11 @@ const SixSignalReport = ({
     localDispatch({
       type: VisitorReportActions.SET_SELECTED_CAMPAIGNS,
       payload: selectedOption
+    });
+    //For resetting Channel filter
+    localDispatch({
+      type: VisitorReportActions.SET_SELECTED_CHANNELS,
+      payload: ''
     });
   };
 
@@ -217,9 +226,6 @@ const SixSignalReport = ({
       type: VisitorReportActions.SET_SELECTED_DATE,
       payload: option.value
     });
-
-    //resetting filters
-    localDispatch({ type: VisitorReportActions.RESET_FILTERS });
   };
 
   //Effect for hiding the side panel and menu
@@ -353,7 +359,6 @@ const SixSignalReport = ({
   //Effect for fetching the visitor identification logged in data
   useEffect(() => {
     const fetchDataForLoggedInUser = async () => {
-      console.log('fetch data for logged in user called-----', Date.now());
       try {
         localDispatch({ type: VisitorReportActions.REPORT_DATA_LOADING });
         if (state.selectedDate) {
@@ -413,6 +418,35 @@ const SixSignalReport = ({
       });
     }
   }, [reportData]);
+
+  //effect for removing filters based on new options
+  useEffect(() => {
+    if (
+      prevCampaigns !== state.campaigns &&
+      state?.selectedCampaigns?.length &&
+      state?.campaigns?.length
+    )
+      localDispatch({
+        type: VisitorReportActions.SET_SELECTED_CAMPAIGNS,
+        payload: state.selectedCampaigns.filter((campaign) =>
+          state?.campaigns?.includes(campaign)
+        )
+      });
+  }, [state.campaigns, state.selectedCampaigns, prevCampaigns]);
+
+  useEffect(() => {
+    if (
+      prevChannels !== state.channels &&
+      state?.selectedChannel &&
+      state?.channels?.length &&
+      !state.channels.includes(state.selectedChannel)
+    ) {
+      localDispatch({
+        type: VisitorReportActions.SET_SELECTED_CHANNELS,
+        payload: ''
+      });
+    }
+  }, [state.channels, state.selectedChannel, prevChannels]);
 
   return (
     <div className='flex flex-col'>
