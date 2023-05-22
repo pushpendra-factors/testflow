@@ -369,10 +369,38 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 				{
 					Entity:    "user_g",
 					Type:      "categorical",
-					Property:  "$session_spent_time",
-					Operator:  "greaterThanOrEqual",
-					Value:     "2500",
+					Property:  "$country",
+					Operator:  "equals",
+					Value:     "India",
 					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$country",
+					Operator:  "equals",
+					Value:     "UAE",
+					LogicalOp: "OR",
+				},
+			},
+		},
+		SearchFilter: map[string][]model.QueryProperty{
+			"users": {
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$page_count",
+					Operator:  "equals",
+					Value:     "150",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$page_count",
+					Operator:  "equals",
+					Value:     "100",
+					LogicalOp: "OR",
 				},
 			},
 		},
@@ -1337,7 +1365,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		},
 	}
 
-	filteredCompaniesNameHostNameMap := map[string]string{"Adapt.IO": "adapt.io", "o9 Solutions": "o9solutions.com", "GoLinks Reporting": "golinks.io", "Clientjoy Ads": "clientjoy.io", "Cin7": "cin7.com", "Repair Desk": "repairdesk.co", "AdPushup": "adpushup.com", "Mad Street Den": "madstreetden.com", "Heyflow": "heyflow.app"}
+	filteredCompaniesNameHostNameMap = map[string]string{"Adapt.IO": "adapt.io", "o9 Solutions": "o9solutions.com", "GoLinks Reporting": "golinks.io", "Clientjoy Ads": "clientjoy.io", "Cin7": "cin7.com", "Repair Desk": "repairdesk.co", "AdPushup": "adpushup.com", "Mad Street Den": "madstreetden.com", "Heyflow": "heyflow.app"}
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)

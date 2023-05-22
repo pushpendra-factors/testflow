@@ -158,6 +158,7 @@ func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, 
 	}
 
 	pageView := reqPayload.PageView
+	sixSignalQuery.PageView = pageView
 	folderName := getFolderName(sixSignalQuery)
 	logCtx.WithFields(log.Fields{"folder name": folderName}).Info("Folder name for reading the result")
 

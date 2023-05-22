@@ -102,11 +102,16 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 
 	//if backfill startTime and endTime is assigned
 
-	if (backfillStartTime <= backfillEndTime) && backfillEndTime != 0 {
+	if backfillStartTime <= backfillEndTime {
 
 		startTime = backfillStartTime
 		endTime = backfillEndTime
+		if backfillEndTime == 0 {
+			endTime = U.TimeNowUnix()
+		}
 	}
+
+	backfillEnabled := backfillStartTime != 0
 
 	for bi := range batches {
 		batch := batches[bi]
@@ -115,7 +120,7 @@ func RunOTPSalesForceForProjects(configs map[string]interface{}) (map[string]int
 
 			wg.Add(1)
 
-			go IntSalesforce.WorkerForSfOtp(batch[pi], startTime, endTime, &wg)
+			go IntSalesforce.WorkerForSfOtp(batch[pi], startTime, endTime, backfillEnabled, &wg)
 		}
 		wg.Wait()
 	}

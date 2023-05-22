@@ -142,11 +142,16 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 
 	//if backfill startTime and endTime is assigned
 
-	if (backfillStartTime <= backfillEndTime) && backfillEndTime != 0 {
+	if backfillStartTime <= backfillEndTime {
 
 		startTime = int64(backfillStartTime)
 		endTime = int64(backfillEndTime)
+		if backfillEndTime == 0 {
+			endTime = U.TimeNowUnix()
+		}
 	}
+
+	backfillEnabled := backfillStartTime != 0
 
 	// Runs enrichment for list of project_ids as batch using go routines.
 	batches := U.GetInt64ListAsBatch(projectIDs, numProjectRoutines)
@@ -159,7 +164,7 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 		for pi := range batch {
 			wg.Add(1)
 
-			go syncWorkerForOTP(batch[pi], startTime, endTime, &wg)
+			go syncWorkerForOTP(batch[pi], startTime, endTime, backfillEnabled, &wg)
 		}
 		wg.Wait()
 	}
@@ -176,7 +181,7 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 
 }
 
-func syncWorkerForOTP(projectID int64, startTime, endTime int64, wg *sync.WaitGroup) {
+func syncWorkerForOTP(projectID int64, startTime, endTime int64, backfillEnabled bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
@@ -202,12 +207,14 @@ func syncWorkerForOTP(projectID int64, startTime, endTime int64, wg *sync.WaitGr
 
 	OtpEventName, _ := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
 
-	_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
-
-	if errCode == http.StatusFound {
-		startTime = _startTime
+	if !backfillEnabled {
+		_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
+		if errCode == http.StatusFound {
+			startTime = _startTime
+		}
 	}
 
+	logCtx.WithFields(log.Fields{"startTime": startTime, "endTime": endTime}).Info("starting otp creation job")
 	//batch time range day-wise
 
 	daysTimeRange, _ := U.GetAllDaysAsTimestamp(startTime, endTime, string(timezoneString))

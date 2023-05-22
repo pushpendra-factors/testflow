@@ -72,8 +72,11 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		segmentQuery.To = U.TimeNowZ().Unix()
 		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
 			if C.IsEnabledEventsFilterInSegments() {
-				if payload.Filters != nil && payload.Filters[segment.Type] != nil {
-					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters[segment.Type]...)
+				if payload.Filters != nil {
+					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters[model.FILTER_TYPE_USERS]...)
+					if profileType == model.PROFILE_TYPE_ACCOUNT && payload.Filters[segment.Type] != nil {
+						segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters[segment.Type]...)
+					}
 				}
 				query, err := U.EncodeStructTypeToPostgresJsonb(segmentQuery)
 				if err != nil {
@@ -101,7 +104,11 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 				if payload.Filters == nil {
 					payload.Filters = make(map[string][]model.QueryProperty)
 				}
-				payload.Filters["users"] = append(payload.Filters["users"], segmentQuery.GlobalUserProperties...)
+				if profileType == model.PROFILE_TYPE_USER {
+					payload.Filters[model.FILTER_TYPE_USERS] = append(payload.Filters[model.FILTER_TYPE_USERS], segmentQuery.GlobalUserProperties...)
+				} else {
+					payload.Filters[payload.Source] = append(payload.Filters[payload.Source], segmentQuery.GlobalUserProperties...)
+				}
 			}
 		}
 	} else {
@@ -150,9 +157,12 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	var filterString string
 	var filterParams []interface{}
 	var filtersArray []string
-	for _, filters := range payload.Filters {
-		filtersForSource, filterParamsForSource, errCode := buildWhereFromProperties(projectID, filters, 0)
-		if errCode != nil {
+	for group, filters := range payload.Filters {
+		if group == model.FILTER_TYPE_USERS {
+			continue
+		}
+		filtersForSource, filterParamsForSource, err := buildWhereFromProperties(projectID, filters, 0)
+		if err != nil {
 			return nil, http.StatusBadRequest
 		}
 		if filtersForSource == "" {
@@ -169,7 +179,19 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	case 1:
 		filterString = filtersArray[0]
 	default:
-		filterString = "(" + strings.Join(filtersArray, " OR ") + ")"
+		filterString = strings.Join(filtersArray, " OR ")
+	}
+	userTypeFilters, userTypeFiltersParams, errMsg := buildWhereFromProperties(projectID, payload.Filters[model.FILTER_TYPE_USERS], 0)
+	if errMsg != nil {
+		return nil, http.StatusBadRequest
+	}
+	if userTypeFilters != "" {
+		if filterString != "" {
+			filterString = filterString + " AND (" + userTypeFilters + ")"
+		} else {
+			filterString = "(" + userTypeFilters + ")"
+		}
+		filterParams = append(filterParams, userTypeFiltersParams...)
 	}
 
 	// Run Queries
@@ -185,7 +207,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	// Get min and max updated_at after ordering as part of optimisation.
 	limitVal := 100000
 	if filterString != "" {
-		limitVal = 500000
+		limitVal = 1000000
 	}
 	runQueryString = fmt.Sprintf("SELECT %s FROM (SELECT updated_at FROM %s ORDER BY updated_at DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
 
@@ -203,7 +225,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		selectColumnsStr = "id, customer_user_id, properties, updated_at"
 		groupByStr = "GROUP BY identity"
 	}
-	timeAndRecordsLimit := fmt.Sprintf("updated_at BETWEEN '%s' AND '%s' LIMIT 1000000", FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt))
+	timeAndRecordsLimit := fmt.Sprintf("updated_at BETWEEN '%s' AND '%s' LIMIT 100000000", FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt))
 	isDomainGroup := (C.IsDomainEnabled(projectID) && payload.Source == "All")
 	if filterString != "" {
 		fromStr = fmt.Sprintf("(SELECT %s FROM %s AND ", selectColumnsStr, commonStr) +
@@ -254,7 +276,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 
 	if len(profiles) < 1 {
 		logCtx.Error("No domain account found.")
-		return nil, http.StatusBadRequest
+		return nil, http.StatusOK
 	}
 
 	domainGroup, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
@@ -339,7 +361,10 @@ func SelectFilterAndHavingStringsForAccounts(filtersMap map[string][]model.Query
 	filterArray := make([]string, 0)
 	havingArray := make([]string, 0)
 	propMap := make(map[string]bool)
-	for _, filterArr := range filtersMap {
+	for group, filterArr := range filtersMap {
+		if group == model.FILTER_TYPE_USERS {
+			continue
+		}
 		for _, filter := range filterArr {
 			if exists := propMap[filter.Property]; exists {
 				continue

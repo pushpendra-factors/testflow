@@ -718,7 +718,8 @@ function AccountProfiles({
   const groupToCompanyPropMap = {
     $hubspot_company: '$hubspot_company_name',
     $salesforce_account: '$salesforce_account_name',
-    $6signal: '$6Signal_name'
+    $6signal: '$6Signal_name',
+    $linkedin_company: '$li_localized_name'
   };
 
   useEffect(() => {
@@ -787,13 +788,17 @@ function AccountProfiles({
   const onSearchClose = () => {
     setSearchBarOpen(false);
     setSearchDDOpen(false);
-    if (accountPayload?.search_filter?.users?.length) {
-      const payload = { ...accountPayload };
-      payload.search_filter = {};
+
+    if (Object.keys(accountPayload?.search_filter || {}).length !== 0) {
+      setAccountPayload(prevPayload => ({
+        ...prevPayload,
+        search_filter: {},
+      }));
+      
       setListSearchItems([]);
-      setAccountPayload(payload);
     }
   };
+  
 
   const onSearchOpen = () => {
     setSearchBarOpen(true);

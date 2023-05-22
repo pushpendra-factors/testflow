@@ -26,7 +26,7 @@ var AllowedSfEventTypeForOTP = []string{
 }
 
 // WorkerForSfOtp sync salesforce Events to otp events
-func WorkerForSfOtp(projectID, startTime, endTime int64, wg *sync.WaitGroup) {
+func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
@@ -60,11 +60,14 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, wg *sync.WaitGroup) {
 
 	OtpEventName, _ := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
 
-	_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
-
-	if errCode == http.StatusFound {
-		startTime = _startTime
+	if !backfillEnabled {
+		_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
+		if errCode == http.StatusFound {
+			startTime = _startTime
+		}
 	}
+
+	logCtx.WithFields(log.Fields{"startTime": startTime, "endTime": endTime}).Info("starting otp creation job")
 
 	//batch time range day-wise
 
@@ -203,18 +206,25 @@ func filterCheckGeneralV1(rule model.OTPRule, event model.EventIdToProperties, l
 	}
 
 	filtersPassed := 0
+	minPassedFiltersRequired := 0
 	for _, filter := range ruleFilters {
 		switch filter.Operator {
 		case model.EqualsOpStr:
 			if _, exists := event.EventProperties[filter.Property]; exists {
 				if filter.Value != "" && event.EventProperties[filter.Property] == filter.Value {
 					filtersPassed++
+					if filter.LogicalOp == model.LOGICAL_OP_AND {
+						minPassedFiltersRequired++
+					}
 				}
 			}
 		case model.NotEqualOpStr:
 			if _, exists := event.EventProperties[filter.Property]; exists {
 				if filter.Value != "" && event.EventProperties[filter.Property] != filter.Value {
 					filtersPassed++
+					if filter.LogicalOp == model.LOGICAL_OP_AND {
+						minPassedFiltersRequired++
+					}
 				}
 			}
 		case model.ContainsOpStr:
@@ -223,6 +233,9 @@ func filterCheckGeneralV1(rule model.OTPRule, event model.EventIdToProperties, l
 					val, ok := event.EventProperties[filter.Property].(string)
 					if ok && strings.Contains(val, filter.Value) {
 						filtersPassed++
+						if filter.LogicalOp == model.LOGICAL_OP_AND {
+							minPassedFiltersRequired++
+						}
 					}
 				}
 			}
@@ -234,7 +247,7 @@ func filterCheckGeneralV1(rule model.OTPRule, event model.EventIdToProperties, l
 	}
 
 	// return true if all the filters passed
-	if filtersPassed != 0 && filtersPassed == len(ruleFilters) {
+	if filtersPassed != 0 && filtersPassed >= minPassedFiltersRequired {
 		return true
 	}
 
@@ -538,8 +551,9 @@ func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model
 	if rule.TouchPointTimeRef == model.SFCampaignMemberResponded {
 		if val, exists := sfEvent.EventProperties[model.EP_SFCampaignMemberFirstRespondedDate]; exists {
 
-			if tt, ok := val.(float64); ok {
-				payload.Timestamp = int64(tt)
+			timestamp, err := U.GetPropertyValueAsFloat64(val)
+			if err == nil || timestamp != 0 {
+				payload.Timestamp = int64(timestamp)
 			} else {
 				logCtx.WithFields(log.Fields{"value": val})
 				logCtx.WithError(err).Error("failed to set timestamp for SF for offline touch point - First responded time.")
