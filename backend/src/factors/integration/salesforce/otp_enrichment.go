@@ -26,7 +26,7 @@ var AllowedSfEventTypeForOTP = []string{
 }
 
 // WorkerForSfOtp sync salesforce Events to otp events
-func WorkerForSfOtp(projectID, startTime, endTime int64, wg *sync.WaitGroup) {
+func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
@@ -60,12 +60,14 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, wg *sync.WaitGroup) {
 
 	OtpEventName, _ := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
 
-	if startTime != 0 {
+	if !backfillEnabled {
 		_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
 		if errCode == http.StatusFound {
 			startTime = _startTime
 		}
 	}
+
+	logCtx.WithFields(log.Fields{"startTime": startTime, "endTime": endTime}).Info("starting otp creation job")
 
 	//batch time range day-wise
 
