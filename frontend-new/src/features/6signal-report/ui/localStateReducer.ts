@@ -229,8 +229,6 @@ export function visitorReportReducer(
       return {
         ...state,
         selectedCampaigns: action.payload,
-        //resetting selected channel when campaigns are selected
-        selectedChannel: '',
         campaignSelectionVisibility: false
       };
     case VisitorReportActions.SET_CHANNELS:

@@ -117,10 +117,17 @@ export default function MultiSelect({
 
   let rendOpts: ReactNode[] = [];
 
-  if (maxAllowedSelection !== 0) {
-    //Clear Button.
-    rendOpts.push(
-      <div key={'clear_opt'} className={`${styles.dropdown__clear_opt}`}>
+  //Clear Button.
+  rendOpts.push(
+    <div key={'clear_opt'} className={`${styles.dropdown__clear_opt}`}>
+      <Button
+        disabled={localSelectedOptionCount === 0}
+        onClick={clearAllClick}
+        type='link'
+      >
+        Clear all
+      </Button>
+      {maxAllowedSelection !== 0 && (
         <Text
           level={7}
           type={'title'}
@@ -130,16 +137,9 @@ export default function MultiSelect({
         >
           {localSelectedOptionCount}/{maxAllowedSelection}
         </Text>
-        <Button
-          disabled={localSelectedOptionCount === 0}
-          onClick={clearAllClick}
-          type='link'
-        >
-          Clear all
-        </Button>
-      </div>
-    );
-  }
+      )}
+    </div>
+  );
 
   if (searchOption && allowSearchTextSelection) {
     // Adding Select Option Based On SearchTerm
@@ -224,24 +224,6 @@ export default function MultiSelect({
           Apply
         </Button>
       </div>
-      {!maxAllowedSelection && (
-        <div key={'clear_opt'} className={`fa-select--buttons`}>
-          <Button
-            disabled={localSelectedOptionCount === 0}
-            onClick={clearAllClick}
-            className={'w-full'}
-          >
-            <SVG
-              name='times'
-              size={17}
-              color={
-                localSelectedOptionCount === 0 ? 'rgba(0, 0, 0, 0.251)' : 'grey'
-              }
-            />
-            Clear All
-          </Button>
-        </div>
-      )}
     </div>
   );
   return <>{rendOpts}</>;
