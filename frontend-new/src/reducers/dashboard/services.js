@@ -1,6 +1,5 @@
-import {
-  get, getHostUrl, post, del, put
-} from '../../utils/request';
+import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
+import { get, getHostUrl, post, del, put } from '../../utils/request';
 import {
   DASHBOARDS_LOADED,
   DASHBOARD_UNITS_LOADING_FAILED,
@@ -9,6 +8,8 @@ import {
   DASHBOARD_UNITS_LOADING,
   DASHBOARD_UNITS_LOADED
 } from '../types';
+import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
+import { changeActiveDashboardAction } from './actions';
 
 const host = getHostUrl();
 
@@ -101,4 +102,14 @@ export const DeleteUnitFromDashboard = (projectId, dashboardId, unitId) => {
     '/units/' +
     unitId;
   return del(null, url);
+};
+
+export const changeActiveDashboard = (selectedDashboard) => {
+  return function (dispatch) {
+    setItemToLocalStorage(
+      DASHBOARD_KEYS.ACTIVE_DASHBOARD_ID,
+      selectedDashboard.id
+    );
+    dispatch(changeActiveDashboardAction(selectedDashboard));
+  };
 };

@@ -1,22 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Avatar,
-  Button,
-  Checkbox,
-  Col,
-  Divider,
-  Dropdown,
-  Input,
-  List,
-  Menu,
-  message,
-  Modal,
-  Row,
-  Space,
-  Spin,
-  Tooltip,
-  Typography
-} from 'antd';
+import { Button, Col, Divider, Dropdown, Menu, Row, Space, Spin } from 'antd';
 import { useSelector, useDispatch, connect } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
 import FaSelect from 'Components/FaSelect';
@@ -26,11 +9,9 @@ import userflow from 'userflow.js';
 import {
   fetchActiveDashboardUnits,
   DeleteUnitFromDashboard,
-  deleteDashboard,
-  assignUnitsToDashboard
+  deleteDashboard
 } from '../../reducers/dashboard/services';
 import {
-  ACTIVE_DASHBOARD_CHANGE,
   WIDGET_DELETED,
   DASHBOARD_DELETED,
   NEW_DASHBOARD_TEMPLATES_MODAL_OPEN,
@@ -50,30 +31,17 @@ import {
 } from '../../components/factorsComponents';
 import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
-import { setItemToLocalStorage } from '../../utils/localStorage.helpers';
-import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
-import {
-  CaretDownOutlined,
-  DownCircleFilled,
-  DownOutlined,
-  LockFilled,
-  LockOutlined,
-  PlusOutlined,
-  UnlockFilled,
-  UnlockOutlined,
-  UserOutlined
-} from '@ant-design/icons';
+import { PlusOutlined } from '@ant-design/icons';
 
 import { useHistory } from 'react-router-dom';
-import { INITIALIZE_GROUPBY } from 'Reducers/coreQuery/actions';
 import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
-  QUERY_TYPE_KPI,
-  QUERY_TYPE_PROFILE
+  QUERY_TYPE_KPI
 } from 'Utils/constants';
 import ExistingReportsModal from './ExistingReportsModal';
+import { changeActiveDashboard as changeActiveDashboardService } from 'Reducers/dashboard/services';
 
 function ProjectDropdown({
   setaddDashboardModal,
@@ -113,7 +81,6 @@ function ProjectDropdown({
   const dispatch = useDispatch();
   const history = useHistory();
 
-  const queries = useSelector((state) => state.queries);
   const { agent_details } = useSelector((state) => state.agent);
 
   useEffect(() => {
@@ -134,16 +101,15 @@ function ProjectDropdown({
       resetDashboardRefreshState();
       setOldestRefreshTime(null);
       const selectedDashboard = dashboards.data.find((d) => d.id === val);
-      dispatch({
-        type: ACTIVE_DASHBOARD_CHANGE,
-        payload: selectedDashboard
-      });
-      setItemToLocalStorage(
-        DASHBOARD_KEYS.ACTIVE_DASHBOARD_ID,
-        selectedDashboard.id
-      );
+      dispatch(changeActiveDashboardService(selectedDashboard));
     },
-    [dashboards, dispatch, activeDashboard?.id]
+    [
+      activeDashboard?.id,
+      resetDashboardRefreshState,
+      setOldestRefreshTime,
+      dashboards.data,
+      dispatch
+    ]
   );
 
   useEffect(() => {
@@ -512,6 +478,7 @@ function ProjectDropdown({
             <Row justify='space-between' className='m-0 p-3'>
               <Col span={projects.length === 1 ? 12 : 18}>
                 <img
+                  alt='welcome'
                   src='assets/icons/welcome.svg'
                   style={{ float: 'left', marginRight: '20px' }}
                 />
@@ -551,7 +518,6 @@ function ProjectDropdown({
                   type='link'
                   style={{
                     background: 'white',
-                    // border: '1px solid #E7E9ED',
                     height: '40px'
                   }}
                   className='m-0 mr-2'
@@ -569,7 +535,7 @@ function ProjectDropdown({
             </Row>
           </div>
         ) : null}
-        <div className='flex items-start justify-between mx-10 my-2'>
+        <div className='flex items-start justify-between'>
           <div className='flex flex-col items-start'>
             <div className='flex items-center'>
               <Button
@@ -589,11 +555,7 @@ function ProjectDropdown({
                 shape='circle'
                 icon={<PlusOutlined style={{ fontSize: '18px' }} />}
                 onClick={() => {
-                  // setaddDashboardModal(true);
-                  // setSelectVisible(false);
-                  {
-                    dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
-                  }
+                  dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
                 }}
                 className={styles.addNewDashboardButtonProjectDropdown}
               />
@@ -613,18 +575,10 @@ function ProjectDropdown({
                 </Space>
               </Button>
             </Dropdown>
-            {/* <Dropdown.Button
-                menu={menuProps} 
-                onClick={(e)=>console.log(e)} 
-              >
-               
-                 <React.Fragment> New Dashboard </React.Fragment>
-               
-              </Dropdown.Button> */}
             {additionalActions()}
           </div>
         </div>
-        <div className='ml-10 mr-4 my-6 flex-1'>
+        <div className='my-6 flex-1'>
           <DashboardSubMenu
             durationObj={durationObj}
             handleDurationChange={handleDurationChange}

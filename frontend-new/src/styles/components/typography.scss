@@ -51,6 +51,18 @@
     color: $fa-color--black;
   }
 
+  &.fai-text__color--disabled {
+    color: $fa-color-disabled-color;
+  }
+
+  &.fai-text__color--character-primary {
+    color: $fa-color-character-primary;
+  }
+
+  &.fai-text__color--character-secondary {
+    color: $fa-color-character-secondary;
+  }
+
   //Case
   &.fai-text__transform--uppercase {
     text-transform: uppercase;

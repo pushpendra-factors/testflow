@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Button,
   Avatar,
@@ -10,7 +10,6 @@ import {
   Tooltip
 } from 'antd';
 import { Text, SVG } from '../factorsComponents';
-import { PlusOutlined, PoweroffOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import {
   updateAgentInfo,
@@ -37,6 +36,18 @@ function ProjectModal(props) {
   const history = useHistory();
   const inputComponentRef = useAutoFocus(ShowPopOver);
 
+  const {
+    agents,
+    currentAgent,
+    fetchAgentInfo,
+    active_project,
+    fetchProjectAgents,
+    updateAgentInfo,
+    setActiveProject,
+    fetchProjectSettings,
+    projects
+  } = props;
+
   const searchProject = (e) => {
     setsearchProjectName(e.target.value);
   };
@@ -49,8 +60,8 @@ function ProjectModal(props) {
 
   const switchProject = () => {
     localStorage.setItem('activeProject', selectedProject?.id);
-    props.setActiveProject(selectedProject);
-    props.fetchProjectSettings(selectedProject?.id);
+    setActiveProject(selectedProject);
+    fetchProjectSettings(selectedProject?.id);
     history.push('/');
     notification.success({
       message: 'Project Changed!',
@@ -58,44 +69,51 @@ function ProjectModal(props) {
     });
   };
 
-  const UpdateOnboardingSeen = () => {
-    props.updateAgentInfo({ is_onboarding_flow_seen: true }).then(() => {
-      props.fetchAgentInfo();
+  const UpdateOnboardingSeen = useCallback(() => {
+    updateAgentInfo({ is_onboarding_flow_seen: true }).then(() => {
+      fetchAgentInfo();
     });
     //Factors FIRST_TIME_LOGIN tracking for NON_INVITED
-    factorsai.track('FIRST_TIME_LOGIN', { email: props?.currentAgent?.email });
-    if (props?.currentAgent?.is_auth0_user) {
+    factorsai.track('FIRST_TIME_LOGIN', { email: currentAgent?.email });
+    if (currentAgent?.is_auth0_user) {
       factorsai.track('$form_submitted', {
-        $email: props?.currentAgent?.email
+        $email: currentAgent?.email
       });
     }
-  };
+  }, [
+    fetchAgentInfo,
+    currentAgent?.email,
+    currentAgent?.is_auth0_user,
+    updateAgentInfo
+  ]);
 
   useEffect(() => {
-    if (!props.agents) {
-      props.fetchProjectAgents(props.active_project?.id);
+    if (!agents) {
+      fetchProjectAgents(active_project?.id);
     }
-    if (!props.currentAgent) {
-      props.fetchAgentInfo();
+    if (!currentAgent) {
+      fetchAgentInfo();
     }
-    if (props.agents && props.currentAgent) {
-      let agent = props.agents?.filter(
-        (agent) => agent.email === props.currentAgent.email
-      );
+    if (agents && currentAgent) {
+      let agent = agents?.filter((agent) => agent.email === currentAgent.email);
       if (agent[0]?.invited_by) {
         setShowProjectModal(false);
-      } else if (!props.currentAgent?.is_onboarding_flow_seen) {
+      } else if (!currentAgent?.is_onboarding_flow_seen) {
         setShowProjectModal(true);
         UpdateOnboardingSeen();
       }
-    } else if (
-      props.currentAgent &&
-      !props.currentAgent?.is_onboarding_flow_seen
-    ) {
+    } else if (currentAgent && !currentAgent?.is_onboarding_flow_seen) {
       setShowProjectModal(true);
       UpdateOnboardingSeen();
     }
-  }, [props.active_project, props.agents, props.currentAgent]);
+  }, [
+    UpdateOnboardingSeen,
+    active_project,
+    agents,
+    currentAgent,
+    fetchAgentInfo,
+    fetchProjectAgents
+  ]);
 
   useEffect(() => {
     if (props?.currentAgent) {
@@ -127,17 +145,17 @@ function ProjectModal(props) {
               backgroundColor: '#fde3cf',
               fontSize: '12px'
             }}
-          >{`${props.currentAgent?.first_name?.charAt(
+          >{`${currentAgent?.first_name?.charAt(
             0
-          )}${props.currentAgent?.last_name?.charAt(0)}`}</Avatar>
+          )}${currentAgent?.last_name?.charAt(0)}`}</Avatar>
           <div className='flex flex-col ml-3'>
             <Text
               type={'title'}
               level={7}
               weight={'bold'}
               extraClass={'m-0'}
-            >{`${props.currentAgent?.first_name} ${props.currentAgent?.last_name}`}</Text>
-            <div className={`text-xs`}>{props.currentAgent?.email}</div>
+            >{`${currentAgent?.first_name} ${currentAgent?.last_name}`}</Text>
+            <div className={`text-xs`}>{currentAgent?.email}</div>
           </div>
         </div>
         <SVG name='settings' size={24} />
@@ -165,7 +183,7 @@ function ProjectModal(props) {
         </Button>
       </div>
 
-      {props.projects?.length > 6 ? (
+      {projects?.length > 6 ? (
         <input
           onChange={(e) => searchProject(e)}
           value={searchProjectName}
@@ -175,7 +193,7 @@ function ProjectModal(props) {
         />
       ) : null}
       <div className={'flex flex-col items-start fa-project-list--wrapper'}>
-        {props.projects
+        {projects
           .filter((project) =>
             project?.name
               .toLowerCase()
@@ -185,10 +203,10 @@ function ProjectModal(props) {
             <div
               key={index}
               className={`flex justify-between items-center project-item mx-2 ${
-                props.active_project?.id === project?.id ? 'active' : null
+                active_project?.id === project?.id ? 'active' : null
               }`}
               onClick={() => {
-                if (props.active_project?.id !== project?.id) {
+                if (active_project?.id !== project?.id) {
                   setShowPopOver(false);
                   setchangeProjectModal(true);
                   setselectedProject(project);
@@ -198,6 +216,7 @@ function ProjectModal(props) {
               <div className='flex items-center flex-no-wrap'>
                 {project.profile_picture ? (
                   <img
+                    alt='profile'
                     src={project.profile_picture}
                     style={{
                       borderRadius: '4px',
@@ -221,7 +240,7 @@ function ProjectModal(props) {
 
                 <span className='font-bold ml-3'>{project?.name}</span>
               </div>
-              {props.active_project?.id === project?.id ? (
+              {active_project?.id === project?.id ? (
                 <SVG name='check_circle' />
               ) : null}
             </div>
@@ -229,7 +248,7 @@ function ProjectModal(props) {
       </div>
       <div className={'fa-popupcard-divider'} />
       <div className={styles.popover_content__additionalActions}>
-        <a href='https://help.factors.ai' target='_blank'>
+        <a rel='noreferrer' href='https://help.factors.ai' target='_blank'>
           Help
         </a>
       </div>
@@ -278,40 +297,18 @@ function ProjectModal(props) {
             type='text'
             size='large'
           >
-            {props.active_project.profile_picture ? (
-              <img
-                src={props.active_project.profile_picture}
-                style={{ width: '36px', borderRadius: '4px' }}
-                alt='avatar'
-              />
-            ) : (
-              <Avatar
-                size={36}
-                shape='square'
-                style={{
-                  background: '#ff0000',
-                  opacity: '0.6',
-                  textTransform: 'uppercase',
-                  fontWeight: '400',
-                  borderRadius: '4px'
-                }}
-              >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
-            )}
-
-            <div className='flex flex-col items-start ml-2'>
-              <div className='flex items-center'>
-                <Text
-                  type={'title'}
-                  level={7}
-                  extraClass={'m-0'}
-                  weight={'bold'}
-                >
-                  {`${props.active_project?.name}`}
-                </Text>
-                <SVG name='caretDown' size={20} />
-              </div>
-              <div className={`text-xs`}>{props.currentAgent?.email}</div>
-            </div>
+            <Avatar
+              size={32}
+              shape='square'
+              style={{
+                background: '#FA541C',
+                textTransform: 'uppercase',
+                fontWeight: '400',
+                borderRadius: '6px'
+              }}
+            >
+              {`${active_project?.name?.charAt(0)}`}
+            </Avatar>
           </Button>
         </Tooltip>
       </Popover>

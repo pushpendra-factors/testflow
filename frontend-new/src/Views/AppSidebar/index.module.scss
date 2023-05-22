@@ -1,0 +1,64 @@
+@import '../../styles/abstracts/variables';
+
+.app-sidebar {
+  background-color: $fa-color--white;
+  border-right: 1px solid $fa-color-neutral-grey-4;
+  min-width: 250px !important;
+  width: 250px !important;
+  max-width: 250px !important;
+  position: fixed !important;
+  top: 3.5rem;
+  height: calc(100vh - 3.5rem) !important;
+
+  transition: 0.4s;
+
+  &.collapsed {
+    min-width: 48px !important;
+    width: 48px !important;
+    max-width: 48px !important;
+  }
+}
+
+.sidebar-search-input {
+  border-radius: 0.375rem !important;
+}
+
+.dashboard-list-container {
+  max-height: calc(100vh - 15rem);
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.sidebar-action-button {
+  padding-left: 32px;
+  border: 0;
+  box-shadow: none;
+}
+
+.active {
+  background-color: $fa-color-brand-1;
+}
+
+.sidebar-content-container {
+  height: calc(100% - 3rem);
+}
+
+.accounts-list-container {
+  max-height: calc(100vh - 12rem);
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.collapsible-icon-wrapper {
+  background-color: $fa-color-neutral-grey-2;
+  border: 1px solid $fa-color-neutral-grey-4;
+  transform: translateX(1rem);
+}

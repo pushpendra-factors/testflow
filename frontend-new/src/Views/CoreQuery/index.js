@@ -1963,64 +1963,68 @@ function CoreQuery({
               id='app-header'
               className='bg-white z-50 flex-col  px-8 w-full'
             >
-              <div className='items-center flex justify-between w-full pt-3 pb-3'>
-                <div
-                  role='button'
-                  tabIndex={0}
-                  className='flex items-center cursor-pointer'
-                >
-                  <Button
-                    size='large'
-                    type='text'
-                    onClick={() => {
-                      history.push('/');
-                    }}
-                    icon={<SVG size={32} name='Brand' />}
-                  />
-                  <Text
-                    type='title'
-                    level={5}
-                    weight='bold'
-                    extraClass='m-0 mt-1'
-                    lineHeight='small'
-                  >
-                    {querySaved
-                      ? `Reports / ${queryType} / ${querySaved.name}`
-                      : `Reports / ${queryType} / Untitled Analysis${' '}
-            ${moment().format('DD/MM/YYYY')}`}
-                  </Text>
-                </div>
-
-                <div className='flex items-center gap-x-2'>
-                  <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
-                  <Button
-                    size='large'
-                    type='default'
-                    onClick={
-                      coreQueryState.navigatedFromDashboard
-                        ? handleCloseDashboardQuery
-                        : handleCloseToAnalyse
-                    }
-                  >
-                    Close
-                  </Button>
-                </div>
-              </div>
-
               {/* {renderReportTabs()} */}
+
               {showResult ? (
-                <div
-                  className={`query_card_cont ${
-                    queryOpen ? `query_card_open` : `query_card_close`
-                  }`}
-                  onClick={(e) => !queryOpen && setQueryOpen(true)}
-                >
-                  {renderQueryComposer()}
-                  <Button size='large' className='query_card_expand'>
-                    <SVG name='expand' size={20} />
-                    Expand
-                  </Button>
-                </div>
+                <>
+                  <div className='items-center flex justify-between w-full pt-3 pb-3'>
+                    <div
+                      role='button'
+                      tabIndex={0}
+                      className='flex items-center cursor-pointer'
+                    >
+                      <Button
+                        size='large'
+                        type='text'
+                        onClick={() => {
+                          history.push('/');
+                        }}
+                        icon={<SVG size={32} name='Brand' />}
+                      />
+                      <Text
+                        type='title'
+                        level={5}
+                        weight='bold'
+                        extraClass='m-0 mt-1'
+                        lineHeight='small'
+                      >
+                        {querySaved
+                          ? `Reports / ${queryType} / ${querySaved.name}`
+                          : `Reports / ${queryType} / Untitled Analysis${' '}
+            ${moment().format('DD/MM/YYYY')}`}
+                      </Text>
+                    </div>
+
+                    <div className='flex items-center gap-x-2'>
+                      <div className='pr-2 border-r'>
+                        {renderSaveQueryComp()}
+                      </div>
+                      <Button
+                        size='large'
+                        type='default'
+                        onClick={
+                          coreQueryState.navigatedFromDashboard
+                            ? handleCloseDashboardQuery
+                            : handleCloseToAnalyse
+                        }
+                      >
+                        Close
+                      </Button>
+                    </div>
+                  </div>
+                  <div
+                    className={`query_card_cont ${
+                      queryOpen ? `query_card_open` : `query_card_close`
+                    }`}
+                    onClick={(e) => !queryOpen && setQueryOpen(true)}
+                  >
+                    {renderQueryComposer()}
+                    <Button size='large' className='query_card_expand'>
+                      <SVG name='expand' size={20} />
+                      Expand
+                    </Button>
+                  </div>
+                </>
               ) : null}
             </div>
           </div>
@@ -2068,7 +2072,7 @@ function CoreQuery({
         !resultState.data &&
         !resultState.loading &&
         activeProject.id === demoProjectId ? (
-          <div className='rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'>
+          <div className='rounded-lg border-2 h-20 mx-20'>
             <Row justify='space-between' className='m-0 p-3'>
               <Col span={projects.length === 1 ? 12 : 18}>
                 <img

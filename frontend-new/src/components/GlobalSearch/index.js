@@ -1,18 +1,16 @@
 import {
   ArrowLeftOutlined,
   LoadingOutlined,
-  MacCommandOutlined,
-  SearchOutlined,
-  VerticalRightOutlined
+  SearchOutlined
 } from '@ant-design/icons';
-import { Button, Divider, Input } from 'antd';
+import { Button, Input } from 'antd';
 import styles from './index.module.scss';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect,  useState } from 'react';
 import { SVG, Text } from 'Components/factorsComponents';
 import { useDispatch, useSelector } from 'react-redux';
 import VirtualList from 'rc-virtual-list';
 import { getQueryType } from 'Utils/dataFormatter';
-import { generatePath, Link, useHistory } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import {
   QUERY_TYPE_ATTRIBUTION,
@@ -26,8 +24,16 @@ import useAutoFocus from 'hooks/useAutoFocus';
 const itemHeight = 47;
 const ContainerHeight = 443;
 
+const ommitRoutes = new Set([
+  'components',
+  'explainV2',
+  'project-setup',
+  'template',
+  'welcome',
+  'visitoridentification'
+]);
+
 const NoResults = () => {
-  const history = useHistory();
   return (
     <div>
       <div className='search-list pb-2' data-testid='no-data'>
@@ -248,6 +254,7 @@ const Part2GlobalSearch = ({
       setSearchString('');
     };
   }, []);
+
   useEffect(() => {
     if (searchType === 1) {
       let key = searchString?.toLowerCase();
@@ -379,14 +386,7 @@ const Part2GlobalSearch = ({
                       }}
                     >
                       <SVG name={svgName} size={20} color='blue' />
-                      {/* <Text
-                        level={6}
-                        type={'paragraph'}
-                        weight={'normal'}
-                        color='#0E2647'
-                      > */}
                       {eachItem.title}
-                      {/* </Text> */}
                     </div>
                   );
                 }}
@@ -430,18 +430,6 @@ const SearchResults = ({ searchString, openSavedReports }) => {
     'project-setup': '',
     '': 'dashboardFilled'
   };
-  const ommitRoutes = new Set([
-    'components',
-    'explainV2',
-    'project-setup',
-    'template',
-    'welcome',
-    'visitoridentification'
-  ]);
-  const checkRoute = (eachRoute) => {
-    let x = eachRoute.split('/')[1]?.trim();
-    return ommitRoutes.has(x);
-  };
 
   useEffect(() => {
     setShowMore({
@@ -472,6 +460,7 @@ const SearchResults = ({ searchString, openSavedReports }) => {
 
     setFilteredQueries(filtered);
   }, [searchString, searchResults, queries]);
+  
   useEffect(() => {
     let filteredResults =
       allRoutes &&
@@ -494,6 +483,7 @@ const SearchResults = ({ searchString, openSavedReports }) => {
     setFinalResults(filteredResults);
     setSearchResults(Array.from(new Set(filteredResults)));
   }, [allRoutes]);
+  
   const getSearchType = (route) => {
     let arr = route.split('/');
     let type = arr[1];
@@ -809,8 +799,9 @@ const GlobalSearch = () => {
   const moveToStep2 = (value) => {
     setSearchType(value);
   };
+  
   useEffect(() => {
-    if (step == 2) {
+    if (step === 2) {
     } else {
     }
   }, [step]);

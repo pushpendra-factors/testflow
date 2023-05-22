@@ -1,7 +1,6 @@
 import {
   CheckCircleOutlined,
   CopyOutlined,
-  ExclamationCircleOutlined,
   LoadingOutlined,
   MinusOutlined,
   PlusOutlined,
@@ -13,42 +12,29 @@ import {
   Col,
   Divider,
   Input,
-  Layout,
-  List,
-  Menu,
   Modal,
   Row,
-  Skeleton,
   Spin,
   Tag
 } from 'antd';
-import { Content, Footer, Header } from 'antd/lib/layout/layout';
-import Sider from 'antd/lib/layout/Sider';
-import Title from 'antd/lib/typography/Title';
 import { SVG, Text } from 'Components/factorsComponents';
 import { ArrowLeftSVG } from 'Components/svgIcons';
-import { set, template } from 'lodash';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { CATEGORY_TYPES } from './../../../../constants/categories.constants';
 
 import {
-  ACTIVE_DASHBOARD_CHANGE,
   ADD_DASHBOARD_MODAL_OPEN,
   NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE,
   NEW_DASHBOARD_TEMPLATES_MODAL_OPEN,
   UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE
 } from '../../../../reducers/types';
 import styles from './index.module.scss';
-import { getHostUrl } from 'Utils/request';
 import HorizontalWindow from 'Components/HorizontalWindow';
 import TemplatesThumbnail, {
   FallBackImage,
-  Integration_Checks,
-  StartFreshImage
+  Integration_Checks
 } from '../../../../constants/templates.constants';
-import { fetchProjectSettingsV1 } from 'Reducers/global';
-import Templates from '../../../../constants/templates.constants';
 import { createDashboardFromTemplate } from 'Reducers/dashboard_templates/services';
 import { fetchDashboards } from 'Reducers/dashboard/services';
 import {

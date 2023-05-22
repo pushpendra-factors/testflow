@@ -147,7 +147,7 @@ function ContentGroups({
   }, [deleteWidgetModal]);
 
   return (
-    <div className={'fa-container mt-32 mb-12 min-h-screen'}>
+    <div className={'fa-container'}>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={18}>
           <div className={'mb-10 pl-4'}>

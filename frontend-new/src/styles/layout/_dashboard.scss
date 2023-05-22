@@ -157,16 +157,16 @@
 
 .fa-global-search--input
 {
-    border: 1px solid $fa-color--mono-2;
-    background-color: $fa-color--mono-1;
-    border-radius: 8px;
-    width: 400px;
+    background-color: $fa-color-neutral-grey-10;
+    border: none;
+    border-radius: 6px;
+    width: 340px;
     height: 40px;
     box-shadow: none;
     transition: all 0.2s;
     &:hover{
-        width: 410px;
-        border: 1px solid $fa-color--mono-3;
+        width: 350px;
+        border: none;
         cursor: pointer;
     }
     input{ 
