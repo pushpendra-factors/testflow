@@ -1182,7 +1182,11 @@ def get_batch_documents_max_timestamp_v3(project_id, docs, object_type, max_time
             log.error("Missing lastmodified in %s for project_id %d.", object_type, project_id)
             return max_timestamp
         
-        last_modified_date = datetime.strptime(object_properties[last_modified_key], "%Y-%m-%dT%H:%M:%S.%fZ")
+        try:
+            last_modified_date = datetime.strptime(object_properties[last_modified_key], "%Y-%m-%dT%H:%M:%S.%fZ")
+        except:
+            last_modified_date = datetime.strptime(object_properties[last_modified_key], "%Y-%m-%dT%H:%M:%SZ")
+
         doc_last_modified_timestamp = int(last_modified_date.timestamp())
         
         if max_timestamp== 0 :
