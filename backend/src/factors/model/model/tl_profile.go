@@ -91,7 +91,7 @@ const PROFILE_TYPE_USER = "user"
 const PROFILE_TYPE_ACCOUNT = "account"
 const COLUMN_NAME_ID = "id"
 const COLUMN_NAME_CUSTOMER_USER_ID = "customer_user_id"
-const GROUP_ACTIVITY_USERNAME = "Channel Activity"
+const GROUP_ACTIVITY_USERNAME = "group_user"
 const FILTER_TYPE_USERS = "users"
 
 // Profile type for Segment Events
