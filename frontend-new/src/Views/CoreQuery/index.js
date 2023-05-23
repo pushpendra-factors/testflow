@@ -42,8 +42,6 @@ import {
   getCampaignConfigData
 } from '../../reducers/coreQuery/middleware';
 import {
-  calculateFrequencyData,
-  calculateActiveUsersData,
   formatApiData,
   getQuery,
   initialState,
@@ -72,8 +70,6 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   TOTAL_EVENTS_CRITERIA,
   TOTAL_USERS_CRITERIA,
-  ACTIVE_USERS_CRITERIA,
-  FREQUENCY_CRITERIA,
   EACH_USER_TYPE,
   REPORT_SECTION,
   INITIAL_SESSION_ANALYTICS_SEQ,
@@ -690,31 +686,6 @@ function CoreQuery({
           data: data.result_group[0]
         });
       }
-    } else if (result_criteria === ACTIVE_USERS_CRITERIA) {
-      const userData = formatApiData(
-        data.result_group[0],
-        data.result_group[1]
-      );
-      const sessionsData = data.result_group[2];
-      const activeUsersData = calculateActiveUsersData(userData, sessionsData, [
-        ...groupBy.global,
-        ...groupBy.event
-      ]);
-      updateResultState({ ...initialState, data: activeUsersData });
-    } else if (result_criteria === FREQUENCY_CRITERIA) {
-      const eventData = formatApiData(
-        data.result_group[0],
-        data.result_group[1]
-      );
-      const userData = formatApiData(
-        data.result_group[2],
-        data.result_group[3]
-      );
-      const frequencyData = calculateFrequencyData(eventData, userData, [
-        ...groupBy.global,
-        ...groupBy.event
-      ]);
-      updateResultState({ ...initialState, data: frequencyData });
     }
   };
 
@@ -782,29 +753,6 @@ function CoreQuery({
           } else {
             resultantData = data.result_group[0];
           }
-        } else if (result_criteria === ACTIVE_USERS_CRITERIA) {
-          const userData = formatApiData(
-            data.result_group[0],
-            data.result_group[1]
-          );
-          const sessionsData = data.result_group[2];
-          resultantData = calculateActiveUsersData(userData, sessionsData, [
-            ...groupBy.global,
-            ...groupBy.event
-          ]);
-        } else if (result_criteria === FREQUENCY_CRITERIA) {
-          const eventData = formatApiData(
-            data.result_group[0],
-            data.result_group[1]
-          );
-          const userData = formatApiData(
-            data.result_group[2],
-            data.result_group[3]
-          );
-          resultantData = calculateFrequencyData(eventData, userData, [
-            ...groupBy.global,
-            ...groupBy.event
-          ]);
         }
         if (isCompareQuery) {
           updateLocalReducer(COMPARISON_DATA_FETCHED, resultantData);
@@ -831,6 +779,7 @@ function CoreQuery({
       activeProject?.name,
       getDashboardConfigs,
       dateRange,
+      currentAgent?.email,
       configActionsOnRunningQuery,
       updateResultState,
       resetComparisonData,
@@ -906,13 +855,14 @@ function CoreQuery({
       globalFilters,
       eventsCondition,
       groupAnalysis,
-      activeProject.id,
-      activeProject?.name,
-      dateRange,
       coreQueryState.funnelConversionDurationNumber,
       coreQueryState.funnelConversionDurationUnit,
+      activeProject.id,
+      activeProject?.name,
       getDashboardConfigs,
+      dateRange,
       resetComparisonData,
+      currentAgent?.email,
       configActionsOnRunningQuery,
       updateResultState,
       updateLocalReducer
@@ -1079,6 +1029,7 @@ function CoreQuery({
       attr_dateRange,
       resetComparisonData,
       attrQueries,
+      currentAgent?.email,
       activeProject.id,
       activeProject?.name,
       configActionsOnRunningQuery,
@@ -1164,6 +1115,7 @@ function CoreQuery({
       activeProject?.name,
       getDashboardConfigs,
       dateRange,
+      currentAgent?.email,
       configActionsOnRunningQuery,
       updateResultState,
       resetComparisonData,
@@ -1248,7 +1200,8 @@ function CoreQuery({
       getDashboardConfigs,
       setNavigatedFromDashboard,
       setNavigatedFromAnalyse,
-      camp_dateRange
+      camp_dateRange,
+      currentAgent?.email
     ]
   );
 
@@ -1307,7 +1260,8 @@ function CoreQuery({
       activeProject.id,
       activeProject?.name,
       getDashboardConfigs,
-      dateRange
+      dateRange,
+      currentAgent?.email
     ]
   );
 

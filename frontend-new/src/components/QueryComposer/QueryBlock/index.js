@@ -56,7 +56,7 @@ function QueryBlock({
 
   const showGroups = useMemo(() => {
     let showOpts = [];
-    if (groupAnalysis === 'users') {
+    if (['users', 'events'].includes(groupAnalysis)) {
       showOpts = [...eventOptions];
     } else {
       const groupOpts = eventOptions?.filter((item) => {

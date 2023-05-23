@@ -1,16 +1,15 @@
 import {
-  TOTAL_EVENTS_CRITERIA,
   TOTAL_USERS_CRITERIA,
-  EACH_USER_TYPE,
+  EACH_USER_TYPE
 } from '../../utils/constants';
 
 const defaultState = {
   session_order: {
     between: 0,
-    to: 0,
+    to: 0
   },
-  show_criteria: TOTAL_EVENTS_CRITERIA,
-  performance_criteria: EACH_USER_TYPE,
+  show_criteria: TOTAL_USERS_CRITERIA,
+  performance_criteria: EACH_USER_TYPE
 };
 
 export const SET_SESSION_ORDER = 'SET_SESSION_ORDER';
@@ -64,7 +63,7 @@ export default function (state = defaultState, action) {
         performance_criteria:
           action.payload !== TOTAL_USERS_CRITERIA
             ? EACH_USER_TYPE
-            : state.performance_criteria,
+            : state.performance_criteria
       };
     case SET_PERFORMANCE_CRITERIA:
       return { ...state, performance_criteria: action.payload };
