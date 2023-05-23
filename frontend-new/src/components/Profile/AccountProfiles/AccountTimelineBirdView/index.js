@@ -61,7 +61,7 @@ function AccountTimelineBirdView({
     const { borderColor, bgColor } = eventIconsColorMap[eventIcon] || {};
     const isTrackedUser = event.user === 'new_user';
     const iconContent = isTrackedUser ? (
-      <SVG name={`TrackedUser${event.id.match(/\d/g)[0]}`} size={20} />
+      <SVG name={`TrackedUser${event.id.match(/\d/g)?.[0] || 0}`} size={20} />
     ) : (
       <img
         src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
