@@ -41,7 +41,10 @@
             font-size: 12px;
             padding: 11px 12px;
             color: $fa-color--mono-5;
-        }  
+        }
+        .ant-table-column-sorters{
+            padding: 0px 0px;
+        }
     }
     // table body
     .ant-table-tbody
