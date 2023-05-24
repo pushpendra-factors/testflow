@@ -11,7 +11,6 @@ import {
   delGroupBy,
   getGroupProperties
 } from '../../../reducers/coreQuery/middleware';
-import GroupSelect2 from '../GroupSelect2';
 import EventGroupBlock from '../EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 import AliasModal from '../AliasModal';
@@ -20,7 +19,7 @@ import { compareFilters, groupFilters } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import { getQueryComposerGroupIcon } from 'Utils/getQueryComposerGroupIcons';
-
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 function QueryBlock({
   availableGroups,
   index,
@@ -70,7 +69,15 @@ function QueryBlock({
       );
       showOpts = groupOpts.concat(userOpts);
     }
-    return showOpts;
+    return showOpts.map((opt) => {
+      return {
+        iconName: opt.icon,
+        label: opt.label,
+        values: opt.values.map((op) => {
+          return { value: op[1], label: op[0] };
+        })
+      };
+    });
   }, [eventOptions, groupAnalysis, availableGroups]);
 
   const filterProperties = useMemo(() => {
@@ -108,11 +115,11 @@ function QueryBlock({
     eventChange(newEvent, index - 1, 'filters_updated');
   };
 
-  const onChange = (group, value, icon) => {
+  const onChange = (option, group) => {
     const newEvent = { alias: '', label: '', filters: [], group: '', icon: '' };
-    newEvent.icon = icon;
-    newEvent.label = value;
-    newEvent.group = group;
+    newEvent.icon = group.icon;
+    newEvent.label = option.value;
+    newEvent.group = group.label;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
   };
@@ -128,15 +135,12 @@ function QueryBlock({
   const selectEvents = () =>
     isDDVisible ? (
       <div className={styles.query_block__event_selector}>
-        <GroupSelect2
-          groupedProperties={showGroups}
-          placeholder='Select Event'
-          optionClick={(group, val, a, icon) => {
-            onChange(group, val[1] ? val[1] : val[0], icon);
-          }}
+        <GroupSelect
+          options={showGroups}
+          optionClickCallback={onChange}
+          allowSearch={true}
           onClickOutside={() => setDDVisible(false)}
-          allowEmpty
-          useCollapseView
+          extraClass={`${styles.query_block__event_selector__select}`}
         />
       </div>
     ) : null;
@@ -536,7 +540,10 @@ function QueryBlock({
               <Button
                 icon={
                   <SVG
-                    name={getQueryComposerGroupIcon(event?.icon)}
+                    name={getQueryComposerGroupIcon(
+                      showGroups.find((group) => group.label === event.group)
+                        ?.iconName
+                    )}
                     size={16}
                   />
                 }

@@ -54,7 +54,7 @@ export default function SingleSelect({
             allowSearch
               ? 'fa-select-group-select--options'
               : 'fa-select--options'
-          }`}
+          } ${op.labelNode ? 'w-full' : ''}`}
         >
           {op.labelNode ? op.labelNode : op.label}
         </div>

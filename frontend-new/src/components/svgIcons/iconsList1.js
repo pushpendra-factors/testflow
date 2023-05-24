@@ -2708,7 +2708,23 @@ export const ChevronDownSVG = ({ size = 24, extraClass, color }) => {
     </svg>
   );
 };
-
+export const ChevronLeftSVG = ({ size = 24, extraClass, color }) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      className={extraClass}
+      viewBox='0 0 16 16'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <path
+        d='M4.82227 7.39258C4.61133 7.60352 4.61133 7.95508 4.82227 8.16602L9.36914 12.7363C9.60352 12.9473 9.95508 12.9473 10.166 12.7363L10.7051 12.1973C10.916 11.9863 10.916 11.6348 10.7051 11.4004L7.0957 7.76758L10.7051 4.1582C10.916 3.92383 10.916 3.57227 10.7051 3.36133L10.166 2.82227C9.95508 2.61133 9.60352 2.61133 9.36914 2.82227L4.82227 7.39258Z'
+        fill={color}
+      />
+    </svg>
+  );
+};
 export const InfoCircleSVG = ({ size = 24, extraClass, color }) => {
   return (
     <svg

@@ -37,14 +37,17 @@
 
   &__event_selector {
     position: absolute;
-    top: 32px;
-
-    &__btn {
-      position: relative;
-    }
+    top: 0px;
 
     .ant-select-selector {
       border-radius: 12px;
+    }
+
+    &__select {
+      width: 380px;
+      height: 458px;
+      max-height: 458px;
+      position: absolute;
     }
   }
 
