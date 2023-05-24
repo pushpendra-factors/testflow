@@ -78,6 +78,11 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 						segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters[segment.Type]...)
 					}
 				}
+				err := segmentQuery.TransformDateTypeFilters()
+				if err != nil {
+					log.WithFields(logFields).Error("Failed to transform query payload filters.")
+					return nil, http.StatusBadRequest
+				}
 				query, err := U.EncodeStructTypeToPostgresJsonb(segmentQuery)
 				if err != nil {
 					log.WithFields(logFields).Error("Failed to append payload filters with global properties.")
@@ -120,6 +125,23 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			tableProps = timelinesConfig.AccountConfig.TableProps
 		} else if profileType == model.PROFILE_TYPE_USER {
 			tableProps = timelinesConfig.UserConfig.TableProps
+		}
+	}
+
+	timezoneString, statusCode := store.GetTimezoneForProject(projectID)
+	if statusCode != http.StatusFound {
+		log.WithFields(logFields).Error("Query failed. Failed to get Timezone.")
+		return nil, http.StatusBadRequest
+	}
+
+	// transforming datetime filters
+	for group, filterArray := range payload.Filters {
+		for index := range filterArray {
+			err := payload.Filters[group][index].TransformDateTypeFilters(timezoneString)
+			if err != nil {
+				log.WithFields(logFields).Error("Failed to transform payload filters.")
+				return nil, http.StatusBadRequest
+			}
 		}
 	}
 

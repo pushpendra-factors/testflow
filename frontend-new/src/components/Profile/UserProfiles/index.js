@@ -212,7 +212,7 @@ function UserProfiles({
           <div className='flex items-center'>
             {identity.isAnonymous ? (
               <SVG
-                name={`TrackedUser${identity.id.match(/\d/g)[0]}`}
+                name={`TrackedUser${identity.id?.match(/\d/)?.[0] || 0}`}
                 size={24}
               />
             ) : (

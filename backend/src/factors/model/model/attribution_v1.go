@@ -788,9 +788,10 @@ func GetUpdatedRowsByDimensionsV1(result *QueryResult, query *AttributionQueryV1
 
 // ProcessQueryKPIV1 converts attribution data into result
 func ProcessQueryKPIV1(query *AttributionQueryV1, attributionData *map[string]*AttributionData,
-	marketingReports *MarketingReports, isCompare bool, kpiData map[string]KPIInfo, kpiHeaders []string, kpiAggFunctionType []string) *QueryResult {
+	marketingReports *MarketingReports, isCompare bool, kpiData map[string]KPIInfo, kpiHeaders []string, kpiAggFunctionType []string, logCtx log.Entry) *QueryResult {
 
-	logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug"})
+	logFields := log.Fields{"Method": "ProcessQueryKPIV1"}
+	logCtx = *logCtx.WithFields(logFields)
 
 	// get the headers for KPI
 	var goalEvents []string
@@ -834,7 +835,7 @@ func ProcessQueryKPIV1(query *AttributionQueryV1, attributionData *map[string]*A
 		return nil
 	}
 
-	result.Rows = MergeDataRowsHavingSameKeyKPIV1(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, kpiAggFunctionType, *logCtx)
+	result.Rows = MergeDataRowsHavingSameKeyKPIV1(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, kpiAggFunctionType, logCtx)
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
 	}

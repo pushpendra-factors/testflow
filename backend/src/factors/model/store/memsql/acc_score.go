@@ -519,7 +519,7 @@ func ComputeUserScoreNonAnonymous(db *gorm.DB, weights model.AccWeights, project
 
 	result := make(map[string]model.PerUserScoreOnDay, 0)
 
-	stmt_customer := fmt.Sprintf("select json_extract_json(event_aggregate,'%s') from users where customer_user_id IN (?) and project_id=?", model.LAST_EVENT)
+	stmt_customer := fmt.Sprintf("select customer_user_id, json_extract_json(event_aggregate,'%s') from users where customer_user_id IN (?) and project_id=?", model.LAST_EVENT)
 	rows, err := db.Raw(stmt_customer, knownUsers, projectId).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Error while fetching rows to compute user scores")
