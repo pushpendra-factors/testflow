@@ -26,7 +26,7 @@ func UpdateAccScoreWeights(c *gin.Context) (interface{}, int, string, string, bo
 		"RequestId": reqID,
 	})
 
-	var weightsRequest M.AccWeightsRequest
+	var weightsRequest M.AccWeights
 	var weights M.AccWeights
 	weights.WeightConfig = make([]M.AccEventWeight, 0)
 	r := c.Request
@@ -39,14 +39,13 @@ func UpdateAccScoreWeights(c *gin.Context) (interface{}, int, string, string, bo
 	weights.SaleWindow = weightsRequest.SaleWindow
 
 	// convert incoming request to AccWeights.
-	for wtKey, wtVal := range weightsRequest.WeightConfig {
+	for _, wtVal := range weightsRequest.WeightConfig {
 		var r M.AccEventWeight
-		r.EventName = wtKey
+		r.EventName = wtVal.EventName
 		r.Is_deleted = wtVal.Is_deleted
 		r.Rule = wtVal.Rule
 		r.WeightId = wtVal.WeightId
 		r.Weight_value = wtVal.Weight_value
-
 		weights.WeightConfig = append(weights.WeightConfig, r)
 	}
 
