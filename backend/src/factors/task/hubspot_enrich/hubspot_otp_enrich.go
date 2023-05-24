@@ -74,7 +74,6 @@ func filterCheckGeneralV1(rule model.OTPRule, event model.EventIdToProperties, l
 	}
 
 	// When neither filters matched nor (filters matched but values are same)
-	logCtx.WithField("Rule", rule).WithField("event", event).Warn("Filter check general is failing for offline touch point rule")
 	return false
 }
 
@@ -414,7 +413,7 @@ func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OT
 func CreateTouchPointEventForFormsAndContactsV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, eventTimestamp int64, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent"})
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForFormsAndContactsV1"})
 	logCtx.WithField("event", event).Info("CreateTouchPointEvent: creating hubspot offline touch point document")
 
 	var trackResponse *SDK.TrackResponse
@@ -582,7 +581,7 @@ func createOTPUniqueKeyForEngagementsV1(rule model.OTPRule, event model.EventIdT
 func CreateTouchPointEventForEngagementV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, engagementType string, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent",
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForEngagementV1",
 		"event": event, "rule": rule})
 
 	logCtx.WithField("rule", rule).WithField("event", event).
@@ -792,8 +791,7 @@ func createOTPUniqueKeyForContactListV1(rule model.OTPRule, event model.EventIdT
 func CreateTouchPointEventForListsV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForLists"})
-
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForListsV1"})
 	logCtx.WithField("rule", rule).WithField("event", event).
 		Info("CreateTouchPointEventForLists: creating hubspot offline touch point document")
 
