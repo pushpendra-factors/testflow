@@ -48,12 +48,12 @@ export const settingsMenuItems = [
   {
     label: 'General Settings',
     url: PathUrls.SettingsGeneral,
-    lineBreak: true
+    lineBreak: false
   },
   {
     label: 'Users',
     url: PathUrls.SettingsUser,
-    lineBreak: false
+    lineBreak: true
   },
   {
     label: 'Attributions',
@@ -63,8 +63,19 @@ export const settingsMenuItems = [
   {
     label: 'Integrations',
     url: PathUrls.SettingsIntegration,
+    lineBreak: false
+  },
+  {
+    label: 'Javascript SDK',
+    url: PathUrls.SettingsSdk,
     lineBreak: true
   },
+  {
+    label: 'Build Insights',
+    url: PathUrls.SettingsInsights,
+    lineBreak: true
+  },
+
   {
     label: 'Sharing',
     url: PathUrls.SettingsSharing,

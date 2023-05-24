@@ -32,6 +32,7 @@ import CodeBlock from 'Components/CodeBlock';
 import styles from './index.module.scss';
 import { UserAddOutlined } from '@ant-design/icons';
 import InviteUsers from 'Views/Settings/ProjectSettings/UserSettings/InviteUsers';
+import ExcludeIp from '../BasicSettings/IpBlocking/excludeIp';
 
 const { TabPane } = Tabs;
 
@@ -53,7 +54,7 @@ const ViewSetup = ({ activeProject }) => {
           Setup 1
         </Text>
         <Text type={'paragraph'} extraClass={'m-0'}>
-          Add the below javascript code on every page between the {'<head>'} and{' '}
+          Add the below javascript code on every page between the {'<head>'} and
           {'</head>'} tags.
         </Text>
       </Col>
@@ -61,13 +62,12 @@ const ViewSetup = ({ activeProject }) => {
         <CodeBlock
           codeContent={
             <>
-              {' '}
-              <span style={{ color: '#2F80ED' }}>{`<script>`}</span>{' '}
+              <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
               {`
 window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("`}
               <span style={{ color: '#EB5757' }}>{projectToken}</span>
               {`"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); 
-`}{' '}
+`}
               <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
             </>
           }
@@ -117,7 +117,7 @@ const GTMSetup = ({ activeProject }) => {
           Setup 1
         </Text>
         <Text type={'paragraph'} extraClass={'m-0'}>
-          1. Sign in to{' '}
+          1. Sign in to
           <span className={'underline'}>
             <a href='https://tagmanager.google.com/' target='_blank'>
               Google Tag Manager
@@ -126,15 +126,15 @@ const GTMSetup = ({ activeProject }) => {
           , select “Workspace”, and “Add a new tag”
         </Text>
         <Text type={'paragraph'} extraClass={'m-0'}>
-          2. Name it “Factors tag”. Select{' '}
+          2. Name it “Factors tag”. Select
           <span className={'italic'}>Edit</span> on Tag Configuration
         </Text>
         <Text type={'paragraph'} extraClass={'m-0'}>
           3. Under custom, select <span className={'italic'}>custom HTML</span>
         </Text>
         <Text type={'paragraph'} extraClass={'m-0'}>
-          4. Copy the below tracking script and{' '}
-          <span className={'italic'}>paste</span> it on the HTML field, Select{' '}
+          4. Copy the below tracking script and
+          <span className={'italic'}>paste</span> it on the HTML field, Select
           <span className={'font-extrabold'}>Save</span>
         </Text>
       </Col>
@@ -142,14 +142,13 @@ const GTMSetup = ({ activeProject }) => {
         <CodeBlock
           codeContent={
             <>
-              {' '}
-              <span style={{ color: '#2F80ED' }}>{`<script>`}</span>{' '}
+              <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
               {`
 window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("`}
               <span style={{ color: '#EB5757' }}>{projectToken}</span>
               {`"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); 
-`}{' '}
-              <span style={{ color: '#2F80ED' }}>{`</script>`}</span>{' '}
+`}
+              <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
             </>
           }
           pureTextCode={`<script> window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("${projectToken}"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); </script>`}
@@ -157,12 +156,12 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
       </Col>
       <Col span={24}>
         <Text type={'paragraph'} extraClass={'m-0'}>
-          5. In the <span className={'italic'}>Triggers</span> popup, select{' '}
-          <span className={'italic'}>Add Trigger</span> and select{' '}
+          5. In the <span className={'italic'}>Triggers</span> popup, select
+          <span className={'italic'}>Add Trigger</span> and select
           <span className={'italic'}>All Pages</span>
         </Text>
         <Text type={'paragraph'} extraClass={'m-0'}>
-          6. The trigger has been added. Click on{' '}
+          6. The trigger has been added. Click on
           <span className={'font-extrabold'}>Publish</span> at the top of your
           GTM window!
         </Text>
@@ -460,7 +459,7 @@ const JSConfig = ({
               onChange={toggleAutoTrack}
               checked={autoTrack}
             />
-          </span>{' '}
+          </span>
           <Text
             type={'title'}
             level={6}
@@ -487,7 +486,7 @@ const JSConfig = ({
               onChange={toggleAutoTrackSPAPageView}
               checked={autoTrackSPAPageView}
             />
-          </span>{' '}
+          </span>
           <Text
             type={'title'}
             level={6}
@@ -515,7 +514,7 @@ const JSConfig = ({
               onChange={toggleExcludeBot}
               checked={excludeBot}
             />
-          </span>{' '}
+          </span>
           <Text
             type={'title'}
             level={6}
@@ -542,7 +541,7 @@ const JSConfig = ({
               onChange={toggleAutoFormCapture}
               checked={autoFormCapture}
             />
-          </span>{' '}
+          </span>
           <Text
             type={'title'}
             level={6}
@@ -569,7 +568,7 @@ const JSConfig = ({
               onChange={toggleAutoCaptureFormFills}
               checked={autoCaptureFormFills}
             />
-          </span>{' '}
+          </span>
           <Text
             type={'title'}
             level={6}
@@ -596,7 +595,7 @@ const JSConfig = ({
               onChange={toggleClickCapture}
               checked={clickCapture}
             />
-          </span>{' '}
+          </span>
           <Text
             type={'title'}
             level={6}
@@ -613,6 +612,9 @@ const JSConfig = ({
           discovery, it will be listed under Click Tracking Configurations and
           can be enabled for tracking as events.
         </Text>
+      </Col>
+      <Col span={24} className='m-0 mt-8'>
+        <ExcludeIp />
       </Col>
     </Row>
   );
@@ -849,7 +851,6 @@ const VerifySdkCheck = ({
             </Row>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              {' '}
               <div
                 style={{
                   margin: '0 5px',
@@ -865,7 +866,7 @@ const VerifySdkCheck = ({
                 weight='bold'
                 extraClass={'m-0 ml-2 mr-1 flex '}
               >
-                Have you added the SDK? Verify Here{' '}
+                Have you added the SDK? Verify Here
               </Text>
               <Button type={'default'} onClick={onSDKcheck}>
                 Check for SDK
@@ -1052,7 +1053,7 @@ function JavascriptSDK({
                 ) : (
                   <>
                     <Tabs defaultActiveKey='1' onChange={callback}>
-                      {renderTabs()}{' '}
+                      {renderTabs()}
                     </Tabs>
 
                     <Divider style={{ margin: '0px 0 10px 0' }} />

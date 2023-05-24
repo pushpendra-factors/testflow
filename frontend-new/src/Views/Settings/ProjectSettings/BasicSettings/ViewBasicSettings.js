@@ -5,7 +5,6 @@ import { connect } from 'react-redux';
 import { getTimeZoneNameFromCity } from 'Utils/constants';
 import { Currency } from 'Utils/currency';
 import _ from 'lodash';
-import ExcludeIp from './IpBlocking/excludeIp';
 
 function ViewBasicSettings({
   activeProject,
@@ -198,15 +197,14 @@ function ViewBasicSettings({
             ) : (
               <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>
                 {currentProjectSettings?.currency
-                  ? `${Currency[currentProjectSettings?.currency]} (${currentProjectSettings?.currency})`
+                  ? `${Currency[currentProjectSettings?.currency]} (${
+                      currentProjectSettings?.currency
+                    })`
                   : '---'}
               </Text>
             )}
           </Col>
         </Row>
-        
-        
-        <ExcludeIp mode="view"></ExcludeIp>
       </div>
     </>
   );
@@ -217,7 +215,7 @@ const mapStateToProps = (state) => ({
   agents: state.agent.agents,
   projects: state.global.projects,
   currentAgent: state.agent.agent_details,
-  currentProjectSettings: state.global.currentProjectSettings,
+  currentProjectSettings: state.global.currentProjectSettings
 });
 
 export default connect(mapStateToProps)(ViewBasicSettings);
