@@ -505,7 +505,7 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 				return nil, nil, nil, nil, nil, nil, err
 			}
 
-			log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiDataForGroupQuery": kpiDataForGroupQuery}).Info("UserKPI Attribution kpiData")
+			logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiDataForGroupQuery": kpiDataForGroupQuery}).Info("UserKPI Attribution kpiData")
 
 			_uniqueUsers := make(map[string]int)
 			// Get user IDs for Revenue Attribution
@@ -533,7 +533,7 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 			}
 
 			if C.GetAttributionDebug() == 1 {
-				log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiDataForGroupQuery": kpiDataForGroupQuery}).Info("KPI Attribution kpiData")
+				logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiDataForGroupQuery": kpiDataForGroupQuery}).Info("KPI Attribution kpiData")
 			}
 
 			_uniqueUsers := make(map[string]int)
@@ -1055,7 +1055,7 @@ func ProcessAttributionDataToResultV1(query *model.AttributionQueryV1,
 
 	} else {
 		// execution similar to the normal run - still keeping it separate for better understanding
-		result = model.ProcessQueryKPIV1(query, attributionData, marketingReports, isCompare, kpiData, kpiHeaders, kpiAggFunctionType)
+		result = model.ProcessQueryKPIV1(query, attributionData, marketingReports, isCompare, kpiData, kpiHeaders, kpiAggFunctionType, *logCtx)
 		if C.GetAttributionDebug() == 1 {
 			logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
 			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")

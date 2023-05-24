@@ -316,7 +316,7 @@ func (store *MemSQL) RunKPIGroupQueryV1(projectID int64, query *model.Attributio
 		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-		log.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest, "ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
+		logCtx.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest, "ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
 		if statusCode != http.StatusOK {
 			logCtx.WithField("err_code", statusCode).Error("failed to get KPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
