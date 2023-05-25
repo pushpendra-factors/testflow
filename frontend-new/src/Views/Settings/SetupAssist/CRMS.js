@@ -29,7 +29,7 @@ const IntegrationProviderData = [
     name: 'LeadSquared',
     desc: 'Leadsquared is a leader in marketing automation. Using our Leadsquared source, we will ingest your Program, Campaign, Person and List records into Factors.',
     icon: 'LeadSquared',
-    kbLink: false,
+    kbLink: 'https://help.factors.ai/en/articles/7283684-leadsquared-integration',
   },
 ];
 
