@@ -110,7 +110,7 @@ const ExcludeIpBlock = ({
 
   return (
     <>
-      <Row className='flex justify-between items-center'>
+      <Row className='flex justify-between items-start'>
         <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 mb-2'}>
           Blocked IPs
         </Text>

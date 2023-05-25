@@ -322,7 +322,7 @@ function AccountProfiles({
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
-        sorter: (a, b) => sortColumn(a.engagement, b.engagement),
+        sorter: (a, b) => sortColumn(a.score, b.score),
         render: (status) => (
           <div
             className='engagement-tag'

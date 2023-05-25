@@ -278,8 +278,7 @@ function UserProfiles({
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
-        align: 'center',
-        sorter: (a, b) => sortColumn(a.engagement, b.engagement),
+        sorter: (a, b) => sortColumn(a.score, b.score),
         render: (status) => (
           <div
             className='engagement-tag'
