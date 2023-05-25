@@ -212,25 +212,25 @@ export const ATTRIBUTION_METRICS = [
   {
     title: 'Impressions',
     header: 'Impressions',
-    enabled: false,
+    enabled: true,
     valueType: 'numerical'
   },
   {
     title: 'Clicks',
     header: 'Clicks',
-    enabled: false,
+    enabled: true,
     valueType: 'numerical'
   },
   {
     title: 'Spend',
     header: 'Spend',
-    enabled: false,
+    enabled: true,
     valueType: 'numerical'
   },
   {
     title: 'CTR (%)',
     header: 'CTR(%)',
-    enabled: false,
+    enabled: true,
     valueType: 'percentage'
   },
   {
@@ -267,7 +267,7 @@ export const ATTRIBUTION_METRICS = [
   {
     title: 'Return on Cost',
     header: 'ROC',
-    enabled: false,
+    enabled: true,
     isEventMetric: true
   }
   // {

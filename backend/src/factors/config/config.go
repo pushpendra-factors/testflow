@@ -184,7 +184,7 @@ type Configuration struct {
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsLastComputed    []int64
-	SkippedOtpProjectIDs                   []int64
+	SkippedOtpProjectIDs                   string
 	DemoProjectIds                         []string
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
@@ -1999,13 +1999,24 @@ func GetSkipAttributionDashboardCaching() int {
 }
 
 func IsProjectIDSkippedForOtp(projectId int64) bool {
-	skip := false
-	for _, id := range configuration.SkippedOtpProjectIDs {
-		if id == projectId {
-			skip = true
+
+	if configuration.SkippedOtpProjectIDs == "" {
+		return false
+	}
+
+	if configuration.SkippedOtpProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectId)
+	projectIDs := strings.Split(configuration.SkippedOtpProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
 		}
 	}
-	return skip
+
+	return false
 }
 
 func GetSDKRequestQueueAllowedTokens() []string {

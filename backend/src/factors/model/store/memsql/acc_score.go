@@ -379,7 +379,7 @@ func (store *MemSQL) GetAllUserScore(projectId int64, debug bool) ([]model.AllUs
 	return result, nil
 }
 
-func (store *MemSQL) GetUserScoreOnIds(projectId int64, knownUsers, unknownUsers []string, debug bool) (map[string]model.PerUserScoreOnDay, error) {
+func (store *MemSQL) GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error) {
 	// get score of each account on current date
 
 	projectID := projectId
@@ -397,7 +397,7 @@ func (store *MemSQL) GetUserScoreOnIds(projectId int64, knownUsers, unknownUsers
 	}
 
 	stmt := fmt.Sprintf("select id, json_extract_json(event_aggregate,'%s') from users where  project_id = ? AND ID IN ( ? ) AND json_length(event_aggregate)>=1 LIMIT %d", model.LAST_EVENT, MAX_LIMIT)
-	rows, err := db.Raw(stmt, projectId, unknownUsers).Rows()
+	rows, err := db.Raw(stmt, projectId, usersAnonymous).Rows()
 	if err != nil {
 
 		return nil, err
@@ -435,7 +435,7 @@ func (store *MemSQL) GetUserScoreOnIds(projectId int64, knownUsers, unknownUsers
 		result[userId] = resultPerUser
 	}
 
-	resultScoresOnCustomerIds, err := ComputeUserScoreNonAnonymous(db, *weights, projectId, knownUsers, debug)
+	resultScoresOnCustomerIds, err := ComputeUserScoreNonAnonymous(db, *weights, projectId, usersNonAnonymous, debug)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to compute user score for known users")
 		return nil, err
@@ -519,7 +519,7 @@ func ComputeUserScoreNonAnonymous(db *gorm.DB, weights model.AccWeights, project
 
 	result := make(map[string]model.PerUserScoreOnDay, 0)
 
-	stmt_customer := fmt.Sprintf("select json_extract_json(event_aggregate,'%s') from users where customer_user_id IN (?) and project_id=?", model.LAST_EVENT)
+	stmt_customer := fmt.Sprintf("select customer_user_id, json_extract_json(event_aggregate,'%s') from users where customer_user_id IN (?) and project_id=?", model.LAST_EVENT)
 	rows, err := db.Raw(stmt_customer, knownUsers, projectId).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Error while fetching rows to compute user scores")

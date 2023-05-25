@@ -173,6 +173,7 @@ func GetSixSignalPublicReportHandler(c *gin.Context) (interface{}, int, string, 
 	}
 
 	pageView := reqPayload.PageView
+	sixSignalQuery.PageView = pageView
 	folderName := getFolderName(sixSignalQuery)
 	logCtx.WithFields(log.Fields{"folder name": folderName}).Info("Folder name for reading the result")
 
@@ -493,7 +494,9 @@ func FilterRowsForSixSignalPageView(projectId int64, reqPayload model.SixSignalQ
 	sortIndex := getIndexForPageCount(filteredRes.Headers)
 	if sortIndex != -1 {
 		sort.Slice(filteredRows, func(i, j int) bool {
-			return filteredRows[i][sortIndex].(int) > filteredRows[j][sortIndex].(int)
+			countI, _ := filteredRows[i][sortIndex].(int)
+			countJ, _ := filteredRows[j][sortIndex].(int)
+			return countI > countJ
 		})
 	}
 	filteredRes.Rows = filteredRows

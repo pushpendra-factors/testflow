@@ -44,17 +44,19 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	assert.Equal(t, errCode, http.StatusAccepted)
 
 	// Properties Map
+	hbMeetingTime := time.Now().AddDate(0, 0, -10).Unix()
+	hbMeetingTimeNow := time.Now().Unix()
 	propsMap := []map[string]interface{}{
 		{"$browser": "Chrome", "$city": "Delhi", "$country": "India", "$device_type": "desktop", "$page_count": 100, "$session_spent_time": 2000},
 		{"$browser": "Brave", "$city": "Delhi", "$country": "India", "$device_type": "iPad", "$page_count": 110, "$session_spent_time": 2500},
 		{"$browser": "Chrome", "$city": "New York", "$country": "US", "$device_type": "desktop", "$page_count": 100, "$session_spent_time": 2500},
 		{"$browser": "Chrome", "$city": "London", "$country": "UK", "$device_type": "iPad", "$page_count": 105, "$session_spent_time": 3000},
 		{"$browser": "Edge", "$city": "London", "$country": "UK", "$device_type": "desktop", "$page_count": 120, "$session_spent_time": 2000},
-		{"$browser": "Brave", "$city": "Paris", "$country": "France", "$device_type": "iPad", "$page_count": 120, "$session_spent_time": 3000},
-		{"$browser": "Edge", "$city": "New York", "$country": "US", "$device_type": "desktop", "$page_count": 110, "$session_spent_time": 2500},
-		{"$browser": "Firefox", "$city": "London", "$country": "UK", "$device_type": "iPad", "$page_count": 100, "$session_spent_time": 3000},
-		{"$browser": "Firefox", "$city": "Dubai", "$country": "UAE", "$device_type": "desktop", "$page_count": 150, "$session_spent_time": 2100},
-		{"$browser": "Chrome", "$city": "Delhi", "$country": "India", "$device_type": "iPad", "$page_count": 150, "$session_spent_time": 2100},
+		{"$browser": "Brave", "$city": "Paris", "$country": "France", "$device_type": "iPad", "$page_count": 120, "$session_spent_time": 3000, "$hubspot_contact_rh_meeting_time": hbMeetingTimeNow},
+		{"$browser": "Edge", "$city": "New York", "$country": "US", "$device_type": "desktop", "$page_count": 110, "$session_spent_time": 2500, "$hubspot_contact_rh_meeting_time": hbMeetingTimeNow},
+		{"$browser": "Firefox", "$city": "London", "$country": "UK", "$device_type": "iPad", "$page_count": 100, "$session_spent_time": 3000, "$hubspot_contact_rh_meeting_time": hbMeetingTime},
+		{"$browser": "Firefox", "$city": "Dubai", "$country": "UAE", "$device_type": "desktop", "$page_count": 150, "$session_spent_time": 2100, "$hubspot_contact_rh_meeting_time": hbMeetingTime},
+		{"$browser": "Chrome", "$city": "Delhi", "$country": "India", "$device_type": "iPad", "$page_count": 150, "$session_spent_time": 2100, "$hubspot_contact_rh_meeting_time": hbMeetingTime},
 	}
 
 	// Create 5 Unidentified Users
@@ -369,10 +371,38 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 				{
 					Entity:    "user_g",
 					Type:      "categorical",
-					Property:  "$session_spent_time",
-					Operator:  "greaterThanOrEqual",
-					Value:     "2500",
+					Property:  "$country",
+					Operator:  "equals",
+					Value:     "India",
 					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$country",
+					Operator:  "equals",
+					Value:     "UAE",
+					LogicalOp: "OR",
+				},
+			},
+		},
+		SearchFilter: map[string][]model.QueryProperty{
+			"users": {
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$page_count",
+					Operator:  "equals",
+					Value:     "150",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$page_count",
+					Operator:  "equals",
+					Value:     "100",
+					LogicalOp: "OR",
 				},
 			},
 		},
@@ -400,6 +430,112 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		}
 	}
 
+	year, month, day := time.Now().AddDate(0, 0, -1).Date()
+	jointest := time.Date(year, month, day, 0, 0, 0, 0, time.Now().Location()).UnixMilli()
+	// 6. (a) Test for dateTime type filters (since)
+	payload = model.TimelinePayload{
+		Source: "web",
+		Filters: map[string][]model.QueryProperty{
+			"users": {
+				{
+					Entity:    "user_g",
+					Type:      "datetime",
+					Property:  "$hubspot_contact_rh_meeting_time",
+					Operator:  "since",
+					Value:     fmt.Sprintf("{\"fr\":%d}", jointest),
+					LogicalOp: "AND",
+				},
+			},
+		},
+	}
+
+	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(resp))
+	for i, user := range resp {
+		assert.Equal(t, user.IsAnonymous, true)
+		for _, prop := range timelinesConfig.UserConfig.TableProps {
+			assert.NotNil(t, user.TableProps[prop])
+		}
+		assert.NotNil(t, user.LastActivity)
+		if i > 0 {
+			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
+		}
+	}
+
+	// 6. (b) Test for dateTime type filters (before)
+	payload = model.TimelinePayload{
+		Source: "web",
+		Filters: map[string][]model.QueryProperty{
+			"users": {
+				{
+					Entity:    "user_g",
+					Type:      "datetime",
+					Property:  "$hubspot_contact_rh_meeting_time",
+					Operator:  "before",
+					Value:     fmt.Sprintf("{\"to\":%d}", jointest),
+					LogicalOp: "AND",
+				},
+			},
+		},
+	}
+
+	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(resp))
+	for i, user := range resp {
+		assert.Equal(t, user.IsAnonymous, true)
+		for _, prop := range timelinesConfig.UserConfig.TableProps {
+			assert.NotNil(t, user.TableProps[prop])
+		}
+		assert.NotNil(t, user.LastActivity)
+		if i > 0 {
+			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
+		}
+	}
+
+	// 6. (c) Test for dateTime type filters (inCurrent)
+	payload = model.TimelinePayload{
+		Source: "web",
+		Filters: map[string][]model.QueryProperty{
+			"users": {
+				{
+					Entity:    "user_g",
+					Type:      "datetime",
+					Property:  "$hubspot_contact_rh_meeting_time",
+					Operator:  "inCurrent",
+					Value:     "{\"gran\":\"week\"}",
+					LogicalOp: "AND",
+				},
+			},
+		},
+	}
+
+	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(resp))
+	for i, user := range resp {
+		assert.Equal(t, user.IsAnonymous, true)
+		for _, prop := range timelinesConfig.UserConfig.TableProps {
+			assert.NotNil(t, user.TableProps[prop])
+		}
+		assert.NotNil(t, user.LastActivity)
+		if i > 0 {
+			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
+		}
+	}
 }
 
 func sendGetProfileUserRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
@@ -2486,17 +2622,19 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
 	assert.NotNil(t, group2)
 	assert.Equal(t, http.StatusCreated, status)
+	hbMeetingTime := time.Now().AddDate(0, 0, -5).Unix()
+	hbMeetingTimeNow := time.Now().Unix()
 	propertiesMap := []map[string]interface{}{
 		{"$salesforce_account_name": "Pepper Content", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "peppercontent.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target"},
 		{"$salesforce_account_name": "o9 Solutions", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "o9solutions.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown"},
 		{"$salesforce_account_name": "GoLinks Reporting", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "golinks.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown"},
 		{"$salesforce_account_name": "Cin7", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "cin7.com", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor"},
 		{"$salesforce_account_name": "Repair Desk", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "repairdesk.co", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer"},
-		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US", "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$country": "US"},
-		{"$hubspot_company_name": "Mad Street Den", "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$country": "US"},
+		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US", "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$country": "US", "$hubspot_contact_rh_meeting_time": hbMeetingTimeNow},
+		{"$hubspot_company_name": "Mad Street Den", "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$country": "US", "$hubspot_contact_rh_meeting_time": hbMeetingTime},
 		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development", "$country": "US"},
-		{"$hubspot_company_name": "Clientjoy Ads", "$hubspot_company_country": "India", "$hubspot_company_domain": "clientjoy.io", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "IT Services", "$country": "US"},
-		{"$hubspot_company_name": "Adapt.IO", "$hubspot_company_country": "India", "$hubspot_company_domain": "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services", "$country": "US"},
+		{"$hubspot_company_name": "Clientjoy Ads", "$hubspot_company_country": "India", "$hubspot_company_domain": "clientjoy.io", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "IT Services", "$country": "US", "$hubspot_contact_rh_meeting_time": hbMeetingTimeNow},
+		{"$hubspot_company_name": "Adapt.IO", "$hubspot_company_country": "India", "$hubspot_company_domain": "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services", "$country": "US", "$hubspot_contact_rh_meeting_time": hbMeetingTime},
 	}
 
 	// creating domain account
@@ -2532,7 +2670,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		ProjectId:      project.ID,
 		Source:         domSource,
 		Group1ID:       "1",
-		CustomerUserId: "domainuser2",
+		CustomerUserId: "domainuser3",
 		Properties:     domProperties,
 		IsGroupUser:    &groupUser,
 	})
@@ -2864,6 +3002,18 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 	payload = model.TimelinePayload{
 		Source:    "$hubspot_company",
 		SegmentId: id,
+		Filters: map[string][]model.QueryProperty{
+			"users": {
+				{
+					Entity:    "user_g",
+					Type:      "datetime",
+					Property:  "$hubspot_contact_rh_meeting_time",
+					Operator:  "inLast",
+					Value:     "{\"num\":7,\"gran\":\"days\"}",
+					LogicalOp: "AND",
+				},
+			},
+		},
 	}
 
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
@@ -2872,7 +3022,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 	resp = make([]model.Profile, 0)
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 2)
+	assert.Equal(t, len(resp), 1)
 	for _, profile := range resp {
 		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
 		assert.NotNil(t, profile.Identity)

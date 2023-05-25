@@ -118,28 +118,25 @@ export const formatFiltersForPayload = (filters = [], returnArray) => {
   }
 
   const filtersMap = {};
-  const groups = [
+  const filterPrefix = [
     '$hubspot_company',
     '$salesforce_account',
     '$6signal',
-    '$linkedin_company'
+    '$li_'
   ];
+
   filterProps.forEach((filter) => {
-    let group = filter.pr;
-    let groupName = '';
-    groups.every((elem) => {
-      if (group.toLowerCase().includes(elem)) {
-        groupName = elem;
-        return false;
-      }
-      return true;
-    });
-    groupName = groupName === '' ? 'users' : groupName;
-    if (filtersMap[groupName] === undefined) {
-      filtersMap[groupName] = new Array();
+    let groupName =
+      filterPrefix.find((elem) => filter.pr.toLowerCase().includes(elem)) || 'users';
+    groupName = groupName === '$li_' ? '$linkedin_company' : groupName;
+
+    if (!filtersMap[groupName]) {
+      filtersMap[groupName] = [];
     }
+
     filtersMap[groupName].push(filter);
   });
+
   return filtersMap;
 };
 

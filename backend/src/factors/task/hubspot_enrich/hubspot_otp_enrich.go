@@ -12,7 +12,6 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 )
@@ -27,55 +26,6 @@ var AllowedHsEventTypeForOTP = []string{
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
 	U.EVENT_NAME_HUBSPOT_CONTACT_LIST,
-}
-
-func filterCheckGeneralV1(rule model.OTPRule, event model.EventIdToProperties, logCtx *log.Entry) bool {
-	var ruleFilters []model.TouchPointFilter
-	err := U.DecodePostgresJsonbToStructType(&rule.Filters, &ruleFilters)
-	if err != nil {
-		logCtx.WithFields(log.Fields{"event": event, "rule": rule}).WithError(err).Error("Failed to decode/fetch offline touch point rule FILTERS for salesforce document.")
-		return false
-	}
-
-	filtersPassed := 0
-	for _, filter := range ruleFilters {
-		switch filter.Operator {
-		case model.EqualsOpStr:
-			if _, exists := event.EventProperties[filter.Property]; exists {
-				if filter.Value != "" && event.EventProperties[filter.Property] == filter.Value {
-					filtersPassed++
-				}
-			}
-		case model.NotEqualOpStr:
-			if _, exists := event.EventProperties[filter.Property]; exists {
-				if filter.Value != "" && event.EventProperties[filter.Property] != filter.Value {
-					filtersPassed++
-				}
-			}
-		case model.ContainsOpStr:
-			if _, exists := event.EventProperties[filter.Property]; exists {
-				if filter.Property != "" {
-					val, ok := event.EventProperties[filter.Property].(string)
-					if ok && strings.Contains(val, filter.Value) {
-						filtersPassed++
-					}
-				}
-			}
-		default:
-			logCtx.WithField("Rule", rule).WithField("event", event).
-				Error("No matching operator found for offline touch point rules for hubspot engagement document.")
-			continue
-		}
-	}
-
-	// return true if all the filters passed
-	if filtersPassed != 0 && filtersPassed == len(ruleFilters) {
-		return true
-	}
-
-	// When neither filters matched nor (filters matched but values are same)
-	logCtx.WithField("Rule", rule).WithField("event", event).Warn("Filter check general is failing for offline touch point rule")
-	return false
 }
 
 func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interface{}, bool) {
@@ -142,11 +92,16 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 
 	//if backfill startTime and endTime is assigned
 
-	if (backfillStartTime <= backfillEndTime) && backfillEndTime != 0 {
+	if backfillStartTime <= backfillEndTime {
 
 		startTime = int64(backfillStartTime)
 		endTime = int64(backfillEndTime)
+		if backfillEndTime == 0 {
+			endTime = U.TimeNowUnix()
+		}
 	}
+
+	backfillEnabled := backfillStartTime != 0
 
 	// Runs enrichment for list of project_ids as batch using go routines.
 	batches := U.GetInt64ListAsBatch(projectIDs, numProjectRoutines)
@@ -159,7 +114,7 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 		for pi := range batch {
 			wg.Add(1)
 
-			go syncWorkerForOTP(batch[pi], startTime, endTime, &wg)
+			go syncWorkerForOTP(batch[pi], startTime, endTime, backfillEnabled, &wg)
 		}
 		wg.Wait()
 	}
@@ -176,7 +131,7 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 
 }
 
-func syncWorkerForOTP(projectID int64, startTime, endTime int64, wg *sync.WaitGroup) {
+func syncWorkerForOTP(projectID int64, startTime, endTime int64, backfillEnabled bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
@@ -202,12 +157,14 @@ func syncWorkerForOTP(projectID int64, startTime, endTime int64, wg *sync.WaitGr
 
 	OtpEventName, _ := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
 
-	_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
-
-	if errCode == http.StatusFound {
-		startTime = _startTime
+	if !backfillEnabled {
+		_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
+		if errCode == http.StatusFound {
+			startTime = _startTime
+		}
 	}
 
+	logCtx.WithFields(log.Fields{"startTime": startTime, "endTime": endTime}).Info("starting otp creation job")
 	//batch time range day-wise
 
 	daysTimeRange, _ := U.GetAllDaysAsTimestamp(startTime, endTime, string(timezoneString))
@@ -371,7 +328,7 @@ func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OT
 		}
 
 		// Check if rule is applicable
-		if !filterCheckGeneralV1(rule, event, logCtx) {
+		if !model.EvaluateOTPFilterV1(rule, event, logCtx) {
 			continue
 		}
 
@@ -407,7 +364,7 @@ func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OT
 func CreateTouchPointEventForFormsAndContactsV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, eventTimestamp int64, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent"})
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForFormsAndContactsV1"})
 	logCtx.WithField("event", event).Info("CreateTouchPointEvent: creating hubspot offline touch point document")
 
 	var trackResponse *SDK.TrackResponse
@@ -515,7 +472,7 @@ func ApplyHSOfflineTouchPointRuleForEngagementV1(project *model.Project, otpRule
 			continue
 		}
 
-		if !filterCheckGeneralV1(rule, event, logCtx) {
+		if !model.EvaluateOTPFilterV1(rule, event, logCtx) {
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
@@ -575,7 +532,7 @@ func createOTPUniqueKeyForEngagementsV1(rule model.OTPRule, event model.EventIdT
 func CreateTouchPointEventForEngagementV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, engagementType string, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent",
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForEngagementV1",
 		"event": event, "rule": rule})
 
 	logCtx.WithField("rule", rule).WithField("event", event).
@@ -733,7 +690,7 @@ func ApplyHSOfflineTouchPointRuleForContactListV1(project *model.Project, otpRul
 			logCtx.Info("Rule Type is failing the OTP event creation.")
 			continue
 		}
-		if !filterCheckGeneralV1(rule, event, logCtx) {
+		if !model.EvaluateOTPFilterV1(rule, event, logCtx) {
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
@@ -785,8 +742,7 @@ func createOTPUniqueKeyForContactListV1(rule model.OTPRule, event model.EventIdT
 func CreateTouchPointEventForListsV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForLists"})
-
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForListsV1"})
 	logCtx.WithField("rule", rule).WithField("event", event).
 		Info("CreateTouchPointEventForLists: creating hubspot offline touch point document")
 
@@ -888,7 +844,7 @@ func ApplyHSOfflineTouchPointRuleForFormsV1(project *model.Project, otpRules *[]
 			logCtx.Info("Rule Type is failing the OTP event creation.")
 			continue
 		}
-		if !filterCheckGeneralV1(rule, event, logCtx) {
+		if !model.EvaluateOTPFilterV1(rule, event, logCtx) {
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties

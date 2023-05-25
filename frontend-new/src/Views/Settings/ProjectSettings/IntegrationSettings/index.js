@@ -43,7 +43,6 @@ import MSTeamIntegration from './MSTeam';
 
 import { ADWORDS_INTERNAL_REDIRECT_URI } from './util';
 import { featureLock } from '../../../../routes/feature';
-import { whiteListedProjects } from '../../../../routes/constants';
 
 const IntegrationProviderData = [
   {
@@ -98,13 +97,15 @@ const IntegrationProviderData = [
     name: 'Facebook',
     desc: 'Pull in reports from Facebook, Instagram and Facebook Audience Network',
     icon: 'Facebook_ads',
-    kbLink: 'https://help.factors.ai/en/articles/7283696-facebook-ads-integration'
+    kbLink:
+      'https://help.factors.ai/en/articles/7283696-facebook-ads-integration'
   },
   {
     name: 'LinkedIn',
     desc: 'Sync LinkedIn ads reports with Factors for performance reporting',
     icon: 'Linkedin_ads',
-    kbLink: 'https://help.factors.ai/en/articles/7283729-linkedin-ads-integration'
+    kbLink:
+      'https://help.factors.ai/en/articles/7283729-linkedin-ads-integration'
   },
   {
     name: 'Drift',
@@ -116,7 +117,8 @@ const IntegrationProviderData = [
     name: 'Google Search Console',
     desc: 'Track organic search impressions, clicks and position from Google Search',
     icon: 'Google',
-    kbLink: 'https://help.factors.ai/en/articles/7283784-google-search-console-integration'
+    kbLink:
+      'https://help.factors.ai/en/articles/7283784-google-search-console-integration'
   },
   {
     name: 'Bing Ads',
@@ -430,27 +432,10 @@ function IntegrationSettings({
                       }
                       // Flag for 6Signal Factors key
                       if (
-                        (item.name === 'Factors Website De-anonymization' &&
-                          !featureLock(currentAgent.email)) ||
-                        (item.name === 'Microsoft Teams' &&
-                          !featureLock(currentAgent.email))
+                        item.name === 'Factors Website De-anonymization' &&
+                        !featureLock(currentAgent.email)
                       ) {
-                        if (
-                          item.name === 'Microsoft Teams' &&
-                          whiteListedProjects.includes(activeProject?.id)
-                        ) {
-                          return (
-                            <IntegrationCard
-                              item={item}
-                              index={index}
-                              key={index}
-                              defaultOpen={defaultOpen}
-                              currentProjectSettings={currentProjectSettings}
-                            />
-                          );
-                        } else {
-                          return null;
-                        }
+                        return null;
                       }
 
                       return (
