@@ -115,7 +115,7 @@ func main() {
 		DryRunCRMSmartEvent:                           *dryRunSmartEvent,
 		CacheSortedSet:                                *cacheSortedSet,
 		AllowedHubspotGroupsByProjectIDs:              *enableHubspotGroupsByProjectID,
-		SkippedOtpProjectIDs:                          C.GetTokensFromStringListAsUint64(*skippedOtpProjectIDs),
+		SkippedOtpProjectIDs:                          *skippedOtpProjectIDs,
 		UseSourcePropertyOverwriteByProjectIDs:        *useSourcePropertyOverwriteByProjectID,
 		CaptureSourceInUsersTable:                     *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:          *restrictReusingUsersByCustomerUserId,

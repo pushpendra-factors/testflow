@@ -5,11 +5,12 @@ import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
@@ -311,68 +312,6 @@ func GetTotalFailedComputedNotComputed(cacheReports []CachingUnitReport) (int, i
 		}
 	}
 	return statusFailed, statusPassed, statusNotComputed
-}
-
-func GetFailedUnitsByProject(cacheReports []CachingUnitReport) map[int64][]FailedDashboardUnitReport {
-
-	var units []CachingUnitReport
-	U.DeepCopy(&cacheReports, &units)
-
-	sort.Slice(units, func(i, j int) bool {
-		return units[i].TimeTaken > units[j].TimeTaken
-	})
-
-	projectFailedUnits := make(map[int64][]FailedDashboardUnitReport)
-	for _, unit := range cacheReports {
-		if unit.Status == CachingUnitStatusFailed {
-			failedUnit := FailedDashboardUnitReport{
-				DashboardID: unit.DashboardID,
-				UnitID:      unit.UnitID,
-				QueryClass:  unit.QueryClass,
-				QueryRange:  unit.QueryRange,
-				From:        U.GetDateOnlyFormatFromTimestampAndTimezone(unit.From, U.TimeZoneString(unit.TimeTakenStr)),
-				To:          U.GetDateOnlyFormatFromTimestampAndTimezone(unit.To, U.TimeZoneString(unit.TimeTakenStr)),
-			}
-			if value, exists := projectFailedUnits[unit.ProjectId]; exists {
-				projectFailedUnits[unit.ProjectId] = append(value, failedUnit)
-			} else {
-				failedUnits := []FailedDashboardUnitReport{failedUnit}
-				projectFailedUnits[unit.ProjectId] = failedUnits
-			}
-		}
-	}
-	return projectFailedUnits
-}
-
-func GetTimedOutUnitsByProject(cacheReports []CachingUnitReport) map[int64][]FailedDashboardUnitReport {
-
-	var units []CachingUnitReport
-	U.DeepCopy(&cacheReports, &units)
-
-	sort.Slice(units, func(i, j int) bool {
-		return units[i].TimeTaken > units[j].TimeTaken
-	})
-
-	projectTimedOutUnits := make(map[int64][]FailedDashboardUnitReport)
-	for _, unit := range cacheReports {
-		if unit.Status == CachingUnitStatusTimeout {
-			timedOutUnit := FailedDashboardUnitReport{
-				DashboardID: unit.DashboardID,
-				UnitID:      unit.UnitID,
-				QueryClass:  unit.QueryClass,
-				QueryRange:  unit.QueryRange,
-				From:        U.GetDateOnlyFormatFromTimestampAndTimezone(unit.From, U.TimeZoneString(unit.TimeTakenStr)),
-				To:          U.GetDateOnlyFormatFromTimestampAndTimezone(unit.To, U.TimeZoneString(unit.TimeTakenStr)),
-			}
-			if value, exists := projectTimedOutUnits[unit.ProjectId]; exists {
-				projectTimedOutUnits[unit.ProjectId] = append(value, timedOutUnit)
-			} else {
-				failedUnits := []FailedDashboardUnitReport{timedOutUnit}
-				projectTimedOutUnits[unit.ProjectId] = failedUnits
-			}
-		}
-	}
-	return projectTimedOutUnits
 }
 
 func GetNSlowestProjects(cacheReports []CachingUnitReport, n int) []CachingProjectReport {

@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"database/sql"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
@@ -302,11 +303,20 @@ func (store *MemSQL) ExecSixSignalPageViewQuery(stmt string, params []interface{
 	defer U.CloseReadQuery(rows, tx)
 	var companyList []string
 	for rows.Next() {
-		err = rows.Scan(&companyList)
+		var companyTmp sql.NullString
+		err = rows.Scan(&companyTmp)
 		if err != nil {
-			logCtx.Error("Error while scanning row")
-			return companyList, err, reqID
+			logCtx.WithError(err).Error("Error while scanning row")
+			continue
 		}
+		if !companyTmp.Valid {
+			continue
+		}
+
+		var company string
+		company = companyTmp.String
+		companyList = append(companyList, company)
+
 	}
 
 	return companyList, nil, reqID

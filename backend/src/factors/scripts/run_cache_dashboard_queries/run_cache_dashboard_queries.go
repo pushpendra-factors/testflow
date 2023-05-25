@@ -204,8 +204,8 @@ func main() {
 	})
 
 	slowUnits := model.GetNSlowestUnits(allUnitReports, 3)
-	failedUnits := model.GetFailedUnitsByProject(allUnitReports)
-	timedOutUnits := model.GetTimedOutUnitsByProject(allUnitReports)
+	failedUnits := store.GetStore().GetFailedUnitsByProject(allUnitReports)
+	timedOutUnits := store.GetStore().GetTimedOutUnitsByProject(allUnitReports)
 	slowProjects := model.GetNSlowestProjects(allUnitReports, 5)
 	failed, passed, notComputed := model.GetTotalFailedComputedNotComputed(allUnitReports)
 

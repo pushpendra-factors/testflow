@@ -191,7 +191,7 @@ const QueryBuilder = ({
       setExcludeEvents(`${activeQueryItem?.include_events ? 'false' : 'true'}`);
 
 
-      let includeGroupFromState = activeQueryItem?.include_group?.map((item) => {
+      let includeGroupFromState = activeQueryItem?.include_group ? activeQueryItem?.include_group?.map((item) => {
         return {
           ...item,
           value: item?.label,
@@ -199,8 +199,8 @@ const QueryBuilder = ({
           filter: item?.filter ? getGlobalFiltersfromSavedState(item?.filter) : null,
           expand_property: item?.expand_property ? getExpandByFromState(item?.expand_property) : null
         }
-      })
-      let includeEventsFromState = activeQueryItem?.include_events?.map((item) => {
+      }) : []
+      let includeEventsFromState = activeQueryItem?.include_events ? activeQueryItem?.include_events?.map((item) => {
         return {
           ...item,
           type: "eventOnly",
@@ -208,7 +208,7 @@ const QueryBuilder = ({
           filter: item?.filter ? getGlobalFiltersfromSavedState(item?.filter) : null,
           expand_property: item?.expand_property ? getExpandByFromState(item?.expand_property) : null
         }
-      })
+      }) : []
       let considerEventsFromState = [...includeGroupFromState, ...includeEventsFromState];
 
       setConsiderEventArr(considerEventsFromState)

@@ -181,6 +181,8 @@ type Model interface {
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool, startCacheTime int64)
 	RunCachingForLast3MonthsAttribution(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString, logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
 	CreateResultInDB(result interface{}, projectId int64, dashboardId int64, unitId int64, queryId int64, preset string, from, to int64, timezoneString U.TimeZoneString, meta interface{}) (int, string)
+	GetFailedUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport
+	GetTimedOutUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport
 
 	// all dashboard runs for am unit
 	RunCustomQueryRangeCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,
@@ -934,7 +936,7 @@ type Model interface {
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
 	GetAllUserScore(project_id int64, debug bool) ([]model.AllUsersScore, error)
-	GetUserScoreOnIds(projectId int64, knowUsers, unknownUsers []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
+	GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 	GetAccountScoreOnIds(projectId int64, accountIds []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 
 	// Slack

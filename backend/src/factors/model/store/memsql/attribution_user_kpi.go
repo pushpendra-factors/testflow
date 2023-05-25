@@ -88,7 +88,7 @@ func (store *MemSQL) ExecuteUserKPIForAttributionV1(projectID int64, query *mode
 	return kpiData, kpiHeaders, kpiAggFunctionType, nil
 }
 
-//RunUserKPIGroupQuery runs kpi group query and adds the result in kpiData
+// RunUserKPIGroupQuery runs kpi group query and adds the result in kpiData
 func (store *MemSQL) RunUserKPIGroupQuery(projectID int64, query *model.AttributionQuery, kpiData *map[string]model.KPIInfo,
 	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) (error, []string, []string, []string) {
 
@@ -125,7 +125,7 @@ func (store *MemSQL) RunUserKPIGroupQuery(projectID int64, query *model.Attribut
 	return errors.New("not a valid type of query for userKPI Attribution"), nil, nil, nil
 }
 
-//RunUserKPIGroupQueryV1 runs kpi group query and adds the result in kpiData
+// RunUserKPIGroupQueryV1 runs kpi group query and adds the result in kpiData
 func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.AttributionKPIQueries, from int64, to int64, kpiData *map[string]model.KPIInfo,
 	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) (error, []string, []string, []string) {
 
@@ -149,7 +149,7 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("UserKPI-Attribution result received")
+		logCtx.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("UserKPI-Attribution result received")
 		if statusCode != http.StatusOK {
 			logCtx.WithField("err_code", statusCode).Error("failed to get userKPI result for attribution query")
 			if statusCode == http.StatusPartialContent {

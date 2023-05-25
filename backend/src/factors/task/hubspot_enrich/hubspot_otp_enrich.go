@@ -74,7 +74,6 @@ func filterCheckGeneralV1(rule model.OTPRule, event model.EventIdToProperties, l
 	}
 
 	// When neither filters matched nor (filters matched but values are same)
-	logCtx.WithField("Rule", rule).WithField("event", event).Warn("Filter check general is failing for offline touch point rule")
 	return false
 }
 
@@ -142,11 +141,16 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 
 	//if backfill startTime and endTime is assigned
 
-	if (backfillStartTime <= backfillEndTime) && backfillEndTime != 0 {
+	if backfillStartTime <= backfillEndTime {
 
 		startTime = int64(backfillStartTime)
 		endTime = int64(backfillEndTime)
+		if backfillEndTime == 0 {
+			endTime = U.TimeNowUnix()
+		}
 	}
+
+	backfillEnabled := backfillStartTime != 0
 
 	// Runs enrichment for list of project_ids as batch using go routines.
 	batches := U.GetInt64ListAsBatch(projectIDs, numProjectRoutines)
@@ -159,7 +163,7 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 		for pi := range batch {
 			wg.Add(1)
 
-			go syncWorkerForOTP(batch[pi], startTime, endTime, &wg)
+			go syncWorkerForOTP(batch[pi], startTime, endTime, backfillEnabled, &wg)
 		}
 		wg.Wait()
 	}
@@ -176,7 +180,7 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 
 }
 
-func syncWorkerForOTP(projectID int64, startTime, endTime int64, wg *sync.WaitGroup) {
+func syncWorkerForOTP(projectID int64, startTime, endTime int64, backfillEnabled bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
@@ -202,12 +206,14 @@ func syncWorkerForOTP(projectID int64, startTime, endTime int64, wg *sync.WaitGr
 
 	OtpEventName, _ := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
 
-	_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
-
-	if errCode == http.StatusFound {
-		startTime = _startTime
+	if !backfillEnabled {
+		_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
+		if errCode == http.StatusFound {
+			startTime = _startTime
+		}
 	}
 
+	logCtx.WithFields(log.Fields{"startTime": startTime, "endTime": endTime}).Info("starting otp creation job")
 	//batch time range day-wise
 
 	daysTimeRange, _ := U.GetAllDaysAsTimestamp(startTime, endTime, string(timezoneString))
@@ -407,7 +413,7 @@ func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OT
 func CreateTouchPointEventForFormsAndContactsV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, eventTimestamp int64, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent"})
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForFormsAndContactsV1"})
 	logCtx.WithField("event", event).Info("CreateTouchPointEvent: creating hubspot offline touch point document")
 
 	var trackResponse *SDK.TrackResponse
@@ -575,7 +581,7 @@ func createOTPUniqueKeyForEngagementsV1(rule model.OTPRule, event model.EventIdT
 func CreateTouchPointEventForEngagementV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, engagementType string, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent",
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForEngagementV1",
 		"event": event, "rule": rule})
 
 	logCtx.WithField("rule", rule).WithField("event", event).
@@ -785,8 +791,7 @@ func createOTPUniqueKeyForContactListV1(rule model.OTPRule, event model.EventIdT
 func CreateTouchPointEventForListsV1(project *model.Project, event model.EventIdToProperties,
 	rule model.OTPRule, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForLists"})
-
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForListsV1"})
 	logCtx.WithField("rule", rule).WithField("event", event).
 		Info("CreateTouchPointEventForLists: creating hubspot offline touch point document")
 

@@ -61,17 +61,17 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 	// Add user scores to the response if scoring is enabled
 	if getScore {
 		// Separate anonymous and known user IDs
-		var userIdsUnknown []string
-		var userIdsKnown []string
+		var userIdsAnonymous []string
+		var userIdsNonAnonymous []string
 		for _, profile := range profileUsersList {
 			if profile.IsAnonymous {
-				userIdsUnknown = append(userIdsUnknown, profile.Identity)
+				userIdsAnonymous = append(userIdsAnonymous, profile.Identity) //anonymus=true
 			} else {
-				userIdsKnown = append(userIdsKnown, profile.Identity)
+				userIdsNonAnonymous = append(userIdsNonAnonymous, profile.Identity) // anonymus=false
 			}
 		}
 		// Retrieve user scores
-		scoresPerUser, err := store.GetStore().GetUserScoreOnIds(projectId, userIdsUnknown, userIdsKnown, getDebug)
+		scoresPerUser, err := store.GetStore().GetUserScoreOnIds(projectId, userIdsAnonymous, userIdsNonAnonymous, getDebug)
 		if err != nil {
 			logCtx.Error("Error while fetching user scores.")
 		} else {

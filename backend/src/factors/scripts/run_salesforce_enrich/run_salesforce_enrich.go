@@ -200,7 +200,7 @@ func main() {
 		AllowedCampaignEnrichmentByProjectID:   *allowedCampaignEnrichmentByProjectID,
 		UseOpportunityAssociationByProjectID:   *useOpportunityAssociationByProjectID,
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
-		SkippedOtpProjectIDs:                   C.GetTokensFromStringListAsUint64(*skippedOtpProjectIDs),
+		SkippedOtpProjectIDs:                   *skippedOtpProjectIDs,
 		AllowedSalesforceGroupsByProjectIDs:    *enableSalesforceGroupsByProjectIDs,
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
