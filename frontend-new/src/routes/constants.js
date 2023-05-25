@@ -21,6 +21,8 @@ import Touchpoints from 'Views/Settings/ProjectConfigure/Touchpoints';
 import AppLayout from 'Views/AppLayout';
 import OnBoard from 'Views/Settings/SetupAssist/Welcome/OnboardFlow';
 import { PathUrls } from './pathUrls';
+import AccountDetails from 'Components/Profile/AccountProfiles/AccountDetails';
+import ContactDetails from 'Components/Profile/UserProfiles/ContactDetails';
 
 const Login = lazyWithRetry(() => import('../Views/Pages/Login'));
 const ForgotPassword = lazyWithRetry(() =>
@@ -281,10 +283,22 @@ export const APP_LAYOUT_ROUTES = {
     Private: true,
     Layout: AppLayout
   },
+  ProfileUserDetails: {
+    path: '/profiles/people/:id',
+    Component: ContactDetails,
+    Private: true,
+    Layout: AppLayout
+  },
   ProfileAccounts: {
     exact: true,
     path: PathUrls.ProfileAccounts,
     Component: AccountProfiles,
+    Private: true,
+    Layout: AppLayout
+  },
+  ProfileAccountsDetails: {
+    path: '/profiles/accounts/:id',
+    Component: AccountDetails,
     Private: true,
     Layout: AppLayout
   },

@@ -42,7 +42,7 @@ function AccountTimelineSingleView({
                   <div className='timestamp top-40'>{timestamp}</div>
                 </td>
                 <td className={`bg-none pb-${milestones.length * 0}`}>
-                  <div class='user-timeline--events'>
+                  <div className={'user-timeline--events'}>
                     {timelineEvents.map((event) => {
                       const category = getEventCategory(event, eventNamesMap);
                       const sourceIcon = getIconForCategory(category);

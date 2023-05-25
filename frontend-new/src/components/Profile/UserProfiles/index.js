@@ -95,6 +95,7 @@ function UserProfiles({
   updateSegmentForId
 }) {
   const dispatch = useDispatch();
+  const history = useHistory();
   const integration = useSelector(
     (state) => state.global.currentProjectSettings
   );
@@ -389,7 +390,7 @@ function UserProfiles({
 
   useEffect(() => {
     const opts = { ...timelinePayload };
-    opts.filters = formatFiltersForPayload(timelinePayload.filters, false);
+    opts.filters = formatFiltersForPayload(timelinePayload.filters, true);
     getProfileUsers(activeProject.id, opts);
   }, [
     activeProject.id,
@@ -838,14 +839,9 @@ function UserProfiles({
         size='large'
         onRow={(user) => ({
           onClick: () => {
-            getProfileUserDetails(
-              activeProject.id,
-              user.identity.id,
-              user.identity.isAnonymous,
-              currentProjectSettings.timelines_config
+            history.push(
+              `/profiles/people/${btoa(user.identity.id)}?is_anonymous=${user.identity.isAnonymous}`
             );
-            setActiveUser(user);
-            showModal();
           }
         })}
         className='fa-table--userlist'
@@ -861,18 +857,6 @@ function UserProfiles({
       />
       <div className='flex flex-row-reverse mt-4'></div>
     </div>
-  );
-
-  const renderContactDetailsModal = () => (
-    <Modal
-      title={null}
-      visible={isModalVisible}
-      className='fa-modal--full-width'
-      footer={null}
-      closable={null}
-    >
-      <ContactDetails user={activeUser} onCancel={handleCancel} />
-    </Modal>
   );
 
   if (loading) {
@@ -895,7 +879,6 @@ function UserProfiles({
         ) : (
           renderTable()
         )}
-        {renderContactDetailsModal()}
         <SegmentModal
           profileType='user'
           activeProject={activeProject}

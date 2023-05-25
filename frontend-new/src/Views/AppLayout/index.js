@@ -39,7 +39,7 @@ import FaHeader from '../../components/FaHeader';
 import { EMPTY_ARRAY } from '../../utils/global';
 
 import { fetchTemplates } from '../../reducers/dashboard_templates/services';
-import { AppLayoutRoutes } from 'Routes';
+import { AppLayoutRoutes } from 'Routes/index';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import './index.css';
 import _ from 'lodash';

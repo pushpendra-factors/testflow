@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Avatar,
@@ -8,7 +8,7 @@ import {
   Tabs,
   notification
 } from 'antd';
-import { connect, useSelector } from 'react-redux';
+import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { SVG, Text } from '../../factorsComponents';
 import UserTimelineBirdview from './UserTimelineBirdview';
@@ -33,10 +33,10 @@ import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
+import { useHistory, useLocation } from 'react-router-dom';
 
 function ContactDetails({
-  user,
-  onCancel,
   userDetails,
   activeProject,
   currentProjectSettings,
@@ -46,6 +46,9 @@ function ContactDetails({
   userProperties,
   eventNamesMap
 }) {
+  const dispatch = useDispatch();
+  const history = useHistory();
+  const location = useLocation();
   const [activities, setActivities] = useState([]);
   const [granularity, setGranularity] = useState('Daily');
   const [collapse, setCollapse] = useState(true);
@@ -55,6 +58,37 @@ function ContactDetails({
   const { TabPane } = Tabs;
 
   const { userPropNames } = useSelector((state) => state.coreQuery);
+
+  useEffect(() => {
+    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+    return () => {
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
+    };
+  }, [dispatch]);
+
+  useEffect(() => {
+    return () => {
+      setGranularity('Daily');
+      setCollapse(true);
+      setPropSelectOpen(false);
+    };
+  }, []);
+
+  const [userID, isAnonymous] = useMemo(() => {
+    const id = atob(location.pathname.split('/').pop());
+    const anonymity = location.search.split('=').pop();
+    return [id, anonymity];
+  }, [location]);
+
+  useEffect(() => {
+    if (userID && userID !== '')
+      getProfileUserDetails(
+        activeProject.id,
+        userID,
+        isAnonymous,
+        currentProjectSettings?.timelines_config
+      );
+  }, [activeProject.id, userID, isAnonymous]);
 
   useEffect(() => {
     const lsitDatetimeProperties = userProperties.filter(
@@ -159,14 +193,16 @@ function ContactDetails({
       .map((item) => item?.prop_name);
     udpateProjectSettings(activeProject.id, {
       timelines_config: { ...timelinesConfig }
-    }).then(() =>
-      getProfileUserDetails(
-        activeProject?.id,
-        user?.identity?.id,
-        user?.identity?.isAnonymous,
-        currentProjectSettings?.timelines_config
-      )
-    );
+    })
+      .then(() => fetchProjectSettings(activeProject.id))
+      .then(() =>
+        getProfileUserDetails(
+          activeProject?.id,
+          userID,
+          isAnonymous,
+          currentProjectSettings?.timelines_config
+        )
+      );
   };
 
   const controlsPopover = () => (
@@ -209,10 +245,7 @@ function ContactDetails({
           icon={<SVG name='brand' size={36} />}
           size='large'
           onClick={() => {
-            onCancel();
-            setCollapse(true);
-            setGranularity('Daily');
-            setPropSelectOpen(false);
+            history.goBack();
           }}
         />
         <Text type='title' level={4} weight='bold' extraClass='m-0'>
@@ -223,10 +256,7 @@ function ContactDetails({
         size='large'
         type='text'
         onClick={() => {
-          onCancel();
-          setCollapse(true);
-          setGranularity('Daily');
-          setPropSelectOpen(false);
+          history.goBack();
         }}
         icon={<SVG name='times' />}
       />
@@ -239,14 +269,16 @@ function ContactDetails({
       timelinesConfig.user_config.leftpane_props.push(value[1]);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...timelinesConfig }
-      }).then(() =>
-        getProfileUserDetails(
-          activeProject?.id,
-          user?.identity?.id,
-          user?.identity?.isAnonymous,
-          currentProjectSettings?.timelines_config
-        )
-      );
+      })
+        .then(() => fetchProjectSettings(activeProject.id))
+        .then(() =>
+          getProfileUserDetails(
+            activeProject?.id,
+            userID,
+            isAnonymous,
+            currentProjectSettings?.timelines_config
+          )
+        );
     }
     setPropSelectOpen(false);
   };
@@ -320,9 +352,9 @@ function ContactDetails({
   const renderLeftPane = () => (
     <div className='leftpane'>
       <div className='user'>
-        {user.identity.isAnonymous ? (
+        {isAnonymous ? (
           <SVG
-            name={`TrackedUser${user.identity.id.match(/\d/g)?.[0] || 0}`}
+            name={`TrackedUser${userID.match(/\d/g)[0]}`}
             size={96}
           />
         ) : (
@@ -332,22 +364,20 @@ function ContactDetails({
             style={{
               backgroundColor: `${
                 iconColors[
-                  ALPHANUMSTR.indexOf(
-                    user.identity.id.charAt(0).toUpperCase()
-                  ) % 8
+                  ALPHANUMSTR.indexOf(userID.charAt(0).toUpperCase()) % 8
                 ]
               }`,
               fontSize: '32px'
             }}
           >
-            {user.identity.id.charAt(0).toUpperCase()}
+            {userID.charAt(0).toUpperCase()}
           </Avatar>
         )}
         <div className='py-2'>
           <Text type='title' level={6} extraClass='m-0' weight='bold'>
             {userDetails.data.title}
           </Text>
-          {user.identity.isAnonymous ? null : (
+          {isAnonymous ? null : (
             <Text type='title' level={7} extraClass='m-0' color='grey'>
               {userDetails.data.subtitle}
             </Text>

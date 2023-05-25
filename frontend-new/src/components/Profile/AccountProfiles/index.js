@@ -14,7 +14,6 @@ import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from '../../factorsComponents';
 import MomentTz from '../../MomentTz';
-import AccountDetails from './AccountDetails';
 import PropertyFilter from '../MyComponents/PropertyFilter';
 import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
@@ -32,7 +31,6 @@ import {
 } from '../utils';
 import {
   getProfileAccounts,
-  getProfileAccountDetails,
   createNewSegment,
   getSavedSegments,
   updateSegmentForId
@@ -47,6 +45,7 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 // import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from '../UserProfiles/SegmentModal';
 // import EventsBlock from '../MyComponents/EventsBlock';
+import { useHistory, useLocation } from 'react-router-dom';
 import {
   fetchGroupPropertyValues,
   fetchGroups
@@ -80,17 +79,16 @@ function AccountProfiles({
   segments,
   createNewSegment,
   getSavedSegments,
-  accountDetails,
   fetchProjectSettings,
   fetchGroups,
   udpateProjectSettings,
   currentProjectSettings,
   getProfileAccounts,
-  getProfileAccountDetails,
   getGroupProperties,
   updateSegmentForId
 }) {
   const dispatch = useDispatch();
+  const history = useHistory();
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
@@ -107,7 +105,6 @@ function AccountProfiles({
   // const [isGroupDDVisible, setGroupDDVisible] = useState(false);
   // const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
   const [listProperties, setListProperties] = useState([]);
-  const [activeModalKey, setActiveModalKey] = useState('');
   const [showPopOver, setShowPopOver] = useState(false);
   const [checkListAccountProps, setCheckListAccountProps] = useState([]);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
@@ -121,6 +118,7 @@ function AccountProfiles({
   );
 
   useEffect(() => {
+    fetchProjectSettings(activeProject.id);
     fetchGroups(activeProject?.id, true);
   }, [activeProject?.id, fetchGroups]);
 
@@ -913,14 +911,11 @@ function AccountProfiles({
       <Table
         onRow={(account) => ({
           onClick: () => {
-            getProfileAccountDetails(
-              activeProject.id,
-              account.identity,
-              accountPayload.source,
-              currentProjectSettings?.timelines_config
+            history.push(
+              `/profiles/accounts/${btoa(account.identity)}?group=${
+                accountPayload.source
+              }`
             );
-            setActiveModalKey(account.identity);
-            showModal();
           }
         })}
         className='fa-table--userlist'
@@ -947,22 +942,6 @@ function AccountProfiles({
     </div>
   );
 
-  const renderAccountDetailsModal = () => (
-    <Modal
-      title={null}
-      visible={isModalVisible}
-      className='fa-modal--full-width'
-      footer={null}
-      closable={null}
-    >
-      <AccountDetails
-        accountId={activeModalKey}
-        source={accountPayload.source}
-        onCancel={handleCancel}
-      />
-    </Modal>
-  );
-
   return (
     <ProfilesWrapper>
       <Text type='title' level={3} weight='bold' extraClass='mb-0'>
@@ -976,7 +955,6 @@ function AccountProfiles({
       ) : (
         <NoDataWithMessage message={'No Accounts Found'} />
       )}
-      {renderAccountDetailsModal()}
       <SegmentModal
         profileType='account'
         activeProject={activeProject}
@@ -999,7 +977,6 @@ const mapStateToProps = (state) => ({
   groupOpts: state.groups.data,
   accounts: state.timelines.accounts,
   segments: state.timelines.segments,
-  accountDetails: state.timelines.accountDetails,
   currentProjectSettings: state.global.currentProjectSettings
 });
 
@@ -1008,7 +985,6 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchGroups,
       getProfileAccounts,
-      getProfileAccountDetails,
       createNewSegment,
       getSavedSegments,
       getGroupProperties,
