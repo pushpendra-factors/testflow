@@ -914,7 +914,7 @@ function AccountProfiles({
             history.push(
               `/profiles/accounts/${btoa(account.identity)}?group=${
                 accountPayload.source
-              }`
+              }&view=birdview`
             );
           }
         })}

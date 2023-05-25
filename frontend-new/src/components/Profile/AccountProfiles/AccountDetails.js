@@ -8,8 +8,10 @@ import {
   DEFAULT_TIMELINE_CONFIG,
   getHost,
   getPropType,
-  granularityOptions
+  granularityOptions,
+  TIMELINE_VIEW_OPTIONS
 } from '../utils';
+import { insertUrlParam } from 'Utils/global';
 import {
   udpateProjectSettings,
   fetchProjectSettings
@@ -52,6 +54,7 @@ function AccountDetails({
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
+  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const availableGroups = useSelector((state) => state.groups.data);
@@ -71,20 +74,22 @@ function AccountDetails({
     };
   }, [dispatch]);
 
-  const [activeId, activeGroup] = useMemo(() => {
+  const [activeId, activeGroup, activeView] = useMemo(() => {
+    const urlSearchParams = new URLSearchParams(location.search);
+    const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
-    const group = location.search.split('=').pop();
-    return [id, group];
+    const group = params.group;
+    const view = params.view;
+    return [id, group, view];
   }, [location]);
 
   useEffect(() => {
     if (activeId && activeId !== '')
-      getProfileAccountDetails(
-        activeProject.id,
-        activeId,
-        activeGroup
-      );
-  }, [activeProject.id, activeId, activeGroup]);
+      getProfileAccountDetails(activeProject.id, activeId, activeGroup);
+    if (activeView && TIMELINE_VIEW_OPTIONS.includes(activeView)) {
+      setTimelineViewMode(activeView);
+    }
+  }, [activeProject.id, activeId, activeGroup, activeView]);
 
   useEffect(() => {
     const listDatetimeProperties = listProperties.filter(
@@ -163,7 +168,7 @@ function AccountDetails({
         getProfileAccountDetails(
           activeProject.id,
           activeId,
-		      source,
+          source,
           currentProjectSettings?.timelines_config
         )
       );
@@ -317,7 +322,7 @@ function AccountDetails({
           icon={<SVG name='brand' size={36} />}
           size='large'
           onClick={() => {
-            history.goBack();
+            history.push(`/profiles/accounts/`);
           }}
         />
         <Text type='title' level={4} weight='bold' extraClass='m-0'>
@@ -328,7 +333,7 @@ function AccountDetails({
         size='large'
         type='text'
         onClick={() => {
-          history.goBack();
+          history.push(`/profiles/accounts/`);
         }}
         icon={<SVG name='times' />}
       />
@@ -503,7 +508,12 @@ function AccountDetails({
         <Tabs
           defaultActiveKey='birdview'
           size='small'
-          onChange={() => setGranularity(granularity)}
+          activeKey={timelineViewMode}
+          onChange={(val) => {
+            insertUrlParam(window.history, 'view', val);
+            setTimelineViewMode(val);
+            setGranularity(granularity);
+          }}
         >
           <TabPane
             tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
