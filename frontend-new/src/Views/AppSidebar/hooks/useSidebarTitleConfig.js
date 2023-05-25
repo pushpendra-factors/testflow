@@ -9,14 +9,14 @@ const useSidebarTitleConfig = () => {
   if (pathname === PathUrls.Dashboard) {
     return {
       title: 'Dashboards',
-      icon: 'dashboard',
-      iconColor: '#597EF7'
+      icon: 'dashboard_Filled',
+      iconColor: '#40A9FF'
     };
   }
   if (pathname === PathUrls.Analyse2) {
     return {
       title: 'Analyse',
-      icon: 'analysis',
+      icon: 'analysis_Filled',
       iconColor: '#9254DE'
     };
   }
@@ -36,14 +36,16 @@ const useSidebarTitleConfig = () => {
   if (isSettingsUrl(pathname)) {
     return {
       title: 'Settings',
-      icon: 'settings'
+      icon: 'settings_Filled',
+      iconColor: '#8C8C8C'
     };
   }
 
   if (isConfigurationUrl(pathname)) {
     return {
       title: 'Configure',
-      icon: 'configure'
+      icon: 'configure_Filled',
+      iconColor: '#8C8C8C'
     };
   }
   return '';

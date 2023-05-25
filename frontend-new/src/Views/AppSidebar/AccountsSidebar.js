@@ -35,22 +35,16 @@ const GroupItem = ({ group }) => {
     );
   };
 
-  const isActive = activeAccountPayload.source === group[1];
+  const isActive =
+    activeAccountPayload.source === group[1] &&
+    !activeAccountPayload.segment_id;
 
   return (
-    <div
-      role='button'
-      className={cx(
-        'py-2 pl-10 pr-2 rounded-md flex justify-between col-gap-2 items-center',
-        {
-          [styles['active']]: isActive
-        }
-      )}
+    <SidebarMenuItem
+      text={group[0]}
+      isActive={isActive}
       onClick={setAccountPayload}
-    >
-      <SidebarMenuItem text={group[0]} />
-      {isActive && <SVG size={16} color='#595959' name='arrowright' />}
-    </div>
+    />
   );
 };
 
@@ -75,19 +69,11 @@ const SegmentItem = ({ segment }) => {
   const isActive = activeAccountPayload.segment_id === segment[1];
 
   return (
-    <div
-      role='button'
-      className={cx(
-        'py-2 pl-10 pr-2 rounded-md flex justify-between col-gap-2 items-center',
-        {
-          [styles['active']]: isActive
-        }
-      )}
+    <SidebarMenuItem
+      text={segment[0]}
+      isActive={isActive}
       onClick={setActiveSegment}
-    >
-      <SidebarMenuItem text={segment[0]} />
-      {isActive && <SVG size={16} color='#595959' name='arrowright' />}
-    </div>
+    />
   );
 };
 
@@ -123,7 +109,7 @@ const AccountsSidebar = () => {
           <Text
             type='title'
             level={8}
-            extraClass='mb-0 pl-10 pr-2'
+            extraClass='mb-0 px-2'
             color='character-secondary'
           >
             Default
@@ -136,7 +122,7 @@ const AccountsSidebar = () => {
           <Text
             type='title'
             level={8}
-            extraClass='mb-0 pl-10 pr-2'
+            extraClass='mb-0 px-2'
             color='character-secondary'
           >
             Custom
@@ -145,6 +131,7 @@ const AccountsSidebar = () => {
             <SidebarSearch
               searchText={searchText}
               setSearchText={setSearchText}
+              placeholder={'Search segment'}
             />
             {segmentsList.map((segment) => {
               if (segment.values != null) {

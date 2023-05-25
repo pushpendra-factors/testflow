@@ -3,9 +3,9 @@
 .app-sidebar {
   background-color: $fa-color--white;
   border-right: 1px solid $fa-color-neutral-grey-4;
-  min-width: 250px !important;
-  width: 250px !important;
-  max-width: 250px !important;
+  min-width: 264px !important;
+  width: 264px !important;
+  max-width: 264px !important;
   position: fixed !important;
   top: 3.5rem;
   height: calc(100vh - 3.5rem) !important;
@@ -24,7 +24,7 @@
 }
 
 .dashboard-list-container {
-  max-height: calc(100vh - 15rem);
+  max-height: calc(100vh - 16rem);
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
   /* Hide scrollbar for Chrome, Safari and Opera */
@@ -37,10 +37,10 @@
   padding-left: 32px;
   border: 0;
   box-shadow: none;
-}
-
-.active {
-  background-color: $fa-color-brand-1;
+  border-radius: 4px;
+  &:hover {
+    background-color: $fa-color-neutral-grey-3;
+  }
 }
 
 .sidebar-content-container {
@@ -61,4 +61,21 @@
   background-color: $fa-color-neutral-grey-2;
   border: 1px solid $fa-color-neutral-grey-4;
   transform: translateX(1rem);
+}
+
+.sidebar-menu-item {
+  :global(.fai-text) {
+    color: $fa-color-character-primary;
+    font-weight: 400;
+  }
+  &:hover {
+    background-color: $fa-color-neutral-grey-3;
+  }
+  &.active {
+    background-color: $fa-color-brand-1;
+    :global(.fai-text) {
+      color: $fa-color-character-title;
+      font-weight: 500;
+    }
+  }
 }

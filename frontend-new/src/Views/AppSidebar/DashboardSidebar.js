@@ -28,19 +28,11 @@ const DashboardItem = ({ dashboard }) => {
   const isActive = activeDashboard.id === dashboard.id;
 
   return (
-    <div
-      role='button'
+    <SidebarMenuItem
+      text={dashboard.name}
       onClick={handleActiveDashboardChange}
-      className={cx(
-        'py-2 cursor-pointer rounded-md pl-8 pr-2 flex justify-between col-gap-2 items-center',
-        {
-          [styles['active']]: isActive
-        }
-      )}
-    >
-      <SidebarMenuItem text={dashboard.name} />
-      {isActive && <SVG size={16} color='#595959' name='arrowright' />}
-    </div>
+      isActive={isActive}
+    />
   );
 };
 
@@ -53,8 +45,12 @@ const DashboardSidebar = () => {
   );
 
   return (
-    <div className='flex flex-col row-gap-5 px-2'>
-      <SidebarSearch setSearchText={setSearchText} searchText={searchText} />
+    <div className='flex flex-col row-gap-5 px-4'>
+      <SidebarSearch
+        placeholder={'Search board'}
+        setSearchText={setSearchText}
+        searchText={searchText}
+      />
       <div
         className={cx(
           'flex flex-col row-gap-3 overflow-auto',

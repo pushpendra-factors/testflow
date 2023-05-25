@@ -3,7 +3,7 @@ import { Input } from 'antd';
 import styles from './index.module.scss';
 import { SVG } from 'Components/factorsComponents';
 
-const SidebarSearch = ({ searchText, setSearchText }) => {
+const SidebarSearch = ({ searchText, setSearchText, placeholder }) => {
   const handleSearchTextChange = (e) => {
     setSearchText(e.target.value);
   };
@@ -13,7 +13,7 @@ const SidebarSearch = ({ searchText, setSearchText }) => {
       className={styles['sidebar-search-input']}
       value={searchText}
       onChange={handleSearchTextChange}
-      placeholder='Search board'
+      placeholder={placeholder}
       prefix={<SVG name={'search'} size={16} color={'#BFBFBF'} />}
     />
   );

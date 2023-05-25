@@ -16,5 +16,6 @@ export const routesWithSidebar = [
   PathUrls.ConfigureDataPoints,
   PathUrls.ConfigureEvents,
   PathUrls.ConfigureProperties,
-  PathUrls.ConfigureTouchPoints
+  PathUrls.ConfigureTouchPoints,
+  PathUrls.ConfigureAlerts
 ];

@@ -31,22 +31,15 @@ const GroupItem = ({ group }) => {
     );
   };
 
-  const isActive = timelinePayload.source === group[1];
+  const isActive =
+    timelinePayload.source === group[1] && !timelinePayload.segment_id;
 
   return (
-    <div
-      role='button'
-      className={cx(
-        'py-2 pl-10 pr-2 rounded-md flex justify-between col-gap-2 items-center',
-        {
-          [styles['active']]: isActive
-        }
-      )}
+    <SidebarMenuItem
+      text={group[0]}
+      isActive={isActive}
       onClick={setTimelinePayload}
-    >
-      <SidebarMenuItem text={group[0]} />
-      {isActive && <SVG size={16} color='#595959' name='arrowright' />}
-    </div>
+    />
   );
 };
 
@@ -69,19 +62,11 @@ const SegmentItem = ({ segment }) => {
   const isActive = timelinePayload.segment_id === segment[1];
 
   return (
-    <div
-      role='button'
-      className={cx(
-        'py-2 pl-10 pr-2 rounded-md flex justify-between col-gap-2 items-center',
-        {
-          [styles['active']]: timelinePayload.segment_id === segment[1]
-        }
-      )}
+    <SidebarMenuItem
+      text={segment[0]}
+      isActive={isActive}
       onClick={setActiveSegment}
-    >
-      <SidebarMenuItem text={segment[0]} />
-      {isActive && <SVG size={16} color='#595959' name='arrowright' />}
-    </div>
+    />
   );
 };
 
@@ -126,6 +111,7 @@ const ProfilesSidebar = () => {
             <SidebarSearch
               searchText={searchText}
               setSearchText={setSearchText}
+              placeholder={'Search segment'}
             />
             {segmentsList.map((segment) => {
               if (segment.values != null) {

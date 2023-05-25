@@ -9,7 +9,7 @@
 
 .dropdown-menu {
   box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.15);
-  border-radius: 5px;
+  border-radius: 0.25rem;
   width: 250px;
   padding: 0.25rem 0;
 }
@@ -23,6 +23,15 @@
 
 .active-header-item {
   background-color: $fa-color--black;
-  padding: 0px 4px 0px 6px;
-  border-radius: 0.25px;
+  padding: 0rem 0.5rem 0rem 0.5rem;
+  border-radius: 0.25rem;
+
+  &.active-header-item-circle {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }

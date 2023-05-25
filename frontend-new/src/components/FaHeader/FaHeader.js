@@ -9,8 +9,10 @@ import { PathUrls } from '../../routes/pathUrls';
 import ProjectModal from 'Components/ProjectModal';
 import {
   isAccountsUrl,
+  isConfigurationUrl,
   isJourneyUrl,
-  isReportsUrl
+  isReportsUrl,
+  isSettingsUrl
 } from 'Views/AppSidebar/appSidebar.helpers';
 
 export const configureMenuItems = [
@@ -119,7 +121,7 @@ const journeyMenu = (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.PathAnalysis}>
-        <SVG name='pathAnalysis' color='#73D13D' />
+        <SVG name='pathAnalysis_Filled' color='#73D13D' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Path Analysis
         </Text>
@@ -127,7 +129,7 @@ const journeyMenu = (
     </Menu.Item>
     <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.Explain}>
-        <SVG name='explain' color='#FFC53D' />
+        <SVG name='explain_Filled' color='#FFC53D' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Explain
         </Text>
@@ -140,7 +142,7 @@ const reportsMenu = (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.Dashboard}>
-        <SVG name='dashboard' color={'#40A9FF'} />
+        <SVG name='dashboard_Filled' color={'#40A9FF'} />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Dashboards
         </Text>
@@ -148,7 +150,7 @@ const reportsMenu = (
     </Menu.Item>
     <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.Analyse2}>
-        <SVG name='analysis' color='#9254DE' />
+        <SVG name='analysis_Filled' color='#9254DE' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Analyse
         </Text>
@@ -288,12 +290,23 @@ function FaHeader() {
       </div>
       <div className='flex w-1/3 items-center justify-end col-gap-6 text-white'>
         <Dropdown overlay={ConfigureMenu} placement='bottomRight'>
-          <div className='cursor-pointer'>
+          <div
+            className={cx('cursor-pointer', {
+              [styles['active-header-item']]: isConfigurationUrl(pathname),
+              [styles['active-header-item-circle']]:
+                isConfigurationUrl(pathname)
+            })}
+          >
             <SVG color='#F0F0F0' size={20} name='controls' />
           </div>
         </Dropdown>
         <Dropdown placement='bottomRight' overlay={settingsMenu}>
-          <div className='cursor-pointer'>
+          <div
+            className={cx('cursor-pointer', {
+              [styles['active-header-item']]: isSettingsUrl(pathname),
+              [styles['active-header-item-circle']]: isSettingsUrl(pathname)
+            })}
+          >
             <SVG color='#F0F0F0' size={20} name='settings' />
           </div>
         </Dropdown>
