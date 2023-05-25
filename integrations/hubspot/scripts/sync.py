@@ -56,6 +56,8 @@ COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE = "hs_lastmodifieddate"
 RECORD_PROPERTIES_KEY = "properties"
 REQUEST_TIMEOUT = 5*60 # 5 min
 
+SEARCH_V3_API_RECORD_PULL_LIMIT = 10000
+
 # Todo: Boilerplate, move this to a reusable module.
 def notify(env, source, message):
     if env != "production": 
@@ -1209,40 +1211,45 @@ def fill_contacts_for_companies_v3(project_id, companies, hubspot_request_handle
             companies[i]["contactIds"] = contact_ids
     return companies, api_calls
 
+def get_search_v3_api_payload(sync_timestamp_property_name, last_sync_timestamp, limit=100):
+    parameters = {
+        "filterGroups":[
+            {
+                "filters":[
+                    {
+                        "propertyName": sync_timestamp_property_name,
+                        "operator": "GTE",
+                        "value": str(last_sync_timestamp)
+                    }
+                ]
+            }
+        ],
+        "sorts": [
+            {
+                "propertyName": sync_timestamp_property_name,
+                "direction": "ASCENDING"
+            }
+        ],
+        "limit": limit
+    }
+    return parameters
+
 def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, sync_all=False):
     log.info("Using sync_companies_v3 for project_id : "+str(project_id)+".")
 
     limit = PAGE_SIZE
+
     if sync_all:
         url = "https://api.hubapi.com/crm/v3/objects/companies?"
         headers = None
         request = requests.get
-        json_data = None
+        json_payload = None
         log.warning("Downloading all companies for project_id : "+ str(project_id) + ".")
     else:
         url = "https://api.hubapi.com/crm/v3/objects/companies/search?"  # both created and modified.
         headers = {'Content-Type': 'application/json'}
         request = requests.post
-        json_data = {
-            "filterGroups":[
-                {
-                    "filters":[
-                        {
-                            "propertyName": COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE,
-                            "operator": "GTE",
-                            "value": str(last_sync_timestamp)
-                        }
-                    ]
-                }
-            ],
-            "sorts": [
-                {
-                    "propertyName": COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE,
-                    "direction": "ASCENDING"
-                }
-            ],
-            "limit": limit
-        }
+        json_payload = get_search_v3_api_payload(COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE, last_sync_timestamp, limit)
         log.warning("Downloading recently created or modified companies for project_id : "+ str(project_id) + ".")
 
     buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
@@ -1255,6 +1262,7 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
     max_timestamp = 0
 
     count = 0
+    overall_doc_count = 0
     parameter_dict = {"limit": limit}
 
     properties, ok = get_all_properties_by_doc_type(project_id, "companies", hubspot_request_handler)
@@ -1270,10 +1278,10 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
         if sync_all:
             get_url = get_url + parameters + '&' + build_properties_param_str(properties)
         else:
-            json_data["properties"] = properties
+            json_payload["properties"] = properties
 
         log.warning("Downloading companies for project_id %d from url %s.", project_id, get_url)
-        r = hubspot_request_handler(project_id, get_url, request=request, json=json_data, headers=headers)
+        r = hubspot_request_handler(project_id, get_url, request=request, json=json_payload, headers=headers)
         if not r.ok:
             log.error("Failure response %d from hubspot on sync_companies", r.status_code)
             break
@@ -1292,7 +1300,7 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
             if sync_all:
                 parameter_dict["after"] = paging_after
             else:
-                json_data["after"] = paging_after
+                json_payload["after"] = paging_after
         else:
             has_more = False
         
@@ -1302,13 +1310,20 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
         _, api_calls = fill_contacts_for_companies_v3(project_id, docs, hubspot_request_handler)
         companies_contacts_api_calls += api_calls
         count = count + len(docs)
+        overall_doc_count = overall_doc_count + len(docs)
         
         if allow_buffer_before_insert_by_project_id(project_id):
             create_all_company_documents_with_buffer(docs, has_more)
-            log.warning("Downloaded %d companies. total %d.", len(docs), count)
+            log.warning("Downloaded %d companies. total %d.", len(docs), overall_doc_count)
         else:
             create_all_documents(project_id, 'company', docs)
-            log.warning("Downloaded and created %d companies. total %d.", len(docs), count)
+            log.warning("Downloaded and created %d companies. total %d.", len(docs), overall_doc_count)
+        
+        if not sync_all:
+            if has_more and count >= SEARCH_V3_API_RECORD_PULL_LIMIT:
+                log.warning("10K record limit hit for companies fopr project_id %d. New timestamp %d", project_id, max_timestamp)
+                count = 0
+                json_payload = get_search_v3_api_payload(COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE, max_timestamp, limit)
     
     create_all_company_documents_with_buffer([], False) ## flush any remaining docs in memory
     return companies_api_calls, companies_contacts_api_calls, max_timestamp
