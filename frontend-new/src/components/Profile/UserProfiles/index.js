@@ -72,6 +72,7 @@ import {
   setActiveSegmentAction,
   setSegmentModalStateAction
 } from 'Reducers/userProfilesView/actions';
+import { useHistory } from 'react-router-dom';
 
 const userOptions = getUserOptions();
 // const userOptionsForDropdown = getUserOptionsForDropdown();

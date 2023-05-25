@@ -89,7 +89,7 @@ const ProfilesSidebar = () => {
           <Text
             type='title'
             level={8}
-            extraClass='mb-0 pl-10 pr-2'
+            extraClass='mb-0 px-2'
             color='character-secondary'
           >
             Default
@@ -102,7 +102,7 @@ const ProfilesSidebar = () => {
           <Text
             type='title'
             level={8}
-            extraClass='mb-0 pl-10 pr-2'
+            extraClass='mb-0 px-2'
             color='character-secondary'
           >
             Custom
