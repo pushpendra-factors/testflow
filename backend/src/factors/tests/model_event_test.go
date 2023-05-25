@@ -648,3 +648,125 @@ func TestIsOTPKeyUniqueWithQuery(t *testing.T) {
 	})
 
 }
+
+func TestEvaluateRulesV1(t *testing.T) {
+
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	var eventPropertiesMap map[string]interface{}
+	err = json.Unmarshal([]byte(`{"$salesforce_campaignmember_firstrespondeddate": "100",
+									"$salesforce_campaignmember_lastmodifieddate": "100",
+										"$salesforce_campaignmember_createddate": "100",
+											"$salesforce_campaign_name":"Webinar",
+												"$salesforce_campaignmember_hasresponded":true,
+													"$salesforce_campaignmember_status":"Attended Live"}`), &eventPropertiesMap)
+	assert.Equal(t, err, nil)
+
+	_, status := store.GetStore().CreateOrGetOfflineTouchPointEventName(project.ID)
+	assert.Equal(t, http.StatusCreated, status)
+
+	t.Run("WithCorrectSetOfRule", func(t *testing.T) {
+		sfEvent := model.EventIdToProperties{
+			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
+			EventProperties: eventPropertiesMap,
+		}
+
+		filter1 := model.TouchPointFilter{
+			Property:  "$salesforce_campaign_name",
+			Operator:  "contains",
+			Value:     "Webinar",
+			LogicalOp: "AND",
+		}
+		filter2 := model.TouchPointFilter{
+			LogicalOp: "AND",
+			Operator:  "equals",
+			Property:  "$salesforce_campaignmember_status",
+			Value:     "Attended Live",
+		}
+		filter3 := model.TouchPointFilter{
+			LogicalOp: "OR",
+			Operator:  "equals",
+			Property:  "$salesforce_campaignmember_status",
+			Value:     "Attended On-demand",
+		}
+		filter4 := model.TouchPointFilter{
+			LogicalOp: "OR",
+			Operator:  "equals",
+			Property:  "$salesforce_campaignmember_status",
+			Value:     "Attended Live and on-Demand",
+		}
+
+		rulePropertyMap := make(map[string]model.TouchPointPropertyValue)
+		rulePropertyMap["$campaign"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsProperty, Value: "$salesforce_campaignmember_campaignname"}
+		rulePropertyMap["$channel"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsConstant, Value: "Other"}
+
+		f, _ := json.Marshal([]model.TouchPointFilter{filter1, filter2, filter3, filter4})
+		rPM, _ := json.Marshal(rulePropertyMap)
+
+		rule := model.OTPRule{
+			Filters:           postgres.Jsonb{json.RawMessage(f)},
+			TouchPointTimeRef: model.SFCampaignMemberResponded, // SFCampaignMemberResponded
+			PropertiesMap:     postgres.Jsonb{json.RawMessage(rPM)},
+		}
+
+		rule.ID = U.RandomLowerAphaNumString(5)
+
+		passed := model.EvaluateOTPFilterV1(rule, sfEvent, nil)
+		assert.Equal(t, true, passed)
+
+	})
+
+	t.Run("WithWrongSetOfRule", func(t *testing.T) {
+		sfEvent := model.EventIdToProperties{
+			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
+			EventProperties: eventPropertiesMap,
+		}
+
+		filter1 := model.TouchPointFilter{
+			Property:  "$salesforce_campaign_name",
+			Operator:  "contains",
+			Value:     "Event",
+			LogicalOp: "AND",
+		}
+		filter2 := model.TouchPointFilter{
+			LogicalOp: "AND",
+			Operator:  "equals",
+			Property:  "$salesforce_campaignmember_status",
+			Value:     "Attended Live",
+		}
+		filter3 := model.TouchPointFilter{
+			LogicalOp: "OR",
+			Operator:  "equals",
+			Property:  "$salesforce_campaignmember_status",
+			Value:     "Attended On-demand",
+		}
+		filter4 := model.TouchPointFilter{
+			LogicalOp: "OR",
+			Operator:  "equals",
+			Property:  "$salesforce_campaignmember_status",
+			Value:     "Attended Live and on-Demand",
+		}
+
+		rulePropertyMap := make(map[string]model.TouchPointPropertyValue)
+		rulePropertyMap["$campaign"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsProperty, Value: "$salesforce_campaignmember_campaignname"}
+		rulePropertyMap["$channel"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsConstant, Value: "Other"}
+
+		f, _ := json.Marshal([]model.TouchPointFilter{filter1, filter2, filter3, filter4})
+		rPM, _ := json.Marshal(rulePropertyMap)
+
+		rule := model.OTPRule{
+			Filters:           postgres.Jsonb{json.RawMessage(f)},
+			TouchPointTimeRef: model.SFCampaignMemberResponded, // SFCampaignMemberResponded
+			PropertiesMap:     postgres.Jsonb{json.RawMessage(rPM)},
+		}
+
+		rule.ID = U.RandomLowerAphaNumString(5)
+
+		rule.ID = U.RandomLowerAphaNumString(5)
+
+		passed := model.EvaluateOTPFilterV1(rule, sfEvent, nil)
+		assert.Equal(t, false, passed)
+
+	})
+}
