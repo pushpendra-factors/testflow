@@ -76,6 +76,7 @@ func main() {
 	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
 	useHubspotCompaniesv3APIByProjectID := flag.String("use_hubspot_companies_v3_by_project_id", "", "")
+	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
 	useHubspotEngagementsv3APIByProjectID := flag.String("use_hubspot_engagements_v3_by_project_id", "", "")
 
 	flag.Parse()
@@ -133,7 +134,11 @@ func main() {
 		EnableSyncReferenceFieldsByProjectID:               *enableSyncReferenceFieldsByProjectID,
 		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
 		UseHubspotCompaniesV3APIByProjectID:                *useHubspotCompaniesv3APIByProjectID,
+<<<<<<< HEAD
+		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
+=======
 		UseHubspotEngagementsV3APIByProjectID:              *useHubspotEngagementsv3APIByProjectID,
+>>>>>>> master
 	}
 
 	C.InitConf(config)

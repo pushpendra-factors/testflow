@@ -269,6 +269,16 @@ func IsBetterEmail(str string, str1 string) bool {
 	return len(str1) > len(str)
 }
 
+func GetEmailDomain(str string) string {
+	regexpEmail := regexp.MustCompile(`^[A-Za-z0-9._%+\-'’^!]+@([A-Za-z0-9.\-]+\.[A-Za-z-]{2,20})$`)
+	matches := regexpEmail.FindStringSubmatch(str)
+	if len(matches) == 2 {
+		return matches[1]
+	}
+
+	return ""
+}
+
 func IsValidPhone(str string) bool {
 	numbers := regexp.MustCompile("\\d").FindAllString(str, -1)
 	if len(numbers) < 5 {
