@@ -242,7 +242,7 @@ function UserProfiles({
           <div className='flex items-center'>
             {identity.isAnonymous ? (
               <SVG
-                name={`TrackedUser${identity.id.match(/\d/g)[0]}`}
+                name={`TrackedUser${identity.id?.match(/\d/)?.[0] || 0}`}
                 size={24}
               />
             ) : (
@@ -270,7 +270,9 @@ function UserProfiles({
       }
     ];
     // Engagement Column
-    const engagementExists = contacts.data?.[0]?.engagement;
+    const engagementExists = contacts.data?.find(
+      (item) => item.engagement !== ''
+    );
     if (engagementExists) {
       columns.push({
         title: <div className={headerClassStr}>Engagement</div>,
@@ -279,17 +281,23 @@ function UserProfiles({
         key: 'engagement',
         fixed: 'left',
         sorter: (a, b) => sortColumn(a.score, b.score),
-        render: (status) => (
-          <div
-            className='engagement-tag'
-            style={{ '--bg-color': EngagementTag[status]?.bgColor }}
-          >
-            <SVG name={EngagementTag[status]?.icon} />
-            <Text type='title' level={6} extraClass='m-0'>
-              {status}
-            </Text>
-          </div>
-        )
+        render: (status) =>
+          status ? (
+            <div
+              className='engagement-tag'
+              style={{ '--bg-color': EngagementTag[status]?.bgColor }}
+            >
+              <img
+                src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
+                alt=''
+              />
+              <Text type='title' level={6} extraClass='m-0'>
+                {status}
+              </Text>
+            </div>
+          ) : (
+            '-'
+          )
       });
     }
 

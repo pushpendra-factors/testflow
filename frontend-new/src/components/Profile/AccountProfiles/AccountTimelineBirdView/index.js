@@ -61,7 +61,7 @@ function AccountTimelineBirdView({
     const { borderColor, bgColor } = eventIconsColorMap[eventIcon] || {};
     const isTrackedUser = event.user === 'new_user';
     const iconContent = isTrackedUser ? (
-      <SVG name={`TrackedUser${event.id.match(/\d/g)[0]}`} size={20} />
+      <SVG name={`TrackedUser${event.id.match(/\d/g)?.[0] || 0}`} size={20} />
     ) : (
       <img
         src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
@@ -180,7 +180,7 @@ function AccountTimelineBirdView({
                       className='userlist-avatar'
                       style={{
                         backgroundColor: `${
-                          user?.title === 'Channel Activity'
+                          user.title === 'group_user'
                             ? '#BAE7FF'
                             : iconColors[
                                 ALPHANUMSTR.indexOf(
@@ -191,7 +191,7 @@ function AccountTimelineBirdView({
                         fontSize: '16px'
                       }}
                     >
-                      {user?.title === 'Channel Activity' ? (
+                      {user.title === 'group_user' ? (
                         <SVG name='focus' size={20} />
                       ) : (
                         user.title.charAt(0).toUpperCase()
@@ -206,7 +206,9 @@ function AccountTimelineBirdView({
                       weight='medium'
                       extraClass='m-0'
                     >
-                      {user.title}
+                      {user.title === 'group_user'
+                        ? 'Account Activity'
+                        : user.title}
                     </Text>
                     <Text type='title' truncate level={8} extraClass='m-0'>
                       {user.subtitle || '-'}

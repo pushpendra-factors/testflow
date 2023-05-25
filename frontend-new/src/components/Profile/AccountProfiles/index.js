@@ -314,7 +314,9 @@ function AccountProfiles({
       }
     ];
     // Engagement Column
-    const engagementExists = accounts.data?.[0]?.engagement;
+    const engagementExists = accounts.data?.find(
+      (item) => item.engagement !== ''
+    );
     if (engagementExists) {
       columns.push({
         title: <div className={headerClassStr}>Engagement</div>,
@@ -323,20 +325,23 @@ function AccountProfiles({
         key: 'engagement',
         fixed: 'left',
         sorter: (a, b) => sortColumn(a.score, b.score),
-        render: (status) => (
-          <div
-            className='engagement-tag'
-            style={{ '--bg-color': EngagementTag[status]?.bgColor }}
-          >
-            <img
-              src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
-              alt=''
-            />
-            <Text type='title' level={6} extraClass='m-0'>
-              {status}
-            </Text>
-          </div>
-        )
+        render: (status) =>
+          status ? (
+            <div
+              className='engagement-tag'
+              style={{ '--bg-color': EngagementTag[status]?.bgColor }}
+            >
+              <img
+                src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
+                alt=''
+              />
+              <Text type='title' level={6} extraClass='m-0'>
+                {status}
+              </Text>
+            </div>
+          ) : (
+            '-'
+          )
       });
     }
     // Table Prop Columns
@@ -720,6 +725,13 @@ function AccountProfiles({
     </Button>
   );
 
+  const groupToCompanyPropMap = {
+    $hubspot_company: '$hubspot_company_name',
+    $salesforce_account: '$salesforce_account_name',
+    $6signal: '$6Signal_name',
+    $linkedin_company: '$li_localized_name'
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       const newCompanyValues = { All: {} };
@@ -786,11 +798,14 @@ function AccountProfiles({
   const onSearchClose = () => {
     setSearchBarOpen(false);
     setSearchDDOpen(false);
-    if (accountPayload?.search_filter?.users?.length) {
-      const payload = { ...accountPayload };
-      payload.search_filter = {};
+
+    if (Object.keys(accountPayload?.search_filter || {}).length !== 0) {
+      setAccountPayload((prevPayload) => ({
+        ...prevPayload,
+        search_filter: {}
+      }));
+
       setListSearchItems([]);
-      setAccountPayload(payload);
     }
   };
 

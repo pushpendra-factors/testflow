@@ -72,8 +72,16 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		segmentQuery.To = U.TimeNowZ().Unix()
 		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
 			if C.IsEnabledEventsFilterInSegments() {
-				if payload.Filters != nil && payload.Filters[segment.Type] != nil {
-					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters[segment.Type]...)
+				if payload.Filters != nil {
+					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters[model.FILTER_TYPE_USERS]...)
+					if profileType == model.PROFILE_TYPE_ACCOUNT && payload.Filters[segment.Type] != nil {
+						segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters[segment.Type]...)
+					}
+				}
+				err := segmentQuery.TransformDateTypeFilters()
+				if err != nil {
+					log.WithFields(logFields).Error("Failed to transform query payload filters.")
+					return nil, http.StatusBadRequest
 				}
 				query, err := U.EncodeStructTypeToPostgresJsonb(segmentQuery)
 				if err != nil {
@@ -101,7 +109,11 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 				if payload.Filters == nil {
 					payload.Filters = make(map[string][]model.QueryProperty)
 				}
-				payload.Filters["users"] = append(payload.Filters["users"], segmentQuery.GlobalUserProperties...)
+				if profileType == model.PROFILE_TYPE_USER {
+					payload.Filters[model.FILTER_TYPE_USERS] = append(payload.Filters[model.FILTER_TYPE_USERS], segmentQuery.GlobalUserProperties...)
+				} else {
+					payload.Filters[payload.Source] = append(payload.Filters[payload.Source], segmentQuery.GlobalUserProperties...)
+				}
 			}
 		}
 	} else {
@@ -113,6 +125,23 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			tableProps = timelinesConfig.AccountConfig.TableProps
 		} else if profileType == model.PROFILE_TYPE_USER {
 			tableProps = timelinesConfig.UserConfig.TableProps
+		}
+	}
+
+	timezoneString, statusCode := store.GetTimezoneForProject(projectID)
+	if statusCode != http.StatusFound {
+		log.WithFields(logFields).Error("Query failed. Failed to get Timezone.")
+		return nil, http.StatusBadRequest
+	}
+
+	// transforming datetime filters
+	for group, filterArray := range payload.Filters {
+		for index := range filterArray {
+			err := payload.Filters[group][index].TransformDateTypeFilters(timezoneString)
+			if err != nil {
+				log.WithFields(logFields).Error("Failed to transform payload filters.")
+				return nil, http.StatusBadRequest
+			}
 		}
 	}
 
@@ -150,9 +179,12 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	var filterString string
 	var filterParams []interface{}
 	var filtersArray []string
-	for _, filters := range payload.Filters {
-		filtersForSource, filterParamsForSource, errCode := buildWhereFromProperties(projectID, filters, 0)
-		if errCode != nil {
+	for group, filters := range payload.Filters {
+		if group == model.FILTER_TYPE_USERS {
+			continue
+		}
+		filtersForSource, filterParamsForSource, err := buildWhereFromProperties(projectID, filters, 0)
+		if err != nil {
 			return nil, http.StatusBadRequest
 		}
 		if filtersForSource == "" {
@@ -169,7 +201,19 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	case 1:
 		filterString = filtersArray[0]
 	default:
-		filterString = "(" + strings.Join(filtersArray, " OR ") + ")"
+		filterString = strings.Join(filtersArray, " OR ")
+	}
+	userTypeFilters, userTypeFiltersParams, errMsg := buildWhereFromProperties(projectID, payload.Filters[model.FILTER_TYPE_USERS], 0)
+	if errMsg != nil {
+		return nil, http.StatusBadRequest
+	}
+	if userTypeFilters != "" {
+		if filterString != "" {
+			filterString = filterString + " AND (" + userTypeFilters + ")"
+		} else {
+			filterString = "(" + userTypeFilters + ")"
+		}
+		filterParams = append(filterParams, userTypeFiltersParams...)
 	}
 
 	// Run Queries
@@ -185,7 +229,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	// Get min and max updated_at after ordering as part of optimisation.
 	limitVal := 100000
 	if filterString != "" {
-		limitVal = 500000
+		limitVal = 1000000
 	}
 	runQueryString = fmt.Sprintf("SELECT %s FROM (SELECT updated_at FROM %s ORDER BY updated_at DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
 
@@ -203,7 +247,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		selectColumnsStr = "id, customer_user_id, properties, updated_at"
 		groupByStr = "GROUP BY identity"
 	}
-	timeAndRecordsLimit := fmt.Sprintf("updated_at BETWEEN '%s' AND '%s' LIMIT 1000000", FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt))
+	timeAndRecordsLimit := fmt.Sprintf("updated_at BETWEEN '%s' AND '%s' LIMIT 100000000", FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt))
 	isDomainGroup := (C.IsDomainEnabled(projectID) && payload.Source == "All")
 	if filterString != "" {
 		fromStr = fmt.Sprintf("(SELECT %s FROM %s AND ", selectColumnsStr, commonStr) +
@@ -254,7 +298,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 
 	if len(profiles) < 1 {
 		logCtx.Error("No domain account found.")
-		return nil, http.StatusBadRequest
+		return nil, http.StatusOK
 	}
 
 	domainGroup, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
@@ -339,7 +383,10 @@ func SelectFilterAndHavingStringsForAccounts(filtersMap map[string][]model.Query
 	filterArray := make([]string, 0)
 	havingArray := make([]string, 0)
 	propMap := make(map[string]bool)
-	for _, filterArr := range filtersMap {
+	for group, filterArr := range filtersMap {
+		if group == model.FILTER_TYPE_USERS {
+			continue
+		}
 		for _, filter := range filterArr {
 			if exists := propMap[filter.Property]; exists {
 				continue
@@ -558,25 +605,25 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	db := C.GetServices().Db
 	var uniqueUser model.ContactDetails
 	if err := db.Table("users").Select(`COALESCE(customer_user_id,id) AS user_id,
-		ISNULL(customer_user_id) AS is_anonymous,
-		properties,
-		MAX(group_1_id) IS NOT NULL AS group_1,
-		MAX(group_2_id) IS NOT NULL AS group_2,
-		MAX(group_3_id) IS NOT NULL AS group_3,
-		MAX(group_4_id) IS NOT NULL AS group_4,
-		MAX(group_5_id) IS NOT NULL AS group_5,
-		MAX(group_6_id) IS NOT NULL AS group_6,
-		MAX(group_7_id) IS NOT NULL AS group_7,
-		MAX(group_8_id) IS NOT NULL AS group_8,
-		MAX(group_1_user_id) AS group_1_user_id,
-		MAX(group_2_user_id) AS group_2_user_id,
-		MAX(group_3_user_id) AS group_3_user_id,
-		MAX(group_4_user_id) AS group_4_user_id,
-		MAX(group_5_user_id) AS group_5_user_id,
-		MAX(group_6_user_id) AS group_6_user_id,
-		MAX(group_7_user_id) AS group_7_user_id,
-		MAX(group_8_user_id) AS group_8_user_id
-		`).
+        ISNULL(customer_user_id) AS is_anonymous,
+        properties,
+        MAX(group_1_id) IS NOT NULL AS group_1,
+        MAX(group_2_id) IS NOT NULL AS group_2,
+        MAX(group_3_id) IS NOT NULL AS group_3,
+        MAX(group_4_id) IS NOT NULL AS group_4,
+        MAX(group_5_id) IS NOT NULL AS group_5,
+        MAX(group_6_id) IS NOT NULL AS group_6,
+        MAX(group_7_id) IS NOT NULL AS group_7,
+        MAX(group_8_id) IS NOT NULL AS group_8,
+        MAX(group_1_user_id) AS group_1_user_id,
+        MAX(group_2_user_id) AS group_2_user_id,
+        MAX(group_3_user_id) AS group_3_user_id,
+        MAX(group_4_user_id) AS group_4_user_id,
+        MAX(group_5_user_id) AS group_5_user_id,
+        MAX(group_6_user_id) AS group_6_user_id,
+        MAX(group_7_user_id) AS group_7_user_id,
+        MAX(group_8_user_id) AS group_8_user_id
+        `).
 		Where("project_id=? AND "+userId+"=?", projectID, identity).
 		Group("user_id").
 		Order("updated_at desc").
@@ -642,22 +689,22 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 
 	eventNamesToExcludePlaceholders := strings.Repeat("?,", len(eventNamesToExclude)-1) + "?"
 	eventsQuery := fmt.Sprintf(`SELECT event_names.name AS event_name, 
-		event_names.type as event_type, 
-		events1.timestamp AS timestamp, 
-		events1.properties AS properties 
-	FROM (
-		SELECT project_id, event_name_id, timestamp, properties 
-		FROM events 
-		WHERE project_id=? AND timestamp <= ? 
-		AND user_id IN (
-			SELECT id FROM users WHERE project_id=? AND %s = ?
-		) AND event_name_id NOT IN (
-			SELECT id FROM event_names WHERE project_id=? AND name IN (%s)
-		) 
-		LIMIT 5000) AS events1 
-	LEFT JOIN event_names
-	ON events1.event_name_id=event_names.id 
-	AND event_names.project_id=?;`, userId, eventNamesToExcludePlaceholders)
+        event_names.type as event_type, 
+        events1.timestamp AS timestamp, 
+        events1.properties AS properties 
+    FROM (
+        SELECT project_id, event_name_id, timestamp, properties 
+        FROM events 
+        WHERE project_id=? AND timestamp <= ? 
+        AND user_id IN (
+            SELECT id FROM users WHERE project_id=? AND %s = ?
+        ) AND event_name_id NOT IN (
+            SELECT id FROM event_names WHERE project_id=? AND name IN (%s)
+        ) 
+        LIMIT 5000) AS events1 
+    LEFT JOIN event_names
+    ON events1.event_name_id=event_names.id 
+    AND event_names.project_id=?;`, userId, eventNamesToExcludePlaceholders)
 
 	excludedEventNamesArgs := make([]interface{}, len(eventNamesToExclude))
 	for i, name := range eventNamesToExclude {
@@ -908,13 +955,13 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 
 	// Timeline Query
 	query := fmt.Sprintf(`SELECT COALESCE(JSON_EXTRACT_STRING(properties, '%s'), customer_user_id, id) AS user_name, %s
-		COALESCE(customer_user_id, id) AS user_id, 
-		ISNULL(customer_user_id) AS is_anonymous 
-	FROM users 
-	WHERE project_id = ? AND (%s) 
-	GROUP BY user_id 
-	ORDER BY updated_at DESC 
-	LIMIT 26;`, U.UP_NAME, selectStrAdditionalProp, groupUserString)
+        COALESCE(customer_user_id, id) AS user_id, 
+        ISNULL(customer_user_id) AS is_anonymous 
+    FROM users 
+    WHERE project_id = ? AND (%s) 
+    GROUP BY user_id 
+    ORDER BY updated_at DESC 
+    LIMIT 26;`, U.UP_NAME, selectStrAdditionalProp, groupUserString)
 
 	// Get Timeline for <=25 users
 	db := C.GetServices().Db

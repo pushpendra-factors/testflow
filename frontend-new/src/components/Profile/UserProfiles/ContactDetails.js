@@ -322,7 +322,7 @@ function ContactDetails({
       <div className='user'>
         {user.identity.isAnonymous ? (
           <SVG
-            name={`TrackedUser${user.identity.id.match(/\d/g)[0]}`}
+            name={`TrackedUser${user.identity.id.match(/\d/g)?.[0] || 0}`}
             size={96}
           />
         ) : (
