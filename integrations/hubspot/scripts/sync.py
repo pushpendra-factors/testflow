@@ -274,12 +274,10 @@ def get_with_fallback_retry(project_id, get_url, request = requests.get, json_ob
                 r = request(url=get_url, headers = headers, json=json_object, timeout=REQUEST_TIMEOUT)
                 if r.status_code != 429:
                     if not r.ok:
-                        if r.status_code== 414 or r.status_code == 404:
+                        if r.status_code == 414 or r.status_code == 404:
                             return r
                         if r.status_code == 400:
-                            err_json = json.loads(r.text)
-                            if err_json.get("status") == "error" and ("Unknown Contacts Search API failure" in err_json.get("message")):
-                                raise Exception("Failed to get data from hubspot. User does not have permissions")
+                            raise Exception("Failed to get data from hubspot. Bad request. " + str(r.text))
                         if retries < RETRY_LIMIT:
                             log.error("Failed to get data from hubspot %d.Retries %d. Retrying in 2 seconds %s",r.status_code,retries, r.text)
                             time.sleep(2)
