@@ -567,26 +567,7 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
     engagement_types = ["calls", "meetings", "emails"]
     engagement_url = "https://api.hubapi.com/crm/v3/objects/"
     headers = {'Content-Type': 'application/json'}
-    json_data = {
-        "filterGroups":[
-            {
-                "filters":[
-                    {
-                        "propertyName": "hs_lastmodifieddate",
-                        "operator": "GTE",
-                        "value": str(last_sync_timestamp)
-                    }
-                ]
-            }
-        ],
-        "sorts": [
-            {
-                "propertyName": "hs_lastmodifieddate",
-                "direction": "ASCENDING"
-            }
-        ],
-        "limit": limit
-    }
+    json_payload = get_search_v3_api_payload("hs_lastmodifieddate", last_sync_timestamp, limit)
     log.warning("Downloading engagements for project_id : "+ str(project_id) + ".")
 
     buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
@@ -598,17 +579,19 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
     call_disposition = get_call_disposition(project_id, hubspot_request_handler)
     
     for type in engagement_types:
-        url = engagement_url + type + "/search" + "?"
+        url = engagement_url + type + "/search"
         has_more = True
-        json_data_with_properties = json_data
-        json_data_with_properties["properties"] = get_properties_for_engagement_v3(type)
+        engagement_properties = get_properties_for_engagement_v3(type)
 
         log.warning("Downloading "+ type + " engagements for project_id : "+ str(project_id) + ".")
         
+        count = 0
+        overall_doc_count = 0
         while has_more:
             get_url = url
 
-            r = hubspot_request_handler(project_id, get_url, request=requests.post, json=json_data_with_properties, headers=headers)
+            json_payload["properties"] = engagement_properties
+            r = hubspot_request_handler(project_id, get_url, request=requests.post, json=json_payload, headers=headers)
             if not r.ok:
                 log.error("Failure response %d from hubspot on sync_engagements", r.status_code)
                 latest_timestamp  = last_sync_timestamp
@@ -631,18 +614,25 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
 
             if paging_after != "":
                 has_more = True
-                json_data_with_properties["after"] = paging_after
+                json_payload["after"] = paging_after
             else:
                 has_more = False
 
             latest_timestamp = get_batch_documents_max_timestamp_v3(project_id, docs, "engagements", latest_timestamp)
+            count = count + len(filter_engagements)
+            overall_doc_count = overall_doc_count + len(filter_engagements)
 
             if allow_buffer_before_insert_by_project_id(project_id):
                 create_all_engagement_documents_with_buffer(filter_engagements, has_more)
-                log.warning("Downloaded %d engagements.", len(filter_engagements))
+                log.warning("Downloaded %d %s engagements. Total %d", len(filter_engagements), type, overall_doc_count)
             else:
                 create_all_documents(project_id, 'engagement', filter_engagements)
-                log.warning("Downloaded and created %d engagements.", len(filter_engagements))
+                log.warning("Downloaded and created %d %s engagements. Total %d", len(filter_engagements), type, overall_doc_count)
+            
+            if has_more and count >= SEARCH_V3_API_RECORD_PULL_LIMIT:
+                log.warning("10K record limit hit for %s engagements for project_id %d. New timestamp %d", type, project_id, latest_timestamp)
+                count = 0
+                json_payload = get_search_v3_api_payload("hs_lastmodifieddate", latest_timestamp, limit)
     
     create_all_engagement_documents_with_buffer([],False) ## flush any remaining docs in memory
     return engagement_api_calls, latest_timestamp
@@ -1395,7 +1385,7 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
         json_payload = None
         log.warning("Downloading all companies for project_id : "+ str(project_id) + ".")
     else:
-        url = "https://api.hubapi.com/crm/v3/objects/companies/search?"  # both created and modified.
+        url = "https://api.hubapi.com/crm/v3/objects/companies/search"  # both created and modified.
         headers = {'Content-Type': 'application/json'}
         request = requests.post
         json_payload = get_search_v3_api_payload(COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE, last_sync_timestamp, limit)
@@ -1470,7 +1460,7 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
         
         if not sync_all:
             if has_more and count >= SEARCH_V3_API_RECORD_PULL_LIMIT:
-                log.warning("10K record limit hit for companies fopr project_id %d. New timestamp %d", project_id, max_timestamp)
+                log.warning("10K record limit hit for companies for project_id %d. New timestamp %d", project_id, max_timestamp)
                 count = 0
                 json_payload = get_search_v3_api_payload(COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE, max_timestamp, limit)
     
