@@ -134,11 +134,8 @@ func main() {
 		EnableSyncReferenceFieldsByProjectID:               *enableSyncReferenceFieldsByProjectID,
 		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
 		UseHubspotCompaniesV3APIByProjectID:                *useHubspotCompaniesv3APIByProjectID,
-<<<<<<< HEAD
 		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
-=======
 		UseHubspotEngagementsV3APIByProjectID:              *useHubspotEngagementsv3APIByProjectID,
->>>>>>> master
 	}
 
 	C.InitConf(config)
