@@ -8,7 +8,6 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -197,64 +196,6 @@ func createOTPUniqueKeyForTasksV1(rule model.OTPRule, sfEvent model.EventIdToPro
 	return uniqueKey, http.StatusCreated
 }
 
-func filterCheckGeneralV1(rule model.OTPRule, event model.EventIdToProperties, logCtx *log.Entry) bool {
-	var ruleFilters []model.TouchPointFilter
-	err := U.DecodePostgresJsonbToStructType(&rule.Filters, &ruleFilters)
-	if err != nil {
-		logCtx.WithFields(log.Fields{"event": event, "rule": rule}).WithError(err).Error("Failed to decode/fetch offline touch point rule FILTERS for salesforce document.")
-		return false
-	}
-
-	filtersPassed := 0
-	minPassedFiltersRequired := 0
-	for _, filter := range ruleFilters {
-		switch filter.Operator {
-		case model.EqualsOpStr:
-			if _, exists := event.EventProperties[filter.Property]; exists {
-				if filter.Value != "" && event.EventProperties[filter.Property] == filter.Value {
-					filtersPassed++
-					if filter.LogicalOp == model.LOGICAL_OP_AND {
-						minPassedFiltersRequired++
-					}
-				}
-			}
-		case model.NotEqualOpStr:
-			if _, exists := event.EventProperties[filter.Property]; exists {
-				if filter.Value != "" && event.EventProperties[filter.Property] != filter.Value {
-					filtersPassed++
-					if filter.LogicalOp == model.LOGICAL_OP_AND {
-						minPassedFiltersRequired++
-					}
-				}
-			}
-		case model.ContainsOpStr:
-			if _, exists := event.EventProperties[filter.Property]; exists {
-				if filter.Property != "" {
-					val, ok := event.EventProperties[filter.Property].(string)
-					if ok && strings.Contains(val, filter.Value) {
-						filtersPassed++
-						if filter.LogicalOp == model.LOGICAL_OP_AND {
-							minPassedFiltersRequired++
-						}
-					}
-				}
-			}
-		default:
-			logCtx.WithField("Rule", rule).WithField("event", event).
-				Error("No matching operator found for offline touch point rules for hubspot engagement document.")
-			continue
-		}
-	}
-
-	// return true if all the filters passed
-	if filtersPassed != 0 && filtersPassed >= minPassedFiltersRequired {
-		return true
-	}
-
-	// When neither filters matched nor (filters matched but values are same)
-	return false
-}
-
 // CreateTouchPointEventForTasksAndEventsV1 - Creates offline touch-point for SF update events with given rule for SF Tasks/Events
 func CreateTouchPointEventForTasksAndEventsV1(project *model.Project, sfEvent model.EventIdToProperties,
 	rule model.OTPRule, otpUniqueKey string) (*SDK.TrackResponse, error) {
@@ -355,7 +296,7 @@ func ApplySFOfflineTouchPointRuleForTasksV1(project *model.Project, otpRules *[]
 		}
 
 		// check if rule is applicable w.r.t filters
-		if !filterCheckGeneralV1(rule, sfEvent, logCtx) {
+		if !model.EvaluateOTPFilterV1(rule, sfEvent, logCtx) {
 			continue
 		}
 
@@ -434,7 +375,7 @@ func ApplySFOfflineTouchPointRuleForEventsV1(project *model.Project, otpRules *[
 		}
 
 		// check if rule is applicable w.r.t filters
-		if !filterCheckGeneralV1(rule, sfEvent, logCtx) {
+		if !model.EvaluateOTPFilterV1(rule, sfEvent, logCtx) {
 			logCtx.Error("Filter check is failing for offline touch point rule for SF Events")
 			continue
 		}
@@ -491,7 +432,7 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 	for _, rule := range *otpRules {
 
 		// check if rule is applicable
-		if !filterCheckGeneralV1(rule, sfEvent, logCtx) {
+		if !model.EvaluateOTPFilterV1(rule, sfEvent, logCtx) {
 			continue
 		}
 
