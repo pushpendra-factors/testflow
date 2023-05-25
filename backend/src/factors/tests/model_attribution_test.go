@@ -2712,7 +2712,7 @@ func TestAttributionKPIV1NoData(t *testing.T) {
 
 	})
 
-	t.Run("TestForHubspotDealsV1MultiKPI", func(t *testing.T) {
+	t.Run("TestForHubspotDealsSalesforceOpportunitiesV1MultiKPI", func(t *testing.T) {
 
 		query1 := model.KPIQuery{
 			Category:         model.ProfileCategory,
@@ -2797,6 +2797,108 @@ func TestAttributionKPIV1NoData(t *testing.T) {
 
 		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, float64(0), getConversionUserCountKpi(query.AttributionKey, result, "Grand Total")) // Deals - Conversion
+		assert.Nil(t, err)
+
+	})
+
+	w = sendUpdateProjectSettingReq(a, project.ID, agent, map[string]interface{}{
+		"attribution_config": model.AttributionConfig{
+			AnalyzeTypeHSCompaniesEnabled:     true,
+			AnalyzeTypeHSDealsEnabled:         false,
+			AnalyzeTypeSFAccountsEnabled:      true,
+			AnalyzeTypeSFOpportunitiesEnabled: false,
+			AttributionWindow:                 10,
+			QueryType:                         model.AttributionQueryTypeConversionBased,
+		},
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	t.Run("TestForHubspotCompaniesSalesforceAccountsV1MultiKPI", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotCompaniesDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"Deals"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup1 := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.HSDealIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query3 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.SalesforceAccountsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"Opportunities"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query4 := model.KPIQuery{}
+		U.DeepCopy(&query3, &query4)
+		query4.GroupByTimestamp = ""
+
+		kpiQueryGroup2 := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query3, query4},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.SFOpportunityIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQueryV1{
+			KPIQueries: []model.AttributionKPIQueries{
+				{KPI: kpiQueryGroup1,
+					AnalyzeType: model.AnalyzeTypeHSDeals,
+					//RunType:     model.RunTypeHSDeals,
+				},
+				{KPI: kpiQueryGroup2,
+					AnalyzeType: model.AnalyzeTypeSFOpportunities,
+					//RunType:     model.RunTypeSFOpportunities,
+				},
+			},
+
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionKeyDimension: []string{model.FieldCampaignName},
+			AttributionMethodology:  model.AttributionMethodLinear,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, float64(0), getConversionUserCountKpi(query.AttributionKey, result, "Grand Total")) // Deals - Conversion
+		assert.Equal(t, 17, len(result.Headers))
 		assert.Nil(t, err)
 
 	})

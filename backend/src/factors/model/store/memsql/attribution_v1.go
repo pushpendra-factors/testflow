@@ -169,7 +169,7 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 
 	}
 
-	attributionData, isCompare, err2 := store.GetAttributionDataV1(projectID, query, userData, marketingReports, kpiData, logCtx)
+	attributionData, isCompare, err2 := store.GetAttributionDataV1(projectID, query, userData, marketingReports, kpiData, kpiHeaders, kpiAggFunctionType, logCtx)
 
 	if err2 != nil {
 		return nil, err2
@@ -813,7 +813,7 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 
 // GetAttributionDataV1 runs attribution on groupSessions
 func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.AttributionQueryV1, sessions map[string]map[string]model.UserSessionData,
-	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, logCtx *log.Entry) (*map[string]*model.AttributionData, bool, error) {
+	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, kpiHeaders []string, kpiAggFunctionType []string, logCtx *log.Entry) (*map[string]*model.AttributionData, bool, error) {
 
 	queryStartTime := time.Now().UTC().Unix()
 
@@ -895,7 +895,7 @@ func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.Attribut
 	}
 
 	// Build attribution weight
-	noOfConversionEvents := 1
+	noOfConversionEvents := len(kpiHeaders)
 	sessionWT := make(map[string][]float64)
 	for key := range groupSessions {
 		kpiValues := model.KPIValueListToValues(kpiData[key])
@@ -928,16 +928,8 @@ func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.Attribut
 		logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
 	}
 
-	// for KPI queries, use the kpiData.KpiAggFunctionTypes as ConvAggFunctionType
-	var convAggFunctionType []string
-	for _, val := range kpiData {
-		if len(val.KpiAggFunctionTypes) > 0 && val.KpiAggFunctionTypes != nil {
-			convAggFunctionType = val.KpiAggFunctionTypes
-			break
-		}
-	}
 	for key := range *attributionData {
-		(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
+		(*attributionData)[key].ConvAggFunctionType = kpiAggFunctionType
 	}
 
 	if C.GetAttributionDebug() == 1 {
