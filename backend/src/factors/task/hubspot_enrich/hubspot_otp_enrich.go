@@ -12,7 +12,6 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 )
@@ -27,54 +26,6 @@ var AllowedHsEventTypeForOTP = []string{
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
 	U.EVENT_NAME_HUBSPOT_CONTACT_LIST,
-}
-
-func filterCheckGeneralV1(rule model.OTPRule, event model.EventIdToProperties, logCtx *log.Entry) bool {
-	var ruleFilters []model.TouchPointFilter
-	err := U.DecodePostgresJsonbToStructType(&rule.Filters, &ruleFilters)
-	if err != nil {
-		logCtx.WithFields(log.Fields{"event": event, "rule": rule}).WithError(err).Error("Failed to decode/fetch offline touch point rule FILTERS for salesforce document.")
-		return false
-	}
-
-	filtersPassed := 0
-	for _, filter := range ruleFilters {
-		switch filter.Operator {
-		case model.EqualsOpStr:
-			if _, exists := event.EventProperties[filter.Property]; exists {
-				if filter.Value != "" && event.EventProperties[filter.Property] == filter.Value {
-					filtersPassed++
-				}
-			}
-		case model.NotEqualOpStr:
-			if _, exists := event.EventProperties[filter.Property]; exists {
-				if filter.Value != "" && event.EventProperties[filter.Property] != filter.Value {
-					filtersPassed++
-				}
-			}
-		case model.ContainsOpStr:
-			if _, exists := event.EventProperties[filter.Property]; exists {
-				if filter.Property != "" {
-					val, ok := event.EventProperties[filter.Property].(string)
-					if ok && strings.Contains(val, filter.Value) {
-						filtersPassed++
-					}
-				}
-			}
-		default:
-			logCtx.WithField("Rule", rule).WithField("event", event).
-				Error("No matching operator found for offline touch point rules for hubspot engagement document.")
-			continue
-		}
-	}
-
-	// return true if all the filters passed
-	if filtersPassed != 0 && filtersPassed == len(ruleFilters) {
-		return true
-	}
-
-	// When neither filters matched nor (filters matched but values are same)
-	return false
 }
 
 func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interface{}, bool) {
@@ -377,7 +328,7 @@ func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OT
 		}
 
 		// Check if rule is applicable
-		if !filterCheckGeneralV1(rule, event, logCtx) {
+		if !model.EvaluateOTPFilterV1(rule, event, logCtx) {
 			continue
 		}
 
@@ -521,7 +472,7 @@ func ApplyHSOfflineTouchPointRuleForEngagementV1(project *model.Project, otpRule
 			continue
 		}
 
-		if !filterCheckGeneralV1(rule, event, logCtx) {
+		if !model.EvaluateOTPFilterV1(rule, event, logCtx) {
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
@@ -739,7 +690,7 @@ func ApplyHSOfflineTouchPointRuleForContactListV1(project *model.Project, otpRul
 			logCtx.Info("Rule Type is failing the OTP event creation.")
 			continue
 		}
-		if !filterCheckGeneralV1(rule, event, logCtx) {
+		if !model.EvaluateOTPFilterV1(rule, event, logCtx) {
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties
@@ -893,7 +844,7 @@ func ApplyHSOfflineTouchPointRuleForFormsV1(project *model.Project, otpRules *[]
 			logCtx.Info("Rule Type is failing the OTP event creation.")
 			continue
 		}
-		if !filterCheckGeneralV1(rule, event, logCtx) {
+		if !model.EvaluateOTPFilterV1(rule, event, logCtx) {
 			continue
 		}
 		//Checks if the otpUniqueKey is already present in other OTP Event Properties

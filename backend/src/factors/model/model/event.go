@@ -254,3 +254,61 @@ func GetUpdateEventPropertiesParamsAsBatch(list []UpdateEventPropertiesParams, b
 func PrependEvent(e Event, events []Event) []Event {
 	return append([]Event{e}, events...)
 }
+
+func EvaluateOTPFilterV1(rule OTPRule, event EventIdToProperties, logCtx *log.Entry) bool {
+	var ruleFilters []TouchPointFilter
+	err := U.DecodePostgresJsonbToStructType(&rule.Filters, &ruleFilters)
+	if err != nil {
+		logCtx.WithFields(log.Fields{"event": event, "rule": rule}).WithError(err).Error("Failed to decode/fetch offline touch point rule FILTERS ")
+		return false
+	}
+
+	filtersPassed := true
+	mapFilterPass := make(map[string]bool)
+
+	for _, filter := range ruleFilters {
+
+		if _, exist := mapFilterPass[filter.Property]; !exist {
+			mapFilterPass[filter.Property] = false
+		}
+	}
+
+	for _, filter := range ruleFilters {
+		switch filter.Operator {
+		case EqualsOpStr:
+			if _, exists := event.EventProperties[filter.Property]; exists {
+				if filter.Value != "" && event.EventProperties[filter.Property] == filter.Value {
+					mapFilterPass[filter.Property] = mapFilterPass[filter.Property] || (filter.LogicalOp == LOGICAL_OP_AND)
+				}
+			}
+		case NotEqualOpStr:
+			if _, exists := event.EventProperties[filter.Property]; exists {
+				if filter.Value != "" && event.EventProperties[filter.Property] != filter.Value {
+					mapFilterPass[filter.Property] = mapFilterPass[filter.Property] || (filter.LogicalOp == LOGICAL_OP_AND)
+				}
+			}
+		case ContainsOpStr:
+			if _, exists := event.EventProperties[filter.Property]; exists {
+				if filter.Property != "" {
+					val, ok := event.EventProperties[filter.Property].(string)
+					if ok && strings.Contains(val, filter.Value) {
+						mapFilterPass[filter.Property] = mapFilterPass[filter.Property] || (filter.LogicalOp == LOGICAL_OP_AND)
+
+					}
+				}
+			}
+		default:
+			logCtx.WithField("Rule", rule).WithField("event", event).
+				Error("No matching operator found for offline touch point rules")
+			continue
+		}
+	}
+
+	// return true if all the filters passed
+	for _, passed := range mapFilterPass {
+		filtersPassed = passed && filtersPassed
+	}
+
+	// When neither filters matched nor (filters matched but values are same)
+	return filtersPassed
+}
