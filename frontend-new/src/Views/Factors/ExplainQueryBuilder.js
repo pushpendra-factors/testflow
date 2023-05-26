@@ -418,7 +418,7 @@ const CreateGoalDrawer = (props) => {
 
   return (
     <div>
-      <div className={`flex flex-col py-4 px-8 border--thin-2 relative `}>
+      <div className={`flex flex-col py-4 px-20 border--thin-2 relative `}>
         <div
           className={`explain-builder--content ${
             collapse ? 'explain-builder--collapsed' : ''

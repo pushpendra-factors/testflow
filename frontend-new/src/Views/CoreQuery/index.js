@@ -706,7 +706,8 @@ function CoreQuery({
           result_criteria,
           user_type,
           durationObj,
-          globalFilters
+          globalFilters,
+          groupAnalysis
         );
 
         setDateFromTo({ from: query[0]?.fr, to: query[0]?.to });
@@ -775,6 +776,7 @@ function CoreQuery({
       result_criteria,
       user_type,
       globalFilters,
+      groupAnalysis,
       activeProject.id,
       activeProject?.name,
       getDashboardConfigs,

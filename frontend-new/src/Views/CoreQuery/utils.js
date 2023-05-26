@@ -959,7 +959,8 @@ export const getQuery = (
   resultCriteria,
   userType,
   dateRange,
-  globalFilters = []
+  globalFilters = [],
+  groupAnalysis
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_EVENT;
@@ -967,6 +968,7 @@ export const getQuery = (
     resultCriteria === TOTAL_EVENTS_CRITERIA
       ? TYPE_EVENTS_OCCURRENCE
       : TYPE_UNIQUE_USERS;
+  query.grpa = groupAnalysis;
 
   const period = {};
   if (dateRange.from && dateRange.to) {
