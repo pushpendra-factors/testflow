@@ -5718,7 +5718,7 @@ func TestGetSalesforceDocumentTimestampByEventV1(t *testing.T) {
 			EventProperties: eventPropertiesMap,
 		}
 
-		timestamp, err := IntSalesforce.GetSalesforceDocumentTimestampByEventV1(sfEvent)
+		timestamp, err := IntSalesforce.GetSalesforceDocumentTimestampByEventV1(sfEvent, sfEvent.Name)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, timestamp, int64(100))
 
@@ -5730,7 +5730,7 @@ func TestGetSalesforceDocumentTimestampByEventV1(t *testing.T) {
 			EventProperties: eventPropertiesMap,
 		}
 
-		timestamp, err := IntSalesforce.GetSalesforceDocumentTimestampByEventV1(sfEvent)
+		timestamp, err := IntSalesforce.GetSalesforceDocumentTimestampByEventV1(sfEvent, sfEvent.Name)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, timestamp, int64(100))
 
@@ -5741,7 +5741,7 @@ func TestGetSalesforceDocumentTimestampByEventV1(t *testing.T) {
 			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
 			EventProperties: eventPropertiesMap,
 		}
-		timestamp, err := IntSalesforce.GetSalesforceDocumentTimestampByEventV1(sfEvent)
+		timestamp, err := IntSalesforce.GetSalesforceDocumentTimestampByEventV1(sfEvent, sfEvent.Name)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, timestamp, int64(100))
 
@@ -5755,6 +5755,7 @@ func TestSalesforceOfflineTouchPointV1(t *testing.T) {
 	assert.Nil(t, err)
 
 	var eventPropertiesMap map[string]interface{}
+
 	err = json.Unmarshal([]byte(`{"$salesforce_campaignmember_firstrespondeddate": "100",
 									"$salesforce_campaignmember_lastmodifieddate": "100",
 										"$salesforce_campaignmember_createddate": "100",
@@ -5768,6 +5769,8 @@ func TestSalesforceOfflineTouchPointV1(t *testing.T) {
 
 	t.Run("WithCorrectSetOfRule", func(t *testing.T) {
 		sfEvent := model.EventIdToProperties{
+			ID:              U.RandomLowerAphaNumString(5),
+			UserId:          U.RandomLowerAphaNumString(5),
 			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
 			EventProperties: eventPropertiesMap,
 		}
@@ -5812,7 +5815,7 @@ func TestSalesforceOfflineTouchPointV1(t *testing.T) {
 
 		rule.ID = U.RandomLowerAphaNumString(5)
 
-		err = IntSalesforce.ApplySFOfflineTouchPointRuleForCampaignMemberV1(project, &[]model.OTPRule{rule}, sfEvent)
+		err = IntSalesforce.ApplySFOfflineTouchPointRuleForCampaignMemberV1(project, &[]model.OTPRule{rule}, &[]string{"123"}, sfEvent.Name, sfEvent)
 		assert.Nil(t, err)
 
 		OtpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
@@ -5822,8 +5825,16 @@ func TestSalesforceOfflineTouchPointV1(t *testing.T) {
 		assert.Equal(t, http.StatusFound, errCode)
 		err = json.Unmarshal(event[0].Properties.RawMessage, &eventPropertiesMap)
 		assert.Equal(t, eventPropertiesMap[U.EP_OTP_RULE_ID], rule.ID)
+		assert.Equal(t, eventPropertiesMap[U.EP_OTP_UNIQUE_KEY], sfEvent.UserId+rule.ID+sfEvent.ID)
 
 	})
+
+	err = json.Unmarshal([]byte(`{"$salesforce_campaignmember_firstrespondeddate": "300",
+									"$salesforce_campaignmember_lastmodifieddate": "300",
+										"$salesforce_campaignmember_createddate": "300",
+											"$salesforce_campaign_name":"Webinar",
+												"$salesforce_campaignmember_hasresponded":true,
+													"$salesforce_campaignmember_status":"Attended Live"}`), &eventPropertiesMap)
 
 	t.Run("WithWrongSetOfRule", func(t *testing.T) {
 		sfEvent := model.EventIdToProperties{
@@ -5871,16 +5882,84 @@ func TestSalesforceOfflineTouchPointV1(t *testing.T) {
 
 		rule.ID = U.RandomLowerAphaNumString(5)
 
-		err = IntSalesforce.ApplySFOfflineTouchPointRuleForCampaignMemberV1(project, &[]model.OTPRule{rule}, sfEvent)
+		err = IntSalesforce.ApplySFOfflineTouchPointRuleForCampaignMemberV1(project, &[]model.OTPRule{rule}, &[]string{"123"}, sfEvent.Name, sfEvent)
 		assert.Nil(t, err)
 
 		OtpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
 		assert.Equal(t, nil, err)
 
-		events, errCode := store.GetStore().GetEventsByEventNameId(project.ID, OtpEventName.ID, 1, 200)
-		assert.Equal(t, http.StatusFound, errCode)
-		err = json.Unmarshal(events[0].Properties.RawMessage, &eventPropertiesMap)
-		assert.NotEqual(t, eventPropertiesMap[U.EP_OTP_RULE_ID], rule.ID)
+		_, errCode := store.GetStore().GetEventsByEventNameId(project.ID, OtpEventName.ID, 200, 400)
+		assert.Equal(t, http.StatusNotFound, errCode)
 
 	})
+
+	err = json.Unmarshal([]byte(`{"$salesforce_campaignmember_firstrespondeddate": "500",
+									"$salesforce_campaignmember_lastmodifieddate": "500",
+										"$salesforce_campaignmember_createddate": "500",
+											"$salesforce_campaign_name":"Webinar",
+												"$salesforce_campaignmember_hasresponded":true,
+													"$salesforce_campaignmember_status":"Attended Live"}`), &eventPropertiesMap)
+
+	t.Run("CheckUniquenessOfOtp", func(t *testing.T) {
+		sfEvent := model.EventIdToProperties{
+			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
+			EventProperties: eventPropertiesMap,
+		}
+
+		filter1 := model.TouchPointFilter{
+			Property:  "$salesforce_campaign_name",
+			Operator:  "contains",
+			Value:     "Webinar",
+			LogicalOp: "AND",
+		}
+		filter2 := model.TouchPointFilter{
+			LogicalOp: "AND",
+			Operator:  "equals",
+			Property:  "$salesforce_campaignmember_status",
+			Value:     "Attended Live",
+		}
+		filter3 := model.TouchPointFilter{
+			LogicalOp: "OR",
+			Operator:  "equals",
+			Property:  "$salesforce_campaignmember_status",
+			Value:     "Attended On-demand",
+		}
+		filter4 := model.TouchPointFilter{
+			LogicalOp: "OR",
+			Operator:  "equals",
+			Property:  "$salesforce_campaignmember_status",
+			Value:     "Attended Live and on-Demand",
+		}
+
+		rulePropertyMap := make(map[string]model.TouchPointPropertyValue)
+		rulePropertyMap["$campaign"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsProperty, Value: "$salesforce_campaignmember_campaignname"}
+		rulePropertyMap["$channel"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsConstant, Value: "Other"}
+
+		f, _ := json.Marshal([]model.TouchPointFilter{filter1, filter2, filter3, filter4})
+		rPM, _ := json.Marshal(rulePropertyMap)
+
+		rule := model.OTPRule{
+			Filters:           postgres.Jsonb{json.RawMessage(f)},
+			TouchPointTimeRef: model.SFCampaignMemberResponded, // SFCampaignMemberResponded
+			PropertiesMap:     postgres.Jsonb{json.RawMessage(rPM)},
+		}
+
+		rule.ID = U.RandomLowerAphaNumString(5)
+		otpUniqueKeys := make([]string, 5)
+		for i := 0; i < 4; i++ {
+			err = IntSalesforce.ApplySFOfflineTouchPointRuleForCampaignMemberV1(project, &[]model.OTPRule{rule}, &otpUniqueKeys, sfEvent.Name, sfEvent)
+			assert.Nil(t, err)
+			otpUniqueKeys = append(otpUniqueKeys, sfEvent.UserId+rule.ID+sfEvent.ID)
+		}
+
+		OtpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
+		assert.Equal(t, nil, err)
+
+		ids, events, err := store.GetStore().PullEventIdsWithEventNameId(project.ID, 400, 600, OtpEventName.ID)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, 1, len(events))
+		assert.Equal(t, events[ids[0]].EventProperties[U.EP_OTP_RULE_ID], rule.ID)
+		assert.Equal(t, events[ids[0]].EventProperties[U.EP_OTP_UNIQUE_KEY], sfEvent.UserId+rule.ID+sfEvent.ID)
+	})
+
 }
