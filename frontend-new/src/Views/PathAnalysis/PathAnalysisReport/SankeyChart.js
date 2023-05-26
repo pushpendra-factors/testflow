@@ -330,7 +330,7 @@ function Sankey({
 
     return (
         <>
-            <div className='mt-16 mb-10'>
+            <div className='mt-16 mb-10 px-10'>
 
                 {/* {StepArraowGenerator(activeQuery)} */}
 

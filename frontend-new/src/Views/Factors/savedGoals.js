@@ -124,12 +124,15 @@ const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, factors_model
           data: data
         });
         setdataSource(formattedArray);
-      });
+      }); 
       SetLoadingTable(false);
     }
     else{
       setdataSource([]);
-      SetLoadingTable(false);
+      SetLoadingTable(true); 
+      fetchSavedExplainGoals(activeProject?.id).then(() => {
+        SetLoadingTable(false)
+      })
     }
   }, [savedExplainGoals]); 
 
@@ -172,7 +175,7 @@ const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, factors_model
 
   return (<>
 
-<div className='flex items-end justify-between mt-10 mb-2'>
+<div className='flex items-end justify-between mt-5 mb-2'>
       <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>{'Saved Reports'}</Text>
 
       <div className='flex justify-end'>
@@ -211,8 +214,9 @@ const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, factors_model
       </div>
     </div>
 
-    <Table loading={loadingTable} 
-    className="fa-table--basic mt-8" 
+    <Table 
+    loading={loadingTable} 
+    className="fa-table--basic" 
     columns={columns} 
     dataSource={searchTerm ? tableData : dataSource}
     pagination={true}
@@ -224,7 +228,7 @@ const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, factors_model
 
 
 const mapStateToProps = (state) => {
-  return {
+  return { 
     savedExplainGoals: state.factors.goals,
     activeProject: state.global.active_project,
     agents: state.agent.agents,
