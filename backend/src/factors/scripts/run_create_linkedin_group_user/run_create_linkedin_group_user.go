@@ -95,11 +95,11 @@ func main() {
 
 	linkedinProjectSettings := make([]model.LinkedinProjectSettings, 0)
 	var errCode int
-	if *projectIDs != "" {
+	if *projectIDs == "*" {
+		linkedinProjectSettings, errCode = store.GetStore().GetLinkedinEnabledProjectSettings()
+	} else {
 		projectIDsArray := strings.Split(*projectIDs, ",")
 		linkedinProjectSettings, errCode = store.GetStore().GetLinkedinEnabledProjectSettingsForProjects(projectIDsArray)
-	} else {
-		linkedinProjectSettings, errCode = store.GetStore().GetLinkedinEnabledProjectSettings()
 	}
 	if errCode != http.StatusOK {
 		log.Fatal("Failed to get linkedin settings")
