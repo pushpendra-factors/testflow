@@ -993,18 +993,7 @@ const EventBasedAlert = ({
                 name='alert_name'
                 className={'m-0'}
                 rules={[
-                  { required: true, message: 'Please enter alert name' },
-                  {
-                    validator: (_, value) => {
-                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
-                      if (!value || regex.test(value)) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(
-                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
-                      );
-                    }
-                  }
+                  { required: true, message: 'Please enter alert name' }
                 ]}
               >
                 <Input
@@ -1488,6 +1477,15 @@ const EventBasedAlert = ({
                         When this alert happens, send this information to other
                         apps to enable more flows.
                       </Text>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        <span className='font-bold'>Note:</span> Please add payload to enable this option.
+                      </Text>
                     </div>
                   </div>
                 </Col>
@@ -1922,18 +1920,7 @@ const EventBasedAlert = ({
                 className={'m-0'}
                 initialValue={viewAlertDetails?.title}
                 rules={[
-                  { required: true, message: 'Please enter alert name' },
-                  {
-                    validator: (_, value) => {
-                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
-                      if (!value || regex.test(value)) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(
-                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
-                      );
-                    }
-                  }
+                  { required: true, message: 'Please enter alert name' }
                 ]}
               >
                 <Input
@@ -2420,6 +2407,15 @@ const EventBasedAlert = ({
                       >
                         When this alert happens, send this information to other
                         apps to enable more flows.
+                      </Text>
+                      <Text
+                        type='paragraph'
+                        mini
+                        extraClass='m-0'
+                        color='grey'
+                        lineHeight='medium'
+                      >
+                        <span className='font-bold'>Note:</span> Please add payload to enable this option.
                       </Text>
                     </div>
                   </div>

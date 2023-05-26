@@ -718,17 +718,6 @@ const KPIBasedAlert = ({
                 className={'m-0'}
                 rules={[
                   { required: true, message: 'Please enter alert name' },
-                  {
-                    validator: (_, value) => {
-                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
-                      if (!value || regex.test(value)) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(
-                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
-                      );
-                    }
-                  }
                 ]}
               >
                 <Input
@@ -1400,18 +1389,7 @@ const KPIBasedAlert = ({
                 className={'m-0'}
                 initialValue={viewAlertDetails?.alert_name}
                 rules={[
-                  { required: true, message: 'Please enter alert name' },
-                  {
-                    validator: (_, value) => {
-                      const regex = /^[a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*$/;
-                      if (!value || regex.test(value)) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(
-                        'Please enter alphabets and numerals with no special characters and no leading or trailing whitespace characters'
-                      );
-                    }
-                  }
+                  { required: true, message: 'Please enter alert name' }
                 ]}
               >
                 <Input
