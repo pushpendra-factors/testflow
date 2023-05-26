@@ -675,6 +675,7 @@ type Model interface {
 	GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID int64, source, propertyKey string) (map[string]string, error)
 	AddPropertyValueLabelToQueryResults(projectID int64, oldResults []model.QueryResult) ([]model.QueryResult, error)
 	TransformQueryResultsColumnValuesToLabel(projectID int64, result map[string]interface{}) (map[string]interface{}, error)
+	AddPropertyValueLabelsToProfileResults(projectID int64, results []model.Profile) []model.Profile
 
 	// task and task-execution
 	RegisterTaskWithDefaultConfiguration(taskName string, source string, frequency int, isProjectEnabled bool) (uint64, int, string)
