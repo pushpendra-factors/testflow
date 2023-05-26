@@ -105,7 +105,7 @@ type PerUserScoreOnDay struct {
 type AllUsersScore struct {
 	UserId      string             `json:"UserId"`
 	ScorePerDay map[string]float64 `json:"score"`
-	Debug       map[string]int     `json:"debug"`
+	Debug       map[string]int64   `json:"debug"`
 }
 
 type GroupEventsCountScore struct {

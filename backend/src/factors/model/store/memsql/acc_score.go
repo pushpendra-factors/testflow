@@ -2,6 +2,9 @@ package memsql
 
 import (
 	"encoding/json"
+
+	log "github.com/sirupsen/logrus"
+
 	"errors"
 	C "factors/config"
 	"factors/model/model"
@@ -11,7 +14,6 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) UpdateUserEventsCount(evdata []model.EventsCountScore) error {
@@ -243,7 +245,7 @@ func ComputeUserScoreOnCustomerId(db *gorm.DB, id string, projectId int64, event
 			return 0, err
 		}
 
-		account_score, counts_map, _, err = ComputeAccountScore(weights, counts_map, eventTs)
+		account_score, _, _, err = ComputeAccountScore(weights, counts_map, eventTs)
 		if err != nil {
 			return 0, err
 		}
@@ -368,6 +370,124 @@ func (store *MemSQL) GetAllUserScore(projectId int64, debug bool) ([]model.AllUs
 		}
 		r.UserId = userId
 		r.ScorePerDay = resultmap
+		result = append(result, r)
+	}
+	if rows.Err() != nil {
+		logCtx.WithError(err).Error("Error while fetching rows to compute all user scores")
+
+		return nil, rows.Err()
+	}
+
+	return result, nil
+}
+
+func (store *MemSQL) GetAllUserScoreOnDay(projectId int64, ts string, debug bool) ([]model.AllUsersScore, error) {
+	// get score of each account on current date
+
+	projectID := projectId
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	MAX_LIMIT := 10000
+	logCtx := log.WithFields(logFields)
+	db := C.GetServices().Db
+
+	weights, _ := store.GetWeightsByProject(projectId)
+	stmt := fmt.Sprintf("select id, json_extract_json(event_aggregate,?) from users where project_id= ? and json_length(event_aggregate)>=1  LIMIT %d", MAX_LIMIT)
+	rows, err := db.Raw(stmt, ts, projectId).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]model.AllUsersScore, 0)
+	for rows.Next() {
+		var eventsCountString string
+		countsMapDays := map[string]map[string]int64{}
+		resultmap := make(map[string]float64)
+		var userId string
+		var r model.AllUsersScore
+		err := rows.Scan(&userId, &eventsCountString)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get event counts for groups")
+		}
+
+		err = json.Unmarshal([]byte(eventsCountString), &countsMapDays)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to unmarshall json counts for users per day")
+		}
+
+		for day, countsPerday := range countsMapDays {
+			accountScore, _, _, err := ComputeAccountScore(*weights, countsPerday, day)
+			if err != nil {
+				return nil, err
+			}
+			if day != model.LAST_EVENT {
+				resultmap[day] = float64(accountScore)
+			}
+		}
+		r.UserId = userId
+		r.ScorePerDay = resultmap
+		result = append(result, r)
+	}
+	if rows.Err() != nil {
+		logCtx.WithError(err).Error("Error while fetching rows to compute all user scores")
+
+		return nil, rows.Err()
+	}
+
+	return result, nil
+}
+
+func (store *MemSQL) GetAllUserScoreLatest(projectId int64, debug bool) ([]model.AllUsersScore, error) {
+	// get score of each account on current date
+
+	projectID := projectId
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	MAX_LIMIT := 10000
+	logCtx := log.WithFields(logFields)
+	db := C.GetServices().Db
+
+	weights, _ := store.GetWeightsByProject(projectId)
+	stmt := fmt.Sprintf("select id, json_extract_json(event_aggregate,?) from users where  project_id= ? and json_length(event_aggregate)>=1  LIMIT %d", MAX_LIMIT)
+	rows, err := db.Raw(stmt, model.LAST_EVENT, projectId).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]model.AllUsersScore, 0)
+	for rows.Next() {
+		var eventsCountString string
+		resultmap := make(map[string]float64)
+		var userId string
+		var r model.AllUsersScore
+		var lastday model.LatestScore
+		err := rows.Scan(&userId, &eventsCountString)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get event counts for groups")
+		}
+
+		err = json.Unmarshal([]byte(eventsCountString), &lastday)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to unmarshall json counts for users per day")
+		}
+
+		day := GetDateOnlyFromTimestamp(lastday.Date)
+		countsPerDay := lastday.EventsCount
+		accountScore, _, _, err := ComputeAccountScore(*weights, countsPerDay, day)
+		if err != nil {
+			return nil, err
+		}
+		resultmap[day] = float64(accountScore)
+
+		r.ScorePerDay = resultmap
+		r.UserId = userId
+		r.Debug = countsPerDay
 		result = append(result, r)
 	}
 	if rows.Err() != nil {
