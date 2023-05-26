@@ -3288,6 +3288,7 @@ func extractionOfPropertiesWithOutEmailOrContact(engagement Engagements, engagem
 		engagementArray = keyArrEngagementEmail
 		metaDataArray = keyArrMetaEmail
 	}
+
 	for _, key := range engagementArray {
 		if key == "timestamp" {
 			vfloat, _ := util.GetPropertyValueAsFloat64(engagement.Engagement[key])
@@ -3298,11 +3299,18 @@ func extractionOfPropertiesWithOutEmailOrContact(engagement Engagements, engagem
 			properties[key] = engagement.Engagement[key]
 		}
 	}
+
 	for _, key := range metaDataArray {
 		if key == "startTime" || key == "endTime" {
-			properties[key] = (int64)((engagement.Metadata[key]).(float64) / 1000)
+			vfloat, _ := util.GetPropertyValueAsFloat64(engagement.Metadata[key])
+			properties[key] = (int64)(vfloat / 1000)
 		} else if key == "to" {
 			toInterface := engagement.Metadata[key]
+			if toInterface == nil {
+				logCtx.Error("No to in engagement metadata")
+				continue
+			}
+
 			interfaceArray, isConvert := toInterface.([]interface{})
 			if !isConvert {
 				logCtx.Error("cannot convert interface to interface array")
@@ -3316,13 +3324,18 @@ func extractionOfPropertiesWithOutEmailOrContact(engagement Engagements, engagem
 
 			toMap, isConvert := interfaceArray[0].(map[string]interface{})
 			if !isConvert {
-				logCtx.Error("cannot convert interface to map")
+				logCtx.Error("cannot convert interface to toMap")
 				continue
 			}
 			properties[key] = toMap["email"]
 		} else if key == "from" {
-			toInterface := engagement.Metadata[key]
-			fromMap, isConvert := toInterface.(map[string]interface{})
+			fromInterface := engagement.Metadata[key]
+			if fromInterface == nil {
+				logCtx.Error("No from in engagement metadata")
+				continue
+			}
+
+			fromMap, isConvert := fromInterface.(map[string]interface{})
 			if !isConvert {
 				logCtx.Error("cannot convert interface to fromMap")
 				continue
