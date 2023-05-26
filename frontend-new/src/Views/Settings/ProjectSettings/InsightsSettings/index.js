@@ -84,7 +84,7 @@ const InsightsSettings = ({
   }, [currentProjectSettings, activeProject]);
 
   return (
-    <div className={'fa-container mt-32 mb-12 min-h-screen'}>
+    <div className={'fa-container'}>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={20}>
           <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0 ml-2'}>Build WI/Explain/Path Analysis</Text>

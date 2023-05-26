@@ -3390,7 +3390,7 @@ func GetTLDFromDomainName(domainName string) string {
 	return ""
 }
 
-func GetDomainGroupDomainName(domainName string) string {
+func GetDomainGroupDomainName(projectID int64, domainName string) string {
 
 	domainName = strings.ToLower(domainName)
 	domainName = strings.TrimPrefix(domainName, "http://")
@@ -3403,7 +3403,7 @@ func GetDomainGroupDomainName(domainName string) string {
 
 	tld := GetTLDFromDomainName(domainName)
 	if tld == "" { // if no match found log and return the domain name
-		log.WithField("domain_name", domainName).Error("Failed to get top level domain from domain name. Using raw domain name.")
+		log.WithFields(log.Fields{"domain_name": domainName, "project_id": projectID}).Error("Failed to get top level domain from domain name. Using raw domain name.")
 		return domainName
 	}
 

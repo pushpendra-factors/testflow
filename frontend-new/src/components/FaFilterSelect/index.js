@@ -51,7 +51,8 @@ const FaFilterSelect = ({
   dropdownPlacement,
   dropdownMaxHeight,
   uploadList,
-  showInList = false
+  showInList = false,
+  minEntriesPerGroup
 }) => {
   const [propState, setPropState] = useState({
     icon: '',
@@ -339,8 +340,9 @@ const FaFilterSelect = ({
           <div className={styles.filter__event_selector}>
             <GroupSelect2
               groupedProperties={propOpts}
+              minEntriesPerGroup={minEntriesPerGroup}
               placeholder='Select Property'
-              optionClick={(group, val) => propSelect([...val, group])}
+              optionClick={(_, val, __, icon) => propSelect([...val, icon])}
               onClickOutside={() => setPropSelectOpen(false)}
               placement={dropdownPlacement}
               height={dropdownMaxHeight}
@@ -374,10 +376,7 @@ const FaFilterSelect = ({
         {operSelectOpen && (
           <FaSelect
             options={operatorOpts[propState.type]
-              .filter((op) => {
-                // Only include the operator if showInList is true or it's not 'inList'
-                return showInList || op !== OPERATORS['inList'];
-              })
+              .filter((op) => showInList || (op !== OPERATORS['inList'] && op !== OPERATORS['notInList']))
               .map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
@@ -946,12 +945,16 @@ const FaFilterSelect = ({
       operatorState !== OPERATORS['isKnown'] &&
       operatorState !== OPERATORS['isUnknown'] &&
       operatorState !== OPERATORS['inList'] &&
+      operatorState !== OPERATORS['notInList'] &&
       operatorState?.[0] !== OPERATORS['isKnown'] &&
       operatorState?.[0] !== OPERATORS['isUnknown'] &&
-      operatorState?.[0] !== OPERATORS['inList']
+      operatorState?.[0] !== OPERATORS['inList'] &&
+      operatorState?.[0] !== OPERATORS['notInList']
         ? renderValuesSelector()
         : operatorState === OPERATORS['inList'] ||
-          operatorState?.[0] === OPERATORS['inList']
+          operatorState?.[0] === OPERATORS['inList'] ||
+          operatorState !== OPERATORS['notInList'] ||
+          operatorState?.[0] !== OPERATORS['notInList']
         ? renderCsvUpload()
         : null}
     </div>

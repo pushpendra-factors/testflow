@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useReducer } from 'react';
+import cx from 'classnames';
 import { Button, Divider, notification, Spin, Tooltip } from 'antd';
 import { Link, useHistory } from 'react-router-dom';
 import { Text, SVG } from 'Components/factorsComponents';
@@ -458,7 +459,7 @@ const SixSignalReport = ({
         />
       )}
 
-      <div className={`${isLoggedIn ? 'px-20' : 'px-24'} pt-16 mt-12`}>
+      <div className={cx({ 'px-24 pt-16 mt-12': !isLoggedIn })}>
         <div className='flex justify-between align-middle'>
           <div className='flex align-middle gap-6'>
             <div className={style.mixChartContainer}>

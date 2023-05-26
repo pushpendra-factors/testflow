@@ -23,6 +23,8 @@ export const granularityOptions = [
   'Monthly'
 ];
 
+export const TIMELINE_VIEW_OPTIONS = ['timeline', 'birdview']
+
 export const groups = {
   Timestamp: (item) =>
     MomentTz(item.timestamp * 1000).format('DD MMM YYYY, hh:mm:ss A'),

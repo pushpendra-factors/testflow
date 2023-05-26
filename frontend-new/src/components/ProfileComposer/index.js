@@ -9,7 +9,6 @@ import GroupBlock from './GroupBlock';
 import { QUERY_TYPE_PROFILE } from '../../utils/constants';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
 import {
-  fetchEventNames,
   getUserProperties,
   getGroupProperties
 } from 'Reducers/coreQuery/middleware';
@@ -27,7 +26,6 @@ function ProfileComposer({
   eventChange,
   queryType,
   fetchGroups,
-  fetchEventNames,
   getUserProperties,
   getGroupProperties,
   activeProject,
@@ -46,7 +44,7 @@ function ProfileComposer({
 
   useEffect(() => {
     fetchGroups(activeProject?.id);
-  }, [activeProject]);
+  }, [activeProject?.id]);
 
   const groupsList = useMemo(() => {
     let groups = [['Users', 'users']];
@@ -58,13 +56,19 @@ function ProfileComposer({
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
-      fetchEventNames(activeProject.id);
       getUserProperties(activeProject.id, queryType);
     }
-  }, [activeProject, fetchEventNames]);
+  }, [activeProject.id]);
+
+  useEffect(() => {
+    if (queryOptions.group_analysis === 'users') return;
+    getGroupProperties(activeProject.id, queryOptions.group_analysis);
+  }, [activeProject.id, queryOptions.group_analysis]);
 
   const setGroupAnalysis = (group) => {
-    getGroupProperties(activeProject.id, group);
+    if (group !== 'users') {
+      getGroupProperties(activeProject.id, group);
+    }
     const opts = Object.assign({}, queryOptions);
     opts.group_analysis = group;
     opts.globalFilters = [];
@@ -87,8 +91,10 @@ function ProfileComposer({
   };
 
   const onChange = (value) => {
-    setGroupAnalysis(value);
-    resetLabel(value);
+    if (value !== queryOptions.group_analysis) {
+      setGroupAnalysis(value);
+      resetLabel(value);
+    }
     setDDVisible(false);
   };
 
@@ -395,7 +401,6 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       fetchGroups,
-      fetchEventNames,
       getUserProperties,
       getGroupProperties
     },

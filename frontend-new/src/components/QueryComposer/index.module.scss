@@ -51,19 +51,19 @@
             display: flex;
             flex-direction: column;
         }
-            
+
     }
 
 }
 
-.composer_footer { 
-        display: flex;
-        justify-content: space-between;
-        padding: 32px 0px;
+.composer_footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 32px 0px;
 
 }
 
-.composer_footer_right { 
+.composer_footer_right {
     @extend .composer_footer;
     justify-content: flex-end;
 
@@ -77,24 +77,32 @@
 .toplevel_select {
     padding: 0;
     position: relative;
-  
+
     &_button {
-      padding: 0;
-  
-      &:hover,
-      &:focus {
-        background: #fff !important;
-      }
+        padding: 0;
+
+        &:hover,
+        &:focus {
+            background: #fff !important;
+        }
     }
-  
+
     &_dropdown {
-      top: 0;
-      &_menu {
-        top: 32px;
-      }
-  
-      .ant-select-selector {
-        border-radius: 12px;
-      }
+        top: 0;
+
+        &_menu {
+            top: 32px;
+        }
+
+        .ant-select-selector {
+            border-radius: 12px;
+        }
     }
-  }
+}
+
+.criteria {
+    position: relative;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}

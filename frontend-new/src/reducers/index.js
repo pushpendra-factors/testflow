@@ -20,6 +20,8 @@ import attributionReducer from '../features/attribution/state/reducer';
 import globalSearch from './globalSearch';
 import allRoutes from './allRoutes';
 import onBoardFlow from './onBoardFlow';
+import accountProfilesViewReducer from './accountProfilesView';
+import userProfilesViewReducer from './userProfilesView';
 
 const rootReducer = combineReducers({
   global: GlobalReducer,
@@ -42,7 +44,9 @@ const rootReducer = combineReducers({
   attributionDashboard: attributionReducer,
   globalSearch: globalSearch,
   allRoutes: allRoutes,
-  onBoardFlow: onBoardFlow
+  onBoardFlow: onBoardFlow,
+  accountProfilesView: accountProfilesViewReducer,
+  userProfilesView: userProfilesViewReducer
 });
 
 export default rootReducer;

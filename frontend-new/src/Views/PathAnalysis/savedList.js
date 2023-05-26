@@ -109,12 +109,16 @@ const SavedGoals = ({
       title: 'Date',
       dataIndex: 'created_at',
       key: 'created_at',
+      defaultSortOrder: 'descend',
+      sorter: (a, b) => { 
+        return moment(a?.created_at).unix() - moment(b?.created_at).unix()
+      },
       render: (date) => <Text type={'title'} level={7} extraClass={'m-0'}>{moment(date).format('MMM DD, YYYY')}</Text>
     },
     {
       title: '',
       dataIndex: 'data',
-      key: 'data',
+      key: 'data', 
       render: (values) => (
         <Dropdown overlay={() => menu(values)} trigger={['hover']}>
           <Button type="text" icon={<MoreOutlined />} />

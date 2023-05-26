@@ -6349,23 +6349,1114 @@ func TestHubspotCompanyV3(t *testing.T) {
 
 	createdateTimestamp, err = U.GetPropertyValueAsFloat64((*userProperties)["$hubspot_company_createdate"])
 	assert.Nil(t, err)
-	createdateInt64Timestamp, err := model.GetTimestampFromPropertiesByKeyV3(companyV3.Properties["createdate"])
+	createdateInt64Timestamp, err := model.GetTimestampForV3Records(companyV3.Properties["createdate"])
 	assert.Nil(t, err)
 	assert.Equal(t, getEventTimestamp(createdateInt64Timestamp), int64(createdateTimestamp))
 
 	lastmodifieddateTimestamp, err = U.GetPropertyValueAsFloat64((*userProperties)["$hubspot_company_hs_lastmodifieddate"])
 	assert.Nil(t, err)
-	lastmodifieddateInt64Timestamp, err := model.GetTimestampFromPropertiesByKeyV3(companyV3.Properties["hs_lastmodifieddate"])
+	lastmodifieddateInt64Timestamp, err := model.GetTimestampForV3Records(companyV3.Properties["hs_lastmodifieddate"])
 	assert.Nil(t, err)
 	assert.Equal(t, getEventTimestamp(lastmodifieddateInt64Timestamp), int64(lastmodifieddateTimestamp))
 
 	demoBookedDateTimestamp, err = U.GetPropertyValueAsFloat64((*userProperties)["$hubspot_company_demo_booked_on"])
 	assert.Nil(t, err)
-	demoBookedDateInt64Timestamp, err := model.GetTimestampFromPropertiesByKeyV3(companyV3.Properties["demo_booked_on"])
+	demoBookedDateInt64Timestamp, err := model.GetTimestampForV3Records(companyV3.Properties["demo_booked_on"])
 	assert.Nil(t, err)
 	assert.Equal(t, getEventTimestamp(demoBookedDateInt64Timestamp), int64(demoBookedDateTimestamp))
 
 	timestamp, err = U.GetPropertyValueAsFloat64((*userProperties)[U.UP_JOIN_TIME])
 	assert.Nil(t, err)
 	assert.Equal(t, companyV3CreatedDate.Unix(), int64(timestamp))
+}
+
+func TestHubspotEngagementCallV3(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	createdAt := time.Now().UTC().AddDate(0, 0, -1)
+	updatedDate := createdAt.AddDate(0, 0, 1)
+
+	email := getRandomEmail()
+	contact := IntHubspot.Contact{
+		Vid: 1,
+		Properties: map[string]IntHubspot.Property{
+			"createdate":       {Value: fmt.Sprintf("%d", createdAt.Unix()*1000)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", updatedDate.Unix()*1000)},
+			"lifecyclestage":   {Value: "lead"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: email,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err := json.Marshal(contact)
+	assert.Nil(t, err)
+	contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdAt.Unix()*1000, hubspotDocument.Timestamp)
+
+	engagementCreatedDate := createdAt.AddDate(0, 0, -1)
+	engagementUpdatedDate := engagementCreatedDate.AddDate(0, 0, 1)
+	engagementTimestamp := (engagementCreatedDate.Unix() + 3600*5)
+
+	// Old Payload
+	engagement := IntHubspot.Engagements{
+		Engagement: map[string]interface{}{
+			"id":           1,
+			"timestamp":    engagementTimestamp * 1000,
+			"type":         "CALL",
+			"source":       "API",
+			"activityType": "Demo",
+			"portalId":     1,
+			"active":       true,
+			"createdAt":    engagementCreatedDate.Unix() * 1000,
+			"lastUpdated":  engagementUpdatedDate.Unix() * 1000,
+		},
+		Associations: map[string][]interface{}{
+			"contactIds": []interface{}{
+				1,
+			},
+		},
+		Metadata: map[string]interface{}{
+			"title":                "Sample Call",
+			"status":               "COMPLETED",
+			"disposition":          U.RandomLowerAphaNumString(36),
+			"disposition_label":    "Connected",
+			"durationMilliseconds": 20261715,
+		},
+	}
+
+	enJSON, err = json.Marshal(engagement)
+	assert.Nil(t, err)
+	engagementPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &engagementPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, engagementCreatedDate.Unix()*1000, hubspotDocument.Timestamp)
+
+	enrichStatus, failure := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	assert.Equal(t, false, failure)
+	for i := range enrichStatus {
+		assert.Equal(t, project.ID, enrichStatus[i].ProjectId)
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameEngagement {
+			assert.Equal(t, 3, enrichStatus[i].Count)
+		}
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameContact {
+			assert.Equal(t, 3, enrichStatus[i].Count)
+		}
+	}
+
+	eventName, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, eventName)
+
+	events, status := store.GetStore().GetEventsByEventNameIDANDTimeRange(project.ID, eventName.ID, engagementCreatedDate.Unix(), engagementCreatedDate.Unix()+1000)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, events)
+	assert.Equal(t, 1, len(events))
+
+	eventProperties, err := U.DecodePostgresJsonbAsPropertiesMap(&events[0].Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, eventProperties)
+
+	assert.Equal(t, "1", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_id"]))
+	assert.Equal(t, float64(engagementTimestamp), (*eventProperties)["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "CALL", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_type"]))
+	assert.Equal(t, "API", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_source"]))
+	assert.Equal(t, "Demo", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_activitytype"]))
+	assert.Equal(t, float64(20261715), (*eventProperties)["$hubspot_engagement_durationmilliseconds"])
+	assert.Equal(t, "Connected", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_disposition_label"]))
+	assert.Equal(t, "COMPLETED", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_status"]))
+	assert.Equal(t, "Sample Call", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_title"]))
+	assert.Equal(t, U.GetPropertyValueAsString(engagement.Metadata["disposition"]), U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_disposition"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_email"]))
+	assert.Equal(t, "t", U.GetPropertyValueAsString((*eventProperties)[U.EP_SKIP_SESSION]))
+	assert.Equal(t, float64(engagementCreatedDate.Unix()), (*eventProperties)[U.EP_TIMESTAMP])
+
+	userProperties, err := U.DecodePostgresJsonbAsPropertiesMap(events[0].UserProperties)
+	assert.Nil(t, err)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$email"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$user_id"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_email"]))
+	assert.Equal(t, "123-45", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lead_guid"]))
+	assert.Equal(t, "lead", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lifecyclestage"]))
+	createdateInDocTimestamp, err := U.GetPropertyValueAsFloat64(contact.Properties["createdate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, createdateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_createdate"])
+	lastmodifieddateInDocTimestamp, err := U.GetPropertyValueAsFloat64(contact.Properties["lastmodifieddate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, lastmodifieddateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_lastmodifieddate"])
+	assert.Equal(t, float64(createdAt.Unix()), (*userProperties)[U.UP_JOIN_TIME])
+
+	// New Payload
+	engagementV3CreatedDate := createdAt
+	engagementV3UpdatedDate := engagementV3CreatedDate.AddDate(0, 0, 1)
+	engagementV3Timestamp := (engagementV3CreatedDate.Unix() + 3600*5)
+
+	engagementV3 := IntHubspot.EngagementsV3{
+		Id: "2",
+		Properties: map[string]string{
+			"hs_createdate":             time.Unix(engagementV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":       time.Unix(engagementV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_call_body":              U.RandomString(20),
+			"hs_activity_type":          "Sample",
+			"hs_call_duration":          "3800000",
+			"hs_call_from_number":       U.RandomNumericString(10),
+			"hs_call_status":            "COMPLETED",
+			"hs_call_title":             "Discovery call",
+			"hs_call_to_number":         U.RandomNumericString(10),
+			"hs_timestamp":              time.Unix(engagementV3Timestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hubspot_owner_id":          "11349275740",
+			"type":                      "CALL",
+			"hs_call_disposition":       U.RandomLowerAphaNumString(36),
+			"hs_call_disposition_label": "Connected",
+			"hs_call_source":            "API",
+		},
+		Associations: []map[string]interface{}{
+			{
+				"to": map[string]interface{}{
+					"id": 1,
+				},
+				"types": []map[string]interface{}{
+					{
+						"associationCategory": "HUBSPOT_DEFINED",
+						"associationTypeId":   194,
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err = json.Marshal(engagementV3)
+	assert.Nil(t, err)
+	engagementPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &engagementPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, engagementV3CreatedDate.Unix()*1000, hubspotDocument.Timestamp)
+
+	enrichStatus, failure = IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	assert.Equal(t, false, failure)
+	for i := range enrichStatus {
+		assert.Equal(t, project.ID, enrichStatus[i].ProjectId)
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameEngagement {
+			assert.Equal(t, 3, enrichStatus[i].Count)
+		}
+	}
+
+	eventName, status = store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, eventName)
+
+	events, status = store.GetStore().GetEventsByEventNameIDANDTimeRange(project.ID, eventName.ID, engagementV3CreatedDate.Unix(), engagementV3CreatedDate.Unix()+1000)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, events)
+	assert.Equal(t, 1, len(events))
+
+	eventProperties, err = U.DecodePostgresJsonbAsPropertiesMap(&events[0].Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, eventProperties)
+
+	assert.Equal(t, "2", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_id"]))
+	engagementV3TimestampInFloat, err := U.GetPropertyValueAsFloat64((*eventProperties)["$hubspot_engagement_timestamp"])
+	assert.Nil(t, err)
+	assert.Equal(t, engagementV3Timestamp, int64(engagementV3TimestampInFloat))
+	assert.Equal(t, "CALL", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_type"]))
+	assert.Equal(t, "API", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_source"]))
+	assert.Equal(t, "Sample", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_activitytype"]))
+	assert.Equal(t, float64(3800000), (*eventProperties)["$hubspot_engagement_durationmilliseconds"])
+	assert.Equal(t, "Connected", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_disposition_label"]))
+	assert.Equal(t, "COMPLETED", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_status"]))
+	assert.Equal(t, "Discovery call", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_title"]))
+	assert.Equal(t, engagementV3.Properties["hs_call_disposition"], U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_disposition"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_email"]))
+	assert.Equal(t, "t", U.GetPropertyValueAsString((*eventProperties)[U.EP_SKIP_SESSION]))
+	assert.Equal(t, float64(createdAt.Unix()), (*eventProperties)[U.EP_TIMESTAMP])
+
+	userProperties, err = U.DecodePostgresJsonbAsPropertiesMap(events[0].UserProperties)
+	assert.Nil(t, err)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$email"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$user_id"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_email"]))
+	assert.Equal(t, "123-45", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lead_guid"]))
+	assert.Equal(t, "lead", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lifecyclestage"]))
+	createdateInDocTimestamp, err = U.GetPropertyValueAsFloat64(contact.Properties["createdate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, createdateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_createdate"])
+	lastmodifieddateInDocTimestamp, err = U.GetPropertyValueAsFloat64(contact.Properties["lastmodifieddate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, lastmodifieddateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_lastmodifieddate"])
+	assert.Equal(t, float64(createdAt.Unix()), (*userProperties)[U.UP_JOIN_TIME])
+}
+
+func TestHubspotEngagementMeetingV3(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	createdAt := time.Now().UTC().AddDate(0, 0, -1)
+	updatedDate := createdAt.AddDate(0, 0, 1)
+
+	email := getRandomEmail()
+	contact := IntHubspot.Contact{
+		Vid: 1,
+		Properties: map[string]IntHubspot.Property{
+			"createdate":       {Value: fmt.Sprintf("%d", createdAt.Unix()*1000)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", updatedDate.Unix()*1000)},
+			"lifecyclestage":   {Value: "lead"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: email,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err := json.Marshal(contact)
+	assert.Nil(t, err)
+	contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdAt.Unix()*1000, hubspotDocument.Timestamp)
+
+	engagementCreatedDate := createdAt.AddDate(0, 0, -1)
+	engagementUpdatedDate := engagementCreatedDate.AddDate(0, 0, 1)
+	engagementTimestamp := (engagementCreatedDate.Unix() + 3600*5)
+
+	meetingStartTimestamp := engagementTimestamp
+	meetingEndTimestamp := engagementTimestamp + (30 * 60)
+
+	// Old Payload
+	engagement := IntHubspot.Engagements{
+		Engagement: map[string]interface{}{
+			"id":           1,
+			"timestamp":    engagementTimestamp * 1000,
+			"type":         "MEETING",
+			"source":       "CRM_UI",
+			"activityType": "Sample Intro Meeting",
+			"portalId":     1,
+			"active":       true,
+			"createdAt":    engagementCreatedDate.Unix() * 1000,
+			"lastUpdated":  engagementUpdatedDate.Unix() * 1000,
+		},
+		Associations: map[string][]interface{}{
+			"contactIds": []interface{}{
+				1,
+			},
+		},
+		Metadata: map[string]interface{}{
+			"title":          "Test Meeting",
+			"meetingOutcome": "SCHEDULED",
+			"startTime":      meetingStartTimestamp * 1000,
+			"endTime":        meetingEndTimestamp * 1000,
+		},
+	}
+
+	enJSON, err = json.Marshal(engagement)
+	assert.Nil(t, err)
+	engagementPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &engagementPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, engagementCreatedDate.Unix()*1000, hubspotDocument.Timestamp)
+
+	enrichStatus, failure := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	assert.Equal(t, false, failure)
+	for i := range enrichStatus {
+		assert.Equal(t, project.ID, enrichStatus[i].ProjectId)
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameEngagement {
+			assert.Equal(t, 3, enrichStatus[i].Count)
+		}
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameContact {
+			assert.Equal(t, 3, enrichStatus[i].Count)
+		}
+	}
+
+	eventName, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, eventName)
+
+	events, status := store.GetStore().GetEventsByEventNameIDANDTimeRange(project.ID, eventName.ID, engagementCreatedDate.Unix(), engagementCreatedDate.Unix()+1000)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, events)
+	assert.Equal(t, 1, len(events))
+
+	eventProperties, err := U.DecodePostgresJsonbAsPropertiesMap(&events[0].Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, eventProperties)
+
+	assert.Equal(t, "1", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_id"]))
+	assert.Equal(t, float64(engagementTimestamp), (*eventProperties)["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "MEETING", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_type"]))
+	assert.Equal(t, "CRM_UI", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_source"]))
+	assert.Equal(t, "true", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_active"]))
+	assert.Equal(t, "Test Meeting", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_title"]))
+	assert.Equal(t, "SCHEDULED", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_meetingoutcome"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_email"]))
+	assert.Equal(t, float64(meetingStartTimestamp), (*eventProperties)["$hubspot_engagement_starttime"])
+	assert.Equal(t, float64(meetingEndTimestamp), (*eventProperties)["$hubspot_engagement_endtime"])
+	assert.Equal(t, "t", U.GetPropertyValueAsString((*eventProperties)[U.EP_SKIP_SESSION]))
+	assert.Equal(t, float64(engagementCreatedDate.Unix()), (*eventProperties)[U.EP_TIMESTAMP])
+
+	userProperties, err := U.DecodePostgresJsonbAsPropertiesMap(events[0].UserProperties)
+	assert.Nil(t, err)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$email"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$user_id"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_email"]))
+	assert.Equal(t, "123-45", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lead_guid"]))
+	assert.Equal(t, "lead", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lifecyclestage"]))
+	createdateInDocTimestamp, err := U.GetPropertyValueAsFloat64(contact.Properties["createdate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, createdateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_createdate"])
+	lastmodifieddateInDocTimestamp, err := U.GetPropertyValueAsFloat64(contact.Properties["lastmodifieddate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, lastmodifieddateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_lastmodifieddate"])
+	assert.Equal(t, float64(createdAt.Unix()), (*userProperties)[U.UP_JOIN_TIME])
+
+	// New Payload
+	engagementV3CreatedDate := createdAt
+	engagementV3UpdatedDate := engagementV3CreatedDate.AddDate(0, 0, 1)
+	engagementV3Timestamp := (engagementV3CreatedDate.Unix() + 3600*5)
+
+	meetingV3StartTimestamp := engagementV3Timestamp
+	meetingV3EndTimestamp := engagementV3Timestamp + (30 * 60)
+
+	engagementV3 := IntHubspot.EngagementsV3{
+		Id: "2",
+		Properties: map[string]string{
+			"hs_createdate":         time.Unix(engagementV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":   time.Unix(engagementV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_activity_type":      "Sample Intro Meeting",
+			"hs_meeting_title":      "Test Meeting",
+			"hs_timestamp":          time.Unix(engagementV3Timestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_meeting_active":     "true",
+			"type":                  "MEETING",
+			"hs_meeting_outcome":    "SCHEDULED",
+			"hs_meeting_source":     "CRM_UI",
+			"hs_meeting_start_time": time.Unix(meetingV3StartTimestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_meeting_end_time":   time.Unix(meetingV3EndTimestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
+		},
+		Associations: []map[string]interface{}{
+			{
+				"to": map[string]interface{}{
+					"id": 1,
+				},
+				"types": []map[string]interface{}{
+					{
+						"associationCategory": "HUBSPOT_DEFINED",
+						"associationTypeId":   194,
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err = json.Marshal(engagementV3)
+	assert.Nil(t, err)
+	engagementPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &engagementPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, engagementV3CreatedDate.Unix()*1000, hubspotDocument.Timestamp)
+
+	enrichStatus, failure = IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	assert.Equal(t, false, failure)
+	for i := range enrichStatus {
+		assert.Equal(t, project.ID, enrichStatus[i].ProjectId)
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameEngagement {
+			assert.Equal(t, 3, enrichStatus[i].Count)
+		}
+	}
+
+	eventName, status = store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, eventName)
+
+	events, status = store.GetStore().GetEventsByEventNameIDANDTimeRange(project.ID, eventName.ID, engagementV3CreatedDate.Unix(), engagementV3CreatedDate.Unix()+1000)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, events)
+	assert.Equal(t, 1, len(events))
+
+	eventProperties, err = U.DecodePostgresJsonbAsPropertiesMap(&events[0].Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, eventProperties)
+
+	assert.Equal(t, "2", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_id"]))
+	engagementV3TimestampInFloat, err := U.GetPropertyValueAsFloat64((*eventProperties)["$hubspot_engagement_timestamp"])
+	assert.Nil(t, err)
+	assert.Equal(t, engagementV3Timestamp, int64(engagementV3TimestampInFloat))
+	assert.Equal(t, "MEETING", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_type"]))
+	assert.Equal(t, "CRM_UI", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_source"]))
+	assert.Equal(t, "true", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_active"]))
+	assert.Equal(t, "Test Meeting", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_title"]))
+	assert.Equal(t, "SCHEDULED", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_meetingoutcome"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_email"]))
+	assert.Equal(t, float64(meetingV3StartTimestamp), (*eventProperties)["$hubspot_engagement_starttime"])
+	assert.Equal(t, float64(meetingV3EndTimestamp), (*eventProperties)["$hubspot_engagement_endtime"])
+	assert.Equal(t, "t", U.GetPropertyValueAsString((*eventProperties)[U.EP_SKIP_SESSION]))
+	assert.Equal(t, float64(engagementV3CreatedDate.Unix()), (*eventProperties)[U.EP_TIMESTAMP])
+
+	userProperties, err = U.DecodePostgresJsonbAsPropertiesMap(events[0].UserProperties)
+	assert.Nil(t, err)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$email"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$user_id"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_email"]))
+	assert.Equal(t, "123-45", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lead_guid"]))
+	assert.Equal(t, "lead", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lifecyclestage"]))
+	createdateInDocTimestamp, err = U.GetPropertyValueAsFloat64(contact.Properties["createdate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, createdateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_createdate"])
+	lastmodifieddateInDocTimestamp, err = U.GetPropertyValueAsFloat64(contact.Properties["lastmodifieddate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, lastmodifieddateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_lastmodifieddate"])
+	assert.Equal(t, float64(createdAt.Unix()), (*userProperties)[U.UP_JOIN_TIME])
+}
+
+func TestHubspotEngagementEmailV3(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	createdAt := time.Now().UTC().AddDate(0, 0, -1)
+	updatedDate := createdAt.AddDate(0, 0, 1)
+
+	fromEmail := getRandomEmail()
+	contact1 := IntHubspot.Contact{
+		Vid: 1,
+		Properties: map[string]IntHubspot.Property{
+			"createdate":       {Value: fmt.Sprintf("%d", createdAt.Unix()*1000)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", updatedDate.Unix()*1000)},
+			"lifecyclestage":   {Value: "lead"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: fromEmail,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err := json.Marshal(contact1)
+	assert.Nil(t, err)
+	contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdAt.Unix()*1000, hubspotDocument.Timestamp)
+
+	toEmail := getRandomEmail()
+	contact2 := IntHubspot.Contact{
+		Vid: 2,
+		Properties: map[string]IntHubspot.Property{
+			"createdate":       {Value: fmt.Sprintf("%d", createdAt.Unix()*1000)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", updatedDate.Unix()*1000)},
+			"lifecyclestage":   {Value: "lead"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: toEmail,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "678-90",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err = json.Marshal(contact2)
+	assert.Nil(t, err)
+	contactPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdAt.Unix()*1000, hubspotDocument.Timestamp)
+
+	engagementCreatedDate := createdAt.AddDate(0, 0, -1)
+	engagementUpdatedDate := engagementCreatedDate.AddDate(0, 0, 1)
+	engagementTimestamp := (engagementCreatedDate.Unix() + 3600*5)
+
+	// Old Payload
+	engagement := IntHubspot.Engagements{
+		Engagement: map[string]interface{}{
+			"id":          1,
+			"timestamp":   engagementTimestamp * 1000,
+			"type":        "EMAIL",
+			"source":      "EMAIL_INTEGRATION",
+			"portalId":    1,
+			"active":      true,
+			"createdAt":   engagementCreatedDate.Unix() * 1000,
+			"lastUpdated": engagementUpdatedDate.Unix() * 1000,
+			"ownerId":     10,
+			"teamId":      12,
+		},
+		Associations: map[string][]interface{}{
+			"contactIds": []interface{}{
+				1,
+			},
+		},
+		Metadata: map[string]interface{}{
+			"from": map[string]interface{}{
+				"contactId": 1,
+				"email":     fromEmail,
+			},
+			"to": []map[string]interface{}{
+				{
+					"contactId": 2,
+					"email":     toEmail,
+				},
+			},
+			"sentVia": "GMAIL",
+			"subject": "Sample Email",
+		},
+	}
+
+	enJSON, err = json.Marshal(engagement)
+	assert.Nil(t, err)
+	engagementPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &engagementPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, engagementCreatedDate.Unix()*1000, hubspotDocument.Timestamp)
+
+	enrichStatus, failure := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	assert.Equal(t, false, failure)
+	for i := range enrichStatus {
+		assert.Equal(t, project.ID, enrichStatus[i].ProjectId)
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameEngagement {
+			assert.Equal(t, 3, enrichStatus[i].Count)
+		}
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameContact {
+			assert.Equal(t, 6, enrichStatus[i].Count)
+		}
+	}
+
+	eventName, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, eventName)
+
+	events, status := store.GetStore().GetEventsByEventNameIDANDTimeRange(project.ID, eventName.ID, engagementCreatedDate.Unix(), engagementCreatedDate.Unix()+1000)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, events)
+	assert.Equal(t, 1, len(events))
+
+	eventProperties, err := U.DecodePostgresJsonbAsPropertiesMap(&events[0].Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, eventProperties)
+
+	assert.Equal(t, "1", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_id"]))
+	assert.Equal(t, float64(engagementTimestamp), (*eventProperties)["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "EMAIL", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_type"]))
+	assert.Equal(t, "EMAIL_INTEGRATION", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_source"]))
+	assert.Equal(t, "Sample Email", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_subject"]))
+	assert.Equal(t, "true", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_active"]))
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_email"]))
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_from"]))
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_to"]))
+	assert.Equal(t, "GMAIL", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_sentvia"]))
+	assert.Equal(t, float64(engagementCreatedDate.Unix()*1000), (*eventProperties)["$hubspot_engagement_createdat"])
+	assert.Equal(t, float64(engagementUpdatedDate.Unix()*1000), (*eventProperties)["$hubspot_engagement_lastupdated"])
+	assert.Equal(t, "10", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_ownerid"]))
+	assert.Equal(t, "12", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_teamid"]))
+	assert.Equal(t, "t", U.GetPropertyValueAsString((*eventProperties)[U.EP_SKIP_SESSION]))
+	assert.Equal(t, float64(engagementCreatedDate.Unix()), (*eventProperties)[U.EP_TIMESTAMP])
+
+	userProperties, err := U.DecodePostgresJsonbAsPropertiesMap(events[0].UserProperties)
+	assert.Nil(t, err)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*userProperties)["$email"]))
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*userProperties)["$user_id"]))
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_email"]))
+	assert.Equal(t, "678-90", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lead_guid"]))
+	assert.Equal(t, "lead", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lifecyclestage"]))
+	createdateInDocTimestamp, err := U.GetPropertyValueAsFloat64(contact1.Properties["createdate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, createdateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_createdate"])
+	lastmodifieddateInDocTimestamp, err := U.GetPropertyValueAsFloat64(contact1.Properties["lastmodifieddate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, lastmodifieddateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_lastmodifieddate"])
+	assert.Equal(t, float64(createdAt.Unix()), (*userProperties)[U.UP_JOIN_TIME])
+
+	// New Payload
+	engagementV3CreatedDate := createdAt
+	engagementV3UpdatedDate := engagementV3CreatedDate.AddDate(0, 0, 1)
+	engagementV3Timestamp := (engagementV3CreatedDate.Unix() + 3600*5)
+
+	engagementV3 := IntHubspot.EngagementsV3{
+		Id: "2",
+		Properties: map[string]string{
+			"hs_createdate":             time.Unix(engagementV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":       time.Unix(engagementV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_email_source":           "EMAIL_INTEGRATION",
+			"hs_email_direction":        "EMAIL",
+			"type":                      "EMAIL",
+			"hs_email_active":           "true",
+			"hs_timestamp":              time.Unix(engagementV3Timestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hubspot_owner_id":          "10",
+			"hs_email_team_id":          "12",
+			"hs_email_sender_email":     fromEmail,
+			"hs_email_sender_contactId": "1",
+			"hs_email_to_email":         toEmail,
+			"hs_email_to_contactId":     "2",
+			"hs_email_subject":          "Test Mail",
+			"hs_email_sent_via":         "GMAIL",
+		},
+		Associations: []map[string]interface{}{
+			{
+				"to": map[string]interface{}{
+					"id": 1,
+				},
+				"types": []map[string]interface{}{
+					{
+						"associationCategory": "HUBSPOT_DEFINED",
+						"associationTypeId":   194,
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err = json.Marshal(engagementV3)
+	assert.Nil(t, err)
+	engagementPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &engagementPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, engagementV3CreatedDate.Unix()*1000, hubspotDocument.Timestamp)
+
+	enrichStatus, failure = IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	assert.Equal(t, false, failure)
+	for i := range enrichStatus {
+		assert.Equal(t, project.ID, enrichStatus[i].ProjectId)
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameEngagement {
+			assert.Equal(t, 3, enrichStatus[i].Count)
+		}
+	}
+
+	eventName, status = store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, eventName)
+
+	events, status = store.GetStore().GetEventsByEventNameIDANDTimeRange(project.ID, eventName.ID, engagementV3CreatedDate.Unix(), engagementV3CreatedDate.Unix()+1000)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, events)
+	assert.Equal(t, 1, len(events))
+
+	eventProperties, err = U.DecodePostgresJsonbAsPropertiesMap(&events[0].Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, eventProperties)
+
+	assert.Equal(t, "2", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_id"]))
+	assert.Equal(t, float64(engagementV3Timestamp), (*eventProperties)["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "EMAIL", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_type"]))
+	assert.Equal(t, "EMAIL_INTEGRATION", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_source"]))
+	assert.Equal(t, "Test Mail", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_subject"]))
+	assert.Equal(t, "true", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_active"]))
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_email"]))
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_from"]))
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_to"]))
+	assert.Equal(t, "GMAIL", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_sentvia"]))
+	assert.Equal(t, float64(engagementV3CreatedDate.Unix()*1000), (*eventProperties)["$hubspot_engagement_createdat"])
+	assert.Equal(t, float64(engagementV3UpdatedDate.Unix()*1000), (*eventProperties)["$hubspot_engagement_lastupdated"])
+	assert.Equal(t, "10", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_ownerid"]))
+	assert.Equal(t, "12", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_teamid"]))
+	assert.Equal(t, "t", U.GetPropertyValueAsString((*eventProperties)[U.EP_SKIP_SESSION]))
+	assert.Equal(t, float64(engagementV3CreatedDate.Unix()), (*eventProperties)[U.EP_TIMESTAMP])
+	assert.Equal(t, "t", U.GetPropertyValueAsString((*eventProperties)[U.EP_SKIP_SESSION]))
+	assert.Equal(t, float64(createdAt.Unix()), (*eventProperties)[U.EP_TIMESTAMP])
+
+	userProperties, err = U.DecodePostgresJsonbAsPropertiesMap(events[0].UserProperties)
+	assert.Nil(t, err)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*userProperties)["$email"]))
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*userProperties)["$user_id"]))
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_email"]))
+	assert.Equal(t, "678-90", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lead_guid"]))
+	assert.Equal(t, "lead", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lifecyclestage"]))
+	createdateInDocTimestamp, err = U.GetPropertyValueAsFloat64(contact1.Properties["createdate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, createdateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_createdate"])
+	lastmodifieddateInDocTimestamp, err = U.GetPropertyValueAsFloat64(contact1.Properties["lastmodifieddate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, lastmodifieddateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_lastmodifieddate"])
+	assert.Equal(t, float64(createdAt.Unix()), (*userProperties)[U.UP_JOIN_TIME])
+}
+
+func TestHubspotEngagementIncomingEmailV3(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	createdAt := time.Now().UTC().AddDate(0, 0, -1)
+	updatedDate := createdAt.AddDate(0, 0, 1)
+
+	fromEmail := getRandomEmail()
+	contact1 := IntHubspot.Contact{
+		Vid: 1,
+		Properties: map[string]IntHubspot.Property{
+			"createdate":       {Value: fmt.Sprintf("%d", createdAt.Unix()*1000)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", updatedDate.Unix()*1000)},
+			"lifecyclestage":   {Value: "lead"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: fromEmail,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err := json.Marshal(contact1)
+	assert.Nil(t, err)
+	contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdAt.Unix()*1000, hubspotDocument.Timestamp)
+
+	toEmail := getRandomEmail()
+	contact2 := IntHubspot.Contact{
+		Vid: 2,
+		Properties: map[string]IntHubspot.Property{
+			"createdate":       {Value: fmt.Sprintf("%d", createdAt.Unix()*1000)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", updatedDate.Unix()*1000)},
+			"lifecyclestage":   {Value: "lead"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: toEmail,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "678-90",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err = json.Marshal(contact2)
+	assert.Nil(t, err)
+	contactPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdAt.Unix()*1000, hubspotDocument.Timestamp)
+
+	engagementCreatedDate := createdAt.AddDate(0, 0, -1)
+	engagementUpdatedDate := engagementCreatedDate.AddDate(0, 0, 1)
+	engagementTimestamp := (engagementCreatedDate.Unix() + 3600*5)
+
+	// Old Payload
+	engagement := IntHubspot.Engagements{
+		Engagement: map[string]interface{}{
+			"id":          1,
+			"timestamp":   engagementTimestamp * 1000,
+			"type":        "INCOMING_EMAIL",
+			"source":      "EMAIL_INTEGRATION",
+			"portalId":    1,
+			"active":      true,
+			"createdAt":   engagementCreatedDate.Unix() * 1000,
+			"lastUpdated": engagementUpdatedDate.Unix() * 1000,
+			"ownerId":     10,
+			"teamId":      12,
+		},
+		Associations: map[string][]interface{}{
+			"contactIds": []interface{}{
+				1,
+			},
+		},
+		Metadata: map[string]interface{}{
+			"from": map[string]interface{}{
+				"contactId": 1,
+				"email":     fromEmail,
+			},
+			"to": []map[string]interface{}{
+				{
+					"contactId": 2,
+					"email":     toEmail,
+				},
+			},
+			"sentVia": "GMAIL",
+			"subject": "Sample Email",
+		},
+	}
+
+	enJSON, err = json.Marshal(engagement)
+	assert.Nil(t, err)
+	engagementPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &engagementPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, engagementCreatedDate.Unix()*1000, hubspotDocument.Timestamp)
+
+	enrichStatus, failure := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	assert.Equal(t, false, failure)
+	for i := range enrichStatus {
+		assert.Equal(t, project.ID, enrichStatus[i].ProjectId)
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameEngagement {
+			assert.Equal(t, 3, enrichStatus[i].Count)
+		}
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameContact {
+			assert.Equal(t, 6, enrichStatus[i].Count)
+		}
+	}
+
+	eventName, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, eventName)
+
+	events, status := store.GetStore().GetEventsByEventNameIDANDTimeRange(project.ID, eventName.ID, engagementCreatedDate.Unix(), engagementCreatedDate.Unix()+1000)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, events)
+	assert.Equal(t, 1, len(events))
+
+	eventProperties, err := U.DecodePostgresJsonbAsPropertiesMap(&events[0].Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, eventProperties)
+
+	assert.Equal(t, "1", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_id"]))
+	assert.Equal(t, float64(engagementTimestamp), (*eventProperties)["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "INCOMING_EMAIL", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_type"]))
+	assert.Equal(t, "EMAIL_INTEGRATION", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_source"]))
+	assert.Equal(t, "Sample Email", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_subject"]))
+	assert.Equal(t, "true", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_active"]))
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_email"]))
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_from"]))
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_to"]))
+	assert.Equal(t, "GMAIL", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_sentvia"]))
+	assert.Equal(t, float64(engagementCreatedDate.Unix()*1000), (*eventProperties)["$hubspot_engagement_createdat"])
+	assert.Equal(t, float64(engagementUpdatedDate.Unix()*1000), (*eventProperties)["$hubspot_engagement_lastupdated"])
+	assert.Equal(t, "10", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_ownerid"]))
+	assert.Equal(t, "12", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_teamid"]))
+	assert.Equal(t, "t", U.GetPropertyValueAsString((*eventProperties)[U.EP_SKIP_SESSION]))
+	assert.Equal(t, float64(engagementCreatedDate.Unix()), (*eventProperties)[U.EP_TIMESTAMP])
+
+	userProperties, err := U.DecodePostgresJsonbAsPropertiesMap(events[0].UserProperties)
+	assert.Nil(t, err)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*userProperties)["$email"]))
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*userProperties)["$user_id"]))
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_email"]))
+	assert.Equal(t, "123-45", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lead_guid"]))
+	assert.Equal(t, "lead", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lifecyclestage"]))
+	createdateInDocTimestamp, err := U.GetPropertyValueAsFloat64(contact2.Properties["createdate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, createdateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_createdate"])
+	lastmodifieddateInDocTimestamp, err := U.GetPropertyValueAsFloat64(contact2.Properties["lastmodifieddate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, lastmodifieddateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_lastmodifieddate"])
+	assert.Equal(t, float64(createdAt.Unix()), (*userProperties)[U.UP_JOIN_TIME])
+
+	// New Payload
+	engagementV3CreatedDate := createdAt
+	engagementV3UpdatedDate := engagementV3CreatedDate.AddDate(0, 0, 1)
+	engagementV3Timestamp := (engagementV3CreatedDate.Unix() + 3600*5)
+
+	engagementV3 := IntHubspot.EngagementsV3{
+		Id: "2",
+		Properties: map[string]string{
+			"hs_createdate":             time.Unix(engagementV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":       time.Unix(engagementV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_email_source":           "EMAIL_INTEGRATION",
+			"hs_email_direction":        "INCOMING_EMAIL",
+			"type":                      "INCOMING_EMAIL",
+			"hs_email_active":           "true",
+			"hs_timestamp":              time.Unix(engagementV3Timestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hubspot_owner_id":          "10",
+			"hs_email_team_id":          "12",
+			"hs_email_sender_email":     fromEmail,
+			"hs_email_sender_contactId": "1",
+			"hs_email_to_email":         toEmail,
+			"hs_email_to_contactId":     "2",
+			"hs_email_subject":          "Test Mail",
+			"hs_email_sent_via":         "GMAIL",
+		},
+		Associations: []map[string]interface{}{
+			{
+				"to": map[string]interface{}{
+					"id": 1,
+				},
+				"types": []map[string]interface{}{
+					{
+						"associationCategory": "HUBSPOT_DEFINED",
+						"associationTypeId":   194,
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err = json.Marshal(engagementV3)
+	assert.Nil(t, err)
+	engagementPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &engagementPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, engagementV3CreatedDate.Unix()*1000, hubspotDocument.Timestamp)
+
+	enrichStatus, failure = IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	assert.Equal(t, false, failure)
+	for i := range enrichStatus {
+		assert.Equal(t, project.ID, enrichStatus[i].ProjectId)
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameEngagement {
+			assert.Equal(t, 3, enrichStatus[i].Count)
+		}
+	}
+
+	eventName, status = store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, eventName)
+
+	events, status = store.GetStore().GetEventsByEventNameIDANDTimeRange(project.ID, eventName.ID, engagementV3CreatedDate.Unix(), engagementV3CreatedDate.Unix()+1000)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, events)
+	assert.Equal(t, 1, len(events))
+
+	eventProperties, err = U.DecodePostgresJsonbAsPropertiesMap(&events[0].Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, eventProperties)
+
+	assert.Equal(t, "2", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_id"]))
+	assert.Equal(t, float64(engagementV3Timestamp), (*eventProperties)["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "INCOMING_EMAIL", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_type"]))
+	assert.Equal(t, "EMAIL_INTEGRATION", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_source"]))
+	assert.Equal(t, "Test Mail", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_subject"]))
+	assert.Equal(t, "true", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_active"]))
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_email"]))
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_from"]))
+	assert.Equal(t, toEmail, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_to"]))
+	assert.Equal(t, "GMAIL", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_sentvia"]))
+	assert.Equal(t, float64(engagementV3CreatedDate.Unix()*1000), (*eventProperties)["$hubspot_engagement_createdat"])
+	assert.Equal(t, float64(engagementV3UpdatedDate.Unix()*1000), (*eventProperties)["$hubspot_engagement_lastupdated"])
+	assert.Equal(t, "10", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_ownerid"]))
+	assert.Equal(t, "12", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_teamid"]))
+	assert.Equal(t, "t", U.GetPropertyValueAsString((*eventProperties)[U.EP_SKIP_SESSION]))
+	assert.Equal(t, float64(engagementV3CreatedDate.Unix()), (*eventProperties)[U.EP_TIMESTAMP])
+
+	userProperties, err = U.DecodePostgresJsonbAsPropertiesMap(events[0].UserProperties)
+	assert.Nil(t, err)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*userProperties)["$email"]))
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*userProperties)["$user_id"]))
+	assert.Equal(t, fromEmail, U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_email"]))
+	assert.Equal(t, "123-45", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lead_guid"]))
+	assert.Equal(t, "lead", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lifecyclestage"]))
+	createdateInDocTimestamp, err = U.GetPropertyValueAsFloat64(contact2.Properties["createdate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, createdateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_createdate"])
+	lastmodifieddateInDocTimestamp, err = U.GetPropertyValueAsFloat64(contact2.Properties["lastmodifieddate"].Value)
+	assert.Nil(t, err)
+	assert.Equal(t, lastmodifieddateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_lastmodifieddate"])
+	assert.Equal(t, float64(createdAt.Unix()), (*userProperties)[U.UP_JOIN_TIME])
 }

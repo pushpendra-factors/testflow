@@ -22,6 +22,7 @@ import {
 } from 'Reducers/settings/middleware';
 import { getPropertyDisplayName} from './utils';
 import _ from 'lodash';
+import getGroupIcon from 'Utils/getGroupIcon'
 
 const SavedProperties = ({
   activeProject,
@@ -93,9 +94,10 @@ const SavedProperties = ({
           return (<div className='flex items-center'>
             { index!=0 && <SVG name={'DoubeEndedArrow'} color={'grey'} size={24} extraClass={'mr-1 ml-1'} /> }
             <div 
-                className={`fa-div--truncate btn-total-round py-1 px-2 background-color--mono-color-1`} 
+                className={`flex items-center fa-div--truncate btn-total-round py-1 px-2 background-color--mono-color-1`} 
               >
-                {`${getPropertyDisplayName(KPI_config,item?.dc,item?.name)} (${_.startCase(item?.dc)})`}
+                   <SVG name={getGroupIcon(item?.dc)} extraClass={'mr-1'} />
+                {`${getPropertyDisplayName(KPI_config,item?.dc,item?.name)}`}
               </div>
           </div>
           )

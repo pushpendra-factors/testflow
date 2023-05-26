@@ -181,8 +181,8 @@ function UserTimelineBirdview({
                           : 'timeline-events--expanded'
                       }`}
                     >
-                      {eventsList?.map((event) => (
-                        <div className='timeline-events__event'>
+                      {eventsList?.map((event, ind) => (
+                        <div key={ind} className='timeline-events__event'>
                           {renderIcon(event)}
                           {renderInfoCard(event)}
                         </div>

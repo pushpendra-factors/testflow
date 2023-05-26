@@ -1,6 +1,7 @@
 /* eslint-disable camelcase */
 import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import moment from 'moment';
+import _ from 'lodash';
 import find from 'lodash/find';
 import { getTableColumns, getTableData } from '../utils';
 import DataTable from '../../../../components/DataTable';
@@ -30,6 +31,7 @@ function FunnelsResultTable({
   tableConfigPopoverContent,
   isBreakdownApplied = false
 }) {
+  const eventsCondition = _.get(resultData, 'meta.query.ec', '');
   const [columns, setColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
   const [searchText, setSearchText] = useState('');
@@ -91,7 +93,8 @@ function FunnelsResultTable({
         comparisonChartData,
         durationObj,
         comparison_duration,
-        isBreakdownApplied
+        isBreakdownApplied,
+        eventsCondition
       )
     );
   }, [
@@ -106,7 +109,8 @@ function FunnelsResultTable({
     comparisonChartData,
     durationObj,
     comparison_duration,
-    isBreakdownApplied
+    isBreakdownApplied,
+    eventsCondition
   ]);
 
   const getCSVData = () => {

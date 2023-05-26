@@ -5,24 +5,20 @@ import styles from './index.module.scss';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-
 import { setGroupBy, delGroupBy } from 'Reducers/coreQuery/middleware';
-
 import FilterBlock from 'Components/KPIComposer/FilterBlock';
 import EventFilterWrapper from 'Components/KPIComposer/EventFilterWrapper';
-
 import GroupSelect2 from 'Components/KPIComposer/GroupSelect2';
 import EventGroupBlock from 'Components/KPIComposer/EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from 'Utils/constants';
-
 import FaSelect from 'Components/FaSelect';
 import AliasModal from 'Components/KPIComposer/AliasModal';
 import ORButton from 'Components/ORButton';
 import { getNormalizedKpi } from '../utils';
 import { get } from 'lodash';
 import { compareFilters, groupFilters } from 'Utils/global';
-
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
+import getGroupIcon from 'Utils/getGroupIcon'
 
 function QueryBlock({
   index,
@@ -126,7 +122,7 @@ function QueryBlock({
 
   const kpiEvents = kpi?.config?.map((item) => {
     return getNormalizedKpi({ kpi: item });
-  }); 
+  });
 
   const selectEvents = () => {
     return (
@@ -261,15 +257,15 @@ function QueryBlock({
       );
     }
   };
- 
+
 
   const additionalActions = () => {
     // Kept Filter by only, as it was previously, just changed Filter Menu
 
     return (
-      <div className={'flex'} style={{'margin-left':'1px'}}>
+      <div className={'flex'} style={{ 'margin-left': '1px' }}>
         <Tooltip title='Delete this KPI' color={TOOLTIP_CONSTANTS.DARK}>
-          <Button  
+          <Button
             onClick={deleteItem}
             className={`btn-right-round`}
           >
@@ -426,9 +422,8 @@ function QueryBlock({
   if (!event) {
     return (
       <div
-        className={`${styles.query_block} fa--query_block my-2 ${
-          ifQueries ? 'borderless no-padding' : 'borderless no-padding'
-        }`}
+        className={`${styles.query_block} fa--query_block my-2 ${ifQueries ? 'borderless no-padding' : 'borderless no-padding'
+          }`}
       >
         <div
           className={`${styles.query_block__event} flex justify-start items-center`}
@@ -448,17 +443,16 @@ function QueryBlock({
     );
   }
 
-  let KPIFilterOptions = [];
+  let KPIFilterOptions = []; 
   return (
     <div
       className={`${styles.query_block} borderless no-padding`}
-    > 
+    >
       <div
-        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${
-          styles.query_block__event
-        }  items-center`}
-      > 
-      { index!=1 && <SVG name={'DoubeEndedArrow'} color={'grey'} size={24} extraClass={'mr-1 ml-1'} /> }
+        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${styles.query_block__event
+          }  items-center`}
+      >
+        {index != 1 && <SVG name={'DoubeEndedArrow'} color={'grey'} size={24} extraClass={'mr-1 ml-1'} />}
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-2'}`}>
           <div className='max-w-7xl'>
             <Tooltip
@@ -468,7 +462,7 @@ function QueryBlock({
               color={TOOLTIP_CONSTANTS.DARK}
             >
               <Button
-                // icon={<SVG name='mouseevent' size={16} color={'purple'} />}
+                icon={<SVG name={getGroupIcon(event?.group)} />}
                 className={`fa-button--truncate fa-button--truncate-lg btn-left-round`}
                 type='link'
                 onClick={triggerDropDown}
@@ -486,7 +480,7 @@ function QueryBlock({
           </div>
         </div>
       </div>
-      {eventFilters()} 
+      {eventFilters()}
     </div>
   );
 }

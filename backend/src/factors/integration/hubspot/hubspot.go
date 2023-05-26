@@ -56,10 +56,19 @@ type ContactIdentity struct {
 type ContactIdentityProfile struct {
 	Identities []ContactIdentity `json:"identities"`
 }
+
+// Engagement definition
 type Engagements struct {
 	Engagement   map[string]interface{}   `json:"engagement"`
 	Associations map[string][]interface{} `json:"associations"`
 	Metadata     map[string]interface{}   `json:"metadata"`
+}
+
+// EngagementV3 definition
+type EngagementsV3 struct {
+	Id           string                   `json:"id"`
+	Properties   map[string]string        `json:"properties"`
+	Associations []map[string]interface{} `json:"associations"`
 }
 
 // Contact definition
@@ -1614,7 +1623,7 @@ func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]mo
 
 // Check if the condition are satisfied for creating OTP events for each rule for HS Engagements - Meetings/Calls/Emails
 func ApplyHSOfflineTouchPointRuleForEngagement(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, trackPayload *SDK.TrackPayload,
-	document *model.HubspotDocument, engagement Engagements, engagementType string) error {
+	document *model.HubspotDocument, threadID string, engagementType string) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRuleForEngagement",
 		"document_id": document.ID, "document_action": document.Action, "document": document})
@@ -1643,7 +1652,7 @@ func ApplyHSOfflineTouchPointRuleForEngagement(project *model.Project, otpRules 
 			continue
 		}
 
-		_, err1 := CreateTouchPointEventForEngagement(project, trackPayload, document, rule, engagement, engagementType, otpUniqueKey)
+		_, err1 := CreateTouchPointEventForEngagement(project, trackPayload, document, rule, threadID, engagementType, otpUniqueKey)
 		if err1 != nil {
 			logCtx.WithError(err1).Error("failed to create touch point for hubspot contact updated document.")
 			continue
@@ -1850,7 +1859,7 @@ func CreateTouchPointEventForLists(project *model.Project, trackPayload *SDK.Tra
 }
 
 // isEmailEngagementAlreadyTracked- Checks if the Email (a type of Engagement) is already tracked for creating OTP event.
-func isEmailEngagementAlreadyTracked(projectID int64, ruleID string, threadID string, engagement Engagements, logCtx *log.Entry) (bool, error) {
+func isEmailEngagementAlreadyTracked(projectID int64, ruleID string, threadID string, logCtx *log.Entry) (bool, error) {
 
 	en, status := store.GetStore().CreateOrGetOfflineTouchPointEventName(projectID)
 	if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
@@ -1884,12 +1893,43 @@ func isEmailEngagementAlreadyTracked(projectID int64, ruleID string, threadID st
 	return false, nil
 }
 
+func getThreadIDFromEngagementV3(engagement EngagementsV3, engagementType string) (string, error) {
+	threadID, isPresent := engagement.Properties["hs_email_thread_id"]
+	if !isPresent {
+		return "", errors.New("couldn't get the threadID on hubspot email engagement_v3, logging and continuing")
+	}
+
+	return threadID, nil
+}
+
+func getThreadIDFromOldEngagement(engagement Engagements, engagementType string) (string, error) {
+	threadID, isPresent := engagement.Metadata["threadId"]
+	if !isPresent {
+		return "", errors.New("couldn't get the threadID on hubspot email engagement, logging and continuing")
+	}
+
+	threadIDStr := U.GetPropertyValueAsString(threadID)
+
+	return threadIDStr, nil
+}
+
+func getThreadIDFromEngagement(engagement interface{}, engagementType string) (string, error) {
+	switch record := engagement.(type) {
+	case EngagementsV3:
+		return getThreadIDFromEngagementV3(record, engagementType)
+	case Engagements:
+		return getThreadIDFromOldEngagement(record, engagementType)
+	default:
+		return "", errors.New("failed to get type of engagement record")
+	}
+}
+
 // CreateTouchPointEventForEngagement - Creates offline touchpoint for HS engagements (calls, meetings, forms, emails) with give rule
 func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument,
-	rule model.OTPRule, engagement Engagements, engagementType string, otpUniqueKey string) (*SDK.TrackResponse, error) {
+	rule model.OTPRule, threadID string, engagementType string, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent",
-		"document_id": document.ID, "document_action": document.Action, "engagement": engagement})
+		"document_id": document.ID, "document_action": document.Action, "threadID": threadID})
 
 	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).
 		Info("CreateTouchPointEvent: creating hubspot offline touch point document")
@@ -1908,15 +1948,10 @@ func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SD
 	var timestamp int64
 
 	switch engagementType {
-
 	case EngagementTypeEmail, EngagementTypeIncomingEmail, EngagementTypeMeeting, EngagementTypeCall:
 		{
-			threadID, isPresent := engagement.Metadata["threadId"]
-			if !isPresent {
-				logCtx.WithField("threadID", threadID).
-					Error("couldn't get the threadID on hubspot email engagement, logging and continuing")
-			} else {
-				found, errT := isEmailEngagementAlreadyTracked(project.ID, rule.ID, threadID.(string), engagement, logCtx)
+			if threadID != "" {
+				found, errT := isEmailEngagementAlreadyTracked(project.ID, rule.ID, threadID, logCtx)
 				if found || errT != nil {
 					return trackResponse, errT
 				}
@@ -1943,7 +1978,6 @@ func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SD
 
 	default:
 		logCtx.Error("engagement type not supported yet for rule creation")
-
 	}
 
 	// Adding mandatory properties
@@ -2760,7 +2794,7 @@ func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
 }
 
 func getHubspotDateTimestampAsMidnightTimeZoneTimestamp(dateUTCMS interface{}, timeZone string) (int64, error) {
-	timestamp, err := model.GetTimestampFromPropertiesByKeyV3(dateUTCMS)
+	timestamp, err := model.GetTimestampForV3Records(dateUTCMS)
 	if err != nil {
 		timestamp, err = model.ReadHubspotTimestamp(dateUTCMS)
 		if err != nil {
@@ -2804,7 +2838,7 @@ func getHubspotMappedDataTypeValue(projectID int64, eventName, enKey string, val
 	if ptype == U.PropertyTypeDateTime {
 		datetime, err := U.GetPropertyValueAsFloat64(value)
 		if err != nil {
-			formatedTime, err := model.GetTimestampFromPropertiesByKeyV3(value)
+			formatedTime, err := model.GetTimestampForV3Records(value)
 			if err == nil {
 				return getEventTimestamp(formatedTime), nil
 			}
@@ -3424,7 +3458,38 @@ func getEngagementContactIds(engagementTypeStr string, engagement Engagements) (
 	return contactIds, http.StatusOK
 }
 
+func checkIfEngagementV3(document *model.HubspotDocument) (bool, error) {
+	value, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return false, err
+	}
+
+	if _, ok := (*value)["properties"]; ok { // Engagement V3 (New payload)
+		return true, nil
+	}
+
+	if _, ok := (*value)["engagement"]; ok { // Engagement V2 (Old payload)
+		return false, nil
+	}
+
+	return false, errors.New("invalid engagement document")
+}
+
 func syncEngagements(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.HubspotDocument) int {
+	isEngagementV3, err := checkIfEngagementV3(document)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": project.ID}).WithError(err).Error("failed to check type of engagement record")
+		return http.StatusInternalServerError
+	}
+
+	if isEngagementV3 {
+		return syncEngagementsV3(project, otpRules, uniqueOTPEventKeys, document)
+	}
+
+	return syncEngagementsV2(project, otpRules, uniqueOTPEventKeys, document)
+}
+
+func syncEngagementsV2(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.HubspotDocument) int {
 	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
 	if document.Type != model.HubspotDocumentTypeEngagement {
 		logCtx.Error("It is not a type of engagement")
@@ -3567,7 +3632,11 @@ func syncEngagements(project *model.Project, otpRules *[]model.OTPRule, uniqueOT
 		}
 
 		if !C.IsProjectIDSkippedForOtp(project.ID) {
-			err = ApplyHSOfflineTouchPointRuleForEngagement(project, otpRules, uniqueOTPEventKeys, payload, document, engagement, engagementTypeStr)
+			threadID, err := getThreadIDFromEngagement(engagement, engagementTypeStr)
+			if err != nil {
+				logCtx.Error("couldn't get the threadID on hubspot email engagement, logging and continuing")
+			}
+			err = ApplyHSOfflineTouchPointRuleForEngagement(project, otpRules, uniqueOTPEventKeys, payload, document, threadID, engagementTypeStr)
 			if err != nil {
 				// log and continue
 				logCtx.WithField("TrackPayload", payload).WithField("userID", userId).Info("failed " +
@@ -3579,6 +3648,298 @@ func syncEngagements(project *model.Project, otpRules *[]model.OTPRule, uniqueOT
 	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, document.ID, model.HubspotDocumentTypeEngagement, "", document.Timestamp, document.Action, "", "")
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot engagement document as synced.")
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
+}
+
+var engagementMeetingV3PropertiesMap = map[string]string{
+	"id":                    "id",
+	"hs_timestamp":          "timestamp",
+	"type":                  "type",
+	"hs_meeting_source":     "source",
+	"hs_meeting_active":     "active",
+	"hs_meeting_start_time": "startTime",
+	"hs_meeting_end_time":   "endTime",
+	"hs_meeting_title":      "title",
+	"hs_meeting_outcome":    "meetingOutcome",
+}
+var engagementCallV3PropertiesMap = map[string]string{
+	"id":                        "id",
+	"hs_timestamp":              "timestamp",
+	"type":                      "type",
+	"hs_call_source":            "source",
+	"hs_activity_type":          "activityType",
+	"hs_call_duration":          "durationMilliseconds",
+	"hs_call_disposition":       "disposition",
+	"hs_call_status":            "status",
+	"hs_call_title":             "title",
+	"hs_call_disposition_label": "disposition_label",
+}
+var engagementEmailV3PropertiesMap = map[string]string{
+	"id":                    "id",
+	"hs_createdate":         "createdAt",
+	"hs_lastmodifieddate":   "lastUpdated",
+	"type":                  "type",
+	"hs_email_team_id":      "teamId",
+	"hubspot_owner_id":      "ownerId",
+	"hs_email_active":       "active",
+	"hs_timestamp":          "timestamp",
+	"hs_email_source":       "source",
+	"hs_email_sender_email": "from",
+	"hs_email_to_email":     "to",
+	"hs_email_subject":      "subject",
+	"hs_email_sent_via":     "sentVia",
+}
+
+func extractionOfPropertiesWithOutEmailOrContactV3(engagement EngagementsV3, engagementType string) map[string]interface{} {
+	logCtx := log.WithField("engagement_type", engagementType).WithField("engagement", engagement)
+	properties := make(map[string]interface{})
+	var engagementArray map[string]string
+
+	if engagementType == EngagementTypeMeeting {
+		engagementArray = engagementMeetingV3PropertiesMap
+	} else if engagementType == EngagementTypeCall {
+		engagementArray = engagementCallV3PropertiesMap
+	} else if engagementType == EngagementTypeIncomingEmail || engagementType == EngagementTypeEmail {
+		engagementArray = engagementEmailV3PropertiesMap
+	}
+
+	for key, oldKey := range engagementArray {
+		if key == "id" {
+			properties[oldKey] = engagement.Id
+		} else if key == "hs_timestamp" || key == "hs_meeting_start_time" || key == "hs_meeting_end_time" {
+			timestamp, err := model.GetTimestampForV3Records(engagement.Properties[key])
+			if err != nil {
+				logCtx.WithField(key, engagement.Properties[key]).Error("failed to get timestamp in engagementArray on extractionOfPropertiesWithOutEmailOrContactV3")
+				continue
+			}
+			properties[oldKey] = (int64)(timestamp / 1000)
+		} else if key == "hs_createdate" || key == "hs_lastmodifieddate" {
+			timestamp, err := model.GetTimestampForV3Records(engagement.Properties[key])
+			if err != nil {
+				logCtx.WithField(key, engagement.Properties[key]).Error("failed to get timestamp in engagementArray on extractionOfPropertiesWithOutEmailOrContactV3")
+				continue
+			}
+			properties[oldKey] = timestamp
+		} else if key == "hs_call_duration" {
+			durationInFloat, err := U.GetPropertyValueAsFloat64(engagement.Properties[key])
+			if err != nil {
+				logCtx.WithField("hs_call_duration", engagement.Properties[key]).Error("failed to get call duration in engagementArray on extractionOfPropertiesWithOutEmailOrContactV3")
+				continue
+			}
+			properties[oldKey] = int64(durationInFloat)
+		} else {
+			properties[oldKey] = engagement.Properties[key]
+		}
+	}
+	return properties
+}
+
+func getEngagementContactIdsV3(engagementTypeStr string, engagement EngagementsV3) ([]string, int) {
+	logCtx := log.WithField("engagement_type_str", engagementTypeStr).WithField("engagement", engagement)
+	contactIds := make([]string, 0, 0)
+	if engagementTypeStr == EngagementTypeCall || engagementTypeStr == EngagementTypeMeeting {
+		for i := range engagement.Associations {
+			contactIdArr, isConvert := engagement.Associations[i]["to"].(map[string]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to contactIdArr in getEngagementContactIdsV3")
+				continue
+			}
+
+			contactId, err := U.GetPropertyValueAsFloat64(contactIdArr["id"])
+			if err != nil {
+				logCtx.WithError(err).Error("cannot convert interface to float64 in getEngagementContactIdsV3")
+				return contactIds, http.StatusInternalServerError
+			}
+			contactIds = append(contactIds, strconv.FormatInt((int64)(contactId), 10))
+		}
+	} else if engagementTypeStr == EngagementTypeIncomingEmail || engagementTypeStr == EngagementTypeEmail {
+		var contact interface{}
+		if engagementTypeStr == EngagementTypeIncomingEmail {
+			contact = engagement.Properties["hs_email_sender_contactId"]
+			if contact == "" || contact == nil {
+				logCtx.Error("No contact id for INCOMING_EMAIL engamement_v3. Will be marked as synced")
+				return nil, http.StatusOK
+			}
+
+		} else {
+			contact = engagement.Properties["hs_email_to_contactId"]
+			if contact == "" || contact == nil {
+				logCtx.Error("No contact id for EMAIL engamement_v3. Will be marked as synced")
+				return nil, http.StatusOK
+			}
+		}
+
+		contactId, err := U.GetPropertyValueAsFloat64(contact)
+		if err != nil {
+			logCtx.WithError(err).Error("cannot convert interface to float64 in getEngagementContactIdsV3")
+			return contactIds, http.StatusInternalServerError
+		}
+		contactIds = append(contactIds, strconv.FormatInt((int64)(contactId), 10))
+	}
+
+	return contactIds, http.StatusOK
+}
+
+func syncEngagementsV3(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.HubspotDocument) int {
+	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
+	if document.Type != model.HubspotDocumentTypeEngagement {
+		logCtx.Error("It is not a type of engagement_v3")
+		return http.StatusInternalServerError
+	}
+
+	var engagement EngagementsV3
+	err := json.Unmarshal((document.Value).RawMessage, &engagement)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to unmarshal hubspot engagement_v3 document.")
+		return http.StatusInternalServerError
+	}
+
+	engagementType, isPresent := engagement.Properties["type"]
+	if !isPresent {
+		logCtx.Error("Failed to find type as a key in engagement_v3.")
+		return http.StatusInternalServerError
+	}
+
+	if engagementType != EngagementTypeCall && engagementType != EngagementTypeMeeting && engagementType != EngagementTypeIncomingEmail && engagementType != EngagementTypeEmail {
+		logCtx.Error("Invalid engagement_v3 type")
+		return http.StatusInternalServerError
+	}
+
+	if (engagementType == EngagementTypeIncomingEmail || engagementType == EngagementTypeEmail) && document.Action == model.HubspotDocumentActionUpdated {
+		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, document.ID, model.HubspotDocumentTypeEngagement, "", document.Timestamp, document.Action, "", "")
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update hubspot engagement_v3 document as synced.")
+			return http.StatusInternalServerError
+		}
+		return http.StatusOK
+	}
+
+	contactIds, error := getEngagementContactIdsV3(engagementType, engagement)
+	if error != http.StatusOK {
+		logCtx.Error("failed to get the contact id in engagement_v3")
+		return error
+	}
+
+	if len(contactIds) == 0 {
+		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, document.ID, model.HubspotDocumentTypeEngagement, "", document.Timestamp, document.Action, "", "")
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update hubspot engagement_v3 document as synced.")
+			return http.StatusInternalServerError
+		}
+		return http.StatusOK
+	}
+
+	properties := extractionOfPropertiesWithOutEmailOrContactV3(engagement, engagementType)
+	contactEngagementProperties := make(map[string]map[string]interface{})
+
+	var contactDocuments []model.HubspotDocument
+	var status int
+
+	if len(contactIds) > 0 {
+		contactDocuments, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
+		if status != http.StatusFound {
+			if status != http.StatusNotFound {
+				logCtx.Error(
+					"Failed to get hubspot documents by type and action on sync engagement_v3.")
+				return http.StatusInternalServerError
+			}
+			logCtx.Warning("Missing engagement_v3 associated contact record.")
+			// Avoid returning error if associated record is not present.
+			return http.StatusOK
+		}
+	}
+
+	if C.DisableHubspotNonMarketingContactsByProjectID(project.ID) && len(contactDocuments) == 0 {
+		logCtx.Warning("No marketing contacts found for hubspot engagement_v3.")
+	}
+
+	for i := range contactIds {
+		var latestContactDocument *model.HubspotDocument
+		for j := range contactDocuments {
+			if contactIds[i] != contactDocuments[j].ID {
+				continue
+			}
+
+			// pick the latest contact document before the engagment timestamp or the first contact document.
+			if latestContactDocument == nil || latestContactDocument.Timestamp < contactDocuments[j].Timestamp {
+				latestContactDocument = &contactDocuments[j]
+			}
+		}
+
+		if latestContactDocument == nil {
+			logCtx.WithFields(log.Fields{"contact_id": contactIds[i]}).Warning("Missing contact record for activity in engagement_v3.")
+			continue
+		}
+
+		propertiesWithEmailOrContact := make(map[string]interface{})
+		enProperties, _, _, _, err := GetContactProperties(project.ID, latestContactDocument)
+		if err != nil {
+			logCtx.WithError(err).Error("can't get contact properties in engagement_v3")
+			return http.StatusInternalServerError
+		}
+		key, value := getCustomerUserIDFromProperties(project.ID, *enProperties)
+		enkey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameEngagement, key)
+		if _, exists := propertiesWithEmailOrContact[enkey]; !exists {
+			propertiesWithEmailOrContact[enkey] = value
+		}
+		for key, value := range properties {
+			enkey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameEngagement, key)
+			propertiesWithEmailOrContact[enkey] = value
+		}
+
+		contactEngagementProperties[contactIds[i]] = propertiesWithEmailOrContact
+	}
+
+	if len(contactEngagementProperties) < 1 {
+		logCtx.Warn("No contacts for processing in engagement_v3.")
+		return http.StatusInternalServerError
+	}
+
+	eventName := getEventNameByDocumentTypeAndAction(engagementType, document.Action)
+	for i := range contactIds {
+		var userId string
+		for j := range contactDocuments {
+			if contactIds[i] == contactDocuments[j].ID && contactDocuments[j].Action == 1 && contactDocuments[j].Synced {
+				userId = contactDocuments[j].UserId
+			}
+		}
+
+		if _, exist := contactEngagementProperties[contactIds[i]]; !exist || userId == "" {
+			continue
+		}
+
+		payload := &SDK.TrackPayload{
+			ProjectId:       project.ID,
+			Name:            eventName,
+			EventProperties: contactEngagementProperties[contactIds[i]],
+			UserId:          userId,
+			Timestamp:       getEventTimestamp(document.Timestamp),
+		}
+		status, _ = sdk.Track(project.ID, payload, true, SDK.SourceHubspot, "")
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.Error("Failed to create hubspot engagement_v3 event")
+			return http.StatusInternalServerError
+		}
+
+		if !C.IsProjectIDSkippedForOtp(project.ID) {
+			threadID, err := getThreadIDFromEngagement(engagement, engagementType)
+			if err != nil {
+				logCtx.Error("couldn't get the threadID on hubspot email engagement_v3, logging and continuing")
+			}
+			err = ApplyHSOfflineTouchPointRuleForEngagement(project, otpRules, uniqueOTPEventKeys, payload, document, threadID, engagementType)
+			if err != nil {
+				// log and continue
+				logCtx.WithField("TrackPayload", payload).WithField("userID", userId).Info("failed " +
+					"creating engagement_v3 hubspot offline touch point")
+			}
+		}
+
+	}
+	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, document.ID, model.HubspotDocumentTypeEngagement, "", document.Timestamp, document.Action, "", "")
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update hubspot engagement_v3 document as synced.")
 		return http.StatusInternalServerError
 	}
 	return http.StatusOK

@@ -92,6 +92,7 @@ function InfoCard({
   );
   return (
     <Popover
+      key={title}
       content={popoverContent}
       overlayClassName='fa-infocard--wrapper'
       placement='rightBottom'

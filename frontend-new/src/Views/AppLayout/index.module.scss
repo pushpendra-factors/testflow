@@ -1,0 +1,17 @@
+.content-layout {
+  position: relative;
+  top: 3.5rem;
+  min-height: calc(100vh - 3.5rem) !important;
+  &.no-header {
+    top: 0px;
+    min-height: 100vh !important;
+  }
+}
+
+.layout-with-sidebar {
+  transition: 0.4s;
+  margin-left: 264px;
+  &.collapsed-sidebar {
+    margin-left: 48px;
+  }
+}

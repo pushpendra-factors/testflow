@@ -219,7 +219,7 @@ type Model interface {
 	RunEventsGroupQuery(queriesOriginal []model.Query, projectId int64, enableFilterOpt bool) (model.ResultGroup, int)
 	ExecuteEventsQuery(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
 	RunInsightsQuery(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
-	BuildInsightsQuery(projectID int64, query model.Query, enableFilterOpt bool) (string, []interface{}, error)
+	BuildInsightsQuery(projectID int64, query model.Query, enableFilterOpt bool, scopeGroupID int, groupIDs []int) (string, []interface{}, error)
 
 	// Profile
 	RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID int64, enableOptimisedFilter bool) (model.ResultGroup, int)
@@ -228,6 +228,7 @@ type Model interface {
 	//six_signal
 	RunSixSignalGroupQuery(queriesOriginal []model.SixSignalQuery, projectId int64) (model.SixSignalResultGroup, int)
 	RunSixSignalPageViewQuery(projectId int64, query model.SixSignalQuery) ([]string, int, string)
+	ExecuteSixSignalQuery(projectId int64, query model.SixSignalQuery) (*model.SixSignalQueryResult, int, string)
 
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)

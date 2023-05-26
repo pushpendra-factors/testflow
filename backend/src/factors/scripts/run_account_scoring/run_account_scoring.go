@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/apache/beam/sdks/go/pkg/beam"
 	_ "github.com/jinzhu/gorm"
@@ -55,7 +56,7 @@ func main() {
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
 	numWorkersFlag := flag.Int("num_beam_workers", 100, "Num of beam workers")
-	DayTimestamp := flag.Int64("day_time_stamp", 1672511400, "time stamp for day")
+	DayTimestamp := flag.Int64("day_time_stamp", time.Now().Unix(), "time stamp for day")
 
 	tmpBucketNameFlag := flag.String("bucket_name_tmp", "/usr/local/var/factors/cloud_storage_tmp", "--bucket_name=/usr/local/var/factors/cloud_storage_tmp pass bucket name for tmp artifacts")
 	archiveBucketNameFlag := flag.String("archive_bucket_name", "/usr/local/var/factors/cloud_storage_archive", "--bucket_name=/usr/local/var/factors/cloud_storage_archive pass archive bucket name")

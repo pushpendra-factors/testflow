@@ -1,6 +1,8 @@
 .button {
   padding: 8px;
   height: 48px;
+  background-color: unset !important;
+  margin: 0;
 
   &:hover,
   &:focus {

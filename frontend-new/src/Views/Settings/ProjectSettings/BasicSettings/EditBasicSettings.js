@@ -22,7 +22,6 @@ import {
 import sanitizeInputString from 'Utils/sanitizeInputString';
 import { Currency } from 'Utils/currency';
 import _ from 'lodash';
-import ExcludeIp from './IpBlocking/excludeIp';
 
 const { Option } = Select;
 
@@ -42,7 +41,7 @@ function EditBasicSettings({
 
   useEffect(() => {
     if (currentProjectSettings && currentProjectSettings?.currency) {
-      setCurrencyVal(currentProjectSettings?.currency)
+      setCurrencyVal(currentProjectSettings?.currency);
     }
     setTimeout(() => {
       setDataLoading(false);
@@ -57,8 +56,8 @@ function EditBasicSettings({
       ...values,
       name: projectName,
       profile_picture: imageUrl,
-      time_zone: "" // disabling sending timezone in project settings update
-      // time_zone: values?.time_zone 
+      time_zone: '' // disabling sending timezone in project settings update
+      // time_zone: values?.time_zone
     };
 
     udpateProjectDetails(activeProject.id, projectData)
@@ -110,8 +109,8 @@ function EditBasicSettings({
     console.log('setCurrency value', value);
     setCurrencyVal(value);
     let data = {
-      'currency': value
-    }
+      currency: value
+    };
     udpateProjectSettings(activeProject.id, data)
       .then(() => {
         message.success('Currency details updated!');
@@ -120,9 +119,7 @@ function EditBasicSettings({
         console.log('err->', err);
         message.error(err.data.error);
       });
-
   };
-
 
   return (
     <>
@@ -136,7 +133,9 @@ function EditBasicSettings({
             project_uri: activeProject?.project_uri,
             date_format: activeProject?.date_format,
             time_format: activeProject?.time_format,
-            time_zone: !_.isEmpty(activeProject?.time_zone) ? activeProject?.time_zone : ""
+            time_zone: !_.isEmpty(activeProject?.time_zone)
+              ? activeProject?.time_zone
+              : ''
           }}
         >
           <Row>
@@ -283,7 +282,7 @@ function EditBasicSettings({
           </Row>
 
           {agent?.email == 'solutions@factors.ai' ||
-            agent?.email == 'baliga@factors.ai' ? (
+          agent?.email == 'baliga@factors.ai' ? (
             <Row className={'mt-6'}>
               <Col span={24}>
                 <Text type={'title'} level={7} extraClass={'m-0'}>
@@ -326,10 +325,12 @@ function EditBasicSettings({
                   weight={'bold'}
                 >
                   {!_.isEmpty(activeProject?.time_zone)
-                    ? `${getTimeZoneNameFromCity(activeProject?.time_zone)?.name
-                    } (UTC ${getTimeZoneNameFromCity(activeProject?.time_zone)
-                      ?.offset
-                    })`
+                    ? `${
+                        getTimeZoneNameFromCity(activeProject?.time_zone)?.name
+                      } (UTC ${
+                        getTimeZoneNameFromCity(activeProject?.time_zone)
+                          ?.offset
+                      })`
                     : '---'}
                 </Text>
               </Col>
@@ -339,8 +340,11 @@ function EditBasicSettings({
 
         <Row className={'mt-6 mb-10'}>
           <Col span={24}>
-            <Text type={'title'} level={7} extraClass={'m-0'}>Currency</Text>
-            <Select className={'fa-select w-full'}
+            <Text type={'title'} level={7} extraClass={'m-0'}>
+              Currency
+            </Text>
+            <Select
+              className={'fa-select w-full'}
               value={currencyVal}
               placeholder={'Currency'}
               size={'large'}
@@ -348,28 +352,25 @@ function EditBasicSettings({
               showSearch
               optionFilterProp='children'
               filterOption={(input, option) =>
-                option.children
-                  .toLowerCase()
-                  .indexOf(input.toLowerCase()) >= 0
+                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
               }
               filterSort={(optionA, optionB) =>
                 optionA.children
                   .toLowerCase()
                   .localeCompare(optionB.children.toLowerCase())
               }
-
             >
-
-              {Currency && Object.keys(Currency).map((key, index) => {
-                return (<Option value={`${key}`}>{`${Currency[key]} (${key})`}</Option>)
-              })
-              }
+              {Currency &&
+                Object.keys(Currency).map((key, index) => {
+                  return (
+                    <Option
+                      value={`${key}`}
+                    >{`${Currency[key]} (${key})`}</Option>
+                  );
+                })}
             </Select>
           </Col>
         </Row>
-
-        
-        <ExcludeIp mode="edit"></ExcludeIp>
       </div>
     </>
   );
@@ -381,6 +382,7 @@ const mapStateToProps = (state) => ({
   agent: state.agent.agent_details
 });
 
-export default connect(mapStateToProps, { udpateProjectDetails, udpateProjectSettings })(
-  EditBasicSettings
-);
+export default connect(mapStateToProps, {
+  udpateProjectDetails,
+  udpateProjectSettings
+})(EditBasicSettings);

@@ -13,10 +13,7 @@ import { Text } from '../../factorsComponents';
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
-  TOTAL_EVENTS_CRITERIA,
-  TOTAL_USERS_CRITERIA,
-  ACTIVE_USERS_CRITERIA,
-  FREQUENCY_CRITERIA
+  TOTAL_USERS_CRITERIA
 } from '../../../utils/constants';
 import FaSelect from '../../FaSelect';
 
@@ -25,22 +22,12 @@ import FunnelsConversionDurationBlock from '../FunnelsConversionDurationBlock/Fu
 
 const CriteriaSection = ({
   queryType,
-  queryCount = 0,
   crit_show,
   crit_perf,
   groupByState,
-  setShowCriteria,
   setPerformanceCriteria
 }) => {
-  const [critShowSelect, setCritShowSelect] = useState(false);
   const [critPerfSelect, setCritPerfSelect] = useState(false);
-
-  const CRITERIA_SHOW_OPTIONS = [
-    ['Total Events', null, TOTAL_EVENTS_CRITERIA],
-    ['Total Users', null, TOTAL_USERS_CRITERIA],
-    ['Active Users', null, ACTIVE_USERS_CRITERIA],
-    ['Frequency', null, FREQUENCY_CRITERIA]
-  ];
 
   const CRITERIA_PERF_OPTIONS = [
     ['Any Event', null, 'any'],
@@ -54,13 +41,12 @@ const CriteriaSection = ({
   };
 
   const renderCritPerf = () => {
-    if (!crit_show || crit_show !== TOTAL_USERS_CRITERIA || queryCount <= 1)
-      return null;
+    if (!crit_show || crit_show !== TOTAL_USERS_CRITERIA) return null;
 
     return (
       <div className={`flex items-center`}>
         <Text type={'title'} level={7} extraClass={'m-0 mr-2 inline'}>
-          who performed
+          Who performed
         </Text>
 
         <div className={`relative fa-button--truncate`}>
@@ -91,41 +77,8 @@ const CriteriaSection = ({
     );
   };
 
-  const renderCritShow = () => {
-    return (
-      <div className={`relative mr-2 items-center`}>
-        <Button type='link' onClick={() => setCritShowSelect(!critShowSelect)}>
-          {crit_show
-            ? CRITERIA_SHOW_OPTIONS.filter((op) => op[2] === crit_show)[0][0]
-            : crit_show}
-        </Button>
-
-        {critShowSelect && (
-          <FaSelect
-            options={CRITERIA_SHOW_OPTIONS}
-            optionClick={(op) => {
-              setShowCriteria(op[2]);
-              setCritShowSelect(false);
-            }}
-            onClickOutside={() => setCritShowSelect(false)}
-          ></FaSelect>
-        )}
-      </div>
-    );
-  };
-
   if (queryType === QUERY_TYPE_EVENT) {
-    return (
-      <div className={`${styles.criteria} mt-2`}>
-        <Text type={'title'} level={7} extraClass={'m-0 mr-2 inline'}>
-          Show
-        </Text>
-
-        {renderCritShow()}
-
-        {renderCritPerf()}
-      </div>
-    );
+    return <div className={`${styles.criteria} mt-2`}>{renderCritPerf()}</div>;
   }
 
   if (queryType === QUERY_TYPE_FUNNEL) {

@@ -38,7 +38,7 @@ const IntegrationProviderData = [
     desc:
       'Sync Bing ads reports with Factors for performance reporting',
     icon: 'Bing',
-    kbLink: false,
+    kbLink: 'https://help.factors.ai/en/articles/7831204-bing-ads-integration',
   },
 ];
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, Suspense } from 'react';
-import { Layout, Modal, Spin } from 'antd';
+import cx from 'classnames';
+import { Layout, Spin } from 'antd';
 
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -14,10 +15,7 @@ import {
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
   fetchEventDisplayNames,
-  // fetchAttrContentGroups,
-  fetchGroups,
   fetchQueries
-  // fetchSmartPropertyRules
 } from '../../reducers/coreQuery/services';
 import {
   fetchAttrContentGroups,
@@ -37,20 +35,22 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import { fetchKPIConfig, fetchPageUrls } from '../../reducers/kpi';
 import FaHeader from '../../components/FaHeader';
-import NavigationBar from '../../components/NavigationBar';
-import SearchBar from '../../components/SearchBar';
 
 import { EMPTY_ARRAY } from '../../utils/global';
 
 import { fetchTemplates } from '../../reducers/dashboard_templates/services';
-import { AppLayoutRoutes } from 'Routes';
+import { AppLayoutRoutes } from 'Routes/index';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
-import GlobalSearch from 'Components/GlobalSearch';
 import './index.css';
 import _ from 'lodash';
 import logger from 'Utils/logger';
 import { useHistory, useLocation } from 'react-router-dom';
-import { APP_LAYOUT_ROUTES } from 'Routes/constants';
+import GlobalSearchModal from './GlobalSearchModal';
+import { APP_LAYOUT_ROUTES } from '../../routes/constants';
+import AppSidebar from '../AppSidebar';
+import styles from './index.module.scss';
+import { routesWithSidebar } from './appLayout.constants';
+import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -73,26 +73,20 @@ function AppLayout({
   const agentState = useSelector((state) => state.agent);
   const isAgentLoggedIn = agentState.isLoggedIn;
   const { active_project } = useSelector((state) => state.global);
+  const isSidebarCollapsed = useSelector((state) =>
+    selectSidebarCollapsedState(state)
+  );
   const { projects } = useSelector((state) => state.global);
   const { show_analytics_result } = useSelector((state) => state.coreQuery);
   const { currentProjectSettings } = useSelector((state) => state.global);
   const dispatch = useDispatch();
-  const [sidebarCollapse, setSidebarCollapse] = useState(true);
   const location = useLocation();
+  const { pathname } = location;
   const history = useHistory();
 
   const activeAgent = agentState?.agent_details?.email;
 
-  const isVisibleGlobalSearch = useSelector(
-    (state) => state.globalSearch.visible
-  );
-
-  const onKeyDown = (e) => {
-    if (e.metaKey && e.keyCode == 75) {
-      dispatch({ type: TOGGLE_GLOBAL_SEARCH });
-    }
-  };
-  const asyncCallOnLoad = useCallback(async () => {
+  const fetchProjectsOnLoad = useCallback(async () => {
     try {
       if (isAgentLoggedIn) await fetchProjects();
       else setDataLoading(false);
@@ -100,17 +94,24 @@ function AppLayout({
       console.log(err);
     }
   }, [fetchProjects, isAgentLoggedIn]);
+
   useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.metaKey && e.keyCode === 75) {
+        dispatch({ type: TOGGLE_GLOBAL_SEARCH });
+      }
+    };
     // on Mount of Component
     document.onkeydown = onKeyDown;
     return () => {
       // on Unmount of Component
       document.onkeydown = null;
     };
-  }, []);
+  }, [dispatch]);
+
   useEffect(() => {
-    asyncCallOnLoad();
-  }, [asyncCallOnLoad]);
+    fetchProjectsOnLoad();
+  }, [fetchProjectsOnLoad]);
 
   useEffect(() => {
     fetchDemoProject().then((res) => {
@@ -178,68 +179,60 @@ function AppLayout({
     }
   }, [dispatch, active_project]);
 
+  if (dataLoading) {
+    return <Spin size={'large'} className={'fa-page-loader'} />;
+  }
+
+  const hasSidebar = routesWithSidebar.includes(pathname);
+
   return (
-    // eslint-disable-next-line react/jsx-no-useless-fragment
-    <>
-      {dataLoading ? (
-        <Spin size={'large'} className={'fa-page-loader'} />
-      ) : (
-        <Layout>
-          <ErrorBoundary
-            fallback={
-              <FaErrorComp
-                size={'medium'}
-                title={'Bundle Error:01'}
-                subtitle='We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
-              />
-            }
-            onError={FaErrorLog}
+    <Layout>
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            size={'medium'}
+            title={'Bundle Error:01'}
+            subtitle='We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
+          />
+        }
+        onError={FaErrorLog}
+      >
+        {!show_analytics_result && isAgentLoggedIn ? <FaHeader /> : null}
+        <Layout
+          className={cx(styles['content-layout'], {
+            [styles['no-header']]: show_analytics_result === true
+          })}
+        >
+          {hasSidebar && <AppSidebar />}
+          <Layout
+            className={cx(
+              {
+                [styles['layout-with-sidebar']]: hasSidebar
+              },
+              {
+                [styles['collapsed-sidebar']]: isSidebarCollapsed
+              }
+            )}
           >
-            {!show_analytics_result && isAgentLoggedIn ? (
-              <>
-                <FaHeader
-                  collapse={sidebarCollapse}
-                  setCollapse={setSidebarCollapse}
-                >
-                  <SearchBar />
-                </FaHeader>
-                <NavigationBar
-                  collapse={sidebarCollapse}
-                  setCollapse={setSidebarCollapse}
-                />
-              </>
-            ) : null}
-            <Layout>
-              <Content className='bg-white'>
-                <Suspense fallback={<PageSuspenseLoader />}>
-                  <AppLayoutRoutes
-                    activeAgent={activeAgent}
-                    demoProjectId={demoProjectId}
-                    active_project={active_project}
-                    currentProjectSettings={currentProjectSettings}
-                  />
-                </Suspense>
-              </Content>
-            </Layout>
-            <Modal
-              zIndex={2000}
-              keyboard={true}
-              visible={isVisibleGlobalSearch}
-              footer={null}
-              closable={false}
-              onCancel={() => {
-                dispatch({ type: TOGGLE_GLOBAL_SEARCH });
-              }}
-              bodyStyle={{ padding: 0 }}
-              width={'40vw'}
-              className='modal-globalsearch'
+            <Content
+              className={cx('bg-white', {
+                'py-8 px-10': !show_analytics_result
+              })}
             >
-              <GlobalSearch />
-            </Modal>
-          </ErrorBoundary>
+              <Suspense fallback={<PageSuspenseLoader />}>
+                <AppLayoutRoutes
+                  activeAgent={activeAgent}
+                  demoProjectId={demoProjectId}
+                  active_project={active_project}
+                  currentProjectSettings={currentProjectSettings}
+                />
+              </Suspense>
+            </Content>
+          </Layout>
         </Layout>
-      )}
-    </>
+        <GlobalSearchModal />
+      </ErrorBoundary>
+    </Layout>
   );
 }
 

@@ -10,7 +10,6 @@ import {
   Tooltip
 } from 'antd';
 import { Text, SVG } from '../factorsComponents';
-import { PlusOutlined, PoweroffOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import {
   updateAgentInfo,
@@ -278,25 +277,16 @@ function ProjectModal(props) {
             type='text'
             size='large'
           >
-            {props.active_project.profile_picture ? (
-              <img
-                src={props.active_project.profile_picture}
-                style={{ width: '36px', borderRadius: '4px' }}
-                alt='avatar'
-              />
-            ) : (
-              <Avatar
-                size={36}
-                shape='square'
-                style={{
-                  background: '#ff0000',
-                  opacity: '0.6',
-                  textTransform: 'uppercase',
-                  fontWeight: '400',
-                  borderRadius: '4px'
-                }}
-              >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
-            )}
+            <Avatar
+              size={36}
+              shape='square'
+              style={{
+                background: '#FF7875',
+                textTransform: 'uppercase',
+                fontWeight: '600',
+                borderRadius: '8px',
+              }}
+            >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
 
             <div className='flex flex-col items-start ml-2'>
               <div className='flex items-center'>
@@ -305,12 +295,15 @@ function ProjectModal(props) {
                   level={7}
                   extraClass={'m-0'}
                   weight={'bold'}
+                  color='white'
                 >
                   {`${props.active_project?.name}`}
                 </Text>
-                <SVG name='caretDown' size={20} />
+                <SVG name='caretDown' size={20} color='#BFBFBF' />
               </div>
-              <div className={`text-xs`}>{props.currentAgent?.email}</div>
+              <div className={`text-xs text-white opacity-80`}>
+                {props.currentAgent?.email}
+              </div>
             </div>
           </Button>
         </Tooltip>

@@ -309,6 +309,8 @@ func TestSDKDomainsGroup(t *testing.T) {
 }
 
 func TestGetDomainGroupDomainName(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	expectedDomainNames := map[string]string{
 		"www.abc.com":         "abc.com",
 		"www.ABC.com":         "abc.com",
@@ -324,7 +326,7 @@ func TestGetDomainGroupDomainName(t *testing.T) {
 		"www.abc.xya":         "www.abc.xya", // if not found return as it is
 	}
 	for rawDomain := range expectedDomainNames {
-		assert.Equal(t, expectedDomainNames[rawDomain], U.GetDomainGroupDomainName(rawDomain))
+		assert.Equal(t, expectedDomainNames[rawDomain], U.GetDomainGroupDomainName(project.ID, rawDomain))
 	}
 
 }
@@ -3725,6 +3727,10 @@ func TestSDKUserDomainReAssociation(t *testing.T) {
 	userSalesforce, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
 		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceSalesforce), CustomerUserId: cuid})
 	assert.Equal(t, http.StatusCreated, errCode)
+	// user without customer user id
+	userSixSignal, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
 
 	/*
 		First update: six signal.
@@ -3737,6 +3743,12 @@ func TestSDKUserDomainReAssociation(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, status)
 	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userHubspot, model.GROUP_NAME_SIX_SIGNAL, sixSignalAccountGroupUserID1)
 	assert.Equal(t, http.StatusOK, status)
+	// user without customer user id
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userSixSignal, model.GROUP_NAME_SIX_SIGNAL, "", sixSignalAccountGroupUserID1, true)
+	assert.Equal(t, http.StatusAccepted, status)
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userSixSignal, model.GROUP_NAME_SIX_SIGNAL, sixSignalAccountGroupUserID1)
+	assert.Equal(t, http.StatusOK, status)
+
 	domainGroup, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_DOMAINS)
 	assert.Equal(t, http.StatusFound, status)
 	users, status := store.GetStore().GetUsersByCustomerUserID(project.ID, cuid)
@@ -3750,8 +3762,19 @@ func TestSDKUserDomainReAssociation(t *testing.T) {
 		assert.Equal(t, http.StatusFound, status)
 		domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
 		assert.Nil(t, err)
-		assert.Equal(t, "sixsignal1.com", domainName)
+		assert.Equal(t, U.GetDomainGroupDomainName(project.ID, U.GetEmailDomain(cuid)), domainName)
 	}
+
+	// user without customer user id will be updated with six signal domain
+	user, status := store.GetStore().GetUser(project.ID, userSixSignal)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err := model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "sixsignal1.com", domainName)
 
 	/*
 		2nd update: hubspot company.
@@ -3987,5 +4010,101 @@ func TestSDKBackfillDomainUser(t *testing.T) {
 	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, domainUserID)
+
+}
+
+func TestSDKAssociateUserEmailDomain(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// Create users by source with same customer user id
+	cuid := "test@mail.freshworks.com"
+	cuid2 := U.RandomString(5)
+	userWeb, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: cuid})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	userWeb2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceHubspot), CustomerUserId: cuid2})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	sixSignalAccountGroupUserID1, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_SIX_SIGNAL, "www.sixsignal1.com",
+		map[string]interface{}{"company": "www.sixsignal1.com"}, U.TimeNowUnix())
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userWeb, model.GROUP_NAME_SIX_SIGNAL, "", sixSignalAccountGroupUserID1, true)
+	assert.Equal(t, http.StatusAccepted, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userWeb2, model.GROUP_NAME_SIX_SIGNAL, "", sixSignalAccountGroupUserID1, true)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userWeb, "", "")
+	assert.Equal(t, http.StatusOK, status)
+
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userWeb2, "", "")
+	assert.Equal(t, http.StatusOK, status)
+
+	domainGroup, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_DOMAINS)
+
+	// userWeb with email as customer user id will have email domain take prcedence
+	user, status := store.GetStore().GetUser(project.ID, userWeb)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err := model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "freshworks.com", domainName)
+
+	// userWeb2 with radom string as customer user id will have 6signal domain as domain
+	user, status = store.GetStore().GetUser(project.ID, userWeb2)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	domainUser, status = store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainName, err = model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "sixsignal1.com", domainName)
+
+	// hubspot user with same customer user id
+	userHubspot1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceHubspot), CustomerUserId: cuid})
+	assert.Equal(t, http.StatusCreated, errCode)
+	userHubspot2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceHubspot), CustomerUserId: cuid2})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	hubspotAccountGroupUserID1, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "www.hubspot1.com",
+		map[string]interface{}{"company": "www.hubspot1.com"}, U.TimeNowUnix())
+
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userHubspot1, model.GROUP_NAME_HUBSPOT_COMPANY, "", hubspotAccountGroupUserID1, true)
+	assert.Equal(t, http.StatusAccepted, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userHubspot2, model.GROUP_NAME_HUBSPOT_COMPANY, "", hubspotAccountGroupUserID1, true)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userWeb, "", "")
+	assert.Equal(t, http.StatusOK, status)
+
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userWeb2, "", "")
+	assert.Equal(t, http.StatusOK, status)
+
+	// overwrite both domains with hubspot
+	user, status = store.GetStore().GetUser(project.ID, userWeb)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	domainUser, status = store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainName, err = model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "hubspot1.com", domainName)
+	user, status = store.GetStore().GetUser(project.ID, userWeb2)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	domainUser, status = store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainName, err = model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "hubspot1.com", domainName)
 
 }

@@ -1,13 +1,13 @@
-/* eslint-disable */
-
+import { TOGGLE_SIDEBAR_COLLAPSED_STATE } from './types';
 import {
   SET_PROJECTS,
   SET_ACTIVE_PROJECT,
   CREATE_PROJECT_FULFILLED,
   FETCH_PROJECTS_REJECTED,
   TEST_TOGGLE_SDK_VERIFICATION
-} from './types';
-import { get, getHostUrl, post, put, del } from '../utils/request';
+} from '../types';
+import { get, getHostUrl, post, put, del } from '../../utils/request';
+import toArray from 'lodash/toArray';
 
 var host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : host + '/';
@@ -23,7 +23,8 @@ const defaultState = {
   currentProjectSettingsLoading: false,
   contentGroup: [],
   bingAds: {},
-  marketo: {}
+  marketo: {},
+  sidebarCollapsed: false
 };
 
 export default function (state = defaultState, action) {
@@ -127,7 +128,7 @@ export default function (state = defaultState, action) {
     }
     case 'ENABLE_SALESFORCE_FULFILLED': {
       let enabledAgentUUID = action.payload.int_salesforce_enabled_agent_uuid;
-      if (!enabledAgentUUID || enabledAgentUUID == '') return state;
+      if (!enabledAgentUUID || enabledAgentUUID === '') return state;
 
       let _state = { ...state };
       _state.currentProjectSettings = {
@@ -148,8 +149,8 @@ export default function (state = defaultState, action) {
       // for array of projects from Object.values().
 
       let projectsWithRoles = [];
-      _.toArray(action.payload).map((project, index) => {
-        project.map((projectDetails) => {
+      toArray(action.payload).forEach((project, index) => {
+        project.forEach((projectDetails) => {
           projectDetails.role = index + 1;
           projectsWithRoles.push(projectDetails);
         });
@@ -232,6 +233,13 @@ export default function (state = defaultState, action) {
           ...state?.projectSettingsV1,
           int_completed: !state?.projectSettingsV1?.int_completed
         }
+      };
+    }
+    case TOGGLE_SIDEBAR_COLLAPSED_STATE: {
+      console.log(action.payload);
+      return {
+        ...state,
+        sidebarCollapsed: action.payload
       };
     }
     default:

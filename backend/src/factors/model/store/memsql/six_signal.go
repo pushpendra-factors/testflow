@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// RunSixSignalGroupQuery gets the query and the projectID, returns the resultGroup after fetching the results.
 func (store *MemSQL) RunSixSignalGroupQuery(queriesOriginal []model.SixSignalQuery,
 	projectId int64) (model.SixSignalResultGroup, int) {
 
@@ -55,6 +56,8 @@ func (store *MemSQL) RunSixSignalGroupQuery(queriesOriginal []model.SixSignalQue
 
 }
 
+// runSingleSixSignalQuery calls the wrapper method that builds and executes the sixsignal query.
+// After fetching the results, it calls the method to build the error result on basis of errMsg if any err is present.
 func (store *MemSQL) runSingleSixSignalQuery(projectId int64,
 	resultHolder *model.SixSignalQueryResult, waitGroup *sync.WaitGroup, query model.SixSignalQuery) {
 
@@ -78,6 +81,7 @@ func (store *MemSQL) runSingleSixSignalQuery(projectId int64,
 	return
 }
 
+// ExecuteSixSignalQuery validates the sixsignal query properties and returns the result from RunSixSignalInsightsQuery.
 func (store *MemSQL) ExecuteSixSignalQuery(projectId int64, query model.SixSignalQuery) (*model.SixSignalQueryResult, int, string) {
 
 	logFields := log.Fields{
@@ -92,6 +96,8 @@ func (store *MemSQL) ExecuteSixSignalQuery(projectId int64, query model.SixSigna
 	return store.RunSixSignalInsightsQuery(projectId, query)
 }
 
+// RunSixSignalInsightsQuery calls the method to build the sixsignal SQL query and after successful creation of sql statement and params
+// it calls the method to execute the query.
 func (store *MemSQL) RunSixSignalInsightsQuery(projectId int64, query model.SixSignalQuery) (*model.SixSignalQueryResult, int, string) {
 	logFields := log.Fields{
 		"query":      query,
@@ -121,6 +127,24 @@ func (store *MemSQL) RunSixSignalInsightsQuery(projectId int64, query model.SixS
 	return result, http.StatusOK, "Successfully executed query"
 }
 
+/*
+- buildSixSignalQuery takes two parameters: a project ID and a SixSignalQuery object.
+- The project ID is used to filter events related to a specific project, while the SixSignalQuery object contains the time range of the events to be considered.
+- The query retrieves the following user properties and behaviors:
+  - $6Signal_name, $6Signal_country, $6Signal_industry, $6Signal_employee_range, $6Signal_revenue_range, $session_spent_time,
+    $page_count, $6Signal_domain, $initial_page_url, $campaign, $channel.
+
+- The query also uses the ROW_NUMBER() function to assign a row number to each user based on their time spent partitioned by company,
+and then selects only the row with the highest time spent for each company.
+
+- The previous SQL query  have been using a JOIN operation to retrieve data from multiple tables, which could have led to slower query
+execution times due to the amount of data being joined together. Additionally, the JOIN operation may have caused data redundancy issues
+where the same data was being repeated in multiple rows, leading to inefficient use of storage space.
+
+- The new SQL query appears to address these issues by using a sub-query to retrieve data from a single table and then applying a
+window function to remove any duplicate data based on a specific ordering criteria. This approach should lead to faster query
+execution times since it is only querying one table and should avoid data redundancy issues since duplicate data is being removed.
+*/
 func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQuery) (string, []interface{}, error) {
 
 	logFields := log.Fields{
@@ -131,43 +155,36 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	caseSelectStmntEventProperties := "CASE WHEN JSON_EXTRACT_STRING(events.properties, ?) IS NULL THEN ? " +
+	caseSelectStmntEventProperties := " CASE WHEN JSON_EXTRACT_STRING(events.properties, ?) IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(events.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(events.properties, ?) END "
 
-	caseSelectStmntUserProperties := "CASE WHEN JSON_EXTRACT_STRING(events.user_properties, ?) IS NULL THEN ? " +
+	caseSelectStmntUserProperties := " CASE WHEN JSON_EXTRACT_STRING(events.user_properties, ?) IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(events.user_properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(events.user_properties, ?) END "
 
 	eventNameID := " SELECT id FROM event_names WHERE project_id=? AND name='$session' "
 
-	maxSessionTimeQuery := "SELECT JSON_EXTRACT_STRING(events.user_properties,?) AS company, " +
-		caseSelectStmntEventProperties + " AS time_spent FROM events "
+	subQuery := " SELECT JSON_EXTRACT_STRING(events.user_properties, ?) AS company, " +
+		caseSelectStmntEventProperties + " AS time_spent, " +
+		"JSON_EXTRACT_BIGINT(events.user_properties, ?) AS page_count, " +
+		caseSelectStmntUserProperties + " AS country, " +
+		caseSelectStmntUserProperties + " AS industry, " +
+		caseSelectStmntUserProperties + " AS emp_range, " +
+		caseSelectStmntUserProperties + " AS revenue_range, " +
+		caseSelectStmntUserProperties + " AS domain, " +
+		caseSelectStmntUserProperties + " AS page_seen, " +
+		caseSelectStmntEventProperties + " AS campaign, " +
+		caseSelectStmntEventProperties + " AS channel " +
+		" FROM events " + " WHERE project_id=? AND timestamp >= ? AND timestamp <= ? AND events.event_name_id IN ( " + eventNameID + " ) "
 
-	maxSessionTimeStmnt := maxSessionTimeQuery + "WHERE project_id=? AND timestamp >= ? AND timestamp <= ? " +
-		" AND events.event_name_id IN ( " + eventNameID + " ) " + " AND company IS NOT NULL " +
-		" GROUP BY company "
+	rowNumAssigned := " SELECT company, country, industry, emp_range, revenue_range, time_spent, page_count, domain, page_seen, campaign, channel, " +
+		" ROW_NUMBER() OVER(PARTITION BY company ORDER BY time_spent DESC) as row_num FROM ( " + subQuery + " ) "
+
+	qStmnt = " SELECT company, country, industry, emp_range, revenue_range, time_spent, page_count, domain, page_seen, campaign, channel " +
+		" FROM (" + rowNumAssigned + " ) WHERE row_num=1 ORDER BY page_count DESC; "
 
 	qParams = append(qParams, U.SIX_SIGNAL_NAME,
 		U.SP_SPENT_TIME, model.PropertyValueZero, U.SP_SPENT_TIME, model.PropertyValueZero, U.SP_SPENT_TIME,
-		projectID, query.From, query.To, projectID)
-
-	sixSignalPropertiesQuery := "SELECT JSON_EXTRACT_STRING(events.user_properties,?) AS company, " +
-		"JSON_EXTRACT_BIGINT(events.user_properties,?) AS page_count, " +
-		caseSelectStmntEventProperties + "AS time_spent, " +
-		caseSelectStmntUserProperties + "AS country, " +
-		caseSelectStmntUserProperties + "AS industry, " +
-		caseSelectStmntUserProperties + "AS emp_range, " +
-		caseSelectStmntUserProperties + "AS revenue_range, " +
-		caseSelectStmntUserProperties + "AS domain, " +
-		caseSelectStmntUserProperties + "AS page_seen, " +
-		caseSelectStmntEventProperties + "AS campaign, " +
-		caseSelectStmntEventProperties + "AS channel " +
-		"FROM events "
-
-	sixSignalPropertiesStmnt := sixSignalPropertiesQuery + " WHERE project_id=? AND timestamp >= ? AND timestamp <= ?" +
-		" AND events.event_name_id IN ( " + eventNameID + " )"
-
-	qParams = append(qParams, U.SIX_SIGNAL_NAME, U.UP_PAGE_COUNT,
-		U.SP_SPENT_TIME, model.PropertyValueZero, U.SP_SPENT_TIME, model.PropertyValueZero, U.SP_SPENT_TIME,
+		U.UP_PAGE_COUNT,
 		U.SIX_SIGNAL_COUNTRY, model.PropertyValueNone, U.SIX_SIGNAL_COUNTRY, model.PropertyValueNone, U.SIX_SIGNAL_COUNTRY,
 		U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY,
 		U.SIX_SIGNAL_EMPLOYEE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_EMPLOYEE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_EMPLOYEE_RANGE,
@@ -178,19 +195,13 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 		U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 		projectID, query.From, query.To, projectID)
 
-	selectStmnt := "SELECT t1.company, t2.country, t2.industry, t2.emp_range, t2.revenue_range, t1.time_spent, t2.page_count, t2.domain, t2.page_seen, t2.campaign, t2.channel " + "FROM "
-
-	qStmnt = selectStmnt + "( " + maxSessionTimeStmnt + " ) AS t1 " + " JOIN " + "( " + sixSignalPropertiesStmnt + " ) AS t2 " +
-		"ON t1.company=t2.company " +
-		"AND t1.time_spent=t2.time_spent " +
-		"ORDER BY t2.page_count DESC; "
-
 	log.WithFields(log.Fields{"SixSignalQuery": qStmnt, "Query parameters": qParams}).Info("Six Signal Query Statement and Parameters")
 
 	return qStmnt, qParams, nil
 
 }
 
+// ExecSixSignalSQLQuery executes the SQL query and returns three values, a pointer to a SixSignalQueryResult struct, an error and a string representing a unique request ID.
 func (store *MemSQL) ExecSixSignalSQLQuery(stmnt string, params []interface{}) (*model.SixSignalQueryResult, error, string) {
 	logFields := log.Fields{
 		"stmnt":  stmnt,
@@ -213,6 +224,10 @@ func (store *MemSQL) ExecSixSignalSQLQuery(stmnt string, params []interface{}) (
 	return result, nil, reqID
 }
 
+// RunSixSignalPageViewQuery takes in two parameters projectId of type int64 and query of type model.SixSignalQuery.
+// It returns a slice of strings, an integer and a string. Next, a SQL statement and its parameters are generated
+// using the buildSixSignalPageViewQuery method. If the SQL statement and its parameters are generated successfully,
+// the ExecSixSignalPageViewQuery method is called with the generated SQL statement and its parameters.
 func (store *MemSQL) RunSixSignalPageViewQuery(projectId int64, query model.SixSignalQuery) ([]string, int, string) {
 	logFields := log.Fields{
 		"project_id": projectId,

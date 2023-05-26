@@ -605,25 +605,25 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	db := C.GetServices().Db
 	var uniqueUser model.ContactDetails
 	if err := db.Table("users").Select(`COALESCE(customer_user_id,id) AS user_id,
-		ISNULL(customer_user_id) AS is_anonymous,
-		properties,
-		MAX(group_1_id) IS NOT NULL AS group_1,
-		MAX(group_2_id) IS NOT NULL AS group_2,
-		MAX(group_3_id) IS NOT NULL AS group_3,
-		MAX(group_4_id) IS NOT NULL AS group_4,
-		MAX(group_5_id) IS NOT NULL AS group_5,
-		MAX(group_6_id) IS NOT NULL AS group_6,
-		MAX(group_7_id) IS NOT NULL AS group_7,
-		MAX(group_8_id) IS NOT NULL AS group_8,
-		MAX(group_1_user_id) AS group_1_user_id,
-		MAX(group_2_user_id) AS group_2_user_id,
-		MAX(group_3_user_id) AS group_3_user_id,
-		MAX(group_4_user_id) AS group_4_user_id,
-		MAX(group_5_user_id) AS group_5_user_id,
-		MAX(group_6_user_id) AS group_6_user_id,
-		MAX(group_7_user_id) AS group_7_user_id,
-		MAX(group_8_user_id) AS group_8_user_id
-		`).
+        ISNULL(customer_user_id) AS is_anonymous,
+        properties,
+        MAX(group_1_id) IS NOT NULL AS group_1,
+        MAX(group_2_id) IS NOT NULL AS group_2,
+        MAX(group_3_id) IS NOT NULL AS group_3,
+        MAX(group_4_id) IS NOT NULL AS group_4,
+        MAX(group_5_id) IS NOT NULL AS group_5,
+        MAX(group_6_id) IS NOT NULL AS group_6,
+        MAX(group_7_id) IS NOT NULL AS group_7,
+        MAX(group_8_id) IS NOT NULL AS group_8,
+        MAX(group_1_user_id) AS group_1_user_id,
+        MAX(group_2_user_id) AS group_2_user_id,
+        MAX(group_3_user_id) AS group_3_user_id,
+        MAX(group_4_user_id) AS group_4_user_id,
+        MAX(group_5_user_id) AS group_5_user_id,
+        MAX(group_6_user_id) AS group_6_user_id,
+        MAX(group_7_user_id) AS group_7_user_id,
+        MAX(group_8_user_id) AS group_8_user_id
+        `).
 		Where("project_id=? AND "+userId+"=?", projectID, identity).
 		Group("user_id").
 		Order("updated_at desc").
@@ -689,22 +689,22 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 
 	eventNamesToExcludePlaceholders := strings.Repeat("?,", len(eventNamesToExclude)-1) + "?"
 	eventsQuery := fmt.Sprintf(`SELECT event_names.name AS event_name, 
-		event_names.type as event_type, 
-		events1.timestamp AS timestamp, 
-		events1.properties AS properties 
-	FROM (
-		SELECT project_id, event_name_id, timestamp, properties 
-		FROM events 
-		WHERE project_id=? AND timestamp <= ? 
-		AND user_id IN (
-			SELECT id FROM users WHERE project_id=? AND %s = ?
-		) AND event_name_id NOT IN (
-			SELECT id FROM event_names WHERE project_id=? AND name IN (%s)
-		) 
-		LIMIT 5000) AS events1 
-	LEFT JOIN event_names
-	ON events1.event_name_id=event_names.id 
-	AND event_names.project_id=?;`, userId, eventNamesToExcludePlaceholders)
+        event_names.type as event_type, 
+        events1.timestamp AS timestamp, 
+        events1.properties AS properties 
+    FROM (
+        SELECT project_id, event_name_id, timestamp, properties 
+        FROM events 
+        WHERE project_id=? AND timestamp <= ? 
+        AND user_id IN (
+            SELECT id FROM users WHERE project_id=? AND %s = ?
+        ) AND event_name_id NOT IN (
+            SELECT id FROM event_names WHERE project_id=? AND name IN (%s)
+        ) 
+        LIMIT 5000) AS events1 
+    LEFT JOIN event_names
+    ON events1.event_name_id=event_names.id 
+    AND event_names.project_id=?;`, userId, eventNamesToExcludePlaceholders)
 
 	excludedEventNamesArgs := make([]interface{}, len(eventNamesToExclude))
 	for i, name := range eventNamesToExclude {
@@ -955,13 +955,13 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 
 	// Timeline Query
 	query := fmt.Sprintf(`SELECT COALESCE(JSON_EXTRACT_STRING(properties, '%s'), customer_user_id, id) AS user_name, %s
-		COALESCE(customer_user_id, id) AS user_id, 
-		ISNULL(customer_user_id) AS is_anonymous 
-	FROM users 
-	WHERE project_id = ? AND (%s) 
-	GROUP BY user_id 
-	ORDER BY updated_at DESC 
-	LIMIT 26;`, U.UP_NAME, selectStrAdditionalProp, groupUserString)
+        COALESCE(customer_user_id, id) AS user_id, 
+        ISNULL(customer_user_id) AS is_anonymous 
+    FROM users 
+    WHERE project_id = ? AND (%s) 
+    GROUP BY user_id 
+    ORDER BY updated_at DESC 
+    LIMIT 26;`, U.UP_NAME, selectStrAdditionalProp, groupUserString)
 
 	// Get Timeline for <=25 users
 	db := C.GetServices().Db
