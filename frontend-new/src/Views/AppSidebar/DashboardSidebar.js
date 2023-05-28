@@ -53,7 +53,7 @@ const DashboardSidebar = () => {
       />
       <div
         className={cx(
-          'flex flex-col row-gap-3 overflow-auto',
+          'flex flex-col row-gap-1 overflow-auto',
           styles['dashboard-list-container']
         )}
       >

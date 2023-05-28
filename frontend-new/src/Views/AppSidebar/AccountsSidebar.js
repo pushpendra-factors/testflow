@@ -105,7 +105,7 @@ const AccountsSidebar = () => {
           styles['accounts-list-container']
         )}
       >
-        <div className='flex flex-col row-gap-1 px-2 pb-6 border-b'>
+        <div className='flex flex-col row-gap-1 px-4 pb-6 border-b'>
           <Text
             type='title'
             level={8}
@@ -118,7 +118,7 @@ const AccountsSidebar = () => {
             return <GroupItem key={group[0]} group={group} />;
           })}
         </div>
-        <div className='flex flex-col row-gap-3 px-2'>
+        <div className='flex flex-col row-gap-3 px-4'>
           <Text
             type='title'
             level={8}
