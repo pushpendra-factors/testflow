@@ -795,7 +795,6 @@ const mapStateToProps = (state) => {
     activeProject: state.global.active_project,
     userProperties: state.coreQuery.userProperties,
     GlobalEventNames: state.coreQuery?.eventOptions[0]?.values,
-    userProperties: state.coreQuery.userProperties,
     factors_models: state.factors.factors_models,
     goal_insights: state.factors.goal_insights,
     tracked_events: state.factors.tracked_events,

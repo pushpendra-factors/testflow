@@ -48,7 +48,7 @@ const TouchpointView = ({
   tchType = '2',
   getEventProperties,
   eventProperties,
-  userProperties,
+  eventUserProperties,
   rule,
   onCancel,
   onSave,
@@ -260,7 +260,7 @@ const TouchpointView = ({
           })
         : (() => {})();
       tchRuleType !== RULE_TYPE_HS_FORM_SUBMISSIONS &&
-        userProperties.forEach((prop) => {
+        eventUserProperties.forEach((prop) => {
           if (startsWith?.length ? prop[1]?.startsWith(startsWith) : true) {
             tchUserProps.push(prop);
           }
@@ -273,7 +273,7 @@ const TouchpointView = ({
             }
           })
         : (() => {})();
-      userProperties.forEach((prop) => {
+      eventUserProperties.forEach((prop) => {
         if (startsWith?.length ? prop[1]?.startsWith(startsWith) : true) {
           tchUserProps.push(prop);
         }
@@ -625,7 +625,7 @@ const TouchpointView = ({
         }
       });
       tchRuleType !== RULE_TYPE_HS_FORM_SUBMISSIONS &&
-        userProperties.forEach((prop) => {
+        eventUserProperties.forEach((prop) => {
           if (prop[1]?.startsWith(startsWith)) {
             propertiesMp.push([prop[0]]);
           }
@@ -636,7 +636,7 @@ const TouchpointView = ({
           propertiesMp.push([prop[0]]);
         }
       });
-      userProperties.forEach((prop) => {
+      eventUserProperties.forEach((prop) => {
         if (prop[1]?.startsWith(startsWith)) {
           propertiesMp.push([prop[0]]);
         }
@@ -932,7 +932,7 @@ const TouchpointView = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   eventProperties: state.coreQuery.eventProperties,
-  userProperties: state.coreQuery.userProperties,
+  eventUserProperties: state.coreQuery.eventUserProperties,
   propertyValuesMap: state.coreQuery.propertyValuesMap
 });
 const mapDispatchToProps = (dispatch) =>

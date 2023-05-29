@@ -13,7 +13,7 @@ function EventGroupBlock({
   grpIndex,
   groupByEvent,
   event,
-  userProperties,
+  eventUserProperties,
   userPropNames,
   eventProperties,
   eventPropNames,
@@ -51,11 +51,11 @@ function EventGroupBlock({
       filterOpts[2].values = groupProperties[eventGroup];
       filterOpts[1].values = [];
     } else {
-      filterOpts[1].values = userProperties;
+      filterOpts[1].values = eventUserProperties;
       filterOpts[2].values = [];
     }
     setFilterOptions(filterOpts);
-  }, [userProperties, eventProperties, groupProperties]);
+  }, [eventUserProperties, eventProperties, groupProperties]);
 
   const onChange = (group, val, ind) => {
     const newGroupByState = { ...groupByEvent };
@@ -256,7 +256,7 @@ function EventGroupBlock({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   groupProperties: state.coreQuery.groupProperties,
-  userProperties: state.coreQuery.userProperties,
+  eventUserProperties: state.coreQuery.eventUserProperties,
   eventProperties: state.coreQuery.eventProperties,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,

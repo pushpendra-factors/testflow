@@ -87,7 +87,7 @@ const EventBasedAlert = ({
   eventPropNames,
   groupProperties,
   groupPropNames,
-  userProperties,
+  eventUserProperties,
   userPropNames,
   eventNames,
   getGroupProperties,
@@ -179,7 +179,7 @@ const EventBasedAlert = ({
         }
       }
     } else {
-      DDCategory = _.union(DDCategory, userProperties);
+      DDCategory = _.union(DDCategory, eventUserProperties);
     }
     setBreakdownOptions(DDCategory);
     if (
@@ -197,7 +197,7 @@ const EventBasedAlert = ({
     queries,
     eventProperties,
     groupProperties,
-    userProperties,
+    eventUserProperties,
     viewAlertDetails,
     alertState
   ]);
@@ -3545,7 +3545,7 @@ const mapStateToProps = (state) => ({
   eventProperties: state.coreQuery.eventProperties,
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
-  userProperties: state.coreQuery.userProperties,
+  eventUserProperties: state.coreQuery.eventUserProperties,
   userPropNames: state.coreQuery.userPropNames,
   eventNames: state.coreQuery.eventNames,
   groupOpts: state.groups.data

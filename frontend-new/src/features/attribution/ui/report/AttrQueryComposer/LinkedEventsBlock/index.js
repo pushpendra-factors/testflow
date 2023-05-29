@@ -17,7 +17,7 @@ function LinkedEventsBlock({
   activeProject,
   eventProperties,
   eventNames,
-  userProperties
+  eventUserProperties
 }) {
   const [selectVisible, setSelectVisible] = useState(false);
   const [filterBlockVisible, setFilterBlockVisible] = useState(false);
@@ -38,9 +38,9 @@ function LinkedEventsBlock({
     if (eventProperties[linkEvent.label]) {
       assignFilterProps.event = eventProperties[linkEvent.label];
     }
-    assignFilterProps.user = userProperties;
+    assignFilterProps.user = eventUserProperties;
     setFilterProperties(assignFilterProps);
-  }, [userProperties, eventProperties, linkEvent]);
+  }, [eventUserProperties, eventProperties, linkEvent]);
 
   const toggleEventSelect = () => {
     setSelectVisible(!selectVisible);
@@ -259,7 +259,7 @@ function LinkedEventsBlock({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   eventProperties: state.coreQuery.eventProperties,
-  userProperties: state.coreQuery.userProperties,
+  eventUserProperties: state.coreQuery.eventUserProperties,
   eventNameOptions: state.coreQuery.eventOptions,
   eventNames: state.coreQuery.eventNames
 });
