@@ -9,11 +9,15 @@ import { PathUrls } from '../../routes/pathUrls';
 import ProjectModal from 'Components/ProjectModal';
 import {
   isAccountsUrl,
+  isAttributionsUrl,
   isConfigurationUrl,
   isJourneyUrl,
   isReportsUrl,
   isSettingsUrl
 } from 'Views/AppSidebar/appSidebar.helpers';
+import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
+import { useSelector } from 'react-redux';
+import { featureLock } from '../../routes/feature';
 
 export const configureMenuItems = [
   {
@@ -213,13 +217,16 @@ function FaHeader() {
   const location = useLocation();
   const { pathname } = location;
 
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
+
   return (
     <Header
       className={`px-6 fixed py-3 flex items-center w-full justify-between ${styles['fa-header']}`}
     >
       <div className={'flex items-center w-1/3'}>
         <div className='flex items-center col-gap-6'>
-          <Link to={PathUrls.Dashboard}>
+          <Link to={PathUrls.ProfileAccounts}>
             <SVG
               name={'brand'}
               background='transparent'
@@ -282,6 +289,24 @@ function FaHeader() {
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
+            {featureLock(activeAgent) ? (
+              <Link
+                to={ATTRIBUTION_ROUTES.base}
+                className={cx('flex items-center', {
+                  [styles['active-header-item']]: isAttributionsUrl(pathname)
+                })}
+              >
+                <Text
+                  type='title'
+                  color='white'
+                  level={7}
+                  extraClass='mb-0'
+                  weight='medium'
+                >
+                  Attribution
+                </Text>
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>

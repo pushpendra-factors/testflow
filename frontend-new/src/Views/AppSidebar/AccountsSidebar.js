@@ -125,7 +125,7 @@ const AccountsSidebar = () => {
             extraClass='mb-0 px-2'
             color='character-secondary'
           >
-            Custom
+            Segments
           </Text>
           <div className='flex flex-col row-gap-1'>
             <SidebarSearch
