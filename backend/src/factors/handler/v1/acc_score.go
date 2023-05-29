@@ -94,7 +94,7 @@ func GetAccountScores(c *gin.Context) (interface{}, int, string, string, bool) {
 	debug, _ := strconv.ParseBool(debugFlag)
 
 	logCtx.Info("getting account scores")
-	perAccScore, err := store.GetStore().GetAccountsScore(projectId, groupId, dateString, debug)
+	perAccScore, weights, err := store.GetStore().GetAccountsScore(projectId, groupId, dateString, debug)
 	if err != nil {
 		errMsg := "Unable to get account score."
 		logCtx.WithError(err).Error(errMsg)
@@ -103,6 +103,10 @@ func GetAccountScores(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	accountScores.AccResult = make([]model.PerAccountScore, len(perAccScore))
 	accountScores.AccResult = perAccScore
+	if debug {
+		accountScores.Debug = make(map[string]interface{})
+		accountScores.Debug["weights"] = weights
+	}
 	return accountScores, http.StatusOK, "", "", false
 
 }
@@ -168,7 +172,7 @@ func GetAllUsersScores(c *gin.Context) (interface{}, int, string, string, bool) 
 	debug, _ := strconv.ParseBool(debug_flag)
 
 	logCtx.Info("getting account scores")
-	perAccScore, err := store.GetStore().GetAllUserScore(projectId, debug)
+	perAccScore, weights, err := store.GetStore().GetAllUserScore(projectId, debug)
 	if err != nil {
 		errMsg := "Unable to get account score."
 		logCtx.WithError(err).Error(errMsg)
@@ -177,6 +181,10 @@ func GetAllUsersScores(c *gin.Context) (interface{}, int, string, string, bool) 
 
 	accountScores.AccResult = make([]model.AllUsersScore, len(perAccScore))
 	accountScores.AccResult = perAccScore
+	if debug {
+		accountScores.Debug = make(map[string]interface{})
+		accountScores.Debug["weights"] = weights
+	}
 	return accountScores, http.StatusOK, "", "", false
 
 }

@@ -91,7 +91,7 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, w
 			switch eventName {
 
 			case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN:
-				RunSFOfflineTouchPointRuleForCampaignMember(project, &otpRules, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, logCtx)
+				RunSFOfflineTouchPointRuleForCampaignMember(project, &otpRules, &uniqueOTPEventKeys, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, eventName, logCtx)
 
 			case U.EVENT_NAME_SALESFORCE_TASK_UPDATED, U.EVENT_NAME_SALESFORCE_TASK_CREATED:
 				RunSFOfflineTouchPointRuleForTasks(project, &otpRules, &uniqueOTPEventKeys, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, logCtx)
@@ -107,7 +107,7 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, w
 
 }
 
-func RunSFOfflineTouchPointRuleForCampaignMember(project *model.Project, otpRules *[]model.OTPRule, startTime, endTime int64, eventNameId string, logCtx *log.Entry) {
+func RunSFOfflineTouchPointRuleForCampaignMember(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, startTime, endTime int64, eventNameId, eventName string, logCtx *log.Entry) {
 
 	eventsIds, events, err := store.GetStore().PullEventIdsWithEventNameId(project.ID, startTime, endTime, eventNameId)
 	if err != nil {
@@ -121,7 +121,7 @@ func RunSFOfflineTouchPointRuleForCampaignMember(project *model.Project, otpRule
 
 	for ei := range events {
 
-		err := ApplySFOfflineTouchPointRuleForCampaignMemberV1(project, otpRules, events[ei])
+		err := ApplySFOfflineTouchPointRuleForCampaignMemberV1(project, otpRules, uniqueOTPEventKeys, eventName, events[ei])
 		if err != nil {
 			logCtx.WithField("event", events[ei]).Info("Fail to apply OTP")
 			return
@@ -407,10 +407,22 @@ func ApplySFOfflineTouchPointRuleForEventsV1(project *model.Project, otpRules *[
 	return nil
 }
 
-// ApplySFOfflineTouchPointRuleForCampaignMemberV1 Check if the condition are satisfied for creating OTP events for each rule for SF Campaign.
-func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otpRules *[]model.OTPRule, sfEvent model.EventIdToProperties) error {
+// Creates a unique key using ruleID, userID and salesforce Event activity ID  as keyID for Salesforce Tasks.
+func createOTPUniqueKeyForCampaignMemberV1(rule model.OTPRule, sfEvent model.EventIdToProperties, logCtx *log.Entry) (string, int) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRuleForCampaignMemberV1", "event": sfEvent})
+	ruleID := rule.ID
+	userID := sfEvent.UserId
+
+	var uniqueKey string
+
+	uniqueKey = userID + ruleID + sfEvent.ID
+	return uniqueKey, http.StatusCreated
+}
+
+// ApplySFOfflineTouchPointRuleForCampaignMemberV1 Check if the condition are satisfied for creating OTP events for each rule for SF Campaign.
+func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, eventName string, sfEvent model.EventIdToProperties) error {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRuleForCampaignMemberV1", "event": sfEvent, "eventName": eventName})
 
 	if otpRules == nil || project == nil {
 		return nil
@@ -418,7 +430,7 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 
 	fistRespondedRuleApplicable := true
 	// Checking if the EP_SFCampaignMemberResponded has already been set as true for same customer id
-	if sfEvent.Name == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
+	if eventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
 
 		// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
 		if val, exists := sfEvent.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
@@ -429,7 +441,34 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 		}
 	}
 
+	otpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
+	if err != nil {
+		return err
+	}
+
 	for _, rule := range *otpRules {
+
+		otpUniqueKey, err := createOTPUniqueKeyForCampaignMemberV1(rule, sfEvent, logCtx)
+		if err != http.StatusCreated {
+			logCtx.Error("Failed to create otp_unique_key")
+			continue
+		}
+
+		//Checks if the otpUniqueKey is already present in other OTP Event Properties
+		if C.GetOtpKeyWithQueryCheckEnabled() {
+
+			//Checks if the otpUniqueKey is already present in other OTP Event Properties
+			isUnique, _ := store.GetStore().IsOTPKeyUniqueWithQuery(project.ID, sfEvent.UserId, otpEventName.ID, otpUniqueKey)
+			if !isUnique {
+				continue
+			}
+
+		} else {
+			//Checks if the otpUniqueKey is already present in other OTP Event Properties
+			if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+				continue
+			}
+		}
 
 		// check if rule is applicable
 		if !model.EvaluateOTPFilterV1(rule, sfEvent, logCtx) {
@@ -437,8 +476,8 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 		}
 
 		// Run for create document rule
-		if rule.TouchPointTimeRef == model.SFCampaignMemberCreated && sfEvent.Name == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
-			_, err := CreateTouchPointEventCampaignMemberV1(project, sfEvent, rule)
+		if rule.TouchPointTimeRef == model.SFCampaignMemberCreated && eventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+			_, err := CreateTouchPointEventCampaignMemberV1(project, sfEvent, otpUniqueKey, eventName, rule)
 			if err != nil {
 				logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document. trying for responded rule")
 			}
@@ -449,7 +488,7 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 
 			if val, exists := sfEvent.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
 				if val.(bool) == true {
-					_, err := CreateTouchPointEventCampaignMemberV1(project, sfEvent, rule)
+					_, err := CreateTouchPointEventCampaignMemberV1(project, sfEvent, otpUniqueKey, eventName, rule)
 					if err != nil {
 						logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document.")
 					}
@@ -461,9 +500,9 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 }
 
 // CreateTouchPointEventCampaignMemberV1 - Creates offline touch point event for SF Campaign
-func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model.EventIdToProperties, rule model.OTPRule) (*SDK.TrackResponse, error) {
+func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model.EventIdToProperties, otpUniqueKey, eventName string, rule model.OTPRule) (*SDK.TrackResponse, error) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventCampaignMemberV1", "rule": rule, "sfEvent": sfEvent})
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventCampaignMemberV1", "rule": rule, "sfEvent": sfEvent, "eventName": eventName})
 	logCtx.WithField("sfEvent", sfEvent).Info("CreateTouchPointEvent: creating salesforce document")
 	var trackResponse *SDK.TrackResponse
 	var err error
@@ -478,7 +517,7 @@ func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model
 
 	var timestamp int64
 
-	timestamp, err = GetSalesforceDocumentTimestampByEventV1(sfEvent)
+	timestamp, err = GetSalesforceDocumentTimestampByEventV1(sfEvent, eventName)
 	if err != nil {
 		logCtx.WithError(err).Error("failed to timestamp for SF for offline touch point.")
 		return trackResponse, err
@@ -521,6 +560,7 @@ func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model
 	}
 	// Adding mandatory properties
 	payload.EventProperties[U.EP_OTP_RULE_ID] = rule.ID
+	payload.EventProperties[U.EP_OTP_UNIQUE_KEY] = otpUniqueKey
 
 	status, trackResponse := SDK.Track(project.ID, payload, true, SDK.SourceSalesforce, "")
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -531,10 +571,10 @@ func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model
 	return trackResponse, nil
 }
 
-// GetSalesforceDocumentTimestampByEventV1 getSalesforceDocumentTimestampByEventV1 returns created or last modified timestamp by SalesforceAction
-func GetSalesforceDocumentTimestampByEventV1(event model.EventIdToProperties) (int64, error) {
+// GetSalesforceDocumentTimestampByEventV1 returns created or last modified timestamp by SalesforceAction
+func GetSalesforceDocumentTimestampByEventV1(event model.EventIdToProperties, eventName string) (int64, error) {
 
-	if event.Name == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
+	if eventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
 
 		date, exists := event.EventProperties[model.EP_SFCampaignMemberUpdated]
 		if !exists || date == nil {
@@ -547,7 +587,7 @@ func GetSalesforceDocumentTimestampByEventV1(event model.EventIdToProperties) (i
 		}
 
 		return int64(timestamp), nil
-	} else if event.Name == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
+	} else if eventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
 
 		date, exists := event.EventProperties[model.EP_SFCampaignMemberFirstRespondedDate]
 		if !exists || date == nil {

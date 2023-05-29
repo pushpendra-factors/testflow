@@ -80,6 +80,7 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 		}
 	}
 
+	profileUsersList = store.GetStore().AddPropertyValueLabelsToProfileResults(projectId, profileUsersList)
 	return profileUsersList, http.StatusOK, "", "", false
 }
 
@@ -234,6 +235,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		}
 	}
 
+	profileAccountsList = store.GetStore().AddPropertyValueLabelsToProfileResults(projectId, profileAccountsList)
 	return profileAccountsList, http.StatusOK, "", "", false
 }
 

@@ -272,3 +272,44 @@ func (store *MemSQL) TransformQueryResultsColumnValuesToLabel(projectID int64, r
 	}
 	return result, nil
 }
+
+func (store *MemSQL) AddPropertyValueLabelsToProfileResults(projectID int64, results []model.Profile) []model.Profile {
+	logCtx := log.WithField("project_id", projectID)
+
+	tablePropsMap := make(map[string]bool, 0)
+	for _, result := range results {
+		for prop := range result.TableProps {
+			tablePropsMap[prop] = true
+		}
+	}
+
+	for propertyName := range tablePropsMap {
+		if !U.IsAllowedCRMPropertyPrefix(propertyName) {
+			continue
+		}
+
+		source := strings.Split(propertyName, "_")[0]
+		source = strings.TrimPrefix(source, "$")
+
+		propertyValueLabels, err := store.GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID, source, propertyName)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"source": source, "property_key": propertyName}).WithError(err).Error("Failed to get property value labels on AddPropertyValueLabelsToProfileResults")
+			continue
+		}
+
+		if len(propertyValueLabels) == 0 {
+			continue
+		}
+
+		for i := range results {
+			propertyValue := U.GetPropertyValueAsString(results[i].TableProps[propertyName])
+			if propertyValue == "" || propertyValueLabels[propertyValue] == "" {
+				continue
+			}
+
+			results[i].TableProps[propertyName] = propertyValueLabels[propertyValue]
+		}
+	}
+
+	return results
+}
