@@ -790,28 +790,15 @@ export const getKPIQuery = (
 };
 
 const mapQueriesByGroup = (queries) => {
-  const group = {
-    user_kpi: [],
-    hubspot_deals: [],
-    salesforce_opportunities: []
-  };
+  const group = {};
   queries.forEach((query) => {
-    if (
-      query.group !== 'hubspot_deals' &&
-      query.group !== 'salesforce_opportunities'
-    ) {
-      group['user_kpi'].push(query);
-    } else {
-      group[query.group].push(query);
-    }
-    return group;
+    group[query.group]? group[query.group].push(query): group[query.group] = [query];
   });
-
   return group;
 };
 
 const getGroupByByGroup = (grp) => {
-  if (grp === 'user_kpi') {
+  if (grp !== 'hubspot_deals' || grp !== 'salesforce_opportunities') {
     return [
       {
         gr: '',
