@@ -49,7 +49,7 @@ func TestGettingAccountscoresinDB(t *testing.T) {
 	counts1["session2"] = int64(20)
 	counts1["session1"] = int64(10)
 	ev.EventScore = counts1
-	ti, err := store.GetStore().GetAccountsScore(project_id, group_id, ts, true)
+	ti, _, err := store.GetStore().GetAccountsScore(project_id, group_id, ts, true)
 	log.Infof("data : %v", ti)
 	assert.Nil(t, err)
 
@@ -58,7 +58,7 @@ func TestGettingAccountscoresinDB(t *testing.T) {
 func TestGettingAllUsersSCores(t *testing.T) {
 
 	project_id := int64(6000003)
-	ti, err := store.GetStore().GetAllUserScore(project_id, false)
+	ti, _, err := store.GetStore().GetAllUserScore(project_id, false)
 	log.Infof("data : %v", ti)
 	assert.Nil(t, err)
 
