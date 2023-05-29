@@ -261,8 +261,6 @@ const SixSignalReport = ({
         localDispatch({ type: VisitorReportActions.SET_PAGE_URL_DATA_ERROR });
       }
     };
-    //remove the below condition when page view is successfully tested
-    if (email !== 'solutions@factors.ai') return;
     if (isLoggedIn && active_project?.id) fetchPageUrls(active_project?.id);
     else if (!isLoggedIn && paramProjectId && paramQueryId)
       fetchPageUrls(paramProjectId, paramQueryId);
@@ -628,60 +626,58 @@ const SixSignalReport = ({
                 </FaSelect>
               )}
             </div>
-            <ControlledComponent controller={email === 'solutions@factors.ai'}>
-              <div className={style.filter}>
-                <div>
-                  <Button
-                    className={`${style.customButton} flex items-center gap-1`}
-                    onClick={() =>
-                      localDispatch({
-                        type: VisitorReportActions.SET_PAGE_VIEW_SELECTION_VISIBILITY,
-                        payload: true
-                      })
-                    }
-                  >
-                    <Text type='title' level={7} extraClass='m-0'>
-                      {!state.selectedPageViews?.length
-                        ? 'Page Viewed'
-                        : generateEllipsisOption(state.selectedPageViews)}
-                    </Text>
-                    <SVG size={14} name='chevronDown' />
-                  </Button>
-                </div>
-
-                {state.pageViewSelectionVisibility && (
-                  <FaSelect
-                    options={getOptions(
-                      state.pageViewUrls?.data || [],
-                      state.selectedPageViews
-                    )}
-                    onClickOutside={() =>
-                      localDispatch({
-                        type: VisitorReportActions.SET_PAGE_VIEW_SELECTION_VISIBILITY,
-                        payload: false
-                      })
-                    }
-                    applyClickCallback={handlePageViewsApplyClick}
-                    allowSearch={
-                      state.pageViewUrls?.data
-                        ? state.pageViewUrls?.data?.length > 0
-                        : false
-                    }
-                    variant='Multi'
-                    loadingState={state.pageViewUrls.loading}
-                    maxAllowedSelection={5}
-                  >
-                    {!state.pageViewUrls?.data?.length ? (
-                      <div className='px-2'>
-                        <Text type={'title'} level={7} extraClass={'m-0'}>
-                          No Page Views!
-                        </Text>
-                      </div>
-                    ) : null}
-                  </FaSelect>
-                )}
+            <div className={style.filter}>
+              <div>
+                <Button
+                  className={`${style.customButton} flex items-center gap-1`}
+                  onClick={() =>
+                    localDispatch({
+                      type: VisitorReportActions.SET_PAGE_VIEW_SELECTION_VISIBILITY,
+                      payload: true
+                    })
+                  }
+                >
+                  <Text type='title' level={7} extraClass='m-0'>
+                    {!state.selectedPageViews?.length
+                      ? 'Page Viewed'
+                      : generateEllipsisOption(state.selectedPageViews)}
+                  </Text>
+                  <SVG size={14} name='chevronDown' />
+                </Button>
               </div>
-            </ControlledComponent>
+
+              {state.pageViewSelectionVisibility && (
+                <FaSelect
+                  options={getOptions(
+                    state.pageViewUrls?.data || [],
+                    state.selectedPageViews
+                  )}
+                  onClickOutside={() =>
+                    localDispatch({
+                      type: VisitorReportActions.SET_PAGE_VIEW_SELECTION_VISIBILITY,
+                      payload: false
+                    })
+                  }
+                  applyClickCallback={handlePageViewsApplyClick}
+                  allowSearch={
+                    state.pageViewUrls?.data
+                      ? state.pageViewUrls?.data?.length > 0
+                      : false
+                  }
+                  variant='Multi'
+                  loadingState={state.pageViewUrls.loading}
+                  maxAllowedSelection={5}
+                >
+                  {!state.pageViewUrls?.data?.length ? (
+                    <div className='px-2'>
+                      <Text type={'title'} level={7} extraClass={'m-0'}>
+                        No Page Views!
+                      </Text>
+                    </div>
+                  ) : null}
+                </FaSelect>
+              )}
+            </div>
           </div>
 
           <div className={style.filter}>
