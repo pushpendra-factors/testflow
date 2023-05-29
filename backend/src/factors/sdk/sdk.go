@@ -2528,6 +2528,11 @@ func TrackDomainsGroup(projectID int64, groupUserID string, groupName string, do
 	}
 
 	groupID := U.GetDomainGroupDomainName(domainName)
+	if groupID == "" {
+		logCtx.Warning("No group id. Skip processing user group.")
+		return http.StatusOK
+	}
+
 	if groupUserID == "" {
 		groupUserID, status = store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, timestamp,
 			model.GetGroupUserSourceByGroupName(groupName))
