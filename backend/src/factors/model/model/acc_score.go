@@ -11,17 +11,20 @@ const DEFAULT_EVENT string = "all_events"
 const LAST_EVENT string = "LAST_EVENT"
 
 type AccScoreResult struct {
-	ProjectId int64             `json:"projectid"`
-	AccResult []PerAccountScore `json:"accountResult"`
+	ProjectId int64                  `json:"projectid"`
+	AccResult []PerAccountScore      `json:"accountResult"`
+	Debug     map[string]interface{} `json:"debug"`
 }
 type AccUserScoreResult struct {
-	ProjectId int64               `json:"projectid"`
-	AccResult []PerUserScoreOnDay `json:"userResult"`
+	ProjectId int64                  `json:"projectid"`
+	AccResult []PerUserScoreOnDay    `json:"userResult"`
+	Debug     map[string]interface{} `json:"debug"`
 }
 
 type UserScoreResult struct {
-	ProjectId int64           `json:"projectid"`
-	AccResult []AllUsersScore `json:"accountResult"`
+	ProjectId int64                  `json:"projectid"`
+	AccResult []AllUsersScore        `json:"accountResult"`
+	Debug     map[string]interface{} `json:"debug"`
 }
 
 type AccAggScore struct {
@@ -93,23 +96,23 @@ type GroupEventsCountResult struct {
 }
 
 type PerAccountScore struct {
-	Id        string           `json:"id"`
-	Score     float32          `json:"score"`
-	Timestamp string           `json:"timestamp"`
-	Debug     map[string]int64 `json:"debug"`
+	Id        string                 `json:"id"`
+	Score     float32                `json:"score"`
+	Timestamp string                 `json:"timestamp"`
+	Debug     map[string]interface{} `json:"debug"`
 }
 
 type PerUserScoreOnDay struct {
-	Id        string           `json:"id"`
-	Score     float32          `json:"score"`
-	Timestamp string           `json:"timestamp"`
-	Debug     map[string]int64 `json:"debug"`
+	Id        string                 `json:"id"`
+	Score     float32                `json:"score"`
+	Timestamp string                 `json:"timestamp"`
+	Debug     map[string]interface{} `json:"debug"`
 }
 
 type AllUsersScore struct {
-	UserId      string             `json:"UserId"`
-	ScorePerDay map[string]float64 `json:"score"`
-	Debug       map[string]int     `json:"debug"`
+	UserId      string                       `json:"UserId"`
+	ScorePerDay map[string]PerUserScoreOnDay `json:"score"`
+	Debug       map[string]int               `json:"debug"`
 }
 
 type GroupEventsCountScore struct {
