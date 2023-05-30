@@ -121,7 +121,7 @@ export const formatData = (response, arrayMapper) => {
 
   const { rows, headers, meta } = response;
   const breakdowns = [...meta.query.gbp];
-  const eventsCondition = [...meta.query?.ec];
+  const eventsCondition = meta.query?.ec;
   const firstEventIdx = headers.findIndex((header) => header === 'step_0');
   const netConversionIndex = headers.findIndex(
     (header) => header === 'conversion_overall'
@@ -192,11 +192,12 @@ export const formatData = (response, arrayMapper) => {
       ...breakdownData,
       ...groupEventData,
       Conversion: value, // used for sorting, value will be removed soon
-      nonConvertedName
+      nonConvertedName,
+      'Conversion Time': formatDuration(totalDuration),
+      ...timeData
     };
-    if (eventsCondition !== 'funnel_any_given_event') {
-      result['Conversion Time'] = formatDuration(totalDuration);
-      result.concat(timeData);
+    if (eventsCondition === 'funnel_any_given_event') {
+      if (result['Conversion Time']) delete result['Conversion Time'];
     }
     return result;
   });
@@ -353,7 +354,11 @@ export const getTableColumns = (
       />
     ),
     dataIndex: 'Conversion',
-    className: 'text-right border-none',
+    className: `text-right ${
+      eventsCondition === 'funnel_any_given_event'
+        ? 'has-border'
+        : 'border-none'
+    }`,
     width: 150,
     render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied)
   };
@@ -620,16 +625,17 @@ export const getTableData = (
         : 'All',
       Conversion: comparisonChartData
         ? { conversion, comparison_conversion }
-        : conversion
+        : conversion,
+      'Conversion Time': comparisonChartData
+        ? { overallDuration, comparisonOverallDuration }
+        : overallDuration,
+      ...queryData
     };
 
-    if (eventsCondition !== 'funnel_any_given_event') {
-      const conversionTime = comparisonChartData
-        ? { overallDuration, comparisonOverallDuration }
-        : overallDuration;
-      result['Conversion Time'] = conversionTime;
+    if (eventsCondition === 'funnel_any_given_event') {
+      if (result['Conversion Time']) delete result['Conversion Time'];
     }
-    return [{ ...result, ...queryData }];
+    return [{ ...result }];
   }
 
   const isComparisonApplied = comparisonChartData != null;
@@ -703,17 +709,17 @@ export const getTableData = (
           conversion: group.Conversion,
           comparison_conversion:
             compareGroup != null ? compareGroup.Conversion : '0'
+        },
+        'Conversion Time': {
+          overallDuration: group['Conversion Time'],
+          comparisonOverallDuration:
+            compareGroup != null ? compareGroup['Conversion Time'] : 'N/A'
         }
       })
     };
 
-    if (eventsCondition !== 'funnel_any_given_event') {
-      const conversionTime = {
-        overallDuration: group['Conversion Time'],
-        comparisonOverallDuration:
-          compareGroup != null ? compareGroup['Conversion Time'] : 'N/A'
-      };
-      result['Conversion Time'] = conversionTime;
+    if (eventsCondition === 'funnel_any_given_event') {
+      if (result['Conversion Time']) delete result['Conversion Time'];
     }
     return result;
   });
