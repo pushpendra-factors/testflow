@@ -278,13 +278,13 @@ func EvaluateOTPFilterV1(rule OTPRule, event EventIdToProperties, logCtx *log.En
 		case EqualsOpStr:
 			if _, exists := event.EventProperties[filter.Property]; exists {
 				if filter.Value != "" && event.EventProperties[filter.Property] == filter.Value {
-					mapFilterPass[filter.Property] = mapFilterPass[filter.Property] || (filter.LogicalOp == LOGICAL_OP_AND)
+					mapFilterPass[filter.Property] = true
 				}
 			}
 		case NotEqualOpStr:
 			if _, exists := event.EventProperties[filter.Property]; exists {
 				if filter.Value != "" && event.EventProperties[filter.Property] != filter.Value {
-					mapFilterPass[filter.Property] = mapFilterPass[filter.Property] || (filter.LogicalOp == LOGICAL_OP_AND)
+					mapFilterPass[filter.Property] = true
 				}
 			}
 		case ContainsOpStr:
@@ -292,7 +292,7 @@ func EvaluateOTPFilterV1(rule OTPRule, event EventIdToProperties, logCtx *log.En
 				if filter.Property != "" {
 					val, ok := event.EventProperties[filter.Property].(string)
 					if ok && strings.Contains(val, filter.Value) {
-						mapFilterPass[filter.Property] = mapFilterPass[filter.Property] || (filter.LogicalOp == LOGICAL_OP_AND)
+						mapFilterPass[filter.Property] = true
 
 					}
 				}
@@ -308,6 +308,8 @@ func EvaluateOTPFilterV1(rule OTPRule, event EventIdToProperties, logCtx *log.En
 	for _, passed := range mapFilterPass {
 		filtersPassed = passed && filtersPassed
 	}
+
+	//logCtx.WithField("Rule", rule).WithField("event", event).WithField("filtersPassed", filtersPassed).Info("rule check")
 
 	// When neither filters matched nor (filters matched but values are same)
 	return filtersPassed

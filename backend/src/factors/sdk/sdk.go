@@ -1048,20 +1048,19 @@ type Rank struct {
 }
 
 func MapEventPropertiesToProjectDefinedProperties(projectID int64, logCtx *log.Entry, properties *U.PropertiesMap) (*U.PropertiesMap, bool) {
-
 	mappedProperties := make(U.PropertiesMap)
+	interactionSettings := model.InteractionSettings{}
 
 	project, errCode := store.GetStore().GetProject(projectID)
-	if errCode != http.StatusFound {
+	if errCode == http.StatusFound {
+		err := U.DecodePostgresJsonbToStructType(&project.InteractionSettings, &interactionSettings)
+		if err != nil && err.Error() != "Empty jsonb object" {
+			logCtx.WithField("projectID", projectID).WithField("err", err).Error("failed to Decode Postgres Jsonb")
+		}
+	} else {
 		logCtx.WithField("projectID", projectID).WithField("err_code", errCode).Error("failed to fetch project")
 	}
 
-	interactionSettings := model.InteractionSettings{}
-
-	err := U.DecodePostgresJsonbToStructType(&project.InteractionSettings, &interactionSettings)
-	if err != nil && err.Error() != "Empty jsonb object" {
-		logCtx.WithField("projectID", projectID).WithField("err", err).Error("failed to Decode Postgres Jsonb")
-	}
 	// use default settings in case not provided
 	if interactionSettings.UTMMappings == nil {
 		interactionSettings = model.DefaultMarketingPropertiesMap()
@@ -2425,7 +2424,7 @@ func TrackGroupWithDomain(projectID int64, groupName, domainName string, propert
 		return "", http.StatusInternalServerError
 	}
 
-	groupID := U.GetDomainGroupDomainName(projectID, domainName)
+	groupID := U.GetDomainGroupDomainName(domainName)
 	groupUserID, status := store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, timestamp, model.GetGroupUserSourceByGroupName(groupName))
 	if status != http.StatusCreated && status != http.StatusFound {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for  group user by group id.")
@@ -2470,7 +2469,7 @@ func TrackUserAccountGroup(projectID int64, userID string, groupName string, gro
 	}
 
 	groupIDPropertyKey := model.GetDomainNameSourcePropertyKey(groupName)
-	groupID := U.GetDomainGroupDomainName(projectID, U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKey]))
+	groupID := U.GetDomainGroupDomainName(U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKey]))
 
 	if groupID == "" {
 		logCtx.Warning("No group id. Skip processing user group.")
@@ -2527,7 +2526,12 @@ func TrackDomainsGroup(projectID int64, groupUserID string, groupName string, do
 		return http.StatusInternalServerError
 	}
 
-	groupID := U.GetDomainGroupDomainName(projectID, domainName)
+	groupID := U.GetDomainGroupDomainName(domainName)
+	if groupID == "" {
+		logCtx.Warning("No group id. Skip processing user group.")
+		return http.StatusOK
+	}
+
 	if groupUserID == "" {
 		groupUserID, status = store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, timestamp,
 			model.GetGroupUserSourceByGroupName(groupName))

@@ -768,9 +768,8 @@ function bindAndCaptureFormFills(appInstance) {
     logger.debug("Binding for form fills capture", false);
 
     // Assigning incremental id to the form.
-    var forms = document.querySelectorAll("form");
+    var forms = Capture.getElemsFromTopAndIframes('form');
     const FACTORS_FORM_ID_ATTRIBUTE = "data-factors-form-id";
-
     if (!window.FACTORS_FORMS_ID) window.FACTORS_FORMS_ID = 0;
  
     for (var fi=0; fi<forms.length; fi++) {
@@ -781,8 +780,7 @@ function bindAndCaptureFormFills(appInstance) {
 
     // Assigns non-form fields with noform.field-1.
     // Assign form input fields with form-1.field-1.
-    var inputs = document.querySelectorAll("input");
-
+    var inputs = Capture.getElemsFromTopAndIframes('input');
     if (!window.FACTORS_INPUTS_ID) window.FACTORS_INPUTS_ID = 0;
 
     for(var i=0; i<inputs.length; i++) {

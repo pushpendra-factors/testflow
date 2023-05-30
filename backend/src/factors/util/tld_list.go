@@ -3395,11 +3395,13 @@ func GetDomainGroupDomainName(projectID int64, domainName string) string {
 	domainName = strings.ToLower(domainName)
 	domainName = strings.TrimPrefix(domainName, "http://")
 	domainName = strings.TrimPrefix(domainName, "https://")
-	domainName = strings.TrimSuffix(domainName, "/")
+	paths := strings.SplitN(domainName, "/", 2)
 
-	if domainName == "" {
+	if len(paths) == 0 || domainName == "" || paths[0] == "" {
 		return ""
 	}
+
+	domainName = paths[0]
 
 	tld := GetTLDFromDomainName(domainName)
 	if tld == "" { // if no match found log and return the domain name
