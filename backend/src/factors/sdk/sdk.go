@@ -1048,20 +1048,19 @@ type Rank struct {
 }
 
 func MapEventPropertiesToProjectDefinedProperties(projectID int64, logCtx *log.Entry, properties *U.PropertiesMap) (*U.PropertiesMap, bool) {
-
 	mappedProperties := make(U.PropertiesMap)
+	interactionSettings := model.InteractionSettings{}
 
 	project, errCode := store.GetStore().GetProject(projectID)
-	if errCode != http.StatusFound {
+	if errCode == http.StatusFound {
+		err := U.DecodePostgresJsonbToStructType(&project.InteractionSettings, &interactionSettings)
+		if err != nil && err.Error() != "Empty jsonb object" {
+			logCtx.WithField("projectID", projectID).WithField("err", err).Error("failed to Decode Postgres Jsonb")
+		}
+	} else {
 		logCtx.WithField("projectID", projectID).WithField("err_code", errCode).Error("failed to fetch project")
 	}
 
-	interactionSettings := model.InteractionSettings{}
-
-	err := U.DecodePostgresJsonbToStructType(&project.InteractionSettings, &interactionSettings)
-	if err != nil && err.Error() != "Empty jsonb object" {
-		logCtx.WithField("projectID", projectID).WithField("err", err).Error("failed to Decode Postgres Jsonb")
-	}
 	// use default settings in case not provided
 	if interactionSettings.UTMMappings == nil {
 		interactionSettings = model.DefaultMarketingPropertiesMap()
