@@ -67,8 +67,8 @@ type Engagements struct {
 // EngagementV3 definition
 type EngagementsV3 struct {
 	Id           string                   `json:"id"`
-	Properties   map[string]string        `json:"properties"`
-	Associations []map[string]interface{} `json:"associations"`
+	Properties   map[string]interface{}   `json:"properties"`
+	Associations map[string][]interface{} `json:"associations"`
 }
 
 // Contact definition
@@ -1899,7 +1899,9 @@ func getThreadIDFromEngagementV3(engagement EngagementsV3, engagementType string
 		return "", errors.New("couldn't get the threadID on hubspot email engagement_v3, logging and continuing")
 	}
 
-	return threadID, nil
+	threadIDStr := U.GetPropertyValueAsString(threadID)
+
+	return threadIDStr, nil
 }
 
 func getThreadIDFromOldEngagement(engagement Engagements, engagementType string) (string, error) {
@@ -3677,25 +3679,25 @@ var engagementCallV3PropertiesMap = map[string]string{
 	"hs_call_disposition_label": "disposition_label",
 }
 var engagementEmailV3PropertiesMap = map[string]string{
-	"id":                    "id",
-	"hs_createdate":         "createdAt",
-	"hs_lastmodifieddate":   "lastUpdated",
-	"type":                  "type",
-	"hs_email_team_id":      "teamId",
-	"hubspot_owner_id":      "ownerId",
-	"hs_email_active":       "active",
-	"hs_timestamp":          "timestamp",
-	"hs_email_source":       "source",
-	"hs_email_sender_email": "from",
-	"hs_email_to_email":     "to",
-	"hs_email_subject":      "subject",
-	"hs_email_sent_via":     "sentVia",
+	"id":                  "id",
+	"hs_createdate":       "createdAt",
+	"hs_lastmodifieddate": "lastUpdated",
+	"type":                "type",
+	"hs_email_team_id":    "teamId",
+	"hubspot_owner_id":    "ownerId",
+	"hs_email_active":     "active",
+	"hs_timestamp":        "timestamp",
+	"hs_email_source":     "source",
+	"hs_email_subject":    "subject",
+	"hs_email_sent_via":   "sentVia",
 }
+var engagementEmailV3Headers = []string{"from", "to"}
 
 func extractionOfPropertiesWithOutEmailOrContactV3(engagement EngagementsV3, engagementType string) map[string]interface{} {
 	logCtx := log.WithField("engagement_type", engagementType).WithField("engagement", engagement)
 	properties := make(map[string]interface{})
 	var engagementArray map[string]string
+	emailHeadersArray := make([]string, 0)
 
 	if engagementType == EngagementTypeMeeting {
 		engagementArray = engagementMeetingV3PropertiesMap
@@ -3703,6 +3705,7 @@ func extractionOfPropertiesWithOutEmailOrContactV3(engagement EngagementsV3, eng
 		engagementArray = engagementCallV3PropertiesMap
 	} else if engagementType == EngagementTypeIncomingEmail || engagementType == EngagementTypeEmail {
 		engagementArray = engagementEmailV3PropertiesMap
+		emailHeadersArray = engagementEmailV3Headers
 	}
 
 	for key, oldKey := range engagementArray {
@@ -3733,45 +3736,134 @@ func extractionOfPropertiesWithOutEmailOrContactV3(engagement EngagementsV3, eng
 			properties[oldKey] = engagement.Properties[key]
 		}
 	}
+
+	for _, key := range emailHeadersArray {
+		if key == "to" {
+			emailHeaders, ok := engagement.Properties["hs_email_headers"].(map[string]interface{})
+			if !ok {
+				logCtx.Error("failed to convert hs_email_header from interface to map")
+				continue
+			}
+
+			toInterface := emailHeaders[key]
+			if toInterface == nil {
+				logCtx.Error("No to in engagement properties hs_email_header")
+				continue
+			}
+
+			interfaceArray, isConvert := toInterface.([]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to interface array")
+				continue
+			}
+
+			if len(interfaceArray) == 0 {
+				logCtx.Error("length of interface array is zero")
+				continue
+			}
+
+			toMap, isConvert := interfaceArray[0].(map[string]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to toMap")
+				continue
+			}
+			properties[key] = toMap["email"]
+		} else if key == "from" {
+			emailHeaders, ok := engagement.Properties["hs_email_headers"].(map[string]interface{})
+			if !ok {
+				logCtx.Error("failed to convert hs_email_header from interface to map")
+				continue
+			}
+
+			fromInterface := emailHeaders[key]
+			if fromInterface == nil {
+				logCtx.Error("No from in engagement properties hs_email_header")
+				continue
+			}
+
+			fromMap, isConvert := fromInterface.(map[string]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to fromMap")
+				continue
+			}
+			properties[key] = fromMap["email"]
+		} else {
+			properties[key] = engagement.Properties[key]
+		}
+	}
 	return properties
 }
 
 func getEngagementContactIdsV3(engagementTypeStr string, engagement EngagementsV3) ([]string, int) {
 	logCtx := log.WithField("engagement_type_str", engagementTypeStr).WithField("engagement", engagement)
-	contactIds := make([]string, 0, 0)
+	contactIds := make([]string, 0)
 	if engagementTypeStr == EngagementTypeCall || engagementTypeStr == EngagementTypeMeeting {
-		for i := range engagement.Associations {
-			contactIdArr, isConvert := engagement.Associations[i]["to"].(map[string]interface{})
-			if !isConvert {
-				logCtx.Error("cannot convert interface to contactIdArr in getEngagementContactIdsV3")
-				continue
-			}
-
-			contactId, err := U.GetPropertyValueAsFloat64(contactIdArr["id"])
+		contactIdArr := engagement.Associations["contactIds"]
+		for i := range contactIdArr {
+			contactId, err := U.GetPropertyValueAsFloat64(contactIdArr[i])
 			if err != nil {
-				logCtx.WithError(err).Error("cannot convert interface to float64 in getEngagementContactIdsV3")
+				logCtx.WithError(err).Error("cannot convert interface to float64")
 				return contactIds, http.StatusInternalServerError
 			}
 			contactIds = append(contactIds, strconv.FormatInt((int64)(contactId), 10))
 		}
 	} else if engagementTypeStr == EngagementTypeIncomingEmail || engagementTypeStr == EngagementTypeEmail {
+		var contactId float64
+		var err error
 		var contact interface{}
+
+		emailHeaders, ok := engagement.Properties["hs_email_headers"].(map[string]interface{})
+		if !ok {
+			logCtx.Error("Failed to convert interface to map for email_headers")
+			return nil, http.StatusInternalServerError
+		}
+
 		if engagementTypeStr == EngagementTypeIncomingEmail {
-			contact = engagement.Properties["hs_email_sender_contactId"]
-			if contact == "" || contact == nil {
-				logCtx.Error("No contact id for INCOMING_EMAIL engamement_v3. Will be marked as synced")
+			contactIdInterface := emailHeaders["from"]
+			if contactIdInterface == nil {
+				logCtx.Warning("No from for INCOMING_EMAIL engagement. Will be marked as synced.")
 				return nil, http.StatusOK
 			}
 
+			fromMap, isConvert := contactIdInterface.(map[string]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to fromMap")
+				return contactIds, http.StatusInternalServerError
+			}
+			contact = fromMap["contactId"]
+			if contact == "" || contact == nil {
+				logCtx.Error("No contact id for INCOMING_EMAIL engamement. Will be marked as synced")
+				return nil, http.StatusOK
+			}
 		} else {
-			contact = engagement.Properties["hs_email_to_contactId"]
+			contactIdInterface := emailHeaders["to"]
+			interfaceArray, isConvert := contactIdInterface.([]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to interface array")
+				return contactIds, http.StatusInternalServerError
+			}
+
+			if len(interfaceArray) == 0 {
+				return contactIds, http.StatusOK
+			}
+
+			toMap, isConvert := interfaceArray[0].(map[string]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to map")
+				return contactIds, http.StatusInternalServerError
+			}
+
+			if len(toMap) == 0 {
+				return contactIds, http.StatusOK
+			}
+			contact = toMap["contactId"]
 			if contact == "" || contact == nil {
 				logCtx.Error("No contact id for EMAIL engamement_v3. Will be marked as synced")
 				return nil, http.StatusOK
 			}
 		}
 
-		contactId, err := U.GetPropertyValueAsFloat64(contact)
+		contactId, err = U.GetPropertyValueAsFloat64(contact)
 		if err != nil {
 			logCtx.WithError(err).Error("cannot convert interface to float64 in getEngagementContactIdsV3")
 			return contactIds, http.StatusInternalServerError
@@ -3796,14 +3888,15 @@ func syncEngagementsV3(project *model.Project, otpRules *[]model.OTPRule, unique
 		return http.StatusInternalServerError
 	}
 
-	engagementType, isPresent := engagement.Properties["type"]
+	engagementTypeInt, isPresent := engagement.Properties["type"]
 	if !isPresent {
 		logCtx.Error("Failed to find type as a key in engagement_v3.")
 		return http.StatusInternalServerError
 	}
+	engagementType := U.GetPropertyValueAsString(engagementTypeInt)
 
 	if engagementType != EngagementTypeCall && engagementType != EngagementTypeMeeting && engagementType != EngagementTypeIncomingEmail && engagementType != EngagementTypeEmail {
-		logCtx.Error("Invalid engagement_v3 type")
+		logCtx.WithField("engagement_type", engagementTypeInt).Error("Invalid engagement_v3 type")
 		return http.StatusInternalServerError
 	}
 

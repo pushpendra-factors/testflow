@@ -454,6 +454,7 @@ def sync_engagements_v2(project_id, refresh_token, api_key, last_sync_timestamp=
     final_url = get_url
     has_more = True
     engagement_api_calls = 0
+    engagements_contacts_api_calls = 0
     latest_timestamp = None
     buffer_size = page_count * get_buffer_size_by_api_count()
     create_all_engagement_documents_with_buffer = get_create_all_documents_with_buffer(project_id, 'engagement', buffer_size)
@@ -504,7 +505,7 @@ def sync_engagements_v2(project_id, refresh_token, api_key, last_sync_timestamp=
             create_all_documents(project_id, 'engagement', filter_engagements)
             log.warning("Downloaded and created %d engagements.", len(filter_engagements))
     create_all_engagement_documents_with_buffer([],False) ## flush any remaining docs in memory
-    return engagement_api_calls,latest_timestamp
+    return engagement_api_calls, engagements_contacts_api_calls, latest_timestamp
 
 def add_contactId_v3(email, project_id, engagement, hubspot_request_handler):
     get_url = "https://api.hubapi.com/contacts/v1/contact/email/" + email + "/profile?"
@@ -515,9 +516,9 @@ def add_contactId_v3(email, project_id, engagement, hubspot_request_handler):
 
     response = json.loads(r.text)
     if engagement["properties"]["hs_email_direction"] == "INCOMING_EMAIL":
-        engagement["properties"]["hs_email_sender_contactId"]["contactId"] = response["vid"]
+        engagement["properties"]["hs_email_headers"]["from"]["contactId"] = response["vid"]
     if engagement["properties"]["hs_email_direction"] == "EMAIL":
-        engagement["properties"]["hs_email_to_contactId"]["contactId"] = response["vid"]
+        engagement["properties"]["hs_email_headers"]["to"][0]["contactId"] = response["vid"]
 
 def add_disposition_label_v3(engagement, call_disposition):
     if "properties" in engagement and "hs_call_disposition" in engagement["properties"]:
@@ -534,12 +535,18 @@ def add_properties_engagement_v3(project_id, hubspot_request_handler, engagement
     elif engagement_type == "emails" and "properties" in engagement and "hs_email_direction" in engagement["properties"]:
         if engagement["properties"]["hs_email_direction"] == "INCOMING_EMAIL":
             engagement["properties"]["type"] = "INCOMING_EMAIL"
-            if "hs_email_sender_email" in engagement["properties"]:
-                add_contactId_v3(engagement["properties"]["hs_email_sender_email"], project_id, engagement, hubspot_request_handler)
+            if "hs_email_headers" in engagement["properties"]:
+                email_headers = json.loads(engagement["properties"]["hs_email_headers"])
+                engagement["properties"]["hs_email_headers"] = email_headers
+                if "from" in email_headers and "email" in email_headers["from"]:
+                    add_contactId_v3(email_headers["from"]["email"], project_id, engagement, hubspot_request_handler)
         if engagement["properties"]["hs_email_direction"] == "EMAIL":
             engagement["properties"]["type"] = "EMAIL"
-            if "hs_email_to_email" in engagement["properties"]:
-                add_contactId_v3(engagement["properties"]["hs_email_to_email"], project_id, engagement, hubspot_request_handler)
+            if "hs_email_headers" in engagement["properties"]:
+                email_headers = json.loads(engagement["properties"]["hs_email_headers"])     
+                engagement["properties"]["hs_email_headers"] = email_headers
+                if "to" in email_headers and len(email_headers["to"])>0 and "email" in email_headers["to"][0]:
+                    add_contactId_v3(email_headers["to"][0]["email"], project_id, engagement, hubspot_request_handler)
 
 def get_properties_for_engagement_v3(engagement_type):
     if engagement_type == "calls":
@@ -560,6 +567,22 @@ def get_properties_for_engagement_v3(engagement_type):
             "hs_email_subject", "hs_email_text", "hs_attachment_ids", "hs_email_headers"
         ]
 
+def fill_contacts_for_engagements_v3(project_id, engagements, engagement_type, hubspot_request_handler):
+    engagements_ids = []
+    for engagement in engagements:
+        engagements_ids.append(engagement["id"])
+        engagement["associations"] = {}
+    
+    associations, api_calls = get_associations(project_id, engagement_type, engagements_ids, "contact", hubspot_request_handler)
+    for i in range(len(engagements)):
+        engagement_id = str(engagements[i]["id"])
+        if engagement_id in associations:
+            contact_ids = []
+            for id in associations[engagement_id]:
+                contact_ids.append(int(id)) ## store as integer
+            engagements[i]["associations"]["contactIds"] = contact_ids
+    return engagements, api_calls
+
 def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=0):
     log.info("Using sync_engagements_v3 for project_id : "+str(project_id)+".")
     
@@ -575,13 +598,15 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
     hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
 
     engagement_api_calls = 0
-    latest_timestamp = 0
+    engagements_contacts_api_calls = 0
+    engagement_latest_timestamp = 0
     call_disposition = get_call_disposition(project_id, hubspot_request_handler)
     
     for type in engagement_types:
         url = engagement_url + type + "/search"
         has_more = True
         engagement_properties = get_properties_for_engagement_v3(type)
+        latest_timestamp = 0
 
         log.warning("Downloading "+ type + " engagements for project_id : "+ str(project_id) + ".")
         
@@ -619,6 +644,9 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
                 has_more = False
 
             latest_timestamp = get_batch_documents_max_timestamp_v3(project_id, docs, "engagements", latest_timestamp)
+
+            _, api_calls = fill_contacts_for_engagements_v3(project_id, docs, type, hubspot_request_handler)
+            engagements_contacts_api_calls += api_calls
             count = count + len(filter_engagements)
             overall_doc_count = overall_doc_count + len(filter_engagements)
 
@@ -633,9 +661,14 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
                 log.warning("10K record limit hit for %s engagements for project_id %d. New timestamp %d", type, project_id, latest_timestamp)
                 count = 0
                 json_payload = get_search_v3_api_payload("hs_lastmodifieddate", latest_timestamp, limit)
+        
+        if engagement_latest_timestamp == 0:
+            engagement_latest_timestamp = latest_timestamp
+        elif latest_timestamp < engagement_latest_timestamp:
+            engagement_latest_timestamp = latest_timestamp
     
     create_all_engagement_documents_with_buffer([],False) ## flush any remaining docs in memory
-    return engagement_api_calls, latest_timestamp
+    return engagement_api_calls, engagements_contacts_api_calls, engagement_latest_timestamp
 
 def is_marketing_contact(doc):
     if "properties" in doc:
@@ -1328,7 +1361,7 @@ def get_batch_documents_max_timestamp_v3(project_id, docs, object_type, max_time
 
         doc_last_modified_timestamp = int(last_modified_date.timestamp() * 1000)
         
-        if max_timestamp== 0 :
+        if max_timestamp == 0 :
             max_timestamp = doc_last_modified_timestamp
         elif max_timestamp < doc_last_modified_timestamp:
             max_timestamp = doc_last_modified_timestamp
@@ -1795,7 +1828,7 @@ def sync(project_id, refresh_token, api_key, doc_type, sync_all, last_sync_times
         elif doc_type == "deleted_contacts":
             response["deleted_contacts_api_calls"] = get_deleted_contacts(project_id, refresh_token, api_key)
         elif doc_type == "engagement":
-            response["engagement_api_calls"],max_timestamp = sync_engagements(project_id, refresh_token, api_key, last_sync_timestamp)
+            response["engagement_api_calls"], response["engagements_contacts_api_calls"], max_timestamp = sync_engagements(project_id, refresh_token, api_key, last_sync_timestamp)
         else:
             raise Exception("invalid doc_type "+ doc_type)
 

@@ -6519,7 +6519,7 @@ func TestHubspotEngagementCallV3(t *testing.T) {
 
 	engagementV3 := IntHubspot.EngagementsV3{
 		Id: "2",
-		Properties: map[string]string{
+		Properties: map[string]interface{}{
 			"hs_createdate":             time.Unix(engagementV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
 			"hs_lastmodifieddate":       time.Unix(engagementV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
 			"hs_call_body":              U.RandomString(20),
@@ -6536,17 +6536,9 @@ func TestHubspotEngagementCallV3(t *testing.T) {
 			"hs_call_disposition_label": "Connected",
 			"hs_call_source":            "API",
 		},
-		Associations: []map[string]interface{}{
-			{
-				"to": map[string]interface{}{
-					"id": 1,
-				},
-				"types": []map[string]interface{}{
-					{
-						"associationCategory": "HUBSPOT_DEFINED",
-						"associationTypeId":   194,
-					},
-				},
+		Associations: map[string][]interface{}{
+			"contactIds": []interface{}{
+				1,
 			},
 		},
 	}
@@ -6597,7 +6589,7 @@ func TestHubspotEngagementCallV3(t *testing.T) {
 	assert.Equal(t, "Connected", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_disposition_label"]))
 	assert.Equal(t, "COMPLETED", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_status"]))
 	assert.Equal(t, "Discovery call", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_title"]))
-	assert.Equal(t, engagementV3.Properties["hs_call_disposition"], U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_disposition"]))
+	assert.Equal(t, U.GetPropertyValueAsString(engagementV3.Properties["hs_call_disposition"]), U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_disposition"]))
 	assert.Equal(t, email, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_email"]))
 	assert.Equal(t, "t", U.GetPropertyValueAsString((*eventProperties)[U.EP_SKIP_SESSION]))
 	assert.Equal(t, float64(createdAt.Unix()), (*eventProperties)[U.EP_TIMESTAMP])
@@ -6772,7 +6764,7 @@ func TestHubspotEngagementMeetingV3(t *testing.T) {
 
 	engagementV3 := IntHubspot.EngagementsV3{
 		Id: "2",
-		Properties: map[string]string{
+		Properties: map[string]interface{}{
 			"hs_createdate":         time.Unix(engagementV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
 			"hs_lastmodifieddate":   time.Unix(engagementV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
 			"hs_activity_type":      "Sample Intro Meeting",
@@ -6785,17 +6777,9 @@ func TestHubspotEngagementMeetingV3(t *testing.T) {
 			"hs_meeting_start_time": time.Unix(meetingV3StartTimestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
 			"hs_meeting_end_time":   time.Unix(meetingV3EndTimestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
 		},
-		Associations: []map[string]interface{}{
-			{
-				"to": map[string]interface{}{
-					"id": 1,
-				},
-				"types": []map[string]interface{}{
-					{
-						"associationCategory": "HUBSPOT_DEFINED",
-						"associationTypeId":   194,
-					},
-				},
+		Associations: map[string][]interface{}{
+			"contactIds": []interface{}{
+				1,
 			},
 		},
 	}
@@ -7062,34 +7046,33 @@ func TestHubspotEngagementEmailV3(t *testing.T) {
 
 	engagementV3 := IntHubspot.EngagementsV3{
 		Id: "2",
-		Properties: map[string]string{
-			"hs_createdate":             time.Unix(engagementV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"hs_lastmodifieddate":       time.Unix(engagementV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"hs_email_source":           "EMAIL_INTEGRATION",
-			"hs_email_direction":        "EMAIL",
-			"type":                      "EMAIL",
-			"hs_email_active":           "true",
-			"hs_timestamp":              time.Unix(engagementV3Timestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
-			"hubspot_owner_id":          "10",
-			"hs_email_team_id":          "12",
-			"hs_email_sender_email":     fromEmail,
-			"hs_email_sender_contactId": "1",
-			"hs_email_to_email":         toEmail,
-			"hs_email_to_contactId":     "2",
-			"hs_email_subject":          "Test Mail",
-			"hs_email_sent_via":         "GMAIL",
-		},
-		Associations: []map[string]interface{}{
-			{
-				"to": map[string]interface{}{
-					"id": 1,
+		Properties: map[string]interface{}{
+			"hs_createdate":       time.Unix(engagementV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate": time.Unix(engagementV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_email_source":     "EMAIL_INTEGRATION",
+			"hs_email_direction":  "EMAIL",
+			"type":                "EMAIL",
+			"hs_email_active":     "true",
+			"hs_timestamp":        time.Unix(engagementV3Timestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hubspot_owner_id":    "10",
+			"hs_email_team_id":    "12",
+			"hs_email_headers": map[string]interface{}{
+				"from": map[string]interface{}{
+					"email": fromEmail,
 				},
-				"types": []map[string]interface{}{
+				"to": []map[string]interface{}{
 					{
-						"associationCategory": "HUBSPOT_DEFINED",
-						"associationTypeId":   194,
+						"email":     toEmail,
+						"contactId": "2",
 					},
 				},
+			},
+			"hs_email_subject":  "Test Mail",
+			"hs_email_sent_via": "GMAIL",
+		},
+		Associations: map[string][]interface{}{
+			"contactIds": []interface{}{
+				1,
 			},
 		},
 	}
@@ -7360,34 +7343,33 @@ func TestHubspotEngagementIncomingEmailV3(t *testing.T) {
 
 	engagementV3 := IntHubspot.EngagementsV3{
 		Id: "2",
-		Properties: map[string]string{
-			"hs_createdate":             time.Unix(engagementV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"hs_lastmodifieddate":       time.Unix(engagementV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"hs_email_source":           "EMAIL_INTEGRATION",
-			"hs_email_direction":        "INCOMING_EMAIL",
-			"type":                      "INCOMING_EMAIL",
-			"hs_email_active":           "true",
-			"hs_timestamp":              time.Unix(engagementV3Timestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
-			"hubspot_owner_id":          "10",
-			"hs_email_team_id":          "12",
-			"hs_email_sender_email":     fromEmail,
-			"hs_email_sender_contactId": "1",
-			"hs_email_to_email":         toEmail,
-			"hs_email_to_contactId":     "2",
-			"hs_email_subject":          "Test Mail",
-			"hs_email_sent_via":         "GMAIL",
-		},
-		Associations: []map[string]interface{}{
-			{
-				"to": map[string]interface{}{
-					"id": 1,
+		Properties: map[string]interface{}{
+			"hs_createdate":       time.Unix(engagementV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate": time.Unix(engagementV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_email_source":     "EMAIL_INTEGRATION",
+			"hs_email_direction":  "INCOMING_EMAIL",
+			"type":                "INCOMING_EMAIL",
+			"hs_email_active":     "true",
+			"hs_timestamp":        time.Unix(engagementV3Timestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hubspot_owner_id":    "10",
+			"hs_email_team_id":    "12",
+			"hs_email_headers": map[string]interface{}{
+				"from": map[string]interface{}{
+					"email":     fromEmail,
+					"contactId": "1",
 				},
-				"types": []map[string]interface{}{
+				"to": []map[string]interface{}{
 					{
-						"associationCategory": "HUBSPOT_DEFINED",
-						"associationTypeId":   194,
+						"email": toEmail,
 					},
 				},
+			},
+			"hs_email_subject":  "Test Mail",
+			"hs_email_sent_via": "GMAIL",
+		},
+		Associations: map[string][]interface{}{
+			"contactIds": []interface{}{
+				1,
 			},
 		},
 	}
