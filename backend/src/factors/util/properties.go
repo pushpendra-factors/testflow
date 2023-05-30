@@ -690,6 +690,18 @@ var LI_LOCALIZED_NAME = "$li_localized_name"
 var LI_AD_VIEW_COUNT = "$li_ad_view_count"
 var LI_AD_CLICK_COUNT = "$li_ad_click_count"
 
+// Click properties
+var EP_CLICK_ELEMENT_TYPE = "element_type"
+var EP_CLICK_CLASS = "class"
+var EP_CLICK_ID = "id"
+var EP_CLICK_REL = "rel"
+var EP_CLICK_ROLE = "role"
+var EP_CLICK_TARGET = "target"
+var EP_CLICK_HREF = "href"
+var EP_CLICK_MEDIA = "media"
+var EP_CLICK_TYPE = "type"
+var EP_CLICK_NAME = "name"
+
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
@@ -1916,6 +1928,56 @@ var CHANNEL_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"$fbclid":                  "FBCLID",
 }
 
+var PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL = []string{
+	EP_CAMPAIGN,
+	EP_CAMPAIGN_ID,
+	EP_SOURCE,
+	EP_MEDIUM,
+	EP_KEYWORD,
+	EP_KEYWORD_MATCH_TYPE,
+	EP_TERM,
+	EP_CONTENT,
+	EP_ADGROUP,
+	EP_ADGROUP_ID,
+	EP_AD,
+	EP_AD_ID,
+	EP_CREATIVE,
+	EP_GCLID,
+	EP_FBCLID,
+	EP_PAGE_TITLE,
+	EP_PAGE_DOMAIN,
+	EP_PAGE_RAW_URL,
+	EP_PAGE_URL,
+	EP_REFERRER,
+	EP_REFERRER_DOMAIN,
+	EP_REFERRER_URL,
+}
+
+var BUTTON_CLICKS_STANDARD_PROPERTIES_CATEGORICAL = []string{
+	EP_PAGE_TITLE,
+	EP_PAGE_DOMAIN,
+	EP_PAGE_RAW_URL,
+	EP_PAGE_URL,
+	EP_REFERRER,
+	EP_REFERRER_DOMAIN,
+	EP_REFERRER_URL,
+	EP_CLICK_ELEMENT_TYPE,
+	EP_CLICK_CLASS,
+	EP_CLICK_ID,
+	EP_CLICK_REL,
+	EP_CLICK_ROLE,
+	EP_CLICK_TARGET,
+	EP_CLICK_HREF,
+	EP_CLICK_MEDIA,
+	EP_CLICK_TYPE,
+	EP_CLICK_NAME,
+}
+
+var PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL = []string{
+	EP_PAGE_LOAD_TIME,
+	EP_PAGE_SPENT_TIME,
+	EP_PAGE_SCROLL_PERCENT,
+}
 // USER_PROPERTIES_MERGE_TYPE_INITIAL Properties for which preference will be given to first occurrence while merging.
 // For rest all properties, latest user values will prevail on conflict.
 var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{

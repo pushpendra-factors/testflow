@@ -31,6 +31,10 @@ import (
 
 const (
 	NO_OF_EVENTS_AT_EACH_LEVEL = 10
+	PAGE_VIEW_CATEGORY = "Page Views"
+	BUTTON_CLICKS_CATEGORY = "Button Clicks"
+	CRM_EVENTS_CATEGORY = "CRM Events"
+	SESSIONS_CATEGORY = "Sessions"
 )
 
 func GetDisplayName(displayNamesFromDB map[string]string, eventName string) string {
@@ -90,19 +94,19 @@ func appendExpandByCriteria(expandByProperty map[string][]PropertyEntityTypeMap,
 	expandByProperties := make([]PropertyEntityTypeMap, 0)
 	expandByPropertiesEvent := make([]PropertyEntityTypeMap, 0)
 	expandByPropertiesUser := make([]PropertyEntityTypeMap, 0)
-	properties, existInMap := expandByProperty["Page Views"]
+	properties, existInMap := expandByProperty[PAGE_VIEW_CATEGORY]
 	if(page_views == true && existInMap){
 		expandByProperties = append(expandByProperties, properties...)
 	}
-	properties, existInMap = expandByProperty["CRM Events"]
+	properties, existInMap = expandByProperty[CRM_EVENTS_CATEGORY]
 	if(crm_event == true && existInMap){
 		expandByProperties = append(expandByProperties, properties...)
 	}
-	properties, existInMap = expandByProperty["Button Clicks"]
+	properties, existInMap = expandByProperty[BUTTON_CLICKS_CATEGORY]
 	if(button_click == true && existInMap){
 		expandByProperties = append(expandByProperties, properties...)
 	}
-	properties, existInMap = expandByProperty["Sessions"]
+	properties, existInMap = expandByProperty[SESSIONS_CATEGORY]
 	if(session_event == true && existInMap){
 		expandByProperties = append(expandByProperties, properties...)
 	}
@@ -377,13 +381,13 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			}
 			if(len(actualQuery.IncludeGroup) > 0){
 				for _, group := range actualQuery.IncludeGroup {
-					if(group.Label == "Page Views"){
+					if(group.Label == PAGE_VIEW_CATEGORY){
 						_, exist := event.EventProperties["$is_page_view"]
 						if(exist){
 							isIncludePresent = true
 						}
 					}
-					if(group.Label == "CRM Events"){
+					if(group.Label == CRM_EVENTS_CATEGORY){
 						hasPrefix := false
 						for _, prefix := range U.CRMEventPrefixes {
 							if(strings.HasPrefix(event.EventName, prefix)){
@@ -394,13 +398,13 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 							isIncludePresent = true
 						}
 					}
-					if(group.Label == "Button Clicks"){
+					if(group.Label == BUTTON_CLICKS_CATEGORY){
 						_, exist := event.EventProperties["element_type"]
 						if(exist){
 							isIncludePresent = true
 						}
 					}
-					if(group.Label == "Sessions"){
+					if(group.Label == SESSIONS_CATEGORY){
 						if((event.EventName == "$session")){
 							isIncludePresent = true
 						}
