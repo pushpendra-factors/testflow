@@ -84,13 +84,13 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, w
 
 		for _, eventName := range AllowedSfEventTypeForOTP {
 
-			logCtx.Info(fmt.Sprintf("event name  %s", eventName))
+			logCtx.WithField("timeRange", timeRange).WithField("eventName", eventName).Info("processing with events for")
 
 			eventDetails, _ := store.GetStore().GetEventNameIDFromEventName(eventName, project.ID)
 
 			switch eventName {
 
-			case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN:
+			case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED:
 				RunSFOfflineTouchPointRuleForCampaignMember(project, &otpRules, &uniqueOTPEventKeys, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, eventName, logCtx)
 
 			case U.EVENT_NAME_SALESFORCE_TASK_UPDATED, U.EVENT_NAME_SALESFORCE_TASK_CREATED:
@@ -103,6 +103,7 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, w
 
 			}
 		}
+
 	}
 
 }
@@ -125,8 +126,8 @@ func RunSFOfflineTouchPointRuleForCampaignMember(project *model.Project, otpRule
 		if err != nil {
 			logCtx.WithField("event", events[ei]).Info("Fail to apply OTP")
 			return
-
 		}
+
 	}
 
 }
@@ -200,7 +201,7 @@ func createOTPUniqueKeyForTasksV1(rule model.OTPRule, sfEvent model.EventIdToPro
 func CreateTouchPointEventForTasksAndEventsV1(project *model.Project, sfEvent model.EventIdToProperties,
 	rule model.OTPRule, otpUniqueKey string) (*SDK.TrackResponse, error) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForTasksAndEventsV1"})
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventForTasksAndEventsV1", "otpUniqueKey": otpUniqueKey})
 
 	logCtx.WithField("response", sfEvent).Info("CreateTouchPointEventForTasksAndEvents: creating salesforce OFFLINE TOUCH POINT document")
 	var trackResponse *SDK.TrackResponse
@@ -263,7 +264,7 @@ func CreateTouchPointEventForTasksAndEventsV1(project *model.Project, sfEvent mo
 		logCtx.WithField("Document", sfEvent).WithError(err).Error(fmt.Errorf("create salesforce OTP event track failed for message %s", trackResponse.Error))
 		return trackResponse, errors.New(fmt.Sprintf("create salesforce touchpoint event track failed in method CreateTouchPointEventForTasksAndEvents for message %s", trackResponse.Error))
 	}
-	logCtx.WithField("statusCode", status).WithField("trackResponsePayload", trackResponse).Info("Successfully: created salesforce offline touch point")
+	logCtx.WithField("statusCode", status).WithField("trackResponsePayload", trackResponse).WithField("otpUniqueKey", otpUniqueKey).Info("Successfully: created salesforce offline touch point")
 	return trackResponse, nil
 
 }
@@ -459,6 +460,7 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 
 			//Checks if the otpUniqueKey is already present in other OTP Event Properties
 			isUnique, _ := store.GetStore().IsOTPKeyUniqueWithQuery(project.ID, sfEvent.UserId, otpEventName.ID, otpUniqueKey)
+
 			if !isUnique {
 				continue
 			}
@@ -466,6 +468,7 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 		} else {
 			//Checks if the otpUniqueKey is already present in other OTP Event Properties
 			if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
+
 				continue
 			}
 		}
@@ -566,7 +569,7 @@ func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model
 		logCtx.WithField("event", sfEvent).WithError(err).Error(fmt.Errorf("create salesforce touchpoint event track failed for doc type , message %s", trackResponse.Error))
 		return trackResponse, errors.New(fmt.Sprintf("create salesforce touchpoint event track failed for doc type , message %s", trackResponse.Error))
 	}
-	logCtx.WithField("statusCode", status).WithField("trackResponsePayload", trackResponse).Info("Successfully: created salesforce offline touch point")
+	logCtx.WithField("statusCode", status).WithField("trackResponsePayload", trackResponse).WithField("otpUniqueKey", otpUniqueKey).Info("Successfully: created salesforce offline touch point")
 	return trackResponse, nil
 }
 
