@@ -54,23 +54,40 @@ function isFieldByMatch(elem, typeStr1, typeStr2) {
     return false;
 }
 
-function getFormsFromIframes() {
+function getElemsFromIframes(elemType) {
     logger.debug("Scanning for iframe forms.", false);
     var frames = document.querySelectorAll('iframe');
-    var formsFromFrames = [];
+    var elemsFromFrames = [];
     for(var fri=0; fri<frames.length; fri++) {
         // This only takes care of certain scenarios. Will have to check all iframe scenarios.
-        var frms = [];
+        var elems = [];
 
         if(frames[fri].contentDocument && frames[fri].contentDocument.querySelectorAll) {
-            frms = frames[fri].contentDocument.querySelectorAll('form');
+            elems = frames[fri].contentDocument.querySelectorAll(elemType);
         }
 
-        for(var formI=0; formI<frms.length; formI++) {
-            formsFromFrames.push(frms[formI])
+        for(var formI=0; formI<elems.length; formI++) {
+            elemsFromFrames.push(elems[formI])
         }
     }
-    return formsFromFrames;
+    return elemsFromFrames;
+}
+
+function getFormsFromIframes() {
+    return getElemsFromIframes('form');
+}
+
+function getElemsFromTopAndIframes(elemType) {
+    var topElems = document.querySelectorAll(elemType);
+    var elems = [].slice.call(topElems);
+    
+    // Add iframe elems to the top list.
+    var iframeElems = getElemsFromIframes(elemType);
+    for (var ind=0; ind<iframeElems.length; ind++) {
+        elems.push(iframeElems[ind]);
+    }
+
+    return elems;
 }
 
 function bindAllFormsOnSubmit(appInstance, processCallback) {
@@ -318,4 +335,5 @@ function getClickCapturePayloadFromElement(element) {
 
 module.exports = exports =  { isEmail, isPhone, isPossibleEmail, isFieldByMatch, isPartOfForm,
     bindAllFormsOnSubmit, bindAllNonFormButtonOnClick, startBackgroundFormBinder,
-    startBackgroundClickBinder, getClickCapturePayloadFromElement, TRIGGER_FORM_BINDING_EVENT };
+    startBackgroundClickBinder, getClickCapturePayloadFromElement, getElemsFromTopAndIframes, 
+    getFormsFromIframes, TRIGGER_FORM_BINDING_EVENT };

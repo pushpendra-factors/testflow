@@ -138,7 +138,6 @@ func createGroupUserAndEvents(linkedinProjectSetting model.LinkedinProjectSettin
 	if errCode != http.StatusOK {
 		return "Failed to get domain data from linkedin", errCode
 	}
-	log.Info("Ashhar ", len(domainDataSet), domainDataSet[0], domainDataSet[len(domainDataSet)-1])
 	projectID, err := strconv.ParseInt(linkedinProjectSetting.ProjectId, 10, 64)
 	if err != nil {
 		return err.Error(), http.StatusInternalServerError
