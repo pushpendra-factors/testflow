@@ -18,7 +18,7 @@ const duplicateWorkerName = "duplicate_integration_request_worker"
 
 func ProcessRequest(token, reqType, reqPayload string) (float64, string, error) {
 	switch reqType {
-	case Int.TypeSegment:
+	case Int.TypeSegment, Int.TypeRudderstack:
 		return IntSegment.ProcessQueueEvent(token, reqPayload)
 	case Int.TypeShopify:
 		// Todo: Add shopify request process method.
