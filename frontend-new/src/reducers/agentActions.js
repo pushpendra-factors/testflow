@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { SET_ACTIVE_PROJECT, SSO_LOGIN_FULFILLED } from './types';
+import { SSO_LOGIN_FULFILLED } from './types';
 import { get, post, put, getHostUrl } from '../utils/request';
 
 var host = getHostUrl();
@@ -90,10 +90,6 @@ export default function reducer(state = initialState, action) {
         agents: action.payload
       };
     }
-    case SET_ACTIVE_PROJECT:
-      return {
-        ...initialState
-      };
     default:
       return state;
   }
