@@ -967,7 +967,7 @@ func (store *MemSQL) GetLast3MonthStoredQueriesFromAndTo(projectID, dashboardID,
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	var dashQueryResults []model.DashQueryResult
-	err := db.Table("queries").Select("from_t,to_t").Where("project_id=? AND dashboard_id=? AND dashboard_unit_id=? AND query_id=?",
+	err := db.Table("dash_query_results").Select("from_t,to_t").Where("project_id=? AND dashboard_id=? AND dashboard_unit_id=? AND query_id=?",
 		projectID, dashboardID, dashboardUnitID, queryID).Find(&dashQueryResults).Error
 
 	if err != nil {
