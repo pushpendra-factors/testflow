@@ -614,6 +614,10 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 
 	propBlock := getPropsBlockV2(msg.MessageProperty)
 
+	// added next two lines to support double quotes(") and backslash(\) in slack templates
+	title := strings.ReplaceAll(strings.ReplaceAll(msg.Title, "\\", "\\\\"), "\"", "\\\"")
+	message := strings.ReplaceAll(strings.ReplaceAll(msg.Message, "\\", "\\\\"), "\"", "\\\"")
+
 	mainBlock := fmt.Sprintf(`[
 		{
 			"type": "section",
@@ -630,10 +634,11 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
 						}
 		}
-	]`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock)
+	]`, title, message, propBlock)
 
 	return mainBlock
 }
+
 func getTeamsMsgBlock(msg model.EventTriggerAlertMessage) string {
 	propBlock := getPropBlocksForTeams(msg.MessageProperty)
 	mainBlock := fmt.Sprintf(`<h3>%s</h3><h3>%s</h3><table>%s</table><a href=https://app.factors.ai>Know More </a>`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock)
@@ -700,6 +705,7 @@ func getPropBlocksForTeams(propMap U.PropertiesMap) string {
 	}
 	return propBlock
 }
+
 func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string, msg model.EventTriggerAlertMessage, Tchannels *postgres.Jsonb) (bool, string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
