@@ -28,6 +28,7 @@ import AccountTimelineSingleView from './AccountTimelineSingleView';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
+import { PathUrls } from '../../../routes/pathUrls';
 
 function AccountDetails({
   source,
@@ -322,7 +323,7 @@ function AccountDetails({
           icon={<SVG name='brand' size={36} />}
           size='large'
           onClick={() => {
-            history.push(`/profiles/accounts/`);
+            history.push(PathUrls.ProfileAccounts);
           }}
         />
         <Text type='title' level={4} weight='bold' extraClass='m-0'>
@@ -333,7 +334,7 @@ function AccountDetails({
         size='large'
         type='text'
         onClick={() => {
-          history.push(`/profiles/accounts/`);
+          history.push(PathUrls.ProfileAccounts);
         }}
         icon={<SVG name='times' />}
       />

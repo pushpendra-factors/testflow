@@ -12,8 +12,8 @@ function NoReports() {
   const history = useHistory();
   const newLocal = 'black';
   return (
-    <div className={`flex flex-col items-center mt-16 ${styles.contentBody}`}>
-      <div className='flex w-full justify-between items-center px-8 my-4'>
+    <div className={`flex flex-col items-center ${styles.contentBody}`}>
+      <div className='flex w-full justify-between items-center px-8'>
         <Text
           type='title'
           level={6}

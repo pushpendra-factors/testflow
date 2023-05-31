@@ -94,7 +94,7 @@ func GetAccountScores(c *gin.Context) (interface{}, int, string, string, bool) {
 	debug, _ := strconv.ParseBool(debugFlag)
 
 	logCtx.Info("getting account scores")
-	perAccScore, err := store.GetStore().GetAccountsScore(projectId, groupId, dateString, debug)
+	perAccScore, weights, err := store.GetStore().GetAccountsScore(projectId, groupId, dateString, debug)
 	if err != nil {
 		errMsg := "Unable to get account score."
 		logCtx.WithError(err).Error(errMsg)
@@ -103,6 +103,10 @@ func GetAccountScores(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	accountScores.AccResult = make([]model.PerAccountScore, len(perAccScore))
 	accountScores.AccResult = perAccScore
+	if debug {
+		accountScores.Debug = make(map[string]interface{})
+		accountScores.Debug["weights"] = weights
+	}
 	return accountScores, http.StatusOK, "", "", false
 
 }
@@ -168,9 +172,10 @@ func GetAllUsersScores(c *gin.Context) (interface{}, int, string, string, bool) 
 	debug, _ := strconv.ParseBool(debug_flag)
 	var perAccScore []M.AllUsersScore
 	var err error
+	var weights *M.AccWeights
 	if date == "" {
 		logCtx.Info("getting account scores")
-		perAccScore, err = store.GetStore().GetAllUserScore(projectId, debug)
+		perAccScore, weights, err = store.GetStore().GetAllUserScore(projectId, debug)
 		if err != nil {
 			errMsg := "Unable to get all user score."
 			logCtx.WithError(err).Error(errMsg)
@@ -178,7 +183,7 @@ func GetAllUsersScores(c *gin.Context) (interface{}, int, string, string, bool) 
 		}
 	} else if date == model.LAST_EVENT {
 		logCtx.Info("getting all user scores latest scores")
-		perAccScore, err = store.GetStore().GetAllUserScoreLatest(projectId, debug)
+		perAccScore, weights, err = store.GetStore().GetAllUserScoreLatest(projectId, debug)
 		if err != nil {
 			errMsg := "Unable all user latest score."
 			logCtx.WithError(err).Error(errMsg)
@@ -186,7 +191,7 @@ func GetAllUsersScores(c *gin.Context) (interface{}, int, string, string, bool) 
 		}
 	} else {
 		logCtx.Info("getting all user scores on day")
-		perAccScore, err = store.GetStore().GetAllUserScoreOnDay(projectId, date, debug)
+		perAccScore, weights, err = store.GetStore().GetAllUserScoreOnDay(projectId, date, debug)
 		if err != nil {
 			errMsg := "Unable all user latest score on day."
 			logCtx.WithError(err).Error(errMsg)
@@ -196,6 +201,10 @@ func GetAllUsersScores(c *gin.Context) (interface{}, int, string, string, bool) 
 
 	accountScores.AccResult = make([]model.AllUsersScore, len(perAccScore))
 	accountScores.AccResult = perAccScore
+	if debug {
+		accountScores.Debug = make(map[string]interface{})
+		accountScores.Debug["weights"] = weights
+	}
 	return accountScores, http.StatusOK, "", "", false
 
 }

@@ -7,8 +7,8 @@ import { ATTRIBUTION_BASICS_LINK } from 'Attribution/utils/constants';
 
 function AttributionSetupDone() {
   return (
-    <div className={`flex flex-col items-center mt-16 ${styles.contentBody}`}>
-      <div className='flex w-full justify-between items-center px-8 my-4'>
+    <div className={`flex flex-col items-center ${styles.contentBody}`}>
+      <div className='flex w-full justify-between items-center px-8'>
         <Text
           type='title'
           level={6}

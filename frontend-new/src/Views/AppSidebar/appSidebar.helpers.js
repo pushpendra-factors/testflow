@@ -1,3 +1,4 @@
+import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { PathUrls } from '../../routes/pathUrls';
 
 export const isSettingsUrl = (pathname) => {
@@ -38,4 +39,12 @@ export const isReportsUrl = (pathname) => {
 
 export const isJourneyUrl = (pathname) => {
   return pathname === PathUrls.Explain || pathname === PathUrls.PathAnalysis;
+};
+
+export const isAttributionsUrl = (pathname) => {
+  return (
+    pathname === ATTRIBUTION_ROUTES.base ||
+    pathname === ATTRIBUTION_ROUTES.report ||
+    pathname === ATTRIBUTION_ROUTES.reports
+  );
 };

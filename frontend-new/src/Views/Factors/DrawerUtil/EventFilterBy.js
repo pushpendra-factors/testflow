@@ -52,7 +52,7 @@ moment.tz.setDefault(timeZone);
 
   useEffect(() => {
     const assignFilterProps = Object.assign({}, filterProps); 
-    assignFilterProps.user = props.userProperties;
+    assignFilterProps.user = props.eventUserProperties;
     let  catAndNumericalProps = []; 
 
     //removing numerical type for both events and user properties
@@ -65,7 +65,7 @@ moment.tz.setDefault(timeZone);
       assignFilterProps.event =  numericalEventProps;
     }
     
-    props.userProperties.map((item)=>{
+    props.eventUserProperties.map((item)=>{
         if(item[2]=='categorical'){ 
           catAndNumericalProps.push(item); 
         }
@@ -74,7 +74,7 @@ moment.tz.setDefault(timeZone);
       assignFilterProps.user = catAndNumericalProps;
       setFilterProperties(assignFilterProps);
 
-  }, [props.userProperties, props.eventProperties]);
+  }, [props.eventUserProperties, props.eventProperties]);
 
  
 
@@ -182,7 +182,7 @@ const mapStateToProps = (state) => {
     factors_models: state.factors.factors_models,
     goal_insights: state.factors.goal_insights,
     tracked_events: state.factors.tracked_events,
-    userProperties: state.coreQuery.userProperties, 
+    eventUserProperties: state.coreQuery.eventUserProperties, 
     eventProperties: state.coreQuery.eventProperties,
   };
 };

@@ -24,7 +24,7 @@ function ConversionGoalBlock({
   eventNames,
   activeProject,
   eventProperties,
-  userProperties,
+  eventUserProperties,
   group_analysis = 'users',
   KPI_config,
   KPI_config_without_derived_kpi,
@@ -58,7 +58,7 @@ function ConversionGoalBlock({
     if (eventGoal) {
       setFilterPropsforKpiGroups();
     }
-  }, [userProperties, eventProperties, group_analysis, eventGoal]);
+  }, [eventUserProperties, eventProperties, group_analysis, eventGoal]);
 
   useEffect(() => {
     if (
@@ -95,7 +95,7 @@ function ConversionGoalBlock({
     if (eventProperties[eventGoal.label]) {
       assignFilterProps.event = eventProperties[eventGoal.label];
     }
-    assignFilterProps.user = userProperties;
+    assignFilterProps.user = eventUserProperties;
     setFilterProperties(assignFilterProps);
   };
 
@@ -509,7 +509,7 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
   eventProperties: state.coreQuery.eventProperties,
-  userProperties: state.coreQuery.userProperties,
+  eventUserProperties: state.coreQuery.eventUserProperties,
   eventNameOptions: state.coreQuery.eventOptions,
   eventNames: state.coreQuery.eventNames,
   KPI_config: state.kpi?.config,

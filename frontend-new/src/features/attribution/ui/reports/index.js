@@ -137,8 +137,8 @@ function Reports({
   }
 
   return (
-    <div className='flex flex-col items-center mt-16'>
-      <div className='flex w-full justify-between items-center px-8 my-4'>
+    <div className='flex flex-col items-center'>
+      <div className='flex w-full justify-between items-center px-8'>
         <div className='flex items-center gap-4'>
           <Text
             type='title'

@@ -325,7 +325,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     }
   });
 
-  const globalBreakdown = requestQuery.gGBy.map((opt, index) => {
+  const globalBreakdown = requestQuery.gGBy?.map((opt, index) => {
     let appGbp = {};
     appGbp = {
       property: opt.prNa,
