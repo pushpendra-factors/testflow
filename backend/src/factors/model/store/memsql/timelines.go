@@ -35,7 +35,7 @@ SELECT id AS identity, properties, updated_at AS last_activity FROM users WHERE 
 SELECT MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at FROM (SELECT updated_at FROM users WHERE project_id=11000006 AND is_group_user=1 AND (group_1_id IS NOT NULL OR group_2_id IS NOT NULL) AND updated_at < '2022-09-15 13:23:20.702165' ORDER BY updated_at DESC LIMIT 500000);
 SELECT id AS identity, properties, updated_at AS last_activity FROM (SELECT id, properties, updated_at FROM users WHERE project_id=11000006 AND is_group_user=1 AND (group_1_id IS NOT NULL OR group_2_id IS NOT NULL) AND updated_at BETWEEN '2022-09-15 13:23:20.480649' AND '2022-09-15 13:23:20.615161'  LIMIT 1000000) AS select_view WHERE ((JSON_EXTRACT_STRING(select_view.properties, '$salesforce_account_billingcountry') = 'India') OR (JSON_EXTRACT_STRING(select_view.properties, '$hubspot_company_country') = 'US'))  ORDER BY last_activity DESC LIMIT 1000;
 */
-func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int) {
+func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int, string) {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"payload":      payload,
@@ -43,7 +43,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
-		return nil, http.StatusBadRequest
+		return nil, http.StatusBadRequest, "Project Id is Invalid"
 	}
 
 	// Merge Filters
@@ -58,12 +58,12 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	if payload.SegmentId != "" {
 		segment, status := store.GetSegmentById(projectID, payload.SegmentId)
 		if status != http.StatusFound {
-			return nil, http.StatusBadRequest
+			return nil, http.StatusBadRequest, "Invalid segment."
 		}
 		segmentQuery := &model.Query{}
 		err := U.DecodePostgresJsonbToStructType(segment.Query, segmentQuery)
 		if err != nil {
-			return nil, http.StatusInternalServerError
+			return nil, http.StatusInternalServerError, "Segment Processing Failed"
 		}
 		payload.Source = segment.Type
 		segmentQuery.Source = segment.Type
@@ -81,7 +81,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 				err := segmentQuery.TransformDateTypeFilters()
 				if err != nil {
 					log.WithFields(logFields).Error("Failed to transform query payload filters.")
-					return nil, http.StatusBadRequest
+					return nil, http.StatusBadRequest, "Segment Filters Processing Failed"
 				}
 				query, err := U.EncodeStructTypeToPostgresJsonb(segmentQuery)
 				if err != nil {
@@ -91,18 +91,18 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 				}
 				profiles, errCode, _ := store.GetAnalyzeResultForSegments(projectID, segment)
 				if errCode != http.StatusOK {
-					return nil, errCode
+					return nil, errCode, "Segment Query Failed"
 				}
 				// Get Table Content
 				returnData, err := FormatProfilesStruct(profiles, profileType, tableProps, payload.Source)
 				if err != nil {
 					log.WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
-					return nil, http.StatusInternalServerError
+					return nil, http.StatusInternalServerError, "Failed Formatting Profile Results"
 				}
-				return returnData, http.StatusFound
+				return returnData, http.StatusFound, ""
 			} else {
 				var profiles = make([]model.Profile, 0)
-				return profiles, http.StatusBadRequest
+				return profiles, http.StatusBadRequest, "Event filters not enabled for the project."
 			}
 		} else {
 			if segment.Type != "" {
@@ -131,7 +131,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	timezoneString, statusCode := store.GetTimezoneForProject(projectID)
 	if statusCode != http.StatusFound {
 		log.WithFields(logFields).Error("Query failed. Failed to get Timezone.")
-		return nil, http.StatusBadRequest
+		return nil, http.StatusBadRequest, "Failed to fetch project timezone."
 	}
 
 	// transforming datetime filters
@@ -140,7 +140,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			err := payload.Filters[group][index].TransformDateTypeFilters(timezoneString)
 			if err != nil {
 				log.WithFields(logFields).Error("Failed to transform payload filters.")
-				return nil, http.StatusBadRequest
+				return nil, http.StatusBadRequest, "Datetime Filters Processing Failed"
 			}
 		}
 	}
@@ -157,12 +157,12 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			groupNameIDMap, errCode := store.GetGroupNameIDMap(projectID)
 			if errCode != http.StatusFound {
 				log.WithField("err_code", errCode).Error("Failed to get groups while adding group info.")
-				return nil, http.StatusBadRequest
+				return nil, http.StatusBadRequest, "Failed processing groups information."
 			}
 			sourceString, status = GetSourceStringForAccountsV1(groupNameIDMap, payload.Source)
 		}
 		if status != http.StatusOK {
-			return nil, status
+			return nil, status, "Failed retrieving account source."
 		}
 	} else if profileType == model.PROFILE_TYPE_USER {
 		selectString = "COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, properties, MAX(updated_at) AS last_activity"
@@ -185,7 +185,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		}
 		filtersForSource, filterParamsForSource, err := buildWhereFromProperties(projectID, filters, 0)
 		if err != nil {
-			return nil, http.StatusBadRequest
+			return nil, http.StatusBadRequest, "Query building failed."
 		}
 		if filtersForSource == "" {
 			continue
@@ -205,7 +205,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 	userTypeFilters, userTypeFiltersParams, errMsg := buildWhereFromProperties(projectID, payload.Filters[model.FILTER_TYPE_USERS], 0)
 	if errMsg != nil {
-		return nil, http.StatusBadRequest
+		return nil, http.StatusBadRequest, "Query building failed."
 	}
 	if userTypeFilters != "" {
 		if filterString != "" {
@@ -237,7 +237,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	err := db.Raw(runQueryString).Scan(&minMax).Error
 	if err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("min and max updated_at couldn't be defined.")
-		return nil, http.StatusInternalServerError
+		return nil, http.StatusInternalServerError, "Failed Setting Time Range."
 	}
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
@@ -269,14 +269,14 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	err = db.Raw(runQueryString, filterParams...).Scan(&profiles).Error
 	if err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to get profile users.")
-		return nil, http.StatusInternalServerError
+		return nil, http.StatusInternalServerError, "Query Execution Failed."
 	}
 
 	// Get merged properties for all accounts
 	if profileType == model.PROFILE_TYPE_ACCOUNT && isDomainGroup {
 		profiles, status = store.AccountPropertiesForDomainsEnabled(projectID, profiles)
 		if status != http.StatusOK {
-			return nil, status
+			return nil, status, "Query Transformation Failed."
 		}
 	}
 
@@ -284,9 +284,9 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	returnData, err := FormatProfilesStruct(profiles, profileType, tableProps, payload.Source)
 	if err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
-		return nil, http.StatusInternalServerError
+		return nil, http.StatusInternalServerError, "Query formatting failed."
 	}
-	return returnData, http.StatusFound
+	return returnData, http.StatusFound, ""
 }
 
 func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int) {
@@ -585,7 +585,7 @@ func FormatProfilesStruct(profiles []model.Profile, profileType string, tablePro
 	return profiles, nil
 }
 
-func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int) {
+func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int, string) {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"id":           identity,
@@ -594,7 +594,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 || identity == "" || isAnonymous == "" {
 		log.WithFields(logFields).Error("invalid payload.")
-		return nil, http.StatusBadRequest
+		return nil, http.StatusBadRequest, "Invalid payload."
 	}
 
 	userId := model.COLUMN_NAME_CUSTOMER_USER_ID
@@ -630,7 +630,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		Limit(1).
 		Find(&uniqueUser).Error; err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to get contact details.")
-		return nil, http.StatusInternalServerError
+		return nil, http.StatusInternalServerError, "User Query Failed."
 	}
 
 	propertiesDecoded, err := U.DecodePostgresJsonb(uniqueUser.Properties)
@@ -657,7 +657,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 
 	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
 
-	return &uniqueUser, http.StatusFound
+	return &uniqueUser, http.StatusFound, ""
 }
 
 func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId string) ([]model.UserActivity, error) {
@@ -903,7 +903,7 @@ func GetFilteredProperties(eventName string, eventType string, properties *map[s
 	return returnProperties
 }
 
-func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int) {
+func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -912,15 +912,15 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
-		return nil, http.StatusBadRequest
+		return nil, http.StatusBadRequest, "Invalid project ID."
 	}
 	if id == "" {
 		log.Error("Invalid account ID.")
-		return nil, http.StatusBadRequest
+		return nil, http.StatusBadRequest, "Invalid account ID."
 	}
 	if groupName == "" {
 		log.Error("Invalid group name.")
-		return nil, http.StatusBadRequest
+		return nil, http.StatusBadRequest, "Invalid group name."
 	}
 
 	var groupUserString string
@@ -934,7 +934,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	}
 
 	if status != http.StatusOK {
-		return nil, status
+		return nil, status, "Accounts Query Processing Failed"
 	}
 
 	accountDetails := FormatAccountDetails(projectID, propertiesDecoded, groupName)
@@ -968,7 +968,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	rows, err := db.Raw(query, projectID).Rows()
 	if err != nil || rows.Err() != nil {
 		log.WithFields(logFields).WithError(err).WithError(rows.Err()).Error("Failed to get associated users")
-		return nil, http.StatusInternalServerError
+		return nil, http.StatusInternalServerError, "Accounts Query Building Failed"
 	}
 	defer U.CloseReadQuery(rows, nil)
 
@@ -980,7 +980,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		var userTimeline model.UserTimeline
 		if err := db.ScanRows(rows, &userTimeline); err != nil {
 			log.WithFields(logFields).WithError(err).Error("Error scanning associated users list")
-			return nil, http.StatusInternalServerError
+			return nil, http.StatusInternalServerError, "Accounts Query Execution Failed"
 		}
 
 		// Determine column to use as the user ID based on IsAnonymous
@@ -1016,7 +1016,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		accountDetails.AccountTimeline = append(accountDetails.AccountTimeline, intentTimeline)
 	}
 
-	return &accountDetails, http.StatusFound
+	return &accountDetails, http.StatusFound, ""
 }
 
 func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error) {

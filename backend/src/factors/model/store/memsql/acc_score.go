@@ -2,9 +2,6 @@ package memsql
 
 import (
 	"encoding/json"
-
-	log "github.com/sirupsen/logrus"
-
 	"errors"
 	C "factors/config"
 	"factors/model/model"
@@ -14,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) UpdateUserEventsCount(evdata []model.EventsCountScore) error {

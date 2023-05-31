@@ -836,11 +836,11 @@ type Model interface {
 	IsMarketoIntegrationAvailable(projectID int64) bool
 
 	// Timeline
-	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int)
-	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int)
+	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int, string)
+	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int, string)
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
 	GetUserActivities(projectID int64, identity string, userId string) ([]model.UserActivity, error)
-	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int)
+	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int, string)
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 	GetAssociatedGroup(projectID int64, userID string, groupName string) (string, error)
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)

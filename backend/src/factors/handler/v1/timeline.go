@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -52,10 +53,10 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 		return nil, http.StatusBadRequest, "", message, true
 	}
 
-	profileUsersList, errCode := store.GetStore().GetProfilesListByProjectId(projectId, payload, model.PROFILE_TYPE_USER)
+	profileUsersList, errCode, errMsg := store.GetStore().GetProfilesListByProjectId(projectId, payload, model.PROFILE_TYPE_USER)
 	if errCode != http.StatusFound {
-		logCtx.Error("User profiles not found.")
-		return nil, errCode, "", "", true
+		logCtx.Error("User profiles not found. " + errMsg)
+		return nil, errCode, "", errMsg, true
 	}
 
 	// Add user scores to the response if scoring is enabled
@@ -168,10 +169,10 @@ func GetProfileUserDetailsHandler(c *gin.Context) (interface{}, int, string, str
 		return nil, http.StatusBadRequest, INVALID_INPUT, "", true
 	}
 
-	userDetails, errCode := store.GetStore().GetProfileUserDetailsByID(projectId, identity, isAnonymous)
+	userDetails, errCode, errMsg := store.GetStore().GetProfileUserDetailsByID(projectId, identity, isAnonymous)
 	if errCode != http.StatusFound {
-		logCtx.Error("User details not found.")
-		return nil, errCode, PROCESSING_FAILED, "Failed to get user details", true
+		logCtx.Error("User details not found." + errMsg)
+		return nil, errCode, PROCESSING_FAILED, errMsg, true
 	}
 
 	return userDetails, http.StatusOK, "", "", false
@@ -213,10 +214,15 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		return nil, http.StatusBadRequest, "", message, true
 	}
 
-	profileAccountsList, errCode := store.GetStore().GetProfilesListByProjectId(projectId, payload, model.PROFILE_TYPE_ACCOUNT)
+	startTime := time.Now().UnixMilli()
+	profileAccountsList, errCode, errMsg := store.GetStore().GetProfilesListByProjectId(projectId, payload, model.PROFILE_TYPE_ACCOUNT)
+	endTime := time.Now().UnixMilli()
+	if timeTaken := endTime - startTime; timeTaken > 2000 {
+		logCtx.Warn("Accounts time exceeded 2 seconds. Time taken is ", timeTaken)
+	}
 	if errCode != http.StatusFound {
-		logCtx.Error("Account profiles not found.")
-		return "", errCode, "", "", true
+		logCtx.Error("Account profiles not found. " + errMsg)
+		return "", errCode, "", errMsg, true
 	}
 
 	// Add account scores to the response if scoring is enabled
@@ -270,10 +276,10 @@ func GetProfileAccountDetailsHandler(c *gin.Context) (interface{}, int, string, 
 		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid group name", true
 	}
 
-	accountDetails, errCode := store.GetStore().GetProfileAccountDetailsByID(projectId, id, group)
+	accountDetails, errCode, errMsg := store.GetStore().GetProfileAccountDetailsByID(projectId, id, group)
 	if errCode != http.StatusFound {
-		logCtx.Error("Account details not found.")
-		return nil, errCode, PROCESSING_FAILED, "Failed to get account details", true
+		logCtx.Error("Account details not found. " + errMsg)
+		return nil, errCode, PROCESSING_FAILED, errMsg, true
 	}
 
 	return accountDetails, http.StatusOK, "", "", false
