@@ -952,10 +952,30 @@ func (store *MemSQL) CacheAttributionDashboardUnit(dashboardUnit model.Dashboard
 	}
 
 	// Running standrad caching attribution
-	// store.RunEverydayCachingForAttribution(dashboardUnit, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
+	store.RunEverydayCachingForAttribution(dashboardUnit, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
 
 	// Todo (Anil) backfilled 3 months version of attribution run
 	store.RunCachingForLast3MonthsAttribution(dashboardUnit, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
+}
+
+func (store *MemSQL) GetLast3MonthStoredQueriesFromAndTo(projectID, dashboardID, dashboardUnitID, queryID int64) (*[]model.DashQueryResult, int) {
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query_id":   queryID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	var dashQueryResults []model.DashQueryResult
+	err := db.Table("queries").Select("from_t,to_t").Where("project_id=? AND dashboard_id=? AND dashboard_unit_id=? AND query_id=?",
+		projectID, dashboardID, dashboardUnitID, queryID).Find(&dashQueryResults).Error
+
+	if err != nil {
+		log.WithFields(logFields).WithFields(log.Fields{"err": err}).Error("Error in executing query in GetLast3MonthStoredQueriesFromAndTo")
+		return &[]model.DashQueryResult{}, http.StatusNotFound
+	}
+	log.WithFields(log.Fields{"dash_query_results_pulled": len(dashQueryResults)}).Info("no of dashQueryResults pulled")
+	return &dashQueryResults, http.StatusFound
 }
 
 func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.DashboardUnit,
@@ -963,7 +983,15 @@ func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.Das
 
 	var unitWaitGroup sync.WaitGroup
 
-	startTimeForCache := time.Now().Unix() - int64(125*U.SECONDS_IN_A_DAY)
+	_threeMonthsBackTime := time.Now().Unix() - int64(125*U.SECONDS_IN_A_DAY)
+	startTimeForCache := U.SanitizeWeekStart(_threeMonthsBackTime, timezoneString)
+	if startTimeForCache == 0 {
+		errMsg := fmt.Sprintf("Error in getting the begining time from  %d", startTimeForCache)
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardDBAttributionPingID, errMsg)
+		return
+	}
+	resultsComputed, _ := store.GetLast3MonthStoredQueriesFromAndTo(dashboardUnit.ProjectID, dashboardUnit.DashboardId, dashboardUnit.ID, dashboardUnit.QueryId)
+
 	// get from and to for all the time ranges!
 	monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
 	weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
@@ -974,6 +1002,15 @@ func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.Das
 
 		from := queryRange.From
 		to := queryRange.To
+
+		// check if the result exists in DB
+		for _, resultEntry := range *resultsComputed {
+			if resultEntry.FromT == from && resultEntry.ToT == to {
+				// already computed hence skip computing
+				logCtx.Info("Already computed unit, skipping")
+				continue
+			}
+		}
 
 		queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
 		if errC != http.StatusFound {
