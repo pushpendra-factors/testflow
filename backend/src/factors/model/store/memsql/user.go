@@ -221,6 +221,9 @@ func (store *MemSQL) UpdateUser(projectId int64, id string,
 		}
 		propsMap := *props
 		propsMap[U.UP_USER_ID] = user.CustomerUserId
+		if U.IsEmail(user.CustomerUserId) {
+			propsMap[U.UP_EMAIL] = user.CustomerUserId
+		}
 		propsByte, err := json.Marshal(propsMap)
 		if err != nil {
 			log.WithFields(logFields).WithError(err).Error("Failed to marshal user properties in user update.")

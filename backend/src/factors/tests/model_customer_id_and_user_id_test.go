@@ -37,6 +37,7 @@ func TestDBCreateAndUpdateCustomerUserId(t *testing.T) {
 	properties, status := store.GetStore().GetLatestUserPropertiesOfUserAsMap(project.ID, createdUserID1)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, cuid, (*properties)[U.UP_USER_ID])
+	assert.Empty(t, (*properties)[U.UP_EMAIL])
 
 	// 	Update customer_user_id, verify.
 	newCuid := "abc_customer_user_id_updated_1"
@@ -57,9 +58,10 @@ func TestDBCreateAndUpdateCustomerUserId(t *testing.T) {
 	assert.Equal(t, newCuid, (*properties)[U.UP_USER_ID])
 	assert.Equal(t, "city1", (*properties)["city"])
 	assert.Equal(t, "value", (*properties)["key"])
+	assert.Empty(t, (*properties)[U.UP_EMAIL])
 
 	// 	Update customer_user_id, verify.
-	newCuid = "customer_user_id1"
+	newCuid = "customer_user_id1@ymail.com"
 	segAid = "new_seg_aid"
 	updateUser = &model.User{CustomerUserId: newCuid,
 		SegmentAnonymousId: segAid,
@@ -77,6 +79,7 @@ func TestDBCreateAndUpdateCustomerUserId(t *testing.T) {
 	assert.Equal(t, newCuid, (*properties)[U.UP_USER_ID])
 	assert.Equal(t, "city1", (*properties)["city"])
 	assert.Equal(t, "newvalue", (*properties)["key"])
+	assert.Equal(t, newCuid, (*properties)[U.UP_EMAIL])
 
 	// Create User id2
 	project1, agent, err := SetupProjectWithAgentDAO()
@@ -110,6 +113,7 @@ func TestDBCreateAndUpdateCustomerUserId(t *testing.T) {
 	assert.Equal(t, newCuid, (*properties)[U.UP_USER_ID])
 	assert.Equal(t, "city1", (*properties)["city"])
 	assert.Equal(t, "newvalue", (*properties)["key"])
+	assert.Equal(t, newCuid, (*properties)[U.UP_EMAIL])
 
 	// Test id1.customer_user_id == id1.$user_id
 	assert.Equal(t, getuser.CustomerUserId, (*properties)[U.UP_USER_ID])
@@ -163,9 +167,10 @@ func TestDBCreateWithoutCustomerUserIdAndUpdateCustomerUserId(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, cuid, (*properties)[U.UP_USER_ID])
 	assert.Equal(t, "value", (*properties)["key"])
+	assert.Empty(t, (*properties)[U.UP_EMAIL])
 
 	// Update customer_user_id, verify.
-	newCuid := "abc_customer_user_id_created_2"
+	newCuid := "abc@ymail.com"
 	segAid = "new_seg_aid"
 	updateUser = &model.User{CustomerUserId: newCuid,
 		SegmentAnonymousId: segAid,
@@ -183,4 +188,5 @@ func TestDBCreateWithoutCustomerUserIdAndUpdateCustomerUserId(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, newCuid, (*properties)[U.UP_USER_ID])
 	assert.Equal(t, "newvalue", (*properties)["key"])
+	assert.Equal(t, newCuid, (*properties)[U.UP_EMAIL])
 }
