@@ -151,21 +151,23 @@ const AccountsSidebar = () => {
           </div>
         </div>
       </div>
-      <Button
-        className={cx(
-          'flex col-gap-2 items-center',
-          styles['sidebar-action-button']
-        )}
-        type='secondary'
-        onClick={() => {
-          dispatch(setSegmentModalStateAction(true));
-        }}
-      >
-        <SVG name={'plus'} size={16} color='#1890FF' />
-        <Text level={7} type='title' color='brand-color-6' extraClass='mb-0'>
-          New Segment
-        </Text>
-      </Button>
+      <div className='px-4'>
+        <Button
+          className={cx(
+            'flex col-gap-2 items-center w-full',
+            styles['sidebar-action-button']
+          )}
+          type='secondary'
+          onClick={() => {
+            dispatch(setSegmentModalStateAction(true));
+          }}
+        >
+          <SVG name={'plus'} size={16} color='#1890FF' />
+          <Text level={7} type='title' color='brand-color-6' extraClass='mb-0'>
+            New Segment
+          </Text>
+        </Button>
+      </div>
     </div>
   );
 };

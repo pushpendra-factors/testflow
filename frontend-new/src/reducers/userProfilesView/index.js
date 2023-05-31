@@ -1,3 +1,4 @@
+import { SET_ACTIVE_PROJECT } from 'Reducers/types';
 import {
   SET_TIMELINE_PAYLOAD,
   SET_PROFILES_ACTIVE_SEGMENT,
@@ -40,6 +41,11 @@ export default function (state = initialState, action) {
       return {
         ...state,
         showSegmentModal: action.payload
+      };
+    }
+    case SET_ACTIVE_PROJECT: {
+      return {
+        ...initialState
       };
     }
     default:

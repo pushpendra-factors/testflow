@@ -1,17 +1,18 @@
-/* eslint-disable */
 import _ from 'lodash';
-import { SSO_LOGIN_FULFILLED } from './types';
+import { SET_ACTIVE_PROJECT, SSO_LOGIN_FULFILLED } from './types';
 import { get, post, put, getHostUrl } from '../utils/request';
 
 var host = getHostUrl();
-host = (host[host.length - 1] === '/') ? host : host + '/';
+host = host[host.length - 1] === '/' ? host : host + '/';
 
-export default function reducer(state = {
+const initialState = {
   agent: {},
   agentError: null,
   isLoggedIn: true,
   billing: {}
-}, action) {
+};
+
+export default function reducer(state = initialState, action) {
   switch (action.type) {
     case 'AGENT_LOGIN_FULFILLED': {
       return { ...state, isLoggedIn: true };
@@ -33,7 +34,7 @@ export default function reducer(state = {
     }
     case 'FETCH_AGENT_INFO_REJECTED': {
       return { ...state, agentError: action.payload };
-    } 
+    }
     case 'UPDATE_AGENT_INFO_FULFILLED': {
       return { ...state, agent_details: action.payload };
     }
@@ -46,49 +47,56 @@ export default function reducer(state = {
     case 'UPDATE_AGENT_ROLE_FULFILLED': {
       return state;
     }
-    case "PROJECT_AGENT_INVITE_FULFILLED": {
-      let nextState = { ...state };  
-      let projectAgentMapping = action.payload.project_agent_mappings[0]; 
-      nextState.agents = [...state.agents]; 
-      nextState.agents.push(projectAgentMapping);  
-      nextState.agents[projectAgentMapping.agent_uuid] = action.payload.agents[projectAgentMapping.agent_uuid];         
-      return nextState
+    case 'PROJECT_AGENT_INVITE_FULFILLED': {
+      let nextState = { ...state };
+      let projectAgentMapping = action.payload.project_agent_mappings[0];
+      nextState.agents = [...state.agents];
+      nextState.agents.push(projectAgentMapping);
+      nextState.agents[projectAgentMapping.agent_uuid] =
+        action.payload.agents[projectAgentMapping.agent_uuid];
+      return nextState;
     }
-    case "PROJECT_AGENT_BATCH_INVITE_FULFILLED": {
-      let nextState = { ...state }; 
-      for(let i = 0; i < action.payload.project_agent_mappings.length; i++) {
-        let projectAgentMapping = action.payload.project_agent_mappings[i]; 
-        nextState.agents = [...state.agents]; 
-        nextState.agents.push(projectAgentMapping);  
-        nextState.agents[projectAgentMapping.agent_uuid] = action.payload.agents[projectAgentMapping.agent_uuid]; 
-    } 
-      return nextState
+    case 'PROJECT_AGENT_BATCH_INVITE_FULFILLED': {
+      let nextState = { ...state };
+      for (let i = 0; i < action.payload.project_agent_mappings.length; i++) {
+        let projectAgentMapping = action.payload.project_agent_mappings[i];
+        nextState.agents = [...state.agents];
+        nextState.agents.push(projectAgentMapping);
+        nextState.agents[projectAgentMapping.agent_uuid] =
+          action.payload.agents[projectAgentMapping.agent_uuid];
+      }
+      return nextState;
     }
-    case "PROJECT_AGENT_INVITE_REJECTED": {
+    case 'PROJECT_AGENT_INVITE_REJECTED': {
       return {
         ...state
-      }
+      };
     }
-    case "PROJECT_AGENT_REMOVE_REJECTED": {
+    case 'PROJECT_AGENT_REMOVE_REJECTED': {
       return {
         ...state
-      }
+      };
     }
-    case "PROJECT_AGENT_REMOVE_FULFILLED": {
-      let nextState = { ...state }; 
-      nextState.agents = state.agents.filter((projectAgent)=>{ 
-        return projectAgent.uuid != action.payload.agent_uuid
-      })  
-      return nextState
+    case 'PROJECT_AGENT_REMOVE_FULFILLED': {
+      let nextState = { ...state };
+      nextState.agents = state.agents.filter((projectAgent) => {
+        return projectAgent.uuid != action.payload.agent_uuid;
+      });
+      return nextState;
     }
-    case "FETCH_PROJECT_AGENTS_FULFILLED":{
+    case 'FETCH_PROJECT_AGENTS_FULFILLED': {
       return {
-        ...state, 
-        agents: action.payload,
-      }
+        ...state,
+        agents: action.payload
+      };
     }
+    case SET_ACTIVE_PROJECT:
+      return {
+        ...initialState
+      };
+    default:
+      return state;
   }
-  return state;
 }
 
 export function login(email, password) {
@@ -97,7 +105,7 @@ export function login(email, password) {
       const invalidMsg = 'Invalid email or password';
       const loginFailMsg = 'Login failed. Please try again.';
 
-      post(dispatch,host + 'agents/signin', {
+      post(dispatch, host + 'agents/signin', {
         email,
         password
       })
@@ -137,9 +145,11 @@ export function signout() {
     return new Promise((resolve, reject) => {
       get(dispatch, host + 'agents/signout')
         .then(() => {
-          resolve(dispatch({
-            type: 'AGENT_LOGOUT_FULFILLED'
-          }));
+          resolve(
+            dispatch({
+              type: 'AGENT_LOGOUT_FULFILLED'
+            })
+          );
         })
         .catch(() => {
           reject('Sign out failed');
@@ -148,294 +158,359 @@ export function signout() {
   };
 }
 
-export function signup(data){
-  return function(dispatch){
+export function signup(data) {
+  return function (dispatch) {
     return new Promise((resolve, reject) => {
-      dispatch({type: "AGENT_SIGNUP"});
+      dispatch({ type: 'AGENT_SIGNUP' });
 
-      post(dispatch, host+"accounts/signup", data)
+      post(dispatch, host + 'accounts/signup', data)
         .then((r) => {
           // status 302 for duplicate email
-          if(r.status != 302)
-          {
+          if (r.status != 302) {
             dispatch({
-              type: "AGENT_SIGNUP_FULFILLED",
+              type: 'AGENT_SIGNUP_FULFILLED',
               payload: {}
             });
             resolve(r);
-          }
-          else
-          {
-            dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
-            reject("Email already exists. Try logging in.")
+          } else {
+            dispatch({ type: 'AGENT_SIGNUP_REJECTED', payload: null });
+            reject('Email already exists. Try logging in.');
           }
         })
-        .catch( () => {
-          dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
-          reject("Sign up failed. Please try again.");
+        .catch(() => {
+          dispatch({ type: 'AGENT_SIGNUP_REJECTED', payload: null });
+          reject('Sign up failed. Please try again.');
         });
     });
-  }
+  };
 }
 
-export function activate(password, token){
-  return function(dispatch){
+export function activate(password, token) {
+  return function (dispatch) {
     return new Promise((resolve, reject) => {
-      dispatch({type: "AGENT_VERIFY"});
+      dispatch({ type: 'AGENT_VERIFY' });
 
-      post(dispatch, host+"agents/activate?skip_project=true&token="+token, { 
-        password: password
-      })
-      .then(() => {
-        resolve(dispatch({
-          type: "AGENT_VERIFY_FULFILLED",
-          payload: {}
-        }));
-      })
-      .catch(() => {
-        dispatch({type: "AGENT_VERIFY_REJECTED", payload: null});
-        
-        reject("Activation failed. Please try again.");
-      })
+      post(
+        dispatch,
+        host + 'agents/activate?skip_project=true&token=' + token,
+        {
+          password: password
+        }
+      )
+        .then(() => {
+          resolve(
+            dispatch({
+              type: 'AGENT_VERIFY_FULFILLED',
+              payload: {}
+            })
+          );
+        })
+        .catch(() => {
+          dispatch({ type: 'AGENT_VERIFY_REJECTED', payload: null });
+
+          reject('Activation failed. Please try again.');
+        });
     });
-  }
+  };
 }
 
-
-export function fetchAgentInfo(){
-  return function(dispatch) {
-    return new Promise((resolve,reject) => {
-      get(dispatch, host + "agents/info")
-        .then((response) => {        
-          dispatch({type:"FETCH_AGENT_INFO_FULFILLED", 
-            payload: response.data});
+export function fetchAgentInfo() {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'agents/info')
+        .then((response) => {
+          dispatch({
+            type: 'FETCH_AGENT_INFO_FULFILLED',
+            payload: response.data
+          });
           resolve(response);
         })
         .catch((err) => {
-          dispatch({type:"FETCH_AGENT_INFO_REJECTED", 
-            payload: 'Failed to fetch agent info'});
+          dispatch({
+            type: 'FETCH_AGENT_INFO_REJECTED',
+            payload: 'Failed to fetch agent info'
+          });
           reject(err);
         });
     });
-  }
-} 
-export function updateAgentInfo(params){
-  return function(dispatch){
-    return new Promise((resolve, reject)=> {
-      put(dispatch, host + "agents/info", params)
-      .then((response) => {
-        dispatch({type:"UPDATE_AGENT_INFO_FULFILLED", 
-            payload: response.data});
+  };
+}
+export function updateAgentInfo(params) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + 'agents/info', params)
+        .then((response) => {
+          dispatch({
+            type: 'UPDATE_AGENT_INFO_FULFILLED',
+            payload: response.data
+          });
           resolve(response);
-      })
-      .catch((err) => {
-        dispatch({type:"UPDATE_AGENT_INFO_REJECTED", 
-            payload: 'Failed to update agent info'});
+        })
+        .catch((err) => {
+          dispatch({
+            type: 'UPDATE_AGENT_INFO_REJECTED',
+            payload: 'Failed to update agent info'
+          });
           reject(err);
-      })
+        });
     });
-  }
+  };
 }
 
-export function fetchProjectAgents(projectId){
-  return function(dispatch){
-    return new Promise((resolve,reject) => {
-       get(dispatch, host + "projects/" + projectId + "/v1/agents")
+export function fetchProjectAgents(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/' + projectId + '/v1/agents')
         .then((r) => {
-          dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: r.data }); 
+          dispatch({ type: 'FETCH_PROJECT_AGENTS_FULFILLED', payload: r.data });
           resolve(r);
         })
         .catch((r) => {
           if (r.status) {
-            // use this pattern for error handling. 
+            // use this pattern for error handling.
             // decided to use redux store.
-            dispatch({type: "FETCH_PROJECT_AGENTS_REJECTED", payload: r.data, code: r.status });        
+            dispatch({
+              type: 'FETCH_PROJECT_AGENTS_REJECTED',
+              payload: r.data,
+              code: r.status
+            });
           } else {
             // network error. Idea: Use a global error component for this.
-            console.log("network error");
+            console.log('network error');
           }
           reject(r);
-        }); 
-    })
-  }
-}
-
-
-export function projectAgentInvite(projectId, payload){
-  return function(dispatch){ 
-    return new Promise((resolve, reject) => {
-      post(dispatch, host + "projects/" + projectId + "/agents/invite?create_dashboard=false", payload)
-      .then((r) => { 
-        if (r.ok && r.status && r.status == 201){ 
-          dispatch({type: "PROJECT_AGENT_INVITE_FULFILLED", payload: r.data });
-          resolve(r.data);
-        }else if (r.status && r.status == 409){ 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error }); 
-          reject("User Seats limit reached");
-        }
-        else { 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
-          reject(r.data.error);
-        }
-      })
-      .catch((r) => { 
-        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
-      });
+        });
     });
-  }
+  };
 }
 
-export function projectAgentBatchInvite(projectId, payload){
-  return function(dispatch){ 
+export function projectAgentInvite(projectId, payload) {
+  return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + "projects/" + projectId + "/agents/batchinvite?create_dashboard=false", payload)
-      .then((r) => { 
-        if (r.ok && r.status && r.status == 201){ 
-          dispatch({type: "PROJECT_AGENT_BATCH_INVITE_FULFILLED", payload: r.data });
-          resolve(r.data);
-        }else if (r.status && r.status == 409){ 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data }); 
-          reject("User Seats limit reached");
-        }
-        else { 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data});
-          reject(r.data);
-        }
-      })
-      .catch((r) => { 
-        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data });
-      });
+      post(
+        dispatch,
+        host +
+          'projects/' +
+          projectId +
+          '/agents/invite?create_dashboard=false',
+        payload
+      )
+        .then((r) => {
+          if (r.ok && r.status && r.status == 201) {
+            dispatch({
+              type: 'PROJECT_AGENT_INVITE_FULFILLED',
+              payload: r.data
+            });
+            resolve(r.data);
+          } else if (r.status && r.status == 409) {
+            dispatch({
+              type: 'PROJECT_AGENT_INVITE_REJECTED',
+              payload: r.data.error
+            });
+            reject('User Seats limit reached');
+          } else {
+            dispatch({
+              type: 'PROJECT_AGENT_INVITE_REJECTED',
+              payload: r.data.error
+            });
+            reject(r.data.error);
+          }
+        })
+        .catch((r) => {
+          dispatch({
+            type: 'PROJECT_AGENT_INVITE_REJECTED',
+            payload: r.data.error
+          });
+        });
     });
-  }
+  };
 }
 
-export function projectAgentRemove(projectId, agentUUID){
-  return function(dispatch){
+export function projectAgentBatchInvite(projectId, payload) {
+  return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(dispatch, host + "projects/" + projectId +"/agents/remove", {"agent_uuid":agentUUID})
-        .then((r) => { 
+      post(
+        dispatch,
+        host +
+          'projects/' +
+          projectId +
+          '/agents/batchinvite?create_dashboard=false',
+        payload
+      )
+        .then((r) => {
+          if (r.ok && r.status && r.status == 201) {
+            dispatch({
+              type: 'PROJECT_AGENT_BATCH_INVITE_FULFILLED',
+              payload: r.data
+            });
+            resolve(r.data);
+          } else if (r.status && r.status == 409) {
+            dispatch({
+              type: 'PROJECT_AGENT_INVITE_REJECTED',
+              payload: r.data
+            });
+            reject('User Seats limit reached');
+          } else {
+            dispatch({
+              type: 'PROJECT_AGENT_INVITE_REJECTED',
+              payload: r.data
+            });
+            reject(r.data);
+          }
+        })
+        .catch((r) => {
+          dispatch({ type: 'PROJECT_AGENT_INVITE_REJECTED', payload: r.data });
+        });
+    });
+  };
+}
+
+export function projectAgentRemove(projectId, agentUUID) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + 'projects/' + projectId + '/agents/remove', {
+        agent_uuid: agentUUID
+      })
+        .then((r) => {
           if (r.status == 403) {
             dispatch({
-              type: "PROJECT_AGENT_REMOVE_REJECTED",
+              type: 'PROJECT_AGENT_REMOVE_REJECTED',
               error: r
             });
             reject(r);
           }
           if (r.status == 202) {
             dispatch({
-              type: "PROJECT_AGENT_REMOVE_FULFILLED",
+              type: 'PROJECT_AGENT_REMOVE_FULFILLED',
               payload: r.data
             });
             resolve(r.data);
           }
 
           dispatch({
-            type: "PROJECT_AGENT_REMOVE_FULFILLED",
+            type: 'PROJECT_AGENT_REMOVE_FULFILLED',
             payload: r.data
           });
-          resolve(r.data); 
-
+          resolve(r.data);
         })
-        .catch((r) => { 
+        .catch((r) => {
           dispatch({
-            type: "PROJECT_AGENT_REMOVE_REJECTED",
+            type: 'PROJECT_AGENT_REMOVE_REJECTED',
             error: r
           });
           reject(r);
         });
     });
-  }
+  };
 }
 
-export function updateAgentPassword(params){
-  return function(dispatch){
-    return new Promise((resolve, reject)=> {
-      put(dispatch, host + "agents/updatepassword", params)
-      .then((response) => {
-        if(response.ok){
-          dispatch({type:"UPDATE_AGENT_PASSWORD_FULFILLED", 
-              payload: response.data});
-              resolve(response); 
-        }
-        else{
-          dispatch({type:"UPDATE_AGENT_PASSWORD_REJECTED", 
-            payload: 'Failed to update agent password'});
-            reject(response.data); 
-        }
-      })
-      .catch((err) => {
-        dispatch({type:"UPDATE_AGENT_PASSWORD_REJECTED", 
-          payload: 'Failed to update agent password'});
-          reject(err);
-      })
-    });
-  }
-}
-export function updateAgentRole(projectId,uuid,role){
-  return function(dispatch){
-    return new Promise((resolve, reject)=> {
-      put(dispatch, host + "projects/" + projectId +"/agents/update", {"agent_uuid":uuid,role,"role":role})
-      .then((response) => {
-        if(response.ok){
-          dispatch({type:"UPDATE_AGENT_ROLE_FULFILLED", 
-              payload: response.data});
-              resolve(response); 
-        }
-        else{
-          dispatch({type:"UPDATE_AGENT_ROLE_REJECTED", 
-            payload: 'Failed to update agent ROLE'});
-            reject(response.data); 
-        }
-      })
-      .catch((err) => {
-        dispatch({type:"UPDATE_AGENT_ROLE_REJECTED", 
-          payload: 'Failed to update agent ROLE'});
-          reject(err);
-      })
-    });
-  }
-}
-
-export function forgotPassword(email){
-  return function(dispatch){
+export function updateAgentPassword(params) {
+  return function (dispatch) {
     return new Promise((resolve, reject) => {
-      dispatch({type: "AGENT_FORGOT_PASSWORD"});
-
-      post(dispatch, host+"agents/forgotpassword", { email: email })
-        .then(() => {
-          resolve(dispatch({
-            type: "AGENT_FORGOT_PASSWORD_FULFILLED",
-            payload: {}
-          }));
+      put(dispatch, host + 'agents/updatepassword', params)
+        .then((response) => {
+          if (response.ok) {
+            dispatch({
+              type: 'UPDATE_AGENT_PASSWORD_FULFILLED',
+              payload: response.data
+            });
+            resolve(response);
+          } else {
+            dispatch({
+              type: 'UPDATE_AGENT_PASSWORD_REJECTED',
+              payload: 'Failed to update agent password'
+            });
+            reject(response.data);
+          }
         })
-        .catch(() => {
-          dispatch({type: "AGENT_FORGOT_PASSWORD_REJECTED", payload: null});
-
-          reject("Failed sending the email. Please try again.")
+        .catch((err) => {
+          dispatch({
+            type: 'UPDATE_AGENT_PASSWORD_REJECTED',
+            payload: 'Failed to update agent password'
+          });
+          reject(err);
         });
     });
-  }
-} 
-
-export function setPassword(password, token){
-  return function(dispatch){
+  };
+}
+export function updateAgentRole(projectId, uuid, role) {
+  return function (dispatch) {
     return new Promise((resolve, reject) => {
-      dispatch({type: "AGENT_SET_PASSWORD"});
+      put(dispatch, host + 'projects/' + projectId + '/agents/update', {
+        agent_uuid: uuid,
+        role,
+        role: role
+      })
+        .then((response) => {
+          if (response.ok) {
+            dispatch({
+              type: 'UPDATE_AGENT_ROLE_FULFILLED',
+              payload: response.data
+            });
+            resolve(response);
+          } else {
+            dispatch({
+              type: 'UPDATE_AGENT_ROLE_REJECTED',
+              payload: 'Failed to update agent ROLE'
+            });
+            reject(response.data);
+          }
+        })
+        .catch((err) => {
+          dispatch({
+            type: 'UPDATE_AGENT_ROLE_REJECTED',
+            payload: 'Failed to update agent ROLE'
+          });
+          reject(err);
+        });
+    });
+  };
+}
 
-      post(dispatch, host+"agents/setpassword?token="+token, {
+export function forgotPassword(email) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      dispatch({ type: 'AGENT_FORGOT_PASSWORD' });
+
+      post(dispatch, host + 'agents/forgotpassword', { email: email })
+        .then(() => {
+          resolve(
+            dispatch({
+              type: 'AGENT_FORGOT_PASSWORD_FULFILLED',
+              payload: {}
+            })
+          );
+        })
+        .catch(() => {
+          dispatch({ type: 'AGENT_FORGOT_PASSWORD_REJECTED', payload: null });
+
+          reject('Failed sending the email. Please try again.');
+        });
+    });
+  };
+}
+
+export function setPassword(password, token) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      dispatch({ type: 'AGENT_SET_PASSWORD' });
+
+      post(dispatch, host + 'agents/setpassword?token=' + token, {
         password: password
       })
         .then(() => {
-          resolve(dispatch({
-            type: "AGENT_SET_PASSWORD_FULFILLED",
-            payload: {}
-          }));
+          resolve(
+            dispatch({
+              type: 'AGENT_SET_PASSWORD_FULFILLED',
+              payload: {}
+            })
+          );
         })
         .catch(() => {
-          dispatch({type: "AGENT_SET_PASSWORD_REJECTED", payload: null});
+          dispatch({ type: 'AGENT_SET_PASSWORD_REJECTED', payload: null });
 
-          reject("Reset password failed. Please try again.");
+          reject('Reset password failed. Please try again.');
         });
     });
-  }
+  };
 }

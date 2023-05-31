@@ -6,29 +6,30 @@ import {
   QUERY_DELETED,
   QUERIES_LOADING_STOPPED,
   QUERY_UPDATED,
+  SET_ACTIVE_PROJECT
 } from './types';
 
-const inititalState = {
+const initialState = {
   loading: false,
   error: false,
-  data: [],
+  data: []
 };
 
-export default function (state = inititalState, action) {
+export default function (state = initialState, action) {
   switch (action.type) {
     case QUERIES_LOADING:
       return { ...state, loading: true };
     case QUERIES_LOADING_FAILED:
-      return { ...inititalState, error: true };
+      return { ...initialState, error: true };
     case QUERIES_LOADED:
-      return { ...inititalState, data: action.payload };
+      return { ...initialState, data: action.payload };
     case QUERY_CREATED:
-      return { ...inititalState, data: [action.payload, ...state.data] };
+      return { ...initialState, data: [action.payload, ...state.data] };
     case QUERY_DELETED:
       var index = state.data.findIndex((d) => d.id === action.payload);
       return {
-        ...inititalState,
-        data: [...state.data.slice(0, index), ...state.data.slice(index + 1)],
+        ...initialState,
+        data: [...state.data.slice(0, index), ...state.data.slice(index + 1)]
       };
     case QUERIES_LOADING_STOPPED:
       return { ...state, loading: false };
@@ -42,11 +43,15 @@ export default function (state = inititalState, action) {
           data: [
             ...state.data.slice(0, updatedQueryIndex),
             { ...state.data[updatedQueryIndex], ...action.payload },
-            ...state.data.slice(updatedQueryIndex + 1),
-          ],
+            ...state.data.slice(updatedQueryIndex + 1)
+          ]
         };
       }
       return state;
+    case SET_ACTIVE_PROJECT:
+      return {
+        ...initialState
+      };
     default:
       return state;
   }
