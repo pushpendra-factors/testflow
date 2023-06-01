@@ -353,10 +353,7 @@ function ContactDetails({
     <div className='leftpane'>
       <div className='user'>
         {isAnonymous ? (
-          <SVG
-            name={`TrackedUser${userID.match(/\d/g)[0]}`}
-            size={96}
-          />
+          <SVG name={`TrackedUser${userID.match(/\d/g)?.[0] || 0}`} size={96} />
         ) : (
           <Avatar
             size={96}

@@ -3,6 +3,7 @@ import {
   ENABLE_STEP_AND_MOVE_TO_NEXT,
   JUMP_TO_STEP_WEBSITE_VISITOR_IDENTIFICATION,
   NEXT_STEP_ONBOARD_FLOW,
+  SET_ACTIVE_PROJECT,
   TOGGLE_DISABLED_STATE_NEXT_BUTTON,
   TOGGLE_FACTORS_6SIGNAL_REQUEST,
   TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL,
@@ -68,6 +69,11 @@ export default function (state = defaultState, action) {
       };
     case JUMP_TO_STEP_WEBSITE_VISITOR_IDENTIFICATION:
       return { ...state, currentStep: action.payload };
+    case SET_ACTIVE_PROJECT: {
+      return {
+        ...defaultState
+      };
+    }
     default:
       return state;
   }

@@ -590,7 +590,6 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
     engagement_types = ["calls", "meetings", "emails"]
     engagement_url = "https://api.hubapi.com/crm/v3/objects/"
     headers = {'Content-Type': 'application/json'}
-    json_payload = get_search_v3_api_payload("hs_lastmodifieddate", last_sync_timestamp, limit)
     log.warning("Downloading engagements for project_id : "+ str(project_id) + ".")
 
     buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()

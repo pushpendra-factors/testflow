@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import {
   FETCH_EVENTS,
   FETCH_EVENT_PROPERTIES,
@@ -44,7 +42,8 @@ import {
   INITIALIZE_CONTENT_GROUPS,
   EVENT_DISPLAY_NAMES_LOADING,
   EVENT_DISPLAY_NAMES_ERROR,
-  EVENT_DISPLAY_NAMES_LOADED
+  EVENT_DISPLAY_NAMES_LOADED,
+  SET_ACTIVE_PROJECT
 } from '../types';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 import { DEFAULT_TOUCHPOINTS } from 'Reducers/coreQuery/utils';
@@ -394,6 +393,11 @@ export default function (state = defaultState, action) {
           error: false,
           data: action.payload
         }
+      };
+    }
+    case SET_ACTIVE_PROJECT: {
+      return {
+        ...defaultState
       };
     }
     default:

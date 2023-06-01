@@ -3,7 +3,8 @@ import {
   NEW_DASHBOARD_TEMPLATES_MODAL_OPEN,
   ADD_DASHBOARD_MODAL_OPEN,
   ADD_DASHBOARD_MODAL_CLOSE,
-  UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE
+  UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE,
+  SET_ACTIVE_PROJECT
 } from '../types';
 import { defaultState } from './constants';
 
@@ -33,6 +34,10 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         pickedFirstTemplate: action.payload
+      };
+    case SET_ACTIVE_PROJECT:
+      return {
+        ...defaultState
       };
     default:
       return state;
