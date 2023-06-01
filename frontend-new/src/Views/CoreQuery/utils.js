@@ -525,12 +525,12 @@ const getEventsWithPropertiesKPI = (filters, category) => {
               category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
-                ? fil?.extra[3] === 'propMap'
+                ? fil?.extra[3] == 'propMap'
                   ? ''
                   : fil?.extra[3]
                 : 'event',
             objTy:
-              fil?.extra[3] === 'propMap'
+              fil?.extra[3] == 'propMap'
                 ? ''
                 : category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
@@ -538,7 +538,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
                   : 'event'
                 : '',
             va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
-            isPrMa: fil?.extra[3] === 'propMap' ? true : false
+            isPrMa: fil?.extra[3] == 'propMap' ? true : false
           });
         });
       } else {
@@ -552,12 +552,12 @@ const getEventsWithPropertiesKPI = (filters, category) => {
             category === 'channels' || category === 'custom_channels'
               ? ''
               : fil?.extra
-              ? fil?.extra[3] === 'propMap'
+              ? fil?.extra[3] == 'propMap'
                 ? ''
                 : fil?.extra[3]
               : 'event',
           objTy:
-            fil?.extra[3] === 'propMap'
+            fil?.extra[3] == 'propMap'
               ? ''
               : category === 'channels' || category === 'custom_channels'
               ? fil?.extra
@@ -568,7 +568,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
             fil.props[1] === 'datetime'
               ? formatFilterDate(fil.values)
               : fil.values,
-          isPrMa: fil?.extra[3] === 'propMap' ? true : false
+          isPrMa: fil?.extra[3] == 'propMap' ? true : false
         });
       }
     } else {
@@ -585,12 +585,12 @@ const getEventsWithPropertiesKPI = (filters, category) => {
               category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
-                ? fil?.extra[3] === 'propMap'
+                ? fil?.extra[3] == 'propMap'
                   ? ''
                   : fil?.extra[3]
                 : 'event',
             objTy:
-              fil?.extra[3] === 'propMap'
+              fil?.extra[3] == 'propMap'
                 ? ''
                 : category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
@@ -598,7 +598,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
                   : 'event'
                 : '',
             va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
-            isPrMa: fil?.extra[3] === 'propMap' ? true : false
+            isPrMa: fil?.extra[3] == 'propMap' ? true : false
           });
         });
       } else {
@@ -615,11 +615,11 @@ const getEventsWithPropertiesKPI = (filters, category) => {
               ? fil?.extra[3]
               : 'event',
           objTy:
-            fil?.extra[3] === 'propMap'
+            fil?.extra[3] == 'propMap'
               ? ''
               : category === 'channels' || category === 'custom_channels'
               ? fil?.extra
-                ? fil?.extra[3] === 'propMap'
+                ? fil?.extra[3] == 'propMap'
                   ? ''
                   : fil?.extra[3]
                 : 'event'
@@ -628,7 +628,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
             fil.props[1] === 'datetime'
               ? formatFilterDate(fil.values)
               : fil.values,
-          isPrMa: fil?.extra[3] === 'propMap' ? true : false
+          isPrMa: fil?.extra[3] == 'propMap' ? true : false
         });
       }
       fil = filtersGr[1];
@@ -644,12 +644,12 @@ const getEventsWithPropertiesKPI = (filters, category) => {
               category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
-                ? fil?.extra[3] === 'propMap'
+                ? fil?.extra[3] == 'propMap'
                   ? ''
                   : fil?.extra[3]
                 : 'event',
             objTy:
-              fil?.extra[3] === 'propMap'
+              fil?.extra[3] == 'propMap'
                 ? ''
                 : category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
@@ -657,7 +657,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
                   : 'event'
                 : '',
             va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
-            isPrMa: fil?.extra[3] === 'propMap' ? true : false
+            isPrMa: fil?.extra[3] == 'propMap' ? true : false
           });
         });
       } else {
@@ -671,12 +671,12 @@ const getEventsWithPropertiesKPI = (filters, category) => {
             category === 'channels' || category === 'custom_channels'
               ? ''
               : fil?.extra
-              ? fil?.extra[3] === 'propMap'
+              ? fil?.extra[3] == 'propMap'
                 ? ''
                 : fil?.extra[3]
               : 'event',
           objTy:
-            fil?.extra[3] === 'propMap'
+            fil?.extra[3] == 'propMap'
               ? ''
               : category === 'channels' || category === 'custom_channels'
               ? fil?.extra
@@ -687,7 +687,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
             fil.props[1] === 'datetime'
               ? formatFilterDate(fil.values)
               : fil.values,
-          isPrMa: fil?.extra[3] === 'propMap' ? true : false
+          isPrMa: fil?.extra[3] == 'propMap' ? true : false
         });
       }
     }
@@ -707,17 +707,17 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) =>
         en:
           category === 'channels' || category === 'custom_channels'
             ? ''
-            : opt.prop_category === 'propMap'
+            : opt.prop_category == 'propMap'
             ? ''
             : opt.prop_category,
         objTy:
           category === 'channels' || category === 'custom_channels'
-            ? opt.prop_category === 'propMap'
+            ? opt.prop_category == 'propMap'
               ? ''
               : opt.prop_category
             : '',
         dpNa: opt?.display_name ? opt?.display_name : '',
-        isPrMa: opt.prop_category === 'propMap' ? true : false
+        isPrMa: opt.prop_category == 'propMap' ? true : false
       };
     } else {
       appGbp = {
@@ -727,17 +727,17 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) =>
         en:
           category === 'channels' || category === 'custom_channels'
             ? ''
-            : opt.prop_category === 'propMap'
+            : opt.prop_category == 'propMap'
             ? ''
             : opt.prop_category,
         objTy:
           category === 'channels' || category === 'custom_channels'
-            ? opt.prop_category === 'propMap'
+            ? opt.prop_category == 'propMap'
               ? ''
               : opt.prop_category
             : '',
         dpNa: opt?.display_name ? opt?.display_name : '',
-        isPrMa: opt.prop_category === 'propMap' ? true : false
+        isPrMa: opt.prop_category == 'propMap' ? true : false
       };
     }
     if (opt.prop_type === 'datetime') {
@@ -830,13 +830,15 @@ export const getKPIQuery = (
 const mapQueriesByGroup = (queries) => {
   const group = {};
   queries.forEach((query) => {
-    group[query.group]? group[query.group].push(query): group[query.group] = [query];
+    group[query.group]
+      ? group[query.group].push(query)
+      : (group[query.group] = [query]);
   });
   return group;
 };
 
 const getGroupByByGroup = (grp) => {
-  if (grp !== 'hubspot_deals' || grp !== 'salesforce_opportunities') {
+  if (grp !== 'hubspot_deals' && grp !== 'salesforce_opportunities') {
     return [
       {
         gr: '',
@@ -912,7 +914,12 @@ export const getKPIQueryAttributionV1 = (
         kpiQueriesByGroup[groupKey][0]?.category
       )
     };
-    kpiQuery.analyze_type = groupKey;
+    kpiQuery.analyze_type = [
+      'hubspot_deals',
+      'salesforce_opportunities'
+    ].includes(groupKey)
+      ? groupKey
+      : 'user_kpi';
     if (kpiQueriesByGroup[groupKey].length) {
       kpiQueries.push(kpiQuery);
     }
