@@ -681,7 +681,8 @@ func (store *MemSQL) FillNormalUsersForKPIDealOppUser(projectID int64, kpiKeyGro
 	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
 
 	if kpiKeyGroupUserIDList == nil || len(kpiKeyGroupUserIDList) == 0 {
-		return errors.New("no group users found, exiting")
+		logCtx.WithFields(log.Fields{"Method": "FillNormalUsersForKPIDealOppUser"}).Info("no group users found, exiting")
+		return nil
 	}
 	kpiKeysGroupUserIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeyGroupUserIDList))
 	kpiKeysGroupUserIdValue := U.GetInterfaceList(kpiKeyGroupUserIDList)

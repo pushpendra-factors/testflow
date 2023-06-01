@@ -261,7 +261,7 @@ def get_hubspot_request_handler(project_id, refresh_token, api_key):
         nonlocal access_token
         nonlocal access_token_expire_time
         log.warning("Using access token for project_id %d",project_id)
-        if access_token == "" or access_token_expire_time == None or access_token_expire_time - time.time() < 10:
+        if access_token == "" or access_token_expire_time == None or access_token_expire_time - time.time() < 300:
             access_token, access_token_expire_time = get_hubspot_access_token_and_expiry_time(project_id, client_id, client_secret, refresh_token)
 
         headers = {"Authorization": "Bearer " + access_token}
