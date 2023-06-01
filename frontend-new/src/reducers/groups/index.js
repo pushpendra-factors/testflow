@@ -1,15 +1,15 @@
 import { FETCH_GROUPS_FULFILLED, FETCH_GROUPS_REJECTED } from '../types';
 
-const inititalState = {
+const initialState = {
   data: []
 };
 
-export default function (state = inititalState, action) {
+export default function (state = initialState, action) {
   switch (action.type) {
     case FETCH_GROUPS_FULFILLED:
-      return { ...inititalState, data: action.payload };
+      return { ...initialState, data: action.payload };
     case FETCH_GROUPS_REJECTED:
-      return { ...inititalState, data: [] };
+      return { ...initialState, data: [] };
     default:
       return state;
   }

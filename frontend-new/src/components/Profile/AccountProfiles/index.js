@@ -101,7 +101,7 @@ function AccountProfiles({
   const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [searchDDOpen, setSearchDDOpen] = useState(false);
   const [listSearchItems, setListSearchItems] = useState([]);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  // const [isModalVisible, setIsModalVisible] = useState(false);
   // const [isGroupDDVisible, setGroupDDVisible] = useState(false);
   // const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
   const [listProperties, setListProperties] = useState([]);
@@ -369,13 +369,13 @@ function AccountProfiles({
     }));
   };
 
-  const showModal = () => {
-    setIsModalVisible(true);
-  };
+  // const showModal = () => {
+  //   setIsModalVisible(true);
+  // };
 
-  const handleCancel = () => {
-    setIsModalVisible(false);
-  };
+  // const handleCancel = () => {
+  //   setIsModalVisible(false);
+  // };
 
   // const onChange = (val) => {
   //   if (val !== accountPayload.source) {
@@ -830,9 +830,9 @@ function AccountProfiles({
           onClickOutside={() => setSearchDDOpen(false)}
           selectedOpts={listSearchItems}
           style={{
-            top: '-2px',
-            left: '-60px',
-            padding: 0,
+            top: '-8px',
+            right: 0,
+            padding: '8px 8px 12px',
             overflowX: 'hidden'
           }}
           allowSearch
@@ -846,20 +846,25 @@ function AccountProfiles({
     <div className='relative mr-2'>
       {searchBarOpen ? (
         <div className={'flex items-center justify-between'}>
-          <Input
-            size='large'
-            value={listSearchItems ? listSearchItems.join(', ') : null}
-            placeholder={'Search Accounts'}
-            style={{ width: '240px', 'border-radius': '5px' }}
-            prefix={<SVG name='search' size={16} color={'grey'} />}
-            onClick={() => setSearchDDOpen(true)}
-          />
-          <Button className='search-btn' onClick={onSearchClose}>
+          {!searchDDOpen && (
+            <Input
+              size='large'
+              value={listSearchItems ? listSearchItems.join(', ') : null}
+              placeholder={'Search Accounts'}
+              style={{
+                width: '240px',
+                'border-radius': '5px'
+              }}
+              prefix={<SVG name='search' size={16} color={'grey'} />}
+              onClick={() => setSearchDDOpen(true)}
+            />
+          )}
+          <Button type='text' className='search-btn' onClick={onSearchClose}>
             <SVG name={'close'} size={20} color={'grey'} />
           </Button>
         </div>
       ) : (
-        <Button className='search-btn' onClick={onSearchOpen}>
+        <Button type='text' className='search-btn' onClick={onSearchOpen}>
           <SVG name={'search'} size={20} color={'grey'} />
         </Button>
       )}
@@ -913,7 +918,7 @@ function AccountProfiles({
           onClick: () => {
             history.push(
               `/profiles/accounts/${btoa(account.identity)}?group=${
-                accountPayload.source
+                activeSegment?.type ? activeSegment.type : accountPayload.source
               }&view=birdview`
             );
           }

@@ -5,6 +5,7 @@ import { SVG, Text } from 'factorsComponents';
 import styles from './index.module.scss';
 import GroupSelect2 from '../GroupSelect2';
 import FaSelect from 'Components/FaSelect';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function EventGroupBlock({
   eventGroup,

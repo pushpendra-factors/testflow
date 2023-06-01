@@ -1,7 +1,5 @@
-import {
-  TOTAL_USERS_CRITERIA,
-  EACH_USER_TYPE
-} from '../../utils/constants';
+import { SET_ACTIVE_PROJECT } from 'Reducers/types';
+import { TOTAL_USERS_CRITERIA, EACH_USER_TYPE } from '../../utils/constants';
 
 const defaultState = {
   session_order: {
@@ -67,6 +65,10 @@ export default function (state = defaultState, action) {
       };
     case SET_PERFORMANCE_CRITERIA:
       return { ...state, performance_criteria: action.payload };
+    case SET_ACTIVE_PROJECT:
+      return {
+        ...defaultState
+      };
     default:
       return state;
   }

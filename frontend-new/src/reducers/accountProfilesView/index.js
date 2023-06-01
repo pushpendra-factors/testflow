@@ -1,3 +1,4 @@
+import { SET_ACTIVE_PROJECT } from 'Reducers/types';
 import {
   SET_ACCOUNT_PAYLOAD,
   SET_ACCOUNT_SEGMENT_MODAL,
@@ -40,6 +41,11 @@ export default function (state = initialState, action) {
       return {
         ...state,
         showSegmentModal: action.payload
+      };
+    }
+    case SET_ACTIVE_PROJECT: {
+      return {
+        ...initialState
       };
     }
     default:

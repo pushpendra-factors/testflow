@@ -6,9 +6,8 @@ import (
 	"factors/util"
 	U "factors/util"
 	"fmt"
-	"testing"
-
 	"github.com/clearbit/clearbit-go/clearbit"
+	"testing"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
@@ -178,4 +177,37 @@ func TestTimeZoneConversion(t *testing.T) {
 	assert.Equal(t, deltaIST > deltaUTC, true)
 	assert.Equal(t, deltaPST < deltaUTC, true)
 
+}
+
+func TestSanitizeWeekStart(t *testing.T) {
+	type args struct {
+		startTime  int64
+		zoneString U.TimeZoneString
+	}
+	args1 := args{1675199123, U.TimeZoneStringIST}
+	want1 := int64(1674930600)
+	args2 := args{1675199777, U.TimeZoneStringIST}
+	want2 := int64(1674930600)
+	args3 := args{1675199898, U.TimeZoneStringIST}
+	want3 := int64(1674930600)
+	args4 := args{1675199100, U.TimeZoneStringIST}
+	want4 := int64(1674930600)
+
+	tests := []struct {
+		name string
+		args args
+		want int64
+	}{
+		{"T1", args1, want1},
+		{"T2", args2, want2},
+		{"T3", args3, want3},
+		{"T4", args4, want4},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := U.SanitizeWeekStart(tt.args.startTime, tt.args.zoneString); got != tt.want {
+				t.Errorf("SanitizeWeekStart() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
