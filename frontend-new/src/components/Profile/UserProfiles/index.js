@@ -391,7 +391,7 @@ function UserProfiles({
 
   useEffect(() => {
     const opts = { ...timelinePayload };
-    opts.filters = formatFiltersForPayload(timelinePayload.filters, true);
+    opts.filters = formatFiltersForPayload(timelinePayload.filters, false);
     getProfileUsers(activeProject.id, opts);
   }, [
     activeProject.id,
@@ -744,9 +744,10 @@ function UserProfiles({
           allowSearch
           placeholder='Search Users'
           style={{
-            top: '-2px',
-            left: '-60px',
-            padding: 0
+            top: '-8px',
+            right: 0,
+            padding: '8px 8px 12px',
+            overflowX: 'hidden'
           }}
           posRight
         />
@@ -774,20 +775,22 @@ function UserProfiles({
     <div className='relative mr-2'>
       {searchBarOpen ? (
         <div className={'flex items-center justify-between'}>
-          <Input
-            size='large'
-            value={listSearchItems ? listSearchItems.join(', ') : null}
-            placeholder={'Search Users'}
-            style={{ width: '240px', 'border-radius': '5px' }}
-            prefix={<SVG name='search' size={16} color={'grey'} />}
-            onClick={() => setSearchDDOpen(true)}
-          />
-          <Button className='search-btn' onClick={onSearchClose}>
+          {!searchDDOpen && (
+            <Input
+              size='large'
+              value={listSearchItems ? listSearchItems.join(', ') : null}
+              placeholder={'Search Users'}
+              style={{ width: '240px', 'border-radius': '5px' }}
+              prefix={<SVG name='search' size={16} color={'grey'} />}
+              onClick={() => setSearchDDOpen(true)}
+            />
+          )}
+          <Button type='text' className='search-btn' onClick={onSearchClose}>
             <SVG name={'close'} size={20} color={'grey'} />
           </Button>
         </div>
       ) : (
-        <Button className='search-btn' onClick={onSearchOpen}>
+        <Button type='text' className='search-btn' onClick={onSearchOpen}>
           <SVG name={'search'} size={20} color={'grey'} />
         </Button>
       )}
@@ -841,7 +844,9 @@ function UserProfiles({
         onRow={(user) => ({
           onClick: () => {
             history.push(
-              `/profiles/people/${btoa(user.identity.id)}?is_anonymous=${user.identity.isAnonymous}`
+              `/profiles/people/${btoa(user.identity.id)}?is_anonymous=${
+                user.identity.isAnonymous
+              }`
             );
           }
         })}

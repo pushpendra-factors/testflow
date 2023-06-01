@@ -5,6 +5,7 @@ import { SVG, Text } from '../../factorsComponents';
 import styles from './index.module.scss';
 import GroupSelect2 from '../GroupSelect2';
 import FaSelect from '../../FaSelect';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function EventGroupBlock({
   eventGroup,
@@ -50,6 +51,7 @@ function EventGroupBlock({
     const filterOpts = [...filterOptions];
     filterOpts[0].values = eventProperties[event.label];
     if (eventGroup) {
+      filterOpts[2].label = `${PropTextFormat(eventGroup)} Properties`;
       filterOpts[2].values = groupProperties[eventGroup];
       filterOpts[1].values = [];
     } else {
@@ -57,16 +59,16 @@ function EventGroupBlock({
       filterOpts[2].values = [];
     }
     setFilterOptions(filterOpts);
-  }, [eventUserProperties, eventProperties, groupProperties]);
+  }, [eventUserProperties, eventProperties, groupProperties, eventGroup]);
 
   const onChange = (group, val, ind) => {
     const newGroupByState = { ...groupByEvent };
     if (group === 'User Properties') {
       newGroupByState.prop_category = 'user';
-    } else if (group === 'Group Properties') {
-      newGroupByState.prop_category = 'group';
-    } else {
+    } else if (group === 'Event Properties') {
       newGroupByState.prop_category = 'event';
+    } else {
+      newGroupByState.prop_category = 'group';
     }
     newGroupByState.eventName = event.label;
     newGroupByState.property = val[1];

@@ -31,7 +31,6 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
 
 function AccountDetails({
-  source,
   accountDetails,
   activeProject,
   currentProjectSettings,
@@ -86,11 +85,22 @@ function AccountDetails({
 
   useEffect(() => {
     if (activeId && activeId !== '')
-      getProfileAccountDetails(activeProject.id, activeId, activeGroup);
+      getProfileAccountDetails(
+        activeProject.id,
+        activeId,
+        activeGroup,
+        currentProjectSettings?.timelines_config
+      );
     if (activeView && TIMELINE_VIEW_OPTIONS.includes(activeView)) {
       setTimelineViewMode(activeView);
     }
-  }, [activeProject.id, activeId, activeGroup, activeView]);
+  }, [
+    activeProject.id,
+    activeId,
+    activeGroup,
+    activeView,
+    currentProjectSettings?.timelines_config
+  ]);
 
   useEffect(() => {
     const listDatetimeProperties = listProperties.filter(
@@ -169,7 +179,7 @@ function AccountDetails({
         getProfileAccountDetails(
           activeProject.id,
           activeId,
-          source,
+          activeGroup,
           currentProjectSettings?.timelines_config
         )
       );
@@ -224,7 +234,7 @@ function AccountDetails({
       getProfileAccountDetails(
         activeProject.id,
         activeId,
-        source,
+        activeGroup,
         currentProjectSettings?.timelines_config
       )
     );
@@ -295,7 +305,7 @@ function AccountDetails({
         getProfileAccountDetails(
           activeProject.id,
           activeId,
-          source,
+          activeGroup,
           currentProjectSettings?.timelines_config
         )
       );
