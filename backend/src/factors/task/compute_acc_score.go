@@ -243,38 +243,40 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 				user_counts += 1
 			}
 
-			if event.Group1UserId != "" {
-				group_counts += 1
-				aggGroupCounts(event, event.Group1UserId, userGroupCount, rule_ids)
-			}
-			if event.Group2UserId != "" {
-				group_counts += 1
-				aggGroupCounts(event, event.Group2UserId, userGroupCount, rule_ids)
-			}
-			if event.Group3UserId != "" {
-				group_counts += 1
-				aggGroupCounts(event, event.Group3UserId, userGroupCount, rule_ids)
-			}
-			if event.Group4UserId != "" {
-				group_counts += 1
-				aggGroupCounts(event, event.Group4UserId, userGroupCount, rule_ids)
-			}
+			if !event.IsGroupUser {
+				if event.Group1UserId != "" {
+					group_counts += 1
+					aggGroupCounts(event, event.Group1UserId, userGroupCount, rule_ids)
+				}
+				if event.Group2UserId != "" {
+					group_counts += 1
+					aggGroupCounts(event, event.Group2UserId, userGroupCount, rule_ids)
+				}
+				if event.Group3UserId != "" {
+					group_counts += 1
+					aggGroupCounts(event, event.Group3UserId, userGroupCount, rule_ids)
+				}
+				if event.Group4UserId != "" {
+					group_counts += 1
+					aggGroupCounts(event, event.Group4UserId, userGroupCount, rule_ids)
+				}
 
-			if event.Group5UserId != "" {
-				group_counts += 1
-				aggGroupCounts(event, event.Group5UserId, userGroupCount, rule_ids)
-			}
-			if event.Group6UserId != "" {
-				group_counts += 1
-				aggGroupCounts(event, event.Group6UserId, userGroupCount, rule_ids)
-			}
-			if event.Group7UserId != "" {
-				group_counts += 1
-				aggGroupCounts(event, event.Group7UserId, userGroupCount, rule_ids)
-			}
-			if event.Group8UserId != "" {
-				group_counts += 1
-				aggGroupCounts(event, event.Group8UserId, userGroupCount, rule_ids)
+				if event.Group5UserId != "" {
+					group_counts += 1
+					aggGroupCounts(event, event.Group5UserId, userGroupCount, rule_ids)
+				}
+				if event.Group6UserId != "" {
+					group_counts += 1
+					aggGroupCounts(event, event.Group6UserId, userGroupCount, rule_ids)
+				}
+				if event.Group7UserId != "" {
+					group_counts += 1
+					aggGroupCounts(event, event.Group7UserId, userGroupCount, rule_ids)
+				}
+				if event.Group8UserId != "" {
+					group_counts += 1
+					aggGroupCounts(event, event.Group8UserId, userGroupCount, rule_ids)
+				}
 			}
 		}
 
