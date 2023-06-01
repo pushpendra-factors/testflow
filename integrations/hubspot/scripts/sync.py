@@ -564,7 +564,7 @@ def get_properties_for_engagement_v3(engagement_type):
     elif engagement_type == "emails":
         return [
             "hs_timestamp", "hubspot_owner_id", "hs_email_direction", "hs_email_html", "hs_email_status", 
-            "hs_email_subject", "hs_email_text", "hs_attachment_ids", "hs_email_headers"
+            "hs_email_subject", "hs_email_text", "hs_email_thread_id", "hs_attachment_ids", "hs_email_headers"
         ]
 
 def fill_contacts_for_engagements_v3(project_id, engagements, engagement_type, hubspot_request_handler):
