@@ -641,3 +641,21 @@ func GetAllDaysAsTimestamp(fromUnix int64, toUnix int64, timezone string) ([]tim
 
 	return rTimestamps, rTimezoneOffsets
 }
+
+//SanitizeWeekStart Gives the start of the week for any timestamp in the week for given timeZone
+func SanitizeWeekStart(startTime int64, zoneString TimeZoneString) int64 {
+
+	unixTimeUTC := time.Unix(startTime, 0) // gives unix time stamp in UTC
+	location, errCode := time.LoadLocation(string(zoneString))
+	if errCode != nil {
+		return 0
+	}
+	unixTimeInGivenTimeZone := unixTimeUTC.In(location)
+	for unixTimeInGivenTimeZone.Weekday() != 0 {
+		if unixTimeInGivenTimeZone.Weekday() > 0 {
+			unixTimeInGivenTimeZone = unixTimeInGivenTimeZone.AddDate(0, 0, -1)
+		}
+	}
+	weekStart := GetBeginningOfDayTimestampIn(unixTimeInGivenTimeZone.Unix(), zoneString)
+	return weekStart
+}
