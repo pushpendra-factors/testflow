@@ -158,13 +158,16 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 	caseSelectStmntEventProperties := " CASE WHEN JSON_EXTRACT_STRING(events.properties, ?) IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(events.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(events.properties, ?) END "
 
+	caseSelectStmntSessionTimeSpent := " CASE WHEN JSON_EXTRACT_BIGINT(events.properties, ?) IS NULL THEN 0 " +
+		" WHEN JSON_EXTRACT_BIGINT(events.properties, ?) = '' THEN 0 ELSE JSON_EXTRACT_BIGINT(events.properties, ?) END "
+
 	caseSelectStmntUserProperties := " CASE WHEN JSON_EXTRACT_STRING(events.user_properties, ?) IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(events.user_properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(events.user_properties, ?) END "
 
 	eventNameID := " SELECT id FROM event_names WHERE project_id=? AND name='$session' "
 
 	subQuery := " SELECT JSON_EXTRACT_STRING(events.user_properties, ?) AS company, " +
-		caseSelectStmntEventProperties + " AS time_spent, " +
+		caseSelectStmntSessionTimeSpent + " AS time_spent, " +
 		"JSON_EXTRACT_BIGINT(events.user_properties, ?) AS page_count, " +
 		caseSelectStmntUserProperties + " AS country, " +
 		caseSelectStmntUserProperties + " AS industry, " +
@@ -174,7 +177,7 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 		caseSelectStmntUserProperties + " AS page_seen, " +
 		caseSelectStmntEventProperties + " AS campaign, " +
 		caseSelectStmntEventProperties + " AS channel " +
-		" FROM events " + " WHERE project_id=? AND timestamp >= ? AND timestamp <= ? AND events.event_name_id IN ( " + eventNameID + " ) "
+		" FROM events " + " WHERE project_id=? AND company IS NOT NULL AND timestamp >= ? AND timestamp <= ? AND events.event_name_id IN ( " + eventNameID + " ) "
 
 	rowNumAssigned := " SELECT company, country, industry, emp_range, revenue_range, time_spent, page_count, domain, page_seen, campaign, channel, " +
 		" ROW_NUMBER() OVER(PARTITION BY company ORDER BY time_spent DESC) as row_num FROM ( " + subQuery + " ) "
@@ -183,7 +186,7 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 		" FROM (" + rowNumAssigned + " ) WHERE row_num=1 ORDER BY page_count DESC; "
 
 	qParams = append(qParams, U.SIX_SIGNAL_NAME,
-		U.SP_SPENT_TIME, model.PropertyValueZero, U.SP_SPENT_TIME, model.PropertyValueZero, U.SP_SPENT_TIME,
+		U.SP_SPENT_TIME, U.SP_SPENT_TIME, U.SP_SPENT_TIME,
 		U.UP_PAGE_COUNT,
 		U.SIX_SIGNAL_COUNTRY, model.PropertyValueNone, U.SIX_SIGNAL_COUNTRY, model.PropertyValueNone, U.SIX_SIGNAL_COUNTRY,
 		U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY,

@@ -115,6 +115,12 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 		resultGroup.CacheMeta = meta
 
 		result[1] = resultGroup
+
+		if len(result[1].Results[0].Rows) == 0 {
+			logCtx.Warn("Data is not present for this date range")
+			return result, http.StatusOK, "", "Data is not present for this date range", false
+		}
+
 		if len(pageView) > 0 && pageView != nil {
 			res, err := FilterRowsForSixSignalPageView(projectId, requestPayload.Queries[0], result[1].Results[0])
 			if err != http.StatusOK {
