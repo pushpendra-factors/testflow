@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SVG, Text } from '../../factorsComponents';
 import { OptionType, PlacementType } from '../FaSelect/types';
 import useAutoFocus from 'hooks/useAutoFocus';
-import { Input, Spin } from 'antd';
+import { Button, Input, Spin, Tag } from 'antd';
 import styles from './index.module.scss';
 import SingleSelect from '../FaSelect/SingleSelect';
 import {
@@ -10,6 +10,7 @@ import {
   GroupSelectOptionType
 } from './types';
 import { getIcon } from './utils';
+import useKey from 'hooks/useKey';
 interface GroupSelectProps {
   options: GroupSelectOptionType[];
   optionClickCallback: GroupSelectOptionClickCallbackType;
@@ -18,6 +19,7 @@ interface GroupSelectProps {
   allowSearch?: boolean;
   extraClass?: string;
   placement?: PlacementType;
+  searchPlaceHolder?: string;
 }
 export default function GroupSelect({
   options,
@@ -26,7 +28,8 @@ export default function GroupSelect({
   onClickOutside,
   extraClass = '',
   placement = 'Bottom',
-  allowSearch = false
+  allowSearch = false,
+  searchPlaceHolder = 'Search'
 }: GroupSelectProps) {
   const [groupSelectorOpen, setGroupSelectorOpen] = useState(true);
   const [selectedGroupIndex, setSelectedGroupIndex] = useState(0);
@@ -36,12 +39,12 @@ export default function GroupSelect({
 
   const renderSearchInput = () => {
     return (
-      <div className={`fa-filter-select fa-search-select`}>
+      <div className={`fa-filter-select fa-search-select pb-0`}>
         <Input
           style={{ overflow: 'hidden' }}
           prefix={<SVG name={'search'} />}
           size='large'
-          placeholder={'Search'}
+          placeholder={searchPlaceHolder}
           onChange={(val) => {
             setSearchTerm(val.target.value);
           }}
@@ -56,16 +59,16 @@ export default function GroupSelect({
     setSelectedGroupIndex(options.map((op) => op.label).indexOf(group.label));
     setGroupSelectorOpen(false);
   };
-  const handleGroupSelectClickWithSearch = (group: OptionType) => {
+  const handleGroupSelectClickWithSearch = (valueOption: OptionType) => {
     //When Search is not Empty in Group Dropdown.
-    const arr = group.value.split('%^%');
-    const index = options.map((op) => op.label).indexOf(arr[0]);
+    const index = options
+      .map((op) => op.label)
+      .indexOf(valueOption.extraProps.groupLabel);
     optionClickCallback(
-      {
-        value: arr[1],
-        label: group.label
-      },
-      index > -1 ? options[index] : { label: group.label, values: [group] }
+      valueOption,
+      index > -1
+        ? options[index]
+        : { label: valueOption.label, values: [valueOption] }
     );
   };
   const handleOptionSelectClick = (option: OptionType) => {
@@ -74,16 +77,18 @@ export default function GroupSelect({
   const handleOptionBackClick = () => {
     setGroupSelectorOpen(true);
     setSelectedGroupIndex(-1);
+    setSearchTerm('');
   };
 
   const generateOptionHeader = () => {
     const selectedGroup = options[selectedGroupIndex];
     return (
-      <div className='flex flex-row justify-between w-full'>
-        <div className='flex flex-row'>
+      <div className='flex flex-row justify-between items-center w-full'>
+        <div className='flex flex-row justify-between items-center'>
           <SVG
             name={getIcon(selectedGroup?.iconName || '')}
             extraClass={'self-center'}
+            size={16}
           ></SVG>
           <Text
             level={7}
@@ -94,23 +99,22 @@ export default function GroupSelect({
           >
             {selectedGroup.label}
           </Text>
+          <div className={`${styles.numberTag} ml-1`}>
+            {selectedGroup.values.length}
+          </div>
         </div>
-        <div className='flex flex-row' onClick={handleOptionBackClick}>
-          <SVG name={'chevronLeft'} extraClass={'self-center'} size={16}></SVG>
-          <Text
-            level={7}
-            type={'title'}
-            extraClass={'m-0'}
-            weight={'bold'}
-            size={14}
-          >
-            Back
-          </Text>
-        </div>
+        <Button
+          icon={
+            <SVG name={'chevronLeft'} extraClass={'self-center'} size={16} />
+          }
+          type='text'
+          onClick={handleOptionBackClick}
+        >
+          Back
+        </Button>
       </div>
     );
   };
-
   const renderGroupFaSelect = () => {
     if (searchTerm.length) {
       let groupValueOptions: OptionType[] = [];
@@ -118,31 +122,43 @@ export default function GroupSelect({
       options.forEach((group) => {
         group.values.forEach((groupValue) => {
           groupValueOptions.push({
-            value: group.label + '%^%' + groupValue.value,
+            value: groupValue.value,
             label: groupValue.label,
             labelNode: (
-              <div className='flex flex-row'>
-                <SVG
-                  name={getIcon(group?.iconName || '')}
-                  extraClass={'self-center'}
-                ></SVG>
-                <Text
-                  level={8}
-                  type={'title'}
-                  extraClass={'m-0 ml-2'}
-                  weight={'bold'}
-                >
-                  {groupValue.label}
-                </Text>
+              <div className='flex flex-row items-center'>
+                <div className='flex'>
+                  <SVG
+                    name={getIcon(group?.iconName || '')}
+                    extraClass={'self-center'}
+                    size={20}
+                  ></SVG>
+                </div>
+                <div className='flex'>
+                  <Text
+                    level={8}
+                    type={'title'}
+                    extraClass={'m-0 ml-2'}
+                    weight={'bold'}
+                  >
+                    {groupValue.label}
+                  </Text>
+                </div>
               </div>
-            )
+            ),
+            extraProps: {
+              groupLabel: group.label,
+              ...groupValue.extraProps
+            }
           });
         });
       });
 
       const searchOption: OptionType = {
         label: searchTerm,
-        value: searchTerm + '%^%' + searchTerm
+        value: searchTerm,
+        extraProps: {
+          groupLabel: searchTerm
+        }
       };
       return (
         <SingleSelect
@@ -154,6 +170,7 @@ export default function GroupSelect({
           searchOption={searchOption}
           searchTerm={searchTerm}
           allowSearchTextSelection={true}
+          extraClass={styles.dropdown__select__content__options}
         />
       );
     }
@@ -162,20 +179,28 @@ export default function GroupSelect({
         value: group.label,
         label: group.label,
         labelNode: (
-          <div className='flex flex-row justify-between w-full'>
-            <div className='flex flex-row'>
-              <SVG
-                name={getIcon(group?.iconName || '')}
-                extraClass={'self-center'}
-              ></SVG>
-              <Text
-                level={7}
-                type={'title'}
-                extraClass={'m-0 ml-2'}
-                weight={'bold'}
-              >
-                {group.label}
-              </Text>
+          <div className='flex flex-row justify-between w-full items-center	'>
+            <div className='flex flex-row items-center'>
+              <div className='flex'>
+                <SVG
+                  name={getIcon(group?.iconName || '')}
+                  extraClass={'self-center'}
+                  size={20}
+                ></SVG>
+              </div>
+              <div className='flex justify-between items-center'>
+                <Text
+                  level={7}
+                  type={'title'}
+                  extraClass={'m-0 ml-2'}
+                  weight={'bold'}
+                >
+                  {group.label}
+                </Text>
+                <div className={`${styles.numberTag} ml-1`}>
+                  {group.values.length}
+                </div>
+              </div>
             </div>
             <div className='flex flex-row'>
               <SVG
@@ -196,6 +221,7 @@ export default function GroupSelect({
         searchOption={null}
         searchTerm={searchTerm}
         allowSearchTextSelection={false}
+        extraClass={styles.dropdown__select__content__options}
       />
     );
   };
@@ -249,6 +275,8 @@ export default function GroupSelect({
     }
     return groupSelectorOpen ? renderGroupFaSelect() : renderOptionFaSelect();
   };
+
+  useKey('Escape', handleOptionBackClick);
 
   return (
     <>

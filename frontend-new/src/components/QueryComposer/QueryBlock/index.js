@@ -69,7 +69,7 @@ function QueryBlock({
       );
       showOpts = groupOpts.concat(userOpts);
     }
-    return showOpts.map((opt) => {
+    showOpts = showOpts?.map((opt) => {
       return {
         iconName: opt.icon,
         label: opt.label,
@@ -78,6 +78,18 @@ function QueryBlock({
         })
       };
     });
+    // Moving MostRecent as first Option.
+    const mostRecentGroupindex = showOpts
+      ?.map((opt) => opt.label)
+      ?.indexOf('Most Recent');
+    if (mostRecentGroupindex > 0) {
+      showOpts = [
+        showOpts[mostRecentGroupindex],
+        ...showOpts.slice(0, mostRecentGroupindex),
+        ...showOpts.slice(mostRecentGroupindex + 1)
+      ];
+    }
+    return showOpts;
   }, [eventOptions, groupAnalysis, availableGroups]);
 
   const filterProperties = useMemo(() => {
@@ -545,7 +557,7 @@ function QueryBlock({
                       showGroups.find((group) => group.label === event.group)
                         ?.iconName
                     )}
-                    size={16}
+                    size={20}
                   />
                 }
                 className='fa-button--truncate fa-button--truncate-lg btn-total-round'
