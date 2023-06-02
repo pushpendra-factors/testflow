@@ -174,9 +174,7 @@ function ContactDetails({
         (obj) => obj.prop_name === option.prop_name
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListMilestones(
-        checkListProps.sort((a, b) => b.enabled - a.enabled)
-      );
+      setCheckListMilestones(checkListProps);
     } else {
       notification.error({
         message: 'Error',
@@ -212,7 +210,7 @@ function ContactDetails({
         key='events'
       >
         <SearchCheckList
-          placeholder='Search Events'
+          placeholder='Select Events to Show'
           mapArray={activities}
           titleKey='display_name'
           checkedKey='enabled'
@@ -438,7 +436,7 @@ function ContactDetails({
           <Popover
             overlayClassName='fa-activity--filter'
             placement='bottomLeft'
-            trigger='hover'
+            trigger='click'
             content={controlsPopover}
           >
             <Button
@@ -449,7 +447,11 @@ function ContactDetails({
               <SVG name='activity_filter' />
             </Button>
           </Popover>
-          <Dropdown overlay={granularityMenu} placement='bottomRight'>
+          <Dropdown
+            overlay={granularityMenu}
+            placement='bottomRight'
+            trigger={['click']}
+          >
             <Button type='text' className='flex items-center'>
               {granularity}
               <SVG name='caretDown' size={16} extraClass='ml-1' />

@@ -168,7 +168,6 @@ function AccountProfiles({
 
   useEffect(() => {
     const source = groupsList?.[0]?.[1] || '';
-
     updateAccountPayload({ source });
   }, [groupsList, updateAccountPayload]);
 
@@ -233,8 +232,8 @@ function AccountProfiles({
   }, [groupProperties, accountPayload?.source]);
 
   useEffect(() => {
-    const tableProps = accountPayload.segment_id
-      ? activeSegment.query.table_props
+    const tableProps = accountPayload?.segment_id
+      ? activeSegment?.query?.table_props
       : currentProjectSettings.timelines_config?.account_config?.table_props;
     const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
       listProperties,
@@ -392,12 +391,14 @@ function AccountProfiles({
     const opts = { ...accountPayload };
     opts.filters = filters;
     setAccountPayload(opts);
+    setActiveSegment(activeSegment, opts)
   };
 
   const clearFilters = () => {
     const opts = { ...accountPayload };
     opts.filters = [];
     setAccountPayload(opts);
+    setActiveSegment(activeSegment, opts)
   };
 
   // const selectGroup = () => (
@@ -422,9 +423,7 @@ function AccountProfiles({
         (obj) => obj.prop_name === option.prop_name
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListAccountProps(
-        checkListProps.sort((a, b) => b.enabled - a.enabled)
-      );
+      setCheckListAccountProps(checkListProps);
     } else {
       notification.error({
         message: 'Error',
@@ -791,19 +790,18 @@ function AccountProfiles({
 
     setListSearchItems(parsedValues);
     setAccountPayload(updatedPayload);
+    setActiveSegment(activeSegment, updatedPayload)
   };
 
   const onSearchClose = () => {
     setSearchBarOpen(false);
     setSearchDDOpen(false);
-
     if (Object.keys(accountPayload?.search_filter || {}).length !== 0) {
-      setAccountPayload((prevPayload) => ({
-        ...prevPayload,
-        search_filter: {}
-      }));
-
+      const updatedPayload = { ...accountPayload };
+      updatedPayload.search_filter = {};
+      setAccountPayload(updatedPayload);
       setListSearchItems([]);
+      setActiveSegment(activeSegment, updatedPayload)
     }
   };
 
@@ -904,7 +902,7 @@ function AccountProfiles({
         {renderPropertyFilter()}
       </div>
       <div className='flex items-center justify-between'>
-        {accountPayload.filters.length ? renderClearFilterButton() : null}
+        {accountPayload?.filters?.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}
       </div>
