@@ -74,14 +74,16 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, w
 
 	for _, timeRange := range daysTimeRange {
 
-		uniqueOTPEventKeys, errCode := store.GetStore().GetUniqueKeyPropertyForOTPEventForLast3Months(projectID)
-		if errCode != http.StatusFound && errCode != http.StatusNotFound {
-			logCtx.WithField("err_code", errCode).Error("Failed to get OTP Unique Keys for Project")
-			statusByProjectAndType = append(statusByProjectAndType, Status{ProjectID: projectID,
-				Status: "Failed to get OTP Unique Keys"})
-			return
+		uniqueOTPEventKeys := make([]string, 0)
+		if !C.GetOtpKeyWithQueryCheckEnabled() {
+			uniqueOTPEventKeys, errCode = store.GetStore().GetUniqueKeyPropertyForOTPEventForLast3Months(projectID)
+			if errCode != http.StatusFound && errCode != http.StatusNotFound {
+				logCtx.WithField("err_code", errCode).Error("Failed to get OTP Unique Keys for Project")
+				statusByProjectAndType = append(statusByProjectAndType, Status{ProjectID: projectID,
+					Status: "Failed to get OTP Unique Keys"})
+				return
+			}
 		}
-
 		for _, eventName := range AllowedSfEventTypeForOTP {
 
 			logCtx.WithField("timeRange", timeRange).WithField("eventName", eventName).Info("processing with events for")
