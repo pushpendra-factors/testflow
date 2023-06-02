@@ -28,7 +28,7 @@ const GlobalFilter = ({
     if (event?.label) {
       props.event = eventProperties[event.label];
     }
-    if (groupName === 'users') {
+    if (groupName === 'users' || groupName === 'events') {
       props.user = userProperties;
     } else {
       props[groupName] = groupProperties[groupName];
