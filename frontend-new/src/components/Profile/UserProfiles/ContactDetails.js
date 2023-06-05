@@ -77,6 +77,7 @@ function ContactDetails({
   const [userID, isAnonymous] = useMemo(() => {
     const id = atob(location.pathname.split('/').pop());
     const anonymity = location.search.split('=').pop();
+    document.title = 'People' + ' - FactorsAI';
     return [id, anonymity];
   }, [location]);
 

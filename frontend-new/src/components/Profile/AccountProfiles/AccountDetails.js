@@ -88,6 +88,7 @@ function AccountDetails({
     const id = atob(location.pathname.split('/').pop());
     const group = params.group;
     const view = params.view;
+    document.title = 'Accounts' + ' - FactorsAI';
     return [id, group, view];
   }, [location]);
 

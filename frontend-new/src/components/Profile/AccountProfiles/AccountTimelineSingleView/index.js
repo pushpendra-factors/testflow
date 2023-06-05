@@ -23,6 +23,7 @@ function AccountTimelineSingleView({
   useEffect(() => {
     const data = eventsFormattedForGranularity(timelineEvents, 'Daily', true);
     setFormattedData(data);
+    document.title = 'Accounts' + ' - FactorsAI';
   }, [timelineEvents]);
 
   const UsernameWithIcon = ({ title, subtitle, isAnonymous }) => (
