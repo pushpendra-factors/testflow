@@ -1,5 +1,5 @@
 -- UP
-SET GLOBAL default_table_type = rowstore;
+SET GLOBAL default_table_type = columnstore;
 
 CREATE DATABASE IF NOT EXISTS factors;
 
@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS adwords_documents (
     -- Ref (project_id, customer_account_id) -> project_settings(project_id, int_adwords_customer_account_id)
 );
 
-CREATE TABLE IF NOT EXISTS agents (
+CREATE ROWSTORE TABLE IF NOT EXISTS agents (
     uuid text,
     first_name varchar(100),
     last_name varchar(100),
@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS agents (
     -- Ref (invited_by) -> agents(uuid) WHERE uuid != invited_by
 );
 
-CREATE TABLE IF NOT EXISTS bigquery_settings (
+CREATE ROWSTORE TABLE IF NOT EXISTS bigquery_settings (
     id text,
     project_id bigint,
     bq_project_id text,
@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS bigquery_settings (
     -- Ref (project_id) -> projects(id)
 );
 
-CREATE TABLE IF NOT EXISTS billing_accounts (
+CREATE ROWSTORE TABLE IF NOT EXISTS billing_accounts (
     id text,
     plan_id bigint,
     agent_uuid text,
@@ -217,7 +217,7 @@ CREATE TABLE IF NOT EXISTS billing_accounts (
     -- Ref (agent_uuid) -> agents(id)
 );
 
-CREATE TABLE IF NOT EXISTS dashboard_units (
+CREATE ROWSTORE TABLE IF NOT EXISTS dashboard_units (
     id bigint AUTO_INCREMENT,
     project_id bigint,
     dashboard_id bigint,
@@ -237,7 +237,7 @@ CREATE TABLE IF NOT EXISTS dashboard_units (
     -- Ref (project_id, query_id) -> queries(project_id, id)
 );
 
-CREATE TABLE IF NOT EXISTS dashboards (
+CREATE ROWSTORE TABLE IF NOT EXISTS dashboards (
     id bigint AUTO_INCREMENT,
     project_id bigint NOT NULL,
     agent_uuid text,
@@ -284,7 +284,7 @@ CREATE TABLE IF NOT EXISTS facebook_documents (
     -- Ref (project_id, customer_ad_account_id) -> project_settings(project_id, int_facebook_ad_account)
 );
 
-CREATE TABLE IF NOT EXISTS factors_goals (
+CREATE ROWSTORE TABLE IF NOT EXISTS factors_goals (
     id bigint AUTO_INCREMENT,
     project_id bigint,
     name text,
@@ -305,7 +305,7 @@ CREATE TABLE IF NOT EXISTS factors_goals (
     -- Ref (created_by) -> agents (uuid)
 );
 
-CREATE TABLE IF NOT EXISTS factors_tracked_events (
+CREATE ROWSTORE TABLE IF NOT EXISTS factors_tracked_events (
     id bigint AUTO_INCREMENT,
     project_id bigint,
     event_name_id text,
@@ -326,7 +326,7 @@ CREATE TABLE IF NOT EXISTS factors_tracked_events (
     -- Ref (created_by) -> agents(uuid)
 );
 
-CREATE TABLE IF NOT EXISTS factors_tracked_user_properties (
+CREATE ROWSTORE TABLE IF NOT EXISTS factors_tracked_user_properties (
     id bigint AUTO_INCREMENT,
     project_id bigint,
     user_property_name text,
@@ -373,7 +373,7 @@ CREATE TABLE IF NOT EXISTS hubspot_documents (
     -- Ref (project_id, user_id) -> users(project_id, id)
 );
 
-CREATE TABLE IF NOT EXISTS project_agent_mappings (
+CREATE ROWSTORE TABLE IF NOT EXISTS project_agent_mappings (
     project_id bigint,
     agent_uuid text,
     role bigint,
@@ -390,7 +390,7 @@ CREATE TABLE IF NOT EXISTS project_agent_mappings (
     -- Ref (invited_by) -> agents(uuid)
 );
 
-CREATE TABLE IF NOT EXISTS project_billing_account_mappings (
+CREATE ROWSTORE TABLE IF NOT EXISTS project_billing_account_mappings (
     project_id bigint,
     billing_account_id text,
     created_at timestamp(6) NOT NULL,
@@ -404,7 +404,7 @@ CREATE TABLE IF NOT EXISTS project_billing_account_mappings (
     -- Ref (billing_account_id) -> billing_accounts(id)
 );
 
-CREATE TABLE IF NOT EXISTS project_settings (
+CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     project_id bigint,
     attribution_config json,
     auto_track boolean NOT NULL DEFAULT FALSE,
@@ -480,7 +480,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     -- Ref (int_google_organic_enabled_agent_uuid) -> agents(uuid)
 );
 
-CREATE TABLE IF NOT EXISTS projects (
+CREATE ROWSTORE TABLE IF NOT EXISTS projects (
     id bigint AUTO_INCREMENT,
     name text,
     token varchar(32),
@@ -507,7 +507,7 @@ CREATE TABLE IF NOT EXISTS projects (
     -- Unique (private_token)
 );
 
-CREATE TABLE IF NOT EXISTS queries (
+CREATE ROWSTORE TABLE IF NOT EXISTS queries (
     id bigint AUTO_INCREMENT,
     project_id bigint,
     title text, -- Add trigram index for like queries.
@@ -557,7 +557,7 @@ CREATE TABLE IF NOT EXISTS salesforce_documents (
     -- Ref (project_id, user_id) -> users(project_id, id)
 );
 
-CREATE TABLE IF NOT EXISTS scheduled_tasks (
+CREATE ROWSTORE TABLE IF NOT EXISTS scheduled_tasks (
     id text,
     project_id bigint,
     job_id text,
@@ -600,7 +600,7 @@ CREATE TABLE IF NOT EXISTS linkedin_documents (
     -- Ref (project_id, customer_ad_account_id) -> project_settings(project_id, int_facebook_ad_account)
 );
 
-CREATE TABLE IF NOT EXISTS smart_property_rules (
+CREATE ROWSTORE TABLE IF NOT EXISTS smart_property_rules (
     id text,
     project_id bigint NOT NULL,
     type bigint NOT NULL,
@@ -616,7 +616,7 @@ CREATE TABLE IF NOT EXISTS smart_property_rules (
     PRIMARY KEY (project_id, id)
 );
 
-CREATE TABLE IF NOT EXISTS smart_properties (
+CREATE ROWSTORE TABLE IF NOT EXISTS smart_properties (
     project_id bigint NOT NULL,
     source text NOT NULL,
     object_id text NOT NULL,
@@ -631,7 +631,7 @@ CREATE TABLE IF NOT EXISTS smart_properties (
     PRIMARY KEY (project_id, object_id, object_type, source)
 );
 
-CREATE TABLE IF NOT EXISTS property_details (
+CREATE ROWSTORE TABLE IF NOT EXISTS property_details (
     project_id bigint NOT NULL,
     event_name_id text,
     `key` text NOT NULL,
@@ -648,7 +648,7 @@ CREATE TABLE IF NOT EXISTS property_details (
     -- Ref.(project_id,event_name_id) -> event_names(project_id,id)
 );
 
-CREATE TABLE IF NOT EXISTS display_names (
+CREATE ROWSTORE TABLE IF NOT EXISTS display_names (
     id text,
     project_id bigint NOT NULL,
     event_name text NULL,
@@ -688,7 +688,7 @@ CREATE TABLE IF NOT EXISTS google_organic_documents (
     -- Ref (project_id) -> projects(id)
 );
 
-CREATE TABLE IF NOT EXISTS project_model_metadata
+CREATE ROWSTORE TABLE IF NOT EXISTS project_model_metadata
 (
     id text NOT NULL,
     project_id bigint NOT NULL,
@@ -707,7 +707,7 @@ CREATE TABLE IF NOT EXISTS project_model_metadata
     -- Add Foreign Key for project_id
 );
 
-CREATE TABLE IF NOT EXISTS task_details
+CREATE ROWSTORE TABLE IF NOT EXISTS task_details
 (
     id text NOT NULL,
     task_id bigint AUTO_INCREMENT,
@@ -729,7 +729,7 @@ CREATE TABLE IF NOT EXISTS task_details
     PRIMARY KEY (task_id)
 );
 
-CREATE TABLE IF NOT EXISTS task_execution_details
+CREATE ROWSTORE TABLE IF NOT EXISTS task_execution_details
 (
     id text NOT NULL,
     task_id bigint NOT NULL,
@@ -745,7 +745,7 @@ CREATE TABLE IF NOT EXISTS task_execution_details
     PRIMARY KEY (task_id, id)
 );
 
-CREATE TABLE IF NOT EXISTS task_execution_dependency_details
+CREATE ROWSTORE TABLE IF NOT EXISTS task_execution_dependency_details
 (
     id text NOT NULL,
     task_id bigint NOT NULL,
@@ -759,7 +759,7 @@ CREATE TABLE IF NOT EXISTS task_execution_dependency_details
     KEY (task_id) USING HASH
 );
 
-CREATE TABLE IF NOT EXISTS weekly_insights_metadata
+CREATE ROWSTORE TABLE IF NOT EXISTS weekly_insights_metadata
 (
     id text NOT NULL,
     project_id bigint NOT NULL,
@@ -780,7 +780,7 @@ CREATE TABLE IF NOT EXISTS weekly_insights_metadata
 
 );
 
-CREATE TABLE IF NOT EXISTS templates (
+CREATE ROWSTORE TABLE IF NOT EXISTS templates (
     project_id bigint NOT NULL,
     type int NOT NULL,
     thresholds JSON,
@@ -791,7 +791,7 @@ CREATE TABLE IF NOT EXISTS templates (
     SHARD KEY (project_id)
 );
 
-CREATE TABLE IF NOT EXISTS feedbacks(
+CREATE ROWSTORE TABLE IF NOT EXISTS feedbacks(
     id text NOT NULL,
     project_id bigint NOT NULL,
     feature text NOT NULL,
@@ -817,7 +817,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS groups(
     UNIQUE KEY (project_id,id)
 );
 
-CREATE TABLE IF NOT EXISTS group_relationships(
+CREATE ROWSTORE TABLE IF NOT EXISTS group_relationships(
     project_id bigint NOT NULL,
     left_group_name_id int NOT NULL,
     left_group_user_id text NOT NULL,
@@ -830,7 +830,7 @@ CREATE TABLE IF NOT EXISTS group_relationships(
     UNIQUE KEY(project_id, left_group_user_id,right_group_user_id) USING HASH
 );
 
-CREATE TABLE IF NOT EXISTS content_groups(
+CREATE ROWSTORE TABLE IF NOT EXISTS content_groups(
     id text NOT NULL,
     project_id bigint NOT NULL,
     content_group_name text,
@@ -911,7 +911,7 @@ CREATE TABLE IF NOT EXISTS integration_documents (
     KEY (project_id, customer_account_id, document_id, document_type, source, timestamp)  USING CLUSTERED COLUMNSTORE
 );
 
-CREATE TABLE IF NOT EXISTS shareable_urls (
+CREATE ROWSTORE TABLE IF NOT EXISTS shareable_urls (
     id text NOT NULL,
     query_id text NOT NULL,
     entity_type integer NOT NULL,
@@ -926,7 +926,7 @@ CREATE TABLE IF NOT EXISTS shareable_urls (
     PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS shareable_url_audits (
+CREATE ROWSTORE TABLE IF NOT EXISTS shareable_url_audits (
     id text NOT NULL,
     project_id bigint NOT NULL,
     share_id text NOT NULL,
@@ -942,7 +942,7 @@ CREATE TABLE IF NOT EXISTS shareable_url_audits (
     PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS alerts(
+CREATE ROWSTORE TABLE IF NOT EXISTS alerts(
     id text NOT NULL,
     project_id bigint NOT NULL,
     alert_name text,
@@ -1071,7 +1071,7 @@ CREATE TABLE IF NOT EXISTS crm_activities (
     -- Unique (project_id,source, id, type, actor_type, actor_id, timestamp)
 );
 
-CREATE TABLE IF NOT EXISTS crm_properties (
+CREATE ROWSTORE TABLE IF NOT EXISTS crm_properties (
     id text NOT NULL,
     project_id bigint NOT NULL,
     source integer NOT NULL,
@@ -1092,7 +1092,7 @@ CREATE TABLE IF NOT EXISTS crm_properties (
     -- Ref (project_id) -> projects(id)
 );
 
-CREATE TABLE IF NOT EXISTS crm_settings (
+CREATE ROWSTORE TABLE IF NOT EXISTS crm_settings (
     project_id bigint NOT NULL,
     hubspot_enrich_heavy boolean NOT NULL DEFAULT FALSE,
     hubspot_enrich_heavy_max_created_at bigint,
@@ -1101,9 +1101,7 @@ CREATE TABLE IF NOT EXISTS crm_settings (
     -- Ref (project_id) -> projects(id)
 );
 
--- DROP DATABASE factors;
-
-CREATE TABLE IF NOT EXISTS dashboard_templates(
+CREATE ROWSTORE TABLE IF NOT EXISTS dashboard_templates(
     id text NOT NULL,
     title text,
     description text,
@@ -1118,7 +1116,7 @@ CREATE TABLE IF NOT EXISTS dashboard_templates(
     SHARD KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS data_availabilities (
+CREATE ROWSTORE TABLE IF NOT EXISTS data_availabilities (
     project_id bigint NOT NULL,
     integration text,
     latest_data_timestamp bigint,
@@ -1146,7 +1144,7 @@ CREATE TABLE IF NOT EXISTS clickable_elements (
 );
 
 
-CREATE TABLE IF NOT EXISTS ads_import (
+CREATE ROWSTORE TABLE IF NOT EXISTS ads_import (
     project_id bigint NOT NULL,
     id text NOT NULL,
     status boolean,
@@ -1155,7 +1153,7 @@ CREATE TABLE IF NOT EXISTS ads_import (
     updated_at timestamp(6) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS otp_rules(
+CREATE ROWSTORE TABLE IF NOT EXISTS otp_rules(
     id text NOT NULL,
     project_id bigint NOT NULL,
     rule_type text,
@@ -1171,7 +1169,7 @@ CREATE TABLE IF NOT EXISTS otp_rules(
     SHARD KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS pathanalysis(
+CREATE ROWSTORE TABLE IF NOT EXISTS pathanalysis(
     id TEXT NOT NULL,
     project_id BIGINT NOT NULL,
     title TEXT,
@@ -1185,7 +1183,7 @@ CREATE TABLE IF NOT EXISTS pathanalysis(
     SHARD KEY(id)
 );
 
-CREATE TABLE IF NOT EXISTS form_fills(
+CREATE ROWSTORE TABLE IF NOT EXISTS form_fills(
     project_id bigint NOT NULL,
     id text NOT NULL,
     user_id text NOT NULL,
@@ -1199,7 +1197,7 @@ CREATE TABLE IF NOT EXISTS form_fills(
 );
 
 
-CREATE TABLE IF NOT EXISTS event_trigger_alerts(
+CREATE ROWSTORE TABLE IF NOT EXISTS event_trigger_alerts(
     id text NOT NULL,
     project_id bigint NOT NULL,
     title text,
@@ -1215,7 +1213,7 @@ CREATE TABLE IF NOT EXISTS event_trigger_alerts(
     is_deleted boolean NOT NULL DEFAULT FALSE
 );
 
-CREATE TABLE IF NOT EXISTS segments(
+CREATE ROWSTORE TABLE IF NOT EXISTS segments(
     id text NOT NULL,
     project_id bigint NOT NULL,
     name text NOT NULL, 
@@ -1226,7 +1224,7 @@ CREATE TABLE IF NOT EXISTS segments(
     SHARD KEY (project_id, id)
 );
 
-CREATE TABLE IF NOT EXISTS explain_v2(
+CREATE ROWSTORE TABLE IF NOT EXISTS explain_v2(
     id text NOT NULL,
     project_id bigint NOT NULL,
     title text,
@@ -1240,7 +1238,7 @@ CREATE TABLE IF NOT EXISTS explain_v2(
     PRIMARY KEY (project_id, id)
 );
 
-CREATE TABLE IF NOT EXISTS feature_gates (
+CREATE ROWSTORE TABLE IF NOT EXISTS feature_gates (
   project_id bigint,
   hubspot INT DEFAULT 2,
   salesforce INT DEFAULT 2,
@@ -1298,7 +1296,7 @@ CREATE TABLE IF NOT EXISTS feature_gates (
   PRIMARY KEY (project_id)
 );
 
-CREATE TABLE IF NOT EXISTS  currency(
+CREATE ROWSTORE TABLE IF NOT EXISTS  currency(
     currency varchar(10), 
     date bigint, 
     inr_value double, 
@@ -1306,7 +1304,7 @@ CREATE TABLE IF NOT EXISTS  currency(
     updated_at timestamp(6)
 );
 
-CREATE TABLE IF NOT EXISTS property_mappings (
+CREATE ROWSTORE TABLE IF NOT EXISTS property_mappings (
     id text NOT NULL,
     project_id bigint NOT NULL,
     name text NOT NULL, 
@@ -1336,7 +1334,7 @@ CREATE TABLE IF NOT EXISTS display_name_labels (
     UNIQUE KEY(project_id, source, id, property_key, value) USING HASH
 );
 
-CREATE TABLE IF NOT EXISTS dash_query_results (
+CREATE ROWSTORE TABLE IF NOT EXISTS dash_query_results (
     id text,
     project_id bigint,
     dashboard_id bigint,
@@ -1352,4 +1350,4 @@ CREATE TABLE IF NOT EXISTS dash_query_results (
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
     UNIQUE KEY (project_id, query_id, id)
-    );
+);
