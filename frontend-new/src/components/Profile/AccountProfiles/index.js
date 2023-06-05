@@ -214,6 +214,7 @@ function AccountProfiles({
     activeProject.id,
     currentProjectSettings,
     accountPayload,
+    activeSegment,
     getProfileAccounts
   ]);
 
@@ -391,14 +392,14 @@ function AccountProfiles({
     const opts = { ...accountPayload };
     opts.filters = filters;
     setAccountPayload(opts);
-    setActiveSegment(activeSegment, opts)
+    setActiveSegment(activeSegment, opts);
   };
 
   const clearFilters = () => {
     const opts = { ...accountPayload };
     opts.filters = [];
     setAccountPayload(opts);
-    setActiveSegment(activeSegment, opts)
+    setActiveSegment(activeSegment, opts);
   };
 
   // const selectGroup = () => (
@@ -447,7 +448,10 @@ function AccountProfiles({
       })
         .then(() => getSavedSegments(activeProject.id))
         .then(() =>
-          setActiveSegment((segment) => ({ ...segment, query: updatedQuery }))
+          setActiveSegment(
+            { ...activeSegment, query: updatedQuery },
+            accountPayload
+          )
         )
         .finally(() => setShowPopOver(false));
     } else {
@@ -790,7 +794,7 @@ function AccountProfiles({
 
     setListSearchItems(parsedValues);
     setAccountPayload(updatedPayload);
-    setActiveSegment(activeSegment, updatedPayload)
+    setActiveSegment(activeSegment, updatedPayload);
   };
 
   const onSearchClose = () => {
@@ -801,7 +805,7 @@ function AccountProfiles({
       updatedPayload.search_filter = {};
       setAccountPayload(updatedPayload);
       setListSearchItems([]);
-      setActiveSegment(activeSegment, updatedPayload)
+      setActiveSegment(activeSegment, updatedPayload);
     }
   };
 

@@ -400,6 +400,7 @@ function UserProfiles({
   }, [
     activeProject.id,
     timelinePayload,
+    activeSegment,
     currentProjectSettings,
     segments,
     getProfileUsers
@@ -597,16 +598,16 @@ function UserProfiles({
 
   const applyTableProps = () => {
     if (timelinePayload?.segment_id?.length) {
-      const query = { ...activeSegment.query };
-      query.table_props = checkListUserProps
+      const updatedQuery = { ...activeSegment.query };
+      updatedQuery.table_props = checkListUserProps
         .filter((item) => item.enabled === true)
         .map((item) => item?.prop_name);
       updateSegmentForId(activeProject.id, timelinePayload.segment_id, {
-        query: { ...query }
+        query: { ...updatedQuery }
       })
         .then(() => getSavedSegments(activeProject.id))
         .then(() =>
-          setActiveSegment({ ...activeSegment, query }, timelinePayload)
+          setActiveSegment({ ...activeSegment, updatedQuery }, timelinePayload)
         );
     } else {
       const config = { ...tlConfig };
