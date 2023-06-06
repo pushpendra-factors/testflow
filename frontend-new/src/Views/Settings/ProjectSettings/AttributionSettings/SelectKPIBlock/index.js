@@ -3,21 +3,22 @@ import { Button, Tooltip } from 'antd';
 import { SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
 import GroupSelect2 from '../../../../../components/QueryComposer/GroupSelect2';
-import { getNormalizedKpi } from '../../../../../utils/kpiQueryComposer.helpers';
+import { getNormalizedKpiWithConfigs } from '../../../../../utils/kpiQueryComposer.helpers';
 
 function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
   const [isDDVisible, setDDVisible] = useState(false);
 
   const kpiEvents = kpi?.config?.map((item) => {
-    return getNormalizedKpi({ kpi: item });
+    return getNormalizedKpiWithConfigs({ kpi: item });
   });
 
   const onChange = (group, value, category) => {
     const opts = Object.assign({}, attrConfig);
-    const newEv = { label: '', group: '', value: '', category: '' };
+    const newEv = { label: '', group: '', value: '', category: '', kpi_query_type: '' };
     newEv.label = value[0];
     newEv.group = group;
     newEv.value = value[1];
+    newEv.kpi_query_type = value[3];
     newEv.category = category;
     !opts.kpis_to_attribute[header]
       ? (opts.kpis_to_attribute[header] = [])
