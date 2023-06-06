@@ -1643,7 +1643,7 @@ func enrichCampaignMember(project *model.Project, otpRules *[]model.OTPRule, doc
 	return http.StatusOK
 }
 
-var activtiesErrNoWhoIdAssociated = errors.New("No WhoId associated with activities document.")
+var errActivtiesNoWhoIdAssociated = errors.New("No WhoId associated with activities document.")
 
 func GetActivitiesUserID(document *model.SalesforceDocument) (string, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": document.ProjectID, "doc_id": document.ID})
@@ -1660,8 +1660,12 @@ func GetActivitiesUserID(document *model.SalesforceDocument) (string, error) {
 	}
 
 	if relationshipActivityRecord.Who.ID == "" {
+		relationshipActivityRecord.Who.ID = relationshipActivityRecord.WhoId
+	}
+
+	if relationshipActivityRecord.Who.ID == "" {
 		logCtx.Warning("No WhoId associated with activities document.")
-		return "", activtiesErrNoWhoIdAssociated
+		return "", errActivtiesNoWhoIdAssociated
 	}
 
 	var relationshipActivityType int
@@ -1763,7 +1767,7 @@ func enrichTask(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEven
 
 	activityUserID, err := GetActivitiesUserID(document)
 	if err != nil {
-		if err == activtiesErrNoWhoIdAssociated {
+		if err == errActivtiesNoWhoIdAssociated {
 			logCtx.WithError(err).Info("Skipping processing for task record.")
 			return http.StatusOK
 		}
@@ -1838,7 +1842,7 @@ func enrichEvent(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 
 	activityUserID, err := GetActivitiesUserID(document)
 	if err != nil {
-		if err == activtiesErrNoWhoIdAssociated {
+		if err == errActivtiesNoWhoIdAssociated {
 			logCtx.WithError(err).Warning("Skipping processing for event record.")
 			return http.StatusOK
 		}

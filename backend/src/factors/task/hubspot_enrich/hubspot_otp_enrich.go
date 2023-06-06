@@ -171,10 +171,13 @@ func syncWorkerForOTP(projectID int64, startTime, endTime int64, backfillEnabled
 
 	for _, timeRange := range daysTimeRange {
 
-		uniqueOTPEventKeys, errCode := store.GetStore().GetUniqueKeyPropertyForOTPEventForLast3Months(projectID)
-		if errCode != http.StatusFound && errCode != http.StatusNotFound {
-			logCtx.WithField("err_code", errCode).Error("Failed to get OTP Unique Keys for Project")
-			return
+		uniqueOTPEventKeys := make([]string, 0)
+		if !C.GetOtpKeyWithQueryCheckEnabled() {
+			uniqueOTPEventKeys, errCode = store.GetStore().GetUniqueKeyPropertyForOTPEventForLast3Months(projectID)
+			if errCode != http.StatusFound && errCode != http.StatusNotFound {
+				logCtx.WithField("err_code", errCode).Error("Failed to get OTP Unique Keys for Project")
+				return
+			}
 		}
 
 		for _, eventName := range AllowedHsEventTypeForOTP {
