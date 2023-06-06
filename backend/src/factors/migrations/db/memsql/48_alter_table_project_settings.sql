@@ -1,0 +1,1 @@
+ALTER TABLE project_settings add COLUMN int_g2_api_key text;

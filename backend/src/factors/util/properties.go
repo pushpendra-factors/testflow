@@ -165,6 +165,14 @@ const GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$salesforce_opportunity
 const GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD = "$linkedin_viewed_ad"
 const GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD = "$linkedin_clicked_ad"
 
+const GROUP_EVENT_NAME_G2_ALL = "$g2_all"
+const GROUP_EVENT_NAME_G2_SPONSORED = "$g2_sponsored"
+const GROUP_EVENT_NAME_G2_PRODUCT_PROFILE = "$g2_product_profile"
+const GROUP_EVENT_NAME_G2_ALTERNATIVE = "$g2_alternative"
+const GROUP_EVENT_NAME_G2_PRICING = "$g2_pricing"
+const GROUP_EVENT_NAME_G2_CATEGORY = "$g2_category"
+const GROUP_EVENT_NAME_G2_COMPARISON = "$g2_comparison"
+
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
 const EVENT_NAME_SHOPIFY_CHECKOUT_UPDATED = "$shopify_checkout_updated"
@@ -310,6 +318,13 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_LEADSQUARED_EMAIL_RECEIVED_CREATED,
 	GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD,
 	GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD,
+	GROUP_EVENT_NAME_G2_ALL,
+	GROUP_EVENT_NAME_G2_SPONSORED,
+	GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
+	GROUP_EVENT_NAME_G2_ALTERNATIVE,
+	GROUP_EVENT_NAME_G2_PRICING,
+	GROUP_EVENT_NAME_G2_CATEGORY,
+	GROUP_EVENT_NAME_G2_COMPARISON,
 }
 
 const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
@@ -319,6 +334,7 @@ const GROUP_NAME_SALESFORCE_OPPORTUNITY = "$salesforce_opportunity"
 const GROUP_NAME_SIX_SIGNAL = "$6signal"
 const GROUP_NAME_DOMAINS = "$domains"
 const GROUP_NAME_LINKEDIN_COMPANY = "$linkedin_company"
+const GROUP_NAME_G2 = "$g2"
 
 var GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING = map[string]string{
 	GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED:        GROUP_NAME_HUBSPOT_COMPANY,
@@ -701,6 +717,16 @@ var EP_CLICK_HREF = "href"
 var EP_CLICK_MEDIA = "media"
 var EP_CLICK_TYPE = "type"
 var EP_CLICK_NAME = "name"
+
+// g2Company properties
+var G2_PROPERTIES_PREFIX = "$g2_"
+var G2_DOMAIN = "$g2_domain"
+var G2_NAME = "$g2_name"
+var G2_LEGAL_NAME = "$g2_legal_name"
+var G2_COUNTRY = "$g2_country"
+var G2_EMPLOYEES_RANGE = "$g2_employees_range"
+var G2_EMPLOYEES = "$g2_employees"
+var G2_COMPANY_ID = "$g2_company_id"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -1978,6 +2004,7 @@ var PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL = []string{
 	EP_PAGE_SPENT_TIME,
 	EP_PAGE_SCROLL_PERCENT,
 }
+
 // USER_PROPERTIES_MERGE_TYPE_INITIAL Properties for which preference will be given to first occurrence while merging.
 // For rest all properties, latest user values will prevail on conflict.
 var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{

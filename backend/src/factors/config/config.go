@@ -383,6 +383,8 @@ const (
 	HealthcheckEventTriggerAlertPingID                = "352760ec-66a2-4b5f-b52e-e2c3f434a567"
 	HealthcheckEventTriggerAlertForHighPriorityPingID = "081f8a7e-a3cf-4aaa-b67e-ab1c729fb3a7"
 	HealthcheckLinkedinGroupUserPingID                = "a8b221cd-6f14-4c9c-8ae7-cd26f585868b"
+	HeathCheckG2ETLPingID                             = "4ccbf168-5175-4e08-84e6-7a6ce58bcb08"
+	HeathCheckG2EnrichmentPingID                      = "3b240e93-e130-4ea6-b698-5d5d0ea0a83f"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.

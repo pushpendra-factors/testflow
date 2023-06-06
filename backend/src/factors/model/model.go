@@ -358,6 +358,12 @@ type Model interface {
 	//bingads document
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 
+	//g2 document
+	CreateMultipleG2Document(g2Documents []model.G2Document) int
+	GetG2LastSyncInfo(projectID int64) ([]model.G2LastSyncInfo, int)
+	GetG2DocumentsForGroupUserCreation(projectID int64) ([]model.G2Document, int)
+	UpdateG2GroupUserCreationDetails(domainData model.G2Document) error
+
 	// funnel_analytics
 	RunFunnelQuery(projectID int64, query model.Query, enableFilterOpt, funnelV2 bool) (*model.QueryResult, int, string)
 
@@ -436,6 +442,8 @@ type Model interface {
 	GetFacebookEnabledIDsAndProjectSettingsForProject(projectIDs []int64) ([]int64, []model.FacebookProjectSettings, int)
 	GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjectSettings, int)
 	GetLinkedinEnabledProjectSettingsForProjects(projectIDs []string) ([]model.LinkedinProjectSettings, int)
+	GetG2EnabledProjectSettings() ([]model.G2ProjectSettings, int)
+	GetG2EnabledProjectSettingsForProjects(projectIDs []int64) ([]model.G2ProjectSettings, int)
 	GetArchiveEnabledProjectIDs() ([]int64, int)
 	GetBigqueryEnabledProjectIDs() ([]int64, int)
 	GetAllSalesforceProjectSettings() ([]model.SalesforceProjectSettings, int)
