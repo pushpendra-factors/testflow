@@ -582,6 +582,11 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 		}
 		ComparedValue = " (" + ComparedValue + ") "
 	}
+
+	// added next line to support double quotes(") and backslash(\) in slack templates
+	// MUST NOT be done for slackBlocks variable
+	alertName := strings.ReplaceAll(strings.ReplaceAll(msg.AlertName, "\\", "\\\\"), "\"", "\\\"")
+	
 	slackMsg = fmt.Sprintf(`
 				[
 					{
@@ -628,7 +633,7 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 						"type": "divider"
 					}
 				]
-				`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, comparedToStatement, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue, emoji)
+				`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, comparedToStatement, strings.ReplaceAll(alertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue, emoji)
 
 	return slackMsg
 }
@@ -718,6 +723,10 @@ func getTeamsMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 		}
 		ComparedValue = " (" + ComparedValue + ") "
 	}
+
+	// added next line to support double quotes(") and backslash(\) in slack templates
+	// MUST NOT be done for slackBlocks variable
+	alertName := strings.ReplaceAll(strings.ReplaceAll(msg.AlertName, "\\", "\\\\"), "\"", "\\\"")
 	teamsMsg = fmt.Sprintf(`{
 		"contentType": "application/vnd.microsoft.teams.card.o365connector",
   		"content": {
@@ -740,7 +749,7 @@ func getTeamsMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 				}]
 			}]
 		}
-	}`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, comparedToStatement, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue)
+	}`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, comparedToStatement, strings.ReplaceAll(alertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue)
 
 	return teamsMsg
 }
@@ -1303,6 +1312,11 @@ func buildSlackTemplateForSavedQuerySharing(alert model.Alert, queryClass, repor
 		}
 	}
 
+	// added next two lines to support double quotes(") and backslash(\) in slack templates
+	// MUST NOT be done for slackBlocks variable
+	reportTitle = strings.ReplaceAll(strings.ReplaceAll(reportTitle, "\\", "\\\\"), "\"", "\\\"")
+	dateRange = strings.ReplaceAll(strings.ReplaceAll(dateRange, "\\", "\\\\"), "\"", "\\\"")
+
 	slackTemplate := fmt.Sprintf(`
 		 [
 			{
@@ -1621,6 +1635,12 @@ func buildChartConfigForSavedQuerySharing(queryClass string, results []model.Que
 }
 func buildSlackMessageForReportSharing(queryClass, reportTitle, dateRange, chartUrl, tableUrl string, eventsWithBreadkown bool) string {
 	var slackTemplate string
+
+	// added next two lines to support double quotes(") and backslash(\) in slack templates
+	// MUST NOT be done for slackBlocks variable
+	reportTitle = strings.ReplaceAll(strings.ReplaceAll(reportTitle, "\\", "\\\\"), "\"", "\\\"")
+	dateRange = strings.ReplaceAll(strings.ReplaceAll(dateRange, "\\", "\\\\"), "\"", "\\\"")
+
 	if eventsWithBreadkown {
 		slackTemplate = fmt.Sprintf(`
 		[

@@ -11,65 +11,50 @@ function PropertyFilter({
   profileType,
   source,
   filters = [],
-  setFilters,
-  onFiltersLoad = []
+  setFilters
 }) {
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
+  const availableGroups = useSelector((state) => state.groups.data);
   const activeProject = useSelector((state) => state.global.active_project);
 
-  const [filterProps, setFilterProperties] = useState({ user: [], group: [] });
+  const [filterProps, setFilterProperties] = useState({});
   const [filterDD, setFilterDD] = useState(false);
 
   useEffect(() => {
-    const props = { ...filterProps };
+    const props = {};
     if (profileType === 'account') {
       if (source === 'All') {
-        props.group = [
-          ...(groupProperties.$hubspot_company
-            ? groupProperties.$hubspot_company
-            : []),
-          ...(groupProperties.$salesforce_account
-            ? groupProperties.$salesforce_account
-            : []),
-          ...(groupProperties.$6signal ? groupProperties.$6signal : [])
-        ];
-      } else props.group = groupProperties[source];
-    } else if (profileType === 'user') props.user = userProperties;
-    setFilterProperties(props);
-  }, [userProperties, groupProperties, source]);
-
-  useEffect(() => {
-    if (onFiltersLoad.length) {
-      onFiltersLoad.forEach((fn) => fn());
+        Object.keys(availableGroups).forEach((group) => {
+          props[group] = groupProperties[group];
+        });
+      } else props[source] = groupProperties[source];
+    } else if (profileType === 'user') {
+      props.user = userProperties;
     }
-  }, [filters]);
+    setFilterProperties(props);
+  }, [userProperties, groupProperties, availableGroups, profileType, source]);
+
+  const updateFilters = (newFilters) => {
+    if (viewMode) return;
+    const sortedFilters = [...newFilters].sort(compareFilters);
+    setFilters(sortedFilters);
+  };
 
   const delFilter = (index) => {
-    if (!viewMode) {
-      const filtersSorted = [...filters];
-      filtersSorted.sort(compareFilters);
-      const fltrs = filtersSorted.filter((f, i) => i !== index);
-      setFilters(fltrs);
-    }
+    updateFilters(filters.filter((f, i) => i !== index));
   };
+
   const editFilter = (id, filter) => {
-    if (!viewMode) {
-      const filtersSorted = [...filters];
-      filtersSorted.sort(compareFilters);
-      const fltrs = filtersSorted.map((f, i) => (i === id ? filter : f));
-      setFilters(fltrs);
-    }
+    updateFilters(filters.map((f, i) => (i === id ? filter : f)));
   };
+
   const addFilter = (filter) => {
-    if (!viewMode) {
-      const fltrs = [...filters];
-      fltrs.push(filter);
-      setFilters(fltrs);
-    }
+    updateFilters([...filters, filter]);
   };
+
   const closeFilter = () => {
     setFilterDD(false);
   };
@@ -90,6 +75,7 @@ function PropertyFilter({
               insertFilter={(val) => editFilter(id, val)}
               closeFilter={closeFilter}
               filterProps={filterProps}
+              minEntriesPerGroup={3}
             />
           </div>
         );
@@ -107,6 +93,7 @@ function PropertyFilter({
                 insertFilter={addFilter}
                 closeFilter={closeFilter}
                 filterProps={filterProps}
+                minEntriesPerGroup={3}
               />
             </div>
           );

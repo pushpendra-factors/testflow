@@ -84,6 +84,21 @@ function CalendarRow({
     [durationObj, handleDurationChange]
   );
 
+  const handleKpiSecondAxisConfigChange = useCallback(
+    (option) => {
+      setSecondAxisKpiIndices((curr) => {
+        if (!curr.includes(option.value)) {
+          if (curr.length === kpis.length - 1) {
+            return curr;
+          }
+          return [...curr, option.value];
+        }
+        return curr.filter((c) => c !== option.value);
+      });
+    },
+    [setSecondAxisKpiIndices, kpis]
+  );
+
   if (queryType === QUERY_TYPE_WEB) {
     return null;
   }
@@ -193,21 +208,6 @@ function CalendarRow({
       </div>
     );
   }
-
-  const handleKpiSecondAxisConfigChange = useCallback(
-    (option) => {
-      setSecondAxisKpiIndices((curr) => {
-        if (!curr.includes(option.value)) {
-          if (curr.length === kpis.length - 1) {
-            return curr;
-          }
-          return [...curr, option.value];
-        }
-        return curr.filter((c) => c !== option.value);
-      });
-    },
-    [setSecondAxisKpiIndices, kpis]
-  );
 
   const KpiSecondAxisConfig = (
     <div className='flex flex-col row-gap-1'>

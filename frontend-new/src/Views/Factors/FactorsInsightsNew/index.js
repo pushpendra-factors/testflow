@@ -100,9 +100,9 @@ const Factors = ({
 
             <HeaderContents />
             <div className={'fa-container'}>
-              <div className={'mt-24'}>
+              <div className={'mt-24 '}>
                 <ExplainQueryBuilder />
-                <div id='fa-explain-results--container'>
+                <div id='fa-explain-results--container' className='px-20'>
                   {!_.isEmpty(goalInsights?.insights) && <ResultsTableL1
                     goalInsights={goalInsights}
                     explainMatchEventName={explainMatchEventName}

@@ -1,58 +1,26 @@
-import React, { useState, useCallback, useRef } from 'react';
-import SearchModal from './SearchModal';
+import React, { useCallback, useRef } from 'react';
 import { SVG } from '../factorsComponents';
 import { Input } from 'antd';
-import { useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 
-function SearchBar({ setQueryToState }) {
+function SearchBar() {
   const inputRef = useRef(null);
-  const [visible, setVisible] = useState(false);
-  const history = useHistory();
   const dispatch = useDispatch();
   const handleFocus = useCallback(() => {
     dispatch({ type: TOGGLE_GLOBAL_SEARCH });
-    document.activeElement.blur();
-    // setVisible(true);
-  }, []);
-
-  const handleClose = useCallback(() => {
-    setVisible(false);
-  }, []);
-
-  const handleQueryClick = useCallback(
-    (query) => {
-      // if (history.location.pathname === '/analyse') {
-      //   setQueryToState(query);
-      // } else {
-      history.push({
-        pathname: '/analyse',
-        state: { query, global_search: true, navigatedFromDashboard: query }
-      });
-      // }
-    },
-    [setQueryToState, history]
-  );
+  }, [dispatch]);
 
   return (
-    <>
-      <Input
-        data-tour='step-2'
-        ref={inputRef}
-        size='large'
-        placeholder='Search Reports'
-        prefix={<SVG name={'search'} size={16} color={'grey'} />}
-        className={'fa-global-search--input'}
-        onFocus={handleFocus}
-      />
-      <SearchModal
-        visible={visible}
-        setVisible={setVisible}
-        handleClose={handleClose}
-        handleQueryClick={handleQueryClick}
-      />
-    </>
+    <Input
+      data-tour='step-2'
+      ref={inputRef}
+      size='large'
+      placeholder='Search Reports and Dasboard ⌘K'
+      prefix={<SVG name={'search'} size={16} color={'#BFBFBF'} />}
+      className={'fa-global-search--input'}
+      onFocus={handleFocus}
+    />
   );
 }
 

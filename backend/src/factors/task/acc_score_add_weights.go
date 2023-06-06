@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"factors/model/model"
 	M "factors/model/model"
+	"factors/model/store"
 	P "factors/pattern"
 	U "factors/util"
 
@@ -17,8 +18,8 @@ import (
 // update : check if duplicate rules exist and is deleted
 // delete : soft delete rule
 type weightfilter struct {
-	Ename string                `json:"en"`
-	Rule  M.WeightKeyValueTuple `json:"rule"`
+	Ename string                  `json:"en"`
+	Rule  []M.WeightKeyValueTuple `json:"rule"`
 }
 
 const HASHKEYLENGTH = 12
@@ -71,81 +72,65 @@ func FilterEvents(event *P.CounterEventFormat, mweights map[string][]M.AccEventW
 
 	event_name := event.EventName
 
-	// currently not adding
-	if rules, ok := mweights[event_name]; ok {
-
-		for _, individual_rule := range rules {
-
-			r := individual_rule.Rule
-
-			if r.Type == "event" {
-				id_, match := evalProperty(event.EventProperties, individual_rule)
-				if match {
-					ids = append(ids, id_)
-				}
-			} else if r.Type == "user" {
-
-				id_, match := evalProperty(event.UserProperties, individual_rule)
-				if match {
-					ids = append(ids, id_)
-				}
-
+	if mrules, ok := mweights[event_name]; ok {
+		for _, individual_rule := range mrules {
+			ruleId, match := ProcessSingleFilterOnEvent(event, individual_rule)
+			if match {
+				ids = append(ids, ruleId)
 			}
-
-			if r.Key == "" {
-				ids = append(ids, individual_rule.WeightId)
-			}
-
 		}
 
 	}
 
 	if rules, ok := mweights[M.DEFAULT_EVENT]; ok {
 		for _, individual_rule := range rules {
-
-			r := individual_rule.Rule
-
-			if r.Type == "event" {
-				id_, match := evalProperty(event.EventProperties, individual_rule)
-				if match {
-					ids = append(ids, id_)
-				}
-			} else if r.Type == "user" {
-
-				id_, match := evalProperty(event.UserProperties, individual_rule)
-				if match {
-					ids = append(ids, id_)
-				}
-
+			ruleId, match := ProcessSingleFilterOnEvent(event, individual_rule)
+			if match {
+				ids = append(ids, ruleId)
 			}
-
-			if r.Key == "" {
-				ids = append(ids, individual_rule.WeightId)
-			}
-
 		}
-
 	}
 
 	return ids
 }
 
-func evalProperty(properties map[string]interface{}, rule M.AccEventWeight) (string, bool) {
+func ProcessSingleFilterOnEvent(event *P.CounterEventFormat, filter M.AccEventWeight) (string, bool) {
 
-	r := rule.Rule
-	propval_ := properties[r.Key]
-	propval := U.GetPropertyValueAsString(propval_)
-	if r.Operator {
-		if strings.Compare(propval, r.Value) == 0 {
-			return rule.WeightId, true
-		}
-	} else {
-		if strings.Compare(propval, r.Value) != 0 {
-			return rule.WeightId, true
+	ruleId := filter.WeightId
+	ruleResultMap := make(map[int]bool, 0)
+
+	for idx, singleRule := range filter.Rule {
+
+		if singleRule.Type == "event" {
+			match := evalProperty(event.EventProperties, singleRule)
+			ruleResultMap[idx] = match
+		} else if singleRule.Type == "user" {
+			match := evalProperty(event.UserProperties, singleRule)
+			ruleResultMap[idx] = match
 		}
 	}
 
-	return "", false
+	for _, resVal := range ruleResultMap {
+		if !resVal {
+			return "", false
+		}
+	}
+
+	return ruleId, true
+}
+
+func evalProperty(properties map[string]interface{}, propFilter M.WeightKeyValueTuple) bool {
+
+	propFilterMap := make(map[string]bool, 0)
+	for _, propertyVal := range propFilter.Value {
+		propFilterMap[propertyVal] = true
+	}
+	propval_ := properties[propFilter.Key]
+	propval := U.GetPropertyValueAsString(propval_)
+	if _, ok := propFilterMap[propval]; ok {
+		return true
+	}
+	return false
 }
 
 func GenerateHashFromStruct(w weightfilter) (string, error) {
@@ -165,4 +150,14 @@ func GenerateHashFromStruct(w weightfilter) (string, error) {
 func GenerateHash(bytes string) (string, error) {
 	uuid := U.HashKeyUsingSha256Checksum(string(bytes))[:HASHKEYLENGTH]
 	return uuid, nil
+}
+
+func OnOnboardingAccScoring(projectId int64) error {
+	weights := model.GetDefaultAccScoringWeights()
+	err := store.GetStore().UpdateAccScoreWeights(projectId, weights)
+	if err != nil {
+		log.Errorf("Unable to add default weights")
+		return err
+	}
+	return nil
 }

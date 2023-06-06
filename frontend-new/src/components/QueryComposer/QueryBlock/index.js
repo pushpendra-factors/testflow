@@ -11,7 +11,6 @@ import {
   delGroupBy,
   getGroupProperties
 } from '../../../reducers/coreQuery/middleware';
-import GroupSelect2 from '../GroupSelect2';
 import EventGroupBlock from '../EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 import AliasModal from '../AliasModal';
@@ -20,7 +19,7 @@ import { compareFilters, groupFilters } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import { getQueryComposerGroupIcon } from 'Utils/getQueryComposerGroupIcons';
-
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 function QueryBlock({
   availableGroups,
   index,
@@ -34,7 +33,7 @@ function QueryBlock({
   groupBy,
   setGroupBy,
   delGroupBy,
-  userProperties,
+  eventUserProperties,
   eventProperties,
   groupProperties,
   getGroupProperties,
@@ -56,7 +55,7 @@ function QueryBlock({
 
   const showGroups = useMemo(() => {
     let showOpts = [];
-    if (groupAnalysis === 'users') {
+    if (['users', 'events'].includes(groupAnalysis)) {
       showOpts = [...eventOptions];
     } else {
       const groupOpts = eventOptions?.filter((item) => {
@@ -70,29 +69,46 @@ function QueryBlock({
       );
       showOpts = groupOpts.concat(userOpts);
     }
+    showOpts = showOpts?.map((opt) => {
+      return {
+        iconName: opt.icon,
+        label: opt.label,
+        values: opt.values.map((op) => {
+          return { value: op[1], label: op[0] };
+        })
+      };
+    });
+    // Moving MostRecent as first Option.
+    const mostRecentGroupindex = showOpts
+      ?.map((opt) => opt.label)
+      ?.indexOf('Most Recent');
+    if (mostRecentGroupindex > 0) {
+      showOpts = [
+        showOpts[mostRecentGroupindex],
+        ...showOpts.slice(0, mostRecentGroupindex),
+        ...showOpts.slice(mostRecentGroupindex + 1)
+      ];
+    }
     return showOpts;
   }, [eventOptions, groupAnalysis, availableGroups]);
 
   const filterProperties = useMemo(() => {
-    if (!event || event === undefined) {
-      return [];
-    }
-    const assignFilterProps = {};
-    assignFilterProps.event = eventProperties[event.label] || [];
+    if (!event) return {};
+
+    const props = {
+      event: eventProperties[event.label] || []
+    };
     if (eventGroup) {
-      assignFilterProps.group = groupProperties[eventGroup];
-      assignFilterProps.user = [];
+      props[eventGroup] = groupProperties[eventGroup];
     } else {
-      assignFilterProps.user = userProperties;
-      assignFilterProps.group = [];
+      props.user = eventUserProperties;
     }
-    return assignFilterProps;
-  }, [event, eventGroup, eventProperties, groupProperties, userProperties]);
+    return props;
+  }, [event, eventGroup, eventProperties, groupProperties, eventUserProperties]);
+
 
   useEffect(() => {
-    if (!event || event === undefined) {
-      return;
-    }
+    if (!event) return;
     if (eventGroup?.length) {
       getGroupProperties(activeProject.id, eventGroup);
     }
@@ -112,11 +128,11 @@ function QueryBlock({
     eventChange(newEvent, index - 1, 'filters_updated');
   };
 
-  const onChange = (group, value, original_group) => {
+  const onChange = (option, group) => {
     const newEvent = { alias: '', label: '', filters: [], group: '', icon: '' };
-    newEvent.icon = original_group?.icon;
-    newEvent.label = value;
-    newEvent.group = group;
+    newEvent.icon = group.icon;
+    newEvent.label = option.value;
+    newEvent.group = group.label;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
   };
@@ -132,15 +148,12 @@ function QueryBlock({
   const selectEvents = () =>
     isDDVisible ? (
       <div className={styles.query_block__event_selector}>
-        <GroupSelect2
-          groupedProperties={showGroups}
-          placeholder='Select Event'
-          optionClick={(group, val, a, original_group) => {
-            onChange(group, val[1] ? val[1] : val[0], original_group);
-          }}
+        <GroupSelect
+          options={showGroups}
+          optionClickCallback={onChange}
+          allowSearch={true}
           onClickOutside={() => setDDVisible(false)}
-          allowEmpty
-          useCollapseView
+          extraClass={`${styles.query_block__event_selector__select}`}
         />
       </div>
     ) : null;
@@ -540,8 +553,11 @@ function QueryBlock({
               <Button
                 icon={
                   <SVG
-                    name={getQueryComposerGroupIcon(event?.icon)}
-                    size={16}
+                    name={getQueryComposerGroupIcon(
+                      showGroups.find((group) => group.label === event.group)
+                        ?.iconName
+                    )}
+                    size={20}
                   />
                 }
                 className='fa-button--truncate fa-button--truncate-lg btn-total-round'
@@ -586,7 +602,7 @@ function QueryBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
+  eventUserProperties: state.coreQuery.eventUserProperties,
   groupProperties: state.coreQuery.groupProperties,
   eventProperties: state.coreQuery.eventProperties,
   groupBy: state.coreQuery.groupBy.event,

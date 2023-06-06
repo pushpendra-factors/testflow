@@ -1,3 +1,4 @@
+import unset from 'lodash/unset';
 import { DefaultDateRangeFormat } from 'Views/CoreQuery/utils';
 import { getRearrangedData } from 'Reducers/dashboard/utils';
 import {
@@ -30,6 +31,7 @@ import {
   ATTRIBUTION_QUERY_UPDATED,
   ATTRIBUTION_DASHBOARD_UNIT_ADDED
 } from './action.constants';
+import { SET_ACTIVE_PROJECT } from 'Reducers/types';
 
 const defaultState = {
   eventGoal: { filters: [] },
@@ -119,8 +121,8 @@ export default function (state = defaultState, action) {
 
     case ATTRIBUTION_WIDGET_DELETED: {
       const updatedUnitsPosition = { ...state.dashboard.units_position };
-      _.unset(updatedUnitsPosition, `position.${action.payload}`);
-      _.unset(updatedUnitsPosition, `size.${action.payload}`);
+      unset(updatedUnitsPosition, `position.${action.payload}`);
+      unset(updatedUnitsPosition, `size.${action.payload}`);
       return {
         ...state,
         attributionDashboardUnits: {
@@ -314,6 +316,11 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         ...action.payload
+      };
+    }
+    case SET_ACTIVE_PROJECT: {
+      return {
+        ...defaultState
       };
     }
     default: {

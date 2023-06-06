@@ -122,7 +122,7 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 			var eventCardinality uint
 			var eventProperties *postgres.Jsonb
 			var userProperties *postgres.Jsonb
-			var is_group_user bool
+			var is_group_user_null sql.NullBool
 			var group_1_user_id_null sql.NullString
 			var group_2_user_id_null sql.NullString
 			var group_3_user_id_null sql.NullString
@@ -140,7 +140,7 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 			var group_7_id_null sql.NullString
 			var group_8_id_null sql.NullString
 			if err = rows.Scan(&userID, &eventName, &eventTimestamp, &eventCardinality, &eventProperties, &userJoinTimestamp, &userProperties,
-				&is_group_user, &group_1_user_id_null, &group_2_user_id_null, &group_3_user_id_null, &group_4_user_id_null,
+				&is_group_user_null, &group_1_user_id_null, &group_2_user_id_null, &group_3_user_id_null, &group_4_user_id_null,
 				&group_5_user_id_null, &group_6_user_id_null, &group_7_user_id_null, &group_8_user_id_null,
 				&group_1_id_null, &group_2_id_null, &group_3_id_null, &group_4_id_null,
 				&group_5_id_null, &group_6_id_null, &group_7_id_null, &group_8_id_null); err != nil {
@@ -193,6 +193,8 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 			} else {
 				nilUserProperties++
 			}
+
+			is_group_user := U.IfThenElse(is_group_user_null.Valid, is_group_user_null.Bool, false).(bool)
 
 			group_1_user_id := U.IfThenElse(group_1_user_id_null.Valid, group_1_user_id_null.String, "").(string)
 			group_2_user_id := U.IfThenElse(group_2_user_id_null.Valid, group_2_user_id_null.String, "").(string)

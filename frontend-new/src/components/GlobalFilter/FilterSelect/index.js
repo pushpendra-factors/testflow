@@ -313,7 +313,7 @@ const FilterSelect = ({
             <GroupSelect2
               groupedProperties={propOpts}
               placeholder='Select Property'
-              optionClick={(group, val) => propSelect([...val, group])}
+              optionClick={(_, val,__, icon) => propSelect([...val, icon])}
               onClickOutside={() => setPropSelectOpen(false)}
             ></GroupSelect2>
           </div>
@@ -341,10 +341,7 @@ const FilterSelect = ({
         {operSelectOpen && (
           <FaSelect
             options={operatorOpts[propState.type]
-              .filter((op) => {
-                // Only include the operator if showInList is true or it's not 'inList'
-                return false || op !== OPERATORS['inList'];
-              })
+              .filter((op) => false || (op !== OPERATORS['inList'] && op !== OPERATORS['notInList']))
               .map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}

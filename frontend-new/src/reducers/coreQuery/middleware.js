@@ -29,7 +29,8 @@ import {
   fetchGroupPropertiesAction,
   resetGroupByAction,
   fetchEventsMapAction,
-  FETCH_PROPERTY_VALUES
+  FETCH_PROPERTY_VALUES,
+  fetchEventUserPropertiesAction
 } from './actions';
 import {
   getEventNames,
@@ -103,6 +104,18 @@ export const getUserProperties = (projectId, queryType = '') => {
             dispatch(setUserPropertiesNamesAction(response.data?.display_names))
           );
           resolve(dispatch(fetchUserPropertiesAction(options)));
+          resolve(
+            dispatch(
+              fetchEventUserPropertiesAction(
+                options.filter(
+                  (item) =>
+                    !response.data?.disabled_event_user_properties?.includes(
+                      item?.[1]
+                    )
+                )
+              )
+            )
+          );
         })
         .catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));

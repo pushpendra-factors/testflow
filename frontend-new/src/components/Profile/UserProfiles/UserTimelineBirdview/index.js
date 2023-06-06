@@ -29,6 +29,9 @@ function UserTimelineBirdview({
 
   const groupedActivities = _.groupBy(activities, groups[granularity]);
 
+  document.title = 'People' + ' - FactorsAI';
+  
+
   useEffect(() => {
     if (collapse !== undefined) {
       const showAllState = new Array(
@@ -181,8 +184,8 @@ function UserTimelineBirdview({
                           : 'timeline-events--expanded'
                       }`}
                     >
-                      {eventsList?.map((event) => (
-                        <div className='timeline-events__event'>
+                      {eventsList?.map((event, ind) => (
+                        <div key={ind} className='timeline-events__event'>
                           {renderIcon(event)}
                           {renderInfoCard(event)}
                         </div>

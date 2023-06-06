@@ -10,6 +10,7 @@ import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function GroupBlock({
   groupByState,
@@ -43,6 +44,7 @@ function GroupBlock({
       filterOpts[0].values = userProperties;
       filterOpts[1].values = [];
     } else {
+      filterOpts[1].label = `${PropTextFormat(groupName)} Properties`;
       filterOpts[1].values = groupProperties[groupName];
       filterOpts[0].values = [];
     }

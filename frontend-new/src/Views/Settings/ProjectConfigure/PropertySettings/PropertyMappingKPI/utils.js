@@ -1,5 +1,5 @@
 import { get, map } from 'lodash';
-
+import getGroupIcon from 'Utils/getGroupIcon'
 export const EMPTY_ARRAY = [];
 
 
@@ -45,11 +45,8 @@ return propertiesDetails
     return {
       label: get(kpi, 'display_category'),
       group: get(kpi, 'display_category'),
-      category: get(kpi, 'category'),
-      icon: 'custom_events',
+      category: get(kpi, 'category'), 
+      icon: getGroupIcon(get(kpi, 'display_category')),
       values: propertiesValues
     };
   };
-
-
-

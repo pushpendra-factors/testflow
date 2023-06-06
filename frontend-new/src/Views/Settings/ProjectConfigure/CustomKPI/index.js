@@ -805,7 +805,7 @@ function CustomKPI({
   }
 
   return (
-    <div className='fa-container mt-32 mb-12 min-h-screen'>
+    <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={18}>
           <div className='mb-10 pl-4'>
@@ -1214,6 +1214,7 @@ function CustomKPI({
                         </Text>
                       </Col>
                     </Row>
+                    <div style={{minHeight: "500px"}}>
                     <div className='mt-4 border rounded-lg'>
                       <Row className='m-0 ml-4 my-2'>
                         <Col span={18}>
@@ -1272,6 +1273,7 @@ function CustomKPI({
                           </Form.Item>
                         </Col>
                       </Row>
+                    </div>
                     </div>
                   </>
                 ) : (

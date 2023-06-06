@@ -32,7 +32,7 @@ const AttrQueryComposer = ({
   activeProject,
   fetchEventNames,
   getEventProperties,
-  userProperties,
+  eventUserProperties,
   eventProperties,
   runAttributionQuery,
   eventGoal,
@@ -86,7 +86,7 @@ const AttrQueryComposer = ({
     if (activeProject && activeProject.id) {
       getCampaignConfigData(activeProject.id, 'all_ads');
       fetchEventNames(activeProject.id);
-      if (!userProperties.length) {
+      if (!eventUserProperties.length) {
         getUserProperties(activeProject.id, 'analysis');
       }
     }
@@ -463,8 +463,8 @@ const AttrQueryComposer = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
   eventProperties: state.coreQuery.eventProperties,
+  eventUserProperties: state.coreQuery.eventUserProperties,
   eventGoal: state.coreQuery.eventGoal,
   touchPoint: state.coreQuery.touchpoint,
   models: state.coreQuery.models,

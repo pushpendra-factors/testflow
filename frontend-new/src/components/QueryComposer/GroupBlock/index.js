@@ -10,6 +10,7 @@ import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function GroupBlock({
   groupByState,
@@ -28,21 +29,22 @@ function GroupBlock({
     {
       label: 'User Properties',
       icon: 'user',
-      values: [],
+      values: []
     },
     {
       label: 'Group Properties',
       icon: 'group',
-      values: [],
-    },
+      values: []
+    }
   ]);
 
   useEffect(() => {
     const filterOpts = [...filterOptions];
-    if (groupName === 'users') {
+    if (groupName === 'users' || groupName === 'events') {
       filterOpts[0].values = userProperties;
       filterOpts[1].values = [];
     } else {
+      filterOpts[1].label = `${PropTextFormat(groupName)} Properties`;
       filterOpts[1].values = groupProperties[groupName];
       filterOpts[0].values = [];
     }
@@ -129,14 +131,14 @@ function GroupBlock({
     const propOpts = {
       numerical: [
         ['original values', null, 'raw_values'],
-        ['bucketed values', null, 'with_buckets'],
+        ['bucketed values', null, 'with_buckets']
       ],
       datetime: [
         ['hour', null, 'hour'],
         ['date', null, 'day'],
         ['week', null, 'week'],
-        ['month', null, 'month'],
-      ],
+        ['month', null, 'month']
+      ]
     };
 
     const getProp = (opt) => {
@@ -260,14 +262,14 @@ const mapStateToProps = (state) => ({
   groupProperties: state.coreQuery.groupProperties,
   userPropNames: state.coreQuery.userPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
-  groupByState: state.coreQuery.groupBy,
+  groupByState: state.coreQuery.groupBy
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setGroupBy,
-      delGroupBy,
+      delGroupBy
     },
     dispatch
   );

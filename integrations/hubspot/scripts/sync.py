@@ -38,6 +38,7 @@ parser.add_option("--allowed_doc_types_sync", dest="allowed_doc_types_sync", hel
 parser.add_option("--use_sync_contact_list_v2", dest="use_sync_contact_list_v2",action="store_true", help="", default=False)
 parser.add_option("--enable_owner_sync_by_project_id", dest="enable_owner_sync_by_project_id", help="", default="")
 parser.add_option("--enable_sync_company_v3_by_project_id", dest="enable_sync_company_v3_by_project_id", help="Use API v3 to overcome 10K limit", default="")
+parser.add_option("--enable_sync_engagement_v3_by_project_id", dest="enable_sync_engagement_v3_by_project_id", help="Use API v3 to overcome 10K limit", default="")
 
 APP_NAME = "hubspot_sync"
 PAGE_SIZE = 100
@@ -409,6 +410,24 @@ def get_contacts_with_properties_by_id(project_id,get_url, hubspot_request_handl
 
     return response_dict, unmodified_dict, r
 
+def get_call_disposition(project_id, hubspot_request_handler):
+    get_disposition_label_url = "https://api.hubapi.com/calling/v1/dispositions?"
+    r = hubspot_request_handler(project_id, get_disposition_label_url)
+    if not r.ok:
+        log.error("Failure response %d from engagement dispositions on get_call_disposition", r.status_code)
+        return
+    response = json.loads(r.text)
+    disposition_values = {}
+    for data in response:
+        if data["id"] and data["label"]:
+            disposition_values[data["id"]] = data["label"]
+    return disposition_values
+
+def sync_engagements(project_id, refresh_token, api_key,last_sync_timestamp):
+    if use_sync_engagement_v3_by_project_id(project_id):
+        return sync_engagements_v3(project_id, refresh_token, api_key,last_sync_timestamp)
+    return sync_engagements_v2(project_id, refresh_token, api_key,last_sync_timestamp)
+
 def add_contactId( email, project_id, engagement, hubspot_request_handler):
     get_url = "https://api.hubapi.com/contacts/v1/contact/email/" + email + "/profile?"
     r  = hubspot_request_handler(project_id, get_url)
@@ -423,12 +442,19 @@ def add_contactId( email, project_id, engagement, hubspot_request_handler):
     elif engagements["type"] == "EMAIL":
         engagement["metadata"]["to"][0]["contactId"] = response["vid"]
 
-def sync_engagements(project_id, refresh_token, api_key, last_sync_timestamp=0):
+def add_disposition_label(engagement, call_disposition):
+    if "metadata" in engagement and "disposition" in engagement["metadata"]:
+        disposition_label = call_disposition.get(engagement["metadata"]["disposition"])
+        if disposition_label != None:
+            engagement["metadata"]["disposition_label"] = disposition_label
+
+def sync_engagements_v2(project_id, refresh_token, api_key, last_sync_timestamp=0):
     page_count = 100
     get_url = "https://api.hubapi.com/engagements/v1/engagements/recent/modified?"+"count="+str(page_count)+"&since="+str(last_sync_timestamp)
     final_url = get_url
     has_more = True
     engagement_api_calls = 0
+    engagements_contacts_api_calls = 0
     latest_timestamp = None
     buffer_size = page_count * get_buffer_size_by_api_count()
     create_all_engagement_documents_with_buffer = get_create_all_documents_with_buffer(project_id, 'engagement', buffer_size)
@@ -479,26 +505,170 @@ def sync_engagements(project_id, refresh_token, api_key, last_sync_timestamp=0):
             create_all_documents(project_id, 'engagement', filter_engagements)
             log.warning("Downloaded and created %d engagements.", len(filter_engagements))
     create_all_engagement_documents_with_buffer([],False) ## flush any remaining docs in memory
-    return engagement_api_calls,latest_timestamp
+    return engagement_api_calls, engagements_contacts_api_calls, latest_timestamp
 
-def add_disposition_label(engagement, call_disposition):
-    if "metadata" in engagement and "disposition" in engagement["metadata"]:
-        disposition_label = call_disposition.get(engagement["metadata"]["disposition"])
+def add_contactId_v3(email, project_id, engagement, hubspot_request_handler):
+    get_url = "https://api.hubapi.com/contacts/v1/contact/email/" + email + "/profile?"
+    r  = hubspot_request_handler(project_id, get_url)
+    if not r.ok:
+        log.error("Failure response %d from hubspot on contactID", r.status_code)
+        return
+
+    response = json.loads(r.text)
+    if engagement["properties"]["hs_email_direction"] == "INCOMING_EMAIL":
+        engagement["properties"]["hs_email_headers"]["from"]["contactId"] = response["vid"]
+    if engagement["properties"]["hs_email_direction"] == "EMAIL":
+        engagement["properties"]["hs_email_headers"]["to"][0]["contactId"] = response["vid"]
+
+def add_disposition_label_v3(engagement, call_disposition):
+    if "properties" in engagement and "hs_call_disposition" in engagement["properties"]:
+        disposition_label = call_disposition.get(engagement["properties"]["hs_call_disposition"])
         if disposition_label != None:
-            engagement["metadata"]["disposition_label"] = disposition_label
+            engagement["properties"]["hs_call_disposition_label"] = disposition_label
 
-def get_call_disposition(project_id, hubspot_request_handler):
-        get_disposition_label_url = "https://api.hubapi.com/calling/v1/dispositions?"
-        r = hubspot_request_handler(project_id, get_disposition_label_url)
-        if not r.ok:
-            log.error("Failure response %d from engagement dispositions on get_call_disposition", r.status_code)
-            return
-        response = json.loads(r.text)
-        disposition_values = {}
-        for data in response:
-            if data["id"] and data["label"]:
-                disposition_values[data["id"]] = data["label"]
-        return disposition_values
+def add_properties_engagement_v3(project_id, hubspot_request_handler, engagement_type, engagement, call_disposition):
+    if engagement_type == "calls":
+        engagement["properties"]["type"] = "CALL"
+        add_disposition_label_v3(engagement, call_disposition)
+    elif engagement_type == "meetings":
+        engagement["properties"]["type"] = "MEETING"
+    elif engagement_type == "emails" and "properties" in engagement and "hs_email_direction" in engagement["properties"]:
+        if engagement["properties"]["hs_email_direction"] == "INCOMING_EMAIL":
+            engagement["properties"]["type"] = "INCOMING_EMAIL"
+            if "hs_email_headers" in engagement["properties"]:
+                email_headers = json.loads(engagement["properties"]["hs_email_headers"])
+                engagement["properties"]["hs_email_headers"] = email_headers
+                if "from" in email_headers and "email" in email_headers["from"]:
+                    add_contactId_v3(email_headers["from"]["email"], project_id, engagement, hubspot_request_handler)
+        if engagement["properties"]["hs_email_direction"] == "EMAIL":
+            engagement["properties"]["type"] = "EMAIL"
+            if "hs_email_headers" in engagement["properties"]:
+                email_headers = json.loads(engagement["properties"]["hs_email_headers"])     
+                engagement["properties"]["hs_email_headers"] = email_headers
+                if "to" in email_headers and len(email_headers["to"])>0 and "email" in email_headers["to"][0]:
+                    add_contactId_v3(email_headers["to"][0]["email"], project_id, engagement, hubspot_request_handler)
+
+def get_properties_for_engagement_v3(engagement_type):
+    if engagement_type == "calls":
+        return [
+            "hs_timestamp", "hs_call_body", "hs_call_callee_object_id", "hs_call_callee_object_type_id", "hs_call_direction", 
+            "hs_call_disposition", "hs_call_duration", "hs_call_from_number", "hs_call_recording_url", "hs_call_status", 
+            "hs_call_title", "hs_call_to_number", "hubspot_owner_id", "hs_activity_type", "hs_attachment_ids"
+        ]
+    elif engagement_type == "meetings":
+        return [
+            "hs_timestamp", "hs_meeting_title", "hubspot_owner_id", "hs_meeting_body", "hs_internal_meeting_notes", 
+            "hs_meeting_external_URL", "hs_meeting_location", "hs_meeting_start_time", "hs_meeting_end_time", 
+            "hs_meeting_outcome", "hs_activity_type", "hs_attachment_ids"
+        ]
+    elif engagement_type == "emails":
+        return [
+            "hs_timestamp", "hubspot_owner_id", "hs_email_direction", "hs_email_html", "hs_email_status", 
+            "hs_email_subject", "hs_email_text", "hs_email_thread_id", "hs_attachment_ids", "hs_email_headers"
+        ]
+
+def fill_contacts_for_engagements_v3(project_id, engagements, engagement_type, hubspot_request_handler):
+    engagements_ids = []
+    for engagement in engagements:
+        engagements_ids.append(engagement["id"])
+        engagement["associations"] = {}
+    
+    associations, api_calls = get_associations(project_id, engagement_type, engagements_ids, "contact", hubspot_request_handler)
+    for i in range(len(engagements)):
+        engagement_id = str(engagements[i]["id"])
+        if engagement_id in associations:
+            contact_ids = []
+            for id in associations[engagement_id]:
+                contact_ids.append(int(id)) ## store as integer
+            engagements[i]["associations"]["contactIds"] = contact_ids
+    return engagements, api_calls
+
+def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=0):
+    log.info("Using sync_engagements_v3 for project_id : "+str(project_id)+".")
+    
+    limit = PAGE_SIZE
+    engagement_types = ["calls", "meetings", "emails"]
+    engagement_url = "https://api.hubapi.com/crm/v3/objects/"
+    headers = {'Content-Type': 'application/json'}
+    log.warning("Downloading engagements for project_id : "+ str(project_id) + ".")
+
+    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
+    create_all_engagement_documents_with_buffer = get_create_all_documents_with_buffer(project_id, 'engagement', buffer_size)
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
+
+    engagement_api_calls = 0
+    engagements_contacts_api_calls = 0
+    engagement_latest_timestamp = 0
+    call_disposition = get_call_disposition(project_id, hubspot_request_handler)
+    
+    for type in engagement_types:
+        url = engagement_url + type + "/search"
+        has_more = True
+        engagement_properties = get_properties_for_engagement_v3(type)
+        json_payload = get_search_v3_api_payload("hs_lastmodifieddate", last_sync_timestamp, limit)
+        latest_timestamp = 0
+
+        log.warning("Downloading "+ type + " engagements for project_id : "+ str(project_id) + ".")
+        
+        count = 0
+        overall_doc_count = 0
+        while has_more:
+            get_url = url
+
+            json_payload["properties"] = engagement_properties
+            r = hubspot_request_handler(project_id, get_url, request=requests.post, json=json_payload, headers=headers)
+            if not r.ok:
+                log.error("Failure response %d from hubspot on sync_engagements", r.status_code)
+                latest_timestamp  = last_sync_timestamp
+                break
+            
+            engagement_api_calls += 1
+            filter_engagements = []
+            
+            response_dict = json.loads(r.text)
+            
+            docs = response_dict['results']
+            for engagement in docs:
+                if type == "calls" or type == "meetings" or type == "emails":
+                    add_properties_engagement_v3(project_id, hubspot_request_handler, type, engagement, call_disposition)
+                    filter_engagements.append(engagement)
+            
+            paging_after = ""
+            if "paging" in response_dict and "next" in response_dict["paging"] and "after" in response_dict["paging"]["next"]:
+                paging_after = response_dict["paging"]["next"]["after"]
+
+            if paging_after != "":
+                has_more = True
+                json_payload["after"] = paging_after
+            else:
+                has_more = False
+
+            latest_timestamp = get_batch_documents_max_timestamp_v3(project_id, filter_engagements, "engagements", latest_timestamp)
+
+            _, api_calls = fill_contacts_for_engagements_v3(project_id, filter_engagements, type, hubspot_request_handler)
+            engagements_contacts_api_calls += api_calls
+            count = count + len(filter_engagements)
+            overall_doc_count = overall_doc_count + len(filter_engagements)
+
+            if allow_buffer_before_insert_by_project_id(project_id):
+                create_all_engagement_documents_with_buffer(filter_engagements, has_more)
+                log.warning("Downloaded %d %s engagements. Total %d", len(filter_engagements), type, overall_doc_count)
+            else:
+                create_all_documents(project_id, 'engagement', filter_engagements)
+                log.warning("Downloaded and created %d %s engagements. Total %d", len(filter_engagements), type, overall_doc_count)
+            
+            if has_more and count >= SEARCH_V3_API_RECORD_PULL_LIMIT:
+                log.warning("10K record limit hit for %s engagements for project_id %d. New timestamp %d", type, project_id, latest_timestamp)
+                count = 0
+                json_payload = get_search_v3_api_payload("hs_lastmodifieddate", latest_timestamp, limit)
+        
+        if engagement_latest_timestamp == 0:
+            engagement_latest_timestamp = latest_timestamp
+        elif latest_timestamp < engagement_latest_timestamp:
+            engagement_latest_timestamp = latest_timestamp
+    
+    create_all_engagement_documents_with_buffer([],False) ## flush any remaining docs in memory
+    return engagement_api_calls, engagements_contacts_api_calls, engagement_latest_timestamp
 
 def is_marketing_contact(doc):
     if "properties" in doc:
@@ -1175,6 +1345,8 @@ def get_batch_documents_max_timestamp_v3(project_id, docs, object_type, max_time
     last_modified_key = ""
     if object_type == "companies":
         last_modified_key = COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE
+    if object_type == "engagements":
+        last_modified_key = "hs_lastmodifieddate"
 
     for doc in docs:
         object_properties = doc[RECORD_PROPERTIES_KEY]
@@ -1189,7 +1361,7 @@ def get_batch_documents_max_timestamp_v3(project_id, docs, object_type, max_time
 
         doc_last_modified_timestamp = int(last_modified_date.timestamp() * 1000)
         
-        if max_timestamp== 0 :
+        if max_timestamp == 0 :
             max_timestamp = doc_last_modified_timestamp
         elif max_timestamp < doc_last_modified_timestamp:
             max_timestamp = doc_last_modified_timestamp
@@ -1246,7 +1418,7 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
         json_payload = None
         log.warning("Downloading all companies for project_id : "+ str(project_id) + ".")
     else:
-        url = "https://api.hubapi.com/crm/v3/objects/companies/search?"  # both created and modified.
+        url = "https://api.hubapi.com/crm/v3/objects/companies/search"  # both created and modified.
         headers = {'Content-Type': 'application/json'}
         request = requests.post
         json_payload = get_search_v3_api_payload(COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE, last_sync_timestamp, limit)
@@ -1321,7 +1493,7 @@ def sync_companies_v3(project_id, refresh_token, api_key, last_sync_timestamp, s
         
         if not sync_all:
             if has_more and count >= SEARCH_V3_API_RECORD_PULL_LIMIT:
-                log.warning("10K record limit hit for companies fopr project_id %d. New timestamp %d", project_id, max_timestamp)
+                log.warning("10K record limit hit for companies for project_id %d. New timestamp %d", project_id, max_timestamp)
                 count = 0
                 json_payload = get_search_v3_api_payload(COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE, max_timestamp, limit)
     
@@ -1571,6 +1743,14 @@ def use_sync_company_v3_by_project_id(project_id):
         return True
     return str(project_id) in allowed_projects
 
+def use_sync_engagement_v3_by_project_id(project_id):
+    if not options.enable_sync_engagement_v3_by_project_id:
+        return False
+    all_projects, allowed_projects,_ = get_allowed_list_with_all_element_support(options.enable_sync_engagement_v3_by_project_id)
+    if all_projects:
+        return True
+    return str(project_id) in allowed_projects
+
 def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False):
     next_sync_info = []
     for project_id in project_settings:
@@ -1648,7 +1828,7 @@ def sync(project_id, refresh_token, api_key, doc_type, sync_all, last_sync_times
         elif doc_type == "deleted_contacts":
             response["deleted_contacts_api_calls"] = get_deleted_contacts(project_id, refresh_token, api_key)
         elif doc_type == "engagement":
-            response["engagement_api_calls"],max_timestamp = sync_engagements(project_id, refresh_token, api_key, last_sync_timestamp)
+            response["engagement_api_calls"], response["engagements_contacts_api_calls"], max_timestamp = sync_engagements(project_id, refresh_token, api_key, last_sync_timestamp)
         else:
             raise Exception("invalid doc_type "+ doc_type)
 

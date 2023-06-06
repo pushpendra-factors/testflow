@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import {
   FETCH_EVENTS,
   FETCH_EVENT_PROPERTIES,
@@ -33,7 +31,8 @@ import {
   SET_GROUP_PROP_NAME,
   SET_ATTR_QUERIES,
   FETCH_EVENTS_MAP,
-  FETCH_PROPERTY_VALUES
+  FETCH_PROPERTY_VALUES,
+  FETCH_EVENT_USER_PROPERTIES
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -43,7 +42,8 @@ import {
   INITIALIZE_CONTENT_GROUPS,
   EVENT_DISPLAY_NAMES_LOADING,
   EVENT_DISPLAY_NAMES_ERROR,
-  EVENT_DISPLAY_NAMES_LOADED
+  EVENT_DISPLAY_NAMES_LOADED,
+  SET_ACTIVE_PROJECT
 } from '../types';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 import { DEFAULT_TOUCHPOINTS } from 'Reducers/coreQuery/utils';
@@ -53,6 +53,7 @@ const defaultState = {
   eventNamesMap: {},
   eventProperties: {},
   userProperties: [],
+  eventUserProperties: [],
   groupProperties: {},
   propertyValuesMap: {},
   groupBy: {
@@ -127,6 +128,8 @@ export default function (state = defaultState, action) {
       return { ...state, groupProperties: groupPropState };
     case FETCH_USER_PROPERTIES:
       return { ...state, userProperties: action.payload };
+    case FETCH_EVENT_USER_PROPERTIES:
+      return { ...state, eventUserProperties: action.payload };
     case FETCH_EVENT_PROPERTIES:
       const eventPropState = Object.assign({}, state.eventProperties);
       eventPropState[action.eventName] = action.payload;
@@ -390,6 +393,11 @@ export default function (state = defaultState, action) {
           error: false,
           data: action.payload
         }
+      };
+    }
+    case SET_ACTIVE_PROJECT: {
+      return {
+        ...defaultState
       };
     }
     default:

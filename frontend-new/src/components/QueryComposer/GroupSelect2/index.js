@@ -17,6 +17,7 @@ function GroupSelect2({
   placement = 'bottom',
   height = 576,
   additionalActions,
+  minEntriesPerGroup = 5,
   useCollapseView
 }) {
   const [groupCollapseState, setGroupCollapseState] = useState([]);
@@ -80,7 +81,6 @@ function GroupSelect2({
   const getGroupLabel = (grp) => {
     if (grp === 'event') return 'Event Properties';
     if (grp === 'user') return 'User Properties';
-    if (grp === 'group') return 'Group Properties';
     if (!grp) return 'Properties';
     return grp;
   };
@@ -164,7 +164,7 @@ function GroupSelect2({
                             group.label ? group.label : group.icon,
                             val,
                             group.category,
-                            group
+                            group.icon
                           )
                         }
                       >
@@ -185,12 +185,13 @@ function GroupSelect2({
                   );
                   return showAll[grpIndex]
                     ? valuesOptions
-                    : valuesOptions.slice(0, 5);
+                    : valuesOptions.slice(0, minEntriesPerGroup);
                 })()
               : null}
           </div>
 
-          {valuesOptions.length > 5 && !groupCollapseState[grpIndex] ? (
+          {valuesOptions.length > minEntriesPerGroup &&
+          !groupCollapseState[grpIndex] ? (
             !showAll[grpIndex] ? (
               <Button
                 className={`show-hide-btn`}
@@ -200,7 +201,7 @@ function GroupSelect2({
                 }}
                 icon={<CaretDownOutlined />}
               >
-                Show More ({valuesOptions.length - 5})
+                Show More ({valuesOptions.length - minEntriesPerGroup})
               </Button>
             ) : (
               <Button

@@ -9,6 +9,7 @@ import {
 } from 'Reducers/coreQuery/middleware';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function FilterWrapper({
   viewMode,
@@ -33,7 +34,8 @@ function FilterWrapper({
   getEventPropertyValues,
   getGroupPropertyValues,
   getUserPropertyValues,
-  propertyValuesMap
+  propertyValuesMap,
+  minEntriesPerGroup
 }) {
   const [newFilterState, setNewFilterState] = useState({
     props: [],
@@ -50,16 +52,13 @@ function FilterWrapper({
   }, [filter]);
 
   useEffect(() => {
-    const filterDD = Object.assign({}, filterDropDownOptions);
-    const propState = [];
-    Object.keys(filterProps).forEach((k, i) => {
-      propState.push({
-        label: k,
-        icon: k,
-        values: filterProps[k]
-      });
+    const filterDD = { ...filterDropDownOptions, props: [] };
+    Object.keys(filterProps).forEach((key) => {
+      const label = `${PropTextFormat(key)} Properties`;
+      const icon = ['user', 'event'].includes(key) ? key : 'group';
+      const values = filterProps[key];
+      filterDD.props.push({ label, icon, values });
     });
-    filterDD.props = propState;
     setFiltDD(filterDD);
   }, [filterProps]);
 
@@ -154,6 +153,7 @@ function FilterWrapper({
       dropdownPlacement={dropdownPlacement}
       dropdownMaxHeight={dropdownMaxHeight}
       showInList={showInList}
+      minEntriesPerGroup={minEntriesPerGroup}
     />
   );
 
@@ -163,29 +163,22 @@ function FilterWrapper({
         caller === 'profiles' ? 'mb-2' : 'mb-2'
       }`}
     >
-      {!showOr &&
-        hasPrefix &&
-        (index >= 1 ? (
-          <Text
-            level={8}
-            type={'title'}
-            extraClass={`m-0 ${caller === 'profiles' ? 'mx-3' : 'mr-16 ml-10'}`}
-            weight={'thin'}
-          >
-            and
-          </Text>
-        ) : (
-          <Text
-            level={8}
-            type={'title'}
-            extraClass={`whitespace-no-wrap m-0 ${
-              caller === 'profiles' ? 'mx-3' : 'mx-10'
-            }`}
-            weight={'thin'}
-          >
-            {filterPrefix}
-          </Text>
-        ))}
+      {!showOr && hasPrefix && (
+        <Text
+          level={8}
+          type={'title'}
+          extraClass={`m-0 ${
+            caller === 'profiles'
+              ? 'mx-3'
+              : index >= 1
+              ? 'mr-16 ml-10'
+              : 'mx-10'
+          } ${filterPrefix?.split(' ')?.length ? 'whitespace-no-wrap' : ''}`}
+          weight={'thin'}
+        >
+          {index >= 1 ? 'and' : filterPrefix}
+        </Text>
+      )}
       {showOr && (
         <Text
           level={8}
@@ -196,7 +189,6 @@ function FilterWrapper({
           or
         </Text>
       )}
-
       <div className={`relative flex`}>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>

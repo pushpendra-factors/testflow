@@ -115,3 +115,10 @@ code {
 .text-with-no-margin {
   margin: 0 !important;
 }
+
+.text-with-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  display: block;
+  text-overflow: ellipsis;
+}

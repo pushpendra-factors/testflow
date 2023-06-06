@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Dropdown, Menu, notification, Popover, Tabs } from 'antd';
 import { bindActionCreators } from 'redux';
-import { connect, useSelector } from 'react-redux';
+import { connect, useDispatch, useSelector } from 'react-redux';
 import { Text, SVG } from '../../factorsComponents';
 import AccountTimelineBirdView from './AccountTimelineBirdView';
 import {
   DEFAULT_TIMELINE_CONFIG,
   getHost,
   getPropType,
-  granularityOptions
+  granularityOptions,
+  TIMELINE_VIEW_OPTIONS
 } from '../utils';
+import { insertUrlParam } from 'Utils/global';
 import {
   udpateProjectSettings,
   fetchProjectSettings
@@ -24,13 +26,18 @@ import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import AccountTimelineSingleView from './AccountTimelineSingleView';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
+import { useHistory, useLocation } from 'react-router-dom';
+import { PathUrls } from '../../../routes/pathUrls';
+import { fetchGroups } from 'Reducers/coreQuery/services';
+import { getGroupProperties } from 'Reducers/coreQuery/middleware';
 
 function AccountDetails({
-  accountId,
-  source,
-  onCancel,
   accountDetails,
   activeProject,
+  fetchGroups,
+  groupOpts,
+  getGroupProperties,
   currentProjectSettings,
   fetchProjectSettings,
   udpateProjectSettings,
@@ -39,24 +46,77 @@ function AccountDetails({
   groupProperties,
   eventNamesMap
 }) {
+  const dispatch = useDispatch();
+  const history = useHistory();
+  const location = useLocation();
   const [granularity, setGranularity] = useState('Daily');
   const [collapseAll, setCollapseAll] = useState(true);
   const [activities, setActivities] = useState([]);
   const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [listProperties, setListProperties] = useState([]);
   const [checkListMilestones, setCheckListMilestones] = useState([]);
+  const [filterProperties, setFilterProperties] = useState([]);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
+  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
 
   useEffect(() => {
-    const lsitDatetimeProperties = listProperties.filter(
+    fetchGroups(activeProject?.id, true);
+  }, [activeProject?.id]);
+
+  useEffect(() => {
+    return () => {
+      setGranularity('Daily');
+      setCollapseAll(true);
+      setPropSelectOpen(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+    return () => {
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
+    };
+  }, [dispatch]);
+
+  const [activeId, activeGroup, activeView] = useMemo(() => {
+    const urlSearchParams = new URLSearchParams(location.search);
+    const params = Object.fromEntries(urlSearchParams.entries());
+    const id = atob(location.pathname.split('/').pop());
+    const group = params.group;
+    const view = params.view;
+    document.title = 'Accounts' + ' - FactorsAI';
+    return [id, group, view];
+  }, [location]);
+
+  useEffect(() => {
+    if (activeId && activeId !== '')
+      getProfileAccountDetails(
+        activeProject.id,
+        activeId,
+        activeGroup,
+        currentProjectSettings?.timelines_config
+      );
+    if (activeView && TIMELINE_VIEW_OPTIONS.includes(activeView)) {
+      setTimelineViewMode(activeView);
+    }
+  }, [
+    activeProject.id,
+    activeId,
+    activeGroup,
+    activeView,
+    currentProjectSettings?.timelines_config
+  ]);
+
+  useEffect(() => {
+    const listDatetimeProperties = listProperties.filter(
       (item) => item[2] === 'datetime'
     );
     const propsWithEnableKey = formatUserPropertiesToCheckList(
-      lsitDatetimeProperties,
+      listDatetimeProperties,
       currentProjectSettings.timelines_config?.account_config?.milestones
     );
     setCheckListMilestones(propsWithEnableKey);
@@ -81,10 +141,6 @@ function AccountDetails({
   }, [currentProjectSettings]);
 
   useEffect(() => {
-    fetchProjectSettings(activeProject.id);
-  }, [activeProject]);
-
-  useEffect(() => {
     const listActivities = addEnabledFlagToActivities(
       accountDetails.data?.account_events,
       currentProjectSettings.timelines_config?.disabled_events
@@ -93,17 +149,28 @@ function AccountDetails({
   }, [currentProjectSettings, accountDetails]);
 
   useEffect(() => {
-    const mergeGroupedProps = [
-      ...(groupProperties.$hubspot_company
-        ? groupProperties.$hubspot_company
-        : []),
-      ...(groupProperties.$salesforce_account
-        ? groupProperties.$salesforce_account
-        : []),
-      ...(groupProperties.$6signal ? groupProperties.$6signal : [])
-    ];
-    setListProperties(mergeGroupedProps);
-  }, [groupProperties]);
+    Object.keys(groupOpts || {}).forEach((group) =>
+      getGroupProperties(activeProject.id, group)
+    );
+  }, [activeProject.id, groupOpts]);
+
+  useEffect(() => {
+    const mergedProps = [];
+    const filterProps = {};
+
+    Object.keys(groupOpts || {}).forEach((group) => {
+      mergedProps.push(...(groupProperties?.[group] || []));
+      filterProps[group] = groupProperties?.[group];
+    });
+
+    const groupProps = Object.entries(filterProps).map(([group, values]) => ({
+      label: `${PropTextFormat(group)} Properties`,
+      icon: group,
+      values
+    }));
+    setListProperties(mergedProps);
+    setFilterProperties(groupProps);
+  }, [groupProperties, groupOpts]);
 
   useEffect(() => {
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
@@ -125,8 +192,8 @@ function AccountDetails({
       }).then(() =>
         getProfileAccountDetails(
           activeProject.id,
-          accountId,
-		  source,
+          activeId,
+          activeGroup,
           currentProjectSettings?.timelines_config
         )
       );
@@ -158,9 +225,7 @@ function AccountDetails({
         (obj) => obj.prop_name === option.prop_name
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListMilestones(
-        checkListProps.sort((a, b) => b.enabled - a.enabled)
-      );
+      setCheckListMilestones(checkListProps);
     } else {
       notification.error({
         message: 'Error',
@@ -180,8 +245,8 @@ function AccountDetails({
     }).then(() =>
       getProfileAccountDetails(
         activeProject.id,
-        accountId,
-		source,
+        activeId,
+        activeGroup,
         currentProjectSettings?.timelines_config
       )
     );
@@ -194,7 +259,7 @@ function AccountDetails({
         key='events'
       >
         <SearchCheckList
-          placeholder='Search Events'
+          placeholder='Select Events to Show'
           mapArray={activities}
           titleKey='display_name'
           checkedKey='enabled'
@@ -206,7 +271,7 @@ function AccountDetails({
         key='properties'
       >
         <SearchCheckList
-          placeholder='Search Properties'
+          placeholder='Select a User Property'
           mapArray={checkListUserProps}
           titleKey='display_name'
           checkedKey='enabled'
@@ -218,7 +283,7 @@ function AccountDetails({
         key='milestones'
       >
         <SearchCheckList
-          placeholder='Select Upto 5 Milestones'
+          placeholder='Select Up To 5 Milestones'
           mapArray={checkListMilestones}
           titleKey='display_name'
           checkedKey='enabled'
@@ -251,8 +316,8 @@ function AccountDetails({
       }).then(() =>
         getProfileAccountDetails(
           activeProject.id,
-          accountId,
-		  source,
+          activeId,
+          activeGroup,
           currentProjectSettings?.timelines_config
         )
       );
@@ -280,10 +345,7 @@ function AccountDetails({
           icon={<SVG name='brand' size={36} />}
           size='large'
           onClick={() => {
-            onCancel();
-            setGranularity('Daily');
-            setCollapseAll(true);
-            setPropSelectOpen(false);
+            history.push(PathUrls.ProfileAccounts);
           }}
         />
         <Text type='title' level={4} weight='bold' extraClass='m-0'>
@@ -294,17 +356,14 @@ function AccountDetails({
         size='large'
         type='text'
         onClick={() => {
-          onCancel();
-          setGranularity('Daily');
-          setCollapseAll(true);
-          setPropSelectOpen(false);
+          history.push(PathUrls.ProfileAccounts);
         }}
         icon={<SVG name='times' />}
       />
     </div>
   );
 
-  const listLeftPaneProps = (props = []) => {
+  const listLeftPaneProps = (props = {}) => {
     const propsList = [];
     const showProps =
       currentProjectSettings?.timelines_config?.account_config
@@ -330,19 +389,11 @@ function AccountDetails({
     return propsList;
   };
 
-  const generateAccountProps = () => {
-    const groupProps = [
-      { label: 'Account Properties', icon: 'users', values: [] }
-    ];
-    groupProps[0].values = listProperties;
-    return groupProps;
-  };
-
   const selectProps = () =>
     propSelectOpen && (
       <div className='relative'>
         <GroupSelect2
-          groupedProperties={generateAccountProps()}
+          groupedProperties={filterProperties}
           placeholder='Select Property'
           optionClick={handleOptionClick}
           onClickOutside={() => setPropSelectOpen(false)}
@@ -440,7 +491,7 @@ function AccountDetails({
           <Popover
             overlayClassName='fa-activity--filter'
             placement='bottomLeft'
-            trigger='hover'
+            trigger='click'
             content={controlsPopover}
           >
             <Button
@@ -451,7 +502,11 @@ function AccountDetails({
               <SVG name='activity_filter' />
             </Button>
           </Popover>
-          <Dropdown overlay={granularityMenu} placement='bottomRight'>
+          <Dropdown
+            overlay={granularityMenu}
+            placement='bottomRight'
+            trigger={['click']}
+          >
             <Button type='text' className='flex items-center'>
               {granularity}
               <SVG name='caretDown' size={16} extraClass='ml-1' />
@@ -480,7 +535,12 @@ function AccountDetails({
         <Tabs
           defaultActiveKey='birdview'
           size='small'
-          onChange={() => setGranularity(granularity)}
+          activeKey={timelineViewMode}
+          onChange={(val) => {
+            insertUrlParam(window.history, 'view', val);
+            setTimelineViewMode(val);
+            setGranularity(granularity);
+          }}
         >
           <TabPane
             tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
@@ -513,6 +573,7 @@ function AccountDetails({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
+  groupOpts: state.groups.data,
   accountDetails: state.timelines.accountDetails,
   userProperties: state.coreQuery.userProperties,
   groupProperties: state.coreQuery.groupProperties,
@@ -522,6 +583,8 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
+      fetchGroups,
+      getGroupProperties,
       getProfileAccountDetails,
       fetchProjectSettings,
       udpateProjectSettings

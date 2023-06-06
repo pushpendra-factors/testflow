@@ -1,3 +1,4 @@
+import { SET_ACTIVE_PROJECT } from 'Reducers/types';
 import { get, getHostUrl, post, put } from '../../utils/request';
 
 let host = getHostUrl();
@@ -62,6 +63,10 @@ export default function (state = initialState, action) {
       return { ...state, segmentUpdateStatus: action.payload };
     case 'UPDATE_SEGMENT_REJECTED':
       return { ...state, segmentUpdateStatus: action.payload };
+    case SET_ACTIVE_PROJECT:
+      return {
+        ...initialState
+      };
     default:
       return state;
   }

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useReducer } from 'react';
+import cx from 'classnames';
 import { Button, Divider, notification, Spin, Tooltip } from 'antd';
-import { Link, useHistory } from 'react-router-dom';
+import { Link, useHistory, useLocation } from 'react-router-dom';
 import { Text, SVG } from 'Components/factorsComponents';
 import FaPublicHeader from 'Components/FaPublicHeader';
 import style from './index.module.scss';
@@ -66,6 +67,7 @@ const SixSignalReport = ({
   } = useSelector((state: any) => state.global);
   const routerQuery = useQuery();
   const history = useHistory();
+  const location = useLocation();
   const paramQueryId = routerQuery.get(SHARE_QUERY_PARAMS.queryId);
   const paramProjectId = routerQuery.get(SHARE_QUERY_PARAMS.projectId);
   const showShareButton = state.reportData?.data
@@ -240,6 +242,12 @@ const SixSignalReport = ({
       if (hideSidePanel) setShowAnalyticsResult(false);
     };
   }, [isLoggedIn, setShowAnalyticsResult]);
+
+  // Todo: Remove this effect once this is set with the help of route config
+  //Effect for setting page title
+  useEffect(() => {
+    document.title = 'Visitor Identification - FactorsAI';
+  }, [location]);
 
   //Effect for fetching page view Urls
   useEffect(() => {
@@ -456,7 +464,7 @@ const SixSignalReport = ({
         />
       )}
 
-      <div className={`${isLoggedIn ? 'px-20' : 'px-24'} pt-16 mt-12`}>
+      <div className={cx({ 'px-24 pt-16 mt-12': !isLoggedIn })}>
         <div className='flex justify-between align-middle'>
           <div className='flex align-middle gap-6'>
             <div className={style.mixChartContainer}>

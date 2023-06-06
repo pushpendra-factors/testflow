@@ -5,9 +5,8 @@ import styles from './index.module.scss';
 import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-
+import getGroupIcon from 'Utils/getGroupIcon';
 import { setGroupBy, delGroupBy } from '../../../../../reducers/coreQuery/middleware';
-
 import FaSelect from 'Components/FaSelect';
 import ORButton from '../../../../../components/ORButton';
 import { get } from 'lodash';
@@ -20,7 +19,7 @@ import GroupSelect2 from '../../../../../components/KPIComposer/GroupSelect2';
 import EventFilterWrapper from '../../../../../components/KPIComposer/EventFilterWrapper';
 
 function QueryBlock({
-  index, 
+  index,
   event,
   eventChange,
   queries,
@@ -75,9 +74,9 @@ function QueryBlock({
 
   const onChange = (value, group, category, type) => {
     let qt;
-    for(let item of kpi?.config) {
-      for(let it of item.metrics) {
-        if(it?.name === value[1])
+    for (let item of kpi?.config) {
+      for (let it of item.metrics) {
+        if (it?.name === value[1])
           qt = it?.kpi_query_type;
       }
     }
@@ -87,8 +86,9 @@ function QueryBlock({
     newEvent.metricType = get(value, '2', '');
     newEvent.group = group;
     newEvent.qt = qt;
+    newEvent.icon = getGroupIcon(group);
     if (category) {
-      newEvent.category = category; 
+      newEvent.category = category;
     }
     setDDVisible(false);
     if (group === 'page_views') {
@@ -188,7 +188,7 @@ function QueryBlock({
   const insertFilters = (filter, filterIndex) => {
     const newEvent = Object.assign({}, event);
     const filtersSorted = newEvent.filters;
-    filtersSorted.sort(compareFilters);    
+    filtersSorted.sort(compareFilters);
     if (filterIndex >= 0) {
       newEvent.filters = filtersSorted.map((filt, i) => {
         if (i === filterIndex) {
@@ -206,10 +206,10 @@ function QueryBlock({
   const removeFilters = (i) => {
     const newEvent = Object.assign({}, event);
     const filtersSorted = newEvent.filters;
-    filtersSorted.sort(compareFilters); 
+    filtersSorted.sort(compareFilters);
     if (filtersSorted[i]) {
       filtersSorted.splice(i, 1);
-      newEvent.filters=filtersSorted;
+      newEvent.filters = filtersSorted;
     }
     eventChange(newEvent, index - 1, 'filters_updated');
   };
@@ -320,19 +320,19 @@ function QueryBlock({
     let index = 0;
     let lastRef = 0;
     if (event && event?.filters?.length) {
-  
+
       const group = groupFilters(event.filters, 'ref');
       const filtersGroupedByRef = Object.values(group);
       const refValues = Object.keys(group);
-      lastRef = parseInt(refValues[refValues.length-1]);
+      lastRef = parseInt(refValues[refValues.length - 1]);
 
-      filtersGroupedByRef.forEach((filtersGr)=>{
+      filtersGroupedByRef.forEach((filtersGr) => {
         const refValue = filtersGr[0].ref;
-        if(filtersGr.length == 1){
-            const filter = filtersGr[0];
-            filters.push(
-              <div className={'fa--query_block--filters flex flex-row'}>
-                <div key={index}>
+        if (filtersGr.length == 1) {
+          const filter = filtersGr[0];
+          filters.push(
+            <div className={'fa--query_block--filters flex flex-wrap'}>
+              <div key={index}>
                 <EventFilterWrapper
                   index={index}
                   filter={filter}
@@ -345,33 +345,33 @@ function QueryBlock({
                   selectedMainCategory={selectedMainCategory}
                   refValue={refValue}
                 />
+              </div>
+              {index !== orFilterIndex && (
+                <ORButton index={index} setOrFilterIndex={setOrFilterIndex} />
+              )}
+              {index === orFilterIndex && (
+                <div key={'init'}>
+                  <EventFilterWrapper
+                    filterProps={filterProps}
+                    activeProject={activeProject}
+                    event={event}
+                    deleteFilter={closeFilter}
+                    insertFilter={insertFilters}
+                    closeFilter={closeFilter}
+                    selectedMainCategory={selectedMainCategory}
+                    refValue={refValue}
+                    showOr={true}
+                  />
                 </div>
-               {index !== orFilterIndex && (
-                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>
-                )}       
-               {index === orFilterIndex && (
-                  <div key={'init'}>
-                    <EventFilterWrapper
-                      filterProps={filterProps}
-                      activeProject={activeProject}
-                      event={event}
-                      deleteFilter={closeFilter}
-                      insertFilter={insertFilters}
-                      closeFilter={closeFilter}
-                      selectedMainCategory={selectedMainCategory}
-                      refValue={refValue}
-                      showOr = {true}
-                    />
-                  </div>                
-                )}  
-                </div>     
-            );
-            index+=1;
-        }else{
+              )}
+            </div>
+          );
+          index += 1;
+        } else {
           filters.push(
-            <div className={'fa--query_block--filters flex flex-row'}>
+            <div className={'fa--query_block--filters flex flex-wrap'}>
               <div key={index}>
-              <EventFilterWrapper
+                <EventFilterWrapper
                   index={index}
                   filter={filtersGr[0]}
                   event={event}
@@ -381,12 +381,12 @@ function QueryBlock({
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   selectedMainCategory={selectedMainCategory}
-                refValue={refValue}
+                  refValue={refValue}
                 />
               </div>
-              <div key={index+1}>
-              <EventFilterWrapper
-                  index={index+1}
+              <div key={index + 1}>
+                <EventFilterWrapper
+                  index={index + 1}
                   filter={filtersGr[1]}
                   event={event}
                   filterProps={filterProps}
@@ -395,13 +395,13 @@ function QueryBlock({
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   selectedMainCategory={selectedMainCategory}
-                refValue={refValue}
-                showOr = {true}
+                  refValue={refValue}
+                  showOr={true}
                 />
               </div>
             </div>
           );
-          index+=2;
+          index += 2;
         }
       })
     }
@@ -409,7 +409,7 @@ function QueryBlock({
     if (isFilterDDVisible) {
       filters.push(
         <div key={'init'} className={'fa--query_block--filters'}>
-          {selectEventFilter(lastRef+1)}
+          {selectEventFilter(lastRef + 1)}
         </div>
       );
     }
@@ -462,9 +462,8 @@ function QueryBlock({
   if (!event) {
     return (
       <div
-        className={`${styles.query_block} fa--query_block my-2 ${
-          ifQueries ? 'borderless no-padding' : 'borderless no-padding'
-        }`}
+        className={`${styles.query_block} fa--query_block my-2 ${ifQueries ? 'borderless no-padding' : 'borderless no-padding'
+          }`}
       >
         <div
           className={`${styles.query_block__event} flex justify-start items-center`}
@@ -483,15 +482,13 @@ function QueryBlock({
       </div>
     );
   }
-
   return (
     <div
       className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}
     >
       <div
-        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${
-          styles.query_block__event
-        } block_section items-center`}
+        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${styles.query_block__event
+          } block_section items-center`}
       >
         <div className={'flex items-center'}>
           <div
@@ -534,7 +531,7 @@ function QueryBlock({
               }
             >
               <Button
-                // icon={<SVG name='mouseevent' size={16} color={'purple'} />}
+                icon={<SVG name={event.icon} />}
                 className={`fa-button--truncate fa-button--truncate-lg btn-total-round`}
                 type="link"
                 onClick={triggerDropDown}

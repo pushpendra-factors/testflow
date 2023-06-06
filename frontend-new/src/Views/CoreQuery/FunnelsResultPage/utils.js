@@ -121,6 +121,7 @@ export const formatData = (response, arrayMapper) => {
 
   const { rows, headers, meta } = response;
   const breakdowns = [...meta.query.gbp];
+  const eventsCondition = meta.query?.ec;
   const firstEventIdx = headers.findIndex((header) => header === 'step_0');
   const netConversionIndex = headers.findIndex(
     (header) => header === 'conversion_overall'
@@ -184,8 +185,7 @@ export const formatData = (response, arrayMapper) => {
     });
 
     const value = row[netConversionIndex];
-
-    return {
+    const result = {
       index,
       name,
       value: `${value}%`,
@@ -196,6 +196,10 @@ export const formatData = (response, arrayMapper) => {
       'Conversion Time': formatDuration(totalDuration),
       ...timeData
     };
+    if (eventsCondition === 'funnel_any_given_event') {
+      if (result['Conversion Time']) delete result['Conversion Time'];
+    }
+    return result;
   });
 
   return {
@@ -275,6 +279,7 @@ export const getTableColumns = (
     !tableConfig.showDuration && !tableConfig.showPercentage;
 
   const unsortedBreakdown = _.get(resultData, 'meta.query.gbp', []);
+  const eventsCondition = _.get(resultData, 'meta.query.ec', '');
   const isBreakdownApplied = unsortedBreakdown.length > 0;
   const breakdown = SortData(unsortedBreakdown, 'eni', 'ascend');
 
@@ -349,7 +354,11 @@ export const getTableColumns = (
       />
     ),
     dataIndex: 'Conversion',
-    className: 'text-right border-none',
+    className: `text-right ${
+      eventsCondition === 'funnel_any_given_event'
+        ? 'has-border'
+        : 'border-none'
+    }`,
     width: 150,
     render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied)
   };
@@ -527,14 +536,16 @@ export const getTableColumns = (
     return queryColumn;
   });
 
-  return [
+  const mergedColumns = [
     ...eventBreakdownColumns,
     ...globalBreakdownColumns,
     ...UserCol,
-    conversionRateColumn,
-    conversionTimeColumn,
-    ...eventColumns
+    conversionRateColumn
   ];
+  if (eventsCondition !== 'funnel_any_given_event')
+    mergedColumns.push(conversionTimeColumn);
+  mergedColumns.push(...eventColumns);
+  return mergedColumns;
 };
 
 export const getTableData = (
@@ -549,7 +560,8 @@ export const getTableData = (
   comparisonChartData,
   durationObj,
   comparison_duration,
-  isBreakdownApplied
+  isBreakdownApplied,
+  eventsCondition
 ) => {
   if (!isBreakdownApplied) {
     const queryData = {};
@@ -591,33 +603,39 @@ export const getTableData = (
         const compare_time =
           comparisonChartData &&
           getStepDuration(comparisonChartDurations, index, index + 1);
-        queryData[`time[${index}-${index + 1}]`] = comparisonChartData
-          ? {
-              time,
-              compare_time
-            }
-          : time;
+        if (eventsCondition !== 'funnel_any_given_event') {
+          queryData[`time[${index}-${index + 1}]`] = comparisonChartData
+            ? {
+                time,
+                compare_time
+              }
+            : time;
+        }
       }
     });
     const conversion = data[data.length - 1].value;
     const comparison_conversion =
       comparisonChartData &&
       comparisonChartData[comparisonChartData.length - 1].value;
-    return [
-      {
-        index: 0,
-        Grouping: comparisonChartData
-          ? { durationObj, comparison_duration }
-          : 'All',
-        Conversion: comparisonChartData
-          ? { conversion, comparison_conversion }
-          : conversion,
-        'Conversion Time': comparisonChartData
-          ? { overallDuration, comparisonOverallDuration }
-          : overallDuration,
-        ...queryData
-      }
-    ];
+
+    const result = {
+      index: 0,
+      Grouping: comparisonChartData
+        ? { durationObj, comparison_duration }
+        : 'All',
+      Conversion: comparisonChartData
+        ? { conversion, comparison_conversion }
+        : conversion,
+      'Conversion Time': comparisonChartData
+        ? { overallDuration, comparisonOverallDuration }
+        : overallDuration,
+      ...queryData
+    };
+
+    if (eventsCondition === 'funnel_any_given_event') {
+      if (result['Conversion Time']) delete result['Conversion Time'];
+    }
+    return [{ ...result }];
   }
 
   const isComparisonApplied = comparisonChartData != null;
@@ -658,15 +676,18 @@ export const getTableData = (
                     ]
                   : 0
             },
-            ...(currentIndex < queries.length - 1 && {
-              [`time[${currentIndex}-${currentIndex + 1}]`]: {
-                time: group[`time[${currentIndex}-${currentIndex + 1}]`],
-                compare_time:
-                  compareGroup != null
-                    ? compareGroup[`time[${currentIndex}-${currentIndex + 1}]`]
-                    : '0s'
-              }
-            })
+            ...(currentIndex < queries.length - 1 &&
+              eventsCondition !== 'funnel_any_given_event' && {
+                [`time[${currentIndex}-${currentIndex + 1}]`]: {
+                  time: group[`time[${currentIndex}-${currentIndex + 1}]`],
+                  compare_time:
+                    compareGroup != null
+                      ? compareGroup[
+                          `time[${currentIndex}-${currentIndex + 1}]`
+                        ]
+                      : '0s'
+                }
+              })
           }),
           [`${currentItem.displayName}-${currentIndex}-percent`]:
             isComparisonApplied
@@ -679,8 +700,7 @@ export const getTableData = (
       },
       {}
     );
-
-    return {
+    const result = {
       ...group,
       ...eventPercentages,
       // if comparison is applied, we have to pass both conversion and comparison_conversion, overallDuration and comparisonOverallDuration
@@ -697,6 +717,11 @@ export const getTableData = (
         }
       })
     };
+
+    if (eventsCondition === 'funnel_any_given_event') {
+      if (result['Conversion Time']) delete result['Conversion Time'];
+    }
+    return result;
   });
   const filteredGroups = appliedGroups.filter(
     (elem) => elem.name.toLowerCase().indexOf(searchText.toLowerCase()) > -1

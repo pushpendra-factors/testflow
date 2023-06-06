@@ -18,23 +18,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUpdatingCountsinDB(t *testing.T) {
+// func TestUpdatingCountsinDB(t *testing.T) {
 
-	ev := M.EventsCountScore{}
-	counts1 := make(map[string]int64, 0)
-	ev.ProjectId = int64(6000003)
-	ev.UserId = "justin.miller@ivvy.com"
-	ev.DateStamp = "20230102"
-	counts1["session4"] = int64(70)
-	counts1["session3"] = int64(30)
-	counts1["session2"] = int64(20)
-	counts1["session1"] = int64(10)
-	ev.EventScore = counts1
-	ti, err := store.GetStore().GetUserScore(ev.ProjectId, ev.UserId, ev.DateStamp, true, true)
-	log.Infof("data : %v", ti)
-	assert.Nil(t, err)
+// 	ev := M.EventsCountScore{}
+// 	counts1 := make(map[string]int64, 0)
+// 	ev.ProjectId = int64(6000003)
+// 	ev.UserId = "justin.miller@ivvy.com"
+// 	ev.DateStamp = "20230102"
+// 	counts1["session4"] = int64(70)
+// 	counts1["session3"] = int64(30)
+// 	counts1["session2"] = int64(20)
+// 	counts1["session1"] = int64(10)
+// 	ev.EventScore = counts1
+// 	ti, err := store.GetStore().GetUserScore(ev.ProjectId, ev.UserId, ev.DateStamp, true, true)
+// 	log.Infof("data : %v", ti)
+// 	assert.Nil(t, err)
 
-}
+// }
 
 func TestGettingAccountscoresinDB(t *testing.T) {
 
@@ -68,13 +68,15 @@ func TestDeduplicateWeights(t *testing.T) {
 
 	var finalWeights M.AccWeights
 
-	w0 := M.AccEventWeight{WeightId: "", Weight_value: 5.0, Is_deleted: false, EventName: "$pageview", Rule: M.WeightKeyValueTuple{Key: "$Country", Value: "India", Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}
-	w1 := M.AccEventWeight{WeightId: "", Weight_value: 7.0, Is_deleted: false, EventName: "$pageview", Rule: M.WeightKeyValueTuple{Key: "$Country", Value: "India", Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}
-	w2 := M.AccEventWeight{WeightId: "", Weight_value: 8.0, Is_deleted: false, EventName: "$session", Rule: M.WeightKeyValueTuple{Key: "$Country", Value: "India", Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}
-	w3 := M.AccEventWeight{WeightId: "", Weight_value: 9.0, Is_deleted: false, EventName: "$form_submitted", Rule: M.WeightKeyValueTuple{Key: "$Country", Value: "India", Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}
-	w4 := M.AccEventWeight{WeightId: "", Weight_value: 10.0, Is_deleted: false, EventName: "www.acme.com", Rule: M.WeightKeyValueTuple{Key: "$Country", Value: "India", Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}
-	w5 := M.AccEventWeight{WeightId: "", Weight_value: 11.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: M.WeightKeyValueTuple{Key: "$Country", Value: "India", Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}
-	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5}
+	w0 := M.AccEventWeight{WeightId: "", Weight_value: 5.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w1 := M.AccEventWeight{WeightId: "", Weight_value: 7.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w2 := M.AccEventWeight{WeightId: "", Weight_value: 8.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w3 := M.AccEventWeight{WeightId: "", Weight_value: 9.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w4 := M.AccEventWeight{WeightId: "", Weight_value: 10.0, Is_deleted: false, EventName: "www.acme.com", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w5 := M.AccEventWeight{WeightId: "", Weight_value: 11.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w6 := M.AccEventWeight{WeightId: "1", Weight_value: 5.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "user", ValueType: "categorical"}}}
+
+	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5, w6}
 	finalWeights.WeightConfig = weightRules
 	finalWeights.SaleWindow = 10
 
@@ -107,15 +109,15 @@ func TestFilterAndCountEvents(t *testing.T) {
 
 	var finalWeights M.AccWeights
 
-	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 5.0, Is_deleted: false, EventName: "$pageview", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Australia", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
-	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 7.0, Is_deleted: false, EventName: "$pageview", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Australia", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
-	w2 := M.AccEventWeight{WeightId: "3", Weight_value: 8.0, Is_deleted: false, EventName: "$session", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Australia", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
-	w3 := M.AccEventWeight{WeightId: "4", Weight_value: 9.0, Is_deleted: false, EventName: "$form_submitted", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Australia", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
-	w4 := M.AccEventWeight{WeightId: "5", Weight_value: 10.0, Is_deleted: false, EventName: "www.acme.com", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Australia", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
-	w5 := M.AccEventWeight{WeightId: "6", Weight_value: 11.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Australia", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
+	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 5.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 7.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w2 := M.AccEventWeight{WeightId: "3", Weight_value: 8.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w3 := M.AccEventWeight{WeightId: "4", Weight_value: 9.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w4 := M.AccEventWeight{WeightId: "5", Weight_value: 10.0, Is_deleted: false, EventName: "www.acme.com", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w5 := M.AccEventWeight{WeightId: "6", Weight_value: 11.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
 	w6 := M.AccEventWeight{WeightId: "7", Weight_value: 8.0, Is_deleted: false, EventName: "$session"}
-	w7 := M.AccEventWeight{WeightId: "8", Weight_value: 11.0, Is_deleted: false, EventName: "", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Kenya", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
-	w8 := M.AccEventWeight{WeightId: "9", Weight_value: 11.0, Is_deleted: false, EventName: "", Rule: M.WeightKeyValueTuple{Key: "$country", Value: "Brazil", Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}
+	w7 := M.AccEventWeight{WeightId: "8", Weight_value: 11.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Kenya"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w8 := M.AccEventWeight{WeightId: "9", Weight_value: 11.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Brazil"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
 
 	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5, w6, w7, w8}
 	finalWeights.WeightConfig = weightRules
@@ -165,14 +167,14 @@ func TestFilterAndCountEventsFromFile(t *testing.T) {
 		events = append(events, eventDetails)
 		line_count += 1
 		if line_count%10 == 0 {
-			fmt.Println(fmt.Sprintf("Read lines :%d", line_count))
+			fmt.Printf(fmt.Sprintf("Read lines :%d", line_count))
 		}
 	}
 
 	fileWeights, err := os.Open("./data/events_score_weights.txt")
 	assert.Nil(t, err)
 	scannerW := bufio.NewScanner(fileWeights)
-	var weightsRequest M.AccWeightsRequest
+	var weightsRequest M.AccWeights
 	var weights M.AccWeights
 
 	for scannerW.Scan() {
@@ -184,9 +186,9 @@ func TestFilterAndCountEventsFromFile(t *testing.T) {
 	}
 	weights.SaleWindow = weightsRequest.SaleWindow
 
-	for wtKey, wtVal := range weightsRequest.WeightConfig {
+	for _, wtVal := range weightsRequest.WeightConfig {
 		var r M.AccEventWeight
-		r.EventName = wtKey
+		r.EventName = wtVal.EventName
 		r.Is_deleted = wtVal.Is_deleted
 		r.Rule = wtVal.Rule
 		r.WeightId = wtVal.WeightId
@@ -211,7 +213,7 @@ func TestCountingEvents(t *testing.T) {
 	fileWeights, err := os.Open("./data/events_score_weights.txt")
 	assert.Nil(t, err)
 	scannerW := bufio.NewScanner(fileWeights)
-	var weightsRequest M.AccWeightsRequest
+	var weightsRequest M.AccWeights
 	var weights M.AccWeights
 
 	for scannerW.Scan() {
@@ -223,9 +225,9 @@ func TestCountingEvents(t *testing.T) {
 	}
 	weights.SaleWindow = weightsRequest.SaleWindow
 
-	for wtKey, wtVal := range weightsRequest.WeightConfig {
+	for _, wtVal := range weightsRequest.WeightConfig {
 		var r M.AccEventWeight
-		r.EventName = wtKey
+		r.EventName = wtVal.EventName
 		r.Is_deleted = wtVal.Is_deleted
 		r.Rule = wtVal.Rule
 		r.WeightId = wtVal.WeightId

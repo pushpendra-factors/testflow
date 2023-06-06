@@ -20,6 +20,9 @@ import AccountProfiles from 'Components/Profile/AccountProfiles';
 import Touchpoints from 'Views/Settings/ProjectConfigure/Touchpoints';
 import AppLayout from 'Views/AppLayout';
 import OnBoard from 'Views/Settings/SetupAssist/Welcome/OnboardFlow';
+import { PathUrls } from './pathUrls';
+import AccountDetails from 'Components/Profile/AccountProfiles/AccountDetails';
+import ContactDetails from 'Components/Profile/UserProfiles/ContactDetails';
 
 const Login = lazyWithRetry(() => import('../Views/Pages/Login'));
 const ForgotPassword = lazyWithRetry(() =>
@@ -95,7 +98,7 @@ export const APP_ROUTES = {
 export const APP_LAYOUT_ROUTES = {
   Dashboard: {
     title: 'Dashboard',
-    path: '/',
+    path: PathUrls.Dashboard,
     Component: Dashboard,
     exact: true,
     Private: true,
@@ -103,27 +106,27 @@ export const APP_LAYOUT_ROUTES = {
   },
   ComponentsLib: {
     title: 'Components Library',
-    path: '/components',
+    path: PathUrls.ComponentsLib,
     Component: componentsLib,
     Private: true,
     Layout: AppLayout
   },
   Analyse: {
-    path: '/analyse/:query_type/:query_id',
+    path: PathUrls.Analyse,
     title: 'Home',
     Component: CoreQuery,
     Private: true,
     Layout: AppLayout
   },
   Analyse1: {
-    path: '/analyse/:query_type',
+    path: PathUrls.Analyse1,
     title: 'Home',
     Component: CoreQuery,
     Private: true,
     Layout: AppLayout
   },
   Analyse2: {
-    path: '/analyse',
+    path: PathUrls.Analyse2,
     title: 'Home',
     Component: CoreQuery,
     Private: true,
@@ -131,7 +134,7 @@ export const APP_LAYOUT_ROUTES = {
   },
   Explain: {
     exact: true,
-    path: '/explain',
+    path: PathUrls.Explain,
     title: 'Factors',
     Component: Factors,
     Private: true,
@@ -139,7 +142,7 @@ export const APP_LAYOUT_ROUTES = {
   },
   ExplainInsightsV2: {
     exact: true,
-    path: '/explainV2/insights',
+    path: PathUrls.ExplainInsightsV2,
     title: 'ExplainV2',
     Component: FactorsInsightsNew,
     Private: true,
@@ -176,49 +179,49 @@ export const APP_LAYOUT_ROUTES = {
   },
   SettingsGeneral: {
     exact: true,
-    path: '/settings/general',
+    path: PathUrls.SettingsGeneral,
     Component: BasicSettings,
     Private: true,
     Layout: AppLayout
   },
   SettingsUser: {
     exact: true,
-    path: '/settings/user',
+    path: PathUrls.SettingsUser,
     Component: UserSettings,
     Private: true,
     Layout: AppLayout
   },
   SettingsAttribution: {
     exact: true,
-    path: '/settings/attribution',
+    path: PathUrls.SettingsAttribution,
     Component: AttributionSettings,
     Private: true,
     Layout: AppLayout
   },
   SettingsSdk: {
     exact: true,
-    path: '/settings/sdk',
+    path: PathUrls.SettingsSdk,
     Component: SDKSettings,
     Private: true,
     Layout: AppLayout
   },
   SettingsIntegration: {
     exact: true,
-    path: '/settings/integration',
+    path: PathUrls.SettingsIntegration,
     Component: IntegrationSettings,
     Private: true,
     Layout: AppLayout
   },
   SettingsSharing: {
     exact: true,
-    path: '/settings/sharing',
+    path: PathUrls.SettingsSharing,
     Component: Sharing,
     Private: true,
     Layout: AppLayout
   },
   SettingsInsights: {
     exact: true,
-    path: '/settings/insights',
+    path: PathUrls.SettingsInsights,
     name: 'dashboardSettings',
     Component: InsightsSettings,
     Private: true,
@@ -226,70 +229,82 @@ export const APP_LAYOUT_ROUTES = {
   },
   ConfigureEvents: {
     exact: true,
-    path: '/configure/events',
+    path: PathUrls.ConfigureEvents,
     Component: Events,
     Private: true,
     Layout: AppLayout
   },
   ConfigureProperties: {
     exact: true,
-    path: '/configure/properties',
+    path: PathUrls.ConfigureProperties,
     Component: PropertySettings,
     Private: true,
     Layout: AppLayout
   },
   ConfigureContentGroups: {
     exact: true,
-    path: '/configure/contentgroups',
+    path: PathUrls.ConfigureContentGroups,
     Component: ContentGroups,
     Private: true,
     Layout: AppLayout
   },
   ConfigureTouchPoints: {
     exact: true,
-    path: '/configure/touchpoints',
+    path: PathUrls.ConfigureTouchPoints,
     Component: Touchpoints,
     Private: true,
     Layout: AppLayout
   },
   ConfigureCustomKpi: {
     exact: true,
-    path: '/configure/customkpi',
+    path: PathUrls.ConfigureCustomKpi,
     Component: CustomKPI,
     Private: true,
     Layout: AppLayout
   },
   ConfigureDataPoints: {
     exact: true,
-    path: '/configure/explaindp',
+    path: PathUrls.ConfigureDataPoints,
     Component: ExplainDataPoints,
     Private: true,
     Layout: AppLayout
   },
   ConfigureAlerts: {
     exact: true,
-    path: '/configure/alerts',
+    path: PathUrls.ConfigureAlerts,
     Component: Alerts,
     Private: true,
     Layout: AppLayout
   },
   ProfilePeople: {
     exact: true,
-    path: '/profiles/people',
+    path: PathUrls.ProfilePeople,
     Component: UserProfiles,
+    Private: true,
+    Layout: AppLayout
+  },
+  ProfileUserDetails: {
+    path: '/profiles/people/:id',
+    Component: ContactDetails,
     Private: true,
     Layout: AppLayout
   },
   ProfileAccounts: {
     exact: true,
-    path: '/profiles/accounts',
+    path: PathUrls.ProfileAccounts,
     Component: AccountProfiles,
+    Private: true,
+    Layout: AppLayout
+  },
+  ProfileAccountsDetails: {
+    path: '/profiles/accounts/:id',
+    Component: AccountDetails,
     Private: true,
     Layout: AppLayout
   },
   VisitorIdentificationReport: {
     exact: true,
-    path: '/reports/visitor_report',
+    path: PathUrls.VisitorIdentificationReport,
     Layout: AppLayout,
     Private: false,
     Component: VisitorIdentificationReportComponent
@@ -317,4 +332,26 @@ export const TestEnvs = [
   'localhost',
   'factors-dev.com',
   'staging-app.factors.ai'
+];
+
+export const whiteListedProjects = [
+  '1125899929000011',
+  '2251799842000007',
+  '2251799840000009',
+  '12384898989000028',
+  '2251799840000015',
+  '2251799842000000',
+  '12384898989000019',
+  '1125899936000001',
+  '2251799836000003',
+  '1125899936000000',
+  '12384898989000033',
+  '12384898990000003',
+  '12384898987000007',
+  '2251799843000004',
+  '1125899935000743',
+  '2251799841000012',
+  '12384898989000034',
+  '2251799840000019',
+  '12384898986000006'
 ];

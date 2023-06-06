@@ -6,6 +6,7 @@ export const FETCH_EVENTS = 'FETCH_EVENTS';
 export const FETCH_EVENTS_MAP = 'FETCH_EVENTS_MAP';
 export const FETCH_EVENT_PROPERTIES = 'FETCH_EVENT_PROPERTIES';
 export const FETCH_USER_PROPERTIES = 'FETCH_USER_PROPERTIES';
+export const FETCH_EVENT_USER_PROPERTIES = 'FETCH_EVENT_USER_PROPERTIES';
 export const FETCH_GROUP_PROPERTIES = 'FETCH_GROUP_PROPERTIES';
 export const FETCH_PROPERTY_VALUES = 'FETCH_PROPERTY_VALUES';
 export const SET_GROUP_PROP_NAME = 'SET_GROUP_PROP_NAME';
@@ -51,6 +52,10 @@ export const setEventsDisplayAction = (displayNames, status = 'started') => {
 
 export const fetchUserPropertiesAction = (userProps) => {
   return { type: FETCH_USER_PROPERTIES, payload: userProps };
+};
+
+export const fetchEventUserPropertiesAction = (eventUserProps) => {
+  return { type: FETCH_EVENT_USER_PROPERTIES, payload: eventUserProps };
 };
 
 export const fetchGroupPropertiesAction = (groupProps, groupName) => {

@@ -82,16 +82,14 @@ function ProfileBlock({
     if (!event || event === undefined) {
       return undefined;
     }
-    const assignFilterProps = Object.assign({}, filterProps);
+    const props = {};
     if (groupAnalysis === 'users') {
-      assignFilterProps.user = userProperties;
-      assignFilterProps.group = [];
+      props.user = userProperties;
     } else {
-      assignFilterProps.user = [];
-      assignFilterProps.group = groupProperties[groupAnalysis];
+      props[groupAnalysis] = groupProperties[groupAnalysis];
     }
-    setFilterProperties(assignFilterProps);
-  }, [userProperties, groupProperties, groupAnalysis]);
+    setFilterProperties(props);
+  }, [userProperties, groupProperties, event, groupAnalysis]);
 
   const deleteItem = () => {
     eventChange(event, index - 1, 'delete');

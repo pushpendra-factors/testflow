@@ -16,6 +16,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// SixSignalAnalysis gets the list of projectId and configs from the job script and calls RunSixSignalGroupQuery method to fetch the data
+// After fetching the data, meta and query is added to the result group and the complete result is saved in cloud-storage
+// in factors-production-model bucket by using WriteSixSignalResultsToCloud method.
 func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) map[string][]int64 {
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
 	modelCloudManager := configs["modelCloudManager"].(*filestore.FileManager)
@@ -100,6 +103,8 @@ func SixSignalAnalysis(projectIdArray []int64, configs map[string]interface{}) m
 
 }
 
+// WriteSixSignalResultsToCloud fetches the path where the result will be saved on cloud-storage in factors-production-model bucket.
+// It then scans the result and save the result in the specified path.
 func WriteSixSignalResultsToCloud(cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, queryId string, projectId int64, logCtx *log.Entry) error {
 
 	path, _ := diskManager.GetSixSignalAnalysisTempFilePathAndName(queryId, projectId)

@@ -982,7 +982,7 @@ const QueryBuilder = ({
 
   return (
     <>
-      <div className={'relative'}>
+      <div className={'relative px-20'}>
         {
           <div
             className={`query_card_cont mb-10 ${!collapse ? `query_card_open` : `query_card_close`

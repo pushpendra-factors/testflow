@@ -1,13 +1,14 @@
-import { get, post, del, getHostUrl } from '../utils/request';
+import { get, post, getHostUrl } from '../utils/request';
+import { SET_ACTIVE_PROJECT } from './types';
 var host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : host + '/';
 
-const inititalState = {
+const initialState = {
   loading: false,
-  error: false,
+  error: false
 };
 
-export default function reducer(state = inititalState, action) {
+export default function reducer(state = initialState, action) {
   switch (action.type) {
     case 'FETCH_ATTR_CONFIG_FULFILLED': {
       return { ...state, attr_config: action.payload };
@@ -15,8 +16,13 @@ export default function reducer(state = inititalState, action) {
     case 'FETCH_SAVED_ATTR_FULFILLED': {
       return { ...state, saved_attr: action.payload };
     }
+    case SET_ACTIVE_PROJECT:
+      return {
+        ...initialState
+      };
+    default:
+      return state;
   }
-  return state;
 }
 
 export function fetchAttrConfig(projectID) {
@@ -29,7 +35,7 @@ export function fetchAttrConfig(projectID) {
         .then((response) => {
           dispatch({
             type: 'FETCH_ATTR_CONFIG_FULFILLED',
-            payload: response.data,
+            payload: response.data
           });
           resolve(response);
         })
@@ -47,7 +53,7 @@ export function fetchSavedAttr(projectID) {
         .then((response) => {
           dispatch({
             type: 'FETCH_SAVED_ATTR_FULFILLED',
-            payload: response.data,
+            payload: response.data
           });
           resolve(response);
         })
@@ -70,7 +76,7 @@ export function addNewAttr(projectID, data) {
         .then((response) => {
           dispatch({
             type: 'ADD_ATTR_FULFILLED',
-            payload: response.data,
+            payload: response.data
           });
           resolve(response);
         })

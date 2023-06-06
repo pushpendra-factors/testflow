@@ -33,13 +33,13 @@ const IntegrationProviderData = [
     name: 'Clearbit Reveal',
     desc: 'Take action as soon as a target account hits your site',
     icon: 'ClearbitLogo',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7261981-clearbit-reveal-integration'
   },
   {
     name: '6Signal by 6Sense',
     desc: 'Gain insight into who is visiting your website and where they are in the buying journey',
     icon: 'SixSignalLogo',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7261968-6signal-by-6sense-integration'
   },
   {
     name: 'Marketo',
@@ -51,19 +51,19 @@ const IntegrationProviderData = [
     name: 'Slack',
     desc: 'Does your team live on Slack? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
     icon: 'Slack',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7283808-slack-integration'
   },
   {
     name: 'Microsoft Teams',
     desc: 'Does your team live on Teams? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
     icon: 'MSTeam',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7913152-microsoft-teams-integration'
   },
   {
     name: 'Rudderstack',
     desc: 'Rudderstack is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Rudderstack_ads',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7283684-leadsquared-integration'
   }
 ];
 
@@ -85,7 +85,7 @@ function IntegrationCard({ item, index }) {
         );
       case 'Clearbit Reveal':
         return (
-          <RevealIntegration active={isActive} setIsActive={setIsActive} />
+          <RevealIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
         );
       case '6Signal by 6Sense':
         return (

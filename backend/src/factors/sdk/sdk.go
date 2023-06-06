@@ -2424,7 +2424,7 @@ func TrackGroupWithDomain(projectID int64, groupName, domainName string, propert
 		return "", http.StatusInternalServerError
 	}
 
-	groupID := U.GetDomainGroupDomainName(domainName)
+	groupID := U.GetDomainGroupDomainName(projectID, domainName)
 	groupUserID, status := store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, timestamp, model.GetGroupUserSourceByGroupName(groupName))
 	if status != http.StatusCreated && status != http.StatusFound {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for  group user by group id.")
@@ -2469,7 +2469,7 @@ func TrackUserAccountGroup(projectID int64, userID string, groupName string, gro
 	}
 
 	groupIDPropertyKey := model.GetDomainNameSourcePropertyKey(groupName)
-	groupID := U.GetDomainGroupDomainName(U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKey]))
+	groupID := U.GetDomainGroupDomainName(projectID, U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKey]))
 
 	if groupID == "" {
 		logCtx.Warning("No group id. Skip processing user group.")
@@ -2526,7 +2526,7 @@ func TrackDomainsGroup(projectID int64, groupUserID string, groupName string, do
 		return http.StatusInternalServerError
 	}
 
-	groupID := U.GetDomainGroupDomainName(domainName)
+	groupID := U.GetDomainGroupDomainName(projectID, domainName)
 	if groupID == "" {
 		logCtx.Warning("No group id. Skip processing user group.")
 		return http.StatusOK

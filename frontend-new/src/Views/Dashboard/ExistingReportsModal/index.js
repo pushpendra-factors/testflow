@@ -151,7 +151,7 @@ const ExistingReportsModal = ({
         <Input
           ref={inputReference}
           onChange={HandleSearchReportModal}
-          className={`fa-global-search--input fa-global-search--input-fw py-1 mb-4`}
+          className={`fa-global-search--input fa-global-search--input-fw fa-global-search--input-bgw py-1 mb-4`}
           placeholder='Search Reports'
           prefix={<SVG name='search' size={16} color={'grey'} />}
         />

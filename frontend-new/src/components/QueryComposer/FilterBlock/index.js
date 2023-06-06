@@ -14,6 +14,7 @@ import {
   fetchChannelObjPropertyValues
 } from '../../../reducers/coreQuery/services';
 import { DEFAULT_OP_PROPS } from 'Utils/operatorMapping';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 const defaultOpProps = {
   categorical: DEFAULT_OP_PROPS['categorical'],
@@ -80,7 +81,7 @@ export default function FilterBlock({
       const filterDD = Object.assign({}, filterDropDownOptions);
       const propState = [];
       Object.keys(filterProps).forEach((k, i) => {
-        propState.push({ label: k, icon: k.replace(' ', '_') });
+        propState.push({ label: `${PropTextFormat(k)} Properties`, icon: k.replace(' ', '_') });
       });
       filterDD.props = propState;
       setFiltDD(filterDD);

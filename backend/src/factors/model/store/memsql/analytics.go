@@ -75,6 +75,8 @@ func getPropertyEntityField(projectID int64, groupProp model.QueryGroupByPropert
 		return "users.properties"
 	} else if groupProp.Entity == model.PropertyEntityEvent {
 		return "events.properties"
+	} else if groupProp.Entity == model.PropertyEntityGroup {
+		return "group_users.properties"
 	}
 
 	return ""
@@ -449,7 +451,7 @@ func getNoneHandledGroupBySelectWithFirst(projectID int64, groupProp model.Query
 // How to use?
 // select user_properties.properties->>'age' as gk_1, events.properties->>'category' as gk_2 from events
 // group by gk_1, gk_2
-func buildGroupKeys(projectID int64, groupProps []model.QueryGroupByProperty, timezoneString string) (groupSelect string,
+func buildGroupKeys(projectID int64, groupProps []model.QueryGroupByProperty, timezoneString string, useGroupProperties bool) (groupSelect string,
 	groupSelectParams []interface{}, groupKeys string) {
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -460,10 +462,13 @@ func buildGroupKeys(projectID int64, groupProps []model.QueryGroupByProperty, ti
 
 	groupSelectParams = make([]interface{}, 0)
 
-	for i, v := range groupProps {
+	for i, groupProp := range groupProps {
 		// Order of group is preserved as received.
-		gKey := groupKeyByIndex(v.Index)
-		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelect(projectID, v, gKey, timezoneString)
+		gKey := groupKeyByIndex(groupProp.Index)
+		if useGroupProperties {
+			groupProp.Entity = model.PropertyEntityGroup
+		}
+		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelect(projectID, groupProp, gKey, timezoneString)
 		groupSelect = groupSelect + noneHandledSelect
 		groupKeys = groupKeys + gKey
 		if i < len(groupProps)-1 {
@@ -640,8 +645,8 @@ func replaceTableWithViewForEventsAndUsers(stmnt, viewName string) string {
 // events.user_id as event_user_id , '0_$session'::text AS event_name FROM events JOIN users ON events.user_id=users.id
 // AND users.project_id = '20426' WHERE events.project_id='20426' AND timestamp>='1583001004' AND timestamp<='1585679399'
 // AND events.event_name_id IN (SELECT id FROM step_0_names WHERE project_id='20426' AND name='$session') AND
-// ( (( JSON_EXTRACT_STRING(events.properties, '$source') != 'google' OR JSON_EXTRACT_STRING(events.properties, '$source') = '' OR JSON_EXTRACT_STRING(events.properties, '$source') IS NULL ) AND
-// ( JSON_EXTRACT_STRING(events.properties, '$source') != 'facebook' OR JSON_EXTRACT_STRING(events.properties, '$source') = '' OR JSON_EXTRACT_STRING(events.properties, '$source') IS NULL )) )
+// ( (( JSON_EXTRACT_STRING(events.properties, '$source') != 'google' OR JSON_EXTRACT_STRING(events.properties, '$source') = ” OR JSON_EXTRACT_STRING(events.properties, '$source') IS NULL ) AND
+// ( JSON_EXTRACT_STRING(events.properties, '$source') != 'facebook' OR JSON_EXTRACT_STRING(events.properties, '$source') = ” OR JSON_EXTRACT_STRING(events.properties, '$source') IS NULL )) )
 // ORDER BY coal_user_id, events.timestamp ASC) , each_users_union AS (SELECT step_0.event_user_id, step_0.coal_user_id, step_0.event_name, FROM step_0)
 // SELECT event_name, _group_key_0, _group_key_1, COUNT(DISTINCT(coal_user_id)) AS count FROM each_users_union GROUP BY event_name ,
 // _group_key_0, _group_key_1 ORDER BY count DESC LIMIT 100000;
@@ -1260,7 +1265,7 @@ func hasGroupEntity(props []model.QueryGroupByProperty, entity string) bool {
 }
 
 func addJoinLatestUserPropsQuery(projectID int64, groupProps []model.QueryGroupByProperty,
-	refStepName string, stepName string, qStmnt *string, qParams *[]interface{}, addSelect string, timeZone string) string {
+	refStepName string, stepName string, qStmnt *string, qParams *[]interface{}, addSelect string, timeZone string, useGroupProperties bool) string {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"step_name":     stepName,
@@ -1273,7 +1278,7 @@ func addJoinLatestUserPropsQuery(projectID int64, groupProps []model.QueryGroupB
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	groupSelect, gSelectParams, gKeys := buildGroupKeys(projectID, groupProps, timeZone)
+	groupSelect, gSelectParams, gKeys := buildGroupKeys(projectID, groupProps, timeZone, useGroupProperties)
 
 	rStmnt := "SELECT " + joinWithComma(groupSelect, addSelect) + " from " + refStepName +
 		" " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
@@ -1329,7 +1334,7 @@ func appendOrderByAggr(qStmnt string) string {
 	return fmt.Sprintf("%s ORDER BY %s DESC", qStmnt, model.AliasAggr)
 }
 
-func appendOrderByAggrAndGroupKeys(projectID int64, qStmnt string, groupBys []model.QueryGroupByProperty, timeZone string) string {
+func appendOrderByAggrAndGroupKeys(projectID int64, qStmnt string, groupBys []model.QueryGroupByProperty, timeZone string, useGroupProperties bool) string {
 	logFields := log.Fields{
 		"q_stmnt":    qStmnt,
 		"project_id": projectID,
@@ -1337,7 +1342,7 @@ func appendOrderByAggrAndGroupKeys(projectID int64, qStmnt string, groupBys []mo
 		"time_zone":  timeZone,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	_, _, groupKeys := buildGroupKeys(projectID, groupBys, timeZone)
+	_, _, groupKeys := buildGroupKeys(projectID, groupBys, timeZone, useGroupProperties)
 	return joinWithComma(fmt.Sprintf("%s ORDER BY %s DESC", qStmnt, model.AliasAggr), groupKeys)
 }
 
@@ -1949,26 +1954,26 @@ func isValidFunnelQuery(query *model.Query) bool {
 	return len(query.EventsWithProperties) <= 10
 }
 
-func (store *MemSQL) IsValidFunnelGroupQueryIfExists(projectID int64, query *model.Query, groupIds []int) (int, bool) {
+func (store *MemSQL) IsValidAnalyticsGroupQueryIfExists(projectID int64, query *model.Query, groupIds []int) (int, bool) {
 
-	if query.GroupAnalysis == "" || model.IsFunnelQueryGroupNameUser(query.GroupAnalysis) {
+	if query.GroupAnalysis == "" || model.IsFunnelQueryGroupNameUser(query.GroupAnalysis) || query.GroupAnalysis == model.QueryClassEvents {
 		return 0, true
 	}
 
-	scopeGroupID, valid := store.IsValidFunnelGroupQuery(projectID, query, groupIds)
+	scopeGroupID, valid := store.IsValidAnalyticsGroupQuery(projectID, query, groupIds)
 	return scopeGroupID, valid
 }
 
-func (store *MemSQL) IsValidFunnelGroupQuery(projectID int64, query *model.Query, groupIds []int) (int, bool) {
+func (store *MemSQL) IsValidAnalyticsGroupQuery(projectID int64, query *model.Query, groupIds []int) (int, bool) {
 	if !model.IsValidFunnelQueryGroupName(query.GroupAnalysis) {
-		log.WithFields(log.Fields{"query": query}).Error("Invalid funnel group query.")
+		log.WithFields(log.Fields{"query": query}).Error("Invalid analytics group query.")
 		return 0, false
 	}
 
 	scopeGroup, status := store.GetGroup(projectID, query.GroupAnalysis)
 	if status != http.StatusFound {
 		if status != http.StatusNotFound {
-			log.WithFields(log.Fields{"query": query}).Error("Failed to get group id from funnel groupe query")
+			log.WithFields(log.Fields{"query": query}).Error("Failed to get group id from analytics groupe query")
 		}
 		return 0, false
 	}
@@ -1981,7 +1986,7 @@ func (store *MemSQL) IsValidFunnelGroupQuery(projectID int64, query *model.Query
 		}
 
 		if groupIds[i] != scopeGroup.ID {
-			log.WithFields(log.Fields{"query": query}).Error("Invalid funnel group query. Different groups selected.")
+			log.WithFields(log.Fields{"query": query}).Error("Invalid analytics group query. Different groups selected.")
 			return 0, false
 		}
 	}

@@ -40,27 +40,23 @@ type AccWeights struct {
 	SaleWindow   int64            `json:"salewindow"`
 }
 
-type AccWeightsRequest struct {
-	WeightConfig map[string]AccEventWeight `json:"WeightConfig"`
-	SaleWindow   int64                     `json:"salewindow"`
-}
-
 type AccEventWeight struct {
-	WeightId     string              `json:"wid"`
-	Weight_value float32             `json:"weight"`
-	Is_deleted   bool                `json:"is_deleted"`
-	EventName    string              `json:"event_name"`
-	Rule         WeightKeyValueTuple `json:"rule"`
+	WeightId     string                `json:"wid"`
+	Weight_value float32               `json:"weight"`
+	Is_deleted   bool                  `json:"is_deleted"`
+	EventName    string                `json:"event_name"`
+	Rule         []WeightKeyValueTuple `json:"rule"`
+	Version      int                   `json:"vr"`
 }
 
 type WeightKeyValueTuple struct {
-	Key        string  `json:"key"`
-	Value      string  `json:"value"`
-	Operator   bool    `json:"operator"`
-	LowerBound float64 `json:"lower_bound"`
-	UpperBound float64 `json:"upper_bound"`
-	Type       string  `json:"property_type"` //event or user property
-	ValueType  string  `json:"value_type"`    //  category or numerical
+	Key        string   `json:"key"`
+	Value      []string `json:"value"`
+	Operator   bool     `json:"operator"`
+	LowerBound float64  `json:"lower_bound"`
+	UpperBound float64  `json:"upper_bound"`
+	Type       string   `json:"property_type"` //event or user property
+	ValueType  string   `json:"value_type"`    //  category or numerical
 }
 
 type EventAgg struct {
@@ -149,4 +145,32 @@ func GetDateFromString(ts string) int64 {
 	t2, _ := strconv.ParseInt(date, 10, 64)
 	t3 := time.Date(int(t), time.Month(t1), int(t2), 0, 0, 0, 0, time.UTC).Unix()
 	return t3
+}
+
+func GetDefaultAccScoringWeights() AccWeights {
+	var weights AccWeights
+	var event_a AccEventWeight
+	var event_b AccEventWeight
+	var event_c AccEventWeight
+
+	weights.WeightConfig = make([]AccEventWeight, 0)
+	weights.SaleWindow = 10
+
+	event_a = AccEventWeight{EventName: "$session", Weight_value: 10, Is_deleted: false,
+		Version: 1}
+
+	keyvals := []string{"Paid search"}
+	filterPRoperties := WeightKeyValueTuple{Key: "$channel", Value: keyvals, Operator: true,
+		LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}
+	event_b = AccEventWeight{EventName: "$session", Weight_value: 20, Is_deleted: false,
+		Rule: []WeightKeyValueTuple{filterPRoperties}, Version: 1}
+
+	event_c = AccEventWeight{EventName: "$form_submitted", Weight_value: 40, Is_deleted: false,
+		Version: 1}
+
+	weights.WeightConfig = append(weights.WeightConfig, event_a)
+	weights.WeightConfig = append(weights.WeightConfig, event_b)
+	weights.WeightConfig = append(weights.WeightConfig, event_c)
+
+	return weights
 }

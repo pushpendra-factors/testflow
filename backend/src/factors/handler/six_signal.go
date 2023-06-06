@@ -25,10 +25,25 @@ const (
 	INVALID_INPUT   = "INVALID_INPUT"
 )
 
-// GetSixSignalReportHandler fetches the saved sixsignal report from cloud storage if the isSaved parameter in request payload is true
-// if the isSaved parameter is false the handler computes the result on the go.
-// The report fetched from the cloud are allowed to share and the result computed on the go is not allowed to share which is reflected
-// in the response parameter isShareable.
+/*
+GetSixSignalReportHandler method is used to retrieve/compute the report for the visitor identification app-login feature.
+
+1. Retrieve the projectId from the request context
+
+2. Decode the request payload JSON into a model.SixSignalQueryGroup struct using a JSON decoder. The request payload contains the timerange (from and to),
+timezone, page view filters and a flag isSaved.
+
+3. If the isSaved flag is true, proceed with retrieving the pre-computed report data from a saved location (cloud storage):
+  - Generate a folder name based on the timerange(from-to) to identify the location of the saved report
+  - Call the GetSixSignalAnalysisData function to retrieve the report data based on the projectId and folder name.
+  - If the pageView value is provided, filter the report data based on the page view and update the result.
+
+4. If the IsSaved flag is set to false:
+  - execute the SixSignal group query using the store.GetStore().RunSixSignalGroupQuery function.
+  - If the pageView value is provided, filter the report data based on the page view and update the result.
+
+5. Return the final result, along with an HTTP status code indicating success, and an empty error code and message.
+*/
 func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	r := c.Request
 
@@ -100,6 +115,12 @@ func GetSixSignalReportHandler(c *gin.Context) (interface{}, int, string, string
 		resultGroup.CacheMeta = meta
 
 		result[1] = resultGroup
+
+		if len(result[1].Results[0].Rows) == 0 {
+			logCtx.Warn("Data is not present for this date range")
+			return result, http.StatusOK, "", "Data is not present for this date range", false
+		}
+
 		if len(pageView) > 0 && pageView != nil {
 			res, err := FilterRowsForSixSignalPageView(projectId, requestPayload.Queries[0], result[1].Results[0])
 			if err != http.StatusOK {

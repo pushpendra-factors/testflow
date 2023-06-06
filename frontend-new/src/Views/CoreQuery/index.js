@@ -42,8 +42,6 @@ import {
   getCampaignConfigData
 } from '../../reducers/coreQuery/middleware';
 import {
-  calculateFrequencyData,
-  calculateActiveUsersData,
   formatApiData,
   getQuery,
   initialState,
@@ -72,8 +70,6 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   TOTAL_EVENTS_CRITERIA,
   TOTAL_USERS_CRITERIA,
-  ACTIVE_USERS_CRITERIA,
-  FREQUENCY_CRITERIA,
   EACH_USER_TYPE,
   REPORT_SECTION,
   INITIAL_SESSION_ANALYTICS_SEQ,
@@ -690,31 +686,6 @@ function CoreQuery({
           data: data.result_group[0]
         });
       }
-    } else if (result_criteria === ACTIVE_USERS_CRITERIA) {
-      const userData = formatApiData(
-        data.result_group[0],
-        data.result_group[1]
-      );
-      const sessionsData = data.result_group[2];
-      const activeUsersData = calculateActiveUsersData(userData, sessionsData, [
-        ...groupBy.global,
-        ...groupBy.event
-      ]);
-      updateResultState({ ...initialState, data: activeUsersData });
-    } else if (result_criteria === FREQUENCY_CRITERIA) {
-      const eventData = formatApiData(
-        data.result_group[0],
-        data.result_group[1]
-      );
-      const userData = formatApiData(
-        data.result_group[2],
-        data.result_group[3]
-      );
-      const frequencyData = calculateFrequencyData(eventData, userData, [
-        ...groupBy.global,
-        ...groupBy.event
-      ]);
-      updateResultState({ ...initialState, data: frequencyData });
     }
   };
 
@@ -735,7 +706,8 @@ function CoreQuery({
           result_criteria,
           user_type,
           durationObj,
-          globalFilters
+          globalFilters,
+          groupAnalysis
         );
 
         setDateFromTo({ from: query[0]?.fr, to: query[0]?.to });
@@ -782,29 +754,6 @@ function CoreQuery({
           } else {
             resultantData = data.result_group[0];
           }
-        } else if (result_criteria === ACTIVE_USERS_CRITERIA) {
-          const userData = formatApiData(
-            data.result_group[0],
-            data.result_group[1]
-          );
-          const sessionsData = data.result_group[2];
-          resultantData = calculateActiveUsersData(userData, sessionsData, [
-            ...groupBy.global,
-            ...groupBy.event
-          ]);
-        } else if (result_criteria === FREQUENCY_CRITERIA) {
-          const eventData = formatApiData(
-            data.result_group[0],
-            data.result_group[1]
-          );
-          const userData = formatApiData(
-            data.result_group[2],
-            data.result_group[3]
-          );
-          resultantData = calculateFrequencyData(eventData, userData, [
-            ...groupBy.global,
-            ...groupBy.event
-          ]);
         }
         if (isCompareQuery) {
           updateLocalReducer(COMPARISON_DATA_FETCHED, resultantData);
@@ -827,10 +776,12 @@ function CoreQuery({
       result_criteria,
       user_type,
       globalFilters,
+      groupAnalysis,
       activeProject.id,
       activeProject?.name,
       getDashboardConfigs,
       dateRange,
+      currentAgent?.email,
       configActionsOnRunningQuery,
       updateResultState,
       resetComparisonData,
@@ -906,13 +857,14 @@ function CoreQuery({
       globalFilters,
       eventsCondition,
       groupAnalysis,
-      activeProject.id,
-      activeProject?.name,
-      dateRange,
       coreQueryState.funnelConversionDurationNumber,
       coreQueryState.funnelConversionDurationUnit,
+      activeProject.id,
+      activeProject?.name,
       getDashboardConfigs,
+      dateRange,
       resetComparisonData,
+      currentAgent?.email,
       configActionsOnRunningQuery,
       updateResultState,
       updateLocalReducer
@@ -1079,6 +1031,7 @@ function CoreQuery({
       attr_dateRange,
       resetComparisonData,
       attrQueries,
+      currentAgent?.email,
       activeProject.id,
       activeProject?.name,
       configActionsOnRunningQuery,
@@ -1164,6 +1117,7 @@ function CoreQuery({
       activeProject?.name,
       getDashboardConfigs,
       dateRange,
+      currentAgent?.email,
       configActionsOnRunningQuery,
       updateResultState,
       resetComparisonData,
@@ -1248,7 +1202,8 @@ function CoreQuery({
       getDashboardConfigs,
       setNavigatedFromDashboard,
       setNavigatedFromAnalyse,
-      camp_dateRange
+      camp_dateRange,
+      currentAgent?.email
     ]
   );
 
@@ -1307,7 +1262,8 @@ function CoreQuery({
       activeProject.id,
       activeProject?.name,
       getDashboardConfigs,
-      dateRange
+      dateRange,
+      currentAgent?.email
     ]
   );
 
@@ -1963,64 +1919,68 @@ function CoreQuery({
               id='app-header'
               className='bg-white z-50 flex-col  px-8 w-full'
             >
-              <div className='items-center flex justify-between w-full pt-3 pb-3'>
-                <div
-                  role='button'
-                  tabIndex={0}
-                  className='flex items-center cursor-pointer'
-                >
-                  <Button
-                    size='large'
-                    type='text'
-                    onClick={() => {
-                      history.push('/');
-                    }}
-                    icon={<SVG size={32} name='Brand' />}
-                  />
-                  <Text
-                    type='title'
-                    level={5}
-                    weight='bold'
-                    extraClass='m-0 mt-1'
-                    lineHeight='small'
-                  >
-                    {querySaved
-                      ? `Reports / ${queryType} / ${querySaved.name}`
-                      : `Reports / ${queryType} / Untitled Analysis${' '}
-            ${moment().format('DD/MM/YYYY')}`}
-                  </Text>
-                </div>
-
-                <div className='flex items-center gap-x-2'>
-                  <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
-                  <Button
-                    size='large'
-                    type='default'
-                    onClick={
-                      coreQueryState.navigatedFromDashboard
-                        ? handleCloseDashboardQuery
-                        : handleCloseToAnalyse
-                    }
-                  >
-                    Close
-                  </Button>
-                </div>
-              </div>
-
               {/* {renderReportTabs()} */}
+
               {showResult ? (
-                <div
-                  className={`query_card_cont ${
-                    queryOpen ? `query_card_open` : `query_card_close`
-                  }`}
-                  onClick={(e) => !queryOpen && setQueryOpen(true)}
-                >
-                  {renderQueryComposer()}
-                  <Button size='large' className='query_card_expand'>
-                    <SVG name='expand' size={20} />
-                    Expand
-                  </Button>
-                </div>
+                <>
+                  <div className='items-center flex justify-between w-full pt-3 pb-3'>
+                    <div
+                      role='button'
+                      tabIndex={0}
+                      className='flex items-center cursor-pointer'
+                    >
+                      <Button
+                        size='large'
+                        type='text'
+                        onClick={() => {
+                          history.push('/');
+                        }}
+                        icon={<SVG size={32} name='Brand' />}
+                      />
+                      <Text
+                        type='title'
+                        level={5}
+                        weight='bold'
+                        extraClass='m-0 mt-1'
+                        lineHeight='small'
+                      >
+                        {querySaved
+                          ? `Reports / ${queryType} / ${querySaved.name}`
+                          : `Reports / ${queryType} / Untitled Analysis${' '}
+            ${moment().format('DD/MM/YYYY')}`}
+                      </Text>
+                    </div>
+
+                    <div className='flex items-center gap-x-2'>
+                      <div className='pr-2 border-r'>
+                        {renderSaveQueryComp()}
+                      </div>
+                      <Button
+                        size='large'
+                        type='default'
+                        onClick={
+                          coreQueryState.navigatedFromDashboard
+                            ? handleCloseDashboardQuery
+                            : handleCloseToAnalyse
+                        }
+                      >
+                        Close
+                      </Button>
+                    </div>
+                  </div>
+                  <div
+                    className={`query_card_cont ${
+                      queryOpen ? `query_card_open` : `query_card_close`
+                    }`}
+                    onClick={(e) => !queryOpen && setQueryOpen(true)}
+                  >
+                    {renderQueryComposer()}
+                    <Button size='large' className='query_card_expand'>
+                      <SVG name='expand' size={20} />
+                      Expand
+                    </Button>
+                  </div>
+                </>
               ) : null}
             </div>
           </div>
@@ -2068,7 +2028,7 @@ function CoreQuery({
         !resultState.data &&
         !resultState.loading &&
         activeProject.id === demoProjectId ? (
-          <div className='rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'>
+          <div className='rounded-lg border-2 h-20 mx-20'>
             <Row justify='space-between' className='m-0 p-3'>
               <Col span={projects.length === 1 ? 12 : 18}>
                 <img

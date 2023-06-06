@@ -953,15 +953,16 @@ export const getQuery = (
   resultCriteria,
   userType,
   dateRange,
-  globalFilters = []
+  globalFilters = [],
+  groupAnalysis
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_EVENT;
   query.ty =
-    resultCriteria === TOTAL_EVENTS_CRITERIA ||
-    resultCriteria === FREQUENCY_CRITERIA
+    resultCriteria === TOTAL_EVENTS_CRITERIA
       ? TYPE_EVENTS_OCCURRENCE
       : TYPE_UNIQUE_USERS;
+  query.grpa = groupAnalysis;
 
   const period = {};
   if (dateRange.from && dateRange.to) {
@@ -1012,18 +1013,6 @@ export const getQuery = (
   });
   query.ec = EVENT_QUERY_USER_TYPE[userType];
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
-  const sessionsQuery = getSessionsQuery({ period });
-  if (resultCriteria === ACTIVE_USERS_CRITERIA) {
-    return [query, { ...query, gbt: '' }, sessionsQuery];
-  }
-  if (resultCriteria === FREQUENCY_CRITERIA) {
-    return [
-      query,
-      { ...query, gbt: '' },
-      { ...query, ty: TYPE_UNIQUE_USERS },
-      { ...query, ty: TYPE_UNIQUE_USERS, gbt: '' }
-    ];
-  }
   if (userType === ANY_USER_TYPE || userType === ALL_USER_TYPE) {
     return [query];
   }

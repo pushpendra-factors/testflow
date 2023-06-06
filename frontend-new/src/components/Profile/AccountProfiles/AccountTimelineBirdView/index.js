@@ -36,6 +36,7 @@ function AccountTimelineBirdView({
       granularity,
       collapseAll
     );
+    document.title = 'Accounts' + ' - FactorsAI';
     setFormattedData(data);
   }, [timelineEvents, granularity]);
 

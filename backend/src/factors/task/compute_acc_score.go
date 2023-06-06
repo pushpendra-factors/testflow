@@ -102,10 +102,11 @@ func CreateweightMap(w *M.AccWeights) (map[string][]M.AccEventWeight, int64) {
 	// create map of event name to rules for easy lookup
 	wt := w.WeightConfig
 	for _, e := range wt {
-		if _, ok := mwt[e.EventName]; !ok {
-			mwt[e.EventName] = make([]M.AccEventWeight, 0)
+		weightkey := e.EventName
+		if _, ok := mwt[weightkey]; !ok {
+			mwt[weightkey] = make([]M.AccEventWeight, 0)
 		}
-		mwt[e.EventName] = append(mwt[e.EventName], e)
+		mwt[weightkey] = append(mwt[weightkey], e)
 	}
 	return mwt, w.SaleWindow
 }

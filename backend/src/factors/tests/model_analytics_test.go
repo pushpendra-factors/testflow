@@ -4993,3 +4993,1262 @@ func TestAnalyticsFunnelConversionXTime(t *testing.T) {
 	assert.Equal(t, float64(2), result.Rows[1][5])
 	assert.Equal(t, float64(1), result.Rows[1][7])
 }
+
+func TestAnalyticsEventsGroupQuery(t *testing.T) {
+	project, _, _, _, err := SetupProjectUserEventNameAgentReturnDAO()
+	assert.Nil(t, err)
+
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
+	uri := "/sdk/event/track"
+
+	groupProperties := map[string]map[string]interface{}{
+		"group_1": {"group_id": "group_1"},
+		"group_2": {"group_id": "group_2"},
+		"group_3": {"group_id": "group_3"},
+		"group_4": {"group_id": "group_4"},
+	}
+
+	groupGroupName := map[string]string{
+		"group_1": model.GROUP_NAME_HUBSPOT_COMPANY,
+		"group_2": model.GROUP_NAME_HUBSPOT_COMPANY,
+		"group_3": model.GROUP_NAME_SALESFORCE_ACCOUNT,
+		"group_4": model.GROUP_NAME_SALESFORCE_ACCOUNT,
+	}
+
+	for _, groupName := range groupGroupName {
+		_, status := store.GetStore().CreateGroup(project.ID, groupName, model.AllowedGroupNames)
+		assert.Contains(t, []int{http.StatusCreated, http.StatusConflict}, status)
+	}
+
+	groupUserIDMap := map[string]string{}
+
+	for groupID, propertiesMap := range groupProperties {
+
+		properties, err := U.EncodeToPostgresJsonb(&propertiesMap)
+		assert.Nil(t, err)
+
+		// create group user
+		groupUserID, status := store.GetStore().CreateGroupUser(&model.User{
+			ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix(),
+			Source:     model.GetRequestSourcePointer(model.UserSourceHubspot),
+			Properties: *properties,
+		}, groupGroupName[groupID], groupID)
+		assert.Equal(t, http.StatusCreated, status)
+		groupUserIDMap[groupID] = groupUserID
+	}
+
+	userProperties := map[string]map[string]interface{}{
+		"user_1": {"user": "user_1"},
+		"user_2": {"user": "user_2"},
+		"user_3": {"user": "user_3"},
+		"user_4": {"user": "user_4"},
+		"user_5": {"user": "user_5"},
+		"user_6": {"user": "user_6"},
+	}
+	userCustomerUserID := map[string]string{
+		"user_1": "cuid1",
+		"user_2": "cuid2",
+		"user_4": "cuid4",
+	}
+
+	userGroups := map[string]string{
+		"user_1": "group_1",
+		"user_2": "group_2",
+		"user_3": "group_3",
+		"user_4": "group_4",
+		"user_6": "group_2",
+	}
+
+	userIDs := map[string]string{}
+	for user, propertiesMap := range userProperties {
+		properties, err := U.EncodeToPostgresJsonb(&propertiesMap)
+		assert.Nil(t, err)
+
+		userID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: *properties,
+			CustomerUserId: userCustomerUserID[user], Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+		assert.Equal(t, http.StatusCreated, errCode)
+		userIDs[user] = userID
+
+		if userGroups[user] != "" {
+			_, status := store.GetStore().UpdateUserGroup(project.ID, userID, groupGroupName[userGroups[user]], userGroups[user],
+				groupUserIDMap[userGroups[user]], false)
+			assert.Equal(t, http.StatusAccepted, status)
+		}
+	}
+
+	groupEvents := map[string]string{
+		"group_1": U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+		"group_2": U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+		"group_3": U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		"group_4": U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+	}
+
+	for groupID, groupEventName := range groupEvents {
+		// group events
+		groupEventTimestamp := U.TimeNowZ().Unix()
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d, "event_properties":{"$company_cost":%d}}`,
+			groupEventName, groupUserIDMap[groupID], groupEventTimestamp, 1)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+	}
+
+	userEvents := map[string]string{
+		"user_1": U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+		"user_2": "event_1",
+		"user_5": "event_1",
+		"user_3": "crm_event_1",
+		"user_6": "crm_event_1",
+	}
+	for user, eventName := range userEvents {
+		userEventTimestamp := U.TimeNowZ().Unix()
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d, "event_properties":{"$user_cost":%d}}`,
+			eventName, userIDs[user], userEventTimestamp, 1)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+	}
+
+	/*
+			    WITH step_0 AS (
+		        SELECT
+		            step_0_event_users_view.user_id as group_user_id,
+		            FIRST(
+		                step_0_event_users_view.user_id,
+		                FROM_UNIXTIME(step_0_event_users_view.timestamp)
+		            ) as event_user_id
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties
+		                FROM
+		                    events
+		                WHERE
+		                    events.project_id = '16001677'
+		                    AND timestamp >= '1684436272'
+		                    AND timestamp <= '1684456272'
+		                    AND (
+		                        events.event_name_id = 'f83cb2f0-07ac-4b65-9806-e40a6361d8d6'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_0_event_users_view
+		        GROUP BY
+		            group_user_id
+		    )
+		    SELECT
+		        COUNT(DISTINCT(group_user_id)) AS aggregate
+		    FROM
+		        step_0
+		    ORDER BY
+		        aggregate DESC
+		    LIMIT
+		        100000
+	*/
+	// total groups with hubspot company created event
+	query := model.Query{
+		From: U.TimeNowUnix() - 10000,
+		To:   U.TimeNowUnix() + 10000,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   U.GROUP_NAME_HUBSPOT_COMPANY,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(2), result.Rows[0][0])
+
+	// invalid check- group analysis different than event group
+	query.GroupAnalysis = model.GROUP_NAME_SALESFORCE_ACCOUNT
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusBadRequest, errCode)
+
+	/*
+			    WITH step_0 AS (
+		        SELECT
+		            step_0_event_users_view.user_id as group_user_id,
+		            FIRST(
+		                step_0_event_users_view.user_id,
+		                FROM_UNIXTIME(step_0_event_users_view.timestamp)
+		            ) as event_user_id
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties
+		                FROM
+		                    events
+		                WHERE
+		                    events.project_id = '16001679'
+		                    AND timestamp >= '1684436839'
+		                    AND timestamp <= '1684456839'
+		                    AND (
+		                        events.event_name_id = '44938ea7-2262-4143-89d7-fdc1e4ec0a84'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_0_event_users_view
+		        GROUP BY
+		            group_user_id
+		    ),
+		    step_1 AS (
+		        SELECT
+		            COALESCE(
+		                step_1_event_users_view.group_user_id,
+		                step_1_event_users_view.user_group_user_id
+		            ) as group_user_id,
+		            FIRST(
+		                step_1_event_users_view.user_id,
+		                FROM_UNIXTIME(step_1_event_users_view.timestamp)
+		            ) as event_user_id
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties,
+		                    user_groups.group_1_user_id as group_user_id,
+		                    users.group_1_user_id as user_group_user_id
+		                FROM
+		                    events
+		                    LEFT JOIN users ON events.user_id = users.id
+		                    AND users.project_id = '16001679'
+		                    LEFT JOIN users AS user_groups ON users.customer_user_id = user_groups.customer_user_id
+		                    AND user_groups.project_id = '16001679'
+		                    AND user_groups.group_1_user_id IS NOT NULL
+		                    AND user_groups.source = '2'
+		                WHERE
+		                    events.project_id = '16001679'
+		                    AND timestamp >= '1684436839'
+		                    AND timestamp <= '1684456839'
+		                    AND (
+		                        group_user_id IS NOT NULL
+		                        OR user_group_user_id IS NOT NULL
+		                    )
+		                    AND (
+		                        events.event_name_id = '1dd4d2fe-c5ed-419d-bb3b-b371795ef120'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_1_event_users_view
+		        GROUP BY
+		            group_user_id
+		    ),
+		    events_intersect AS (
+		        SELECT
+		            step_0.event_user_id as event_user_id,
+		            step_0.group_user_id as group_user_id
+		        FROM
+		            step_0
+		            JOIN step_1 ON step_1.group_user_id = step_0.group_user_id
+		    )
+		    SELECT
+		        COUNT(DISTINCT(group_user_id)) AS aggregate
+		    FROM
+		        events_intersect
+		    ORDER BY
+		        aggregate DESC
+		    LIMIT
+		        100000
+	*/
+	// total groups who performed all events, only group 2
+	query = model.Query{
+		From: U.TimeNowUnix() - 10000,
+		To:   U.TimeNowUnix() + 10000,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "event_1",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   U.GROUP_NAME_HUBSPOT_COMPANY,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(1), result.Rows[0][0])
+
+	/*
+			    WITH step_0 AS (
+		        SELECT
+		            step_0_event_users_view.user_id as group_user_id,
+		            FIRST(
+		                step_0_event_users_view.user_id,
+		                FROM_UNIXTIME(step_0_event_users_view.timestamp)
+		            ) as event_user_id,
+		            '0_$hubspot_company_created' AS event_name
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties
+		                FROM
+		                    events
+		                WHERE
+		                    events.project_id = '16001680'
+		                    AND timestamp >= '1684437025'
+		                    AND timestamp <= '1684457025'
+		                    AND (
+		                        events.event_name_id = '9a181ab3-378a-4731-b60f-b56284849ed0'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_0_event_users_view
+		        GROUP BY
+		            group_user_id
+		    ),
+		    step_1 AS (
+		        SELECT
+		            COALESCE(
+		                step_1_event_users_view.group_user_id,
+		                step_1_event_users_view.user_group_user_id
+		            ) as group_user_id,
+		            FIRST(
+		                step_1_event_users_view.user_id,
+		                FROM_UNIXTIME(step_1_event_users_view.timestamp)
+		            ) as event_user_id,
+		            '1_event_1' AS event_name
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties,
+		                    user_groups.group_2_user_id as group_user_id,
+		                    users.group_2_user_id as user_group_user_id
+		                FROM
+		                    events
+		                    LEFT JOIN users ON events.user_id = users.id
+		                    AND users.project_id = '16001680'
+		                    LEFT JOIN users AS user_groups ON users.customer_user_id = user_groups.customer_user_id
+		                    AND user_groups.project_id = '16001680'
+		                    AND user_groups.group_2_user_id IS NOT NULL
+		                    AND user_groups.source = '2'
+		                WHERE
+		                    events.project_id = '16001680'
+		                    AND timestamp >= '1684437025'
+		                    AND timestamp <= '1684457025'
+		                    AND (
+		                        group_user_id IS NOT NULL
+		                        OR user_group_user_id IS NOT NULL
+		                    )
+		                    AND (
+		                        events.event_name_id = '50b4297e-942b-4832-9972-d5f7e3ad6611'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_1_event_users_view
+		        GROUP BY
+		            group_user_id
+		    ),
+		    each_events_union AS (
+		        SELECT
+		            step_0.event_name as event_name,
+		            step_0.group_user_id as group_user_id,
+		            step_0.event_user_id as event_user_id
+		        FROM
+		            step_0
+		        UNION
+		        ALL
+		        SELECT
+		            step_1.event_name as event_name,
+		            step_1.group_user_id as group_user_id,
+		            step_1.event_user_id as event_user_id
+		        FROM
+		            step_1
+		    )
+		    SELECT
+		        event_name,
+		        COUNT(DISTINCT(group_user_id)) AS aggregate
+		    FROM
+		        each_events_union
+		    GROUP BY
+		        event_name
+		    ORDER BY
+		        aggregate DESC
+		    LIMIT
+		        100000
+	*/
+	// total groups who performed each events, hubspot company created - 2(group_1, group_2), event_1 - 1(group_2)
+	query = model.Query{
+		From: U.TimeNowUnix() - 10000,
+		To:   U.TimeNowUnix() + 10000,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "event_1",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   U.GROUP_NAME_HUBSPOT_COMPANY,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(2), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+
+	/*
+			    WITH step_0 AS (
+		        SELECT
+		            step_0_event_users_view.user_id as group_user_id,
+		            FIRST(
+		                step_0_event_users_view.user_id,
+		                FROM_UNIXTIME(step_0_event_users_view.timestamp)
+		            ) as event_user_id,
+		            '0_$hubspot_company_created' AS event_name
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties
+		                FROM
+		                    events
+		                WHERE
+		                    events.project_id = '16001681'
+		                    AND timestamp >= '1684437193'
+		                    AND timestamp <= '1684457193'
+		                    AND (
+		                        events.event_name_id = 'c4ad6d57-cb30-4fce-bf25-d546ec9b47e7'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_0_event_users_view
+		        GROUP BY
+		            group_user_id
+		    ),
+		    step_1 AS (
+		        SELECT
+		            COALESCE(
+		                step_1_event_users_view.group_user_id,
+		                step_1_event_users_view.user_group_user_id
+		            ) as group_user_id,
+		            FIRST(
+		                step_1_event_users_view.user_id,
+		                FROM_UNIXTIME(step_1_event_users_view.timestamp)
+		            ) as event_user_id,
+		            '1_crm_event_1' AS event_name
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties,
+		                    user_groups.group_2_user_id as group_user_id,
+		                    users.group_2_user_id as user_group_user_id
+		                FROM
+		                    events
+		                    LEFT JOIN users ON events.user_id = users.id
+		                    AND users.project_id = '16001681'
+		                    LEFT JOIN users AS user_groups ON users.customer_user_id = user_groups.customer_user_id
+		                    AND user_groups.project_id = '16001681'
+		                    AND user_groups.group_2_user_id IS NOT NULL
+		                    AND user_groups.source = '2'
+		                WHERE
+		                    events.project_id = '16001681'
+		                    AND timestamp >= '1684437193'
+		                    AND timestamp <= '1684457193'
+		                    AND (
+		                        group_user_id IS NOT NULL
+		                        OR user_group_user_id IS NOT NULL
+		                    )
+		                    AND (
+		                        events.event_name_id = 'a0ad2adc-a2d6-47f8-b104-3f849dd48020'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_1_event_users_view
+		        GROUP BY
+		            group_user_id
+		    ),
+		    each_events_union AS (
+		        SELECT
+		            step_0.event_name as event_name,
+		            step_0.group_user_id as group_user_id,
+		            step_0.event_user_id as event_user_id
+		        FROM
+		            step_0
+		        UNION
+		        ALL
+		        SELECT
+		            step_1.event_name as event_name,
+		            step_1.group_user_id as group_user_id,
+		            step_1.event_user_id as event_user_id
+		        FROM
+		            step_1
+		    )
+		    SELECT
+		        event_name,
+		        COUNT(DISTINCT(group_user_id)) AS aggregate
+		    FROM
+		        each_events_union
+		    GROUP BY
+		        event_name
+		    ORDER BY
+		        aggregate DESC
+		    LIMIT
+		        100000
+	*/
+	// total groups who performed each events, hubspot company created - 2(group_1, group_2), crm_event_1 - 1(group_2)( user directly associated with group instead of using customer user id)
+	query = model.Query{
+		From: U.TimeNowUnix() - 10000,
+		To:   U.TimeNowUnix() + 10000,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "crm_event_1",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   U.GROUP_NAME_HUBSPOT_COMPANY,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(2), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+
+	/*
+			    WITH step_0 AS (
+		        SELECT
+		            step_0_event_users_view.user_id as group_user_id,
+		            FIRST(
+		                step_0_event_users_view.user_id,
+		                FROM_UNIXTIME(step_0_event_users_view.timestamp)
+		            ) as event_user_id
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties
+		                FROM
+		                    events
+		                WHERE
+		                    events.project_id = '16001682'
+		                    AND timestamp >= '1684437390'
+		                    AND timestamp <= '1684457390'
+		                    AND (
+		                        events.event_name_id = '8d72806d-f60d-4663-bd47-58d4b860a9fb'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_0_event_users_view
+		        GROUP BY
+		            group_user_id
+		    ),
+		    step_1 AS (
+		        SELECT
+		            COALESCE(
+		                step_1_event_users_view.group_user_id,
+		                step_1_event_users_view.user_group_user_id
+		            ) as group_user_id,
+		            FIRST(
+		                step_1_event_users_view.user_id,
+		                FROM_UNIXTIME(step_1_event_users_view.timestamp)
+		            ) as event_user_id
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties,
+		                    user_groups.group_1_user_id as group_user_id,
+		                    users.group_1_user_id as user_group_user_id
+		                FROM
+		                    events
+		                    LEFT JOIN users ON events.user_id = users.id
+		                    AND users.project_id = '16001682'
+		                    LEFT JOIN users AS user_groups ON users.customer_user_id = user_groups.customer_user_id
+		                    AND user_groups.project_id = '16001682'
+		                    AND user_groups.group_1_user_id IS NOT NULL
+		                    AND user_groups.source = '2'
+		                WHERE
+		                    events.project_id = '16001682'
+		                    AND timestamp >= '1684437390'
+		                    AND timestamp <= '1684457390'
+		                    AND (
+		                        group_user_id IS NOT NULL
+		                        OR user_group_user_id IS NOT NULL
+		                    )
+		                    AND (
+		                        events.event_name_id = 'f23528ea-761c-4f19-8fb2-a4a75946c9c0'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_1_event_users_view
+		        GROUP BY
+		            group_user_id
+		    ),
+		    events_intersect AS (
+		        SELECT
+		            step_0.event_user_id as event_user_id,
+		            step_0.group_user_id as group_user_id
+		        FROM
+		            step_0
+		            JOIN step_1 ON step_1.group_user_id = step_0.group_user_id
+		    )
+		    SELECT
+		        COUNT(DISTINCT(group_user_id)) AS aggregate
+		    FROM
+		        events_intersect
+		    ORDER BY
+		        aggregate DESC
+		    LIMIT
+		        100000
+	*/
+	query.EventsCondition = model.EventCondAllGivenEvent
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(1), result.Rows[0][0])
+
+	/*
+			    WITH step_0 AS (
+		        SELECT
+		            step_0_event_users_view.user_id as group_user_id,
+		            FIRST(
+		                step_0_event_users_view.user_id,
+		                FROM_UNIXTIME(step_0_event_users_view.timestamp)
+		            ) as event_user_id,
+		            '0_$hubspot_company_created' AS event_name
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties
+		                FROM
+		                    events
+		                WHERE
+		                    events.project_id = '16001683'
+		                    AND timestamp >= '1684437595'
+		                    AND timestamp <= '1684457595'
+		                    AND (
+		                        events.event_name_id = '67ca8555-ef97-46e2-9fb0-e594c10529ab'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_0_event_users_view
+		        GROUP BY
+		            group_user_id
+		        ORDER BY
+		            group_user_id,
+		            step_0_event_users_view.timestamp ASC
+		    ),
+		    step_1 AS (
+		        SELECT
+		            COALESCE(
+		                step_1_event_users_view.group_user_id,
+		                step_1_event_users_view.user_group_user_id
+		            ) as group_user_id,
+		            FIRST(
+		                step_1_event_users_view.user_id,
+		                FROM_UNIXTIME(step_1_event_users_view.timestamp)
+		            ) as event_user_id,
+		            '1_event_1' AS event_name
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties,
+		                    user_groups.group_1_user_id as group_user_id,
+		                    users.group_1_user_id as user_group_user_id
+		                FROM
+		                    events
+		                    LEFT JOIN users ON events.user_id = users.id
+		                    AND users.project_id = '16001683'
+		                    LEFT JOIN users AS user_groups ON users.customer_user_id = user_groups.customer_user_id
+		                    AND user_groups.project_id = '16001683'
+		                    AND user_groups.group_1_user_id IS NOT NULL
+		                    AND user_groups.source = '2'
+		                WHERE
+		                    events.project_id = '16001683'
+		                    AND timestamp >= '1684437595'
+		                    AND timestamp <= '1684457595'
+		                    AND (
+		                        group_user_id IS NOT NULL
+		                        OR user_group_user_id IS NOT NULL
+		                    )
+		                    AND (
+		                        events.event_name_id = '25b4fb1a-8797-4248-afc8-109c2adddafe'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_1_event_users_view
+		        GROUP BY
+		            group_user_id
+		        ORDER BY
+		            group_user_id,
+		            step_1_event_users_view.timestamp ASC
+		    ),
+		    each_events_union AS (
+		        SELECT
+		            step_0.event_name as event_name,
+		            step_0.group_user_id as group_user_id,
+		            step_0.event_user_id as event_user_id
+		        FROM
+		            step_0
+		        UNION
+		        ALL
+		        SELECT
+		            step_1.event_name as event_name,
+		            step_1.group_user_id as group_user_id,
+		            step_1.event_user_id as event_user_id
+		        FROM
+		            step_1
+		    ),
+		    each_users_union AS (
+		        SELECT
+		            each_events_union.event_user_id,
+		            each_events_union.group_user_id,
+		            each_events_union.event_name,
+		            CASE
+		                WHEN JSON_EXTRACT_STRING(group_users.properties, 'group_id') IS NULL THEN '$none'
+		                WHEN JSON_EXTRACT_STRING(group_users.properties, 'group_id') = '' THEN '$none'
+		                ELSE JSON_EXTRACT_STRING(group_users.properties, 'group_id')
+		            END AS _group_key_0
+		        FROM
+		            each_events_union
+		            LEFT JOIN users AS group_users ON each_events_union.group_user_id = group_users.id
+		            AND group_users.project_id = 16001683
+		    )
+		    SELECT
+		        event_name,
+		        _group_key_0,
+		        COUNT(DISTINCT(group_user_id)) AS aggregate
+		    FROM
+		        each_users_union
+		    GROUP BY
+		        event_name,
+		        _group_key_0
+		    ORDER BY
+		        aggregate DESC
+		    LIMIT
+		        10000
+	*/
+	// global breakdown property filter test
+	query = model.Query{
+		From: U.TimeNowUnix() - 10000,
+		To:   U.TimeNowUnix() + 10000,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "event_1",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				Property:  "group_id",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   U.GROUP_NAME_HUBSPOT_COMPANY,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		eventNameI := U.GetPropertyValueAsString(result.Rows[i][0])
+		eventNameJ := U.GetPropertyValueAsString(result.Rows[j][0])
+		eventNameI1, _ := U.GetPropertyValueAsFloat64(result.Rows[i][1])
+		eventNameJ1, _ := U.GetPropertyValueAsFloat64(result.Rows[j][1])
+		if eventNameI < eventNameJ {
+			return true
+		}
+
+		if eventNameI1 > eventNameJ1 {
+			return false
+		}
+
+		return eventNameI1 < eventNameJ1
+	})
+
+	assert.Equal(t, "$hubspot_company_created", result.Rows[0][1])
+	assert.Equal(t, "group_1", result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "$hubspot_company_created", result.Rows[1][1])
+	assert.Equal(t, "group_2", result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+	assert.Equal(t, "event_1", result.Rows[2][1])
+	assert.Equal(t, "group_2", result.Rows[2][2])
+	assert.Equal(t, float64(1), result.Rows[2][3])
+
+	/*
+			        WITH step_0 AS (
+		            SELECT
+		                step_0_event_users_view.user_id as group_user_id,
+		                FIRST(
+		                    step_0_event_users_view.user_id,
+		                    FROM_UNIXTIME(step_0_event_users_view.timestamp)
+		                ) as event_user_id,
+		                '0_$hubspot_company_created' AS event_name
+		            FROM
+		                (
+		                    SELECT
+		                        events.project_id,
+		                        events.id,
+		                        events.event_name_id,
+		                        events.user_id,
+		                        events.timestamp,
+		                        events.properties as event_properties,
+		                        events.user_properties as event_user_properties
+		                    FROM
+		                        events
+		                    WHERE
+		                        events.project_id = '16001683'
+		                        AND timestamp >= '1684437595'
+		                        AND timestamp <= '1684457595'
+		                        AND (
+		                            events.event_name_id = '67ca8555-ef97-46e2-9fb0-e594c10529ab'
+		                        )
+		                    LIMIT
+		                        10000000000
+		                ) step_0_event_users_view
+		            GROUP BY
+		                group_user_id
+		            ORDER BY
+		                group_user_id,
+		                step_0_event_users_view.timestamp ASC
+		        ),
+		        step_1 AS (
+		            SELECT
+		                COALESCE(
+		                    step_1_event_users_view.group_user_id,
+		                    step_1_event_users_view.user_group_user_id
+		                ) as group_user_id,
+		                FIRST(
+		                    step_1_event_users_view.user_id,
+		                    FROM_UNIXTIME(step_1_event_users_view.timestamp)
+		                ) as event_user_id,
+		                '1_event_1' AS event_name
+		            FROM
+		                (
+		                    SELECT
+		                        events.project_id,
+		                        events.id,
+		                        events.event_name_id,
+		                        events.user_id,
+		                        events.timestamp,
+		                        events.properties as event_properties,
+		                        events.user_properties as event_user_properties,
+		                        user_groups.group_1_user_id as group_user_id,
+		                        users.group_1_user_id as user_group_user_id
+		                    FROM
+		                        events
+		                        LEFT JOIN users ON events.user_id = users.id
+		                        AND users.project_id = '16001683'
+		                        LEFT JOIN users AS user_groups ON users.customer_user_id = user_groups.customer_user_id
+		                        AND user_groups.project_id = '16001683'
+		                        AND user_groups.group_1_user_id IS NOT NULL
+		                        AND user_groups.source = '2'
+		                    WHERE
+		                        events.project_id = '16001683'
+		                        AND timestamp >= '1684437595'
+		                        AND timestamp <= '1684457595'
+		                        AND (
+		                            group_user_id IS NOT NULL
+		                            OR user_group_user_id IS NOT NULL
+		                        )
+		                        AND (
+		                            events.event_name_id = '25b4fb1a-8797-4248-afc8-109c2adddafe'
+		                        )
+		                    LIMIT
+		                        10000000000
+		                ) step_1_event_users_view
+		            GROUP BY
+		                group_user_id
+		            ORDER BY
+		                group_user_id,
+		                step_1_event_users_view.timestamp ASC
+		        ),
+		        each_events_union AS (
+		            SELECT
+		                step_0.event_name as event_name,
+		                step_0.group_user_id as group_user_id,
+		                step_0.event_user_id as event_user_id
+		            FROM
+		                step_0
+		            UNION
+		            ALL
+		            SELECT
+		                step_1.event_name as event_name,
+		                step_1.group_user_id as group_user_id,
+		                step_1.event_user_id as event_user_id
+		            FROM
+		                step_1
+		        ),
+		        each_users_union AS (
+		            SELECT
+		                each_events_union.event_user_id,
+		                each_events_union.group_user_id,
+		                each_events_union.event_name,
+		                CASE
+		                    WHEN JSON_EXTRACT_STRING(group_users.properties, 'group_id') IS NULL THEN '$none'
+		                    WHEN JSON_EXTRACT_STRING(group_users.properties, 'group_id') = '' THEN '$none'
+		                    ELSE JSON_EXTRACT_STRING(group_users.properties, 'group_id')
+		                END AS _group_key_0
+		            FROM
+		                each_events_union
+		                LEFT JOIN users AS group_users ON each_events_union.group_user_id = group_users.id
+		                AND group_users.project_id = 16001683
+		        )
+		        SELECT
+		            event_name,
+		            _group_key_0,
+		            COUNT(DISTINCT(group_user_id)) AS aggregate
+		        FROM
+		            each_users_union
+		        GROUP BY
+		            event_name,
+		            _group_key_0
+		        ORDER BY
+		            aggregate DESC
+		        LIMIT
+		            10000
+	*/
+	// global property property filter test
+	query = model.Query{
+		From: U.TimeNowUnix() - 10000,
+		To:   U.TimeNowUnix() + 10000,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "event_1",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				Property:  "group_id",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+
+			model.QueryProperty{
+				Entity:    model.PropertyEntityUserGlobal,
+				Property:  "group_id",
+				Operator:  "equals",
+				Value:     "group_1",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   U.GROUP_NAME_HUBSPOT_COMPANY,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		eventNameI := U.GetPropertyValueAsString(result.Rows[i][0])
+		eventNameJ := U.GetPropertyValueAsString(result.Rows[j][0])
+		eventNameI1, _ := U.GetPropertyValueAsFloat64(result.Rows[i][1])
+		eventNameJ1, _ := U.GetPropertyValueAsFloat64(result.Rows[j][1])
+		if eventNameI < eventNameJ {
+			return true
+		}
+
+		if eventNameI1 > eventNameJ1 {
+			return false
+		}
+
+		return eventNameI1 < eventNameJ1
+	})
+
+	assert.Len(t, result.Rows, 2)
+	assert.Equal(t, "$hubspot_company_created", result.Rows[0][1])
+	assert.Equal(t, "group_1", result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "event_1", result.Rows[1][1])
+	assert.Equal(t, "group_1", result.Rows[1][2])
+	assert.Equal(t, int(0), result.Rows[1][3])
+
+	/*
+			    WITH step_0 AS (
+		        SELECT
+		            step_0_event_users_view.user_id as group_user_id,
+		            FIRST(
+		                step_0_event_users_view.user_id,
+		                FROM_UNIXTIME(step_0_event_users_view.timestamp)
+		            ) as event_user_id,
+		            '0_$hubspot_company_created' AS event_name
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties
+		                FROM
+		                    events
+		                WHERE
+		                    events.project_id = '16001685'
+		                    AND timestamp >= '1684437958'
+		                    AND timestamp <= '1684457958'
+		                    AND (
+		                        events.event_name_id = '768b0050-04cf-4ae0-af83-4418a46cbe88'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_0_event_users_view
+		        WHERE
+		            (
+		                (
+		                    JSON_EXTRACT_STRING(
+		                        step_0_event_users_view.event_user_properties,
+		                        'group_id'
+		                    ) = 'group_1'
+		                )
+		            )
+		        GROUP BY
+		            group_user_id
+		        ORDER BY
+		            group_user_id,
+		            step_0_event_users_view.timestamp ASC
+		    ),
+		    step_1 AS (
+		        SELECT
+		            COALESCE(
+		                step_1_event_users_view.group_user_id,
+		                step_1_event_users_view.user_group_user_id
+		            ) as group_user_id,
+		            FIRST(
+		                step_1_event_users_view.user_id,
+		                FROM_UNIXTIME(step_1_event_users_view.timestamp)
+		            ) as event_user_id,
+		            '1_event_1' AS event_name
+		        FROM
+		            (
+		                SELECT
+		                    events.project_id,
+		                    events.id,
+		                    events.event_name_id,
+		                    events.user_id,
+		                    events.timestamp,
+		                    events.properties as event_properties,
+		                    events.user_properties as event_user_properties,
+		                    user_groups.group_2_user_id as group_user_id,
+		                    users.group_2_user_id as user_group_user_id
+		                FROM
+		                    events
+		                    LEFT JOIN users ON events.user_id = users.id
+		                    AND users.project_id = '16001685'
+		                    LEFT JOIN users AS user_groups ON users.customer_user_id = user_groups.customer_user_id
+		                    AND user_groups.project_id = '16001685'
+		                    AND user_groups.group_2_user_id IS NOT NULL
+		                    AND user_groups.source = '2'
+		                WHERE
+		                    events.project_id = '16001685'
+		                    AND timestamp >= '1684437958'
+		                    AND timestamp <= '1684457958'
+		                    AND (
+		                        group_user_id IS NOT NULL
+		                        OR user_group_user_id IS NOT NULL
+		                    )
+		                    AND (
+		                        events.event_name_id = 'c46d6c76-2d6b-499c-aa68-eeefdbc697db'
+		                    )
+		                LIMIT
+		                    10000000000
+		            ) step_1_event_users_view
+		        GROUP BY
+		            group_user_id
+		        ORDER BY
+		            group_user_id,
+		            step_1_event_users_view.timestamp ASC
+		    ),
+		    each_events_union AS (
+		        SELECT
+		            step_0.event_name as event_name,
+		            step_0.group_user_id as group_user_id,
+		            step_0.event_user_id as event_user_id
+		        FROM
+		            step_0
+		        UNION
+		        ALL
+		        SELECT
+		            step_1.event_name as event_name,
+		            step_1.group_user_id as group_user_id,
+		            step_1.event_user_id as event_user_id
+		        FROM
+		            step_1
+		    ),
+		    each_users_union AS (
+		        SELECT
+		            each_events_union.event_user_id,
+		            each_events_union.group_user_id,
+		            each_events_union.event_name,
+		            CASE
+		                WHEN JSON_EXTRACT_STRING(group_users.properties, 'group_id') IS NULL THEN '$none'
+		                WHEN JSON_EXTRACT_STRING(group_users.properties, 'group_id') = '' THEN '$none'
+		                ELSE JSON_EXTRACT_STRING(group_users.properties, 'group_id')
+		            END AS _group_key_0
+		        FROM
+		            each_events_union
+		            LEFT JOIN users AS group_users ON each_events_union.group_user_id = group_users.id
+		            AND group_users.project_id = 16001685
+		    )
+		    SELECT
+		        event_name,
+		        _group_key_0,
+		        COUNT(DISTINCT(group_user_id)) AS aggregate
+		    FROM
+		        each_users_union
+		    GROUP BY
+		        event_name,
+		        _group_key_0
+		    ORDER BY
+		        aggregate DESC
+		    LIMIT
+		        10000
+	*/
+	// Event level filter test
+	query = model.Query{
+		From: U.TimeNowUnix() - 10000,
+		To:   U.TimeNowUnix() + 10000,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+				Properties: []model.QueryProperty{
+					model.QueryProperty{
+						Entity:    model.PropertyEntityUser,
+						Property:  "group_id",
+						Operator:  "equals",
+						Value:     "group_1",
+						Type:      U.PropertyTypeCategorical,
+						LogicalOp: "AND",
+					},
+				},
+			},
+			{
+				Name:       "event_1",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				Property:  "group_id",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   U.GROUP_NAME_HUBSPOT_COMPANY,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		eventNameI := U.GetPropertyValueAsString(result.Rows[i][0])
+		eventNameJ := U.GetPropertyValueAsString(result.Rows[j][0])
+		eventNameI1, _ := U.GetPropertyValueAsFloat64(result.Rows[i][1])
+		eventNameJ1, _ := U.GetPropertyValueAsFloat64(result.Rows[j][1])
+		if eventNameI < eventNameJ {
+			return true
+		}
+
+		if eventNameI1 > eventNameJ1 {
+			return false
+		}
+
+		return eventNameI1 < eventNameJ1
+	})
+
+	assert.Len(t, result.Rows, 2)
+	assert.Equal(t, "$hubspot_company_created", result.Rows[0][1])
+	assert.Equal(t, "group_1", result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "event_1", result.Rows[1][1])
+	assert.Equal(t, "group_2", result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+}

@@ -177,7 +177,7 @@ const ConfigureDP = (props) => {
   };
 
   return (
-    <div className={'fa-container mt-32 mb-12 min-h-screen'}>
+    <div className={'fa-container'}>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={18}>
           <Row className='w-full' justify={'center'}>

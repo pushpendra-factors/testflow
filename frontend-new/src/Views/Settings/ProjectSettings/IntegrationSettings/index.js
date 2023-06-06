@@ -55,7 +55,7 @@ const IntegrationProviderData = [
     name: 'Rudderstack',
     desc: 'Rudderstack is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Rudderstack_ads',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7283693-rudderstack-integration'
   },
   {
     name: 'Marketo',
@@ -67,13 +67,13 @@ const IntegrationProviderData = [
     name: 'Slack',
     desc: 'Does your team live on Slack? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
     icon: 'Slack',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7283808-slack-integration'
   },
   {
     name: 'Microsoft Teams',
     desc: 'Does your team live on Teams? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
     icon: 'MSTeam',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7913152-microsoft-teams-integration'
   },
   {
     name: 'Hubspot',
@@ -124,31 +124,31 @@ const IntegrationProviderData = [
     name: 'Bing Ads',
     desc: 'Sync Bing ads reports with Factors for performance reporting',
     icon: 'Bing',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7831204-bing-ads-integration'
   },
   {
     name: 'Clearbit Reveal',
     desc: 'Take action as soon as a target account hits your site',
     icon: 'ClearbitLogo',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7261981-clearbit-reveal-integration'
   },
   {
     name: 'LeadSquared',
     desc: 'Leadsquared is a leader in marketing automation. Using our Leadsquared source, we will ingest your Program, Campaign, Person and List records into Factors.',
     icon: 'LeadSquared',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7283684-leadsquared-integration'
   },
   {
     name: '6Signal by 6Sense',
     desc: 'Gain insight into who is visiting your website and where they are in the buying journey',
     icon: 'SixSignalLogo',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7261968-6signal-by-6sense-integration'
   },
   {
     name: 'Factors Website De-anonymization',
     desc: 'Gain insight into who is visiting your website and where they are in the buying journey',
     icon: 'Brand',
-    kbLink: false
+    kbLink: 'https://help.factors.ai/en/articles/7261968-6signal-by-6sense-integration'
   }
 ];
 
@@ -405,7 +405,7 @@ function IntegrationSettings({
       }
       onError={FaErrorLog}
     >
-      <div className='fa-container mt-32 mb-12 min-h-screen'>
+      <div className='fa-container'>
         <Row gutter={[24, 24]} justify='center'>
           <Col span={18}>
             <div className='mb-10 pl-4'>

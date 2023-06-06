@@ -30,7 +30,7 @@ function QueryBlock({
   groupBy,
   setGroupBy,
   delGroupBy,
-  userProperties,
+  eventUserProperties,
   eventProperties,
   groupProperties,
   getGroupProperties,
@@ -127,12 +127,12 @@ function QueryBlock({
       assignFilterProps.group = groupProperties[eventGroup];
       assignFilterProps.user = [];
     } else {
-      assignFilterProps.user = userProperties;
+      assignFilterProps.user = eventUserProperties;
       assignFilterProps.group = [];
     }
     assignFilterProps.event = eventProperties[event.label] || [];
     setFilterProperties(assignFilterProps);
-  }, [eventProperties, groupProperties, userProperties]);
+  }, [eventProperties, groupProperties, eventUserProperties]);
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -486,7 +486,7 @@ function QueryBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
+  eventUserProperties: state.coreQuery.eventUserProperties,
   groupProperties: state.coreQuery.groupProperties,
   eventProperties: state.coreQuery.eventProperties,
   groupBy: state.coreQuery.groupBy.event,

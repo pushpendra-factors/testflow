@@ -26,7 +26,6 @@ CheckMergeConflict(){
     exit 1
  else
     printf "$curbranch has no conflicts with $1 \n "
-    git merge --abort
     return
  fi   
 }

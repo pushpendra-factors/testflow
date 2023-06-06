@@ -1054,7 +1054,7 @@ function CoreQuery({
           <SearchBar setQueryToState={setQueryToState} />
         </FaHeader> */}
         <div>
-          <div className={'fa-container mt-24 min-h-screen'}>
+          <div className={'fa-container'}>
             <Row gutter={[24, 24]} justify='center'>
               <Col span={20}>
                 <Row gutter={[24, 24]}>

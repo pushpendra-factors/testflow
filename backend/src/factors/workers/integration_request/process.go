@@ -85,6 +85,7 @@ func main() {
 	enableSixSignalGroupByProjectID := flag.String("enable_six_signal_group_by_project_id", "", "")
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
 	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
+	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
 
 	flag.Parse()
 
@@ -139,6 +140,7 @@ func main() {
 		EnableSixSignalGroupByProjectID:                    *enableSixSignalGroupByProjectID,
 		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
 		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
+		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
 	}
 	C.InitConf(config)
 

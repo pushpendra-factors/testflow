@@ -418,7 +418,7 @@ const CreateGoalDrawer = (props) => {
 
   return (
     <div>
-      <div className={`flex flex-col py-4 px-8 border--thin-2 relative `}>
+      <div className={`flex flex-col py-4 px-20 border--thin-2 relative `}>
         <div
           className={`explain-builder--content ${
             collapse ? 'explain-builder--collapsed' : ''
@@ -791,7 +791,6 @@ const mapStateToProps = (state) => {
     activeProject: state.global.active_project,
     userProperties: state.coreQuery.userProperties,
     GlobalEventNames: state.coreQuery?.eventOptions[0]?.values,
-    userProperties: state.coreQuery.userProperties,
     factors_models: state.factors.factors_models,
     goal_insights: state.factors.goal_insights,
     tracked_events: state.factors.tracked_events,

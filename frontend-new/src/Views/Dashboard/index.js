@@ -219,7 +219,7 @@ function Dashboard({
         }
         onError={FaErrorLog}
       >
-        <div className='mt-20 flex-1 flex flex-col'>
+        <div className='flex-1 flex flex-col'>
           <ProjectDropdown
             handleEditClick={handleEditClick}
             setaddDashboardModal={setaddDashboardModal}
