@@ -4,9 +4,7 @@ export const getGroupList = (groupOptions) => {
   const groups = Object.entries(groupOptions || {}).map(
     ([group_name, display_name]) => [display_name, group_name]
   );
-  if (groups.length > 1) {
-    groups.unshift(['All Accounts', 'All']);
-  }
+  groups.unshift(['All Accounts', 'All']);
   return groups;
 };
 

@@ -16,7 +16,7 @@ type Profile struct {
 	LastActivity time.Time              `json:"last_activity"`
 	TableProps   map[string]interface{} `json:"table_props"`
 	Score        float64                `json:"score"`
-	Engagement   string                 `json:"engagement"`
+	Engagement   string                 `json:"engagement,omitempty"`
 }
 
 type ContactDetails struct {

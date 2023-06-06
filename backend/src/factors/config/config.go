@@ -311,6 +311,7 @@ type Configuration struct {
 	AllowEventAnalyticsGroupsByProjectID               string
 	OtpKeyWithQueryCheckEnabled                        bool
 	AllowEmailDomainsByProjectID                       string
+	EnableScoringByProjectID                           string
 }
 
 type Services struct {
@@ -2133,6 +2134,14 @@ func IsIPBlockingFeatureEnabled(token string) bool {
 // IsDomainEnabled - Checks if $domain is enabled for given project_id in all accounts
 func IsDomainEnabled(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllAccountsProjectId, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
+func IsScoringEnabled(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableScoringByProjectID, "")
 	if allProjects || projectIDsMap[projectID] {
 		return true
 	}

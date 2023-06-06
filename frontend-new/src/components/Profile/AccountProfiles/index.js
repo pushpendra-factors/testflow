@@ -27,7 +27,8 @@ import {
   getHost,
   getPropType,
   propValueFormat,
-  sortColumn
+  sortNumericalColumn,
+  sortStringColumn
 } from '../utils';
 import {
   getProfileAccounts,
@@ -268,7 +269,10 @@ function AccountProfiles({
       dataIndex: prop,
       key: prop,
       width: 280,
-      sorter: (a, b) => sortColumn(a[prop], b[prop]),
+      sorter: (a, b) =>
+        propType === 'numerical'
+          ? sortNumericalColumn(a[prop], b[prop])
+          : sortStringColumn(a[prop], b[prop]),
       render: (value) => (
         <Text type='title' level={7} extraClass='m-0' truncate>
           {value ? propValueFormat(prop, value, propType) : '-'}
@@ -287,7 +291,7 @@ function AccountProfiles({
         width: 300,
         fixed: 'left',
         ellipsis: true,
-        sorter: (a, b) => sortColumn(a.account.name, b.account.name),
+        sorter: (a, b) => sortStringColumn(a.account.name, b.account.name),
         render: (item) =>
           (
             <div className='flex items-center'>
@@ -322,7 +326,7 @@ function AccountProfiles({
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
-        sorter: (a, b) => sortColumn(a.score, b.score),
+        sorter: (a, b) => sortNumericalColumn(a.score, b.score),
         render: (status) =>
           status ? (
             <div
@@ -333,7 +337,7 @@ function AccountProfiles({
                 src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
                 alt=''
               />
-              <Text type='title' level={6} extraClass='m-0'>
+              <Text type='title' level={7} extraClass='m-0'>
                 {status}
               </Text>
             </div>
@@ -353,7 +357,7 @@ function AccountProfiles({
       key: 'lastActivity',
       width: 200,
       align: 'right',
-      sorter: (a, b) => sortColumn(a.lastActivity, b.lastActivity),
+      sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
       render: (item) => MomentTz(item).fromNow()
     });
     return columns;

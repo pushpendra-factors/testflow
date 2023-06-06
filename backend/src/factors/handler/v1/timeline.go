@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strconv"
 
+	C "factors/config"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -59,7 +61,7 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 	}
 
 	// Add user scores to the response if scoring is enabled
-	if getScore {
+	if getScore || C.IsScoringEnabled(projectId) {
 		// Separate anonymous and known user IDs
 		var userIdsAnonymous []string
 		var userIdsNonAnonymous []string
@@ -220,7 +222,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 	}
 
 	// Add account scores to the response if scoring is enabled
-	if getScore {
+	if getScore || C.IsScoringEnabled(projectId) {
 		// Retrieve scores for account IDs
 		var accountIds []string
 		for _, profile := range profileAccountsList {

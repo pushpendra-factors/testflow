@@ -39,7 +39,8 @@ import {
   getPropType,
   iconColors,
   propValueFormat,
-  sortColumn
+  sortStringColumn,
+  sortNumericalColumn,
 } from '../utils';
 import {
   getProfileUsers,
@@ -239,7 +240,7 @@ function UserProfiles({
         key: 'identity',
         fixed: 'left',
         ellipsis: true,
-        sorter: (a, b) => sortColumn(a.identity.id, b.identity.id),
+        sorter: (a, b) => sortStringColumn(a.identity.id, b.identity.id),
         render: (identity) => (
           <div className='flex items-center'>
             {identity.isAnonymous ? (
@@ -282,7 +283,7 @@ function UserProfiles({
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
-        sorter: (a, b) => sortColumn(a.score, b.score),
+        sorter: (a, b) => sortNumericalColumn(a.score, b.score),
         render: (status) =>
           status ? (
             <div
@@ -293,7 +294,7 @@ function UserProfiles({
                 src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
                 alt=''
               />
-              <Text type='title' level={6} extraClass='m-0'>
+              <Text type='title' level={7} extraClass='m-0'>
                 {status}
               </Text>
             </div>
@@ -329,7 +330,10 @@ function UserProfiles({
         dataIndex: prop,
         key: prop,
         width: 260,
-        sorter: (a, b) => sortColumn(a[prop], b[prop]),
+        sorter: (a, b) =>
+          propType === 'numerical'
+            ? sortNumericalColumn(a[prop], b[prop])
+            : sortStringColumn(a[prop], b[prop]),
         render: (value) => (
           <Text type='title' level={7} extraClass='m-0' truncate>
             {value ? propValueFormat(prop, value, propType) : '-'}
@@ -344,7 +348,7 @@ function UserProfiles({
       key: 'lastActivity',
       width: 200,
       align: 'right',
-      sorter: (a, b) => sortColumn(a.lastActivity, b.lastActivity),
+      sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
       defaultSortOrder: 'ascend',
       render: (item) => MomentTz(item).fromNow()
     });
