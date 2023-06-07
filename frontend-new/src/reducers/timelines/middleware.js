@@ -9,18 +9,17 @@ import {
 } from '.';
 import { formatAccountTimeline, formatUsersTimeline } from './utils';
 
-export const getProfileAccounts = (projectId, payload) => (dispatch) => {
+export const getProfileAccounts = (projectId, payload, agentId) => (dispatch) => {
   dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
   return new Promise((resolve) => {
-    fetchProfileAccounts(projectId, payload)
+    fetchProfileAccounts(projectId, payload, agentId)
       .then((response) => {
         const data = response.data.map((account) => ({
+          ...account,
           identity: account.identity,
           account: { name: account.name, host: account?.host_name },
           tableProps: account.table_props,
-          lastActivity: account.last_activity,
-          engagement: account.engagement,
-          score: account.score
+          lastActivity: account.last_activity
         }));
         resolve(
           dispatch({
@@ -67,17 +66,16 @@ export const getProfileAccountDetails =
     });
   };
 
-export const getProfileUsers = (projectId, payload) => (dispatch) => {
+export const getProfileUsers = (projectId, payload, agentId) => (dispatch) => {
   dispatch({ type: 'FETCH_PROFILE_USERS_LOADING' });
   return new Promise((resolve) => {
-    fetchProfileUsers(projectId, payload)
+    fetchProfileUsers(projectId, payload, agentId)
       .then((response) => {
         const data = response.data.map((user) => ({
+          ...user,
           identity: { id: user.identity, isAnonymous: user.is_anonymous },
           tableProps: user.table_props,
-          lastActivity: user.last_activity,
-          engagement: user.engagement,
-          score: user.score
+          lastActivity: user.last_activity
         }));
         resolve(
           dispatch({
