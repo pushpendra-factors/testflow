@@ -73,6 +73,8 @@ type JobStatus struct {
 const OpportunityLeadID = "opportunity_to_lead"
 const OpportunityMultipleLeadID = "opportunity_to_multiple_lead"
 
+const BatchSizeForSyncUsingFields = 142
+
 func GetSalesforceAPIVersion(projectID int64) string {
 	if C.AllowSalesforcev54APIByProjectID(projectID) {
 		return salesforceAPIVersion54
@@ -1683,47 +1685,38 @@ func getStartTimestamp(docType string) int64 {
 	return now.New(currentTime).BeginningOfDay().Unix() // get from last 90 days
 }
 
-func syncByTypeUsingFields(ps *model.SalesforceProjectSettings, accessToken, objectName string, startTimestamp int64) (ObjectStatus, error) {
-	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": objectName, "start_timestamp": startTimestamp})
-
-	var salesforceObjectStatus ObjectStatus
-	salesforceObjectStatus.ProjetID = ps.ProjectID
-	salesforceObjectStatus.DocType = objectName
-	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
-
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to build salesforceDataClient.")
-		return salesforceObjectStatus, err
-	}
-
-	query := fmt.Sprintf("SELECT+id+FROM+%s", objectName)
-
-	if startTimestamp > 0 {
-		t := time.Unix(startTimestamp, 0)
-		sfFormatedTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
-		query = query + "+" + fmt.Sprintf("WHERE+LastModifiedDate%s+ORDER+BY+LastModifiedDate+ASC", url.QueryEscape(">"+sfFormatedTime))
-	}
-
-	paginatedIDs, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, query, objectName)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to initialize salesforce data client")
-		return salesforceObjectStatus, err
-	}
+func getBatchedIDsForSyncUsingFields(s *DataClient, projectID int64, objectName string, startTimestamp int64, endTimestamp int64) ([][]string, int, error) {
 	ids := make([]string, 0)
+	batchedIDs := make([][]string, 0)
+
+	t := time.Unix(endTimestamp, 0)
+	sfFormatedEndTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+
+	query := fmt.Sprintf("SELECT+id+FROM+%s+WHERE+LastModifiedDate%s", objectName, url.QueryEscape("<="+sfFormatedEndTime))
+	if startTimestamp > 0 {
+		t = time.Unix(startTimestamp, 0)
+		sfFormatedStartTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		query = query + "+" + fmt.Sprintf("AND+LastModifiedDate%s", url.QueryEscape(">="+sfFormatedStartTime))
+	}
+	query = query + "+" + "ORDER+BY+LastModifiedDate+ASC"
+
+	paginatedIDs, err := s.getSalesforceDataByQuery(projectID, query, objectName)
+	if err != nil {
+		return batchedIDs, 0, fmt.Errorf("%v. Failed to initialize salesforce data client", err.Error())
+	}
 
 	done := false
 	var objectRecords []model.SalesforceRecord
 	for !done {
 		objectRecords, done, err = paginatedIDs.getNextBatch()
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to getNextBatch.")
-			return salesforceObjectStatus, err
+			return batchedIDs, 0, fmt.Errorf("%v. Failed to getNextBatch", err.Error())
 		}
 
 		for i := range objectRecords {
 			if _, exists := objectRecords[i]["Id"]; !exists {
-				logCtx.WithField("record", objectRecords[i]).Error("ID doesn't exist")
+				log.WithFields(log.Fields{"project_id": projectID, "doc_type": objectName,
+					"start_timestamp": startTimestamp, "end_timestamp": endTimestamp, "record": objectRecords[i]}).Error("ID doesn't exist")
 				continue
 			}
 			id := U.GetPropertyValueAsString(objectRecords[i]["Id"])
@@ -1731,36 +1724,286 @@ func syncByTypeUsingFields(ps *model.SalesforceProjectSettings, accessToken, obj
 		}
 	}
 
-	salesforceObjectStatus.TotalAPICalls["FieldsIDAPICalls"] = paginatedIDs.APICall
+	batchedIDs = U.GetStringListAsBatch(ids, BatchSizeForSyncUsingFields)
+
+	return batchedIDs, paginatedIDs.APICall, nil
+}
+
+func syncAccountUsingFields(ps *model.SalesforceProjectSettings, accessToken string, startTimestamp int64) ObjectStatus {
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": model.SalesforceDocumentTypeNameAccount, "start_timestamp": startTimestamp})
+
+	var salesforceObjectStatus ObjectStatus
+	salesforceObjectStatus.ProjetID = ps.ProjectID
+	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameAccount
+	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
+	salesforceObjectStatus.Failures = make([]string, 0)
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncAccountUsingFields.")
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+
+	endTime := time.Now()
+	sfFormatedEndTime := endTime.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+
+	batchedIDs, fieldsIDAPICalls, err := getBatchedIDsForSyncUsingFields(salesforceDataClient, ps.ProjectID, model.SalesforceDocumentTypeNameAccount, startTimestamp, endTime.Unix())
+	if err != nil {
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDAPICalls"] = fieldsIDAPICalls
+
+	syncUsingFieldsAPICalls := 0
+	query := fmt.Sprintf("SELECT+FIELDS(ALL)+FROM+%s+WHERE+LastModifiedDate%s", model.SalesforceDocumentTypeNameAccount, url.QueryEscape("<="+sfFormatedEndTime))
+	if startTimestamp > 0 {
+		t := time.Unix(startTimestamp, 0)
+		sfFormatedStartTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		query = query + "+" + fmt.Sprintf("AND+LastModifiedDate%s", url.QueryEscape(">="+sfFormatedStartTime))
+	}
+
+	for i := range batchedIDs {
+		queryURL := query + "+" + fmt.Sprintf("AND+Id+IN+(%s)+LIMIT+%d", "'"+strings.Join(batchedIDs[i], "','")+"'", BatchSizeForSyncUsingFields)
+		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, model.SalesforceDocumentTypeNameAccount)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to initialize salesforce data client in syncAccountUsingFields.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+			return salesforceObjectStatus
+		}
+
+		var objectRecords []model.SalesforceRecord
+		done := false
+		for !done {
+			objectRecords, done, err = paginatedRecords.getNextBatch()
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to getNextBatch in syncAccountUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, model.SalesforceDocumentTypeNameAccount, objectRecords)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocumentInBatch documents in syncAccountUsingFields")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			salesforceObjectStatus.TotalRecords += len(objectRecords)
+		}
+
+		syncUsingFieldsAPICalls += paginatedRecords.APICall
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDRecordsAPICalls"] = syncUsingFieldsAPICalls
+
+	return salesforceObjectStatus
+}
+
+func syncAssociationsForOpportunities(ps *model.SalesforceProjectSettings, accessToken string, objectRecords []model.SalesforceRecord, logCtx *log.Entry) (int, int, []string) {
+	allowedObject := model.GetSalesforceDocumentTypeAlias(ps.ProjectID)
+
+	var oppToLeadIDs map[string]string
+	var oppToMultipleLeadID map[string]map[string]bool
+
+	var leadIDForOpportunityRecordsAPICalls int
+	var opportunityPrimaryContactAPICalls int
+
+	var err error
+	var failures []string
+
+	if _, exist := allowedObject[model.SalesforceDocumentTypeNameLead]; exist {
+		oppToLeadIDs, oppToMultipleLeadID, leadIDForOpportunityRecordsAPICalls, err = getLeadIDForOpportunityRecords(ps.ProjectID, objectRecords, accessToken, ps.InstanceURL)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get lead converted opportunity id for opportunity sync.")
+			failures = append(failures, err.Error())
+			return leadIDForOpportunityRecordsAPICalls, opportunityPrimaryContactAPICalls, failures
+		}
+	}
+
+	for i := range objectRecords {
+		if _, exist := allowedObject[model.SalesforceDocumentTypeNameLead]; exist {
+			oppID := util.GetPropertyValueAsString(objectRecords[i]["Id"])
+			leadID := (oppToLeadIDs)[oppID]
+			if leadID == "" {
+				logCtx.WithFields(log.Fields{"opportunity_id": oppID}).Warn("Missing lead id for opportunity. Skipping adding lead id to opportunity.")
+			} else {
+				objectRecords[i][OpportunityLeadID] = leadID
+			}
+
+			if len(oppToMultipleLeadID[oppID]) > 0 {
+				objectRecords[i][OpportunityMultipleLeadID] = oppToMultipleLeadID[oppID]
+			}
+		}
+
+		// only sync object if allowed by the project, will fallback to leads if not allowed
+		if _, exist := allowedObject[model.SalesforceDocumentTypeNameContact]; exist {
+			primaryContactIDs := getOpportunityPrimaryContactIDs(ps.ProjectID, objectRecords)
+			if len(primaryContactIDs) < 1 {
+				continue
+			}
+
+			allFailures, apiCalls, failure := syncOpportunityPrimaryContact(ps.ProjectID, primaryContactIDs, accessToken, ps.InstanceURL)
+			if failure {
+				failures = append(failures, allFailures...)
+			}
+			opportunityPrimaryContactAPICalls += apiCalls
+		}
+	}
+
+	return leadIDForOpportunityRecordsAPICalls, opportunityPrimaryContactAPICalls, failures
+}
+
+func syncOpporunityUsingFields(ps *model.SalesforceProjectSettings, accessToken string, startTimestamp int64) ObjectStatus {
+	opportunityAssociationEnabled := config.UseOpportunityAssociationByProjectID(ps.ProjectID)
+
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": model.SalesforceDocumentTypeNameOpportunity, "start_timestamp": startTimestamp, "association_enabled": opportunityAssociationEnabled})
+
+	var salesforceObjectStatus ObjectStatus
+	salesforceObjectStatus.ProjetID = ps.ProjectID
+	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameOpportunity
+	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncOpporunityUsingFields")
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+
+	endTime := time.Now()
+	sfFormatedEndTime := endTime.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+
+	batchedIDs, fieldsIDAPICalls, err := getBatchedIDsForSyncUsingFields(salesforceDataClient, ps.ProjectID, model.SalesforceDocumentTypeNameOpportunity, startTimestamp, endTime.Unix())
+	if err != nil {
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDAPICalls"] = fieldsIDAPICalls
+
+	var allFailures []string
+	syncUsingFieldsAPICalls := 0
+
+	opportunityLeadIDAPICalls := 0
+	opportunityPrimaryContactAPICalls := 0
+
+	query := fmt.Sprintf("SELECT+FIELDS(ALL),(+SELECT+id,isPrimary,ContactId,OpportunityId,Role+from+%s+)+FROM+%s+WHERE+LastModifiedDate%s", model.SalesforceChildRelationshipNameOpportunityContactRoles, model.SalesforceDocumentTypeNameOpportunity, url.QueryEscape("<="+sfFormatedEndTime))
+	if startTimestamp > 0 {
+		t := time.Unix(startTimestamp, 0)
+		sfFormatedStartTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		query = query + "+" + fmt.Sprintf("AND+LastModifiedDate%s", url.QueryEscape(">="+sfFormatedStartTime))
+	}
+
+	for i := range batchedIDs {
+		queryURL := query + "+" + fmt.Sprintf("AND+Id+IN+(%s)+LIMIT+%d", "'"+strings.Join(batchedIDs[i], "','")+"'", BatchSizeForSyncUsingFields)
+		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, model.SalesforceDocumentTypeNameOpportunity)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to initialize salesforce data client in syncOpportunityUsingFields.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+			return salesforceObjectStatus
+		}
+
+		var objectRecords []model.SalesforceRecord
+		done := false
+		for !done {
+			objectRecords, done, err = paginatedRecords.getNextBatch()
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to getNextBatch in syncOpportunityUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			if opportunityAssociationEnabled {
+				leadIDForOpportunityRecordsAPICalls, contactIDForOpportunityRecordsAPICalls, failures := syncAssociationsForOpportunities(ps, accessToken, objectRecords, logCtx)
+				if err != nil {
+					logCtx.Error("Failed to sync associations for opportunities.")
+					allFailures = append(allFailures, failures...)
+				}
+
+				opportunityLeadIDAPICalls += leadIDForOpportunityRecordsAPICalls
+				opportunityPrimaryContactAPICalls += contactIDForOpportunityRecordsAPICalls
+			}
+
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, model.SalesforceDocumentTypeNameOpportunity, objectRecords)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocumentInBatch documents in syncOpportunityUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			salesforceObjectStatus.TotalRecords += len(objectRecords)
+		}
+
+		syncUsingFieldsAPICalls += paginatedRecords.APICall
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsOpportunityRecordsAPICalls"] = syncUsingFieldsAPICalls
+	salesforceObjectStatus.TotalAPICalls["leadIDForOpportunityRecordsAPICalls"] = opportunityLeadIDAPICalls
+	salesforceObjectStatus.TotalAPICalls["opportunityPrimaryContactAPICalls"] = opportunityPrimaryContactAPICalls
+	salesforceObjectStatus.Failures = allFailures
+
+	return salesforceObjectStatus
+}
+
+func syncContactUsingFields(ps *model.SalesforceProjectSettings, accessToken string, startTimestamp int64) ObjectStatus {
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": model.SalesforceDocumentTypeNameContact, "start_timestamp": startTimestamp})
+
+	var salesforceObjectStatus ObjectStatus
+	salesforceObjectStatus.ProjetID = ps.ProjectID
+	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameContact
+	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncContactUsingFields")
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+
+	endTime := time.Now()
+	sfFormatedEndTime := endTime.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+
+	batchedIDs, fieldsIDAPICalls, err := getBatchedIDsForSyncUsingFields(salesforceDataClient, ps.ProjectID, model.SalesforceDocumentTypeNameContact, startTimestamp, endTime.Unix())
+	if err != nil {
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDAPICalls"] = fieldsIDAPICalls
 
 	var failures []string
 	syncUsingFieldsAPICalls := 0
 
-	batchSize := 142
-	idBatches := U.GetStringListAsBatch(ids, batchSize)
-	query = fmt.Sprintf("SELECT+FIELDS(ALL)+FROM+%s", objectName)
+	query := fmt.Sprintf("SELECT+FIELDS(ALL)+FROM+%s+WHERE+LastModifiedDate%s", model.SalesforceDocumentTypeNameContact, url.QueryEscape("<="+sfFormatedEndTime))
+	if startTimestamp > 0 {
+		t := time.Unix(startTimestamp, 0)
+		sfFormatedStartTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		query = query + "+" + fmt.Sprintf("AND+LastModifiedDate%s", url.QueryEscape(">="+sfFormatedStartTime))
+	}
 
-	for i := range idBatches {
-		queryURL := query + "+" + fmt.Sprintf("WHERE+Id+IN+(%s)+LIMIT+%d", "'"+strings.Join(idBatches[i], "','")+"'", batchSize)
-		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, objectName)
+	for i := range batchedIDs {
+		queryURL := query + "+" + fmt.Sprintf("AND+Id+IN+(%s)+LIMIT+%d", "'"+strings.Join(batchedIDs[i], "','")+"'", BatchSizeForSyncUsingFields)
+		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, model.SalesforceDocumentTypeNameContact)
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to initialize salesforce data client to syncByTypeUsingFields.")
-			return salesforceObjectStatus, err
+			logCtx.WithError(err).Error("Failed to initialize salesforce data client in syncContactUsingFields.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+			return salesforceObjectStatus
 		}
 
-		done = false
+		var objectRecords []model.SalesforceRecord
+		done := false
 		for !done {
 			objectRecords, done, err = paginatedRecords.getNextBatch()
 			if err != nil {
-				logCtx.WithError(err).Error("Failed to getNextBatch.")
-				break
+				logCtx.WithError(err).Error("Failed to getNextBatch in syncContactUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
 			}
 
-			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, objectName, objectRecords)
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, model.SalesforceDocumentTypeNameContact, objectRecords)
 			if err != nil {
-				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument documents on sync.")
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument documents in syncContactUsingFields")
 				failures = append(failures, err.Error())
 			}
+
+			salesforceObjectStatus.TotalRecords += len(objectRecords)
 		}
 
 		syncUsingFieldsAPICalls += paginatedRecords.APICall
@@ -1768,7 +2011,659 @@ func syncByTypeUsingFields(ps *model.SalesforceProjectSettings, accessToken, obj
 	salesforceObjectStatus.TotalAPICalls["FieldsIDRecordsAPICalls"] = syncUsingFieldsAPICalls
 	salesforceObjectStatus.Failures = failures
 
-	return salesforceObjectStatus, nil
+	return salesforceObjectStatus
+}
+
+func syncLeadUsingFields(ps *model.SalesforceProjectSettings, accessToken string, startTimestamp int64) ObjectStatus {
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": model.SalesforceDocumentTypeNameLead, "start_timestamp": startTimestamp})
+
+	var salesforceObjectStatus ObjectStatus
+	salesforceObjectStatus.ProjetID = ps.ProjectID
+	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameLead
+	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncLeadUsingFields")
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+
+	endTime := time.Now()
+	sfFormatedEndTime := endTime.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+
+	batchedIDs, fieldsIDAPICalls, err := getBatchedIDsForSyncUsingFields(salesforceDataClient, ps.ProjectID, model.SalesforceDocumentTypeNameLead, startTimestamp, endTime.Unix())
+	if err != nil {
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDAPICalls"] = fieldsIDAPICalls
+
+	var failures []string
+	syncUsingFieldsAPICalls := 0
+
+	query := fmt.Sprintf("SELECT+FIELDS(ALL)+FROM+%s+WHERE+LastModifiedDate%s", model.SalesforceDocumentTypeNameLead, url.QueryEscape("<="+sfFormatedEndTime))
+	if startTimestamp > 0 {
+		t := time.Unix(startTimestamp, 0)
+		sfFormatedStartTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		query = query + "+" + fmt.Sprintf("AND+LastModifiedDate%s", url.QueryEscape(">="+sfFormatedStartTime))
+	}
+
+	for i := range batchedIDs {
+		queryURL := query + "+" + fmt.Sprintf("AND+Id+IN+(%s)+LIMIT+%d", "'"+strings.Join(batchedIDs[i], "','")+"'", BatchSizeForSyncUsingFields)
+		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, model.SalesforceDocumentTypeNameLead)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to initialize salesforce data client in syncLeadUsingFields.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+			return salesforceObjectStatus
+		}
+
+		var objectRecords []model.SalesforceRecord
+		done := false
+		for !done {
+			objectRecords, done, err = paginatedRecords.getNextBatch()
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to getNextBatch in syncLeadUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, model.SalesforceDocumentTypeNameLead, objectRecords)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument documents in syncLeadUsingFields.")
+				failures = append(failures, err.Error())
+			}
+
+			salesforceObjectStatus.TotalRecords += len(objectRecords)
+		}
+
+		syncUsingFieldsAPICalls += paginatedRecords.APICall
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDRecordsAPICalls"] = syncUsingFieldsAPICalls
+	salesforceObjectStatus.Failures = failures
+
+	return salesforceObjectStatus
+}
+
+func syncCampaignUsingFields(ps *model.SalesforceProjectSettings, accessToken string, startTimestamp int64) ObjectStatus {
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": model.SalesforceDocumentTypeNameCampaign, "start_timestamp": startTimestamp})
+
+	var salesforceObjectStatus ObjectStatus
+	salesforceObjectStatus.ProjetID = ps.ProjectID
+	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameCampaign
+	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncCampaignUsingFields")
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+
+	endTime := time.Now()
+	sfFormatedEndTime := endTime.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+
+	batchedIDs, fieldsIDAPICalls, err := getBatchedIDsForSyncUsingFields(salesforceDataClient, ps.ProjectID, model.SalesforceDocumentTypeNameCampaign, startTimestamp, endTime.Unix())
+	if err != nil {
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDAPICalls"] = fieldsIDAPICalls
+
+	var allFailures []string
+	syncUsingFieldsAPICalls := 0
+
+	allCampaignMemberIDs := make([]string, 0)
+
+	query := fmt.Sprintf("SELECT+FIELDS(ALL),(+SELECT+id+from+campaignmembers+)+FROM+%s+WHERE+LastModifiedDate%s", model.SalesforceDocumentTypeNameCampaign, url.QueryEscape("<="+sfFormatedEndTime))
+	if startTimestamp > 0 {
+		t := time.Unix(startTimestamp, 0)
+		sfFormatedStartTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		query = query + "+" + fmt.Sprintf("AND+LastModifiedDate%s", url.QueryEscape(">="+sfFormatedStartTime))
+	}
+
+	for i := range batchedIDs {
+		queryURL := query + "+" + fmt.Sprintf("AND+Id+IN+(%s)+LIMIT+%d", "'"+strings.Join(batchedIDs[i], "','")+"'", BatchSizeForSyncUsingFields)
+		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, model.SalesforceDocumentTypeNameCampaign)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to initialize salesforce data client in syncCampaignUsingFields.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+			return salesforceObjectStatus
+		}
+
+		var objectRecords []model.SalesforceRecord
+		done := false
+		for !done {
+			objectRecords, done, err = paginatedRecords.getNextBatch()
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to getNextBatch in syncCampaignUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			for i := range objectRecords {
+				// get campaing memeber ids from the campaign to sync missing leads,contacts and campaign members associated with the campaign
+				campaignMemberIDs, err := getCampaingMemberIDsFromCampaign(&objectRecords[i])
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to get campaign member ids from campaign.")
+				} else {
+					allCampaignMemberIDs = append(allCampaignMemberIDs, campaignMemberIDs...)
+				}
+			}
+
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, model.SalesforceDocumentTypeNameCampaign, objectRecords)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument documents in syncCampaignUSingFields")
+				allFailures = append(allFailures, err.Error())
+			}
+
+			salesforceObjectStatus.TotalRecords += len(objectRecords)
+		}
+
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, allFailures...)
+		syncUsingFieldsAPICalls += paginatedRecords.APICall
+
+		// sync missing lead or contact id if not available from first date of data pull
+		campaignMemberRecords, recordObjectType, campaignMemberAPICalls, memberObjectAPICalls, err := getAllCampaignMemberContactAndLeadRecords(ps.ProjectID, allCampaignMemberIDs, accessToken, ps.InstanceURL)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to getAllCampaignMemberContactAndLeadRecords in syncCampaignUsingFields.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+			return salesforceObjectStatus
+		}
+
+		salesforceObjectStatus.TotalAPICalls["CampaignMemberAPICalls"] += campaignMemberAPICalls
+		salesforceObjectStatus.TotalAPICalls["MemberObjectAPICalls"] += memberObjectAPICalls
+
+		objectRecordsMap := make(map[string][]model.SalesforceRecord, 0)
+		for i := range campaignMemberRecords {
+			if _, exist := objectRecordsMap[recordObjectType[i]]; !exist {
+				objectRecordsMap[recordObjectType[i]] = make([]model.SalesforceRecord, 0)
+			}
+			objectRecordsMap[recordObjectType[i]] = append(objectRecordsMap[recordObjectType[i]], campaignMemberRecords[i])
+		}
+
+		for objectName := range objectRecordsMap {
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, objectName, objectRecordsMap[objectName])
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to insert campaign member on BuildAndUpsertDocumentInBatch in syncCampaignUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+		}
+
+		batchedDocIDs := U.GetStringListAsBatch(allCampaignMemberIDs, 50)
+		for i := range batchedDocIDs {
+			paginatedObjectByID, err := salesforceDataClient.GetObjectRecordsByIDs(ps.ProjectID, model.SalesforceDocumentTypeNameCampaignMember, batchedDocIDs[i])
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to re-initialize salesforce data client in syncCampaignUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			var campaignRecords []model.SalesforceRecord
+			done = false
+			for !done {
+				campaignRecords, done, err = paginatedObjectByID.getNextBatch()
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to getNextBatch.")
+					salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+					return salesforceObjectStatus
+				}
+
+				err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, model.SalesforceDocumentTypeNameCampaignMember, campaignRecords)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to insert unsynced campaign related document on BuildAndUpsertDocument.")
+					salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				}
+			}
+			salesforceObjectStatus.TotalAPICalls[model.SalesforceDocumentTypeNameCampaignMember] += paginatedObjectByID.APICall
+		}
+	}
+
+	salesforceObjectStatus.TotalAPICalls["FieldsCampaignRecordsAPICalls"] = syncUsingFieldsAPICalls
+	salesforceObjectStatus.Failures = allFailures
+
+	return salesforceObjectStatus
+}
+
+func syncCampaignMemberUsingFields(ps *model.SalesforceProjectSettings, accessToken string, startTimestamp int64) ObjectStatus {
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": model.SalesforceDocumentTypeNameCampaignMember, "start_timestamp": startTimestamp})
+
+	var salesforceObjectStatus ObjectStatus
+	salesforceObjectStatus.ProjetID = ps.ProjectID
+	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameCampaignMember
+	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncCampaignMemberUsingFields")
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+
+	endTime := time.Now()
+	sfFormatedEndTime := endTime.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+
+	batchedIDs, fieldsIDAPICalls, err := getBatchedIDsForSyncUsingFields(salesforceDataClient, ps.ProjectID, model.SalesforceDocumentTypeNameCampaignMember, startTimestamp, endTime.Unix())
+	if err != nil {
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDAPICalls"] = fieldsIDAPICalls
+
+	var allFailures []string
+	syncUsingFieldsAPICalls := 0
+
+	allCampaignMemberIDs := make([]string, 0)
+	allCampaignIDs := make(map[string]bool, 0)
+
+	query := fmt.Sprintf("SELECT+FIELDS(ALL)+FROM+%s+WHERE+LastModifiedDate%s", model.SalesforceDocumentTypeNameCampaignMember, url.QueryEscape("<="+sfFormatedEndTime))
+	if startTimestamp > 0 {
+		t := time.Unix(startTimestamp, 0)
+		sfFormatedStartTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		query = query + "+" + fmt.Sprintf("AND+LastModifiedDate%s", url.QueryEscape(">="+sfFormatedStartTime))
+	}
+
+	for i := range batchedIDs {
+		queryURL := query + "+" + fmt.Sprintf("AND+Id+IN+(%s)+LIMIT+%d", "'"+strings.Join(batchedIDs[i], "','")+"'", BatchSizeForSyncUsingFields)
+		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, model.SalesforceDocumentTypeNameCampaignMember)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to initialize salesforce data client in syncCampaignMemberUsingFields.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+			return salesforceObjectStatus
+		}
+
+		var objectRecords []model.SalesforceRecord
+		done := false
+		for !done {
+			objectRecords, done, err = paginatedRecords.getNextBatch()
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to getNextBatch in syncCampaignMemberUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			for i := range objectRecords {
+				campaignID := util.GetPropertyValueAsString(objectRecords[i]["CampaignId"])
+
+				if campaignID != "" {
+					allCampaignIDs[campaignID] = true
+				} else {
+					logCtx.WithError(err).Error("Missing campaign Id from campaign member record.")
+				}
+
+				campaignMemberIDs := util.GetPropertyValueAsString(objectRecords[i]["Id"])
+				if campaignMemberIDs != "" {
+					allCampaignMemberIDs = append(allCampaignMemberIDs, campaignMemberIDs)
+				} else {
+					logCtx.WithError(err).Error("Missing campaign member Id from campaign member record.")
+				}
+			}
+
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, model.SalesforceDocumentTypeNameCampaignMember, objectRecords)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument documents in syncCampaignMemberUsingFields")
+				allFailures = append(allFailures, err.Error())
+			}
+
+			salesforceObjectStatus.TotalRecords += len(objectRecords)
+		}
+
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, allFailures...)
+		syncUsingFieldsAPICalls += paginatedRecords.APICall
+
+		// sync missing lead or contact id if not available from first date of data pull
+		campaignMemberRecords, recordObjectType, campaingMemberAPICalls, memberObjectAPICalls, err := getAllCampaignMemberContactAndLeadRecords(ps.ProjectID, allCampaignMemberIDs, accessToken, ps.InstanceURL)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to getAllCampaignMemberContactAndLeadRecords in syncCampaignMemberUsingFields")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+			return salesforceObjectStatus
+		}
+		salesforceObjectStatus.TotalAPICalls["CampaignMemberAPICalls"] = campaingMemberAPICalls
+		salesforceObjectStatus.TotalAPICalls["MemberObjectAPICalls"] = memberObjectAPICalls
+
+		objectRecordsMap := make(map[string][]model.SalesforceRecord, 0)
+		for i := range campaignMemberRecords {
+			if _, exist := objectRecordsMap[recordObjectType[i]]; !exist {
+				objectRecordsMap[recordObjectType[i]] = make([]model.SalesforceRecord, 0)
+			}
+			objectRecordsMap[recordObjectType[i]] = append(objectRecordsMap[recordObjectType[i]], campaignMemberRecords[i])
+		}
+
+		var failures []string
+		for objectName := range objectRecordsMap {
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, objectName, objectRecordsMap[objectName])
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to insert campaign members on BuildAndUpsertDocument.")
+				failures = append(failures, err.Error())
+			}
+		}
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
+
+		campaignIDs := U.GetKeysMapAsArray(allCampaignIDs)
+		batchedDocIDs := U.GetStringListAsBatch(campaignIDs, 50)
+		for i := range batchedDocIDs {
+			paginatedObjectByID, err := salesforceDataClient.GetObjectRecordsByIDs(ps.ProjectID, model.SalesforceDocumentTypeNameCampaign, batchedDocIDs[i])
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to re-initialize salesforce data client in syncCampaignMemberUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			var campaignRecords []model.SalesforceRecord
+			done = false
+			for !done {
+				campaignRecords, done, err = paginatedObjectByID.getNextBatch()
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to getNextBatch.")
+					salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+					return salesforceObjectStatus
+				}
+
+				err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, model.SalesforceDocumentTypeNameCampaign, campaignRecords)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to insert unsynced campaign related document on BuildAndUpsertDocument.")
+					salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				}
+			}
+			salesforceObjectStatus.TotalAPICalls[model.SalesforceDocumentTypeNameCampaign] += paginatedObjectByID.APICall
+		}
+	}
+
+	salesforceObjectStatus.TotalAPICalls["FieldsCampaignRecordsAPICalls"] = syncUsingFieldsAPICalls
+	salesforceObjectStatus.Failures = allFailures
+
+	return salesforceObjectStatus
+}
+
+func syncOpportunityContactRoleUsingFields(ps *model.SalesforceProjectSettings, accessToken string, startTimestamp int64) ObjectStatus {
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": model.SalesforceDocumentTypeNameOpportunityContactRole, "start_timestamp": startTimestamp})
+
+	var salesforceObjectStatus ObjectStatus
+	salesforceObjectStatus.ProjetID = ps.ProjectID
+	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameOpportunityContactRole
+	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
+	salesforceObjectStatus.Failures = make([]string, 0)
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncOpportunityContactRoleUsingFields.")
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+
+	endTime := time.Now()
+	sfFormatedEndTime := endTime.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+
+	batchedIDs, fieldsIDAPICalls, err := getBatchedIDsForSyncUsingFields(salesforceDataClient, ps.ProjectID, model.SalesforceDocumentTypeNameOpportunityContactRole, startTimestamp, endTime.Unix())
+	if err != nil {
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDAPICalls"] = fieldsIDAPICalls
+
+	syncUsingFieldsAPICalls := 0
+	query := fmt.Sprintf("SELECT+FIELDS(ALL)+FROM+%s+WHERE+LastModifiedDate%s", model.SalesforceDocumentTypeNameOpportunityContactRole, url.QueryEscape("<="+sfFormatedEndTime))
+	if startTimestamp > 0 {
+		t := time.Unix(startTimestamp, 0)
+		sfFormatedStartTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		query = query + "+" + fmt.Sprintf("AND+LastModifiedDate%s", url.QueryEscape(">="+sfFormatedStartTime))
+	}
+
+	for i := range batchedIDs {
+		queryURL := query + "+" + fmt.Sprintf("AND+Id+IN+(%s)+LIMIT+%d", "'"+strings.Join(batchedIDs[i], "','")+"'", BatchSizeForSyncUsingFields)
+		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, model.SalesforceDocumentTypeNameOpportunityContactRole)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to initialize salesforce data client in syncOpportunityContactRoleUsingFields.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+			return salesforceObjectStatus
+		}
+
+		var objectRecords []model.SalesforceRecord
+		done := false
+		for !done {
+			objectRecords, done, err = paginatedRecords.getNextBatch()
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to getNextBatch in syncOpportunityContactRoleUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, model.SalesforceDocumentTypeNameOpportunityContactRole, objectRecords)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocumentInBatch documents in syncOpportunityContactRoleUsingFields")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			salesforceObjectStatus.TotalRecords += len(objectRecords)
+		}
+
+		syncUsingFieldsAPICalls += paginatedRecords.APICall
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDRecordsAPICalls"] = syncUsingFieldsAPICalls
+
+	return salesforceObjectStatus
+}
+
+func syncActivitiesUsingFields(ps *model.SalesforceProjectSettings, objectName, accessToken string, startTimestamp int64) ObjectStatus {
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": objectName, "start_timestamp": startTimestamp})
+
+	var salesforceObjectStatus ObjectStatus
+	salesforceObjectStatus.ProjetID = ps.ProjectID
+	salesforceObjectStatus.DocType = objectName
+	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
+
+	if objectName != model.SalesforceDocumentTypeNameTask && objectName != model.SalesforceDocumentTypeNameEvent {
+		logCtx.Error("invalid doc_type in syncActivitiesUsingFields")
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, "invalid doc_type")
+		return salesforceObjectStatus
+	}
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncActivitiesUsingFields")
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+
+	endTime := time.Now()
+	sfFormatedEndTime := endTime.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+
+	batchedIDs, fieldsIDAPICalls, err := getBatchedIDsForSyncUsingFields(salesforceDataClient, ps.ProjectID, objectName, startTimestamp, endTime.Unix())
+	if err != nil {
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDAPICalls"] = fieldsIDAPICalls
+
+	var allFailures []string
+	syncUsingFieldsAPICalls := 0
+
+	allLeadIds := make([]string, 0)
+	allContactIds := make([]string, 0)
+
+	allowedObject := model.GetSalesforceDocumentTypeAlias(ps.ProjectID)
+
+	leadAllowed := false
+	if _, exist := allowedObject[model.SalesforceDocumentTypeNameLead]; exist {
+		leadAllowed = true
+	}
+
+	contactAllowed := false
+	if _, exist := allowedObject[model.SalesforceDocumentTypeNameContact]; exist {
+		contactAllowed = true
+	}
+
+	query := fmt.Sprintf("SELECT+FIELDS(ALL)+FROM+%s+WHERE+LastModifiedDate%s", objectName, url.QueryEscape("<="+sfFormatedEndTime))
+	if startTimestamp > 0 {
+		t := time.Unix(startTimestamp, 0)
+		sfFormatedStartTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		query = query + "+" + fmt.Sprintf("AND+LastModifiedDate%s", url.QueryEscape(">="+sfFormatedStartTime))
+	}
+
+	for i := range batchedIDs {
+		queryURL := query + "+" + fmt.Sprintf("AND+Id+IN+(%s)+LIMIT+%d", "'"+strings.Join(batchedIDs[i], "','")+"'", BatchSizeForSyncUsingFields)
+		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, objectName)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to initialize salesforce data client in syncActivitiesUsingFields.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+			return salesforceObjectStatus
+		}
+
+		var objectRecords []model.SalesforceRecord
+		done := false
+		for !done {
+			objectRecords, done, err = paginatedRecords.getNextBatch()
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to getNextBatch in syncActivitiesUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			leadIds, contactIds := getLeadIDAndContactIDForActivityRecords(ps.ProjectID, objectRecords)
+			allLeadIds = append(allLeadIds, leadIds...)
+			allContactIds = append(allContactIds, contactIds...)
+
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, objectName, objectRecords)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocumentInBatch documents in syncOpportunityUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			salesforceObjectStatus.TotalRecords += len(objectRecords)
+		}
+
+		syncUsingFieldsAPICalls += paginatedRecords.APICall
+	}
+
+	var anyFailure bool
+	var failures []string
+
+	var leadAPICalls int
+	if leadAllowed {
+		failures, leadAPICalls, anyFailure = syncMissingObjectsForSalesforceActivities(ps.ProjectID, allLeadIds, model.SalesforceDocumentTypeNameLead, accessToken, ps.InstanceURL)
+		if anyFailure {
+			allFailures = append(allFailures, failures...)
+		}
+	}
+
+	var contactAPICalls int
+	if contactAllowed {
+		failures, contactAPICalls, anyFailure = syncMissingObjectsForSalesforceActivities(ps.ProjectID, allContactIds, model.SalesforceDocumentTypeNameContact, accessToken, ps.InstanceURL)
+		if anyFailure {
+			allFailures = append(allFailures, failures...)
+		}
+	}
+
+	salesforceObjectStatus.TotalAPICalls[fmt.Sprintf("Fields%vRecordsAPICalls", objectName)] = syncUsingFieldsAPICalls
+	salesforceObjectStatus.TotalAPICalls[fmt.Sprintf("leadIDFor%sFieldsRecordsAPICalls", U.CapitalizeFirstLetter(objectName))] = leadAPICalls
+	salesforceObjectStatus.TotalAPICalls[fmt.Sprintf("contactIDFor%sFieldsRecordsAPICalls", U.CapitalizeFirstLetter(objectName))] = contactAPICalls
+
+	salesforceObjectStatus.Failures = allFailures
+	return salesforceObjectStatus
+}
+
+func syncUserUsingFields(ps *model.SalesforceProjectSettings, accessToken string, startTimestamp int64) ObjectStatus {
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": model.SalesforceDocumentTypeNameUser, "start_timestamp": startTimestamp})
+
+	var salesforceObjectStatus ObjectStatus
+	salesforceObjectStatus.ProjetID = ps.ProjectID
+	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameUser
+	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncUserUsingFields")
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+
+	endTime := time.Now()
+	sfFormatedEndTime := endTime.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+
+	batchedIDs, fieldsIDAPICalls, err := getBatchedIDsForSyncUsingFields(salesforceDataClient, ps.ProjectID, model.SalesforceDocumentTypeNameUser, startTimestamp, endTime.Unix())
+	if err != nil {
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+		return salesforceObjectStatus
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDAPICalls"] = fieldsIDAPICalls
+
+	var failures []string
+	syncUsingFieldsAPICalls := 0
+
+	query := fmt.Sprintf("SELECT+FIELDS(ALL)+FROM+%s+WHERE+LastModifiedDate%s", model.SalesforceDocumentTypeNameUser, url.QueryEscape("<="+sfFormatedEndTime))
+	if startTimestamp > 0 {
+		t := time.Unix(startTimestamp, 0)
+		sfFormatedStartTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		query = query + "+" + fmt.Sprintf("AND+LastModifiedDate%s", url.QueryEscape(">="+sfFormatedStartTime))
+	}
+
+	for i := range batchedIDs {
+		queryURL := query + "+" + fmt.Sprintf("AND+Id+IN+(%s)+LIMIT+%d", "'"+strings.Join(batchedIDs[i], "','")+"'", BatchSizeForSyncUsingFields)
+		paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, queryURL, model.SalesforceDocumentTypeNameUser)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to initialize salesforce data client in syncUserUsingFields.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+			return salesforceObjectStatus
+		}
+
+		var objectRecords []model.SalesforceRecord
+		done := false
+		for !done {
+			objectRecords, done, err = paginatedRecords.getNextBatch()
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to getNextBatch in syncUserUsingFields.")
+				salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
+				return salesforceObjectStatus
+			}
+
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, model.SalesforceDocumentTypeNameUser, objectRecords)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument documents in syncUserUsingFields")
+				failures = append(failures, err.Error())
+			}
+
+			salesforceObjectStatus.TotalRecords += len(objectRecords)
+		}
+
+		syncUsingFieldsAPICalls += paginatedRecords.APICall
+	}
+	salesforceObjectStatus.TotalAPICalls["FieldsIDRecordsAPICalls"] = syncUsingFieldsAPICalls
+	salesforceObjectStatus.Failures = failures
+
+	return salesforceObjectStatus
+}
+
+func syncByTypeUsingFields(ps *model.SalesforceProjectSettings, accessToken, objectName string, startTimestamp int64) (ObjectStatus, error) {
+	log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": objectName, "start_timestamp": startTimestamp}).Info("Using syncByTypeUsingFields")
+
+	switch objectName {
+	case model.SalesforceDocumentTypeNameAccount:
+		return syncAccountUsingFields(ps, accessToken, startTimestamp), nil
+	case model.SalesforceDocumentTypeNameOpportunity:
+		return syncOpporunityUsingFields(ps, accessToken, startTimestamp), nil
+	case model.SalesforceDocumentTypeNameContact:
+		return syncContactUsingFields(ps, accessToken, startTimestamp), nil
+	case model.SalesforceDocumentTypeNameLead:
+		return syncLeadUsingFields(ps, accessToken, startTimestamp), nil
+	case model.SalesforceDocumentTypeNameCampaign:
+		return syncCampaignUsingFields(ps, accessToken, startTimestamp), nil
+	case model.SalesforceDocumentTypeNameCampaignMember:
+		return syncCampaignMemberUsingFields(ps, accessToken, startTimestamp), nil
+	case model.SalesforceDocumentTypeNameOpportunityContactRole:
+		return syncOpportunityContactRoleUsingFields(ps, accessToken, startTimestamp), nil
+	case model.SalesforceDocumentTypeNameTask, model.SalesforceDocumentTypeNameEvent:
+		if (objectName == model.SalesforceDocumentTypeNameTask && config.IsAllowedSalesforceActivityTasksByProjectID(ps.ProjectID)) || (objectName == model.SalesforceDocumentTypeNameEvent && config.IsAllowedSalesforceActivityEventsByProjectID(ps.ProjectID)) {
+			return syncActivitiesUsingFields(ps, objectName, accessToken, startTimestamp), nil
+		}
+		return ObjectStatus{ProjetID: ps.ProjectID, DocType: objectName}, errors.New("activities sync not not supported for project")
+	case model.SalesforceDocumentTypeNameUser:
+		return syncUserUsingFields(ps, accessToken, startTimestamp), nil
+	default:
+		return ObjectStatus{ProjetID: ps.ProjectID, DocType: objectName}, errors.New("doc_type not supported for fields sync")
+	}
 }
 
 // SyncDocuments syncs from salesforce to database by doc type
@@ -1786,10 +2681,13 @@ func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]
 			syncAll = true
 		}
 
-		objectStatus, err := syncByType(ps, accessToken, docType, timestamp)
-		if docType == model.SalesforceDocumentTypeNameAccount && err == ErrRequestHeaderFieldsTooLarge && C.IsFieldsSyncAllowedForProjectID(ps.ProjectID) {
+		var objectStatus ObjectStatus
+		var err error
+		if C.IsFieldsSyncAllowedForProjectID(ps.ProjectID) {
 			log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": docType, "timestamp": timestamp}).Warn("Using syncByTypeUsingFields")
 			objectStatus, err = syncByTypeUsingFields(ps, accessToken, docType, timestamp)
+		} else {
+			objectStatus, err = syncByType(ps, accessToken, docType, timestamp)
 		}
 
 		if err != nil || len(objectStatus.Failures) != 0 {

@@ -150,17 +150,17 @@ function SmartEventsForm({
               data.property_evaluation_type == 'any'
                 ? []
                 : [
-                    {
-                      gen: 'curr',
-                      op: currOperator,
-                      value: currVal
-                    },
-                    {
-                      gen: 'last',
-                      op: lastOperator,
-                      value: lastVal
-                    }
-                  ]
+                  {
+                    gen: 'curr',
+                    op: currOperator,
+                    value: currVal
+                  },
+                  {
+                    gen: 'last',
+                    op: lastOperator,
+                    value: lastVal
+                  }
+                ]
           }
         ]
       }
@@ -531,7 +531,7 @@ function SmartEventsForm({
                           size='large'
                           className={'fa-input w-full'}
                           placeholder='Display Name'
-                          // ref={inputComponentRef}
+                        // ref={inputComponentRef}
                         />
                       </Form.Item>
                     </Col>

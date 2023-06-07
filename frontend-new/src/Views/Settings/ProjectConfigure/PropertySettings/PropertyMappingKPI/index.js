@@ -230,7 +230,7 @@ const PropertyMappingForm = ({
 
       <Row>
         <Col span={24}>
-          <div className='flex flex-col mt-8'>
+          <div className='flex flex-col mt-8' style={{minHeight: "450px"}}>
             <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Properties to Map</Text>
             <div className='flex items-center flex-wrap mr-10'>
               {queryList()}

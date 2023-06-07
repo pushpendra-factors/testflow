@@ -27,7 +27,8 @@ import {
   getHost,
   getPropType,
   propValueFormat,
-  sortColumn
+  sortNumericalColumn,
+  sortStringColumn
 } from '../utils';
 import {
   getProfileAccounts,
@@ -168,7 +169,6 @@ function AccountProfiles({
 
   useEffect(() => {
     const source = groupsList?.[0]?.[1] || '';
-
     updateAccountPayload({ source });
   }, [groupsList, updateAccountPayload]);
 
@@ -215,6 +215,7 @@ function AccountProfiles({
     activeProject.id,
     currentProjectSettings,
     accountPayload,
+    activeSegment,
     getProfileAccounts
   ]);
 
@@ -233,8 +234,8 @@ function AccountProfiles({
   }, [groupProperties, accountPayload?.source]);
 
   useEffect(() => {
-    const tableProps = accountPayload.segment_id
-      ? activeSegment.query.table_props
+    const tableProps = accountPayload?.segment_id
+      ? activeSegment?.query?.table_props
       : currentProjectSettings.timelines_config?.account_config?.table_props;
     const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
       listProperties,
@@ -268,7 +269,10 @@ function AccountProfiles({
       dataIndex: prop,
       key: prop,
       width: 280,
-      sorter: (a, b) => sortColumn(a[prop], b[prop]),
+      sorter: (a, b) =>
+        propType === 'numerical'
+          ? sortNumericalColumn(a[prop], b[prop])
+          : sortStringColumn(a[prop], b[prop]),
       render: (value) => (
         <Text type='title' level={7} extraClass='m-0' truncate>
           {value ? propValueFormat(prop, value, propType) : '-'}
@@ -287,7 +291,7 @@ function AccountProfiles({
         width: 300,
         fixed: 'left',
         ellipsis: true,
-        sorter: (a, b) => sortColumn(a.account.name, b.account.name),
+        sorter: (a, b) => sortStringColumn(a.account.name, b.account.name),
         render: (item) =>
           (
             <div className='flex items-center'>
@@ -322,7 +326,7 @@ function AccountProfiles({
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
-        sorter: (a, b) => sortColumn(a.score, b.score),
+        sorter: (a, b) => sortNumericalColumn(a.score, b.score),
         render: (status) =>
           status ? (
             <div
@@ -333,7 +337,7 @@ function AccountProfiles({
                 src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
                 alt=''
               />
-              <Text type='title' level={6} extraClass='m-0'>
+              <Text type='title' level={7} extraClass='m-0'>
                 {status}
               </Text>
             </div>
@@ -353,7 +357,7 @@ function AccountProfiles({
       key: 'lastActivity',
       width: 200,
       align: 'right',
-      sorter: (a, b) => sortColumn(a.lastActivity, b.lastActivity),
+      sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
       render: (item) => MomentTz(item).fromNow()
     });
     return columns;
@@ -392,12 +396,14 @@ function AccountProfiles({
     const opts = { ...accountPayload };
     opts.filters = filters;
     setAccountPayload(opts);
+    setActiveSegment(activeSegment, opts);
   };
 
   const clearFilters = () => {
     const opts = { ...accountPayload };
     opts.filters = [];
     setAccountPayload(opts);
+    setActiveSegment(activeSegment, opts);
   };
 
   // const selectGroup = () => (
@@ -422,9 +428,7 @@ function AccountProfiles({
         (obj) => obj.prop_name === option.prop_name
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListAccountProps(
-        checkListProps.sort((a, b) => b.enabled - a.enabled)
-      );
+      setCheckListAccountProps(checkListProps);
     } else {
       notification.error({
         message: 'Error',
@@ -448,7 +452,10 @@ function AccountProfiles({
       })
         .then(() => getSavedSegments(activeProject.id))
         .then(() =>
-          setActiveSegment((segment) => ({ ...segment, query: updatedQuery }))
+          setActiveSegment(
+            { ...activeSegment, query: updatedQuery },
+            accountPayload
+          )
         )
         .finally(() => setShowPopOver(false));
     } else {
@@ -791,19 +798,18 @@ function AccountProfiles({
 
     setListSearchItems(parsedValues);
     setAccountPayload(updatedPayload);
+    setActiveSegment(activeSegment, updatedPayload);
   };
 
   const onSearchClose = () => {
     setSearchBarOpen(false);
     setSearchDDOpen(false);
-
     if (Object.keys(accountPayload?.search_filter || {}).length !== 0) {
-      setAccountPayload((prevPayload) => ({
-        ...prevPayload,
-        search_filter: {}
-      }));
-
+      const updatedPayload = { ...accountPayload };
+      updatedPayload.search_filter = {};
+      setAccountPayload(updatedPayload);
       setListSearchItems([]);
+      setActiveSegment(activeSegment, updatedPayload);
     }
   };
 
@@ -904,7 +910,7 @@ function AccountProfiles({
         {renderPropertyFilter()}
       </div>
       <div className='flex items-center justify-between'>
-        {accountPayload.filters.length ? renderClearFilterButton() : null}
+        {accountPayload?.filters?.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}
       </div>

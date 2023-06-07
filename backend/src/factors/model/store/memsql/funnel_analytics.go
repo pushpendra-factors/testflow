@@ -532,7 +532,7 @@ func buildStepXToYJoinV2(stepName string, prevStepName string, previousCombinedU
 	stepXToYJoin := ""
 	if q.EventsCondition == model.EventCondFunnelAnyGivenEvent {
 		if isFunnelGroupQuery {
-			stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.group_user_id = %s.group_user_id",
+			stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_group_user_id = %s.coal_group_user_id",
 				stepName, previousCombinedUsersStepName, stepName)
 		} else {
 			stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id",
@@ -541,7 +541,7 @@ func buildStepXToYJoinV2(stepName string, prevStepName string, previousCombinedU
 
 	} else {
 		if isFunnelGroupQuery {
-			stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.group_user_id = %s.group_user_id WHERE %s.timestamp %s %s.timestamp",
+			stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_group_user_id = %s.coal_group_user_id WHERE %s.timestamp %s %s.timestamp",
 				stepName, previousCombinedUsersStepName, stepName, stepName, comparisonSymbol, previousCombinedUsersStepName)
 		} else {
 			stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id WHERE %s.timestamp %s %s.timestamp",
@@ -553,7 +553,7 @@ func buildStepXToYJoinV2(stepName string, prevStepName string, previousCombinedU
 	if i == 1 {
 		if q.EventsCondition == model.EventCondFunnelAnyGivenEvent {
 			if isFunnelGroupQuery {
-				stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.group_user_id = %s.group_user_id",
+				stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_group_user_id = %s.coal_group_user_id",
 					stepName, prevStepName, stepName)
 			} else {
 				stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id",
@@ -562,7 +562,7 @@ func buildStepXToYJoinV2(stepName string, prevStepName string, previousCombinedU
 
 		} else {
 			if isFunnelGroupQuery {
-				stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.group_user_id = %s.group_user_id WHERE %s.timestamp %s %s.timestamp",
+				stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_group_user_id = %s.coal_group_user_id WHERE %s.timestamp %s %s.timestamp",
 					stepName, prevStepName, stepName, stepName, comparisonSymbol, prevStepName)
 			} else {
 				stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id WHERE %s.timestamp %s %s.timestamp",
@@ -617,14 +617,14 @@ func buildStepXToYV2(stepXToYSelect string, prevStepName string, previousCombine
 
 	stepXToY := ""
 	if isFunnelGroupQuery {
-		stepXToY = fmt.Sprintf("SELECT %s FROM %s %s GROUP BY %s.group_user_id", stepXToYSelect, previousCombinedUsersStepName, stepXToYJoin, stepName)
+		stepXToY = fmt.Sprintf("SELECT %s FROM %s %s GROUP BY %s.coal_group_user_id", stepXToYSelect, previousCombinedUsersStepName, stepXToYJoin, stepName)
 	} else {
 		stepXToY = fmt.Sprintf("SELECT %s FROM %s %s GROUP BY %s.coal_user_id", stepXToYSelect, previousCombinedUsersStepName, stepXToYJoin, stepName)
 	}
 
 	if i == 1 {
 		if isFunnelGroupQuery {
-			stepXToY = fmt.Sprintf("SELECT %s FROM %s %s GROUP BY %s.group_user_id", stepXToYSelect, prevStepName, stepXToYJoin, stepName)
+			stepXToY = fmt.Sprintf("SELECT %s FROM %s %s GROUP BY %s.coal_group_user_id", stepXToYSelect, prevStepName, stepXToYJoin, stepName)
 		} else {
 			stepXToY = fmt.Sprintf("SELECT %s FROM %s %s GROUP BY %s.coal_user_id", stepXToYSelect, prevStepName, stepXToYJoin, stepName)
 		}
@@ -656,20 +656,20 @@ func buildAddSelectForFunnelGroup(stepName string, stepIndex int, groupID, scope
 
 	isGroupEventUser := groupID > 0
 	if !isGroupEventUser {
-		addSelect := fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as group_user_id,"+
+		addSelect := fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as coal_group_user_id,"+
 			" FIRST(events.timestamp, FROM_UNIXTIME(events.timestamp)) as timestamp, 1 as %s", scopeGroupID, scopeGroupID, stepName)
 
 		if stepIndex > 0 {
-			addSelect = fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as group_user_id, events.timestamp, 1 as %s", scopeGroupID, scopeGroupID, stepName)
+			addSelect = fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as coal_group_user_id, events.timestamp, 1 as %s", scopeGroupID, scopeGroupID, stepName)
 		}
 		return addSelect
 	}
 
 	// scopeGroupID not required as group events user_id is group user id.
-	addSelect := fmt.Sprintf("events.user_id as group_user_id, FIRST(events.timestamp, "+
+	addSelect := fmt.Sprintf("events.user_id as coal_group_user_id, FIRST(events.timestamp, "+
 		"FROM_UNIXTIME(events.timestamp)) as timestamp, 1 as %s", stepName)
 	if stepIndex > 0 {
-		addSelect = fmt.Sprintf("events.user_id as group_user_id, events.timestamp, 1 as %s", stepName)
+		addSelect = fmt.Sprintf("events.user_id as coal_group_user_id, events.timestamp, 1 as %s", stepName)
 	}
 
 	return addSelect
@@ -689,8 +689,8 @@ func buildAddJoinForFunnelGroup(projectID int64, groupID, scopeGroupID int, sour
 			addSelect := fmt.Sprintf(" LEFT JOIN users ON events.user_id = users.id AND users.project_id = ? LEFT JOIN "+
 				"users AS user_groups ON users.customer_user_id = user_groups.customer_user_id AND "+
 				"user_groups.project_id = ? AND user_groups.group_%d_user_id IS NOT NULL AND user_groups.source = ? "+
-				"LEFT JOIN users AS group_users ON user_groups.group_%d_user_id = group_users.id AND group_users.project_id = ? AND "+
-				"group_users.source = ? ", scopeGroupID, scopeGroupID)
+				"LEFT JOIN users AS group_users ON COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) = group_users.id AND group_users.project_id = ? AND "+
+				"group_users.source = ? ", scopeGroupID, scopeGroupID, scopeGroupID)
 			return addSelect, []interface{}{projectID, projectID, model.GroupUserSource[source], projectID, model.GroupUserSource[source]}
 		}
 
@@ -1226,9 +1226,9 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 		var groupBy string
 		if isFunnelGroupQuery {
 			if i == 0 || q.EventsCondition == model.EventCondFunnelAnyGivenEvent {
-				groupBy = "group_user_id"
+				groupBy = "coal_group_user_id"
 			} else {
-				groupBy = "group_user_id,timestamp"
+				groupBy = "coal_group_user_id,timestamp"
 			}
 		} else if i == 0 || q.EventsCondition == model.EventCondFunnelAnyGivenEvent {
 			groupBy = "coal_user_id"
@@ -1258,7 +1258,7 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 
 		stepXToYSelect := fmt.Sprintf("%s.coal_user_id, FIRST(%s.user_id, FROM_UNIXTIME(%s.timestamp)) as user_id, FIRST(%s.timestamp, FROM_UNIXTIME(%s.timestamp)) as timestamp, %s", stepName, stepName, stepName, stepName, stepName, stepName)
 		if isFunnelGroupQuery {
-			stepXToYSelect = fmt.Sprintf("%s.group_user_id, FIRST(%s.timestamp, "+
+			stepXToYSelect = fmt.Sprintf("%s.coal_group_user_id, FIRST(%s.timestamp, "+
 				"FROM_UNIXTIME(%s.timestamp)) as timestamp, %s", stepName, stepName, stepName, stepName)
 		} else if isSessionAnalysisReqBool && i >= int(q.SessionStartEvent)-1 && i < int(q.SessionEndEvent) {
 			stepXToYSelect = fmt.Sprintf("%s.coal_user_id, FIRST(%s.user_id, FROM_UNIXTIME(%s.timestamp)) as user_id, FIRST(%s.timestamp, FROM_UNIXTIME(%s.timestamp)) as timestamp,"+
@@ -1307,7 +1307,7 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 		if i > 0 {
 			if isFunnelGroupQuery {
 				stepsJoinStmnt = appendStatement(stepsJoinStmnt,
-					fmt.Sprintf("LEFT JOIN %s ON %s.group_user_id=%s.group_user_id", fs, funnelSteps[i-1], fs))
+					fmt.Sprintf("LEFT JOIN %s ON %s.coal_group_user_id=%s.coal_group_user_id", fs, funnelSteps[i-1], fs))
 			} else {
 				// builds "LEFT JOIN step2 on step0_users.coal_user_id=step_0_step_1_users.coal_user_id"
 				stepsJoinStmnt = appendStatement(stepsJoinStmnt,

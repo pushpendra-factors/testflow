@@ -204,6 +204,8 @@ func main() {
 	teamsApplicationID := flag.String("teams_application_id", "", "")
 	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 	allowEventAnalyticsGroupsByProjectID := flag.String("allow_event_analytics_groups_by_project_id", "", "")
+	enableScoreByProjectID := flag.String("enable_score_by_project_id", "", "List of projectIds with scoring enabled.")
+
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -357,6 +359,7 @@ func main() {
 		TeamsApplicationID:                             *teamsApplicationID,
 		EnableSyncReferenceFieldsByProjectID:           *enableSyncReferenceFieldsByProjectID,
 		AllowEventAnalyticsGroupsByProjectID:           *allowEventAnalyticsGroupsByProjectID,
+		EnableScoringByProjectID:                       *enableScoreByProjectID,
 	}
 	C.InitConf(config)
 

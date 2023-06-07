@@ -188,9 +188,8 @@ const NoBreakdownChartsComponent = forwardRef(
         </div>
       );
     } else if (chartType === CHART_TYPE_METRIC_CHART) {
-      console.log(aggregateData);
       chart = (
-        <div className='w-full'>
+        <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12'>
           {aggregateData &&
             aggregateData.map((eachAggregateData, eachIndex) => {
               return (

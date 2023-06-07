@@ -29,10 +29,15 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
+import { fetchGroups } from 'Reducers/coreQuery/services';
+import { getGroupProperties } from 'Reducers/coreQuery/middleware';
 
 function AccountDetails({
   accountDetails,
   activeProject,
+  fetchGroups,
+  groupOpts,
+  getGroupProperties,
   currentProjectSettings,
   fetchProjectSettings,
   udpateProjectSettings,
@@ -57,7 +62,10 @@ function AccountDetails({
   const [timelineViewMode, setTimelineViewMode] = useState('birdview');
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
-  const availableGroups = useSelector((state) => state.groups.data);
+
+  useEffect(() => {
+    fetchGroups(activeProject?.id, true);
+  }, [activeProject?.id]);
 
   useEffect(() => {
     return () => {
@@ -80,6 +88,7 @@ function AccountDetails({
     const id = atob(location.pathname.split('/').pop());
     const group = params.group;
     const view = params.view;
+    document.title = 'Accounts' + ' - FactorsAI';
     return [id, group, view];
   }, [location]);
 
@@ -140,12 +149,18 @@ function AccountDetails({
   }, [currentProjectSettings, accountDetails]);
 
   useEffect(() => {
+    Object.keys(groupOpts || {}).forEach((group) =>
+      getGroupProperties(activeProject.id, group)
+    );
+  }, [activeProject.id, groupOpts]);
+
+  useEffect(() => {
     const mergedProps = [];
     const filterProps = {};
 
-    Object.keys(availableGroups).forEach((group) => {
-      mergedProps.push(...groupProperties[group]);
-      filterProps[group] = groupProperties[group];
+    Object.keys(groupOpts || {}).forEach((group) => {
+      mergedProps.push(...(groupProperties?.[group] || []));
+      filterProps[group] = groupProperties?.[group];
     });
 
     const groupProps = Object.entries(filterProps).map(([group, values]) => ({
@@ -153,10 +168,9 @@ function AccountDetails({
       icon: group,
       values
     }));
-
     setListProperties(mergedProps);
     setFilterProperties(groupProps);
-  }, [groupProperties, availableGroups]);
+  }, [groupProperties, groupOpts]);
 
   useEffect(() => {
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
@@ -211,9 +225,7 @@ function AccountDetails({
         (obj) => obj.prop_name === option.prop_name
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListMilestones(
-        checkListProps.sort((a, b) => b.enabled - a.enabled)
-      );
+      setCheckListMilestones(checkListProps);
     } else {
       notification.error({
         message: 'Error',
@@ -247,7 +259,7 @@ function AccountDetails({
         key='events'
       >
         <SearchCheckList
-          placeholder='Search Events'
+          placeholder='Select Events to Show'
           mapArray={activities}
           titleKey='display_name'
           checkedKey='enabled'
@@ -259,7 +271,7 @@ function AccountDetails({
         key='properties'
       >
         <SearchCheckList
-          placeholder='Search Properties'
+          placeholder='Select a User Property'
           mapArray={checkListUserProps}
           titleKey='display_name'
           checkedKey='enabled'
@@ -479,7 +491,7 @@ function AccountDetails({
           <Popover
             overlayClassName='fa-activity--filter'
             placement='bottomLeft'
-            trigger='hover'
+            trigger='click'
             content={controlsPopover}
           >
             <Button
@@ -490,7 +502,11 @@ function AccountDetails({
               <SVG name='activity_filter' />
             </Button>
           </Popover>
-          <Dropdown overlay={granularityMenu} placement='bottomRight'>
+          <Dropdown
+            overlay={granularityMenu}
+            placement='bottomRight'
+            trigger={['click']}
+          >
             <Button type='text' className='flex items-center'>
               {granularity}
               <SVG name='caretDown' size={16} extraClass='ml-1' />
@@ -557,6 +573,7 @@ function AccountDetails({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
+  groupOpts: state.groups.data,
   accountDetails: state.timelines.accountDetails,
   userProperties: state.coreQuery.userProperties,
   groupProperties: state.coreQuery.groupProperties,
@@ -566,6 +583,8 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
+      fetchGroups,
+      getGroupProperties,
       getProfileAccountDetails,
       fetchProjectSettings,
       udpateProjectSettings

@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jinzhu/gorm/dialects/postgres"
-
 	"github.com/jinzhu/gorm"
 	"github.com/rs/xid"
 	log "github.com/sirupsen/logrus"
@@ -1535,7 +1533,7 @@ func (store *MemSQL) CreateResultInDB(result interface{}, projectId int64, dashb
 		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult.")
 		return http.StatusInternalServerError, "Failed to encode dashboardCacheResult."
 	}
-	resJson := &postgres.Jsonb{json.RawMessage(resMarshalled)}
+	// resJson := &postgres.Jsonb{json.RawMessage(resMarshalled)}
 
 	resultWarpper := model.DashQueryResult{
 		ID:              U.GetUUID(),
@@ -1545,7 +1543,7 @@ func (store *MemSQL) CreateResultInDB(result interface{}, projectId int64, dashb
 		QueryID:         queryId,
 		FromT:           from,
 		ToT:             to,
-		Result:          *resJson,
+		Result:          resMarshalled,
 		IsDeleted:       false,
 		ComputedAt:      U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 		//Timezone:    string(timezoneString)

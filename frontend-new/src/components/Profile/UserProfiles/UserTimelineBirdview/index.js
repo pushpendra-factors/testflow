@@ -29,6 +29,9 @@ function UserTimelineBirdview({
 
   const groupedActivities = _.groupBy(activities, groups[granularity]);
 
+  document.title = 'People' + ' - FactorsAI';
+  
+
   useEffect(() => {
     if (collapse !== undefined) {
       const showAllState = new Array(

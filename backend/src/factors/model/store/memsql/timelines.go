@@ -547,20 +547,21 @@ func FormatProfilesStruct(profiles []model.Profile, profileType string, tablePro
 			profiles[index].TableProps = filterTableProps
 
 			// Filter Company Name and Hostname
-			for _, prop := range companyNameProps {
-				if profiles[index].Name != "" {
-					break
-				}
-				if name, exists := (*properties)[prop]; exists {
-					profiles[index].Name = fmt.Sprintf("%s", name)
+			nameProps := append(companyNameProps, hostNameProps...)
+
+			for _, prop := range nameProps {
+				if profiles[index].Name == "" {
+					if name, exists := (*properties)[prop]; exists {
+						profiles[index].Name = fmt.Sprintf("%s", name)
+					}
 				}
 			}
+
 			for _, prop := range hostNameProps {
-				if profiles[index].HostName != "" {
-					break
-				}
-				if hostname, exists := (*properties)[prop]; exists {
-					profiles[index].HostName = fmt.Sprintf("%s", hostname)
+				if profiles[index].HostName == "" {
+					if hostname, exists := (*properties)[prop]; exists {
+						profiles[index].HostName = fmt.Sprintf("%s", hostname)
+					}
 				}
 			}
 		}
@@ -1193,18 +1194,20 @@ func (store *MemSQL) GetAccountsAssociatedToDomain(projectID int64, id string, d
 
 func FormatAccountDetails(projectID int64, propertiesDecoded map[string]interface{},
 	groupName string) model.AccountDetails {
-	var nameProps, hostNameProps []string
+	var companyNameProps, hostNameProps []string
 	var accountDetails model.AccountDetails
+
 	if C.IsDomainEnabled(projectID) && groupName != "All" {
 		if model.IsAllowedAccountGroupNames(groupName) {
 			hostNameProps = []string{model.HostNameGroup[groupName]}
-			nameProps = []string{model.AccountNames[groupName]}
+			companyNameProps = []string{model.AccountNames[groupName], U.UP_COMPANY}
 		}
-		nameProps = append(nameProps, U.UP_COMPANY)
 	} else {
-		nameProps = model.NameProps
+		companyNameProps = model.NameProps
 		hostNameProps = model.HostNameProps
 	}
+
+	nameProps := append(companyNameProps, hostNameProps...)
 	for _, prop := range nameProps {
 		if name, exists := (propertiesDecoded)[prop]; exists {
 			accountDetails.Name = fmt.Sprintf("%s", name)

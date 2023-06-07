@@ -16,7 +16,7 @@ type Profile struct {
 	LastActivity time.Time              `json:"last_activity"`
 	TableProps   map[string]interface{} `json:"table_props"`
 	Score        float64                `json:"score"`
-	Engagement   string                 `json:"engagement"`
+	Engagement   string                 `json:"engagement,omitempty"`
 }
 
 type ContactDetails struct {
@@ -124,8 +124,8 @@ var AccountNames = map[string]string{
 }
 
 // host and company name list
-var NameProps []string = []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME, U.LI_LOCALIZED_NAME}
-var HostNameProps []string = []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE, U.SIX_SIGNAL_DOMAIN, U.LI_DOMAIN}
+var NameProps = []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME, U.LI_LOCALIZED_NAME}
+var HostNameProps = []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE, U.SIX_SIGNAL_DOMAIN, U.LI_DOMAIN}
 
 // Hover Events Property Map
 var HOVER_EVENTS_NAME_PROPERTY_MAP = map[string][]string{

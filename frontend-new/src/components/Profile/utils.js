@@ -23,7 +23,7 @@ export const granularityOptions = [
   'Monthly'
 ];
 
-export const TIMELINE_VIEW_OPTIONS = ['timeline', 'birdview']
+export const TIMELINE_VIEW_OPTIONS = ['timeline', 'birdview'];
 
 export const groups = {
   Timestamp: (item) =>
@@ -127,7 +127,8 @@ export const formatFiltersForPayload = (filters = [], returnArray) => {
 
   filterProps.forEach((filter) => {
     let groupName =
-      filterPrefix.find((elem) => filter.pr.toLowerCase().includes(elem)) || 'users';
+      filterPrefix.find((elem) => filter.pr.toLowerCase().includes(elem)) ||
+      'users';
     groupName = groupName === '$li_' ? '$linkedin_company' : groupName;
 
     if (!filtersMap[groupName]) {
@@ -572,8 +573,10 @@ export const EngagementTag = {
   }
 };
 
-export const sortColumn = (a = '', b = '') => {
+export const sortStringColumn = (a = '', b = '') => {
   const compareA = typeof a === 'string' ? a.toLowerCase() : a;
   const compareB = typeof b === 'string' ? b.toLowerCase() : b;
   return compareB > compareA ? 1 : compareA > compareB ? -1 : 0;
 };
+
+export const sortNumericalColumn = (a = 0, b = 0) => a - b;

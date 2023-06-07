@@ -1214,6 +1214,7 @@ function CustomKPI({
                         </Text>
                       </Col>
                     </Row>
+                    <div style={{minHeight: "500px"}}>
                     <div className='mt-4 border rounded-lg'>
                       <Row className='m-0 ml-4 my-2'>
                         <Col span={18}>
@@ -1272,6 +1273,7 @@ function CustomKPI({
                           </Form.Item>
                         </Col>
                       </Row>
+                    </div>
                     </div>
                   </>
                 ) : (

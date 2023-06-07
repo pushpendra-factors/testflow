@@ -6,6 +6,7 @@ export type OptionType = {
   labelNode?: ReactNode;
   isSelected?: boolean;
   isDisabled?: boolean;
+  extraProps?: any;
 };
 export type Variant = 'Single' | 'Multi';
 

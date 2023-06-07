@@ -191,7 +191,6 @@ const MultipleEventsWithBreakdown = forwardRef(
         </div>
       );
     } else if (chartType === CHART_TYPE_METRIC_CHART) {
-      console.log(visibleSeriesData);
       chart = (
         <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12'>
           {visibleSeriesData &&

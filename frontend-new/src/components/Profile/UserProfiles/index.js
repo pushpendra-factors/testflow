@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Table,
   Button,
@@ -39,7 +39,8 @@ import {
   getPropType,
   iconColors,
   propValueFormat,
-  sortColumn
+  sortStringColumn,
+  sortNumericalColumn,
 } from '../utils';
 import {
   getProfileUsers,
@@ -116,10 +117,10 @@ function UserProfiles({
   const [searchDDOpen, setSearchDDOpen] = useState(false);
   // const [isUserDDVisible, setUserDDVisible] = useState(false);
   // const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  // const [isModalVisible, setIsModalVisible] = useState(false);
   const [demoProjectId, setDemoProjectId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeUser, setActiveUser] = useState({});
+  // const [activeUser, setActiveUser] = useState({});
   const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
@@ -213,8 +214,8 @@ function UserProfiles({
     integration?.int_rudderstack;
 
   useEffect(() => {
-    const tableProps = timelinePayload.segment_id
-      ? activeSegment.query.table_props
+    const tableProps = timelinePayload?.segment_id
+      ? activeSegment?.query?.table_props
       : currentProjectSettings.timelines_config?.user_config?.table_props;
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
       userProperties,
@@ -230,7 +231,7 @@ function UserProfiles({
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
 
-  const getColumns = () => {
+  const { tableProperties, tableColumns } = useMemo(() => {
     const columns = [
       {
         title: <div className={headerClassStr}>Identity</div>,
@@ -239,7 +240,7 @@ function UserProfiles({
         key: 'identity',
         fixed: 'left',
         ellipsis: true,
-        sorter: (a, b) => sortColumn(a.identity.id, b.identity.id),
+        sorter: (a, b) => sortStringColumn(a.identity.id, b.identity.id),
         render: (identity) => (
           <div className='flex items-center'>
             {identity.isAnonymous ? (
@@ -282,7 +283,7 @@ function UserProfiles({
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
-        sorter: (a, b) => sortColumn(a.score, b.score),
+        sorter: (a, b) => sortNumericalColumn(a.score, b.score),
         render: (status) =>
           status ? (
             <div
@@ -293,7 +294,7 @@ function UserProfiles({
                 src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
                 alt=''
               />
-              <Text type='title' level={6} extraClass='m-0'>
+              <Text type='title' level={7} extraClass='m-0'>
                 {status}
               </Text>
             </div>
@@ -303,9 +304,10 @@ function UserProfiles({
       });
     }
 
-    const tableProps = timelinePayload.segment_id
-      ? activeSegment.query.table_props
+    const tableProps = timelinePayload?.segment_id
+      ? activeSegment?.query?.table_props
       : currentProjectSettings?.timelines_config?.user_config?.table_props;
+
     tableProps?.forEach((prop) => {
       const propDisplayName = userPropNames[prop]
         ? userPropNames[prop]
@@ -328,7 +330,10 @@ function UserProfiles({
         dataIndex: prop,
         key: prop,
         width: 260,
-        sorter: (a, b) => sortColumn(a[prop], b[prop]),
+        sorter: (a, b) =>
+          propType === 'numerical'
+            ? sortNumericalColumn(a[prop], b[prop])
+            : sortStringColumn(a[prop], b[prop]),
         render: (value) => (
           <Text type='title' level={7} extraClass='m-0' truncate>
             {value ? propValueFormat(prop, value, propType) : '-'}
@@ -336,18 +341,19 @@ function UserProfiles({
         )
       });
     });
+
     columns.push({
       title: <div className={headerClassStr}>Last Activity</div>,
       dataIndex: 'lastActivity',
       key: 'lastActivity',
       width: 200,
       align: 'right',
-      sorter: (a, b) => sortColumn(a.lastActivity, b.lastActivity),
+      sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
       defaultSortOrder: 'ascend',
       render: (item) => MomentTz(item).fromNow()
     });
-    return columns;
-  };
+    return { tableProperties: tableProps, tableColumns: columns };
+  }, [contacts?.data, currentProjectSettings, timelinePayload, activeSegment]);
 
   const getTableData = (data) => {
     const tableData = data?.map((row) => {
@@ -359,13 +365,13 @@ function UserProfiles({
     return tableData;
   };
 
-  const showModal = () => {
-    setIsModalVisible(true);
-  };
+  // const showModal = () => {
+  //   setIsModalVisible(true);
+  // };
 
-  const handleCancel = () => {
-    setIsModalVisible(false);
-  };
+  // const handleCancel = () => {
+  //   setIsModalVisible(false);
+  // };
 
   // const onChange = (val) => {
   //   if (val[1] !== timelinePayload.source) {
@@ -381,12 +387,14 @@ function UserProfiles({
     const opts = { ...timelinePayload };
     opts.filters = filters;
     setTimelinePayload(opts);
+    setActiveSegment(activeSegment, opts);
   };
 
   const clearFilters = () => {
     const opts = { ...timelinePayload };
     opts.filters = [];
     setTimelinePayload(opts);
+    setActiveSegment(activeSegment, opts);
   };
 
   useEffect(() => {
@@ -396,6 +404,7 @@ function UserProfiles({
   }, [
     activeProject.id,
     timelinePayload,
+    activeSegment,
     currentProjectSettings,
     segments,
     getProfileUsers
@@ -581,9 +590,7 @@ function UserProfiles({
         (obj) => obj.prop_name === option.prop_name
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListUserProps(
-        checkListProps.sort((a, b) => b.enabled - a.enabled)
-      );
+      setCheckListUserProps(checkListProps);
     } else {
       notification.error({
         message: 'Error',
@@ -595,16 +602,16 @@ function UserProfiles({
 
   const applyTableProps = () => {
     if (timelinePayload?.segment_id?.length) {
-      const query = { ...activeSegment.query };
-      query.table_props = checkListUserProps
+      const updatedQuery = { ...activeSegment.query };
+      updatedQuery.table_props = checkListUserProps
         .filter((item) => item.enabled === true)
         .map((item) => item?.prop_name);
       updateSegmentForId(activeProject.id, timelinePayload.segment_id, {
-        query: { ...query }
+        query: { ...updatedQuery }
       })
         .then(() => getSavedSegments(activeProject.id))
         .then(() =>
-          setActiveSegment({ ...activeSegment, query }, timelinePayload)
+          setActiveSegment({ ...activeSegment, updatedQuery }, timelinePayload)
         );
     } else {
       const config = { ...tlConfig };
@@ -687,7 +694,6 @@ function UserProfiles({
         source={timelinePayload.source}
         filters={timelinePayload.filters}
         setFilters={setFilters}
-        onFiltersLoad={[() => getUserProperties(activeProject.id)]}
       />
     </div>
   );
@@ -725,6 +731,7 @@ function UserProfiles({
     payload.search_filter = formatFiltersForPayload([searchFilter], false);
     setListSearchItems(searchFilter.values);
     setTimelinePayload(payload);
+    setActiveSegment(activeSegment, payload);
   };
 
   const searchUsers = () => (
@@ -763,6 +770,7 @@ function UserProfiles({
       payload.search_filter = {};
       setListSearchItems([]);
       setTimelinePayload(payload);
+      setActiveSegment(activeSegment, payload);
     }
   };
 
@@ -852,13 +860,11 @@ function UserProfiles({
         })}
         className='fa-table--userlist'
         dataSource={getTableData(contacts.data)}
-        columns={getColumns()}
+        columns={tableColumns}
         rowClassName='cursor-pointer'
         pagination={{ position: ['bottom', 'left'], defaultPageSize: '25' }}
         scroll={{
-          x:
-            currentProjectSettings?.timelines_config?.user_config?.table_props
-              ?.length * 250
+          x: tableProperties?.length * 250
         }}
       />
       <div className='flex flex-row-reverse mt-4'></div>

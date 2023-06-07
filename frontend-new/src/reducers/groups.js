@@ -5,7 +5,7 @@ import {
 } from './types';
 
 const initialState = {
-  data: []
+  data: {}
 };
 
 export default function (state = initialState, action) {
