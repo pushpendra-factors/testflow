@@ -1029,6 +1029,101 @@ func SyncOwnerReferenceFields(projectID int64, propertiesMetaMap map[string][]Pr
 	return failures
 }
 
+type Stage struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
+type DealPipeline struct {
+	ID     string  `json:"id"`
+	Label  string  `json:"label"`
+	Stages []Stage `json:"stages"`
+}
+
+func GetHubspotDealStagesAndPipelines(apiKey, refreshToken string) ([]DealPipeline, error) {
+	if apiKey == "" && refreshToken == "" {
+		return nil, errors.New("missing api key and refresh token on GetHubspotDealStagesAndPipelines")
+	}
+
+	var accessToken string
+	var err error
+	if refreshToken != "" {
+		accessToken, err = model.GetHubspotAccessToken(refreshToken, C.GetHubspotAppID(), C.GetHubspotAppSecret())
+		if err != nil {
+			return nil, err
+		}
+		apiKey = ""
+	}
+
+	url := "https://api.hubapi.com/crm/v3/pipelines/deals?"
+	resp, err := model.ActionHubspotRequestHandler("GET", url, apiKey, accessToken, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		var body interface{}
+		json.NewDecoder(resp.Body).Decode(&body)
+		log.WithFields(log.Fields{"resp_body": body}).Error("Failed to GetHubspotDealStagesAndPipelines")
+		return nil, fmt.Errorf("error while query data %s ", body)
+	}
+
+	var dealStagesAndPipelines []DealPipeline
+	err = json.NewDecoder(resp.Body).Decode(&dealStagesAndPipelines)
+	if err != nil {
+		return nil, err
+	}
+
+	return dealStagesAndPipelines, nil
+}
+
+func syncHubspotDealStageAndPipeline(projectID int64, apiKey, refreshToken string) bool {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	failures := false
+
+	if projectID == 0 || (apiKey == "" && refreshToken == "") {
+		logCtx.Error("Invalid parameters on syncHubspotDealStageAndPipeline")
+		return true
+	}
+
+	dealPipelines, err := GetHubspotDealStagesAndPipelines(apiKey, refreshToken)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get deal stage and pipeline.")
+		return true
+	}
+
+	for i := range dealPipelines {
+		if dealPipelines[i].ID != "" && dealPipelines[i].Label != "" {
+			propertyKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameDeal, "pipeline")
+			status := store.GetStore().CreateOrUpdateDisplayNameLabel(projectID, model.SmartCRMEventSourceHubspot, propertyKey, dealPipelines[i].ID, dealPipelines[i].Label)
+			if status == http.StatusBadRequest || status == http.StatusInternalServerError {
+				logCtx.WithFields(log.Fields{"key": propertyKey, "value": dealPipelines[i].ID, "label": dealPipelines[i].Label}).
+					Error("Failed to create or update display name label from deal pipeline")
+				failures = true
+				continue
+			}
+		}
+
+		for _, dealStage := range dealPipelines[i].Stages {
+			if dealStage.ID == "" || dealStage.Label == "" {
+				continue
+			}
+
+			propertyKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameDeal, "dealstage")
+			status := store.GetStore().CreateOrUpdateDisplayNameLabel(projectID, model.SmartCRMEventSourceHubspot, propertyKey, dealStage.ID, dealStage.Label)
+			if status == http.StatusBadRequest || status == http.StatusInternalServerError {
+				logCtx.WithFields(log.Fields{"key": propertyKey, "value": dealStage.ID, "label": dealStage.Label}).
+					Error("Failed to create or update display name label from deal stage")
+				failures = true
+				continue
+			}
+		}
+	}
+
+	return failures
+}
+
 func SyncReferenceField(projectID int64, apiKey, refreshToken string, hubspotAllowedDocTypes []string, recordsMaxCreatedAtSec int64) bool {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
@@ -1079,6 +1174,13 @@ func SyncReferenceField(projectID int64, apiKey, refreshToken string, hubspotAll
 		failures = true
 	}
 	log.Info(fmt.Sprintf("Synced engagement call disposition for project %d", projectID))
+
+	log.Info(fmt.Sprintf("Starting sync deal stage and pipeline for project %d", projectID))
+	dealStageAndPipelineFailures := syncHubspotDealStageAndPipeline(projectID, apiKey, refreshToken)
+	if dealStageAndPipelineFailures {
+		failures = true
+	}
+	log.Info(fmt.Sprintf("Synced deal stage and pipeline for project %d", projectID))
 
 	return failures
 }

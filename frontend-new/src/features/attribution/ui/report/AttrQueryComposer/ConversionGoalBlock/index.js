@@ -77,7 +77,8 @@ function ConversionGoalBlock({
             item.label,
             item.value,
             item.category,
-            item.group
+            item.group,
+            item.kpi_query_type
           ]);
         });
         groupedList.push(propertyObj);
@@ -334,6 +335,9 @@ function ConversionGoalBlock({
       }
       if (val[3]) {
         currentEventGoal.group = val[3];
+      }
+      if(val[4]) {
+        currentEventGoal.qt = val[4];
       }
     }
     eventGoalChange(currentEventGoal);
