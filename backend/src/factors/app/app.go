@@ -103,7 +103,7 @@ func main() {
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	useSentryRollup := flag.Bool("use_sentry_rollup", false, "Enables rollup support for sentry")
-	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 300, "Enables to send errors to sentry in given interval.")
+	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 60, "Enables to send errors to sentry in given interval.")
 
 	skipTrackProjectIds := flag.String("skip_track_project_ids", "", "List or projects to skip track")
 	lookbackWindowForEventUserCache := flag.Int("lookback_window_event_user_cache",

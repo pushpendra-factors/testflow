@@ -1338,18 +1338,22 @@ func sendErrorsToSentry(appName string) {
 			case <-ticker.C:
 				errorsMap := ForkLogErrors()
 				for message, Info := range errorsMap {
-					sentry.NewScope().SetTags(map[string]string{
-						SENTRY_APP_KEY:        appName,
-						SENTRY_OCCURRENCE_KEY: strconv.Itoa(Info.occurences),
-						"data_store":          GetPrimaryDatastore(),
-					})
-					for key, value := range Info.Fields {
-						ctx := context.Background()
-						hub := sentry.GetHubFromContext(ctx)
-						hub.Scope().SetTag(key, value.(string))
+					event := sentry.NewEvent()
+					event.Level = sentry.LevelError
+					event.Message = message
+					event.Environment = configuration.Env
+					event.Tags = map[string]string{
+						SENTRY_APP_KEY: appName,
 					}
-					sentry.CaptureMessage(message)
+
+					for key, value := range Info.Fields {
+						Info.Fields[key] = fmt.Sprintf("%+v", value)
+					}
+					event.Extra = Info.Fields
+
+					sentry.CaptureEvent(event)
 				}
+
 			case <-quit:
 				ticker.Stop()
 				return
@@ -1407,7 +1411,7 @@ func InitSentryLogging(sentryDSN, appName string) {
 	}
 	log.SetReportCaller(true)
 
-	if IsDevelopment() || IsStaging() || sentryDSN == "" {
+	if sentryDSN == "" {
 		return
 	}
 
