@@ -53,8 +53,8 @@ type DomainDataResponse struct {
 	Domain              string `json:"domain"`
 	HeadQuarters        string `json:"headquarters"`
 	PreferredCountry    string `json:"preferred_country"`
-	Impressions         string `json:"impressions"`
-	Clicks              string `json:"clicks"`
+	Impressions         int64  `json:"impressions"`
+	Clicks              int64  `json:"clicks"`
 }
 
 const (
