@@ -376,7 +376,11 @@ const FaFilterSelect = ({
         {operSelectOpen && (
           <FaSelect
             options={operatorOpts[propState.type]
-              .filter((op) => showInList || (op !== OPERATORS['inList'] && op !== OPERATORS['notInList']))
+              .filter(
+                (op) =>
+                  showInList ||
+                  (op !== OPERATORS['inList'] && op !== OPERATORS['notInList'])
+              )
               .map((op) => [op])}
             optionClick={(val) => operatorSelect(val)}
             onClickOutside={() => setOperSelectOpen(false)}
@@ -953,8 +957,8 @@ const FaFilterSelect = ({
         ? renderValuesSelector()
         : operatorState === OPERATORS['inList'] ||
           operatorState?.[0] === OPERATORS['inList'] ||
-          operatorState !== OPERATORS['notInList'] ||
-          operatorState?.[0] !== OPERATORS['notInList']
+          operatorState === OPERATORS['notInList'] ||
+          operatorState?.[0] === OPERATORS['notInList']
         ? renderCsvUpload()
         : null}
     </div>
