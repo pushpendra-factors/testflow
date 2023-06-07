@@ -111,6 +111,9 @@ function AccountProfiles({
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const [companyValueOpts, setCompanyValueOpts] = useState({ All: {} });
 
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
+
   const setShowSegmentModal = useCallback(
     (value) => {
       dispatch(setSegmentModalStateAction(value));
@@ -206,17 +209,22 @@ function AccountProfiles({
         accountPayload.filters,
         false
       );
-      getProfileAccounts(activeProject.id, {
-        ...accountPayload,
-        filters: formattedFilters
-      });
+      getProfileAccounts(
+        activeProject.id,
+        {
+          ...accountPayload,
+          filters: formattedFilters
+        },
+        activeAgent
+      );
     }
   }, [
     activeProject.id,
     currentProjectSettings,
     accountPayload,
     activeSegment,
-    getProfileAccounts
+    getProfileAccounts,
+    activeAgent
   ]);
 
   useEffect(() => {
@@ -317,7 +325,9 @@ function AccountProfiles({
     ];
     // Engagement Column
     const engagementExists = accounts.data?.find(
-      (item) => item.engagement !== ''
+      (item) =>
+        item.engagement &&
+        (item.engagement !== undefined || item.engagement !== '')
     );
     if (engagementExists) {
       columns.push({

@@ -72,10 +72,10 @@ export default function (state = initialState, action) {
   }
 }
 
-const getURLWithQueryParams = (projectId, profileType) => {
+const getURLWithQueryParams = (projectId, profileType, agentId) => {
   const queryParams = [];
 
-  if (window.SCORE) {
+  if (window.SCORE || agentId === 'solutions@factors.ai') {
     queryParams.push('score=true');
   }
 
@@ -92,8 +92,8 @@ const getURLWithQueryParams = (projectId, profileType) => {
   return url;
 };
 
-export const fetchProfileUsers = (projectId, reqBody) => {
-  let url = getURLWithQueryParams(projectId, 'users');
+export const fetchProfileUsers = (projectId, reqBody, agentId) => {
+  let url = getURLWithQueryParams(projectId, 'users', agentId);
   return post(null, url, reqBody);
 };
 
@@ -102,8 +102,8 @@ export const fetchProfileUserDetails = (projectId, id, isAnonymous) => {
   return get(null, url);
 };
 
-export const fetchProfileAccounts = (projectId, reqBody) => {
-  const url = getURLWithQueryParams(projectId, 'accounts');
+export const fetchProfileAccounts = (projectId, reqBody, agentId) => {
+  const url = getURLWithQueryParams(projectId, 'accounts', agentId);
   return post(null, url, reqBody);
 };
 

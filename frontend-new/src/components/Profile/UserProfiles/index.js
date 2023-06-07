@@ -40,7 +40,7 @@ import {
   iconColors,
   propValueFormat,
   sortStringColumn,
-  sortNumericalColumn,
+  sortNumericalColumn
 } from '../utils';
 import {
   getProfileUsers,
@@ -125,6 +125,9 @@ function UserProfiles({
   const [showPopOver, setShowPopOver] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const [userValueOpts, setUserValueOpts] = useState({});
+
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
 
   const setTimelinePayload = useCallback(
     (payload) => {
@@ -274,7 +277,9 @@ function UserProfiles({
     ];
     // Engagement Column
     const engagementExists = contacts.data?.find(
-      (item) => item.engagement !== ''
+      (item) =>
+        item.engagement &&
+        (item.engagement !== undefined || item.engagement !== '')
     );
     if (engagementExists) {
       columns.push({
@@ -400,14 +405,15 @@ function UserProfiles({
   useEffect(() => {
     const opts = { ...timelinePayload };
     opts.filters = formatFiltersForPayload(timelinePayload.filters, false);
-    getProfileUsers(activeProject.id, opts);
+    getProfileUsers(activeProject.id, opts, activeAgent);
   }, [
     activeProject.id,
     timelinePayload,
     activeSegment,
     currentProjectSettings,
     segments,
-    getProfileUsers
+    getProfileUsers,
+    activeAgent
   ]);
 
   const handleSaveSegment = (segmentPayload) => {
