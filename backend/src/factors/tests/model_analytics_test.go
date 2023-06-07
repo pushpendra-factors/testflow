@@ -3,7 +3,9 @@ package tests
 import (
 	"encoding/json"
 	C "factors/config"
+	SDK "factors/sdk"
 	TaskSession "factors/task/session"
+	"factors/util"
 	U "factors/util"
 	"net/http"
 	"sort"
@@ -6251,4 +6253,199 @@ func TestAnalyticsEventsGroupQuery(t *testing.T) {
 	assert.Equal(t, "event_1", result.Rows[1][1])
 	assert.Equal(t, "group_2", result.Rows[1][2])
 	assert.Equal(t, float64(1), result.Rows[1][3])
+}
+
+func TestAnalyticsSixSignalGroupQuery(t *testing.T) {
+	project, _, _, _, err := SetupProjectUserEventNameAgentReturnDAO()
+	assert.Nil(t, err)
+
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
+	uri := "/sdk/event/track"
+
+	_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// user 1 with 6signal group 1
+	properties := map[string]interface{}{"group_user_no": 1}
+	properties1JSONB, err := U.EncodeStructTypeToPostgresJsonb(properties)
+	assert.Nil(t, err)
+	userID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: *properties1JSONB,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	groupProperties := &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc.com"}
+	status = SDK.TrackUserAccountGroup(project.ID, userID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	payload := fmt.Sprintf(`{"event_name": "event_1", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userID, U.TimeNowZ().Add(-10*time.Minute).Unix(), 1)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// user 2 with 6signal group 2
+	properties = map[string]interface{}{"group_user_no": 2}
+	properties1JSONB, err = U.EncodeStructTypeToPostgresJsonb(properties)
+	assert.Nil(t, err)
+	userID, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: *properties1JSONB,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	groupProperties = &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc2.com"}
+	status = SDK.TrackUserAccountGroup(project.ID, userID, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	payload = fmt.Sprintf(`{"event_name": "event_1", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userID, U.TimeNowZ().Add(-10*time.Minute).Unix(), 2)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "event_2", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userID, U.TimeNowZ().Add(-9*time.Minute).Unix(), 2)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Events query total groups who performed event_1
+	query := model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "event_1",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "event_2",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   U.GROUP_NAME_SIX_SIGNAL,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(1), result.Rows[0][0])
+
+	// total groups who performed any given event
+	query.EventsCondition = model.EventCondAnyGivenEvent
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(2), result.Rows[0][0])
+
+	// total groups who performed each given event
+	query.EventsCondition = model.EventCondEachGivenEvent
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(2), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+
+	// Events query total groups who performed event_1, breakdown by
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "event_1",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "event_2",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:   model.PropertyEntityUser,
+				Property: U.SIX_SIGNAL_DOMAIN,
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   U.GROUP_NAME_SIX_SIGNAL,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][0])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][0])
+		return p1 < p2
+	})
+	assert.Equal(t, "abc.com", result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+	assert.Equal(t, "abc2.com", result.Rows[1][0])
+	assert.Equal(t, float64(1), result.Rows[1][1])
+
+	/*
+		Funnel query event1 to event_2
+	*/
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "event_1",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "event_2",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		GroupAnalysis:   U.GROUP_NAME_SIX_SIGNAL,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(2), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "event_1",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "event_2",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		GroupAnalysis:   U.GROUP_NAME_SIX_SIGNAL,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][0])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][0])
+		return p1 < p2
+	})
+	assert.Equal(t, "$no_group", result.Rows[0][0])
+	assert.Equal(t, float64(2), result.Rows[0][1])
+	assert.Equal(t, float64(1), result.Rows[0][2])
+
+	assert.Equal(t, "abc.com", result.Rows[1][0])
+	assert.Equal(t, float64(1), result.Rows[1][1])
+	assert.Equal(t, float64(0), result.Rows[1][2])
+
+	assert.Equal(t, "abc2.com", result.Rows[2][0])
+	assert.Equal(t, float64(1), result.Rows[2][1])
+	assert.Equal(t, float64(1), result.Rows[2][2])
 }

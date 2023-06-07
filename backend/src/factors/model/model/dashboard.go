@@ -69,18 +69,18 @@ type DashboardCacheResult struct {
 
 type DashQueryResult struct {
 	// Composite primary key, id + project_id.
-	ID              string         `gorm:"not null" json:"id"`
-	ProjectID       int64          `gorm:"not null" json:"project_id"`
-	DashboardID     int64          `gorm:"not null" json:"dashboard_id"`
-	DashboardUnitID int64          `gorm:"not null" json:"dashboard_unit_id"`
-	QueryID         int64          `gorm:"not null" json:"query_id"`
-	FromT           int64          `gorm:"not null" json:"from_t"`
-	ToT             int64          `gorm:"not null" json:"to_t"`
-	Result          postgres.Jsonb `gorm:"not null" json:"result"`
-	IsDeleted       bool           `gorm:"not null;default:false" json:"is_deleted"`
-	ComputedAt      int64          `gorm:"not null" json:"computed_at"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
+	ID              string    `gorm:"not null" json:"id"`
+	ProjectID       int64     `gorm:"not null" json:"project_id"`
+	DashboardID     int64     `gorm:"not null" json:"dashboard_id"`
+	DashboardUnitID int64     `gorm:"not null" json:"dashboard_unit_id"`
+	QueryID         int64     `gorm:"not null" json:"query_id"`
+	FromT           int64     `gorm:"not null" json:"from_t"`
+	ToT             int64     `gorm:"not null" json:"to_t"`
+	Result          []byte    `gorm:"not null" json:"result"`
+	IsDeleted       bool      `gorm:"not null;default:false" json:"is_deleted"`
+	ComputedAt      int64     `gorm:"not null" json:"computed_at"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 const DashboardCachingDurationInSeconds = 32 * 24 * 60 * 60              // 32 days.

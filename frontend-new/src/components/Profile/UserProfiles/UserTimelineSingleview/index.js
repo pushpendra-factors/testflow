@@ -18,6 +18,8 @@ function AccountTimelineSingleView({
 }) {
   const groupedActivities = _.groupBy(activities, groups['Daily']);
 
+  document.title = 'People' + ' - FactorsAI';
+
   const SingleTimelineViewTable = ({ data = [] }) => (
     <div className='table-scroll'>
       <table>

@@ -19,6 +19,25 @@ export const getNormalizedKpi = ({ kpi }) => {
   };
 };
 
+export const getNormalizedKpiWithConfigs = ({ kpi }) => {
+  const metrics = get(kpi, 'metrics', EMPTY_ARRAY);
+  const metricsValues = map(metrics, (metric) => {
+    return [
+      get(metric, 'display_name', metric),
+      get(metric, 'name', metric),
+      get(metric, 'type', ''),
+      get(metric, 'kpi_query_type', metric),
+    ];
+  });
+  return {
+    label: get(kpi, 'display_category'),
+    group: get(kpi, 'display_category'),
+    category: get(kpi, 'category'),
+    icon: getGroupIcon(get(kpi, 'display_category')),
+    values: metricsValues
+  };
+};
+
 export const areKpisInSameGroup = ({ kpis }) => {
   return kpis.every((_, index) => {
     if (kpis[0].group == 'others') {

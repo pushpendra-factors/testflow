@@ -19,7 +19,8 @@ export const getProfileAccounts = (projectId, payload) => (dispatch) => {
           account: { name: account.name, host: account?.host_name },
           tableProps: account.table_props,
           lastActivity: account.last_activity,
-          engagement: account.engagement
+          engagement: account.engagement,
+          score: account.score
         }));
         resolve(
           dispatch({
@@ -75,7 +76,8 @@ export const getProfileUsers = (projectId, payload) => (dispatch) => {
           identity: { id: user.identity, isAnonymous: user.is_anonymous },
           tableProps: user.table_props,
           lastActivity: user.last_activity,
-          engagement: user.engagement
+          engagement: user.engagement,
+          score: user.score
         }));
         resolve(
           dispatch({

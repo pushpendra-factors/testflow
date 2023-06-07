@@ -22,6 +22,8 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	logFields := log.Fields{
 		"project_id":        projectID,
 		"debug_query_key":   debugQueryKey,
+		"query_from":        queryOriginal.From,
+		"query_to":          queryOriginal.To,
 		"attribution_query": true,
 	}
 

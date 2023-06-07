@@ -11,7 +11,7 @@ export const getAccountActivitiesWithEnableKeyConfig = (
       return {
         ...activity,
         user: user.is_anonymous ? 'new_user' : user.user_id,
-        id:user.user_id,
+        id: user.user_id,
         enabled: isEnabled
       };
     });
@@ -59,9 +59,7 @@ export const formatAccountTimeline = (data, config) => {
     : [];
 
   const non_anonymous_users = account_timeline
-    .filter(
-      (user) => !user.is_anonymous && user.user_name !== 'group_user'
-    )
+    .filter((user) => !user.is_anonymous && user.user_name !== 'group_user')
     .sort((a, b) =>
       compareObjTimestampsDesc(a.user_activities[0], b.user_activities[0])
     )
@@ -100,9 +98,9 @@ const addEnabledFlagToActivity = (activity, disabledEvents) => {
 
 export const addEnabledFlagToActivities = (activities, disabledEvents) => {
   return (
-    activities?.map((activity) =>
-      addEnabledFlagToActivity(activity, disabledEvents)
-    ) || []
+    activities
+      ?.map((activity) => addEnabledFlagToActivity(activity, disabledEvents))
+      ?.sort((a, b) => b.enabled - a.enabled) || []
   );
 };
 

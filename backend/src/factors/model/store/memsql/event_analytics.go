@@ -865,9 +865,9 @@ func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEv
 	if caller == model.USER_PROFILE_CALLER {
 		if scopeGroupID > 0 {
 			if isGroupEvent {
-				return "events.user_id as group_user_id"
+				return "events.user_id as coal_group_user_id"
 			}
-			return fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as group_user_id", scopeGroupID, scopeGroupID)
+			return fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as coal_group_user_id", scopeGroupID, scopeGroupID)
 		}
 
 		if isGroupEvent {
@@ -884,10 +884,10 @@ func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEv
 	selectEventUserID := "FIRST(%s, FROM_UNIXTIME(events.timestamp)) as event_user_id"
 	if scopeGroupID > 0 {
 		if isGroupEvent {
-			return "events.user_id as group_user_id" + ", " + fmt.Sprintf(selectEventUserID, "events.user_id")
+			return "events.user_id as coal_group_user_id" + ", " + fmt.Sprintf(selectEventUserID, "events.user_id")
 		}
 
-		return fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as group_user_id, %s ", scopeGroupID, scopeGroupID,
+		return fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as coal_group_user_id, %s ", scopeGroupID, scopeGroupID,
 			fmt.Sprintf(selectEventUserID, "events.user_id"))
 	}
 
@@ -971,8 +971,8 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 
 			if scopeGroupID > 0 {
-				commonOrderBy = fmt.Sprintf("group_user_id%%, %s, events.timestamp ASC", model.AliasDateTime)
-				commonGroupBy = "datetime, group_user_id"
+				commonOrderBy = fmt.Sprintf("coal_group_user_id%%, %s, events.timestamp ASC", model.AliasDateTime)
+				commonGroupBy = "datetime, coal_group_user_id"
 			} else {
 				commonOrderBy = fmt.Sprintf("coal_user_id%%, %s, events.timestamp ASC", model.AliasDateTime)
 				commonGroupBy = "datetime, coal_user_id"
@@ -983,7 +983,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			commonSelect = "%s"
 			// default select.
 			if scopeGroupID > 0 {
-				commonGroupBy = "group_user_id"
+				commonGroupBy = "coal_group_user_id"
 			} else {
 				commonGroupBy = "coal_user_id"
 			}
@@ -1009,7 +1009,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	if len(q.GroupByProperties) > 0 && commonOrderBy == "" {
 		// Using first occurred event_properties after distinct on user_id.
 		if scopeGroupID > 0 {
-			commonOrderBy = "group_user_id%s, events.timestamp ASC"
+			commonOrderBy = "coal_group_user_id%s, events.timestamp ASC"
 		} else {
 			commonOrderBy = "coal_user_id%s, events.timestamp ASC"
 		}
@@ -1272,13 +1272,13 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 
 	if termSelect != "" {
 		if scopeGroupID > 0 {
-			termStmnt = fmt.Sprintf("SELECT %s.event_user_id, %s.group_user_id, ", refStep, refStep) + termSelect + " FROM " + refStep
+			termStmnt = fmt.Sprintf("SELECT %s.event_user_id, %s.coal_group_user_id, ", refStep, refStep) + termSelect + " FROM " + refStep
 		} else {
 			termStmnt = fmt.Sprintf("SELECT %s.event_user_id, %s.coal_user_id, ", refStep, refStep) + termSelect + " FROM " + refStep
 		}
 	} else {
 		if scopeGroupID > 0 {
-			termStmnt = fmt.Sprintf("SELECT %s.event_user_id, %s.group_user_id ", refStep, refStep) + termSelect + " FROM " + refStep
+			termStmnt = fmt.Sprintf("SELECT %s.event_user_id, %s.coal_group_user_id ", refStep, refStep) + termSelect + " FROM " + refStep
 		} else {
 			termStmnt = fmt.Sprintf("SELECT %s.event_user_id, %s.coal_user_id ", refStep, refStep) + termSelect + " FROM " + refStep
 		}
@@ -1286,7 +1286,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		if scopeGroupID > 0 {
-			termStmnt = termStmnt + " " + "LEFT JOIN users AS group_users ON " + refStep + ".group_user_id=group_users.id"
+			termStmnt = termStmnt + " " + "LEFT JOIN users AS group_users ON " + refStep + ".coal_group_user_id=group_users.id"
 			// Using string format for project_id condition, as the value is from internal system.
 			termStmnt = termStmnt + " AND " + fmt.Sprintf("group_users.project_id = %d", projectID)
 		} else {
@@ -1314,7 +1314,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 		var bucketedGroupBys, bucketedOrderBys []string
 		if scopeGroupID > 0 {
 			bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys = appendNumericalBucketingSteps(isAggregateOnProperty,
-				&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id, group_user_id")
+				&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id, coal_group_user_id")
 		} else {
 			bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys = appendNumericalBucketingSteps(isAggregateOnProperty,
 				&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id, coal_user_id")
@@ -1354,7 +1354,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 			query.AggregateFunction, model.AliasAggr, model.AliasAggr, aggregateFromStepName)
 	} else {
 		if scopeGroupID > 0 {
-			aggregateSelect = aggregateSelect + aggregateSelectKeys + query.GetAggregateFunction() + fmt.Sprintf("(DISTINCT(group_user_id)) AS %s FROM %s",
+			aggregateSelect = aggregateSelect + aggregateSelectKeys + query.GetAggregateFunction() + fmt.Sprintf("(DISTINCT(coal_group_user_id)) AS %s FROM %s",
 				model.AliasAggr, aggregateFromStepName)
 		} else {
 			aggregateSelect = aggregateSelect + aggregateSelectKeys + query.GetAggregateFunction() + fmt.Sprintf("(DISTINCT(coal_user_id)) AS %s FROM %s",
@@ -1581,7 +1581,7 @@ func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
 	for i, step := range steps {
 		selectStr := ""
 		if scopeGroupID > 0 {
-			selectStr = fmt.Sprintf("%s.event_name as event_name, %s.group_user_id as group_user_id, %s.event_user_id as event_user_id", step, step, step)
+			selectStr = fmt.Sprintf("%s.event_name as event_name, %s.coal_group_user_id as coal_group_user_id, %s.event_user_id as event_user_id", step, step, step)
 		} else {
 			selectStr = fmt.Sprintf("%s.event_name as event_name, %s.coal_user_id as coal_user_id, %s.event_user_id as event_user_id", step, step, step)
 		}
@@ -1779,7 +1779,7 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 	} else if query.Caller == model.ACCOUNT_PROFILE_CALLER {
 		intersectSelect = fmt.Sprintf("%s.identity, %s.last_activity, %s.properties", steps[0], steps[0], steps[0])
 	} else if scopeGroupID > 0 {
-		intersectSelect = fmt.Sprintf("%s.event_user_id as event_user_id, %s.group_user_id as group_user_id", steps[0], steps[0])
+		intersectSelect = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_group_user_id as coal_group_user_id", steps[0], steps[0])
 	} else {
 		intersectSelect = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_user_id as coal_user_id", steps[0], steps[0])
 	}
@@ -1801,7 +1801,7 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 					steps[i], steps[i], steps[i-1])
 			} else {
 				if scopeGroupID > 0 {
-					intersectJoin = intersectJoin + " " + fmt.Sprintf("JOIN %s ON %s.group_user_id = %s.group_user_id",
+					intersectJoin = intersectJoin + " " + fmt.Sprintf("JOIN %s ON %s.coal_group_user_id = %s.coal_group_user_id",
 						steps[i], steps[i], steps[i-1])
 				} else {
 					intersectJoin = intersectJoin + " " + fmt.Sprintf("JOIN %s ON %s.coal_user_id = %s.coal_user_id",
@@ -1946,7 +1946,7 @@ func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 	for i, step := range steps {
 		selectStr := ""
 		if scopeGroupID > 0 {
-			selectStr = fmt.Sprintf("%s.event_user_id as event_user_id, %s.group_user_id as group_user_id", step, step)
+			selectStr = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_group_user_id as coal_group_user_id", step, step)
 		} else {
 			selectStr = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_user_id as coal_user_id", step, step)
 		}

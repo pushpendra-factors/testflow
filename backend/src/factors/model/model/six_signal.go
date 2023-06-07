@@ -3,7 +3,7 @@ package model
 import (
 	"encoding/json"
 	cacheRedis "factors/cache/redis"
-	"factors/util"
+
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -18,18 +18,18 @@ type SixSignalQueryGroup struct {
 	Queries []SixSignalQuery `json:"six_signal_query_group"`
 }
 
-func (q *SixSignalQueryGroup) SetTimeZone(timezoneString util.TimeZoneString) {
+func (q *SixSignalQueryGroup) SetTimeZone(timezoneString U.TimeZoneString) {
 	for i := 0; i < len(q.Queries); i++ {
 		q.Queries[i].Timezone = timezoneString
 	}
 }
 
 type SixSignalQuery struct {
-	Timezone util.TimeZoneString `json:"tz"`
-	From     int64               `json:"fr"`
-	To       int64               `json:"to"`
-	IsSaved  bool                `json:"isSaved"`
-	PageView []string            `json:"pageView"`
+	Timezone U.TimeZoneString `json:"tz"`
+	From     int64            `json:"fr"`
+	To       int64            `json:"to"`
+	IsSaved  bool             `json:"isSaved"`
+	PageView []string         `json:"pageView"`
 }
 
 type SixSignalResultGroup struct {
@@ -60,12 +60,12 @@ type SixSignalPublicURLResponse struct {
 }
 
 type SixSignalEmailAndMessage struct {
-	EmailIDs []string            `json:"email_ids"`
-	Url      string              `json:"url"`
-	Domain   string              `json:"domain"`
-	From     int64               `json:"fr"`
-	To       int64               `json:"to"`
-	Timezone util.TimeZoneString `json:"tz"`
+	EmailIDs []string         `json:"email_ids"`
+	Url      string           `json:"url"`
+	Domain   string           `json:"domain"`
+	From     int64            `json:"fr"`
+	To       int64            `json:"to"`
+	Timezone U.TimeZoneString `json:"tz"`
 }
 
 // SetSixSignalCacheResult Sets the cache result key in redis.
@@ -97,7 +97,7 @@ func SetSixSignalCacheResult(projectID int64, userId string, userIP string) {
 }
 func GetSixSignalCacheRedisKey(projectID int64, userId string, userIP string) (*cacheRedis.Key, error) {
 	prefix := "ip:enrichment:sixsignal"
-	suffix := fmt.Sprintf("userId:%d:userIP:%s", userId, userIP)
+	suffix := fmt.Sprintf("userId:%s:userIP:%s", userId, userIP)
 	return cacheRedis.NewKey(projectID, prefix, suffix)
 }
 
