@@ -3125,6 +3125,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 			Caller:          "account_profiles",
 			Source:          "$hubspot_company",
 			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
+			GroupAnalysis:   "$hubspot_company",
 		},
 		Type: "$hubspot_company",
 	}
