@@ -15,7 +15,6 @@ func main() {
 
 	sentryDSN := flag.String("sentry_dsn", "https://81f48ea1f7604e6eb98871c04f68f9d4@o435495.ingest.sentry.io/5394896", "Sentry DSN")
 	overrideAppName := flag.String("app_name", "sentry_rollup_test", "Override default app_name.")
-	useSentryRollup := flag.Bool("use_sentry_rollup", true, "Enables rollup support for sentry")
 	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 10, "Enables to send errors to sentry in given interval in seconds.")
 
 	defaultAppName := "sentry_rollup_job"
@@ -26,8 +25,8 @@ func main() {
 		AppName:                appName,
 		Env:                    *env,
 		SentryDSN:              *sentryDSN,
-		UseSentryRollup:        *useSentryRollup,
 		SentryRollupSyncInSecs: *sentryRollupSyncInSecs,
+		UseSentryRollup:        true,
 	}
 	C.InitConf(config)
 

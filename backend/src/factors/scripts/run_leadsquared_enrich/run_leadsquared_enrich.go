@@ -24,7 +24,6 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	useSentryRollup := flag.Bool("use_sentry_rollup", false, "Enables rollup support for sentry")
 	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 300, "Enables to send errors to sentry in given interval.")
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -75,7 +74,6 @@ func main() {
 		RedisHostPersistent:                    *redisHostPersistent,
 		RedisPortPersistent:                    *redisPortPersistent,
 		SentryDSN:                              *sentryDSN,
-		UseSentryRollup:                        *useSentryRollup,
 		SentryRollupSyncInSecs:                 *sentryRollupSyncInSecs,
 		CacheSortedSet:                         *cacheSortedSet,
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
