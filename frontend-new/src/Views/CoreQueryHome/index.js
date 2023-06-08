@@ -84,6 +84,7 @@ import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { useHistory } from 'react-router-dom';
 import moment from 'moment';
+import styles from './index.module.scss';
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -307,7 +308,7 @@ function CoreQuery({
         <div className='flex justify-between items-center'>
           <div>{MomentTz(q.created_at).format('MMM DD, YYYY')}</div>
           <div>
-            <Dropdown overlay={getMenu(q)} trigger={['hover']}>
+            <Dropdown overlay={getMenu(q)} placement='bottomRight'>
               <Button type='text' icon={<MoreOutlined />} />
             </Dropdown>
           </div>
@@ -670,9 +671,15 @@ function CoreQuery({
 
   const getMenu = (row) => {
     return (
-      <Menu>
+      <Menu className={`${styles.antdActionMenu}`}>
         <Menu.Item key='0'>
           <a onClick={handleViewResult.bind(this, row)} href='#!'>
+            <SVG
+              name={'eye'}
+              size={18}
+              color={'grey'}
+              extraClass={'inline mr-2'}
+            />
             View Report
           </a>
         </Menu.Item>
@@ -680,6 +687,12 @@ function CoreQuery({
         getQueryType(row.query) === QUERY_TYPE_EVENT ? (
           <Menu.Item key='1'>
             <a onClick={showEmailModal.bind(this, row)} href='#!'>
+              <SVG
+                name={'envelope'}
+                size={18}
+                color={'grey'}
+                extraClass={'inline mr-2'}
+              />
               Email this report
             </a>
           </Menu.Item>
@@ -688,6 +701,12 @@ function CoreQuery({
         getQueryType(row.query) === QUERY_TYPE_EVENT ? (
           <Menu.Item key='2'>
             <a onClick={showSlackModal.bind(this, row)} href='#!'>
+              <SVG
+                name={'SlackStroke'}
+                size={18}
+                color={'grey'}
+                extraClass={'inline mr-2'}
+              />
               Share to slack
             </a>
           </Menu.Item>
@@ -699,6 +718,12 @@ function CoreQuery({
         </Menu.Item>
         <Menu.Item key="2"> */}
           <a onClick={handleDelete.bind(this, row)} href='#!'>
+            <SVG
+              name={'trash'}
+              size={18}
+              color={'grey'}
+              extraClass={'inline mr-2'}
+            />
             Delete Report
           </a>
         </Menu.Item>
