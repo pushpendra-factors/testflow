@@ -914,6 +914,7 @@ type Model interface {
 	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
 	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
 	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)
+	GetInternalStatusForEventTriggerAlert(projectID int64, id string) (string, int, error)
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)

@@ -273,3 +273,55 @@ func TestWebhookforEventTriggerAlerts(c *gin.Context) (interface{}, int, string,
 
 	return response, http.StatusAccepted, "", "", false
 }
+
+func GetInternalStatusForEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+
+	if projectID == 0 {
+		return "", http.StatusForbidden, ErrorMessages[INVALID_PROJECT], "Get internal status request failed. Invalid project ID.", true
+	}
+	id := c.Param("id")
+	if id == "" {
+		errMsg := "Get internal status failed. Invalid id provided."
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
+		return "", http.StatusBadRequest, INVALID_INPUT, errMsg, true
+	}
+	status, errCode, err := store.GetStore().GetInternalStatusForEventTriggerAlert(projectID, id)
+	if err != nil || errCode != http.StatusFound {
+		return "", errCode, ErrorMessages[PROCESSING_FAILED], err.Error(), true
+	}
+
+	return status, http.StatusOK, "", "", false
+}
+
+func UpdateEventTriggerAlertInternalStatusHandler(c *gin.Context) (interface{}, int, string, string, bool)  {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+
+	if projectID == 0 {
+		return "", http.StatusForbidden, ErrorMessages[INVALID_PROJECT], "Get internal status request failed. Invalid project ID.", true
+	}
+	id := c.Param("id")
+	if id == "" {
+		errMsg := "Get internal status failed. Invalid id."
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
+		return "", http.StatusBadRequest, INVALID_INPUT, errMsg, true
+	}
+
+	is := make(map[string]interface{})
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&is); err != nil {
+		errMsg := "Internal status update failed. Invalid JSON."
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
+	}
+	errCode, err := store.GetStore().UpdateEventTriggerAlertField(projectID, id, is)
+	if err != nil || errCode != http.StatusAccepted {
+		errMsg := "Internal status update failed"
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error(errMsg)
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, errMsg, true
+	}
+
+	return nil, http.StatusAccepted, "", "", false
+}

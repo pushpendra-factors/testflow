@@ -78,6 +78,27 @@ func (store *MemSQL) GetEventTriggerAlertByID(id string) (*model.EventTriggerAle
 	return &alert, http.StatusFound
 }
 
+func (store *MemSQL) GetInternalStatusForEventTriggerAlert(projectID int64, id string) (string, int, error) {
+	logFields := log.Fields{
+		"id": id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	var alert model.EventTriggerAlert
+	err := db.Where("project_id = ?", projectID).Where("id = ?", id).
+		Where("is_deleted = ?", false).Find(&alert).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return "", http.StatusNotFound, err
+		}
+		log.WithError(err).Error("Failed to fetch rows from event_trigger_alerts table for project")
+		return "", http.StatusInternalServerError, err
+	}
+
+	return alert.InternalStatus, http.StatusFound, nil
+}
+
 func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []model.EventTriggerAlert) []model.EventTriggerAlertInfo {
 
 	res := make([]model.EventTriggerAlertInfo, 0)
