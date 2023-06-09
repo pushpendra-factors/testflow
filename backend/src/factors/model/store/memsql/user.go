@@ -3001,9 +3001,18 @@ func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID st
 		groupIDMap[groups[i].Name] = groups[i].ID
 	}
 
-	if groupIDMap[model.GROUP_NAME_DOMAINS] == 0 && requestGroupName != "" && groupIDMap[requestGroupName] == 0 {
+	if requestGroupName != "" && groupIDMap[requestGroupName] == 0 {
 		logCtx.Error("Missing domains group or request group.")
 		return http.StatusBadRequest
+	}
+
+	if groupIDMap[model.GROUP_NAME_DOMAINS] == 0 {
+		domainGroup, status := store.CreateOrGetDomainsGroup(projectID)
+		if status != http.StatusCreated && status != http.StatusFound {
+			logCtx.Error("Failed to CreateOrGetDomainsGroup on AssociateUserDomainsGroup.")
+			return http.StatusInternalServerError
+		}
+		groupIDMap[model.GROUP_NAME_DOMAINS] = domainGroup.ID
 	}
 
 	requestUser, status := store.GetUserWithoutProperties(projectID, requestUserID)
