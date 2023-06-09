@@ -223,11 +223,11 @@ func main() {
 	}
 
 	C.InitConf(config)
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	C.InitSortedSetCache(config.CacheSortedSet)
 	C.InitSalesforceConfig(config.SalesforceAppID, config.SalesforceAppSecret)
 	C.InitRedis(config.RedisHost, config.RedisPort)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
-	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 	C.InitSmartEventMode(config.DryRunCRMSmartEvent)
 	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize, *whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)

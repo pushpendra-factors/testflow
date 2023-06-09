@@ -1296,6 +1296,14 @@ func WriteToLogErrors(logCtx *log.Entry, appName string) {
 	services.logErrorsLock.RLock()
 	defer services.logErrorsLock.RUnlock()
 
+	if services == nil {
+		services = &Services{}
+	}
+
+	if services.logErrors == nil {
+		services.logErrors = make(map[string]*SentryInfo)
+	}
+
 	_, errorExists := services.logErrors[logCtx.Message]
 	if !errorExists {
 		services.logErrors[logCtx.Message] = &SentryInfo{logCtx: *logCtx, occurences: 1, Fields: logCtx.Data}
@@ -1314,6 +1322,14 @@ func WriteToLogErrors(logCtx *log.Entry, appName string) {
 func ForkLogErrors() map[string]SentryInfo {
 	services.logErrorsLock.RLock()
 	defer services.logErrorsLock.RUnlock()
+
+	if services == nil {
+		services = &Services{}
+	}
+
+	if services.logErrors == nil {
+		services.logErrors = make(map[string]*SentryInfo)
+	}
 
 	// Copy the logs so far.
 	forkedErrorLogs := make(map[string]SentryInfo)
@@ -1373,8 +1389,13 @@ func initSentryRollup(sentryDSN, appName string) {
 	}
 
 	if services == nil {
-		services = &Services{logErrors: make(map[string]*SentryInfo)}
+		services = &Services{}
 	}
+
+	if services.logErrors == nil {
+		services.logErrors = make(map[string]*SentryInfo)
+	}
+
 	if !configuration.UseSentryRollup {
 		return
 	}
