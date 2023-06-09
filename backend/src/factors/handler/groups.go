@@ -239,8 +239,9 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+
 	if len(propertyValues) == 0 {
-		logCtx.WithError(err).Error("No property values returned.")
+		logCtx.WithError(err).Warn("No property values returned.")
 	}
 
 	label := c.Query("label")
@@ -257,7 +258,7 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 		}
 
 		if len(propertyValueLabel) == 0 {
-			logCtx.WithField("property_name", propertyName).Error("No group property value labels returned")
+			logCtx.WithField("property_name", propertyName).Warn("No group property value labels returned")
 		}
 
 		c.JSON(http.StatusOK, propertyValueLabel)

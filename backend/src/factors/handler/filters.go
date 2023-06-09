@@ -332,27 +332,19 @@ func DeleteSmartEventFilterHandler(c *gin.Context) (interface{}, int, string, st
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Delete smart event_name filter failed. Invalid query type", true
 	}
 
-	logCtx := log.WithFields(log.Fields{
-		"project_id": projectID,
-		"reqId":      U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
-	})
-
 	filterID := strings.TrimSpace(c.Query("filter_id"))
 	if filterID == "" {
-		logCtx.Error("Deleting smart event_name filter failed. filter_id parse failed.")
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Delete smart event_name filter failed. Invalid rule id", true
 	}
 
 	eventName, status := store.GetStore().DeleteSmartEventFilter(projectID, filterID)
 	if status != http.StatusAccepted {
-		logCtx.Error("Failed to delete smart event filter.")
-		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Delete smart event_name filter failed. Failed processing request.", true
+		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Delete smart event_name filter failed.", true
 	}
 
 	filterExp, err := model.GetDecodedSmartEventFilterExp(eventName.FilterExpr)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to GetDecodedSmartEventFilterExp")
-		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Delete smart event_name filter failed. Failed processing request.", true
+		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Delete smart event_name filter failed. Failed to decode.", true
 	}
 
 	responsePayload := &APISmartEventFilterResponePayload{

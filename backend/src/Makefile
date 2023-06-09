@@ -359,14 +359,6 @@ upload-dashboard-db-precompute: export IMAGE_NAME=dashboard-db-precompute
 upload-dashboard-db-precompute: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/dashboard-db-precompute:$(TAG)
 
-
-pack-monthly-dashboard-caching:
-	docker build -t us.gcr.io/factors-$(ENV)/monthly-dashboard-caching-job:$(TAG) -f Dockerfile.monthly_dashboard_caching_job .
-
-upload-monthly-dashboard-caching: export IMAGE_NAME=monthly-dashboard-caching-job
-upload-monthly-dashboard-caching: notify-deployment
-	docker push us.gcr.io/factors-$(ENV)/monthly-dashboard-caching-job:$(TAG)
-
 pack-beam-dashboard-caching:
 	docker build -t us.gcr.io/factors-$(ENV)/beam-dashboard-caching-job:$(TAG) -f Dockerfile.beam_dashboard_caching_job .
 
@@ -628,8 +620,6 @@ pack-analytics-bundle: pack-monthly-beam-dashboard-caching-now
 
 upload-analytics-bundle: upload-api
 upload-analytics-bundle: upload-dashboard-caching
-upload-analytics-bundle: upload-monthly-dashboard-caching
-upload-analytics-bundle: upload-monthly-beam-dashboard-caching
 upload-analytics-bundle: upload-monthly-beam-dashboard-caching-now
 
 

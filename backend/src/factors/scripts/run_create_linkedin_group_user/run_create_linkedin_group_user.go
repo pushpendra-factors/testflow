@@ -171,68 +171,77 @@ func createGroupUserAndEvents(linkedinProjectSetting model.LinkedinProjectSettin
 		}
 		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 		logCtx := log.WithFields(logFields)
-		properties := U.PropertiesMap{
-			U.LI_DOMAIN:            domainData.Domain,
-			U.LI_HEADQUARTER:       domainData.HeadQuarters,
-			U.LI_LOCALIZED_NAME:    domainData.LocalizedName,
-			U.LI_VANITY_NAME:       domainData.VanityName,
-			U.LI_PREFERRED_COUNTRY: domainData.PreferredCountry,
-		}
 
-		timestamp, err := time.ParseInLocation("20060102", domainData.Timestamp, location)
-		if err != nil {
-			return err.Error(), http.StatusInternalServerError
-		}
+		if domainData.Domain != "" && domainData.Domain != "$none" {
+			properties := U.PropertiesMap{
+				U.LI_DOMAIN:            domainData.Domain,
+				U.LI_HEADQUARTER:       domainData.HeadQuarters,
+				U.LI_LOCALIZED_NAME:    domainData.LocalizedName,
+				U.LI_VANITY_NAME:       domainData.VanityName,
+				U.LI_PREFERRED_COUNTRY: domainData.PreferredCountry,
+			}
 
-		unixTimestamp := timestamp.Unix()
-		userID, errCode := SDK.TrackGroupWithDomain(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, domainData.Domain, properties, unixTimestamp)
-		if errCode != http.StatusOK {
-			logCtx.Error("Failed in TrackGroupWithDomain")
-			return "Failed in TrackGroupWithDomain", errCode
-		}
+			timestamp, err := time.ParseInLocation("20060102", domainData.Timestamp, location)
+			if err != nil {
+				return err.Error(), http.StatusInternalServerError
+			}
 
-		viewedADEvent := model.Event{
-			EventNameId: eventNameViewedAD.ID,
-			Timestamp:   unixTimestamp,
-			ProjectId:   projectID,
-			UserId:      userID,
-		}
-		viewedADEventPropertiesMap := map[string]interface{}{
-			U.LI_AD_VIEW_COUNT: domainData.Impressions,
-		}
-		viewedADEventPropertiesJsonB, err := U.EncodeStructTypeToPostgresJsonb(&viewedADEventPropertiesMap)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed in encoding viewed ad properties to JSONb")
-			return "Failed in encoding viewed ad properties to JSONb", http.StatusInternalServerError
-		}
-		viewedADEvent.Properties = *viewedADEventPropertiesJsonB
+			unixTimestamp := timestamp.Unix()
+			userID, errCode := SDK.TrackGroupWithDomain(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, domainData.Domain, properties, unixTimestamp)
+			if errCode != http.StatusOK {
+				logCtx.Error("Failed in TrackGroupWithDomain")
+				return "Failed in TrackGroupWithDomain", errCode
+			}
 
-		_, errCode = store.GetStore().CreateEvent(&viewedADEvent)
-		if errCode != http.StatusCreated {
-			logCtx.Error("Failed in creating viewed ad event")
-			return "Failed in creating viewed ad event", errCode
-		}
+			if domainData.Impressions != 0 {
+				viewedADEvent := model.Event{
+					EventNameId: eventNameViewedAD.ID,
+					Timestamp:   unixTimestamp,
+					ProjectId:   projectID,
+					UserId:      userID,
+				}
+				viewedADEventPropertiesMap := map[string]interface{}{
+					U.LI_AD_VIEW_COUNT: domainData.Impressions,
+					U.EP_SKIP_SESSION:  true,
+				}
+				viewedADEventPropertiesJsonB, err := U.EncodeStructTypeToPostgresJsonb(&viewedADEventPropertiesMap)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed in encoding viewed ad properties to JSONb")
+					return "Failed in encoding viewed ad properties to JSONb", http.StatusInternalServerError
+				}
+				viewedADEvent.Properties = *viewedADEventPropertiesJsonB
 
-		clickedADEvent := model.Event{
-			EventNameId: eventNameClickedAD.ID,
-			Timestamp:   unixTimestamp,
-			ProjectId:   projectID,
-			UserId:      userID,
-		}
-		clickedADEventPropertiesMap := map[string]interface{}{
-			U.LI_AD_CLICK_COUNT: domainData.Clicks,
-		}
-		clickedADEventPropertiesJsonB, err := U.EncodeStructTypeToPostgresJsonb(&clickedADEventPropertiesMap)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed in encoding clicked ad properties to JSONb")
-			return "Failed in encoding clicked ad properties to JSONb", http.StatusInternalServerError
-		}
-		clickedADEvent.Properties = *clickedADEventPropertiesJsonB
+				_, errCode = store.GetStore().CreateEvent(&viewedADEvent)
+				if errCode != http.StatusCreated {
+					logCtx.Error("Failed in creating viewed ad event")
+					return "Failed in creating viewed ad event", errCode
+				}
+			}
 
-		_, errCode = store.GetStore().CreateEvent(&clickedADEvent)
-		if errCode != http.StatusCreated {
-			logCtx.Error("Failed in creating clicked ad event")
-			return "Failed in creating clicked ad event", errCode
+			if domainData.Clicks != 0 {
+				clickedADEvent := model.Event{
+					EventNameId: eventNameClickedAD.ID,
+					Timestamp:   unixTimestamp + 1,
+					ProjectId:   projectID,
+					UserId:      userID,
+				}
+				clickedADEventPropertiesMap := map[string]interface{}{
+					U.LI_AD_CLICK_COUNT: domainData.Clicks,
+					U.EP_SKIP_SESSION:   true,
+				}
+				clickedADEventPropertiesJsonB, err := U.EncodeStructTypeToPostgresJsonb(&clickedADEventPropertiesMap)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed in encoding clicked ad properties to JSONb")
+					return "Failed in encoding clicked ad properties to JSONb", http.StatusInternalServerError
+				}
+				clickedADEvent.Properties = *clickedADEventPropertiesJsonB
+
+				_, errCode = store.GetStore().CreateEvent(&clickedADEvent)
+				if errCode != http.StatusCreated {
+					logCtx.Error("Failed in creating clicked ad event")
+					return "Failed in creating clicked ad event", errCode
+				}
+			}
 		}
 
 		err = store.GetStore().UpdateLinkedinGroupUserCreationDetails(domainData)

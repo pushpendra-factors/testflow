@@ -416,10 +416,6 @@ func GetPageViewForSixSignalReport(c *gin.Context) (interface{}, int, string, st
 		return nil, http.StatusInternalServerError, "", "Failed fetching page views", true
 	}
 
-	if len(eventNames) == 0 {
-		logCtx.WithError(err).Error(fmt.Sprintf("No Events Returned - ProjectID - %d", projectId))
-	}
-
 	// Force add specific events.
 	if fNames, pExists := FORCED_EVENT_NAMES[projectId]; pExists {
 		eventNames = append(eventNames, fNames...)

@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { SSO_LOGIN_FULFILLED } from './types';
+import { SET_ACTIVE_PROJECT, SSO_LOGIN_FULFILLED } from './types';
 import { get, post, put, getHostUrl } from '../utils/request';
 
 var host = getHostUrl();
@@ -9,7 +9,8 @@ const initialState = {
   agent: {},
   agentError: null,
   isLoggedIn: true,
-  billing: {}
+  billing: {},
+  agents: []
 };
 
 export default function reducer(state = initialState, action) {
@@ -88,6 +89,12 @@ export default function reducer(state = initialState, action) {
       return {
         ...state,
         agents: action.payload
+      };
+    }
+    case SET_ACTIVE_PROJECT: {
+      return {
+        ...state,
+        agents: initialState.agents
       };
     }
     default:

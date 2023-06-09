@@ -56,8 +56,8 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
-	useSentryRollup := flag.Bool("use_sentry_rollup", false, "Enables rollup support for sentry")
-	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 300, "Enables to send errors to sentry in given interval.")
+	// Rollup default intentionally set to 1minute considering criticality.
+	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 60, "Enables to send errors to sentry in given interval.")
 
 	sdkRequestQueueProjectTokens := flag.String("sdk_request_queue_project_tokens", "",
 		"List of project tokens allowed to use sdk request queue")
@@ -123,7 +123,6 @@ func main() {
 		DuplicateQueueRedisHost: *duplicateQueueRedisHost,
 		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
 		SentryDSN:               *sentryDSN,
-		UseSentryRollup:         *useSentryRollup,
 		SentryRollupSyncInSecs:  *sentryRollupSyncInSecs,
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
 		ClearbitEnabled:        *clearbitEnabled,

@@ -51,6 +51,7 @@ import AppSidebar from '../AppSidebar';
 import styles from './index.module.scss';
 import { routesWithSidebar } from './appLayout.constants';
 import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
+import { fetchProjectAgents } from 'Reducers/agentActions';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -176,6 +177,7 @@ function AppLayout({
       fetchProjectSettingsV1(active_project?.id);
       dispatch(fetchEventDisplayNames({ projectId: active_project?.id }));
       dispatch(fetchAttributionQueries(active_project?.id));
+      dispatch(fetchProjectAgents(active_project.id));
     }
   }, [dispatch, active_project]);
 

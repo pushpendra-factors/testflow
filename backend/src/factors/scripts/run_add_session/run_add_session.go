@@ -50,7 +50,6 @@ func main() {
 	endTimestamp := flag.Int64("end_timestamp", 0, "Add session to specific window of events - end timestamp.")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
-	useSentryRollup := flag.Bool("use_sentry_rollup", false, "Enables rollup support for sentry")
 	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 300, "Enables to send errors to sentry in given interval.")
 
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
@@ -112,7 +111,6 @@ func main() {
 		RedisHostPersistent:                 *redisHostPersistent,
 		RedisPortPersistent:                 *redisPortPersistent,
 		SentryDSN:                           *sentryDSN,
-		UseSentryRollup:                     *useSentryRollup,
 		SentryRollupSyncInSecs:              *sentryRollupSyncInSecs,
 		CacheSortedSet:                      *cacheSortedSet,
 		AllowChannelGroupingForProjectIDs:   *allowChannelGroupingForProjectIDs,
