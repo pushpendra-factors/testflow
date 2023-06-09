@@ -87,6 +87,7 @@ type ProjectSetting struct {
 	IsDeanonymizationRequested bool   `json:"is_deanonymization_requested"`
 	IsOnboardingCompleted      bool   `json:"is_onboarding_completed"`
 	SixSignalEmailList         string `gorm:"column:sixsignal_email_list" json:"sixsignal_email_list"`
+	IntG2ApiKey                string `json:"int_g2_api_key"`
 }
 
 /* Sample Attribution Setting
@@ -279,6 +280,11 @@ type LinkedinProjectSettings struct {
 	IntLinkedinRefreshToken       string `json:"int_linkedin_refresh_token"`
 	IntLinkedinRefreshTokenExpiry int64  `json:"int_linkedin_refresh_token_expiry"`
 	IntLinkedinAccessToken        string `json:"int_linkedin_access_token"`
+}
+
+type G2ProjectSettings struct {
+	ProjectID   int64  `json:"project_id"`
+	IntG2APIKey string `json:"int_g2_api_key"`
 }
 
 // SalesforceProjectSettings contains refresh_token and instance_url for enabled projects

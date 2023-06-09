@@ -20,13 +20,20 @@ const (
 	prefixNameforAlerts = "ETA"
 	TEAMS               = "teams"
 	counterIndex        = "Counter"
-	cacheExpiry         = 0
+	cacheExpiry         = 7 * 24 * 60 * 60
 	cacheCounterExpiry  = 24 * 60 * 60
-
+	Paused              = "paused"   //Internal status if the difference between failure is greater than success of the alert by 72 hours
+	Active              = "active"   //Default internal status
+	Disabled            = "disabled" //Internal status if the failures from the poison queue are not resolved for 72 more hours
+	
 	// cachekey structure = ETA:pid:<project_id>:<alert_id>:<UnixTime>
 	// cacheCounterKey structure = ETA:Counter:pid:<project_id>:<alert_id>:<YYYYMMDD>
 	// sortedset key structure = ETA:pid:<project_id>
 	// coolDownKeyCounter structure = ETA:CoolDown:pid:<project_id>:<alert_id>:<prop>:<value>:....:
+	// failure sorted set key structure = ETA:Fail:pid:<project_id>
+	// failure key = <fail_point>:ETA:pid:<project_id>:<alert_id>:<UnixTime>
+	// 		-> fail_point = Slack/WH/Teams
+	// Poison queue sorted set cache key = ETA:Poison:pid:<project_id>
 )
 
 type EventTriggerAlert struct {
@@ -41,6 +48,7 @@ type EventTriggerAlert struct {
 	CreatedAt                time.Time       `gorm:"column:created_at; autoCreateTime" json:"created_at"`
 	UpdatedAt                time.Time       `gorm:"column:updated_at; autoUpdateTime" json:"updated_at"`
 	LastFailDetails          *postgres.Jsonb `gorm:"column:last_fail_details" json:"last_fail_details"`
+	InternalStatus           string          `gorm:"column:internal_status; default:'active'" json:"internal_status"`
 	IsDeleted                bool            `gorm:"column:is_deleted; not null; default:false" json:"is_deleted"`
 }
 
@@ -98,8 +106,8 @@ type MessagePropMapStruct struct {
 
 type LastFailDetails struct {
 	FailTime time.Time `json:"fail_time"`
-	FailedAt string    `json:"failed_at"`
-	Details  string    `json:"details"`
+	FailedAt []string    `json:"failed_at"`
+	Details  []string    `json:"details"`
 }
 
 func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTriggerAlert) error {

@@ -16,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	D "factors/delta"
 )
 
 var FORCED_EVENT_NAMES = map[int64][]string{
@@ -210,4 +211,33 @@ func UploadListForFilters(c *gin.Context) {
 	}
 	store.GetStore().UploadFilterFile(fileReference, projectId)
 	c.JSON(http.StatusOK, gin.H{"file_reference": fileReference})
+}
+
+func GetPropertiesByEventCategoryType(c *gin.Context) {
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+
+	eventCategoryType := c.Query("category")
+	if eventCategoryType == "" {
+		logCtx.WithField("eventCategoryType", eventCategoryType).Error("null eventCategoryType")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	properties := make(map[string][]string)
+	if(eventCategoryType == D.PAGE_VIEW_CATEGORY) {
+		properties["categorical"] = U.PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL
+		properties["numerical"]= U.PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL
+		
+	} else if(eventCategoryType == D.BUTTON_CLICKS_CATEGORY){
+		properties["categorical"] = U.BUTTON_CLICKS_STANDARD_PROPERTIES_CATEGORICAL
+	}
+	c.JSON(http.StatusOK, gin.H{"properties": properties})
 }

@@ -27,6 +27,8 @@ const (
 	SortedSetCacheKey  = "ETA:pid"
 	CoolDownPrefix     = "ETA:CoolDown"
 	oneDayInSeconds    = 24 * 60 * 60
+	PoisonTime         = 72             // Hours after which the alert will be paused internally
+	DisableTime        = 2 * PoisonTime // Hours after which the alert will not be processed from sdk
 )
 
 func (store *MemSQL) GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int) {
@@ -74,6 +76,27 @@ func (store *MemSQL) GetEventTriggerAlertByID(id string) (*model.EventTriggerAle
 	}
 
 	return &alert, http.StatusFound
+}
+
+func (store *MemSQL) GetInternalStatusForEventTriggerAlert(projectID int64, id string) (string, int, error) {
+	logFields := log.Fields{
+		"id": id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	var alert model.EventTriggerAlert
+	err := db.Where("project_id = ?", projectID).Where("id = ?", id).
+		Where("is_deleted = ?", false).Find(&alert).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return "", http.StatusNotFound, err
+		}
+		log.WithError(err).Error("Failed to fetch rows from event_trigger_alerts table for project")
+		return "", http.StatusInternalServerError, err
+	}
+
+	return alert.InternalStatus, http.StatusFound, nil
 }
 
 func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []model.EventTriggerAlert) []model.EventTriggerAlertInfo {
@@ -218,6 +241,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 		IsDeleted:                false,
 		SlackChannelAssociatedBy: slackTokenUser,
 		TeamsChannelAssociatedBy: teamTokenUser,
+		InternalStatus:           model.Active,
 	}
 
 	if err := db.Create(&alert).Error; err != nil {
@@ -332,6 +356,7 @@ func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([
 
 	if err := db.Where("project_id = ? AND is_deleted = 0", projectId).
 		Where("JSON_EXTRACT_STRING(event_trigger_alert, 'event') LIKE ?", eventName.Name).
+		Not("internal_status = ?", model.Disabled).
 		Find(&eventAlerts).Error; err != nil {
 		log.WithFields(log.Fields{"projectId": projectId, "event": eventName.Name}).WithError(err).Error(
 			"filtering eventName failed on GetFilterEventNamesByEvent")
@@ -735,10 +760,10 @@ func getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(projectID int64, 
 }
 
 func isCoolDownTimeExhausted(key *cacheRedis.Key, coolDownTime, unixtime int64, breakdownProps *map[string]interface{}) (bool, error) {
-	
+
 	// coolDownKeyCounter structure = ETA:CoolDown:pid:<project_id>:<alert_id>:<prop>:<value>:....
 	// remove the unixtime from the alert cache key
-	// sort and stringify the breakdownProps 
+	// sort and stringify the breakdownProps
 	// create the coolDown cacheKey from the alert key by adding breakdownProps
 	// INCR the coolDown cacheKey
 	// if the INCR returns value 1 then set the expiry as coolDownTime and return true
@@ -893,4 +918,71 @@ func (store *MemSQL) UpdateEventTriggerAlertField(projectID int64, id string, fi
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusAccepted, nil
+}
+
+func (store *MemSQL) UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	db := C.GetServices().Db
+
+	alertIDs := make([]string, 0)
+	alerts := make([]model.EventTriggerAlert, 0)
+
+	err := db.Where("project_id = ? AND is_deleted = ?", projectID, false).
+		Find(&alerts).Error
+	if err != nil {
+		log.WithFields(logFields).WithError(err).
+			Error("Failed to fetch rows from event_trigger_alerts table")
+		return alertIDs, http.StatusInternalServerError, err
+	}
+
+	for _, alert := range alerts {
+		var lastFail model.LastFailDetails
+		if alert.LastFailDetails != nil {
+			err := U.DecodePostgresJsonbToStructType(alert.LastFailDetails, &lastFail)
+			if err != nil {
+				log.WithFields(logFields).WithError(err).Error("Error in decoding jsonb to struct type")
+				return alertIDs, http.StatusInternalServerError, err
+			}
+		}
+
+		var lastSentTime time.Time
+		if alert.LastAlertAt.IsZero() {
+			lastSentTime = alert.CreatedAt
+		} else {
+			lastSentTime = alert.LastAlertAt
+		}
+		tt := lastFail.FailTime.Sub(lastSentTime)
+
+		if tt.Hours() >= PoisonTime && alert.InternalStatus != model.Paused {
+			updateInternalStatus := map[string]interface{}{
+				"internal_status": model.Paused,
+			}
+			errCode, err := store.UpdateEventTriggerAlertField(projectID, alert.ID, updateInternalStatus)
+			if errCode != http.StatusAccepted || err != nil {
+				log.WithFields(log.Fields{"project_id": projectID, "alert_id": alert.ID}).WithError(err).
+					Error("Failed to update event_trigger_alert row")
+			}
+			alert.InternalStatus = model.Paused
+		}
+		if tt.Hours() >= DisableTime && alert.InternalStatus != model.Disabled {
+			updateInternalStatus := map[string]interface{}{
+				"internal_status": model.Disabled,
+			}
+			errCode, err := store.UpdateEventTriggerAlertField(projectID, alert.ID, updateInternalStatus)
+			if errCode != http.StatusAccepted || err != nil {
+				log.WithFields(log.Fields{"project_id": projectID, "alert_id": alert.ID}).WithError(err).
+					Error("Failed to update event_trigger_alert row")
+			}
+			alert.InternalStatus = model.Disabled
+		}
+		if alert.InternalStatus == model.Paused {
+			alertIDs = append(alertIDs, alert.ID)
+		}
+	}
+
+	return alertIDs, http.StatusOK, nil
 }

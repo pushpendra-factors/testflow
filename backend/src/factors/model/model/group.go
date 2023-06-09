@@ -27,6 +27,7 @@ const GROUP_NAME_SALESFORCE_OPPORTUNITY = "$salesforce_opportunity"
 const GROUP_NAME_SIX_SIGNAL = "$6signal"
 const GROUP_NAME_DOMAINS = "$domains"
 const GROUP_NAME_LINKEDIN_COMPANY = "$linkedin_company"
+const GROUP_NAME_G2 = "$g2"
 
 // AllowedGroupNames list of allowed group names
 var AllowedGroupNames = map[string]bool{
@@ -36,12 +37,14 @@ var AllowedGroupNames = map[string]bool{
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: true,
 	GROUP_NAME_SIX_SIGNAL:             true,
 	GROUP_NAME_LINKEDIN_COMPANY:       true,
+	GROUP_NAME_G2:                     true,
 }
 var AccountGroupNames = map[string]bool{
 	GROUP_NAME_HUBSPOT_COMPANY:    true,
 	GROUP_NAME_SALESFORCE_ACCOUNT: true,
 	GROUP_NAME_SIX_SIGNAL:         true,
 	GROUP_NAME_LINKEDIN_COMPANY:   true,
+	GROUP_NAME_G2:                 true,
 }
 
 var AllowedGroupToDomainsGroup = map[string]bool{
@@ -49,6 +52,7 @@ var AllowedGroupToDomainsGroup = map[string]bool{
 	GROUP_NAME_SALESFORCE_ACCOUNT: true,
 	GROUP_NAME_SIX_SIGNAL:         true,
 	GROUP_NAME_LINKEDIN_COMPANY:   true,
+	GROUP_NAME_G2:                 true,
 }
 
 var DomainNameSourcePropertyKey = map[string]string{

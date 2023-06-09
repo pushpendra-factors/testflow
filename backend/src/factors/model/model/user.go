@@ -139,6 +139,8 @@ const (
 	UserSourceDomains               = 9
 	UserSourceLinkedinCompany       = 10
 	UserSourceLinkedinCompanyString = "linkedin_company"
+	UserSourceG2                    = 11
+	UserSourceG2String              = "g2"
 )
 
 var UserSourceMap = map[string]int{
@@ -150,6 +152,7 @@ var UserSourceMap = map[string]int{
 	UserSourceSixSignalString:       UserSourceSixSignal,
 	UserSourceDomainsString:         UserSourceDomains,
 	UserSourceLinkedinCompanyString: UserSourceLinkedinCompany,
+	UserSourceG2String:              UserSourceG2,
 }
 
 var UserSourceCRM = map[string]int{
@@ -167,6 +170,7 @@ var GroupUserSource = map[string]int{
 	U.GROUP_NAME_SIX_SIGNAL:             UserSourceSixSignal,
 	U.GROUP_NAME_DOMAINS:                UserSourceDomains,
 	U.GROUP_NAME_LINKEDIN_COMPANY:       UserSourceLinkedinCompany,
+	U.GROUP_NAME_G2:                     UserSourceG2,
 }
 
 const USERS = "users"

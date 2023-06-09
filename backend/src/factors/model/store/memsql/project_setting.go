@@ -1117,6 +1117,37 @@ func (store *MemSQL) GetLinkedinEnabledProjectSettingsForProjects(projectIDs []s
 	return linkedinProjectSettings, http.StatusOK
 }
 
+func (store *MemSQL) GetG2EnabledProjectSettings() ([]model.G2ProjectSettings, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
+	db := C.GetServices().Db
+
+	g2ProjectSettings := make([]model.G2ProjectSettings, 0, 0)
+
+	err := db.Table("project_settings").Where("int_g2_api_key IS NOT NULL AND int_g2_api_key != ''").Find(&g2ProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get g2 enabled project settings for sync info.")
+		return g2ProjectSettings, http.StatusInternalServerError
+	}
+	return g2ProjectSettings, http.StatusOK
+}
+
+func (store *MemSQL) GetG2EnabledProjectSettingsForProjects(projectIDs []int64) ([]model.G2ProjectSettings, int) {
+	logFields := log.Fields{
+		"project_ids": projectIDs,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	g2ProjectSettings := make([]model.G2ProjectSettings, 0, 0)
+
+	err := db.Table("project_settings").Where("int_g2_api_key IS NOT NULL AND int_g2_api_key != '' AND project_id IN (?)", projectIDs).Find(&g2ProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get g2 enabled project settings for sync info.")
+		return g2ProjectSettings, http.StatusInternalServerError
+	}
+	return g2ProjectSettings, http.StatusOK
+}
+
 // GetArchiveEnabledProjectIDs Returns list of project ids which have archive enabled.
 func (store *MemSQL) GetArchiveEnabledProjectIDs() ([]int64, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)

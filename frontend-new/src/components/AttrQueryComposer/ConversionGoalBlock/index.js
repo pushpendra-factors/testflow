@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { isArray } from 'lodash';
@@ -13,6 +12,8 @@ import { fetchKPIConfigWithoutDerivedKPI } from 'Reducers/kpi';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import EventFilterWrapper from 'Components/KPIComposer/EventFilterWrapper';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import { getQueryComposerGroupIcon } from 'Utils/getQueryComposerGroupIcons';
 
 const ConversionGoalBlock = ({
   eventGoal,
@@ -334,15 +335,16 @@ const ConversionGoalBlock = ({
     return filters;
   };
 
-  const onEventSelect = (val, group, category) => {
+  const onEventSelect = (option, group) => {
     const currentEventGoal = Object.assign({}, eventGoal);
-    currentEventGoal.label = val[1] ? val[1] : val[0];
-    currentEventGoal.group = group;
+    const category = group.extraProps?.category;
+    currentEventGoal.label = option.value ? option.value : option.label;
+    currentEventGoal.group = group.value;
     currentEventGoal.filters = [];
     if (group_analysis !== 'users') {
-      currentEventGoal.label = val[0];
-      currentEventGoal.metric = val[1] ? val[1] : val[0];
-      currentEventGoal.group = group;
+      currentEventGoal.label = option.label;
+      currentEventGoal.metric = option.value ? option.value : option.label;
+      currentEventGoal.group = group.value;
       if (category) {
         currentEventGoal.category = category;
       }
@@ -422,12 +424,42 @@ const ConversionGoalBlock = ({
   };
 
   const getGroupedProps = () => {
-    if (!group_analysis || group_analysis === 'users') return eventNameOptions;
-    if (group_analysis === 'all') {
-      return getKpiGroupListAll();
+    let groupOptions = [];
+    if (!group_analysis || group_analysis === 'users')
+      groupOptions = eventNameOptions;
+    else if (group_analysis === 'all') {
+      groupOptions = getKpiGroupListAll();
     } else {
-      return getKpiGroupList(group_analysis);
+      groupOptions = getKpiGroupList(group_analysis);
     }
+    groupOptions = groupOptions?.map((groupOpt) => {
+      return {
+        iconName: groupOpt?.icon,
+        label: _.startCase(groupOpt?.label),
+        value: groupOpt?.label,
+        extraProps: {
+          category: groupOpt?.category
+        },
+        values: groupOpt?.values?.map((op) => {
+          return {
+            value: op[1],
+            label: op[0]
+          };
+        })
+      };
+    });
+    // Moving MostRecent as first Option.
+    const mostRecentGroupindex = groupOptions
+      ?.map((opt) => opt.label)
+      ?.indexOf('Most Recent');
+    if (mostRecentGroupindex > 0) {
+      groupOptions = [
+        groupOptions[mostRecentGroupindex],
+        ...groupOptions.slice(0, mostRecentGroupindex),
+        ...groupOptions.slice(mostRecentGroupindex + 1)
+      ];
+    }
+    return groupOptions;
   };
 
   const selectEvents = () => {
@@ -435,20 +467,19 @@ const ConversionGoalBlock = ({
     return (
       <div className={styles.block__event_selector}>
         {selectVisible ? (
-          <GroupSelect2
-            groupedProperties={groupedProps}
-            placeholder='Select Event'
-            optionClick={(group, val, category) =>
-              onEventSelect(val, group, category)
-            }
+          <GroupSelect
+            options={groupedProps}
             onClickOutside={() => setSelectVisible(false)}
-            useCollapseView
+            optionClickCallback={onEventSelect}
+            placeholder='Select Event'
+            allowSearch={true}
+            extraClass={styles.block__event_selector__select}
+            allowSearchTextSelection={false}
           />
         ) : null}
       </div>
     );
   };
-
   const renderGoalBlockContent = () => {
     let filterOptions = [];
     return (
@@ -466,7 +497,15 @@ const ConversionGoalBlock = ({
             <Button
               type='link'
               onClick={toggleEventSelect}
-              icon={<SVG name='mouseevent' />}
+              icon={
+                <SVG
+                  name={getQueryComposerGroupIcon(
+                    getGroupedProps()?.find(
+                      (groupOpt) => groupOpt?.value === eventGoal.group
+                    )?.iconName
+                  )}
+                />
+              }
               className={`fa-button--truncate fa-button--truncate-lg btn-total-round`}
             >
               {eventNames[eventGoal?.label]

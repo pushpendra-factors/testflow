@@ -8,7 +8,6 @@ import { bindActionCreators } from 'redux';
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FilterBlock from '../FilterBlock';
 import EventFilterWrapper from '../EventFilterWrapper';
-import GroupSelect2 from '../GroupSelect2';
 import EventGroupBlock from '../EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 import FaSelect from 'Components/FaSelect';
@@ -18,6 +17,7 @@ import { getNormalizedKpi } from '../../../utils/kpiQueryComposer.helpers';
 import { get } from 'lodash';
 import { compareFilters, groupFilters } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 function QueryBlock({
   index,
@@ -73,20 +73,23 @@ function QueryBlock({
     setPageUrlDD(false);
   };
 
-  const onChange = (value, group, category, original_group) => {
+  const onChange = (option, group) => {
+    const metric = option.value;
+    const metricType = option.extraProps?.valueType | '';
+    const category = group.extraProps?.category;
     let qt;
     for (let item of kpi?.config) {
       for (let it of item.metrics) {
-        if (it?.name === value[1]) qt = it?.kpi_query_type;
+        if (it?.name === metric) qt = it?.kpi_query_type;
       }
     }
     const newEvent = { alias: '', label: '', filters: [], group: '' };
-    newEvent.label = value[0];
-    newEvent.metric = value[1];
-    newEvent.metricType = get(value, '2', '');
-    newEvent.group = group;
+    newEvent.label = option.label;
+    newEvent.metric = metric;
+    newEvent.metricType = metricType;
+    newEvent.group = group.value;
     newEvent.qt = qt;
-    newEvent.icon = original_group.icon;
+    newEvent.icon = group.iconName;
     if (category) {
       newEvent.category = category;
     }
@@ -97,7 +100,6 @@ function QueryBlock({
       eventChange(newEvent, index - 1, 'add');
     }
   };
-
   // useEffect(() => {
   //   if (!event || event === undefined) {
   //     return undefined;
@@ -119,23 +121,54 @@ function QueryBlock({
     eventChange(event, index - 1, 'delete');
   };
 
-  const kpiEvents = kpi?.config?.map((item) => {
-    return getNormalizedKpi({ kpi: item });
-  });
+  const kpiEvents = kpi?.config
+    ?.map((item) => {
+      return getNormalizedKpi({ kpi: item });
+    })
+    ?.map((groupOpt) => {
+      return {
+        iconName: groupOpt?.icon,
+        label: _.startCase(groupOpt?.label),
+        value: groupOpt?.label,
+        extraProps: {
+          category: groupOpt?.category
+        },
+        values: groupOpt?.values?.map((op) => {
+          return {
+            value: op[1],
+            label: op[0],
+            extraProps: {
+              valueType: op[2]
+            }
+          };
+        })
+      };
+    });
 
   const selectEvents = () => {
+    let orderedKpiEvents;
+    // Moving MostRecent as first Option.
+    const mostRecentGroupindex = kpiEvents
+      ?.map((opt) => opt.label)
+      ?.indexOf('Most Recent');
+    if (mostRecentGroupindex > 0) {
+      orderedKpiEvents = [
+        orderedKpiEvents[mostRecentGroupindex],
+        ...orderedKpiEvents.slice(0, mostRecentGroupindex),
+        ...orderedKpiEvents.slice(mostRecentGroupindex + 1)
+      ];
+    }
     return (
       <>
         {isDDVisible ? (
           <div className={styles.query_block__event_selector}>
-            <GroupSelect2
-              groupedProperties={kpiEvents ? kpiEvents : []}
-              placeholder='Select Event'
-              optionClick={(group, val, category, original_group) =>
-                onChange(val, group, category, original_group)
-              }
+            <GroupSelect
+              options={kpiEvents ? kpiEvents : []}
+              optionClickCallback={onChange}
               onClickOutside={() => setDDVisible(false)}
-              allowEmpty={true}
+              allowSearch={true}
+              extraClass={styles.query_block__event_selector__select}
+              allowSearchTextSelection={false}
             />
           </div>
         ) : null}
@@ -569,7 +602,15 @@ function QueryBlock({
               color={TOOLTIP_CONSTANTS.DARK}
             >
               <Button
-                icon={<SVG name={event.icon} />}
+                icon={
+                  <SVG
+                    name={
+                      kpiEvents?.find((group) => group.value === event.group)
+                        ?.iconName
+                    }
+                    size={20}
+                  />
+                }
                 className={`fa-button--truncate fa-button--truncate-lg btn-total-round`}
                 type='link'
                 onClick={triggerDropDown}

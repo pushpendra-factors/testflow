@@ -8,7 +8,7 @@ import React, {
 import cx from 'classnames';
 import moment from 'moment';
 import _, { get } from 'lodash';
-import { Button, Modal, Tabs } from 'antd';
+import { Button, Dropdown, Menu, Modal, Tabs } from 'antd';
 import { useSelector } from 'react-redux';
 import { useHistory, useLocation } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
@@ -46,7 +46,6 @@ function AnalysisHeader({
   const [showSaveQueryModal, setShowSaveQueryModal] = useState(false);
   const [showUpdateQuery, setShowUpdateQuery] = useState(false);
   const [visible, setVisible] = useState(false);
-  const [helpMenu, setHelpMenu] = useState(false);
   const savedQueries = useSelector((state) =>
     get(state, 'queries.data', EMPTY_ARRAY)
   );
@@ -106,10 +105,13 @@ function AnalysisHeader({
 
   const saveAndClose = () => {
     setVisible(false);
-    if(navigatedFromDashboard?.id || navigatedFromAnalyse?.key) {
+    if (navigatedFromDashboard?.id || navigatedFromAnalyse?.key) {
       setShowUpdateQuery(true);
       setTimeout(() => {
-        location?.state?.navigatedFromDashboardExistingReports || navigatedFromDashboard ? conditionalRouteBackCheck() : closeWithoutSave()
+        location?.state?.navigatedFromDashboardExistingReports ||
+        navigatedFromDashboard
+          ? conditionalRouteBackCheck()
+          : closeWithoutSave();
       }, 1500);
     } else {
       setShowSaveQueryModal(true);
@@ -210,9 +212,7 @@ function AnalysisHeader({
       size='large'
       type='text'
       onClick={
-        navigatedFromDashboard
-          ? handleCloseFromLogo
-          : handleCloseFromLogo
+        navigatedFromDashboard ? handleCloseFromLogo : handleCloseFromLogo
       }
       icon={<SVG size={32} name='Brand' />}
     />
@@ -295,36 +295,91 @@ function AnalysisHeader({
       ic(!hideIntercomState === true ? 'hide' : 'show');
     }
   };
-  const setActions = (opt) => {
-    if (opt[1] === 'help_doc') {
-      window.open('https://help.factors.ai/', '_blank');
-    } else if (opt[1] === 'intercom_help') {
+
+  const handleActionMenuClick = (e) => {
+    if (e?.key === '6') {
       handleIntercomHelp();
+    } else if (e?.key === '7') {
+      window.open('https://help.factors.ai/', '_blank');
     }
   };
-  const getHelpMenu = () => {
-    return helpMenu === false ? (
-      ''
-    ) : (
-      <FaSelect
-        extraClass={styles.additionalops}
-        options={[
-          ['Help and Support', 'help_doc'],
-          ['Talk to us', 'intercom_help']
-        ]}
-        optionClick={(val) => setActions(val)}
-        onClickOutside={() => setHelpMenu(false)}
-        posRight={true}
-        showIcon
-      ></FaSelect>
-    );
-  };
+
+  const actionMenu = (
+    <Menu
+      onClick={handleActionMenuClick}
+      className={`${styles.antdActionMenu}`}
+    >
+      <Menu.Item key='1' disabled={!savedQueryId}>
+        <SVG
+          name={'envelope'}
+          size={18}
+          color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
+          extraClass={'inline mr-2'}
+        />
+        Email this report
+      </Menu.Item>
+      <Menu.Item key='2' disabled={!savedQueryId}>
+        <SVG
+          name={'SlackStroke'}
+          size={18}
+          color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
+          extraClass={'inline mr-2'}
+        />
+        Share to slack
+      </Menu.Item>
+      <Menu.Item key='3' disabled={!savedQueryId}>
+        <SVG
+          name={'addtodash'}
+          size={18}
+          color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
+          extraClass={'inline mr-2'}
+        />
+        Add to Dashboard
+      </Menu.Item>
+      <Menu.Divider />
+      <Menu.Item key='4' disabled={!savedQueryId}>
+        <SVG
+          name={'edit'}
+          size={18}
+          color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
+          extraClass={'inline mr-2'}
+        />
+        Edit Details
+      </Menu.Item>
+      <Menu.Item key='5' disabled={!savedQueryId}>
+        <SVG
+          name={'trash'}
+          size={18}
+          color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
+          extraClass={'inline mr-2'}
+        />
+        Delete
+      </Menu.Item>
+      <Menu.Divider />
+      <Menu.Item key='6'>
+        <SVG
+          name={'headset'}
+          size={18}
+          color={'grey'}
+          extraClass={'inline mr-2'}
+        />
+        Talk to us
+      </Menu.Item>
+      <Menu.Item key='7'>
+        <QuestionCircleOutlined
+          style={{ fontSize: '15px', marginRight: '12px' }}
+        />
+        Help and Support
+      </Menu.Item>
+    </Menu>
+  );
   return (
     <div
       id='app-header'
       className={cx('bg-white z-50 flex-col  px-8 w-full', {
         fixed: requestQuery
       })}
+      style={{ borderBottom: requestQuery ? '1px solid lightgray' : 'none' }}
     >
       <div className='items-center flex justify-between w-full pt-3 pb-3'>
         <div
@@ -340,19 +395,18 @@ function AnalysisHeader({
         <div className='flex items-center'>
           {isFromAnalysisPage ? (
             <div className='pr-2 '>
-              <div className='relative'>
-                <Button
-                  size='large'
-                  type='text'
-                  icon={<QuestionCircleOutlined />}
-                  onClick={() => setHelpMenu(!helpMenu)}
-                ></Button>
-                {getHelpMenu()}
+              <div className='relative gap-x-2 mr-2'>
+                <Dropdown overlay={actionMenu} placement='bottomRight'>
+                  <Button
+                    type='text'
+                    icon={<SVG name={'threedot'} size={25} />}
+                  />
+                </Dropdown>
               </div>
             </div>
           ) : (
             ''
-            )}
+          )}
           <div className='pr-2'>{renderSaveQueryComp()}</div>
           {renderReportCloseIcon()}
         </div>
@@ -387,13 +441,20 @@ function AnalysisHeader({
               className='mx-4 my-2'
               onClick={saveAndClose}
             >
-              {(navigatedFromDashboard?.id || navigatedFromAnalyse?.key) ? 'Save and Close': 'Save as New'}
+              {navigatedFromDashboard?.id || navigatedFromAnalyse?.key
+                ? 'Save and Close'
+                : 'Save as New'}
             </Button>
             <Button
               type='default'
               style={{ width: '168px', height: '32px' }}
               className='mx-4 my-2'
-              onClick={() => location?.state?.navigatedFromDashboardExistingReports || navigatedFromDashboard ? conditionalRouteBackCheck() : closeWithoutSave()}
+              onClick={() =>
+                location?.state?.navigatedFromDashboardExistingReports ||
+                navigatedFromDashboard
+                  ? conditionalRouteBackCheck()
+                  : closeWithoutSave()
+              }
             >
               Close without saving
             </Button>
