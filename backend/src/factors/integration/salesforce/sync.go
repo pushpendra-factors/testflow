@@ -1112,7 +1112,7 @@ func SyncUserReferenceFields(projectID int64, propertiesMetaMap map[string][]Pro
 
 	failures := false
 
-	userRecords, errCode := store.GetStore().GetSalesforceDocumentsByTypeForSync(projectID, model.SalesforceDocumentTypeUser, 0, 0)
+	userRecords, errCode := store.GetStore().GetSalesforceDocumentsByTypeForSync(projectID, model.SalesforceDocumentTypeUser, 0, 0, 0, 0)
 	if errCode != http.StatusNotFound && errCode != http.StatusFound {
 		logCtx.WithField("doc_type", model.SalesforceDocumentTypeUser).Error("Failed to get salesforce user document for sync.")
 		return true
