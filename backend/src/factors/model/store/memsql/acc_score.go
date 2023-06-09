@@ -14,6 +14,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const MAX_LIMIT = 10000
+
 func (store *MemSQL) UpdateUserEventsCount(evdata []model.EventsCountScore) error {
 	projectID := evdata[0].ProjectId
 	logFields := log.Fields{
@@ -484,7 +486,6 @@ func (store *MemSQL) GetAccountScoreOnIds(projectId int64, accountIds []string, 
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	MAX_LIMIT := 10000
 	logCtx := log.WithFields(logFields)
 	db := C.GetServices().Db
 
@@ -552,8 +553,8 @@ func ComputeUserScoreNonAnonymous(db *gorm.DB, weights model.AccWeights, project
 
 	result := make(map[string]model.PerUserScoreOnDay, 0)
 
-	stmt_customer := fmt.Sprintf("select customer_user_id, json_extract_json(event_aggregate,'%s') from users where customer_user_id IN (?) and project_id=?", model.LAST_EVENT)
-	rows, err := db.Raw(stmt_customer, knownUsers, projectId).Rows()
+	stmt_customer := fmt.Sprintf("select customer_user_id, json_extract_json(event_aggregate,'%s') from users where project_id=? and customer_user_id IN (?) AND JSON_LENGTH(event_aggregate)>=1 LIMIT %d", model.LAST_EVENT, MAX_LIMIT)
+	rows, err := db.Raw(stmt_customer, projectId, knownUsers).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Error while fetching rows to compute user scores")
 		return nil, err
