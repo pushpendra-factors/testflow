@@ -4109,3 +4109,26 @@ func TestSDKAssociateUserEmailDomain(t *testing.T) {
 	assert.Equal(t, "hubspot1.com", domainName)
 
 }
+
+func TestSDKCreateDomainGroupOnUserAssociation(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	cuid := "test@mail.freshworks.com"
+	userWeb, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: cuid})
+	assert.Equal(t, http.StatusCreated, errCode)
+	status := store.GetStore().AssociateUserDomainsGroup(project.ID, userWeb, "", "")
+	assert.Equal(t, http.StatusOK, status)
+	domainGroup, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_DOMAINS)
+	assert.Equal(t, http.StatusFound, status)
+	user, status := store.GetStore().GetUser(project.ID, userWeb)
+	assert.Equal(t, http.StatusFound, status)
+	domainUserID, err := model.GetUserGroupUserID(user, domainGroup.ID)
+	assert.Nil(t, err)
+	domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "freshworks.com", domainName)
+}
