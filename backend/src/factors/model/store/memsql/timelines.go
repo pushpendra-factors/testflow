@@ -70,6 +70,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		tableProps = segmentQuery.TableProps
 		segmentQuery.From = U.TimeNowZ().AddDate(0, 0, -28).Unix()
 		segmentQuery.To = U.TimeNowZ().Unix()
+		segmentQuery.GroupAnalysis = ""
 		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
 			if C.IsEnabledEventsFilterInSegments() {
 				if payload.Filters != nil {

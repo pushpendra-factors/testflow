@@ -275,18 +275,28 @@ func (projReport *SendReportLogCount) addToSendReport(alertReport SendReportLogC
 	projReport.WebhookSuccess += alertReport.WebhookSuccess
 }
 
-func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEventTriggerAlert, alertID string, retry bool, sendTo string) (bool, SendReportLogCount) {
+func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEventTriggerAlert,
+	alertID string, retry bool, sendTo string) (bool, SendReportLogCount) {
+
+	logCtx := log.WithFields(log.Fields{
+		"key":      key,
+		"alert":    alert,
+		"alert_id": alertID,
+		"retry":    retry,
+		"send_to":  sendTo,
+	})
+
 	var sendReport SendReportLogCount
 	eta, errCode := store.GetStore().GetEventTriggerAlertByID(alertID)
 	if errCode != http.StatusFound || eta == nil {
-		log.Error("Failed to fetch alert from db, ", errCode)
+		logCtx.WithField("err_code", errCode).Error("Failed to fetch alert from db.")
 		return false, sendReport
 	}
 
 	var alertConfiguration model.EventTriggerAlertConfig
 	err := U.DecodePostgresJsonbToStructType(eta.EventTriggerAlert, &alertConfiguration)
 	if err != nil {
-		log.WithError(err).Error("Failed to decode Jsonb to struct type")
+		logCtx.WithError(err).Error("Failed to decode Jsonb to struct type")
 		return false, sendReport
 	}
 
@@ -301,7 +311,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 	if (retry && strings.EqualFold("Slack", sendTo)) || (!retry && alertConfiguration.Slack) {
 		isSlackIntergrated, errCode := store.GetStore().IsSlackIntegratedForProject(eta.ProjectID, eta.SlackChannelAssociatedBy)
 		if errCode != http.StatusOK {
-			log.WithFields(log.Fields{"agentID": eta.SlackChannelAssociatedBy, "event_trigger_alert_id": eta.ID}).
+			logCtx.WithFields(log.Fields{"agentID": eta.SlackChannelAssociatedBy, "event_trigger_alert_id": eta.ID}).
 				Error("failed to check slack integration")
 		}
 		if isSlackIntergrated {
@@ -309,7 +319,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 			if !slackSuccess {
 				err := EventTriggerDeliveryFailureExecution(key, eta, "Slack", errMsg)
 				if err != nil {
-					log.WithError(err).Error("failed while updating slack-fail flow")
+					logCtx.WithError(err).Error("failed while updating slack-fail flow")
 				}
 				sendReport.SlackFail++
 			} else {
@@ -317,14 +327,14 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 				sendReport.SlackSuccess++
 			}
 		} else {
-			log.WithFields(log.Fields{"alert_id": alertID}).Error("integration not found for slack configuration")
+			logCtx.WithFields(log.Fields{"alert_id": alertID}).Error("integration not found for slack configuration")
 		}
 	}
 
 	if (retry && strings.EqualFold("Teams", sendTo)) || (!retry && alertConfiguration.Teams) {
 		isTeamsIntergrated, errCode := store.GetStore().IsTeamsIntegratedForProject(eta.ProjectID, eta.TeamsChannelAssociatedBy)
 		if errCode != http.StatusOK {
-			log.WithFields(log.Fields{"agentID": eta.TeamsChannelAssociatedBy, "event_trigger_alert": alert}).
+			logCtx.WithFields(log.Fields{"agentID": eta.TeamsChannelAssociatedBy, "event_trigger_alert": alert}).
 				Error("failed to check teams integration")
 		}
 		if isTeamsIntergrated {
@@ -332,7 +342,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 			if !teamsSuccess {
 				err := EventTriggerDeliveryFailureExecution(key, eta, "Teams", errMsg)
 				if err != nil {
-					log.WithError(err).Error("failed while updating teams-fail flow")
+					logCtx.WithError(err).Error("failed while updating teams-fail flow")
 				}
 
 				sendReport.TeamsFail++
@@ -341,20 +351,20 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 				sendReport.TeamsSuccess++
 			}
 		} else {
-			log.WithFields(log.Fields{"alert_id": alertID}).Error("integration not found for teams configuration")
+			logCtx.WithFields(log.Fields{"alert_id": alertID}).Error("integration not found for teams configuration")
 		}
 	}
 
 	if (retry && strings.EqualFold("WH", sendTo)) || (!retry && alertConfiguration.Webhook) {
 		response, err := webhook.DropWebhook(alertConfiguration.WebhookURL, alertConfiguration.Secret, alert.Message)
 		if err != nil {
-			log.WithFields(log.Fields{"alert_id": alertID, "server_response": response}).
+			logCtx.WithFields(log.Fields{"alert_id": alertID, "server_response": response}).
 				WithError(err).Error("Webhook failure")
 		}
-		log.Info(fmt.Printf("Webhook dropped for alert: %s. RESPONSE: %+v", alertID, response))
+		logCtx.WithField("response", response).Info("Webhook dropped for alert.")
 		stat := response["status"]
 		if stat != "ok" {
-			log.Error("Error details: ", stat, response)
+			log.WithField("status", stat).WithField("response", response).Error("Web hook error details")
 
 			whSuccess = false
 			errMsg := fmt.Sprintf("%+v", response)
@@ -374,7 +384,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		status, err := store.GetStore().UpdateEventTriggerAlertField(eta.ProjectID, eta.ID,
 			map[string]interface{}{"last_alert_at": time.Now()})
 		if status != http.StatusAccepted || err != nil {
-			log.WithError(err).Error("Failed to update db field")
+			logCtx.WithError(err).Error("Failed to update db field")
 		}
 	}
 

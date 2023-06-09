@@ -996,6 +996,10 @@ func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.Das
 
 	allRange := append(monthRange, weeksRange...)
 
+	log.WithFields(log.Fields{"projectID": dashboardUnit.ProjectID,
+		"allRange": allRange,
+		"Method":   "RunCachingForLast3MonthsAttribution"}).Info("Attribution V1 caching debug")
+
 	for _, queryRange := range allRange {
 
 		from := queryRange.From
@@ -1828,6 +1832,7 @@ func (store *MemSQL) _cacheAttributionDashboardUnitForDateRange(cachePayload mod
 		"wait_group":       waitGroup,
 		"report_collector": reportCollector,
 	}
+	log.WithFields(logFields).Info("Attribution V1 caching debug _cacheAttributionDashboardUnitForDateRange")
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()
