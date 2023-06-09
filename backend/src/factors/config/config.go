@@ -1273,6 +1273,7 @@ type SentryInfo struct {
 	logCtx     log.Entry
 	occurences int
 	Fields     log.Fields
+	Stacktrace string
 }
 
 type SentryErrorHook struct {
@@ -1306,7 +1307,12 @@ func WriteToLogErrors(logCtx *log.Entry, appName string) {
 
 	_, errorExists := services.logErrors[logCtx.Message]
 	if !errorExists {
-		services.logErrors[logCtx.Message] = &SentryInfo{logCtx: *logCtx, occurences: 1, Fields: logCtx.Data}
+		services.logErrors[logCtx.Message] = &SentryInfo{
+			logCtx:     *logCtx,
+			occurences: 1,
+			Fields:     logCtx.Data,
+			Stacktrace: string(debug.Stack()),
+		}
 	} else {
 		// increment the ocurences of the error message if it repeats
 		services.logErrors[logCtx.Message].occurences = services.logErrors[logCtx.Message].occurences + 1
@@ -1370,6 +1376,7 @@ func sendErrorsToSentry(appName string) {
 						Info.Fields[key] = fmt.Sprintf("%+v", value)
 					}
 					event.Extra = Info.Fields
+					event.Extra["stacktrace"] = Info.Stacktrace
 
 					sentry.CaptureEvent(event)
 				}
