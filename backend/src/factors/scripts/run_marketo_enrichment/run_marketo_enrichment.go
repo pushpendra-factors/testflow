@@ -53,6 +53,9 @@ func main() {
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
+	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
+	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
+	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
 
 	recordProcessLimit := flag.Int("record_process_limit", 0, "Adding limit for processing records") // By default, pull all records
 
@@ -96,6 +99,9 @@ func main() {
 		ClearbitEnabled:                        *clearbitEnabled,
 		SixSignalEnabled:                       *sixSignalEnabled,
 		IngestionTimezoneEnabledProjectIDs:     C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
+		EnableDomainsGroupByProjectID:          *enableDomainsGroupByProjectID,
+		EnableUserDomainsGroupByProjectID:      *enableUserDomainsGroupByProjectID,
+		AllowEmailDomainsByProjectID:           *allowEmailDomainsByProjectID,
 	}
 
 	C.InitConf(config)
