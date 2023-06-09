@@ -29,7 +29,6 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
-	useSentryRollup := flag.Bool("use_sentry_rollup", false, "Enables rollup support for sentry")
 	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 300, "Enables to send errors to sentry in given interval.")
 
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
@@ -111,7 +110,6 @@ func main() {
 		RedisHostPersistent:                           *redisHostPersistent,
 		RedisPortPersistent:                           *redisPortPersistent,
 		SentryDSN:                                     *sentryDSN,
-		UseSentryRollup:                               *useSentryRollup,
 		SentryRollupSyncInSecs:                        *sentryRollupSyncInSecs,
 		DryRunCRMSmartEvent:                           *dryRunSmartEvent,
 		CacheSortedSet:                                *cacheSortedSet,

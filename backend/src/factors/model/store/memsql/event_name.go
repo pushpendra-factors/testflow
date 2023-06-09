@@ -613,12 +613,13 @@ func getPropertyValuesByEventPropertyFromCache(projectID int64, eventName string
 	return cacheValue, nil
 }
 
-// We fetch properties from Cache and filter the required properties based on the eventName provided.
-
-func (store *MemSQL) GetEventPropertiesAndModifyResultsForNonExplain(projectId int64, eventName string) (map[string][]string, int) {
+// Fetches properties from Cache and filter the required properties based on the eventName provided.
+func (store *MemSQL) GetEventPropertiesAndModifyResultsForNonExplain(projectId int64,
+	eventName string) (map[string][]string, int) {
 
 	logCtx := log.WithFields(log.Fields{
-		"projectId": projectId,
+		"projectId":  projectId,
+		"event_name": eventName,
 	})
 
 	properties := make(map[string][]string)
@@ -652,12 +653,14 @@ func (store *MemSQL) GetEventPropertiesAndModifyResultsForNonExplain(projectId i
 		properties = propertiesFromCache
 	}
 	if err != nil {
-		logCtx.WithError(err).Error("get properties by event")
+		logCtx.WithError(err).Error("Failed to get properties by event")
 		return make(map[string][]string, 0), http.StatusInternalServerError
 	}
+
 	if len(properties) == 0 {
-		logCtx.WithError(err).Error(fmt.Sprintf("No event properties Returned - ProjectID - %v, EventName - %s", projectId, eventName))
+		logCtx.WithError(err).Warn("No event properties returned")
 	}
+
 	return properties, http.StatusOK
 }
 

@@ -182,7 +182,6 @@ func (store *MemSQL) GetPropertiesByGroup(projectID int64, groupName string, lim
 	}
 	currentDate := model.OverrideCacheDateRangeForProjects(projectID)
 	if groupName == "" || groupName == "undefined" {
-		logCtx.Error("Invalid group_name.")
 		return properties, http.StatusBadRequest
 	}
 	groupProperties := make([]U.CachePropertyWithTimestamp, 0)

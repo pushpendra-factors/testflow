@@ -58,7 +58,7 @@ const TEST = "test"
 const STAGING = "staging"
 const PRODUCTION = "production"
 
-const SENTRY_APP_KEY = "app_name"
+const SENTRY_APP_KEY = "AppName"
 const SENTRY_OCCURRENCE_KEY = "occurences"
 
 // Warning: Any changes to the cookie name has to be
@@ -781,6 +781,12 @@ func InitConf(c *Configuration) {
 			Fatal("Environment not provided on config intialization.")
 	}
 
+	// default config.
+	c.UseSentryRollup = true
+	if c.SentryRollupSyncInSecs == 0 {
+		c.SentryRollupSyncInSecs = 300
+	}
+
 	log.WithField("config", c).Info("Configuration Initialized.")
 	configuration = c
 }
@@ -1304,9 +1310,7 @@ func WriteToLogErrors(logCtx *log.Entry, appName string) {
 	// TODO: Add log fields receive every time to an array.
 
 	logCtx.Data[SENTRY_OCCURRENCE_KEY] = services.logErrors[logCtx.Message].occurences
-	logCtx.Data[SENTRY_APP_KEY] = appName
 	services.logErrors[logCtx.Message].Fields = logCtx.Data
-
 }
 
 // ForkLogErrors() - Forks a new log rollup and returns the so far collected.
@@ -1341,25 +1345,28 @@ func sendErrorsToSentry(appName string) {
 			case <-ticker.C:
 				errorsMap := ForkLogErrors()
 				for message, Info := range errorsMap {
-					sentry.NewScope().SetTags(map[string]string{
-						SENTRY_APP_KEY:        appName,
-						SENTRY_OCCURRENCE_KEY: strconv.Itoa(Info.occurences),
-						"data_store":          GetPrimaryDatastore(),
-					})
-					for key, value := range Info.Fields {
-						ctx := context.Background()
-						hub := sentry.GetHubFromContext(ctx)
-						hub.Scope().SetTag(key, value.(string))
+					event := sentry.NewEvent()
+					event.Level = sentry.LevelError
+					event.Message = message
+					event.Environment = configuration.Env
+					event.Tags = map[string]string{
+						SENTRY_APP_KEY: appName,
 					}
-					sentry.CaptureMessage(message)
+
+					for key, value := range Info.Fields {
+						Info.Fields[key] = fmt.Sprintf("%+v", value)
+					}
+					event.Extra = Info.Fields
+
+					sentry.CaptureEvent(event)
 				}
+
 			case <-quit:
 				ticker.Stop()
 				return
 			}
 		}
 	}()
-
 }
 
 func initSentryRollup(sentryDSN, appName string) {
@@ -1410,7 +1417,7 @@ func InitSentryLogging(sentryDSN, appName string) {
 	}
 	log.SetReportCaller(true)
 
-	if IsDevelopment() || IsStaging() || sentryDSN == "" {
+	if sentryDSN == "" {
 		return
 	}
 
@@ -1424,6 +1431,7 @@ func InitSentryLogging(sentryDSN, appName string) {
 	if services == nil {
 		services = &Services{}
 	}
+
 	sentryHook, err := logrus_sentry.NewAsyncSentryHook(sentryDSN, []log.Level{
 		log.PanicLevel,
 		log.FatalLevel,

@@ -79,7 +79,7 @@ func (store *MemSQL) convertPathAnalysisToPathAnalysisEntityInfo(list []model.Pa
 			return nil
 		}
 		_, exist := res[obj.ReferenceID]
-		if(!exist){
+		if !exist {
 			res[obj.ReferenceID] = make([]model.PathAnalysisEntityInfo, 0)
 		}
 		e := model.PathAnalysisEntityInfo{
@@ -91,9 +91,26 @@ func (store *MemSQL) convertPathAnalysisToPathAnalysisEntityInfo(list []model.Pa
 			PathAnalysisQuery: entity,
 		}
 		res[obj.ReferenceID] = append(res[obj.ReferenceID], e)
-		
+
 	}
 	return res
+}
+
+func isDateRangeNotCorrect(startTime, endTime int64) bool {
+	oneDayInSeconds := 60 * 60 * 24
+	//As of 08.06.2023, the endTimeStamp is set for the last day of the selected time range at 14.00 time
+	//and the startTimeStamp is set to the previous day of the starting date at 14.00 time
+	//so the endtime check is for 4 days and 10 hours
+	endThreshold := 4*oneDayInSeconds + 60*60*10 //4days + 10 hours
+	tt := time.Now().Unix()
+
+	if endTime > tt-int64(endThreshold) {
+		return true
+	}
+	if endTime-startTime > int64(90*oneDayInSeconds) {
+		return true
+	}
+	return false
 }
 
 func (store *MemSQL) CreatePathAnalysisEntity(userID string, projectId int64, entity *model.PathAnalysisQuery, referenceId string) (*model.PathAnalysis, int, string) {
@@ -113,6 +130,10 @@ func (store *MemSQL) CreatePathAnalysisEntity(userID string, projectId int64, en
 
 	if isDulplicatePathAnalysisQuery(projectId, entity) {
 		return nil, http.StatusConflict, "Query already exists"
+	}
+
+	if isDateRangeNotCorrect(entity.StartTimestamp, entity.EndTimestamp) {
+		return nil, http.StatusConflict, "invalid date range selected"
 	}
 
 	transTime := gorm.NowFunc()
@@ -136,7 +157,7 @@ func (store *MemSQL) CreatePathAnalysisEntity(userID string, projectId int64, en
 		IsDeleted:         false,
 	}
 
-	if(referenceId == ""){
+	if referenceId == "" {
 		obj.ReferenceID = obj.ID
 	} else {
 		obj.ReferenceID = referenceId

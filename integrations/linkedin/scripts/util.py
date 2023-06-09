@@ -87,11 +87,12 @@ class Util:
         date = data['dateRange']['end']
         return Util.get_timestamp(date)
 
+    # if last sync date was 20230101, then date start would be 20230102 adn date end would be today - 1
     # this is inclusive of date start and date end
     @staticmethod
     def get_timestamp_range_from_start_end_date(date_start, date_end):
         timestamps =[]
-        num_of_days = (date_end-date_start).days
+        num_of_days = (date_end-date_start).days + 1
         if num_of_days <=0:
             return []
         for i in range (0, num_of_days):

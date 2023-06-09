@@ -144,15 +144,16 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	}
 
 	if isExplain != "true" {
-		properties, err = store.GetStore().GetUserPropertiesByProject(projectId, 2500, C.GetLookbackWindowForEventUserCache())
+		properties, err = store.GetStore().GetUserPropertiesByProject(projectId, 2500,
+			C.GetLookbackWindowForEventUserCache())
 		if err != nil {
-			logCtx.WithError(err).Error("get user properties by project")
+			logCtx.WithError(err).Error("Failed to get user properties by project.")
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
 
 		if len(properties) == 0 {
-			logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %v", projectId))
+			logCtx.WithError(err).Warn("No user properties Returned.")
 		}
 	} else {
 		var status int
@@ -209,7 +210,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"properties": properties, "disabled_event_user_properties": U.DISABLED_EVENT_USER_PROPERTIES})
 }
 
-//GetUserPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/user_properties/$country
+// GetUserPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/user_properties/$country
 // GetUserPropertiesHandler godoc
 // @Summary Get property values for given property name.
 // @Tags Users
