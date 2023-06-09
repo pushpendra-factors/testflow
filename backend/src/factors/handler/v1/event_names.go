@@ -55,11 +55,6 @@ func GetEventNamesHandler(c *gin.Context) {
 		return
 	}
 
-	if len(eventNames) == 0 {
-
-		logCtx.WithError(err).Error(fmt.Sprintf("No Events Returned - ProjectID - %s", projectId))
-	}
-
 	// Force add specific events.
 	if fNames, pExists := FORCED_EVENT_NAMES[projectId]; pExists {
 		eventNames[U.FrequentlySeen] = append(eventNames[U.FrequentlySeen], fNames...)
@@ -140,10 +135,6 @@ func GetEventNamesByTypeHandler(c *gin.Context) {
 		logCtx.WithError(err).Error("get event names ordered by occurence and recency")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
-	}
-
-	if len(eventNames) == 0 {
-		logCtx.WithError(err).Error(fmt.Sprintf("No Events Returned - ProjectID - %d", projectId))
 	}
 
 	// Force add specific events.

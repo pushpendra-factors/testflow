@@ -22,7 +22,7 @@ import (
 // curl -i -X GET http://localhost:8080/projects/1/event_names
 // TODO(aravind): Hack below to force some important but not frequent events to show up on production.
 
-//  FORCED_EVENT_NAMES All handlers here have a back up DB call. Will remove this after the cache is functional/updated for all the projects
+// FORCED_EVENT_NAMES All handlers here have a back up DB call. Will remove this after the cache is functional/updated for all the projects
 var FORCED_EVENT_NAMES = map[int64][]string{
 	215: []string{
 		// Project ExpertRec.
@@ -157,11 +157,6 @@ func GetEventNamesHandler(c *gin.Context) {
 		return
 	}
 
-	if len(eventNames) == 0 {
-
-		logCtx.WithError(err).Error(fmt.Sprintf("No Events Returned - ProjectID - %v", projectId))
-	}
-
 	eventNameStrings := make([]string, 0)
 
 	if len(eventNames[U.SmartEvent]) > 0 {
@@ -208,11 +203,6 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 		logCtx.WithError(err).Error("get event names ordered by occurence and recency")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
-	}
-
-	if len(eventNames) == 0 {
-
-		logCtx.WithError(err).Error(fmt.Sprintf("No Events Returned - ProjectID - %v", projectId))
 	}
 
 	eventNames = RemoveGroupEventNamesOnUserEventNames(eventNames)
@@ -311,11 +301,6 @@ func GetEventNamesByGroupHandler(c *gin.Context) {
 		logCtx.WithError(err).Error("get event names ordered by occurence and recency")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
-	}
-
-	if len(eventNames) == 0 {
-
-		logCtx.WithError(err).Error(fmt.Sprintf("No Events Returned - ProjectID - %v", projectId))
 	}
 
 	eventNames = RemoveGroupEventNamesOnUserEventNames(eventNames)

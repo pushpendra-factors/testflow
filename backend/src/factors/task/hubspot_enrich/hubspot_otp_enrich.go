@@ -9,11 +9,12 @@ import (
 	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 var AllowedHsEventTypeForOTP = []string{
@@ -561,7 +562,7 @@ func CreateTouchPointEventForEngagementV1(project *model.Project, event model.Ev
 			threadID, isPresent := event.EventProperties["threadId"]
 			if !isPresent {
 				logCtx.WithField("threadID", threadID).
-					Error("couldn't get the threadID on hubspot email engagement, logging and continuing")
+					Warn("couldn't get the threadID on hubspot email engagement, logging and continuing")
 			} else {
 				found, errT := isEmailEngagementAlreadyTrackedV1(project.ID, rule.ID, threadID.(string), logCtx)
 				if found || errT != nil {

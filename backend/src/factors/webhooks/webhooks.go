@@ -6,9 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"io/ioutil"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -48,8 +48,8 @@ func DropWebhook(url, secret string, payload interface{}) (map[string]interface{
 	response := make(map[string]interface{})
 	if resp.StatusCode == 201 || resp.StatusCode == 200 {
 		response["status"] = "ok"
-	} else {	
-		log.Error("Request:", request)
+	} else {
+		log.WithField("request", request).Error("Failed to send webhook request")
 		response["error"] = string(bodyBytes)
 		response["statuscode"] = resp.StatusCode
 	}

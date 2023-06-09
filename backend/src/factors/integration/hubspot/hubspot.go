@@ -415,7 +415,8 @@ func GetContactProperties(projectID int64, document *model.HubspotDocument) (*ma
 			model.HubspotDocumentTypeNameContact, pkey)
 		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED, enKey, pvalue.Value, model.HubspotDocumentTypeContact, document.GetDateProperties(), string(document.GetTimeZone()))
 		if err != nil {
-			log.WithFields(log.Fields{"project_id": projectID, "property_key": enKey}).WithError(err).Error("Failed to get property value.")
+			log.WithFields(log.Fields{"project_id": projectID, "property_key": enKey}).
+				WithError(err).Error("Failed to get property value.")
 			continue
 		}
 
@@ -3456,7 +3457,7 @@ func extractionOfPropertiesWithOutEmailOrContact(engagement Engagements, engagem
 			}
 
 			if len(interfaceArray) == 0 {
-				logCtx.Error("length of interface array is zero")
+				logCtx.Warn("Length of interface array is zero")
 				continue
 			}
 
@@ -3738,7 +3739,7 @@ func syncEngagementsV2(project *model.Project, otpRules *[]model.OTPRule, unique
 		if !C.IsProjectIDSkippedForOtp(project.ID) {
 			threadID, err := getThreadIDFromEngagement(engagement, engagementTypeStr)
 			if err != nil {
-				logCtx.Error("couldn't get the threadID on hubspot email engagement, logging and continuing")
+				logCtx.Warn("couldn't get the threadID on hubspot email engagement, logging and continuing")
 			}
 			err = ApplyHSOfflineTouchPointRuleForEngagement(project, otpRules, uniqueOTPEventKeys, payload, document, threadID, engagementTypeStr)
 			if err != nil {
@@ -3860,7 +3861,7 @@ func extractionOfPropertiesWithOutEmailOrContactV3(engagement EngagementsV3, eng
 			}
 
 			if len(interfaceArray) == 0 {
-				logCtx.Error("length of interface array is zero")
+				logCtx.Warn("Length of interface array is zero")
 				continue
 			}
 

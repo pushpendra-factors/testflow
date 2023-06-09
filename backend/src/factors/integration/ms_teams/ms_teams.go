@@ -49,6 +49,13 @@ type Channel struct {
 }
 
 func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message string) error {
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+		"agent_uuid": agentUUID,
+		"team_id":    teamID,
+		"channel_id": channelID,
+	})
+
 	tokens, err := store.GetStore().GetTeamsAuthTokens(projectID, agentUUID)
 	if err != nil {
 		return errors.New("Failed to get access tokens for teams")
@@ -80,7 +87,7 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.WithError(err).Error("Failed to read response body")
+		logCtx.WithError(err).Error("Failed to read response body")
 		return err
 	}
 
@@ -88,7 +95,7 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 	if resp.StatusCode == http.StatusUnauthorized {
 		var errorResponse map[string]interface{}
 		json.Unmarshal(body, &errorResponse)
-		log.Error("error response body teams attempt 1",errorResponse["error"],errorResponse)
+		logCtx.WithField("response", errorResponse).Error("Error response body teams attempt 1.")
 		errorCode, ok := errorResponse["error"].(map[string]interface{})["code"].(string)
 		if ok && errorCode == "InvalidAuthenticationToken" {
 			token, err := RefreshAndGetTeamsAccessToken(projectID, agentUUID)
@@ -104,15 +111,14 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 			}
 			body, err = ioutil.ReadAll(resp.Body)
 			if err != nil {
-				log.WithError(err).Error("Failed to read response body")
+				logCtx.WithError(err).Error("Failed to read response body")
 				return err
 			}
 
 			defer resp.Body.Close()
 
 		} else {
-			//
-			log.Error("Error in making request to teams " + errorCode)
+			logCtx.Error("Error in making request to teams " + errorCode)
 			// add healthcheck/sentry notifcation to re integrate
 			return errors.New("Error in making request to teams " + errorCode)
 		}
@@ -120,7 +126,7 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 	if resp.StatusCode != http.StatusCreated {
 		var errorResponse map[string]interface{}
 		json.Unmarshal(body, &errorResponse)
-		log.Error("error response body teams attempt 2", errorResponse)
+		logCtx.WithField("response", errorResponse).Error("Error response body teams attempt 2.")
 		return errors.New(fmt.Sprintf("failed to send Teams message: %v", resp.Status))
 	}
 
