@@ -13,9 +13,7 @@ import {
   Col,
   message
 } from 'antd';
-import GroupSelect2 from '../QueryComposer/GroupSelect2';
 import FaDatepicker from '../FaDatepicker';
-import FaSelect from '../FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import {
@@ -29,6 +27,9 @@ import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import AppModal from 'Components/AppModal';
 import { UploadOutlined } from '@ant-design/icons';
 import { uploadList } from 'Reducers/global';
+import FaSelect from 'Components/GenericComponents/FaSelect';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
@@ -52,7 +53,8 @@ const FaFilterSelect = ({
   dropdownMaxHeight,
   uploadList,
   showInList = false,
-  minEntriesPerGroup
+  minEntriesPerGroup,
+  maxAllowedSelection
 }) => {
   const [propState, setPropState] = useState({
     icon: '',
@@ -87,18 +89,10 @@ const FaFilterSelect = ({
   }, [valueOpts, propState.name]);
 
   useEffect(() => {
-    if (
-      currentPicker.includes(
-        isArray(operatorState) ? operatorState[0] : operatorState
-      )
-    ) {
+    if (currentPicker.includes(operatorState)) {
       setCurrentFilt();
     }
-    if (
-      deltaPicker.includes(
-        isArray(operatorState) ? operatorState[0] : operatorState
-      )
-    ) {
+    if (deltaPicker.includes(operatorState)) {
       setDeltaFilt();
     }
   }, [valuesState]);
@@ -106,11 +100,9 @@ const FaFilterSelect = ({
   useEffect(() => {
     if (
       operatorState === OPERATORS['isKnown'] ||
-      operatorState === OPERATORS['isUnknown'] ||
-      operatorState?.[0] === OPERATORS['isKnown'] ||
-      operatorState?.[0] === OPERATORS['isUnknown']
+      operatorState === OPERATORS['isUnknown']
     ) {
-      valuesSelectSingle(['$none']);
+      valuesSelect(['$none']);
     }
   }, [operatorState]);
 
@@ -123,16 +115,11 @@ const FaFilterSelect = ({
       setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
       if (
         (filter.operator === OPERATORS['equalTo'] ||
-          filter.operator === OPERATORS['notEqualTo'] ||
-          filter.operator?.[0] === OPERATORS['equalTo'] ||
-          filter.operator?.[0] === OPERATORS['notEqualTo']) &&
+          filter.operator === OPERATORS['notEqualTo']) &&
         filter.values?.length === 1 &&
         filter.values?.[0] === '$none'
       ) {
-        if (
-          filter.operator === OPERATORS['equalTo'] ||
-          filter.operator?.[0] === OPERATORS['equalTo']
-        )
+        if (filter.operator === OPERATORS['equalTo'])
           setOperatorState(OPERATORS['isUnknown']);
         else setOperatorState(OPERATORS['isKnown']);
       } else {
@@ -203,19 +190,30 @@ const FaFilterSelect = ({
     setOperSelectOpen(false);
   };
 
-  const propSelect = (prop) => {
-    setPropState({ icon: prop[3], name: prop[1], type: prop[2] });
+  const propSelect = (option, group) => {
+    setPropState({
+      icon: group.iconName,
+      name: option.value,
+      type: option.extraProps.valueType
+    });
     setPropSelectOpen(false);
     setOperatorState(
-      prop[2] === 'datetime' ? OPERATORS['between'] : OPERATORS['equalTo']
+      option.extraProps.valueType === 'datetime'
+        ? OPERATORS['between']
+        : OPERATORS['equalTo']
     );
     setValuesState(null);
-    setValuesByProps(prop);
+    setValuesByProps([
+      option.label,
+      option.value,
+      option.extraProps.valueType,
+      group.iconName
+    ]);
     setValuesSelectionOpen(true);
   };
 
-  const valuesSelect = (val) => {
-    setValuesState(val.map((vl) => JSON.parse(vl)[0]));
+  const valuesSelect = (values) => {
+    setValuesState(values);
     setValuesSelectionOpen(false);
     updateStateApply(true);
   };
@@ -311,6 +309,13 @@ const FaFilterSelect = ({
     );
   };
 
+  const getGroupLabel = (grp) => {
+    if (grp === 'event') return 'Event Properties';
+    if (grp === 'user') return 'User Properties';
+    if (!grp || !grp.length) return 'Properties';
+    return grp;
+  };
+
   const renderPropSelect = () => {
     return (
       <div
@@ -338,14 +343,29 @@ const FaFilterSelect = ({
         </Tooltip>
         {propSelectOpen && (
           <div className={styles.filter__event_selector}>
-            <GroupSelect2
-              groupedProperties={propOpts}
-              minEntriesPerGroup={minEntriesPerGroup}
-              placeholder='Select Property'
-              optionClick={(_, val, __, icon) => propSelect([...val, icon])}
-              onClickOutside={() => setPropSelectOpen(false)}
+            <GroupSelect
+              options={propOpts?.map((groupOpt) => {
+                return {
+                  iconName: groupOpt?.icon,
+                  label: getGroupLabel(groupOpt?.label),
+                  values: groupOpt?.values?.map((valueOpt) => {
+                    return {
+                      label: valueOpt[0],
+                      value: valueOpt[1],
+                      extraProps: {
+                        valueType: valueOpt[2]
+                      }
+                    };
+                  })
+                };
+              })}
               placement={dropdownPlacement}
-              height={dropdownMaxHeight}
+              onClickOutside={() => setPropSelectOpen(false)}
+              placeholder='Select Property'
+              allowSearch={true}
+              optionClickCallback={propSelect}
+              allowSearchTextSelection={false}
+              extraClass={`${styles.filter__event_selector__select}`}
             />
           </div>
         )}
@@ -376,13 +396,17 @@ const FaFilterSelect = ({
         {operSelectOpen && (
           <FaSelect
             options={operatorOpts[propState.type]
-              .filter(
-                (op) =>
+              .filter((op) => {
+                // Only include the operator if showInList is true or it's not 'inList'
+                return (
                   showInList ||
                   (op !== OPERATORS['inList'] && op !== OPERATORS['notInList'])
-              )
-              .map((op) => [op])}
-            optionClick={(val) => operatorSelect(val)}
+                );
+              })
+              .map((op) => {
+                return { value: op, label: op };
+              })}
+            optionClickCallback={(option) => operatorSelect(option.value)}
             onClickOutside={() => setOperSelectOpen(false)}
             placement={dropdownPlacement}
           />
@@ -453,9 +477,7 @@ const FaFilterSelect = ({
   const onDatePickerSelect = (val) => {
     let dateT;
     let dateValue = {};
-    const operatorSt = isArray(operatorState)
-      ? operatorState[0]
-      : operatorState;
+    const operatorSt = operatorState;
     if (operatorSt === OPERATORS['before']) {
       dateT = MomentTz(val).startOf('day');
       dateValue['to'] = dateT.toDate().getTime();
@@ -537,8 +559,15 @@ const FaFilterSelect = ({
 
           {dateOptionSelectOpen && (
             <FaSelect
-              options={[['Days'], ['Weeks'], ['Months'], ['Quarters']]}
-              optionClick={(val) => setDeltaGran(dateTimeSelect.get(val[0]))}
+              options={['Days', 'Weeks', 'Months', 'Quarters'].map((option) => {
+                return {
+                  value: option,
+                  label: option
+                };
+              })}
+              optionClickCallback={(option) => {
+                setDeltaGran(dateTimeSelect.get(option.value));
+              }}
               onClickOutside={() => setDateOptionSelectOpen(false)}
               placement={dropdownPlacement}
             />
@@ -566,8 +595,15 @@ const FaFilterSelect = ({
 
           {dateOptionSelectOpen && (
             <FaSelect
-              options={[['Week'], ['Month'], ['Quarter']]}
-              optionClick={(val) => setCurrentGran(val[0].toLowerCase())}
+              options={['Week', 'Month', 'Quarter'].map((option) => {
+                return {
+                  value: option,
+                  label: option
+                };
+              })}
+              optionClickCallback={(option) => {
+                setCurrentGran(option.value.toLowerCase());
+              }}
               onClickOutside={() => setDateOptionSelectOpen(false)}
               placement={dropdownPlacement}
             />
@@ -608,34 +644,49 @@ const FaFilterSelect = ({
 
     return selectorComponent;
   };
-
   const renderValuesSelector = () => {
     let selectionComponent;
     if (propState.type === 'categorical') {
-      selectionComponent = (
-        <FaSelect
-          multiSelect={
-            (isArray(operatorState) ? operatorState[0] : operatorState) ===
-              OPERATORS['notEqualTo'] ||
-            (isArray(operatorState) ? operatorState[0] : operatorState) ===
-              OPERATORS['doesNotContain']
-              ? false
-              : true
-          }
-          options={
-            valueOpts?.[propState?.name]
-              ? Object.keys(valueOpts[propState.name]).map((value) => [value])
-              : []
-          }
-          displayNames={valueDisplayNames}
-          applClick={(val) => valuesSelect(val)}
-          optionClick={(val) => valuesSelectSingle(val)}
-          onClickOutside={() => setValuesSelectionOpen(false)}
-          selectedOpts={valuesState ? valuesState : []}
-          allowSearch={true}
-          placement={dropdownPlacement}
-        />
-      );
+      const variant =
+        operatorState === OPERATORS['notEqualTo'] ||
+        operatorState === OPERATORS['doesNotContain']
+          ? 'Single'
+          : 'Multi';
+      let valueOptions = valueOpts?.[propState?.name]
+        ? Object.entries(valueOpts[propState.name]).map((val) => {
+            return {
+              value: val[0],
+              label: val[1]
+            };
+          })
+        : [];
+      valueOptions = selectedOptionsMapper(valueOptions, valuesState);
+      if (variant === 'Single') {
+        selectionComponent = (
+          <FaSelect
+            variant={'Single'}
+            options={valueOptions}
+            optionClickCallback={(option) => {
+              valuesSelect([option.value]);
+            }}
+            onClickOutside={() => setValuesSelectionOpen(false)}
+            allowSearch={true}
+          />
+        );
+      } else {
+        selectionComponent = (
+          <FaSelect
+            variant={'Multi'}
+            options={valueOptions}
+            applyClickCallback={(updatedOptions, selectedOptions) => {
+              valuesSelect(selectedOptions);
+            }}
+            onClickOutside={() => setValuesSelectionOpen(false)}
+            allowSearch={true}
+            maxAllowedSelection={maxAllowedSelection}
+          />
+        );
+      }
     }
 
     if (propState.type === 'datetime') {
@@ -657,10 +708,7 @@ const FaFilterSelect = ({
         gran: dateRange.gran
       };
 
-      selectionComponent = selectDateTimeSelector(
-        isArray(operatorState) ? operatorState[0] : operatorState,
-        rang
-      );
+      selectionComponent = selectDateTimeSelector(operatorState, rang);
     }
 
     if (propState.type === 'numerical') {
@@ -938,7 +986,6 @@ const FaFilterSelect = ({
       </div>
     );
   };
-
   return (
     <div className={styles.filter}>
       {renderPropSelect()}
@@ -949,16 +996,10 @@ const FaFilterSelect = ({
       operatorState !== OPERATORS['isKnown'] &&
       operatorState !== OPERATORS['isUnknown'] &&
       operatorState !== OPERATORS['inList'] &&
-      operatorState !== OPERATORS['notInList'] &&
-      operatorState?.[0] !== OPERATORS['isKnown'] &&
-      operatorState?.[0] !== OPERATORS['isUnknown'] &&
-      operatorState?.[0] !== OPERATORS['inList'] &&
-      operatorState?.[0] !== OPERATORS['notInList']
+      operatorState !== OPERATORS['notInList']
         ? renderValuesSelector()
         : operatorState === OPERATORS['inList'] ||
-          operatorState?.[0] === OPERATORS['inList'] ||
-          operatorState === OPERATORS['notInList'] ||
-          operatorState?.[0] === OPERATORS['notInList']
+          operatorState === OPERATORS['notInList']
         ? renderCsvUpload()
         : null}
     </div>

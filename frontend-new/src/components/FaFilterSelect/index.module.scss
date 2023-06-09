@@ -1,21 +1,28 @@
 .filter {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
 
-    &__propContainer {
-        position: relative;
+  &__propContainer {
+    position: relative;
+  }
+
+  &__event_selector {
+    position: relative;
+    top: 0;
+
+    &__btn {
+      position: relative;
     }
 
-    &__event_selector { 
-        position: relative;
-        // top: 30px;
-
-        &__btn {
-            position: relative;
-        }
-
-        .ant-select-selector {
-            border-radius: 12px;
-        }
+    .ant-select-selector {
+      border-radius: 12px;
     }
+    &__select {
+      top: 0 !important;
+      width: 380px;
+      height: 480px;
+      max-height: 480px;
+      position: absolute;
+    }
+  }
 }

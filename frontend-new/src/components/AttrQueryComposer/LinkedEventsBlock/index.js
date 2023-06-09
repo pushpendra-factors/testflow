@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import FilterWrapper from '../../GlobalFilter/FilterWrapper';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { SVG } from 'factorsComponents';
 import { isArray } from 'lodash';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 const LinkedEventsBlock = ({
   linkEvent,
@@ -133,9 +133,9 @@ const LinkedEventsBlock = ({
     return filters;
   };
 
-  const onEventSelect = (val) => {
+  const onEventSelect = (option, group) => {
     const currentLinkEvent = Object.assign({}, linkEvent);
-    currentLinkEvent.label = val;
+    currentLinkEvent.label = option?.value;
     currentLinkEvent.filters = [];
     linkEventChange(currentLinkEvent);
     setSelectVisible(false);
@@ -202,19 +202,42 @@ const LinkedEventsBlock = ({
   };
 
   const selectEvents = () => {
+    let orderedEventOptions = eventNameOptions.map((groupOpt) => {
+      return {
+        iconName: groupOpt?.icon,
+        label: groupOpt?.label,
+        value: groupOpt?.label,
+        values: groupOpt?.values?.map((op) => {
+          return {
+            value: op[1],
+            label: op[0]
+          };
+        })
+      };
+    });
+    const mostRecentGroupindex = orderedEventOptions
+      ?.map((opt) => opt.label)
+      ?.indexOf('Most Recent');
+    if (mostRecentGroupindex > 0) {
+      orderedEventOptions = [
+        orderedEventOptions[mostRecentGroupindex],
+        ...orderedEventOptions.slice(0, mostRecentGroupindex),
+        ...orderedEventOptions.slice(mostRecentGroupindex + 1)
+      ];
+    }
     return (
       <div className={styles.block__event_selector}>
         {selectVisible ? (
           <div className={styles.block__event_selector__btn}>
-            <GroupSelect2
-              groupedProperties={eventNameOptions}
-              placeholder='Select Event'
-              optionClick={(group, val) =>
-                onEventSelect(val[1] ? val[1] : val[0])
-              }
+            <GroupSelect
+              options={orderedEventOptions}
               onClickOutside={() => setSelectVisible(false)}
-              useCollapseView
-            ></GroupSelect2>
+              optionClickCallback={onEventSelect}
+              placeholder='Select Event'
+              allowSearch={true}
+              extraClass={styles.block__event_selector__select}
+              allowSearchTextSelection={false}
+            />
           </div>
         ) : null}
       </div>

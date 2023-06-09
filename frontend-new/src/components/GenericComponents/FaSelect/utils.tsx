@@ -6,15 +6,17 @@ export const selectedOptionsMapper = (
   options: OptionType[],
   selectedOptions: string[]
 ) => {
-  const optionsValues = options.map((op) => op.value);
-  return selectedOptions.map((opValue: string) => {
+  const optionsValues = options?.map((op) => op.value);
+  if (!selectedOptions) return options;
+  selectedOptions?.map((opValue) => {
     const index = optionsValues.indexOf(opValue);
     if (index > -1) {
-      return options[index];
+      return (options[index] = { isSelected: true, ...options[index] });
     }
     //Custom Selected Option By User.
-    return { value: opValue, label: opValue };
+    return options.push({ value: opValue, label: opValue, isSelected: true });
   });
+  return options;
 };
 
 export const moveSelectedOptionsToTop = (options: OptionType[]) => {

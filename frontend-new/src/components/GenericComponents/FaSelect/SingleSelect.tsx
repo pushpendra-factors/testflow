@@ -56,7 +56,7 @@ export default function SingleSelect({
         handleOptionClick(searchOption);
       }
     } else {
-      handleOptionClick(options[hoveredOptionIndex]);
+      handleOptionClick(filteredOptions[hoveredOptionIndex]);
     }
   };
   useKey('ArrowDown', handleKeyArrowDown);
