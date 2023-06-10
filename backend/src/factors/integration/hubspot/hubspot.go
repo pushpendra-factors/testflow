@@ -1041,6 +1041,10 @@ type DealPipeline struct {
 	Stages []Stage `json:"stages"`
 }
 
+type DealPipelineResults struct {
+	Results []DealPipeline `json:"results"`
+}
+
 func GetHubspotDealStagesAndPipelines(apiKey, refreshToken string) ([]DealPipeline, error) {
 	if apiKey == "" && refreshToken == "" {
 		return nil, errors.New("missing api key and refresh token on GetHubspotDealStagesAndPipelines")
@@ -1070,13 +1074,13 @@ func GetHubspotDealStagesAndPipelines(apiKey, refreshToken string) ([]DealPipeli
 		return nil, fmt.Errorf("error while query data %s ", body)
 	}
 
-	var dealStagesAndPipelines []DealPipeline
-	err = json.NewDecoder(resp.Body).Decode(&dealStagesAndPipelines)
+	var results DealPipelineResults
+	err = json.NewDecoder(resp.Body).Decode(&results)
 	if err != nil {
 		return nil, err
 	}
 
-	return dealStagesAndPipelines, nil
+	return results.Results, nil
 }
 
 func syncHubspotDealStageAndPipeline(projectID int64, apiKey, refreshToken string) bool {
