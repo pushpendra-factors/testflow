@@ -535,14 +535,14 @@ def add_properties_engagement_v3(project_id, hubspot_request_handler, engagement
     elif engagement_type == "emails" and "properties" in engagement and "hs_email_direction" in engagement["properties"]:
         if engagement["properties"]["hs_email_direction"] == "INCOMING_EMAIL":
             engagement["properties"]["type"] = "INCOMING_EMAIL"
-            if "hs_email_headers" in engagement["properties"]:
+            if "hs_email_headers" in engagement["properties"] and engagement["properties"]["hs_email_headers"] is not None:
                 email_headers = json.loads(engagement["properties"]["hs_email_headers"])
                 engagement["properties"]["hs_email_headers"] = email_headers
                 if "from" in email_headers and "email" in email_headers["from"]:
                     add_contactId_v3(email_headers["from"]["email"], project_id, engagement, hubspot_request_handler)
         if engagement["properties"]["hs_email_direction"] == "EMAIL":
             engagement["properties"]["type"] = "EMAIL"
-            if "hs_email_headers" in engagement["properties"]:
+            if "hs_email_headers" in engagement["properties"] and engagement["properties"]["hs_email_headers"] is not None:
                 email_headers = json.loads(engagement["properties"]["hs_email_headers"])     
                 engagement["properties"]["hs_email_headers"] = email_headers
                 if "to" in email_headers and len(email_headers["to"])>0 and "email" in email_headers["to"][0]:
