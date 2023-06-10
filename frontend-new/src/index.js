@@ -27,7 +27,7 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
 } else {
   // production env
   Sentry.init({
-    dsn: 'https://edc572f4f8bb4c8094acbc8df35389cf@o435495.ingest.sentry.io/5567060',
+    dsn: 'https://81f48ea1f7604e6eb98871c04f68f9d4@o435495.ingest.sentry.io/5394896',
     autoSessionTracking: true,
     integrations: [new Integrations.BrowserTracing()],
 
