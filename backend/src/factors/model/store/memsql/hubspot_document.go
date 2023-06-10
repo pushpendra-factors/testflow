@@ -541,7 +541,7 @@ func (store *MemSQL) getHubspotDocumentsForInsertion(projectId int64, documents 
 		if exist := batchDocumentIDs[documents[i].ID]; exist {
 			log.WithFields(log.Fields{"project_id": documents[i].ProjectId,
 				"document_id": documents[i].ID, "documents": documents}).
-				Error("Duplicate hubspot document in same batch.")
+				Warn("Duplicate hubspot document in same batch.")
 		}
 		batchDocumentIDs[documents[i].ID] = true
 

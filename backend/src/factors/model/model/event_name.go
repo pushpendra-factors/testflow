@@ -949,8 +949,8 @@ func IsGroupSmartEventName(projectID int64, eventName *EventName) (string, bool)
 		return "", false
 	}
 	smartEventFilter, err := GetDecodedSmartEventFilterExp(eventName.FilterExpr)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to GetDecodedSmartEventFilterExp")
+	if err != nil && err != ErrorSmartEventFiterEmptyString {
+		logCtx.WithError(err).Warn("Failed to decode smart event filter expression.")
 		return "", false
 	}
 

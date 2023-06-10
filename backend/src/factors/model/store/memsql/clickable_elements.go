@@ -34,8 +34,7 @@ func (store *MemSQL) UpsertCountAndCheckEnabledClickableElement(projectId int64,
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if projectId == 0 || reqPayload.DisplayName == "" {
-		logCtx.Error("Invalid parameters.")
-		return false, http.StatusBadRequest, errors.New("Invalid parameters.")
+		return false, http.StatusBadRequest, errors.New("invalid parameters.")
 	}
 
 	if !isAllowedElementType(reqPayload.ElementType) {
@@ -51,8 +50,7 @@ func (store *MemSQL) UpsertCountAndCheckEnabledClickableElement(projectId int64,
 		status, err := store.CreateClickableElement(projectId, reqPayload)
 		return false, status, err
 	} else if getErr == http.StatusBadRequest {
-		logCtx.WithField("err_code", getErr).Error("Invalid parameters.")
-		return false, http.StatusBadRequest, errors.New("Update click failed. Invalid parameters.")
+		return false, http.StatusBadRequest, errors.New("invalid parameters.")
 	} else if getErr == http.StatusInternalServerError {
 		logCtx.WithField("err_code", getErr).Error("Getting clickable element failed.")
 		return false, http.StatusInternalServerError,
@@ -89,8 +87,7 @@ func (store *MemSQL) CreateClickableElement(projectId int64, click *model.Captur
 	logCtx := log.WithFields(logFields)
 
 	if projectId == 0 || click.DisplayName == "" || click.ElementType == "" {
-		logCtx.Error("Invalid parameters.")
-		return http.StatusBadRequest, errors.New("Failed to create a clickable element. Invalid parameters.")
+		return http.StatusBadRequest, errors.New("invalid parameters.")
 	}
 
 	elementAttributes, err := U.EncodeStructTypeToPostgresJsonb(click.ElementAttributes)
@@ -215,7 +212,6 @@ func (store *MemSQL) DeleteClickableElementsOlderThanGivenDays(expiry int,
 
 	logCtx := log.WithFields(logFields)
 	if expiry < 0 || (!allProjects && projectID == 0) {
-		logCtx.Error("Invalid parameters.")
 		return http.StatusBadRequest, nil
 	}
 
