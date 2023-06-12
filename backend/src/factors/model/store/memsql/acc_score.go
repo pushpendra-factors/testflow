@@ -290,9 +290,7 @@ func ComputeAccountScore(weights model.AccWeights, eventsCount map[string]int64,
 	}
 
 	decay_value := ComputeDecayValue(ts, saleWindow)
-
 	account_score_after_decay := (accountScore - accountScore*float32(decay_value))
-
 	return account_score_after_decay, eventsCountMap, decay_value, nil
 }
 
@@ -331,8 +329,7 @@ func ComputeDecayValue(ts string, SaleWindow int64) float64 {
 	currentTS := time.Now().Unix()
 	EventTs := GetDateFromString(ts)
 	// get difference in weeks
-	dayDiff := ComputeDayDifference(currentTS, EventTs)
-
+	dayDiff := ComputeDayDifference(EventTs, currentTS)
 	if int64(dayDiff) > SaleWindow {
 		return 1
 	}
