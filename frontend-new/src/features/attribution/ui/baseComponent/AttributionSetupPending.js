@@ -31,8 +31,7 @@ function AttributionSetupPending() {
           color='grey'
           extraClass='m-0 text-justify'
         >
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean
-          placerat eros id porttitor dignissim. In order to set up conversion
+          In order to set up conversion
           goals for attribution and attribution window, click on the "Setup now"
           button below.
         </Text>

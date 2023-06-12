@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	M "factors/model/model"
 	P "factors/pattern"
 	T "factors/task"
 
 	"factors/model/store"
+	mm "factors/model/store/memsql"
 
 	log "github.com/sirupsen/logrus"
 
@@ -254,4 +256,111 @@ func TestCountingEvents(t *testing.T) {
 		log.Debugf("%s, %s", k, string(line))
 	}
 	assert.Nil(t, err)
+}
+
+func TestFilterCountAndScoreEvents(t *testing.T) {
+
+	e1 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$session", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome", "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Australia"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e2 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Australia"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e3 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$form_submitted", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome", "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Australia"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e4 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$session", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Australia"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e5 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$session_1", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome", "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Kenya"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e6 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview_1", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Kenya"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e7 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$form_submitted_1", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome", "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Kenya"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e8 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$session_3", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Brazil"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+
+	ev := []string{e1, e2, e3, e4, e5, e6, e7, e8}
+	var events []*P.CounterEventFormat = make([]*P.CounterEventFormat, 0)
+
+	for _, e := range ev {
+		var testev *P.CounterEventFormat
+		err := json.Unmarshal([]byte(e), &testev)
+		assert.Nil(t, err)
+		events = append(events, testev)
+	}
+
+	var finalWeights M.AccWeights
+
+	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w2 := M.AccEventWeight{WeightId: "3", Weight_value: 1.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w3 := M.AccEventWeight{WeightId: "4", Weight_value: 1.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w4 := M.AccEventWeight{WeightId: "5", Weight_value: 1.0, Is_deleted: false, EventName: "www.acme.com", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w5 := M.AccEventWeight{WeightId: "6", Weight_value: 1.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w6 := M.AccEventWeight{WeightId: "7", Weight_value: 1.0, Is_deleted: false, EventName: "$session"}
+	w7 := M.AccEventWeight{WeightId: "8", Weight_value: 1.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Kenya"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w8 := M.AccEventWeight{WeightId: "9", Weight_value: 1.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Brazil"}, Operator: true, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+
+	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5, w6, w7, w8}
+	finalWeights.WeightConfig = weightRules
+	finalWeights.SaleWindow = 10
+
+	ev_r1 := []string{"3", "7"}
+	ev_r2 := []string{"1", "2"}
+	ev_r3 := []string{"4"}
+	ev_r4 := []string{"3", "7"}
+	ev_r5 := []string{"8"}
+	ev_r6 := []string{"8"}
+	ev_r7 := []string{"8"}
+	ev_r8 := []string{"9"}
+
+	ev_rules := [][]string{ev_r1, ev_r2, ev_r3, ev_r4, ev_r5, ev_r6, ev_r7, ev_r8}
+	cr, err := T.DeduplicateWeights(finalWeights) //new ids will not be added, as weight id is already filled
+	assert.Nil(t, err)
+	for _, w := range cr.WeightConfig {
+		log.Debug(w)
+	}
+	weightmap, _ := T.CreateweightMap(&cr)
+	countsmap := make(map[string]int64)
+	log.Debug(weightmap)
+	for idx, ev := range events {
+		ids := T.FilterEvents(ev, weightmap)
+		log.Debug(ids)
+		for _, fids := range ids {
+			countsmap[fids] += 1
+		}
+		assert.ElementsMatch(t, ids, ev_rules[idx], fmt.Sprintf("events :%d", idx))
+
+	}
+	assert.Equal(t, 6, len(weightmap))
+
+	// score should be half on mid of sale window
+	current_time := time.Now()
+	half_num_day := current_time.AddDate(0, 0, -1*int(finalWeights.SaleWindow/2))
+	dateString := T.GetDateOnlyFromTimestamp(half_num_day.Unix())
+	account_score, counts_map, decayValue, err := mm.ComputeAccountScore(cr, countsmap, dateString)
+	s := fmt.Sprintf("acc score : %f , decay_value : %f , counts map :%v", account_score, decayValue, counts_map)
+	log.Debugf(s)
+	assert.Nil(t, err)
+	// expected counts map is all ones
+	//countsmap[id]count [1:1 2:1 3:2 4:1 7:2 8:3 9:1]
+	assert.Equal(t, account_score, float32(5.500), "score miscalculation")
+	assert.Equal(t, decayValue, 0.5, "decay value miscalculation")
+
+	//last day goes to zero as decay is 1 .
+	current_time = time.Now()
+	onlastsaleday := current_time.AddDate(0, 0, -1*int(finalWeights.SaleWindow))
+	dateString = T.GetDateOnlyFromTimestamp(onlastsaleday.Unix())
+	account_score, counts_map, decayValue, err = mm.ComputeAccountScore(cr, countsmap, dateString)
+	s = fmt.Sprintf("acc score : %f , decay_value : %f , counts map :%v", account_score, decayValue, counts_map)
+	log.Debugf(s)
+	assert.Nil(t, err)
+	// expected counts map is all ones
+	//countsmap[id]count [1:1 2:1 3:2 4:1 7:2 8:3 9:1]
+	assert.Equal(t, account_score, float32(0), "score miscalculation")
+	assert.Equal(t, decayValue, float64(1), "decay value miscalculation")
+
+	// score should be 0 after the sale window has been exceeded
+	current_time = time.Now()
+	sale_day_exceed := current_time.AddDate(0, 0, -1*int(finalWeights.SaleWindow)-1)
+	dateString = T.GetDateOnlyFromTimestamp(sale_day_exceed.Unix())
+	account_score, counts_map, decayValue, err = mm.ComputeAccountScore(cr, countsmap, dateString)
+	s = fmt.Sprintf("acc score : %f , decay_value : %f , counts map :%v", account_score, decayValue, counts_map)
+	log.Debugf(s)
+	assert.Nil(t, err)
+	// expected counts map is all ones
+	//countsmap[id]count [1:1 2:1 3:2 4:1 7:2 8:3 9:1]
+	assert.Equal(t, account_score, float32(0), "score miscalculation")
+	assert.Equal(t, decayValue, float64(1), "decay value miscalculation")
+
 }

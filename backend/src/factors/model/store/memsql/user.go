@@ -2977,7 +2977,7 @@ func (store *MemSQL) PullUsersRowsForWIV1(projectID int64, startTime, endTime in
 func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int {
 
 	logFields := log.Fields{"project_id": projectID, "request_user_id": requestUserID, "request_group_name": requestGroupName,
-		"request_group_user_id": requestGroupUserID, "source": source}
+		"request_group_user_id": requestGroupUserID}
 	logCtx := log.WithFields(logFields)
 
 	if projectID == 0 || requestUserID == "" || source == "" {

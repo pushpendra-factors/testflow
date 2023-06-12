@@ -933,7 +933,7 @@ func (store *MemSQL) BuildAndUpsertDocument(projectID int64, objectName string, 
 }
 
 // GetSalesforceDocumentsByTypeForSync - Pulls salesforce documents which are not synced
-func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID int64, typ int, from, to int64) ([]model.SalesforceDocument, int) {
+func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID int64, typ int, from, to int64, limit, offset int) ([]model.SalesforceDocument, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"typ":        typ,
@@ -958,7 +958,17 @@ func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID int64, typ in
 	}
 
 	db := C.GetServices().Db
-	err := db.Order("timestamp, created_at ASC").Where(whereStmnt, whereParams...).Find(&documents).Error
+	dbTx := db.Order("timestamp, created_at ASC").Where(whereStmnt, whereParams...)
+
+	if limit > 0 {
+		dbTx = dbTx.Limit(limit)
+	}
+
+	if offset > 0 {
+		dbTx = dbTx.Offset(offset)
+	}
+
+	err := dbTx.Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get salesforce documents by type.")
 		return nil, http.StatusInternalServerError
@@ -971,7 +981,7 @@ func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID int64, typ in
 	return documents, http.StatusFound
 }
 
-//GetLatestSalesforceDocumentByID return latest synced or unsynced document
+// GetLatestSalesforceDocumentByID return latest synced or unsynced document
 func (store *MemSQL) GetLatestSalesforceDocumentByID(projectID int64, documentIDs []string, docType int, maxTimestamp int64) ([]model.SalesforceDocument, int) {
 	logFields := log.Fields{
 		"project_id":    projectID,
