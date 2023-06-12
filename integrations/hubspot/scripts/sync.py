@@ -508,7 +508,7 @@ def sync_engagements_v2(project_id, refresh_token, api_key, last_sync_timestamp=
     return engagement_api_calls, engagements_contacts_api_calls, latest_timestamp
 
 def add_contactId_v3(email, project_id, engagement, hubspot_request_handler):
-    get_url = "https://api.hubapi.com/contacts/v1/contact/email/" + email + "/profile?"
+    get_url = "https://api.hubapi.com/contacts/v1/contact/email/" + urllib.parse.quote(email) + "/profile?"
     r  = hubspot_request_handler(project_id, get_url)
     if not r.ok:
         log.error("Failure response %d from hubspot on contactID", r.status_code)
@@ -539,14 +539,16 @@ def add_properties_engagement_v3(project_id, hubspot_request_handler, engagement
                 email_headers = json.loads(engagement["properties"]["hs_email_headers"])
                 engagement["properties"]["hs_email_headers"] = email_headers
                 if "from" in email_headers and "email" in email_headers["from"]:
-                    add_contactId_v3(email_headers["from"]["email"], project_id, engagement, hubspot_request_handler)
+                    if email_headers["from"]["email"] is not None and email_headers["from"]["email"] != "":
+                        add_contactId_v3(email_headers["from"]["email"], project_id, engagement, hubspot_request_handler)
         if engagement["properties"]["hs_email_direction"] == "EMAIL":
             engagement["properties"]["type"] = "EMAIL"
             if "hs_email_headers" in engagement["properties"] and engagement["properties"]["hs_email_headers"] is not None:
                 email_headers = json.loads(engagement["properties"]["hs_email_headers"])     
                 engagement["properties"]["hs_email_headers"] = email_headers
                 if "to" in email_headers and len(email_headers["to"])>0 and "email" in email_headers["to"][0]:
-                    add_contactId_v3(email_headers["to"][0]["email"], project_id, engagement, hubspot_request_handler)
+                    if email_headers["to"][0]["email"] is not None and email_headers["to"][0]["email"]!= "":
+                        add_contactId_v3(email_headers["to"][0]["email"], project_id, engagement, hubspot_request_handler)
 
 def get_properties_for_engagement_v3(engagement_type):
     if engagement_type == "calls":
