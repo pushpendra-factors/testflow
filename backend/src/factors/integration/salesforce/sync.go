@@ -73,7 +73,7 @@ type JobStatus struct {
 const OpportunityLeadID = "opportunity_to_lead"
 const OpportunityMultipleLeadID = "opportunity_to_multiple_lead"
 
-const BatchSizeForSyncUsingFields = 142
+const BatchSizeForSyncUsingFields = 25
 
 func GetSalesforceAPIVersion(projectID int64) string {
 	if C.AllowSalesforcev54APIByProjectID(projectID) {
