@@ -1,0 +1,10 @@
+{
+    "require": {
+        "matomo/device-detector": "^6.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Src\\": "src/"
+        }
+    }
+}
