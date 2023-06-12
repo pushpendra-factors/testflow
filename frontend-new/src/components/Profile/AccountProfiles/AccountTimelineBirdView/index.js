@@ -1,4 +1,4 @@
-import { Avatar, Spin } from 'antd';
+import { Avatar, Spin, Tooltip } from 'antd';
 import React, { useState, useEffect } from 'react';
 import { CaretRightOutlined, CaretUpOutlined } from '@ant-design/icons';
 import InfoCard from '../../MyComponents/InfoCard';
@@ -117,7 +117,14 @@ function AccountTimelineBirdView({
           listProperties={listProperties}
         >
           <div className='inline-flex gap--4 items-center'>
-            <div className='event-name--sm'>{eventName}</div>
+            <Tooltip
+              title={eventName}
+              trigger={
+                !hoverConditionals && eventName.length >= 30 ? 'hover' : []
+              }
+            >
+              {eventName}
+            </Tooltip>
             {hoverConditionals ? (
               <CaretRightOutlined
                 style={{ fontSize: '12px', color: '#8692A3' }}
