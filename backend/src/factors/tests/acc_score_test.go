@@ -210,6 +210,8 @@ func TestFilterAndCountEventsFromFile(t *testing.T) {
 }
 
 func TestCountingEvents(t *testing.T) {
+	config := make(map[string]interface{})
+
 	fileWeights, err := os.Open("./data/events_score_weights.txt")
 	assert.Nil(t, err)
 	scannerW := bufio.NewScanner(fileWeights)
@@ -245,7 +247,7 @@ func TestCountingEvents(t *testing.T) {
 	var userGroupCount map[string]*T.AggEventsOnUserAndGroup = make(map[string]*T.AggEventsOnUserAndGroup)
 	weightmap, _ := T.CreateweightMap(&cr)
 
-	err = T.AggEventsOnUsers(fileEvents, userGroupCount, weightmap)
+	err = T.AggEventsOnUsers(fileEvents, userGroupCount, weightmap, config)
 
 	for k, v := range userGroupCount {
 		// log.Debugf("uid :%s", k)
