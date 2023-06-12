@@ -26,8 +26,8 @@ func (store *MemSQL) CreateSegment(projectId int64, segmentPayload *model.Segmen
 		return http.StatusBadRequest, errors.New("segment creation failed. invalid project_id")
 	}
 
-	isValidSegment, err := isValidSegment(segmentPayload)
-	if !isValidSegment {
+	isSegmentValid, err := isValidSegment(segmentPayload)
+	if !isSegmentValid {
 		return http.StatusBadRequest, err
 	}
 
