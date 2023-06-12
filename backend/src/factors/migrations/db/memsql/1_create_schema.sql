@@ -817,7 +817,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS groups(
     UNIQUE KEY (project_id,id)
 );
 
-CREATE ROWSTORE TABLE IF NOT EXISTS group_relationships(
+CREATE TABLE IF NOT EXISTS group_relationships(
     project_id bigint NOT NULL,
     left_group_name_id int NOT NULL,
     left_group_user_id text NOT NULL,
