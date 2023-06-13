@@ -64,6 +64,7 @@ function QueryComposer({
   const [eventBlockOpen, setEventBlockOpen] = useState(true);
   const [isOrderDDVisible, setOrderDDVisible] = useState(false);
   const eventBreakdowns = useSelector((state) => state.coreQuery.groupBy.event);
+  const criteria = useSelector((state) => state.analyticsQuery.show_criteria);
 
   const dispatch = useDispatch();
 
@@ -425,7 +426,9 @@ function QueryComposer({
   const renderCriteria = () => {
     try {
       if (
-        (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) &&
+        ((queryType === QUERY_TYPE_EVENT &&
+          criteria === TOTAL_USERS_CRITERIA) ||
+          queryType === QUERY_TYPE_FUNNEL) &&
         queries.length > 1
       ) {
         return (

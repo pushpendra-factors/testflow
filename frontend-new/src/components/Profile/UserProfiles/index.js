@@ -433,7 +433,8 @@ function UserProfiles({
       .catch((err) => {
         notification.error({
           message: 'Error',
-          description: 'Segment Creation Failed. Invalid Parameters.',
+          description:
+            err?.data?.error || 'Segment Creation Failed. Invalid Parameters.',
           duration: 3
         });
       });

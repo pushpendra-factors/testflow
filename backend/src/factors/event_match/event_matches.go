@@ -198,7 +198,7 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 			} else {
 				score, err := cacheRedis.ZScorePersistent(cacheKeyList, propertyValue)
 				if err != nil {
-					results[i] = false
+					results[i] = true
 				} else {
 					if(score == 1){
 						results[i] = false

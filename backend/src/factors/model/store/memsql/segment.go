@@ -22,17 +22,18 @@ func (store *MemSQL) CreateSegment(projectId int64, segmentPayload *model.Segmen
 	logCtx := log.WithFields(logFields)
 
 	if projectId == 0 {
-		logCtx.Error("Segment Creation Failed. Invalid projectId.")
-		return http.StatusBadRequest, errors.New("Segment Creation Failed. Invalid projectId.")
+		logCtx.Error("segment creation failed. invalid projectId")
+		return http.StatusBadRequest, errors.New("segment creation failed. invalid project_id")
 	}
 
-	if !isValidSegment(segmentPayload) {
-		return http.StatusBadRequest, errors.New("Segment Creation Failed. Invalid Parameters.")
+	isSegmentValid, err := isValidSegment(segmentPayload)
+	if !isSegmentValid {
+		return http.StatusBadRequest, err
 	}
 
 	if store.IsDuplicateSegmentNameCheck(projectId, segmentPayload.Name) {
-		logCtx.Error("Segment Creation Failed. Duplicate name")
-		return http.StatusBadRequest, errors.New("Segment Creation Failed. Duplicate Name.")
+		logCtx.Error("segment creation failed. Duplicate Name")
+		return http.StatusBadRequest, errors.New("segment creation failed. Duplicate Name")
 	}
 
 	querySegment, err := U.EncodeStructTypeToPostgresJsonb(segmentPayload.Query)
@@ -53,34 +54,34 @@ func (store *MemSQL) CreateSegment(projectId int64, segmentPayload *model.Segmen
 	dbx := db.Create(&segment)
 	if dbx.Error != nil {
 		if IsDuplicateRecordError(dbx.Error) {
-			return http.StatusConflict, errors.New("Failed to create a segment. Duplicate.")
+			return http.StatusConflict, errors.New("failed to create a segment. Duplicate Record")
 		}
 		logCtx.WithError(dbx.Error).Error("Failed to create a segment.")
-		return http.StatusInternalServerError, errors.New("Failed to create a segment")
+		return http.StatusInternalServerError, errors.New("failed to create a segment")
 	}
 
 	return http.StatusCreated, nil
 }
 
-func isValidSegment(segmentPayload *model.SegmentPayload) bool {
+func isValidSegment(segmentPayload *model.SegmentPayload) (bool, error) {
 	logFields := log.Fields{
 		"segment": segmentPayload,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 	if segmentPayload.Type == "" {
-		logCtx.Error("Segment Creation Failed. No Type Added.")
-		return false
+		logCtx.Error("segment creation failed. No Type Added.")
+		return false, errors.New("segment creation failed. Analyze Section Empty")
 	}
 	if segmentPayload.Name == "" {
-		logCtx.Error("Segment Creation Failed. No Name Added.")
-		return false
+		logCtx.Error("segment creation failed. No Name Added.")
+		return false, errors.New("segment creation failed. Name Field Empty")
 	}
 	if len(segmentPayload.Query.EventsWithProperties) == 0 && len(segmentPayload.Query.GlobalUserProperties) == 0 {
-		logCtx.Error("Segment Creation Failed. No Query Added.")
-		return false
+		logCtx.Error("segment creation failed. No Query Added.")
+		return false, errors.New("segment creation failed. Query Section Empty")
 	}
-	return true
+	return true, nil
 }
 
 func (store *MemSQL) IsDuplicateSegmentNameCheck(projectID int64, name string) bool {

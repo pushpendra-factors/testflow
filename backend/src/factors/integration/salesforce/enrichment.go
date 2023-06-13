@@ -2464,32 +2464,87 @@ func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, smartEvent
 	}
 }
 
-func enrichGroup(projectID int64, workerPerProject int, salesforceSmartEventNames *map[string][]SalesforceSmartEventName) (map[string]bool, map[string]map[string]string, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+type DocumentPaginator struct {
+	ProjectID    int64                     `json:"project_id"`
+	DocType      int                       `json:"doc_type"`
+	StartTime    int64                     `json:"start_time"`
+	EndTime      int64                     `json:"end_time"`
+	LastDocument *model.SalesforceDocument `json:"previous_last_document"`
+	Limit        int                       `json:"limit"`
+	Offset       int                       `json:"offset"`
+}
 
-	if projectID == 0 {
-		logCtx.Error("Invalid project id.")
-		return nil, nil, http.StatusBadRequest
+func NewSalesforceDocumentPaginator(projectID int64, docType int, startTime, endTime int64, limit int) *DocumentPaginator {
+	return &DocumentPaginator{
+		ProjectID: projectID,
+		DocType:   docType,
+		StartTime: startTime,
+		EndTime:   endTime,
+		Limit:     limit,
 	}
+}
 
-	overAllSyncStatus := make(map[string]bool)
-	overAllPendingSyncRecords := make(map[string]map[string]string)
-	for _, docTypeAlias := range []string{model.SalesforceDocumentTypeNameAccount, model.SalesforceDocumentTypeNameOpportunity} {
-
-		docType := model.GetSalesforceDocTypeByAlias(docTypeAlias)
-		documents, errCode := store.GetStore().GetSalesforceDocumentsByTypeForSync(projectID, docType, 0, 0)
-		if errCode != http.StatusFound {
-			if errCode == http.StatusNotFound {
-				continue
-			}
-
-			logCtx.Error("Failed to get salesforce account documents for groups.")
-			return nil, nil, http.StatusInternalServerError
+func (dp *DocumentPaginator) GetNextBatch() ([]model.SalesforceDocument, int, bool) {
+	documents, status := store.GetStore().GetSalesforceDocumentsByTypeForSync(dp.ProjectID, dp.DocType, dp.StartTime, dp.EndTime, dp.Limit, dp.Offset)
+	if status != http.StatusFound {
+		if status != http.StatusNotFound {
+			log.WithFields(log.Fields{"paginator": dp}).Error("Failed to get salesforce documents using pagination.")
+			return nil, status, false
 		}
 
-		overAllSyncStatus[docTypeAlias] = false
+		return nil, status, false
+	}
+
+	log.WithFields(log.Fields{"paginator": dp, "total_records": len(documents)}).Info("Pulled records in salesforce documents paginator.")
+	// In case of campaign member, task and events processing where records are skipped when associated contact is not processed yet. It could keep looping on same records.
+	// set offset by length of documents and pull next set of records
+	if dp.LastDocument != nil && len(documents) == dp.Limit {
+		currentLastDocument := documents[len(documents)-1]
+		if dp.LastDocument.ID == currentLastDocument.ID && dp.LastDocument.Timestamp == currentLastDocument.Timestamp {
+			dp.Offset += len(documents)
+
+			log.WithFields(log.Fields{"paginator": dp, "total_records": len(documents)}).Info("Same records received on salesforce documents paginator. Shifting offest.")
+			documents, status = store.GetStore().GetSalesforceDocumentsByTypeForSync(dp.ProjectID, dp.DocType, dp.StartTime, dp.EndTime, dp.Limit, dp.Offset)
+			if status != http.StatusFound {
+				if status != http.StatusNotFound {
+					log.WithFields(log.Fields{"paginator": dp}).Error("Failed to get salesforce documents using pagination with offset.")
+					return nil, status, false
+				}
+
+				return nil, status, false
+			}
+		}
+	}
+
+	dp.LastDocument = &documents[len(documents)-1]
+	return documents, http.StatusFound, len(documents) == dp.Limit
+}
+
+func getAndProcessUnSyncedGroupDocuments(projectID int64, docType int, workerPerProject int, salesforceSmartEventNames *map[string][]SalesforceSmartEventName,
+	timeZoneStr U.TimeZoneString, dataPropertiesByType map[int]*map[string]bool, pullLimit int) (bool, map[string]map[string]string) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType, "worker_per_project": workerPerProject, "salesforce_smart_event_names": salesforceSmartEventNames})
+
+	docTypeFailure := false
+	overAllPendingSyncRecords := make(map[string]map[string]string)
+	documentPaginator := NewSalesforceDocumentPaginator(projectID, docType, 0, 0, pullLimit)
+	hasMore := true
+	for hasMore {
+		var documents []model.SalesforceDocument
+		var errCode int
+		documents, errCode, hasMore = documentPaginator.GetNextBatch()
+		if errCode != http.StatusFound {
+			if errCode != http.StatusNotFound {
+				logCtx.WithFields(log.Fields{"err_code": errCode}).Error("Failed to get salesforce account documents for groups.")
+				return true, overAllPendingSyncRecords
+			}
+
+			return docTypeFailure, overAllPendingSyncRecords
+		}
+
+		fillTimeZoneAndDateProperty(documents, timeZoneStr, dataPropertiesByType[docType])
 
 		batches := GetBatchedOrderedDocumentsByID(documents, workerPerProject)
+		docTypeAlias := model.GetSalesforceAliasByDocType(docType)
 		var status enrichGroupWorkerStatus
 		workerIndex := 0
 		for i := range batches {
@@ -2504,8 +2559,44 @@ func enrichGroup(projectID int64, workerPerProject int, salesforceSmartEventName
 			wg.Wait()
 		}
 
-		overAllSyncStatus[docTypeAlias] = status.HasFailure
-		overAllPendingSyncRecords = status.OverAllPendingSyncRecords
+		if status.HasFailure {
+			docTypeFailure = true
+		}
+
+		for key, value := range status.OverAllPendingSyncRecords {
+			if _, exist := overAllPendingSyncRecords[key]; !exist {
+				overAllPendingSyncRecords[key] = make(map[string]string)
+			}
+			for subKey := range value {
+				overAllPendingSyncRecords[key][subKey] = value[subKey]
+			}
+		}
+	}
+
+	return docTypeFailure, overAllPendingSyncRecords
+}
+
+func enrichGroup(projectID int64, workerPerProject int, docMinTimestamp map[int]int64, salesforceSmartEventNames *map[string][]SalesforceSmartEventName, timeZoneStr U.TimeZoneString, dataPropertiesByType map[int]*map[string]bool, pullLimit int) (map[string]bool, map[string]map[string]string, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	if projectID == 0 {
+		logCtx.Error("Invalid project id.")
+		return nil, nil, http.StatusBadRequest
+	}
+
+	overAllSyncStatus := make(map[string]bool)
+	overAllPendingSyncRecords := make(map[string]map[string]string)
+	for _, docTypeAlias := range []string{model.SalesforceDocumentTypeNameAccount, model.SalesforceDocumentTypeNameOpportunity} {
+		docType := model.GetSalesforceDocTypeByAlias(docTypeAlias)
+		if docMinTimestamp[docType] <= 0 {
+			continue
+		}
+
+		logCtx = logCtx.WithFields(log.Fields{"type": docTypeAlias, "project_id": projectID})
+
+		logCtx.Info("Processing group started for given time range.")
+		overAllSyncStatus[docTypeAlias], overAllPendingSyncRecords = getAndProcessUnSyncedGroupDocuments(projectID, docType, workerPerProject, salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit)
+		logCtx.Info("Processing group completed for given time range.")
 	}
 
 	return overAllSyncStatus, overAllPendingSyncRecords, http.StatusOK
@@ -2612,8 +2703,57 @@ func fillTimeZoneAndDateProperty(documents []model.SalesforceDocument, TimeZoneS
 	return nil
 }
 
+func getAndProcessUnSyncedDocuments(project *model.Project, docType int, workerPerProject int, otpRules []model.OTPRule, uniqueOTPEventKeys []string,
+	salesforceSmartEventNames *map[string][]SalesforceSmartEventName, pendingOpportunityGroupAssociations map[string]map[string]string, timeZoneStr U.TimeZoneString,
+	dataPropertiesByType map[int]*map[string]bool, startTime, endTime int64, limit int) bool {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "doc_type": docType, "start_time": startTime, "end_time": endTime, "limit": limit})
+	docTypFailure := false
+
+	documentPaginator := NewSalesforceDocumentPaginator(project.ID, docType, startTime, endTime, limit)
+	hasMore := true
+	for hasMore {
+		var documents []model.SalesforceDocument
+		var errCode int
+		documents, errCode, hasMore = documentPaginator.GetNextBatch()
+		if errCode != http.StatusFound {
+			if errCode != http.StatusNotFound {
+				logCtx.Error("Failed to get salesforce document by type for sync.")
+				return true
+			}
+
+			return docTypFailure
+		}
+
+		fillTimeZoneAndDateProperty(documents, timeZoneStr, dataPropertiesByType[docType])
+
+		batches := GetBatchedOrderedDocumentsByID(documents, workerPerProject)
+
+		docTypeAlias := model.GetSalesforceAliasByDocType(docType)
+		workerIndex := 0
+		var enrichStatus enrichWorkerStatus
+		for i := range batches {
+			batch := batches[i]
+			var wg sync.WaitGroup
+			for docID := range batch {
+				logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias}).Info("Processing Batch by doc_id")
+				wg.Add(1)
+				go enrichAllWorker(project, &wg, &enrichStatus, &otpRules, &uniqueOTPEventKeys, batch[docID], (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, endTime)
+				workerIndex++
+			}
+			wg.Wait()
+		}
+
+		if enrichStatus.HasFailure {
+			docTypFailure = true
+		}
+	}
+
+	return docTypFailure
+}
+
 // Enrich sync salesforce documents to events
-func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]*map[string]bool) ([]Status, bool) {
+func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]*map[string]bool, pullLimit int) ([]Status, bool) {
 
 	logCtx := log.WithField("project_id", projectID)
 
@@ -2690,9 +2830,15 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 		enrichOrderByType = append(enrichOrderByType, model.SalesforceDocumentTypeEvent)
 	}
 
+	timeZoneStr, status := store.GetStore().GetTimezoneForProject(projectID)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get timezone for project.")
+		return statusByProjectAndType, true
+	}
+
 	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
 		var syncStatus map[string]bool
-		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroup(projectID, workerPerProject, salesforceSmartEventNames)
+		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroup(projectID, workerPerProject, docMinTimestamp, salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit)
 		if status != http.StatusOK {
 			overAllSyncStatus["groups"] = true
 		}
@@ -2702,12 +2848,6 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 		}
 
 		enrichOrderByType = append(enrichOrderByType, model.SalesforceDocumentTypeOpportunityContactRole)
-	}
-
-	timeZoneStr, status := store.GetStore().GetTimezoneForProject(projectID)
-	if status != http.StatusFound {
-		logCtx.Error("Failed to get timezone for project.")
-		return statusByProjectAndType, true
 	}
 
 	for _, timeRange := range orderedTimeSeries {
@@ -2724,43 +2864,19 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 			}
 
 			logCtx = logCtx.WithFields(log.Fields{"type": docTypeAlias, "time_range": timeRange, "project_id": projectID})
-			logCtx.Info("Processing started for given time range")
+			logCtx.Info("Processing started for given time range.")
 
-			var documents []model.SalesforceDocument
-			documents, errCode = store.GetStore().GetSalesforceDocumentsByTypeForSync(projectID, docType, timeRange[0], timeRange[1])
-			if errCode != http.StatusFound {
-				if errCode != http.StatusNotFound {
-					logCtx.Error("Failed to get salesforce document by type for sync.")
-				}
-				continue
-			}
+			failure := getAndProcessUnSyncedDocuments(project, docType, workerPerProject, otpRules, uniqueOTPEventKeys, salesforceSmartEventNames,
+				pendingOpportunityGroupAssociations, timeZoneStr, dataPropertiesByType, timeRange[0], timeRange[1], pullLimit)
 
-			fillTimeZoneAndDateProperty(documents, timeZoneStr, dataPropertiesByType[docType])
-
-			batches := GetBatchedOrderedDocumentsByID(documents, workerPerProject)
-
-			workerIndex := 0
-			var enrichStatus enrichWorkerStatus
-			for i := range batches {
-				batch := batches[i]
-				var wg sync.WaitGroup
-				for docID := range batch {
-					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias}).Info("Processing Batch by doc_id")
-					wg.Add(1)
-					go enrichAllWorker(project, &wg, &enrichStatus, &otpRules, &uniqueOTPEventKeys, batch[docID], (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, timeRange[1])
-					workerIndex++
-				}
-				wg.Wait()
-			}
-
+			logCtx.Info("Processing completed for given time range.")
 			if _, exist := overAllSyncStatus[docTypeAlias]; !exist {
 				overAllSyncStatus[docTypeAlias] = false
 			}
 
-			if enrichStatus.HasFailure {
+			if failure {
 				overAllSyncStatus[docTypeAlias] = true
 			}
-
 		}
 	}
 

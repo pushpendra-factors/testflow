@@ -539,7 +539,7 @@ type Model interface {
 	GetSalesforceDocumentsByTypeAndAction(projectID int64, docType int, action model.SalesforceAction, from int64, to int64) ([]model.SalesforceDocument, int)
 	GetSyncedSalesforceDocumentByType(projectID int64, ids []string, docType int, includeUnSynced bool) ([]model.SalesforceDocument, int)
 	GetSalesforceObjectValuesByPropertyName(ProjectID int64, objectType string, propertyName string) []interface{}
-	GetSalesforceDocumentsByTypeForSync(projectID int64, typ int, from, to int64) ([]model.SalesforceDocument, int)
+	GetSalesforceDocumentsByTypeForSync(projectID int64, typ int, from, to int64, limit int, offset int) ([]model.SalesforceDocument, int)
 	GetLatestSalesforceDocumentByID(projectID int64, documentIDs []string, docType int, maxTimestamp int64) ([]model.SalesforceDocument, int)
 	GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID int64) (map[int]int64, int64, int)
 	GetSalesforceDocumentByType(projectID int64, docType int, from, to int64) ([]model.SalesforceDocument, int)

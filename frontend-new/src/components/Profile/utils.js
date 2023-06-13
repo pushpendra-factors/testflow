@@ -560,15 +560,15 @@ export const timestampToString = {
 
 export const EngagementTag = {
   Hot: {
-    bgColor: '#FEE9E9',
+    bgColor: '#FFF1F0',
     icon: 'fire'
   },
   Warm: {
-    bgColor: '#F9C06E33',
+    bgColor: '#FFF7E6',
     icon: 'sun'
   },
   Cool: {
-    bgColor: '#F5F5F5',
+    bgColor: '#F0F5FF',
     icon: 'snowflake'
   }
 };

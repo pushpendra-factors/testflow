@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Spin } from 'antd';
+import { Spin, Tooltip } from 'antd';
 import _ from 'lodash';
 import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
 import { SVG } from '../../../factorsComponents';
@@ -29,8 +29,7 @@ function UserTimelineBirdview({
 
   const groupedActivities = _.groupBy(activities, groups[granularity]);
 
-  document.title = 'People' + ' - FactorsAI';
-  
+  document.title = 'People - FactorsAI';
 
   useEffect(() => {
     if (collapse !== undefined) {
@@ -39,7 +38,7 @@ function UserTimelineBirdview({
       ).fill(!collapse);
       setShowAll(showAllState);
     }
-  }, [collapse]);
+  }, [collapse, groupedActivities]);
 
   const setShowAllIndex = (ind, flag) => {
     setCollapse(undefined);
@@ -106,7 +105,16 @@ function UserTimelineBirdview({
           listProperties={listProperties}
         >
           <div className='inline-flex gap--6 items-center'>
-            <div className='event-name--sm'>{eventName}</div>
+            <div className='event-name--sm'>
+              <Tooltip
+                title={eventName}
+                trigger={
+                  !hoverConditionals && eventName.length >= 30 ? 'hover' : []
+                }
+              >
+                {eventName}
+              </Tooltip>
+            </div>
             {hoverConditionals ? (
               <CaretRightOutlined
                 style={{ fontSize: '12px', color: '#8692A3' }}

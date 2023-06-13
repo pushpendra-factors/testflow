@@ -751,7 +751,6 @@ func SDKCaptureClickHandler(c *gin.Context) {
 	var response *model.CaptureClickResponse
 	isEnabled, status, err := store.GetStore().UpsertCountAndCheckEnabledClickableElement(projectID, &request)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to capture click.")
 		response = &model.CaptureClickResponse{Error: "Failed to capture click."}
 		c.AbortWithStatusJSON(status, response)
 		return
