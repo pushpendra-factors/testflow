@@ -930,6 +930,10 @@ const QueryBuilder = ({
               startDate: selectedDateRange.startDate,
               endDate: selectedDateRange.endDate
             }}
+            disabledDateRange={{
+              startDate: moment().subtract(3, 'months'),
+              endDate: moment().subtract(5, 'days')
+            }}
             savedRanges={savedRanges}
             onSelect={setDateRange}
             onSelectSavedRange={onSelectSavedRangeFn}

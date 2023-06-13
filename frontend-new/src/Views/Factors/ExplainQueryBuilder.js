@@ -444,6 +444,10 @@ const CreateGoalDrawer = (props) => {
                   startDate: defaultStartDate,
                   endDate: defaultEndDate
                 }}
+                disabledDateRange={{
+                  startDate: moment().subtract(3, 'months'),
+                  endDate: moment().subtract(4, 'days')
+                }}
                 onSelect={setSelectedDateRange}
               />
             </div>
