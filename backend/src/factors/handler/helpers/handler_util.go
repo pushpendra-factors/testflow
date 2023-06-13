@@ -1,11 +1,13 @@
 package helpers
 
 import (
+	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
 	"factors/model/model"
 	"factors/model/store"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"strconv"
 	"time"
@@ -226,6 +228,17 @@ func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) {
 		cacheRedis.DelPersistent(cacheKey)
 	}
 
+}
+
+func GetResponseFromDBCaching(reqId string, projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
+
+	errCode, cacheResult := store.GetStore().FetchCachedResultFromDataBase(reqId, projectID, dashboardID, unitID, from, to)
+	// since cacheResult.Result is []byte, need to marshall it
+	resultJson := &postgres.Jsonb{RawMessage: json.RawMessage(cacheResult.Result)}
+	if errCode == http.StatusFound && cacheResult.Result != nil {
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: resultJson, Cache: true, RefreshedAt: cacheResult.ComputedAt, TimeZone: string(timezoneString), CacheMeta: nil}
+	}
+	return false, errCode, nil
 }
 
 // GetResponseIfCachedDashboardQuery Common function to fetch result from cache if present for dashboard query.
