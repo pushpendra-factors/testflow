@@ -125,32 +125,11 @@ func evalProperty(properties map[string]interface{}, propFilter M.WeightKeyValue
 	for _, propertyVal := range propFilter.Value {
 		propFilterMap[propertyVal] = true
 	}
-	propvalKey := properties[propFilter.Key]
-
-	if propFilter.Operator == model.EqualsOpStr {
-		propval := U.GetPropertyValueAsString(propvalKey)
-		filterval := propFilter.Value[0]
-		if strings.Compare(propval, filterval) == 0 {
-			return true
-		}
-	} else if propFilter.Operator == model.NotEqualOpStr {
-		propval := U.GetPropertyValueAsString(propvalKey)
-		filterval := propFilter.Value[0]
-		if strings.Compare(propval, filterval) != 0 {
-			return true
-		}
-	} else if propFilter.Operator == model.ContainsOpStr {
-		propval := U.GetPropertyValueAsString(propvalKey)
-		if _, ok := propFilterMap[propval]; ok {
-			return true
-		}
-	} else if propFilter.Operator == model.NotContainsOpStr {
-		propval := U.GetPropertyValueAsString(propvalKey)
-		if _, ok := propFilterMap[propval]; !ok {
-			return true
-		}
+	propval_ := properties[propFilter.Key]
+	propval := U.GetPropertyValueAsString(propval_)
+	if _, ok := propFilterMap[propval]; ok {
+		return true
 	}
-
 	return false
 }
 
