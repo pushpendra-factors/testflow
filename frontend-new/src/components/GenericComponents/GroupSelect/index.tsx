@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { SVG, Text } from '../../factorsComponents';
 import { OptionType, PlacementType } from '../FaSelect/types';
 import useAutoFocus from 'hooks/useAutoFocus';
-import { Button, Input, Spin, Tag } from 'antd';
+import { Button, Input, Spin } from 'antd';
 import styles from './index.module.scss';
 import SingleSelect from '../FaSelect/SingleSelect';
 import {
@@ -11,6 +11,7 @@ import {
 } from './types';
 import { getIcon } from './utils';
 import useKey from 'hooks/useKey';
+import { HighlightSearchText } from 'Utils/dataFormatter';
 interface GroupSelectProps {
   options: GroupSelectOptionType[];
   optionClickCallback: GroupSelectOptionClickCallbackType;
@@ -45,14 +46,28 @@ export default function GroupSelect({
           prefix={<SVG name={'search'} />}
           size='large'
           placeholder={searchPlaceHolder}
-          onChange={(val) => {
-            setSearchTerm(val.target.value);
+          onChange={(event) => {
+            updateSearchText(event.target.value);
           }}
           ref={inputComponentRef}
         ></Input>
       </div>
     );
   };
+
+  const updateSearchText = debounce((value) => {
+    setSearchTerm(value);
+  });
+
+  function debounce(callback: (value: string) => void, delay = 200) {
+    let timeout;
+    return (...args: any) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        callback(...args);
+      }, delay);
+    };
+  }
 
   const handleGroupSelectClickWithSearchEmpty = (group: OptionType) => {
     //When Search is Empty in Group Dropdown.
@@ -74,11 +89,10 @@ export default function GroupSelect({
   const handleOptionSelectClick = (option: OptionType) => {
     optionClickCallback(option, options[selectedGroupIndex]);
   };
-  const handleOptionBackClick = () => {
+  const handleOptionBackClick = useCallback(() => {
     setGroupSelectorOpen(true);
     setSelectedGroupIndex(-1);
-    setSearchTerm('');
-  };
+  }, []);
 
   const generateOptionHeader = () => {
     const selectedGroup = options[selectedGroupIndex];
@@ -135,12 +149,15 @@ export default function GroupSelect({
                 </div>
                 <div className='flex'>
                   <Text
-                    level={8}
+                    level={7}
                     type={'title'}
                     extraClass={'m-0 ml-2'}
-                    weight={'bold'}
+                    weight={'thin'}
                   >
-                    {groupValue.label}
+                    <HighlightSearchText
+                      text={groupValue?.label}
+                      highlight={searchTerm}
+                    />
                   </Text>
                 </div>
               </div>
@@ -162,6 +179,7 @@ export default function GroupSelect({
       };
       return (
         <SingleSelect
+          key={'group-with-search'}
           options={groupValueOptions}
           optionClickCallback={(group) =>
             handleGroupSelectClickWithSearch(group)
@@ -215,6 +233,7 @@ export default function GroupSelect({
     });
     return (
       <SingleSelect
+        key={'group-without-search'}
         options={groupOptions}
         optionClickCallback={handleGroupSelectClickWithSearchEmpty}
         allowSearch={true}
@@ -229,6 +248,7 @@ export default function GroupSelect({
     const selectedGroup = options[selectedGroupIndex];
     return (
       <SingleSelect
+        key={'group-values-options'}
         options={selectedGroup?.values || []}
         optionClickCallback={handleOptionSelectClick}
         allowSearch={true}
@@ -276,7 +296,7 @@ export default function GroupSelect({
     return groupSelectorOpen ? renderGroupFaSelect() : renderOptionFaSelect();
   };
 
-  useKey('Escape', handleOptionBackClick);
+  useKey(['Escape'], handleOptionBackClick);
 
   return (
     <>
