@@ -1576,6 +1576,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
 	GROUP_NAME_SIX_SIGNAL:             "6Signal Domains",
 	GROUP_NAME_LINKEDIN_COMPANY:       "Linkedin Company Engagements",
+	GROUP_NAME_G2:                     "G2 Enagagements",
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{
