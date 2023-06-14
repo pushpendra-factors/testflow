@@ -118,6 +118,11 @@ type HubspotDocumentProperties struct {
 	Properties map[string]HubspotProperty `json:"properties"`
 }
 
+// HubspotDocumentProperties only holds the properties object of the document
+type HubspotDocumentPropertiesV3 struct {
+	Properties map[string]interface{} `json:"properties"`
+}
+
 // HubspotProjectSyncStatus hubspot project sync status
 type HubspotProjectSyncStatus struct {
 	ProjectID int64  `json:"project_id"`
@@ -555,7 +560,21 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 		if !exists || properties == nil {
 			return 0, errorFailedToGetCreatedAtFromHubspotDocument
 		}
+
 		propertiesMap := properties.(map[string]interface{})
+
+		if _, isDealV3Record := (*value)["id"]; isDealV3Record {
+			createDate, exists := propertiesMap["createdate"]
+			if !exists || createDate == nil {
+				return 0, errorFailedToGetCreatedAtFromHubspotDocument
+			}
+
+			valueInInt64, ok := GetTimestampForV3Records(createDate)
+			if ok != nil {
+				return 0, errors.New("failed to convert interface into float64 for deal_V3")
+			}
+			return valueInInt64, nil
+		}
 
 		hsCreateDate, exists := propertiesMap["hs_createdate"]
 		if exists {

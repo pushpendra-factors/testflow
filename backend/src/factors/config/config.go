@@ -311,6 +311,7 @@ type Configuration struct {
 	AllowEventAnalyticsGroupsByProjectID               string
 	OtpKeyWithQueryCheckEnabled                        bool
 	AllowEmailDomainsByProjectID                       string
+	UseHubspotDealsV3APIByProjectID                    string
 	EnableScoringByProjectID                           string
 }
 
@@ -2867,6 +2868,15 @@ func AllowEventAnalyticsGroupsByProjectID(projectID int64) bool {
 
 func AllowEmailDomainsByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowEmailDomainsByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func AllowHubspotDealsv3APIByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotDealsV3APIByProjectID, "")
 	if allProjects {
 		return true
 	}

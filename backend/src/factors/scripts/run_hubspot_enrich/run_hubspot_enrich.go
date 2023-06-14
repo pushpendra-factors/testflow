@@ -77,6 +77,7 @@ func main() {
 	useHubspotCompaniesv3APIByProjectID := flag.String("use_hubspot_companies_v3_by_project_id", "", "")
 	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
 	useHubspotEngagementsv3APIByProjectID := flag.String("use_hubspot_engagements_v3_by_project_id", "", "")
+	useHubspotDealsv3APIByProjectID := flag.String("use_hubspot_deals_v3_by_project_id", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -134,6 +135,7 @@ func main() {
 		UseHubspotCompaniesV3APIByProjectID:                *useHubspotCompaniesv3APIByProjectID,
 		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
 		UseHubspotEngagementsV3APIByProjectID:              *useHubspotEngagementsv3APIByProjectID,
+		UseHubspotDealsV3APIByProjectID:                    *useHubspotDealsv3APIByProjectID,
 	}
 
 	C.InitConf(config)

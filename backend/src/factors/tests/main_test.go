@@ -131,6 +131,9 @@ func TestMain(m *testing.M) {
 		EnableEventFiltersInSegments:                       true,
 		AllAccountsProjectId:                               "*",
 		AllowEmailDomainsByProjectID:                       "*",
+		UseHubspotCompaniesV3APIByProjectID:                "*",
+		UseHubspotEngagementsV3APIByProjectID:              "*",
+		UseHubspotDealsV3APIByProjectID:                    "*",
 	}
 	C.InitConf(config)
 
