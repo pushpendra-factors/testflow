@@ -199,6 +199,10 @@ type CompanyAttributesStruct struct {
 	Domain         string `json:"domain"`
 }
 
+var defaultPropertiesForEvent = map[string]interface{}{
+	U.EP_SKIP_SESSION: U.PROPERTY_VALUE_TRUE,
+}
+
 func PerformCompanyEnrichmentAndUserAndEventCreationForProject(projectSetting model.G2ProjectSettings) (string, int) {
 	g2Documents, errCode := store.GetStore().GetG2DocumentsForGroupUserCreation(projectSetting.ProjectID)
 	if errCode != http.StatusOK {
@@ -273,12 +277,17 @@ func PerformCompanyEnrichmentAndUserAndEventCreationForProject(projectSetting mo
 		if errCode != http.StatusCreated && errCode != http.StatusConflict {
 			return "Failed in creating pageview event name", errCode
 		}
-
+		propertiesJSONB, err := U.EncodeStructTypeToPostgresJsonb(&defaultPropertiesForEvent)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed in encoding properties to JSONb")
+			return "Failed in encoding properties to JSONb", http.StatusInternalServerError
+		}
 		allPageviewEvent := model.Event{
 			EventNameId: eventNameG2All.ID,
 			Timestamp:   g2Document.Timestamp,
 			ProjectId:   projectID,
 			UserId:      userID,
+			Properties:  *propertiesJSONB,
 		}
 		_, errCode = store.GetStore().CreateEvent(&allPageviewEvent)
 		if errCode != http.StatusCreated {
@@ -291,6 +300,7 @@ func PerformCompanyEnrichmentAndUserAndEventCreationForProject(projectSetting mo
 			Timestamp:   g2Document.Timestamp,
 			ProjectId:   projectID,
 			UserId:      userID,
+			Properties:  *propertiesJSONB,
 		}
 		_, errCode = store.GetStore().CreateEvent(&g2PageviewEvent)
 		if errCode != http.StatusCreated {
