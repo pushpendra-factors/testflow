@@ -356,7 +356,7 @@ func ShouldCacheUnitForTimeRange(queryClass, preset string, from, to int64, only
 	}
 	// Using one minute as a buffer time in taking out difference
 	epsilonSeconds := int64(60)
-	if queryClass == QueryClassAttribution {
+	if queryClass == QueryClassAttribution || queryClass == QueryClassAttributionV1 {
 
 		// Rule 2: Skip for Today or Yesterday for attribution class queries
 		if preset == U.DateRangePresetToday || preset == U.DateRangePresetYesterday {
@@ -387,6 +387,42 @@ func ShouldCacheUnitForTimeRange(queryClass, preset string, from, to int64, only
 
 		// Cases for Sunday, Monday of ThisWeek & 1st, 2nd of ThisMonth, it shouldn't cache.
 		return false, 0, 0
+	}
+
+	// For other units, caching should run without changing `to`.
+	return true, from, to
+}
+
+func ShouldCacheUnitForTimeRangeDashboardV1(queryClass, preset string, from, to int64, onlyAttribution, skipAttribution int, skipPreset bool) (bool, int64, int64) {
+
+	if queryClass == QueryClassAttribution || queryClass == QueryClassAttributionV1 {
+		// Rule 1: Skip attribution class queries if skipAttribution = 1
+		if skipAttribution == 1 {
+			return false, 0, 0
+		}
+	} else {
+		// Rule 2: Skip other class queries if onlyAttribution = 1
+		if onlyAttribution == 1 {
+			return false, 0, 0
+		}
+	}
+	// Using one minute as a buffer time in taking out difference
+	epsilonSeconds := int64(60)
+	if queryClass == QueryClassAttribution || queryClass == QueryClassAttributionV1 {
+
+		// Rule 2: Skip for Today or Yesterday for attribution class queries
+		if preset == U.DateRangePresetToday || preset == U.DateRangePresetYesterday {
+			return false, 0, 0
+		}
+
+		if (preset == U.DateRangePresetLastWeek || preset == U.DateRangePresetLastMonth) && !skipPreset {
+			// Rule 2': If last week/last month is well before one day in past, compute for entire range
+			now := time.Now().Unix()
+			if (to + U.SECONDS_IN_A_DAY) <= (now - epsilonSeconds) {
+				return true, from, to
+			}
+		}
+
 	}
 
 	// For other units, caching should run without changing `to`.

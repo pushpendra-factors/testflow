@@ -201,6 +201,7 @@ type Configuration struct {
 	CloudManager                                       filestore.FileManager
 	SegmentExcludedCustomerIDByProject                 map[int64]string // map[project_id]customer_user_id
 	AttributionDebug                                   int
+	AttributionDBCacheLookup                           int
 	DisableDashboardQueryDBExecution                   bool
 	AllowedHubspotGroupsByProjectIDs                   string
 	EnableFilterOptimisation                           bool
@@ -2035,6 +2036,10 @@ func GetTokensFromStringListAsString(stringList string) []string {
 
 func GetAttributionDebug() int {
 	return configuration.AttributionDebug
+}
+
+func GetAttributionDBCacheLookup() int {
+	return configuration.AttributionDBCacheLookup
 }
 
 func GetClearbitEnabled() int {
