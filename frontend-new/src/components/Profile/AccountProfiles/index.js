@@ -67,12 +67,6 @@ import {
   setSegmentModalStateAction
 } from 'Reducers/accountProfilesView/actions';
 
-const groupToCompanyPropMap = {
-  $hubspot_company: '$hubspot_company_name',
-  $salesforce_account: '$salesforce_account_name',
-  $6signal: '$6Signal_name'
-};
-
 function AccountProfiles({
   activeProject,
   groupOpts,
@@ -136,6 +130,7 @@ function AccountProfiles({
       $salesforce_account: 'salesforce',
       $6signal: '6Signal',
       $linkedin_company: '$li_',
+      $g2: '$g2',
       All: ''
     };
     const source = filterPropsMap[accountPayload?.source];
@@ -751,7 +746,8 @@ function AccountProfiles({
     $hubspot_company: '$hubspot_company_name',
     $salesforce_account: '$salesforce_account_name',
     $6signal: '$6Signal_name',
-    $linkedin_company: '$li_localized_name'
+    $linkedin_company: '$li_localized_name',
+    $g2: '$g2_name'
   };
 
   useEffect(() => {
