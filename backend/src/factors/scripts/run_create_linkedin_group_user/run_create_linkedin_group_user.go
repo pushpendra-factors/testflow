@@ -202,7 +202,7 @@ func createGroupUserAndEvents(linkedinProjectSetting model.LinkedinProjectSettin
 				}
 				viewedADEventPropertiesMap := map[string]interface{}{
 					U.LI_AD_VIEW_COUNT: domainData.Impressions,
-					U.EP_SKIP_SESSION:  true,
+					U.EP_SKIP_SESSION:  U.PROPERTY_VALUE_TRUE,
 				}
 				viewedADEventPropertiesJsonB, err := U.EncodeStructTypeToPostgresJsonb(&viewedADEventPropertiesMap)
 				if err != nil {
@@ -227,7 +227,7 @@ func createGroupUserAndEvents(linkedinProjectSetting model.LinkedinProjectSettin
 				}
 				clickedADEventPropertiesMap := map[string]interface{}{
 					U.LI_AD_CLICK_COUNT: domainData.Clicks,
-					U.EP_SKIP_SESSION:   true,
+					U.EP_SKIP_SESSION:   U.PROPERTY_VALUE_TRUE,
 				}
 				clickedADEventPropertiesJsonB, err := U.EncodeStructTypeToPostgresJsonb(&clickedADEventPropertiesMap)
 				if err != nil {
