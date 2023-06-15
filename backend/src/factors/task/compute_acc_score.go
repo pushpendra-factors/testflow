@@ -151,7 +151,7 @@ func AggregateDailyEvents(projectId int64, archiveCloudManager,
 	fileNamePrefix := "events"
 
 	domain_group, status := store.GetStore().GetGroup(projectId, model.GROUP_NAME_DOMAINS)
-	if status != http.StatusNotFound {
+	if status != http.StatusFound {
 		e := fmt.Errorf("failed to get existing groups (%s) for project (%d)", model.GROUP_NAME_DOMAINS, projectId)
 		log.WithField("err_code", status).Error(e)
 		return e
