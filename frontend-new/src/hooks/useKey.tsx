@@ -1,14 +1,13 @@
 import { useEffect } from 'react';
 
-const useKey = (targetKey, callback) => {
+const useKey = (targetKeys: string[], callback: (key: string) => void) => {
   useEffect(() => {
     // Event handler for keydown event
-    const handleKeyDown = (event) => {
-      if (event.key === targetKey) {
-        callback();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (targetKeys.includes(event.key)) {
+        callback(event.key);
       }
     };
-
     // Add event listener
     document.addEventListener('keydown', handleKeyDown);
 
@@ -16,7 +15,7 @@ const useKey = (targetKey, callback) => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [targetKey, callback]);
+  }, [targetKeys, callback]);
 };
 
 export default useKey;

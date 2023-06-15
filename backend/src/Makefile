@@ -696,9 +696,9 @@ upload-create-linkedin-group-user: export IMAGE_NAME=create-linkedin-group-user-
 upload-create-linkedin-group-user: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/create-linkedin-group-user-job:$(TAG)
 
-pack-g2-data-pull:
-	docker build -t us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG) -f Dockerfile.g2_data_pull_and_enrich_job .
+pack-g2-enrich-job:
+	docker build -t us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG) -f Dockerfile.g2_enrich_job .
 
-upload-g2-data-pull: export IMAGE_NAME=g2-enrich-job
-upload-g2-data-pull: notify-deployment
+upload-g2-enrich-job: export IMAGE_NAME=g2-enrich-job
+upload-g2-enrich-job: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG)

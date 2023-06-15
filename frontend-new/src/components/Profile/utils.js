@@ -84,7 +84,8 @@ export const displayFilterOpts = {
   $hubspot_company: 'Hubspot Companies',
   $salesforce_account: 'Salesforce Accounts',
   $6signal: '6Signal Domains',
-  $linkedin_company: 'Linkedin Company Engagements'
+  $linkedin_company: 'Linkedin Company Engagements',
+  $g2: 'G2 Engagements'
 };
 
 export const formatFiltersForPayload = (filters = [], returnArray) => {
@@ -122,6 +123,7 @@ export const formatFiltersForPayload = (filters = [], returnArray) => {
     '$hubspot_company',
     '$salesforce_account',
     '$6signal',
+    '$g2',
     '$li_'
   ];
 

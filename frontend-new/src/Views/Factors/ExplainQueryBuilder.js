@@ -12,7 +12,8 @@ import {
   fetchFactorsModels,
   saveGoalInsightRules,
   saveGoalInsightModel,
-  fetchFactorsModelMetadata
+  fetchFactorsModelMetadata,
+  fetchSavedExplainGoals
 } from 'Reducers/factors';
 import { connect } from 'react-redux';
 import { useHistory } from 'react-router-dom';
@@ -25,10 +26,9 @@ import ComposerBlock from '../../components/QueryCommons/ComposerBlock';
 import EventTag from './FactorsInsightsNew/Components/EventTag';
 import factorsai from 'factorsai';
 import FaDatepicker from 'Components/FaDatepicker';
-// import { operatorMap } from 'Utils/operatorMapping';
 
-const symbolToTextConv = (symbol) =>{
-  switch(symbol){
+const symbolToTextConv = (symbol) => {
+  switch (symbol) {
     case '=':
       return 'equals';
     case '!=':
@@ -130,7 +130,7 @@ const CreateGoalDrawer = (props) => {
   };
 
   const onChangeGroupSelect1 = (grp, value) => {
-    setShowDropDown(false); 
+    setShowDropDown(false);
     setEvent1(value[0]);
   };
   const removeFilter = (index) => {
@@ -183,9 +183,9 @@ const CreateGoalDrawer = (props) => {
         setEvent1(goalInsights?.goal?.st_en);
         setEvent2(goalInsights?.goal?.en_en);
       }
-      
-      if(goalInsights?.goal?.rule?.in_en){
-        setEventsToInc(goalInsights?.goal?.rule?.in_en) 
+
+      if (goalInsights?.goal?.rule?.in_en) {
+        setEventsToInc(goalInsights?.goal?.rule?.in_en)
       }
 
     }
@@ -291,7 +291,7 @@ const CreateGoalDrawer = (props) => {
     const getInsights = (reportName) => {
       setInsightBtnLoading(true);
       // const calcModelId = modelIDtoStringMap();
-      let projectID = props.activeProject.id; 
+      let projectID = props.activeProject.id;
       let gprData = getFilters(filters);
       let event1pr = getFilters(filtersEvent1);
       let event2pr = getFilters(filtersEvent2);
@@ -311,17 +311,16 @@ const CreateGoalDrawer = (props) => {
         name: reportName,
         sts: moment(defaultStartDate).unix(),
         ets: moment(defaultEndDate).unix()
-      }; 
+      };
 
       // creating explain job
       props
         .createExplainJob(projectID, payload)
         .then((data) => {
           setInsightBtnLoading(false);
+          props.fetchSavedExplainGoals(projectID);
           history.push('/explain');
-          message.success(
-            'Your report is saved. Find under the saved reports of Explain 2.0'
-          );
+          message.success('Report saved!');
         })
         .catch((err) => {
           console.log('createExplainJob catch', err);
@@ -420,9 +419,8 @@ const CreateGoalDrawer = (props) => {
     <div>
       <div className={`flex flex-col py-4 px-20 border--thin-2 relative `}>
         <div
-          className={`explain-builder--content ${
-            collapse ? 'explain-builder--collapsed' : ''
-          }`}
+          className={`explain-builder--content ${collapse ? 'explain-builder--collapsed' : ''
+            }`}
         >
           <ComposerBlock
             blockTitle={'SELECT ANALYSIS WINDOW'}
@@ -503,12 +501,12 @@ const CreateGoalDrawer = (props) => {
                                 groupedProperties={
                                   TrackedEventNames
                                     ? [
-                                        {
-                                          label: 'Most Recent',
-                                          icon: 'most_recent',
-                                          values: TrackedEventNames
-                                        }
-                                      ]
+                                      {
+                                        label: 'Most Recent',
+                                        icon: 'most_recent',
+                                        values: TrackedEventNames
+                                      }
+                                    ]
                                     : null
                                 }
                                 placeholder='Select Events'
@@ -610,12 +608,12 @@ const CreateGoalDrawer = (props) => {
                                   groupedProperties={
                                     TrackedEventNames
                                       ? [
-                                          {
-                                            label: 'Most Recent',
-                                            icon: 'most_recent',
-                                            values: TrackedEventNames
-                                          }
-                                        ]
+                                        {
+                                          label: 'Most Recent',
+                                          icon: 'most_recent',
+                                          values: TrackedEventNames
+                                        }
+                                      ]
                                       : null
                                   }
                                   placeholder='Select Events'
@@ -812,5 +810,6 @@ export default connect(mapStateToProps, {
   saveGoalInsightModel,
   getUserProperties,
   getEventProperties,
-  fetchFactorsModelMetadata
+  fetchFactorsModelMetadata,
+  fetchSavedExplainGoals
 })(CreateGoalDrawer);

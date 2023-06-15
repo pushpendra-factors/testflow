@@ -129,6 +129,12 @@ function UserProfiles({
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
 
+  useEffect(() => {
+    if (!timelinePayload.search_filter) {
+      setListSearchItems([]);
+    }
+  }, [timelinePayload]);
+
   const setTimelinePayload = useCallback(
     (payload) => {
       dispatch(setTimelinePayloadAction(payload));

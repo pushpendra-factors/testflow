@@ -143,6 +143,23 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		var resCode int
 		var resMsg interface{}
 
+		if C.GetAttributionDBCacheLookup() == 1 {
+			logCtx.Info("Hitting the DB cache lookup")
+			shouldReturn, resCode, resMsg = H.GetResponseFromDBCaching(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo, timezoneString)
+			logCtx.WithFields(log.Fields{
+				"should_return": shouldReturn,
+				"res_code":      resCode,
+				"res_msg":       resMsg,
+				"dashboard_Id":  dashboardId,
+				"unit_id":       unitId,
+			}).Info("Hitting the DB cache lookup")
+			if shouldReturn {
+				if resCode == http.StatusOK {
+					return resMsg, resCode, "", "", false
+				}
+			}
+		}
+
 		if C.IsLastComputedWhitelisted(projectId) {
 
 			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQueryWithPreset(reqId, projectId, dashboardId, unitId, preset, effectiveFrom, effectiveTo, timezoneString)

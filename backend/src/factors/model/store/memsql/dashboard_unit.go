@@ -956,6 +956,7 @@ func (store *MemSQL) CacheAttributionDashboardUnit(dashboardUnit model.Dashboard
 	store.RunCachingForLast3MonthsAttribution(dashboardUnit, timezoneString, logCtx, queryClass, reportCollector, enableFilterOpt)
 }
 
+// GetLast3MonthStoredQueriesFromAndTo fetches all date ranges computed and stored in DB
 func (store *MemSQL) GetLast3MonthStoredQueriesFromAndTo(projectID, dashboardID, dashboardUnitID, queryID int64) (*[]model.DashQueryResult, int) {
 
 	logFields := log.Fields{
@@ -976,6 +977,7 @@ func (store *MemSQL) GetLast3MonthStoredQueriesFromAndTo(projectID, dashboardID,
 	return &dashQueryResults, http.StatusFound
 }
 
+// RunCachingForLast3MonthsAttribution runs for all date ranges for last 3 months which are not yet computed
 func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.DashboardUnit,
 	timezoneString U.TimeZoneString, logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool) {
 
@@ -1047,7 +1049,7 @@ func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.Das
 
 		// Filtering queries on type and range for attribution query
 		allowedPreset := cacheSettings.AttributionCachePresets
-		shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, "", from, to,
+		shouldCache, from, to := model.ShouldCacheUnitForTimeRangeDashboardV1(queryClass, "", from, to,
 			C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[""])
 		if !shouldCache {
 			continue
@@ -1424,7 +1426,12 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 		QueryRange:  U.SecondsToHMSString(to - from),
 	}
 
-	logCtx := log.WithFields(logFields).WithFields(log.Fields{"PreUnitReport": unitReport})
+	logCtx := log.WithFields(log.Fields{
+		"cache_payload": cachePayload,
+		"from":          from,
+		"to":            to,
+	}).WithFields(log.Fields{"PreUnitReport": unitReport})
+
 	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, timezoneString, false) {
 		return http.StatusOK, "", unitReport
 	}
@@ -1848,8 +1855,11 @@ func (store *MemSQL) _cacheAttributionDashboardUnitForDateRange(cachePayload mod
 		"ProjectID":       projectID,
 		"DashboardID":     dashboardID,
 		"DashboardUnitID": dashboardUnitID,
+		"from":            from,
+		"to":              to,
 		"FromTo":          fmt.Sprintf("%d-%d", from, to),
 	})
+
 	errCode, errMsg, report := store.CacheAttributionDashboardUnitForDateRange(cachePayload, enableFilterOpt)
 	reportCollector.Store(model.GetCachingUnitReportUniqueKey(report), report)
 	if errCode != http.StatusOK {

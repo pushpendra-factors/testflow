@@ -46,7 +46,7 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 // import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from '../UserProfiles/SegmentModal';
 // import EventsBlock from '../MyComponents/EventsBlock';
-import { useHistory, useLocation } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import {
   fetchGroupPropertyValues,
   fetchGroups
@@ -66,12 +66,6 @@ import {
   updateAccountPayloadAction,
   setSegmentModalStateAction
 } from 'Reducers/accountProfilesView/actions';
-
-const groupToCompanyPropMap = {
-  $hubspot_company: '$hubspot_company_name',
-  $salesforce_account: '$salesforce_account_name',
-  $6signal: '$6Signal_name'
-};
 
 function AccountProfiles({
   activeProject,
@@ -136,6 +130,7 @@ function AccountProfiles({
       $salesforce_account: 'salesforce',
       $6signal: '6Signal',
       $linkedin_company: '$li_',
+      $g2: '$g2',
       All: ''
     };
     const source = filterPropsMap[accountPayload?.source];
@@ -148,6 +143,12 @@ function AccountProfiles({
         );
     return tableProps || [];
   }, [currentProjectSettings, accountPayload, activeSegment]);
+
+  useEffect(() => {
+    if (!accountPayload.search_filter) {
+      setListSearchItems([]);
+    }
+  }, [accountPayload]);
 
   const setAccountPayload = useCallback(
     (payload) => {
@@ -745,7 +746,8 @@ function AccountProfiles({
     $hubspot_company: '$hubspot_company_name',
     $salesforce_account: '$salesforce_account_name',
     $6signal: '$6Signal_name',
-    $linkedin_company: '$li_localized_name'
+    $linkedin_company: '$li_localized_name',
+    $g2: '$g2_name'
   };
 
   useEffect(() => {

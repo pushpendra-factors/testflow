@@ -14,6 +14,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type InternalStatus struct {
+	Status string `json:"status"`
+}
+
 func GetEventTriggerAlertsByProjectHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 
@@ -307,7 +311,7 @@ func UpdateEventTriggerAlertInternalStatusHandler(c *gin.Context) (interface{}, 
 		return "", http.StatusBadRequest, INVALID_INPUT, errMsg, true
 	}
 
-	is := make(map[string]interface{})
+	var is InternalStatus
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -316,10 +320,22 @@ func UpdateEventTriggerAlertInternalStatusHandler(c *gin.Context) (interface{}, 
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error(errMsg)
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
-	errCode, err := store.GetStore().UpdateEventTriggerAlertField(projectID, id, is)
+
+	// Check if the status received is one of the known values
+	if is.Status != model.Active && is.Status != model.Paused && is.Status != model.Disabled {
+		errMsg := "Internal status update failed. Unkown value received for status"
+		log.WithFields(log.Fields{"project_id": projectID, "alert_id": id}).Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
+	}
+
+	field := map[string]interface{}{
+		"internal_status": is.Status,
+	}
+
+	errCode, err := store.GetStore().UpdateEventTriggerAlertField(projectID, id, field)
 	if err != nil || errCode != http.StatusAccepted {
 		errMsg := "Internal status update failed"
-		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error(errMsg)
+		log.WithFields(log.Fields{"project_id": projectID, "alert_id": id}).WithError(err).Error(errMsg)
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, errMsg, true
 	}
 

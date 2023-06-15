@@ -8,11 +8,12 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"net/http"
+	"reflect"
+
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"net/http"
-	"reflect"
 )
 
 const ROUTE_SDK_ROOT = "/sdk"
@@ -312,7 +313,7 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id", responseWrapper(V1.EditEventTriggerAlertHandler))
 	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/test_wh", responseWrapper(V1.TestWebhookforEventTriggerAlerts))
 	featuresGatesRouteGroup.GET("/:project_id/v1/eventtriggeralert/:id", responseWrapper(V1.GetInternalStatusForEventTriggerAlertHandler))
-	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id/internal_status", responseWrapper(V1.UpdateEventTriggerAlertInternalStatusHandler))
+	featuresGatesRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id/status", responseWrapper(V1.UpdateEventTriggerAlertInternalStatusHandler))
 
 	// teams
 	featuresGatesRouteGroup.POST("/:project_id/teams/auth", mid.SkipDemoProjectWriteAccess(), V1.TeamsAuthRedirectHandler)
@@ -335,7 +336,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/settings", mid.SkipDemoProjectWriteAccess(), GetProjectSettingHandler)
 	authRouteGroup.GET("/:project_id/v1/settings", mid.SkipDemoProjectWriteAccess(), V1.GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", mid.SkipDemoProjectWriteAccess(), UpdateProjectSettingsHandler)
-	authRouteGroup.PUT("/:project_id", mid.SkipDemoProjectWriteAccess(), EditProjectHandler)	
+	authRouteGroup.PUT("/:project_id", mid.SkipDemoProjectWriteAccess(), EditProjectHandler)
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
 	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
