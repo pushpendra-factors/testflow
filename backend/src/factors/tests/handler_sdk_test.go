@@ -3680,6 +3680,34 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 		PagesInclude:   []model.SixSignalFilter{},
 		PagesExclude:   []model.SixSignalFilter{{Value: "www.axc", Type: "contains"}}}, countryName: "India", pageUrl: "www.abc.com"}
 
+	//Testing Page Include Case for Equals Operator with utm params in pageUrl
+	t13ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "equals"}},
+		PagesExclude:   []model.SixSignalFilter{}}, countryName: "India", pageUrl: "https://www.abc.com?source=Google&channel=Direct"}
+	t14ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc-abc.com", Type: "equals"}},
+		PagesExclude:   []model.SixSignalFilter{}}, countryName: "India", pageUrl: "www.abc.com?source=Google&channel=Direct"}
+
+	//Testing Page Exclude Case for Equals Operator with utm params in pageUrl
+	t15ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "equals"}}}, countryName: "India", pageUrl: "www.abc.com?source=Google&channel=Direct"}
+	t16ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{{Value: "www.abc-abc.com", Type: "equals"}}}, countryName: "India", pageUrl: "www.abc.com?source=Google&channel=Direct"}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -3698,6 +3726,10 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 		{"Test10", t10ar, false, false},
 		{"Test11", t11ar, false, false},
 		{"Test12", t12ar, true, false},
+		{"Test13", t13ar, true, false},
+		{"Test14", t14ar, false, false},
+		{"Test15", t15ar, false, false},
+		{"Test16", t16ar, true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
