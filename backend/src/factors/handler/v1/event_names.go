@@ -232,11 +232,11 @@ func GetPropertiesByEventCategoryType(c *gin.Context) {
 		return
 	}
 	properties := make(map[string][]string)
-	if(eventCategoryType == D.PAGE_VIEW_CATEGORY) {
+	if(eventCategoryType == "page_views") {
 		properties["categorical"] = U.PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL
 		properties["numerical"]= U.PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL
 		
-	} else if(eventCategoryType == D.BUTTON_CLICKS_CATEGORY){
+	} else if(eventCategoryType == "button_clicks"){
 		properties["categorical"] = U.BUTTON_CLICKS_STANDARD_PROPERTIES_CATEGORICAL
 	}
 	c.JSON(http.StatusOK, gin.H{"properties": properties})

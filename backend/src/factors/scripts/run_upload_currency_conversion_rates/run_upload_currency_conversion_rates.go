@@ -79,7 +79,7 @@ func main() {
 	defer db.Close()
 
 	todayDateinYYYYMMFormat := time.Unix(time.Now().Unix(), 0).UTC().Format("200601")
-	todayDateinYYYYMMDDFormat := time.Unix(time.Now().Unix(), 0).UTC().Format("2006-01-01")
+	todayDateinYYYYMMDDFormat := time.Unix(time.Now().Unix(), 0).UTC().Format("2006-01-02")
 	exchangeRateUrl := "https://openexchangerates.org/api/historical/"+todayDateinYYYYMMDDFormat+".json?app_id=b61633badf274600a9b20b398e6c1768"
 	fmt.Println(exchangeRateUrl)
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, exchangeRateUrl).
