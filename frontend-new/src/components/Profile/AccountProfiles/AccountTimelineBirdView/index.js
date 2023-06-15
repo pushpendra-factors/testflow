@@ -117,14 +117,16 @@ function AccountTimelineBirdView({
           listProperties={listProperties}
         >
           <div className='inline-flex gap--4 items-center'>
-            <Tooltip
-              title={eventName}
-              trigger={
-                !hoverConditionals && eventName.length >= 30 ? 'hover' : []
-              }
-            >
-              {eventName}
-            </Tooltip>
+            <div className='event-name--sm'>
+              <Tooltip
+                title={eventName}
+                trigger={
+                  !hoverConditionals && eventName.length >= 30 ? 'hover' : []
+                }
+              >
+                {eventName}
+              </Tooltip>
+            </div>
             {hoverConditionals ? (
               <CaretRightOutlined
                 style={{ fontSize: '12px', color: '#8692A3' }}
