@@ -105,6 +105,7 @@ var SourceGroupUser = map[int]string{
 	UserSourceSixSignal:       U.GROUP_NAME_SIX_SIGNAL,
 	UserSourceLinkedinCompany: U.GROUP_NAME_LINKEDIN_COMPANY,
 	UserSourceDomains:         U.GROUP_NAME_DOMAINS,
+	UserSourceG2:              U.GROUP_NAME_G2,
 }
 
 // source name to hostname
@@ -162,4 +163,6 @@ var GROUP_TO_COMPANY_NAME_MAP = map[string]string{
 	U.GROUP_NAME_HUBSPOT_COMPANY:    U.GP_HUBSPOT_COMPANY_NAME,
 	U.GROUP_NAME_SALESFORCE_ACCOUNT: U.GP_SALESFORCE_ACCOUNT_NAME,
 	U.GROUP_NAME_SIX_SIGNAL:         U.SIX_SIGNAL_DOMAIN,
+	U.GROUP_NAME_LINKEDIN_COMPANY:   U.LI_LOCALIZED_NAME,
+	U.GROUP_NAME_G2:                 U.G2_NAME,
 }
