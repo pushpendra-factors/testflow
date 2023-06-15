@@ -16,7 +16,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
-	D "factors/delta"
 )
 
 var FORCED_EVENT_NAMES = map[int64][]string{
