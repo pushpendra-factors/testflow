@@ -65,6 +65,8 @@ func main() {
 	formFillIdentifyAllowedProjectIDs := flag.String("form_fill_identify_allowed_projects", "", "Form fill identification allowed project ids.")
 	enableSixSignalGroupByProjectID := flag.String("enable_six_signal_group_by_project_id", "", "")
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
+	disableEventUserPropertyByProjectID := flag.String("remove_disabled_event_user_properties",
+		"", "List of projects to disable event user property population in events.")
 	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
 	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
 	flag.Parse()
@@ -119,6 +121,7 @@ func main() {
 		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
 		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
 		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
+		DisableEventUserPropertyByProjectID:                *disableEventUserPropertyByProjectID,
 	}
 	C.InitConf(config)
 
