@@ -108,3 +108,31 @@
     }
   }
 }
+
+.antdIcon{
+  :global(.ant-btn.ant-btn-icon-only) {
+    border-radius: 0px 4px 4px 0px !important;
+    margin-left: 1px;
+  }
+
+  :global(.ant-btn.ant-btn-primary:first-child:not(:last-child)){
+    border-radius: 4px 0px 0px 4px !important;
+  }
+}
+
+.antdActionMenu {
+  min-width: 170px;
+  border-radius: 5px;
+ 
+  :global(.ant-dropdown-menu-item)
+  {
+      border-radius: 10px;
+      padding: 10px 12px !important;
+  }
+
+  :global(.anticon) {
+    vertical-align: 0px !important;
+  }
+    
+}
+  

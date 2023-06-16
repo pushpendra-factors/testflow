@@ -40,7 +40,7 @@ const Alerts = ({
   const [viewAlertDetails, setAlertDetails] = useState(false);
   const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
-  const [tabNo, setTabNo] = useState('1');
+  const [tabNo, setTabNo] = useState('2');
   const [alertState, setAlertState] = useState({
     state: 'list',
     index: 0
@@ -270,7 +270,7 @@ const Alerts = ({
     if (alertState.state === 'list') {
       alertContent = (
         <Tabs activeKey={`${tabNo}`} onChange={callback}>
-          <TabPane tab='Track KPIs' key='1'>
+          <TabPane tab='Event based' key='2'>
             <Table
               className='fa-table--basic mt-8'
               loading={tableLoading}
@@ -279,7 +279,7 @@ const Alerts = ({
               pagination={false}
             />
           </TabPane>
-          <TabPane tab='Event based' key='2'>
+          <TabPane tab='Track KPIs' key='1'>
             <Table
               className='fa-table--basic mt-8'
               loading={tableLoading}

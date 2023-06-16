@@ -84,7 +84,8 @@ export const displayFilterOpts = {
   $hubspot_company: 'Hubspot Companies',
   $salesforce_account: 'Salesforce Accounts',
   $6signal: '6Signal Domains',
-  $linkedin_company: 'Linkedin Company Engagements'
+  $linkedin_company: 'Linkedin Company Engagements',
+  $g2: 'G2 Engagements'
 };
 
 export const formatFiltersForPayload = (filters = [], returnArray) => {
@@ -122,6 +123,7 @@ export const formatFiltersForPayload = (filters = [], returnArray) => {
     '$hubspot_company',
     '$salesforce_account',
     '$6signal',
+    '$g2',
     '$li_'
   ];
 
@@ -560,15 +562,15 @@ export const timestampToString = {
 
 export const EngagementTag = {
   Hot: {
-    bgColor: '#FEE9E9',
+    bgColor: '#FFF1F0',
     icon: 'fire'
   },
   Warm: {
-    bgColor: '#F9C06E33',
+    bgColor: '#FFF7E6',
     icon: 'sun'
   },
   Cool: {
-    bgColor: '#F5F5F5',
+    bgColor: '#F0F5FF',
     icon: 'snowflake'
   }
 };

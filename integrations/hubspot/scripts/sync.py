@@ -607,7 +607,6 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
         url = engagement_url + type + "/search"
         has_more = True
         engagement_properties = get_properties_for_engagement_v3(type)
-        json_payload = get_search_v3_api_payload("hs_lastmodifieddate", last_sync_timestamp, limit)
         latest_timestamp = 0
 
         log.warning("Downloading "+ type + " engagements for project_id : "+ str(project_id) + ".")
@@ -645,9 +644,9 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
             else:
                 has_more = False
 
-            latest_timestamp = get_batch_documents_max_timestamp_v3(project_id, filter_engagements, "engagements", latest_timestamp)
+            latest_timestamp = get_batch_documents_max_timestamp_v3(project_id, docs, "engagements", latest_timestamp)
 
-            _, api_calls = fill_contacts_for_engagements_v3(project_id, filter_engagements, type, hubspot_request_handler)
+            _, api_calls = fill_contacts_for_engagements_v3(project_id, docs, type, hubspot_request_handler)
             engagements_contacts_api_calls += api_calls
             count = count + len(filter_engagements)
             overall_doc_count = overall_doc_count + len(filter_engagements)

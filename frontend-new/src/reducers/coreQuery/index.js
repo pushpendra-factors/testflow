@@ -128,8 +128,8 @@ export default function (state = defaultState, action) {
       return { ...state, groupProperties: groupPropState };
     case FETCH_USER_PROPERTIES:
       return { ...state, userProperties: action.payload };
-    case FETCH_EVENT_USER_PROPERTIES:
-      return { ...state, eventUserProperties: action.payload };
+      case FETCH_EVENT_USER_PROPERTIES:
+        return { ...state, eventUserProperties: action.payload };
     case FETCH_EVENT_PROPERTIES:
       const eventPropState = Object.assign({}, state.eventProperties);
       eventPropState[action.eventName] = action.payload;

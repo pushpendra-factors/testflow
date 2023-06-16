@@ -165,6 +165,14 @@ const GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$salesforce_opportunity
 const GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD = "$linkedin_viewed_ad"
 const GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD = "$linkedin_clicked_ad"
 
+const GROUP_EVENT_NAME_G2_ALL = "$g2_all"
+const GROUP_EVENT_NAME_G2_SPONSORED = "$g2_sponsored"
+const GROUP_EVENT_NAME_G2_PRODUCT_PROFILE = "$g2_product_profile"
+const GROUP_EVENT_NAME_G2_ALTERNATIVE = "$g2_alternative"
+const GROUP_EVENT_NAME_G2_PRICING = "$g2_pricing"
+const GROUP_EVENT_NAME_G2_CATEGORY = "$g2_category"
+const GROUP_EVENT_NAME_G2_COMPARISON = "$g2_comparison"
+
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
 const EVENT_NAME_SHOPIFY_CHECKOUT_UPDATED = "$shopify_checkout_updated"
@@ -310,6 +318,13 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_LEADSQUARED_EMAIL_RECEIVED_CREATED,
 	GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD,
 	GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD,
+	GROUP_EVENT_NAME_G2_ALL,
+	GROUP_EVENT_NAME_G2_SPONSORED,
+	GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
+	GROUP_EVENT_NAME_G2_ALTERNATIVE,
+	GROUP_EVENT_NAME_G2_PRICING,
+	GROUP_EVENT_NAME_G2_CATEGORY,
+	GROUP_EVENT_NAME_G2_COMPARISON,
 }
 
 const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
@@ -319,6 +334,7 @@ const GROUP_NAME_SALESFORCE_OPPORTUNITY = "$salesforce_opportunity"
 const GROUP_NAME_SIX_SIGNAL = "$6signal"
 const GROUP_NAME_DOMAINS = "$domains"
 const GROUP_NAME_LINKEDIN_COMPANY = "$linkedin_company"
+const GROUP_NAME_G2 = "$g2"
 
 var GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING = map[string]string{
 	GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED:        GROUP_NAME_HUBSPOT_COMPANY,
@@ -689,6 +705,28 @@ var LI_VANITY_NAME = "$li_vanity_name"
 var LI_LOCALIZED_NAME = "$li_localized_name"
 var LI_AD_VIEW_COUNT = "$li_ad_view_count"
 var LI_AD_CLICK_COUNT = "$li_ad_click_count"
+
+// Click properties
+var EP_CLICK_ELEMENT_TYPE = "element_type"
+var EP_CLICK_CLASS = "class"
+var EP_CLICK_ID = "id"
+var EP_CLICK_REL = "rel"
+var EP_CLICK_ROLE = "role"
+var EP_CLICK_TARGET = "target"
+var EP_CLICK_HREF = "href"
+var EP_CLICK_MEDIA = "media"
+var EP_CLICK_TYPE = "type"
+var EP_CLICK_NAME = "name"
+
+// g2Company properties
+var G2_PROPERTIES_PREFIX = "$g2_"
+var G2_DOMAIN = "$g2_domain"
+var G2_NAME = "$g2_name"
+var G2_LEGAL_NAME = "$g2_legal_name"
+var G2_COUNTRY = "$g2_country"
+var G2_EMPLOYEES_RANGE = "$g2_employees_range"
+var G2_EMPLOYEES = "$g2_employees"
+var G2_COMPANY_ID = "$g2_company_id"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -1538,6 +1576,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
 	GROUP_NAME_SIX_SIGNAL:             "6Signal Domains",
 	GROUP_NAME_LINKEDIN_COMPANY:       "Linkedin Company Engagements",
+	GROUP_NAME_G2:                     "G2 Enagagements",
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{
@@ -1914,6 +1953,57 @@ var CHANNEL_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"$medium":                  "Medium",
 	"$gclid":                   "GCLID",
 	"$fbclid":                  "FBCLID",
+}
+
+var PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL = []string{
+	EP_CAMPAIGN,
+	EP_CAMPAIGN_ID,
+	EP_SOURCE,
+	EP_MEDIUM,
+	EP_KEYWORD,
+	EP_KEYWORD_MATCH_TYPE,
+	EP_TERM,
+	EP_CONTENT,
+	EP_ADGROUP,
+	EP_ADGROUP_ID,
+	EP_AD,
+	EP_AD_ID,
+	EP_CREATIVE,
+	EP_GCLID,
+	EP_FBCLID,
+	EP_PAGE_TITLE,
+	EP_PAGE_DOMAIN,
+	EP_PAGE_RAW_URL,
+	EP_PAGE_URL,
+	EP_REFERRER,
+	EP_REFERRER_DOMAIN,
+	EP_REFERRER_URL,
+}
+
+var BUTTON_CLICKS_STANDARD_PROPERTIES_CATEGORICAL = []string{
+	EP_PAGE_TITLE,
+	EP_PAGE_DOMAIN,
+	EP_PAGE_RAW_URL,
+	EP_PAGE_URL,
+	EP_REFERRER,
+	EP_REFERRER_DOMAIN,
+	EP_REFERRER_URL,
+	EP_CLICK_ELEMENT_TYPE,
+	EP_CLICK_CLASS,
+	EP_CLICK_ID,
+	EP_CLICK_REL,
+	EP_CLICK_ROLE,
+	EP_CLICK_TARGET,
+	EP_CLICK_HREF,
+	EP_CLICK_MEDIA,
+	EP_CLICK_TYPE,
+	EP_CLICK_NAME,
+}
+
+var PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL = []string{
+	EP_PAGE_LOAD_TIME,
+	EP_PAGE_SPENT_TIME,
+	EP_PAGE_SCROLL_PERCENT,
 }
 
 // USER_PROPERTIES_MERGE_TYPE_INITIAL Properties for which preference will be given to first occurrence while merging.

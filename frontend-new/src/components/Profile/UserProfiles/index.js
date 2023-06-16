@@ -129,6 +129,12 @@ function UserProfiles({
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
 
+  useEffect(() => {
+    if (!timelinePayload.search_filter) {
+      setListSearchItems([]);
+    }
+  }, [timelinePayload]);
+
   const setTimelinePayload = useCallback(
     (payload) => {
       dispatch(setTimelinePayloadAction(payload));
@@ -433,7 +439,8 @@ function UserProfiles({
       .catch((err) => {
         notification.error({
           message: 'Error',
-          description: 'Segment Creation Failed. Invalid Parameters.',
+          description:
+            err?.data?.error || 'Segment Creation Failed. Invalid Parameters.',
           duration: 3
         });
       });

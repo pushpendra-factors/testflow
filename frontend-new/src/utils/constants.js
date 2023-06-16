@@ -597,7 +597,8 @@ export const ProfileMapper = {
   'Marketo Person': 'marketo',
   'LeadSquared Person': 'leadsquared',
   'All Domains': '6signal',
-  'All Engagements':'linkedin_company'
+  'All Linkedin Engagements': 'linkedin_company',
+  'All G2 Engagements': 'g2'
 };
 
 export const ReverseProfileMapper = {
@@ -615,7 +616,8 @@ export const ReverseProfileMapper = {
   marketo: { users: 'Marketo Person' },
   leadsquared: { users: 'LeadSquared Person' },
   '6signal': { $6signal: 'All Domains' },
-  linkedin_company: { $linkedin_company: 'All Engagements' }
+  linkedin_company: { $linkedin_company: 'All Linkedin Engagements' },
+  g2: { $g2: 'All G2 Engagements' }
 };
 
 export const profileOptions = {
@@ -631,7 +633,8 @@ export const profileOptions = {
   $salesforce_account: [['All Accounts']],
   $hubspot_company: [['All Companies']],
   $6signal: [['All Domains']],
-  $linkedin_company:[['All Engagements']]
+  $linkedin_company: [['All Linkedin Engagements']],
+  $g2: [['All G2 Engagements']]
 };
 
 export const DISPLAY_PROP = { $none: '(Not Set)' };
@@ -698,5 +701,5 @@ export const OPERATORS = {
   isKnown: 'is known',
   isUnknown: 'is unknown',
   inList: 'is in a list',
-  notInList: 'not in a list',
+  notInList: 'not in a list'
 };

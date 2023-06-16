@@ -359,6 +359,12 @@ type Model interface {
 	//bingads document
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 
+	//g2 document
+	CreateMultipleG2Document(g2Documents []model.G2Document) int
+	GetG2LastSyncInfo(projectID int64) ([]model.G2LastSyncInfo, int)
+	GetG2DocumentsForGroupUserCreation(projectID int64) ([]model.G2Document, int)
+	UpdateG2GroupUserCreationDetails(domainData model.G2Document) error
+
 	// funnel_analytics
 	RunFunnelQuery(projectID int64, query model.Query, enableFilterOpt, funnelV2 bool) (*model.QueryResult, int, string)
 
@@ -437,6 +443,8 @@ type Model interface {
 	GetFacebookEnabledIDsAndProjectSettingsForProject(projectIDs []int64) ([]int64, []model.FacebookProjectSettings, int)
 	GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjectSettings, int)
 	GetLinkedinEnabledProjectSettingsForProjects(projectIDs []string) ([]model.LinkedinProjectSettings, int)
+	GetG2EnabledProjectSettings() ([]model.G2ProjectSettings, int)
+	GetG2EnabledProjectSettingsForProjects(projectIDs []int64) ([]model.G2ProjectSettings, int)
 	GetArchiveEnabledProjectIDs() ([]int64, int)
 	GetBigqueryEnabledProjectIDs() ([]int64, int)
 	GetAllSalesforceProjectSettings() ([]model.SalesforceProjectSettings, int)
@@ -837,11 +845,11 @@ type Model interface {
 	IsMarketoIntegrationAvailable(projectID int64) bool
 
 	// Timeline
-	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int)
-	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int)
+	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int, string)
+	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int, string)
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
 	GetUserActivities(projectID int64, identity string, userId string) ([]model.UserActivity, error)
-	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int)
+	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int, string)
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 	GetAssociatedGroup(projectID int64, userID string, groupName string) (string, error)
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)
@@ -906,6 +914,8 @@ type Model interface {
 	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)
 	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
 	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
+	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)
+	GetInternalStatusForEventTriggerAlert(projectID int64, id string) (string, int, error)
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)
@@ -938,6 +948,8 @@ type Model interface {
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, *model.AccWeights, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
 	GetAllUserScore(project_id int64, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
+	GetAllUserScoreOnDay(project_id int64, ts string, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
+	GetAllUserScoreLatest(project_id int64, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
 	GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 	GetAccountScoreOnIds(projectId int64, accountIds []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 

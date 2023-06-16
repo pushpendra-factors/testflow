@@ -1,4 +1,4 @@
-.PHONY: pack-sync upload-sync
+.PHONY: pack-adwords-sync upload-adwords-sync
 
 TAG?=
 export TAG
@@ -10,11 +10,11 @@ export ENV
 # Should be set in ~/.bashrc or ~/.profile or passed every time.
 export CHANNEL_TOKEN
 
-pack-sync:
+pack-adwords-sync:
 	docker build -t us.gcr.io/factors-$(ENV)/adwords-sync:$(TAG) -f Dockerfile.sync .
 
-upload-sync: export IMAGE_NAME=adwords-sync
-upload-sync: notify-deployment
+upload-adwords-sync: export IMAGE_NAME=adwords-sync
+upload-adwords-sync: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/adwords-sync:$(TAG)
 
 notify-deployment:

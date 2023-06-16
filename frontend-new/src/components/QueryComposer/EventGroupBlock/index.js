@@ -59,7 +59,7 @@ function EventGroupBlock({
       filterOpts[2].values = [];
     }
     setFilterOptions(filterOpts);
-  }, [eventUserProperties, eventProperties, groupProperties, eventGroup]);
+  }, [eventUserProperties, eventProperties, groupProperties]);
 
   const onChange = (group, val, ind) => {
     const newGroupByState = { ...groupByEvent };

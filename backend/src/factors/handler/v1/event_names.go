@@ -211,3 +211,32 @@ func UploadListForFilters(c *gin.Context) {
 	store.GetStore().UploadFilterFile(fileReference, projectId)
 	c.JSON(http.StatusOK, gin.H{"file_reference": fileReference})
 }
+
+func GetPropertiesByEventCategoryType(c *gin.Context) {
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+
+	eventCategoryType := c.Query("category")
+	if eventCategoryType == "" {
+		logCtx.WithField("eventCategoryType", eventCategoryType).Error("null eventCategoryType")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	properties := make(map[string][]string)
+	if(eventCategoryType == "page_views") {
+		properties["categorical"] = U.PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL
+		properties["numerical"]= U.PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL
+		
+	} else if(eventCategoryType == "button_clicks"){
+		properties["categorical"] = U.BUTTON_CLICKS_STANDARD_PROPERTIES_CATEGORICAL
+	}
+	c.JSON(http.StatusOK, gin.H{"properties": properties})
+}

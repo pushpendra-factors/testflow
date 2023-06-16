@@ -11,6 +11,7 @@ import (
 	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
 func BingAdsIntegration(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
@@ -111,9 +112,11 @@ func BingAdsIntegration(projectId int64, configs map[string]interface{}) (map[st
 		if accountString == "" {
 			accountString = account[0]
 		} else {
-			accountString = fmt.Sprintf(",%v", account)
+			accountString = fmt.Sprintf("%v,%v", accountString, account)
 		}
 	}
+	accountString = strings.Replace(accountString, "[", "", -1)
+	accountString = strings.Replace(accountString, "]", "", -1)
 	store.GetStore().UpdateFiveTranMappingAccount(mapping.ProjectID, mapping.Integration, mapping.ConnectorID, accountString)
 	if totalFailures > 0 || status == false {
 		return resultStatus, false

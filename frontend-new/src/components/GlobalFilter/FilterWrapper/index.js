@@ -99,6 +99,10 @@ function FilterWrapper({
             group = '$salesforce_account';
           if (newFilterState.props[0].toLowerCase().includes('6signal'))
             group = '$6signal';
+          if (newFilterState.props[0].toLowerCase().includes('$li_'))
+            group = '$linkedin_company';
+          if (newFilterState.props[0].toLowerCase().includes('$g2_'))
+            group = '$g2';
         }
         getGroupPropertyValues(projectID, group, newFilterState.props[0]);
       }
@@ -134,6 +138,9 @@ function FilterWrapper({
           if (props[1].toLowerCase().includes('salesforce'))
             group = '$salesforce_account';
           if (props[1].toLowerCase().includes('6signal')) group = '$6signal';
+          if (props[1].toLowerCase().includes('$li_'))
+            group = '$linkedin_company';
+          if (props[1].toLowerCase().includes('$g2_')) group = '$g2';
         }
         getGroupPropertyValues(projectID, group, props[1]);
       }

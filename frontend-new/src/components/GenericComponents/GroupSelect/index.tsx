@@ -21,6 +21,8 @@ interface GroupSelectProps {
   extraClass?: string;
   placement?: PlacementType;
   searchPlaceHolder?: string;
+  // for allowing to select the search option
+  allowSearchTextSelection?: boolean;
 }
 export default function GroupSelect({
   options,
@@ -30,7 +32,8 @@ export default function GroupSelect({
   extraClass = '',
   placement = 'Bottom',
   allowSearch = false,
-  searchPlaceHolder = 'Search'
+  searchPlaceHolder = 'Search',
+  allowSearchTextSelection = true
 }: GroupSelectProps) {
   const [groupSelectorOpen, setGroupSelectorOpen] = useState(true);
   const [selectedGroupIndex, setSelectedGroupIndex] = useState(0);
@@ -71,14 +74,14 @@ export default function GroupSelect({
 
   const handleGroupSelectClickWithSearchEmpty = (group: OptionType) => {
     //When Search is Empty in Group Dropdown.
-    setSelectedGroupIndex(options.map((op) => op.label).indexOf(group.label));
+    setSelectedGroupIndex(options?.map((op) => op.label)?.indexOf(group.label));
     setGroupSelectorOpen(false);
   };
   const handleGroupSelectClickWithSearch = (valueOption: OptionType) => {
     //When Search is not Empty in Group Dropdown.
     const index = options
-      .map((op) => op.label)
-      .indexOf(valueOption.extraProps.groupLabel);
+      ?.map((op) => op.label)
+      ?.indexOf(valueOption.extraProps.groupLabel);
     optionClickCallback(
       valueOption,
       index > -1
@@ -102,7 +105,7 @@ export default function GroupSelect({
           <SVG
             name={getIcon(selectedGroup?.iconName || '')}
             extraClass={'self-center'}
-            size={16}
+            size={20}
           ></SVG>
           <Text
             level={7}
@@ -111,10 +114,10 @@ export default function GroupSelect({
             weight={'bold'}
             size={14}
           >
-            {selectedGroup.label}
+            {selectedGroup?.label}
           </Text>
           <div className={`${styles.numberTag} ml-1`}>
-            {selectedGroup.values.length}
+            {selectedGroup?.values?.length}
           </div>
         </div>
         <Button
@@ -136,8 +139,8 @@ export default function GroupSelect({
       options.forEach((group) => {
         group.values.forEach((groupValue) => {
           groupValueOptions.push({
-            value: groupValue.value,
-            label: groupValue.label,
+            value: groupValue?.value,
+            label: groupValue?.label,
             labelNode: (
               <div className='flex flex-row items-center'>
                 <div className='flex'>
@@ -163,7 +166,7 @@ export default function GroupSelect({
               </div>
             ),
             extraProps: {
-              groupLabel: group.label,
+              groupLabel: group?.label,
               ...groupValue.extraProps
             }
           });
@@ -187,15 +190,15 @@ export default function GroupSelect({
           allowSearch={true}
           searchOption={searchOption}
           searchTerm={searchTerm}
-          allowSearchTextSelection={true}
+          allowSearchTextSelection={allowSearchTextSelection}
           extraClass={styles.dropdown__select__content__options}
         />
       );
     }
     const groupOptions: OptionType[] = options.map((group) => {
       return {
-        value: group.label,
-        label: group.label,
+        value: group?.label,
+        label: group?.label,
         labelNode: (
           <div className='flex flex-row justify-between w-full items-center	'>
             <div className='flex flex-row items-center'>
@@ -213,10 +216,10 @@ export default function GroupSelect({
                   extraClass={'m-0 ml-2'}
                   weight={'bold'}
                 >
-                  {group.label}
+                  {group?.label}
                 </Text>
                 <div className={`${styles.numberTag} ml-1`}>
-                  {group.values.length}
+                  {group?.values?.length}
                 </div>
               </div>
             </div>
