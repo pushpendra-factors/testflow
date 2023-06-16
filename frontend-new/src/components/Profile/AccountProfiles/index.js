@@ -84,12 +84,26 @@ function AccountProfiles({
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
+  const location = useLocation();
+
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
-  const accountPayload = useSelector((state) => selectAccountPayload(state));
-  const activeSegment = useSelector((state) => selectActiveSegment(state));
+  const accountPayload = useSelector((state) => {
+    // if (location.state?.accountPayload) {
+    //   return location.state.accountPayload;
+    // } else {
+      return selectAccountPayload(state);
+    // }
+  });
+  const activeSegment = useSelector((state) => {
+    // if (location.state?.activeSegment) {
+    //   return location.state.activeSegment;
+    // } else {
+      return selectActiveSegment(state);
+    // }
+  });
   const showSegmentModal = useSelector((state) =>
     selectSegmentModalState(state)
   );
@@ -205,6 +219,7 @@ function AccountProfiles({
   }, [activeProject.id, getGroupProperties, groupOpts]);
 
   useEffect(() => {
+    // const shouldCache = location.state?.fromDetails;
     if (accountPayload.source && accountPayload.source !== '') {
       const formattedFilters = formatFiltersForPayload(
         accountPayload.filters,
@@ -218,13 +233,16 @@ function AccountProfiles({
         },
         activeAgent
       );
-    }
+    } 
+    // else {
+    //   // const locateState = {fromDetails: false}
+    //   // history.replace({...history.location, state: locateState});
+    // }
   }, [
     activeProject.id,
     currentProjectSettings,
     accountPayload,
     activeSegment,
-    getProfileAccounts,
     activeAgent
   ]);
 
@@ -938,7 +956,8 @@ function AccountProfiles({
             history.push(
               `/profiles/accounts/${btoa(account.identity)}?group=${
                 activeSegment?.type ? activeSegment.type : accountPayload.source
-              }&view=birdview`
+              }&view=birdview`,
+              { accountPayload: accountPayload, activeSegment: activeSegment }
             );
           }
         })}

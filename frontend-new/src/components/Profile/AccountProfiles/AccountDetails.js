@@ -86,8 +86,8 @@ function AccountDetails({
     const urlSearchParams = new URLSearchParams(location.search);
     const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
-    const group = params.group;
-    const view = params.view;
+    const group = params.group ? params.group : 'All';
+    const view = params.view ? params.view : 'birdview';
     document.title = 'Accounts' + ' - FactorsAI';
     return [id, group, view];
   }, [location]);
@@ -345,7 +345,11 @@ function AccountDetails({
           icon={<SVG name='brand' size={36} />}
           size='large'
           onClick={() => {
-            history.push(PathUrls.ProfileAccounts);
+            history.replace(PathUrls.ProfileAccounts, {
+              activeSegment: location.state?.activeSegment,
+              fromDetails: true,
+              accountPayload: location.state?.accountPayload
+            });
           }}
         />
         <Text type='title' level={4} weight='bold' extraClass='m-0'>
@@ -356,7 +360,11 @@ function AccountDetails({
         size='large'
         type='text'
         onClick={() => {
-          history.push(PathUrls.ProfileAccounts);
+          history.replace(PathUrls.ProfileAccounts, {
+            activeSegment: location.state?.activeSegment,
+            fromDetails: true,
+            accountPayload: location.state?.accountPayload
+          });
         }}
         icon={<SVG name='times' />}
       />
