@@ -85,6 +85,8 @@ func main() {
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
 	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
 	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
+	removeDisabledEventUserPropertiesByProjectID := flag.String("remove_disabled_event_user_properties",
+		"", "List of projects to disable event user property population in events.")
 
 	flag.Parse()
 
@@ -139,6 +141,7 @@ func main() {
 		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
 		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
 		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
+		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectID,
 	}
 	C.InitConf(config)
 

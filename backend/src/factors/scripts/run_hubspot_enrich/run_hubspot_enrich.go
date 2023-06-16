@@ -78,6 +78,8 @@ func main() {
 	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
 	useHubspotEngagementsv3APIByProjectID := flag.String("use_hubspot_engagements_v3_by_project_id", "", "")
 	useHubspotDealsv3APIByProjectID := flag.String("use_hubspot_deals_v3_by_project_id", "", "")
+	removeDisabledEventUserPropertiesByProjectId := flag.String("remove_disabled_event_user_properties",
+		"", "List of projects to disable event user property population in events.")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -136,6 +138,7 @@ func main() {
 		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
 		UseHubspotEngagementsV3APIByProjectID:              *useHubspotEngagementsv3APIByProjectID,
 		UseHubspotDealsV3APIByProjectID:                    *useHubspotDealsv3APIByProjectID,
+		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectId,
 	}
 
 	C.InitConf(config)

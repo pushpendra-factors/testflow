@@ -962,8 +962,8 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err := U.DecodePostgresJsonb(event.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Equal(t, float64(10), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*userPropertiesMap)[U.UP_OS])
 	// check latest user_properties state.
 	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
@@ -1113,9 +1113,17 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	userPropertiesMap, err = U.DecodePostgresJsonb(event4.UserProperties)
 	assert.Nil(t, err)
 
-	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
-	assert.Equal(t, float64(12), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
+	lastestUserPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, user.Properties)
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*lastestUserPropertiesMap)[U.EP_SESSION_COUNT])
 
 	// Test: Create new session for event with marketing property,
 	// followed by other events, even though there was continuos
@@ -1162,9 +1170,17 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event6.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
-	assert.Equal(t, float64(14), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
+	lastestUserPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, user.Properties)
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*lastestUserPropertiesMap)[U.EP_SESSION_COUNT])
 
 	// Test: Last event with marketing property.
 	timestamp = timestamp + 2
@@ -2534,8 +2550,8 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err := U.DecodePostgresJsonb(event.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Equal(t, float64(10), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*userPropertiesMap)[U.UP_OS])
 	// check latest user_properties state.
 	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
@@ -2684,9 +2700,17 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	userPropertiesMap, err = U.DecodePostgresJsonb(event4.UserProperties)
 	assert.Nil(t, err)
 
-	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
-	assert.Equal(t, float64(12), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
+	lastestUserPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, user.Properties)
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*lastestUserPropertiesMap)[U.EP_SESSION_COUNT])
 
 	// =============================================
 
@@ -2735,9 +2759,17 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event6.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
-	assert.Equal(t, float64(14), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
+	lastestUserPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, user.Properties)
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*lastestUserPropertiesMap)[U.EP_SESSION_COUNT])
 
 	// Test: event with marketing property.
 	timestamp = timestamp + 2
@@ -4508,4 +4540,68 @@ func TestGetAllEventsForSessionCreationAsUserEventsMap(t *testing.T) {
 	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
+}
+
+func TestAddSessionRemoveEventLevelUserProperties(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	timestamp := time.Now().AddDate(0, 0, -1)
+	timestampUnix := timestamp.Unix()
+
+	randomEventName := RandomURL()
+	trackEventProperties := U.PropertiesMap{
+		U.EP_PAGE_URL:     "https://example.com",
+		U.EP_PAGE_RAW_URL: "https://example.com",
+		U.EP_CAMPAIGN_ID:  "124",
+	}
+	trackUserProperties := U.PropertiesMap{
+		U.UP_OS: "android1",
+	}
+
+	trackPayload := SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestampUnix,
+		EventProperties: trackEventProperties,
+		UserProperties:  trackUserProperties,
+		RequestSource:   model.UserSourceWeb,
+	}
+	status, res := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	userID := res.UserId
+	// session not created.
+	_, errCode := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, 2*24*60*60, 0, 0, 30, 1, 1)
+
+	assert.Nil(t, err)
+
+	// session created.
+	_, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	sessionEvent := assertAssociatedSession(t, project.ID, []string{res.EventId},
+		[]string{}, "Session")
+
+	// session event properties .
+	lsEventProperties, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties)[U.SP_PAGE_COUNT], float64(1))
+	assert.Equal(t, (*lsEventProperties)[U.SP_SPENT_TIME], float64(1))
+	lsUserProperties, err := U.DecodePostgresJsonb(sessionEvent.UserProperties)
+	assert.Nil(t, err)
+	assert.NotEqual(t, (*lsUserProperties)[U.UP_PAGE_COUNT], float64(1))
+	assert.NotEqual(t, (*lsUserProperties)[U.UP_TOTAL_SPENT_TIME], float64(1))
+
+	//user properties
+	user, status := store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap := make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, properitesMap[U.UP_PAGE_COUNT], float64(1))
+	assert.Equal(t, properitesMap[U.UP_TOTAL_SPENT_TIME], float64(1))
+	assert.Nil(t, properitesMap[U.EP_SESSION_COUNT])
 }

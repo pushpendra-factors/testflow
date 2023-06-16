@@ -33,13 +33,14 @@ Development (Direct Runner):
 go run scripts/run_beam_add_session/run_beam_add_session.go --project_ids='*'
 
 Staging (Dataflow runner):
-go run scripts/run_beam_add_session/run_beam_add_session.go --project_ids='2,3' --runner dataflow --project factors-staging \
-	--region us-west1 --temp_location gs://factors-staging-misc/beam/tmp/ \
-	--staging_location gs://factors-staging-misc/beam/binaries/ \
-	--worker_harness_container_image=apache/beam_go_sdk:latest --db_host=10.12.64.2 \
-	--db_user autometa_ro --db_pass='' --redis_host='10.0.0.24' \
-	--redis_port=8379 --subnetwork='regions/us-west1/subnetworks/us-west-1-factors-staging-subnet-1' \
-	--num_workers=1 --max_num_workers=1 --zone='us-west1-b'
+
+	go run scripts/run_beam_add_session/run_beam_add_session.go --project_ids='2,3' --runner dataflow --project factors-staging \
+		--region us-west1 --temp_location gs://factors-staging-misc/beam/tmp/ \
+		--staging_location gs://factors-staging-misc/beam/binaries/ \
+		--worker_harness_container_image=apache/beam_go_sdk:latest --db_host=10.12.64.2 \
+		--db_user autometa_ro --db_pass='' --redis_host='10.0.0.24' \
+		--redis_port=8379 --subnetwork='regions/us-west1/subnetworks/us-west-1-factors-staging-subnet-1' \
+		--num_workers=1 --max_num_workers=1 --zone='us-west1-b'
 */
 const stepTrace = "StepTrace"
 

@@ -312,22 +312,30 @@ func TestGetDomainGroupDomainName(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	expectedDomainNames := map[string]string{
-		"www.abc.com":            "abc.com",
-		"www.ABC.com":            "abc.com",
-		"http://www.abc.com":     "abc.com",
-		"http://www.abc.com/":    "abc.com",
-		"http://abc.com/":        "abc.com",
-		"https://abc.com/":       "abc.com",
-		"abc.com":                "abc.com",
-		"www.abc.co.in":          "abc.co.in",
-		"www.abc.aero":           "abc.aero",
-		"abc.cargo.aero":         "abc.cargo.aero",
-		"www.abc.cargo.aero":     "abc.cargo.aero",
-		"www.abc.xya":            "www.abc.xya", // if not found return as it is
-		"www.abc.com/contact-us": "abc.com",
+		"www.abc.com":                   "abc.com",
+		"www.ABC.com":                   "abc.com",
+		"http://www.abc.com":            "abc.com",
+		"http://www.abc.com/":           "abc.com",
+		"http://abc.com/":               "abc.com",
+		"https://abc.com/":              "abc.com",
+		"abc.com":                       "abc.com",
+		"www.abc.co.in":                 "abc.co.in",
+		"www.abc.aero":                  "abc.aero",
+		"abc.cargo.aero":                "abc.cargo.aero",
+		"www.abc.cargo.aero":            "abc.cargo.aero",
+		"www.abc.xya":                   "abc.xya", // if not found return as it is
+		"www.abc.com/contact-us":        "abc.com",
+		"www.abc.com/contact-us?q=1":    "abc.com",
+		"www.abc.com?q=1":               "abc.com",
+		"www.abc.coman":                 "abc.com",
+		"www.littleheath.herts.sch.ukq": "littleheath.herts.sch.uk",
+		"littleheath.herts.sch.ukq":     "littleheath.herts.sch.uk",
+		"btinternet.comcom":             "btinternet.com",
+		"pentopaper.co.uyk":             "pentopaper.co.uy",
+		"abcdxyz":                       "abcdxyz", // not valid url return as it is
 	}
 	for rawDomain := range expectedDomainNames {
-		assert.Equal(t, expectedDomainNames[rawDomain], U.GetDomainGroupDomainName(project.ID, rawDomain))
+		assert.Equal(t, expectedDomainNames[rawDomain], U.GetDomainGroupDomainName(project.ID, rawDomain), fmt.Sprintf("Input %s", rawDomain))
 	}
 
 }
@@ -3680,6 +3688,34 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 		PagesInclude:   []model.SixSignalFilter{},
 		PagesExclude:   []model.SixSignalFilter{{Value: "www.axc", Type: "contains"}}}, countryName: "India", pageUrl: "www.abc.com"}
 
+	//Testing Page Include Case for Equals Operator with utm params in pageUrl
+	t13ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "equals"}},
+		PagesExclude:   []model.SixSignalFilter{}}, countryName: "India", pageUrl: "https://www.abc.com?source=Google&channel=Direct"}
+	t14ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc-abc.com", Type: "equals"}},
+		PagesExclude:   []model.SixSignalFilter{}}, countryName: "India", pageUrl: "www.abc.com?source=Google&channel=Direct"}
+
+	//Testing Page Exclude Case for Equals Operator with utm params in pageUrl
+	t15ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "equals"}}}, countryName: "India", pageUrl: "www.abc.com?source=Google&channel=Direct"}
+	t16ar := args{sixSignalConfig: model.SixSignalConfig{
+		APILimit:       100,
+		CountryInclude: []model.SixSignalFilter{},
+		CountryExclude: []model.SixSignalFilter{},
+		PagesInclude:   []model.SixSignalFilter{},
+		PagesExclude:   []model.SixSignalFilter{{Value: "www.abc-abc.com", Type: "equals"}}}, countryName: "India", pageUrl: "www.abc.com?source=Google&channel=Direct"}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -3698,6 +3734,10 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 		{"Test10", t10ar, false, false},
 		{"Test11", t11ar, false, false},
 		{"Test12", t12ar, true, false},
+		{"Test13", t13ar, true, false},
+		{"Test14", t14ar, false, false},
+		{"Test15", t15ar, false, false},
+		{"Test16", t16ar, true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

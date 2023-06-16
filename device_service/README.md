@@ -3,7 +3,7 @@
 ## Running the service
 
 ```
-make build && make serve
+make build-device-service && make serve-device-service
 ```
 
 # Deployment
@@ -11,7 +11,7 @@ make build && make serve
 # Uploading the PHP service
 
 ```
-make pack upload serve
+make pack-device-service upload-device-service serve-device-service
 ```
 
 # Testing Local Setup

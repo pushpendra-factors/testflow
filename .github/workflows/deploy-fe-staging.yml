@@ -1,4 +1,4 @@
-name: Deploy FE to staging env
+name: Deploy Frontend - Staging
 
 on:
   workflow_dispatch:

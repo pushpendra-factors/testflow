@@ -1,4 +1,4 @@
-name: Deploy FE to Production env
+name: Deploy Frontend - Production
 
 on:
   workflow_dispatch:
