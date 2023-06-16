@@ -131,6 +131,7 @@ func TestMain(m *testing.M) {
 		EnableEventFiltersInSegments:                       true,
 		AllAccountsProjectId:                               "*",
 		AllowEmailDomainsByProjectID:                       "*",
+		RemoveDisabledEventUserPropertiesByProjectID:       "*",
 	}
 	C.InitConf(config)
 

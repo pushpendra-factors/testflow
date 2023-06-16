@@ -247,7 +247,7 @@ type Configuration struct {
 	EnableBingAdsAttribution                           bool
 	EnableHubspotFormsEventsByProjectID                string
 	DisableHubspotNonMarketingContactsByProjectID      string
-	DisableEventUserPropertyByProjectID                string
+	RemoveDisabledEventUserPropertiesByProjectID       string
 	HubspotBatchInsertBatchSize                        int
 	UseHubspotBatchInsertByProjectID                   string
 	SalesforcePropertyLookBackTimeHr                   int
@@ -2555,7 +2555,7 @@ func DisableHubspotNonMarketingContactsByProjectID(projectID int64) bool {
 }
 
 func DisableEventUserPropertiesByProjectID(projectID int64) bool {
-	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().DisableEventUserPropertyByProjectID, "")
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().RemoveDisabledEventUserPropertiesByProjectID, "")
 	if allProjects {
 		return true
 	}
