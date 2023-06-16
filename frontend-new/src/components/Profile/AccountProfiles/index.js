@@ -46,7 +46,7 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 // import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from '../UserProfiles/SegmentModal';
 // import EventsBlock from '../MyComponents/EventsBlock';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import {
   fetchGroupPropertyValues,
   fetchGroups
