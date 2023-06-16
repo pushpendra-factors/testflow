@@ -47,6 +47,10 @@ type BlockedAlertList struct {
 	keys    []string
 }
 
+func NewBlockedAlertList() *BlockedAlertList {
+	return &BlockedAlertList{alertID: make(map[string]int), keys: make([]string, 0)}
+}
+
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 
@@ -107,7 +111,7 @@ func main() {
 	}
 	defaultHealthcheckPingID := C.HealthcheckEventTriggerAlertPingID
 	highPriorityHealthCheckPingID := C.HealthcheckEventTriggerAlertForHighPriorityPingID
- 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
@@ -124,8 +128,6 @@ func main() {
 	conf := make(map[string]interface{})
 	finalStatus := make(map[string]interface{})
 	success := true
-	sendReportForProject := SendReportLogCount{}
-	blockedAlertList := BlockedAlertList{}
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 
 	for _, projectID := range projectIDs {
@@ -139,8 +141,7 @@ func main() {
 			blockedAlertMap[id] = true
 		}
 
-		projectSuccess := false
-		sendReportForProject, blockedAlertList, projectSuccess = EventTriggerAlertsSender(projectID, conf, blockedAlertMap)
+		sendReportForProject, blockedAlertList, projectSuccess := EventTriggerAlertsSender(projectID, conf, blockedAlertMap)
 		if !projectSuccess {
 			log.WithFields(log.Fields{"project_id": projectID}).Error("Event Trigger Alert job failing")
 		}
@@ -230,7 +231,7 @@ func main() {
 		C.PingHealthcheckForSuccess(healthcheckPingID, finalStatus)
 		if len(finalStatus) > 0 {
 			C.PingHealthcheckForSuccess(highPriorityHealthCheckPingID, finalStatus)
-		} 
+		}
 	}
 
 }
@@ -254,7 +255,7 @@ EVENT TRIGGER ALERTS SENDER
 # Whether the status received is a success or a failure we remove the entry for that key from the sorted set
 */
 func EventTriggerAlertsSender(projectID int64, configs map[string]interface{},
-	blockedAlert map[string]bool) (SendReportLogCount, BlockedAlertList, bool) {
+	blockedAlert map[string]bool) (SendReportLogCount, *BlockedAlertList, bool) {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -263,7 +264,7 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{},
 
 	ok := int(0)
 	sendReportForProject := SendReportLogCount{}
-	blockedAlertList := BlockedAlertList{}
+	blockedAlertList := NewBlockedAlertList()
 	ssKey, err := getSortedSetCacheKey(SortedSetKeyPrefix, projectID)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch cacheKey for sortedSet")
@@ -442,7 +443,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 			eta.SlackChannelAssociatedBy)
 		if errCode != http.StatusOK {
 			logCtx.WithFields(log.Fields{"agentID": eta.SlackChannelAssociatedBy, "event_trigger_alert_id": eta.ID}).
-			Error("failed to check slack integration")
+				Error("failed to check slack integration")
 		}
 		if isSlackIntergrated {
 			partialSlackSuccess, _, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID,
@@ -498,7 +499,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		response, err := webhook.DropWebhook(alertConfiguration.WebhookURL, alertConfiguration.Secret, msg)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"alert_id": alertID, "server_response": response}).
-			WithError(err).Error("Webhook failure")
+				WithError(err).Error("Webhook failure")
 		}
 		logCtx.WithField("response", response).Info("Webhook dropped for alert.")
 		stat := response["status"]
@@ -1108,7 +1109,7 @@ RETRY FAILED EVENT TRIGGER ALERTS
 	then two hours after the first retry
 	then three hours after the second retry and so on.
 */
-func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]bool) (SendReportLogCount, BlockedAlertList) {
+func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]bool) (SendReportLogCount, *BlockedAlertList) {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1116,7 +1117,7 @@ func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]boo
 	logCtx := log.WithFields(logFields)
 
 	sendReportForProject := SendReportLogCount{}
-	blockedAlertList := BlockedAlertList{}
+	blockedAlertList := NewBlockedAlertList()
 	ssKey, err := getSortedSetCacheKey(FailureSortedSetPrefix, projectID)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to fetch cacheKey for sortedSet")

@@ -111,7 +111,7 @@ func EnrichSmartPropertyForCurrentDayForProject(projectID int64) int {
 	adwordsCampaigns, adwordsAdGroups := store.GetStore().GetLatestMetaForAdwordsForGivenDays(projectID, 1)
 	facebookCampaigns, facebookAdGroups := store.GetStore().GetLatestMetaForFacebookForGivenDays(projectID, 1)
 	linkedinCampaigns, linkedinAdGroups := store.GetStore().GetLatestMetaForLinkedinForGivenDays(projectID, 1)
-	bingadsCampaigns, bingadsAdGroups := store.GetStore().GetLatestMetaForBingAdsForGivenDays(projectID, 1)
+	bingadsCampaigns, bingadsAdGroups := store.GetStore().GetLatestMetaForBingAdsForGivenDays(projectID, 3)
 	customadsCampaigns, customadsAdGroups := make([][]model.ChannelDocumentsWithFields, 0), make([][]model.ChannelDocumentsWithFields, 0)
 	for _, source := range sources {
 		customadsCampaign, customadsAdGroup := store.GetStore().GetLatestMetaForCustomAdsForGivenDays(projectID, source, 1)

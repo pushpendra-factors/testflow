@@ -1990,3 +1990,26 @@ func (store *MemSQL) AppendOTPSessionsV1(projectID int64, query *model.Attributi
 
 	model.UpdateSessionsMapWithCoalesceID(_sessionsOTP, usersInfoOTP, sessions)
 }
+
+// FetchCachedResultFromDataBase fetches the result row from `dash_query_results` if that exits
+func (store *MemSQL) FetchCachedResultFromDataBase(reqId string, projectID, dashboardID, unitID int64,
+	from, to int64) (int, model.DashQueryResult) {
+
+	logFields := log.Fields{
+		"project_id":        projectID,
+		"req_id":            reqId,
+		"dashboard_id":      dashboardID,
+		"dashboard_unit_id": unitID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	var dashQueryResult model.DashQueryResult
+	err := db.Limit(1).Table("dash_query_results").Where("project_id=? AND dashboard_id=? AND dashboard_unit_id=? AND from_t=? AND to_t=?",
+		projectID, dashboardID, unitID, from, to).Find(&dashQueryResult).Error
+	if err != nil {
+		log.WithFields(logFields).WithFields(log.Fields{"err": err}).Error("Error in executing query to get dashboard cache results")
+		return http.StatusNotFound, dashQueryResult
+	}
+	log.Info("got the dash query results from DB")
+	return http.StatusFound, dashQueryResult
+}

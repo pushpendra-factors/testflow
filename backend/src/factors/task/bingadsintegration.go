@@ -115,8 +115,8 @@ func BingAdsIntegration(projectId int64, configs map[string]interface{}) (map[st
 			accountString = fmt.Sprintf("%v,%v", accountString, account)
 		}
 	}
-	strings.Replace(accountString, "[", "", -1)
-	strings.Replace(accountString, "]", "", -1)
+	accountString = strings.Replace(accountString, "[", "", -1)
+	accountString = strings.Replace(accountString, "]", "", -1)
 	store.GetStore().UpdateFiveTranMappingAccount(mapping.ProjectID, mapping.Integration, mapping.ConnectorID, accountString)
 	if totalFailures > 0 || status == false {
 		return resultStatus, false
