@@ -60,6 +60,8 @@ func main() {
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	allowChannelGroupingForProjectIDs := flag.String("allow_channel_grouping_for_projects",
 		"", "List of projects to allow channel property population in sesion events.")
+	removeDisabledEventUserPropertiesByProjectId := flag.String("remove_disabled_event_user_properties",
+		"", "List of projects to disable event user property population in events.")
 
 	enableOLTPQueriesMemSQLImprovements := flag.String("enable_OLTP_queries_memsql_improvements", "", "")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
@@ -119,8 +121,9 @@ func main() {
 		SessionBatchTransactionBatchSize:    *sessionBatchTransactionBatchSize,
 		IngestionTimezoneEnabledProjectIDs:  C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		EnableUserLevelEventPullForAddSessionByProjectID: *enableUserLevelEventPullForAddSessionByProjectID,
-		EventsPullMaxLimit:                *eventsPullMaxLimit,
-		DisableUpdateNextSessionTimestamp: *disableUpdateNextSessionTimestamp,
+		EventsPullMaxLimit:                           *eventsPullMaxLimit,
+		DisableUpdateNextSessionTimestamp:            *disableUpdateNextSessionTimestamp,
+		RemoveDisabledEventUserPropertiesByProjectID: *removeDisabledEventUserPropertiesByProjectId,
 	}
 
 	C.InitConf(config)

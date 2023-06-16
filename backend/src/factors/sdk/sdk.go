@@ -951,7 +951,23 @@ func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, p
 		for _, filter := range sixSignalConfig.PagesInclude {
 			switch filter.Type {
 			case model.EqualsOpStr:
-				if filter.Value == pageUrl {
+				//cleaning incoming page url
+				parsedPageUrl, err := U.ParseURLStable(pageUrl)
+				if err != nil {
+					log.WithField("PageUrl", pageUrl).Error("Error occured while ParseURLStable.")
+					continue
+				}
+				basePageUrl := U.GetURLHostAndPath(parsedPageUrl)
+
+				//cleaning sixsignal config page url
+				parsedFilterPageUrl, err := U.ParseURLStable(filter.Value)
+				if err != nil {
+					log.WithField("PageUrl filter", filter.Value).Error("Error occured while ParseURLStable.")
+					continue
+				}
+				filterPageUrl := U.GetURLHostAndPath(parsedFilterPageUrl)
+
+				if filterPageUrl == basePageUrl {
 					pageFilterPassed = true
 					break
 				}
@@ -972,7 +988,23 @@ func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, p
 		for _, filter := range sixSignalConfig.PagesExclude {
 			switch filter.Type {
 			case model.EqualsOpStr:
-				if filter.Value == pageUrl {
+				//cleaning incoming pageUrl
+				parsedPageUrl, err := U.ParseURLStable(pageUrl)
+				if err != nil {
+					log.WithField("PageUrl", pageUrl).Error("Error occured while ParseURLStable.")
+					continue
+				}
+				basePageUrl := U.GetURLHostAndPath(parsedPageUrl)
+
+				//cleaning sixsignal config page url
+				parsedFilterPageUrl, err := U.ParseURLStable(filter.Value)
+				if err != nil {
+					log.WithField("PageUrl filter", filter.Value).Error("Error occured while ParseURLStable.")
+					continue
+				}
+				filterPageUrl := U.GetURLHostAndPath(parsedFilterPageUrl)
+
+				if filterPageUrl == basePageUrl {
 					//skip if page name matches
 					return false, nil
 				}
@@ -2468,8 +2500,13 @@ func TrackUserAccountGroup(projectID int64, userID string, groupName string, gro
 		return http.StatusBadRequest
 	}
 
-	groupIDPropertyKey := model.GetDomainNameSourcePropertyKey(groupName)
-	groupID := U.GetDomainGroupDomainName(projectID, U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKey]))
+	groupIDPropertyKeys := model.GetDomainNameSourcePropertyKey(groupName)
+	groupID := ""
+	for i := range groupIDPropertyKeys {
+		if groupID = U.GetDomainGroupDomainName(projectID, U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKeys[i]])); groupID != "" {
+			break
+		}
+	}
 
 	if groupID == "" {
 		logCtx.Warning("No group id. Skip processing user group.")

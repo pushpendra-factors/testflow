@@ -46,13 +46,9 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusBadRequest, "Project Id is Invalid"
 	}
 
-	// Merge Filters
-	for source, properties := range payload.SearchFilter {
-		if payload.Filters == nil {
-			payload.Filters = make(map[string][]model.QueryProperty)
-		}
-		payload.Filters[source] = append(payload.Filters[source], properties...)
-	}
+	// Merge Search Filters
+	payload.Filters = append(payload.Filters, payload.SearchFilter...)
+	groupedFilters := GroupFiltersByPrefix(payload.Filters)
 
 	var tableProps []string
 	if payload.SegmentId != "" {
@@ -78,9 +74,9 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
 			if C.IsEnabledEventsFilterInSegments() {
 				if payload.Filters != nil {
-					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters[model.FILTER_TYPE_USERS]...)
-					if profileType == model.PROFILE_TYPE_ACCOUNT && payload.Filters[segment.Type] != nil {
-						segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters[segment.Type]...)
+					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, groupedFilters[model.FILTER_TYPE_USERS]...)
+					if profileType == model.PROFILE_TYPE_ACCOUNT && groupedFilters[segment.Type] != nil {
+						segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, groupedFilters[segment.Type]...)
 					}
 				}
 				err := segmentQuery.TransformDateTypeFilters()
@@ -111,13 +107,8 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			}
 		} else {
 			if segment.Type != "" {
-				if payload.Filters == nil {
-					payload.Filters = make(map[string][]model.QueryProperty)
-				}
-				if profileType == model.PROFILE_TYPE_USER {
-					payload.Filters[model.FILTER_TYPE_USERS] = append(payload.Filters[model.FILTER_TYPE_USERS], segmentQuery.GlobalUserProperties...)
-				} else {
-					payload.Filters[payload.Source] = append(payload.Filters[payload.Source], segmentQuery.GlobalUserProperties...)
+				{
+					payload.Filters = append(payload.Filters, segmentQuery.GlobalUserProperties...)
 				}
 			}
 		}
@@ -140,9 +131,10 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 
 	// transforming datetime filters
-	for group, filterArray := range payload.Filters {
+	groupedFilters = GroupFiltersByPrefix(payload.Filters)
+	for group, filterArray := range groupedFilters {
 		for index := range filterArray {
-			err := payload.Filters[group][index].TransformDateTypeFilters(timezoneString)
+			err := groupedFilters[group][index].TransformDateTypeFilters(timezoneString)
 			if err != nil {
 				log.WithFields(logFields).Error("Failed to transform payload filters.")
 				return nil, http.StatusBadRequest, "Datetime Filters Processing Failed"
@@ -184,7 +176,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	var filterString string
 	var filterParams []interface{}
 	var filtersArray []string
-	for group, filters := range payload.Filters {
+	for group, filters := range groupedFilters {
 		if group == model.FILTER_TYPE_USERS {
 			continue
 		}
@@ -208,7 +200,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	default:
 		filterString = strings.Join(filtersArray, " OR ")
 	}
-	userTypeFilters, userTypeFiltersParams, errMsg := buildWhereFromProperties(projectID, payload.Filters[model.FILTER_TYPE_USERS], 0)
+	userTypeFilters, userTypeFiltersParams, errMsg := buildWhereFromProperties(projectID, groupedFilters[model.FILTER_TYPE_USERS], 0)
 	if errMsg != nil {
 		return nil, http.StatusBadRequest, "Query building failed."
 	}
@@ -266,7 +258,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 	if profileType == model.PROFILE_TYPE_ACCOUNT && isDomainGroup {
 		whereForUserQuery := fmt.Sprintf("WHERE project_id=%d ", projectID) + sourceString
-		runQueryString = BuildQueryStringForDomains(filterString, whereForUserQuery, domainGroupId, timeAndRecordsLimit, payload.Filters)
+		runQueryString = BuildQueryStringForDomains(filterString, whereForUserQuery, domainGroupId, timeAndRecordsLimit, groupedFilters)
 	} else {
 		runQueryString = fmt.Sprintf("SELECT %s FROM %s %s %s ORDER BY last_activity DESC LIMIT 1000;", selectString, fromStr, filterString, groupByStr)
 	}
@@ -1338,4 +1330,35 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, segment *model
 	}
 
 	return profiles, http.StatusOK, nil
+}
+
+func GroupFiltersByPrefix(filters []model.QueryProperty) map[string][]model.QueryProperty {
+	filtersMap := make(map[string][]model.QueryProperty)
+	filterPrefixList := []string{
+		U.GROUP_NAME_HUBSPOT_COMPANY,
+		U.GROUP_NAME_SALESFORCE_ACCOUNT,
+		U.GROUP_NAME_SIX_SIGNAL,
+		U.LI_PROPERTIES_PREFIX,
+		U.GROUP_NAME_G2,
+	}
+
+	for _, filter := range filters {
+		var groupName string
+		for _, prefix := range filterPrefixList {
+			if strings.Contains(strings.ToLower(filter.Property), prefix) {
+				groupName = prefix
+				break
+			}
+		}
+
+		if groupName == "" {
+			groupName = model.FILTER_TYPE_USERS
+		} else if groupName == U.LI_PROPERTIES_PREFIX {
+			groupName = U.GROUP_NAME_LINKEDIN_COMPANY
+		}
+
+		filtersMap[groupName] = append(filtersMap[groupName], filter)
+	}
+
+	return filtersMap
 }

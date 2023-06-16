@@ -1,4 +1,4 @@
-name: run_unit_tests
+name: Validate Pull Request
 
 on:
   push:

@@ -3978,11 +3978,11 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	groupUser, status := store.GetStore().GetUser(project.ID, documents[0].GroupUserId)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, "abc.com", groupUser.Group3ID)
+	assert.Equal(t, "testcompany.com", groupUser.Group3ID)
 	assert.True(t, *groupUser.IsGroupUser)
 	domainsGroup, status := store.GetStore().GetUser(project.ID, groupUser.Group3UserID)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, "abc.com", domainsGroup.Group3ID)
+	assert.Equal(t, "testcompany.com", domainsGroup.Group3ID)
 	assert.Empty(t, domainsGroup.Group3UserID)
 	assert.True(t, *domainsGroup.IsGroupUser)
 
@@ -3997,7 +3997,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		assert.Equal(t, http.StatusFound, status)
 		domainUser, status := store.GetStore().GetUser(project.ID, user.Group3UserID)
 		assert.Equal(t, http.StatusFound, status)
-		assert.Equal(t, "abc.com", domainUser.Group3ID)
+		assert.Equal(t, "testcompany.com", domainUser.Group3ID)
 	}
 }
 

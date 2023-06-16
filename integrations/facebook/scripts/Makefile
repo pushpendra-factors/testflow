@@ -1,4 +1,4 @@
-.PHONY: pack-sync upload-sync
+.PHONY: pack-facebook-sync upload-facebook-sync
 
 TAG?=
 export TAG
@@ -10,11 +10,11 @@ export ENV
 # Should be set in ~/.bashrc or ~/.profile or passed every time.
 export CHANNEL_TOKEN
 
-pack-sync:
+pack-facebook-sync:
 	docker build -t us.gcr.io/factors-$(ENV)/facebook-sync-job:$(TAG) -f Dockerfile.sync .
 
-upload-sync: export IMAGE_NAME=facebook-sync-job
-upload-sync: notify-deployment
+upload-facebook-sync: export IMAGE_NAME=facebook-sync-job
+upload-facebook-sync: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/facebook-sync-job:$(TAG)
 
 notify-deployment:

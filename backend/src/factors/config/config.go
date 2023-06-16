@@ -247,6 +247,7 @@ type Configuration struct {
 	EnableBingAdsAttribution                           bool
 	EnableHubspotFormsEventsByProjectID                string
 	DisableHubspotNonMarketingContactsByProjectID      string
+	RemoveDisabledEventUserPropertiesByProjectID       string
 	HubspotBatchInsertBatchSize                        int
 	UseHubspotBatchInsertByProjectID                   string
 	SalesforcePropertyLookBackTimeHr                   int
@@ -2554,6 +2555,15 @@ func DisableHubspotNonMarketingContactsByProjectID(projectID int64) bool {
 	return allowedProjectIDs[projectID]
 }
 
+func DisableEventUserPropertiesByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().RemoveDisabledEventUserPropertiesByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
 func GetHubspotPropertiesLookbackLimit() int {
 	return GetConfig().HubspotPropertyLookBackLimit
 }
@@ -2561,6 +2571,7 @@ func GetHubspotPropertiesLookbackLimit() int {
 func IsSlowDBQueryLoggingEnabled() bool {
 	return configuration.EnableSlowDBQueryLogging
 }
+
 func GetSlackClientID() string {
 	return configuration.SlackAppClientID
 }

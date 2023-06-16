@@ -46,7 +46,7 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 // import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from '../UserProfiles/SegmentModal';
 // import EventsBlock from '../MyComponents/EventsBlock';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import {
   fetchGroupPropertyValues,
   fetchGroups
@@ -84,12 +84,26 @@ function AccountProfiles({
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
+  const location = useLocation();
+
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
-  const accountPayload = useSelector((state) => selectAccountPayload(state));
-  const activeSegment = useSelector((state) => selectActiveSegment(state));
+  const accountPayload = useSelector((state) => {
+    // if (location.state?.accountPayload) {
+    //   return location.state.accountPayload;
+    // } else {
+      return selectAccountPayload(state);
+    // }
+  });
+  const activeSegment = useSelector((state) => {
+    // if (location.state?.activeSegment) {
+    //   return location.state.activeSegment;
+    // } else {
+      return selectActiveSegment(state);
+    // }
+  });
   const showSegmentModal = useSelector((state) =>
     selectSegmentModalState(state)
   );
@@ -118,7 +132,7 @@ function AccountProfiles({
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
     fetchGroups(activeProject?.id, true);
-  }, [activeProject?.id, fetchGroups]);
+  }, [activeProject?.id]);
 
   const groupsList = useMemo(() => {
     return getGroupList(groupOpts);
@@ -191,24 +205,25 @@ function AccountProfiles({
     };
 
     setTLConfig(timelinesConfig);
-  }, [currentProjectSettings]);
+  }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
     getSavedSegments(activeProject.id);
-  }, [activeProject.id, fetchProjectSettings, getSavedSegments]);
+  }, [activeProject.id]);
 
   useEffect(() => {
     Object.keys(groupOpts || {}).forEach((group) =>
       getGroupProperties(activeProject.id, group)
     );
-  }, [activeProject.id, getGroupProperties, groupOpts]);
+  }, [activeProject.id, groupOpts]);
 
   useEffect(() => {
+    // const shouldCache = location.state?.fromDetails;
     if (accountPayload.source && accountPayload.source !== '') {
       const formattedFilters = formatFiltersForPayload(
         accountPayload.filters,
-        false
+        true
       );
       getProfileAccounts(
         activeProject.id,
@@ -218,13 +233,16 @@ function AccountProfiles({
         },
         activeAgent
       );
-    }
+    } 
+    // else {
+    //   // const locateState = {fromDetails: false}
+    //   // history.replace({...history.location, state: locateState});
+    // }
   }, [
     activeProject.id,
     currentProjectSettings,
     accountPayload,
     activeSegment,
-    getProfileAccounts,
     activeAgent
   ]);
 
@@ -800,14 +818,11 @@ function AccountProfiles({
       ...accountPayload,
       search_filter: formatFiltersForPayload(searchFilter, true)
     };
-    const search_filter_map = {};
-    search_filter_map['users'] = updatedPayload.search_filter.map(
-      (filter, index) => {
-        const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
-        return isAnd ? filter : { ...filter, lop: 'OR' };
-      }
-    );
-    updatedPayload.search_filter = search_filter_map;
+    const search_filters = updatedPayload.search_filter.map((filter, index) => {
+      const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
+      return isAnd ? filter : { ...filter, lop: 'OR' };
+    });
+    updatedPayload.search_filter = search_filters;
 
     setListSearchItems(parsedValues);
     setAccountPayload(updatedPayload);
@@ -817,9 +832,9 @@ function AccountProfiles({
   const onSearchClose = () => {
     setSearchBarOpen(false);
     setSearchDDOpen(false);
-    if (Object.keys(accountPayload?.search_filter || {}).length !== 0) {
+    if (accountPayload?.search_filter?.length !== 0) {
       const updatedPayload = { ...accountPayload };
-      updatedPayload.search_filter = {};
+      updatedPayload.search_filter = [];
       setAccountPayload(updatedPayload);
       setListSearchItems([]);
       setActiveSegment(activeSegment, updatedPayload);
@@ -938,7 +953,8 @@ function AccountProfiles({
             history.push(
               `/profiles/accounts/${btoa(account.identity)}?group=${
                 activeSegment?.type ? activeSegment.type : accountPayload.source
-              }&view=birdview`
+              }&view=birdview`,
+              { accountPayload: accountPayload, activeSegment: activeSegment }
             );
           }
         })}
@@ -983,7 +999,7 @@ function AccountProfiles({
         profileType='account'
         activeProject={activeProject}
         type={accountPayload.source}
-        typeOptions={groupsList.filter((group) => group[1] !== 'All')}
+        typeOptions={groupsList}
         visible={showSegmentModal}
         segment={{}}
         onSave={handleSaveSegment}

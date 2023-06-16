@@ -63,10 +63,10 @@ type UserActivity struct {
 }
 
 type TimelinePayload struct {
-	Source       string                     `json:"source"`
-	SegmentId    string                     `json:"segment_id"`
-	Filters      map[string][]QueryProperty `json:"filters"`
-	SearchFilter map[string][]QueryProperty `json:"search_filter"`
+	Source       string          `json:"source"`
+	SegmentId    string          `json:"segment_id"`
+	Filters      []QueryProperty `json:"filters"`
+	SearchFilter []QueryProperty `json:"search_filter"`
 }
 
 type AccountDetails struct {
