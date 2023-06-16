@@ -118,7 +118,7 @@ function AccountProfiles({
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
     fetchGroups(activeProject?.id, true);
-  }, [activeProject?.id, fetchGroups]);
+  }, [activeProject?.id]);
 
   const groupsList = useMemo(() => {
     return getGroupList(groupOpts);
@@ -191,24 +191,24 @@ function AccountProfiles({
     };
 
     setTLConfig(timelinesConfig);
-  }, [currentProjectSettings]);
+  }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
     getSavedSegments(activeProject.id);
-  }, [activeProject.id, fetchProjectSettings, getSavedSegments]);
+  }, [activeProject.id]);
 
   useEffect(() => {
     Object.keys(groupOpts || {}).forEach((group) =>
       getGroupProperties(activeProject.id, group)
     );
-  }, [activeProject.id, getGroupProperties, groupOpts]);
+  }, [activeProject.id, groupOpts]);
 
   useEffect(() => {
     if (accountPayload.source && accountPayload.source !== '') {
       const formattedFilters = formatFiltersForPayload(
         accountPayload.filters,
-        false
+        true
       );
       getProfileAccounts(
         activeProject.id,
@@ -219,14 +219,7 @@ function AccountProfiles({
         activeAgent
       );
     }
-  }, [
-    activeProject.id,
-    currentProjectSettings,
-    accountPayload,
-    activeSegment,
-    getProfileAccounts,
-    activeAgent
-  ]);
+  }, [activeProject.id,currentProjectSettings, accountPayload, activeSegment, activeAgent]);
 
   useEffect(() => {
     let listProps = [];
@@ -800,14 +793,11 @@ function AccountProfiles({
       ...accountPayload,
       search_filter: formatFiltersForPayload(searchFilter, true)
     };
-    const search_filter_map = {};
-    search_filter_map['users'] = updatedPayload.search_filter.map(
-      (filter, index) => {
-        const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
-        return isAnd ? filter : { ...filter, lop: 'OR' };
-      }
-    );
-    updatedPayload.search_filter = search_filter_map;
+    const search_filters = updatedPayload.search_filter.map((filter, index) => {
+      const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
+      return isAnd ? filter : { ...filter, lop: 'OR' };
+    });
+    updatedPayload.search_filter = search_filters;
 
     setListSearchItems(parsedValues);
     setAccountPayload(updatedPayload);
@@ -817,9 +807,9 @@ function AccountProfiles({
   const onSearchClose = () => {
     setSearchBarOpen(false);
     setSearchDDOpen(false);
-    if (Object.keys(accountPayload?.search_filter || {}).length !== 0) {
+    if (accountPayload?.search_filter?.length !== 0) {
       const updatedPayload = { ...accountPayload };
-      updatedPayload.search_filter = {};
+      updatedPayload.search_filter = [];
       setAccountPayload(updatedPayload);
       setListSearchItems([]);
       setActiveSegment(activeSegment, updatedPayload);
@@ -983,7 +973,7 @@ function AccountProfiles({
         profileType='account'
         activeProject={activeProject}
         type={accountPayload.source}
-        typeOptions={groupsList.filter((group) => group[1] !== 'All')}
+        typeOptions={groupsList}
         visible={showSegmentModal}
         segment={{}}
         onSave={handleSaveSegment}

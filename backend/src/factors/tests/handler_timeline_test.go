@@ -176,15 +176,15 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	// 2. UserSourceWeb (1 filter, no segment applied)
 	payload = model.TimelinePayload{
 		Source: "web",
-		Filters: map[string][]model.QueryProperty{
-			"users": {{
+		Filters: []model.QueryProperty{
+			{
 				Entity:    "user_g",
 				Type:      "categorical",
 				Property:  "$country",
 				Operator:  "equals",
 				Value:     "India",
 				LogicalOp: "AND",
-			}},
+			},
 		},
 		SegmentId: ""}
 	w := sendGetProfileUserRequest(r, project.ID, agent, payload)
@@ -207,15 +207,15 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	// 2. UserSourceWeb (1 search filter applied)
 	payload = model.TimelinePayload{
 		Source: "web",
-		SearchFilter: map[string][]model.QueryProperty{
-			"users": {{
+		SearchFilter: []model.QueryProperty{
+			{
 				Entity:    "user_g",
 				Type:      "categorical",
 				Property:  "$user_id",
 				Operator:  "contains",
 				Value:     "user2",
 				LogicalOp: "AND",
-			}},
+			},
 		},
 		SegmentId: "",
 	}
@@ -366,44 +366,40 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	// 5. UserSourceWeb (Segment with multiple filters applied, 1 filter)
 	payload = model.TimelinePayload{
 		Source: "web",
-		Filters: map[string][]model.QueryProperty{
-			"users": {
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$country",
-					Operator:  "equals",
-					Value:     "India",
-					LogicalOp: "AND",
-				},
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$country",
-					Operator:  "equals",
-					Value:     "UAE",
-					LogicalOp: "OR",
-				},
+		Filters: []model.QueryProperty{
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$country",
+				Operator:  "equals",
+				Value:     "India",
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$country",
+				Operator:  "equals",
+				Value:     "UAE",
+				LogicalOp: "OR",
 			},
 		},
-		SearchFilter: map[string][]model.QueryProperty{
-			"users": {
-				{
-					Entity:    "user_g",
-					Type:      "numerical",
-					Property:  "$page_count",
-					Operator:  "equals",
-					Value:     "150",
-					LogicalOp: "AND",
-				},
-				{
-					Entity:    "user_g",
-					Type:      "numerical",
-					Property:  "$page_count",
-					Operator:  "equals",
-					Value:     "100",
-					LogicalOp: "OR",
-				},
+		SearchFilter: []model.QueryProperty{
+			{
+				Entity:    "user_g",
+				Type:      "numerical",
+				Property:  "$page_count",
+				Operator:  "equals",
+				Value:     "150",
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    "user_g",
+				Type:      "numerical",
+				Property:  "$page_count",
+				Operator:  "equals",
+				Value:     "100",
+				LogicalOp: "OR",
 			},
 		},
 		SegmentId: segments["web"][0].Id,
@@ -435,16 +431,14 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	// 6. (a) Test for dateTime type filters (since)
 	payload = model.TimelinePayload{
 		Source: "web",
-		Filters: map[string][]model.QueryProperty{
-			"users": {
-				{
-					Entity:    "user_g",
-					Type:      "datetime",
-					Property:  "$hubspot_contact_rh_meeting_time",
-					Operator:  "since",
-					Value:     fmt.Sprintf("{\"fr\":%d}", jointest),
-					LogicalOp: "AND",
-				},
+		Filters: []model.QueryProperty{
+			{
+				Entity:    "user_g",
+				Type:      "datetime",
+				Property:  "$hubspot_contact_rh_meeting_time",
+				Operator:  "since",
+				Value:     fmt.Sprintf("{\"fr\":%d}", jointest),
+				LogicalOp: "AND",
 			},
 		},
 	}
@@ -470,16 +464,14 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	// 6. (b) Test for dateTime type filters (before)
 	payload = model.TimelinePayload{
 		Source: "web",
-		Filters: map[string][]model.QueryProperty{
-			"users": {
-				{
-					Entity:    "user_g",
-					Type:      "datetime",
-					Property:  "$hubspot_contact_rh_meeting_time",
-					Operator:  "before",
-					Value:     fmt.Sprintf("{\"to\":%d}", jointest),
-					LogicalOp: "AND",
-				},
+		Filters: []model.QueryProperty{
+			{
+				Entity:    "user_g",
+				Type:      "datetime",
+				Property:  "$hubspot_contact_rh_meeting_time",
+				Operator:  "before",
+				Value:     fmt.Sprintf("{\"to\":%d}", jointest),
+				LogicalOp: "AND",
 			},
 		},
 	}
@@ -505,16 +497,14 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	// 6. (c) Test for dateTime type filters (inCurrent)
 	payload = model.TimelinePayload{
 		Source: "web",
-		Filters: map[string][]model.QueryProperty{
-			"users": {
-				{
-					Entity:    "user_g",
-					Type:      "datetime",
-					Property:  "$hubspot_contact_rh_meeting_time",
-					Operator:  "inCurrent",
-					Value:     "{\"gran\":\"week\"}",
-					LogicalOp: "AND",
-				},
+		Filters: []model.QueryProperty{
+			{
+				Entity:    "user_g",
+				Type:      "datetime",
+				Property:  "$hubspot_contact_rh_meeting_time",
+				Operator:  "inCurrent",
+				Value:     "{\"gran\":\"week\"}",
+				LogicalOp: "AND",
 			},
 		},
 	}
@@ -1360,34 +1350,30 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 
 	payload = model.TimelinePayload{
 		Source: "All",
-		Filters: map[string][]model.QueryProperty{
-			"$salesforce_account": {
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$browser",
-					Operator:  "equals",
-					Value:     "Chrome",
-					LogicalOp: "AND",
-				},
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$device_type",
-					Operator:  "equals",
-					Value:     "PC",
-					LogicalOp: "AND",
-				},
+		Filters: []model.QueryProperty{
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$browser",
+				Operator:  "equals",
+				Value:     "Chrome",
+				LogicalOp: "AND",
 			},
-			"$hubspot_company": {
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$hubspot_company_country",
-					Operator:  "equals",
-					Value:     "India",
-					LogicalOp: "AND",
-				},
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$device_type",
+				Operator:  "equals",
+				Value:     "PC",
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$hubspot_company_country",
+				Operator:  "equals",
+				Value:     "India",
+				LogicalOp: "AND",
 			},
 		},
 	}
@@ -1417,58 +1403,54 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 
 	payload = model.TimelinePayload{
 		Source: "All",
-		Filters: map[string][]model.QueryProperty{
-			"$salesforce_account": {
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$salesforce_account_name",
-					Operator:  "equals",
-					Value:     "Adapt.IO",
-					LogicalOp: "AND",
-				},
+		Filters: []model.QueryProperty{
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$salesforce_account_name",
+				Operator:  "equals",
+				Value:     "Adapt.IO",
+				LogicalOp: "AND",
 			},
-			"$hubspot_company": {
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$hubspot_company_country",
-					Operator:  "equals",
-					Value:     "India",
-					LogicalOp: "AND",
-				},
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$hubspot_company_country",
-					Operator:  "equals",
-					Value:     "Pakistan",
-					LogicalOp: "OR",
-				},
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$hubspot_company_country",
-					Operator:  "equals",
-					Value:     "Germany",
-					LogicalOp: "OR",
-				},
-				{
-					Entity:    "user_g",
-					Type:      "numerical",
-					Property:  "$hubspot_company_num_associated_contacts",
-					Operator:  "equals",
-					Value:     "50",
-					LogicalOp: "AND",
-				},
-				{
-					Entity:    "user_g",
-					Type:      "numerical",
-					Property:  "$hubspot_company_num_associated_contacts",
-					Operator:  "equals",
-					Value:     "150",
-					LogicalOp: "OR",
-				},
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$hubspot_company_country",
+				Operator:  "equals",
+				Value:     "India",
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$hubspot_company_country",
+				Operator:  "equals",
+				Value:     "Pakistan",
+				LogicalOp: "OR",
+			},
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$hubspot_company_country",
+				Operator:  "equals",
+				Value:     "Germany",
+				LogicalOp: "OR",
+			},
+			{
+				Entity:    "user_g",
+				Type:      "numerical",
+				Property:  "$hubspot_company_num_associated_contacts",
+				Operator:  "equals",
+				Value:     "50",
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    "user_g",
+				Type:      "numerical",
+				Property:  "$hubspot_company_num_associated_contacts",
+				Operator:  "equals",
+				Value:     "150",
+				LogicalOp: "OR",
 			},
 		},
 	}
@@ -2045,7 +2027,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			// Separate check the 10th element (Intent Activity)
 			if index == 9 {
 				assert.Equal(t, userTimeline.UserName, model.GROUP_ACTIVITY_USERNAME)
-				assert.Equal(t, userTimeline.AdditionalProp, model.GROUP_NAME_HUBSPOT_COMPANY)
+				assert.Equal(t, userTimeline.AdditionalProp, U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_COMPANY])
 				assert.Equal(t, userTimeline.IsAnonymous, false)
 				assert.Equal(t, len(userTimeline.UserActivities), 1)
 				continue
@@ -3002,16 +2984,14 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 	payload = model.TimelinePayload{
 		Source:    "$hubspot_company",
 		SegmentId: id,
-		Filters: map[string][]model.QueryProperty{
-			"users": {
-				{
-					Entity:    "user_g",
-					Type:      "datetime",
-					Property:  "$hubspot_contact_rh_meeting_time",
-					Operator:  "inLast",
-					Value:     "{\"num\":7,\"gran\":\"days\"}",
-					LogicalOp: "AND",
-				},
+		Filters: []model.QueryProperty{
+			{
+				Entity:    "user_g",
+				Type:      "datetime",
+				Property:  "$hubspot_contact_rh_meeting_time",
+				Operator:  "inLast",
+				Value:     "{\"num\":7,\"gran\":\"days\"}",
+				LogicalOp: "AND",
 			},
 		},
 	}

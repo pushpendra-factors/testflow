@@ -201,7 +201,7 @@ function UserProfiles({
 
   useEffect(() => {
     getUserProperties(activeProject.id);
-  }, [activeProject, getUserProperties]);
+  }, [activeProject?.id]);
 
   const isIntegrationEnabled =
     integration?.int_segment ||
@@ -235,7 +235,7 @@ function UserProfiles({
 
   useEffect(() => {
     getSavedSegments(activeProject.id);
-  }, [getSavedSegments, activeProject.id]);
+  }, [activeProject.id]);
 
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
@@ -410,7 +410,7 @@ function UserProfiles({
 
   useEffect(() => {
     const opts = { ...timelinePayload };
-    opts.filters = formatFiltersForPayload(timelinePayload.filters, false);
+    opts.filters = formatFiltersForPayload(timelinePayload.filters, true);
     getProfileUsers(activeProject.id, opts, activeAgent);
   }, [
     activeProject.id,
@@ -418,7 +418,6 @@ function UserProfiles({
     activeSegment,
     currentProjectSettings,
     segments,
-    getProfileUsers,
     activeAgent
   ]);
 
@@ -741,7 +740,7 @@ function UserProfiles({
     };
     const payload = { ...timelinePayload };
     searchFilter.values.push(...val.map((vl) => JSON.parse(vl)[0]));
-    payload.search_filter = formatFiltersForPayload([searchFilter], false);
+    payload.search_filter = formatFiltersForPayload([searchFilter], true);
     setListSearchItems(searchFilter.values);
     setTimelinePayload(payload);
     setActiveSegment(activeSegment, payload);
@@ -778,9 +777,9 @@ function UserProfiles({
   const onSearchClose = () => {
     setSearchBarOpen(false);
     setSearchDDOpen(false);
-    if (timelinePayload?.search_filter?.users?.length) {
+    if (timelinePayload?.search_filter?.length) {
       const payload = { ...timelinePayload };
-      payload.search_filter = {};
+      payload.search_filter = [];
       setListSearchItems([]);
       setTimelinePayload(payload);
       setActiveSegment(activeSegment, payload);
