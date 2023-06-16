@@ -2045,7 +2045,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			// Separate check the 10th element (Intent Activity)
 			if index == 9 {
 				assert.Equal(t, userTimeline.UserName, model.GROUP_ACTIVITY_USERNAME)
-				assert.Equal(t, userTimeline.AdditionalProp, model.GROUP_NAME_HUBSPOT_COMPANY)
+				assert.Equal(t, userTimeline.AdditionalProp, U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_COMPANY])
 				assert.Equal(t, userTimeline.IsAnonymous, false)
 				assert.Equal(t, len(userTimeline.UserActivities), 1)
 				continue
@@ -2695,7 +2695,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 			Source:         source,
 			Group3ID:       "3",
 			Group1ID:       "1",
-			Group3UserID:   domID,
+			Group1UserID:   domID,
 			CustomerUserId: fmt.Sprintf("sfuser%d@%s", i+1, propertiesMap[i]["$salesforce_account_website"]),
 			Properties:     properties,
 			IsGroupUser:    &groupUser,
@@ -2703,6 +2703,34 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
 		accounts = append(accounts, *account)
+
+		eventProperties := map[string]interface{}{
+			U.EP_CHANNEL:                           "ChannelName1",
+			U.EP_CAMPAIGN:                          "CampaignName1",
+			U.EP_FORM_NAME:                         "Form Name For Accountts",
+			U.EP_SALESFORCE_CAMPAIGN_TYPE:          "Some Salesforce Type",
+			U.EP_SALESFORCE_CAMPAIGNMEMBER_STATUS:  "CurrentStatusNow",
+			U.EP_HUBSPOT_ENGAGEMENT_SOURCE:         "Some Engagement Source For Accounts",
+			U.EP_HUBSPOT_ENGAGEMENT_TYPE:           "Some Engagement Type",
+			U.EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME: "Some Outcome",
+			U.EP_HUBSPOT_ENGAGEMENT_STARTTIME:      "Start time",
+		}
+		trackPayload := SDK.TrackPayload{
+			UserId:          createdUserID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+			EventProperties: eventProperties,
+			UserProperties:  propertiesMap[i+5],
+			Timestamp:       timestamp,
+			ProjectId:       project.ID,
+			Auto:            false,
+			RequestSource:   *source,
+		}
+
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotEmpty(t, response)
+		assert.Equal(t, http.StatusOK, status)
 	}
 
 	// Create 5 Hubspot Companies
@@ -2720,7 +2748,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 			Source:         source,
 			Group2ID:       "2",
 			Group1ID:       "1",
-			Group2UserID:   domID,
+			Group1UserID:   domID,
 			CustomerUserId: fmt.Sprintf("hsuser%d@%s", i+1, propertiesMap[i+5]["$hubspot_company_domain"]),
 			Properties:     properties,
 			IsGroupUser:    &groupUser,
@@ -2740,12 +2768,11 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 			U.EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME: "Some Outcome",
 			U.EP_HUBSPOT_ENGAGEMENT_STARTTIME:      "Start time",
 		}
-		val := i + (i % 2)
 		trackPayload := SDK.TrackPayload{
 			UserId:          createdUserID,
 			CreateUser:      false,
 			IsNewUser:       false,
-			Name:            randomURLs[val],
+			Name:            U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
 			EventProperties: eventProperties,
 			UserProperties:  propertiesMap[i+5],
 			Timestamp:       timestamp,
@@ -2756,6 +2783,38 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 
 		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 		assert.NotEmpty(t, response)
+		assert.Equal(t, http.StatusOK, status)
+
+		if i >= 2 {
+			continue
+		}
+		createdUserID1, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         source,
+			Properties:     properties,
+			Group2UserID:   createdUserID,
+			CustomerUserId: fmt.Sprintf("hubspot@%duser", (i%10)+1),
+		})
+
+		user1, errCode := store.GetStore().GetUser(project.ID, createdUserID1)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Equal(t, createdUserID1, user1.ID)
+
+		timestamp = timestamp - 10000
+		trackPayload = SDK.TrackPayload{
+			UserId:          user1.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			Auto:            false,
+			RequestSource:   model.UserSourceSalesforce,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
 		assert.Equal(t, http.StatusOK, status)
 	}
 	assert.Equal(t, len(accounts), 10)
@@ -2802,7 +2861,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 			},
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
-					Name: randomURLs[0],
+					Name: U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
 					Properties: []model.QueryProperty{
 						{
 							Type:      "categorical",
@@ -2815,82 +2874,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 				{
-					Name: randomURLs[2],
-					Properties: []model.QueryProperty{
-						{
-							Type:      "categorical",
-							Property:  U.EP_CHANNEL,
-							Operator:  "equals",
-							Value:     "ChannelName1",
-							LogicalOp: "AND",
-							Entity:    "event",
-						},
-					},
-				},
-			},
-			Class:           model.QueryClassEvents,
-			Type:            model.QueryTypeUniqueUsers,
-			EventsCondition: model.EventCondEachGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "account_profiles",
-			Source:          "$hubspot_company",
-			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
-		},
-		Type: "$hubspot_company",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	for _, segment := range segments["$hubspot_company"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
-	}
-
-	payload = model.TimelinePayload{
-		Source:    "$hubspot_company",
-		SegmentId: id,
-	}
-
-	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
-	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	resp = make([]model.Profile, 0)
-	err = json.Unmarshal(jsonResponse, &resp)
-	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 1)
-	for _, profile := range resp {
-		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
-		assert.NotNil(t, profile.Identity)
-		assert.NotNil(t, profile.LastActivity)
-	}
-
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name6",
-		Description: "dummy info",
-		Query: model.Query{
-			EventsWithProperties: []model.QueryEventWithProperties{
-				{
-					Name: randomURLs[2],
-					Properties: []model.QueryProperty{
-						{
-							Type:      "categorical",
-							Property:  U.EP_SALESFORCE_CAMPAIGN_TYPE,
-							Operator:  "equals",
-							Value:     "Some Salesforce Type",
-							LogicalOp: "AND",
-							Entity:    "event",
-						},
-					},
-				},
-				{
-					Name: randomURLs[0],
+					Name: U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
 					Properties: []model.QueryProperty{
 						{
 							Type:      "categorical",
@@ -2947,6 +2931,81 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 	}
 
 	segmentPayload = &model.SegmentPayload{
+		Name:        "Name6",
+		Description: "dummy info",
+		Query: model.Query{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name: U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_SALESFORCE_CAMPAIGN_TYPE,
+							Operator:  "equals",
+							Value:     "Some Salesforce Type",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+				{
+					Name: U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_CHANNEL,
+							Operator:  "equals",
+							Value:     "ChannelName1",
+							LogicalOp: "AND",
+							Entity:    "event",
+						},
+					},
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+			Timezone:        "America/Vancouver",
+			From:            startTimestamp,
+			To:              time.Now().UTC().Unix(),
+			Caller:          "account_profiles",
+			Source:          "$hubspot_company",
+			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
+		},
+		Type: "$hubspot_company",
+	}
+	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
+	// fetch segments
+	segments, status = store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	for _, segment := range segments["$hubspot_company"] {
+		if segment.Name == segmentPayload.Name {
+			id = segment.Id
+		}
+	}
+
+	payload = model.TimelinePayload{
+		Source:    "$hubspot_company",
+		SegmentId: id,
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+	for _, profile := range resp {
+		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+	}
+
+	segmentPayload = &model.SegmentPayload{
 		Name:        "Name7",
 		Description: "dummy info",
 		Query: model.Query{
@@ -2962,7 +3021,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 			},
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
-					Name: randomURLs[4],
+					Name: U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
 					Properties: []model.QueryProperty{
 						{
 							Type:      "categorical",
@@ -3035,7 +3094,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
-					Name: randomURLs[2],
+					Name: U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
 					Properties: []model.QueryProperty{
 						{
 							Type:      "categorical",
@@ -3048,7 +3107,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 				{
-					Name: randomURLs[2],
+					Name: U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
 					Properties: []model.QueryProperty{
 						{
 							Type:      "categorical",
@@ -3096,7 +3155,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 	resp = make([]model.Profile, 0)
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 2)
+	assert.Equal(t, len(resp), 5)
 	for _, profile := range resp {
 		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
 		assert.NotNil(t, profile.Identity)
@@ -3109,10 +3168,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
-					Name: randomURLs[1],
-				},
-				{
-					Name: randomURLs[2],
+					Name: U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
 				},
 			},
 
