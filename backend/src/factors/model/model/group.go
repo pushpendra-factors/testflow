@@ -55,13 +55,13 @@ var AllowedGroupToDomainsGroup = map[string]bool{
 	GROUP_NAME_G2:                 true,
 }
 
-var DomainNameSourcePropertyKey = map[string]string{
-	GROUP_NAME_SIX_SIGNAL:         U.SIX_SIGNAL_DOMAIN,
-	GROUP_NAME_HUBSPOT_COMPANY:    "$hubspot_company_website",
-	GROUP_NAME_SALESFORCE_ACCOUNT: "$salesforce_account_website",
+var DomainNameSourcePropertyKey = map[string][]string{
+	GROUP_NAME_SIX_SIGNAL:         []string{U.SIX_SIGNAL_DOMAIN},
+	GROUP_NAME_HUBSPOT_COMPANY:    []string{"$hubspot_company_domain", "$hubspot_company_website"},
+	GROUP_NAME_SALESFORCE_ACCOUNT: []string{"$salesforce_account_website"},
 }
 
-func GetDomainNameSourcePropertyKey(groupName string) string {
+func GetDomainNameSourcePropertyKey(groupName string) []string {
 	return DomainNameSourcePropertyKey[groupName]
 }
 

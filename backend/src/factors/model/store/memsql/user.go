@@ -3159,8 +3159,8 @@ func (store *MemSQL) createOrGetDomainUserIDByProperties(projectID int64, groupN
 		return "", "", http.StatusBadRequest
 	}
 
-	propertyKey := model.GetDomainNameSourcePropertyKey(groupName)
-	if propertyKey == "" {
+	propertyKeys := model.GetDomainNameSourcePropertyKey(groupName)
+	if len(propertyKeys) == 0 {
 		logCtx.Error("Empty property key on createOrGetDomainUserIDByProperties.")
 		return "", "", http.StatusInternalServerError
 	}
@@ -3171,7 +3171,14 @@ func (store *MemSQL) createOrGetDomainUserIDByProperties(projectID int64, groupN
 		return "", "", http.StatusInternalServerError
 	}
 
-	domainName := U.GetPropertyValueAsString((*propertiesMap)[propertyKey])
+	domainName := ""
+	for i := range propertyKeys {
+		if U.GetPropertyValueAsString((*propertiesMap)[propertyKeys[i]]) != "" {
+			domainName = U.GetPropertyValueAsString((*propertiesMap)[propertyKeys[i]])
+			break
+		}
+	}
+
 	if domainName == "" {
 		logCtx.WithFields(log.Fields{"properties": propertiesMap}).Warn("No domain name found. Skip processing domain.")
 		return "", "", http.StatusNotFound

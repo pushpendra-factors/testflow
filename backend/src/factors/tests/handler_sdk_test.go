@@ -312,22 +312,30 @@ func TestGetDomainGroupDomainName(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	expectedDomainNames := map[string]string{
-		"www.abc.com":            "abc.com",
-		"www.ABC.com":            "abc.com",
-		"http://www.abc.com":     "abc.com",
-		"http://www.abc.com/":    "abc.com",
-		"http://abc.com/":        "abc.com",
-		"https://abc.com/":       "abc.com",
-		"abc.com":                "abc.com",
-		"www.abc.co.in":          "abc.co.in",
-		"www.abc.aero":           "abc.aero",
-		"abc.cargo.aero":         "abc.cargo.aero",
-		"www.abc.cargo.aero":     "abc.cargo.aero",
-		"www.abc.xya":            "www.abc.xya", // if not found return as it is
-		"www.abc.com/contact-us": "abc.com",
+		"www.abc.com":                   "abc.com",
+		"www.ABC.com":                   "abc.com",
+		"http://www.abc.com":            "abc.com",
+		"http://www.abc.com/":           "abc.com",
+		"http://abc.com/":               "abc.com",
+		"https://abc.com/":              "abc.com",
+		"abc.com":                       "abc.com",
+		"www.abc.co.in":                 "abc.co.in",
+		"www.abc.aero":                  "abc.aero",
+		"abc.cargo.aero":                "abc.cargo.aero",
+		"www.abc.cargo.aero":            "abc.cargo.aero",
+		"www.abc.xya":                   "abc.xya", // if not found return as it is
+		"www.abc.com/contact-us":        "abc.com",
+		"www.abc.com/contact-us?q=1":    "abc.com",
+		"www.abc.com?q=1":               "abc.com",
+		"www.abc.coman":                 "abc.com",
+		"www.littleheath.herts.sch.ukq": "littleheath.herts.sch.uk",
+		"littleheath.herts.sch.ukq":     "littleheath.herts.sch.uk",
+		"btinternet.comcom":             "btinternet.com",
+		"pentopaper.co.uyk":             "pentopaper.co.uy",
+		"abcdxyz":                       "abcdxyz", // not valid url return as it is
 	}
 	for rawDomain := range expectedDomainNames {
-		assert.Equal(t, expectedDomainNames[rawDomain], U.GetDomainGroupDomainName(project.ID, rawDomain))
+		assert.Equal(t, expectedDomainNames[rawDomain], U.GetDomainGroupDomainName(project.ID, rawDomain), fmt.Sprintf("Input %s", rawDomain))
 	}
 
 }

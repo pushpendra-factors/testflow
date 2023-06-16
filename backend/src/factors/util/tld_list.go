@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -3395,9 +3396,19 @@ func GetDomainGroupDomainName(projectID int64, domainName string) string {
 	domainName = strings.ToLower(domainName)
 	domainName = strings.TrimPrefix(domainName, "http://")
 	domainName = strings.TrimPrefix(domainName, "https://")
+	domainName = strings.TrimPrefix(domainName, "www.")
+	if domainName == "" {
+		return ""
+	}
+
 	paths := strings.SplitN(domainName, "/", 2)
 
-	if len(paths) == 0 || domainName == "" || paths[0] == "" {
+	if len(paths) == 0 {
+		return ""
+	}
+
+	paths = strings.SplitN(paths[0], "?", 2)
+	if len(paths) == 0 || paths[0] == "" {
 		return ""
 	}
 
@@ -3405,8 +3416,13 @@ func GetDomainGroupDomainName(projectID int64, domainName string) string {
 
 	tld := GetTLDFromDomainName(domainName)
 	if tld == "" { // if no match found log and return the domain name
-		log.WithFields(log.Fields{"domain_name": domainName, "project_id": projectID}).Error("Failed to get top level domain from domain name. Using raw domain name.")
-		return domainName
+		tld = smartDomainCleanup(domainName)
+		if tld == "" {
+			log.WithFields(log.Fields{"domain_name": domainName, "project_id": projectID}).Error("Failed to get top level domain from domain name after smartDomainCleanup. Using raw domain name.")
+			return domainName
+		}
+
+		log.WithFields(log.Fields{"domain_name": domainName, "project_id": projectID, "smart_domain_cleanup_url": tld}).Warning("Using tld from smart domain cleanup.")
 	}
 
 	// www.abc.co.in -> [www.abc(sld), .co.in(tld)]
@@ -3418,4 +3434,28 @@ func GetDomainGroupDomainName(projectID int64, domainName string) string {
 
 	// length of subDomains would be 1 if there is no www. Use the first element
 	return subDomains[0] + tld
+}
+
+func smartDomainCleanup(domainName string) string {
+	domains := strings.Split(domainName, ".")
+	if len(domains) <= 1 {
+		return ""
+	}
+
+	lastOctet := domains[len(domains)-1]
+	lastOctetRune := []rune(lastOctet)
+	for i := range lastOctetRune {
+		suffix := string(lastOctetRune[:len(lastOctetRune)-i])
+		if suffix == "" {
+			continue
+		}
+
+		if TLDList[fmt.Sprintf(".%s", suffix)] == true {
+			domains[len(domains)-1] = suffix
+			break
+		}
+	}
+
+	return strings.Join(domains, ".")
+
 }

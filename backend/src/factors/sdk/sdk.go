@@ -2500,8 +2500,13 @@ func TrackUserAccountGroup(projectID int64, userID string, groupName string, gro
 		return http.StatusBadRequest
 	}
 
-	groupIDPropertyKey := model.GetDomainNameSourcePropertyKey(groupName)
-	groupID := U.GetDomainGroupDomainName(projectID, U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKey]))
+	groupIDPropertyKeys := model.GetDomainNameSourcePropertyKey(groupName)
+	groupID := ""
+	for i := range groupIDPropertyKeys {
+		if groupID = U.GetDomainGroupDomainName(projectID, U.GetPropertyValueAsString((*groupProperties)[groupIDPropertyKeys[i]])); groupID != "" {
+			break
+		}
+	}
 
 	if groupID == "" {
 		logCtx.Warning("No group id. Skip processing user group.")
