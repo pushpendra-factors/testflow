@@ -56,6 +56,8 @@ func main() {
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
 	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
 	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
+	removeDisabledEventUserPropertiesByProjectId := flag.String("remove_disabled_event_user_properties",
+		"", "List of projects to disable event user property population in events.")
 
 	recordProcessLimit := flag.Int("record_process_limit", 0, "Adding limit for processing records") // By default, pull all records
 
@@ -86,22 +88,23 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:                       *primaryDatastore,
-		RedisHost:                              *redisHost,
-		RedisPort:                              *redisPort,
-		RedisHostPersistent:                    *redisHostPersistent,
-		RedisPortPersistent:                    *redisPortPersistent,
-		SentryDSN:                              *sentryDSN,
-		CacheSortedSet:                         *cacheSortedSet,
-		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
-		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
-		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
-		ClearbitEnabled:                        *clearbitEnabled,
-		SixSignalEnabled:                       *sixSignalEnabled,
-		IngestionTimezoneEnabledProjectIDs:     C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
-		EnableDomainsGroupByProjectID:          *enableDomainsGroupByProjectID,
-		EnableUserDomainsGroupByProjectID:      *enableUserDomainsGroupByProjectID,
-		AllowEmailDomainsByProjectID:           *allowEmailDomainsByProjectID,
+		PrimaryDatastore:                             *primaryDatastore,
+		RedisHost:                                    *redisHost,
+		RedisPort:                                    *redisPort,
+		RedisHostPersistent:                          *redisHostPersistent,
+		RedisPortPersistent:                          *redisPortPersistent,
+		SentryDSN:                                    *sentryDSN,
+		CacheSortedSet:                               *cacheSortedSet,
+		UseSourcePropertyOverwriteByProjectIDs:       *useSourcePropertyOverwriteByProjectID,
+		CaptureSourceInUsersTable:                    *captureSourceInUsersTable,
+		RestrictReusingUsersByCustomerUserId:         *restrictReusingUsersByCustomerUserId,
+		ClearbitEnabled:                              *clearbitEnabled,
+		SixSignalEnabled:                             *sixSignalEnabled,
+		IngestionTimezoneEnabledProjectIDs:           C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
+		EnableDomainsGroupByProjectID:                *enableDomainsGroupByProjectID,
+		EnableUserDomainsGroupByProjectID:            *enableUserDomainsGroupByProjectID,
+		AllowEmailDomainsByProjectID:                 *allowEmailDomainsByProjectID,
+		RemoveDisabledEventUserPropertiesByProjectID: *removeDisabledEventUserPropertiesByProjectId,
 	}
 
 	C.InitConf(config)
