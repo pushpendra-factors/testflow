@@ -52,7 +52,7 @@ type AccEventWeight struct {
 type WeightKeyValueTuple struct {
 	Key        string   `json:"key"`
 	Value      []string `json:"value"`
-	Operator   bool     `json:"operator"`
+	Operator   string   `json:"operator"`
 	LowerBound float64  `json:"lower_bound"`
 	UpperBound float64  `json:"upper_bound"`
 	Type       string   `json:"property_type"` //event or user property
@@ -160,7 +160,7 @@ func GetDefaultAccScoringWeights() AccWeights {
 		Version: 1}
 
 	keyvals := []string{"Paid search"}
-	filterPRoperties := WeightKeyValueTuple{Key: "$channel", Value: keyvals, Operator: true,
+	filterPRoperties := WeightKeyValueTuple{Key: "$channel", Value: keyvals, Operator: EqualsOpStr,
 		LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}
 	event_b = AccEventWeight{EventName: "$session", Weight_value: 20, Is_deleted: false,
 		Rule: []WeightKeyValueTuple{filterPRoperties}, Version: 1}
