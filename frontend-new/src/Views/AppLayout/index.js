@@ -218,7 +218,7 @@ function AppLayout({
           >
             <Content
               className={cx('bg-white', {
-                'py-8 px-10': !show_analytics_result
+                'py-6 px-10': !show_analytics_result
               })}
             >
               <Suspense fallback={<PageSuspenseLoader />}>
