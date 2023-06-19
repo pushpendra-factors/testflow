@@ -47,6 +47,10 @@ export const configureMenuItems = [
   {
     label: 'Alerts',
     url: PathUrls.ConfigureAlerts
+  },
+  {
+    label: 'Engagements',
+    url: PathUrls.ConfigureEngagements
   }
 ];
 

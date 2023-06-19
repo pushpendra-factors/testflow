@@ -23,6 +23,7 @@ import OnBoard from 'Views/Settings/SetupAssist/Welcome/OnboardFlow';
 import { PathUrls } from './pathUrls';
 import AccountDetails from 'Components/Profile/AccountProfiles/AccountDetails';
 import ContactDetails from 'Components/Profile/UserProfiles/ContactDetails';
+import EngagementConfig from 'Views/Settings/ProjectConfigure/Engagement';
 
 const Login = lazyWithRetry(() => import('../Views/Pages/Login'));
 const ForgotPassword = lazyWithRetry(() =>
@@ -273,6 +274,13 @@ export const APP_LAYOUT_ROUTES = {
     exact: true,
     path: PathUrls.ConfigureAlerts,
     Component: Alerts,
+    Private: true,
+    Layout: AppLayout
+  },
+  ConfigureEngagements: {
+    exact: true,
+    path: PathUrls.ConfigureEngagements,
+    Component: EngagementConfig,
     Private: true,
     Layout: AppLayout
   },

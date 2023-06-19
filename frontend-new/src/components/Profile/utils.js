@@ -582,3 +582,63 @@ export const sortStringColumn = (a = '', b = '') => {
 };
 
 export const sortNumericalColumn = (a = 0, b = 0) => a - b;
+
+export const transformPayloadForWeightConfig = (payload) => {
+  const output = {
+    wid: payload.key,
+    event_name: payload.label,
+    weight: payload.weight,
+    is_deleted: false,
+    rule: [],
+    vr: payload.vr === 0 ? 0 : 1
+  };
+
+  if (payload?.filters?.length) {
+    payload.filters.forEach((filter) => {
+      const rule = {
+        key: filter.props[0],
+        value: filter.values,
+        operator: filter.operator,
+        property_type: filter.props[2],
+        value_type: filter.props[1]
+      };
+      output.rule.push(rule);
+    });
+  } else {
+    output.rule = null;
+  }
+
+  return output;
+};
+
+export const transformWeightConfigForQuery = (config) => {
+  const output = {
+    key: config.wid,
+    label: config.event_name,
+    weight: config.weight,
+    filters: [],
+    vr: config.vr
+  };
+
+  if (config.rule) {
+    const rules = Array.isArray(config.rule) ? config.rule : [config.rule];
+
+    rules.forEach((rule) => {
+      const ruleValues = Array.isArray(rule.value)
+        ? rule.value
+        : rule.value_type === 'categorical'
+        ? [rule.value]
+        : rule.value;
+
+      const filter = {
+        props: [rule.key, rule.value_type, rule.property_type],
+        operator: rule.operator,
+        values: ruleValues,
+        ref: 1
+      };
+      output.filters.push(filter);
+    });
+  }
+
+  return output;
+};
