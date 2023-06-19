@@ -29,6 +29,7 @@ var tagEnum = map[string]string{
 	"products.features":                           U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 	"products.details":                            U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 	"products.pricing":                            U.GROUP_EVENT_NAME_G2_PRICING,
+	"products.discussions":                        U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 }
 
 type EventStreamResponseStruct struct {
@@ -269,6 +270,11 @@ func PerformCompanyEnrichmentAndUserAndEventCreationForProject(projectSetting mo
 			return "Failed in tag not exists for eventname creation", http.StatusBadRequest
 		}
 		tag := fmt.Sprintf("%v", valueMap["tag"])
+		if _, exists := tagEnum[tag]; !exists {
+			errMsg := "Tag " + tag + " is not present is enum"
+			logCtx.Error(errMsg)
+			return errMsg, http.StatusBadRequest
+		}
 
 		eventNameG2, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{
 			ProjectId: projectID,
