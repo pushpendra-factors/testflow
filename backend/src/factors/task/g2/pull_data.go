@@ -250,7 +250,15 @@ func PerformCompanyEnrichmentAndUserAndEventCreationForProject(projectSetting mo
 		if err != nil {
 			return err.Error(), http.StatusInternalServerError
 		}
-
+		if jsonResponse.Data.Attributes.Domain == "" {
+			logCtx.Error("Ashhar - no domain given in the API") // to be removed after testing
+			err = store.GetStore().UpdateG2GroupUserCreationDetails(g2Document)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed in updating user creation details")
+				return "Failed in updating user creation details", http.StatusInternalServerError
+			}
+			continue
+		}
 		userPropertiesMap := U.PropertiesMap{
 			U.G2_COMPANY_ID:      jsonResponse.Data.ID,
 			U.G2_COUNTRY:         jsonResponse.Data.Attributes.Country,
