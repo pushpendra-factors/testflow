@@ -51,12 +51,10 @@ const SegmentItem = ({ segment }) => {
     const opts = { ...timelinePayload };
     opts.source = segment[2].type;
     opts.segment_id = segment[1];
-    dispatch(
-      setActiveSegmentAction({
-        segmentPayload: segment[2],
-        timelinePayload: opts
-      })
-    );
+    opts.filters = [];
+    delete opts.search_filter;
+    dispatch(setActiveSegmentAction(segment[2]));
+    dispatch(setTimelinePayloadAction(opts));
   };
 
   const isActive = timelinePayload.segment_id === segment[1];

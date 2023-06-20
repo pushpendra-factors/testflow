@@ -348,7 +348,8 @@ function AccountDetails({
             history.replace(PathUrls.ProfileAccounts, {
               activeSegment: location.state?.activeSegment,
               fromDetails: true,
-              accountPayload: location.state?.accountPayload
+              accountPayload: location.state?.accountPayload,
+              currentPage: location.state.currentPage
             });
           }}
         />
@@ -363,7 +364,8 @@ function AccountDetails({
           history.replace(PathUrls.ProfileAccounts, {
             activeSegment: location.state?.activeSegment,
             fromDetails: true,
-            accountPayload: location.state?.accountPayload
+            accountPayload: location.state?.accountPayload,
+            currentPage: location.state.currentPage
           });
         }}
         icon={<SVG name='times' />}

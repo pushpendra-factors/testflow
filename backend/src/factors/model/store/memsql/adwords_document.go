@@ -1356,7 +1356,7 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForAdwords(proj
 }
 
 func (store *MemSQL) GetDataCurrencyForAdwords(projectId int64) string {
-	query := "select JSON_EXTRACT_STRING(value, 'currency_code') from adwords_documents where project_id = ? and type = 9 limit 1"
+	query := "select JSON_EXTRACT_STRING(value, 'currency_code') from adwords_documents where project_id = ? and type = 9 order by created_at desc limit 1"
 	db := C.GetServices().Db
 
 	params := make([]interface{}, 0)
