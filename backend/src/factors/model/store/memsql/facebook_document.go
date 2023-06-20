@@ -645,7 +645,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID int64,
 }
 
 func (store *MemSQL) GetDataCurrencyForFacebook(projectId int64) string {
-	query := "select JSON_EXTRACT_STRING(value, 'account_currency')  from facebook_documents where project_id = ? and type = 4 limit 1"
+	query := "select JSON_EXTRACT_STRING(value, 'account_currency')  from facebook_documents where project_id = ? and type = 4 order by created_at desc limit 1"
 	db := C.GetServices().Db
 
 	params := make([]interface{}, 0)
