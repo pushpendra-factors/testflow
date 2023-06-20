@@ -26,8 +26,7 @@ export default function (state = initialState, action) {
     case SET_ACTIVE_SEGMENT:
       return {
         ...state,
-        activeSegment: action.payload.segmentPayload,
-        accountPayload: action.payload.accountPayload
+        activeSegment: action.payload
       };
     case UPDATE_ACCOUNT_PAYLOAD:
       return {

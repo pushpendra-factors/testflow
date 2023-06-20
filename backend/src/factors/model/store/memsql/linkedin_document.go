@@ -844,7 +844,7 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(pro
 }
 
 func (store *MemSQL) GetDataCurrencyForLinkedin(projectId int64) string {
-	query := "select JSON_EXTRACT_STRING(value, 'currency') from linkedin_documents where project_id = ? and type = 7 limit 1"
+	query := "select JSON_EXTRACT_STRING(value, 'currency') from linkedin_documents where project_id = ? and type = 7 order by created_at desc limit 1"
 	db := C.GetServices().Db
 
 	params := make([]interface{}, 0)
