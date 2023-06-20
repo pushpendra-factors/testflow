@@ -58,12 +58,10 @@ const SegmentItem = ({ segment }) => {
     const opts = { ...activeAccountPayload };
     opts.segment_id = segment[1];
     opts.source = segment[2].type;
-    dispatch(
-      setActiveSegmentAction({
-        segmentPayload: segment[2],
-        accountPayload: opts
-      })
-    );
+    opts.filters = [];
+    delete opts.search_filter;
+    dispatch(setActiveSegmentAction(segment[2]));
+    dispatch(setAccountPayloadAction(opts));
   };
 
   const isActive = activeAccountPayload.segment_id === segment[1];

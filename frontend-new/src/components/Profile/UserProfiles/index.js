@@ -132,8 +132,13 @@ function UserProfiles({
   useEffect(() => {
     if (!timelinePayload.search_filter) {
       setListSearchItems([]);
+    } else {
+      const listValues =
+        timelinePayload?.search_filter?.users?.map((vl) => vl?.va) || [];
+      setListSearchItems(_.uniq(listValues));
+      setSearchBarOpen(true);
     }
-  }, [timelinePayload]);
+  }, [timelinePayload?.search_filter]);
 
   const setTimelinePayload = useCallback(
     (payload) => {
@@ -143,8 +148,8 @@ function UserProfiles({
   );
 
   const setActiveSegment = useCallback(
-    (segmentPayload, timelinePayload) => {
-      dispatch(setActiveSegmentAction({ segmentPayload, timelinePayload }));
+    (segmentPayload) => {
+      dispatch(setActiveSegmentAction(segmentPayload));
     },
     [dispatch]
   );
@@ -172,7 +177,7 @@ function UserProfiles({
       };
       setTLConfig(timelinesConfig);
     }
-  }, [currentProjectSettings]);
+  }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
     fetchDemoProject()
@@ -398,29 +403,32 @@ function UserProfiles({
     const opts = { ...timelinePayload };
     opts.filters = filters;
     setTimelinePayload(opts);
-    setActiveSegment(activeSegment, opts);
+    setActiveSegment(activeSegment);
+    getUsers(opts);
   };
 
   const clearFilters = () => {
     const opts = { ...timelinePayload };
     opts.filters = [];
     setTimelinePayload(opts);
-    setActiveSegment(activeSegment, opts);
+    setActiveSegment(activeSegment);
   };
 
+  const getUsers = useCallback(
+    (payload) => {
+      if (payload.source && payload.source !== '') {
+        const formatPayload = { ...payload };
+        formatPayload.filters =
+          formatFiltersForPayload(payload?.filters, false) || {};
+        getProfileUsers(activeProject.id, formatPayload, activeAgent);
+      }
+    },
+    [activeProject.id, activeAgent]
+  );
+
   useEffect(() => {
-    const opts = { ...timelinePayload };
-    opts.filters = formatFiltersForPayload(timelinePayload.filters, false);
-    getProfileUsers(activeProject.id, opts, activeAgent);
-  }, [
-    activeProject.id,
-    timelinePayload,
-    activeSegment,
-    currentProjectSettings,
-    segments,
-    getProfileUsers,
-    activeAgent
-  ]);
+    getUsers(timelinePayload);
+  }, [timelinePayload.source, timelinePayload.segment_id]);
 
   const handleSaveSegment = (segmentPayload) => {
     createNewSegment(activeProject.id, segmentPayload)
@@ -624,7 +632,7 @@ function UserProfiles({
       })
         .then(() => getSavedSegments(activeProject.id))
         .then(() =>
-          setActiveSegment({ ...activeSegment, updatedQuery }, timelinePayload)
+          setActiveSegment({ ...activeSegment, query: updatedQuery })
         );
     } else {
       const config = { ...tlConfig };
@@ -636,6 +644,7 @@ function UserProfiles({
       });
     }
     setShowPopOver(false);
+    getUsers(timelinePayload);
   };
 
   const popoverContent = () => (
@@ -744,7 +753,8 @@ function UserProfiles({
     payload.search_filter = formatFiltersForPayload([searchFilter], false);
     setListSearchItems(searchFilter.values);
     setTimelinePayload(payload);
-    setActiveSegment(activeSegment, payload);
+    setActiveSegment(activeSegment);
+    getUsers(payload);
   };
 
   const searchUsers = () => (
@@ -783,7 +793,8 @@ function UserProfiles({
       payload.search_filter = {};
       setListSearchItems([]);
       setTimelinePayload(payload);
-      setActiveSegment(activeSegment, payload);
+      setActiveSegment(activeSegment);
+      getUsers(payload);
     }
   };
 
