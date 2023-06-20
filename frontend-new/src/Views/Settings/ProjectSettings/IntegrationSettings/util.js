@@ -7,8 +7,7 @@ export const getDefaultTimelineConfigForSixSignal = (config) => {
   const defaultTableProps = [
     '$6Signal_domain',
     '$6Signal_industry',
-    '$6Signal_employee_range',
-    '$session_spent_time'
+    '$6Signal_employee_range'
   ];
   if (!config) {
     return {
@@ -16,7 +15,7 @@ export const getDefaultTimelineConfigForSixSignal = (config) => {
         table_props: defaultTableProps
       },
       user_config: {
-        table_props: defaultTableProps
+        table_props: [...defaultTableProps, '$session_spent_time']
       }
     };
   } else {
