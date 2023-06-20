@@ -324,7 +324,7 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForBingads(proj
 }
 
 func (store *MemSQL) GetDataCurrencyForBingAds(projectId int64) string {
-	query := "select JSON_EXTRACT_STRING(value, 'currency_code')  from integration_documents where project_id = ? and document_type = 7 and source = 'bingads' limit 1"
+	query := "select JSON_EXTRACT_STRING(value, 'currency_code')  from integration_documents where project_id = ? and document_type = 7 and source = 'bingads' order by created_at desc limit 1"
 	db := C.GetServices().Db
 
 	params := make([]interface{}, 0)

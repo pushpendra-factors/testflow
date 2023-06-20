@@ -29,6 +29,7 @@ var tagEnum = map[string]string{
 	"products.features":                           U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 	"products.details":                            U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 	"products.pricing":                            U.GROUP_EVENT_NAME_G2_PRICING,
+	"products.discussions":                        U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 }
 
 type EventStreamResponseStruct struct {
@@ -249,7 +250,15 @@ func PerformCompanyEnrichmentAndUserAndEventCreationForProject(projectSetting mo
 		if err != nil {
 			return err.Error(), http.StatusInternalServerError
 		}
-
+		if jsonResponse.Data.Attributes.Domain == "" {
+			logCtx.Error("Ashhar - no domain given in the API") // to be removed after testing
+			err = store.GetStore().UpdateG2GroupUserCreationDetails(g2Document)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed in updating user creation details")
+				return "Failed in updating user creation details", http.StatusInternalServerError
+			}
+			continue
+		}
 		userPropertiesMap := U.PropertiesMap{
 			U.G2_COMPANY_ID:      jsonResponse.Data.ID,
 			U.G2_COUNTRY:         jsonResponse.Data.Attributes.Country,
@@ -269,6 +278,11 @@ func PerformCompanyEnrichmentAndUserAndEventCreationForProject(projectSetting mo
 			return "Failed in tag not exists for eventname creation", http.StatusBadRequest
 		}
 		tag := fmt.Sprintf("%v", valueMap["tag"])
+		if _, exists := tagEnum[tag]; !exists {
+			errMsg := "Tag " + tag + " is not present is enum"
+			logCtx.Error(errMsg)
+			return errMsg, http.StatusBadRequest
+		}
 
 		eventNameG2, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{
 			ProjectId: projectID,
