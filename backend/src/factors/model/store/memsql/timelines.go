@@ -46,10 +46,6 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusBadRequest, "Project Id is Invalid"
 	}
 
-	// Merge Search Filters
-	payload.Filters = append(payload.Filters, payload.SearchFilter...)
-	groupedFilters := GroupFiltersByPrefix(payload.Filters)
-
 	var tableProps []string
 	if payload.SegmentId != "" {
 		segment, status := store.GetSegmentById(projectID, payload.SegmentId)
@@ -74,10 +70,10 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
 			if C.IsEnabledEventsFilterInSegments() {
 				if payload.Filters != nil {
-					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, groupedFilters[model.FILTER_TYPE_USERS]...)
-					if profileType == model.PROFILE_TYPE_ACCOUNT && groupedFilters[segment.Type] != nil {
-						segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, groupedFilters[segment.Type]...)
-					}
+					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters...)
+				}
+				if payload.SearchFilter != nil {
+					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.SearchFilter...)
 				}
 				err := segmentQuery.TransformDateTypeFilters()
 				if err != nil {
@@ -105,12 +101,8 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 				var profiles = make([]model.Profile, 0)
 				return profiles, http.StatusBadRequest, "Event filters not enabled for the project."
 			}
-		} else {
-			if segment.Type != "" {
-				{
-					payload.Filters = append(payload.Filters, segmentQuery.GlobalUserProperties...)
-				}
-			}
+		} else if segment.Type != "" {
+			payload.Filters = append(payload.Filters, segmentQuery.GlobalUserProperties...)
 		}
 	} else {
 		timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
@@ -131,7 +123,9 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 
 	// transforming datetime filters
-	groupedFilters = GroupFiltersByPrefix(payload.Filters)
+	groupedFilters := GroupFiltersByPrefix(payload.Filters)
+	groupedFilters[model.FILTER_TYPE_USERS] = append(groupedFilters[model.FILTER_TYPE_USERS], payload.SearchFilter...)
+
 	for group, filterArray := range groupedFilters {
 		for index := range filterArray {
 			err := groupedFilters[group][index].TransformDateTypeFilters(timezoneString)

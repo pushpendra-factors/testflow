@@ -95,14 +95,14 @@ function AccountProfiles({
     // if (location.state?.accountPayload) {
     //   return location.state.accountPayload;
     // } else {
-      return selectAccountPayload(state);
+    return selectAccountPayload(state);
     // }
   });
   const activeSegment = useSelector((state) => {
     // if (location.state?.activeSegment) {
     //   return location.state.activeSegment;
     // } else {
-      return selectActiveSegment(state);
+    return selectActiveSegment(state);
     // }
   });
   const showSegmentModal = useSelector((state) =>
@@ -234,7 +234,7 @@ function AccountProfiles({
         },
         activeAgent
       );
-    } 
+    }
     // else {
     //   // const locateState = {fromDetails: false}
     //   // history.replace({...history.location, state: locateState});
