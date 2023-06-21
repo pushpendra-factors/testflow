@@ -30,7 +30,9 @@ import {
   resetGroupByAction,
   fetchEventsMapAction,
   FETCH_PROPERTY_VALUES,
-  fetchEventUserPropertiesAction
+  fetchEventUserPropertiesAction,
+  setButtonClicksPropertiesNamesAction,
+  setPageViewsPropertiesNamesAction
 } from './actions';
 import {
   getEventNames,
@@ -40,12 +42,15 @@ import {
   fetchCampaignConfig,
   fetchEventPropertyValues,
   fetchGroupPropertyValues,
-  fetchUserPropertyValues
+  fetchUserPropertyValues,
+  fetchButtonClicksPropertyValues,
+  fetchPageViewsPropertyValues
 } from './services';
 import {
   convertToEventOptions,
   convertPropsToOptions,
-  convertCampaignConfig
+  convertCampaignConfig,
+  convertCustomEventCategoryToOptions
 } from './utils';
 
 export const fetchEventNames = (projectId) => {
@@ -90,7 +95,7 @@ export const getGroupProperties = (projectId, groupName) => {
     });
   };
 };
-
+ 
 export const getUserProperties = (projectId, queryType = '') => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
@@ -139,6 +144,43 @@ export const getEventProperties = (projectId, eventName) => {
             )
           );
           resolve(dispatch(fetchEventPropertiesAction(options, eventName)));
+        })
+        .catch((err) => {
+          // resolve(dispatch(fetchEventPropertiesAction({})));
+        });
+    });
+  };
+};
+
+export const getButtonClickProperties = (projectId) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchButtonClicksPropertyValues(projectId)
+        .then((response) => {
+          const transformedData = convertCustomEventCategoryToOptions(response.data)
+          resolve(
+            dispatch(
+              setButtonClicksPropertiesNamesAction(transformedData)
+            )
+          ); 
+        })
+        .catch((err) => {
+          // resolve(dispatch(fetchEventPropertiesAction({})));
+        });
+    });
+  };
+};
+export const getPageViewsProperties = (projectId) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchPageViewsPropertyValues(projectId)
+        .then((response) => {
+          const transformedData = convertCustomEventCategoryToOptions(response.data)
+          resolve(
+            dispatch(
+              setPageViewsPropertiesNamesAction(transformedData)
+            )
+          ); 
         })
         .catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));

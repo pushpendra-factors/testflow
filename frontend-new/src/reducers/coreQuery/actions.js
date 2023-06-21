@@ -12,6 +12,8 @@ export const FETCH_PROPERTY_VALUES = 'FETCH_PROPERTY_VALUES';
 export const SET_GROUP_PROP_NAME = 'SET_GROUP_PROP_NAME';
 export const SET_USER_PROP_NAME = 'SET_USER_PROP_NAME';
 export const SET_EVENT_PROP_NAME = 'SET_EVENT_PROP_NAME';
+export const SET_BUTTONCLICK_PROP_NAME = 'SET_BUTTONCLICK_PROP_NAME';
+export const SET_PAGEVIEW_PROP_NAME = 'SET_PAGEVIEW_PROP_NAME';
 export const INITIALIZE_GROUPBY = 'INITIALIZE_GROUPBY';
 export const SET_GROUPBY = 'SET_GROUPBY';
 export const RESET_GROUPBY = 'RESET_GROUPBY';
@@ -80,6 +82,14 @@ export const fetchEventPropertiesAction = (eventProps, name) => {
 
 export const setEventPropertiesNamesAction = (eventPropDisplayNames) => {
   return { type: SET_EVENT_PROP_NAME, payload: eventPropDisplayNames };
+};
+
+export const setButtonClicksPropertiesNamesAction = (eventPropDisplayNames) => {
+  return { type: SET_BUTTONCLICK_PROP_NAME, payload: eventPropDisplayNames };
+};
+
+export const setPageViewsPropertiesNamesAction = (eventPropDisplayNames) => {
+  return { type: SET_PAGEVIEW_PROP_NAME, payload: eventPropDisplayNames };
 };
 
 export const delGroupByAction = (type, payload, index) => {
