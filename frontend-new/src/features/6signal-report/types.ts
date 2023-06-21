@@ -66,6 +66,7 @@ export interface ReportTableProps {
   selectedChannel: string;
   isSixSignalActivated: boolean;
   dataSelected: string;
+  isPastDateDataAvailable: boolean;
 }
 
 export interface StringObject {

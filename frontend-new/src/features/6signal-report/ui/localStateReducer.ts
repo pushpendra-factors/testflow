@@ -27,7 +27,8 @@ export enum VisitorReportActions {
   SET_PAGE_URL_DATA_LOADING = 'SET_PAGE_URL_DATA_LOADING',
   SET_PAGE_URL_DATA_ERROR = 'SET_PAGE_URL_DATA_ERROR',
   SET_PAGE_VIEW_SELECTION_VISIBILITY = 'SET_PAGE_VIEW_SELECTION_VISIBILITY',
-  SET_SELECTED_PAGE_VIEWS = 'SET_SELECTED_PAGE_VIEWS'
+  SET_SELECTED_PAGE_VIEWS = 'SET_SELECTED_PAGE_VIEWS',
+  SET_PAST_DATE_DATA_AVAILABILITY = 'SET_PAST_DATE_DATA_AVAILABILITY'
 }
 
 //Action Types and payload
@@ -39,7 +40,8 @@ interface SetBooleanPayload {
     | VisitorReportActions.SET_CHANNEL_SELECTION_VISIBILITY
     | VisitorReportActions.SET_DATE_SELECTION_VISIBILITY
     | VisitorReportActions.SET_SHARE_MODAL_VISIBILITY
-    | VisitorReportActions.SET_PAGE_VIEW_SELECTION_VISIBILITY;
+    | VisitorReportActions.SET_PAGE_VIEW_SELECTION_VISIBILITY
+    | VisitorReportActions.SET_PAST_DATE_DATA_AVAILABILITY;
   payload: boolean;
 }
 
@@ -139,6 +141,7 @@ interface VisitorReportState {
   shareData: ShareDataType;
   shareModalVisibility: boolean;
   pageViewUrls: PageViewUrls;
+  isPastDatesDataAvailable: boolean;
 }
 
 type Action =
@@ -181,7 +184,8 @@ export const initialState: VisitorReportState = {
     data: null,
     loading: false,
     error: false
-  }
+  },
+  isPastDatesDataAvailable: false
 };
 
 export function visitorReportReducer(
@@ -355,6 +359,11 @@ export function visitorReportReducer(
         ...state,
         selectedPageViews: action.payload,
         pageViewSelectionVisibility: false
+      };
+    case VisitorReportActions.SET_PAST_DATE_DATA_AVAILABILITY:
+      return {
+        ...state,
+        isPastDatesDataAvailable: action.payload
       };
     default:
       logger.error('Unsupported visitor action type');
