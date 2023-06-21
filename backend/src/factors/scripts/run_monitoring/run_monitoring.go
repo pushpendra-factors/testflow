@@ -19,6 +19,7 @@ func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
@@ -55,14 +56,6 @@ func main() {
 
 	flag.Parse()
 
-	apiPayload, msg, err := GetHealth(*apiToken, *apiUrl)
-	if *apiToken == "" {
-		log.WithError(err).Fatal("empty token")
-	}
-	if msg != "" {
-		log.WithError(err).Error(msg)
-	}
-
 	defaultAppName := "monitoring_job"
 	defaultHealthcheckPingID := C.HealthcheckMonitoringJobPingID
 	if *primaryDatastore == C.DatastoreTypeMemSQL {
@@ -81,6 +74,7 @@ func main() {
 		GCPProjectLocation: *gcpProjectLocation,
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
+			IsPSCHost:   *isPSCHost,
 			Port:        *memSQLPort,
 			User:        *memSQLUser,
 			Name:        *memSQLName,
@@ -98,7 +92,7 @@ func main() {
 	}
 
 	C.InitConf(config)
-	err = C.InitDB(*config)
+	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initalize db.")
 	}
@@ -119,6 +113,14 @@ func main() {
 
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
+
+	apiPayload, msg, err := GetHealth(*apiToken, *apiUrl)
+	if *apiToken == "" {
+		log.WithError(err).Fatal("empty token")
+	}
+	if msg != "" {
+		log.WithError(err).Error(msg)
+	}
 
 	// ANALYZE TABLE hook for updating table estimates for query planning.
 	analyzeStatus := map[string]interface{}{}

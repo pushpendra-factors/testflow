@@ -41,6 +41,7 @@ func main() {
 	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
@@ -52,6 +53,7 @@ func main() {
 
 	enableDBConnectionPool2 := flag.Bool("enable_db_conn_pool2", false, "")
 	memSQLHost2 := flag.String("memsql_host_2", C.MemSQLDefaultDBParams.Host, "")
+	isPSCHost2 := flag.Int("memsql_is_psc_host_2", C.MemSQLDefaultDBParams.IsPSCHost, "")
 	memSQLPort2 := flag.Int("memsql_port_2", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser2 := flag.String("memsql_user_2", C.MemSQLDefaultDBParams.User, "")
 	memSQLName2 := flag.String("memsql_name_2", C.MemSQLDefaultDBParams.Name, "")
@@ -228,6 +230,7 @@ func main() {
 		},
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
+			IsPSCHost:   *isPSCHost,
 			Port:        *memSQLPort,
 			User:        *memSQLUser,
 			Name:        *memSQLName,
@@ -241,6 +244,7 @@ func main() {
 		},
 		MemSQL2Info: C.DBConf{
 			Host:        *memSQLHost2,
+			IsPSCHost:   *isPSCHost2,
 			Port:        *memSQLPort2,
 			User:        *memSQLUser2,
 			Name:        *memSQLName2,

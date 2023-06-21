@@ -244,133 +244,152 @@ func getMemSQLQuery(projectID int64, eventNameID string, from, to int64, propert
 
 /*
 WITH smart_events AS (
-    select
-        id as smart_event_id,
-        uuid(properties ->> '$crm_reference_event_id') as reference_event_id
-    from
-        events
-    where
-        project_id = '399'
-        and timestamp between '1627324200'
-        and '1628101800'
-        and event_name_id = '2330399'
+
+	select
+	    id as smart_event_id,
+	    uuid(properties ->> '$crm_reference_event_id') as reference_event_id
+	from
+	    events
+	where
+	    project_id = '399'
+	    and timestamp between '1627324200'
+	    and '1628101800'
+	    and event_name_id = '2330399'
+
 ),
 smart_event_reference_contact AS (
-    select
-        smart_event_id,
-        reference_event_id,
-        properties ->> '$hubspot_contact_hs_object_id' as hubspot_contact_id
-    from
-        smart_events
-        left join events on smart_events.reference_event_id = events.id
-        and project_id = '399'
+
+	select
+	    smart_event_id,
+	    reference_event_id,
+	    properties ->> '$hubspot_contact_hs_object_id' as hubspot_contact_id
+	from
+	    smart_events
+	    left join events on smart_events.reference_event_id = events.id
+	    and project_id = '399'
+
 ),
 smart_event_documents AS (
-    select
-        id,
-        timestamp,
-        sync_id,
-        value
-    from
-        hubspot_documents
-    where
-        project_id = '399'
-        and type = '2'
-        and id in (
-            select
-                hubspot_contact_id
-            from
-                smart_event_reference_contact
-        )
-        and sync_id in (
-            select
-                reference_event_id :: text
-            from
-                smart_event_reference_contact
-        )
+
+	select
+	    id,
+	    timestamp,
+	    sync_id,
+	    value
+	from
+	    hubspot_documents
+	where
+	    project_id = '399'
+	    and type = '2'
+	    and id in (
+	        select
+	            hubspot_contact_id
+	        from
+	            smart_event_reference_contact
+	    )
+	    and sync_id in (
+	        select
+	            reference_event_id :: text
+	        from
+	            smart_event_reference_contact
+	    )
+
 ),
 smart_events_to_hubspot_documents AS (
-    select
-        hubspot_contact_id,
-        smart_event_id,
-        reference_event_id,
-        smart_event_documents.sync_id,
-        smart_event_documents.timestamp as curr_timestamp,
-        value -> 'properties' -> 'demo_booked_on' ->> 'value' as curr_value
-    from
-        smart_event_reference_contact
-        left join smart_event_documents on smart_event_reference_contact.reference_event_id :: text = smart_event_documents.sync_id
+
+	select
+	    hubspot_contact_id,
+	    smart_event_id,
+	    reference_event_id,
+	    smart_event_documents.sync_id,
+	    smart_event_documents.timestamp as curr_timestamp,
+	    value -> 'properties' -> 'demo_booked_on' ->> 'value' as curr_value
+	from
+	    smart_event_reference_contact
+	    left join smart_event_documents on smart_event_reference_contact.reference_event_id :: text = smart_event_documents.sync_id
+
 ),
 all_related_documents AS (
-    select
-        *
-    from
-        smart_events_to_hubspot_documents
-        left join hubspot_documents on smart_events_to_hubspot_documents.hubspot_contact_id = hubspot_documents.id
-        and project_id = '399'
-        and type = '2'
-    where
-        project_id = '399'
-        and type = '2'
+
+	select
+	    *
+	from
+	    smart_events_to_hubspot_documents
+	    left join hubspot_documents on smart_events_to_hubspot_documents.hubspot_contact_id = hubspot_documents.id
+	    and project_id = '399'
+	    and type = '2'
+	where
+	    project_id = '399'
+	    and type = '2'
+
 ),
 filtered_updated_contact_result AS (
-    select
-        distinct on(smart_event_id, hubspot_contact_id) smart_event_id,
-        hubspot_contact_id,
-        curr_timestamp,
-        timestamp as prev_timestamp,
-        curr_value,
-        value -> 'properties' -> 'demo_booked_on' ->> 'value' as prev_value
-    from
-        all_related_documents
-    where
-        timestamp < curr_timestamp
-    order by
-        smart_event_id,
-        hubspot_contact_id,
-        timestamp desc
+
+	select
+	    distinct on(smart_event_id, hubspot_contact_id) smart_event_id,
+	    hubspot_contact_id,
+	    curr_timestamp,
+	    timestamp as prev_timestamp,
+	    curr_value,
+	    value -> 'properties' -> 'demo_booked_on' ->> 'value' as prev_value
+	from
+	    all_related_documents
+	where
+	    timestamp < curr_timestamp
+	order by
+	    smart_event_id,
+	    hubspot_contact_id,
+	    timestamp desc
+
 ),
 filtered_created_contact_result AS (
-    select
-        distinct on (all_related_documents.smart_event_id) all_related_documents.smart_event_id,
-        all_related_documents.hubspot_contact_id,
-        all_related_documents.curr_timestamp,
-        all_related_documents.timestamp as prev_timestamp,
-        all_related_documents.curr_value,
-        '' :: text as prev_value
-    from
-        all_related_documents,
-        filtered_updated_contact_result
-    where
-        all_related_documents.smart_event_id not in (
-            select
-                smart_event_id
-            from
-                filtered_updated_contact_result
-        )
-        and all_related_documents.timestamp = all_related_documents.curr_timestamp
+
+	select
+	    distinct on (all_related_documents.smart_event_id) all_related_documents.smart_event_id,
+	    all_related_documents.hubspot_contact_id,
+	    all_related_documents.curr_timestamp,
+	    all_related_documents.timestamp as prev_timestamp,
+	    all_related_documents.curr_value,
+	    '' :: text as prev_value
+	from
+	    all_related_documents,
+	    filtered_updated_contact_result
+	where
+	    all_related_documents.smart_event_id not in (
+	        select
+	            smart_event_id
+	        from
+	            filtered_updated_contact_result
+	    )
+	    and all_related_documents.timestamp = all_related_documents.curr_timestamp
+
 ),
 overall_result AS (
-    select
-        *
-    from
-        filtered_created_contact_result
-    union
-    all
-    select
-        *
-    from
-        filtered_updated_contact_result
+
+	select
+	    *
+	from
+	    filtered_created_contact_result
+	union
+	all
+	select
+	    *
+	from
+	    filtered_updated_contact_result
+
 )
 select
-    smart_event_id,
-    hubspot_contact_id,
-    curr_timestamp,
-    prev_timestamp,
-    curr_value,
-    prev_value
+
+	smart_event_id,
+	hubspot_contact_id,
+	curr_timestamp,
+	prev_timestamp,
+	curr_value,
+	prev_value
+
 from
-    overall_result
+
+	overall_result
 */
 func GetSmartEventMetaDataQuery(projectID int64, propertyName, eventNameID string, from, to int64) (string, []interface{}) {
 	stmnt := ""
@@ -467,6 +486,7 @@ func main() {
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
@@ -484,6 +504,7 @@ func main() {
 		SentryDSN: *sentryDSN,
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
+			IsPSCHost:   *isPSCHost,
 			Port:        *memSQLPort,
 			User:        *memSQLUser,
 			Name:        *memSQLName,
