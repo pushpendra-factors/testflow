@@ -7439,245 +7439,87 @@ func TestHubspotEngagementIncomingEmailV3(t *testing.T) {
 	assert.Equal(t, float64(createdAt.Unix()), (*userProperties)[U.UP_JOIN_TIME])
 }
 
-func TestHubspotDealV3(t *testing.T) {
-	r := gin.Default()
-	H.InitDataServiceRoutes(r)
-	H.InitAppRoutes(r)
-	project, _, err := SetupProjectWithAgentDAO()
-	assert.Nil(t, err)
-
-	companyID := int64(1)
-	companyContactIDs := []int64{2, 3, 4}
-	dealID := "5"
-
-	companyCreatedDate := time.Now().AddDate(0, 0, -5)
-	companyUpdatedDate := companyCreatedDate.AddDate(0, 0, 1)
-
-	company := IntHubspot.Company{
-		CompanyId:  companyID,
-		ContactIds: companyContactIDs,
-		Properties: map[string]IntHubspot.Property{
-			"createdate":             {Value: fmt.Sprintf("%d", companyCreatedDate.Unix()*1000)},
-			"hs_lastmodifieddate":    {Value: fmt.Sprintf("%d", companyUpdatedDate.Unix()*1000)},
-			"company_lifecyclestage": {Value: "lead"},
-			"name": {
-				Value:     "testcompany",
-				Timestamp: companyCreatedDate.Unix() * 1000,
-			},
-			"website": {
-				Value:     "abc.com",
-				Timestamp: companyCreatedDate.Unix() * 1000,
-			},
-			"company_id": {
-				Value: fmt.Sprintf("%d", companyID),
-			},
-			"domain": {
-				Value:     "testcompany.com",
-				Timestamp: companyCreatedDate.Unix() * 1000,
-			},
-		},
-	}
-	enJSON, err := json.Marshal(company)
-	assert.Nil(t, err)
-	companyPJson := postgres.Jsonb{json.RawMessage(enJSON)}
-	hubspotDocument := model.HubspotDocument{
-		TypeAlias: model.HubspotDocumentTypeNameCompany,
-		Value:     &companyPJson,
-	}
-	status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeCompany, []*model.HubspotDocument{&hubspotDocument}, 1)
-	assert.Equal(t, http.StatusCreated, status)
-
-	// contacts for company
-	for i := range companyContactIDs {
-		contact := IntHubspot.Contact{
-			Vid: companyContactIDs[i],
-			Properties: map[string]IntHubspot.Property{
-				"createdate":       {Value: fmt.Sprintf("%d", companyCreatedDate.Add(100*time.Minute).Unix()*1000)},
-				"lastmodifieddate": {Value: fmt.Sprintf("%d", companyCreatedDate.Add(100*time.Minute).Unix()*1000)},
-				"lifecyclestage":   {Value: "lead"},
-			},
-			IdentityProfiles: []IntHubspot.ContactIdentityProfile{
-				{
-					Identities: []IntHubspot.ContactIdentity{
-						{
-							Type:  "LEAD_GUID",
-							Value: getRandomAgentUUID(),
-						},
-					},
-				},
-			},
-		}
-
-		enJSON, err = json.Marshal(contact)
-		assert.Nil(t, err)
-		contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
-		hubspotDocument := model.HubspotDocument{
-			TypeAlias: model.HubspotDocumentTypeNameContact,
-			Value:     &contactPJson,
-		}
-		status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, []*model.HubspotDocument{&hubspotDocument}, 1)
-		assert.Equal(t, http.StatusCreated, status)
-	}
-
-	dealStartTimestamp := time.Now().AddDate(0, 0, -1)
-	deal := map[string]interface{}{
-		"id": dealID,
-		"properties": map[string]interface{}{
-			"createdate":          time.Unix(dealStartTimestamp.Add(time.Hour).Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"hs_lastmodifieddate": time.Unix(dealStartTimestamp.Add(time.Hour).Add(20*time.Minute).Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"dealname":            "testdeal",
-			"dealstage":           "closedlost",
-			"hs_object_id":        "11589340999",
-			"pipeline":            "default",
-		},
-		"associations": map[string]interface{}{
-			"associatedCompanyIds": []int64{companyID},
-			"associatedVids":       []int64{companyContactIDs[2], companyContactIDs[1]},
-		},
-	}
-
-	dealPJson, err := U.EncodeToPostgresJsonb(&deal)
-	assert.Nil(t, err)
-	hubspotDocument = model.HubspotDocument{
-		TypeAlias: model.HubspotDocumentTypeNameDeal,
-		Value:     dealPJson,
-	}
-
-	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
-	assert.Equal(t, http.StatusCreated, status)
-
-	enrichStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
-
-	assert.Equal(t, project.ID, enrichStatus[0].ProjectId)
-	assert.Equal(t, "success", enrichStatus[0].Status)
-	assert.Equal(t, "success", enrichStatus[0].Status)
-	assert.Equal(t, "success", enrichStatus[0].Status)
-
-	// Verfiying contact to company association
-	contactIds := []string{}
-	for i := range companyContactIDs {
-		contactIds = append(contactIds, fmt.Sprintf("%d", companyContactIDs[i]))
-	}
-
-	companyIDstring := fmt.Sprintf("%d", companyID)
-	companyDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{companyIDstring}, model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
-	assert.Equal(t, http.StatusFound, status)
-	assert.Len(t, companyDocuments, 1)
-	company1GroupUserID := companyDocuments[0].GroupUserId
-
-	contactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
-	assert.Equal(t, http.StatusFound, status)
-	assert.Len(t, contactDocuments, 3)
-	for i := range contactDocuments {
-		contactUser, status := store.GetStore().GetUser(project.ID, contactDocuments[i].UserId)
-		assert.Equal(t, http.StatusFound, status)
-		// verify group_1_id is company unique id and group_1_user_id is company user_id
-		assert.Equal(t, true, assertUserGroupValueByColumnName(contactUser, "group_1_id", companyDocuments[0].ID))
-		assert.Equal(t, true, assertUserGroupValueByColumnName(contactUser, "group_1_user_id", companyDocuments[0].GroupUserId))
-	}
-
-	// total company events
-	query := model.Query{
-		From: companyCreatedDate.Unix() - 500,
-		To:   companyUpdatedDate.AddDate(0, 0, 1).Unix() + 500,
-		EventsWithProperties: []model.QueryEventWithProperties{
-			{
-				Name:       U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
-				Properties: []model.QueryProperty{},
-			},
-		},
-		GroupByProperties: []model.QueryGroupByProperty{
-			{
-				Entity:         model.PropertyEntityUser,
-				Property:       "$hubspot_company_name",
-				EventName:      U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
-				EventNameIndex: 1,
-			},
-		},
-		Class:           model.QueryClassEvents,
-		Type:            model.QueryTypeEventsOccurrence,
-		EventsCondition: model.EventCondEachGivenEvent,
-	}
-
-	result, status := store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID, C.EnableOptimisedFilterOnEventUserQuery())
-	assert.Equal(t, http.StatusOK, status)
-	assert.Equal(t, U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED, result.Results[0].Rows[0][1])
-	assert.Equal(t, "testcompany", result.Results[0].Rows[0][2])
-	assert.Equal(t, float64(1), result.Results[0].Rows[0][3])
-
-	// total users
-	query = model.Query{
-		From: companyCreatedDate.Unix() - 500,
-		To:   companyUpdatedDate.AddDate(0, 0, 1).Unix() + 500,
-		EventsWithProperties: []model.QueryEventWithProperties{
-			{
-				Name:       U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
-				Properties: []model.QueryProperty{},
-			},
-		},
-		Class:           model.QueryClassEvents,
-		Type:            model.QueryTypeUniqueUsers,
-		EventsCondition: model.EventCondEachGivenEvent,
-	}
-
-	result, status = store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID, C.EnableOptimisedFilterOnEventUserQuery())
-	assert.Equal(t, http.StatusOK, status)
-	assert.Equal(t, float64(3), result.Results[0].Rows[0][2])
-
-	// verify deal groups
-	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{dealID}, model.HubspotDocumentTypeDeal, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
-	assert.Equal(t, http.StatusFound, status)
-	assert.Len(t, documents, 3)
-	assert.NotEqual(t, "", documents[0].GroupUserId)
-	assert.Equal(t, documents[0].GroupUserId, documents[1].GroupUserId)
-	deal1GroupUserID := documents[0].GroupUserId
-
-	groupRelationship, status := store.GetStore().GetGroupRelationshipByUserID(project.ID, deal1GroupUserID)
-	assert.Equal(t, http.StatusFound, status)
-	assert.Len(t, groupRelationship, 1)
-	assert.Equal(t, groupRelationship[0].LeftGroupUserID, deal1GroupUserID)
-	assert.Equal(t, groupRelationship[0].RightGroupUserID, company1GroupUserID)
-
-	// verify contact not associated to any
-	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%d", companyContactIDs[0])}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
-	assert.Equal(t, http.StatusFound, status)
-	assert.Len(t, documents, 2)
-	assert.Equal(t, "", documents[0].GroupUserId)
-	user, status := store.GetStore().GetUser(project.ID, documents[0].UserId)
-	assert.Equal(t, http.StatusFound, status)
-	assert.True(t, assertUserGroupValueByColumnName(user, "group_2_user_id", ""))
-}
-
-func TestHubspotDealV3SmartEvent(t *testing.T) {
+func TestHubspotEngagementMeetingDatetimeProperties(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
 	createdAt := time.Now().UTC().AddDate(0, 0, -1)
+	updatedDate := createdAt.AddDate(0, 0, 1)
 
-	dealCreatedDate := createdAt.AddDate(0, 0, -1)
-	dealUpdatedDate := dealCreatedDate.AddDate(0, 0, 1)
-
-	deal := IntHubspot.Deal{
-		DealId: 1,
+	email := getRandomEmail()
+	contact := IntHubspot.Contact{
+		Vid: 1,
 		Properties: map[string]IntHubspot.Property{
-			"hs_createdate":       {Value: fmt.Sprintf("%d", dealCreatedDate.Unix()*1000)},
-			"hs_lastmodifieddate": {Value: fmt.Sprintf("%d", dealUpdatedDate.Unix()*1000)},
-			"dealname":            {Value: "testdeal"},
-			"dealstage":           {Value: "closedlost"},
-			"pipeline":            {Value: "default"},
+			"createdate":       {Value: fmt.Sprintf("%d", createdAt.Unix()*1000)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", updatedDate.Unix()*1000)},
+			"lifecyclestage":   {Value: "lead"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: email,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
 		},
 	}
 
-	enJSON, err := json.Marshal(deal)
+	enJSON, err := json.Marshal(contact)
 	assert.Nil(t, err)
-	dealPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
 	hubspotDocument := model.HubspotDocument{
-		TypeAlias: model.HubspotDocumentTypeNameDeal,
-		Value:     &dealPJson,
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
 	}
 	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
-	assert.Equal(t, dealCreatedDate.Unix()*1000, hubspotDocument.Timestamp)
+	assert.Equal(t, createdAt.Unix()*1000, hubspotDocument.Timestamp)
+
+	engagementV3CreatedDate := createdAt
+	engagementV3UpdatedDate := engagementV3CreatedDate.AddDate(0, 0, 1)
+	engagementV3Timestamp := (engagementV3CreatedDate.Unix() + 3600*5)
+
+	meetingV3StartTimestamp := engagementV3Timestamp
+	meetingV3EndTimestamp := engagementV3Timestamp + (30 * 60)
+
+	engagementV3 := IntHubspot.EngagementsV3{
+		Id: "2",
+		Properties: map[string]interface{}{
+			"hs_createdate":         time.Unix(engagementV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":   time.Unix(engagementV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_activity_type":      "Sample Intro Meeting",
+			"hs_meeting_title":      "Test Meeting",
+			"hs_timestamp":          time.Unix(engagementV3Timestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_meeting_active":     "true",
+			"type":                  "MEETING",
+			"hs_meeting_outcome":    "SCHEDULED",
+			"hs_meeting_source":     "CRM_UI",
+			"hs_meeting_start_time": time.Unix(meetingV3StartTimestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
+			"hs_meeting_end_time":   time.Unix(meetingV3EndTimestamp, 0).UTC().Format(model.HubspotDateTimeLayout),
+		},
+		Associations: map[string][]interface{}{
+			"contactIds": []interface{}{
+				1,
+			},
+		},
+	}
+
+	enJSON, err = json.Marshal(engagementV3)
+	assert.Nil(t, err)
+	engagementPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &engagementPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, engagementV3CreatedDate.Unix()*1000, hubspotDocument.Timestamp)
 
 	enrichStatus, failure := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
 	assert.Equal(t, false, failure)
@@ -7685,297 +7527,86 @@ func TestHubspotDealV3SmartEvent(t *testing.T) {
 		assert.Equal(t, project.ID, enrichStatus[i].ProjectId)
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 
-		if enrichStatus[i].Type == model.HubspotDocumentTypeNameDeal {
+		if enrichStatus[i].Type == model.HubspotDocumentTypeNameEngagement {
 			assert.Equal(t, 3, enrichStatus[i].Count)
 		}
 	}
 
-	filter := model.SmartCRMEventFilter{
-		Source:               model.SmartCRMEventSourceHubspot,
-		ObjectType:           "deal",
-		Description:          "hubspot deal dealstage",
-		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
-		Filters: []model.PropertyFilter{
-			{
-				Name: "dealstage",
-				Rules: []model.CRMFilterRule{
-					{
-						PropertyState: model.CurrentState,
-						Value:         "closedwon",
-						Operator:      model.COMPARE_EQUAL,
-					},
-					{
-						PropertyState: model.PreviousState,
-						Value:         "closedlost",
-						Operator:      model.COMPARE_EQUAL,
-					},
-				},
-				LogicalOp: model.LOGICAL_OP_AND,
-			},
-		},
-		LogicalOp:               model.LOGICAL_OP_AND,
-		TimestampReferenceField: "time",
-	}
+	eventName, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, eventName)
 
-	currentProperties := make(map[string]interface{})
-	currentProperties["dealstage"] = "closedwon"
-	smartEvent, _, ok := IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "1", hubspotDocument.Type, &currentProperties, nil, &filter)
-	assert.Equal(t, true, ok)
-	assert.Equal(t, "test", smartEvent.Name)
-	assert.Equal(t, "closedlost", smartEvent.Properties["$prev_hubspot_deal_dealstage"])
-	assert.Equal(t, "closedwon", smartEvent.Properties["$curr_hubspot_deal_dealstage"])
+	events, status := store.GetStore().GetEventsByEventNameIDANDTimeRange(project.ID, eventName.ID, engagementV3CreatedDate.Unix(), engagementV3CreatedDate.Unix()+1000)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, events)
+	assert.Equal(t, 1, len(events))
 
-	dealV3CreatedDate := createdAt
-	dealV3UpdatedDate := dealV3CreatedDate.AddDate(0, 0, 1)
-
-	dealV3 := IntHubspot.DealV3{
-		DealId: "1",
-		Properties: map[string]interface{}{
-			"createdate":          time.Unix(dealV3CreatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"hs_lastmodifieddate": time.Unix(dealV3UpdatedDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"dealname":            "testdeal",
-			"dealstage":           "closedwon",
-			"pipeline":            "default",
-		},
-	}
-
-	enJSON, err = json.Marshal(dealV3)
+	eventProperties, err := U.DecodePostgresJsonbAsPropertiesMap(&events[0].Properties)
 	assert.Nil(t, err)
-	dealPJson = postgres.Jsonb{json.RawMessage(enJSON)}
-	hubspotDocument = model.HubspotDocument{
-		TypeAlias: model.HubspotDocumentTypeNameDeal,
-		Value:     &dealPJson,
-	}
-	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Equal(t, dealV3UpdatedDate.Unix()*1000, hubspotDocument.Timestamp)
+	assert.NotNil(t, eventProperties)
 
-	enrichStatus, failure = IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
-	assert.Equal(t, false, failure)
-	for i := range enrichStatus {
-		assert.Equal(t, project.ID, enrichStatus[i].ProjectId)
-		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
-
-		if enrichStatus[i].Type == model.HubspotDocumentTypeNameDeal {
-			assert.Equal(t, 1, enrichStatus[i].Count)
-		}
-	}
-
-	// previous rule should fail
-	currentProperties = make(map[string]interface{})
-	currentProperties["dealstage"] = "closedwon"
-	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "1", hubspotDocument.Type, &currentProperties, nil, &filter)
-	assert.Equal(t, false, ok)
-
-	// use any change should also fail
-	filter.FilterEvaluationType = model.FilterEvaluationTypeAny
-	currentProperties = make(map[string]interface{})
-	currentProperties["dealstage"] = "closedwon"
-	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "1", hubspotDocument.Type, &currentProperties, nil, &filter)
-	assert.Equal(t, false, ok)
-
-	dealV3.Properties["dealstage"] = "presentationscheduled"
-	dealV3.Properties["hs_lastmodifieddate"] = time.Unix(dealV3UpdatedDate.Add(time.Hour).Unix(), 0).UTC().Format(model.HubspotDateTimeLayout)
-
-	enJSON, err = json.Marshal(dealV3)
+	assert.Equal(t, "2", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_id"]))
+	engagementV3TimestampInFloat, err := U.GetPropertyValueAsFloat64((*eventProperties)["$hubspot_engagement_timestamp"])
 	assert.Nil(t, err)
-	dealPJson = postgres.Jsonb{json.RawMessage(enJSON)}
-	hubspotDocument = model.HubspotDocument{
-		TypeAlias: model.HubspotDocumentTypeNameDeal,
-		Value:     &dealPJson,
-	}
-	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Equal(t, dealV3UpdatedDate.Add(time.Hour).Unix()*1000, hubspotDocument.Timestamp)
+	assert.Equal(t, engagementV3Timestamp, int64(engagementV3TimestampInFloat))
+	assert.Equal(t, "MEETING", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_type"]))
+	assert.Equal(t, "CRM_UI", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_source"]))
+	assert.Equal(t, "true", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_active"]))
+	assert.Equal(t, "Test Meeting", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_title"]))
+	assert.Equal(t, "SCHEDULED", U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_meetingoutcome"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*eventProperties)["$hubspot_engagement_email"]))
+	assert.Equal(t, float64(meetingV3StartTimestamp), (*eventProperties)["$hubspot_engagement_starttime"])
+	assert.Equal(t, float64(meetingV3EndTimestamp), (*eventProperties)["$hubspot_engagement_endtime"])
+	assert.Equal(t, "t", U.GetPropertyValueAsString((*eventProperties)[U.EP_SKIP_SESSION]))
+	assert.Equal(t, float64(engagementV3CreatedDate.Unix()), (*eventProperties)[U.EP_TIMESTAMP])
 
-	enrichStatus, failure = IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
-	assert.Equal(t, false, failure)
-	for i := range enrichStatus {
-		assert.Equal(t, project.ID, enrichStatus[i].ProjectId)
-		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
-
-		if enrichStatus[i].Type == model.HubspotDocumentTypeNameDeal {
-			assert.Equal(t, 1, enrichStatus[i].Count)
-		}
-	}
-
-	filter.FilterEvaluationType = model.FilterEvaluationTypeSpecific
-	filter.Filters[0].Rules = []model.CRMFilterRule{
-		{
-			PropertyState: model.CurrentState,
-			Value:         "closedwon",
-			Operator:      model.COMPARE_EQUAL,
-		},
-		{
-			PropertyState: model.PreviousState,
-			Value:         "presentationscheduled",
-			Operator:      model.COMPARE_EQUAL,
-		},
-	}
-
-	currentProperties = make(map[string]interface{})
-	currentProperties["dealstage"] = "closedwon"
-
-	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "1", hubspotDocument.Type, &currentProperties, nil, &filter)
-	assert.Equal(t, true, ok)
-	assert.Equal(t, "test", smartEvent.Name)
-	assert.Equal(t, "presentationscheduled", smartEvent.Properties["$prev_hubspot_deal_dealstage"])
-	assert.Equal(t, "closedwon", smartEvent.Properties["$curr_hubspot_deal_dealstage"])
-}
-
-func sendGetCRMObjectPropertiesReq(r *gin.Engine, projectID int64, agent *model.Agent, objectSource, objectType string) *httptest.ResponseRecorder {
-	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
-	if err != nil {
-		log.WithError(err).Error("Error creating cookie data.")
-		return nil
-	}
-
-	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/crm/%s/%s/properties", projectID, objectSource, objectType)).
-		WithCookie(&http.Cookie{
-			Name:   C.GetFactorsCookieName(),
-			Value:  cookieData,
-			MaxAge: 1000,
-		})
-
-	req, err := rb.Build()
-	if err != nil {
-		log.WithError(err).Error("Error creating request")
-	}
-
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	return w
-}
-
-func TestGetCRMObjectPropertiesHandlerForDealV3(t *testing.T) {
-	project, agent, err := SetupProjectWithAgentDAO()
+	userProperties, err := U.DecodePostgresJsonbAsPropertiesMap(events[0].UserProperties)
 	assert.Nil(t, err)
-	r := gin.Default()
-	H.InitAppRoutes(r)
-
-	createdDate := time.Now().AddDate(0, 0, -1)
-
-	deal := IntHubspot.DealV3{
-		DealId: "1",
-		Properties: map[string]interface{}{
-			"createdate":          time.Unix(createdDate.Add(time.Hour).Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"hs_lastmodifieddate": time.Unix(createdDate.Add(time.Hour).Add(20*time.Minute).Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"dealname":            "testdeal",
-			"dealstage":           "closedlost",
-			"hs_object_id":        "11589340999",
-			"pipeline":            "default",
-		},
-	}
-
-	enJSON, err := json.Marshal(deal)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$email"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$user_id"]))
+	assert.Equal(t, email, U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_email"]))
+	assert.Equal(t, "123-45", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lead_guid"]))
+	assert.Equal(t, "lead", U.GetPropertyValueAsString((*userProperties)["$hubspot_contact_lifecyclestage"]))
+	createdateInDocTimestamp, err := U.GetPropertyValueAsFloat64(contact.Properties["createdate"].Value)
 	assert.Nil(t, err)
-	dealPJson := postgres.Jsonb{json.RawMessage(enJSON)}
-	hubspotDocument := model.HubspotDocument{
-		TypeAlias: model.HubspotDocumentTypeNameDeal,
-		Value:     &dealPJson,
-	}
-
-	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
-	assert.Equal(t, http.StatusCreated, status)
-
-	limit := 10
-	for i := 0; i < limit; i++ {
-		createdDate = createdDate.Add(10 * time.Second)
-		deal.Properties["createdate"] = time.Unix(createdDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout)
-		deal.Properties["hs_lastmodifieddate"] = time.Unix(createdDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout)
-		deal.Properties["dealname"] = fmt.Sprintf("testdeal_%d", i)
-
-		enJSON, err := json.Marshal(deal)
-		assert.Nil(t, err)
-		dealPJson = postgres.Jsonb{json.RawMessage(enJSON)}
-
-		hubspotDocumentPrev := &model.HubspotDocument{
-			TypeAlias: model.HubspotDocumentTypeNameDeal,
-			Value:     &dealPJson,
-		}
-		status = store.GetStore().CreateHubspotDocument(project.ID, hubspotDocumentPrev)
-		assert.Equal(t, http.StatusCreated, status)
-	}
-
-	var properties map[string][]string
-	w := sendGetCRMObjectPropertiesReq(r, project.ID, agent, model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameDeal)
-	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
-	err = json.Unmarshal(jsonResponse, &properties)
+	assert.Equal(t, createdateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_createdate"])
+	lastmodifieddateInDocTimestamp, err := U.GetPropertyValueAsFloat64(contact.Properties["lastmodifieddate"].Value)
 	assert.Nil(t, err)
+	assert.Equal(t, lastmodifieddateInDocTimestamp/1000, (*userProperties)["$hubspot_contact_lastmodifieddate"])
+	assert.Equal(t, float64(createdAt.Unix()), (*userProperties)[U.UP_JOIN_TIME])
 
-	assert.Equal(t, 2, len(properties))
-	categoricalProperties := properties["categorical"]
-	assert.Equal(t, 4, len(categoricalProperties))
-	assert.Contains(t, categoricalProperties, "hs_object_id")
-	assert.Contains(t, categoricalProperties, "pipeline")
-	assert.Contains(t, categoricalProperties, "dealname")
-	assert.Contains(t, categoricalProperties, "dealstage")
-
-	datetimeProperties := properties["datetime"]
-	assert.Equal(t, 2, len(datetimeProperties))
-	assert.Contains(t, datetimeProperties, "hs_lastmodifieddate")
-	assert.Contains(t, datetimeProperties, "createdate")
-}
-
-func TestGetCRMObjectValuesByPropertyNameHandlerForDealV3(t *testing.T) {
-	project, agent, err := SetupProjectWithAgentDAO()
-	assert.Nil(t, err)
-	r := gin.Default()
-	H.InitAppRoutes(r)
-
-	createdDate := time.Now().AddDate(0, 0, -1)
-
-	deal := IntHubspot.DealV3{
-		DealId: "1",
-		Properties: map[string]interface{}{
-			"createdate":          time.Unix(createdDate.Add(time.Hour).Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"hs_lastmodifieddate": time.Unix(createdDate.Add(time.Hour).Add(20*time.Minute).Unix(), 0).UTC().Format(model.HubspotDateTimeLayout),
-			"dealname":            "testdeal",
-			"dealstage":           "closedlost",
-			"hs_object_id":        "11589340999",
-			"pipeline":            "default",
-		},
+	anyFailure, engagementPropertyDetailsStatus := IntHubspot.SyncEngagementDatetimeProperties(project.ID)
+	assert.Equal(t, false, anyFailure)
+	assert.Equal(t, 5, len(engagementPropertyDetailsStatus))
+	for i := range engagementPropertyDetailsStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, engagementPropertyDetailsStatus[i].Status)
+		assert.Equal(t, project.ID, engagementPropertyDetailsStatus[i].ProjectId)
+		assert.Equal(t, model.HubspotDocumentTypeNameEngagement, engagementPropertyDetailsStatus[i].Type)
 	}
 
-	enJSON, err := json.Marshal(deal)
-	assert.Nil(t, err)
-	dealPJson := postgres.Jsonb{json.RawMessage(enJSON)}
-	hubspotDocument := model.HubspotDocument{
-		TypeAlias: model.HubspotDocumentTypeNameDeal,
-		Value:     &dealPJson,
-	}
+	// Check property details
+	status, propertyDetail := store.GetStore().GetPropertyTypeFromDB(project.ID, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED, "$hubspot_engagement_starttime", false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, U.PropertyTypeDateTime, propertyDetail.Type)
 
-	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	status, propertyDetail = store.GetStore().GetPropertyTypeFromDB(project.ID, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED, "$hubspot_engagement_endtime", false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, U.PropertyTypeDateTime, propertyDetail.Type)
 
-	limit := 10
-	for i := 0; i < limit; i++ {
-		createdDate = createdDate.Add(10 * time.Second)
-		deal.Properties["createdate"] = time.Unix(createdDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout)
-		deal.Properties["hs_lastmodifieddate"] = time.Unix(createdDate.Unix(), 0).UTC().Format(model.HubspotDateTimeLayout)
-		deal.Properties["dealname"] = fmt.Sprintf("testdeal_%d", i)
+	status, propertyDetail = store.GetStore().GetPropertyTypeFromDB(project.ID, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED, "$hubspot_engagement_timestamp", false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, U.PropertyTypeDateTime, propertyDetail.Type)
 
-		enJSON, err := json.Marshal(deal)
-		assert.Nil(t, err)
-		dealPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	status, propertyDetail = store.GetStore().GetPropertyTypeFromDB(project.ID, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED, "$hubspot_engagement_starttime", false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, U.PropertyTypeDateTime, propertyDetail.Type)
 
-		hubspotDocumentPrev := &model.HubspotDocument{
-			TypeAlias: model.HubspotDocumentTypeNameDeal,
-			Value:     &dealPJson,
-		}
-		status = store.GetStore().CreateHubspotDocument(project.ID, hubspotDocumentPrev)
-		assert.Equal(t, http.StatusCreated, status)
-	}
+	status, propertyDetail = store.GetStore().GetPropertyTypeFromDB(project.ID, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED, "$hubspot_engagement_endtime", false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, U.PropertyTypeDateTime, propertyDetail.Type)
 
-	var propertyValues []interface{}
-	w := sendGetCRMObjectValuesByPropertyNameReq(r, project.ID, agent, model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameDeal, "dealname")
-	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
-	err = json.Unmarshal(jsonResponse, &propertyValues)
-	assert.Nil(t, err)
-
-	for i := 0; i < limit; i++ {
-		assert.Contains(t, propertyValues, fmt.Sprintf("%s_%d", "testdeal", i))
-	}
+	status, propertyDetail = store.GetStore().GetPropertyTypeFromDB(project.ID, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED, "$hubspot_engagement_timestamp", false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, U.PropertyTypeDateTime, propertyDetail.Type)
 }
