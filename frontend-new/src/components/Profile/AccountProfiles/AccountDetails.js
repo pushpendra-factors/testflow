@@ -347,9 +347,9 @@ function AccountDetails({
           onClick={() => {
             history.replace(PathUrls.ProfileAccounts, {
               activeSegment: location.state?.activeSegment,
-              fromDetails: true,
+              fromDetails: location.state?.fromDetails,
               accountPayload: location.state?.accountPayload,
-              currentPage: location.state.currentPage
+              currentPage: location.state?.currentPage
             });
           }}
         />
@@ -363,9 +363,9 @@ function AccountDetails({
         onClick={() => {
           history.replace(PathUrls.ProfileAccounts, {
             activeSegment: location.state?.activeSegment,
-            fromDetails: true,
+            fromDetails: location.state?.fromDetails,
             accountPayload: location.state?.accountPayload,
-            currentPage: location.state.currentPage
+            currentPage: location.state?.currentPage
           });
         }}
         icon={<SVG name='times' />}
