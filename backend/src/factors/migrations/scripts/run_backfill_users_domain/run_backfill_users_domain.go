@@ -24,6 +24,10 @@ func main() {
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
+	redisHost := flag.String("redis_host", "localhost", "")
+	redisPort := flag.Int("redis_port", 6379, "")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	sentryRollupSyncInSecs := flag.Int("sentry_rollup_sync_in_seconds", 300, "Enables to send errors to sentry in given interval.")
@@ -31,6 +35,7 @@ func main() {
 	startTime := flag.Int64("start_timestamp", 0, "Staring timestamp for users.")
 	endTime := flag.Int64("end_timestamp", 0, "Ending timestamp for users. End timestamp will be included")
 	wetRun := flag.Bool("wet", false, "Wet run")
+	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	flag.Parse()
 	defer util.NotifyOnPanic("Task#run_backfill_users_domain", *env)
 
@@ -56,13 +61,21 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     taskID,
 		},
+		RedisHost:              *redisHost,
+		RedisPort:              *redisPort,
+		RedisHostPersistent:    *redisHostPersistent,
+		RedisPortPersistent:    *redisPortPersistent,
 		SentryDSN:              *sentryDSN,
 		SentryRollupSyncInSecs: *sentryRollupSyncInSecs,
 		PrimaryDatastore:       *primaryDatastore,
+		CacheSortedSet:         *cacheSortedSet,
 	}
 
 	C.InitConf(config)
+	C.InitSortedSetCache(config.CacheSortedSet)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
 	err := C.InitDB(*config)
 	if err != nil {
@@ -137,6 +150,7 @@ func startBackfillUserDomains(projectID int64, startTime, endTime int64, wetRun 
 		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID}).Info("AssociateUserDomainsGroup without customer user id.")
 		if !wetRun {
 			totalusersWithoutCustomerUserIDUpdated++
+			continue
 		}
 
 		status := store.GetStore().AssociateUserDomainsGroup(projectID, userID, "", "")
