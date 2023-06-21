@@ -18,7 +18,8 @@ const ReportTable = ({
   selectedChannel,
   selectedCampaigns,
   isSixSignalActivated,
-  dataSelected
+  dataSelected,
+  isPastDateDataAvailable
 }: ReportTableProps) => {
   const [searchText, setSearchText] = useState<string>('');
   const [tableData, setTableData] = useState<StringObject[]>([]);
@@ -135,7 +136,9 @@ const ReportTable = ({
       <ConfigProvider
         renderEmpty={() => {
           if (isLoggedIn) {
-            return isSixSignalActivated ? NoDataState : NoIntegrationState;
+            return isSixSignalActivated || isPastDateDataAvailable
+              ? NoDataState
+              : NoIntegrationState;
           }
           return NoDataState;
         }}

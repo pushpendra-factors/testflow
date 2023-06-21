@@ -137,7 +137,7 @@ export default function GroupSelect({
       let groupValueOptions: OptionType[] = [];
       //The Value is Modified, to extract the group information when Value-Labels are same.
       options.forEach((group) => {
-        group.values.forEach((groupValue) => {
+        group.values?.forEach((groupValue) => {
           groupValueOptions.push({
             value: groupValue?.value,
             label: groupValue?.label,

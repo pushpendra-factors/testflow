@@ -276,7 +276,7 @@ const SixSignalReport = ({
 
   //Effect for fetching dates
   useEffect(() => {
-    if (!active_project?.id || !isSixSignalActivated) return;
+    if (!active_project?.id) return;
     const getSavedReports = async () => {
       try {
         const res = (await getSavedReportDates(
@@ -295,13 +295,17 @@ const SixSignalReport = ({
             type: VisitorReportActions.SET_SELECTED_DATE,
             payload: resDates?.[0]?.formattedRange
           });
+          localDispatch({
+            type: VisitorReportActions.SET_PAST_DATE_DATA_AVAILABILITY,
+            payload: Array.isArray(res.data) && res.data.length > 0
+          });
         }
       } catch (error) {
         logger.error('Error in fetching dates', error);
       }
     };
     getSavedReports();
-  }, [active_project?.id, isSixSignalActivated]);
+  }, [active_project?.id]);
 
   //Effect for fetching the visitor identification public data
   useEffect(() => {
@@ -394,20 +398,14 @@ const SixSignalReport = ({
       }
     };
 
-    if (
-      isLoggedIn &&
-      active_project?.id &&
-      state.selectedDate &&
-      isSixSignalActivated
-    )
+    if (isLoggedIn && active_project?.id && state.selectedDate)
       fetchDataForLoggedInUser();
   }, [
     isLoggedIn,
     active_project,
     state.selectedDate,
     state.selectedPageViews,
-    getDateObjFromSelectedDate,
-    isSixSignalActivated
+    getDateObjFromSelectedDate
   ]);
 
   //Effect for formatting data when api data is available.
@@ -710,7 +708,9 @@ const SixSignalReport = ({
                 }
                 icon={<SVG name={'calendar'} color='#8692A3' size={16} />}
                 className={style.customButton}
-                disabled={!isSixSignalActivated}
+                disabled={
+                  !state.isPastDatesDataAvailable && !isSixSignalActivated
+                }
               >
                 {state?.selectedDate ? state.selectedDate : 'Select Report'}
               </Button>
@@ -750,6 +750,7 @@ const SixSignalReport = ({
                 selectedChannel={state.selectedChannel}
                 selectedCampaigns={state.selectedCampaigns}
                 isSixSignalActivated={isSixSignalActivated}
+                isPastDateDataAvailable={state.isPastDatesDataAvailable}
                 dataSelected={state.selectedDate}
               />
               {!!reportData && reportData.result_group?.[0]?.rows?.length > 0 && (
