@@ -95,7 +95,6 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 	if resp.StatusCode == http.StatusUnauthorized {
 		var errorResponse map[string]interface{}
 		json.Unmarshal(body, &errorResponse)
-		logCtx.WithField("response", errorResponse).Error("Error response body teams attempt 1.")
 		errorCode, ok := errorResponse["error"].(map[string]interface{})["code"].(string)
 		if ok && errorCode == "InvalidAuthenticationToken" {
 			token, err := RefreshAndGetTeamsAccessToken(projectID, agentUUID)
@@ -126,8 +125,7 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 	if resp.StatusCode != http.StatusCreated {
 		var errorResponse map[string]interface{}
 		json.Unmarshal(body, &errorResponse)
-		logCtx.WithField("response", errorResponse).Error("Error response body teams attempt 2.")
-		return errors.New(fmt.Sprintf("failed to send Teams message: %v", resp.Status))
+		return fmt.Errorf("teams failure: Status - %v; Response - %v", resp.Status, errorResponse)
 	}
 
 	return nil

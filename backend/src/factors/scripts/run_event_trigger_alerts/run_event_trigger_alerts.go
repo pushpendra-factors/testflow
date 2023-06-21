@@ -958,7 +958,7 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				channel.ChannelId, message)
 			if err != nil {
 				errMsg := err.Error()
-				logCtx.WithError(err).Error("failed to send teams message: ", errMsg)
+				logCtx.WithError(err).Error("failed to send teams message")
 				return false, errMsg
 			}
 
