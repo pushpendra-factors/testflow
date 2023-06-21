@@ -837,6 +837,81 @@ func syncHubspotPropertyByType(projectID int64, doctTypeAlias string, fieldName,
 	return nil
 }
 
+/*
+Map defined as follows:
+eventName -> property -> Property type
+*/
+var engagementDatetimePropertiesMap = map[string]map[string]string{
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED: {
+		"starttime": U.PropertyTypeDateTime,
+		"endtime":   U.PropertyTypeDateTime,
+		"timestamp": U.PropertyTypeDateTime,
+	},
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED: {
+		"starttime": U.PropertyTypeDateTime,
+		"endtime":   U.PropertyTypeDateTime,
+		"timestamp": U.PropertyTypeDateTime,
+	},
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL: {
+		"createdat":   U.PropertyTypeDateTime,
+		"lastupdated": U.PropertyTypeDateTime,
+		"timestamp":   U.PropertyTypeDateTime,
+	},
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED: {
+		"timestamp": U.PropertyTypeDateTime,
+	},
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED: {
+		"timestamp": U.PropertyTypeDateTime,
+	},
+}
+
+func SyncEngagementDatetimeProperties(projectID int64) (bool, []Status) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	if projectID == 0 {
+		logCtx.Error("Missing project_id.")
+		return true, nil
+	}
+
+	var allStatus []Status
+	anyFailures := false
+
+	for eventName := range engagementDatetimePropertiesMap {
+		var engagementMeetingStatus Status
+		engagementMeetingStatus.ProjectId = projectID
+		engagementMeetingStatus.Type = model.HubspotDocumentTypeNameEngagement
+
+		var engagementMeetingFailure bool
+
+		for fieldName, pType := range engagementDatetimePropertiesMap[eventName] {
+			enKey := model.GetCRMEnrichPropertyKeyByType(
+				model.SmartCRMEventSourceHubspot,
+				model.HubspotDocumentTypeNameEngagement,
+				fieldName,
+			)
+
+			err := store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, pType, false, true)
+			if err != nil {
+				logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).WithError(err).Error("Failed to create event property details.")
+				engagementMeetingFailure = true
+			} else {
+				engagementMeetingFailure = false
+			}
+		}
+
+		if engagementMeetingFailure {
+			engagementMeetingStatus.Status = U.CRM_SYNC_STATUS_FAILURES
+			anyFailures = true
+		} else {
+			engagementMeetingStatus.Status = U.CRM_SYNC_STATUS_SUCCESS
+		}
+
+		allStatus = append(allStatus, engagementMeetingStatus)
+	}
+
+	return anyFailures, allStatus
+}
+
 // SyncDatetimeAndNumericalProperties sync datetime and numerical properties to the property_details table
 func SyncDatetimeAndNumericalProperties(projectID int64, apiKey, refreshToken string) (bool, []Status) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
@@ -902,7 +977,6 @@ func SyncDatetimeAndNumericalProperties(projectID int64, apiKey, refreshToken st
 			if failure := syncHubspotPropertyByType(projectID, docType, fieldName, fieldType); failure != nil {
 				docTypeFailure = true
 			}
-
 		}
 
 		if docTypeFailure {
@@ -913,6 +987,15 @@ func SyncDatetimeAndNumericalProperties(projectID int64, apiKey, refreshToken st
 		}
 
 		allStatus = append(allStatus, status)
+	}
+
+	if C.AllowHubspotEngagementsByProjectID(projectID) {
+		failure, engagementsStatus := SyncEngagementDatetimeProperties(projectID)
+		if failure {
+			anyFailures = true
+		}
+
+		allStatus = append(allStatus, engagementsStatus...)
 	}
 
 	return anyFailures, allStatus
