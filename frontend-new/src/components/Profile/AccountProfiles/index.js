@@ -966,7 +966,10 @@ function AccountProfiles({
               `/profiles/accounts/${btoa(account.identity)}?group=${
                 activeSegment?.type ? activeSegment.type : accountPayload.source
               }&view=birdview`,
-              { accountPayload: accountPayload, activeSegment: activeSegment, currentPage: currentPage }
+              { accountPayload: accountPayload,
+                activeSegment: activeSegment,
+                fromDetails: true,
+                currentPage: currentPage }
             );
           }
         })}

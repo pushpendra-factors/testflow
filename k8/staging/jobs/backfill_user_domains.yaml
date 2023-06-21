@@ -1,0 +1,60 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: staging-containerd
+  name: backfill-users-domain
+spec:
+  concurrencyPolicy: Forbid
+  schedule: "1 2 3 4 5" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: staging-containerd
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: staging-containerd
+          containers:
+            - name: backfill-users-domain
+              image: us.gcr.io/factors-staging/backfill-users-domain:0.1
+              imagePullPolicy: IfNotPresent
+              args:
+                - --env
+                - $(ENV)
+                - --api_domain
+                - $(API_DOMAIN)
+                - --memsql_host
+                - $(MEMSQL_HOST)
+                - --memsql_port
+                - $(MEMSQL_PORT)
+                - --memsql_name
+                - $(MEMSQL_DB)
+                - --memsql_user
+                - $(MEMSQL_HEAVY_USER)
+                - --memsql_pass
+                - $(MEMSQL_PASSWORD)
+                - --memsql_cert
+                - $(MEMSQL_CERTIFICATE)
+                - --sentry_dsn
+                - $(SENTRY_DSN)
+                - --project_ids
+                - ""
+                - --start_time
+                - 0
+                - --end_time
+                - 0
+              envFrom:
+                - configMapRef:
+                    name: config-env
+                - configMapRef:
+                    name: config-memsql
+                - secretRef:
+                    name: secret-memsql
+                - secretRef:
+                    name: secret-sentry
+          restartPolicy: OnFailure
