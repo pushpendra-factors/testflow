@@ -953,7 +953,7 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 	if wetRun {
 
 		for _, channel := range teamsChannels.TeamsChannelList {
-			message := getTeamsMessageTemp(msg)
+			message := getTeamsMsgBlock(msg)
 			err := teams.SendTeamsMessage(projectID, agentUUID, teamsChannels.TeamsId,
 				channel.ChannelId, message)
 			if err != nil {
