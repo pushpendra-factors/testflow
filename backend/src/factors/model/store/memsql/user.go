@@ -3190,7 +3190,7 @@ func (store *MemSQL) createOrGetDomainUserIDByProperties(projectID int64, groupN
 		return "", "", http.StatusNotFound
 	}
 
-	groupUserID, status := store.CreateOrGetDomainGroupUser(projectID, groupName, cleanedDomainName, U.TimeNowUnix(), model.GetGroupUserSourceByGroupName(groupName))
+	groupUserID, status := store.CreateOrGetDomainGroupUser(projectID, model.GROUP_NAME_DOMAINS, cleanedDomainName, U.TimeNowUnix(), model.GetGroupUserSourceByGroupName(model.GROUP_NAME_DOMAINS))
 	if status != http.StatusCreated && status != http.StatusFound {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for group user by group id in createOrGetDomainUserIDByProperties.")
 		return "", "", http.StatusInternalServerError
