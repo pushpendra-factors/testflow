@@ -6,7 +6,7 @@ class DataTransformation:
     
     def update_org_data(map_id_to_org_data, records):
         for data in records:
-            id = data['pivotValue'].split(':')[3]
+            id = data['pivotValues'][0].split(':')[3]
             data['id'] = id
             if id not in map_id_to_org_data:
                 data['vanityName'] = '$none'
@@ -56,7 +56,7 @@ class DataTransformation:
                                                 campaign_meta, creative_meta):
         final_response = []
         for data in response:
-            id = data['pivotValue'].split(':')[3]
+            id = data['pivotValues'][0].split(':')[3]
             data.update({'id': id})
             if doc_type == CAMPAIGN_GROUP_INSIGHTS:
                 if id in campaign_group_meta:

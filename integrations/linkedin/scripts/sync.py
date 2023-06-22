@@ -39,7 +39,7 @@ parser.add_option('--data_service_host', dest='data_service_host',
     help='Data service host', default='http://localhost:8089')
 parser.add_option('--run_member_company_insights', dest='run_member_company_insights', 
     help='', default='True')
-parser.add_option('--backfill_project_ids', dest='backfill_project_ids', help='', default='', type=str)
+parser.add_option('--backfill_project_ids', dest='backfill_project_ids', help='', default='1', type=str)
 
 def ping_healthcheck(successes, failures, token_failures):
         status_msg = ''
@@ -109,16 +109,18 @@ def get_collections(options, linkedin_setting, sync_info_with_type, end_timestam
             if res['status'] == 'failed':
                 return res
             
-            res = DataFetch.etl_ads_hierarchical_data(
-                    options, linkedin_setting, sync_info_with_type, campaign_group_meta,
-                    campaign_meta, creative_meta, CREATIVES, CREATIVE_INSIGHTS,
-                    URL_ENDPOINT_CREATIVE_META, 'CREATIVE', end_timestamp)
+            # keeping it commented for future reference
+            
+            # res = DataFetch.etl_ads_hierarchical_data(
+            #         options, linkedin_setting, sync_info_with_type, campaign_group_meta,
+            #         campaign_meta, creative_meta, CREATIVES, CREATIVE_INSIGHTS,
+            #         URL_ENDPOINT_CREATIVE_META, 'CREATIVE', end_timestamp)
 
-            requests_counter += res[API_REQUESTS]
-            if res['status'] == 'skipped':
-                skipMsgs.append(res['errMsg'])
-            if res['status'] == 'failed':
-                return res
+            # requests_counter += res[API_REQUESTS]
+            # if res['status'] == 'skipped':
+            #     skipMsgs.append(res['errMsg'])
+            # if res['status'] == 'failed':
+            #     return res
         
         if run_member_company_insights:
             res = DataFetch.etl_member_company_data(
