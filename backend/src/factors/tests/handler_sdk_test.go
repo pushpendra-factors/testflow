@@ -4022,11 +4022,25 @@ func TestSDKBackfillDomainUser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, domainUserID)
 
+	domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 9, *domainUser.Source)
+	domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "abc.com", domainName)
+
 	user, status = store.GetStore().GetUser(project.ID, userHubspot)
 	assert.Equal(t, http.StatusFound, status)
 	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, domainUserID)
+
+	domainUser, status = store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 9, *domainUser.Source)
+	domainName, err = model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "abc2.com", domainName)
 
 	user, status = store.GetStore().GetUser(project.ID, userSalesforce)
 	assert.Equal(t, http.StatusFound, status)
@@ -4034,11 +4048,24 @@ func TestSDKBackfillDomainUser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, domainUserID)
 
+	domainUser, status = store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 9, *domainUser.Source)
+	domainName, err = model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "abc3.com", domainName)
+
 	user, status = store.GetStore().GetUser(project.ID, sixSignalGroupUserID)
 	assert.Equal(t, http.StatusFound, status)
 	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, domainUserID)
+	domainUser, status = store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 9, *domainUser.Source)
+	domainName, err = model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "abc.com", domainName)
 
 	user, status = store.GetStore().GetUser(project.ID, hubspotGroupUserID)
 	assert.Equal(t, http.StatusFound, status)
@@ -4046,12 +4073,25 @@ func TestSDKBackfillDomainUser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, domainUserID)
 
+	domainUser, status = store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 9, *domainUser.Source)
+	domainName, err = model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "abc2.com", domainName)
+
 	user, status = store.GetStore().GetUser(project.ID, salesforceGroupUserID)
 	assert.Equal(t, http.StatusFound, status)
 	domainUserID, err = model.GetUserGroupUserID(user, domainGroup.ID)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, domainUserID)
 
+	domainUser, status = store.GetStore().GetUser(project.ID, domainUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 9, *domainUser.Source)
+	domainName, err = model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, "abc3.com", domainName)
 }
 
 func TestSDKAssociateUserEmailDomain(t *testing.T) {

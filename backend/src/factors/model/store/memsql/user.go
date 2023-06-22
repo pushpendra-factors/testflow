@@ -118,9 +118,6 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		return nil, err
 	}
 
-	// Log for analysis.
-	log.WithField("project_id", user.ProjectId).WithField("tag", "create_user").Info("Created user.")
-
 	properties, errCode := store.UpdateUserProperties(user.ProjectId, user.ID, newUserPropertiesJsonb, user.JoinTimestamp)
 	if errCode == http.StatusInternalServerError {
 		return nil, errors.New("failed to update user properties")
@@ -1730,9 +1727,6 @@ func (store *MemSQL) OverwriteUserPropertiesByCustomerUserID(projectID int64,
 		return http.StatusInternalServerError
 	}
 
-	// Log for analysis.
-	log.WithField("project_id", projectID).WithField("tag", "update_user").Info("Updated user.")
-
 	return http.StatusAccepted
 }
 
@@ -1839,9 +1833,6 @@ func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID int64,
 		logCtx.WithError(err).Error("Failed to overwrite user properties.")
 		return http.StatusInternalServerError
 	}
-
-	// Log for analysis.
-	log.WithField("project_id", projectID).WithField("tag", "update_user").Info("Updated user.")
 
 	return http.StatusAccepted
 }
@@ -3177,7 +3168,7 @@ func (store *MemSQL) createOrGetDomainUserIDByProperties(projectID int64, groupN
 		return "", "", http.StatusNotFound
 	}
 
-	groupUserID, status := store.CreateOrGetDomainGroupUser(projectID, groupName, cleanedDomainName, U.TimeNowUnix(), model.GetGroupUserSourceByGroupName(groupName))
+	groupUserID, status := store.CreateOrGetDomainGroupUser(projectID, model.GROUP_NAME_DOMAINS, cleanedDomainName, U.TimeNowUnix(), model.GetGroupUserSourceByGroupName(model.GROUP_NAME_DOMAINS))
 	if status != http.StatusCreated && status != http.StatusFound {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for group user by group id in createOrGetDomainUserIDByProperties.")
 		return "", "", http.StatusInternalServerError
