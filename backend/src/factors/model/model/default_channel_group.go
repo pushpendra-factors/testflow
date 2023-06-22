@@ -19,20 +19,22 @@ type ChannelPropertyRule struct {
 }
 
 const (
-	direct         = "Direct"
-	paidSearch     = "Paid Search"
-	paidSocial     = "Paid Social"
-	organicSearch  = "Organic Search"
-	organicSocial  = "Organic Social"
-	email          = "Email"
-	affiliate      = "Affiliate"
-	otherCampaigns = "Other Campaigns"
-	referral       = "Referral"
+	ChannelDirect         = "Direct"
+	ChannelPaidSearch     = "Paid Search"
+	ChannelPaidSocial     = "Paid Social"
+	ChannelOrganicSearch  = "Organic Search"
+	ChannelOrganicSocial  = "Organic Social"
+	ChannelEmail          = "Email"
+	ChannelAffiliate      = "Affiliate"
+	ChannelOtherCampaigns = "Other Campaigns"
+	ChannelReferral       = "Referral"
+	ChannelInternal       = "Internal"
+	ChannelOthers         = "Others"
 )
 
 var DefaultChannelPropertyRules = []ChannelPropertyRule{
 	{
-		Channel: direct,
+		Channel: ChannelDirect,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
@@ -79,7 +81,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: paidSearch,
+		Channel: ChannelPaidSearch,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_GCLID,
@@ -90,7 +92,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: paidSearch,
+		Channel: ChannelPaidSearch,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
@@ -155,7 +157,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: paidSearch,
+		Channel: ChannelPaidSearch,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
@@ -202,7 +204,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: paidSocial,
+		Channel: ChannelPaidSocial,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_FBCLID,
@@ -213,7 +215,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: paidSocial,
+		Channel: ChannelPaidSocial,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
@@ -290,7 +292,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: paidSocial,
+		Channel: ChannelPaidSocial,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
@@ -301,7 +303,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: paidSocial,
+		Channel: ChannelPaidSocial,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_MEDIUM,
@@ -312,7 +314,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: paidSocial,
+		Channel: ChannelPaidSocial,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_MEDIUM,
@@ -383,7 +385,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: organicSocial,
+		Channel: ChannelOrganicSocial,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_FBCLID,
@@ -466,7 +468,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: organicSearch,
+		Channel: ChannelOrganicSearch,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_GCLID,
@@ -537,7 +539,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: email,
+		Channel: ChannelEmail,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
@@ -548,7 +550,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: email,
+		Channel: ChannelEmail,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_MEDIUM,
@@ -559,7 +561,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: affiliate,
+		Channel: ChannelAffiliate,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
@@ -570,7 +572,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: affiliate,
+		Channel: ChannelAffiliate,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_MEDIUM,
@@ -581,7 +583,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: otherCampaigns,
+		Channel: ChannelOtherCampaigns,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_CAMPAIGN,
@@ -592,7 +594,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: referral,
+		Channel: ChannelReferral,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
@@ -643,7 +645,7 @@ func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessi
 			return rule.Channel
 		}
 	}
-	return "Others"
+	return ChannelOthers
 }
 
 func checkFilter(sessionPropertesMap U.PropertiesMap, filter ChannelPropertyFilter) bool {

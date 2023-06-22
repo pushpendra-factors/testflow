@@ -176,6 +176,12 @@ func AreMarketingPropertiesMatching(event1 Event, event2 Event) bool {
 
 func GetChannelGroup(project Project, sessionPropertiesMap U.PropertiesMap) (string, string) {
 
+	if sessionPropertiesMap[U.UP_INITIAL_REFERRER_DOMAIN] != nil && sessionPropertiesMap[U.UP_INITIAL_PAGE_DOMAIN] != nil &&
+		sessionPropertiesMap[U.UP_INITIAL_PAGE_DOMAIN] == sessionPropertiesMap[U.UP_INITIAL_REFERRER_DOMAIN] {
+
+		return ChannelInternal, ""
+	}
+
 	var channelGroupRules []ChannelPropertyRule
 
 	if !U.IsEmptyPostgresJsonb(&project.ChannelGroupRules) {
