@@ -827,12 +827,17 @@ func MergeUserPropertiesByCustomerUserID(projectID int64, users []User, customer
 func getCRMTimestampValue(value interface{}) (int64, error) {
 	fValue, err := util.GetPropertyValueAsFloat64(value)
 	if err != nil {
-		timestamp, err := GetSalesforceDocumentTimestamp(value) // make sure timezone info is loaded to the container
-		if err != nil {
-			return 0, err
+		timestamp, err1 := GetTimestampForV3Records(value)
+		if err1 == nil {
+			return timestamp, nil
 		}
 
-		return timestamp, nil
+		timestamp, err2 := GetSalesforceDocumentTimestamp(value) // make sure timezone info is loaded to the container
+		if err2 == nil {
+			return timestamp, nil
+		}
+
+		return 0, fmt.Errorf("%v %v", err1.Error(), err2.Error())
 	}
 
 	timestamp := int64(fValue)

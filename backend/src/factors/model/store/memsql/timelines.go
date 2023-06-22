@@ -46,10 +46,6 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusBadRequest, "Project Id is Invalid"
 	}
 
-	// Merge Search Filters
-	payload.Filters = append(payload.Filters, payload.SearchFilter...)
-	groupedFilters := GroupFiltersByPrefix(payload.Filters)
-
 	var tableProps []string
 	if payload.SegmentId != "" {
 		segment, status := store.GetSegmentById(projectID, payload.SegmentId)
@@ -66,14 +62,18 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		tableProps = segmentQuery.TableProps
 		segmentQuery.From = U.TimeNowZ().AddDate(0, 0, -28).Unix()
 		segmentQuery.To = U.TimeNowZ().Unix()
-		segmentQuery.GroupAnalysis = ""
+		if !C.AllowEventAnalyticsGroupsByProjectID(projectID) || segmentQuery.Caller == model.USER_PROFILE_CALLER {
+			segmentQuery.GroupAnalysis = ""
+		} else {
+			segmentQuery.GroupAnalysis = segment.Type
+		}
 		if segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0 {
 			if C.IsEnabledEventsFilterInSegments() {
 				if payload.Filters != nil {
-					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, groupedFilters[model.FILTER_TYPE_USERS]...)
-					if profileType == model.PROFILE_TYPE_ACCOUNT && groupedFilters[segment.Type] != nil {
-						segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, groupedFilters[segment.Type]...)
-					}
+					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.Filters...)
+				}
+				if payload.SearchFilter != nil {
+					segmentQuery.GlobalUserProperties = append(segmentQuery.GlobalUserProperties, payload.SearchFilter...)
 				}
 				err := segmentQuery.TransformDateTypeFilters()
 				if err != nil {
@@ -101,12 +101,8 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 				var profiles = make([]model.Profile, 0)
 				return profiles, http.StatusBadRequest, "Event filters not enabled for the project."
 			}
-		} else {
-			if segment.Type != "" {
-				{
-					payload.Filters = append(payload.Filters, segmentQuery.GlobalUserProperties...)
-				}
-			}
+		} else if segment.Type != "" {
+			payload.Filters = append(payload.Filters, segmentQuery.GlobalUserProperties...)
 		}
 	} else {
 		timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
@@ -127,7 +123,9 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 
 	// transforming datetime filters
-	groupedFilters = GroupFiltersByPrefix(payload.Filters)
+	groupedFilters := GroupFiltersByPrefix(payload.Filters)
+	groupedFilters[model.FILTER_TYPE_USERS] = append(groupedFilters[model.FILTER_TYPE_USERS], payload.SearchFilter...)
+
 	for group, filterArray := range groupedFilters {
 		for index := range filterArray {
 			err := groupedFilters[group][index].TransformDateTypeFilters(timezoneString)
@@ -590,34 +588,15 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		log.WithFields(logFields).Error("invalid payload.")
 		return nil, http.StatusBadRequest, "Invalid payload."
 	}
-
+	isAnon := isAnonymous == "true"
 	userId := model.COLUMN_NAME_CUSTOMER_USER_ID
-	if isAnonymous == "true" {
+	if isAnon {
 		userId = model.COLUMN_NAME_ID
 	}
 
 	db := C.GetServices().Db
 	var uniqueUser model.ContactDetails
-	if err := db.Table("users").Select(`COALESCE(customer_user_id,id) AS user_id,
-        ISNULL(customer_user_id) AS is_anonymous,
-        properties,
-        MAX(group_1_id) IS NOT NULL AS group_1,
-        MAX(group_2_id) IS NOT NULL AS group_2,
-        MAX(group_3_id) IS NOT NULL AS group_3,
-        MAX(group_4_id) IS NOT NULL AS group_4,
-        MAX(group_5_id) IS NOT NULL AS group_5,
-        MAX(group_6_id) IS NOT NULL AS group_6,
-        MAX(group_7_id) IS NOT NULL AS group_7,
-        MAX(group_8_id) IS NOT NULL AS group_8,
-        MAX(group_1_user_id) AS group_1_user_id,
-        MAX(group_2_user_id) AS group_2_user_id,
-        MAX(group_3_user_id) AS group_3_user_id,
-        MAX(group_4_user_id) AS group_4_user_id,
-        MAX(group_5_user_id) AS group_5_user_id,
-        MAX(group_6_user_id) AS group_6_user_id,
-        MAX(group_7_user_id) AS group_7_user_id,
-        MAX(group_8_user_id) AS group_8_user_id
-        `).
+	if err := db.Table("users").Select("COALESCE(customer_user_id,id) AS user_id, ISNULL(customer_user_id) AS is_anonymous, properties").
 		Where("project_id=? AND "+userId+"=?", projectID, identity).
 		Group("user_id").
 		Order("updated_at desc").
@@ -649,7 +628,11 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		uniqueUser.UserActivity = activities
 	}
 
-	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
+	uniqueUser.Account, err = store.GetAssociatedDomainForUser(projectID, identity, isAnon)
+	if err != nil {
+		log.WithField("status", err).WithError(err).Error("associated account could not be fetched.")
+		uniqueUser.Account = ""
+	}
 
 	return &uniqueUser, http.StatusFound, ""
 }
@@ -805,61 +788,6 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 	}
 
 	return userActivities, nil
-}
-
-func (store *MemSQL) GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo {
-	groupsInfo := []model.GroupsInfo{}
-
-	groups, err := store.GetGroups(projectID)
-	if err != http.StatusFound {
-		log.WithField("project_id", projectID).WithField("status", err).Error("Failed to get groups.")
-		return groupsInfo
-	}
-
-	if len(groups) == 0 {
-		return groupsInfo
-	}
-
-	groupsMap := make(map[int]string)
-	for _, group := range groups {
-		groupsMap[group.ID] = group.Name
-	}
-
-	for i := 1; i <= model.AllowedGroups; i++ {
-		// Get the groupX field from the userDetails struct
-		groupField := reflect.ValueOf(userDetails).FieldByName(fmt.Sprintf("Group%d", i))
-
-		// Skip if groupX is 0
-		if !groupField.Bool() {
-			continue
-		}
-
-		groupInfo := model.GroupsInfo{GroupName: U.STANDARD_GROUP_DISPLAY_NAMES[groupsMap[i]]}
-
-		userIDField := reflect.ValueOf(userDetails).FieldByName(fmt.Sprintf("Group%dUserID", i)) // Get the group_x_user_id field for the group
-		if userIDField.String() != "" {
-			associatedGroup, err := store.GetAssociatedGroup(projectID, userIDField.String(), groupsMap[i]) // Call GetAssociatedGroup method to get the associated group name for the user
-			if err != nil {
-				if gorm.IsRecordNotFoundError(err) {
-					log.WithField("project_id", projectID).WithField("status", err).Error("Group record not found for user.")
-				}
-			} else {
-				groupInfo.AssociatedGroup = associatedGroup // Set the associated group name for the groupInfo object
-			}
-		}
-		groupsInfo = append(groupsInfo, groupInfo) // Append the groupInfo object to the groupsInfo slice
-	}
-	return groupsInfo
-}
-
-func (store *MemSQL) GetAssociatedGroup(projectID int64, userID string, groupName string) (string, error) {
-	db := C.GetServices().Db
-	companyQuery := "SELECT JSON_EXTRACT_STRING(properties, ?) AS associated_group FROM users WHERE project_id=? AND id=?"
-	groupInfo := model.GroupsInfo{}
-	if err := db.Raw(companyQuery, model.GROUP_TO_COMPANY_NAME_MAP[groupName], projectID, userID).Scan(&groupInfo).Limit(1).Error; err != nil {
-		return "", err
-	}
-	return groupInfo.AssociatedGroup, nil
 }
 
 func GetFilteredProperties(eventName string, eventType string, properties *map[string]interface{}) *postgres.Jsonb {

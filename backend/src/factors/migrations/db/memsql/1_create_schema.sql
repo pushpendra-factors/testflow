@@ -460,11 +460,13 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     integration_bits varchar(32) DEFAULT '00000000000000000000000000000000',
     project_currency varchar(10),
     is_path_analysis_enabled boolean,
-    acc_score_weights json;
+    acc_score_weights json,
     filter_ips JSON,
     is_deanonymization_requested boolean,
     is_onboarding_completed boolean,
-    sixsignal_email_list string,
+    sixsignal_email_list text,
+    int_g2_api_key text,
+    six_signal_config JSON,
 
     KEY (updated_at),
     SHARD KEY (project_id),
@@ -817,7 +819,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS groups(
     UNIQUE KEY (project_id,id)
 );
 
-CREATE ROWSTORE TABLE IF NOT EXISTS group_relationships(
+CREATE TABLE IF NOT EXISTS group_relationships(
     project_id bigint NOT NULL,
     left_group_name_id int NOT NULL,
     left_group_user_id text NOT NULL,
@@ -855,6 +857,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS custom_metrics(
     transformations json,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    display_result_as text,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
@@ -1112,6 +1115,8 @@ CREATE ROWSTORE TABLE IF NOT EXISTS dashboard_templates(
     tags json,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    categories JSON,
+    required_integrations JSON,
     KEY (id) USING HASH,
     SHARD KEY (id)
 );
@@ -1192,6 +1197,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS form_fills(
     value text,
     created_at timestamp(6),
     updated_at timestamp(6),
+    event_properties JSON,
     PRIMARY KEY (project_id, user_id, form_id, id),
     SHARD KEY (project_id, user_id, form_id)
 );
@@ -1334,7 +1340,7 @@ CREATE TABLE IF NOT EXISTS display_name_labels (
     UNIQUE KEY(project_id, source, id, property_key, value) USING HASH
 );
 
-CREATE ROWSTORE TABLE IF NOT EXISTS dash_query_results (
+CREATE TABLE IF NOT EXISTS dash_query_results (
     id text,
     project_id bigint,
     dashboard_id bigint,

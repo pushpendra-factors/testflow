@@ -4023,6 +4023,8 @@ func isURLProperty(property string) bool {
 		UP_INITIAL_REFERRER,
 		UP_LATEST_REFERRER,
 		SP_INITIAL_REFERRER,
+		UP_INITIAL_PAGE_DOMAIN,
+		UP_INITIAL_REFERRER_DOMAIN,
 	}
 
 	return strings.HasSuffix(property, "url") ||

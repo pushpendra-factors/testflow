@@ -236,7 +236,6 @@ export default function (state = defaultState, action) {
       };
     }
     case TOGGLE_SIDEBAR_COLLAPSED_STATE: {
-      console.log(action.payload);
       return {
         ...state,
         sidebarCollapsed: action.payload

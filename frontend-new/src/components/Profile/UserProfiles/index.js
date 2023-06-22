@@ -74,6 +74,7 @@ import {
   setSegmentModalStateAction
 } from 'Reducers/userProfilesView/actions';
 import { useHistory } from 'react-router-dom';
+import { PathUrls } from '../../../routes/pathUrls';
 
 const userOptions = getUserOptions();
 // const userOptionsForDropdown = getUserOptionsForDropdown();
@@ -844,14 +845,21 @@ function UserProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button
-        size='large'
-        icon={<SVG name='activity_filter' />}
-        className='relative'
-      >
-        Configure
+      <Button size='large' type='text' className='search-btn relative'>
+        <SVG name='activity_filter' />
       </Button>
     </Popover>
+  );
+
+  const renderConfiguration = () => (
+    <Button
+      size='large'
+      icon={<SVG name='configure' />}
+      className='dropdown-btn'
+      onClick={() => history.push(PathUrls.ConfigureEngagements)}
+    >
+      Configure
+    </Button>
   );
 
   const renderActions = () => (
@@ -865,6 +873,7 @@ function UserProfiles({
         {timelinePayload.filters.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}
+        {renderConfiguration()}
       </div>
     </div>
   );

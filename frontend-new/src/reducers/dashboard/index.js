@@ -18,6 +18,8 @@ import {
   DASHBOARD_LAST_REFRESHED
 } from '../types';
 
+import { SET_DRAFTS_SELECTED } from './types';
+
 import { getRearrangedData, getUpdateStateOnDashboardsLoaded } from './utils';
 import { defaultState } from './constants';
 
@@ -65,7 +67,8 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         activeDashboard: action.payload,
-        activeDashboardUnits: { ...defaultState.activeDashboardUnits }
+        activeDashboardUnits: { ...defaultState.activeDashboardUnits },
+        draftsSelected: false
       };
     case DASHBOARD_LAST_REFRESHED:
       return {
@@ -161,6 +164,14 @@ export default function (state = defaultState, action) {
             ...state.dashboards.data.slice(dashboardIndex + 1)
           ]
         }
+      };
+    }
+    case SET_DRAFTS_SELECTED: {
+      return {
+        ...state,
+        draftsSelected: true,
+        activeDashboard: defaultState.activeDashboard,
+        activeDashboardUnits: defaultState.activeDashboardUnits
       };
     }
     case SET_ACTIVE_PROJECT:

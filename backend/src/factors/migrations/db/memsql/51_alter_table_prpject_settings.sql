@@ -1,0 +1,1 @@
+ALTER TABLE project_settings add column int_g2 boolean default false;

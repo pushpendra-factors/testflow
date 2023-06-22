@@ -120,11 +120,12 @@ func TestCreatePathAnalysisHandler(t *testing.T) {
 
 	t.Run("CreatePathAnalysis:WithValidQuery", func(t *testing.T) {
 		rName1 := U.RandomString(5)
-		query := &model.PathAnalysisQuery{
+		query := &model.PathAnalysisQueryWithReference{
+			Query: model.PathAnalysisQuery{
 			Title: rName1, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName1},
 			NumberOfSteps: 4,
 			ExcludeEvents: []model.PathAnalysisEvent{{Label: "e1"}, {Label: "E2"}},
-			Filter:        []model.QueryProperty{{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"}}}
+			Filter:        []model.QueryProperty{{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"}}}}
 
 		queryJson, err := json.Marshal(query)
 		assert.Nil(t, err)
@@ -134,11 +135,12 @@ func TestCreatePathAnalysisHandler(t *testing.T) {
 	})
 	t.Run("CreatePathAnalysisEntity:Include & Exclude both Events Provided: Invalid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
-		query := &model.PathAnalysisQuery{
+		query := &model.PathAnalysisQueryWithReference{
+			Query: model.PathAnalysisQuery{
 			Title: rName1, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName1}, NumberOfSteps: 4,
 			IncludeEvents: []model.PathAnalysisEvent{{Label: "e1"}, {Label: "E2"}},
 			ExcludeEvents: []model.PathAnalysisEvent{{Label: "e1"}, {Label: "E2"}},
-			Filter:        []model.QueryProperty{{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"}}}
+			Filter:        []model.QueryProperty{{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"}}}}
 
 		queryJson, err := json.Marshal(query)
 		assert.Nil(t, err)
@@ -160,13 +162,14 @@ func TestPathAnalysisLimitHandler(t *testing.T) {
 		limit := model.BuildLimit
 		for i := 0; i < limit; i++ {
 			rName1 := U.RandomString(5)
-			query := &model.PathAnalysisQuery{
+			query := &model.PathAnalysisQueryWithReference{
+				Query: model.PathAnalysisQuery{
 				Title: rName1, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName1}, NumberOfSteps: 4,
 				IncludeEvents: []model.PathAnalysisEvent{{Label: "e1"}, {Label: "E2"}},
 				Filter: []model.QueryProperty{
 					{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 				},
-			}
+			}}
 
 			queryJson, err := json.Marshal(query)
 			assert.Nil(t, err)
@@ -176,13 +179,14 @@ func TestPathAnalysisLimitHandler(t *testing.T) {
 		}
 
 		rName2 := U.RandomString(5)
-		query := &model.PathAnalysisQuery{
+		query := &model.PathAnalysisQueryWithReference{
+			Query: model.PathAnalysisQuery{
 			Title: rName2, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName2}, NumberOfSteps: 4,
 			IncludeEvents: []model.PathAnalysisEvent{{Label: "e1"}, {Label: "E2"}},
 			Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 			},
-		}
+		}}
 		queryJson, err := json.Marshal(query)
 		assert.Nil(t, err)
 
@@ -190,6 +194,7 @@ func TestPathAnalysisLimitHandler(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
+
 func sendCreatePathAnalysisReques(r *gin.Engine, projectId int64, agent *model.Agent, query *postgres.Jsonb) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)

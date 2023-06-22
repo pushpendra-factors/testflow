@@ -66,6 +66,7 @@ import {
   updateAccountPayloadAction,
   setSegmentModalStateAction
 } from 'Reducers/accountProfilesView/actions';
+import { PathUrls } from '../../../routes/pathUrls';
 import _ from 'lodash';
 
 function AccountProfiles({
@@ -928,16 +929,22 @@ function AccountProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button
-        size='large'
-        icon={<SVG name='activity_filter' />}
-        className='relative'
-      >
-        Configure
+      <Button size='large' type='text' className='search-btn relative'>
+        <SVG name='activity_filter' />
       </Button>
     </Popover>
   );
 
+  const renderConfiguration = () => (
+    <Button
+      size='large'
+      icon={<SVG name='configure' />}
+      className='dropdown-btn'
+      onClick={() => history.push(PathUrls.ConfigureEngagements)}
+    >
+      Configure
+    </Button>
+  );
   const handleTableChange = (pageParams) => {
     setCurrentPage(pageParams.current);
   }
@@ -953,6 +960,7 @@ function AccountProfiles({
         {accountPayload?.filters?.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}
+        {renderConfiguration()}
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import {
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 
 function FilterWrapper({
   viewMode,
@@ -35,7 +36,8 @@ function FilterWrapper({
   getGroupPropertyValues,
   getUserPropertyValues,
   propertyValuesMap,
-  minEntriesPerGroup
+  minEntriesPerGroup,
+  operatorsMap = DEFAULT_OPERATOR_PROPS
 }) {
   const [newFilterState, setNewFilterState] = useState({
     props: [],
@@ -59,6 +61,7 @@ function FilterWrapper({
       const values = filterProps[key];
       filterDD.props.push({ label, icon, values });
     });
+    filterDD.operator = operatorsMap
     setFiltDD(filterDD);
   }, [filterProps]);
 

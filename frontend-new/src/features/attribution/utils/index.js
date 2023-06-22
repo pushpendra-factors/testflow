@@ -8,9 +8,11 @@ import { EMPTY_ARRAY } from 'Utils/global';
 import { QUERY_TYPE_ATTRIBUTION } from 'Utils/constants';
 import {
   FILTER_TYPES,
+} from 'Views/CoreQuery/constants';
+import {
   convertDateTimeObjectValuesToMilliSeconds,
   DefaultDateRangeFormat
-} from 'Views/CoreQuery/constants';
+} from 'Views/CoreQuery/utils';
 
 export const convertToEventOptions = (eventNames, display_names = []) => {
   // Based on groups Currently clubbing all into one, untill we have backend support
@@ -135,10 +137,10 @@ export const getAttributionStateFromRequestQuery = (
         enabled: !requestQuery.attribution_key_dimensions
           ? dimension.defaultValue
           : requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
-              -1 ||
-            requestQuery.attribution_key_custom_dimensions?.indexOf(
-              dimension.header
-            ) > -1
+          -1 ||
+          requestQuery.attribution_key_custom_dimensions?.indexOf(
+            dimension.header
+          ) > -1
       };
     }
     return dimension;
@@ -151,9 +153,9 @@ export const getAttributionStateFromRequestQuery = (
         enabled: !requestQuery.attribution_key_dimensions
           ? dimension.defaultValue
           : requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
-              -1 ||
-            requestQuery.attribution_content_groups?.indexOf(dimension.header) >
-              -1
+          -1 ||
+          requestQuery.attribution_content_groups?.indexOf(dimension.header) >
+          -1
       };
     }
     return dimension;
@@ -208,7 +210,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
         const DNa = pr.extra ? pr.extra[0] : startCase(pr.prNa);
         const isCamp =
           requestQuery?.qG[0]?.ca === 'channels' ||
-          requestQuery?.qG[0]?.ca === 'custom_channels'
+            requestQuery?.qG[0]?.ca === 'custom_channels'
             ? pr.objTy
             : pr.en;
         eventFilters.push({
@@ -233,7 +235,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
         const DNa = pr.extra ? pr.extra[0] : startCase(pr.prNa);
         const isCamp =
           requestQuery?.qG[0]?.ca === 'channels' ||
-          requestQuery?.qG[0]?.ca === 'custom_channels'
+            requestQuery?.qG[0]?.ca === 'custom_channels'
             ? pr.objTy
             : pr.en;
         eventFilters.push({
@@ -279,7 +281,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       const DNa = pr.extra ? pr.extra[0] : startCase(pr.prNa);
       const isCamp =
         requestQuery?.qG[0]?.ca === 'channels' ||
-        requestQuery?.qG[0]?.ca === 'custom_channels'
+          requestQuery?.qG[0]?.ca === 'custom_channels'
           ? pr.objTy
           : pr.en;
       filters.push({
@@ -304,7 +306,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       const DNa = pr.extra ? pr.extra[0] : startCase(pr.prNa);
       const isCamp =
         requestQuery?.qG[0]?.ca === 'channels' ||
-        requestQuery?.qG[0]?.ca === 'custom_channels'
+          requestQuery?.qG[0]?.ca === 'custom_channels'
           ? pr.objTy
           : pr.en;
       filters.push({

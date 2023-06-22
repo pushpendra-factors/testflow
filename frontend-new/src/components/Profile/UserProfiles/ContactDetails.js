@@ -380,26 +380,17 @@ function ContactDetails({
           )}
         </div>
       </div>
+      <div className='flex flex-col items-start my-2'>
+        <Text type='title' level={7} extraClass='m-0'>
+          Account:
+        </Text>
+        <Text type='title' level={7} extraClass='m-0' color='grey'>
+          {userDetails.data.account || '-'}
+        </Text>
+      </div>
       <div className='props'>
         {listLeftPaneProps(userDetails.data.left_pane_props)}
         <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
-        <div className='groups'>
-          <Text type='title' level={7} extraClass='m-0 my-2' color='grey'>
-            Associated Groups:
-          </Text>
-          {userDetails?.data?.group_infos?.map((group) => {
-            return (
-              <div className='flex flex-col items-start mb-2'>
-                <Text type='title' level={7} extraClass='m-0'>
-                  {group?.group_name}
-                </Text>
-                <Text type='title' level={7} extraClass='m-0' color='grey'>
-                  {group?.associated_group || '-'}
-                </Text>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </div>
   );

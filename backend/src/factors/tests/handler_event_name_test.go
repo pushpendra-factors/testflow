@@ -427,11 +427,10 @@ func TestGetEventNameByUserHandler(t *testing.T) {
 
 		assert.Nil(t, eventNames.EventNames[U.SmartEvent])
 
-		assert.Equal(t, len(eventNames.AllowedDisplayNameGroups), 5) // STANDARD_GROUP_DISPLAY_NAMES
+		assert.Equal(t, len(eventNames.AllowedDisplayNameGroups), 6) // STANDARD_GROUP_DISPLAY_NAMES
 		for displayGroupName, groupName := range U.GetStandardDisplayNameGroups() {
 			assert.Equal(t, eventNames.AllowedDisplayNameGroups[displayGroupName], groupName)
 		}
-
 	})
 
 }
@@ -888,7 +887,7 @@ func TestDisabledEventUserProperties(t *testing.T) {
 	json.Unmarshal(jsonResponse, &properties)
 
 	// event-level properties disabled
-	assert.Len(t, properties.DisabledEventUserProperties, 3)
+	assert.Len(t, properties.DisabledEventUserProperties, 5)
 	assert.Equal(t, properties.DisabledEventUserProperties, U.DISABLED_EVENT_USER_PROPERTIES)
 
 	// disabled only on event-level user_properties dropdown.
