@@ -12,6 +12,7 @@ import {
 } from '../../../utils';
 import EmptyDataState from './EmptyDataState';
 import style from './index.module.scss';
+import { formatCellData } from './utils';
 
 const ReportTable = ({
   data,
@@ -69,10 +70,10 @@ const ReportTable = ({
       columnsArray.push(KEY_LABELS?.[header] || header);
       return header;
     });
-
     const rowsArray = tableData.map((row) => {
       return columns?.map((col) => {
-        return row?.[col] || '';
+        // @ts-ignore
+        return row?.[col] ? formatCellData(row?.[col], col) : '';
       });
     });
     return {
