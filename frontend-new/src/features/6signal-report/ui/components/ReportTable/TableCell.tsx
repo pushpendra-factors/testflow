@@ -2,32 +2,20 @@ import { Tooltip, Image } from 'antd';
 import { Text } from 'Components/factorsComponents';
 import { getHost } from 'Components/Profile/utils';
 import React from 'react';
-import { formatDuration } from 'Utils/dataFormatter';
 import {
   COMPANY_KEY,
   DOMAIN_KEY,
   INDUSTRY_KEY,
-  PAGE_COUNT_KEY,
-  SESSION_SPENT_TIME
+  KEY_LABELS
 } from '../../../const';
 import { StringObject } from '../../../types';
 import fallbackImage from '../../../../../assets/icons/fallbackImage.svg';
+import { formatCellData } from './utils';
 
 const TableCell = ({ text, record, header }: TableCellProps) => {
-  let title = text;
+  let title = formatCellData(text, header);
   const domain = record?.[DOMAIN_KEY];
   const showCursor = header === COMPANY_KEY && domain;
-  if (header === SESSION_SPENT_TIME) {
-    if (isNaN(Number(text))) {
-      title = 'NA';
-    } else if (Number(text) < 1800) {
-      title = formatDuration(text);
-    } else {
-      title = '> 30mins';
-    }
-  } else if (header === PAGE_COUNT_KEY) {
-    title = `${text} ${Number(text) > 1 ? 'Pages' : 'Page'}`;
-  }
 
   const openUrlInNewTab = (_domain: string) => {
     try {
@@ -80,7 +68,7 @@ const TableCell = ({ text, record, header }: TableCellProps) => {
 type TableCellProps = {
   text: string;
   record: StringObject;
-  header: string;
+  header: keyof typeof KEY_LABELS;
 };
 
 export default TableCell;
