@@ -36,6 +36,7 @@ func main() {
 	endTime := flag.Int64("end_timestamp", 0, "Ending timestamp for users. End timestamp will be included")
 	wetRun := flag.Bool("wet", false, "Wet run")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
+	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
 	flag.Parse()
 	defer util.NotifyOnPanic("Task#run_backfill_users_domain", *env)
 
@@ -61,14 +62,15 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     taskID,
 		},
-		RedisHost:              *redisHost,
-		RedisPort:              *redisPort,
-		RedisHostPersistent:    *redisHostPersistent,
-		RedisPortPersistent:    *redisPortPersistent,
-		SentryDSN:              *sentryDSN,
-		SentryRollupSyncInSecs: *sentryRollupSyncInSecs,
-		PrimaryDatastore:       *primaryDatastore,
-		CacheSortedSet:         *cacheSortedSet,
+		RedisHost:                    *redisHost,
+		RedisPort:                    *redisPort,
+		RedisHostPersistent:          *redisHostPersistent,
+		RedisPortPersistent:          *redisPortPersistent,
+		SentryDSN:                    *sentryDSN,
+		SentryRollupSyncInSecs:       *sentryRollupSyncInSecs,
+		PrimaryDatastore:             *primaryDatastore,
+		CacheSortedSet:               *cacheSortedSet,
+		AllowEmailDomainsByProjectID: *allowEmailDomainsByProjectID,
 	}
 
 	C.InitConf(config)
