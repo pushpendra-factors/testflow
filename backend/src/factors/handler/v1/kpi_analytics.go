@@ -198,6 +198,7 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 
 	if len(propertyValueLabelMap) == 0 {
 		logCtx.WithField("property_name", request.PropertyName).Error("No KPI Filter property value labels returned")
+		return kpiFilterValues, http.StatusOK, "", "", false
 	}
 
 	return propertyValueLabelMap, http.StatusOK, "", "", false
