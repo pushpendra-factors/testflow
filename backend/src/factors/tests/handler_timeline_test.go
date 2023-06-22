@@ -569,6 +569,38 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
 	assert.Equal(t, errCode, http.StatusAccepted)
 
+	// Create Groups
+	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group1)
+	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.NotNil(t, group2)
+	assert.Equal(t, http.StatusCreated, status)
+	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
+	assert.NotNil(t, group3)
+	assert.Equal(t, http.StatusCreated, status)
+	group4, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_DEAL, model.AllowedGroupNames)
+	assert.NotNil(t, group4)
+	assert.Equal(t, http.StatusCreated, status)
+	group5, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group5)
+
+	// Create Domain Group
+	domProperties := postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
+	source := model.GetRequestSourcePointer(model.UserSourceDomains)
+	groupUser := true
+	domID, _ := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		Source:         source,
+		Group5ID:       "abc.xyz",
+		CustomerUserId: "domainuser",
+		Properties:     domProperties,
+		IsGroupUser:    &groupUser,
+	})
+	_, errCode = store.GetStore().GetUser(project.ID, domID)
+	assert.Equal(t, http.StatusFound, errCode)
+
 	// Create Associated Account
 	props := map[string]interface{}{
 		"$hubspot_company_name": "Freshworks",
@@ -617,6 +649,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		Group1ID:       "1",
 		Group2ID:       "2",
 		Group1UserID:   accountID,
+		Group5UserID:   domID,
 		CustomerUserId: customerEmail,
 		Properties:     properties,
 		IsGroupUser:    &isGroupUser,
@@ -624,18 +657,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 	assert.Equal(t, user.ID, createdUserID)
 	assert.Equal(t, http.StatusFound, errCode)
-	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.NotNil(t, group1)
-	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
-	assert.NotNil(t, group2)
-	assert.Equal(t, http.StatusCreated, status)
-	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
-	assert.NotNil(t, group3)
-	assert.Equal(t, http.StatusCreated, status)
-	group4, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_DEAL, model.AllowedGroupNames)
-	assert.NotNil(t, group4)
-	assert.Equal(t, http.StatusCreated, status)
 
 	// event properties map
 	eventProperties := map[string]interface{}{
@@ -975,10 +996,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		for i, property := range resp.Milestones {
 			assert.Equal(t, (*userPropsDecoded)[i], property)
 		}
-
-		assert.NotNil(t, resp.GroupInfos)
-		assert.Equal(t, resp.GroupInfos[0], model.GroupsInfo{GroupName: U.STANDARD_GROUP_DISPLAY_NAMES[U.GROUP_NAME_HUBSPOT_COMPANY], AssociatedGroup: "Freshworks"})
-		assert.Equal(t, resp.GroupInfos[1], model.GroupsInfo{GroupName: U.STANDARD_GROUP_DISPLAY_NAMES[U.GROUP_NAME_SALESFORCE_ACCOUNT], AssociatedGroup: ""})
+		assert.Equal(t, resp.Account, "abc.xyz")
 		assert.NotNil(t, resp.UserActivity)
 		for _, activity := range resp.UserActivity {
 			assert.NotNil(t, activity.EventName)
@@ -1030,9 +1048,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 					assert.True(t, i < len(lookInProps))
 				}
 			}
-
 		}
-
 	})
 }
 

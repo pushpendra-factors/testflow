@@ -27,23 +27,7 @@ type ContactDetails struct {
 	Milestones    map[string]interface{} `json:"milestones"`
 	Name          string                 `json:"name,omitempty"`
 	Company       string                 `json:"company"`
-	Group1        bool                   `gorm:"default:false;column:group_1" json:"-"`
-	Group2        bool                   `gorm:"default:false;column:group_2" json:"-"`
-	Group3        bool                   `gorm:"default:false;column:group_3" json:"-"`
-	Group4        bool                   `gorm:"default:false;column:group_4" json:"-"`
-	Group5        bool                   `gorm:"default:false;column:group_5" json:"-"`
-	Group6        bool                   `gorm:"default:false;column:group_6" json:"-"`
-	Group7        bool                   `gorm:"default:false;column:group_7" json:"-"`
-	Group8        bool                   `gorm:"default:false;column:group_8" json:"-"`
-	Group1UserID  string                 `gorm:"default:null;column:group_1_user_id" json:"-"`
-	Group2UserID  string                 `gorm:"default:null;column:group_2_user_id" json:"-"`
-	Group3UserID  string                 `gorm:"default:null;column:group_3_user_id" json:"-"`
-	Group4UserID  string                 `gorm:"default:null;column:group_4_user_id" json:"-"`
-	Group5UserID  string                 `gorm:"default:null;column:group_5_user_id" json:"-"`
-	Group6UserID  string                 `gorm:"default:null;column:group_6_user_id" json:"-"`
-	Group7UserID  string                 `gorm:"default:null;column:group_7_user_id" json:"-"`
-	Group8UserID  string                 `gorm:"default:null;column:group_8_user_id" json:"-"`
-	GroupInfos    []GroupsInfo           `json:"group_infos,omitempty"`
+	Account       string                 `json:"account,omitempty"`
 	UserActivity  []UserActivity         `json:"user_activities,omitempty"`
 }
 
@@ -87,16 +71,22 @@ type UserTimeline struct {
 }
 
 // Constants
-const PROFILE_TYPE_USER = "user"
-const PROFILE_TYPE_ACCOUNT = "account"
-const COLUMN_NAME_ID = "id"
-const COLUMN_NAME_CUSTOMER_USER_ID = "customer_user_id"
+const (
+	PROFILE_TYPE_USER    = "user"
+	PROFILE_TYPE_ACCOUNT = "account"
+)
+const (
+	COLUMN_NAME_ID               = "id"
+	COLUMN_NAME_CUSTOMER_USER_ID = "customer_user_id"
+)
 const GROUP_ACTIVITY_USERNAME = "group_user"
 const FILTER_TYPE_USERS = "users"
 
 // Profile type for Segment Events
-const USER_PROFILE_CALLER = "user_profiles"
-const ACCOUNT_PROFILE_CALLER = "account_profiles"
+const (
+	USER_PROFILE_CALLER    = "user_profiles"
+	ACCOUNT_PROFILE_CALLER = "account_profiles"
+)
 
 // Source number to source name map
 var SourceGroupUser = map[int]string{

@@ -3185,3 +3185,36 @@ func (store *MemSQL) createOrGetDomainUserIDByProperties(projectID int64, groupN
 
 	return groupUserID, cleanedDomainName, status
 }
+
+func (store *MemSQL) GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error) {
+	db := C.GetServices().Db
+
+	domainGroup, errCode := store.GetGroup(projectID, U.GROUP_NAME_DOMAINS)
+	if errCode != http.StatusFound {
+		return "", fmt.Errorf("failed to retrieve domain group")
+	}
+	columnName := model.COLUMN_NAME_CUSTOMER_USER_ID
+	if isAnonymous {
+		columnName = model.COLUMN_NAME_ID
+	}
+	var details model.ContactDetails
+	queryString := fmt.Sprintf(`
+		SELECT group_%d_id as account
+		FROM users 
+		WHERE project_id = ? 
+			AND id = (
+				SELECT group_%d_user_id
+				FROM users 
+				WHERE project_id = ?
+					AND %s = ? 
+					AND group_%d_user_id IS NOT NULL 
+				LIMIT 1
+			)
+		`, domainGroup.ID, domainGroup.ID, columnName, domainGroup.ID)
+
+	err := db.Raw(queryString, projectID, projectID, userID).Scan(&details).Error
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve domain name: %w", err)
+	}
+	return details.Account, nil
+}
