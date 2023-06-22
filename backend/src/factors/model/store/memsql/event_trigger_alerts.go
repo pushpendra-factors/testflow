@@ -27,7 +27,7 @@ const (
 	SortedSetCacheKey  = "ETA:pid"
 	CoolDownPrefix     = "ETA:CoolDown"
 	oneDayInSeconds    = 24 * 60 * 60
-	PoisonTime         = 72             // Hours after which the alert will be paused internally
+	PoisonTime         = 24             // Hours after which the alert will be paused internally
 	DisableTime        = 2 * PoisonTime // Hours after which the alert will not be processed from sdk
 )
 
