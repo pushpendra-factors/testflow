@@ -45,7 +45,7 @@ func (es *EnrichStatus) AddEnrichStatus(status []IntSalesforce.Status, hasFailur
 	}
 }
 
-func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProject int, enrichStatus *EnrichStatus, salesforceProjectSettings *model.SalesforceProjectSettings, enrichPullLimit int) {
+func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProject int, enrichStatus *EnrichStatus, salesforceProjectSettings *model.SalesforceProjectSettings, enrichPullLimit int, enrichRecordProcessLimit int) {
 	defer wg.Done()
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "worder_index": workerIndex})
@@ -65,7 +65,7 @@ func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProje
 		return
 	}
 
-	status, hasFailure := IntSalesforce.Enrich(projectID, workerPerProject, dataPropertyByType, enrichPullLimit)
+	status, hasFailure := IntSalesforce.Enrich(projectID, workerPerProject, dataPropertyByType, enrichPullLimit, enrichRecordProcessLimit)
 	enrichStatus.AddEnrichStatus(status, hasFailure)
 	logCtx.Info("Processing completed for given project.")
 }
@@ -152,6 +152,7 @@ func main() {
 	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 	enrichPullLimit := flag.Int("enrich_pull_limit", 0, "Limit number of records to be pull from db at a time")
 	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
+	enrichRecordProcessLimit := flag.Int("enrich_record_process_limit", 0, "Limit number of records for enrichment at project level")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -359,7 +360,7 @@ func main() {
 			var wg sync.WaitGroup
 			for pi := range batch {
 				wg.Add(1)
-				go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus, allowedSalesforceProjectSettings[batch[pi]], *enrichPullLimit)
+				go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus, allowedSalesforceProjectSettings[batch[pi]], *enrichPullLimit, *enrichRecordProcessLimit)
 				workerIndex++
 			}
 			wg.Wait()
