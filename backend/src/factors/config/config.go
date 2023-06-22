@@ -77,11 +77,12 @@ const (
 
 // MemSQLDefaultDBParams Default connection params for Postgres.
 var MemSQLDefaultDBParams = DBConf{
-	Host:     "localhost",
-	Port:     3306,
-	User:     "root",
-	Name:     "factors",
-	Password: "dbfactors123",
+	Host:      "localhost",
+	Port:      3306,
+	User:      "root",
+	Name:      "factors",
+	Password:  "dbfactors123",
+	IsPSCHost: 0,
 }
 
 // PostgresDefaultDBParams Default connection params for MemSQL.
@@ -95,6 +96,7 @@ var PostgresDefaultDBParams = DBConf{
 
 type DBConf struct {
 	Host        string
+	IsPSCHost   int
 	Port        int
 	User        string
 	Name        string
@@ -934,8 +936,11 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 		services = &Services{}
 	}
 
-	// SSL Mandatory for staging and production.
-	dbConf.UseSSL = IsStaging() || IsProduction()
+	// SSL enabled for staging and production,
+	// if Private Service Connect is not enabled.
+	isPSCHost := dbConf.IsPSCHost > 0
+	dbConf.UseSSL = (IsStaging() || IsProduction()) && !isPSCHost
+
 	memSQLDB, err := gorm.Open("mysql", GetMemSQLDSNString(&dbConf))
 	if err != nil {
 		log.WithError(err).Error("Failed connecting to memsql.")

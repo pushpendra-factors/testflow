@@ -20,6 +20,7 @@ func main() {
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
@@ -96,6 +97,7 @@ func main() {
 		CacheSortedSet:         *cacheSortedSet,
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
+			IsPSCHost:   *isPSCHost,
 			Port:        *memSQLPort,
 			User:        *memSQLUser,
 			Name:        *memSQLName,

@@ -29,6 +29,7 @@ func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
@@ -48,11 +49,12 @@ func main() {
 	config := &C.Configuration{
 		Env: *env,
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
+			Host:      *memSQLHost,
+			IsPSCHost: *isPSCHost,
+			Port:      *memSQLPort,
+			User:      *memSQLUser,
+			Name:      *memSQLName,
+			Password:  *memSQLPass,
 		},
 		PrimaryDatastore: *primaryDatastore,
 		RedisHost:        *redisHost,
@@ -163,7 +165,7 @@ func getPhoneNoAsCustomerUserId(phoneNo string) string {
 	return newPhoneNo
 }
 
-//userIndentificationByPhoneNo tries various pattern in specific order for identifying customer_user_id
+// userIndentificationByPhoneNo tries various pattern in specific order for identifying customer_user_id
 func userIndentificationByPhoneNo(projectId int64, phoneNo string) string {
 
 	if len(phoneNo) > 2 {

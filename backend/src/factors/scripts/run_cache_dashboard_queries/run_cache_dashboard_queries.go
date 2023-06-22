@@ -30,6 +30,7 @@ func main() {
 	startTimestampForWeekMonth := flag.Int64("start_timestamp_week_month", -1,
 		"Start timestamp of caching week/month")
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
@@ -110,6 +111,7 @@ func main() {
 		SentryDSN:          *sentryDSN,
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
+			IsPSCHost:   *isPSCHost,
 			Port:        *memSQLPort,
 			User:        *memSQLUser,
 			Name:        *memSQLName,
@@ -145,7 +147,7 @@ func main() {
 		CacheOnlyDashboards:                   *cacheOnlyDashboards,
 		CustomDateStart:                       *customDateStart,
 		CustomDateEnd:                         *customDateEnd,
-		AllowEventAnalyticsGroupsByProjectID: *allowEventAnalyticsGroupsByProjectID,
+		AllowEventAnalyticsGroupsByProjectID:  *allowEventAnalyticsGroupsByProjectID,
 	}
 
 	C.InitConf(config)

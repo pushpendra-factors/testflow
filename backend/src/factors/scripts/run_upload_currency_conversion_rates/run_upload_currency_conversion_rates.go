@@ -1,22 +1,24 @@
 package main
 
 import (
+	"encoding/json"
 	C "factors/config"
+	"factors/model/store"
 	"flag"
 	"fmt"
-	"os"
-	log "github.com/sirupsen/logrus"
 	"net/http"
-	"time"
-	"encoding/json"
-	"factors/model/store"
+	"os"
 	"strconv"
+	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
@@ -52,6 +54,7 @@ func main() {
 		Env:     *env,
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
+			IsPSCHost:   *isPSCHost,
 			Port:        *memSQLPort,
 			User:        *memSQLUser,
 			Name:        *memSQLName,
@@ -80,7 +83,7 @@ func main() {
 
 	todayDateinYYYYMMFormat := time.Unix(time.Now().Unix(), 0).UTC().Format("200601")
 	todayDateinYYYYMMDDFormat := time.Unix(time.Now().Unix(), 0).UTC().Format("2006-01-02")
-	exchangeRateUrl := "https://openexchangerates.org/api/historical/"+todayDateinYYYYMMDDFormat+".json?app_id=b61633badf274600a9b20b398e6c1768"
+	exchangeRateUrl := "https://openexchangerates.org/api/historical/" + todayDateinYYYYMMDDFormat + ".json?app_id=b61633badf274600a9b20b398e6c1768"
 	fmt.Println(exchangeRateUrl)
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, exchangeRateUrl).
 		WithHeader("Content-Type", "application/json")
@@ -115,14 +118,14 @@ func main() {
 	currencyOffsetWithINR := make(map[string]float64)
 	offset := currency["INR"].(float64)
 	for key, value := range currency {
-		currencyOffsetWithINR[key] = value.(float64)/offset
+		currencyOffsetWithINR[key] = value.(float64) / offset
 	}
 	dateAsInt64, _ := strconv.ParseInt(todayDateinYYYYMMFormat, 10, 64)
 	allSuccess := true
 	finalStatus := make(map[string]interface{})
 	for key, value := range currencyOffsetWithINR {
 		err := store.GetStore().CreateCurrencyDetails(key, dateAsInt64, value)
-		if(err != nil){
+		if err != nil {
 			finalStatus[key+"err"] = err.Error()
 			allSuccess = false
 		} else {

@@ -254,6 +254,13 @@ upload-backfill-salesforce-datetime-job: export IMAGE_NAME=backfill-salesforce-d
 upload-backfill-salesforce-datetime-job: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/backfill-salesforce-datetime-job:$(TAG)
 
+pack-backfill-users-domain:
+	docker build -t us.gcr.io/factors-$(ENV)/backfill-users-domain:$(TAG) -f Dockerfile.backfill_users_domain .
+
+upload-backfill-users-domain: export IMAGE_NAME=backfill-users-domain
+upload-backfill-users-domain: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/backfill-users-domain:$(TAG)
+
 pack-backfill-salesforce-smart-event-job:
 	docker build -t us.gcr.io/factors-$(ENV)/backfill-salesforce-smart-event-job:$(TAG) -f Dockerfile.backfill_salesforce_datetime_job .
 

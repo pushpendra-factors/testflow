@@ -55,6 +55,7 @@ func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
@@ -93,6 +94,7 @@ func main() {
 		Env:     *env,
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
+			IsPSCHost:   *isPSCHost,
 			Port:        *memSQLPort,
 			User:        *memSQLUser,
 			Name:        *memSQLName,
@@ -864,7 +866,6 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 	return mainBlock
 }
 
-
 func getTeamsMsgBlock(msg model.EventTriggerAlertMessage) string {
 	propBlock := getPropBlocksForTeams(msg.MessageProperty)
 	mainBlock := fmt.Sprintf(`<h3>%s</h3><h3>%s</h3><table>%s</table><a href=https://app.factors.ai>Know More </a>`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock)
@@ -958,7 +959,7 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				channel.ChannelId, message)
 			if err != nil {
 				errMsg := err.Error()
-				logCtx.WithError(err).Error("failed to send teams message: ", errMsg)
+				logCtx.WithError(err).Error("failed to send teams message")
 				return false, errMsg
 			}
 
