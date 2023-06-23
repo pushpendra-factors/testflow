@@ -227,7 +227,7 @@ class Util:
         batch_of_ids = []
         len_of_batch = 500
         for data in records:
-            id = data['pivotValue'].split(':')[3]
+            id = data['pivotValues'][0].split(':')[3]
             mapIDs[id]= True
 
         ids_list = list(mapIDs.keys())
@@ -238,7 +238,7 @@ class Util:
     def org_lookup(access_token, ids):
         url = ORG_LOOKUP_URL.format(ids)
         headers = {'Authorization': 'Bearer ' + access_token, 
-                    'X-Restli-Protocol-Version': '2.0.0'}
+                    'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
         return requests.get(url, headers=headers)
 
     def get_failed_ids(ids, map_id_to_org_data):
