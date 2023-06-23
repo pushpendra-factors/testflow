@@ -2854,10 +2854,6 @@ func AllowHubspotCompaniesv3APIByProjectID(projectID int64) bool {
 }
 
 func AllowHubspotEngagementsv3APIByProjectID(projectID int64) bool {
-	if !AllowHubspotEngagementsByProjectID(projectID) {
-		return false
-	}
-
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotEngagementsV3APIByProjectID, "")
 	if allProjects {
 		return true
