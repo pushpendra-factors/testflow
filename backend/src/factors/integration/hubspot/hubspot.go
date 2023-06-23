@@ -2106,6 +2106,10 @@ func getThreadIDFromOldEngagement(engagement Engagements, engagementType string)
 }
 
 func getThreadIDFromEngagement(engagement interface{}, engagementType string) (string, error) {
+	if engagementType != EngagementTypeEmail && engagementType != EngagementTypeIncomingEmail {
+		return "", nil
+	}
+
 	switch record := engagement.(type) {
 	case EngagementsV3:
 		return getThreadIDFromEngagementV3(record, engagementType)
