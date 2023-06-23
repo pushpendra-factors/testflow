@@ -18,14 +18,15 @@ class DataFetch:
         start = 0
         while is_first_fetch or len(response.json()[ELEMENTS])>=META_COUNT:
             is_first_fetch = False
-            url = META_DATA_URL.format(url_endpoint, ad_account, start, META_COUNT)
-            headers = {'Authorization': 'Bearer ' + access_token}
+            url = META_DATA_URL.format(ad_account, url_endpoint, start, META_COUNT)
+            headers = {'Authorization': 'Bearer ' + access_token,
+                    'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
             response = requests.get(url, headers=headers)
             request_counter += 1
             if not response.ok:
                 errString = API_ERROR_FORMAT.format(
                     doc_type, 'metadata', response.status_code,
-                    response.text, project_id)
+                    response.text, project_id, ad_account)
                 return metadata, errString, request_counter
             metadata.extend(response.json()[ELEMENTS])
             start +=META_COUNT
@@ -55,14 +56,15 @@ class DataFetch:
                     REQUESTED_FIELDS, linkedin_setting.ad_account,
                     start, INSIGHTS_COUNT)
             
-            headers = {'Authorization': 'Bearer ' + linkedin_setting.access_token}
+            headers = {'Authorization': 'Bearer ' + linkedin_setting.access_token,
+                    'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
             response = requests.get(url, headers=headers)
             request_counter += 1
             if not response.ok:
                 errString = API_ERROR_FORMAT.format(
                                 pivot, 'insights',
                                 response.status_code, response.text, 
-                                linkedin_setting.project_id)
+                                linkedin_setting.project_id, linkedin_setting.ad_account)
                 log.error(errString)
                 return [], {'status': 'failed', 'errMsg': errString,
                                 API_REQUESTS: request_counter}
@@ -105,7 +107,8 @@ class DataFetch:
         
     def get_ad_account_data(options, linkedin_setting, end_timestamp):
         url = AD_ACCOUNT_URL.format(linkedin_setting.ad_account)
-        headers = {'Authorization': 'Bearer ' + linkedin_setting.access_token}
+        headers = {'Authorization': 'Bearer ' + linkedin_setting.access_token,
+                    'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
         response = requests.get(url, headers=headers)
         if not response.ok:
             errString = API_ERROR_FORMAT.format(
