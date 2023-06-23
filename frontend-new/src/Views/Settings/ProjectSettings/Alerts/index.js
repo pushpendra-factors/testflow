@@ -8,7 +8,9 @@ import {
   Button,
   Table,
   notification,
-  Tabs
+  Tabs,
+  Badge,
+  Switch
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { MoreOutlined } from '@ant-design/icons';
@@ -22,6 +24,7 @@ import {
 import ConfirmationModal from '../../../../components/ConfirmationModal';
 import KPIBasedAlert from './KPIBasedAlert';
 import EventBasedAlert from './EventBasedAlert';
+import styles from './index.module.scss';
 
 const { TabPane } = Tabs;
 
@@ -101,8 +104,8 @@ const Alerts = ({
 
   const menu = (item) => {
     return (
-      <Menu>
-        <Menu.Item
+      <Menu className={`${styles.antdActionMenu}`}>
+        {/* <Menu.Item
           key='0'
           onClick={() => {
             setAlertState({ state: 'view', index: item });
@@ -110,7 +113,7 @@ const Alerts = ({
           }}
         >
           <a>View</a>
-        </Menu.Item>
+        </Menu.Item> */}
         <Menu.Item
           key='1'
           onClick={() => {
@@ -118,15 +121,18 @@ const Alerts = ({
             setAlertDetails(item);
           }}
         >
-          <a>Edit</a>
+          <a>Edit alert</a>
         </Menu.Item>
+        <Menu.Divider />
         <Menu.Item
           key='2'
           onClick={() => {
             showDeleteWidgetModal(item.id);
           }}
         >
-          <a>Remove</a>
+          <a>
+            <span style={{ color: 'red' }}>Remove alert</span>
+          </a>
         </Menu.Item>
       </Menu>
     );
@@ -137,9 +143,19 @@ const Alerts = ({
       title: 'Name',
       dataIndex: 'alert_name',
       key: 'alert_name',
-      render: (text) => (
-        <Text type={'title'} level={7} truncate={true} charLimit={50}>
-          {text}
+      width: '350px',
+      render: (item) => (
+        <Text
+          type={'title'}
+          level={7}
+          truncate={true}
+          extraClass={`cursor-pointer m-0`}
+          onClick={() => {
+            setAlertState({ state: 'edit', index: item });
+            setAlertDetails(item);
+          }}
+        >
+          {item?.alert_name || item?.title}
         </Text>
       )
       // width: 100,
@@ -156,13 +172,36 @@ const Alerts = ({
       // width: 200,
     },
     {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => (
+        <div className='flex items-center'>
+          {' '}
+          {status === 'paused' || status === 'disabled' ? (
+            <Badge
+              className={'fa-custom-badge fa-custom-badge--orange'}
+              status='processing'
+              text={'Paused'}
+            />
+          ) : (
+            <Badge
+              className={'fa-custom-badge fa-custom-badge--green'}
+              status='success'
+              text={'Active'}
+            />
+          )}
+        </div>
+      )
+    },
+    {
       title: '',
       dataIndex: 'actions',
       key: 'actions',
       align: 'right',
       width: 75,
       render: (obj) => (
-        <Dropdown overlay={menu(obj)} trigger={['hover']}>
+        <Dropdown overlay={menu(obj)} placement='bottomRight'>
           <Button
             type='text'
             icon={
@@ -198,13 +237,14 @@ const Alerts = ({
         savedAlerts?.map((item, index) => {
           savedArr.push({
             key: index,
-            alert_name: item.alert_name,
+            alert_name: item,
             dop:
               (item.alert_configuration.email_enabled ? 'Email' : '') +
               ' ' +
               (item.alert_configuration.slack_enabled ? 'Slack' : '') +
               ' ' +
               (item.alert_configuration.teams_enabled ? 'Teams' : ''),
+            status: item?.status,
             actions: item
           });
         });
@@ -218,8 +258,9 @@ const Alerts = ({
         savedEventAlerts?.map((item, index) => {
           savedArr.push({
             key: index,
-            alert_name: item.title,
+            alert_name: item,
             dop: item?.delivery_options,
+            status: item?.status,
             actions: item
           });
         });
