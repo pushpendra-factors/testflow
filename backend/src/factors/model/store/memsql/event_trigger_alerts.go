@@ -128,10 +128,20 @@ func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []mode
 				deliveryOption += "& Teams"
 			}
 		}
+
+		internalStatus := ""
+		if obj.InternalStatus == model.Active || obj.InternalStatus == model.Paused {
+			internalStatus = model.Active
+		} else if obj.InternalStatus == model.Disabled {
+			internalStatus = model.Paused
+		}
+
 		e := model.EventTriggerAlertInfo{
 			ID:                obj.ID,
 			Title:             obj.Title,
 			DeliveryOptions:   deliveryOption,
+			LastFailDetails:   obj.LastFailDetails,
+			Status:            internalStatus,
 			EventTriggerAlert: &alert,
 		}
 		res = append(res, e)
