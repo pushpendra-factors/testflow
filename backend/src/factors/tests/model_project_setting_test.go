@@ -100,7 +100,7 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 
 	// Test update filter_ip
 	filterIps := model.FilterIps{
-		BlockIps: []string{"192.168.000.254", "10.40.210.253", "2001:0db8:85a3:0000:0000:8a2e:0370:7334"},
+		BlockIps: []string{"192.158.1.38", "10.40.210.253", "2001:0db8:85a3:0000:0000:8a2e:0370:7334"},
 	}
 	filtersIpsEncoded, err := U.EncodeStructTypeToPostgresJsonb(filterIps)
 	assert.Nil(t, err)
@@ -115,7 +115,7 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 	assert.Equal(t, int(3), len(filterIpsResp.BlockIps))
 
 	//checking if updated IP Blocked
-	isBlockedIP := memsql.IsBlockedIP("", "192.168.000.254", filterIpsResp)
+	isBlockedIP := memsql.IsBlockedIP("", "192.158.1.38", filterIpsResp)
 	assert.Equal(t, true, isBlockedIP)
 
 	isBlockedIP = memsql.IsBlockedIP("10.40.210.253", "192.168.000.244", filterIpsResp)

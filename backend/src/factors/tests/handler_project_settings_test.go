@@ -254,7 +254,7 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 
 		// updating with valid ip
 		filterIps = model.FilterIps{
-			BlockIps: []string{"192.168.000.254", "10.40.210.253", "2001:0db8:85a3:0000:0000:8a2e:0370:7334"},
+			BlockIps: []string{"192.158.1.38", "10.40.210.253", "2001:0db8:85a3:0000:0000:8a2e:0370:7334"},
 		}
 		filtersIpsEncoded1, err := U.EncodeStructTypeToPostgresJsonb(filterIps)
 		assert.Nil(t, err)
