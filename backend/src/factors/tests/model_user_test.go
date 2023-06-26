@@ -1781,3 +1781,44 @@ func TestUserGetUserWithoutProperties(t *testing.T) {
 	assert.Equal(t, *user.Source, model.UserSourceWeb)
 	assert.Equal(t, user.CustomerUserId, customerUserId)
 }
+
+func TestUserGetUsersForDomainUserAssociationUpdate(t *testing.T) {
+	// Initialize a project for the user.
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	topSetUsers := []model.User{}
+	for i := 0; i < 50; i++ {
+		user := model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "abc", CreatedAt: U.TimeNowZ(), UpdatedAt: U.TimeNowZ()}
+		topSetUsers = append(topSetUsers, user)
+	}
+
+	middleSetUsers := []model.User{}
+	for i := 0; i < 10; i++ {
+		user := model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "abc", CreatedAt: U.TimeNowZ(), UpdatedAt: U.TimeNowZ()}
+		middleSetUsers = append(middleSetUsers, user)
+	}
+
+	bottomSetUsers := []model.User{}
+	for i := 0; i < 50; i++ {
+		user := model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "abc", CreatedAt: U.TimeNowZ(), UpdatedAt: U.TimeNowZ()}
+		bottomSetUsers = append(bottomSetUsers, user)
+	}
+
+	users := append(topSetUsers, middleSetUsers...)
+	users = append(users, bottomSetUsers...)
+	assert.Len(t, users, 110)
+
+	users = model.GetUsersForDomainUserAssociationUpdate(users)
+	assert.Len(t, users, 100)
+
+	for i := range topSetUsers {
+		assert.Equal(t, topSetUsers[i].ID, users[i].ID)
+	}
+
+	for i := range bottomSetUsers {
+		assert.Equal(t, bottomSetUsers[i].ID, users[50+i-1].ID)
+	}
+
+}
