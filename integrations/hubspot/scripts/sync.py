@@ -508,18 +508,42 @@ def sync_engagements_v2(project_id, refresh_token, api_key, last_sync_timestamp=
     create_all_engagement_documents_with_buffer([],False) ## flush any remaining docs in memory
     return engagement_api_calls, engagements_contacts_api_calls, latest_timestamp
 
-def add_contactId_v3(email, project_id, engagement, hubspot_request_handler):
-    get_url = "https://api.hubapi.com/contacts/v1/contact/email/" + urllib.parse.quote(email) + "/profile?"
+def build_email_param_str(email_ids = []):
+    email_str = ''
+    for email in email_ids:
+        if email_str != '':
+            email_str = email_str + '&'
+        email_str = email_str + 'email=' + email
+    return email_str
+
+def add_contactId_v3(email_ids, project_id, engagements, hubspot_request_handler):
+    if len(email_ids) == 0:
+        return engagements
+    
+    get_url = "https://api.hubapi.com/contacts/v1/contact/emails/batch/?" + "property=&propertyMode=value_only&formSubmissionMode=none" + "&" + build_email_param_str(email_ids)
     r  = hubspot_request_handler(project_id, get_url)
     if not r.ok:
-        log.error("Failure response %d from hubspot on contactID", r.status_code)
-        return
+        log.error("Failure response %d from hubspot on batch contactID", r.status_code)
+        return engagements
 
     response = json.loads(r.text)
-    if engagement["properties"]["hs_email_direction"] == "INCOMING_EMAIL":
-        engagement["properties"]["hs_email_headers"]["from"]["contactId"] = response["vid"]
-    if engagement["properties"]["hs_email_direction"] == "EMAIL":
-        engagement["properties"]["hs_email_headers"]["to"][0]["contactId"] = response["vid"]
+    for engagement in engagements:
+        engagement_type = engagement["properties"]["type"]
+        engagement_email_id = get_email_id_from_engagement_v3(engagement, False)
+        if engagement_email_id == "":
+            continue
+            
+        for contact_id in response:
+            for contact_identity_profile in response[contact_id]["identity-profiles"]:
+                contact_identities = contact_identity_profile["identities"]
+                for identity in contact_identities:
+                    if identity["type"] == "EMAIL" and identity["value"] == engagement_email_id:
+                        if engagement_type == "INCOMING_EMAIL":
+                            engagement["properties"]["hs_email_headers"]["from"]["contactId"] = contact_id
+                        elif engagement_type == "EMAIL":
+                            engagement["properties"]["hs_email_headers"]["to"][0]["contactId"] = contact_id
+    
+    return engagements
 
 def add_disposition_label_v3(engagement, call_disposition):
     if "properties" in engagement and "hs_call_disposition" in engagement["properties"]:
@@ -527,29 +551,60 @@ def add_disposition_label_v3(engagement, call_disposition):
         if disposition_label != None:
             engagement["properties"]["hs_call_disposition_label"] = disposition_label
 
-def add_properties_engagement_v3(project_id, hubspot_request_handler, engagement_type, engagement, call_disposition):
+def add_properties_engagements_v3(project_id, hubspot_request_handler, engagement_type, engagements, call_disposition):
     if engagement_type == "calls":
-        engagement["properties"]["type"] = "CALL"
-        add_disposition_label_v3(engagement, call_disposition)
+        for engagement in engagements:
+            engagement["properties"]["type"] = "CALL"
+            add_disposition_label_v3(engagement, call_disposition)
     elif engagement_type == "meetings":
-        engagement["properties"]["type"] = "MEETING"
-    elif engagement_type == "emails" and "properties" in engagement and "hs_email_direction" in engagement["properties"]:
+        for engagement in engagements:
+            engagement["properties"]["type"] = "MEETING"
+    elif engagement_type == "emails":
+        email_ids = get_email_ids_from_engagements_v3(engagements)
+        engagements = add_contactId_v3(email_ids, project_id, engagements, hubspot_request_handler)
+    
+    return engagements
+
+def get_email_headers_for_engagements_v3(engagement, convert_email_headers):
+    email_headers = {}
+    if convert_email_headers:
+        email_headers = json.loads(engagement["properties"]["hs_email_headers"])
+        engagement["properties"]["hs_email_headers"] = email_headers
+    else:
+        email_headers = engagement["properties"]["hs_email_headers"]
+    return email_headers
+
+def get_email_id_from_engagement_v3(engagement, convert_email_headers=True):
+    email_id = ""
+    if "properties" in engagement and "hs_email_direction" in engagement["properties"]:
         if engagement["properties"]["hs_email_direction"] == "INCOMING_EMAIL":
             engagement["properties"]["type"] = "INCOMING_EMAIL"
             if "hs_email_headers" in engagement["properties"] and engagement["properties"]["hs_email_headers"] is not None:
-                email_headers = json.loads(engagement["properties"]["hs_email_headers"])
-                engagement["properties"]["hs_email_headers"] = email_headers
+                email_headers = get_email_headers_for_engagements_v3(engagement, convert_email_headers)
                 if "from" in email_headers and "email" in email_headers["from"]:
                     if email_headers["from"]["email"] is not None and email_headers["from"]["email"] != "":
-                        add_contactId_v3(email_headers["from"]["email"], project_id, engagement, hubspot_request_handler)
+                        email_id = email_headers["from"]["email"]
         if engagement["properties"]["hs_email_direction"] == "EMAIL":
             engagement["properties"]["type"] = "EMAIL"
             if "hs_email_headers" in engagement["properties"] and engagement["properties"]["hs_email_headers"] is not None:
-                email_headers = json.loads(engagement["properties"]["hs_email_headers"])     
-                engagement["properties"]["hs_email_headers"] = email_headers
+                email_headers = get_email_headers_for_engagements_v3(engagement, convert_email_headers)
                 if "to" in email_headers and len(email_headers["to"])>0 and "email" in email_headers["to"][0]:
                     if email_headers["to"][0]["email"] is not None and email_headers["to"][0]["email"]!= "":
-                        add_contactId_v3(email_headers["to"][0]["email"], project_id, engagement, hubspot_request_handler)
+                        email_id = email_headers["to"][0]["email"]
+    
+    if email_id is None:
+        return ""
+    return email_id
+
+def get_email_ids_from_engagements_v3(engagements):
+    email_ids = []
+    
+    for engagement in engagements:
+        email_id = get_email_id_from_engagement_v3(engagement)
+        if email_id != "":
+            email_ids.append(email_id)
+    
+    return email_ids
 
 def get_properties_for_engagement_v3(engagement_type):
     if engagement_type == "calls":
@@ -609,6 +664,7 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
         has_more = True
         engagement_properties = get_properties_for_engagement_v3(type)
         latest_timestamp = 0
+        json_payload = get_search_v3_api_payload("hs_lastmodifieddate", last_sync_timestamp, limit)
 
         log.warning("Downloading "+ type + " engagements for project_id : "+ str(project_id) + ".")
         
@@ -620,20 +676,16 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
             json_payload["properties"] = engagement_properties
             r = hubspot_request_handler(project_id, get_url, request=requests.post, json=json_payload, headers=headers)
             if not r.ok:
-                log.error("Failure response %d from hubspot on sync_engagements", r.status_code)
+                log.error("Failure response %d from hubspot on sync_engagements_v3", r.status_code)
                 latest_timestamp  = last_sync_timestamp
                 break
             
             engagement_api_calls += 1
-            filter_engagements = []
             
             response_dict = json.loads(r.text)
             
             docs = response_dict['results']
-            for engagement in docs:
-                if type == "calls" or type == "meetings" or type == "emails":
-                    add_properties_engagement_v3(project_id, hubspot_request_handler, type, engagement, call_disposition)
-                    filter_engagements.append(engagement)
+            filter_engagements = add_properties_engagements_v3(project_id, hubspot_request_handler, type, docs, call_disposition)
             
             paging_after = ""
             if "paging" in response_dict and "next" in response_dict["paging"] and "after" in response_dict["paging"]["next"]:
@@ -645,9 +697,9 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
             else:
                 has_more = False
 
-            latest_timestamp = get_batch_documents_max_timestamp_v3(project_id, docs, "engagements", latest_timestamp)
+            latest_timestamp = get_batch_documents_max_timestamp_v3(project_id, filter_engagements, "engagements", latest_timestamp)
 
-            _, api_calls = fill_contacts_for_engagements_v3(project_id, docs, type, hubspot_request_handler)
+            _, api_calls = fill_contacts_for_engagements_v3(project_id, filter_engagements, type, hubspot_request_handler)
             engagements_contacts_api_calls += api_calls
             count = count + len(filter_engagements)
             overall_doc_count = overall_doc_count + len(filter_engagements)
