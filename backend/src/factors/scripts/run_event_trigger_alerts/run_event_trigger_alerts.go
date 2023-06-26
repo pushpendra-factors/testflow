@@ -231,9 +231,18 @@ func main() {
 		C.PingHealthcheckForFailure(healthcheckPingID, finalStatus)
 	} else {
 		C.PingHealthcheckForSuccess(healthcheckPingID, finalStatus)
-		if len(finalStatus) > 0 {
-			C.PingHealthcheckForSuccess(highPriorityHealthCheckPingID, finalStatus)
+	}
+
+	// Check if the finalStatus map contains atleast one instance of 'Success' key
+	var isHighPriorityHealthcheckOK bool
+	for key := range finalStatus {
+		if strings.Contains(key, "Success") {
+			isHighPriorityHealthcheckOK = true
+			break
 		}
+	}
+	if isHighPriorityHealthcheckOK {
+		C.PingHealthcheckForSuccess(highPriorityHealthCheckPingID, finalStatus)
 	}
 
 }

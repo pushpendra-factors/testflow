@@ -999,14 +999,12 @@ func SyncDatetimeAndNumericalProperties(projectID int64, apiKey, refreshToken st
 		allStatus = append(allStatus, status)
 	}
 
-	if C.AllowHubspotEngagementsByProjectID(projectID) {
-		failure, engagementsStatus := SyncEngagementDatetimeProperties(projectID)
-		if failure {
-			anyFailures = true
-		}
-
-		allStatus = append(allStatus, engagementsStatus...)
+	failure, engagementsStatus := SyncEngagementDatetimeProperties(projectID)
+	if failure {
+		anyFailures = true
 	}
+
+	allStatus = append(allStatus, engagementsStatus...)
 
 	return anyFailures, allStatus
 }
@@ -2116,6 +2114,10 @@ func getThreadIDFromOldEngagement(engagement Engagements, engagementType string)
 }
 
 func getThreadIDFromEngagement(engagement interface{}, engagementType string) (string, error) {
+	if engagementType != EngagementTypeEmail && engagementType != EngagementTypeIncomingEmail {
+		return "", nil
+	}
+
 	switch record := engagement.(type) {
 	case EngagementsV3:
 		return getThreadIDFromEngagementV3(record, engagementType)
