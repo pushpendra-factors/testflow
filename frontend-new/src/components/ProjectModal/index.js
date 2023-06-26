@@ -17,15 +17,17 @@ import {
   fetchProjectAgents,
   signout
 } from 'Reducers/agentActions';
+import { USER_LOGOUT } from 'Reducers/types';
 import { setActiveProject } from 'Reducers/global';
 import UserSettings from '../../Views/Settings/UserSettings';
 import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
-import { connect } from 'react-redux';
+import { connect, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import factorsai from 'factorsai';
 import { fetchProjectSettings } from 'Reducers/global';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import useAutoFocus from 'hooks/useAutoFocus';
+
 function ProjectModal(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [searchProjectName, setsearchProjectName] = useState('');
@@ -35,6 +37,8 @@ function ProjectModal(props) {
   const [selectedProject, setselectedProject] = useState(null);
   const history = useHistory();
   const inputComponentRef = useAutoFocus(ShowPopOver);
+
+  const dispatch = useDispatch();
 
   const searchProject = (e) => {
     setsearchProjectName(e.target.value);
@@ -107,6 +111,11 @@ function ProjectModal(props) {
       factorsai.identify(props?.currentAgent?.email, userAndProjectDetails);
     }
   }, [props?.currentAgent, props?.active_project]);
+
+  const userLogout = () =>{
+    props.signout(); 
+    dispatch({ type: USER_LOGOUT });
+  }
 
   const popoverContent = () => (
     <div data-tour='step-9' className={'fa-popupcard'}>
@@ -238,8 +247,8 @@ function ProjectModal(props) {
           size={'large'}
           type={'text'}
           onClick={() => {
-            setShowPopOver(false);
-            props.signout();
+            setShowPopOver(false); 
+            userLogout();
           }}
           className={styles.popover_content__signout}
         >

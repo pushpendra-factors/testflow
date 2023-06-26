@@ -22,8 +22,9 @@ import allRoutes from './allRoutes';
 import onBoardFlow from './onBoardFlow';
 import accountProfilesViewReducer from './accountProfilesView';
 import userProfilesViewReducer from './userProfilesView';
+import { USER_LOGOUT } from './types';
 
-const rootReducer = combineReducers({
+const appReducer = combineReducers({
   global: GlobalReducer,
   agent: agentActions,
   coreQuery: CoreQueryReducer,
@@ -48,5 +49,16 @@ const rootReducer = combineReducers({
   accountProfilesView: accountProfilesViewReducer,
   userProfilesView: userProfilesViewReducer
 });
+
+const rootReducer = (state, action) => {
+  if (action.type === USER_LOGOUT) {
+      // for all keys defined in your persistConfig(s)
+      localStorage.removeItem('persist:root')
+      // storage.removeItem('persist:otherKey')
+
+      return appReducer(undefined, action);
+  }
+  return appReducer(state, action);
+};
 
 export default rootReducer;

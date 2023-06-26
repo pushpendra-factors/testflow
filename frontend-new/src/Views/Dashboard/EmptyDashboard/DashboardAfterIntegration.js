@@ -30,7 +30,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
       };
 
     useEffect(() => {
-        let email = currentAgent.email;
+        let email = currentAgent?.email;
         getHubspotContact(email).then((res) => {
             console.log('get hubspot contact success', res.data)
             setownerID(res.data.hubspot_owner_id)

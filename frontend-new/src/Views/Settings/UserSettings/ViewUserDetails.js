@@ -38,7 +38,7 @@ function ViewUserDetails({
           <Col>
             <Text type={'title'} level={7} extraClass={'m-0'}>Name</Text>
             {dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{`${agent.first_name} ${agent.last_name}`}</Text>
+              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{`${agent?.first_name} ${agent?.last_name}`}</Text>
             }
           </Col>
         </Row>
@@ -46,7 +46,7 @@ function ViewUserDetails({
           <Col>
             <Text type={'title'} level={7} extraClass={'m-0'}>Email</Text>
             {dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{agent.email}</Text>
+              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{agent?.email}</Text>
             }
           </Col>
         </Row>
@@ -54,7 +54,7 @@ function ViewUserDetails({
           <Col>
             <Text type={'title'} level={7} extraClass={'m-0'}>Mobile</Text>
             {dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{agent.phone}</Text>
+              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{agent?.phone}</Text>
             }
           </Col>
         </Row>
