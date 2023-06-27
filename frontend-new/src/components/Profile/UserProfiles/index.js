@@ -414,17 +414,14 @@ function UserProfiles({
     setActiveSegment(activeSegment);
   };
 
-  const getUsers = useCallback(
-    (payload) => {
-      if (payload.source && payload.source !== '') {
-        const formatPayload = { ...payload };
-        formatPayload.filters =
-          formatFiltersForPayload(payload?.filters, false) || {};
-        getProfileUsers(activeProject.id, formatPayload, activeAgent);
-      }
-    },
-    [activeProject.id, activeAgent]
-  );
+  const getUsers = (payload) => {
+    if (payload.source && payload.source !== '') {
+      const formatPayload = { ...payload };
+      formatPayload.filters =
+        formatFiltersForPayload(payload?.filters, false) || {};
+      getProfileUsers(activeProject.id, formatPayload, activeAgent);
+    }
+  };
 
   useEffect(() => {
     getUsers(timelinePayload);
@@ -631,9 +628,8 @@ function UserProfiles({
         query: { ...updatedQuery }
       })
         .then(() => getSavedSegments(activeProject.id))
-        .then(() =>
-          setActiveSegment({ ...activeSegment, query: updatedQuery })
-        );
+        .then(() => setActiveSegment({ ...activeSegment, query: updatedQuery }))
+        .finally(() => getUsers(timelinePayload));
     } else {
       const config = { ...tlConfig };
       config.user_config.table_props = checkListUserProps
@@ -641,10 +637,9 @@ function UserProfiles({
         .map((item) => item?.prop_name);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...config }
-      });
+      }).then(() => getUsers(timelinePayload));
     }
     setShowPopOver(false);
-    getUsers(timelinePayload);
   };
 
   const popoverContent = () => (
