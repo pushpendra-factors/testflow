@@ -38,7 +38,7 @@ function UserTimelineBirdview({
       ).fill(!collapse);
       setShowAll(showAllState);
     }
-  }, [collapse, groupedActivities]);
+  }, [collapse]);
 
   const setShowAllIndex = (ind, flag) => {
     setCollapse(undefined);

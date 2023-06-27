@@ -805,7 +805,7 @@ function UserProfiles({
   };
 
   const renderSearchSection = () => (
-    <div className='relative mr-2'>
+    <div className='relative'>
       {searchBarOpen ? (
         <div className={'flex items-center justify-between'}>
           {!searchDDOpen && (
@@ -854,8 +854,7 @@ function UserProfiles({
   const renderConfiguration = () => (
     <Button
       size='large'
-      icon={<SVG name='configure' />}
-      className='dropdown-btn'
+      icon={<SVG name='configure' size={20}/>}
       onClick={() => history.push(PathUrls.ConfigureEngagements)}
     >
       Configure
@@ -869,7 +868,7 @@ function UserProfiles({
         {renderSegmentSelect()} */}
         {renderPropertyFilter()}
       </div>
-      <div className='flex items-center justify-between'>
+      <div className='inline-flex gap--6'>
         {timelinePayload.filters.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}

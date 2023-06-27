@@ -10,7 +10,7 @@ function LeftPanePropBlock({ property, type, displayName, value, onDelete }) {
         <Text
           type='title'
           level={8}
-          color='grey-2'
+          color='grey'
           truncate
           charLimit={30}
           extraClass='m-0'
