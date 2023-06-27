@@ -8,6 +8,7 @@ import (
 	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
+	"strings"
 	"time"
 
 	"net/http"
@@ -18,6 +19,9 @@ import (
 var defaultSyncInfo = map[string]int64{
 	"event_stream": 0,
 }
+
+const NO_DATA_ERROR = "No data found"
+const CATEGORIES_TAG_PREFIX = "categories/"
 
 var tagEnum = map[string]string{
 	"products.competitors":                        U.GROUP_EVENT_NAME_G2_ALTERNATIVE,
@@ -55,6 +59,9 @@ func PerformETLForProject(projectSetting model.G2ProjectSettings) string {
 		if err != nil {
 			return err.Error()
 		}
+		if len(data) == 0 {
+			return NO_DATA_ERROR
+		}
 		transformedData, err := transformData(data)
 		if err != nil {
 			return err.Error()
@@ -67,6 +74,7 @@ func PerformETLForProject(projectSetting model.G2ProjectSettings) string {
 	return ""
 }
 
+// Todo: Add retries
 func extractData(lastSync int64, apiKey string) ([]EventStreamResponseDataFormat, error) {
 	data := make([]EventStreamResponseDataFormat, 0)
 	from, to := getFromAndToTimestampInReqFormat(lastSync)
@@ -274,25 +282,20 @@ func PerformCompanyEnrichmentAndUserAndEventCreationForProject(projectSetting mo
 			logCtx.Error("Failed in TrackGroupWithDomain")
 			return "Failed in TrackGroupWithDomain", errCode
 		}
-		if _, exists := valueMap["tag"]; !exists {
-			logCtx.Error("Failed in tag not exists for eventname creation")
-			return "Failed in tag not exists for eventname creation", http.StatusBadRequest
-		}
-		tag := fmt.Sprintf("%v", valueMap["tag"])
-		if _, exists := tagEnum[tag]; !exists {
-			errMsg := "Tag " + tag + " is not present is enum"
-			logCtx.Error(errMsg)
-			return errMsg, http.StatusBadRequest
+		eventName, errMsg, errCode := getEventNameFromTag(valueMap)
+		if errMsg != "" {
+			return errMsg, errCode
 		}
 
 		eventNameG2, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{
 			ProjectId: projectID,
-			Name:      tagEnum[tag],
+			Name:      eventName,
 		})
 		if errCode != http.StatusCreated && errCode != http.StatusConflict {
 			return "Failed in creating pageview event name", errCode
 		}
-		propertiesJSONB, err := U.EncodeStructTypeToPostgresJsonb(&defaultPropertiesForEvent)
+		properties := getEventPropertiesFromValueMap(valueMap)
+		propertiesJSONB, err := U.EncodeStructTypeToPostgresJsonb(&properties)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed in encoding properties to JSONb")
 			return "Failed in encoding properties to JSONb", http.StatusInternalServerError
@@ -331,4 +334,32 @@ func PerformCompanyEnrichmentAndUserAndEventCreationForProject(projectSetting mo
 
 	}
 	return "", http.StatusOK
+}
+
+func getEventNameFromTag(valueMap map[string]interface{}) (string, string, int) {
+	if _, exists := valueMap["tag"]; !exists {
+		return "", "Failed in tag not exists for eventname creation", http.StatusBadRequest
+	}
+	tag := fmt.Sprintf("%v", valueMap["tag"])
+	eventName, exists := tagEnum[tag]
+	if !exists {
+		if strings.HasPrefix(tag, CATEGORIES_TAG_PREFIX) {
+			eventName = U.GROUP_EVENT_NAME_G2_CATEGORY
+		} else {
+			errMsg := "Tag " + tag + " is not present is enum"
+			return "", errMsg, http.StatusBadRequest
+		}
+	}
+	return eventName, "", http.StatusOK
+}
+
+func getEventPropertiesFromValueMap(valueMap map[string]interface{}) map[string]interface{} {
+	properties := defaultPropertiesForEvent
+	tag := fmt.Sprintf("%v", valueMap["tag"])
+	title := fmt.Sprintf("%v", valueMap["title"])
+	page_url := fmt.Sprintf("%v", valueMap["url"])
+	properties[U.EP_PAGE_TITLE] = title
+	properties[U.EP_PAGE_URL] = page_url
+	properties[U.EP_G2_TAG] = tag
+	return properties
 }

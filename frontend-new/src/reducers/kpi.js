@@ -184,7 +184,7 @@ export function fetchKPIFilterValues(projectID, data) {
     return new Promise((resolve, reject) => {
       post(
         dispatch,
-        host + 'projects/' + projectID + `/v1/kpi/filter_values?label=true`,
+        host + 'projects/' + projectID + `/v1/kpi/filter_values`,
         data
       )
         .then((response) => {
