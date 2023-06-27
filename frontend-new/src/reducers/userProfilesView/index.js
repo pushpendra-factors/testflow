@@ -21,7 +21,6 @@ export default function (state = initialState, action) {
       return {
         ...state,
         timelinePayload: action.payload,
-        activeSegment: INITIAL_ACTIVE_SEGMENT
       };
     case SET_PROFILES_ACTIVE_SEGMENT:
       return {
