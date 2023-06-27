@@ -348,7 +348,7 @@ function AnalysisHeader({
       </Menu.Item>
       <Menu.Item key='5' disabled={!savedQueryId}>
         <SVG
-          name={'trash'}
+          name={'TrashLight'}
           size={18}
           color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
           extraClass={'inline mr-2'}

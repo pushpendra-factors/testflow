@@ -1133,3 +1133,20 @@ func GetGroupUserSourceByGroupName(groupName string) int {
 func GetGroupUserSourceNameByGroupName(groupName string) string {
 	return GetUserSourceName(GroupUserSource[groupName])
 }
+
+func GetUsersForDomainUserAssociationUpdate(users []User) []User {
+	if len(users) <= 100 {
+		return users
+	}
+
+	// Sort by updated_at ASC
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].UpdatedAt.Before(users[j].UpdatedAt)
+	})
+
+	var updateUsers []User
+	updateUsers = users[:50]
+	updateUsers = append(updateUsers, users[len(users)-50:]...)
+
+	return updateUsers
+}

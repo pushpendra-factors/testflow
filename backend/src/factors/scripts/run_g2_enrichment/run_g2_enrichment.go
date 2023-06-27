@@ -15,6 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Todo: introduce more constants
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 	projectIDs := flag.String("project_ids", "*", "List of project_id to run for.")
@@ -119,20 +120,21 @@ func main() {
 	}
 }
 
+// G2 etl and enrichment inside the following method
 func G2Enrichment(g2ProjectSettings []model.G2ProjectSettings) (map[string][]SP.Status, map[string][]SP.Status) {
 	syncStatusFailures := make([]SP.Status, 0)
 	syncStatusSuccesses := make([]SP.Status, 0)
 
 	for _, setting := range g2ProjectSettings {
 		errMsg := G2.PerformETLForProject(setting)
-		if errMsg != "" {
+		if errMsg != "" && errMsg != G2.NO_DATA_ERROR {
 			failure := SP.Status{
 				ProjectID: setting.ProjectID,
 				ErrMsg:    errMsg,
 			}
 			syncStatusFailures = append(syncStatusFailures, failure)
 		} else {
-			syncStatusSuccesses = append(syncStatusSuccesses, SP.Status{ProjectID: setting.ProjectID})
+			syncStatusSuccesses = append(syncStatusSuccesses, SP.Status{ProjectID: setting.ProjectID, ErrMsg: errMsg})
 		}
 	}
 
@@ -154,7 +156,7 @@ func G2Enrichment(g2ProjectSettings []model.G2ProjectSettings) (map[string][]SP.
 			}
 			syncStatusFailures = append(syncStatusFailures, failure)
 		} else {
-			syncStatusSuccesses = append(syncStatusSuccesses, SP.Status{ProjectID: setting.ProjectID})
+			syncStatusSuccesses = append(syncStatusSuccesses, SP.Status{ProjectID: setting.ProjectID, ErrMsg: errMsg})
 		}
 	}
 	log.Warn("End of user and event creation part of g2 sync job")

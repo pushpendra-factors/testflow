@@ -3175,9 +3175,11 @@ func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID st
 		domainUserID = emailDomainUserID
 	}
 
+	updateUsers := model.GetUsersForDomainUserAssociationUpdate(users)
+
 	userIDs := []string{}
-	for i := range users {
-		userIDs = append(userIDs, users[i].ID)
+	for i := range updateUsers {
+		userIDs = append(userIDs, updateUsers[i].ID)
 	}
 
 	status = store.updateUserDomainsGroup(projectID, userIDs, groupIDMap[model.GROUP_NAME_DOMAINS], domainUserID)

@@ -494,6 +494,7 @@ var EP_SF_EVENT_SUBJECT string = "$salesforce_event_subject"
 var EP_SF_EVENT_TYPE string = "$salesforce_event_type"
 var EP_SF_EVENT_SUBTYPE string = "$salesforce_event_eventsubtype"
 var EP_SF_EVENT_COMPLETED_DATETIME string = "$salesforce_event_completeddatetime"
+var EP_G2_TAG string = "$g2_tag"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -1739,6 +1740,7 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	EP_FORM_METHOD:                           "Form Method",
 	EP_FORM_ACTION:                           "Form Action",
 	EP_FORM_TYPE:                             "Form Type",
+	EP_G2_TAG:                                "G2 Tag",
 	"$hubspot_form_submission_form-type":     "Form Type",
 	"$hubspot_form_submission_title":         "Form Title",
 	"$hubspot_form_submission_form-id":       "Form ID",

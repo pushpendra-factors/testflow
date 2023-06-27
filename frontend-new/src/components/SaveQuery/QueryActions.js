@@ -126,7 +126,7 @@ const QueryActionsComponent = ({
       </Menu.Item>
       <Menu.Item key='2'>
         <SVG
-          name={'save'}
+          name={'SaveLight'}
           size={20}
           color={'grey'}
           extraClass={'inline -mt-1 mr-1'}
@@ -180,7 +180,7 @@ const QueryActionsComponent = ({
       </Menu.Item>
       <Menu.Item key='5' disabled={!savedQueryId}>
         <SVG
-          name={'trash'}
+          name={'TrashLight'}
           size={18}
           color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
           extraClass={'inline mr-2'}
@@ -265,7 +265,7 @@ const QueryActionsComponent = ({
               disabled={savedQueryId}
               type={BUTTON_TYPES.PRIMARY}
               size={'large'}
-              icon={<SVG name={'CaretDown'} size={20} color={'LightGray'} />}
+              icon={<SVG name={'CaretDown'} size={20} color={'white'} />}
             >
               Save
             </Dropdown.Button>
