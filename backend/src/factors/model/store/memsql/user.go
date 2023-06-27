@@ -2749,7 +2749,17 @@ func (store *MemSQL) updateUserDomainsGroup(projectID int64, userIDs []string, d
 		groupUserIDColumn: domainsUserID,
 	}
 
-	err := db.Model(model.User{}).Where("project_id = ? AND id IN ( ? )", projectID, userIDs).Updates(update).Error
+	whereStmnt := ""
+	whereParams := []interface{}{}
+	if len(userIDs) == 1 {
+		whereStmnt = "project_id = ? AND id = ?"
+		whereParams = []interface{}{projectID, userIDs[0]}
+	} else {
+		whereStmnt = "project_id = ? AND id in ( ? )"
+		whereParams = []interface{}{projectID, userIDs}
+	}
+
+	err := db.Model(model.User{}).Where(whereStmnt, whereParams...).Updates(update).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to updateUserDomainsGroup.")
 		return http.StatusInternalServerError
@@ -3128,16 +3138,12 @@ func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID st
 
 	updateUsers := model.GetUsersForDomainUserAssociationUpdate(users)
 
-	userIDs := []string{}
 	for i := range updateUsers {
-		userIDs = append(userIDs, updateUsers[i].ID)
-	}
-
-	status = store.updateUserDomainsGroup(projectID, userIDs, groupIDMap[model.GROUP_NAME_DOMAINS], domainUserID)
-	if status != http.StatusAccepted && status != http.StatusNotModified {
-		logCtx.WithFields(log.Fields{"user_id": userIDs, "domain_group_index": groupIDMap[model.GROUP_NAME_DOMAINS], "domain_user_id": domainUserID}).
-			Error("Failed to update domains user id on user.")
-		return http.StatusInternalServerError
+		status = store.updateUserDomainsGroup(projectID, []string{updateUsers[i].ID}, groupIDMap[model.GROUP_NAME_DOMAINS], domainUserID)
+		if status != http.StatusAccepted && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"user_id": updateUsers[i].ID, "domain_group_index": groupIDMap[model.GROUP_NAME_DOMAINS], "domain_user_id": domainUserID}).
+				Error("Failed to update domains user id on user. Skipping user id.")
+		}
 	}
 
 	return http.StatusOK
