@@ -536,7 +536,9 @@ def add_contactId_v3(email_ids, project_id, engagements, hubspot_request_handler
             for contact_identity_profile in response[contact_id]["identity-profiles"]:
                 contact_identities = contact_identity_profile["identities"]
                 for identity in contact_identities:
-                    if identity["type"] == "EMAIL" and identity["value"] == engagement_email_id:
+                    identity_type = identity.get(identity["type"], "")
+                    identity_value = identity.get(identity["value"], "")
+                    if identity_type == "EMAIL" and identity_value == engagement_email_id:
                         if engagement_type == "INCOMING_EMAIL":
                             engagement["properties"]["hs_email_headers"]["from"]["contactId"] = contact_id
                         elif engagement_type == "EMAIL":
