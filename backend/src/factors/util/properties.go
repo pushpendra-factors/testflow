@@ -172,6 +172,7 @@ const GROUP_EVENT_NAME_G2_ALTERNATIVE = "$g2_alternative"
 const GROUP_EVENT_NAME_G2_PRICING = "$g2_pricing"
 const GROUP_EVENT_NAME_G2_CATEGORY = "$g2_category"
 const GROUP_EVENT_NAME_G2_COMPARISON = "$g2_comparison"
+const GROUP_EVENT_NAME_G2_REPORT = "$g2_report"
 
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
