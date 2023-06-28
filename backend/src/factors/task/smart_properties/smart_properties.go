@@ -47,7 +47,7 @@ func EnrichSmartPropertyForChangedRulesForProject(projectID int64) int {
 	adwordsCampaigns, adwordsAdGroups := store.GetStore().GetLatestMetaForAdwordsForGivenDays(projectID, 30)
 	facebookCampaigns, facebookAdGroups := store.GetStore().GetLatestMetaForFacebookForGivenDays(projectID, 30)
 	linkedinCampaigns, linkedinAdGroups := store.GetStore().GetLatestMetaForLinkedinForGivenDays(projectID, 30)
-	bingadsCampaigns, bingadsAdGroups := store.GetStore().GetLatestMetaForBingAdsForGivenDays(projectID, 30)
+	bingadsCampaigns, bingadsAdGroups := store.GetStore().GetLatestMetaForBingAdsForGivenDays(projectID, 365)
 	customadsCampaigns, customadsAdGroups := make([][]model.ChannelDocumentsWithFields, 0), make([][]model.ChannelDocumentsWithFields, 0)
 	for _, source := range sources {
 		customadsCampaign, customadsAdGroup := store.GetStore().GetLatestMetaForCustomAdsForGivenDays(projectID, source, 90)

@@ -270,22 +270,25 @@ function FaHeader() {
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
-              <Link
-                to={ATTRIBUTION_ROUTES.base}
-                className={cx('flex items-center', {
-                  [styles['active-header-item']]: isAttributionsUrl(pathname)
-                })}
-              >
-                <Text
-                  type='title'
-                  color='white'
-                  level={7}
-                  extraClass='mb-0'
-                  weight='medium'
+            {featureLock(activeAgent)? 
+                <Link
+                  to={ATTRIBUTION_ROUTES.base}
+                  className={cx('flex items-center', {
+                    [styles['active-header-item']]: isAttributionsUrl(pathname)
+                  })}
                 >
-                  Attribution
-                </Text>
-              </Link>
+                  <Text
+                    type='title'
+                    color='white'
+                    level={7}
+                    extraClass='mb-0'
+                    weight='medium'
+                  >
+                    Attribution
+                  </Text>
+                </Link>
+               : null}
+            
           </div>
         </div>
       </div>
