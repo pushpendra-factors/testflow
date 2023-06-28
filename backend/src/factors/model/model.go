@@ -853,9 +853,9 @@ type Model interface {
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)
 	GetAccountsAssociatedToDomain(projectID int64, id string, domainGroupId int) ([]model.User, int)
-	GetSourceStringForAccountsV2(projectID int64, source string) (string, int, int)
-	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (string, map[string]interface{}, int)
-	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, int)
+	GetSourceStringForAccountsV2(projectID int64, source string) (string, int, []interface{}, int)
+	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (string, map[string]interface{}, []interface{}, int)
+	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
 	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
 
 	// segment

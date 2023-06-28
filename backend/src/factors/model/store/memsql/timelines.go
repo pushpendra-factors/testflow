@@ -138,11 +138,13 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	var selectString, isGroupUserString, sourceString string
 	var domainGroupId, status int
+	var params, minMaxParamsQ []interface{}
+	params = append(params, projectID)
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
 		isGroupUserString = "is_group_user=1"
 		selectString = "id AS identity, properties, updated_at AS last_activity"
 		if C.IsDomainEnabled(projectID) {
-			sourceString, domainGroupId, status = store.GetSourceStringForAccountsV2(projectID, payload.Source)
+			sourceString, domainGroupId, params, status = store.GetSourceStringForAccountsV2(projectID, payload.Source)
 		} else {
 			// Check for Enabled Groups
 			groupNameIDMap, errCode := store.GetGroupNameIDMap(projectID)
@@ -159,13 +161,15 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		selectString = "COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, properties, MAX(updated_at) AS last_activity"
 		isGroupUserString = "(is_group_user=0 OR is_group_user IS NULL)"
 		if model.UserSourceMap[payload.Source] == model.UserSourceWeb {
-			sourceString = "AND (source=" + strconv.Itoa(model.UserSourceMap[payload.Source]) + " OR source IS NULL)"
+			sourceString = "AND (source=1 OR users.source IS NULL)"
 		} else if payload.Source == "All" {
 			sourceString = ""
 		} else {
-			sourceString = "AND source=" + strconv.Itoa(model.UserSourceMap[payload.Source])
+			sourceString = "AND source=?"
+			params = append(params, strconv.Itoa(model.UserSourceMap[payload.Source]))
 		}
 	}
+	minMaxParamsQ = append(minMaxParamsQ, params...)
 
 	var filterString string
 	var filterParams []interface{}
@@ -207,6 +211,17 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		filterParams = append(filterParams, userTypeFiltersParams...)
 	}
 
+	// to check whether the filter in account profiles is of user properties
+	isUserProperty := false
+	if profileType == model.PROFILE_TYPE_ACCOUNT {
+		for _, filter := range payload.Filters {
+			if filter.Entity == model.PropertyEntityUserGroup {
+				isUserProperty = true
+				break
+			}
+		}
+	}
+
 	// Run Queries
 	type MinMaxTime struct {
 		MinUpdatedAt time.Time `json:"min_updated_at"`
@@ -214,50 +229,87 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 	var minMax MinMaxTime
 	var runQueryString, fromStr, groupByStr, selectColumnsStr, commonStr string
-	windowSelectStr := "MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at"                  // Select Min & Max updated_at
-	commonStr = fmt.Sprintf("users WHERE project_id=%d AND %s %s", projectID, isGroupUserString, sourceString) // Common String for Queries
-	fromStr = fmt.Sprintf("%s AND updated_at < '%s'", commonStr, FormatTimeToString(gorm.NowFunc()))
+	windowSelectStr := "MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at" // Select Min & Max updated_at
+	// commonStr for additional join stmt
+	if isUserProperty {
+		commonStr = fmt.Sprintf("WHERE users.project_id=? AND users.%s %s", isGroupUserString, sourceString) // Common String for Queries
+	} else {
+		commonStr = fmt.Sprintf("WHERE project_id=? AND %s %s", isGroupUserString, sourceString) // Common String for Queries
+	}
+	fromStr = fmt.Sprintf("%s AND updated_at < ?", commonStr)
+	minMaxParamsQ = append(minMaxParamsQ, FormatTimeToString(gorm.NowFunc()))
 	// Get min and max updated_at after ordering as part of optimisation.
 	limitVal := 100000
 	if filterString != "" {
 		limitVal = 1000000
 	}
-	runQueryString = fmt.Sprintf("SELECT %s FROM (SELECT updated_at FROM %s ORDER BY updated_at DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
-
+	runQueryString = fmt.Sprintf("SELECT %s FROM (SELECT updated_at FROM users %s ORDER BY updated_at DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
 	db := C.GetServices().Db
-	err := db.Raw(runQueryString).Scan(&minMax).Error
+	err := db.Raw(runQueryString, minMaxParamsQ...).Scan(&minMax).Error
 	if err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("min and max updated_at couldn't be defined.")
 		return nil, http.StatusInternalServerError, "Failed Setting Time Range."
 	}
 
+	// Join condition is case of user property filter for accounts
+	if isUserProperty && payload.Source != "All" {
+		group, errCode := store.GetGroup(projectID, payload.Source)
+		if errCode != http.StatusFound || group == nil {
+			log.WithField("err_code", errCode).Error("Failed to get group while adding group info.")
+			return nil, errCode, "Failed to get group while adding group info."
+		}
+		joinStr := fmt.Sprintf("JOIN users as user_user_g ON users.id = user_user_g.group_%d_user_id", group.ID)
+		commonStr = joinStr + " " + commonStr
+	}
+
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
-		selectColumnsStr = "id, properties, updated_at"
+		selectColumnsStr = "users.id, users.properties, users.updated_at "
 		groupByStr = ""
+		// selecting property col of users in case of user props in account profiles
+		if isUserProperty {
+			selectColumnsStr = selectColumnsStr + ", user_user_g.properties as user_global_user_properties"
+		}
 	} else if profileType == model.PROFILE_TYPE_USER {
 		selectColumnsStr = "id, customer_user_id, properties, updated_at"
 		groupByStr = "GROUP BY identity"
 	}
-	timeAndRecordsLimit := fmt.Sprintf("updated_at BETWEEN '%s' AND '%s' LIMIT 100000000", FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt))
+	timeAndRecordsLimit := fmt.Sprintf("users.updated_at BETWEEN ? AND ? LIMIT 100000000")
+	params = append(params, FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt))
 	isDomainGroup := (C.IsDomainEnabled(projectID) && payload.Source == "All")
 	if filterString != "" {
-		fromStr = fmt.Sprintf("(SELECT %s FROM %s AND ", selectColumnsStr, commonStr) +
+		fromStr = fmt.Sprintf("(SELECT %s FROM users %s AND ", selectColumnsStr, commonStr) +
 			timeAndRecordsLimit + " ) AS select_view WHERE"
 		if profileType == model.PROFILE_TYPE_USER || !isDomainGroup {
 			filterString = strings.ReplaceAll(filterString, "users.", "select_view.") // Json Filters on select_view
+			if isUserProperty {
+				filterString = strings.ReplaceAll(filterString, "user_user_g.", "select_view.") // Json Filters on select_view
+			}
 		}
 	} else {
-		fromStr = fmt.Sprintf("%s AND updated_at BETWEEN '%s' AND '%s'",
-			commonStr, FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt))
+		fromStr = fmt.Sprintf("users %s AND updated_at BETWEEN ? AND ?",
+			commonStr)
 	}
 	if profileType == model.PROFILE_TYPE_ACCOUNT && isDomainGroup {
-		whereForUserQuery := fmt.Sprintf("WHERE project_id=%d ", projectID) + sourceString
-		runQueryString = BuildQueryStringForDomains(filterString, whereForUserQuery, domainGroupId, timeAndRecordsLimit, groupedFilters)
+		whereForUserQuery := fmt.Sprintf("WHERE project_id=? ") + sourceString
+		params = append(params, projectID, strconv.Itoa(model.UserSourceMap[model.UserSourceDomainsString]))
+		userPropertiesJoin := ""
+		// Join in case of "All" accounts with user properties
+		if isUserProperty {
+			var errString string
+			var param interface{}
+			userPropertiesJoin, param, errString = store.userPropertiesForAccounts(projectID)
+			params = append(params, param)
+			if errString != "" {
+				return nil, http.StatusNotFound, errString
+			}
+		}
+		runQueryString = BuildQueryStringForDomains(filterString, whereForUserQuery, domainGroupId, timeAndRecordsLimit, groupedFilters, userPropertiesJoin)
 	} else {
 		runQueryString = fmt.Sprintf("SELECT %s FROM %s %s %s ORDER BY last_activity DESC LIMIT 1000;", selectString, fromStr, filterString, groupByStr)
 	}
+	params = append(params, filterParams...)
 	var profiles []model.Profile
-	err = db.Raw(runQueryString, filterParams...).Scan(&profiles).Error
+	err = db.Raw(runQueryString, params...).Scan(&profiles).Error
 	if err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to get profile users.")
 		return nil, http.StatusInternalServerError, "Query Execution Failed."
@@ -278,6 +330,41 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusInternalServerError, "Query formatting failed."
 	}
 	return returnData, http.StatusFound, ""
+}
+
+func (store *MemSQL) userPropertiesForAccounts(projectID int64) (string, interface{}, string) {
+	groupIdsMap, errCode := store.GetGroupNameIDMap(projectID)
+	if errCode != http.StatusFound {
+		return "", nil, "No CRMs for the project"
+	}
+	var selectColArr []string
+	for groupName, id := range groupIdsMap {
+		if model.IsAllowedAccountGroupNames(groupName) {
+			selectColArr = append(selectColArr, fmt.Sprintf("%d", id))
+		}
+	}
+	var selectCol, whereString, onString string
+	selectCol = "properties as user_global_user_properties, is_group_user, "
+	whereString = fmt.Sprintf("project_id = ? AND (")
+	param := projectID
+	onString = "("
+	for index, col := range selectColArr {
+		selectCol = selectCol + fmt.Sprintf("group_%s_user_id", col)
+		whereString = whereString + fmt.Sprintf("users.group_%s_id IS NOT NULL", col)
+		onString = onString + fmt.Sprintf("users.id = user_user_g.group_%s_user_id", col)
+		if index != len(selectColArr)-1 {
+			selectCol = selectCol + ", "
+			whereString = whereString + " OR "
+			onString = onString + " OR "
+		}
+	}
+	whereString = whereString + ")"
+	onString = onString + ") AND (user_user_g.is_group_user = 0 OR user_user_g.is_group_user IS NULL)"
+
+	joinStmnt := fmt.Sprintf("JOIN ( SELECT %s FROM users WHERE %s) AS user_user_g ON %s", selectCol, whereString, onString)
+
+	return joinStmnt, param, ""
+
 }
 
 func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int) {
@@ -342,31 +429,35 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	}
 	return profiles, http.StatusOK
 }
-func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string) (string, int, int) {
+func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string) (string, int, []interface{}, int) {
 	var sourceString string
 	var domainGroupId int
+	var params []interface{}
+	params = append(params, projectID)
 	if source == "All" {
 		group, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 		if errCode != http.StatusFound || group == nil {
 			log.WithField("err_code", errCode).Error("Failed to get domain group while adding group info.")
-			return sourceString, domainGroupId, http.StatusBadRequest
+			return sourceString, domainGroupId, nil, http.StatusBadRequest
 		}
 		domainGroupId = group.ID
-		sourceString = fmt.Sprintf("AND users.source!=%d AND users.group_%d_id IS NOT NULL", model.UserSourceDomains, domainGroupId)
+		sourceString = fmt.Sprintf("AND users.source!=? AND users.group_%d_id IS NOT NULL", domainGroupId)
+		params = append(params, model.UserSourceDomains)
 	} else {
 		group, errCode := store.GetGroup(projectID, source)
 		if errCode != http.StatusFound || group == nil {
 			log.WithField("err_code", errCode).Error("Failed to get group while adding group info.")
-			return sourceString, domainGroupId, http.StatusBadRequest
+			return sourceString, domainGroupId, nil, http.StatusBadRequest
 		}
 		if model.IsAllowedAccountGroupNames(source) && source == group.Name {
-			sourceString = fmt.Sprintf("AND source!=%d AND group_%d_id IS NOT NULL", model.UserSourceDomains, group.ID)
+			sourceString = fmt.Sprintf("AND users.source!=? AND users.group_%d_id IS NOT NULL", group.ID)
+			params = append(params, model.UserSourceDomains)
 		} else {
 			log.WithField("err_code", errCode).Error(fmt.Sprintf("%s not enabled for this project.", source))
-			return sourceString, domainGroupId, http.StatusBadRequest
+			return sourceString, domainGroupId, nil, http.StatusBadRequest
 		}
 	}
-	return sourceString, domainGroupId, http.StatusOK
+	return sourceString, domainGroupId, params, http.StatusOK
 }
 
 func SelectFilterAndHavingStringsForAccounts(filtersMap map[string][]model.QueryProperty) (string, string) {
@@ -404,13 +495,13 @@ func SelectFilterAndHavingStringsForAccounts(filtersMap map[string][]model.Query
 // ) AS domain_groups ON users.group_6_user_id = domain_groups.id WHERE JSON_EXTRACT_STRING(users.properties, "$6signal_city") = "Delhi"
 // GROUP BY identity ORDER BY last_activity DESC LIMIT 1000;
 func BuildQueryStringForDomains(filterString string, whereForUserQuery string, domainGroupId int,
-	userTimeAndRecordsLimit string, filters map[string][]model.QueryProperty) string {
+	userTimeAndRecordsLimit string, filters map[string][]model.QueryProperty, userPropsJoin string) string {
 	whereForDomainGroupQuery := fmt.Sprintf(strings.Replace(whereForUserQuery, "source!=", "source=",
 		1) + " AND is_group_user = 1")
 	if filterString != "" {
 		whereForUserQuery = whereForUserQuery + " AND " + userTimeAndRecordsLimit
 	}
-	selectUserColumnsString := fmt.Sprintf("properties, group_%d_user_id", domainGroupId)
+	selectUserColumnsString := fmt.Sprintf("properties, group_%d_user_id, id", domainGroupId)
 	userQueryString := fmt.Sprintf("(SELECT " + selectUserColumnsString + " FROM users " + whereForUserQuery + " ) AS users")
 	selectDomainGroupColString := "SELECT id, updated_at FROM users"
 	domainGroupQueryString := "( " + selectDomainGroupColString + " " + whereForDomainGroupQuery +
@@ -425,6 +516,10 @@ func BuildQueryStringForDomains(filterString string, whereForUserQuery string, d
 	}
 	queryString := "SELECT " + selectString + " FROM " + userQueryString + " JOIN " + domainGroupQueryString + " " +
 		onCondition
+
+	if userPropsJoin != "" {
+		queryString = queryString + " " + userPropsJoin
+	}
 
 	if filterString != "" {
 		queryString = queryString + " WHERE " + filterString
@@ -849,10 +944,11 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	propertiesDecoded := make(map[string]interface{})
 	var status int
 
+	var params []interface{}
 	if C.IsDomainEnabled(projectID) {
-		groupUserString, propertiesDecoded, status = store.AccountPropertiesForDomainsEnabledV2(projectID, id, groupName)
+		groupUserString, propertiesDecoded, params, status = store.AccountPropertiesForDomainsEnabledV2(projectID, id, groupName)
 	} else {
-		groupUserString, propertiesDecoded, status = store.AccountPropertiesForDomainsDisabledV1(projectID, id)
+		groupUserString, propertiesDecoded, params, status = store.AccountPropertiesForDomainsDisabledV1(projectID, id)
 	}
 
 	if status != http.StatusOK {
@@ -887,7 +983,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 
 	// Get Timeline for <=25 users
 	db := C.GetServices().Db
-	rows, err := db.Raw(query, projectID).Rows()
+	rows, err := db.Raw(query, params...).Rows()
 	if err != nil || rows.Err() != nil {
 		log.WithFields(logFields).WithError(err).WithError(rows.Err()).Error("Failed to get associated users")
 		return nil, http.StatusInternalServerError, "Accounts Query Building Failed"
@@ -990,31 +1086,33 @@ func FormatTimeToString(time time.Time) string {
 }
 
 func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (string,
-	map[string]interface{}, int) {
+	map[string]interface{}, []interface{}, int) {
 	var groupUserString string
 	propertiesDecoded := make(map[string]interface{}, 0)
-
+	var params []interface{}
+	params = append(params, projectID)
 	if groupName == "All" {
 		groupNameIDMap, status := store.GetGroupNameIDMap(projectID)
 		if status != http.StatusFound {
-			return groupUserString, propertiesDecoded, status
+			return groupUserString, propertiesDecoded, params, status
 		}
 		// Fetching accounts associated to the domain
 		accountGroupDetails, status := store.GetAccountsAssociatedToDomain(projectID, id, groupNameIDMap[model.GROUP_NAME_DOMAINS])
 		if status != http.StatusFound {
-			return groupUserString, propertiesDecoded, status
+			return groupUserString, propertiesDecoded, params, status
 		}
 		for index, accountGroupDetail := range accountGroupDetails {
 			accountName := model.SourceGroupUser[*accountGroupDetail.Source]
 			if index == 0 {
-				groupUserString = fmt.Sprintf("group_%d_user_id='%s' ", groupNameIDMap[accountName], accountGroupDetail.ID)
+				groupUserString = fmt.Sprintf("group_%d_user_id=? ", groupNameIDMap[accountName])
 			} else {
-				groupUserString = groupUserString + fmt.Sprintf(" OR group_%d_user_id='%s' ", groupNameIDMap[accountName], accountGroupDetail.ID)
+				groupUserString = groupUserString + fmt.Sprintf(" OR group_%d_user_id=? ", groupNameIDMap[accountName])
 			}
+			params = append(params, accountGroupDetail.ID)
 			props, err := U.DecodePostgresJsonb(&accountGroupDetail.Properties)
 			if err != nil {
 				log.Error("Unable to decode account properties.")
-				return groupUserString, propertiesDecoded, status
+				return groupUserString, propertiesDecoded, params, status
 			}
 			// merging all account properties
 			if index == 0 {
@@ -1026,66 +1124,70 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id st
 	} else {
 		if !model.IsAllowedAccountGroupNames(groupName) {
 			log.Error("Invalid group name.")
-			return groupUserString, propertiesDecoded, http.StatusBadRequest
+			return groupUserString, propertiesDecoded, params, http.StatusBadRequest
 		}
 		group, errCode := store.GetGroup(projectID, groupName)
 		if errCode != http.StatusFound {
 			log.WithField("err_code", errCode).Error("Failed to get group.")
-			return groupUserString, propertiesDecoded, http.StatusNotFound
+			return groupUserString, propertiesDecoded, params, http.StatusNotFound
 		}
 		if group != nil {
-			groupUserString = fmt.Sprintf("group_%d_user_id='%s' ", group.ID, id)
+			groupUserString = fmt.Sprintf("group_%d_user_id=? ", group.ID)
+			params = append(params, id)
 		}
 		// Filter Properties
 		properties, status := store.GetUserPropertiesByUserID(projectID, id)
 		if status != http.StatusFound {
 			log.Error("Failed to get account properties.")
-			return groupUserString, propertiesDecoded, http.StatusInternalServerError
+			return groupUserString, propertiesDecoded, params, http.StatusInternalServerError
 		}
 		props, err := U.DecodePostgresJsonb(properties)
 		if err != nil {
 			log.WithError(err).Error("Failed to decode account properties.")
-			return groupUserString, propertiesDecoded, http.StatusInternalServerError
+			return groupUserString, propertiesDecoded, params, http.StatusInternalServerError
 		}
 		propertiesDecoded = *props
 	}
-	return groupUserString, propertiesDecoded, http.StatusOK
+	return groupUserString, propertiesDecoded, params, http.StatusOK
 }
 
 func (store *MemSQL) AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string,
-	map[string]interface{}, int) {
+	map[string]interface{}, []interface{}, int) {
 	var groupUserString string
 	propertiesDecoded := make(map[string]interface{}, 0)
-
+	var params []interface{}
+	params = append(params, projectID)
 	groupNameIDMap, errCode := store.GetGroupNameIDMap(projectID)
 	if errCode != http.StatusFound {
 		log.WithField("err_code", errCode).Error("Failed to get groups.")
-		return groupUserString, propertiesDecoded, http.StatusNotFound
+		return groupUserString, propertiesDecoded, params, http.StatusNotFound
 	}
 	firstVal := false
 	for name, groupID := range groupNameIDMap {
 		if model.IsAllowedAccountGroupNames(name) {
 			if !firstVal {
-				groupUserString = fmt.Sprintf("group_%d_user_id='%s' ", groupID, id)
+				groupUserString = fmt.Sprintf("group_%d_user_id=? ", groupID)
 				firstVal = true
+				params = append(params, id)
 			} else {
-				groupUserString = groupUserString + fmt.Sprintf(" OR group_%d_user_id='%s' ", groupID, id)
+				groupUserString = groupUserString + fmt.Sprintf(" OR group_%d_user_id=? ", groupID)
+				params = append(params, id)
 			}
 		}
 	}
 	properties, status := store.GetUserPropertiesByUserID(projectID, id)
 	if status != http.StatusFound {
 		log.Error("Failed to get account properties.")
-		return groupUserString, propertiesDecoded, http.StatusInternalServerError
+		return groupUserString, propertiesDecoded, params, http.StatusInternalServerError
 	}
 	props, err := U.DecodePostgresJsonb(properties)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode account properties.")
-		return groupUserString, propertiesDecoded, http.StatusInternalServerError
+		return groupUserString, propertiesDecoded, params, http.StatusInternalServerError
 	}
 	propertiesDecoded = *props
 
-	return groupUserString, propertiesDecoded, http.StatusOK
+	return groupUserString, propertiesDecoded, params, http.StatusOK
 }
 
 func (store *MemSQL) GetAccountsAssociatedToDomain(projectID int64, id string, domainGroupId int) ([]model.User, int) {

@@ -382,6 +382,9 @@ func GetPropertyEntityFieldForFilter(entityName string, fromTimestamp int64) str
 
 	case model.PropertyEntityUserGlobal:
 		return model.GetPropertyEntityFieldForFilter(entityName)
+
+	case model.PropertyEntityUserGroup:
+		return model.GetPropertyEntityFieldForFilter(entityName)
 	}
 
 	return ""
