@@ -484,9 +484,8 @@ function AccountProfiles({
         query: updatedQuery
       })
         .then(() => getSavedSegments(activeProject.id))
-        .finally(() =>
-          setActiveSegment({ ...activeSegment, query: updatedQuery })
-        );
+        .then(() => setActiveSegment({ ...activeSegment, query: updatedQuery }))
+        .finally(() => getAccounts(accountPayload));
     } else {
       const filteredProps =
         accountPayload.source !== 'All'
@@ -511,10 +510,9 @@ function AccountProfiles({
 
       udpateProjectSettings(activeProject.id, {
         timelines_config: updatedConfig
-      });
+      }).then(() => getAccounts(accountPayload));
     }
     setShowPopOver(false);
-    getAccounts(accountPayload);
   };
 
   const popoverContent = () => (
