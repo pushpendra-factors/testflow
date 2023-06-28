@@ -217,8 +217,17 @@ func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) {
 	var err error
 
 	pattern := fmt.Sprintf("dashboard:*:pid:%d:did:%d:duid:%d:*", projectID, dashboardID, unitID)
-	cacheKey, err := cacheRedis.Scan(pattern, model.MaxNumberPerScanCount, model.MaxNumberPerScanCount)
+	cacheKey, err := cacheRedis.ScanPersistent(pattern, model.MaxNumberPerScanCount, model.MaxNumberPerScanCount)
 	cacheKeys = append(cacheKeys, cacheKey...)
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{
+			"projectID":   projectID,
+			"dashboardID": dashboardID,
+			"unitID":      unitID,
+			"pattern":     pattern,
+			"cacheKeys":   cacheKeys,
+		}).Info("InValidateDashboardQueryCache")
+	}
 	if err != nil {
 		log.WithError(err).Error("Failed to get cache key")
 		return
