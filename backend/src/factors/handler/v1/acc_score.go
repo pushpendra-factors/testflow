@@ -108,7 +108,57 @@ func GetAccountScores(c *gin.Context) (interface{}, int, string, string, bool) {
 		accountScores.Debug["weights"] = weights
 	}
 	return accountScores, http.StatusOK, "", "", false
+}
 
+// GetAccountScore returns account score for a given date and user_id
+func GetPerAccountScore(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	reqID, _ := getReqIDAndProjectID(c)
+
+	userId := c.Query("id")
+	dateString := c.Query("date")
+	numDaysTrend := c.Query("trend")
+	debugFlag := c.Query("debug")
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+		"RequestId": reqID,
+		"userId":    userId,
+		"date":      dateString,
+	})
+
+	var accountScores model.AccScoreResult
+	var numDaysToTrend int
+	var err error
+	accountScores.ProjectId = projectId
+	debug, _ := strconv.ParseBool(debugFlag)
+
+	numDaysToTrend, err = strconv.Atoi(numDaysTrend)
+	if err != nil {
+		errMsg := "Unable to convert number of days to trend."
+		logCtx.WithError(err).Error(errMsg)
+		return nil, http.StatusInternalServerError, "", "", true
+	}
+
+	if numDaysToTrend == 0 {
+		numDaysToTrend = model.NUM_TREND_DAYS
+	}
+
+	logCtx.Info("getting account scores")
+	perAccScore, weights, err := store.GetStore().GetPerAccountScore(projectId, dateString, userId, numDaysToTrend, debug)
+	if err != nil {
+		errMsg := "Unable to get account score."
+		logCtx.WithError(err).Error(errMsg)
+		return nil, http.StatusInternalServerError, "", "", true
+	}
+
+	accountScores.AccResult = make([]model.PerAccountScore, 1)
+	accountScores.AccResult[0] = perAccScore
+	if debug {
+		accountScores.Debug = make(map[string]interface{})
+		accountScores.Debug["weights"] = weights
+	}
+	return accountScores, http.StatusOK, "", "", false
 }
 
 // GetUserScore returns the score for a user on a given date

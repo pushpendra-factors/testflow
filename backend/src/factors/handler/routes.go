@@ -305,6 +305,7 @@ func InitAppRoutes(r *gin.Engine) {
 	featuresGatesRouteGroup.GET("/:project_id/v1/accscore/score/user", responseWrapper(V1.GetUserScore))
 	featuresGatesRouteGroup.GET("/:project_id/v1/accscore/score/user/all", responseWrapper(V1.GetAllUsersScores))
 	featuresGatesRouteGroup.GET("/:project_id/v1/accscore/score/account", responseWrapper(V1.GetAccountScores))
+	featuresGatesRouteGroup.GET("/:project_id/v1/accscore/score/paccount/", responseWrapper(V1.GetPerAccountScore))
 
 	// event trigger alert
 	featuresGatesRouteGroup.GET("/:project_id/v1/eventtriggeralert", responseWrapper(V1.GetEventTriggerAlertsByProjectHandler))

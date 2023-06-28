@@ -9,6 +9,7 @@ import (
 
 const DEFAULT_EVENT string = "all_events"
 const LAST_EVENT string = "LAST_EVENT"
+const NUM_TREND_DAYS int = 10
 
 type AccScoreResult struct {
 	ProjectId int64                  `json:"projectid"`
@@ -95,6 +96,7 @@ type PerAccountScore struct {
 	Id        string                 `json:"id"`
 	Score     float32                `json:"score"`
 	Timestamp string                 `json:"timestamp"`
+	Trend     map[string]float32     `json:"trend"`
 	Debug     map[string]interface{} `json:"debug"`
 }
 

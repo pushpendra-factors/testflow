@@ -147,18 +147,97 @@ func (store *MemSQL) GetAccountsScore(projectId int64, groupId int, ts string, d
 		}
 		r.Id = account_id
 		r.Score = account_score
-		r.Timestamp = ts // have to fill the right ts
+		r.Timestamp = ts // have to fill the right timestamp
 		if debug {
 			r.Debug = make(map[string]interface{})
 			r.Debug["counts"] = counts_map
 			r.Debug["decay"] = decayValue
-
+			r.Debug["score"] = account_score
+			r.Debug["timestamp"] = ts
 		}
 		result = append(result, r)
-
 	}
 
 	return result, weights, nil
+}
+
+func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userId string, numDaysToTrend int, debug bool) (model.PerAccountScore, *model.AccWeights, error) {
+	// get score of each account on current date
+
+	projectID := projectId
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	var rt string
+	var result model.PerAccountScore
+	countsMapDays := map[string]map[string]int64{}
+	scoreOnDays := make(map[string]float32)
+	resultmap := make(map[string]model.PerAccountScore)
+
+	currentDate := GetDateFromString(timestamp)
+	prevDateTotrend := time.Unix(currentDate, 0).AddDate(0, 0, -1*numDaysToTrend).Unix()
+
+	db := C.GetServices().Db
+
+	weights, errStatus := store.GetWeightsByProject(projectId)
+	if errStatus != http.StatusFound {
+		return result, nil, fmt.Errorf("unable to get weights for project %d", projectId)
+	}
+	logCtx.WithField("weights", weights).Info("weights")
+
+	stmt := "select event_aggregate from users where id=? and project_id=?"
+	tx := db.Raw(stmt, userId, projectId).Row()
+	err := tx.Scan(&rt)
+	if err != nil {
+		logCtx.WithError(err).Error("Unable to read user counts data from DB")
+		return result, nil, err
+	}
+
+	err = json.Unmarshal([]byte(rt), &countsMapDays)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to unmarshall json counts for users per day")
+	}
+
+	for day, countsPerday := range countsMapDays {
+		accountScore, _, decay, err := ComputeAccountScore(*weights, countsPerday, day)
+		if err != nil {
+			return model.PerAccountScore{}, nil, err
+		}
+
+		if day != model.LAST_EVENT {
+			var t model.PerAccountScore
+			t.Score = float32(accountScore)
+			t.Timestamp = day
+			unixDay := GetDateFromString(day)
+			if unixDay >= prevDateTotrend {
+				scoreOnDays[day] = accountScore
+				if debug {
+					t.Debug = make(map[string]interface{})
+					t.Debug["counts"] = make(map[string]int64, 0)
+					t.Debug["counts"] = countsPerday
+					t.Debug["date"] = day
+					t.Debug["score"] = accountScore
+					t.Debug["decay"] = decay
+				}
+			}
+			resultmap[day] = t
+		}
+	}
+
+	if debug {
+		result.Debug = make(map[string]interface{})
+		result.Debug["info"] = resultmap
+	}
+	result.Id = userId
+	result.Trend = make(map[string]float32)
+	result.Trend = scoreOnDays
+	result.Score = scoreOnDays[timestamp]
+	result.Timestamp = timestamp
+	return result, weights, nil
+
 }
 
 func (store *MemSQL) GetUserScore(projectId int64, userId string, eventTS string, debug bool, is_anonymous bool) (model.PerUserScoreOnDay, error) {
