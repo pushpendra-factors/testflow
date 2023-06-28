@@ -2684,7 +2684,7 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 		// No sync_id as no event or user or one user property created.
 		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
 		if errCode != http.StatusAccepted {
-			logCtx.Error("Failed to update hubspot deal document as synced.")
+			logCtx.Error("Failed to update hubspot company document as synced.")
 			return http.StatusInternalServerError
 		}
 		return http.StatusOK
@@ -2696,7 +2696,7 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 		contactDocuments, errCode = store.GetStore().GetHubspotDocumentByTypeAndActions(projectID,
 			contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
 		if errCode == http.StatusInternalServerError {
-			logCtx.Error("Failed to get hubspot documents by type and action on sync company.")
+			logCtx.Error("Failed to get hubspot contact documents by type and action on sync company.")
 			return errCode
 		}
 	}
@@ -2707,51 +2707,29 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 
 	// update $hubspot_company_name and other company
 	// properties on each associated contact user.
-	isContactsUpdateFailed := false
-	contactUpdateCount := 0
 	for _, contactDocument := range contactDocuments {
-		if contactDocument.SyncId != "" {
-			_, contactSyncEventUserId, errCode := store.GetStore().GetUserIdFromEventId(projectID, contactDocument.SyncId, "")
-			if errCode == http.StatusFound {
-				status := store.GetStore().IsUserExistByID(projectID, contactSyncEventUserId)
-				if status != http.StatusFound {
-					logCtx.WithField("user_id", contactSyncEventUserId).Error(
-						"Failed to get user by contact event user update user properties with company properties.")
-					isContactsUpdateFailed = true
-					continue
+		if contactDocument.UserId != "" {
+			if C.IsAllowedHubspotGroupsByProjectID(projectID) {
+				logCtx.Info("Updating user company group user id.")
+				_, status := store.GetStore().UpdateUserGroup(projectID, contactDocument.UserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID, false)
+				if status != http.StatusAccepted && status != http.StatusNotModified {
+					logCtx.Error("Failed to update user group id.")
 				}
+			}
 
-				if C.IsAllowedHubspotGroupsByProjectID(projectID) {
-					logCtx.Info("Updating user company group user id.")
-					_, status = store.GetStore().UpdateUserGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID, false)
-					if status != http.StatusAccepted && status != http.StatusNotModified {
-						logCtx.Error("Failed to update user group id.")
-					}
-				}
-
-				if C.EnableUserDomainsGroupByProjectID(projectID) {
-					status = store.GetStore().AssociateUserDomainsGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyUserID)
-					if status != http.StatusOK && status != http.StatusNotModified {
-						logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to AssociateUserDomainsGroup on hubspot sync company.")
-					}
-				}
-
-				if contactUpdateCount > 100 {
-					continue
+			if C.EnableUserDomainsGroupByProjectID(projectID) {
+				status := store.GetStore().AssociateUserDomainsGroup(projectID, contactDocument.UserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyUserID)
+				if status != http.StatusOK && status != http.StatusNotModified {
+					logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to AssociateUserDomainsGroup on hubspot sync company.")
 				}
 			}
 		}
 	}
 
-	if isContactsUpdateFailed {
-		logCtx.Error("Failed to update some hubspot company properties on user properties.")
-		return http.StatusInternalServerError
-	}
-
 	// No sync_id as no event or user or one user property created.
 	errCode = store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
 	if errCode != http.StatusAccepted {
-		logCtx.Error("Failed to update hubspot deal document as synced.")
+		logCtx.Error("Failed to update hubspot company document as synced.")
 		return http.StatusInternalServerError
 	}
 
@@ -2837,7 +2815,7 @@ func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
 		// No sync_id as no event or user or one user property created.
 		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
 		if errCode != http.StatusAccepted {
-			logCtx.Error("Failed to update hubspot deal document as synced.")
+			logCtx.Error("Failed to update hubspot company_v3 document as synced.")
 			return http.StatusInternalServerError
 		}
 		return http.StatusOK
@@ -2849,7 +2827,7 @@ func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
 		contactDocuments, errCode = store.GetStore().GetHubspotDocumentByTypeAndActions(projectID,
 			contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
 		if errCode == http.StatusInternalServerError {
-			logCtx.Error("Failed to get hubspot documents by type and action on sync company.")
+			logCtx.Error("Failed to get hubspot contact documents by type and action on sync company.")
 			return errCode
 		}
 	}
@@ -2860,51 +2838,29 @@ func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
 
 	// update $hubspot_company_name and other company
 	// properties on each associated contact user.
-	isContactsUpdateFailed := false
-	contactUpdateCount := 0
 	for _, contactDocument := range contactDocuments {
-		if contactDocument.SyncId != "" {
-			_, contactSyncEventUserId, errCode := store.GetStore().GetUserIdFromEventId(projectID, contactDocument.SyncId, "")
-			if errCode == http.StatusFound {
-				status := store.GetStore().IsUserExistByID(projectID, contactSyncEventUserId)
-				if status != http.StatusFound {
-					logCtx.WithField("user_id", contactSyncEventUserId).Error(
-						"Failed to get user by contact event user update user properties with company properties.")
-					isContactsUpdateFailed = true
-					continue
+		if contactDocument.UserId != "" {
+			if C.IsAllowedHubspotGroupsByProjectID(projectID) {
+				logCtx.Info("Updating user company group user id.")
+				_, status := store.GetStore().UpdateUserGroup(projectID, contactDocument.UserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID, false)
+				if status != http.StatusAccepted && status != http.StatusNotModified {
+					logCtx.Error("Failed to update user group id.")
 				}
+			}
 
-				if C.IsAllowedHubspotGroupsByProjectID(projectID) {
-					logCtx.Info("Updating user company group user id.")
-					_, status = store.GetStore().UpdateUserGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID, false)
-					if status != http.StatusAccepted && status != http.StatusNotModified {
-						logCtx.Error("Failed to update user group id.")
-					}
-				}
-
-				if C.EnableUserDomainsGroupByProjectID(projectID) {
-					status = store.GetStore().AssociateUserDomainsGroup(projectID, contactSyncEventUserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyUserID)
-					if status != http.StatusOK && status != http.StatusNotModified {
-						logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to AssociateUserDomainsGroup on hubspot sync company.")
-					}
-				}
-
-				if contactUpdateCount > 100 {
-					continue
+			if C.EnableUserDomainsGroupByProjectID(projectID) {
+				status := store.GetStore().AssociateUserDomainsGroup(projectID, contactDocument.UserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyUserID)
+				if status != http.StatusOK && status != http.StatusNotModified {
+					logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to AssociateUserDomainsGroup on hubspot sync company.")
 				}
 			}
 		}
 	}
 
-	if isContactsUpdateFailed {
-		logCtx.Error("Failed to update some hubspot company properties on user properties.")
-		return http.StatusInternalServerError
-	}
-
 	// No sync_id as no event or user or one user property created.
 	errCode = store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
 	if errCode != http.StatusAccepted {
-		logCtx.Error("Failed to update hubspot deal document as synced.")
+		logCtx.Error("Failed to update hubspot company_v3 document as synced.")
 		return http.StatusInternalServerError
 	}
 

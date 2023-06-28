@@ -188,12 +188,12 @@ function GroupBlock({
     if (opt.property && opt.prop_category === 'user') {
       propertyName = userPropNames[opt.property]
         ? userPropNames[opt.property]
-        : opt.property;
+        : PropTextFormat(opt.property);
     }
     if (opt.property && opt.prop_category === 'group') {
       propertyName = groupPropNames[opt.property]
         ? groupPropNames[opt.property]
-        : opt.property;
+        : PropTextFormat(opt.property);
     }
     if (!opt.property) {
       propertyName = 'Select user property';

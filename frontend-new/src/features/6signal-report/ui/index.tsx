@@ -71,7 +71,7 @@ const SixSignalReport = ({
   const paramQueryId = routerQuery.get(SHARE_QUERY_PARAMS.queryId);
   const paramProjectId = routerQuery.get(SHARE_QUERY_PARAMS.projectId);
   const showShareButton = state.reportData?.data
-    ? state.reportData.data.is_shareable && isLoggedIn
+    ? state.reportData.data?.is_shareable && isLoggedIn
     : false;
 
   const isSixSignalActivated = currentProjectSettings
@@ -283,17 +283,18 @@ const SixSignalReport = ({
           active_project.id
         )) as SavedReportDatesApiResponse;
         if (res?.data) {
-          const resDates = [
-            ...generateUnsavedReportDateRanges(),
-            ...parseSavedReportDates(res.data)
-          ];
+          const dynamicDates = generateUnsavedReportDateRanges();
+          const preComputedDates = parseSavedReportDates(res.data);
+          const pageLoadDate =
+            preComputedDates[0]?.formattedRange ||
+            dynamicDates[0]?.formattedRange;
           localDispatch({
             type: VisitorReportActions.SET_DATE_VALUES,
-            payload: resDates
+            payload: [...dynamicDates, ...preComputedDates]
           });
           localDispatch({
             type: VisitorReportActions.SET_SELECTED_DATE,
-            payload: resDates?.[0]?.formattedRange
+            payload: pageLoadDate
           });
           localDispatch({
             type: VisitorReportActions.SET_PAST_DATE_DATA_AVAILABILITY,
@@ -735,7 +736,8 @@ const SixSignalReport = ({
           </div>
         </div>
         <div className='mt-6'>
-          {reportDataLoading ||
+          {state.reportData?.isNotInitialized ||
+          reportDataLoading ||
           state.shareData.loading ||
           currentProjectSettingsLoading ? (
             <div className='w-full h-full flex items-center justify-center'>

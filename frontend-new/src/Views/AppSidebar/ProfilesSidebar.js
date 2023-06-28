@@ -29,6 +29,7 @@ const GroupItem = ({ group }) => {
         segment_id: ''
       })
     );
+    dispatch(setActiveSegmentAction({}));
   };
 
   const isActive =

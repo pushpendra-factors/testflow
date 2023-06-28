@@ -415,17 +415,14 @@ function UserProfiles({
     setActiveSegment(activeSegment);
   };
 
-  const getUsers = useCallback(
-    (payload) => {
-      if (payload.source && payload.source !== '') {
-        const formatPayload = { ...payload };
-        formatPayload.filters =
-          formatFiltersForPayload(payload?.filters, true) || [];
-        getProfileUsers(activeProject.id, formatPayload, activeAgent);
-      }
-    },
-    [activeProject.id, activeAgent]
-  );
+  const getUsers = (payload) => {
+    if (payload.source && payload.source !== '') {
+      const formatPayload = { ...payload };
+      formatPayload.filters =
+        formatFiltersForPayload(payload?.filters, false) || {};
+      getProfileUsers(activeProject.id, formatPayload, activeAgent);
+    }
+  };
 
   useEffect(() => {
     getUsers(timelinePayload);
@@ -632,9 +629,8 @@ function UserProfiles({
         query: { ...updatedQuery }
       })
         .then(() => getSavedSegments(activeProject.id))
-        .then(() =>
-          setActiveSegment({ ...activeSegment, query: updatedQuery })
-        );
+        .then(() => setActiveSegment({ ...activeSegment, query: updatedQuery }))
+        .finally(() => getUsers(timelinePayload));
     } else {
       const config = { ...tlConfig };
       config.user_config.table_props = checkListUserProps
@@ -642,10 +638,9 @@ function UserProfiles({
         .map((item) => item?.prop_name);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...config }
-      });
+      }).then(() => getUsers(timelinePayload));
     }
     setShowPopOver(false);
-    getUsers(timelinePayload);
   };
 
   const popoverContent = () => (
@@ -805,7 +800,7 @@ function UserProfiles({
   };
 
   const renderSearchSection = () => (
-    <div className='relative mr-2'>
+    <div className='relative'>
       {searchBarOpen ? (
         <div className={'flex items-center justify-between'}>
           {!searchDDOpen && (
@@ -854,8 +849,7 @@ function UserProfiles({
   const renderConfiguration = () => (
     <Button
       size='large'
-      icon={<SVG name='configure' />}
-      className='dropdown-btn'
+      icon={<SVG name='configure' size={20}/>}
       onClick={() => history.push(PathUrls.ConfigureEngagements)}
     >
       Configure
@@ -869,7 +863,7 @@ function UserProfiles({
         {renderSegmentSelect()} */}
         {renderPropertyFilter()}
       </div>
-      <div className='flex items-center justify-between'>
+      <div className='inline-flex gap--6'>
         {timelinePayload.filters.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}

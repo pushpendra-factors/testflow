@@ -178,30 +178,64 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 		return kpiFilterValues, status, errString, errMsg, failures
 	}
 
+	if request.Category == model.ChannelCategory || request.Category == model.CustomChannelCategory {
+		return kpiFilterValues, http.StatusOK, "", "", false
+	}
+
 	label := c.Query("label")
 	if label != "true" {
 		return kpiFilterValues, http.StatusOK, "", "", false
 	}
 
-	var source string
-	if U.IsAllowedCRMPropertyPrefix(request.PropertyName) {
-		source = strings.Split(request.PropertyName, "_")[0]
-		source = strings.TrimPrefix(source, "$")
-	} else {
-		logCtx.WithField("source", source).Warning("source is empty")
-	}
+	logCtx = logCtx.WithField("property_name", request.PropertyName)
 
-	propertyValueLabelMap, err := store.GetStore().GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID, source, request.PropertyName)
+	propertyValueLabel, err, isSourceEmpty := getPropertyValueLabel(projectID, request.PropertyName, kpiFilterValues)
 	if err != nil {
-		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during getting property values and labels of KPI FilterValues Data.", true
+		logCtx.WithError(err).Error("Error during getting property values and labels of KPI FilterValues Data")
+		return kpiFilterValues, http.StatusOK, "", err.Error(), false // return values without labels
 	}
 
-	if len(propertyValueLabelMap) == 0 {
-		logCtx.WithField("property_name", request.PropertyName).Error("No KPI Filter property value labels returned")
+	if isSourceEmpty {
+		logCtx.Warning("source is empty")
+		return kpiFilterValues, http.StatusOK, "", "", false // return values without labels
+	}
+
+	if len(propertyValueLabel) == 0 {
+		logCtx.Error("No KPI Filter property value labels returned")
 		return kpiFilterValues, http.StatusOK, "", "", false
 	}
 
-	return propertyValueLabelMap, http.StatusOK, "", "", false
+	return propertyValueLabel, http.StatusOK, "", "", false
+}
+
+func getPropertyValueLabel(projectID int64, propertyName string, filterValues interface{}) (map[string]string, error, bool) {
+	var source string
+	if U.IsAllowedCRMPropertyPrefix(propertyName) {
+		source = strings.Split(propertyName, "_")[0]
+		source = strings.TrimPrefix(source, "$")
+	}
+
+	if source == "" {
+		return nil, nil, true
+	}
+
+	propertyValueLabelMap, err := store.GetStore().GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID, source, propertyName)
+	if err != nil {
+		return nil, err, false
+	}
+
+	propertyValues, ok := filterValues.([]string)
+	if !ok {
+		return nil, errors.New("failed to convert interface to []string in getPropertyValueLabel"), false
+	}
+
+	for _, value := range propertyValues {
+		if label, exists := propertyValueLabelMap[value]; !exists || label == "" {
+			propertyValueLabelMap[value] = value
+		}
+	}
+
+	return propertyValueLabelMap, nil, false
 }
 
 // Gets filter values for property mapping request as union of individual property values
