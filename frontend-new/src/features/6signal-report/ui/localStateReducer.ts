@@ -107,6 +107,7 @@ interface ReportDataType {
   data: ReportApiResponseData | null;
   loading: boolean;
   error: boolean;
+  isNotInitialized?: boolean;
 }
 
 type PageMode = 'in-app' | 'public';
@@ -160,7 +161,8 @@ export const initialState: VisitorReportState = {
   reportData: {
     data: null,
     error: false,
-    loading: false
+    loading: false,
+    isNotInitialized: true
   },
   campaigns: [],
   selectedCampaigns: [],

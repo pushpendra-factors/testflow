@@ -96,7 +96,7 @@ function AccountProfiles({
     if (location.state?.accountPayload && location.state?.fromDetails) {
       return location.state.accountPayload;
     } else {
-    return selectAccountPayload(state);
+      return selectAccountPayload(state);
     }
   });
 
@@ -104,7 +104,7 @@ function AccountProfiles({
     if (location.state?.activeSegment && location.state?.fromDetails) {
       return location.state.activeSegment;
     } else {
-    return selectActiveSegment(state);
+      return selectActiveSegment(state);
     }
   });
 
@@ -196,7 +196,6 @@ function AccountProfiles({
     [dispatch]
   );
 
-
   useEffect(() => {
     if (!accountPayload.source) {
       const source = groupsList?.[0]?.[1] || '';
@@ -231,22 +230,20 @@ function AccountProfiles({
     );
   }, [activeProject.id, groupOpts]);
 
-  const getAccounts = 
-    (payload) => {
-      const shouldCache = location.state?.fromDetails
-      if (payload.source && payload.source !== '' && !shouldCache) {
-        const formatPayload = { ...payload };
-        formatPayload.filters =
-          formatFiltersForPayload(payload?.filters, true) || [];
-        getProfileAccounts(activeProject.id, formatPayload, activeAgent);
-        
-      } 
-      if(shouldCache) {
-        setCurrentPage(location.state.currentPage);
-        const localeState = {...history.location.state, fromDetails: false}
-        history.replace({state: localeState});
-      }
-   }
+  const getAccounts = (payload) => {
+    const shouldCache = location.state?.fromDetails;
+    if (payload.source && payload.source !== '' && !shouldCache) {
+      const formatPayload = { ...payload };
+      formatPayload.filters =
+        formatFiltersForPayload(payload?.filters, true) || [];
+      getProfileAccounts(activeProject.id, formatPayload, activeAgent);
+    }
+    if (shouldCache) {
+      setCurrentPage(location.state.currentPage);
+      const localeState = { ...history.location.state, fromDetails: false };
+      history.replace({ state: localeState });
+    }
+  };
 
   useEffect(() => {
     getAccounts(accountPayload);
@@ -487,9 +484,8 @@ function AccountProfiles({
         query: updatedQuery
       })
         .then(() => getSavedSegments(activeProject.id))
-        .finally(() =>
-          setActiveSegment({ ...activeSegment, query: updatedQuery })
-        );
+        .then(() => setActiveSegment({ ...activeSegment, query: updatedQuery }))
+        .finally(() => getAccounts(accountPayload));
     } else {
       const filteredProps =
         accountPayload.source !== 'All'
@@ -514,10 +510,9 @@ function AccountProfiles({
 
       udpateProjectSettings(activeProject.id, {
         timelines_config: updatedConfig
-      });
+      }).then(() => getAccounts(accountPayload));
     }
     setShowPopOver(false);
-    getAccounts(accountPayload);
   };
 
   const popoverContent = () => (
@@ -938,8 +933,7 @@ function AccountProfiles({
   const renderConfiguration = () => (
     <Button
       size='large'
-      icon={<SVG name='configure' />}
-      className='dropdown-btn'
+      icon={<SVG name='configure' size={20} />}
       onClick={() => history.push(PathUrls.ConfigureEngagements)}
     >
       Configure
@@ -947,7 +941,7 @@ function AccountProfiles({
   );
   const handleTableChange = (pageParams) => {
     setCurrentPage(pageParams.current);
-  }
+  };
 
   const renderActions = () => (
     <div className='flex justify-between items-start my-4'>
@@ -956,7 +950,7 @@ function AccountProfiles({
         {renderSegmentSelect()} */}
         {renderPropertyFilter()}
       </div>
-      <div className='flex items-center justify-between'>
+      <div className='inline-flex gap--6'>
         {accountPayload?.filters?.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}
@@ -974,10 +968,12 @@ function AccountProfiles({
               `/profiles/accounts/${btoa(account.identity)}?group=${
                 activeSegment?.type ? activeSegment.type : accountPayload.source
               }&view=birdview`,
-              { accountPayload: accountPayload,
+              {
+                accountPayload: accountPayload,
                 activeSegment: activeSegment,
                 fromDetails: true,
-                currentPage: currentPage }
+                currentPage: currentPage
+              }
             );
           }
         })}
@@ -985,8 +981,8 @@ function AccountProfiles({
         dataSource={getTableData(accounts.data)}
         columns={getColumns()}
         rowClassName='cursor-pointer'
-        pagination={{ 
-          position: ['bottom', 'left'], 
+        pagination={{
+          position: ['bottom', 'left'],
           defaultPageSize: '25',
           current: currentPage
         }}
