@@ -881,7 +881,7 @@ function AccountProfiles({
   );
 
   const renderSearchSection = () => (
-    <div className='relative mr-2'>
+    <div className='relative'>
       {searchBarOpen ? (
         <div className={'flex items-center justify-between'}>
           {!searchDDOpen && (
@@ -936,7 +936,7 @@ function AccountProfiles({
       icon={<SVG name='configure' size={20} />}
       onClick={() => history.push(PathUrls.ConfigureEngagements)}
     >
-      Configure
+      Engagements
     </Button>
   );
   const handleTableChange = (pageParams) => {

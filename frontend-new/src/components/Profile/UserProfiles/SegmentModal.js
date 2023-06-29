@@ -185,6 +185,7 @@ function SegmentModal({
 
   const queryChange = useCallback(
     (newEvent, index, changeType = 'add') => {
+      console.log('this is hell!');
       const queryupdated = [...listEvents];
       if (queryupdated[index]) {
         if (changeType === 'add' || changeType === 'filters_updated') {
@@ -213,6 +214,7 @@ function SegmentModal({
       blockList.push(
         <div key={index}>
           <EventsBlock
+            isEngagementConfig={false}
             availableGroups={typeOptions}
             index={index + 1}
             event={event}
@@ -230,6 +232,7 @@ function SegmentModal({
         blockList.push(
           <div key={blockList.length}>
             <EventsBlock
+              isEngagementConfig={false}
               availableGroups={typeOptions}
               index={listEvents.length + 1}
               queries={listEvents}
