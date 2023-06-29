@@ -1,4 +1,5 @@
 FROM google/cloud-sdk:290.0.1-alpine
 
 RUN apk update && apk add --no-cache go curl bash vim ca-certificates && echo "http://nl.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && echo "http://nl.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories && apk add etcd-ctl && apk add redis && apk add postgresql-client && apk add jq && apk add mysql-client && rm -rf /var/cache/apk/*
+
 ENTRYPOINT [ "tail", "-f", "/dev/null"]

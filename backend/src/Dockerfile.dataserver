@@ -7,6 +7,7 @@ RUN go build -o $GOPATH/bin/dataserver $GOPATH/src/factors/data_service/data-ser
 # Create stripped down version without go and source code
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 COPY --from=builder /go/bin/dataserver /go/bin/dataserver
 ENTRYPOINT [ "/go/bin/dataserver"]
 EXPOSE 8089

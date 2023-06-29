@@ -1,0 +1,6 @@
+
+FROM apache/beam_go_sdk:2.48.0
+ENV GOPATH=/go GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
+COPY --from=apache/beam_go_sdk:2.48.0 /opt/apache/beam /opt/apache/beam
+
+ENTRYPOINT ["/opt/apache/beam/boot"]
