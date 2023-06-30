@@ -882,6 +882,9 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 		} else {
 			// logCtx.Info("6Signal cache miss")
 			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+			if projectId == 12384898989000011 && strings.Contains(pageURLProp, "www.almabase.com/advanced-event-management") {
+				logCtx.WithFields(log.Fields{"pageURL": pageURLProp, "Page include": sixSignalConfig.PagesInclude}).Info("Almabase advance event management page enrichment")
+			}
 
 			select {
 			case ok := <-execute6SignalStatusChannel:
