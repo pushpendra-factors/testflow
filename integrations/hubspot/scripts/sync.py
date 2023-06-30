@@ -525,8 +525,6 @@ def add_contactId_v3(email_ids, project_id, engagements, hubspot_request_handler
         log.error("Failure response %d from hubspot on batch contactID", r.status_code)
         return engagements
 
-    filter_engagements = []
-
     response = json.loads(r.text)
     for engagement in engagements:
         engagement_type = ""
@@ -545,17 +543,13 @@ def add_contactId_v3(email_ids, project_id, engagements, hubspot_request_handler
                 contact_identities = contact_identity_profile["identities"]
                 for identity in contact_identities:
                     if "type" in identity and "value" in identity:
-                        identity_type = identity["type"]
-                        identity_value = identity["value"]
-                        if identity_type == "EMAIL" and identity_value == engagement_email_id:
+                        if identity["type"] == "EMAIL" and identity["value"] == engagement_email_id:
                             if engagement_type == "INCOMING_EMAIL":
                                 engagement["properties"]["hs_email_headers"]["from"]["contactId"] = contact_id
                             elif engagement_type == "EMAIL":
                                 engagement["properties"]["hs_email_headers"]["to"][0]["contactId"] = contact_id
-        
-        filter_engagements.append(engagement)
     
-    return filter_engagements
+    return engagements
 
 def add_disposition_label_v3(engagement, call_disposition):
     if "properties" in engagement and "hs_call_disposition" in engagement["properties"]:
