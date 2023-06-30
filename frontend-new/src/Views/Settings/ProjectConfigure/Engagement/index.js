@@ -1,4 +1,4 @@
-import { Button, Col, notification, Row, Table } from 'antd';
+import { Button, Col, Modal, notification, Row, Table } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
   transformPayloadForWeightConfig,
@@ -131,6 +131,20 @@ function EngagementConfig({ fetchProjectSettings }) {
     });
   };
 
+  const renderDeleteModal = (event, index) => {
+    Modal.confirm({
+      title: 'Do you want to remove this score?',
+      okText: 'Yes',
+      cancelText: 'Cancel',
+      closable: true,
+      centered: true,
+      onOk: () => {
+        onDelete(event, index);
+      },
+      onCancel: () => {}
+    });
+  };
+
   const onDelete = (event, index) => {
     const updatedWeightConfig = [...weightsConfig];
 
@@ -138,7 +152,13 @@ function EngagementConfig({ fetchProjectSettings }) {
     updateAccountScores(activeProject.id, {
       WeightConfig: updatedWeightConfig,
       salewindow: 10
-    });
+    })
+      .then(() => fetchProjectSettings(activeProject.id))
+      .then(() => showSuccessMessage(`Score removed successfully`))
+      .catch((err) => {
+        console.log(err);
+        showErrorMessage(`Error removing score.`);
+      });
   };
 
   const handleCancel = () => {
@@ -175,7 +195,7 @@ function EngagementConfig({ fetchProjectSettings }) {
                   icon={<SVG name='edit' />}
                 />
                 <Button
-                  onClick={() => onDelete(event, index)}
+                  onClick={() => renderDeleteModal(event, index)}
                   type='text'
                   icon={<SVG name='delete' />}
                 />
