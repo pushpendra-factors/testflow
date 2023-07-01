@@ -9,9 +9,11 @@
 }
 
 .layout-with-sidebar {
-  transition: 0.4s;
   margin-left: 264px;
   &.collapsed-sidebar {
     margin-left: 48px;
+  }
+  &.enable-transition {
+    transition: 0.4s;
   }
 }

@@ -14,7 +14,6 @@ import {
 import {
   WIDGET_DELETED,
   DASHBOARD_DELETED,
-  NEW_DASHBOARD_TEMPLATES_MODAL_OPEN,
   ADD_DASHBOARD_MODAL_OPEN
 } from '../../reducers/types';
 import SortableCards from './SortableCards';
@@ -31,7 +30,6 @@ import {
 } from '../../components/factorsComponents';
 import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
-import { PlusOutlined } from '@ant-design/icons';
 import ExistingReportsModal from './ExistingReportsModal';
 import { changeActiveDashboard as changeActiveDashboardService } from 'Reducers/dashboard/services';
 import NewReportButton from './NewReportButton';
@@ -190,10 +188,6 @@ function ProjectDropdown({
     active_project.id,
     dispatch
   ]);
-
-  const toggleDashboardSelect = () => {
-    setSelectVisible(!selectVisible);
-  };
 
   const setDashboard = () => (
     <div className={styles.event_selector}>
@@ -412,14 +406,6 @@ function ProjectDropdown({
               >
                 {showDashboardName}
               </Text>
-              <Button
-                shape='circle'
-                icon={<PlusOutlined style={{ fontSize: '18px' }} />}
-                onClick={() => {
-                  dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
-                }}
-                className={styles.addNewDashboardButtonProjectDropdown}
-              />
             </div>
             {setDashboard()}
             <Text level={7} type='title' weight='medium' color='grey'>
