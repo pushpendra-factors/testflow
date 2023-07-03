@@ -33,7 +33,8 @@ import {
   SET_GROUP_PROP_NAME,
   SET_ATTR_QUERIES,
   FETCH_EVENTS_MAP,
-  FETCH_PROPERTY_VALUES,
+  FETCH_PROPERTY_VALUES_LOADING,
+  FETCH_PROPERTY_VALUES_LOADED,
   FETCH_EVENT_USER_PROPERTIES
 } from './actions';
 import {
@@ -57,7 +58,10 @@ const defaultState = {
   userProperties: [],
   eventUserProperties: [],
   groupProperties: {},
-  propertyValuesMap: {},
+  propertyValuesMap: {
+    loading: false,
+    data: {}
+  },
   groupBy: {
     global: [],
     event: []
@@ -134,16 +138,30 @@ export default function (state = defaultState, action) {
       return { ...state, groupProperties: groupPropState };
     case FETCH_USER_PROPERTIES:
       return { ...state, userProperties: action.payload };
-      case FETCH_EVENT_USER_PROPERTIES:
-        return { ...state, eventUserProperties: action.payload };
+    case FETCH_EVENT_USER_PROPERTIES:
+      return { ...state, eventUserProperties: action.payload };
     case FETCH_EVENT_PROPERTIES:
       const eventPropState = Object.assign({}, state.eventProperties);
       eventPropState[action.eventName] = action.payload;
       return { ...state, eventProperties: eventPropState };
-    case FETCH_PROPERTY_VALUES:
-      const propValState = Object.assign({}, state.propertyValuesMap);
+    case FETCH_PROPERTY_VALUES_LOADING:
+      return {
+        ...state,
+        propertyValuesMap: {
+          loading: true,
+          data: {}
+        }
+      };
+    case FETCH_PROPERTY_VALUES_LOADED:
+      const propValState = Object.assign({}, state.propertyValuesMap.data);
       propValState[action.propName] = { ...action.payload, $none: '(Not Set)' };
-      return { ...state, propertyValuesMap: propValState };
+      return {
+        ...state,
+        propertyValuesMap: {
+          loading: false,
+          data: propValState
+        }
+      };
     case SET_EVENT_PROP_NAME:
       const evnPropNames = { ...state.eventPropNames, ...action.payload };
       return { ...state, eventPropNames: evnPropNames };
