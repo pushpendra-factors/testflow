@@ -68,20 +68,20 @@ function EventsBlock({
 
   useEffect(() => {
     let showOpts = [];
+
     if (groupAnalysis === 'users') {
       showOpts = [...eventOptions];
     } else {
-      const groupOpts = eventOptions?.filter((item) => {
-        const [label] =
-          availableGroups.find((group) => group[1] === groupAnalysis) || [];
-        return item.label === label;
-      });
-      const groupNamesList = availableGroups.map((item) => item[0]);
+      const [label] =
+        availableGroups.find((group) => group[1] === groupAnalysis) || [];
+      const groupOpts = eventOptions?.filter((item) => item.label === label);
       const userOpts = eventOptions?.filter(
-        (item) => !groupNamesList.includes(item?.label)
+        (item) =>
+          !availableGroups.map((group) => group[0]).includes(item?.label)
       );
       showOpts = groupOpts.concat(userOpts);
     }
+
     setShowGroups(showOpts);
   }, [eventOptions, groupAnalysis]);
 
@@ -126,13 +126,7 @@ function EventsBlock({
       }
     });
     setFilterProperties(assignFilterProps);
-  }, [
-    eventProperties,
-    eventUserProperties,
-    isEngagementConfig,
-    event,
-    propertiesScope
-  ]);
+  }, [eventProperties, eventUserProperties, event]);
 
   const deleteItem = () => {
     eventChange(event, index - 1, 'delete');

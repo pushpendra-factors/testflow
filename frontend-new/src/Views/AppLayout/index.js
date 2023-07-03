@@ -52,6 +52,8 @@ import styles from './index.module.scss';
 import { routesWithSidebar } from './appLayout.constants';
 import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
 import { fetchProjectAgents } from 'Reducers/agentActions';
+import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
+import { PathUrls } from '../../routes/pathUrls';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -80,6 +82,9 @@ function AppLayout({
   const { projects } = useSelector((state) => state.global);
   const { show_analytics_result } = useSelector((state) => state.coreQuery);
   const { currentProjectSettings } = useSelector((state) => state.global);
+  const areDraftsSelected = useSelector((state) =>
+    selectAreDraftsSelected(state)
+  );
   const dispatch = useDispatch();
   const location = useLocation();
   const { pathname } = location;
@@ -210,6 +215,12 @@ function AppLayout({
             className={cx(
               {
                 [styles['layout-with-sidebar']]: hasSidebar
+              },
+              {
+                [styles['enable-transition']]:
+                  hasSidebar &&
+                  (pathname !== PathUrls.Dashboard ||
+                    areDraftsSelected === false)
               },
               {
                 [styles['collapsed-sidebar']]: isSidebarCollapsed

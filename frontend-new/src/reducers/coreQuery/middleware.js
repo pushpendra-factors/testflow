@@ -29,10 +29,11 @@ import {
   fetchGroupPropertiesAction,
   resetGroupByAction,
   fetchEventsMapAction,
-  FETCH_PROPERTY_VALUES,
   fetchEventUserPropertiesAction,
   setButtonClicksPropertiesNamesAction,
-  setPageViewsPropertiesNamesAction
+  setPageViewsPropertiesNamesAction,
+  FETCH_PROPERTY_VALUES_LOADING,
+  FETCH_PROPERTY_VALUES_LOADED
 } from './actions';
 import {
   getEventNames,
@@ -95,7 +96,7 @@ export const getGroupProperties = (projectId, groupName) => {
     });
   };
 };
- 
+
 export const getUserProperties = (projectId, queryType = '') => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
@@ -157,12 +158,12 @@ export const getButtonClickProperties = (projectId) => {
     return new Promise((resolve, reject) => {
       fetchButtonClicksPropertyValues(projectId)
         .then((response) => {
-          const transformedData = convertCustomEventCategoryToOptions(response.data)
+          const transformedData = convertCustomEventCategoryToOptions(
+            response.data
+          );
           resolve(
-            dispatch(
-              setButtonClicksPropertiesNamesAction(transformedData)
-            )
-          ); 
+            dispatch(setButtonClicksPropertiesNamesAction(transformedData))
+          );
         })
         .catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));
@@ -175,12 +176,10 @@ export const getPageViewsProperties = (projectId) => {
     return new Promise((resolve, reject) => {
       fetchPageViewsPropertyValues(projectId)
         .then((response) => {
-          const transformedData = convertCustomEventCategoryToOptions(response.data)
-          resolve(
-            dispatch(
-              setPageViewsPropertiesNamesAction(transformedData)
-            )
-          ); 
+          const transformedData = convertCustomEventCategoryToOptions(
+            response.data
+          );
+          resolve(dispatch(setPageViewsPropertiesNamesAction(transformedData)));
         })
         .catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));
@@ -360,10 +359,11 @@ export const resetState = () => {
 export const getUserPropertyValues =
   (projectId, propertyName) => (dispatch) => {
     return new Promise((resolve, reject) => {
+      dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
       fetchUserPropertyValues(projectId, propertyName).then((response) => {
         resolve(
           dispatch({
-            type: FETCH_PROPERTY_VALUES,
+            type: FETCH_PROPERTY_VALUES_LOADED,
             payload: response.data,
             propName: propertyName
           })
@@ -373,7 +373,7 @@ export const getUserPropertyValues =
       console.log(err);
       resolve(
         dispatch({
-          type: FETCH_PROPERTY_VALUES,
+          type: FETCH_PROPERTY_VALUES_LOADED,
           payload: {},
           propName: propertyName
         })
@@ -384,11 +384,12 @@ export const getUserPropertyValues =
 export const getEventPropertyValues =
   (projectId, eventName, propertyName) => (dispatch) => {
     return new Promise((resolve, reject) => {
+      dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
       fetchEventPropertyValues(projectId, eventName, propertyName).then(
         (response) => {
           resolve(
             dispatch({
-              type: FETCH_PROPERTY_VALUES,
+              type: FETCH_PROPERTY_VALUES_LOADED,
               payload: response.data,
               propName: propertyName
             })
@@ -399,7 +400,7 @@ export const getEventPropertyValues =
       console.log(err);
       resolve(
         dispatch({
-          type: FETCH_PROPERTY_VALUES,
+          type: FETCH_PROPERTY_VALUES_LOADED,
           payload: {},
           propName: propertyName
         })
@@ -410,11 +411,12 @@ export const getEventPropertyValues =
 export const getGroupPropertyValues =
   (projectId, groupName, propertyName) => (dispatch) => {
     return new Promise((resolve, reject) => {
+      dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
       fetchGroupPropertyValues(projectId, groupName, propertyName).then(
         (response) => {
           resolve(
             dispatch({
-              type: FETCH_PROPERTY_VALUES,
+              type: FETCH_PROPERTY_VALUES_LOADED,
               payload: response.data,
               propName: propertyName
             })
@@ -425,7 +427,7 @@ export const getGroupPropertyValues =
       console.log(err);
       resolve(
         dispatch({
-          type: FETCH_PROPERTY_VALUES,
+          type: FETCH_PROPERTY_VALUES_LOADED,
           payload: {},
           propName: propertyName
         })

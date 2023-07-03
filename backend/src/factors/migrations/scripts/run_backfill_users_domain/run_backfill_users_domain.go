@@ -138,7 +138,6 @@ func startBackfillUserDomains(projectID int64, startTime, endTime int64, wetRun 
 	totaluniqueUsersByCustomerUserIDUpdated := 0
 	totalusersWithoutCustomerUserIDUpdated := 0
 	for _, userID := range uniqueUsersByCustomerUserID {
-		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "wet_run": wetRun}).Info("AssociateUserDomainsGroup by customer user id.")
 		if !wetRun {
 			totaluniqueUsersByCustomerUserIDUpdated++
 			continue
@@ -151,7 +150,6 @@ func startBackfillUserDomains(projectID int64, startTime, endTime int64, wetRun 
 	}
 
 	for _, userID := range usersWithoutCustomerUserID {
-		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID}).Info("AssociateUserDomainsGroup without customer user id.")
 		if !wetRun {
 			totalusersWithoutCustomerUserIDUpdated++
 			continue

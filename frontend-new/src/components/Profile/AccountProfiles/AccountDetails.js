@@ -385,7 +385,6 @@ function AccountDetails({
         : PropTextFormat(prop);
       const value = props[prop];
       propsList.push(
-        <div key={index}>
           <LeftPanePropBlock
             property={prop}
             type={propType}
@@ -393,7 +392,6 @@ function AccountDetails({
             value={value}
             onDelete={onDelete}
           />
-        </div>
       );
     });
     return propsList;

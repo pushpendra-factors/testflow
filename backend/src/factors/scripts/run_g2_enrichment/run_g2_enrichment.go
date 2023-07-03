@@ -38,6 +38,8 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "*", "")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "*", "")
+	removeDisabledEventUserPropertiesByProjectID := flag.String("remove_disabled_event_user_properties",
+		"", "List of projects to disable event user property population in events.")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -69,6 +71,7 @@ func main() {
 		RedisPort:                     *redisPort,
 		RedisHostPersistent:           *redisHostPersistent,
 		RedisPortPersistent:           *redisPortPersistent,
+		RemoveDisabledEventUserPropertiesByProjectID: *removeDisabledEventUserPropertiesByProjectID,
 	}
 	defaultHealthcheckETLPingID := C.HeathCheckG2ETLPingID
 	healthcheckETLPingID := C.GetHealthcheckPingID(defaultHealthcheckETLPingID, *overrideHealthcheckETLPingID)

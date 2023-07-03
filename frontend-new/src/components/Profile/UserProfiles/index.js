@@ -419,7 +419,7 @@ function UserProfiles({
     if (payload.source && payload.source !== '') {
       const formatPayload = { ...payload };
       formatPayload.filters =
-        formatFiltersForPayload(payload?.filters, false) || {};
+        formatFiltersForPayload(payload?.filters, true) || [];
       getProfileUsers(activeProject.id, formatPayload, activeAgent);
     }
   };
@@ -852,7 +852,7 @@ function UserProfiles({
       icon={<SVG name='configure' size={20}/>}
       onClick={() => history.push(PathUrls.ConfigureEngagements)}
     >
-      Configure
+      Engagements
     </Button>
   );
 
