@@ -47,6 +47,10 @@ export const configureMenuItems = [
   {
     label: 'Alerts',
     url: PathUrls.ConfigureAlerts
+  },
+  {
+    label: 'Engagements',
+    url: PathUrls.ConfigureEngagements
   }
 ];
 
@@ -136,27 +140,6 @@ const journeyMenu = (
         <SVG name='explain_Filled' color='#FFC53D' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Explain
-        </Text>
-      </Link>
-    </Menu.Item>
-  </Menu>
-);
-
-const reportsMenu = (
-  <Menu className={styles['dropdown-menu']}>
-    <Menu.Item className={styles['dropdown-menu-item']}>
-      <Link className='items-center col-gap-2' to={PathUrls.Dashboard}>
-        <SVG name='dashboard_Filled' color={'#40A9FF'} />
-        <Text color='black' level={7} type='title' extraClass='mb-0'>
-          Dashboards
-        </Text>
-      </Link>
-    </Menu.Item>
-    <Menu.Item className={styles['dropdown-menu-item']}>
-      <Link className='items-center col-gap-2' to={PathUrls.Analyse2}>
-        <SVG name='analysis_Filled' color='#9254DE' />
-        <Text color='black' level={7} type='title' extraClass='mb-0'>
-          Analyse
         </Text>
       </Link>
     </Menu.Item>
@@ -253,24 +236,22 @@ function FaHeader() {
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
-            <Dropdown overlay={reportsMenu}>
-              <div
-                className={cx('flex cursor-pointer items-center col-gap-1', {
-                  [styles['active-header-item']]: isReportsUrl(pathname)
-                })}
+            <Link
+              to={PathUrls.Dashboard}
+              className={cx('flex items-center', {
+                [styles['active-header-item']]: isReportsUrl(pathname)
+              })}
+            >
+              <Text
+                type='title'
+                color='white'
+                level={7}
+                extraClass='mb-0'
+                weight='medium'
               >
-                <Text
-                  color='white'
-                  level={7}
-                  type='title'
-                  extraClass='mb-0'
-                  weight='medium'
-                >
-                  Reports
-                </Text>{' '}
-                <SVG color='#D9D9D9' size={16} name='chevronDown' />
-              </div>
-            </Dropdown>
+                Reports
+              </Text>
+            </Link>
             <Dropdown overlay={journeyMenu}>
               <div
                 className={cx('flex cursor-pointer items-center col-gap-1', {

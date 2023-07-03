@@ -75,10 +75,10 @@ function ContactDetails({
   }, []);
 
   const [userID, isAnonymous] = useMemo(() => {
-    const id = atob(location.pathname.split('/').pop());
-    const anonymity = location.search.split('=').pop();
-    document.title = 'People' + ' - FactorsAI';
-    return [id, anonymity];
+    const decodedUserID = atob(location.pathname.split('/').pop());
+    const isUserAnonymous = location.search.split('=').pop() === 'true';
+    document.title = 'People - FactorsAI';
+    return [decodedUserID, isUserAnonymous];
   }, [location]);
 
   useEffect(() => {
@@ -306,15 +306,13 @@ function ContactDetails({
         : PropTextFormat(prop);
       const value = props[prop] || '-';
       propsList.push(
-        <div key={index}>
-          <LeftPanePropBlock
-            property={prop}
-            type={propType}
-            displayName={propDisplayName}
-            value={value}
-            onDelete={onDelete}
-          />
-        </div>
+        <LeftPanePropBlock
+          property={prop}
+          type={propType}
+          displayName={propDisplayName}
+          value={value}
+          onDelete={onDelete}
+        />
       );
     });
     return propsList;
@@ -380,26 +378,22 @@ function ContactDetails({
           )}
         </div>
       </div>
+      <div className='account inline-flex gap--8'>
+        <div className='icon'>
+          <SVG name='globe' size={20} />
+        </div>
+        <div className='flex flex-col items-start'>
+          <Text type='title' level={8} color='grey' extraClass='m-0'>
+            Account:
+          </Text>
+          <Text type='title' level={7} extraClass='m-0'>
+            {userDetails.data.account || '-'}
+          </Text>
+        </div>
+      </div>
       <div className='props'>
         {listLeftPaneProps(userDetails.data.left_pane_props)}
         <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
-        <div className='groups'>
-          <Text type='title' level={7} extraClass='m-0 my-2' color='grey'>
-            Associated Groups:
-          </Text>
-          {userDetails?.data?.group_infos?.map((group) => {
-            return (
-              <div className='flex flex-col items-start mb-2'>
-                <Text type='title' level={7} extraClass='m-0'>
-                  {group?.group_name}
-                </Text>
-                <Text type='title' level={7} extraClass='m-0' color='grey'>
-                  {group?.associated_group || '-'}
-                </Text>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </div>
   );

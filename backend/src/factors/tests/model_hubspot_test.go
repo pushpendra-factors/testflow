@@ -3587,31 +3587,30 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	dealContactAssociations := [][]int64{{}, {company1Contact[1]}, {company1Contact[2]}, {company1Contact[0], company1Contact[2]}}
 	dealStartTimestamp := time.Now().AddDate(0, 0, -1)
 	for i := range dealIds {
-		deal := IntHubspot.Deal{
-			DealId: dealIds[i],
-			Properties: map[string]IntHubspot.Property{
-				"hs_createdate": {
-					Value: fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[i])*time.Hour).Unix()*1000),
+		deal := map[string]interface{}{
+			"dealId": dealIds[i],
+			"properties": map[string]interface{}{
+				"hs_createdate": map[string]interface{}{
+					"value": fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[i])*time.Hour).Unix()*1000),
 				},
-				"hs_lastmodifieddate": {
-					Value: fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[i])*time.Hour).Add(20*time.Minute).Unix()*1000),
+				"hs_lastmodifieddate": map[string]interface{}{
+					"value": fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[i])*time.Hour).Add(20*time.Minute).Unix()*1000),
 				},
-				"stage": {
-					Value: fmt.Sprintf("deal%d In Progress", dealIds[i]),
+				"stage": map[string]interface{}{
+					"value": fmt.Sprintf("deal%d In Progress", dealIds[i]),
 				},
 			},
-			Associations: IntHubspot.Associations{
-				AssociatedCompanyIds: dealCompanyAssociations[i],
-				AssociatedContactIds: dealContactAssociations[i],
+			"associations": map[string]interface{}{
+				"associatedCompanyIds": dealCompanyAssociations[i],
+				"associatedVids":       dealContactAssociations[i],
 			},
 		}
 
-		enJSON, err = json.Marshal(deal)
+		dealPJson, err := U.EncodeToPostgresJsonb(&deal)
 		assert.Nil(t, err)
-		dealPJson := postgres.Jsonb{json.RawMessage(enJSON)}
 		hubspotDocument = model.HubspotDocument{
 			TypeAlias: model.HubspotDocumentTypeNameDeal,
-			Value:     &dealPJson,
+			Value:     dealPJson,
 		}
 
 		status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeDeal, []*model.HubspotDocument{&hubspotDocument}, 1)
@@ -3866,31 +3865,30 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.True(t, assertUserGroupValueByColumnName(user, "group_2_user_id", ""))
 
-	deal := IntHubspot.Deal{
-		DealId: dealIds[0],
-		Properties: map[string]IntHubspot.Property{
-			"hs_createdate": {
-				Value: fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[0])*time.Hour).Unix()*1000),
+	deal := map[string]interface{}{
+		"dealId": dealIds[0],
+		"properties": map[string]interface{}{
+			"hs_createdate": map[string]interface{}{
+				"value": fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[0])*time.Hour).Unix()*1000),
 			},
-			"hs_lastmodifieddate": {
-				Value: fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[0])*time.Hour).Add(30*time.Minute).Unix()*1000),
+			"hs_lastmodifieddate": map[string]interface{}{
+				"value": fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[0])*time.Hour).Add(30*time.Minute).Unix()*1000),
 			},
-			"stage": {
-				Value: fmt.Sprintf("deal%d In Progress", dealIds[0]),
+			"stage": map[string]interface{}{
+				"value": fmt.Sprintf("deal%d In Progress", dealIds[0]),
 			},
 		},
-		Associations: IntHubspot.Associations{
-			AssociatedCompanyIds: []int64{dealCompanyAssociations[0][0], company2ID},
-			AssociatedContactIds: []int64{company1Contact[3]},
+		"associations": map[string]interface{}{
+			"associatedCompanyIds": []int64{dealCompanyAssociations[0][0], company2ID},
+			"associatedVids":       []int64{company1Contact[3]},
 		},
 	}
 
-	enJSON, err = json.Marshal(deal)
+	dealPJson, err := U.EncodeToPostgresJsonb(&deal)
 	assert.Nil(t, err)
-	dealPJson := postgres.Jsonb{json.RawMessage(enJSON)}
 	hubspotDocument = model.HubspotDocument{
 		TypeAlias: model.HubspotDocumentTypeNameDeal,
-		Value:     &dealPJson,
+		Value:     dealPJson,
 	}
 
 	status = store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeDeal, []*model.HubspotDocument{&hubspotDocument}, 1)
@@ -3928,31 +3926,30 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	// deal3 getting associated to company2 but without updated timestamp
 	// should create new record of action associationupdated with timestamp = prevtimestamp +1
 
-	deal = IntHubspot.Deal{
-		DealId: dealIds[2],
-		Properties: map[string]IntHubspot.Property{
-			"hs_createdate": {
-				Value: fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[2])*time.Hour).Unix()*1000),
+	deal = map[string]interface{}{
+		"dealId": dealIds[2],
+		"properties": map[string]interface{}{
+			"hs_createdate": map[string]interface{}{
+				"value": fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[2])*time.Hour).Unix()*1000),
 			},
-			"hs_lastmodifieddate": {
-				Value: fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[2])*time.Hour).Add(20*time.Minute).Unix()*1000),
+			"hs_lastmodifieddate": map[string]interface{}{
+				"value": fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[2])*time.Hour).Add(20*time.Minute).Unix()*1000),
 			},
-			"stage": {
-				Value: fmt.Sprintf("deal%d In Progress", dealIds[2]),
+			"stage": map[string]interface{}{
+				"value": fmt.Sprintf("deal%d In Progress", dealIds[2]),
 			},
 		},
-		Associations: IntHubspot.Associations{
-			AssociatedCompanyIds: append(dealCompanyAssociations[2], company2ID),
-			AssociatedContactIds: dealContactAssociations[2],
+		"associations": map[string]interface{}{
+			"associatedVids":       dealContactAssociations[2],
+			"associatedCompanyIds": append(dealCompanyAssociations[2], company2ID),
 		},
 	}
 
-	enJSON, err = json.Marshal(deal)
+	dealPJson, err = U.EncodeToPostgresJsonb(&deal)
 	assert.Nil(t, err)
-	dealPJson = postgres.Jsonb{json.RawMessage(enJSON)}
 	hubspotDocument = model.HubspotDocument{
 		TypeAlias: model.HubspotDocumentTypeNameDeal,
-		Value:     &dealPJson,
+		Value:     dealPJson,
 	}
 
 	status = store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeDeal, []*model.HubspotDocument{&hubspotDocument}, 1)
@@ -4547,31 +4544,30 @@ func TestHubspotGroupUserFix(t *testing.T) {
 	dealCompanyAssociations := [][]int64{{int64(1)}, {int64(2), int64(3)}, {}, {}}
 	company1Contact := []int64{1, 2, 3, 4}
 
-	deal := IntHubspot.Deal{
-		DealId: int64(1),
-		Properties: map[string]IntHubspot.Property{
-			"hs_createdate": {
-				Value: fmt.Sprintf("%d", time.Now().Unix()*1000),
+	deal := map[string]interface{}{
+		"dealId": int64(1),
+		"properties": map[string]interface{}{
+			"hs_createdate": map[string]interface{}{
+				"value": fmt.Sprintf("%d", time.Now().Unix()*1000),
 			},
-			"hs_lastmodifieddate": {
-				Value: fmt.Sprintf("%d", time.Now().Unix()*1000),
+			"hs_lastmodifieddate": map[string]interface{}{
+				"value": fmt.Sprintf("%d", time.Now().Unix()*1000),
 			},
-			"stage": {
-				Value: fmt.Sprintf("deal%d In Progress", int64(1)),
+			"stage": map[string]interface{}{
+				"value": fmt.Sprintf("deal%d In Progress", int64(1)),
 			},
 		},
-		Associations: IntHubspot.Associations{
-			AssociatedCompanyIds: []int64{dealCompanyAssociations[0][0], int64(2)},
-			AssociatedContactIds: []int64{company1Contact[3]},
+		"associations": map[string]interface{}{
+			"associatedCompanyIds": []int64{dealCompanyAssociations[0][0], int64(2)},
+			"associatedVids":       []int64{company1Contact[3]},
 		},
 	}
 
-	enJSON, err = json.Marshal(deal)
+	dealPJson, err := U.EncodeToPostgresJsonb(&deal)
 	assert.Nil(t, err)
-	dealPJson := postgres.Jsonb{json.RawMessage(enJSON)}
 	hubspotDocument = model.HubspotDocument{
 		TypeAlias: model.HubspotDocumentTypeNameDeal,
-		Value:     &dealPJson,
+		Value:     dealPJson,
 	}
 
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)

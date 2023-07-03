@@ -25,7 +25,8 @@ const FaDatepicker = ({
   comparison_supported: comparisonSupported = false,
   handleCompareWithClick,
   disabled = false,
-  todayPicker = true
+  todayPicker = true,
+  disabledDateRange = null
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setDatePickerType] = useState('');
@@ -487,6 +488,13 @@ const FaDatepicker = ({
     </div>
   );
 
+  const disabledDateFn = (date) =>{
+    if(disabledDateRange){
+      return date.isBefore(disabledDateRange?.startDate) || date.isAfter(disabledDateRange?.endDate)
+    }
+    return date.isAfter(MomentTz().subtract(1, 'days'))
+  }
+
   const renderFaDatePicker = () => (
     <div className="fa-custom-datepicker">
       <Dropdown
@@ -510,7 +518,7 @@ const FaDatepicker = ({
                 <RangePicker
                   disabled={disabled}
                   format="MMM DD YYYY"
-                  disabledDate={(d) => !d || (todayPicker ?  d.isAfter(MomentTz()) : d.isAfter(MomentTz().subtract(1, 'days')) )}
+                  disabledDate={(d) => !d || (todayPicker ?  d.isAfter(MomentTz()) : disabledDateFn(d) )}
                   dropdownClassName="fa-custom-datepicker--datepicker"
                   size="small"
                   suffixIcon={null}

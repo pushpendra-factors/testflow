@@ -81,9 +81,19 @@ type Contact struct {
 
 // Deal definition
 type Deal struct {
-	DealId       int64               `json:"dealId"`
-	Properties   map[string]Property `json:"properties"`
-	Associations Associations        `json:"associations"`
+	DealId     int64               `json:"dealId"`
+	Properties map[string]Property `json:"properties"`
+}
+
+// DealV3 definition
+type DealV3 struct {
+	DealId     string                 `json:"id"`
+	Properties map[string]interface{} `json:"properties"`
+}
+
+// Deal Association definition
+type DealAssociations struct {
+	Associations Associations `json:"associations"`
 }
 
 // Company definition
@@ -2450,92 +2460,6 @@ func filterCheckGeneral(rule model.OTPRule, trackPayload *SDK.TrackPayload, logC
 	return false
 }
 
-func getDealUserID(projectID int64, deal *Deal) string {
-	logCtx := log.WithField("project_id", projectID)
-
-	contactIds := make([]string, 0, 0)
-	// Get directly associated contacts.
-	if len(deal.Associations.AssociatedContactIds) > 0 {
-		// Considering first contact as primary contact.
-		for i := range deal.Associations.AssociatedContactIds {
-			contactIds = append(contactIds,
-				strconv.FormatInt(deal.Associations.AssociatedContactIds[i], 10))
-		}
-	}
-
-	// If no directly associated contacts available, get
-	// contacts of companies directly associated.
-	if len(contactIds) == 0 && len(deal.Associations.AssociatedCompanyIds) > 0 {
-		// Considering first company as primary company.
-		companyID := strconv.FormatInt(deal.Associations.AssociatedCompanyIds[0], 10)
-		companyDocuments, errCode := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID,
-			[]string{companyID}, model.HubspotDocumentTypeCompany,
-			[]int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
-
-		if errCode == http.StatusInternalServerError {
-			logCtx.Error(
-				"Failed to get deal user. Failed to get synced hubspot company documents.")
-			return ""
-		}
-
-		companyContactIds := make(map[int64]bool, 0)
-		for _, companyDocument := range companyDocuments {
-			var company Company
-			err := json.Unmarshal((companyDocument.Value).RawMessage, &company)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to unmarshal company document on get deal user")
-			}
-
-			for i := range company.ContactIds {
-				companyContactIds[company.ContactIds[i]] = true
-			}
-		}
-
-		for id := range companyContactIds {
-			if id > 0 {
-				contactIds = append(contactIds, strconv.FormatInt(id, 10))
-			}
-		}
-	}
-
-	if len(contactIds) == 0 {
-		return ""
-	}
-
-	contactDocuments, errCode := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID,
-		contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
-	if errCode == http.StatusInternalServerError {
-		logCtx.Error(
-			"Failed to get deal user. Failed to get synced hubspot contact documents.")
-		return ""
-	}
-
-	if C.DisableHubspotNonMarketingContactsByProjectID(projectID) && len(contactDocuments) == 0 {
-		logCtx.Warning("No marketing contacts found for hubspot deal.")
-	}
-
-	// No synced contact document.
-	if errCode == http.StatusNotFound || len(contactDocuments) == 0 {
-		return ""
-	}
-
-	// Use first contact as primary contact.
-	contactDocument := contactDocuments[0]
-	if contactDocument.SyncId == "" {
-		logCtx.Error("No sync_id on synced hubspot contact document.")
-		return ""
-	}
-
-	_, dealUserID, errCode := store.GetStore().GetUserIdFromEventId(projectID, contactDocument.SyncId, "")
-	if errCode != http.StatusFound {
-		logCtx.WithField("event_id", contactDocument.SyncId).Error(
-			"Failed to get deal user. Failed to get hubspot contact created event using sync_id.")
-		return ""
-	}
-
-	return dealUserID
-}
-
 // HubspotSmartEventName holds event_name and filter expression
 type HubspotSmartEventName struct {
 	EventName string
@@ -3027,8 +2951,17 @@ func getDealProperties(projectID int64, document *model.HubspotDocument) (*map[s
 		return nil, nil, errors.New("invalid type")
 	}
 
+	isDealV3, err := checkIfDealV3(document)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if isDealV3 {
+		return getDealPropertiesV3(projectID, document)
+	}
+
 	var deal Deal
-	err := json.Unmarshal((document.Value).RawMessage, &deal)
+	err = json.Unmarshal((document.Value).RawMessage, &deal)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -3225,21 +3158,21 @@ func getDealAssociatedIDs(projectID int64, document *model.HubspotDocument) ([]s
 		return nil, nil, errors.New("invalid document type")
 	}
 
-	var deal Deal
-	err := json.Unmarshal((document.Value).RawMessage, &deal)
+	var dealAssociations DealAssociations
+	err := json.Unmarshal((document.Value).RawMessage, &dealAssociations)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var contactIDs []string
 	var companyIDs []string
-	associatedContactIDs := deal.Associations.AssociatedContactIds
+	associatedContactIDs := dealAssociations.Associations.AssociatedContactIds
 	for i := range associatedContactIDs {
 		contactID := strconv.FormatInt(associatedContactIDs[i], 10)
 		contactIDs = append(contactIDs, contactID)
 	}
 
-	associatedCompanyIDs := deal.Associations.AssociatedCompanyIds
+	associatedCompanyIDs := dealAssociations.Associations.AssociatedCompanyIds
 	for i := range associatedCompanyIDs {
 		companyID := strconv.FormatInt(associatedCompanyIDs[i], 10)
 		companyIDs = append(companyIDs, companyID)
@@ -3392,7 +3325,38 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 	return dealGroupUserID, eventId, http.StatusOK
 }
 
+func checkIfDealV3(document *model.HubspotDocument) (bool, error) {
+	value, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return false, err
+	}
+
+	if _, ok := (*value)["id"]; ok { // Deal V3 (New payload)
+		return true, nil
+	}
+
+	if _, ok := (*value)["dealId"]; ok { // Deal V2 (Old payload)
+		return false, nil
+	}
+
+	return false, errors.New("invalid deal document")
+}
+
 func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+	isDealV3, err := checkIfDealV3(document)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("failed to check type of deal record")
+		return http.StatusInternalServerError
+	}
+
+	if isDealV3 {
+		return syncDealV3(projectID, document, hubspotSmartEventNames)
+	}
+
+	return syncDealV2(projectID, document, hubspotSmartEventNames)
+}
+
+func syncDealV2(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return http.StatusInternalServerError
 	}
@@ -3442,6 +3406,92 @@ func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEven
 		document.ID, model.HubspotDocumentTypeDeal, eventId, document.Timestamp, document.Action, "", groupUserID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot deal document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
+func getDealPropertiesV3(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+	if document.Type != model.HubspotDocumentTypeDeal {
+		return nil, nil, errors.New("invalid type")
+	}
+
+	var deal DealV3
+	err := json.Unmarshal((document.Value).RawMessage, &deal)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	enProperties := make(map[string]interface{}, 0)
+	properties := make(map[string]interface{})
+	for k, v := range deal.Properties {
+		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameDeal, k)
+		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED, enKey,
+			v, model.HubspotDocumentTypeDeal, document.GetDateProperties(), string(document.GetTimeZone()))
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectID, "property_key": enKey, "value": value}).
+				WithError(err).Error("Failed to get property value.")
+			continue
+		}
+
+		enProperties[enKey] = value
+		properties[k] = value
+
+	}
+
+	return &enProperties, &properties, nil
+}
+
+func syncDealV3(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+	if document.Type != model.HubspotDocumentTypeDeal {
+		return http.StatusInternalServerError
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID})
+
+	var deal DealV3
+	err := json.Unmarshal((document.Value).RawMessage, &deal)
+	if err != nil {
+		logCtx.Error("Failed to unmarshal hubspot document deal_v3.")
+		return http.StatusInternalServerError
+	}
+
+	enProperties, properties, err := getDealPropertiesV3(projectID, document)
+	if err != nil {
+		logCtx.Error("Failed to get hubspot deal_v3 document properties")
+		return http.StatusInternalServerError
+	}
+
+	var groupUserID string
+	var status int
+	var eventId string
+	if C.IsAllowedHubspotGroupsByProjectID(projectID) {
+		groupUserID, eventId, status = syncGroupDeal(projectID, enProperties, document)
+		if status != http.StatusOK {
+			logCtx.Error("Failed to syncGroupDeal.")
+			return http.StatusInternalServerError
+		}
+	}
+
+	var defaultSmartEventTimestamp int64
+	if timestamp, err := model.GetHubspotDocumentUpdatedTimestamp(document); err != nil {
+		logCtx.WithError(err).Warn("Failed to get last modified timestamp for smart event. Using document timestamp")
+		defaultSmartEventTimestamp = document.Timestamp
+	} else {
+		defaultSmartEventTimestamp = timestamp
+	}
+
+	var prevProperties *map[string]interface{}
+	for i := range hubspotSmartEventNames {
+		prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventId, document.ID, groupUserID, document.Type,
+			properties, prevProperties, defaultSmartEventTimestamp, false)
+	}
+
+	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID,
+		document.ID, model.HubspotDocumentTypeDeal, eventId, document.Timestamp, document.Action, "", groupUserID)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update hubspot deal_v3 document as synced.")
 		return http.StatusInternalServerError
 	}
 

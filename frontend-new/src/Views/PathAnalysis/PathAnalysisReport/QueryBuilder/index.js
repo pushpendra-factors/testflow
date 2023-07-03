@@ -19,7 +19,10 @@ import QueryBlock from './QueryBlock';
 import {
   deleteGroupByForEvent,
   getGroupProperties,
-  getUserProperties
+  getUserProperties,
+  getEventProperties,
+  getButtonClickProperties,
+  getPageViewsProperties
 } from 'Reducers/coreQuery/middleware';
 import {
   fetchSavedPathAnalysis,
@@ -52,7 +55,10 @@ const QueryBuilder = ({
   getUserProperties,
   eventOptions,
   savedQuery,
-  fetchPathAnalysisInsights
+  fetchPathAnalysisInsights,
+  getEventProperties,
+  getButtonClickProperties,
+  getPageViewsProperties
 }) => {
   const [singleQueries, setSingleQueries] = useState([]);
   const [globalFilters, setGlobalFilters] = useState([]);
@@ -74,7 +80,10 @@ const QueryBuilder = ({
   const history = useHistory();
 
   useEffect(() => {
-    fetchGroups(activeProject.id);
+    fetchGroups(activeProject?.id);
+    getEventProperties(activeProject?.id, '$session'); //pre-fetching event-propeties for $session
+    getButtonClickProperties(activeProject?.id)
+    getPageViewsProperties(activeProject?.id)
   }, [activeProject?.id]);
 
   // useEffect(() => {
@@ -483,15 +492,17 @@ const QueryBuilder = ({
     const [filterDD, setFilterDD] = useState(false);
     const [expandByDD, setExpandByDD] = useState([false]);
     const [eventLevelExpandBy, setEventLevelExpandBy] = useState([]);
+    const [eventTypeName, setEventTypeName] = useState(null);
 
 
     useEffect(() => {
       //reset filter when event type changes
       setEventLevelFilter([]);
       setEventLevelExpandBy([]);
-    }, [eventType]);
-
-    const setValOnChange = (val) => {
+    }, [eventType, eventTypeName]); 
+    
+    const setValOnChange = (val) => { 
+      setEventTypeName(val)
       let mainArr = considerEventArr;
       mainArr[index] = {
         ...mainArr[index],
@@ -641,6 +652,7 @@ const QueryBuilder = ({
           groupName={groupCategory}
           filterDD={filterDD}
           setFilterDD={setFilterDD}
+          eventTypeName={eventTypeName}
         />
 
         <ExpandBy isDDVisible={expandByDD} setDDVisible={setExpandByDD}
@@ -838,7 +850,7 @@ const QueryBuilder = ({
           onFinishFailed={onFinishFailed}
           autoComplete='off'
           form={form}
-        >
+        > 
           <Form.Item
             name='title'
             rules={[
@@ -929,6 +941,10 @@ const QueryBuilder = ({
             range={{
               startDate: selectedDateRange.startDate,
               endDate: selectedDateRange.endDate
+            }}
+            disabledDateRange={{
+              startDate: moment().subtract(3, 'months'),
+              endDate: moment().subtract(5, 'days')
             }}
             savedRanges={savedRanges}
             onSelect={setDateRange}
@@ -1029,5 +1045,8 @@ export default connect(mapStateToProps, {
   fetchGroups,
   getGroupProperties,
   getUserProperties,
-  fetchPathAnalysisInsights
+  fetchPathAnalysisInsights,
+  getEventProperties,
+  getButtonClickProperties,
+  getPageViewsProperties
 })(QueryBuilder);

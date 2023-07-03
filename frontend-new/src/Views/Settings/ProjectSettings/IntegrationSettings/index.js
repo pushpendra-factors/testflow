@@ -40,6 +40,7 @@ import SixSignalIntegration from './SixSignal';
 import SixSignalFactorsIntegration from './SixSignalFactors';
 import RudderstackIntegration from './Rudderstack';
 import MSTeamIntegration from './MSTeam';
+import G2Integration from './G2';
 
 import { ADWORDS_INTERNAL_REDIRECT_URI } from './util';
 import { featureLock } from '../../../../routes/feature';
@@ -55,7 +56,8 @@ const IntegrationProviderData = [
     name: 'Rudderstack',
     desc: 'Rudderstack is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Rudderstack_ads',
-    kbLink: 'https://help.factors.ai/en/articles/7283693-rudderstack-integration'
+    kbLink:
+      'https://help.factors.ai/en/articles/7283693-rudderstack-integration'
   },
   {
     name: 'Marketo',
@@ -73,7 +75,8 @@ const IntegrationProviderData = [
     name: 'Microsoft Teams',
     desc: 'Does your team live on Teams? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
     icon: 'MSTeam',
-    kbLink: 'https://help.factors.ai/en/articles/7913152-microsoft-teams-integration'
+    kbLink:
+      'https://help.factors.ai/en/articles/7913152-microsoft-teams-integration'
   },
   {
     name: 'Hubspot',
@@ -108,6 +111,12 @@ const IntegrationProviderData = [
       'https://help.factors.ai/en/articles/7283729-linkedin-ads-integration'
   },
   {
+    name: 'G2',
+    desc: 'Sync G2 intent data with Factors for a complete look at buyer intent',
+    icon: 'g2crowd',
+    kbLink: false
+  },
+  {
     name: 'Drift',
     desc: 'Track events and conversions from Drift’s chat solution on the website',
     icon: 'DriftLogo',
@@ -130,25 +139,29 @@ const IntegrationProviderData = [
     name: 'Clearbit Reveal',
     desc: 'Take action as soon as a target account hits your site',
     icon: 'ClearbitLogo',
-    kbLink: 'https://help.factors.ai/en/articles/7261981-clearbit-reveal-integration'
+    kbLink:
+      'https://help.factors.ai/en/articles/7261981-clearbit-reveal-integration'
   },
   {
     name: 'LeadSquared',
     desc: 'Leadsquared is a leader in marketing automation. Using our Leadsquared source, we will ingest your Program, Campaign, Person and List records into Factors.',
     icon: 'LeadSquared',
-    kbLink: 'https://help.factors.ai/en/articles/7283684-leadsquared-integration'
+    kbLink:
+      'https://help.factors.ai/en/articles/7283684-leadsquared-integration'
   },
   {
     name: '6Signal by 6Sense',
     desc: 'Gain insight into who is visiting your website and where they are in the buying journey',
     icon: 'SixSignalLogo',
-    kbLink: 'https://help.factors.ai/en/articles/7261968-6signal-by-6sense-integration'
+    kbLink:
+      'https://help.factors.ai/en/articles/7261968-6signal-by-6sense-integration'
   },
   {
     name: 'Factors Website De-anonymization',
     desc: 'Gain insight into who is visiting your website and where they are in the buying journey',
     icon: 'Brand',
-    kbLink: 'https://help.factors.ai/en/articles/7261968-6signal-by-6sense-integration'
+    kbLink:
+      'https://help.factors.ai/en/articles/7261968-6signal-by-6sense-integration'
   }
 ];
 
@@ -195,6 +208,8 @@ function IntegrationCard({ item, index, defaultOpen }) {
         return (
           <LinkedInIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
         );
+      case 'G2':
+        return <G2Integration kbLink={item.kbLink} setIsActive={setIsActive} />;
       case 'Google Search Console':
         return (
           <GoogleSearchConsole kbLink={item.kbLink} setIsStatus={setIsStatus} />

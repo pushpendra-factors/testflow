@@ -28,6 +28,8 @@ import {
   SET_EVENT_NAMES,
   SET_USER_PROP_NAME,
   SET_EVENT_PROP_NAME,
+  SET_BUTTONCLICK_PROP_NAME,
+  SET_PAGEVIEW_PROP_NAME,
   SET_GROUP_PROP_NAME,
   SET_ATTR_QUERIES,
   FETCH_EVENTS_MAP,
@@ -117,6 +119,10 @@ export default function (state = defaultState, action) {
       return { ...state, eventNames: action.payload };
     case SET_USER_PROP_NAME:
       return { ...state, userPropNames: action.payload };
+    case SET_BUTTONCLICK_PROP_NAME:
+      return { ...state, buttonClickPropNames: action.payload };
+    case SET_PAGEVIEW_PROP_NAME:
+      return { ...state, pageViewPropNames: action.payload };
     case SET_GROUP_PROP_NAME:
       return {
         ...state,

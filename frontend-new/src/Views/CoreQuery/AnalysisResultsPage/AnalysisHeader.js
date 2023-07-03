@@ -7,25 +7,24 @@ import React, {
 } from 'react';
 import cx from 'classnames';
 import moment from 'moment';
-import _, { get } from 'lodash';
+import { isEmpty } from 'lodash';
 import { Button, Dropdown, Menu, Modal, Tabs } from 'antd';
 import { useSelector } from 'react-redux';
 import { useHistory, useLocation } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
 import {
-  EVENT_BREADCRUMB,
-  QUERY_TYPE_ATTRIBUTION,
-  QUERY_TYPE_FUNNEL,
-  QUERY_TYPE_KPI
+  EVENT_BREADCRUMB
+  // QUERY_TYPE_ATTRIBUTION,
+  // QUERY_TYPE_FUNNEL,
+  // QUERY_TYPE_KPI
 } from 'Utils/constants';
-import userflow from 'userflow.js';
-import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
+// import userflow from 'userflow.js';
+// import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import SaveQuery from '../../../components/SaveQuery';
 import { addShadowToHeader } from './analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
-import { EMPTY_ARRAY } from 'Utils/global';
-import FaSelect from 'Components/FaSelect';
+// import FaSelect from 'Components/FaSelect';
 import styles from './index.module.scss';
 import AppModal from '../../../components/AppModal';
 
@@ -46,9 +45,9 @@ function AnalysisHeader({
   const [showSaveQueryModal, setShowSaveQueryModal] = useState(false);
   const [showUpdateQuery, setShowUpdateQuery] = useState(false);
   const [visible, setVisible] = useState(false);
-  const savedQueries = useSelector((state) =>
-    get(state, 'queries.data', EMPTY_ARRAY)
-  );
+  // const savedQueries = useSelector((state) =>
+  //   get(state, 'queries.data', EMPTY_ARRAY)
+  // );
 
   let location = useLocation();
   useEffect(() => {
@@ -73,8 +72,8 @@ function AnalysisHeader({
   const isInsightsEnabled =
     (metadata?.QueryWiseResult != null &&
       !metadata?.DashboardUnitWiseResult != null) ||
-    (!_.isEmpty(metadata?.QueryWiseResult) &&
-      !_.isEmpty(metadata?.DashboardUnitWiseResult));
+    (!isEmpty(metadata?.QueryWiseResult) &&
+      !isEmpty(metadata?.DashboardUnitWiseResult));
 
   const showReportTabs = requestQuery && isInsightsEnabled;
 
@@ -91,17 +90,6 @@ function AnalysisHeader({
       window.history.pushState(null, document.title, window.location.href);
     });
   }, []);
-
-  const handleCloseToAnalyse = useCallback(() => {
-    if (!savedQueryId && requestQuery !== null) {
-      setVisible(true);
-    } else {
-      history.push({
-        pathname: '/analyse'
-      });
-      onBreadCrumbClick();
-    }
-  });
 
   const saveAndClose = () => {
     setVisible(false);
@@ -126,7 +114,7 @@ function AnalysisHeader({
   };
 
   // This checks where to route back if came from Dashboard
-  const conditionalRouteBackCheck = () => {
+  const conditionalRouteBackCheck = useCallback(() => {
     let navigatedFromDashboardExistingReports =
       location.state?.navigatedFromDashboardExistingReports;
     if (navigatedFromDashboardExistingReports) {
@@ -141,7 +129,11 @@ function AnalysisHeader({
         state: { dashboardWidgetId: navigatedFromDashboard.id }
       });
     }
-  };
+  }, [
+    history,
+    location.state?.navigatedFromDashboardExistingReports,
+    navigatedFromDashboard.id
+  ]);
 
   const handleCloseFromLogo = useCallback(() => {
     if (!savedQueryId && requestQuery !== null) {
@@ -162,7 +154,7 @@ function AnalysisHeader({
     } else {
       conditionalRouteBackCheck();
     }
-  }, [history, navigatedFromDashboard, requestQuery, savedQueryId]);
+  }, [conditionalRouteBackCheck, requestQuery, savedQueryId]);
 
   const handleCloseDashboardQuery = useCallback(() => {
     if (!savedQueryId && requestQuery !== null) {
@@ -170,7 +162,7 @@ function AnalysisHeader({
     } else {
       conditionalRouteBackCheck();
     }
-  }, [history, navigatedFromDashboard, requestQuery, savedQueryId]);
+  }, [conditionalRouteBackCheck, requestQuery, savedQueryId]);
 
   const renderReportTitle = () => (
     <Text
@@ -189,19 +181,10 @@ function AnalysisHeader({
 
   const renderReportCloseIcon = () => {
     // Here instead of ContextAPIs we can get this state from location state. which makes it simpler to access variables across routes
-    let navigatedFromDashboardExistingReports =
-      location.state?.navigatedFromDashboardExistingReports;
+    // let navigatedFromDashboardExistingReports =
+    //   location.state?.navigatedFromDashboardExistingReports;
     return (
-      <Button
-        size='large'
-        type='default'
-        onClick={
-          // This is the condition checking
-          navigatedFromDashboardExistingReports || navigatedFromDashboard
-            ? handleCloseDashboardQuery
-            : handleCloseToAnalyse
-        }
-      >
+      <Button size='large' type='default' onClick={handleCloseDashboardQuery}>
         Close
       </Button>
     );
@@ -220,41 +203,42 @@ function AnalysisHeader({
 
   const renderSaveQueryComp = () => {
     if (!requestQuery) {
-      if (
-        queryType === QUERY_TYPE_ATTRIBUTION ||
-        queryType === QUERY_TYPE_FUNNEL ||
-        queryType === QUERY_TYPE_KPI
-      ) {
-        let flowID = '';
-        if (queryType === QUERY_TYPE_ATTRIBUTION) {
-          flowID = USERFLOW_CONFIG_ID?.AttributionQueryBuilder;
-        }
-        if (queryType === QUERY_TYPE_FUNNEL) {
-          flowID = USERFLOW_CONFIG_ID?.FunnelSQueryBuilder;
-        }
-        if (queryType === QUERY_TYPE_KPI) {
-          flowID = USERFLOW_CONFIG_ID?.KPIQueryBuilder;
-        }
+      // if (
+      //   queryType === QUERY_TYPE_ATTRIBUTION ||
+      //   queryType === QUERY_TYPE_FUNNEL ||
+      //   queryType === QUERY_TYPE_KPI
+      // ) {
+      //   let flowID = '';
+      //   if (queryType === QUERY_TYPE_ATTRIBUTION) {
+      //     flowID = USERFLOW_CONFIG_ID?.AttributionQueryBuilder;
+      //   }
+      //   if (queryType === QUERY_TYPE_FUNNEL) {
+      //     flowID = USERFLOW_CONFIG_ID?.FunnelSQueryBuilder;
+      //   }
+      //   if (queryType === QUERY_TYPE_KPI) {
+      //     flowID = USERFLOW_CONFIG_ID?.KPIQueryBuilder;
+      //   }
 
-        return (
-          <Button
-            size='large'
-            type='link'
-            icon={<SVG name='Handshake' size={16} color='blue' />}
-            onClick={() => {
-              userflow.start(flowID);
-            }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center'
-            }}
-          >
-            Walk me through
-          </Button>
-        );
-      }
+      //   return (
+      //     <Button
+      //       size='large'
+      //       type='link'
+      //       icon={<SVG name='Handshake' size={16} color='blue' />}
+      //       onClick={() => {
+      //         userflow.start(flowID);
+      //       }}
+      //       style={{
+      //         display: 'inline-flex',
+      //         alignItems: 'center'
+      //       }}
+      //     >
+      //       Walk me through
+      //     </Button>
+      //   );
+      // }
       return null;
     }
+
     return (
       <SaveQuery
         showSaveQueryModal={showSaveQueryModal}
@@ -348,7 +332,7 @@ function AnalysisHeader({
       </Menu.Item>
       <Menu.Item key='5' disabled={!savedQueryId}>
         <SVG
-          name={'trash'}
+          name={'TrashLight'}
           size={18}
           color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
           extraClass={'inline mr-2'}

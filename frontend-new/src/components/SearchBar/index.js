@@ -16,7 +16,7 @@ function SearchBar() {
       data-tour='step-2'
       ref={inputRef}
       size='large'
-      placeholder='Search Reports and Dasboard ⌘K'
+      placeholder='Search Reports and Dashboard ⌘K'
       prefix={<SVG name={'search'} size={16} color={'#BFBFBF'} />}
       className={'fa-global-search--input'}
       onFocus={handleFocus}

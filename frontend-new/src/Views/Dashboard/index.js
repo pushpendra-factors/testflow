@@ -23,6 +23,8 @@ import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegratio
 import ProjectDropdown from './ProjectDropdown';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 import DashboardBeforeIntegration from './DashboardBeforeIntegration';
+import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
+import Drafts from './Drafts';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -50,6 +52,11 @@ function Dashboard({
   const { dashboards, activeDashboardUnits } = useSelector(
     (state) => state.dashboard
   );
+
+  const areDraftsSelected = useSelector((state) =>
+    selectAreDraftsSelected(state)
+  );
+  
   const integration = useSelector(
     (state) => state.global.currentProjectSettings
   );
@@ -219,28 +226,33 @@ function Dashboard({
         }
         onError={FaErrorLog}
       >
-        <div className='flex-1 flex flex-col'>
-          <ProjectDropdown
-            handleEditClick={handleEditClick}
-            setaddDashboardModal={setaddDashboardModal}
-            durationObj={durationObj}
-            handleDurationChange={handleDurationChange}
-            oldestRefreshTime={oldestRefreshTime}
-            setOldestRefreshTime={setOldestRefreshTime}
-            handleRefreshClick={handleRefreshClick}
-            dashboardRefreshState={dashboardRefreshState}
-            onDataLoadSuccess={onDataLoadSuccess}
-            resetDashboardRefreshState={resetDashboardRefreshState}
-            handleWidgetRefresh={handleWidgetRefresh}
-          />
-        </div>
+        {areDraftsSelected === false && (
+          <>
+            <div className='flex-1 flex flex-col'>
+              <ProjectDropdown
+                handleEditClick={handleEditClick}
+                setaddDashboardModal={setaddDashboardModal}
+                durationObj={durationObj}
+                handleDurationChange={handleDurationChange}
+                oldestRefreshTime={oldestRefreshTime}
+                setOldestRefreshTime={setOldestRefreshTime}
+                handleRefreshClick={handleRefreshClick}
+                dashboardRefreshState={dashboardRefreshState}
+                onDataLoadSuccess={onDataLoadSuccess}
+                resetDashboardRefreshState={resetDashboardRefreshState}
+                handleWidgetRefresh={handleWidgetRefresh}
+              />
+            </div>
 
-        <AddDashboard
-          setEditDashboard={setEditDashboard}
-          editDashboard={editDashboard}
-          addDashboardModal={addDashboardModal}
-          setaddDashboardModal={setaddDashboardModal}
-        />
+            <AddDashboard
+              setEditDashboard={setEditDashboard}
+              editDashboard={editDashboard}
+              addDashboardModal={addDashboardModal}
+              setaddDashboardModal={setaddDashboardModal}
+            />
+          </>
+        )}
+        {areDraftsSelected === true && <Drafts />}
       </ErrorBoundary>
     );
   }

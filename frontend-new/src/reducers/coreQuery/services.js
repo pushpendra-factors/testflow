@@ -67,6 +67,16 @@ export function fetchEventPropertyValues(projectId, eventName, propertyName) {
   return get(null, url);
 }
 
+export function fetchButtonClicksPropertyValues(projectId) {
+  const url = `${host}projects/${projectId}/event_name_category/category/properties?category=button_clicks`;
+  return get(null, url);
+}
+
+export function fetchPageViewsPropertyValues(projectId) {
+  const url = `${host}projects/${projectId}/event_name_category/category/properties?category=page_views`;
+  return get(null, url);
+}
+
 export const fetchChannelObjPropertyValues = (
   projectId,
   channel = 'all_channels',

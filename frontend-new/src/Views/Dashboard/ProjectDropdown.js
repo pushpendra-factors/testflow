@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Col, Divider, Dropdown, Menu, Row, Space, Spin } from 'antd';
+import { Button, Col, Divider, Row, Spin } from 'antd';
 import { useSelector, useDispatch, connect } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
 import FaSelect from 'Components/FaSelect';
@@ -14,7 +14,6 @@ import {
 import {
   WIDGET_DELETED,
   DASHBOARD_DELETED,
-  NEW_DASHBOARD_TEMPLATES_MODAL_OPEN,
   ADD_DASHBOARD_MODAL_OPEN
 } from '../../reducers/types';
 import SortableCards from './SortableCards';
@@ -31,17 +30,9 @@ import {
 } from '../../components/factorsComponents';
 import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
-import { PlusOutlined } from '@ant-design/icons';
-
-import { useHistory } from 'react-router-dom';
-import {
-  QUERY_TYPE_ATTRIBUTION,
-  QUERY_TYPE_EVENT,
-  QUERY_TYPE_FUNNEL,
-  QUERY_TYPE_KPI
-} from 'Utils/constants';
 import ExistingReportsModal from './ExistingReportsModal';
 import { changeActiveDashboard as changeActiveDashboardService } from 'Reducers/dashboard/services';
+import NewReportButton from './NewReportButton';
 
 function ProjectDropdown({
   setaddDashboardModal,
@@ -68,7 +59,6 @@ function ProjectDropdown({
     (state) => state.dashboard
   );
   const { projects } = useSelector((state) => state.global);
-  let reports = useSelector((state) => state?.queries?.data);
   const [selectVisible, setSelectVisible] = useState(false);
   const [showDashboardName, setDashboardName] = useState('');
   const [showDashboardDesc, setDashboardDesc] = useState('');
@@ -79,7 +69,6 @@ function ProjectDropdown({
 
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const dispatch = useDispatch();
-  const history = useHistory();
 
   const { agent_details } = useSelector((state) => state.agent);
 
@@ -199,10 +188,6 @@ function ProjectDropdown({
     active_project.id,
     dispatch
   ]);
-
-  const toggleDashboardSelect = () => {
-    setSelectVisible(!selectVisible);
-  };
 
   const setDashboard = () => (
     <div className={styles.event_selector}>
@@ -327,132 +312,6 @@ function ProjectDropdown({
     );
   }
 
-  const items = [
-    {
-      label: 'KPI Report',
-      key: 1,
-      icon: (
-        <div style={{ padding: '0 10px 0 0px' }}>
-          <SVG name={`KPI_cq`} size={24} color={'blue'} />
-        </div>
-      ),
-      description: 'Measure performance over time'
-    },
-    {
-      label: 'Funnel Report',
-      key: 2,
-      icon: (
-        <div style={{ padding: '0 10px 0 0px' }}>
-          <SVG name={`funnels_cq`} size={24} color={'blue'} />
-        </div>
-      ),
-      description: 'Track how users navigate'
-    },
-    {
-      label: 'Attribution Report',
-      key: 3,
-      icon: (
-        <div style={{ padding: '0 10px 0 0px' }}>
-          <SVG name={`attributions_cq`} size={24} color={'blue'} />
-        </div>
-      ),
-      description: 'Identify the channels that contribute'
-    },
-    {
-      label: 'Event Report',
-      key: 4,
-      icon: (
-        <div style={{ padding: '0 10px 0 0px' }}>
-          <SVG name={`events_cq`} size={24} color={'blue'} />
-        </div>
-      ),
-      description: 'Track and Chart Events'
-    },
-    {
-      label: 'Saved Report',
-      key: 5,
-      icon: (
-        <div style={{ padding: '0 10px 0 0px' }}>
-          {' '}
-          <SVG name={'FileSignature'} size={24} color={'blue'} />
-        </div>
-      ),
-      description: 'Select from saved Reports'
-    }
-  ];
-  let HandleMenuItemClick = ({ item, key, keyPath, domEvent }) => {
-    /*
-      navigatedFromDashboardExistingReports helps to nagivate back to dashboard if closed AnalyseHeader, if and only if That was opened from New Query Menu from Dashboard
-    */
-    if (key === '0') {
-      history.push({
-        pathname: '/analyse/' + QUERY_TYPE_KPI,
-        state: {
-          navigatedFromDashboardExistingReports: true
-        }
-      });
-    } else if (key === '1') {
-      history.push({
-        pathname: '/analyse/' + QUERY_TYPE_FUNNEL,
-        state: {
-          navigatedFromDashboardExistingReports: true
-        }
-      });
-    } else if (key === '2') {
-      history.push({
-        pathname: '/analyse/' + QUERY_TYPE_ATTRIBUTION,
-        state: {
-          navigatedFromDashboardExistingReports: true
-        }
-      });
-    } else if (key === '3') {
-      history.push({
-        pathname: '/analyse/' + QUERY_TYPE_EVENT,
-        state: {
-          navigatedFromDashboardExistingReports: true
-        }
-      });
-    } else if (key === '4') {
-      setIsReportsModalOpen((prev) => !prev);
-    }
-  };
-  const menu = (
-    <Menu
-      onClick={HandleMenuItemClick}
-      style={{ borderRadius: '5px', paddingTop: '8px' }}
-    >
-      {items.map((eachItem, eachKey) => {
-        return (
-          <>
-            {eachKey === items.length - 1 ? (
-              <Divider style={{ margin: 0 }} />
-            ) : (
-              ''
-            )}
-            <Menu.Item
-              icon={eachItem.icon}
-              key={eachKey}
-              style={{
-                margin: '2px 6px 2px 6px',
-                display: 'flex',
-                flexWrap: 'nowrap',
-                borderRadius: '5px'
-              }}
-            >
-              <div style={{ display: 'block' }}>
-                {' '}
-                <div>{eachItem.label}</div>
-                <div style={{ fontSize: '12px', color: '#8692A3' }}>
-                  {eachItem.description}
-                </div>
-              </div>
-            </Menu.Item>
-          </>
-        );
-      })}
-    </Menu>
-  );
-
   if (dashboards.data.length) {
     return (
       <ErrorBoundary
@@ -538,27 +397,15 @@ function ProjectDropdown({
         <div className='flex items-start justify-between'>
           <div className='flex flex-col items-start'>
             <div className='flex items-center'>
-              <Button
-                className={`${styles.dropdownbtn}`}
-                type='text'
-                size='large'
-                onClick={toggleDashboardSelect}
+              <Text
+                color='character-primary'
+                level={4}
+                weight='bold'
+                extraClass='mb-0'
+                type='title'
               >
-                <div className={styles.dropdownbtntext + '  text-sm'}>
-                  {showDashboardName}
-                </div>
-                <div className={styles.dropdownbtnicon}>
-                  <SVG name='caretDown' size={18} />
-                </div>
-              </Button>
-              <Button
-                shape='circle'
-                icon={<PlusOutlined style={{ fontSize: '18px' }} />}
-                onClick={() => {
-                  dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
-                }}
-                className={styles.addNewDashboardButtonProjectDropdown}
-              />
+                {showDashboardName}
+              </Text>
             </div>
             {setDashboard()}
             <Text level={7} type='title' weight='medium' color='grey'>
@@ -566,15 +413,10 @@ function ProjectDropdown({
             </Text>
           </div>
           <div className='flex items-center'>
-            <Dropdown overlay={menu} placement='bottomRight' trigger={'click'}>
-              <Button type='primary'>
-                <Space>
-                  <SVG name={'plus'} size={16} color='white' />
-                  New Report
-                  {/* <CaretDownOutlined /> */}
-                </Space>
-              </Button>
-            </Dropdown>
+            <NewReportButton
+              showSavedReport={true}
+              setIsReportsModalOpen={setIsReportsModalOpen}
+            />
             {additionalActions()}
           </div>
         </div>

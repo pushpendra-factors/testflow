@@ -1,3 +1,4 @@
+import { resolve } from 'path';
 import { SET_ACTIVE_PROJECT } from 'Reducers/types';
 import { get, getHostUrl, post, put } from '../../utils/request';
 
@@ -129,5 +130,10 @@ export const fetchSegmentById = (projectId, id) => {
 
 export const updateSegment = (projectId, id, payload) => {
   const url = `${host}projects/${projectId}/segments/${id}`;
+  return put(null, url, payload);
+};
+
+export const updateAccountScores = (projectID, payload) => {
+  const url = `${host}projects/${projectID}/v1/accscore/weights`;
   return put(null, url, payload);
 };

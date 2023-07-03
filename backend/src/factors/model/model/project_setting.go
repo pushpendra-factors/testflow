@@ -88,6 +88,7 @@ type ProjectSetting struct {
 	IsOnboardingCompleted      bool   `json:"is_onboarding_completed"`
 	SixSignalEmailList         string `gorm:"column:sixsignal_email_list" json:"sixsignal_email_list"`
 	IntG2ApiKey                string `json:"int_g2_api_key"`
+	IntG2                      *bool  `gorm:"not null;default:false" json:"int_g2,omitempty"`
 }
 
 /* Sample Attribution Setting

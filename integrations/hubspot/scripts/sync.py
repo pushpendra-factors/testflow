@@ -37,8 +37,9 @@ parser.add_option("--enable_contact_list_sync_by_project_id", dest="enable_conta
 parser.add_option("--allowed_doc_types_sync", dest="allowed_doc_types_sync", help="", default="*")
 parser.add_option("--use_sync_contact_list_v2", dest="use_sync_contact_list_v2",action="store_true", help="", default=False)
 parser.add_option("--enable_owner_sync_by_project_id", dest="enable_owner_sync_by_project_id", help="", default="")
-parser.add_option("--enable_sync_company_v3_by_project_id", dest="enable_sync_company_v3_by_project_id", help="Use API v3 to overcome 10K limit", default="")
-parser.add_option("--enable_sync_engagement_v3_by_project_id", dest="enable_sync_engagement_v3_by_project_id", help="Use API v3 to overcome 10K limit", default="")
+parser.add_option("--enable_sync_company_v3_by_project_id", dest="enable_sync_company_v3_by_project_id", help="Use company v3 API to overcome 10K limit", default="")
+parser.add_option("--enable_sync_engagement_v3_by_project_id", dest="enable_sync_engagement_v3_by_project_id", help="Use engagement v3 API to overcome 10K limit", default="")
+parser.add_option("--enable_sync_deal_v3_by_project_id", dest="enable_sync_deal_v3_by_project_id", help="Use deal v3 API to overcome 10K limit", default="")
 
 APP_NAME = "hubspot_sync"
 PAGE_SIZE = 100
@@ -1187,8 +1188,12 @@ def get_deals_with_properties(project_id, get_url, hubspot_request_handler):
 
     return hubspot_request_handler(project_id, url)
 
+def sync_deals(project_id, refresh_token, api_key, last_sync_timestamp, sync_all=False):
+    if use_sync_deal_v3_by_project_id(project_id):
+        return sync_deals_v3(project_id, refresh_token, api_key, last_sync_timestamp, sync_all)
+    return sync_deals_v2(project_id, refresh_token, api_key, last_sync_timestamp, sync_all)
 
-def sync_deals(project_id, refresh_token, api_key, sync_all=False):
+def sync_deals_v2(project_id, refresh_token, api_key, last_sync_timestamp, sync_all=False):
     page_count_key = ""
     page_count = 0
     if sync_all:
@@ -1277,8 +1282,131 @@ def sync_deals(project_id, refresh_token, api_key, sync_all=False):
                 create_all_documents(project_id, 'deal', docs)
                 log.warning("Downloaded and created %d deals. total %d.", len(docs), count)
     create_all_deal_documents_with_buffer([], False) ## flush any remaining docs in memory
-    return deal_api_calls
+    return deal_api_calls, 0, 0
 
+def fill_associations_for_deals_v3(project_id, deals, hubspot_request_handler):
+    deals_ids = []
+    for deal in deals:
+        deals_ids.append(deal["id"])
+        deal["associations"] = {}
+
+    total_api_calls = 0
+
+    associations, api_calls = get_associations(project_id, "deal", deals_ids, "contact", hubspot_request_handler)
+    for i in range(len(deals)):
+        deal_id = str(deals[i]["id"])
+        if deal_id in associations:
+            contact_ids = []
+            for id in associations[deal_id]:
+                contact_ids.append(int(id)) ## store as integer
+            deals[i]["associations"]["associatedVids"] = contact_ids
+    total_api_calls += api_calls
+
+    associations, api_calls = get_associations(project_id, "deal", deals_ids, "company", hubspot_request_handler)
+    for i in range(len(deals)):
+        deal_id = str(deals[i]["id"])
+        if deal_id in associations:
+            company_ids = []
+            for id in associations[deal_id]:
+                company_ids.append(int(id)) ## store as integer
+            deals[i]["associations"]["associatedCompanyIds"] = company_ids
+    total_api_calls += api_calls
+
+    return deals, total_api_calls
+
+def sync_deals_v3(project_id, refresh_token, api_key, last_sync_timestamp, sync_all=False):
+    log.info("Using sync_deals_v3 for project_id : "+str(project_id)+".")
+
+    limit = PAGE_SIZE
+
+    if sync_all:
+        url = "https://api.hubapi.com/crm/v3/objects/deals?"
+        headers = None
+        request = requests.get
+        json_payload = None
+        log.warning("Downloading all deals for project_id : "+ str(project_id) + ".")
+    else:
+        url = "https://api.hubapi.com/crm/v3/objects/deals/search"  # both created and modified.
+        headers = {'Content-Type': 'application/json'}
+        request = requests.post
+        json_payload = get_search_v3_api_payload("hs_lastmodifieddate", last_sync_timestamp, limit)
+        log.warning("Downloading recently created or modified deals for project_id : "+ str(project_id) + ".")
+
+    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
+    create_all_deal_documents_with_buffer = get_create_all_documents_with_buffer(project_id, "deal", buffer_size)
+
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
+
+    deals_api_calls = 0
+    deals_associations_api_calls = 0
+    max_timestamp = 0
+
+    count = 0
+    overall_doc_count = 0
+    parameter_dict = {"limit": limit}
+
+    properties, ok = get_all_properties_by_doc_type(project_id, "deals", hubspot_request_handler)
+    if not ok:
+        log.error("Failure loading properties for project_id %d on sync_deals_v3", project_id)
+        return 0, 0, last_sync_timestamp
+
+    has_more = True
+    while has_more:
+        parameters = urllib.parse.urlencode(parameter_dict)
+        get_url = url
+        
+        if sync_all:
+            get_url = get_url + parameters + '&' + build_properties_param_str(properties)
+        else:
+            json_payload["properties"] = properties
+
+        log.warning("Downloading deals for project_id %d from url %s.", project_id, get_url)
+        r = hubspot_request_handler(project_id, get_url, request=request, json=json_payload, headers=headers)
+        if not r.ok:
+            log.error("Failure response %d from hubspot on sync_deals_v3", r.status_code)
+            break
+        
+        deals_api_calls +=1
+        response_dict = json.loads(r.text)
+
+        docs = response_dict['results']
+        
+        paging_after = ""
+        if "paging" in response_dict and "next" in response_dict["paging"] and "after" in response_dict["paging"]["next"]:
+            paging_after = response_dict["paging"]["next"]["after"]
+
+        if paging_after != "":
+            has_more = True
+            if sync_all:
+                parameter_dict["after"] = paging_after
+            else:
+                json_payload["after"] = paging_after
+        else:
+            has_more = False
+        
+        max_timestamp = get_batch_documents_max_timestamp_v3(project_id, docs, "deals", max_timestamp)
+        
+        # fills contact ids and company ids for each deal under 'contactIds' and 'companyIds' respectively.
+        _, api_calls = fill_associations_for_deals_v3(project_id, docs, hubspot_request_handler)
+        deals_associations_api_calls += api_calls
+        count = count + len(docs)
+        overall_doc_count = overall_doc_count + len(docs)
+        
+        if allow_buffer_before_insert_by_project_id(project_id):
+            create_all_deal_documents_with_buffer(docs, has_more)
+            log.warning("Downloaded %d deals. total %d.", len(docs), overall_doc_count)
+        else:
+            create_all_documents(project_id, 'deal', docs)
+            log.warning("Downloaded and created %d deals. total %d.", len(docs), overall_doc_count)
+        
+        if not sync_all:
+            if has_more and count >= SEARCH_V3_API_RECORD_PULL_LIMIT:
+                log.warning("10K record limit hit for deals for project_id %d. New timestamp %d", project_id, max_timestamp)
+                count = 0
+                json_payload = get_search_v3_api_payload("hs_lastmodifieddate", max_timestamp, limit)
+    
+    create_all_deal_documents_with_buffer([], False) ## flush any remaining docs in memory
+    return deals_api_calls, deals_associations_api_calls, max_timestamp
 
 def get_company_contacts(project_id, company_id, hubspot_request_handler):
     if hubspot_request_handler == None or not company_id:
@@ -1405,7 +1533,7 @@ def get_batch_documents_max_timestamp_v3(project_id, docs, object_type, max_time
     last_modified_key = ""
     if object_type == "companies":
         last_modified_key = COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE
-    if object_type == "engagements":
+    if object_type == "engagements" or object_type == "deals":
         last_modified_key = "hs_lastmodifieddate"
 
     for doc in docs:
@@ -1811,6 +1939,14 @@ def use_sync_engagement_v3_by_project_id(project_id):
         return True
     return str(project_id) in allowed_projects
 
+def use_sync_deal_v3_by_project_id(project_id):
+    if not options.enable_sync_deal_v3_by_project_id:
+        return False
+    all_projects, allowed_projects,_ = get_allowed_list_with_all_element_support(options.enable_sync_deal_v3_by_project_id)
+    if all_projects:
+        return True
+    return str(project_id) in allowed_projects
+
 def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False):
     next_sync_info = []
     for project_id in project_settings:
@@ -1876,7 +2012,7 @@ def sync(project_id, refresh_token, api_key, doc_type, sync_all, last_sync_times
         elif doc_type == "company":        
             response["companies_api_calls"], response["companies_contacts_api_calls"],max_timestamp = sync_companies(project_id, refresh_token, api_key, last_sync_timestamp, sync_all)
         elif doc_type == "deal":
-            response["deal_api_calls"] = sync_deals(project_id, refresh_token, api_key, sync_all)
+            response["deal_api_calls"], response["deal_association_api_calls"], max_timestamp = sync_deals(project_id, refresh_token, api_key, last_sync_timestamp, sync_all)
         elif doc_type == "contact_list":
             response["contact_list_api_calls"], max_timestamp = sync_all_contact_lists_v2(project_id, refresh_token, api_key, last_sync_timestamp)
         elif doc_type == "form":

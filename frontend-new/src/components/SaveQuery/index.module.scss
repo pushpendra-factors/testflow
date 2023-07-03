@@ -113,15 +113,26 @@
   :global(.ant-btn.ant-btn-icon-only) {
     border-radius: 0px 4px 4px 0px !important;
     margin-left: 1px;
+    &:disabled{
+      background-color: rgb(221, 219, 219) !important;
+      border-right: 1px solid var(--functional-colours-white, #FFF);
+      border: none;
+    }
   }
 
   :global(.ant-btn.ant-btn-primary:first-child:not(:last-child)){
     border-radius: 4px 0px 0px 4px !important;
+    &:disabled{
+      color: white !important;
+      background-color: rgb(221, 219, 219) !important;
+      border-right: 1px solid var(--functional-colours-white, #FFF);
+      border: none;
+    }
   }
 }
 
 .antdActionMenu {
-  min-width: 170px;
+  min-width: 200px;
   border-radius: 5px;
  
   :global(.ant-dropdown-menu-item)

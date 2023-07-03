@@ -11,5 +11,6 @@ export const defaultState = {
     loading: false,
     error: false,
     data: EMPTY_ARRAY
-  }
+  },
+  draftsSelected: false
 };

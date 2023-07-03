@@ -152,6 +152,8 @@ func main() {
 	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 	enrichPullLimit := flag.Int("enrich_pull_limit", 0, "Limit number of records to be pull from db at a time")
 	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
+	removeDisabledEventUserPropertiesByProjectId := flag.String("remove_disabled_event_user_properties",
+		"", "List of projects to disable event user property population in events.")
 	enrichRecordProcessLimit := flag.Int("enrich_record_process_limit", 0, "Limit number of records for enrichment at project level")
 
 	flag.Parse()
@@ -224,6 +226,7 @@ func main() {
 		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
 		EnableSyncReferenceFieldsByProjectID:               *enableSyncReferenceFieldsByProjectID,
 		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
+		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectId,
 	}
 
 	C.InitConf(config)

@@ -1123,7 +1123,7 @@ func (store *MemSQL) GetG2EnabledProjectSettings() ([]model.G2ProjectSettings, i
 
 	g2ProjectSettings := make([]model.G2ProjectSettings, 0, 0)
 
-	err := db.Table("project_settings").Where("int_g2_api_key IS NOT NULL AND int_g2_api_key != ''").Find(&g2ProjectSettings).Error
+	err := db.Table("project_settings").Where("int_g2_api_key IS NOT NULL AND int_g2_api_key != '' AND int_g2 = true").Find(&g2ProjectSettings).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get g2 enabled project settings for sync info.")
 		return g2ProjectSettings, http.StatusInternalServerError
@@ -1140,7 +1140,7 @@ func (store *MemSQL) GetG2EnabledProjectSettingsForProjects(projectIDs []int64) 
 
 	g2ProjectSettings := make([]model.G2ProjectSettings, 0, 0)
 
-	err := db.Table("project_settings").Where("int_g2_api_key IS NOT NULL AND int_g2_api_key != '' AND project_id IN (?)", projectIDs).Find(&g2ProjectSettings).Error
+	err := db.Table("project_settings").Where("int_g2_api_key IS NOT NULL AND int_g2_api_key != '' AND int_g2 = true AND project_id IN (?)", projectIDs).Find(&g2ProjectSettings).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get g2 enabled project settings for sync info.")
 		return g2ProjectSettings, http.StatusInternalServerError

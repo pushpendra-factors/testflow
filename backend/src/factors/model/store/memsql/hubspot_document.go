@@ -95,6 +95,9 @@ func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 		}
 	case model.HubspotDocumentTypeDeal:
 		idKey = "dealId"
+		if _, ok := (*documentMap)["id"]; ok {
+			idKey = "id"
+		}
 	case model.HubspotDocumentTypeFormSubmission:
 		idKey = "formId"
 	case model.HubspotDocumentTypeEngagement:
@@ -1349,6 +1352,34 @@ func (store *MemSQL) GetSyncedHubspotDealDocumentByIdAndStage(projectId int64, i
 	return &documents[0], http.StatusFound
 }
 
+func getHubspotDocumentValuesByPropertyNameAndLimitForV3Records(hubspotDocument model.HubspotDocument,
+	propertyName string, valuesAggregate map[interface{}]int) (map[interface{}]int, error) {
+	if propertyName == "" {
+		return valuesAggregate, errors.New("empty property name on getHubspotDocumentValuesByPropertyNameAndLimitForV3Records")
+	}
+
+	var docProperties model.HubspotDocumentPropertiesV3
+	err := json.Unmarshal((hubspotDocument.Value).RawMessage, &docProperties)
+	if err != nil {
+		return valuesAggregate, err
+	}
+
+	for name, value := range docProperties.Properties {
+		if name != propertyName {
+			continue
+		}
+
+		if value == nil {
+			continue
+		}
+
+		valueStr := U.GetPropertyValueAsString(value)
+		valuesAggregate[valueStr] = valuesAggregate[valueStr] + 1
+	}
+
+	return valuesAggregate, nil
+}
+
 func getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments []model.HubspotDocument,
 	propertyName string, limit int) []interface{} {
 	logFields := log.Fields{
@@ -1364,10 +1395,17 @@ func getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments []model.Hub
 
 	valuesAggregate := make(map[interface{}]int)
 	for i := range hubspotDocuments {
+		var err error
+		valuesAggregate, err = getHubspotDocumentValuesByPropertyNameAndLimitForV3Records(hubspotDocuments[i], propertyName, valuesAggregate)
+		if err == nil {
+			continue
+		}
+
 		var docProperties model.HubspotDocumentProperties
-		err := json.Unmarshal((hubspotDocuments[i].Value).RawMessage, &docProperties)
+		err = json.Unmarshal((hubspotDocuments[i].Value).RawMessage, &docProperties)
 		if err != nil {
-			log.WithFields(log.Fields{"document_id": hubspotDocuments[i].ID}).WithError(err).Error("Failed to unmarshal hubspot document on getAllHubspotDocumentPropertiesValue")
+			log.WithFields(log.Fields{"document_id": hubspotDocuments[i].ID, "property_name": propertyName}).WithError(err).
+				Error("Failed to unmarshal hubspot document on getHubspotDocumentValuesByPropertyNameAndLimit")
 			continue
 		}
 
@@ -1394,6 +1432,53 @@ func getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments []model.Hub
 
 }
 
+func getHubspotDocumentPropertiesNameByTypeForV3Records(hubspotDocument model.HubspotDocument, dateTimeProperties, categoricalProperties map[string]interface{}, currentTimestamp int64, logFields log.Fields) (map[string]interface{}, map[string]interface{}, error) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var docProperties model.HubspotDocumentPropertiesV3
+	err := json.Unmarshal((hubspotDocument.Value).RawMessage, &docProperties)
+	if err != nil {
+		log.WithError(err).Error("Failed to unmarshal hubspot document on getHubspotDocumentPropertiesNameByTypeForV3Records")
+		return dateTimeProperties, categoricalProperties, err
+	}
+
+	for key, value := range docProperties.Properties {
+		valueStr := U.GetPropertyValueAsString(value)
+		if valueStr == "" {
+			continue
+		}
+
+		if U.IsPropertyNameContainsDateOrTime(key) {
+			_, isNumber := U.ConvertDateTimeValueToNumber(value)
+			if isNumber {
+				dateTimeProperties[key] = true
+				continue
+			}
+		}
+
+		if len(valueStr) == 20 || len(valueStr) == 24 { // datetime format - for v3 records
+			timestamp, err := model.GetTimestampForV3Records(valueStr)
+			if err == nil && timestamp >= 0 && int64(timestamp) <= currentTimestamp {
+				// if for some document it was passed as categorical then its not a timestamp.
+				if _, exists := categoricalProperties[key]; !exists {
+					dateTimeProperties[key] = true
+				}
+				continue
+			}
+		}
+
+		// delete from datetime if already exist in it.
+		if _, exists := dateTimeProperties[key]; exists {
+			delete(dateTimeProperties, key)
+		}
+
+		categoricalProperties[key] = true
+
+	}
+
+	return dateTimeProperties, categoricalProperties, nil
+}
+
 func getHubspotDocumentPropertiesNameByType(hubspotDocuments []model.HubspotDocument) ([]string, []string) {
 	logFields := log.Fields{
 		"hubspot_documents": hubspotDocuments,
@@ -1404,10 +1489,16 @@ func getHubspotDocumentPropertiesNameByType(hubspotDocuments []model.HubspotDocu
 	currentTimestamp := U.TimeNowUnix() * 1000
 
 	for i := range hubspotDocuments {
+		var err error
+		dateTimeProperties, categoricalProperties, err = getHubspotDocumentPropertiesNameByTypeForV3Records(hubspotDocuments[i], dateTimeProperties, categoricalProperties, currentTimestamp, logFields)
+		if err == nil {
+			continue
+		}
+
 		var docProperties model.HubspotDocumentProperties
-		err := json.Unmarshal((hubspotDocuments[i].Value).RawMessage, &docProperties)
+		err = json.Unmarshal((hubspotDocuments[i].Value).RawMessage, &docProperties)
 		if err != nil {
-			log.WithError(err).Error("Failed to unmarshal hubspot document on GetHubspotObjectProperties")
+			log.WithError(err).Error("Failed to unmarshal hubspot document on getHubspotDocumentPropertiesNameByType")
 			continue
 		}
 
@@ -1503,7 +1594,7 @@ func (store *MemSQL) GetHubspotObjectPropertiesName(ProjectID int64, objectType 
 
 	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, C.GetHubspotPropertiesLookbackLimit())
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to GetSalesforceObjectPropertiesValues")
+		logCtx.WithError(err).Error("Failed to GetHubspotObjectPropertiesName")
 		return nil, nil
 	}
 

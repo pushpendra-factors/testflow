@@ -362,10 +362,14 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	// Use current properties of user, if user_properties is not provided and if it is not a past event.
 	if event.UserProperties == nil && !event.IsFromPast {
 		properties, errCode := store.GetUserPropertiesByUserID(event.ProjectId, event.UserId)
+
+		newUserProperties := RemoveDisabledEventUserProperties(event.ProjectId, properties)
+
 		if errCode != http.StatusFound {
 			logCtx.WithField("err_code", errCode).Error("Failed to get properties of user for event creation.")
 		}
-		event.UserProperties = properties
+		event.UserProperties = newUserProperties
+
 	}
 
 	// Incrementing count based on EventNameId, not by EventName.
@@ -711,10 +715,12 @@ func (store *MemSQL) UpdateEventPropertiesInBatch(projectID int64,
 		eventID := batchedUpdateEventPropertiesParams[i].EventID
 		updateTimestamp := batchedUpdateEventPropertiesParams[i].SessionEventTimestamp
 		properties := batchedUpdateEventPropertiesParams[i].SessionProperties
+
 		optionalEventUserProperties := batchedUpdateEventPropertiesParams[i].NewSessionEventUserProperties
+		newUserProperties := RemoveDisabledEventUserProperties(projectID, optionalEventUserProperties)
 
 		status := store.updateEventPropertiesWithTransaction(projectID, eventID, userID, properties,
-			updateTimestamp, optionalEventUserProperties, dbTx)
+			updateTimestamp, newUserProperties, dbTx)
 		if status != http.StatusAccepted {
 			logCtx.WithFields(log.Fields{"update_event_properties_params": batchedUpdateEventPropertiesParams[i]}).
 				Error("Failed to overwrite event user properties in batch.")
@@ -796,7 +802,9 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 	// Optional event user_properties update with
 	// event properties update.
 	if optionalEventUserProperties != nil {
-		updatedFields["user_properties"] = optionalEventUserProperties
+
+		newUserProperties := RemoveDisabledEventUserProperties(projectId, optionalEventUserProperties)
+		updatedFields["user_properties"] = newUserProperties
 	}
 
 	EnableOLTPQueriesMemSQLImprovements := C.EnableOLTPQueriesMemSQLImprovements(projectId)
@@ -1584,19 +1592,6 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 			sessionPropertiesMap[U.EP_SESSION_COUNT] = sessionEvent.Count
 
-			sessionEventUserProperties := map[string]interface{}{
-				U.UP_PAGE_COUNT:       sessionPageCount,
-				U.UP_TOTAL_SPENT_TIME: sessionPageSpentTime,
-			}
-			newSessionEventUserPropertiesJsonb, err := U.AddToPostgresJsonb(
-				sessionEvent.UserProperties, sessionEventUserProperties, true)
-			if err != nil {
-				// Log and continue with event properties update skipping event_user_properties.
-				logCtx.WithError(err).
-					Error("Failed to add session event user properties to existing user properties.")
-				newSessionEventUserPropertiesJsonb = nil
-			}
-
 			if C.GetSessionBatchTransactionBatchSize() > 0 {
 				updateEventPropertiesParams = append(updateEventPropertiesParams,
 					model.UpdateEventPropertiesParams{
@@ -1605,14 +1600,14 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 						UserID:                        sessionEvent.UserId,
 						SessionProperties:             &sessionPropertiesMap,
 						SessionEventTimestamp:         sessionEvent.Timestamp,
-						NewSessionEventUserProperties: newSessionEventUserPropertiesJsonb,
+						NewSessionEventUserProperties: sessionEvent.UserProperties,
 						EventsOfSession:               eventsOfSession,
 					})
 			} else {
 				// Update session event properties.
 				errCode = store.UpdateEventProperties(projectId, sessionEvent.ID,
 					sessionEvent.UserId, &sessionPropertiesMap, sessionEvent.Timestamp+1,
-					newSessionEventUserPropertiesJsonb)
+					sessionEvent.UserProperties)
 				if errCode == http.StatusInternalServerError {
 					logCtx.WithField("err_code", errCode).Error("Failed updating session event properties on add session.")
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
@@ -1644,10 +1639,11 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 			// doing this only for non-continued session because initial and latest channel property would already be set and we don't need to change that
 			if !isSessionContinued {
+
 				sessionUserPropertiesRecordMap[sessionEvent.ID] = model.SessionUserProperties{
 					UserID:                userId,
 					SessionChannel:        channelOfSessionEvent[sessionEvent.ID],
-					EventUserProperties:   newSessionEventUserPropertiesJsonb,
+					EventUserProperties:   sessionEvent.UserProperties,
 					IsSessionEvent:        true,
 					SessionEventTimestamp: sessionEvent.Timestamp,
 				}
@@ -1692,6 +1688,21 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 	return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 		noOfUserPropertiesUpdated, isLastEventToBeProcessed, http.StatusOK
+}
+
+// RemoveDisabledEventUserProperties remove disabled event level user properties
+func RemoveDisabledEventUserProperties(ProjectId int64, userProperties *postgres.Jsonb) *postgres.Jsonb {
+
+	newSessionEventUserPropertiesJsonb, err := U.RemoveFromJsonb(userProperties, U.DISABLED_EVENT_USER_LEVEL_PROPERTIES)
+	if err != nil {
+		// continue with event properties update skipping event_user_properties.
+		newSessionEventUserPropertiesJsonb = nil
+	}
+	if C.DisableEventUserPropertiesByProjectID(ProjectId) {
+		return newSessionEventUserPropertiesJsonb
+	}
+	return userProperties
+
 }
 
 // GetDatesForNextEventsArchivalBatch Get dates for events since startTime, excluding today's date.
@@ -2300,13 +2311,15 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID int64, userID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	newUserProperties := RemoveDisabledEventUserProperties(projectID, userProperties)
+
 	logCtx := log.WithFields(logFields)
 	if projectID == 0 || id == "" {
 		logCtx.Error("Invalid values for arguments.")
 		return http.StatusBadRequest
 	}
 
-	if userProperties == nil || U.IsEmptyPostgresJsonb(userProperties) {
+	if newUserProperties == nil || U.IsEmptyPostgresJsonb(newUserProperties) {
 		logCtx.Error("Failed to overwrite user_properties. Empty or nil properties.")
 		return http.StatusBadRequest
 	}
@@ -2318,7 +2331,7 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID int64, userID,
 		dbx = dbx.Where("user_id = ?", userID)
 	}
 
-	err := dbx.Update("user_properties", userProperties).Error
+	err := dbx.Update("user_properties", newUserProperties).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to overwrite user properteis.")
 		return http.StatusInternalServerError

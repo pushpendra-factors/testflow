@@ -17,22 +17,15 @@ export const selectSegmentsList = createSelector(
   selectSegments,
   (timelinePayload, segments) => {
     const segmentsList = [];
-    if (timelinePayload.source === 'All') {
-      Object.entries(segments)
-        .filter((segment) =>
-          Object.keys(ReverseProfileMapper).includes(segment[0])
-        )
-        .forEach(([group, vals]) => {
-          const obj = formatSegmentsObjToGroupSelectObj(group, vals);
-          segmentsList.push(obj);
-        });
-    } else {
-      const obj = formatSegmentsObjToGroupSelectObj(
-        timelinePayload.source,
-        segments[timelinePayload.source]
-      );
-      segmentsList.push(obj);
-    }
+    Object.entries(segments)
+      .filter((segment) =>
+        Object.keys(ReverseProfileMapper).includes(segment[0])
+      )
+      .forEach(([group, vals]) => {
+        const obj = formatSegmentsObjToGroupSelectObj(group, vals);
+        segmentsList.push(obj);
+      });
+
     return segmentsList;
   }
 );

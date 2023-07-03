@@ -109,7 +109,7 @@ export const formatUsersTimeline = (data, config) => {
     title: data.is_anonymous ? 'New User' : data.name || data.user_id,
     subtitle: data.company || data.user_id,
     left_pane_props: data.left_pane_props,
-    group_infos: data.group_infos,
+    account:data.account,
     user_activities: []
   };
   const arrayMilestones = [

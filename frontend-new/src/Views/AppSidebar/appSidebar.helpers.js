@@ -21,7 +21,8 @@ export const isConfigurationUrl = (pathname) => {
     pathname === PathUrls.ConfigureDataPoints ||
     pathname === PathUrls.ConfigureEvents ||
     pathname === PathUrls.ConfigureProperties ||
-    pathname === PathUrls.ConfigureTouchPoints
+    pathname === PathUrls.ConfigureTouchPoints ||
+    pathname === PathUrls.ConfigureEngagements
   );
 };
 

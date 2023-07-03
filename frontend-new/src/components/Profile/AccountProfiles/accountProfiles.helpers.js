@@ -1,3 +1,4 @@
+import { ReverseProfileMapper } from 'Utils/constants';
 import { formatSegmentsObjToGroupSelectObj } from '../utils';
 
 export const getGroupList = (groupOptions) => {
@@ -11,23 +12,11 @@ export const getGroupList = (groupOptions) => {
 export const generateSegmentsList = ({ accountPayload, segments }) => {
   const segmentsList = [];
 
-  if (accountPayload.source === 'All') {
-    const allowedGroups = [
-      '$hubspot_company',
-      '$salesforce_account',
-      '$6signal'
-    ];
-
-    Object.entries(segments)
-      .filter(([group]) => allowedGroups.includes(group))
-      .map(([group, vals]) => formatSegmentsObjToGroupSelectObj(group, vals))
-      .forEach((obj) => segmentsList.push(obj));
-  } else {
-    const obj = formatSegmentsObjToGroupSelectObj(
-      accountPayload.source,
-      segments[accountPayload.source]
-    );
-    segmentsList.push(obj);
-  }
+  Object.entries(segments)
+    .filter(
+      (segment) => !Object.keys(ReverseProfileMapper).includes(segment[0])
+    )
+    .map(([group, vals]) => formatSegmentsObjToGroupSelectObj(group, vals))
+    .forEach((obj) => segmentsList.push(obj));
   return segmentsList;
 };

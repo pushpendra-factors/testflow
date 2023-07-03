@@ -249,6 +249,7 @@ type Configuration struct {
 	EnableBingAdsAttribution                           bool
 	EnableHubspotFormsEventsByProjectID                string
 	DisableHubspotNonMarketingContactsByProjectID      string
+	RemoveDisabledEventUserPropertiesByProjectID       string
 	HubspotBatchInsertBatchSize                        int
 	UseHubspotBatchInsertByProjectID                   string
 	SalesforcePropertyLookBackTimeHr                   int
@@ -314,6 +315,7 @@ type Configuration struct {
 	AllowEventAnalyticsGroupsByProjectID               string
 	OtpKeyWithQueryCheckEnabled                        bool
 	AllowEmailDomainsByProjectID                       string
+	UseHubspotDealsV3APIByProjectID                    string
 	EnableScoringByProjectID                           string
 }
 
@@ -2558,6 +2560,15 @@ func DisableHubspotNonMarketingContactsByProjectID(projectID int64) bool {
 	return allowedProjectIDs[projectID]
 }
 
+func DisableEventUserPropertiesByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().RemoveDisabledEventUserPropertiesByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
 func GetHubspotPropertiesLookbackLimit() int {
 	return GetConfig().HubspotPropertyLookBackLimit
 }
@@ -2565,6 +2576,7 @@ func GetHubspotPropertiesLookbackLimit() int {
 func IsSlowDBQueryLoggingEnabled() bool {
 	return configuration.EnableSlowDBQueryLogging
 }
+
 func GetSlackClientID() string {
 	return configuration.SlackAppClientID
 }
@@ -2873,6 +2885,15 @@ func AllowEventAnalyticsGroupsByProjectID(projectID int64) bool {
 
 func AllowEmailDomainsByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowEmailDomainsByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func AllowHubspotDealsv3APIByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotDealsV3APIByProjectID, "")
 	if allProjects {
 		return true
 	}

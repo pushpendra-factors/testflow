@@ -1,5 +1,7 @@
 /* eslint-disable */
 
+import _ from 'lodash';
+
 // Data manipulation
 export const convertToEventOptions = (eventNames, display_names = []) => {
   // Based on groups Currently clubbing all into one, untill we have backend support
@@ -27,6 +29,18 @@ export const convertPropsToOptions = (props, display_names = []) => {
     });
   });
   return options;
+};
+
+export const convertCustomEventCategoryToOptions = (data) => {
+  const mainItem = data.properties
+  const keys = Object.keys(mainItem);
+  const finalArr = keys.map((type,index)=>{
+    let arr = mainItem[type].map(item=>{
+      return [_.startCase(item),item,type]
+    })
+    return arr
+  })
+  return _.flatten(finalArr)
 };
 
 const convertToChannelOptions = (objects) => {

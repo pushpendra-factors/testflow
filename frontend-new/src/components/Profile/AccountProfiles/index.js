@@ -66,6 +66,7 @@ import {
   updateAccountPayloadAction,
   setSegmentModalStateAction
 } from 'Reducers/accountProfilesView/actions';
+import { PathUrls } from '../../../routes/pathUrls';
 import _ from 'lodash';
 
 function AccountProfiles({
@@ -168,7 +169,7 @@ function AccountProfiles({
       setListSearchItems([]);
     } else {
       const listValues =
-        accountPayload?.search_filter?.users?.map((vl) => vl?.va) || [];
+        accountPayload?.search_filter?.map((vl) => vl?.va) || [];
       setListSearchItems(_.uniq(listValues));
       setSearchBarOpen(true);
     }
@@ -216,25 +217,25 @@ function AccountProfiles({
       }
     };
     setTLConfig(timelinesConfig);
-  }, [currentProjectSettings]);
+  }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
     getSavedSegments(activeProject.id);
-  }, [activeProject.id, fetchProjectSettings, getSavedSegments]);
+  }, [activeProject.id]);
 
   useEffect(() => {
     Object.keys(groupOpts || {}).forEach((group) =>
       getGroupProperties(activeProject.id, group)
     );
-  }, [activeProject.id, getGroupProperties, groupOpts]);
+  }, [activeProject.id, groupOpts]);
 
   const getAccounts = (payload) => {
     const shouldCache = location.state?.fromDetails;
     if (payload.source && payload.source !== '' && !shouldCache) {
       const formatPayload = { ...payload };
       formatPayload.filters =
-        formatFiltersForPayload(payload?.filters, false) || {};
+        formatFiltersForPayload(payload?.filters, true) || [];
       getProfileAccounts(activeProject.id, formatPayload, activeAgent);
     }
     if (shouldCache) {
@@ -819,14 +820,11 @@ function AccountProfiles({
       ...accountPayload,
       search_filter: formatFiltersForPayload(searchFilter, true)
     };
-    const search_filter_map = {};
-    search_filter_map['users'] = updatedPayload.search_filter.map(
-      (filter, index) => {
-        const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
-        return isAnd ? filter : { ...filter, lop: 'OR' };
-      }
-    );
-    updatedPayload.search_filter = search_filter_map;
+    const search_filters = updatedPayload.search_filter.map((filter, index) => {
+      const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
+      return isAnd ? filter : { ...filter, lop: 'OR' };
+    });
+    updatedPayload.search_filter = search_filters;
 
     setListSearchItems(parsedValues);
     setAccountPayload(updatedPayload);
@@ -837,9 +835,9 @@ function AccountProfiles({
   const onSearchClose = () => {
     setSearchBarOpen(false);
     setSearchDDOpen(false);
-    if (Object.keys(accountPayload?.search_filter || {}).length !== 0) {
+    if (accountPayload?.search_filter?.length !== 0) {
       const updatedPayload = { ...accountPayload };
-      updatedPayload.search_filter = {};
+      updatedPayload.search_filter = [];
       setAccountPayload(updatedPayload);
       setListSearchItems([]);
       setActiveSegment(activeSegment);
@@ -883,7 +881,7 @@ function AccountProfiles({
   );
 
   const renderSearchSection = () => (
-    <div className='relative mr-2'>
+    <div className='relative'>
       {searchBarOpen ? (
         <div className={'flex items-center justify-between'}>
           {!searchDDOpen && (
@@ -926,16 +924,21 @@ function AccountProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button
-        size='large'
-        icon={<SVG name='activity_filter' />}
-        className='relative'
-      >
-        Configure
+      <Button size='large' type='text' className='search-btn relative'>
+        <SVG name='activity_filter' />
       </Button>
     </Popover>
   );
 
+  const renderConfiguration = () => (
+    <Button
+      size='large'
+      icon={<SVG name='configure' size={20} />}
+      onClick={() => history.push(PathUrls.ConfigureEngagements)}
+    >
+      Engagements
+    </Button>
+  );
   const handleTableChange = (pageParams) => {
     setCurrentPage(pageParams.current);
   };
@@ -947,10 +950,11 @@ function AccountProfiles({
         {renderSegmentSelect()} */}
         {renderPropertyFilter()}
       </div>
-      <div className='flex items-center justify-between'>
+      <div className='inline-flex gap--6'>
         {accountPayload?.filters?.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}
+        {renderConfiguration()}
       </div>
     </div>
   );
@@ -1019,7 +1023,7 @@ function AccountProfiles({
         profileType='account'
         activeProject={activeProject}
         type={accountPayload.source}
-        typeOptions={groupsList.filter((group) => group[1] !== 'All')}
+        typeOptions={groupsList}
         visible={showSegmentModal}
         segment={{}}
         onSave={handleSaveSegment}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	C "factors/config"
 	"factors/filestore"
+	"factors/model/model"
 	M "factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
@@ -144,9 +145,19 @@ func AggregateDailyEvents(projectId int64, archiveCloudManager,
 	diskManager *serviceDisk.DiskDriver, startTime int64,
 	userEventGroupCount map[string]*AggEventsOnUserAndGroup, mweights map[string][]M.AccEventWeight) error {
 
+	configs := make(map[string]interface{})
 	partFilesDir, _ := (*archiveCloudManager).GetDailyEventArchiveFilePathAndName(projectId, startTime, 0, 0)
 	listFiles := (*archiveCloudManager).ListFiles(partFilesDir)
 	fileNamePrefix := "events"
+
+	domain_group, status := store.GetStore().GetGroup(projectId, model.GROUP_NAME_DOMAINS)
+	if status != http.StatusFound {
+		e := fmt.Errorf("failed to get existing groups (%s) for project (%d)", model.GROUP_NAME_DOMAINS, projectId)
+		log.WithField("err_code", status).Error(e)
+		return e
+	}
+	domain_group_id := fmt.Sprintf("%d", domain_group.ID)
+	configs["domain_group"] = domain_group_id
 
 	for _, partFileFullName := range listFiles {
 		partFNamelist := strings.Split(partFileFullName, "/")
@@ -162,7 +173,7 @@ func AggregateDailyEvents(projectId int64, archiveCloudManager,
 			return err
 		}
 
-		err = AggEventsOnUsers(file, userEventGroupCount, mweights)
+		err = AggEventsOnUsers(file, userEventGroupCount, mweights, configs)
 		if err != nil {
 			return err
 		}
@@ -170,18 +181,6 @@ func AggregateDailyEvents(projectId int64, archiveCloudManager,
 		if err != nil {
 			return err
 		}
-
-		// for k, v := range userEventGroupCount {
-
-		// 	a, err := json.Marshal(v)
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	if len(v.EventsCount) > 0 {
-		// 		log.Infof("Key :%s value :%s", k, string(a))
-		// 	}
-
-		// }
 	}
 
 	log.Infof("Done aggregating")
@@ -190,21 +189,29 @@ func AggregateDailyEvents(projectId int64, archiveCloudManager,
 }
 
 // AggEventsOnUsers  agg count of each event performed by each user along with users group id.
-func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOnUserAndGroup, mweights map[string][]M.AccEventWeight) error {
+func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOnUserAndGroup, mweights map[string][]M.AccEventWeight, configs map[string]interface{}) error {
 	log.Infof("Aggregating users from file")
+	var domainGroup string
 	scanner := bufio.NewScanner(file)
 	const maxCapacity = 30 * 1024 * 1024
 	buf := make([]byte, maxCapacity)
 	scanner.Buffer(buf, maxCapacity)
 	eventCount := 0
-	user_counts := 0
-	group_counts := 0
-	line_count := 0
+	userCounts := 0
+	groupCounts := 0
+	lineCount := 0
+
+	if domainVal, ok := configs["domain_group"].(string); ok {
+		domainGroup = domainVal
+	} else {
+		domainGroup = ""
+	}
+
 	for scanner.Scan() {
 		var event *P.CounterEventFormat
 		line := scanner.Text()
 		err := json.Unmarshal([]byte(line), &event)
-		line_count += 1
+		lineCount += 1
 		if err != nil {
 			log.WithError(err).Errorf("Error in line :%d", eventCount)
 			return err
@@ -218,65 +225,73 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 		}
 
 		if val, ok := userGroupCount[event.UserId]; ok {
-			// get rule_ids from filter events
-			rule_ids := FilterEvents(event, mweights)
+			// get ruleIds from filter events
+			ruleIds := FilterEvents(event, mweights)
 
 			// get rule_ids from filter events
 			// if rule_ids is already present in val.EventsCount
 			// then increment the count
 			// else create a new entry in val.EventsCount
-			for _, rule_id := range rule_ids {
-				if _, ok := val.EventsCount[rule_id]; !ok {
+			for _, ruleId := range ruleIds {
+				if _, ok := val.EventsCount[ruleId]; !ok {
 					var ev M.EventAgg
 					ev.EventName = event.EventName
-					ev.EventId = rule_id
+					ev.EventId = ruleId
 					ev.EventCount = 0 // if eventsCount does not contain the rule id then create an entry with count 0
 					userGroupCount[event.UserId].Is_group = false
-					val.EventsCount[rule_id] = &ev
+					val.EventsCount[ruleId] = &ev
 
 				}
 
-				if _, ok := val.EventsCount[rule_id]; ok {
-					t := val.EventsCount[rule_id]
+				if _, ok := val.EventsCount[ruleId]; ok {
+					t := val.EventsCount[ruleId]
 					t.EventCount += 1
 				}
-				user_counts += 1
+				userCounts += 1
 			}
 
 			if !event.IsGroupUser {
-				if event.Group1UserId != "" {
-					group_counts += 1
-					aggGroupCounts(event, event.Group1UserId, userGroupCount, rule_ids)
+				if event.Group1UserId != "" && domainGroup != "1" {
+					groupCounts += 1
+					aggGroupCounts(event, event.Group1UserId, userGroupCount, ruleIds)
 				}
-				if event.Group2UserId != "" {
-					group_counts += 1
-					aggGroupCounts(event, event.Group2UserId, userGroupCount, rule_ids)
+				if event.Group2UserId != "" && domainGroup != "2" {
+					groupCounts += 1
+					aggGroupCounts(event, event.Group2UserId, userGroupCount, ruleIds)
 				}
-				if event.Group3UserId != "" {
-					group_counts += 1
-					aggGroupCounts(event, event.Group3UserId, userGroupCount, rule_ids)
+				if event.Group3UserId != "" && domainGroup != "3" {
+					groupCounts += 1
+					aggGroupCounts(event, event.Group3UserId, userGroupCount, ruleIds)
 				}
-				if event.Group4UserId != "" {
-					group_counts += 1
-					aggGroupCounts(event, event.Group4UserId, userGroupCount, rule_ids)
+				if event.Group4UserId != "" && domainGroup != "4" {
+					groupCounts += 1
+					aggGroupCounts(event, event.Group4UserId, userGroupCount, ruleIds)
 				}
 
-				if event.Group5UserId != "" {
-					group_counts += 1
-					aggGroupCounts(event, event.Group5UserId, userGroupCount, rule_ids)
+				if event.Group5UserId != "" && domainGroup != "5" {
+					groupCounts += 1
+					aggGroupCounts(event, event.Group5UserId, userGroupCount, ruleIds)
 				}
-				if event.Group6UserId != "" {
-					group_counts += 1
-					aggGroupCounts(event, event.Group6UserId, userGroupCount, rule_ids)
+				if event.Group6UserId != "" && domainGroup != "6" {
+					groupCounts += 1
+					aggGroupCounts(event, event.Group6UserId, userGroupCount, ruleIds)
 				}
-				if event.Group7UserId != "" {
-					group_counts += 1
-					aggGroupCounts(event, event.Group7UserId, userGroupCount, rule_ids)
+				if event.Group7UserId != "" && domainGroup != "7" {
+					groupCounts += 1
+					aggGroupCounts(event, event.Group7UserId, userGroupCount, ruleIds)
 				}
-				if event.Group8UserId != "" {
-					group_counts += 1
-					aggGroupCounts(event, event.Group8UserId, userGroupCount, rule_ids)
+				if event.Group8UserId != "" && domainGroup != "8" {
+					groupCounts += 1
+					aggGroupCounts(event, event.Group8UserId, userGroupCount, ruleIds)
 				}
+			} else if event.IsGroupUser {
+
+				// get domain group user id
+				if domainGroup != "" {
+					id := getDomainGroupUserId(event, domainGroup)
+					aggGroupCounts(event, id, userGroupCount, ruleIds)
+				}
+
 			}
 		}
 
@@ -287,10 +302,33 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 		return err
 	}
 
-	log.Infof(fmt.Sprintf("Total lines counted : %d , total users counted : %d, total groups counted : %d", line_count, user_counts, group_counts))
+	log.Infof(fmt.Sprintf("Total lines counted : %d , total users counted : %d, total groups counted : %d", lineCount, userCounts, groupCounts))
 
 	return nil
 
+}
+
+func getDomainGroupUserId(event *P.CounterEventFormat, gId string) string {
+
+	switch gId {
+	case "1":
+		return event.Group1UserId
+	case "2":
+		return event.Group2UserId
+	case "3":
+		return event.Group3UserId
+	case "4":
+		return event.Group4UserId
+	case "5":
+		return event.Group5UserId
+	case "6":
+		return event.Group6UserId
+	case "7":
+		return event.Group7UserId
+	case "8":
+		return event.Group8UserId
+	}
+	return ""
 }
 
 func aggGroupCounts(event *P.CounterEventFormat, user_id string, userGroupCount map[string]*AggEventsOnUserAndGroup, rule_ids []string) {

@@ -147,7 +147,7 @@ const InsightTable = ({
         <div className={'my-5'}>
           <div className={'border--thin-2  border-radius--sm'}>
             <div className={'py-4 px-6 background-color--brand-color-1 border-radius--sm flex justify-between'}>
-              <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 capitalize'}>{`${isAttribute ? 'Segments (Attributes)' : `Engagements (Journeys + Campaigns)`}`}</Text>
+              <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 capitalize'}>{`${isAttribute ? 'Segments (Attributes)' : `Engagements (Journeys)`}`}</Text>
               <div className={'flex justify-between'}>
                 {showSearch ? <Input
                   onChange={onInputSearch}

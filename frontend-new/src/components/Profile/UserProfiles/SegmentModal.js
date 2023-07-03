@@ -9,7 +9,6 @@ import { SVG, Text } from 'Components/factorsComponents';
 import InputFieldWithLabel from '../MyComponents/InputFieldWithLabel/index';
 import {
   QUERY_OPTIONS_DEFAULT_VALUE,
-  QUERY_TYPE_SEGMENT,
   ReverseProfileMapper
 } from 'Utils/constants';
 import FaSelect from 'Components/FaSelect';
@@ -35,28 +34,22 @@ function SegmentModal({
     name: '',
     description: '',
     query: {},
-    type:
-      type === 'All'
-        ? profileType === 'user'
-          ? 'web'
-          : '$hubspot_company'
-        : type
+    type: type
   };
-
   const DEFAULT_SEGMENT_QUERY_OPTIONS = {
     ...QUERY_OPTIONS_DEFAULT_VALUE,
     caller: caller,
-    group_analysis: profileType === 'user' ? 'users' : '$hubspot_company',
-    source: type,
+    group_analysis: profileType === 'user' ? 'users' : type,
+    source: !type ? (profileType === 'user' ? 'web' : 'All') : type,
     date_range: { ...DefaultDateRangeForSegments },
     table_props: tableProps
   };
-  const [isEventDDVisible, setEventDDVisible] = useState(false);
+  const [isEventsVisible, setEventsVisible] = useState(false);
   const [isUserDDVisible, setUserDDVisible] = useState(false);
   const [isConditionDDVisible, setConditionDDVisible] = useState(false);
-  const [isFilterDDVisible, setFilterDDVisible] = useState(false);
+  const [isFiltersVisible, setFiltersVisible] = useState(false);
   const [isCritDDVisible, setCritDDVisible] = useState(false);
-  const [segmentPayload, setSegmentPayload] = useState(DEFAULT_SEGMENT_PAYLOAD);
+  const [segmentPayload, setSegmentPayload] = useState({});
   const [listEvents, setListEvents] = useState([]);
   const [queryOptions, setQueryOptions] = useState(
     DEFAULT_SEGMENT_QUERY_OPTIONS
@@ -75,10 +68,32 @@ function SegmentModal({
   ];
 
   useEffect(() => {
-    const props = { ...filterProperties };
+    let setType = type;
+    if (!setType) {
+      setType = profileType === 'user' ? 'web' : 'All';
+    }
+    const setGrpa = profileType === 'user' ? 'users' : setType;
+    setSegmentPayload({ ...DEFAULT_SEGMENT_PAYLOAD, type: setType });
+    setQueryOptions({
+      ...DEFAULT_SEGMENT_QUERY_OPTIONS,
+      group_analysis: setGrpa,
+      source: setType
+    });
+  }, [type, profileType, visible]);
+
+  useEffect(() => {
+    const props = {};
     if (profileType === 'account') {
-      props[segmentPayload.type] = groupProperties[segmentPayload.type];
-    } else if (profileType === 'user') props.user = userProperties;
+      if (segmentPayload.type === 'All') {
+        typeOptions
+          .filter((group) => group[1] !== 'All')
+          .forEach(([_, group]) => {
+            props[group] = groupProperties[group];
+          });
+      } else props[segmentPayload.type] = groupProperties[segmentPayload.type];
+    } else if (profileType === 'user') {
+      props.user = userProperties;
+    }
     setFilterProperties(props);
   }, [userProperties, groupProperties, segmentPayload.type, profileType]);
 
@@ -121,6 +136,8 @@ function SegmentModal({
     } else if (profileType === 'user') {
       queryOpts.source = newType;
     }
+    queryOpts.globalFilters = [];
+    setListEvents([]);
     setQueryOptions(queryOpts);
     setUserDDVisible(false);
   };
@@ -167,21 +184,16 @@ function SegmentModal({
   );
 
   const queryChange = useCallback(
-    (newEvent, index, changeType = 'add', flag = null) => {
+    (newEvent, index, changeType = 'add') => {
+      console.log('this is hell!');
       const queryupdated = [...listEvents];
       if (queryupdated[index]) {
-        if (changeType === 'add') {
+        if (changeType === 'add' || changeType === 'filters_updated') {
           queryupdated[index] = newEvent;
-        } else if (changeType === 'filters_updated') {
-          // dont remove group by if filter is changed
-          queryupdated[index] = newEvent;
-        } else {
+        } else if (changeType === 'delete') {
           queryupdated.splice(index, 1);
         }
       } else {
-        if (flag) {
-          Object.assign(newEvent, { pageViewVal: flag });
-        }
         queryupdated.push(newEvent);
       }
       setListEvents(
@@ -202,9 +214,9 @@ function SegmentModal({
       blockList.push(
         <div key={index}>
           <EventsBlock
+            isEngagementConfig={false}
             availableGroups={typeOptions}
             index={index + 1}
-            queryType={QUERY_TYPE_SEGMENT}
             event={event}
             closeEvent={closeEvent}
             queries={listEvents}
@@ -216,17 +228,16 @@ function SegmentModal({
     });
 
     if (listEvents.length < 3) {
-      if (isEventDDVisible) {
+      if (isEventsVisible) {
         blockList.push(
           <div key={blockList.length}>
             <EventsBlock
+              isEngagementConfig={false}
               availableGroups={typeOptions}
-              queryType={QUERY_TYPE_SEGMENT}
               index={listEvents.length + 1}
               queries={listEvents}
               eventChange={queryChange}
               closeEvent={closeEvent}
-              groupBy={queryOptions.groupBy}
               groupAnalysis={queryOptions.group_analysis}
             />
           </div>
@@ -271,8 +282,8 @@ function SegmentModal({
     setFilters(fltrs);
   };
 
-  const closeFilter = () => setFilterDDVisible(false);
-  const closeEvent = () => setEventDDVisible(false);
+  const closeFilter = () => setFiltersVisible(false);
+  const closeEvent = () => setEventsVisible(false);
 
   const filterList = () => {
     if (filterProperties) {
@@ -289,14 +300,14 @@ function SegmentModal({
               insertFilter={(val) => editFilter(id, val)}
               closeFilter={closeFilter}
               filterProps={filterProperties}
-              dropdownPlacement='top'
+              dropdownPlacement='Top'
               dropdownMaxHeight={344}
             />
           </div>
         );
       });
       if (queryOptions.globalFilters.length < 3) {
-        if (isFilterDDVisible) {
+        if (isFiltersVisible) {
           list.push(
             <div key={list.length}>
               <FilterWrapper
@@ -307,7 +318,7 @@ function SegmentModal({
                 insertFilter={addFilter}
                 closeFilter={closeFilter}
                 filterProps={filterProperties}
-                dropdownPlacement='top'
+                dropdownPlacement='Top'
                 dropdownMaxHeight={344}
               />
             </div>
@@ -327,16 +338,16 @@ function SegmentModal({
 
   const setActions = (opt) => {
     if (opt[1] === 'event') {
-      setEventDDVisible(true);
+      setEventsVisible(true);
     } else if (opt[1] === 'filter') {
-      setFilterDDVisible(true);
+      setFiltersVisible(true);
     }
     setConditionDDVisible(false);
   };
 
   const generateConditionOpts = () => {
     const options = [];
-    if (listEvents.length < 3) {
+    if (listEvents.length < 3 && segmentPayload.type !== 'All') {
       options.push(['Performed Events', 'event']);
     }
     if (queryOptions.globalFilters.length < 3) {
@@ -386,9 +397,10 @@ function SegmentModal({
         <div className='segment-query_section'>
           {eventsList()}
           {filterList()}
-          {(listEvents.length > 2 && queryOptions.globalFilters.length > 2) ||
-          isEventDDVisible ||
-          isFilterDDVisible ? null : (
+          {((listEvents.length > 2 || segmentPayload.type === 'All') &&
+            queryOptions.globalFilters.length > 2) ||
+          isEventsVisible ||
+          isFiltersVisible ? null : (
             <div
               className={`relative ${
                 listEvents.length || queryOptions.globalFilters.length

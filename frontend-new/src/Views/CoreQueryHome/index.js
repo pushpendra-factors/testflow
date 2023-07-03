@@ -650,23 +650,7 @@ function CoreQuery({
         console.log(err);
       }
     },
-    [
-      updateSavedQuerySettings,
-      setQueryType,
-      setClickedSavedReport,
-      activeProject?.id,
-      activeProject?.name,
-      dispatch,
-      updateEventFunnelsState,
-      kpiConfig,
-      updateKPIQueryState,
-      attr_dimensions,
-      content_groups,
-      setQueryOptions,
-      setAttributionMetrics,
-      updateCoreQueryReducer,
-      updateProfileQueryState
-    ]
+    [updateSavedQuerySettings, setQueryType, setClickedSavedReport, agent_details?.email, activeProject?.id, activeProject?.name, dispatch, updateEventFunnelsState, kpiConfig, updateKPIQueryState, attr_dimensions, content_groups, setQueryOptions, setAttributionMetrics, updateCoreQueryReducer, updateProfileQueryState]
   );
 
   const getMenu = (row) => {
@@ -1106,7 +1090,7 @@ function CoreQuery({
                           revenue activities. <a href='#!'>Learn more</a>
                         </Text>
                       </div>
-                      <div className='flex justify-end'>
+                      {/* <div className='flex justify-end'>
                         <Button
                           type='link'
                           icon={
@@ -1122,7 +1106,7 @@ function CoreQuery({
                         >
                           Walk me through
                         </Button>
-                      </div>
+                      </div> */}
                     </div>
                   </Col>
                   <Col span={24}>

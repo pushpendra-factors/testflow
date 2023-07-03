@@ -1444,6 +1444,13 @@ var DISABLED_FACTORS_USER_PROPERTIES = [...]string{
 	UP_META_OBJECT_IDENTIFIER_KEY,
 }
 
+var DISABLED_EVENT_USER_LEVEL_PROPERTIES = []string{
+
+	UP_SESSION_COUNT,
+	UP_PAGE_COUNT,
+	UP_TOTAL_SPENT_TIME,
+}
+
 // DISABLED_FACTORS_EVENT_PROPERTIES Event properties disabled for the factors analysis.
 var DISABLED_FACTORS_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -4020,6 +4027,8 @@ func isURLProperty(property string) bool {
 		UP_INITIAL_REFERRER,
 		UP_LATEST_REFERRER,
 		SP_INITIAL_REFERRER,
+		UP_INITIAL_PAGE_DOMAIN,
+		UP_INITIAL_REFERRER_DOMAIN,
 	}
 
 	return strings.HasSuffix(property, "url") ||

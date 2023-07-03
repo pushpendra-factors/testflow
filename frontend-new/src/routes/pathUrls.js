@@ -17,6 +17,7 @@ export const PathUrls = {
   ConfigureCustomKpi: '/configure/customkpi',
   ConfigureDataPoints: '/configure/explaindp',
   ConfigureAlerts: '/configure/alerts',
+  ConfigureEngagements:'/configure/engagements',
   SettingsGeneral: '/settings/general',
   SettingsUser: '/settings/user',
   SettingsAttribution: '/settings/attribution',

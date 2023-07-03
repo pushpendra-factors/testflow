@@ -2118,30 +2118,6 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID int64,
 			continue
 		}
 
-		var existingPageCount, existingTotalSpentTime float64
-		if existingPageCountValue, exists := (*userPropertiesMap)[U.UP_PAGE_COUNT]; exists {
-			existingPageCount, err = U.GetPropertyValueAsFloat64(existingPageCountValue)
-			if err != nil {
-				logCtx.WithError(err).
-					Error("Failed to convert page_count property value as float64.")
-			}
-		}
-
-		if existingTotalSpentTimeValue, exists := (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME]; exists {
-			existingTotalSpentTime, err = U.GetPropertyValueAsFloat64(existingTotalSpentTimeValue)
-			if err != nil {
-				logCtx.WithError(err).
-					Error("Failed to convert total_page_spent time property value as float64.")
-			}
-		}
-
-		newPageCount := existingPageCount + sessionUserProperties.SessionPageCount
-		newTotalSpentTime := existingTotalSpentTime + sessionUserProperties.SessionPageSpentTime
-		newSessionCount := sessionUserProperties.SessionCount
-
-		(*userPropertiesMap)[U.UP_PAGE_COUNT] = newPageCount
-		(*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME] = newTotalSpentTime
-
 		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
 		if err != nil {
 			logCtx.WithError(err).
@@ -2161,11 +2137,11 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID int64,
 		// Latest session based user properties state to be overwritten on
 		// latest user_properties_record of the user, if not added already
 		latestUserProperties := model.LatestUserPropertiesFromSession{
-			PageCount:      newPageCount,
-			TotalSpentTime: newTotalSpentTime,
-			SessionCount:   newSessionCount,
+			PageCount:      sessionUserProperties.SessionPageCount,
+			TotalSpentTime: sessionUserProperties.SessionPageSpentTime,
 			Timestamp:      sessionUserProperties.SessionEventTimestamp,
 		}
+
 		if _, exists := latestSessionUserPropertiesByUserID[sessionUserProperties.UserID]; !exists {
 			latestSessionUserPropertiesByUserID[sessionUserProperties.UserID] = latestUserProperties
 		} else {
@@ -2301,14 +2277,12 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 			continue
 		}
 
+		newUserProperties := make(map[string]interface{})
+
 		validateAndLogPageCountAndPageSpentTimeDisparity(logCtx, existingUserProperties,
 			sessionUserProperties.PageCount, sessionUserProperties.TotalSpentTime)
 
-		newUserProperties := map[string]interface{}{
-			U.UP_TOTAL_SPENT_TIME: sessionUserProperties.TotalSpentTime,
-			U.UP_PAGE_COUNT:       sessionUserProperties.PageCount,
-		}
-		existingUserPropertiesMap, err := U.DecodePostgresJsonb(existingUserProperties)
+		existingUserPropertiesMap, err := U.DecodePostgresJsonbAsPropertiesMap(existingUserProperties)
 		if err != nil {
 			logCtx.WithError(err).
 				Error("Failed to decode existing user properites.")
@@ -2320,6 +2294,19 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 			}
 			newUserProperties[U.UP_LATEST_CHANNEL] = sessionUserProperties.LatestChannel
 		}
+
+		existingPageCount, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_PAGE_COUNT])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
+		}
+
+		existingTotalSpentTime, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
+		}
+
+		newUserProperties[U.UP_TOTAL_SPENT_TIME] = existingTotalSpentTime + sessionUserProperties.TotalSpentTime
+		newUserProperties[U.UP_PAGE_COUNT] = existingPageCount + sessionUserProperties.PageCount
 
 		userPropertiesJsonb, err := U.AddToPostgresJsonb(existingUserProperties, newUserProperties, true)
 		if err != nil {
@@ -3196,4 +3183,37 @@ func (store *MemSQL) createOrGetDomainUserIDByProperties(projectID int64, groupN
 	}
 
 	return groupUserID, cleanedDomainName, status
+}
+
+func (store *MemSQL) GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error) {
+	db := C.GetServices().Db
+
+	domainGroup, errCode := store.GetGroup(projectID, U.GROUP_NAME_DOMAINS)
+	if errCode != http.StatusFound {
+		return "", fmt.Errorf("failed to retrieve domain group")
+	}
+	columnName := model.COLUMN_NAME_CUSTOMER_USER_ID
+	if isAnonymous {
+		columnName = model.COLUMN_NAME_ID
+	}
+	var details model.ContactDetails
+	queryString := fmt.Sprintf(`
+		SELECT group_%d_id as account
+		FROM users 
+		WHERE project_id = ? 
+			AND id = (
+				SELECT group_%d_user_id
+				FROM users 
+				WHERE project_id = ?
+					AND %s = ? 
+					AND group_%d_user_id IS NOT NULL 
+				LIMIT 1
+			)
+		`, domainGroup.ID, domainGroup.ID, columnName, domainGroup.ID)
+
+	err := db.Raw(queryString, projectID, projectID, userID).Scan(&details).Error
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve domain name: %w", err)
+	}
+	return details.Account, nil
 }

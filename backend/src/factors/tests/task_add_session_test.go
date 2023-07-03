@@ -240,19 +240,19 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	propertiesMap := make(map[string]interface{})
 	err = json.Unmarshal(user.Properties.RawMessage, &propertiesMap)
 	assert.Nil(t, err)
-	assert.Equal(t, propertiesMap[U.UP_INITIAL_CHANNEL], "Direct")
-	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], "Direct")
+	assert.Equal(t, propertiesMap[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
+	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], model.ChannelDirect)
 
 	sessionEvent1 := assertAssociatedSession(t, project.ID, []string{eventId},
 		[]string{}, "Session 1")
 	// session event properties added from event properties.
 	lsEventProperties1, err := U.DecodePostgresJsonb(&sessionEvent1.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties1)[U.EP_CHANNEL], "Direct")
+	assert.Equal(t, (*lsEventProperties1)[U.EP_CHANNEL], model.ChannelDirect)
 	lsUserProperties1, err := U.DecodePostgresJsonb(sessionEvent1.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsUserProperties1)[U.UP_INITIAL_CHANNEL], "Direct")
-	assert.Equal(t, (*lsUserProperties1)[U.UP_LATEST_CHANNEL], "Direct")
+	assert.Equal(t, (*lsUserProperties1)[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
+	assert.Equal(t, (*lsUserProperties1)[U.UP_LATEST_CHANNEL], model.ChannelDirect)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -291,19 +291,19 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	propertiesMap = make(map[string]interface{})
 	err = json.Unmarshal(user.Properties.RawMessage, &propertiesMap)
 	assert.Nil(t, err)
-	assert.Equal(t, propertiesMap[U.UP_INITIAL_CHANNEL], "Direct")
-	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], "Paid Search")
+	assert.Equal(t, propertiesMap[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
+	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], model.ChannelPaidSearch)
 
 	sessionEvent2 := assertAssociatedSession(t, project.ID, []string{eventId},
 		[]string{}, "Session 2")
 	// session event properties added from event properties.
 	lsEventProperties2, err := U.DecodePostgresJsonb(&sessionEvent2.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties2)[U.EP_CHANNEL], "Paid Search")
+	assert.Equal(t, (*lsEventProperties2)[U.EP_CHANNEL], model.ChannelPaidSearch)
 	lsUserProperties2, err := U.DecodePostgresJsonb(sessionEvent2.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsUserProperties2)[U.UP_INITIAL_CHANNEL], "Direct")
-	assert.Equal(t, (*lsUserProperties2)[U.UP_LATEST_CHANNEL], "Paid Search")
+	assert.Equal(t, (*lsUserProperties2)[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
+	assert.Equal(t, (*lsUserProperties2)[U.UP_LATEST_CHANNEL], model.ChannelPaidSearch)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -342,11 +342,11 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties3, err := U.DecodePostgresJsonb(&sessionEvent3.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties3)[U.EP_CHANNEL], "Paid Search")
+	assert.Equal(t, (*lsEventProperties3)[U.EP_CHANNEL], model.ChannelPaidSearch)
 	lsUserProperties3, err := U.DecodePostgresJsonb(sessionEvent3.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsUserProperties3)[U.UP_INITIAL_CHANNEL], "Direct")
-	assert.Equal(t, (*lsUserProperties3)[U.UP_LATEST_CHANNEL], "Paid Search")
+	assert.Equal(t, (*lsUserProperties3)[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
+	assert.Equal(t, (*lsUserProperties3)[U.UP_LATEST_CHANNEL], model.ChannelPaidSearch)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -385,7 +385,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties4, err := U.DecodePostgresJsonb(&sessionEvent4.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties4)[U.EP_CHANNEL], "Paid Search")
+	assert.Equal(t, (*lsEventProperties4)[U.EP_CHANNEL], model.ChannelPaidSearch)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -424,11 +424,11 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties5, err := U.DecodePostgresJsonb(&sessionEvent5.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties5)[U.EP_CHANNEL], "Paid Social")
+	assert.Equal(t, (*lsEventProperties5)[U.EP_CHANNEL], model.ChannelPaidSocial)
 	lsUserProperties5, err := U.DecodePostgresJsonb(sessionEvent5.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsUserProperties5)[U.UP_INITIAL_CHANNEL], "Direct")
-	assert.Equal(t, (*lsUserProperties5)[U.UP_LATEST_CHANNEL], "Paid Social")
+	assert.Equal(t, (*lsUserProperties5)[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
+	assert.Equal(t, (*lsUserProperties5)[U.UP_LATEST_CHANNEL], model.ChannelPaidSocial)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -467,7 +467,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties6, err := U.DecodePostgresJsonb(&sessionEvent6.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties6)[U.EP_CHANNEL], "Paid Social")
+	assert.Equal(t, (*lsEventProperties6)[U.EP_CHANNEL], model.ChannelPaidSocial)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -506,7 +506,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties7, err := U.DecodePostgresJsonb(&sessionEvent7.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties7)[U.EP_CHANNEL], "Paid Social")
+	assert.Equal(t, (*lsEventProperties7)[U.EP_CHANNEL], model.ChannelPaidSocial)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -545,7 +545,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties8, err := U.DecodePostgresJsonb(&sessionEvent8.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties8)[U.EP_CHANNEL], "Paid Social")
+	assert.Equal(t, (*lsEventProperties8)[U.EP_CHANNEL], model.ChannelPaidSocial)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -584,7 +584,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties9, err := U.DecodePostgresJsonb(&sessionEvent9.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties9)[U.EP_CHANNEL], "Organic Social")
+	assert.Equal(t, (*lsEventProperties9)[U.EP_CHANNEL], model.ChannelOrganicSocial)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -622,7 +622,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties10, err := U.DecodePostgresJsonb(&sessionEvent10.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties10)[U.EP_CHANNEL], "Organic Search")
+	assert.Equal(t, (*lsEventProperties10)[U.EP_CHANNEL], model.ChannelOrganicSearch)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -660,7 +660,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties11, err := U.DecodePostgresJsonb(&sessionEvent11.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties11)[U.EP_CHANNEL], "Email")
+	assert.Equal(t, (*lsEventProperties11)[U.EP_CHANNEL], model.ChannelEmail)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -698,7 +698,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties12, err := U.DecodePostgresJsonb(&sessionEvent12.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties12)[U.EP_CHANNEL], "Affiliate")
+	assert.Equal(t, (*lsEventProperties12)[U.EP_CHANNEL], model.ChannelAffiliate)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -736,7 +736,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties13, err := U.DecodePostgresJsonb(&sessionEvent13.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties13)[U.EP_CHANNEL], "Referral")
+	assert.Equal(t, (*lsEventProperties13)[U.EP_CHANNEL], model.ChannelReferral)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -774,7 +774,49 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties14, err := U.DecodePostgresJsonb(&sessionEvent14.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties14)[U.EP_CHANNEL], "Organic Social")
+	assert.Equal(t, (*lsEventProperties14)[U.EP_CHANNEL], model.ChannelOrganicSocial)
+
+	timestamp = timestamp + 2000
+
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties14 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_REFERRER_DOMAIN: "facebook.com",
+		U.EP_PAGE_DOMAIN:     "facebook.com",
+		U.EP_MEDIUM:          "something",
+	}
+	trackUserProperties14 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties14,
+		UserProperties:  trackUserProperties14,
+		RequestSource:   model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent15 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 15")
+	// session event properties added from event properties.
+	lsEventProperties15, err := U.DecodePostgresJsonb(&sessionEvent15.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties15)[U.EP_CHANNEL], model.ChannelInternal)
+
 }
 
 func TestMultipleEventsWithSingleAddSessionCallWithChannelGroup(t *testing.T) {
@@ -851,8 +893,8 @@ func TestMultipleEventsWithSingleAddSessionCallWithChannelGroup(t *testing.T) {
 	propertiesMap := make(map[string]interface{})
 	err = json.Unmarshal(user.Properties.RawMessage, &propertiesMap)
 	assert.Nil(t, err)
-	assert.Equal(t, propertiesMap[U.UP_INITIAL_CHANNEL], "Direct")
-	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], "Paid Search")
+	assert.Equal(t, propertiesMap[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
+	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], model.ChannelPaidSearch)
 
 	sessionEvent1 := assertAssociatedSession(t, project.ID, []string{eventId},
 		[]string{}, "Session 1")
@@ -861,16 +903,16 @@ func TestMultipleEventsWithSingleAddSessionCallWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties1, err := U.DecodePostgresJsonb(&sessionEvent1.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties1)[U.EP_CHANNEL], "Direct")
+	assert.Equal(t, (*lsEventProperties1)[U.EP_CHANNEL], model.ChannelDirect)
 	lsUserProperties1, err := U.DecodePostgresJsonb(sessionEvent1.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsUserProperties1)[U.UP_INITIAL_CHANNEL], "Direct")
-	assert.Equal(t, (*lsUserProperties1)[U.UP_LATEST_CHANNEL], "Direct")
+	assert.Equal(t, (*lsUserProperties1)[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
+	assert.Equal(t, (*lsUserProperties1)[U.UP_LATEST_CHANNEL], model.ChannelDirect)
 
 	lsUserProperties2, err := U.DecodePostgresJsonb(sessionEvent2.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsUserProperties2)[U.UP_INITIAL_CHANNEL], "Direct")
-	assert.Equal(t, (*lsUserProperties2)[U.UP_LATEST_CHANNEL], "Paid Search")
+	assert.Equal(t, (*lsUserProperties2)[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
+	assert.Equal(t, (*lsUserProperties2)[U.UP_LATEST_CHANNEL], model.ChannelPaidSearch)
 }
 
 func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
@@ -962,8 +1004,8 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err := U.DecodePostgresJsonb(event.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Equal(t, float64(10), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*userPropertiesMap)[U.UP_OS])
 	// check latest user_properties state.
 	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
@@ -1113,9 +1155,17 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	userPropertiesMap, err = U.DecodePostgresJsonb(event4.UserProperties)
 	assert.Nil(t, err)
 
-	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
-	assert.Equal(t, float64(12), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
+	lastestUserPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, user.Properties)
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*lastestUserPropertiesMap)[U.EP_SESSION_COUNT])
 
 	// Test: Create new session for event with marketing property,
 	// followed by other events, even though there was continuos
@@ -1162,9 +1212,17 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event6.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
-	assert.Equal(t, float64(14), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
+	lastestUserPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, user.Properties)
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*lastestUserPropertiesMap)[U.EP_SESSION_COUNT])
 
 	// Test: Last event with marketing property.
 	timestamp = timestamp + 2
@@ -2534,8 +2592,8 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err := U.DecodePostgresJsonb(event.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Equal(t, float64(10), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*userPropertiesMap)[U.UP_OS])
 	// check latest user_properties state.
 	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
@@ -2684,9 +2742,17 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	userPropertiesMap, err = U.DecodePostgresJsonb(event4.UserProperties)
 	assert.Nil(t, err)
 
-	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
-	assert.Equal(t, float64(12), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
+	lastestUserPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, user.Properties)
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*lastestUserPropertiesMap)[U.EP_SESSION_COUNT])
 
 	// =============================================
 
@@ -2735,9 +2801,17 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event6.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
-	assert.Equal(t, float64(14), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
+	lastestUserPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, user.Properties)
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.NotNil(t, (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Nil(t, (*lastestUserPropertiesMap)[U.EP_SESSION_COUNT])
 
 	// Test: event with marketing property.
 	timestamp = timestamp + 2
@@ -4508,4 +4582,68 @@ func TestGetAllEventsForSessionCreationAsUserEventsMap(t *testing.T) {
 	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
+}
+
+func TestAddSessionRemoveEventLevelUserProperties(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	timestamp := time.Now().AddDate(0, 0, -1)
+	timestampUnix := timestamp.Unix()
+
+	randomEventName := RandomURL()
+	trackEventProperties := U.PropertiesMap{
+		U.EP_PAGE_URL:     "https://example.com",
+		U.EP_PAGE_RAW_URL: "https://example.com",
+		U.EP_CAMPAIGN_ID:  "124",
+	}
+	trackUserProperties := U.PropertiesMap{
+		U.UP_OS: "android1",
+	}
+
+	trackPayload := SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestampUnix,
+		EventProperties: trackEventProperties,
+		UserProperties:  trackUserProperties,
+		RequestSource:   model.UserSourceWeb,
+	}
+	status, res := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	userID := res.UserId
+	// session not created.
+	_, errCode := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, 2*24*60*60, 0, 0, 30, 1, 1)
+
+	assert.Nil(t, err)
+
+	// session created.
+	_, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	sessionEvent := assertAssociatedSession(t, project.ID, []string{res.EventId},
+		[]string{}, "Session")
+
+	// session event properties .
+	lsEventProperties, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties)[U.SP_PAGE_COUNT], float64(1))
+	assert.Equal(t, (*lsEventProperties)[U.SP_SPENT_TIME], float64(1))
+	lsUserProperties, err := U.DecodePostgresJsonb(sessionEvent.UserProperties)
+	assert.Nil(t, err)
+	assert.NotEqual(t, (*lsUserProperties)[U.UP_PAGE_COUNT], float64(1))
+	assert.NotEqual(t, (*lsUserProperties)[U.UP_TOTAL_SPENT_TIME], float64(1))
+
+	//user properties
+	user, status := store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap := make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, properitesMap[U.UP_PAGE_COUNT], float64(1))
+	assert.Equal(t, properitesMap[U.UP_TOTAL_SPENT_TIME], float64(1))
+	assert.Nil(t, properitesMap[U.EP_SESSION_COUNT])
 }

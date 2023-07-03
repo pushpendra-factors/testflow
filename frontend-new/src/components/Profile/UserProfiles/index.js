@@ -74,6 +74,7 @@ import {
   setSegmentModalStateAction
 } from 'Reducers/userProfilesView/actions';
 import { useHistory } from 'react-router-dom';
+import { PathUrls } from '../../../routes/pathUrls';
 
 const userOptions = getUserOptions();
 // const userOptionsForDropdown = getUserOptionsForDropdown();
@@ -134,7 +135,7 @@ function UserProfiles({
       setListSearchItems([]);
     } else {
       const listValues =
-        timelinePayload?.search_filter?.users?.map((vl) => vl?.va) || [];
+        timelinePayload?.search_filter?.map((vl) => vl?.va) || [];
       setListSearchItems(_.uniq(listValues));
       setSearchBarOpen(true);
     }
@@ -206,7 +207,7 @@ function UserProfiles({
 
   useEffect(() => {
     getUserProperties(activeProject.id);
-  }, [activeProject, getUserProperties]);
+  }, [activeProject?.id]);
 
   const isIntegrationEnabled =
     integration?.int_segment ||
@@ -240,7 +241,7 @@ function UserProfiles({
 
   useEffect(() => {
     getSavedSegments(activeProject.id);
-  }, [getSavedSegments, activeProject.id]);
+  }, [activeProject.id]);
 
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
@@ -418,7 +419,7 @@ function UserProfiles({
     if (payload.source && payload.source !== '') {
       const formatPayload = { ...payload };
       formatPayload.filters =
-        formatFiltersForPayload(payload?.filters, false) || {};
+        formatFiltersForPayload(payload?.filters, true) || [];
       getProfileUsers(activeProject.id, formatPayload, activeAgent);
     }
   };
@@ -745,7 +746,7 @@ function UserProfiles({
     };
     const payload = { ...timelinePayload };
     searchFilter.values.push(...val.map((vl) => JSON.parse(vl)[0]));
-    payload.search_filter = formatFiltersForPayload([searchFilter], false);
+    payload.search_filter = formatFiltersForPayload([searchFilter], true);
     setListSearchItems(searchFilter.values);
     setTimelinePayload(payload);
     setActiveSegment(activeSegment);
@@ -783,9 +784,9 @@ function UserProfiles({
   const onSearchClose = () => {
     setSearchBarOpen(false);
     setSearchDDOpen(false);
-    if (timelinePayload?.search_filter?.users?.length) {
+    if (timelinePayload?.search_filter?.length) {
       const payload = { ...timelinePayload };
-      payload.search_filter = {};
+      payload.search_filter = [];
       setListSearchItems([]);
       setTimelinePayload(payload);
       setActiveSegment(activeSegment);
@@ -799,7 +800,7 @@ function UserProfiles({
   };
 
   const renderSearchSection = () => (
-    <div className='relative mr-2'>
+    <div className='relative'>
       {searchBarOpen ? (
         <div className={'flex items-center justify-between'}>
           {!searchDDOpen && (
@@ -839,14 +840,20 @@ function UserProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button
-        size='large'
-        icon={<SVG name='activity_filter' />}
-        className='relative'
-      >
-        Configure
+      <Button size='large' type='text' className='search-btn relative'>
+        <SVG name='activity_filter' />
       </Button>
     </Popover>
+  );
+
+  const renderConfiguration = () => (
+    <Button
+      size='large'
+      icon={<SVG name='configure' size={20}/>}
+      onClick={() => history.push(PathUrls.ConfigureEngagements)}
+    >
+      Engagements
+    </Button>
   );
 
   const renderActions = () => (
@@ -856,10 +863,11 @@ function UserProfiles({
         {renderSegmentSelect()} */}
         {renderPropertyFilter()}
       </div>
-      <div className='flex items-center justify-between'>
+      <div className='inline-flex gap--6'>
         {timelinePayload.filters.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}
+        {renderConfiguration()}
       </div>
     </div>
   );
