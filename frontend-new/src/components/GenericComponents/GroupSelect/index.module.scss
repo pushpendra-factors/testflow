@@ -35,6 +35,10 @@
       &__options {
         width: 100%;
         padding: 8px 12px !important;
+
+        h4 {
+          max-width: 332px;
+        }
       }
     }
 
@@ -75,8 +79,6 @@
   align-items: center;
   padding: 1px 8px;
   gap: 10px;
-
-  width: 31px;
   height: 16px;
 
   /* Neutral/gray-3 */
