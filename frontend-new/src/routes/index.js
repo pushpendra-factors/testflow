@@ -89,13 +89,12 @@ export const AppLayoutRoutes = ({
     <Switch>
       {renderRoutes(APP_LAYOUT_ROUTES)}
       {/* Additional Conditional routes  */}
-      {featureLock(activeAgent) ? (
+      
         <PrivateRoute
           path={ATTRIBUTION_ROUTES.base}
           name='attribution'
           component={Attribution}
         />
-      ) : null}
 
       {currentProjectSettings?.is_path_analysis_enabled && (
         <>

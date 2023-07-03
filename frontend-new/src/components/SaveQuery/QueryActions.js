@@ -2,21 +2,21 @@ import React, { memo, useContext, useEffect, useState } from 'react';
 import _ from 'lodash';
 import PropTypes from 'prop-types';
 import { SVG } from 'factorsComponents';
-import { Button, Dropdown, Menu, message, Tooltip } from 'antd';
+import { Button, Dropdown, Menu,  Tooltip } from 'antd';
 import { BUTTON_TYPES } from '../../constants/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import {
-  QUERY_TYPE_KPI,
+  // QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
-  QUERY_TYPE_ATTRIBUTION,
-  QUERY_TYPE_FUNNEL
+  // QUERY_TYPE_ATTRIBUTION,
+  // QUERY_TYPE_FUNNEL
 } from '../../utils/constants';
-import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
+// import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
-import userflow from 'userflow.js';
-import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
+// import userflow from 'userflow.js';
+// import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
 
 const QueryActionsComponent = ({
   queryType,
@@ -59,33 +59,33 @@ const QueryActionsComponent = ({
     }
   };
 
-  const [chart, setChart] = useState(null);
-  useEffect(() => {
-    setChart(
-      getChartType({ queryType, chartTypes, breakdown, attributionModels })
-    );
-  }, [queryType, chartTypes, breakdown, attributionModels]);
+  // const [chart, setChart] = useState(null);
+  // useEffect(() => {
+  //   setChart(
+  //     getChartType({ queryType, chartTypes, breakdown, attributionModels })
+  //   );
+  // }, [queryType, chartTypes, breakdown, attributionModels]);
 
-  const triggerUserFlow = () => {
-    if (
-      queryType === QUERY_TYPE_ATTRIBUTION ||
-      queryType === QUERY_TYPE_FUNNEL ||
-      queryType === QUERY_TYPE_KPI
-    ) {
-      let flowID = '';
-      if (queryType === QUERY_TYPE_ATTRIBUTION) {
-        flowID = USERFLOW_CONFIG_ID?.AttributionQueryBuilder;
-      }
-      if (queryType === QUERY_TYPE_FUNNEL) {
-        flowID = USERFLOW_CONFIG_ID?.FunnelSQueryBuilder;
-      }
-      if (queryType === QUERY_TYPE_KPI) {
-        flowID = USERFLOW_CONFIG_ID?.KPIQueryBuilder;
-      }
+  // const triggerUserFlow = () => {
+  //   if (
+  //     queryType === QUERY_TYPE_ATTRIBUTION ||
+  //     queryType === QUERY_TYPE_FUNNEL ||
+  //     queryType === QUERY_TYPE_KPI
+  //   ) {
+  //     let flowID = '';
+  //     if (queryType === QUERY_TYPE_ATTRIBUTION) {
+  //       flowID = USERFLOW_CONFIG_ID?.AttributionQueryBuilder;
+  //     }
+  //     if (queryType === QUERY_TYPE_FUNNEL) {
+  //       flowID = USERFLOW_CONFIG_ID?.FunnelSQueryBuilder;
+  //     }
+  //     if (queryType === QUERY_TYPE_KPI) {
+  //       flowID = USERFLOW_CONFIG_ID?.KPIQueryBuilder;
+  //     }
 
-      userflow.start(flowID);
-    }
-  };
+  //     userflow.start(flowID);
+  //   }
+  // };
 
   const handleMenuClick = (e) => {
     if (e?.key === '1') {
@@ -208,7 +208,7 @@ const QueryActionsComponent = ({
 
   return (
     <div className='flex gap-x-2 items-center'>
-      {(queryType == QUERY_TYPE_ATTRIBUTION ||
+      {/* {(queryType == QUERY_TYPE_ATTRIBUTION ||
         queryType == QUERY_TYPE_FUNNEL ||
         queryType == QUERY_TYPE_KPI) && (
         <>
@@ -221,7 +221,7 @@ const QueryActionsComponent = ({
             />
           </Tooltip>
         </>
-      )}
+      )} */}
 
       <ControlledComponent controller={!!savedQueryId}>
         <ControlledComponent controller={queryType !== QUERY_TYPE_PROFILE}>

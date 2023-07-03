@@ -61,7 +61,7 @@ function FilterWrapper({
       const values = filterProps[key];
       filterDD.props.push({ label, icon, values });
     });
-    filterDD.operator = operatorsMap
+    filterDD.operator = operatorsMap;
     setFiltDD(filterDD);
   }, [filterProps]);
 
@@ -71,7 +71,7 @@ function FilterWrapper({
         viewMode={viewMode}
         propOpts={filterDropDownOptions.props}
         operatorOpts={filterDropDownOptions.operator}
-        valueOpts={propertyValuesMap}
+        valueOpts={propertyValuesMap.data}
         applyFilter={applyFilter}
         setValuesByProps={setValuesByProps}
         filter={filter}
@@ -80,6 +80,7 @@ function FilterWrapper({
         dropdownPlacement={dropdownPlacement}
         dropdownMaxHeight={dropdownMaxHeight}
         showInList={showInList}
+        valueOptsLoading={propertyValuesMap.loading}
       />
     );
   };
@@ -155,7 +156,7 @@ function FilterWrapper({
       viewMode={viewMode}
       propOpts={filterDropDownOptions.props}
       operatorOpts={filterDropDownOptions.operator}
-      valueOpts={propertyValuesMap}
+      valueOpts={propertyValuesMap.data}
       applyFilter={applyFilter}
       refValue={refValue}
       setValuesByProps={setValuesByProps}
@@ -164,6 +165,7 @@ function FilterWrapper({
       dropdownMaxHeight={dropdownMaxHeight}
       showInList={showInList}
       minEntriesPerGroup={minEntriesPerGroup}
+      valueOptsLoading={propertyValuesMap.loading}
     />
   );
 

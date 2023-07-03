@@ -145,13 +145,25 @@
             }
         }
 
-        .props {
-            padding: 48px 0 0;
-
-            .groups {
-                padding: 8px 36px;
-                border-top: 1px dashed #E7E9ED;
+        .account {
+            margin: 32px 16px 16px;
+            padding: 16px;
+            width: calc(100% - 32px);
+            border-bottom: 1px solid #F0F0F0;
+            
+            .icon {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background-color: #F0F0F0;
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
             }
+        }
+
+        .props {
+            padding: 0;
         }
 
         .logo_attr {
@@ -675,6 +687,7 @@
 .inline-flex {
     display: inline-flex;
     flex-wrap: nowrap;
+    align-items: center;
 
     &.gap--4 {
         gap: 4px;

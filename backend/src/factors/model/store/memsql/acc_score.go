@@ -44,7 +44,7 @@ func (store *MemSQL) UpdateUserEventsCount(evdata []model.EventsCountScore) erro
 			logCtx.WithError(err).Errorf("Unable to marshall latest score ")
 		}
 
-		stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, event_aggregate::`%s`='%s' ,event_aggregate::%s = CASE WHEN event_aggregate::%s IS NULL OR json_extract_json(event_aggregate,'%s','Date') <= %d THEN '%s' ELSE json_extract_json(event_aggregate,'%s') END where id= ? and project_id= ?", ev.DateStamp, eventsCountjson, model.LAST_EVENT, model.LAST_EVENT, model.LAST_EVENT, ts_unix, LatestScoreString, model.LAST_EVENT)
+		stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, event_aggregate::`%s`='%s' ,event_aggregate::%s = CASE WHEN event_aggregate::%s IS NULL OR json_extract_json(event_aggregate,'%s','date') <= %d THEN '%s' ELSE json_extract_json(event_aggregate,'%s') END where id= ? and project_id= ?", ev.DateStamp, eventsCountjson, model.LAST_EVENT, model.LAST_EVENT, model.LAST_EVENT, ts_unix, LatestScoreString, model.LAST_EVENT)
 		err = db.Exec(stmt, ev.UserId, ev.ProjectId).Error
 		if err != nil {
 			logCtx.WithError(err).Errorf("Unable to update latest score in user events ")
@@ -88,7 +88,7 @@ func (store *MemSQL) UpdateGroupEventsCount(evdata []model.EventsCountScore) err
 				logCtx.WithError(err).Errorf("Unable to marshall latest score ")
 			}
 
-			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, event_aggregate::`%s`='%s' ,event_aggregate::%s = CASE WHEN event_aggregate::%s IS NULL OR json_extract_json(event_aggregate,'%s','Date') <= %d THEN '%s' ELSE json_extract_json(event_aggregate,'%s') END where id= ? and project_id= ?", ev.DateStamp, eventsCountjson, model.LAST_EVENT, model.LAST_EVENT, model.LAST_EVENT, ts, LatestScoreString, model.LAST_EVENT)
+			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, event_aggregate::`%s`='%s' ,event_aggregate::%s = CASE WHEN event_aggregate::%s IS NULL OR json_extract_json(event_aggregate,'%s','date') <= %d THEN '%s' ELSE json_extract_json(event_aggregate,'%s') END where id= ? and project_id= ?", ev.DateStamp, eventsCountjson, model.LAST_EVENT, model.LAST_EVENT, model.LAST_EVENT, ts, LatestScoreString, model.LAST_EVENT)
 			err = db.Exec(stmt, ev.UserId, ev.ProjectId).Error
 			if err != nil {
 				logCtx.WithError(err).Errorf("Unable to update latest score in user events ")
