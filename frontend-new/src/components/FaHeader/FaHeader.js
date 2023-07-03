@@ -270,7 +270,7 @@ function FaHeader() {
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
-            {featureLock(activeAgent)? 
+            
                 <Link
                   to={ATTRIBUTION_ROUTES.base}
                   className={cx('flex items-center', {
@@ -287,7 +287,6 @@ function FaHeader() {
                     Attribution
                   </Text>
                 </Link>
-               : null}
             
           </div>
         </div>

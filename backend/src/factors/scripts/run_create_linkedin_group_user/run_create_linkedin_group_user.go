@@ -37,6 +37,8 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "*", "")
+	removeDisabledEventUserPropertiesByProjectID := flag.String("remove_disabled_event_user_properties",
+		"", "List of projects to disable event user property population in events.")
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
@@ -80,6 +82,7 @@ func main() {
 		RedisHostPersistent:           *redisHostPersistent,
 		RedisPortPersistent:           *redisPortPersistent,
 		CaptureSourceInUsersTable:     *captureSourceInUsersTable,
+		RemoveDisabledEventUserPropertiesByProjectID: *removeDisabledEventUserPropertiesByProjectID,
 	}
 	C.InitConf(config)
 	C.InitRedis(config.RedisHost, config.RedisPort)
