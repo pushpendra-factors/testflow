@@ -836,7 +836,16 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 	isGroupEventUser := groupID > 0
 
 	if !isGroupEventUser {
-		if hasGlobalGroupPropertiesFilter || isAcconutsSegment {
+		if isAcconutsSegment {
+			addSelect := fmt.Sprintf(" LEFT JOIN users ON events.user_id = users.id AND users.project_id = ? LEFT JOIN "+
+				"users AS user_groups ON users.customer_user_id = user_groups.customer_user_id AND "+
+				"user_groups.project_id = ? AND user_groups.group_%d_user_id IS NOT NULL AND user_groups.source = ? "+
+				"LEFT JOIN users AS group_users ON COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) = group_users.id AND group_users.project_id = ? AND "+
+				"group_users.source = ? ", scopeGroupID, scopeGroupID, scopeGroupID)
+			return addSelect, []interface{}{projectID, projectID, model.GroupUserSource[source], projectID, model.GroupUserSource[source]}
+		}
+
+		if hasGlobalGroupPropertiesFilter {
 			addSelect := fmt.Sprintf(" LEFT JOIN users ON events.user_id = users.id AND users.project_id = ? LEFT JOIN "+
 				"users AS user_groups ON users.customer_user_id = user_groups.customer_user_id AND "+
 				"user_groups.project_id = ? AND user_groups.group_%d_user_id IS NOT NULL AND user_groups.source = ? "+
