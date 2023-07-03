@@ -6,6 +6,7 @@ RUN go build -o $GOPATH/bin/migrate_model_metadata $GOPATH/src/factors/migration
 
 # Create stripped down version without go and source code
 FROM alpine:3.7
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 COPY --from=builder /go/bin/migrate_model_metadata /go/bin/migrate_model_metadata
 ENTRYPOINT ["/go/bin/migrate_model_metadata"]

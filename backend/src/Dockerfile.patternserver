@@ -6,6 +6,7 @@ RUN go build -o $GOPATH/bin/pattern-app $GOPATH/src/factors/pattern_server/cmd/p
 
 # Create stripped down version without go and source code
 FROM alpine:3.7
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 COPY --from=builder /go/bin/pattern-app /go/bin/pattern-app
 ENTRYPOINT [ "/go/bin/pattern-app"]

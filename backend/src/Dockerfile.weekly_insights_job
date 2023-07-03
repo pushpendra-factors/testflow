@@ -6,6 +6,7 @@ ADD /factors .
 ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 
 ENV GOPATH=/go
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 RUN apt-get update -y && apt-get install -y ca-certificates && go build -o /go/bin/weeklyinsightsjob /go/src/factors/scripts/run_delta_insights/run_delta_insights.go
 
 ENTRYPOINT ["/go/bin/weeklyinsightsjob"]

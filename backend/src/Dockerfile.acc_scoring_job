@@ -1,5 +1,6 @@
 FROM golang:1.20-buster
 WORKDIR /go/src/factors
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 ADD /factors .
 
 # Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.

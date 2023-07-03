@@ -2,6 +2,8 @@ FROM google/cloud-sdk:290.0.1-alpine
 
 WORKDIR /go/src/factors
 
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
+
 COPY k8_backup.sh k8_backup.sh
 
 RUN apk update && apk add --no-cache go curl && \
