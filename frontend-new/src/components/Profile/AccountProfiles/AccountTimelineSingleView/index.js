@@ -17,13 +17,12 @@ function AccountTimelineSingleView({
   timelineUsers = [],
   loading = false,
   eventNamesMap,
-  listProperties
 }) {
   const [formattedData, setFormattedData] = useState({});
   useEffect(() => {
     const data = eventsFormattedForGranularity(timelineEvents, 'Daily', true);
     setFormattedData(data);
-    document.title = 'Accounts' + ' - FactorsAI';
+    document.title = 'Accounts - FactorsAI';
   }, [timelineEvents]);
 
   const UsernameWithIcon = ({ title, subtitle, isAnonymous }) => (
@@ -107,7 +106,6 @@ function AccountTimelineSingleView({
                                 event={event}
                                 sourceIcon={sourceIcon}
                                 eventIcon={eventIcon}
-                                listProperties={listProperties}
                               />
                             );
                           })}

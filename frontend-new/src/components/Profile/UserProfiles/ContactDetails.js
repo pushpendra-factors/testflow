@@ -18,6 +18,7 @@ import {
   DEFAULT_TIMELINE_CONFIG,
   getPropType,
   granularityOptions,
+  hoverEvents,
   iconColors
 } from '../utils';
 import {
@@ -35,6 +36,7 @@ import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
+import { getEventProperties } from 'Reducers/coreQuery/middleware';
 
 function ContactDetails({
   userDetails,
@@ -44,7 +46,9 @@ function ContactDetails({
   udpateProjectSettings,
   getProfileUserDetails,
   userProperties,
-  eventNamesMap
+  eventNamesMap,
+  eventProperties,
+  getEventProperties
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -129,6 +133,17 @@ function ContactDetails({
     groupProps[0].values = userProperties;
     return groupProps;
   };
+
+  useEffect(() => {
+    userDetails?.data?.user_activities?.forEach((event) => {
+      if (
+        !eventProperties[event?.event_name] &&
+        hoverEvents.includes(event?.event_name)
+      ) {
+        getEventProperties(activeProject?.id, event?.event_name);
+      }
+    });
+  }, [activeProject?.id, userDetails?.data?.user_activities]);
 
   useEffect(() => {
     const listActivities = addEnabledFlagToActivities(
@@ -508,6 +523,7 @@ const mapStateToProps = (state) => ({
   currentProjectSettings: state.global.currentProjectSettings,
   userDetails: state.timelines.contactDetails,
   userProperties: state.coreQuery.userProperties,
+  eventProperties: state.coreQuery.eventProperties,
   eventNamesMap: state.coreQuery.eventNamesMap
 });
 
@@ -516,7 +532,8 @@ const mapDispatchToProps = (dispatch) =>
     {
       getProfileUserDetails,
       fetchProjectSettings,
-      udpateProjectSettings
+      udpateProjectSettings,
+      getEventProperties
     },
     dispatch
   );

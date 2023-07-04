@@ -291,7 +291,7 @@ export const getUniqueItemsByKeyAndSearchTerm = (activities, searchTerm) => {
 
 export const getPropType = (propsList, searchProp) => {
   let propType = 'categorical';
-  propsList.forEach((propArr) => {
+  propsList?.forEach((propArr) => {
     if (propArr[1] === searchProp) {
       propType = propArr[2];
     }
