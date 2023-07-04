@@ -598,6 +598,9 @@ def get_email_id_from_engagement_v3(engagement, convert_email_headers=True):
                 if "to" in email_headers and len(email_headers["to"])>0 and "email" in email_headers["to"][0]:
                     if email_headers["to"][0]["email"] is not None and email_headers["to"][0]["email"]!= "":
                         email_id = email_headers["to"][0]["email"]
+        if engagement["properties"]["hs_email_direction"] == "FORWARDED_EMAIL":
+            engagement["properties"]["type"] = "FORWARDED_EMAIL"
+            email_id = ""
     
     if email_id is None:
         return ""

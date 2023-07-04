@@ -9,6 +9,7 @@ import {
   getHost,
   getPropType,
   granularityOptions,
+  hoverEvents,
   TIMELINE_VIEW_OPTIONS
 } from '../utils';
 import { insertUrlParam } from 'Utils/global';
@@ -30,7 +31,10 @@ import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
 import { fetchGroups } from 'Reducers/coreQuery/services';
-import { getGroupProperties } from 'Reducers/coreQuery/middleware';
+import {
+  getGroupProperties,
+  getEventProperties
+} from 'Reducers/coreQuery/middleware';
 
 function AccountDetails({
   accountDetails,
@@ -44,7 +48,9 @@ function AccountDetails({
   getProfileAccountDetails,
   userProperties,
   groupProperties,
-  eventNamesMap
+  eventNamesMap,
+  eventProperties,
+  getEventProperties
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -147,6 +153,17 @@ function AccountDetails({
     );
     setActivities(listActivities);
   }, [currentProjectSettings, accountDetails]);
+
+  useEffect(() => {
+    accountDetails.data?.account_events?.forEach((event) => {
+      if (
+        !eventProperties[event?.event_name] &&
+        hoverEvents.includes(event?.event_name)
+      ) {
+        getEventProperties(activeProject?.id, event?.event_name);
+      }
+    });
+  }, [activeProject?.id, accountDetails.data?.account_events]);
 
   useEffect(() => {
     Object.keys(groupOpts || {}).forEach((group) =>
@@ -385,13 +402,13 @@ function AccountDetails({
         : PropTextFormat(prop);
       const value = props[prop];
       propsList.push(
-          <LeftPanePropBlock
-            property={prop}
-            type={propType}
-            displayName={propDisplayName}
-            value={value}
-            onDelete={onDelete}
-          />
+        <LeftPanePropBlock
+          property={prop}
+          type={propType}
+          displayName={propDisplayName}
+          value={value}
+          onDelete={onDelete}
+        />
       );
     });
     return propsList;
@@ -584,6 +601,7 @@ const mapStateToProps = (state) => ({
   groupOpts: state.groups.data,
   accountDetails: state.timelines.accountDetails,
   userProperties: state.coreQuery.userProperties,
+  eventProperties: state.coreQuery.eventProperties,
   groupProperties: state.coreQuery.groupProperties,
   eventNamesMap: state.coreQuery.eventNamesMap
 });
@@ -593,6 +611,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchGroups,
       getGroupProperties,
+      getEventProperties,
       getProfileAccountDetails,
       fetchProjectSettings,
       udpateProjectSettings

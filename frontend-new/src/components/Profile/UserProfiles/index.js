@@ -300,7 +300,11 @@ function UserProfiles({
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
-        sorter: (a, b) => sortNumericalColumn(a.score, b.score),
+        defaultSortOrder: 'descend',
+        sorter: {
+          compare: (a, b) => sortNumericalColumn(a.score, b.score),
+          multiple: 1
+        },
         render: (status) =>
           status ? (
             <div
@@ -365,21 +369,23 @@ function UserProfiles({
       key: 'lastActivity',
       width: 200,
       align: 'right',
-      sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
-      defaultSortOrder: 'ascend',
+      sorter: {
+        compare: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
+        multiple: 2
+      },
       render: (item) => MomentTz(item).fromNow()
     });
     return { tableProperties: tableProps, tableColumns: columns };
   }, [contacts?.data, currentProjectSettings, timelinePayload, activeSegment]);
 
   const getTableData = (data) => {
-    const tableData = data?.map((row) => {
-      return {
-        ...row,
-        ...row?.tableProps
-      };
-    });
-    return tableData;
+    const sortedData = data.sort(
+      (a, b) => new Date(b.last_activity) - new Date(a.last_activity)
+    );
+    return sortedData.map((row) => ({
+      ...row,
+      ...row?.tableProps
+    }));
   };
 
   // const showModal = () => {
@@ -849,7 +855,7 @@ function UserProfiles({
   const renderConfiguration = () => (
     <Button
       size='large'
-      icon={<SVG name='configure' size={20}/>}
+      icon={<SVG name='configure' size={20} />}
       onClick={() => history.push(PathUrls.ConfigureEngagements)}
     >
       Engagements

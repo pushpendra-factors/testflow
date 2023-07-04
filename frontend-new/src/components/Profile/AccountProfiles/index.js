@@ -358,7 +358,11 @@ function AccountProfiles({
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
-        sorter: (a, b) => sortNumericalColumn(a.score, b.score),
+        defaultSortOrder: 'descend',
+        sorter: {
+          compare: (a, b) => sortNumericalColumn(a.score, b.score),
+          multiple: 1
+        },
         render: (status) =>
           status ? (
             <div
@@ -389,7 +393,10 @@ function AccountProfiles({
       key: 'lastActivity',
       width: 200,
       align: 'right',
-      sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
+      sorter: {
+        compare: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
+        multiple: 2
+      },
       render: (item) => MomentTz(item).fromNow()
     });
     return columns;

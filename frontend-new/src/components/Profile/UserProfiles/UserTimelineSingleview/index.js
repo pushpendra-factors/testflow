@@ -56,7 +56,6 @@ function AccountTimelineSingleView({
                           event={event}
                           eventIcon={eventIcon}
                           sourceIcon={sourceIcon}
-                          listProperties={listProperties}
                         />
                       );
                     })}

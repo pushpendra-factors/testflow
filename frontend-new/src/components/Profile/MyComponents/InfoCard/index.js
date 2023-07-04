@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Popover } from 'antd';
 import { Text } from 'Components/factorsComponents';
 import { PropTextFormat } from 'Utils/dataFormatter';
@@ -7,6 +7,9 @@ import {
   propValueFormat,
   TimelineHoverPropDisplayNames
 } from '../../utils';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
+import { getEventProperties } from 'Reducers/coreQuery/middleware';
 
 function InfoCard({
   title,
@@ -17,8 +20,14 @@ function InfoCard({
   properties = {},
   trigger,
   children,
-  listProperties
+  activeProject,
+  eventProperties
 }) {
+  useEffect(() => {
+    if (!eventProperties[eventName])
+      getEventProperties(activeProject?.id, eventName);
+  }, [activeProject?.id, eventName]);
+
   const popoverContent = () => (
     <div className='fa-popupcard'>
       <div className='top-section mb-2'>
@@ -34,7 +43,7 @@ function InfoCard({
       </div>
 
       {Object.entries(properties).map(([key, value]) => {
-        const propType = getPropType(listProperties, key);
+        const propType = getPropType(eventProperties[eventName], key);
         if (key === '$is_page_view' && value === true)
           return (
             <div className='flex justify-between py-2'>
@@ -102,4 +111,18 @@ function InfoCard({
     </Popover>
   );
 }
-export default InfoCard;
+
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project,
+  eventProperties: state.coreQuery.eventProperties
+});
+
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      getEventProperties
+    },
+    dispatch
+  );
+
+export default connect(mapStateToProps, mapDispatchToProps)(InfoCard);

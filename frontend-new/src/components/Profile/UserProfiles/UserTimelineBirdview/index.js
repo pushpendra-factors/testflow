@@ -102,7 +102,6 @@ function UserTimelineBirdview({
               loading='lazy'
             />
           }
-          listProperties={listProperties}
         >
           <div className='inline-flex gap--6 items-center'>
             <div className='event-name--sm'>
