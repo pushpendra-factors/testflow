@@ -7,6 +7,7 @@ import {
   ATTRIBUTION_BASICS_LINK,
   ATTRIBUTION_ROUTES
 } from 'Attribution/utils/constants';
+import { PathUrls } from '../../../../routes/pathUrls';
 
 function NoReports() {
   const history = useHistory();
@@ -23,13 +24,22 @@ function NoReports() {
         >
           Attribution Reports
         </Text>
-        <Button
-          type='primary'
-          size='large'
-          onClick={() => history.push(ATTRIBUTION_ROUTES.report)}
-        >
-          <SVG name='plus' color='white' className='w-full' /> Add Report
-        </Button>
+        <div className='flex items-center gap-2'>
+          <Button
+            type='link'
+            size='large'
+            onClick={() => history.push(PathUrls.SettingsAttribution)}
+          >
+            Configuration
+          </Button>
+          <Button
+            type='primary'
+            size='large'
+            onClick={() => history.push(ATTRIBUTION_ROUTES.report)}
+          >
+            <SVG name='plus' color='white' className='w-full' /> Add Report
+          </Button>
+        </div>
       </div>
       <div className='flex flex-col justify-center items-center w-2/4 gap-4'>
         <div className='mb-2'>

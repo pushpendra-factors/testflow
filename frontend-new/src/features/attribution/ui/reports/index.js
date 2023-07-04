@@ -22,6 +22,7 @@ import {
   ATTRIBUTION_QUERY_DELETED,
   ATTRIBUTION_WIDGET_DELETED
 } from 'Attribution/state/action.constants';
+import { PathUrls } from '../../../../routes/pathUrls';
 
 function Reports({
   attributionDashboardUnits,
@@ -165,6 +166,13 @@ function Reports({
           />
         </div>
         <div className='flex items-center gap-2'>
+          <Button
+            type='link'
+            size='large'
+            onClick={() => history.push(PathUrls.SettingsAttribution)}
+          >
+            Configuration
+          </Button>
           <Button
             type='primary'
             size='large'

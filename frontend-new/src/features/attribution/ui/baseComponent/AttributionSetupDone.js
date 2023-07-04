@@ -4,6 +4,7 @@ import { Button } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import { ATTRIBUTION_BASICS_LINK } from 'Attribution/utils/constants';
+import { PathUrls } from '../../../../routes/pathUrls';
 
 function AttributionSetupDone() {
   return (
@@ -18,9 +19,18 @@ function AttributionSetupDone() {
         >
           Attribution Reports
         </Text>
-        <Button type='primary' disabled size='large'>
-          <SVG name='plus' color='white' className='w-full' /> Add Report
-        </Button>
+        <div className='flex items-center gap-2'>
+          <Button
+            type='link'
+            size='large'
+            onClick={() => history.push(PathUrls.SettingsAttribution)}
+          >
+            Configuration
+          </Button>
+          <Button type='primary' disabled size='large'>
+            <SVG name='plus' color='white' className='w-full' /> Add Report
+          </Button>
+        </div>
       </div>
       <div className='flex flex-col justify-center items-center w-2/4 gap-4'>
         <div className='mb-2'>

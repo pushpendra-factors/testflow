@@ -10,14 +10,14 @@ import {
   Table,
   Tag,
   Space,
-  message,
+  message
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
 import SmartEventsForm from './SmartEvents/SmartEventsForm';
 import {
   fetchEventNames,
-  getUserProperties,
+  getUserProperties
 } from 'Reducers/coreQuery/middleware';
 import { MoreOutlined } from '@ant-design/icons';
 import { removeSmartEvents, fetchSmartEvents } from 'Reducers/events';
@@ -29,7 +29,7 @@ function Events({
   fetchEventNames,
   activeProject,
   removeSmartEvents,
-  fetchSmartEvents,
+  fetchSmartEvents
 }) {
   const [smartEvents, setsmartEvents] = useState(null);
   const [showSmartEventForm, setShowSmartEventForm] = useState(false);
@@ -54,13 +54,13 @@ function Events({
       title: 'Diplay name',
       dataIndex: 'name',
       key: 'name',
-      render: (text) => <span className={'capitalize'}>{text}</span>,
+      render: (text) => <span className={'capitalize'}>{text}</span>
     },
     {
       title: 'Source',
       dataIndex: 'source',
       key: 'source',
-      render: (text) => <span className={'capitalize'}>{text}</span>,
+      render: (text) => <span className={'capitalize'}>{text}</span>
     },
     {
       title: '',
@@ -70,8 +70,8 @@ function Events({
         <Dropdown overlay={() => menu(values)} trigger={['hover']}>
           <Button type='text' icon={<MoreOutlined />} />
         </Dropdown>
-      ),
-    },
+      )
+    }
   ];
 
   const editEvent = (values) => {
@@ -99,12 +99,14 @@ function Events({
 
   useEffect(() => {
     setLoading(true);
-    fetchSmartEvents(activeProject?.id).then(() => {
-      setLoading(false);
-    }).catch((err) => {
-      console.log('Fetch SmartEvents catch', err);
-      setLoading(false);
-    });
+    fetchSmartEvents(activeProject?.id)
+      .then(() => {
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.log('Fetch SmartEvents catch', err);
+        setLoading(false);
+      });
   }, [activeProject]);
 
   useEffect(() => {
@@ -116,7 +118,7 @@ function Events({
           key: index,
           name: item.name,
           source: item?.expr?.source,
-          actions: item,
+          actions: item
         });
       });
       setsmartEvents(smartEventsArray);
@@ -165,7 +167,8 @@ function Events({
                         color={'grey-2'}
                         extraClass={'m-0'}
                       >
-                        Set up custom events that get logged based on transitions and state changes inside your CRM. Use this new event you define across your funnel and attribution queries.
+                        Track and analyze user interactions in a way that aligns
+                        perfectly with your business objectives.
                       </Text>
                       <Text
                         type={'title'}
@@ -173,8 +176,14 @@ function Events({
                         color={'grey-2'}
                         extraClass={'m-0 mt-2'}
                       >
-                        For example, logging a contact’s stage inside your CRM as ‘Demo Done’ is an important milestone. Factors lets you monitor and track this event natively inside the platform.
+                        Define and capture custom events that matter most to
+                        your business, such as clicks, form submissions,
+                        lifecycle stage changes, or other specific actions.{' '}
+                        <a href='https://help.factors.ai/en/articles/7284092-custom-events'>
+                          Learn more
+                        </a>
                       </Text>
+
                       <Tabs defaultActiveKey='1'>
                         <TabPane tab='Custom Events' key='1'>
                           <Table
@@ -208,11 +217,11 @@ function Events({
 
 const mapStateToProps = (state) => ({
   smart_events: state.events.smart_events,
-  activeProject: state.global.active_project,
+  activeProject: state.global.active_project
 });
 
 export default connect(mapStateToProps, {
   fetchEventNames,
   removeSmartEvents,
-  fetchSmartEvents,
+  fetchSmartEvents
 })(Events);

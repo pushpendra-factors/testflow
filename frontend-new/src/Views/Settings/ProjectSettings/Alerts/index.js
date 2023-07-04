@@ -348,6 +348,30 @@ const Alerts = ({
             </Row>
             <Row className={'mt-4'}>
               <Col span={24}>
+                <Text
+                  type={'title'}
+                  level={7}
+                  color={'grey-2'}
+                  extraClass={'m-0'}
+                >
+                  With real-time alerts in Slack, stay informed the moment a
+                  prospect visits a high-intent page on your website or when a
+                  significant change occurs in a KPI that matters to your
+                  organization.
+                </Text>
+                <Text
+                  type={'title'}
+                  level={7}
+                  color={'grey-2'}
+                  extraClass={'m-0 mt-2'}
+                >
+                  Be instantly notified, take immediate action, and seize every
+                  opportunity to drive conversions, optimize performance, and
+                  achieve your business objectives.
+                  <a href='https://help.factors.ai/en/articles/7284705-alerts'>
+                    Learn more
+                  </a>
+                </Text>
                 <div className={'mt-6'}>{renderAlertContent()}</div>
               </Col>
             </Row>
