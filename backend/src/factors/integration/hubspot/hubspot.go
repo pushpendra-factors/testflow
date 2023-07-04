@@ -3506,10 +3506,11 @@ var keyArrEngagementEmail = []string{"id", "createdAt", "lastUpdated", "type", "
 var keyArrMetaEmail = []string{"from", "to", "subject", "sentVia"}
 
 const (
-	EngagementTypeCall          = "CALL"
-	EngagementTypeEmail         = "EMAIL"
-	EngagementTypeIncomingEmail = "INCOMING_EMAIL"
-	EngagementTypeMeeting       = "MEETING"
+	EngagementTypeCall           = "CALL"
+	EngagementTypeEmail          = "EMAIL"
+	EngagementTypeIncomingEmail  = "INCOMING_EMAIL"
+	EngagementTypeForwardedEmail = "FORWARDED_EMAIL"
+	EngagementTypeMeeting        = "MEETING"
 
 	HSEngagementTimestampProperty = "$hubspot_engagement_timestamp"
 )
@@ -3621,7 +3622,7 @@ func getEngagementContactIds(engagementTypeStr string, engagement Engagements) (
 			}
 			contact = fromMap["contactId"]
 			if contact == "" || contact == nil {
-				logCtx.Error("No contact id for INCOMING_EMAIL engamement. Will be marked as synced")
+				logCtx.Warning("No contact id for INCOMING_EMAIL engamement. Will be marked as synced")
 				return nil, http.StatusOK
 			}
 
@@ -4017,6 +4018,10 @@ func getEngagementContactIdsV3(engagementTypeStr string, engagement EngagementsV
 		var err error
 		var contact interface{}
 
+		if engagement.Properties["hs_email_headers"] == nil {
+			return nil, http.StatusOK
+		}
+
 		emailHeaders, ok := engagement.Properties["hs_email_headers"].(map[string]interface{})
 		if !ok {
 			logCtx.Error("Failed to convert interface to map for email_headers")
@@ -4037,11 +4042,16 @@ func getEngagementContactIdsV3(engagementTypeStr string, engagement EngagementsV
 			}
 			contact = fromMap["contactId"]
 			if contact == "" || contact == nil {
-				logCtx.Error("No contact id for INCOMING_EMAIL engamement. Will be marked as synced")
+				logCtx.Warning("No contact id for INCOMING_EMAIL engamement. Will be marked as synced")
 				return nil, http.StatusOK
 			}
 		} else {
 			contactIdInterface := emailHeaders["to"]
+			if contactIdInterface == nil {
+				logCtx.Warning("No to for EMAIL engagement. Will be marked as synced.")
+				return nil, http.StatusOK
+			}
+
 			interfaceArray, isConvert := contactIdInterface.([]interface{})
 			if !isConvert {
 				logCtx.Error("cannot convert interface to interface array")
@@ -4063,7 +4073,7 @@ func getEngagementContactIdsV3(engagementTypeStr string, engagement EngagementsV
 			}
 			contact = toMap["contactId"]
 			if contact == "" || contact == nil {
-				logCtx.Error("No contact id for EMAIL engamement_v3. Will be marked as synced")
+				logCtx.Warning("No contact id for EMAIL engamement_v3. Will be marked as synced")
 				return nil, http.StatusOK
 			}
 		}
@@ -4100,9 +4110,18 @@ func syncEngagementsV3(project *model.Project, otpRules *[]model.OTPRule, unique
 	}
 	engagementType := U.GetPropertyValueAsString(engagementTypeInt)
 
-	if engagementType != EngagementTypeCall && engagementType != EngagementTypeMeeting && engagementType != EngagementTypeIncomingEmail && engagementType != EngagementTypeEmail {
+	if engagementType != EngagementTypeCall && engagementType != EngagementTypeMeeting && engagementType != EngagementTypeIncomingEmail && engagementType != EngagementTypeEmail && engagementType != EngagementTypeForwardedEmail {
 		logCtx.WithField("engagement_type", engagementTypeInt).Error("Invalid engagement_v3 type")
 		return http.StatusInternalServerError
+	}
+
+	if engagementType == EngagementTypeForwardedEmail {
+		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, document.ID, model.HubspotDocumentTypeEngagement, "", document.Timestamp, document.Action, "", "")
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update hubspot engagement_v3 document as synced.")
+			return http.StatusInternalServerError
+		}
+		return http.StatusOK
 	}
 
 	if (engagementType == EngagementTypeIncomingEmail || engagementType == EngagementTypeEmail) && document.Action == model.HubspotDocumentActionUpdated {
