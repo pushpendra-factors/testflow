@@ -449,7 +449,7 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 			success := store.CacheEventTriggerAlert(&alert, event, eventName)
 			if !success {
 				log.WithFields(log.Fields{"project_id": event.ProjectId,
-					"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
+					"event_trigger_alert": alert}).Error("Caching alert failure")
 			}
 		}
 	}
@@ -848,7 +848,7 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 			success := store.CacheEventTriggerAlert(&alert, &updatedEvent, eventName)
 			if !success {
 				log.WithFields(log.Fields{"project_id": event.ProjectId,
-					"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
+					"event_trigger_alert": alert}).Error("Caching alert failure")
 			}
 		}
 	}
