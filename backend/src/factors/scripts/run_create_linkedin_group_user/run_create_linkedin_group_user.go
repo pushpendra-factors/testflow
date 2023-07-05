@@ -193,7 +193,14 @@ func createGroupUserAndEvents(linkedinProjectSetting model.LinkedinProjectSettin
 
 			unixTimestamp := timestamp.Unix()
 			userID, errCode := SDK.TrackGroupWithDomain(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, domainData.Domain, properties, unixTimestamp)
-			if errCode != http.StatusOK {
+			if errCode == http.StatusNotImplemented {
+				err = store.GetStore().UpdateLinkedinGroupUserCreationDetails(domainData)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed in updating user creation details")
+					return "Failed in updating user creation details", http.StatusInternalServerError
+				}
+				continue
+			} else if errCode != http.StatusOK {
 				logCtx.Error("Failed in TrackGroupWithDomain")
 				return "Failed in TrackGroupWithDomain", errCode
 			}
