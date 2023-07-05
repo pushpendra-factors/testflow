@@ -7,9 +7,10 @@ import {
   TimelineHoverPropDisplayNames
 } from 'Components/Profile/utils';
 import React from 'react';
+import { connect } from 'react-redux';
 import { PropTextFormat } from 'Utils/dataFormatter';
 
-const EventInfoCard = ({ event, eventIcon, sourceIcon, listProperties }) => (
+const EventInfoCard = ({ event, eventIcon, sourceIcon, eventProperties }) => (
   <div className='timeline-event__container'>
     <div className='timestamp'>
       {MomentTz(event?.timestamp * 1000).format('hh:mm A')}
@@ -53,7 +54,7 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, listProperties }) => (
       </div>
 
       {Object.entries(event?.properties || {}).map(([key, value]) => {
-        const propType = getPropType(listProperties, key);
+        const propType = getPropType(eventProperties[event?.event_name], key);
         if (key === '$is_page_view' && value === true)
           return (
             <div className='flex justify-between py-2'>
@@ -112,4 +113,8 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, listProperties }) => (
   </div>
 );
 
-export default EventInfoCard;
+const mapStateToProps = (state) => ({
+  eventProperties: state.coreQuery.eventProperties
+});
+
+export default connect(mapStateToProps, null)(EventInfoCard);

@@ -757,6 +757,7 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 		U.GROUP_EVENT_NAME_HUBSPOT_DEAL_UPDATED,
 		U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
 		U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
+		U.GROUP_EVENT_NAME_G2_ALL,
 	}
 
 	eventNamesToExcludePlaceholders := strings.Repeat("?,", len(eventNamesToExclude)-1) + "?"

@@ -114,7 +114,6 @@ function AccountTimelineBirdView({
               loading='lazy'
             />
           }
-          listProperties={listProperties}
         >
           <div className='inline-flex gap--4 items-center'>
             <div className='event-name--sm'>
