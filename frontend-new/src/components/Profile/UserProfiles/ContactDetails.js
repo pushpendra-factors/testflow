@@ -135,15 +135,12 @@ function ContactDetails({
   };
 
   useEffect(() => {
-    userDetails?.data?.user_activities?.forEach((event) => {
-      if (
-        !eventProperties[event?.event_name] &&
-        hoverEvents.includes(event?.event_name)
-      ) {
+    hoverEvents.forEach((event) => {
+      if (!eventProperties[event]) {
         getEventProperties(activeProject?.id, event?.event_name);
       }
     });
-  }, [activeProject?.id, userDetails?.data?.user_activities]);
+  }, [activeProject?.id, eventProperties]);
 
   useEffect(() => {
     const listActivities = addEnabledFlagToActivities(

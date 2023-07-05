@@ -363,14 +363,16 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	if event.UserProperties == nil && !event.IsFromPast {
 		properties, errCode := store.GetUserPropertiesByUserID(event.ProjectId, event.UserId)
 
-		newUserProperties := RemoveDisabledEventUserProperties(event.ProjectId, properties)
-
 		if errCode != http.StatusFound {
 			logCtx.WithField("err_code", errCode).Error("Failed to get properties of user for event creation.")
 		}
-		event.UserProperties = newUserProperties
+		event.UserProperties = properties
 
 	}
+
+	newUserProperties := RemoveDisabledEventUserProperties(event.ProjectId, event.UserProperties)
+
+	event.UserProperties = newUserProperties
 
 	// Incrementing count based on EventNameId, not by EventName.
 	count, errCode := store.GetEventCountOfUserByEventName(event.ProjectId, event.UserId, event.EventNameId)
@@ -447,7 +449,7 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 			success := store.CacheEventTriggerAlert(&alert, event, eventName)
 			if !success {
 				log.WithFields(log.Fields{"project_id": event.ProjectId,
-					"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
+					"event_trigger_alert": alert}).Error("Caching alert failure")
 			}
 		}
 	}
@@ -846,7 +848,7 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 			success := store.CacheEventTriggerAlert(&alert, &updatedEvent, eventName)
 			if !success {
 				log.WithFields(log.Fields{"project_id": event.ProjectId,
-					"event_trigger_alert": alert}).Error("Caching alert failure for ", alert)
+					"event_trigger_alert": alert}).Error("Caching alert failure")
 			}
 		}
 	}

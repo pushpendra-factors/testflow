@@ -2461,6 +2461,10 @@ func TrackGroupWithDomain(projectID int64, groupName, domainName string, propert
 	}
 
 	groupID := U.GetDomainGroupDomainName(projectID, domainName)
+	if groupID == "" {
+		logCtx.Warn("No domain available")
+		return "", http.StatusNotImplemented
+	}
 	groupUserID, status := store.GetStore().CreateOrGetDomainGroupUser(projectID, groupName, groupID, timestamp, model.GetGroupUserSourceByGroupName(groupName))
 	if status != http.StatusCreated && status != http.StatusFound {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for  group user by group id.")

@@ -155,15 +155,12 @@ function AccountDetails({
   }, [currentProjectSettings, accountDetails]);
 
   useEffect(() => {
-    accountDetails.data?.account_events?.forEach((event) => {
-      if (
-        !eventProperties[event?.event_name] &&
-        hoverEvents.includes(event?.event_name)
-      ) {
-        getEventProperties(activeProject?.id, event?.event_name);
+    hoverEvents.forEach((event) => {
+      if (!eventProperties[event]) {
+        getEventProperties(activeProject?.id, event);
       }
     });
-  }, [activeProject?.id, accountDetails.data?.account_events]);
+  }, [activeProject?.id, eventProperties]);
 
   useEffect(() => {
     Object.keys(groupOpts || {}).forEach((group) =>
