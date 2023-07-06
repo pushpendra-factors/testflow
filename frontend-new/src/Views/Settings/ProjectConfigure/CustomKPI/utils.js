@@ -440,12 +440,12 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
                 ? ''
                 : fil?.extra
                 ? fil?.extra[3]
-                : 'event',
+                : fil?.props?.[2],
             objTy:
               category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
                   ? fil?.extra[3]
-                  : 'event'
+                  : fil?.props?.[2]
                 : '',
             va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
           });
@@ -461,12 +461,12 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
               ? ''
               : fil?.extra
               ? fil?.extra[3]
-              : 'event',
+              : fil?.props?.[2],
           objTy:
             category === 'channels' || category === 'custom_channels'
               ? fil?.extra
                 ? fil?.extra[3]
-                : 'event'
+                : fil?.props?.[2]
               : '',
           va:
             fil.props[1] === 'datetime'
@@ -488,12 +488,12 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
                 ? ''
                 : fil?.extra
                 ? fil?.extra[3]
-                : 'event',
+                : fil?.props?.[2],
             objTy:
               category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
                   ? fil?.extra[3]
-                  : 'event'
+                  : fil?.props?.[2]
                 : '',
             va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
           });
@@ -509,12 +509,12 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
               ? ''
               : fil?.extra
               ? fil?.extra[3]
-              : 'event',
+              : fil?.props?.[2],
           objTy:
             category === 'channels' || category === 'custom_channels'
               ? fil?.extra
                 ? fil?.extra[3]
-                : 'event'
+                : fil?.props?.[2]
               : '',
           va:
             fil.props[1] === 'datetime'
@@ -535,12 +535,12 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
                 ? ''
                 : fil?.extra
                 ? fil?.extra[3]
-                : 'event',
+                : fil?.props?.[2],
             objTy:
               category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
                   ? fil?.extra[3]
-                  : 'event'
+                  : fil?.props?.[2]
                 : '',
             va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
           });
@@ -556,12 +556,12 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
               ? ''
               : fil?.extra
               ? fil?.extra[3]
-              : 'event',
+              : fil?.props?.[2],
           objTy:
             category === 'channels' || category === 'custom_channels'
               ? fil?.extra
                 ? fil?.extra[3]
-                : 'event'
+                : fil?.props?.[2]
               : '',
           va:
             fil.props[1] === 'datetime'

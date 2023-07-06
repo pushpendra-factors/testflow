@@ -844,12 +844,11 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, countryName, pageURLProp)
 
 	if shouldEnrichUsingSixSignal == false {
-		//logCtx.WithFields(log.Fields{"six_signal_config": sixSignalConfig, "countryName": countryName, "page": pageURLProp}).
-		//	Warn("request filtered for six signal")
+		logCtx.WithFields(log.Fields{"six_signal_config": sixSignalConfig, "countryName": countryName, "page": pageURLProp}).Info("sixsignal filter returns false - debug Upflow")
 		return
 	}
 
-	if projectId == 2251799844000008 && (!(strings.Contains(pageURLProp, "/demo") || !(strings.Contains(pageURLProp, "/pricing")))) {
+	if projectId == 2251799844000008 && !(strings.Contains(pageURLProp, "/demo") && !(strings.Contains(pageURLProp, "/pricing"))) {
 		logCtx.WithFields(log.Fields{"pageUrl": pageURLProp, "Pages Include": sixSignalConfig.PagesInclude, "EnrichSixSignal": shouldEnrichUsingSixSignal}).Info("Hitting factors sixsignal enrichment -debug for Upflow.")
 	}
 
@@ -860,22 +859,20 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 		if sixSignalExists {
 			// logCtx.Info("6Signal cache hit")
 		} else {
-			// logCtx.Info("6Signal cache miss")
+
 			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
 
 			select {
 			case ok := <-execute6SignalStatusChannel:
 				if ok == 1 {
 					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
-					// logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("SetSixSignalCacheResult using clients Key")
 
 				} else {
 					logCtx.Warn("ExecuteSixSignal failed in track call")
-					// logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("ExecuteSixSignal failed in track call using clients Key")
 				}
 			case <-time.After(U.TimeoutOneSecond):
 				logCtx.Warn("six_Signal enrichment timed out in Track call")
-				//logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("Timed Out 6Signal enrichment using clients Key")
+
 			}
 		}
 	} else if projectSettings.Factors6SignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true {

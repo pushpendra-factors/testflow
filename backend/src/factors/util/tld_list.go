@@ -3418,7 +3418,8 @@ func GetDomainGroupDomainName(projectID int64, domainName string) string {
 	if tld == "" { // if no match found log and return the domain name
 		tld = smartDomainCleanup(domainName)
 		if tld == "" {
-			log.WithFields(log.Fields{"domain_name": domainName, "project_id": projectID}).Error("Failed to get top level domain from domain name after smartDomainCleanup. Using raw domain name.")
+			log.WithFields(log.Fields{"domain_name": domainName, "project_id": projectID}).
+				Warning("Failed to get top level domain from domain name after smartDomainCleanup. Using raw domain name.")
 			return domainName
 		}
 
