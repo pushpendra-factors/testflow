@@ -321,6 +321,7 @@ func GetTimestampForV3Records(propertyValue interface{}) (int64, error) {
 	if err == nil {
 		return tm.UnixNano() / int64(time.Millisecond), nil
 	}
+	log.WithField("value", propertyValue).Error("failed to convert timestamp inside getTimestampFromPropertiesByKeyV3")
 	return 0, errors.New("failed to convert timestamp inside getTimestampFromPropertiesByKeyV3")
 }
 
@@ -571,7 +572,7 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 
 			valueInInt64, ok := GetTimestampForV3Records(createDate)
 			if ok != nil {
-				return 0, errors.New("failed to convert interface into float64 for deal_V3")
+				return 0, errors.New("failed to convert interface into int64 for deal_V3")
 			}
 			return valueInInt64, nil
 		}
