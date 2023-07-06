@@ -1432,13 +1432,57 @@ func getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments []model.Hub
 
 }
 
+func getHubspotDocumentPropertiesNameByTypeForOldRecords(hubspotDocument model.HubspotDocument, dateTimeProperties, categoricalProperties map[string]interface{}, currentTimestamp int64, logFields log.Fields) (map[string]interface{}, map[string]interface{}, error) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var docProperties model.HubspotDocumentProperties
+	err := json.Unmarshal((hubspotDocument.Value).RawMessage, &docProperties)
+	if err != nil {
+		return dateTimeProperties, categoricalProperties, err
+	}
+
+	for key, value := range docProperties.Properties {
+		valueStr := U.GetPropertyValueAsString(value.Value)
+		if valueStr == "" {
+			continue
+		}
+
+		if U.IsPropertyNameContainsDateOrTime(key) {
+			_, isNumber := U.ConvertDateTimeValueToNumber(value)
+			if isNumber {
+				dateTimeProperties[key] = true
+				continue
+			}
+		}
+
+		if len(valueStr) == 13 { // milliseconds format
+			timestamp, err := strconv.ParseUint(valueStr, 10, 64)
+			if err == nil && int64(timestamp) >= 0 && int64(timestamp) <= currentTimestamp {
+				// if for some document it was passed as categorical then its not a timestamp.
+				if _, exists := categoricalProperties[key]; !exists {
+					dateTimeProperties[key] = true
+				}
+				continue
+			}
+		}
+
+		// delete from datetime if already exist in it.
+		if _, exists := dateTimeProperties[key]; exists {
+			delete(dateTimeProperties, key)
+		}
+
+		categoricalProperties[key] = true
+	}
+
+	return dateTimeProperties, categoricalProperties, nil
+}
+
 func getHubspotDocumentPropertiesNameByTypeForV3Records(hubspotDocument model.HubspotDocument, dateTimeProperties, categoricalProperties map[string]interface{}, currentTimestamp int64, logFields log.Fields) (map[string]interface{}, map[string]interface{}, error) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var docProperties model.HubspotDocumentPropertiesV3
 	err := json.Unmarshal((hubspotDocument.Value).RawMessage, &docProperties)
 	if err != nil {
-		log.WithError(err).Error("Failed to unmarshal hubspot document on getHubspotDocumentPropertiesNameByTypeForV3Records")
 		return dateTimeProperties, categoricalProperties, err
 	}
 
@@ -1458,7 +1502,7 @@ func getHubspotDocumentPropertiesNameByTypeForV3Records(hubspotDocument model.Hu
 
 		if len(valueStr) == 20 || len(valueStr) == 24 { // datetime format - for v3 records
 			timestamp, err := model.GetTimestampForV3Records(valueStr)
-			if err == nil && timestamp >= 0 && int64(timestamp) <= currentTimestamp {
+			if err == nil && timestamp >= 0 && timestamp <= currentTimestamp {
 				// if for some document it was passed as categorical then its not a timestamp.
 				if _, exists := categoricalProperties[key]; !exists {
 					dateTimeProperties[key] = true
@@ -1473,7 +1517,6 @@ func getHubspotDocumentPropertiesNameByTypeForV3Records(hubspotDocument model.Hu
 		}
 
 		categoricalProperties[key] = true
-
 	}
 
 	return dateTimeProperties, categoricalProperties, nil
@@ -1490,50 +1533,19 @@ func getHubspotDocumentPropertiesNameByType(hubspotDocuments []model.HubspotDocu
 
 	for i := range hubspotDocuments {
 		var err error
+		dateTimeProperties, categoricalProperties, err = getHubspotDocumentPropertiesNameByTypeForOldRecords(hubspotDocuments[i], dateTimeProperties, categoricalProperties, currentTimestamp, logFields)
+		if err == nil {
+			continue
+		}
+
 		dateTimeProperties, categoricalProperties, err = getHubspotDocumentPropertiesNameByTypeForV3Records(hubspotDocuments[i], dateTimeProperties, categoricalProperties, currentTimestamp, logFields)
 		if err == nil {
 			continue
 		}
 
-		var docProperties model.HubspotDocumentProperties
-		err = json.Unmarshal((hubspotDocuments[i].Value).RawMessage, &docProperties)
 		if err != nil {
-			log.WithError(err).Error("Failed to unmarshal hubspot document on getHubspotDocumentPropertiesNameByType")
-			continue
-		}
-
-		for key, value := range docProperties.Properties {
-			valueStr := U.GetPropertyValueAsString(value.Value)
-			if valueStr == "" {
-				continue
-			}
-
-			if U.IsPropertyNameContainsDateOrTime(key) {
-				_, isNumber := U.ConvertDateTimeValueToNumber(value)
-				if isNumber {
-					dateTimeProperties[key] = true
-					continue
-				}
-			}
-
-			if len(valueStr) == 13 { // milliseconds format
-				timestamp, err := strconv.ParseUint(valueStr, 10, 64)
-				if err == nil && timestamp >= 0 && int64(timestamp) <= currentTimestamp {
-					// if for some document it was passed as categorical then its not a timestamp.
-					if _, exists := categoricalProperties[key]; !exists {
-						dateTimeProperties[key] = true
-					}
-					continue
-				}
-			}
-
-			// delete from datetime if already exist in it.
-			if _, exists := dateTimeProperties[key]; exists {
-				delete(dateTimeProperties, key)
-			}
-
-			categoricalProperties[key] = true
-
+			log.WithFields(log.Fields{"doc_id": hubspotDocuments[i].ID, "doc_type": hubspotDocuments[i].Type}).WithError(err).
+				Error("Failed to get datetime and categorical property names by type from getHubspotDocumentPropertiesNameByType")
 		}
 	}
 
