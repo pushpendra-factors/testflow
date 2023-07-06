@@ -50,6 +50,7 @@ const TYPE_CRM_HUBSPOT = "CH"
 const EVENT_NAME_REQUEST_TYPE_APPROX = "approx"
 const EVENT_NAME_REQUEST_TYPE_EXACT = "exact"
 const EVENT_NAME_TYPE_SMART_EVENT = "SE"
+const EVENT_NAME_TYPE_PAGE_VIEW_EVENT = "PVW"
 
 var ALLOWED_TYPES = [...]string{
 	TYPE_USER_CREATED_EVENT_NAME,
@@ -771,6 +772,11 @@ func GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectId int64, 
 
 func GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectId int64, date string) (*cacheRedis.Key, error) {
 	prefix := "SS:EN:SE"
+	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s", date))
+}
+
+func GetPageViewEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectId int64, date string) (*cacheRedis.Key, error) {
+	prefix := "SS:EN:PVW"
 	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s", date))
 }
 

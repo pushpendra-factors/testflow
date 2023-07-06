@@ -207,6 +207,9 @@ func (store *MemSQL) addEventDetailsToCache(projectID int64, event *model.Event,
 	if model.IsEventNameTypeSmartEvent(eventNameDetails.Type) {
 		eventNamesKeySortedSet, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 			currentTimeDatePart)
+	} else if _, exists := eventProperties["$is_page_view"]; exists && eventProperties["$is_page_view"].(bool) == true {
+		eventNamesKeySortedSet, err = model.GetPageViewEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
+			currentTimeDatePart)
 	} else {
 		eventNamesKeySortedSet, err = model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 			currentTimeDatePart)

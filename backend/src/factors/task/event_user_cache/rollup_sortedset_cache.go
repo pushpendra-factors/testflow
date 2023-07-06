@@ -50,13 +50,19 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 			eventNamesSmartKeySortedSet, err := model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 				currentTimeDatePart)
 			if err != nil {
-				log.WithError(err).Error("Failed to get cache key - events")
+				log.WithError(err).Error("Failed to get cache key - smart events")
+				return nil, false
+			}
+			eventNamesPageViewSortedSet, err := model.GetPageViewEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
+				currentTimeDatePart)
+			if err != nil {
+				log.WithError(err).Error("Failed to get cache key - pageView events")
 				return nil, false
 			}
 			eventNamesKeySortedSet, err := model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 				currentTimeDatePart)
 			if err != nil {
-				log.WithError(err).Error("Failed to get cache key - smart events")
+				log.WithError(err).Error("Failed to get cache key - events")
 				return nil, false
 			}
 			propertyCategoryKeySortedSet, err := model.GetPropertiesByEventCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
@@ -83,6 +89,8 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 
 			smartEvents, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesSmartKeySortedSet)
 			log.WithField("Count", len(smartEvents)).Info("SmartEventCount")
+			pageViewEvents, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesPageViewSortedSet)
+			log.WithField("Count", len(smartEvents)).Info("SmartEventCount")
 			events, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesKeySortedSet)
 			log.WithField("Count", len(events)).Info("EventsCount")
 			properties, err := cacheRedis.ZrangeWithScoresPersistent(false, propertyCategoryKeySortedSet)
@@ -99,7 +107,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				// 1. Create cache object
 				// 2. Get the cache key
 				// 3. set cache
-				eventNamesRollupObj := GetCacheEventObject(events, smartEvents, currentTimeDatePart)
+				eventNamesRollupObj := GetCacheEventObject(events, smartEvents, pageViewEvents, currentTimeDatePart)
 				eventNamesKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(projectID, currentTimeDatePart)
 				enEventCache, err := json.Marshal(eventNamesRollupObj)
 				if err != nil {
@@ -355,7 +363,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 	return nil, true
 }
 
-func GetCacheEventObject(events map[string]string, smartEvents map[string]string, date string) model.CacheEventNamesWithTimestamp {
+func GetCacheEventObject(events map[string]string, smartEvents map[string]string, pageViewEvents map[string]string, date string) model.CacheEventNamesWithTimestamp {
 	eventNames := make(map[string]U.CountTimestampTuple)
 	for eventName, count := range events {
 		eventCount, _ := strconv.Atoi(count)
@@ -374,6 +382,16 @@ func GetCacheEventObject(events map[string]string, smartEvents map[string]string
 			LastSeenTimestamp: keyDate.Unix(),
 			Count:             int64(eventCount),
 			Type:              model.EVENT_NAME_TYPE_SMART_EVENT,
+		}
+		eventNames[eventName] = eventNameCacheObj
+	}
+	for eventName, count := range pageViewEvents {
+		eventCount, _ := strconv.Atoi(count)
+		keyDate, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, date)
+		eventNameCacheObj := U.CountTimestampTuple{
+			LastSeenTimestamp: keyDate.Unix(),
+			Count:             int64(eventCount),
+			Type:              model.EVENT_NAME_TYPE_PAGE_VIEW_EVENT,
 		}
 		eventNames[eventName] = eventNameCacheObj
 	}

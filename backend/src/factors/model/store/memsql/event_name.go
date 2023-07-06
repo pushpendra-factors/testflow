@@ -789,6 +789,10 @@ func aggregateEventsAcrossDate(events []model.CacheEventNamesWithTimestamp) []U.
 				eventsAggregatedInt.Type = U.SmartEvent
 			}
 
+			if eventDetails.Type == model.EVENT_NAME_TYPE_PAGE_VIEW_EVENT {
+				eventsAggregatedInt.Type = U.PageViewEvent
+			}
+
 			eventsAggregated[eventNameSuffixTrim] = eventsAggregatedInt
 		}
 	}

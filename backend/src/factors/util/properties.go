@@ -4113,32 +4113,32 @@ type NameCountTimestampCategory struct {
 func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimestampCategory {
 
 	smartEventNames := make([]NameCountTimestampCategory, 0)
+	pageViewEventNames := make([]NameCountTimestampCategory, 0)
 	sorted := make([]NameCountTimestampCategory, 0)
 	trimmed := make([]NameCountTimestampCategory, 0)
-	currentDate := time.Now().UTC()
 
 	sort.Slice(data, func(i, j int) bool {
 		return data[i].Count > data[j].Count
 	})
 
 	for _, details := range data {
-		hoursBeforeLastSeen := currentDate.Sub(time.Unix(details.Timestamp, 0)).Hours()
 		if details.Category == SmartEvent {
 			details.GroupName = SmartEvent
 			smartEventNames = append(smartEventNames, details)
+		} else if details.Category == PageViewEvent {
+			details.GroupName = PageViewEvent
+			pageViewEventNames = append(smartEventNames, details)
 		} else {
-			if hoursBeforeLastSeen <= float64(24) {
-				details.GroupName = MostRecent
-				sorted = append(sorted, details)
-			} else {
-				details.GroupName = FrequentlySeen
-				trimmed = append(trimmed, details)
-			}
+
+			details.GroupName = FrequentlySeen
+			trimmed = append(trimmed, details)
 		}
 
 	}
 
 	sorted = append(smartEventNames, sorted...)
+	sorted = append(pageViewEventNames, sorted...)
+
 	for _, data := range trimmed {
 		sorted = append(sorted, data)
 	}
