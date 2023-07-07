@@ -566,15 +566,25 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 
 		if _, isDealV3Record := (*value)["id"]; isDealV3Record {
 			createDate, exists := propertiesMap["createdate"]
-			if !exists || createDate == nil {
-				return 0, errorFailedToGetCreatedAtFromHubspotDocument
+			if exists && createDate != nil && createDate != "" {
+				createTimestamp, err := GetTimestampForV3Records(createDate)
+				if err != nil || createTimestamp == 0 {
+					return 0, err
+				}
+				return createTimestamp, nil
 			}
 
-			valueInInt64, ok := GetTimestampForV3Records(createDate)
-			if ok != nil {
-				return 0, errors.New("failed to convert interface into int64 for deal_V3")
+			hsCreateDate, exists := propertiesMap["hs_createdate"]
+			if exists && hsCreateDate != nil && hsCreateDate != "" {
+				createTimestamp, err := GetTimestampForV3Records(hsCreateDate)
+				if err != nil || createTimestamp == 0 {
+					return 0, err
+				}
+				return createTimestamp, nil
 			}
-			return valueInInt64, nil
+
+			log.WithField("document", *value).Error("failed to get created_date and hs_createdate for deal_v3")
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
 		}
 
 		hsCreateDate, exists := propertiesMap["hs_createdate"]
