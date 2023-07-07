@@ -317,6 +317,8 @@ type Configuration struct {
 	AllowEmailDomainsByProjectID                       string
 	UseHubspotDealsV3APIByProjectID                    string
 	EnableScoringByProjectID                           string
+	DeviceServiceURL                                   string
+	EnableDeviceServiceByProjectID                     string
 }
 
 type Services struct {
@@ -2899,4 +2901,14 @@ func AllowHubspotDealsv3APIByProjectID(projectID int64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+func AllowDeviceServiceByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDeviceServiceByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+
 }

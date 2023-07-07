@@ -673,7 +673,7 @@ func SDKErrorHandler(c *gin.Context) {
 	}
 
 	properties := make(U.PropertiesMap, 0)
-	SDK.FillUserAgentUserProperties(&properties, c.Request.UserAgent())
+	SDK.FillDeviceInfoFromFallback(&properties, c.Request.UserAgent())
 
 	// Error logged for adding it to error email.
 	log.WithFields(log.Fields{

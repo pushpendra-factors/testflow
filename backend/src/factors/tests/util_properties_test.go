@@ -51,9 +51,11 @@ func TestGetPropertyValueAsString(t *testing.T) {
 }
 
 func TestFillUserAgentUserProperties(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	userProperties := make(U.PropertiesMap, 0)
 	userAgent := "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-	SDK.FillUserAgentUserProperties(&userProperties, userAgent)
+	SDK.FillUserAgentUserProperties(project.ID, &userProperties, userAgent)
 	assert.NotNil(t, userProperties[U.UP_USER_AGENT])
 	assert.Equal(t, userAgent, userProperties[U.UP_USER_AGENT])
 	assert.NotNil(t, userProperties[U.UP_BROWSER])
@@ -61,7 +63,7 @@ func TestFillUserAgentUserProperties(t *testing.T) {
 
 	newUserProperties := make(U.PropertiesMap, 0)
 	userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
-	SDK.FillUserAgentUserProperties(&newUserProperties, userAgent)
+	SDK.FillUserAgentUserProperties(project.ID, &newUserProperties, userAgent)
 	assert.NotNil(t, newUserProperties[U.UP_DEVICE_BRAND])
 	assert.NotNil(t, newUserProperties[U.UP_DEVICE_MODEL])
 	assert.NotNil(t, newUserProperties[U.UP_DEVICE_TYPE])
@@ -69,7 +71,7 @@ func TestFillUserAgentUserProperties(t *testing.T) {
 
 	UserProperties1 := make(U.PropertiesMap, 0)
 	userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) browser/2020.2.2 Chrome/78.0.3904.130 Electron/7.3.2 Safari/537.36 PingdomTMS/2020.2"
-	SDK.FillUserAgentUserProperties(&UserProperties1, userAgent)
+	SDK.FillUserAgentUserProperties(project.ID, &UserProperties1, userAgent)
 	assert.NotNil(t, UserProperties1[U.UP_USER_AGENT])
 	assert.Equal(t, userAgent, UserProperties1[U.UP_USER_AGENT])
 	assert.NotNil(t, UserProperties1[U.UP_BROWSER])

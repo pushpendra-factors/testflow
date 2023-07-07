@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+use DeviceDetector\ClientHints;
 use DeviceDetector\DeviceDetector;
 use DeviceDetector\Parser\Device\AbstractDeviceParser;
 
@@ -9,16 +10,17 @@ use DeviceDetector\Parser\Device\AbstractDeviceParser;
 function GetDevice($userAgent)
 {
 
+    $clientHints = ClientHints::factory($_SERVER);
     AbstractDeviceParser::setVersionTruncation(AbstractDeviceParser::VERSION_TRUNCATION_NONE);
-    $dd = new DeviceDetector($userAgent);
+    $dd = new DeviceDetector($userAgent, $clientHints);
     $dd->parse();
 
     // Check if user agent is a bot
     if ($dd->isBot()) {
-        $botInfo = $dd->getBot();
-        echo json_encode(["is_bot" => $botInfo]);
+        return json_encode(["is_bot" => $dd->isBot()]);
     } else {
 
+        $clientInfo = $dd->getClient();
         $osInfo = $dd->getOs();
         $device = $dd->getDeviceName();
         $brand = $dd->getBrandName();
@@ -26,6 +28,7 @@ function GetDevice($userAgent)
 
         return json_encode([
             "is_bot" => $dd->isBot(),
+            "client_info" => $clientInfo,
             "os_info" => $osInfo,
             "device_type" => $device,
             "device_brand" => $brand,

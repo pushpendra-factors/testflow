@@ -88,6 +88,8 @@ func main() {
 	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
 	removeDisabledEventUserPropertiesByProjectID := flag.String("remove_disabled_event_user_properties",
 		"", "List of projects to disable event user property population in events.")
+	deviceServiceUrl := flag.String("device_service_url", "http://0.0.0.0:3000/device_service", "URL for the device detection service")
+	enableDeviceServiceByProjectID := flag.String("enable_device_service_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -144,6 +146,8 @@ func main() {
 		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
 		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
 		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectID,
+		DeviceServiceURL:                                   *deviceServiceUrl,
+		EnableDeviceServiceByProjectID:                     *enableDeviceServiceByProjectID,
 	}
 	C.InitConf(config)
 

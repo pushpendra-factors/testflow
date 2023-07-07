@@ -55,6 +55,7 @@ const EVENT_USER_CACHE_EXPIRY_SECS = 1728000
 const TimeoutOneSecond = 1 * time.Second
 const TimeoutTwoSecond = 2 * time.Second
 const TimeoutFiveSecond = 5 * time.Second
+const TimeoutHundredMilliSecond = 100 * time.Millisecond
 
 const (
 	DayInSecs                        = 24 * 60 * 60
