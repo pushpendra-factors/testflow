@@ -9,14 +9,13 @@ import (
 	U "factors/util"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
-// SavedQueryRequestPayload is struct for post request to create saved query
+//SavedQueryRequestPayload is struct for post request to create saved query
 type SavedQueryRequestPayload struct {
 	Title    string          `json:"title"`
 	Type     int             `json:"type"`
@@ -134,7 +133,6 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		return
 	}
 
-	time1 := time.Now()
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	var requestPayload SavedQueryRequestPayload
@@ -166,11 +164,6 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		return
 	}
 
-	time2 := time.Now()
-	if projectID == 2 {
-		log.WithField("time taken", time2.Sub(time1).Seconds()).Warn("Query time taken check1")
-	}
-
 	queryRequest := &model.Queries{
 		Query:     postgres.Jsonb{},
 		Title:     requestPayload.Title,
@@ -186,11 +179,6 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		log.Error("query not found")
 		return
 	}
-	time3 := time.Now()
-	if projectID == 2 {
-		log.WithField("time taken", time3.Sub(time2).Seconds()).Warn("Query time taken check2")
-	}
-
 	queryRequest.IdText = query.IdText
 
 	if requestPayload.Query != nil && !U.IsEmptyPostgresJsonb(requestPayload.Query) {
@@ -199,11 +187,6 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 	}
 	if requestPayload.Settings != nil && !U.IsEmptyPostgresJsonb(requestPayload.Settings) {
 		queryRequest.Settings = *requestPayload.Settings
-	}
-
-	time4 := time.Now()
-	if projectID == 2 {
-		log.WithField("time taken", time4.Sub(time3).Seconds()).Warn("Query time taken check3")
 	}
 
 	_, errCode := store.GetStore().UpdateSavedQuery(projectID, queryID,
