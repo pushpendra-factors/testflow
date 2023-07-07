@@ -419,6 +419,7 @@ function UserProfiles({
     opts.filters = [];
     setTimelinePayload(opts);
     setActiveSegment(activeSegment);
+    getUsers(opts);
   };
 
   const getUsers = (payload) => {
@@ -852,15 +853,15 @@ function UserProfiles({
     </Popover>
   );
 
-  const renderConfiguration = () => (
-    <Button
-      size='large'
-      icon={<SVG name='configure' size={20} />}
-      onClick={() => history.push(PathUrls.ConfigureEngagements)}
-    >
-      Engagements
-    </Button>
-  );
+  // const renderConfiguration = () => (
+  //   <Button
+  //     size='large'
+  //     icon={<SVG name='configure' size={20} />}
+  //     onClick={() => history.push(PathUrls.ConfigureEngagements)}
+  //   >
+  //     Engagements
+  //   </Button>
+  // );
 
   const renderActions = () => (
     <div className='flex justify-between items-start my-4'>
@@ -873,7 +874,7 @@ function UserProfiles({
         {timelinePayload.filters.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}
-        {renderConfiguration()}
+        {/* {renderConfiguration()} */}
       </div>
     </div>
   );
