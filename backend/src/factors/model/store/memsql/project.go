@@ -241,8 +241,8 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	// Associated project setting creation with default state.
 	defaultAutoTrackState := true
 	defaultAutoFormCapture := true
-	defaultAutoFormFillsCapture := true
 	defaultExcludebotState := true
+	defaultAutoFormFillsCapture := false
 	defaultDriftIntegrationState := false
 	defaultClearBitIntegrationState := false
 
@@ -537,7 +537,7 @@ func (store *MemSQL) GetAllProjectIDs() ([]int64, int) {
 	return projectIds, http.StatusFound
 }
 
-//GetProjectIDsWithSixSignalEnabled Gets the project_ids of projects for which 6Signal is enabled.
+// GetProjectIDsWithSixSignalEnabled Gets the project_ids of projects for which 6Signal is enabled.
 func (store *MemSQL) GetProjectIDsWithSixSignalEnabled() []int64 {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	projectIds := make([]int64, 0, 0)
