@@ -1027,7 +1027,7 @@ func GetPropertyEntityFieldForFilter(entityName string) string {
 	case PropertyEntityUserGlobal:
 		return "users.properties"
 	case PropertyEntityUserGroup:
-		return "user_user_g.user_global_user_properties"
+		return "user_global_user_properties"
 	}
 
 	return ""
