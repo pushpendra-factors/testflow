@@ -857,6 +857,8 @@ type Model interface {
 	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (string, map[string]interface{}, []interface{}, bool, int)
 	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
 	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
+	GetGroupUserStringWithParams(projectID int64, userID, groupName string) (string, []interface{}, error)
+	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, error)
 	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, string, map[string]interface{}, []interface{}, int)
 
 	// segment

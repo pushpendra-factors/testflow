@@ -35,8 +35,10 @@ import {
   getGroupProperties,
   getEventProperties
 } from 'Reducers/coreQuery/middleware';
+import AccountOverview from './AccountOverview';
 
 function AccountDetails({
+  accounts,
   accountDetails,
   activeProject,
   fetchGroups,
@@ -65,7 +67,7 @@ function AccountDetails({
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
-  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
+  const [timelineViewMode, setTimelineViewMode] = useState('overview');
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
 
@@ -94,7 +96,7 @@ function AccountDetails({
     const id = atob(location.pathname.split('/').pop());
     const group = params.group ? params.group : 'All';
     const view = params.view ? params.view : 'birdview';
-    document.title = 'Accounts' + ' - FactorsAI';
+    document.title = 'Accounts - FactorsAI';
     return [id, group, view];
   }, [location]);
 
@@ -477,6 +479,21 @@ function AccountDetails({
     </div>
   );
 
+  // temp hack for engagement
+  const formatOverview = useMemo(() => {
+    const account = accounts?.data?.find((item) => item?.identity === activeId);
+    const { data: { overview } = {} } = accountDetails;
+    const formattedOverview = { ...overview, engagement: account?.engagement };
+    return formattedOverview;
+  }, [accounts, accountDetails, activeId]);
+
+  const renderOverview = () => (
+    <AccountOverview
+      overview={formatOverview || {}}
+      loading={accountDetails?.isLoading}
+    />
+  );
+
   const renderSingleTimelineView = () => (
     <AccountTimelineSingleView
       timelineEvents={
@@ -555,7 +572,7 @@ function AccountDetails({
     return (
       <div className='timeline-view'>
         <Tabs
-          defaultActiveKey='birdview'
+          defaultActiveKey='overview'
           size='small'
           activeKey={timelineViewMode}
           onChange={(val) => {
@@ -564,6 +581,12 @@ function AccountDetails({
             setGranularity(granularity);
           }}
         >
+          <TabPane
+            tab={<span className='fa-activity-filter--tabname'>Overview</span>}
+            key='overview'
+          >
+            {renderOverview()}
+          </TabPane>
           <TabPane
             tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
             key='timeline'
@@ -596,6 +619,7 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
   groupOpts: state.groups.data,
+  accounts: state.timelines.accounts,
   accountDetails: state.timelines.accountDetails,
   userProperties: state.coreQuery.userProperties,
   eventProperties: state.coreQuery.eventProperties,

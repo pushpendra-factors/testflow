@@ -1057,7 +1057,95 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		accountDetails.AccountTimeline = append(accountDetails.AccountTimeline, intentTimeline)
 	}
 
+	overview, err := store.GetAccountOverview(projectID, id, groupName)
+	if err != nil {
+		log.WithFields(logFields).WithError(err)
+	} else {
+		accountDetails.Overview = overview
+	}
+
 	return &accountDetails, http.StatusFound, ""
+}
+
+func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (model.Overview, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"id":         id,
+	}
+
+	overview := model.Overview{}
+
+	// Get Users Count and Total Active Time
+	queryParams := []interface{}{projectID} // Initialize with projectID
+
+	groupUserString, params, errGetCount := store.GetGroupUserStringWithParams(projectID, id, groupName)
+	if errGetCount != nil {
+		log.WithFields(logFields).Error("Error retrieving parameters")
+	} else {
+		overviewQuery := fmt.Sprintf(`
+		SELECT COUNT(DISTINCT(id)) AS users_count, 
+			SUM(JSON_EXTRACT_STRING(properties, '%s')) AS time_active 
+		FROM (
+			SELECT LAST(id, updated_at) AS id, properties 
+			FROM users 
+			WHERE project_id = ?
+			  AND is_group_user=0
+			  AND (%s)
+			  AND customer_user_id IS NOT NULL 
+			GROUP BY customer_user_id
+			UNION 
+			SELECT id, properties 
+			FROM users 
+		  	WHERE project_id = ?
+			  AND is_group_user=0
+			  AND (%s) 
+			  AND customer_user_id IS NULL
+		);`,
+			U.UP_TOTAL_SPENT_TIME, groupUserString, groupUserString,
+		)
+		queryParams = append(queryParams, params...)      // append groupUserString params
+		queryParams = append(queryParams, queryParams...) // double the queryParams
+
+		db := C.GetServices().Db
+		errGetCount := db.Raw(overviewQuery, queryParams...).Scan(&overview).Error
+		if errGetCount != nil {
+			log.WithFields(logFields).WithError(errGetCount).Error("Error retrieving users count and active time")
+		}
+	}
+
+	// Get Account Engagement Score and Trends
+	accountScore, _, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, true)
+	if errGetScore != nil {
+		log.WithFields(logFields).WithError(errGetScore).Error("Error retrieving account score")
+	} else {
+		overview.Temperature = accountScore.Score
+		overview.ScoresList = accountScore.Trend
+	}
+
+	if errGetScore != nil && errGetCount != nil {
+		return overview, fmt.Errorf("error getting overview")
+	}
+	return overview, nil
+}
+
+func (store *MemSQL) GetGroupUserStringWithParams(projectID int64, userID, groupName string) (string, []interface{}, error) {
+	groupUserString := ""
+	var params []interface{}
+
+	grpName := groupName
+	if groupName == "All" {
+		grpName = U.GROUP_NAME_DOMAINS
+	}
+	
+	group, errCode := store.GetGroup(projectID, grpName)
+	if errCode != http.StatusFound {
+		return "", []interface{}{}, fmt.Errorf("failed to get group")
+	}
+	if group != nil {
+		groupUserString = fmt.Sprintf("group_%d_user_id=? ", group.ID)
+		params = append(params, userID)
+	}
+	return groupUserString, params, nil
 }
 
 func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error) {

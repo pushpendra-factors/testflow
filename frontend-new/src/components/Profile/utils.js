@@ -23,7 +23,7 @@ export const granularityOptions = [
   'Monthly'
 ];
 
-export const TIMELINE_VIEW_OPTIONS = ['timeline', 'birdview'];
+export const TIMELINE_VIEW_OPTIONS = ['timeline', 'birdview', 'overview'];
 
 export const groups = {
   Timestamp: (item) =>

@@ -1809,7 +1809,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	// 10  Associated Users
-	m := map[string]string{"$name": "Some Name"}
+	m := map[string]interface{}{U.UP_NAME: "Some Name"}
 	userProps, err := json.Marshal(m)
 	if err != nil {
 		log.WithError(err).Fatal("Marshal error.")
@@ -1860,6 +1860,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		}
 		userProps := map[string]interface{}{
 			"$hubspot_contact_jobtitle": jobTitle,
+			U.UP_TOTAL_SPENT_TIME:       100,
 		}
 		userPropsJSON, err := json.Marshal(userProps)
 		if err != nil {
@@ -1881,7 +1882,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			customerEmail = "@domain2.com"
 			notGroupUser := false
 			userProps := map[string]interface{}{
-				"$page_count": i * 10, "$company": "ChargeBee",
+				"$page_count": i * 10, "$company": "ChargeBee", U.UP_TOTAL_SPENT_TIME: 100,
 			}
 			userPropsJSON, err := json.Marshal(userProps)
 			if err != nil {
@@ -2192,6 +2193,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Equal(t, resp.HostName, "chargebee.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
 		assert.Equal(t, len(resp.AccountTimeline), 4)
+		assert.Equal(t, resp.Overview.UsersCount, int64(len(resp.AccountTimeline)-1))
+		assert.Equal(t, resp.Overview.TimeActive, int64((len(resp.AccountTimeline)-1)*100))
 		for _, userTimeline := range resp.AccountTimeline {
 			if userTimeline.UserName != model.GROUP_ACTIVITY_USERNAME {
 				assert.Equal(t, userTimeline.IsAnonymous, false)
@@ -2210,6 +2213,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline), 10)
+		assert.Equal(t, resp.Overview.UsersCount, int64(len(resp.AccountTimeline)-1))
+		assert.Equal(t, resp.Overview.TimeActive, int64((len(resp.AccountTimeline)-1)*100))
 		assert.NotNil(t, resp.LeftPaneProps)
 		for i, property := range resp.LeftPaneProps {
 			assert.Equal(t, props[i], property)

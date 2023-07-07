@@ -444,6 +444,7 @@ function AccountProfiles({
     opts.filters = [];
     setAccountPayload(opts);
     setActiveSegment(activeSegment);
+    getAccounts(opts);
   };
 
   // const selectGroup = () => (

@@ -419,6 +419,7 @@ function UserProfiles({
     opts.filters = [];
     setTimelinePayload(opts);
     setActiveSegment(activeSegment);
+    getUsers(opts);
   };
 
   const getUsers = (payload) => {
