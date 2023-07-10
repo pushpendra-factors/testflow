@@ -66,6 +66,11 @@ function AccountDetails({
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
   const [timelineViewMode, setTimelineViewMode] = useState('birdview');
+  const [openPopover, setOpenPopover] = useState(false);
+
+  const handleOpenPopoverChange = (value) => {
+    setOpenPopover(value);
+  };
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
 
@@ -156,11 +161,15 @@ function AccountDetails({
 
   useEffect(() => {
     hoverEvents.forEach((event) => {
-      if (!eventProperties[event]) {
+      if (!eventProperties[event] &&
+          accountDetails.data?.account_events?.some(
+            (activity) => activity?.event_name === event
+          )
+      ) {
         getEventProperties(activeProject?.id, event);
       }
     });
-  }, [activeProject?.id, eventProperties]);
+  }, [activeProject?.id, eventProperties, accountDetails.data?.account_events]);
 
   useEffect(() => {
     Object.keys(groupOpts || {}).forEach((group) =>
@@ -212,6 +221,7 @@ function AccountDetails({
         )
       );
     }
+    setOpenPopover(false)
   };
 
   const handleEventsChange = (option) => {
@@ -227,6 +237,7 @@ function AccountDetails({
     udpateProjectSettings(activeProject.id, {
       timelines_config: { ...timelinesConfig }
     });
+    setOpenPopover(false)
   };
 
   const handleMilestonesChange = (option) => {
@@ -240,6 +251,7 @@ function AccountDetails({
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
       setCheckListMilestones(checkListProps);
+      setOpenPopover(false)
     } else {
       notification.error({
         message: 'Error',
@@ -515,6 +527,8 @@ function AccountDetails({
             placement='bottomLeft'
             trigger='click'
             content={controlsPopover}
+            open={openPopover}
+            onOpenChange={handleOpenPopoverChange}
           >
             <Button
               size='large'

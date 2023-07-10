@@ -134,8 +134,8 @@ func (store *MemSQL) GetDashboards(projectId int64, agentUUID string) ([]model.D
 		return dashboards, http.StatusBadRequest
 	}
 
-	err := db.Order("created_at ASC").Where("project_id = ? AND (type = ? OR agent_uuid = ?) AND is_deleted = ?",
-		projectId, model.DashboardTypeProjectVisible, agentUUID, false).Find(&dashboards).Error
+	err := db.Order("created_at ASC").Where("project_id = ? AND (type = ? OR type = ? OR agent_uuid = ?) AND is_deleted = ?",
+		projectId, model.DashboardTypeProjectVisible, model.DashboardTypeAttributionV1, agentUUID, false).Find(&dashboards).Error
 	if err != nil {
 		log.WithField("project_id", projectId).WithError(err).Error("Failed to get dashboards.")
 		return dashboards, http.StatusInternalServerError
@@ -161,8 +161,8 @@ func (store *MemSQL) GetDashboard(projectId int64, agentUUID string, id int64) (
 		return nil, http.StatusBadRequest
 	}
 
-	if err := db.Where("project_id = ? AND id = ? AND (type = ? OR agent_uuid = ?) AND is_deleted = ?",
-		projectId, id, model.DashboardTypeProjectVisible, agentUUID, false).First(&dashboard).Error; err != nil {
+	if err := db.Where("project_id = ? AND id = ? AND (type = ? OR type = ? OR agent_uuid = ?) AND is_deleted = ?",
+		projectId, id, model.DashboardTypeProjectVisible, model.DashboardTypeAttributionV1, agentUUID, false).First(&dashboard).Error; err != nil {
 		logCtx.WithError(err).WithField("dashboardID", id).Error(
 			"Getting dashboard failed in GetDashboard")
 		if gorm.IsRecordNotFoundError(err) {
