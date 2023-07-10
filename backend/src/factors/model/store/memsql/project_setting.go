@@ -529,7 +529,7 @@ func getProjectSettingDefault() *model.ProjectSetting {
 	return &model.ProjectSetting{
 		AutoTrack:            &enabled,
 		AutoFormCapture:      &enabled,
-		AutoCaptureFormFills: &enabled,
+		AutoCaptureFormFills: &disabled,
 		AutoTrackSPAPageView: &disabled,
 		ExcludeBot:           &enabled,
 		IntSegment:           &enabled,

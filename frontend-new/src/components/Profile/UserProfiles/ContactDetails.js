@@ -61,6 +61,12 @@ function ContactDetails({
   const [checkListMilestones, setCheckListMilestones] = useState([]);
   const { TabPane } = Tabs;
 
+  const [openPopover, setOpenPopover] = useState(false);
+
+  const handleOpenPopoverChange = (value) => {
+    setOpenPopover(value);
+  };
+
   const { userPropNames } = useSelector((state) => state.coreQuery);
 
   useEffect(() => {
@@ -136,11 +142,15 @@ function ContactDetails({
 
   useEffect(() => {
     hoverEvents.forEach((event) => {
-      if (!eventProperties[event]) {
-        getEventProperties(activeProject?.id, event?.event_name);
+      if (!eventProperties[event] &&
+        userDetails?.data?.user_activities?.some(
+            (activity) => activity?.event_name === event
+          )
+      ) {
+        getEventProperties(activeProject?.id, event);
       }
     });
-  }, [activeProject?.id, eventProperties]);
+  }, [activeProject?.id, eventProperties, userDetails?.data?.user_activities]);
 
   useEffect(() => {
     const listActivities = addEnabledFlagToActivities(
@@ -175,6 +185,7 @@ function ContactDetails({
     udpateProjectSettings(activeProject.id, {
       timelines_config: { ...timelinesConfig }
     });
+    setOpenPopover(false)
   };
 
   const handleMilestonesChange = (option) => {
@@ -188,6 +199,7 @@ function ContactDetails({
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
       setCheckListMilestones(checkListProps);
+      setOpenPopover(false)
     } else {
       notification.error({
         message: 'Error',
@@ -445,6 +457,8 @@ function ContactDetails({
             placement='bottomLeft'
             trigger='click'
             content={controlsPopover}
+            open={openPopover}
+            onOpenChange={handleOpenPopoverChange}
           >
             <Button
               size='large'
