@@ -364,7 +364,9 @@ func getNoneHandledGroupBySelectForProfiles(projectID int64, groupProp model.Que
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var groupSelect string
 	groupSelectParams := make([]interface{}, 0)
-	if groupProp.Type != U.PropertyTypeDateTime {
+	if groupProp.Property == U.UP_USER_ID {
+		groupSelect = fmt.Sprintf("COALESCE(customer_user_id, id) AS %s", groupKey)
+	} else if groupProp.Type != U.PropertyTypeDateTime {
 		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s, ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '' THEN '%s' ELSE JSON_EXTRACT_STRING(%s, ?) END AS %s",
 			"properties", model.PropertyValueNone, "properties", model.PropertyValueNone, "properties", groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
@@ -426,6 +428,7 @@ func sanitizeNumericalBucketRangesProfiles(result *model.QueryResult, query *mod
 		}
 	}
 }
+
 func sanitizeNumericalBucketRangeProfiles(query *model.ProfileQuery, rows [][]interface{}, indexToSanitize int) {
 	logFields := log.Fields{
 		"rows":              rows,
