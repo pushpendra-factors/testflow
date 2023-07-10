@@ -7,7 +7,7 @@ import (
 
 // Common/Util methods - to both adwords, facebook and all channels.
 // Similar method is found in KPI_analytics_linkedin.
-func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperties []ChannelObjectAndProperties) []map[string]string {
+func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperties []ChannelObjectAndProperties, channel string) []map[string]string {
 	var resultantPropertiesConfig []map[string]string
 	var tempPropertyConfig map[string]string
 
@@ -19,6 +19,7 @@ func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperti
 				"data_type":    property.Type,
 				"object_type":  channelAndProperties.Name,
 				"entity":       EventEntity,
+				"category": 	channel,
 			}
 			resultantPropertiesConfig = append(resultantPropertiesConfig, tempPropertyConfig)
 		}

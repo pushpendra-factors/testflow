@@ -350,6 +350,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 	})
 
 	isExplain := c.Query("is_explain")
+	version := c.Query("version")
 	isDisplayNameEnabled := c.Query("is_display_name_enabled")
 	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
@@ -420,10 +421,30 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 	if isDisplayNameEnabled == "true" {
 		displayNamesOp := store.GetStore().GetDisplayNamesForEventProperties(projectId, properties, eventName)
-		c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp})
+		if(version != "2"){
+			c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp})
+		} else {
+			eventType := ""
+			if(eventName == "$session"){
+				eventType = "session"
+			} else {
+				eventType = "event"
+			}
+			c.JSON(http.StatusOK, gin.H{"properties": model.CategorizeProperties(properties, eventType), "display_names": displayNamesOp})
+		}
 		return
 	}
-	c.JSON(http.StatusOK, properties)
+	if(version != "2"){
+		c.JSON(http.StatusOK, properties)
+	} else {
+		eventType := ""
+		if(eventName == "$session"){
+			eventType = "session"
+		} else {
+			eventType = "event"
+		}
+		c.JSON(http.StatusOK, model.CategorizeProperties(properties, eventType))
+	}
 }
 
 func GetChannelGroupingPropertiesHandler(c *gin.Context) {

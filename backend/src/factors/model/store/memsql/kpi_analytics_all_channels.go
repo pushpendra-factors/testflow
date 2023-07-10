@@ -17,7 +17,7 @@ func (store *MemSQL) GetKPIConfigsForAllChannels(projectID int64, reqID string, 
 
 	config := model.GetKPIConfigsForAllChannels()
 	objectsAndProperties := store.buildObjectAndPropertiesForAllChannel(projectID, ObjectsForAllChannels)
-	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(objectsAndProperties)
+	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(objectsAndProperties, "AllChannels")
 
 	rMetrics := model.GetKPIMetricsForAllChannels()
 	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.AllChannelsDisplayCategory, includeDerivedKPIs)...)

@@ -19,6 +19,7 @@ func (store *MemSQL) GetKPIConfigFromStandardUserProperties(projectID int64) []m
 			"display_name": userDisplayPropertyName,
 			"data_type":    U.GetPropertyTypeByName(userProperty),
 			"entity":       model.UserEntity,
+			"category":		model.CategorizeProperty(userProperty, model.UserEntity),
 		}
 		resultantKPIConfigProperties = append(resultantKPIConfigProperties, tempKPIConfigProperty)
 	}

@@ -17,7 +17,7 @@ func (store *MemSQL) GetKPIConfigsForBingAds(projectID int64, reqID string, incl
 	}
 	config := model.KpiBingAdsConfig
 	BingadsObjectsAndProperties := store.buildObjectAndPropertiesForBingAds(projectID, model.ObjectsForBingads)
-	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(BingadsObjectsAndProperties)
+	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(BingadsObjectsAndProperties, "BingAds")
 
 	rMetrics := model.GetKPIMetricsForBingAds()
 	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.BingAdsDisplayCategory, includeDerivedKPIs)...)
