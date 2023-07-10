@@ -847,8 +847,12 @@ function UserProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button size='large' type='text' className='search-btn relative'>
-        <SVG name='activity_filter' />
+      <Button
+        size='large'
+        icon={<SVG name='activity_filter' />}
+        className='relative'
+      >
+        Edit Columns
       </Button>
     </Popover>
   );
