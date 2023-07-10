@@ -957,21 +957,31 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		return nil, http.StatusBadRequest, "Invalid group name."
 	}
 
-	var groupUserString string
 	propertiesDecoded := make(map[string]interface{})
 	var status int
 	isUserDetails := false
 	var accountDetails model.AccountDetails
 
-	var params []interface{}
+	var group *model.Group
+	if groupName == "All" {
+		group, status = store.GetGroup(projectID, U.GROUP_NAME_DOMAINS)
+	} else {
+		group, status = store.GetGroup(projectID, groupName)
+	}
+	if status != http.StatusFound || group == nil {
+		return nil, status, "Failed to get group"
+	}
+	groupUserString := fmt.Sprintf("group_%d_user_id=? ", group.ID)
+	params := []interface{}{projectID, id}
+
 	if C.IsDomainEnabled(projectID) {
-		groupUserString, propertiesDecoded, params, isUserDetails, status = store.AccountPropertiesForDomainsEnabledV2(projectID, id, groupName)
+		propertiesDecoded, isUserDetails, status = store.AccountPropertiesForDomainsEnabledV2(projectID, id, groupName)
 	} else {
 		groupUserString, propertiesDecoded, params, status = store.AccountPropertiesForDomainsDisabledV1(projectID, id)
 	}
 
 	if isUserDetails {
-		accountDetails, groupUserString, propertiesDecoded, params, status = store.GetUserDetailsAssociatedToDomain(projectID, id)
+		accountDetails, propertiesDecoded, status = store.GetUserDetailsAssociatedToDomain(projectID, id)
 	}
 
 	if status != http.StatusOK {
@@ -1077,9 +1087,21 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 
 	// Get Users Count and Total Active Time
 	queryParams := []interface{}{projectID} // Initialize with projectID
+	groupUserString := ""
+	var params []interface{}
+	grpName := groupName
+	if groupName == "All" {
+		grpName = U.GROUP_NAME_DOMAINS
+	}
+	group, errGetGroup := store.GetGroup(projectID, grpName)
+	if group != nil {
+		groupUserString = fmt.Sprintf("group_%d_user_id=? ", group.ID)
+		params = append(params, id)
+	}
 
-	groupUserString, params, errGetCount := store.GetGroupUserStringWithParams(projectID, id, groupName)
-	if errGetCount != nil {
+	var errGetCount error
+	if errGetGroup != http.StatusFound {
+		errGetCount = fmt.Errorf("Error retrieving parameters")
 		log.WithFields(logFields).Error("Error retrieving parameters")
 	} else {
 		overviewQuery := fmt.Sprintf(`
@@ -1107,7 +1129,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 		queryParams = append(queryParams, queryParams...) // double the queryParams
 
 		db := C.GetServices().Db
-		errGetCount := db.Raw(overviewQuery, queryParams...).Scan(&overview).Error
+		errGetCount = db.Raw(overviewQuery, queryParams...).Scan(&overview).Error
 		if errGetCount != nil {
 			log.WithFields(logFields).WithError(errGetCount).Error("Error retrieving users count and active time")
 		}
@@ -1126,26 +1148,6 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 		return overview, fmt.Errorf("error getting overview")
 	}
 	return overview, nil
-}
-
-func (store *MemSQL) GetGroupUserStringWithParams(projectID int64, userID, groupName string) (string, []interface{}, error) {
-	groupUserString := ""
-	var params []interface{}
-
-	grpName := groupName
-	if groupName == "All" {
-		grpName = U.GROUP_NAME_DOMAINS
-	}
-	
-	group, errCode := store.GetGroup(projectID, grpName)
-	if errCode != http.StatusFound {
-		return "", []interface{}{}, fmt.Errorf("failed to get group")
-	}
-	if group != nil {
-		groupUserString = fmt.Sprintf("group_%d_user_id=? ", group.ID)
-		params = append(params, userID)
-	}
-	return groupUserString, params, nil
 }
 
 func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error) {
@@ -1196,41 +1198,31 @@ func FormatTimeToString(time time.Time) string {
 	return time.Format("2006-01-02 15:04:05.000000")
 }
 
-func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (string,
-	map[string]interface{}, []interface{}, bool, int) {
-	var groupUserString string
+func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (map[string]interface{},
+	bool, int) {
 	propertiesDecoded := make(map[string]interface{}, 0)
-	var params []interface{}
 	isUserDetails := false
-	params = append(params, projectID)
 	if groupName == "All" {
 		groupNameIDMap, status := store.GetGroupNameIDMap(projectID)
 		if status != http.StatusFound {
-			return groupUserString, propertiesDecoded, params, isUserDetails, status
+			return propertiesDecoded, isUserDetails, status
 		}
 		// Fetching accounts associated to the domain
 		accountGroupDetails, status := store.GetAccountsAssociatedToDomain(projectID, id, groupNameIDMap[model.GROUP_NAME_DOMAINS])
 		if status != http.StatusFound {
-			return groupUserString, propertiesDecoded, params, isUserDetails, status
+			return propertiesDecoded, isUserDetails, status
 		}
 
 		if len(accountGroupDetails) < 1 {
 			isUserDetails = true
-			return groupUserString, propertiesDecoded, params, isUserDetails, status
+			return propertiesDecoded, isUserDetails, status
 		}
 
 		for index, accountGroupDetail := range accountGroupDetails {
-			accountName := model.SourceGroupUser[*accountGroupDetail.Source]
-			if index == 0 {
-				groupUserString = fmt.Sprintf("group_%d_user_id=? ", groupNameIDMap[accountName])
-			} else {
-				groupUserString = groupUserString + fmt.Sprintf(" OR group_%d_user_id=? ", groupNameIDMap[accountName])
-			}
-			params = append(params, accountGroupDetail.ID)
 			props, err := U.DecodePostgresJsonb(&accountGroupDetail.Properties)
 			if err != nil {
 				log.Error("Unable to decode account properties.")
-				return groupUserString, propertiesDecoded, params, isUserDetails, status
+				return propertiesDecoded, isUserDetails, status
 			}
 			// merging all account properties
 			if index == 0 {
@@ -1242,31 +1234,22 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id st
 	} else {
 		if !model.IsAllowedAccountGroupNames(groupName) {
 			log.Error("Invalid group name.")
-			return groupUserString, propertiesDecoded, params, isUserDetails, http.StatusBadRequest
-		}
-		group, errCode := store.GetGroup(projectID, groupName)
-		if errCode != http.StatusFound {
-			log.WithField("err_code", errCode).Error("Failed to get group.")
-			return groupUserString, propertiesDecoded, params, isUserDetails, http.StatusNotFound
-		}
-		if group != nil {
-			groupUserString = fmt.Sprintf("group_%d_user_id=? ", group.ID)
-			params = append(params, id)
+			return propertiesDecoded, isUserDetails, http.StatusBadRequest
 		}
 		// Filter Properties
 		properties, status := store.GetUserPropertiesByUserID(projectID, id)
 		if status != http.StatusFound {
 			log.Error("Failed to get account properties.")
-			return groupUserString, propertiesDecoded, params, isUserDetails, http.StatusInternalServerError
+			return propertiesDecoded, isUserDetails, http.StatusInternalServerError
 		}
 		props, err := U.DecodePostgresJsonb(properties)
 		if err != nil {
 			log.WithError(err).Error("Failed to decode account properties.")
-			return groupUserString, propertiesDecoded, params, isUserDetails, http.StatusInternalServerError
+			return propertiesDecoded, isUserDetails, http.StatusInternalServerError
 		}
 		propertiesDecoded = *props
 	}
-	return groupUserString, propertiesDecoded, params, isUserDetails, http.StatusOK
+	return propertiesDecoded, isUserDetails, http.StatusOK
 }
 
 func (store *MemSQL) AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string,
@@ -1308,7 +1291,7 @@ func (store *MemSQL) AccountPropertiesForDomainsDisabledV1(projectID int64, id s
 	return groupUserString, propertiesDecoded, params, http.StatusOK
 }
 
-func (store *MemSQL) GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, string, map[string]interface{}, []interface{}, int) {
+func (store *MemSQL) GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -1317,17 +1300,13 @@ func (store *MemSQL) GetUserDetailsAssociatedToDomain(projectID int64, id string
 	logCtx := log.WithFields(logFields)
 
 	var accountDetails model.AccountDetails
-	var paramsQuery, params []interface{}
-	var groupQueryString string
+	var paramsQuery []interface{}
 
 	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if errCode != http.StatusFound {
 		logCtx.Error("Domain group not found")
-		return accountDetails, groupQueryString, nil, params, errCode
+		return accountDetails, nil, errCode
 	}
-
-	groupQueryString = fmt.Sprintf("group_%d_user_id=? AND customer_user_id IS NOT NULL", domainGroup.ID)
-	params = append(params, projectID, id)
 
 	// Fetching accounts associated to the domain
 	// SELECT domain_group.group_1_id AS host_name, users.properties AS properties FROM (SELECT group_1_id, id FROM users WHERE project_id = 1000000 AND source = 9
@@ -1343,18 +1322,18 @@ func (store *MemSQL) GetUserDetailsAssociatedToDomain(projectID int64, id string
 	err := db.Raw(query, paramsQuery...).Scan(&accountDetails).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get groups.")
-		return accountDetails, groupQueryString, nil, params, http.StatusInternalServerError
+		return accountDetails, nil, http.StatusInternalServerError
 	}
 
 	props, err := U.DecodePostgresJsonb(accountDetails.Properties)
 	if err != nil {
 		log.Error("Unable to decode account properties.")
-		return accountDetails, groupQueryString, nil, params, http.StatusInternalServerError
+		return accountDetails, nil, http.StatusInternalServerError
 	}
 
 	propertiesDecoded := *props
 
-	return accountDetails, groupQueryString, propertiesDecoded, params, http.StatusOK
+	return accountDetails, propertiesDecoded, http.StatusOK
 }
 
 func (store *MemSQL) GetAccountsAssociatedToDomain(projectID int64, id string, domainGroupId int) ([]model.User, int) {

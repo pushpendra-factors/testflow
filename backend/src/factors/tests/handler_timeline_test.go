@@ -1908,6 +1908,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 				Group2ID:       "2",
 				Group2UserID:   createdUserID1,
 				CustomerUserId: customerUserID,
+				Group1UserID:   domainUser.ID,
 				Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
 			})
 
@@ -2164,7 +2165,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
-		assert.Equal(t, len(resp.AccountTimeline), 10)
+		assert.Equal(t, len(resp.AccountTimeline), 11)
 		assert.NotNil(t, resp.LeftPaneProps)
 		for i, property := range resp.LeftPaneProps {
 			assert.Equal(t, props[i], property)
