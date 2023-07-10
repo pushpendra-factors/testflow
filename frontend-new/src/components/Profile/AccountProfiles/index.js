@@ -938,15 +938,16 @@ function AccountProfiles({
     </Popover>
   );
 
-  const renderConfiguration = () => (
-    <Button
-      size='large'
-      icon={<SVG name='configure' size={20} />}
-      onClick={() => history.push(PathUrls.ConfigureEngagements)}
-    >
-      Engagements
-    </Button>
-  );
+  // const renderConfiguration = () => (
+  //   <Button
+  //     size='large'
+  //     icon={<SVG name='configure' size={20} />}
+  //     onClick={() => history.push(PathUrls.ConfigureEngagements)}
+  //   >
+  //     Engagements
+  //   </Button>
+  // );
+
   const handleTableChange = (pageParams) => {
     setCurrentPage(pageParams.current);
   };
@@ -962,7 +963,7 @@ function AccountProfiles({
         {accountPayload?.filters?.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}
-        {renderConfiguration()}
+        {/* {renderConfiguration()} */}
       </div>
     </div>
   );

@@ -563,7 +563,7 @@ const JSConfig = ({
           <span style={{ width: '50px' }}>
             <Switch
               checkedChildren='On'
-              disabled={enableEdit}
+              disabled={enableEdit || currentAgent.email === 'solutions@factors.ai'}
               unCheckedChildren='OFF'
               onChange={toggleAutoCaptureFormFills}
               checked={autoCaptureFormFills}
@@ -636,7 +636,7 @@ const ClickTrackConfiguration = ({
     setEnableEdit(false);
     agents &&
       currentAgent &&
-      agents.map((agent) => {
+      agents.forEach((agent) => {
         if (agent.uuid === currentAgent.uuid && agent.role === 1)
           setEnableEdit(true);
       });
@@ -1109,7 +1109,6 @@ export default connect(mapStateToProps, {
   udpateProjectSettings,
   fetchClickableElements,
   toggleClickableElement,
-
   fetchBingAdsIntegration,
   fetchMarketoIntegration,
   fetchProjectSettingsV1

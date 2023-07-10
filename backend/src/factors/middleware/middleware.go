@@ -47,6 +47,11 @@ const SUB_ROUTE_SHOPIFY_INTEGRATION_SDK = "/shopify_sdk"
 
 const ADMIN_LOGIN_TOKEN_SEP = ":"
 
+var HOSTED_DOMAINS = []string{
+	"api.factors.ai",
+	"staging-api.factors.ai",
+}
+
 const (
 	FEATURE_UNAVAILABLE = 0
 	FEATURE_AVAILABLE   = 1
@@ -112,6 +117,20 @@ func SetScopeProjectToken() gin.HandlerFunc {
 		}
 
 		U.SetScope(c, SCOPE_PROJECT_TOKEN, token)
+		c.Next()
+	}
+}
+
+func AddSecurityResponseHeadersToCustomDomain() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Note: When custom domain is used the c.Request.Host will contain
+		// Internal IP of loadbalancer. This makes it not possible to enable
+		// it by selected custom domain.
+		if !U.StringValueIn(c.Request.Host, HOSTED_DOMAINS) {
+			c.Header("Strict-Transport-Security", "max-age=31536000;includeSubDomains")
+			c.Header("X-Frame-Options", "SAMEORIGIN")
+			c.Header("X-Content-Type-Options", "nosniff")
+		}
 		c.Next()
 	}
 }

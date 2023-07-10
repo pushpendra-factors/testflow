@@ -5,17 +5,22 @@ master="origin/master"
 staging="origin/staging"
 release="origin/release"
 merge_conflict_msg="Automatic merge failed; fix conflicts"
+curbranch="origin/${GITHUB_HEAD_REF#refs/heads/}"
+basebranch="origin/${GITHUB_BASE_REF#refs/heads/}"
 
 # turning off hints
 git config --global advice.resolveConflict false
 git config --global advice.commitBeforeMerge false
 
-# # checking out current branch
+# check for release branch 
+if [ "$curbranch" == "$release" ]; then
+    exit
+else
+
+# check out current branch
 git config --global user.name "Github Actions"
 git config --global user.email "actions@github.com"
 git fetch --unshallow -q
-curbranch="origin/${GITHUB_HEAD_REF#refs/heads/}"
-basebranch="origin/${GITHUB_BASE_REF#refs/heads/}"
 git checkout -q $curbranch
 
 # checks for merge conflict
@@ -30,18 +35,14 @@ CheckMergeConflict(){
  fi   
 }
 
-# check for release branch 
-if [ "$curbranch" == "$release" ]; then
-    exit
-else
-
 # To check conflicts when base branch is master
-    if [ "$basebranch" == "$master" ]; then
-        CheckMergeConflict $staging
-        CheckMergeConflict $release
+if [ "$basebranch" == "$master" ]; then
+    CheckMergeConflict $staging
+    CheckMergeConflict $release
 
 # To check conflicts when base branch is staging
-    elif [ "$basebranch" == "$staging" ]; then
-         CheckMergeConflict $release
-    fi
+elif [ "$basebranch" == "$staging" ]; then
+    CheckMergeConflict $release
+fi
+
 fi
