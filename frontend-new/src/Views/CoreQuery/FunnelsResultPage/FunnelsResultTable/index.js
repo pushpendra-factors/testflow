@@ -158,48 +158,42 @@ function FunnelsResultTable({
         const compare_duration_to = moment(comparison_duration.to).format(
           'MMM DD'
         );
-        tableData.forEach(({ index, ...rest }) => {
+        tableData.forEach(({ index, ...remaining }) => {
+          const rest = {};
           rest.Users = 'All';
 
           rest[`Conversion (${duration_from} - ${duration_to})`] =
-            rest.Conversion.conversion;
+            remaining.Conversion.conversion;
           rest[
             `Conversion (${compare_duration_from} - ${compare_duration_to})`
-          ] = rest.Conversion.comparsion_conversion;
+          ] = remaining.Conversion.comparison_conversion;
 
           rest[`Conversion Time (${duration_from} - ${duration_to})`] =
-            rest['Conversion Time'].overallDuration;
+            remaining['Conversion Time'].overallDuration;
           rest[
             `Conversion Time (${compare_duration_from} - ${compare_duration_to})`
-          ] = rest['Conversion Time'].comparisonOverallDuration;
-
-          delete rest['Conversion Time'];
-          delete rest.Conversion;
-          delete rest.Grouping;
+          ] = remaining['Conversion Time'].comparisonOverallDuration;
 
           arrayMapper.forEach((elem, index) => {
             rest[
               `${elem.displayName}-${index} (${duration_from} - ${duration_to})`
-            ] = rest[`${elem.displayName}-${index}-count`].count;
+            ] = remaining[`${elem.displayName}-${index}-count`].count;
             rest[
               `${elem.displayName}-${index} (${compare_duration_from} - ${compare_duration_to})`
-            ] = rest[`${elem.displayName}-${index}-count`].compare_count;
+            ] = remaining[`${elem.displayName}-${index}-count`].compare_count;
 
             if (index < arrayMapper.length - 1) {
               rest[
                 `time[${index}-${
                   index + 1
                 }] (${duration_from} - ${duration_to})`
-              ] = rest[`time[${index}-${index + 1}]`].time;
+              ] = remaining[`time[${index}-${index + 1}]`].time;
               rest[
                 `time[${index}-${
                   index + 1
                 }] (${compare_duration_from} - ${compare_duration_to})`
-              ] = rest[`time[${index}-${index + 1}]`].compare_time;
-              delete rest[`time[${index}-${index + 1}]`];
+              ] = remaining[`time[${index}-${index + 1}]`].compare_time;
             }
-
-            delete rest[`${elem.mapper}`];
           });
           data.push(rest);
         });
