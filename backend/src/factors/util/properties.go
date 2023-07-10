@@ -3840,7 +3840,8 @@ func GetPropertyValueAsString(value interface{}) string {
 	case bool:
 		return strconv.FormatBool(value.(bool))
 	default:
-		log.Error("Invalid value type on GetPropertyValueAsString : ", valueType)
+		log.WithField("value_type", valueType).WithField("value", value).
+			Error("Invalid value type on GetPropertyValueAsString")
 		return ""
 	}
 }

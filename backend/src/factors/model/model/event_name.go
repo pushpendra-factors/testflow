@@ -978,7 +978,7 @@ func IsUserSmartEventName(projectID int64, eventName *EventName) (string, bool) 
 	}
 	smartEventFilter, err := GetDecodedSmartEventFilterExp(eventName.FilterExpr)
 	if err != nil {
-		logCtx.Error("Failed to GetDecodedSmartEventFilterExp")
+		logCtx.WithError(err).Error("Failed to GetDecodedSmartEventFilterExp")
 		return "", false
 	}
 
