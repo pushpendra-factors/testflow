@@ -1,6 +1,7 @@
 package model
 
 import (
+	"math"
 	"strconv"
 	"time"
 
@@ -134,8 +135,8 @@ type PerDayScore struct {
 }
 
 type LatestScore struct {
-	Date        int64            `json:"date"`
-	EventsCount map[string]int64 `json:"events"`
+	Date        int64              `json:"date"`
+	EventsCount map[string]float64 `json:"events"`
 }
 
 func GetDateFromString(ts string) int64 {
@@ -175,4 +176,31 @@ func GetDefaultAccScoringWeights() AccWeights {
 	weights.WeightConfig = append(weights.WeightConfig, event_c)
 
 	return weights
+}
+
+func ComputeDayDifference(ts1 int64, ts2 int64) int {
+
+	t1 := time.Unix(ts1, 0)
+	day1 := t1.YearDay()
+
+	t2 := time.Unix(ts2, 0)
+	day2 := t2.YearDay()
+
+	return int(math.Abs(float64(day2 - day1)))
+
+}
+
+func ComputeDecayValue(ts string, SaleWindow int64) float64 {
+	var decay float64
+	// get current date
+	currentTS := time.Now().Unix()
+	EventTs := GetDateFromString(ts)
+	// get difference in weeks
+	dayDiff := ComputeDayDifference(currentTS, EventTs)
+	if int64(dayDiff) > SaleWindow {
+		return 0
+	}
+	// get decay value
+	decay = 1 - float64(float64(int64(dayDiff))/float64(SaleWindow))
+	return decay
 }

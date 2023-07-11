@@ -216,6 +216,11 @@ func GetAllUsersScores(c *gin.Context) (interface{}, int, string, string, bool) 
 		"projectId": projectId,
 		"RequestId": reqID,
 	})
+	if date == "" {
+		errMsg := "Unable to parse Date "
+		logCtx.Error(errMsg)
+		return nil, http.StatusBadRequest, "", "", true
+	}
 
 	var accountScores model.UserScoreResult
 	accountScores.ProjectId = projectId
@@ -223,15 +228,7 @@ func GetAllUsersScores(c *gin.Context) (interface{}, int, string, string, bool) 
 	var perAccScore []M.AllUsersScore
 	var err error
 	var weights *M.AccWeights
-	if date == "" {
-		logCtx.Info("getting account scores")
-		perAccScore, weights, err = store.GetStore().GetAllUserScore(projectId, debug)
-		if err != nil {
-			errMsg := "Unable to get all user score."
-			logCtx.WithError(err).Error(errMsg)
-			return nil, http.StatusInternalServerError, "", "", true
-		}
-	} else if date == model.LAST_EVENT {
+	if date == model.LAST_EVENT {
 		logCtx.Info("getting all user scores latest scores")
 		perAccScore, weights, err = store.GetStore().GetAllUserScoreLatest(projectId, debug)
 		if err != nil {
