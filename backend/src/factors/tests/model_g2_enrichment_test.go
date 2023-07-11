@@ -55,6 +55,20 @@ func TestG2Enrichment(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, model.UserSourceG2, *(user.Source))
 
+	eventNameG2All, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{
+		ProjectId: project.ID,
+		Name:      U.GROUP_EVENT_NAME_G2_ALL,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	allPageviewEvent := model.Event{
+		EventNameId: eventNameG2All.ID,
+		Timestamp:   timestamp,
+		ProjectId:   project.ID,
+		UserId:      userID,
+	}
+	_, errCode = store.GetStore().CreateEvent(&allPageviewEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+
 	err = store.GetStore().UpdateG2GroupUserCreationDetails(g2Document)
 	assert.Nil(t, err)
 
