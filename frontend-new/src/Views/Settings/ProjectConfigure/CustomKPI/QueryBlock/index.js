@@ -5,8 +5,10 @@ import styles from './index.module.scss';
 import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import getGroupIcon from 'Utils/getGroupIcon';
-import { setGroupBy, delGroupBy } from '../../../../../reducers/coreQuery/middleware';
+import {
+  setGroupBy,
+  delGroupBy
+} from '../../../../../reducers/coreQuery/middleware';
 import FaSelect from 'Components/FaSelect';
 import ORButton from '../../../../../components/ORButton';
 import { get } from 'lodash';
@@ -15,8 +17,8 @@ import { getNormalizedKpi } from '../../../../../utils/kpiQueryComposer.helpers'
 import AliasModal from '../../../../../components/KPIComposer/AliasModal';
 import { QUERY_TYPE_FUNNEL } from '../../../../../utils/constants';
 import EventGroupBlock from '../../../../../components/KPIComposer/EventGroupBlock';
-import GroupSelect2 from '../../../../../components/KPIComposer/GroupSelect2';
 import EventFilterWrapper from '../../../../../components/KPIComposer/EventFilterWrapper';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 function QueryBlock({
   index,
@@ -72,26 +74,29 @@ function QueryBlock({
     setPageUrlDD(false);
   };
 
-  const onChange = (value, group, category, type) => {
+  const onChange = (option, group) => {
+    console.log(option, group);
+    const metric = option.value;
+    const metricType = option.extraProps?.valueType | '';
+    const category = group.extraProps?.category;
     let qt;
     for (let item of kpi?.config) {
       for (let it of item.metrics) {
-        if (it?.name === value[1])
-          qt = it?.kpi_query_type;
+        if (it?.name === metric) qt = it?.kpi_query_type;
       }
     }
     const newEvent = { alias: '', label: '', filters: [], group: '' };
-    newEvent.label = value[0];
-    newEvent.metric = value[1];
-    newEvent.metricType = get(value, '2', '');
-    newEvent.group = group;
+    newEvent.label = option.label;
+    newEvent.metric = metric;
+    newEvent.metricType = metricType;
+    newEvent.group = group?.value;
     newEvent.qt = qt;
-    newEvent.icon = getGroupIcon(group);
+    newEvent.icon = group?.iconName;
     if (category) {
       newEvent.category = category;
     }
     setDDVisible(false);
-    if (group === 'page_views') {
+    if (group.value === 'page_views') {
       eventChange(newEvent, index - 1, 'add', 'select_url');
     } else {
       eventChange(newEvent, index - 1, 'add');
@@ -119,23 +124,43 @@ function QueryBlock({
     eventChange(event, index - 1, 'delete');
   };
 
-  const kpiEvents = kpi?.config_without_derived_kpi?.map((item) => {
-    return getNormalizedKpi({ kpi: item });
-  });
+  const kpiEvents = kpi?.config_without_derived_kpi
+    ?.map((item) => {
+      return getNormalizedKpi({ kpi: item });
+    })
+    .map((groupOpt) => {
+      return {
+        iconName: groupOpt?.icon,
+        label: _.startCase(groupOpt?.label),
+        value: groupOpt?.label,
+        extraProps: {
+          category: groupOpt?.category
+        },
+        values: groupOpt?.values?.map((op) => {
+          return {
+            value: op[1],
+            label: op[0],
+            extraProps: {
+              valueType: op[2]
+            }
+          };
+        })
+      };
+    });
 
   const selectEvents = () => {
     return (
       <>
         {isDDVisible ? (
           <div className={styles.query_block__event_selector}>
-            <GroupSelect2
-              groupedProperties={kpiEvents ? kpiEvents : []}
-              placeholder="Select Event"
-              optionClick={(group, val, category) =>
-                onChange(val, group, category)
-              }
+            <GroupSelect
+              options={kpiEvents ? kpiEvents : []}
+              optionClickCallback={onChange}
+              searchPlaceHolder='Select Event'
               onClickOutside={() => setDDVisible(false)}
-              allowEmpty={true}
+              allowSearch={true}
+              extraClass={styles.query_block__event_selector__select}
+              allowSearchTextSelection={false}
             />
           </div>
         ) : null}
@@ -164,7 +189,7 @@ function QueryBlock({
               {pageUrlDD ? (
                 <FaSelect
                   options={pageURLs || []}
-                  placeholder="Select Event"
+                  placeholder='Select Event'
                   optionClick={(val) => setPageURL(val)}
                   onClickOutside={() => setPageUrlDD(false)}
                   allowSearch={true}
@@ -273,12 +298,12 @@ function QueryBlock({
       <div className={'fa--query_block--actions-cols flex'}>
         <div className={`relative`}>
           <Button
-            type="text"
+            type='text'
             size={'large'}
             onClick={() => setMoreOptions(true)}
             className={`fa-btn--custom mr-1 btn-total-round`}
           >
-            <SVG name="more" />
+            <SVG name='more' />
           </Button>
 
           {moreOptions ? (
@@ -305,11 +330,11 @@ function QueryBlock({
         </div>
         <Button
           size={'large'}
-          type="text"
+          type='text'
           onClick={deleteItem}
           className={`fa-btn--custom btn-total-round`}
         >
-          <SVG name="trash" />
+          <SVG name='trash' />
         </Button>
       </div>
     );
@@ -320,7 +345,6 @@ function QueryBlock({
     let index = 0;
     let lastRef = 0;
     if (event && event?.filters?.length) {
-
       const group = groupFilters(event.filters, 'ref');
       const filtersGroupedByRef = Object.values(group);
       const refValues = Object.keys(group);
@@ -403,7 +427,7 @@ function QueryBlock({
           );
           index += 2;
         }
-      })
+      });
     }
 
     if (isFilterDDVisible) {
@@ -462,15 +486,16 @@ function QueryBlock({
   if (!event) {
     return (
       <div
-        className={`${styles.query_block} fa--query_block my-2 ${ifQueries ? 'borderless no-padding' : 'borderless no-padding'
-          }`}
+        className={`${styles.query_block} fa--query_block my-2 ${
+          ifQueries ? 'borderless no-padding' : 'borderless no-padding'
+        }`}
       >
         <div
           className={`${styles.query_block__event} flex justify-start items-center`}
         >
           {
             <Button
-              type="text"
+              type='text'
               onClick={triggerDropDown}
               icon={<SVG name={'plus'} color={'grey'} />}
             >
@@ -487,8 +512,9 @@ function QueryBlock({
       className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}
     >
       <div
-        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${styles.query_block__event
-          } block_section items-center`}
+        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${
+          styles.query_block__event
+        } block_section items-center`}
       >
         <div className={'flex items-center'}>
           <div
@@ -514,17 +540,17 @@ function QueryBlock({
               <Tooltip title={'Edit Alias'}>
                 <Button
                   className={`${styles.custombtn} mx-1`}
-                  type="text"
+                  type='text'
                   onClick={showModal}
                 >
-                  <SVG size={20} name="edit" color={'grey'} />
+                  <SVG size={20} name='edit' color={'grey'} />
                 </Button>
               </Tooltip>
             </Text>
           ) : null}
         </div>
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-2'}`}>
-          <div className="max-w-7xl ml-2">
+          <div className='max-w-7xl ml-2'>
             <Tooltip
               title={
                 eventNames[event.label] ? eventNames[event.label] : event.label
@@ -533,7 +559,7 @@ function QueryBlock({
               <Button
                 icon={<SVG name={event.icon} />}
                 className={`fa-button--truncate fa-button--truncate-lg btn-total-round`}
-                type="link"
+                type='link'
                 onClick={triggerDropDown}
               >
                 {eventNames[event.label]

@@ -29,7 +29,7 @@ function EventFilterWrapper({
   fetchKPIFilterValues,
   KPI_config,
   selectedMainCategory,
-  showOr,
+  showOr
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -37,26 +37,26 @@ function EventFilterWrapper({
   const [newFilterState, setNewFilterState] = useState({
     props: [],
     operator: '',
-    values: [],
+    values: []
   });
 
   const [dropDownValues, setDropDownValues] = useState({});
+  const [valueOptsLoading, setvalueOptsLoading] = useState(false);
   const [selectedRngState, setSelectedRngState] = useState([
-    { ...DEFAULT_DATE_RANGE },
+    { ...DEFAULT_DATE_RANGE }
   ]);
 
   const [filterDropDownOptions, setFiltDD] = useState({
     props: [
       {
         label: ' ',
-        icon: 'mouseclick',
-      },
+        icon: 'mouseclick'
+      }
     ],
-    operator: operatorProps,
+    operator: operatorProps
   });
 
   const { userPropNames } = useSelector((state) => state.coreQuery);
-
 
   useEffect(() => {
     if (filter) {
@@ -65,43 +65,49 @@ function EventFilterWrapper({
 
       if (filter && filter?.extra) {
         let filterData = {};
-        if (event?.category == 'channels' || event?.category == 'custom_channels') {
+        if (
+          event?.category == 'channels' ||
+          event?.category == 'custom_channels'
+        ) {
           filterData = {
             category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
             object_type: filter?.extra[3],
             property_name: filter?.extra[1],
             display_category: selectedMainCategory?.group,
-            entity: 'event',
+            entity: 'event'
           };
         } else {
           filterData = {
             category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
             object_type: event?.pageViewVal ? event?.pageViewVal : event?.group, // depreciated! object_type to display_category key change
-            display_category: event?.pageViewVal ? event?.pageViewVal : event?.group, // object_type to display_category key change
+            display_category: event?.pageViewVal
+              ? event?.pageViewVal
+              : event?.group, // object_type to display_category key change
             property_name: filter?.extra[1],
-            entity: filter?.extra[3] ? filter?.extra[3] : filter?.extra[2],
+            entity: filter?.extra[3] ? filter?.extra[3] : filter?.extra[2]
           };
         }
+        setvalueOptsLoading(true);
         fetchKPIFilterValues(activeProject.id, filterData)
           .then((res) => {
             const ddValues = Object.assign({}, dropDownValues);
             ddValues[filter?.extra[0]] = [...res.data, '$none'];
             setDropDownValues(ddValues);
+            setvalueOptsLoading(false);
           })
           .catch((err) => {
             const ddValues = Object.assign({}, dropDownValues);
             ddValues[filter?.extra[0]] = ['$none'];
             setDropDownValues(ddValues);
+            setvalueOptsLoading(false);
           });
-      } else if(!filter?.extra) {
+      } else if (!filter?.extra) {
         // filter.extra getiing set null after running query once and after 2nd time it showing loading
         // added here temporary fix for the above
-          const ddValues = Object.assign({}, dropDownValues);
-          ddValues[filter?.props[0]] = ['$none'];
-          setDropDownValues(ddValues);
+        const ddValues = Object.assign({}, dropDownValues);
+        ddValues[filter?.props[0]] = ['$none'];
+        setDropDownValues(ddValues);
       }
-
-
     }
   }, [filter, event]);
 
@@ -112,7 +118,7 @@ function EventFilterWrapper({
       propState.push({
         label: k,
         icon: k === 'event' ? 'mouseclick' : k,
-        values: filterProps[k],
+        values: filterProps[k]
       });
     });
     let KPIlist = KPI_config || [];
@@ -123,11 +129,12 @@ function EventFilterWrapper({
       if (item == null) return;
       let ddName = item.display_name ? item.display_name : item.name;
       let ddtype =
-        (selGroup?.category == 'channels'|| selGroup?.category == 'custom_channels')
+        selGroup?.category == 'channels' ||
+        selGroup?.category == 'custom_channels'
           ? item.object_type
           : item.entity
-            ? item.entity
-            : item.object_type;
+          ? item.entity
+          : item.object_type;
       return [ddName, item.name, item.data_type, ddtype];
     });
 
@@ -136,8 +143,8 @@ function EventFilterWrapper({
       {
         icon: 'user',
         label: 'user',
-        values: DDvalues,
-      },
+        values: DDvalues
+      }
     ];
     setFiltDD(filterDD);
   }, [filterProps]);
@@ -155,35 +162,45 @@ function EventFilterWrapper({
 
   const setValuesByProps = (props) => {
     if (props && props[3]) {
-      let filterData = {}; 
-      if (event?.category == 'channels' || event?.category == 'custom_channels') { //use event instead of selectedMainCategory since it is in induvidual level
+      let filterData = {};
+      if (
+        event?.category == 'channels' ||
+        event?.category == 'custom_channels'
+      ) {
+        //use event instead of selectedMainCategory since it is in induvidual level
         filterData = {
           category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
           object_type: props[3] ? props[3] : event?.group,
           property_name: props[1],
           display_category: event?.group,
-          entity: 'event',
+          entity: 'event'
         };
       } else {
         filterData = {
           category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
-          object_type:  event?.pageViewVal ? event?.pageViewVal : event?.group, // depreciated! object_type to display_category key change
-          display_category: event?.pageViewVal ? event?.pageViewVal :  event?.group, // object_type to display_category key change
+          object_type: event?.pageViewVal ? event?.pageViewVal : event?.group, // depreciated! object_type to display_category key change
+          display_category: event?.pageViewVal
+            ? event?.pageViewVal
+            : event?.group, // object_type to display_category key change
           property_name: props[1],
-          entity: props[3] ? props[3] : props[2],
+          entity: props[3] ? props[3] : props[2]
         };
       }
+
+      setvalueOptsLoading(true);
 
       fetchKPIFilterValues(activeProject.id, filterData)
         .then((res) => {
           const ddValues = Object.assign({}, dropDownValues);
           ddValues[props[0]] = [...res.data, '$none'];
           setDropDownValues(ddValues);
+          setvalueOptsLoading(false);
         })
         .catch((err) => {
           const ddValues = Object.assign({}, dropDownValues);
           ddValues[props[0]] = ['$none'];
           setDropDownValues(ddValues);
+          setvalueOptsLoading(false);
         });
     }
   };
@@ -194,6 +211,7 @@ function EventFilterWrapper({
         propOpts={filterDropDownOptions.props}
         operatorOpts={filterDropDownOptions.operator}
         valueOpts={dropDownValues}
+        valueOptsLoading={valueOptsLoading}
         applyFilter={applyFilter}
         setValuesByProps={setValuesByProps}
         filter={filter}
@@ -203,18 +221,36 @@ function EventFilterWrapper({
   };
 
   return (
-    <div className={`flex items-center relative ${!showOr ? 'ml-10' : 'ml-10'}`}>
-      {!showOr && (index >= 1 ? (
-        <Text level={8} type={'title'} extraClass={'m-0 mr-16'} weight={'thin'}>
-          and
-        </Text>
-      ) : (
-        <Text level={8} type={'title'} extraClass={'m-0 mr-10'} weight={'thin'}>
-          Filter by
-        </Text>
-      ))}
+    <div
+      className={`flex items-center relative ${!showOr ? 'ml-10' : 'ml-10'}`}
+    >
+      {!showOr &&
+        (index >= 1 ? (
+          <Text
+            level={8}
+            type={'title'}
+            extraClass={'m-0 mr-16'}
+            weight={'thin'}
+          >
+            and
+          </Text>
+        ) : (
+          <Text
+            level={8}
+            type={'title'}
+            extraClass={'m-0 mr-10'}
+            weight={'thin'}
+          >
+            Filter by
+          </Text>
+        ))}
       {showOr && (
-        <Text level={8} type={'title'} extraClass={'m-0 mr-16 my-3'} weight={'thin'}>
+        <Text
+          level={8}
+          type={'title'}
+          extraClass={'m-0 mr-16 my-3'}
+          weight={'thin'}
+        >
           or
         </Text>
       )}
@@ -238,7 +274,7 @@ function EventFilterWrapper({
 }
 
 const mapStateToProps = (state) => ({
-  KPI_config: state.kpi?.config,
+  KPI_config: state.kpi?.config
 });
 
 export default connect(mapStateToProps, { fetchKPIFilterValues })(

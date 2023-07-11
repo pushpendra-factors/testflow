@@ -5,12 +5,12 @@ import { SVG, Text } from 'factorsComponents';
 import { bindActionCreators } from 'redux';
 
 import { Button, Tooltip } from 'antd';
-import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 function GroupBlock({
   groupByState,
@@ -28,12 +28,12 @@ function GroupBlock({
   const [filterOptions, setFilterOptions] = useState([
     {
       label: 'User Properties',
-      icon: 'user',
+      iconName: 'user',
       values: []
     },
     {
       label: 'Group Properties',
-      icon: 'group',
+      iconName: 'group',
       values: []
     }
   ]);
@@ -48,7 +48,22 @@ function GroupBlock({
       filterOpts[1].values = groupProperties[groupName];
       filterOpts[0].values = [];
     }
-    setFilterOptions(filterOpts);
+    const modifiedFilterOpts = filterOpts?.map((opt) => {
+      return {
+        iconName: opt?.iconName,
+        label: opt?.label,
+        values: opt?.values?.map((op) => {
+          return {
+            value: op?.[1],
+            label: op?.[0],
+            extraProps: {
+              valueType: op?.[2]
+            }
+          };
+        })
+      };
+    });
+    setFilterOptions(modifiedFilterOpts);
   }, [userProperties, groupProperties, groupName]);
 
   const delOption = (index) => {
@@ -69,12 +84,18 @@ function GroupBlock({
     setSelVis(ddVis);
   };
 
-  const onChange = (value, index) => {
+  const onChange = (option, group, index) => {
     const newGroupByState = Object.assign({}, groupByState.global[index]);
-    newGroupByState.prop_category = 'user';
+
+    if (group?.label === 'Group Properties') {
+      newGroupByState.prop_category = 'group';
+    } else {
+      newGroupByState.prop_category = 'user';
+    }
+
     newGroupByState.eventName = '$present';
-    newGroupByState.property = value[1][1];
-    newGroupByState.prop_type = value[1][2];
+    newGroupByState.property = option?.value;
+    newGroupByState.prop_type = option?.extraProps?.valueType;
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = 'raw_values';
     }
@@ -112,12 +133,17 @@ function GroupBlock({
           }
           {isDDVisible[index] ? (
             <div className={`${styles.group_block__event_selector}`}>
-              <GroupSelect2
-                groupedProperties={filterOptions}
-                placeholder='Select Property'
-                optionClick={(group, val) => onChange([group, val], index)}
+              <GroupSelect
+                options={filterOptions}
+                searchPlaceHolder='Select Property'
+                optionClickCallback={(option, group) =>
+                  onChange(option, group, index)
+                }
                 onClickOutside={() => triggerDropDown(index, true)}
-              ></GroupSelect2>
+                allowSearch={true}
+                extraClass={styles.group_block__event_selector__select}
+                allowSearchTextSelection={false}
+              />
             </div>
           ) : null}
         </div>
@@ -230,12 +256,17 @@ function GroupBlock({
               {renderGroupDisplayName(opt, index)}
               {isDDVisible[index] ? (
                 <div className={`${styles.group_block__event_selector}`}>
-                  <GroupSelect2
-                    groupedProperties={filterOptions}
-                    placeholder='Select Property'
-                    optionClick={(group, val) => onChange([group, val], index)}
+                  <GroupSelect
+                    options={filterOptions}
+                    searchPlaceHolder='Select Property'
+                    optionClickCallback={(option, group) =>
+                      onChange(option, group, index)
+                    }
                     onClickOutside={() => triggerDropDown(index, true)}
-                  ></GroupSelect2>
+                    allowSearch={true}
+                    extraClass={styles.group_block__event_selector__select}
+                    allowSearchTextSelection={false}
+                  />
                 </div>
               ) : null}
             </div>

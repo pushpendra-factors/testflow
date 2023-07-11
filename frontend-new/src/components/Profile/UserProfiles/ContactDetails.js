@@ -8,6 +8,7 @@ import {
   Tabs,
   notification
 } from 'antd';
+import styles from './index.module.scss';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { SVG, Text } from '../../factorsComponents';
@@ -32,11 +33,11 @@ import {
 } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
-import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
 import { getEventProperties } from 'Reducers/coreQuery/middleware';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 function ContactDetails({
   userDetails,
@@ -135,17 +136,34 @@ function ContactDetails({
   }, [activeProject]);
 
   const generateUserProps = () => {
-    const groupProps = [{ label: 'User Properties', icon: 'user', values: [] }];
+    const groupProps = [
+      { label: 'User Properties', iconName: 'user', values: [] }
+    ];
     groupProps[0].values = userProperties;
-    return groupProps;
+    return groupProps?.map((opt) => {
+      return {
+        iconName: opt?.iconName,
+        label: opt?.label,
+        values: opt?.values?.map((op) => {
+          return {
+            value: op?.[1],
+            label: op?.[0],
+            extraProps: {
+              valueType: op?.[2]
+            }
+          };
+        })
+      };
+    });
   };
 
   useEffect(() => {
     hoverEvents.forEach((event) => {
-      if (!eventProperties[event] &&
+      if (
+        !eventProperties[event] &&
         userDetails?.data?.user_activities?.some(
-            (activity) => activity?.event_name === event
-          )
+          (activity) => activity?.event_name === event
+        )
       ) {
         getEventProperties(activeProject?.id, event);
       }
@@ -185,7 +203,7 @@ function ContactDetails({
     udpateProjectSettings(activeProject.id, {
       timelines_config: { ...timelinesConfig }
     });
-    setOpenPopover(false)
+    setOpenPopover(false);
   };
 
   const handleMilestonesChange = (option) => {
@@ -199,7 +217,7 @@ function ContactDetails({
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
       setCheckListMilestones(checkListProps);
-      setOpenPopover(false)
+      setOpenPopover(false);
     } else {
       notification.error({
         message: 'Error',
@@ -286,10 +304,10 @@ function ContactDetails({
     </div>
   );
 
-  const handleOptionClick = (group, value) => {
+  const handleOptionClick = (option, group) => {
     const timelinesConfig = { ...tlConfig };
-    if (!timelinesConfig.user_config.leftpane_props.includes(value[1])) {
-      timelinesConfig.user_config.leftpane_props.push(value[1]);
+    if (!timelinesConfig.user_config.leftpane_props.includes(option?.value)) {
+      timelinesConfig.user_config.leftpane_props.push(option?.value);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...timelinesConfig }
       })
@@ -344,12 +362,15 @@ function ContactDetails({
 
   const selectProps = () =>
     propSelectOpen && (
-      <div className='relative'>
-        <GroupSelect2
-          groupedProperties={generateUserProps()}
-          placeholder='Select Property'
-          optionClick={handleOptionClick}
+      <div className={styles.user_profiles__event_selector}>
+        <GroupSelect
+          options={generateUserProps()}
+          searchPlaceHolder='Select Property'
+          optionClickCallback={handleOptionClick}
           onClickOutside={() => setPropSelectOpen(false)}
+          allowSearchTextSelection={false}
+          extraClass={styles.user_profiles__event_selector__select}
+          allowSearch={true}
         />
       </div>
     );

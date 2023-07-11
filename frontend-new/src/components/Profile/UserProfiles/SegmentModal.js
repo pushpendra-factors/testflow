@@ -300,8 +300,6 @@ function SegmentModal({
               insertFilter={(val) => editFilter(id, val)}
               closeFilter={closeFilter}
               filterProps={filterProperties}
-              dropdownPlacement='Top'
-              dropdownMaxHeight={344}
             />
           </div>
         );
@@ -318,8 +316,6 @@ function SegmentModal({
                 insertFilter={addFilter}
                 closeFilter={closeFilter}
                 filterProps={filterProperties}
-                dropdownPlacement='Top'
-                dropdownMaxHeight={344}
               />
             </div>
           );

@@ -1,0 +1,11 @@
+.user_profiles {
+  &__event_selector {
+    position: relative;
+    &__select {
+      width: 380px;
+      max-height: 480px;
+      min-height: 240px;
+      position: absolute;
+    }
+  }
+}

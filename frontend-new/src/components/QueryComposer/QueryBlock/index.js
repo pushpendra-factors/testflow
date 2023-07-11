@@ -71,9 +71,9 @@ function QueryBlock({
     }
     showOpts = showOpts?.map((opt) => {
       return {
-        iconName: opt.icon,
-        label: opt.label,
-        values: opt.values.map((op) => {
+        iconName: opt?.icon,
+        label: opt?.label,
+        values: opt?.values?.map((op) => {
           return { value: op[1], label: op[0] };
         })
       };
@@ -104,8 +104,13 @@ function QueryBlock({
       props.user = eventUserProperties;
     }
     return props;
-  }, [event, eventGroup, eventProperties, groupProperties, eventUserProperties]);
-
+  }, [
+    event,
+    eventGroup,
+    eventProperties,
+    groupProperties,
+    eventUserProperties
+  ]);
 
   useEffect(() => {
     if (!event) return;

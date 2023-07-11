@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Dropdown, Menu, notification, Popover, Tabs } from 'antd';
+import styles from './index.module.scss';
 import { bindActionCreators } from 'redux';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { Text, SVG } from '../../factorsComponents';
@@ -24,7 +25,6 @@ import {
 } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
-import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import AccountTimelineSingleView from './AccountTimelineSingleView';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
@@ -36,6 +36,7 @@ import {
   getEventProperties
 } from 'Reducers/coreQuery/middleware';
 import AccountOverview from './AccountOverview';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 function AccountDetails({
   accounts,
@@ -162,10 +163,11 @@ function AccountDetails({
 
   useEffect(() => {
     hoverEvents.forEach((event) => {
-      if (!eventProperties[event] &&
-          accountDetails.data?.account_events?.some(
-            (activity) => activity?.event_name === event
-          )
+      if (
+        !eventProperties[event] &&
+        accountDetails.data?.account_events?.some(
+          (activity) => activity?.event_name === event
+        )
       ) {
         getEventProperties(activeProject?.id, event);
       }
@@ -187,11 +189,26 @@ function AccountDetails({
       filterProps[group] = groupProperties?.[group];
     });
 
-    const groupProps = Object.entries(filterProps).map(([group, values]) => ({
+    let groupProps = Object.entries(filterProps).map(([group, values]) => ({
       label: `${PropTextFormat(group)} Properties`,
-      icon: group,
+      iconName: group,
       values
     }));
+    groupProps = groupProps?.map((opt) => {
+      return {
+        iconName: opt?.iconName,
+        label: opt?.label,
+        values: opt?.values?.map((op) => {
+          return {
+            value: op?.[1],
+            label: op?.[0],
+            extraProps: {
+              valueType: op?.[2]
+            }
+          };
+        })
+      };
+    });
     setListProperties(mergedProps);
     setFilterProperties(groupProps);
   }, [groupProperties, groupOpts]);
@@ -222,7 +239,7 @@ function AccountDetails({
         )
       );
     }
-    setOpenPopover(false)
+    setOpenPopover(false);
   };
 
   const handleEventsChange = (option) => {
@@ -238,7 +255,7 @@ function AccountDetails({
     udpateProjectSettings(activeProject.id, {
       timelines_config: { ...timelinesConfig }
     });
-    setOpenPopover(false)
+    setOpenPopover(false);
   };
 
   const handleMilestonesChange = (option) => {
@@ -252,7 +269,7 @@ function AccountDetails({
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
       setCheckListMilestones(checkListProps);
-      setOpenPopover(false)
+      setOpenPopover(false);
     } else {
       notification.error({
         message: 'Error',
@@ -334,10 +351,12 @@ function AccountDetails({
     </Menu>
   );
 
-  const handleOptionClick = (group, value) => {
+  const handleOptionClick = (option, group) => {
     const timelinesConfig = { ...tlConfig };
-    if (!timelinesConfig.account_config.leftpane_props.includes(value[1])) {
-      timelinesConfig.account_config.leftpane_props.push(value[1]);
+    if (
+      !timelinesConfig.account_config.leftpane_props.includes(option?.value)
+    ) {
+      timelinesConfig.account_config.leftpane_props.push(option?.value);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...timelinesConfig }
       }).then(() =>
@@ -426,12 +445,15 @@ function AccountDetails({
 
   const selectProps = () =>
     propSelectOpen && (
-      <div className='relative'>
-        <GroupSelect2
-          groupedProperties={filterProperties}
-          placeholder='Select Property'
-          optionClick={handleOptionClick}
+      <div className={styles.account_profiles__event_selector}>
+        <GroupSelect
+          options={filterProperties}
+          searchPlaceHolder='Select Property'
+          optionClickCallback={handleOptionClick}
           onClickOutside={() => setPropSelectOpen(false)}
+          allowSearchTextSelection={false}
+          extraClass={styles.account_profiles__event_selector__select}
+          allowSearch={true}
         />
       </div>
     );

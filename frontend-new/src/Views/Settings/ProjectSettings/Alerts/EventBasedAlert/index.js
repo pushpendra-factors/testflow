@@ -459,7 +459,6 @@ const EventBasedAlert = ({
         setGroupState={pushGroupBy}
         closeDropDown={() => setGroupByDDVisible(false)}
         hideText={true}
-        // posTop={true}
       />
     ) : null;
 
@@ -486,7 +485,6 @@ const EventBasedAlert = ({
                 setGroupState={pushGroupBy}
                 closeDropDown={() => setGroupByDDVisible(false)}
                 hideText={true}
-                // posTop={true}
               />
             </div>
           );
