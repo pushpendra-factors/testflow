@@ -48,11 +48,31 @@ const SparklineChart: React.FC<SparklineChartProps> = ({ data }) => {
           max: 100,
           min: 0
         },
+        plotOptions: {
+          area: {
+            color: {
+              linearGradient: {
+                x1: 0,
+                y1: 0,
+                x2: 0,
+                y2: 1
+              },
+              stops: [
+                [0, 'rgba(0, 120, 255, 1)'],
+                [1, 'rgba(255, 255, 255, 1)']
+              ]
+            },
+            marker: {
+              radius: 2
+            },
+            lineWidth: 1
+          }
+        },
         series: [
           {
             name: 'Engagement Score',
             data: Object.values(data || {}),
-            type: 'line',
+            type: 'area',
             lineWidth: 2,
             marker: {
               enabled: false
@@ -67,7 +87,6 @@ const SparklineChart: React.FC<SparklineChartProps> = ({ data }) => {
           shadow: true,
           useHTML: true,
           formatter() {
-            console.log('dafdfa: ', this.point);
             return ReactDOMServer.renderToString(
               <div
                 className='flex flex-col row-gap-2 p-2'

@@ -235,7 +235,7 @@ function AccountProfiles({
     if (payload.source && payload.source !== '' && !shouldCache) {
       const formatPayload = { ...payload };
       formatPayload.filters =
-        formatFiltersForPayload(payload?.filters, true) || [];
+        formatFiltersForPayload(payload?.filters, 'accounts') || [];
       getProfileAccounts(activeProject.id, formatPayload, activeAgent);
     }
     if (shouldCache) {
@@ -826,7 +826,7 @@ function AccountProfiles({
 
     const updatedPayload = {
       ...accountPayload,
-      search_filter: formatFiltersForPayload(searchFilter, true)
+      search_filter: formatFiltersForPayload(searchFilter)
     };
     const search_filters = updatedPayload.search_filter.map((filter, index) => {
       const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';

@@ -425,8 +425,7 @@ function UserProfiles({
   const getUsers = (payload) => {
     if (payload.source && payload.source !== '') {
       const formatPayload = { ...payload };
-      formatPayload.filters =
-        formatFiltersForPayload(payload?.filters, true) || [];
+      formatPayload.filters = formatFiltersForPayload(payload?.filters) || [];
       getProfileUsers(activeProject.id, formatPayload, activeAgent);
     }
   };
@@ -753,7 +752,7 @@ function UserProfiles({
     };
     const payload = { ...timelinePayload };
     searchFilter.values.push(...val.map((vl) => JSON.parse(vl)[0]));
-    payload.search_filter = formatFiltersForPayload([searchFilter], true);
+    payload.search_filter = formatFiltersForPayload([searchFilter]);
     setListSearchItems(searchFilter.values);
     setTimelinePayload(payload);
     setActiveSegment(activeSegment);
