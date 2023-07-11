@@ -115,7 +115,7 @@ function FunnelsResultTable({
 
   const getCSVData = () => {
     try {
-      if (!comparisonChartData || isBreakdownApplied) {
+      if (!comparisonChartData) {
         return {
           fileName: `${reportTitle}.csv`,
           data: tableData.map(
@@ -160,7 +160,19 @@ function FunnelsResultTable({
         );
         tableData.forEach(({ index, ...remaining }) => {
           const rest = {};
-          rest.Users = 'All';
+          if (!isBreakdownApplied) {
+            rest.Users = 'All';
+          } else {
+            breakdown.forEach((b, index) => {
+              rest[
+                `${getBreakdownDisplayName({
+                  breakdown: b,
+                  userPropNames,
+                  eventPropertiesDisplayNames
+                })}`
+              ] = remaining[`${b.property} - ${b.eventIndex}`];
+            });
+          }
 
           rest[`Conversion (${duration_from} - ${duration_to})`] =
             remaining.Conversion.conversion;
