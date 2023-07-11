@@ -47,7 +47,9 @@ const GroupedChartComponent = forwardRef(
       tableConfig,
       tableConfigPopoverContent,
       savedQuerySettings,
-      comparisonData
+      comparisonData,
+      durationObj,
+      comparisonDuration
     },
     ref
   ) => {
@@ -207,6 +209,8 @@ const GroupedChartComponent = forwardRef(
             tableConfigPopoverContent={tableConfigPopoverContent}
             comparisonChartData={compareGroups}
             isBreakdownApplied={true}
+            durationObj={durationObj}
+            comparison_duration={comparisonDuration}
           />
         </div>
       </div>
@@ -219,7 +223,11 @@ const GroupedChartMemoized = memo(GroupedChartComponent);
 function GroupedChart(props) {
   const { renderedCompRef, ...rest } = props;
   const {
-    coreQueryState: { savedQuerySettings, comparison_data: comparisonData }
+    coreQueryState: {
+      savedQuerySettings,
+      comparison_data: comparisonData,
+      comparison_duration: comparisonDuration
+    }
   } = useContext(CoreQueryContext);
 
   return (
@@ -227,6 +235,7 @@ function GroupedChart(props) {
       ref={renderedCompRef}
       savedQuerySettings={savedQuerySettings}
       comparisonData={comparisonData}
+      comparisonDuration={comparisonDuration}
       {...rest}
     />
   );

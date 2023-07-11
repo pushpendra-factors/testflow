@@ -844,11 +844,14 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, countryName, pageURLProp)
 
 	if shouldEnrichUsingSixSignal == false {
-		logCtx.WithFields(log.Fields{"six_signal_config": sixSignalConfig, "countryName": countryName, "page": pageURLProp}).Info("sixsignal filter returns false - debug Upflow")
+
+		if projectId == 2251799844000008 {
+			logCtx.WithFields(log.Fields{"six_signal_config": sixSignalConfig, "countryName": countryName, "page": pageURLProp}).Info("sixsignal filter returns false - debug Upflow")
+		}
 		return
 	}
 
-	if projectId == 2251799844000008 && !(strings.Contains(pageURLProp, "/demo") && !(strings.Contains(pageURLProp, "/pricing"))) {
+	if projectId == 2251799844000008 && !strings.Contains(pageURLProp, "/demo") && !strings.Contains(pageURLProp, "/pricing") {
 		logCtx.WithFields(log.Fields{"pageUrl": pageURLProp, "Pages Include": sixSignalConfig.PagesInclude, "EnrichSixSignal": shouldEnrichUsingSixSignal}).Info("Hitting factors sixsignal enrichment -debug for Upflow.")
 	}
 
@@ -891,17 +894,11 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 					// Total hit counts
 					model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
 
-					// logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("SetSixSignalCacheResult using Factors key")
-
 				} else {
 					logCtx.Warn("ExecuteSixSignal failed in track call")
-					// logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("ExecuteSixSignal failed in track call using Factors Key")
-
 				}
 			case <-time.After(U.TimeoutOneSecond):
 				logCtx.Warn("Six_Signal enrichment timed out in Track call")
-				// logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("Timed Out 6Signal enrichment using Factors Key")
-
 			}
 		}
 	}

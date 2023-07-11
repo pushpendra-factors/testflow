@@ -124,5 +124,5 @@ func IsBotEventByPrefix(eventName string) bool {
 func IsJsonError(err error) bool {
 	log.WithError(err).Warn("Invalid json payload.")
 	// "unexpected EOF" error happens when json payload is "null" or "".
-	return err != nil && err.Error() != "unexpected EOF"
+	return err != nil && err.Error() != "unexpected EOF" && err.Error() != "EOF"
 }

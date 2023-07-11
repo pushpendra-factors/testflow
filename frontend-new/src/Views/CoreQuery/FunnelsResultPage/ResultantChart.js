@@ -54,6 +54,7 @@ function ResultantChartComponent({
         chartType={chartType}
         tableConfig={tableConfig}
         tableConfigPopoverContent={tableConfigPopoverContent}
+        durationObj={durationObj}
       />
     );
   }

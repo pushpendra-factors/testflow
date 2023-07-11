@@ -154,6 +154,37 @@ func TestProfiles(t *testing.T) {
 
 	})
 
+	t.Run("No filter, 1 group by with user id", func(t *testing.T) {
+		query := model.ProfileQuery{
+			Type:          "web",
+			Filters:       []model.QueryProperty{},
+			GroupBys:      []model.QueryGroupByProperty{{Entity: "user_g", Property: "$user_id", Type: "categorical"}},
+			From:          joinTime - 100,
+			To:            nextUserJoinTime + 100,
+			GroupAnalysis: "users",
+		}
+		queryGroup := model.ProfileQueryGroup{
+			Class:          "profiles",
+			Queries:        []model.ProfileQuery{query},
+			GlobalFilters:  []model.QueryProperty{},
+			GlobalGroupBys: []model.QueryGroupByProperty{},
+			From:           joinTime - 100,
+			To:             nextUserJoinTime + 100,
+		}
+		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID, C.EnableOptimisedFilterOnProfileQuery())
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, "query_index", result.Results[0].Headers[0])
+		assert.Equal(t, int(0), result.Results[0].Rows[0][0])
+		assert.Equal(t, int(0), result.Results[0].Rows[1][0])
+
+		assert.Equal(t, float64(1), result.Results[0].Rows[0][1])
+		assert.Equal(t, float64(1), result.Results[0].Rows[1][1])
+		assert.Equal(t, model.AliasAggr, result.Results[0].Headers[1])
+
+		assert.Equal(t, "$user_id", result.Results[0].Headers[2])
+		assert.Equal(t, 2, len(result.Results[0].Rows))
+	})
+
 	t.Run("No filter, 1 group by bucketed", func(t *testing.T) {
 		query := model.ProfileQuery{
 			Type:          "web",
