@@ -317,6 +317,7 @@ type Configuration struct {
 	AllowEmailDomainsByProjectID                       string
 	UseHubspotDealsV3APIByProjectID                    string
 	EnableScoringByProjectID                           string
+	DisableOpportunityContactRolesByProjectID          string
 }
 
 type Services struct {
@@ -2894,6 +2895,15 @@ func AllowEmailDomainsByProjectID(projectID int64) bool {
 
 func AllowHubspotDealsv3APIByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotDealsV3APIByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func DisableOpportunityContactRolesEnrichmentByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().DisableOpportunityContactRolesByProjectID, "")
 	if allProjects {
 		return true
 	}

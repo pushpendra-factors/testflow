@@ -2865,7 +2865,9 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 			overAllSyncStatus[fmt.Sprintf("groups_%s", docType)] = syncStatus[docType]
 		}
 
-		enrichOrderByType = append(enrichOrderByType, model.SalesforceDocumentTypeOpportunityContactRole)
+		if !C.DisableOpportunityContactRolesEnrichmentByProjectID(projectID) {
+			enrichOrderByType = append(enrichOrderByType, model.SalesforceDocumentTypeOpportunityContactRole)
+		}
 	}
 
 	for _, timeRange := range orderedTimeSeries {
