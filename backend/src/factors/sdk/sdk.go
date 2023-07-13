@@ -705,16 +705,17 @@ func Track(projectId int64, request *TrackPayload,
 	if C.GetClearbitEnabled() == 1 {
 		FillClearbitUserProperties(projectId, projectSettings, userProperties, request.UserId, clientIP)
 	}
-
-	if C.Get6SignalEnabled() == 1 {
+	if C.IsSixSignalV1Enabled(projectId) {
+		FillSixSignalUserPropertiesV1(projectId, projectSettings, userProperties, request.UserId, clientIP, countryName, pageURLProp)
+	} else {
 		FillSixSignalUserProperties(projectId, projectSettings, userProperties, request.UserId, clientIP, countryName, pageURLProp)
-		if C.EnableSixSignalGroupByProjectID(projectId) {
-			groupProperties := U.FilterPropertiesByKeysByPrefix(userProperties, U.SIX_SIGNAL_PROPERTIES_PREFIX)
-			if groupProperties != nil && len(*groupProperties) > 0 {
-				status := TrackUserAccountGroup(projectId, request.UserId, U.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
-				if status != http.StatusOK && status != http.StatusNotModified && status != http.StatusNotImplemented {
-					logCtx.Error("Failed to TrackUserGroup.")
-				}
+	}
+	if C.EnableSixSignalGroupByProjectID(projectId) {
+		groupProperties := U.FilterPropertiesByKeysByPrefix(userProperties, U.SIX_SIGNAL_PROPERTIES_PREFIX)
+		if groupProperties != nil && len(*groupProperties) > 0 {
+			status := TrackUserAccountGroup(projectId, request.UserId, U.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+			if status != http.StatusOK && status != http.StatusNotModified && status != http.StatusNotImplemented {
+				logCtx.Error("Failed to TrackUserGroup.")
 			}
 		}
 	}
@@ -852,6 +853,7 @@ func Track(projectId int64, request *TrackPayload,
 	return http.StatusOK, response
 }
 
+// To be deprecated after new flow is tested.
 func FillSixSignalUserProperties(projectId int64, projectSettings *model.ProjectSetting,
 	userProperties *U.PropertiesMap, UserId, clientIP, countryName, pageURLProp string) {
 
@@ -894,14 +896,11 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 		if sixSignalExists {
 			// logCtx.Info("6Signal cache hit")
 		} else {
-
 			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
-
 			select {
 			case ok := <-execute6SignalStatusChannel:
 				if ok == 1 {
 					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
-
 				} else {
 					logCtx.Warn("ExecuteSixSignal failed in track call")
 				}
@@ -925,6 +924,99 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
 					// Total hit counts
 					model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
+				} else {
+					logCtx.Warn("ExecuteSixSignal failed in track call")
+				}
+			case <-time.After(U.TimeoutOneSecond):
+				logCtx.Warn("Six_Signal enrichment timed out in Track call")
+			}
+		}
+	}
+}
+
+/*
+	FillSixSignalUserProperties{
+		If clientIp is “”{
+			Return
+		}
+		if clientKey is present and client integration is enabled :
+			enrich using them
+		else if factors sixsignal is enabled:
+		 	check sixsignal quota is not exhausted (TODO)
+		 	fetch factors API KEY from configs
+		 	fetch sixsignal configs–page url & country filter
+		 	check whether sixisignal config is satisfied
+		 	then enrich
+		Else : return
+	}
+*/
+func FillSixSignalUserPropertiesV1(projectId int64, projectSettings *model.ProjectSetting,
+	userProperties *U.PropertiesMap, UserId, clientIP, countryName, pageURLProp string) {
+
+	logCtx := log.WithField("project_id", projectId)
+	if clientIP == "" {
+		logCtx.Warn("Client IP is blank")
+		return
+	}
+
+	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) {
+
+		execute6SignalStatusChannel := make(chan int)
+		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
+		if sixSignalExists {
+			// logCtx.Info("6Signal cache hit")
+		} else {
+
+			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+
+			select {
+			case ok := <-execute6SignalStatusChannel:
+				if ok == 1 {
+					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
+
+				} else {
+					logCtx.Warn("ExecuteSixSignal failed in track call")
+				}
+			case <-time.After(U.TimeoutOneSecond):
+				logCtx.Warn("six_Signal enrichment timed out in Track call")
+
+			}
+		}
+	} else if *(projectSettings.IntFactorsSixSignalKey) {
+
+		//Todo: @Roshan check sixsignal quota is not exhausted
+
+		//Fetching sixsignal API Key
+		factors6SignalKey := C.GetFactorsSixSignalAPIKey()
+
+		//Fetching sixsignal configs
+		sixSignalConfig := model.SixSignalConfig{}
+		if projectSettings.SixSignalConfig != nil {
+			err := json.Unmarshal(projectSettings.SixSignalConfig.RawMessage, &sixSignalConfig)
+			if err != nil {
+				logCtx.WithField("six_signal_config", projectSettings.SixSignalConfig).WithError(err).Error("Failed to decode six signal property")
+			}
+		}
+
+		shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, countryName, pageURLProp)
+		if !shouldEnrichUsingSixSignal {
+			return
+		}
+
+		execute6SignalStatusChannel := make(chan int)
+		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
+		if sixSignalExists {
+			// logCtx.Info("6Signal cache hit")
+		} else {
+			// logCtx.Info("6Signal cache miss")
+			go six_signal.ExecuteSixSignalEnrich(projectId, factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+
+			select {
+			case ok := <-execute6SignalStatusChannel:
+				if ok == 1 {
+					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
+					// Total hit counts
+					model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
 
 				} else {
 					logCtx.Warn("ExecuteSixSignal failed in track call")
@@ -933,6 +1025,8 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 				logCtx.Warn("Six_Signal enrichment timed out in Track call")
 			}
 		}
+	} else {
+		return
 	}
 }
 

@@ -30,6 +30,8 @@ func main() {
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
+	factorsSixsignalAPIKey := flag.String("factors_sixsignal_api_key", "dummy", "")
+
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
@@ -52,7 +54,7 @@ func main() {
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 	minSyncTimestamp := flag.Int64("min_sync_timestamp", 0, "Min timstamp from where to process records")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
-	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
+	sixsignalV1EnabledProjectIDs := flag.String("sixsignal_v1_enabled_projectIds", "", "To enable new sixsignal flow")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
 	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
@@ -95,13 +97,14 @@ func main() {
 		RedisPort:                                    *redisPort,
 		RedisHostPersistent:                          *redisHostPersistent,
 		RedisPortPersistent:                          *redisPortPersistent,
+		FactorsSixSignalAPIKey:                       *factorsSixsignalAPIKey,
 		SentryDSN:                                    *sentryDSN,
 		CacheSortedSet:                               *cacheSortedSet,
 		UseSourcePropertyOverwriteByProjectIDs:       *useSourcePropertyOverwriteByProjectID,
 		CaptureSourceInUsersTable:                    *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:         *restrictReusingUsersByCustomerUserId,
 		ClearbitEnabled:                              *clearbitEnabled,
-		SixSignalEnabled:                             *sixSignalEnabled,
+		SixSignalV1EnabledProjectIDs:                 *sixsignalV1EnabledProjectIDs,
 		IngestionTimezoneEnabledProjectIDs:           C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		EnableDomainsGroupByProjectID:                *enableDomainsGroupByProjectID,
 		EnableUserDomainsGroupByProjectID:            *enableUserDomainsGroupByProjectID,

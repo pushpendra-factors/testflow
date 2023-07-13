@@ -31,6 +31,8 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
+	factorsSixsignalAPIKey := flag.String("factors_sixsignal_api_key", "dummy", "")
+
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
 	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
 
@@ -60,7 +62,7 @@ func main() {
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 	mergeAmpIDAndSegmentIDWithUserIDByProjectID := flag.String("allow_amp_id_and_segment_id_with_user_id_by_project_id", "", "")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
-	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
+	sixsignalV1EnabledProjectIDs := flag.String("sixsignal_v1_enabled_projectIds", "", "To enable new sixsignal flow")
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	formFillIdentifyAllowedProjectIDs := flag.String("form_fill_identify_allowed_projects", "", "Form fill identification allowed project ids.")
@@ -89,6 +91,7 @@ func main() {
 		GCPProjectLocation:     *gcpProjectLocation,
 		RedisHost:              *redisHost,
 		RedisPort:              *redisPort,
+		FactorsSixSignalAPIKey: *factorsSixsignalAPIKey,
 		QueueRedisHost:         *queueRedisHost,
 		QueueRedisPort:         *queueRedisPort,
 		GeolocationFile:        *geoLocFilePath,
@@ -118,7 +121,7 @@ func main() {
 		RestrictReusingUsersByCustomerUserId:               *restrictReusingUsersByCustomerUserId,
 		MergeAmpIDAndSegmentIDWithUserIDByProjectID:        *mergeAmpIDAndSegmentIDWithUserIDByProjectID,
 		ClearbitEnabled:                                    *clearbitEnabled,
-		SixSignalEnabled:                                   *sixSignalEnabled,
+		SixSignalV1EnabledProjectIDs:                       *sixsignalV1EnabledProjectIDs,
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
 		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		FormFillIdentificationAllowedProjects:              *formFillIdentifyAllowedProjectIDs,

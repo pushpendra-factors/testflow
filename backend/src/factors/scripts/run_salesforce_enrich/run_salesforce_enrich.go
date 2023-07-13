@@ -107,6 +107,8 @@ func main() {
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
+	factorsSixsignalAPIKey := flag.String("factors_sixsignal_api_key", "dummy", "")
+
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 	dryRunSmartEvent := flag.Bool("dry_run_smart_event", false, "Dry run mode for smart event creation")
@@ -137,7 +139,7 @@ func main() {
 	insertBatchSize := flag.Int("insert_batch_size", 1, "Number of unique document go routines per project")
 	overrideLastSyncTimestamp := flag.Int64("override_last_sync_timestamp", 0, "Override last sync timestamp")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
-	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
+	sixsignalV1EnabledProjectIDs := flag.String("sixsignal_v1_enabled_projectIds", "", "To enable new sixsignal flow")
 	useSalesforceV54APIByProjectID := flag.String("use_salesforce_v54_api_by_project_id", "", "Use v54 api for query salesforce data")
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
@@ -200,6 +202,7 @@ func main() {
 		RedisPort:                                          *redisPort,
 		RedisHostPersistent:                                *redisHostPersistent,
 		RedisPortPersistent:                                *redisPortPersistent,
+		FactorsSixSignalAPIKey:                             *factorsSixsignalAPIKey,
 		DryRunCRMSmartEvent:                                *dryRunSmartEvent,
 		CacheSortedSet:                                     *cacheSortedSet,
 		AllowedCampaignEnrichmentByProjectID:               *allowedCampaignEnrichmentByProjectID,
@@ -212,7 +215,7 @@ func main() {
 		DisableCRMUniquenessConstraintsCheckByProjectID:    *disableCRMUniquenessConstraintsCheckByProjectID,
 		SalesforceBatchInsertBatchSize:                     *insertBatchSize,
 		ClearbitEnabled:                                    *clearbitEnabled,
-		SixSignalEnabled:                                   *sixSignalEnabled,
+		SixSignalV1EnabledProjectIDs:                       *sixsignalV1EnabledProjectIDs,
 		UseSalesforceV54APIByProjectID:                     *useSalesforceV54APIByProjectID,
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
 		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
