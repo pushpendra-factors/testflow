@@ -715,6 +715,16 @@ upload-create-linkedin-group-user: notify-deployment
 pack-g2-enrich-job:
 	docker build -t us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG) -f Dockerfile.g2_enrich_job .
 
+upload-g2-data-pull: export IMAGE_NAME=g2-enrich-job
+upload-g2-data-pull: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG)
+
+pack-plan-population:
+	docker build -t us.gcr.io/factors-$(ENV)/plan-population-job:$(TAG) -f Dockerfile.plan_population_job .
+
+upload-plan-population: export IMAGE_NAME=plan-population-job
+upload-plan-population: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/plan-population-job:$(TAG)
 upload-g2-enrich-job: export IMAGE_NAME=g2-enrich-job
 upload-g2-enrich-job: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG)

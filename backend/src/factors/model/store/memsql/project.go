@@ -299,10 +299,10 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 			return errCode
 		}
 	}
-
-	status, err := store.CreateDefaultFeatureGatesConfigForProject(projectID)
+	// inserting project into free plan by default
+	status, err := store.CreateDefaultProjectPlanMapping(projectID, model.PLAN_ID_FREE)
 	if status != http.StatusCreated {
-		logCtx.Error("Create default feature gates failed on create project dependencies for project ID ", projectID)
+		logCtx.Error("Create default project plan mapping failed on create project dependencies for project ID ", projectID)
 		return errCode
 	}
 

@@ -13,6 +13,10 @@ import (
 	"factors/model/store/memsql"
 	U "factors/util"
 	"fmt"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/rs/xid"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -21,14 +25,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"reflect"
-	"runtime"
-
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	"github.com/rs/xid"
-	log "github.com/sirupsen/logrus"
 )
 
 // scope constants.
@@ -962,39 +958,64 @@ func BlockMaliciousPayload() gin.HandlerFunc {
 }
 
 // Feature gate middleware
-func FeatureMiddleware() gin.HandlerFunc {
+// func FeatureMiddleware() gin.HandlerFunc {
+// 	return func(c *gin.Context) {
+// 		// Get the name of the handler function
+// 		if !C.IsEnabledFeatureGates() {
+// 			c.Next()
+// 			return
+// 		}
+// 		handlerName := runtime.FuncForPC(reflect.ValueOf(c.Handler()).Pointer()).Name()
+// 		projectID := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
+// 		handlerFeatures := GetFeatureMap()
+// 		features, ok := handlerFeatures[handlerName]
+// 		if !ok {
+// 			log.Error("Handler is not mapped to any feature", handlerName)
+// 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Handler is not mapped to any feature" + handlerName})
+// 			return
+// 		}
+
+// 		for _, feature := range features {
+// 			status, err := store.GetStore().GetFeatureStatusForProject(projectID, feature)
+// 			if err != nil {
+// 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get feature status for this project " + feature})
+// 				return
+// 			}
+// 			if isFeatureAvailable(status) {
+// 				c.Next()
+// 				return
+// 			}
+
+// 			// if !isFeatureEnabled(status) {
+// 			// 	c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Feature not enabled for this project "})
+// 			// 	return
+
+// 			// }
+// 		}
+// 		c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Feature not available for this project "})
+// 	}
+// }
+
+// Feature gate middleware new
+func FeatureMiddleware(features []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get the name of the handler function
-		if !C.IsEnabledFeatureGates() {
+		if !C.IsEnabledFeatureGatesV2() {
 			c.Next()
 			return
 		}
-		handlerName := runtime.FuncForPC(reflect.ValueOf(c.Handler()).Pointer()).Name()
 		projectID := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
-		handlerFeatures := GetFeatureMap()
-		features, ok := handlerFeatures[handlerName]
-		if !ok {
-			log.Error("Handler is not mapped to any feature", handlerName)
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Handler is not mapped to any feature" + handlerName})
-			return
-		}
 
 		for _, feature := range features {
-			status, err := store.GetStore().GetFeatureStatusForProject(projectID, feature)
+			status, err := store.GetStore().GetFeatureStatusForProjectV2(projectID, feature)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get feature status for this project " + feature})
 				return
 			}
-			if isFeatureAvailable(status) {
+			if status {
 				c.Next()
 				return
 			}
 
-			// if !isFeatureEnabled(status) {
-			// 	c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Feature not enabled for this project "})
-			// 	return
-
-			// }
 		}
 		c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Feature not available for this project "})
 	}

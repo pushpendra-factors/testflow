@@ -5,6 +5,7 @@ import (
 	C "factors/config"
 	"factors/filestore"
 	"factors/merge"
+	M "factors/model/model"
 	"factors/model/store"
 	"factors/pattern"
 	serviceDisk "factors/services/disk"
@@ -14,14 +15,13 @@ import (
 	"factors/util"
 	"flag"
 	"fmt"
+	"github.com/apache/beam/sdks/go/pkg/beam"
+	_ "github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
-
-	"github.com/apache/beam/sdks/go/pkg/beam"
-	_ "github.com/jinzhu/gorm"
-	log "github.com/sirupsen/logrus"
 )
 
 func registerStructs() {
@@ -268,11 +268,20 @@ func main() {
 
 	// status := taskWrapper.TaskFuncWithProjectId("AccScoreJob", *lookback, projectIdsArray, T.BuildAccScoringDaily, configs)
 	for _, projectId := range projectIdsArray {
-		status, _ := T.BuildAccScoringDaily(projectId, configs)
-		log.Info(status)
-		if status["err"] != nil {
-			C.PingHealthcheckForFailure(healthcheckPingID, status)
+		available, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_ACCOUNT_SCORING)
+		if err != nil {
+			log.WithError(err).Error("Failed to get feature status in account scoring job for project ID ", projectId)
 		}
-		C.PingHealthcheckForSuccess(healthcheckPingID, status)
+		if available {
+
+			status, _ := T.BuildAccScoringDaily(projectId, configs)
+			log.Info(status)
+			if status["err"] != nil {
+				C.PingHealthcheckForFailure(healthcheckPingID, status)
+			}
+			C.PingHealthcheckForSuccess(healthcheckPingID, status)
+		} else {
+			log.Error("Feature Not Available... Skipping account scoring job for project ID ", projectId)
+		}
 	}
 }

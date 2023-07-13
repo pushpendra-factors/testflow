@@ -15,7 +15,14 @@ import (
 )
 
 func BingAdsIntegration(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
-
+	available, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_BING_ADS)
+	if err != nil {
+		log.WithError(err).Error("Failed to get feature status in bing ads integration job for project ID ", projectId)
+	}
+	if !available {
+		log.Error("Feature Not Available... Skipping bing ads integration job for project ID ", projectId)
+		return nil, false
+	}
 	bigQuerySetting := model.BigquerySetting{
 		BigqueryProjectID:       configs["BigqueryProjectId"].(string),
 		BigqueryCredentialsJSON: configs["BigqueryCredential"].(string),

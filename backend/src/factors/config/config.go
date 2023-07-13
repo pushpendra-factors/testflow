@@ -315,6 +315,7 @@ type Configuration struct {
 	UseHubspotEngagementsV3APIByProjectID              string
 	AllowEventAnalyticsGroupsByProjectID               string
 	OtpKeyWithQueryCheckEnabled                        bool
+	EnableFeatureGatesV2                               bool
 	AllowEmailDomainsByProjectID                       string
 	UseHubspotDealsV3APIByProjectID                    string
 	EnableScoringByProjectID                           string
@@ -2785,6 +2786,10 @@ func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
 
 func IsEnabledFeatureGates() bool {
 	return configuration.EnableFeatureGates
+}
+
+func IsEnabledFeatureGatesV2() bool {
+	return configuration.EnableFeatureGatesV2
 }
 
 func EnableSixSignalGroupByProjectID(projectID int64) bool {

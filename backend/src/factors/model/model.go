@@ -230,6 +230,7 @@ type Model interface {
 	RunSixSignalGroupQuery(queriesOriginal []model.SixSignalQuery, projectId int64) (model.SixSignalResultGroup, int)
 	RunSixSignalPageViewQuery(projectId int64, query model.SixSignalQuery) ([]string, int, string)
 	ExecuteSixSignalQuery(projectId int64, query model.SixSignalQuery) (*model.SixSignalQueryResult, int, string)
+	GetSixSignalInfoForProject(projectID int64) (model.SixSignalInfo, error)
 
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
@@ -932,6 +933,9 @@ type Model interface {
 	UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error)
 	GetFeatureStatusForProject(projectID int64, featureName string) (int, error)
 	CreateDefaultFeatureGatesConfigForProject(ProjectID int64) (int, error)
+	GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, error)
+	GetPlanDetailsAndAddonsForProject(projectID int64) (model.FeatureList, model.OverWrite, error)
+	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
 
 	// Property Mapping
 	CreatePropertyMapping(propertyMapping model.PropertyMapping) (*model.PropertyMapping, string, int)
@@ -971,4 +975,21 @@ type Model interface {
 	GetCurrencyDetails(currency string, date int64) ([]model.Currency, error)
 	// UploadFile
 	UploadFilterFile(fileReference string, projectId int64)
+
+	//Billing plan and features
+	GetAllProjectIdsUsingPlanId(id int64) ([]int64, int, string, error)
+	GetPlanDetailsForProject(projectID int64) (model.PlanDetails, error)
+	GetProjectPlanMappingforProject(projectID int64) (model.ProjectPlanMapping, error)
+	UpdateProjectPlanMappingField(projectID int64, planType string) (int,
+		string, error)
+	PopulatePlanDetailsTable(planDetails model.PlanDetails) (int, error)
+	GetFeatureListForProject(projectID int64) (*model.DisplayPlanDetails, int,
+		string, error)
+	UpdatePlanDetailsTable(id int64, features []string, add bool) (int, error)
+	GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, planDetails model.PlanDetails) (
+		*model.DisplayPlanDetails, int, string, error)
+	UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatuers []string) (int, error)
+	UpdateAddonsForProject(projectID int64, addons model.OverWrite) (string, error)
+	CreateAddonsForCustomPlanForProject(projectID int64) error
+	CreateDefaultProjectPlanMapping(projectID int64, planID int) (int, error)
 }

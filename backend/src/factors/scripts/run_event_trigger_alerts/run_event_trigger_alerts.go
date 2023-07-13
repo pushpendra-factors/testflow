@@ -133,6 +133,14 @@ func main() {
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 
 	for _, projectID := range projectIDs {
+		available, err := store.GetStore().GetFeatureStatusForProjectV2(projectID, model.FEATURE_EVENT_BASED_ALERTS)
+		if err != nil {
+			log.WithError(err).Error("Failed to get feature status in event trigger alerts  job for project ID ", projectID)
+		}
+		if !available {
+			log.Error("Feature Not Available... Skipping event trigger alerts job for project ID ", projectID)
+			return
+		}
 
 		blockedAlerts, errMsg, err := store.GetStore().UpdateInternalStatusAndGetAlertIDs(projectID)
 		if err != nil {
