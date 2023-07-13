@@ -6,8 +6,8 @@ import {
 } from 'Components/FaHeader/FaHeader';
 import { isConfigurationUrl } from './appSidebar.helpers';
 import SidebarMenuItem from './SidebarMenuItem';
-import useAgentInfo from 'hooks/useAgentInfo';
 import { WhiteListedAccounts } from 'Routes/constants';
+import { useSelector } from 'react-redux';
 
 const SettingItem = ({ item }) => {
   const location = useLocation();
@@ -32,19 +32,21 @@ const SettingItem = ({ item }) => {
 const SettingsSidebar = () => {
   const location = useLocation();
   const { pathname } = location;
-  const { email } = useAgentInfo();
+
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
 
   const menuList = useMemo(() => {
     if (isConfigurationUrl(pathname)) {
-      return getConfigureMenuItems(email);
+      return getConfigureMenuItems(activeAgent);
     }
     return settingsMenuItems;
-  }, [pathname, email]);
+  }, [pathname, activeAgent]);
 
   return (
     <div className='flex flex-col row-gap-1 px-2'>
       {menuList.map((item) => {
-        if (item?.whitelisted && !WhiteListedAccounts.includes(email)) {
+        if (item?.whitelisted && !WhiteListedAccounts.includes(activeAgent)) {
           return null;
         }
         return <SettingItem item={item} />;
