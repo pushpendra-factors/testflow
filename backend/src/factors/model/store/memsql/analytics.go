@@ -1387,7 +1387,9 @@ func getSelectTimestampByType(timestampType, timezone string) string {
 	}
 
 	var selectStr string
-	if timestampType == model.GroupByTimestampHour {
+	if timestampType == model.GroupByTimestampSecond {
+		selectStr = fmt.Sprintf("date_trunc('second', CONVERT_TZ(FROM_UNIXTIME(timestamp), 'UTC', '%s'))", selectTz)
+	} else if timestampType == model.GroupByTimestampHour {
 		selectStr = fmt.Sprintf("date_trunc('hour', CONVERT_TZ(FROM_UNIXTIME(timestamp), 'UTC', '%s'))", selectTz)
 	} else if timestampType == model.GroupByTimestampWeek {
 		// default week is Monday to Sunday for memsql, updating it to Sunday to Saturday
