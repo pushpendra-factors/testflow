@@ -92,7 +92,8 @@ export const settingsMenuItems = [
   {
     label: 'Build Insights',
     url: PathUrls.SettingsInsights,
-    lineBreak: true
+    lineBreak: true,
+    whitelisted: true
   },
 
   {
@@ -193,14 +194,17 @@ const SettingsMenu = (
         </Text>
       </Link>
     </Menu.Item>
-    {settingsMenuItems.map((item) => {
+    {settingsMenuItems.map((item) => {  
+      if(item?.whitelisted){
+        return null
+      }
       return (
         <>
           <Menu.Item key={item.label} className={styles['dropdown-menu-item']}>
             <Link to={item.url}>
               <Text color='black' level={7} type='title' extraClass='mb-0'>
                 {item.label}
-              </Text>
+              </Text> 
             </Link>
           </Menu.Item>
           {item.lineBreak === true && <hr />}

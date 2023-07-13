@@ -7,6 +7,7 @@ import {
 import { isConfigurationUrl } from './appSidebar.helpers';
 import SidebarMenuItem from './SidebarMenuItem';
 import useAgentInfo from 'hooks/useAgentInfo';
+import { WhiteListedAccounts } from 'Routes/constants';
 
 const SettingItem = ({ item }) => {
   const location = useLocation();
@@ -43,6 +44,9 @@ const SettingsSidebar = () => {
   return (
     <div className='flex flex-col row-gap-1 px-2'>
       {menuList.map((item) => {
+        if (item?.whitelisted && !WhiteListedAccounts.includes(email)) {
+          return null;
+        }
         return <SettingItem item={item} />;
       })}
     </div>

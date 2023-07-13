@@ -515,7 +515,6 @@ export const WhiteListedAccounts = [
   'baliga@factors.ai',
   SolutionsAccountId,
   'sonali@factors.ai',
-  'praveenr@factors.ai',
   'janani@factors.ai',
   'junaid@factors.ai'
 ];
