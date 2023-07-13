@@ -66,6 +66,10 @@ import {
   updateAccountPayloadAction,
   setSegmentModalStateAction
 } from 'Reducers/accountProfilesView/actions';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
+import UpgradeModal from '../UpgradeModal';
+import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { PathUrls } from '../../../routes/pathUrls';
 import _ from 'lodash';
 
@@ -108,6 +112,8 @@ function AccountProfiles({
     }
   });
 
+  const { sixSignalInfo } = useSelector((state) => state.featureConfig);
+
   const [currentPage, setCurrentPage] = useState(1);
 
   const showSegmentModal = useSelector((state) =>
@@ -127,6 +133,10 @@ function AccountProfiles({
 
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
+  const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
+    FEATURES.FEATURE_ENGAGEMENT
+  );
+  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
 
   const setShowSegmentModal = useCallback(
     (value) => {
@@ -351,7 +361,7 @@ function AccountProfiles({
         item.engagement &&
         (item.engagement !== undefined || item.engagement !== '')
     );
-    if (engagementExists) {
+    if (engagementExists && !isEngagementLocked) {
       columns.push({
         title: <div className={headerClassStr}>Engagement</div>,
         width: 150,
@@ -523,6 +533,11 @@ function AccountProfiles({
     setShowPopOver(false);
   };
 
+  const handleDisableOptionClick = () => {
+    setIsUpgradeModalVisible(true);
+    setShowPopOver(false);
+  };
+
   const popoverContent = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
@@ -539,6 +554,9 @@ function AccountProfiles({
           onChange={handlePropChange}
           showApply
           onApply={applyTableProps}
+          showDisabledOption={isEngagementLocked}
+          disabledOptions={['Engagement', 'Engaged Channels']}
+          handleDisableOptionClick={handleDisableOptionClick}
         />
       </Tabs.TabPane>
     </Tabs>
@@ -1021,6 +1039,13 @@ function AccountProfiles({
 
   return (
     <ProfilesWrapper>
+      <div className='mb-4'>
+        <RangeNudge
+          title='Tracked users'
+          amountUsed={sixSignalInfo?.usage || 0}
+          totalLimit={sixSignalInfo?.limit || 0}
+        />
+      </div>
       <Text type='title' level={3} weight='bold' extraClass='mb-0'>
         Account Profiles
       </Text>
@@ -1045,6 +1070,11 @@ function AccountProfiles({
         tableProps={
           currentProjectSettings.timelines_config?.account_config?.table_props
         }
+      />
+      <UpgradeModal
+        visible={isUpgradeModalVisible}
+        variant='account'
+        onCancel={() => setIsUpgradeModalVisible(false)}
       />
     </ProfilesWrapper>
   );

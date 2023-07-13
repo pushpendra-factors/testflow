@@ -1,0 +1,90 @@
+import { Text } from 'Components/factorsComponents';
+import { Button } from 'antd';
+import React from 'react';
+import { Link, useHistory } from 'react-router-dom';
+import style from './index.module.scss';
+import YouTubePlayer from '../YoutubePlayer';
+import { PathUrls } from 'Routes/pathUrls';
+
+const LockedStateComponent = ({
+  title,
+  description,
+  learnMoreLink,
+  upgradeText = 'To use this feature, you should upgrade from your current plan to Professional',
+  upgradeButtonText = 'Upgrade plan',
+  upgradeLink = PathUrls.SettingsPricing,
+  embeddedLink = 'https://www.youtube.com/embed/-mh9GtYEm08'
+}: LockedStateComponentProps) => {
+  const history = useHistory();
+  return (
+    <div className={style.container}>
+      <div
+        className='flex gap-10 items-center justify-start'
+        style={{ height: 315 }}
+      >
+        {/* iframe video */}
+        <div
+          className='w-1/2 h-full'
+          style={{ borderRadius: 15, background: '#f5f5f5' }}
+        >
+          <YouTubePlayer
+            embeddedLink={embeddedLink}
+            title={title}
+            extraClass={style.videoPlayer}
+          />
+        </div>
+        {/* description */}
+        <div className='w-1/2 h-full'>
+          <Text type={'title'} level={3} weight={'bold'}>
+            {title}
+          </Text>
+          <div className='flex items-center flex-wrap gap-1 mt-1'>
+            <Text type={'paragraph'} mini extraClass={'m-0'} color='grey'>
+              {description}
+            </Text>
+            {learnMoreLink && (
+              <Link
+                className='flex items-center font-semibold gap-2'
+                style={{ color: `#1d89ff` }}
+                target='_blank'
+                to={{
+                  pathname: learnMoreLink
+                }}
+              >
+                <Text
+                  type={'paragraph'}
+                  level={7}
+                  weight={'bold'}
+                  color='brand-color-6'
+                >
+                  Learn more
+                </Text>
+              </Link>
+            )}
+          </div>
+          <Text type={'paragraph'} mini color='grey' extraClass={'m-0 mt-2'}>
+            {upgradeText}
+          </Text>
+
+          <div className={style.upgradeButton}>
+            <Button type='primary' onClick={() => history.push(upgradeLink)}>
+              {upgradeButtonText}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+type LockedStateComponentProps = {
+  title: string;
+  description: string;
+  learnMoreLink?: string;
+  upgradeText?: string;
+  upgradeButtonText?: string;
+  upgradeLink?: string;
+  embeddedLink: string;
+};
+
+export default LockedStateComponent;

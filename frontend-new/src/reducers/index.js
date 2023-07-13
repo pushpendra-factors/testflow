@@ -22,6 +22,7 @@ import allRoutes from './allRoutes';
 import onBoardFlow from './onBoardFlow';
 import accountProfilesViewReducer from './accountProfilesView';
 import userProfilesViewReducer from './userProfilesView';
+import FeatureConfigReducer from './featureConfig';
 import { USER_LOGOUT } from './types';
 
 const appReducer = combineReducers({
@@ -47,16 +48,17 @@ const appReducer = combineReducers({
   allRoutes: allRoutes,
   onBoardFlow: onBoardFlow,
   accountProfilesView: accountProfilesViewReducer,
-  userProfilesView: userProfilesViewReducer
+  userProfilesView: userProfilesViewReducer,
+  featureConfig: FeatureConfigReducer
 });
 
 const rootReducer = (state, action) => {
   if (action.type === USER_LOGOUT) {
-      // for all keys defined in your persistConfig(s)
-      localStorage.removeItem('persist:root')
-      // storage.removeItem('persist:otherKey')
+    // for all keys defined in your persistConfig(s)
+    localStorage.removeItem('persist:root');
+    // storage.removeItem('persist:otherKey')
 
-      return appReducer(undefined, action);
+    return appReducer(undefined, action);
   }
   return appReducer(state, action);
 };

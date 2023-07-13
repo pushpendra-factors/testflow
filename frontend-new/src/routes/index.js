@@ -3,17 +3,28 @@ import { Route, Switch, Redirect } from 'react-router-dom';
 import lazyWithRetry from 'Utils/lazyWithRetry';
 import PrivateRoute from 'Components/PrivateRoute';
 import { APP_LAYOUT_ROUTES, APP_ROUTES } from './constants';
-import { featureLock } from './feature';
+import { AdminLock, featureLock } from './feature';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import SetupAssist from 'Views/Settings/SetupAssist';
 import { useDispatch } from 'react-redux';
 import { UPDATE_ALL_ROUTES } from 'Reducers/types';
 import OnBoard from 'Views/Settings/SetupAssist/Welcome/OnboardFlow';
-const PathAnalysis = lazyWithRetry(() => import('../Views/PathAnalysis'));
-const PathAnalysisReport = lazyWithRetry(() =>
-  import('../Views/PathAnalysis/PathAnalysisReport')
-);
+import withFeatureLockHOC from 'HOC/withFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
+import LockedStateComponent from 'Components/GenericComponents/LockedStateVideoComponent';
+import { PathUrls } from './pathUrls';
+import ConfigurePlans from 'Views/Settings/ProjectSettings/ConfigurePlans';
+
 const Attribution = lazyWithRetry(() => import('../features/attribution/ui'));
+const FeatureLockedAttributionComponent = withFeatureLockHOC(Attribution, {
+  featureName: FEATURES.FEATURE_ATTRIBUTION,
+  LockedComponent: () => (
+    <LockedStateComponent
+      title={'Attribution'}
+      description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
+    />
+  )
+});
 
 const renderRoutes = (routesObj) => {
   return Object.keys(routesObj)
@@ -60,14 +71,6 @@ export const AppLayoutRoutes = ({
   currentProjectSettings
 }) => {
   const dispatch = useDispatch();
-  useEffect(() => {
-    if (currentProjectSettings.is_path_analysis_enabled) {
-      let allRoutes = [];
-      allRoutes.push('/path-analysis');
-      allRoutes.push('/path-analysis/insights');
-      dispatch({ type: UPDATE_ALL_ROUTES, payload: allRoutes });
-    }
-  }, [currentProjectSettings.is_path_analysis_enabled]);
 
   useEffect(() => {
     if (featureLock(activeAgent)) {
@@ -89,29 +92,21 @@ export const AppLayoutRoutes = ({
     <Switch>
       {renderRoutes(APP_LAYOUT_ROUTES)}
       {/* Additional Conditional routes  */}
-      
-        <PrivateRoute
-          path={ATTRIBUTION_ROUTES.base}
-          name='attribution'
-          component={Attribution}
-        />
 
-      {currentProjectSettings?.is_path_analysis_enabled && (
-        <>
-          <PrivateRoute
-            path='/path-analysis'
-            name='PathAnalysis'
-            exact
-            component={PathAnalysis}
-          />
-          <PrivateRoute
-            path='/path-analysis/insights'
-            name='PathAnalysisInsights'
-            exact
-            component={PathAnalysisReport}
-          />
-        </>
-      )}
+      <PrivateRoute
+        path={ATTRIBUTION_ROUTES.base}
+        name='attribution'
+        component={FeatureLockedAttributionComponent}
+      />
+
+      {AdminLock(activeAgent) ? (
+        <PrivateRoute
+          path={PathUrls.ConfigurePlans}
+          name='Configure Plans'
+          component={ConfigurePlans}
+        />
+      ) : null}
+
       {!demoProjectId.includes(active_project?.id) ? (
         <PrivateRoute path='/project-setup' component={SetupAssist} />
       ) : (

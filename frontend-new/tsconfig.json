@@ -31,8 +31,9 @@
       "Views/*": ["./src/Views/*"],
       "Attribution/*": ["./src/features/attribution/*"],
       "Context/*": ["./src/contexts/*"],
-      "Constants/*": ["./src/constants"],
-      "Routes/*": ["./src/routes"]
+      "Constants/*": ["./src/constants/*"],
+      "Routes/*": ["./src/routes/*"],
+      "HOC/*": ["./src/HOC/*"]
     }
   },
   "include": ["src/**/*", "declaration"],

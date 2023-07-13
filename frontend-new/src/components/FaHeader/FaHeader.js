@@ -18,41 +18,55 @@ import {
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { useSelector } from 'react-redux';
 import { featureLock } from '../../routes/feature';
+import { SolutionsAccountId } from 'Routes/constants';
 
-export const configureMenuItems = [
-  {
-    label: 'Events',
-    url: PathUrls.ConfigureEvents
-  },
-  {
-    label: 'Properties',
-    url: PathUrls.ConfigureProperties
-  },
-  {
-    label: 'Content Groups',
-    url: PathUrls.ConfigureContentGroups
-  },
-  {
-    label: 'Touchpoints',
-    url: PathUrls.ConfigureTouchPoints
-  },
-  {
-    label: 'Custom KPIs',
-    url: PathUrls.ConfigureCustomKpi
-  },
-  {
-    label: 'Top Events and Properties',
-    url: PathUrls.ConfigureDataPoints
-  },
-  {
-    label: 'Alerts',
-    url: PathUrls.ConfigureAlerts
-  },
-  {
-    label: 'Engagements',
-    url: PathUrls.ConfigureEngagements
+export const getConfigureMenuItems = (email) => {
+  let configureMenuItems = [
+    {
+      label: 'Events',
+      url: PathUrls.ConfigureEvents
+    },
+    {
+      label: 'Properties',
+      url: PathUrls.ConfigureProperties
+    },
+    {
+      label: 'Content Groups',
+      url: PathUrls.ConfigureContentGroups
+    },
+    {
+      label: 'Touchpoints',
+      url: PathUrls.ConfigureTouchPoints
+    },
+    {
+      label: 'Custom KPIs',
+      url: PathUrls.ConfigureCustomKpi
+    },
+    {
+      label: 'Top Events and Properties',
+      url: PathUrls.ConfigureDataPoints
+    },
+    {
+      label: 'Alerts',
+      url: PathUrls.ConfigureAlerts
+    },
+    {
+      label: 'Engagements',
+      url: PathUrls.ConfigureEngagements
+    },
+    {
+      label: 'Attribution',
+      url: PathUrls.ConfigureAttribution
+    }
+  ];
+  if (email === SolutionsAccountId) {
+    configureMenuItems.push({
+      label: 'Plans',
+      url: PathUrls.ConfigurePlans
+    });
   }
-];
+  return configureMenuItems;
+};
 
 export const settingsMenuItems = [
   {
@@ -63,11 +77,6 @@ export const settingsMenuItems = [
   {
     label: 'Users',
     url: PathUrls.SettingsUser,
-    lineBreak: true
-  },
-  {
-    label: 'Attribution',
-    url: PathUrls.SettingsAttribution,
     lineBreak: true
   },
   {
@@ -89,6 +98,12 @@ export const settingsMenuItems = [
   {
     label: 'Sharing',
     url: PathUrls.SettingsSharing,
+    lineBreak: true
+  },
+
+  {
+    label: 'Pricing',
+    url: PathUrls.SettingsPricing,
     lineBreak: false
   }
 ];
@@ -146,7 +161,7 @@ const journeyMenu = (
   </Menu>
 );
 
-const ConfigureMenu = (
+const renderConfigureMenu = (email) => (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item disabled className={styles['dropdown-menu-item']}>
       <Link to={PathUrls.Dashboard}>
@@ -155,7 +170,7 @@ const ConfigureMenu = (
         </Text>
       </Link>
     </Menu.Item>
-    {configureMenuItems.map((item) => {
+    {getConfigureMenuItems(email).map((item) => {
       return (
         <Menu.Item key={item.label} className={styles['dropdown-menu-item']}>
           <Link to={item.url}>
@@ -169,7 +184,7 @@ const ConfigureMenu = (
   </Menu>
 );
 
-const settingsMenu = (
+const SettingsMenu = (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item disabled className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.Dashboard}>
@@ -270,24 +285,23 @@ function FaHeader() {
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
-            
-                <Link
-                  to={ATTRIBUTION_ROUTES.base}
-                  className={cx('flex items-center', {
-                    [styles['active-header-item']]: isAttributionsUrl(pathname)
-                  })}
-                >
-                  <Text
-                    type='title'
-                    color='white'
-                    level={7}
-                    extraClass='mb-0'
-                    weight='medium'
-                  >
-                    Attribution
-                  </Text>
-                </Link>
-            
+
+            <Link
+              to={ATTRIBUTION_ROUTES.base}
+              className={cx('flex items-center', {
+                [styles['active-header-item']]: isAttributionsUrl(pathname)
+              })}
+            >
+              <Text
+                type='title'
+                color='white'
+                level={7}
+                extraClass='mb-0'
+                weight='medium'
+              >
+                Attribution
+              </Text>
+            </Link>
           </div>
         </div>
       </div>
@@ -295,7 +309,10 @@ function FaHeader() {
         <SearchBar />
       </div>
       <div className='flex w-1/3 items-center justify-end col-gap-6 text-white'>
-        <Dropdown overlay={ConfigureMenu} placement='bottomRight'>
+        <Dropdown
+          overlay={renderConfigureMenu(activeAgent)}
+          placement='bottomRight'
+        >
           <div
             className={cx('cursor-pointer', {
               [styles['active-header-item']]: isConfigurationUrl(pathname),
@@ -306,7 +323,7 @@ function FaHeader() {
             <SVG color='#F0F0F0' size={20} name='controls' />
           </div>
         </Dropdown>
-        <Dropdown placement='bottomRight' overlay={settingsMenu}>
+        <Dropdown placement='bottomRight' overlay={SettingsMenu}>
           <div
             className={cx('cursor-pointer', {
               [styles['active-header-item']]: isSettingsUrl(pathname),

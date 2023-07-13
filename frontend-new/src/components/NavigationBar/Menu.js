@@ -10,6 +10,7 @@ import { fetchProjects } from 'Reducers/global';
 import { getActiveDomain } from '@sentry/hub';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { APP_LAYOUT_ROUTES } from 'Routes/constants';
+import { PathUrls } from 'Routes/pathUrls';
 
 const { SubMenu } = Menu;
 
@@ -162,7 +163,7 @@ function SiderMenu({
                 to={
                   item !== 'visitorIdentification'
                     ? `/profiles/${item.toLowerCase()}`
-                    : APP_LAYOUT_ROUTES.VisitorIdentificationReport.path
+                    : PathUrls.VisitorIdentificationReport
                 }
                 onClick={() => setShowPopOverSettings(false)}
               >
@@ -270,18 +271,21 @@ function SiderMenu({
         </Popover>
       ) : (
         <SubMenu key='sub1' icon={setIcon('profile')} title={<b>Profiles</b>}>
-          <Menu.Item className={styles.menuitems_sub} key={`/profiles/people`}>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={PathUrls.ProfilePeople}
+          >
             <b>{MenuItems.People}</b>
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
-            key={`/profiles/accounts`}
+            key={PathUrls.ProfileAccounts}
           >
             {MenuItems.Accounts}
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
-            key={APP_LAYOUT_ROUTES.VisitorIdentificationReport.path}
+            key={PathUrls.VisitorIdentificationReport}
           >
             {MenuItems.visitorIdentification}
           </Menu.Item>
@@ -409,7 +413,7 @@ function SiderMenu({
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
-            key={`/settings/attribution`}
+            key={PathUrls.ConfigureAttribution}
           >
             {MenuItems.Attribution}
           </Menu.Item>

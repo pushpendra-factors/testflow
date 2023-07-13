@@ -54,6 +54,7 @@ import { useHistory } from 'react-router-dom';
 import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
 import { DASHBOARD_KEYS } from './../../../../constants/localStorage.constants';
 import TemplateThumbnailImage from './TemplateThumbnailImage';
+import { PathUrls } from 'Routes/pathUrls';
 
 const CATEGORY_SELECTED_STYLES = {
   background: '#f5f6f8',
@@ -420,7 +421,7 @@ let Step2DashboardTemplateModal = ({
 
       // fetchDashboardItems ();
       if (res) {
-        history.push('/');
+        history.push(PathUrls.Dashboard);
       }
     } catch (err) {
       setCopiedState(1);

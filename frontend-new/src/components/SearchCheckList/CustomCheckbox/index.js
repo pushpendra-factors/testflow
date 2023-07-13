@@ -1,16 +1,18 @@
 import React from 'react';
 import { Checkbox } from 'antd';
-import { Text } from '../../factorsComponents';
+import { SVG, Text } from '../../factorsComponents';
 
 export default function CustomCheckbox({ key, name, checked, onChange }) {
   return (
     <div
       key={key}
-      className='inline-flex gap--4 min-w-full p-2'
+      className='inline-flex justify-between items-center gap--4 min-w-full py-2 px-3 cursor-pointer'
+      onClick={onChange}
+      style={{ background: checked ? '#F5F5F5' : null }}
     >
-      <div className='mr-2'>
+      {/* <div className='mr-2'>
         <Checkbox checked={checked} onChange={onChange} />
-      </div>
+      </div> */}
       <Text
         type='title'
         level={7}
@@ -20,6 +22,14 @@ export default function CustomCheckbox({ key, name, checked, onChange }) {
       >
         {name}
       </Text>
+      {checked && (
+        <SVG
+          name='checkmark'
+          extraClass={'self-center'}
+          size={17}
+          color={'purple'}
+        />
+      )}
     </div>
   );
 }

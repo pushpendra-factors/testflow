@@ -31,6 +31,8 @@ import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
 import { fetchGroups } from 'Reducers/coreQuery/services';
+import UpgradeModal from '../UpgradeModal';
+import { PLANS } from 'Constants/plans.constants';
 import {
   getGroupProperties,
   getEventProperties
@@ -69,12 +71,15 @@ function AccountDetails({
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
   const [timelineViewMode, setTimelineViewMode] = useState('overview');
+  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
   const handleOpenPopoverChange = (value) => {
     setOpenPopover(value);
   };
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
+  const { plan } = useSelector((state) => state.featureConfig);
+  const isFreePlan = plan?.name === PLANS.PLAN_FREE;
 
   useEffect(() => {
     fetchGroups(activeProject?.id, true);
@@ -540,9 +545,44 @@ function AccountDetails({
     />
   );
 
+  const getTimelineUsers = () => {
+    const timelineUsers = accountDetails.data?.account_users || [];
+    if (isFreePlan) {
+      return timelineUsers.filter(
+        (userConfig) => userConfig?.title !== 'group_user'
+      );
+    }
+    return timelineUsers;
+  };
+
   const renderBirdviewWithActions = () => (
     <div className='flex flex-col'>
-      <div className='timeline-actions flex-row-reverse'>
+      <div
+        className={`timeline-actions ${
+          isFreePlan ? 'justify-between' : 'flex-row-reverse'
+        } `}
+      >
+        {isFreePlan && (
+          <div className='flex items-baseline flex-wrap'>
+            <Text
+              type={'paragraph'}
+              mini
+              color='character-primary'
+              extraClass='inline-block'
+            >
+              LinkedIn ads engagement and G2 intent data is not available in
+              free plan. To unlock,
+              <span
+                className='inline-block cursor-pointer ml-1'
+                onClick={() => setIsUpgradeModalVisible(true)}
+              >
+                <Text type={'paragraph'} mini color='brand-color-6'>
+                  {'  '} Upgrade plan
+                </Text>
+              </span>
+            </Text>
+          </div>
+        )}
         <div className='timeline-actions__group'>
           <div className='timeline-actions__group__collapse'>
             <Button
@@ -592,7 +632,7 @@ function AccountDetails({
         timelineEvents={
           activities?.filter((activity) => activity.enabled === true) || []
         }
-        timelineUsers={accountDetails.data?.account_users || []}
+        timelineUsers={getTimelineUsers()}
         collapseAll={collapseAll}
         setCollapseAll={setCollapseAll}
         granularity={granularity}
@@ -646,6 +686,11 @@ function AccountDetails({
         {renderLeftPane()}
         {renderTimelineView()}
       </div>
+      <UpgradeModal
+        visible={isUpgradeModalVisible}
+        variant='timeline'
+        onCancel={() => setIsUpgradeModalVisible(false)}
+      />
     </div>
   );
 }

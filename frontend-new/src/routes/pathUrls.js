@@ -1,5 +1,5 @@
 export const PathUrls = {
-  Dashboard: '/',
+  Dashboard: '/reports',
   ComponentsLib: '/components',
   Analyse: '/analyse/:query_type/:query_id',
   Analyse1: '/analyse/:query_type',
@@ -7,9 +7,10 @@ export const PathUrls = {
   Explain: '/explain',
   ExplainInsightsV2: '/explainV2/insights',
   ProfilePeople: '/profiles/people',
-  ProfileAccounts: '/profiles/accounts',
+  ProfileAccounts: '/',
   VisitorIdentificationReport: '/reports/visitor_report',
   PathAnalysis: '/path-analysis',
+  PathAnalysisInsights: '/path-analysis/insights',
   ConfigureEvents: '/configure/events',
   ConfigureProperties: '/configure/properties',
   ConfigureContentGroups: '/configure/contentgroups',
@@ -17,12 +18,16 @@ export const PathUrls = {
   ConfigureCustomKpi: '/configure/customkpi',
   ConfigureDataPoints: '/configure/explaindp',
   ConfigureAlerts: '/configure/alerts',
-  ConfigureEngagements:'/configure/engagements',
+  ConfigureEngagements: '/configure/engagements',
+  ConfigureAttribution: '/configure/attribution',
+  ConfigurePlans: '/configure/plans',
   SettingsGeneral: '/settings/general',
   SettingsUser: '/settings/user',
   SettingsAttribution: '/settings/attribution',
   SettingsSdk: '/settings/sdk',
   SettingsIntegration: '/settings/integration',
   SettingsSharing: '/settings/sharing',
-  SettingsInsights: '/settings/insights'
+  SettingsInsights: '/settings/insights',
+  SettingsPricing: '/settings/pricing',
+  Upgrade: '/upgrade'
 };

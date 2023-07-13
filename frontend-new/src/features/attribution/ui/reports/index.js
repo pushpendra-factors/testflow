@@ -169,7 +169,7 @@ function Reports({
           <Button
             type='link'
             size='large'
-            onClick={() => history.push(PathUrls.SettingsAttribution)}
+            onClick={() => history.push(PathUrls.ConfigureAttribution)}
           >
             Configuration
           </Button>

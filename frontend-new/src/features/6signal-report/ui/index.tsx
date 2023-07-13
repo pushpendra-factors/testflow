@@ -48,6 +48,8 @@ import {
   visitorReportReducer
 } from './localStateReducer';
 import usePrevious from 'hooks/usePrevious';
+import RangeNudge from 'Components/GenericComponents/RangeNudge';
+import { FeatureConfigState } from 'Reducers/featureConfig/types';
 
 const SixSignalReport = ({
   setShowAnalyticsResult
@@ -65,6 +67,10 @@ const SixSignalReport = ({
     currentProjectSettings,
     currentProjectSettingsLoading
   } = useSelector((state: any) => state.global);
+  const { sixSignalInfo } = useSelector(
+    (state: any) => state.featureConfig
+  ) as FeatureConfigState;
+
   const routerQuery = useQuery();
   const history = useHistory();
   const location = useLocation();
@@ -462,6 +468,14 @@ const SixSignalReport = ({
           showShareButton={showShareButton}
         />
       )}
+
+      <div className='mb-4'>
+        <RangeNudge
+          title='Tracked users'
+          amountUsed={sixSignalInfo?.usage || 0}
+          totalLimit={sixSignalInfo?.limit || 0}
+        />
+      </div>
 
       <div className={cx({ 'px-24 pt-16 mt-12': !isLoggedIn })}>
         <div className='flex justify-between align-middle'>

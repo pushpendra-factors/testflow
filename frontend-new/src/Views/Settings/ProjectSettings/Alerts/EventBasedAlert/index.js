@@ -58,6 +58,9 @@ import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import _ from 'lodash';
 import { fetchGroups } from 'Reducers/coreQuery/services';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
+import UpgradeButton from 'Components/GenericComponents/UpgradeButton';
 
 const { Option } = Select;
 
@@ -135,6 +138,9 @@ const EventBasedAlert = ({
   const [enableWidgetModal, showEnableWidgetModal] = useState(false);
 
   // Webhook support
+  const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
+    FEATURES.FEATURE_WEBHOOK
+  );
   const [webhookUrl, setWebhookUrl] = useState('');
   const [finalWebhookUrl, setFinalWebhookUrl] = useState('');
   const [confirmBtn, setConfirmBtn] = useState(true);
@@ -1537,6 +1543,11 @@ const EventBasedAlert = ({
                         payload to enable this option.
                       </Text>
                     </div>
+                    {isWebHookFeatureLocked && (
+                      <div className='p-2'>
+                        <UpgradeButton />
+                      </div>
+                    )}
                   </div>
                 </Col>
                 <Col className={'m-0 mt-4'}>
@@ -1560,7 +1571,7 @@ const EventBasedAlert = ({
                               groupBy.length &&
                               groupBy[0] &&
                               groupBy[0].property
-                            )
+                            ) || isWebHookFeatureLocked
                           }
                           onChange={(checked) => setWebhookEnabled(checked)}
                           checked={webhookEnabled}
@@ -2475,6 +2486,11 @@ const EventBasedAlert = ({
                         payload to enable this option.
                       </Text>
                     </div>
+                    {isWebHookFeatureLocked && (
+                      <div className='p-2'>
+                        <UpgradeButton />
+                      </div>
+                    )}
                   </div>
                 </Col>
                 <Col className={'m-0 mt-4'}>
