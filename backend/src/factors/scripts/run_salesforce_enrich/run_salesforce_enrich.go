@@ -157,6 +157,7 @@ func main() {
 	removeDisabledEventUserPropertiesByProjectId := flag.String("remove_disabled_event_user_properties",
 		"", "List of projects to disable event user property population in events.")
 	enrichRecordProcessLimit := flag.Int("enrich_record_process_limit", 0, "Limit number of records for enrichment at project level")
+	disableOpportunityContactRolesByProjectID := flag.String("disable_opportunity_contact_roles_by_project_id", "", "")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -230,6 +231,7 @@ func main() {
 		EnableSyncReferenceFieldsByProjectID:               *enableSyncReferenceFieldsByProjectID,
 		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
 		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectId,
+		DisableOpportunityContactRolesByProjectID:          *disableOpportunityContactRolesByProjectID,
 	}
 
 	C.InitConf(config)

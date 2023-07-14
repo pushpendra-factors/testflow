@@ -2,9 +2,11 @@ package memsql
 
 import (
 	"database/sql"
+	"errors"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"net/http"
 	"strings"
 	"time"
 
@@ -435,13 +437,17 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 }
 
 //FetchMarketingReportsV1 returns the marketing report for given projectId and attribution query
-func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.AttributionQueryV1, projectSetting model.ProjectSetting) (*model.MarketingReports, error) {
+func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.AttributionQueryV1) (*model.MarketingReports, error) {
 	logFields := log.Fields{
-		"project_id":      projectID,
-		"q":               q,
-		"project_setting": projectSetting,
+		"project_id": projectID,
+		"q":          q,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return nil, errors.New("failed to get project Settings")
+	}
 
 	enableBingAdsAttribution := C.GetConfig().EnableBingAdsAttribution
 	data := &model.MarketingReports{}
