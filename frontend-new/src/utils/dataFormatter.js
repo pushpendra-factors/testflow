@@ -731,6 +731,6 @@ export const formatDurationIntoString = (seconds) => {
       i++;
       stringLength = returnString.split(' ').length;
     }
-  } else return '0 seconds';
+  } else return 'NA';
   return returnString.trim();
 };

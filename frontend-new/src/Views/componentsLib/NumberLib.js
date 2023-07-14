@@ -2,6 +2,7 @@
 import React from 'react';
 import { Breadcrumb, Row, Col, Divider, Tag } from 'antd';
 import { Number, Text } from 'factorsComponents';
+import CodeBlock from 'Components/CodeBlock';
 
 const CheckBoxLib = () => {
   const NumberList = [
@@ -91,7 +92,10 @@ const CheckBoxLib = () => {
 
       <Row>
         <Col span={20}>
-        <CodeBlock preClassName={'my-4 fa-code-block'} codeClassName={'fa-code-code-block'} codeContent={`import {Number} from 'factorsComponents';
+          <CodeBlock
+            preClassName={'my-4 fa-code-block'}
+            codeClassName={'fa-code-code-block'}
+            codeContent={`import {Number} from 'factorsComponents';
 
 //Props
 <Number 
@@ -100,8 +104,8 @@ const CheckBoxLib = () => {
   suffix={''} //Optional | 'String' e.g: %,#,*
   number={number} //Requried
 />
-`}></CodeBlock>
-      
+`}
+          ></CodeBlock>
         </Col>
       </Row>
 

@@ -245,16 +245,17 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	defaultAutoFormFillsCapture := false
 	defaultDriftIntegrationState := false
 	defaultClearBitIntegrationState := false
+	deafultSixSignalIntegrationState := true
 
 	//default timeline config
 	timelinesConfig := model.TimelinesConfig{
 		DisabledEvents: []string{"Contact Updated", "Campaign Member Updated", "Engagement Meeting Updated", "Engagement Call Updated"}, //Display Names. Used on FE only.
 		UserConfig: model.UserConfig{
-			TableProps:    []string{U.UP_COUNTRY},
+			TableProps:    []string{U.UP_COUNTRY, U.SIX_SIGNAL_DOMAIN, U.SIX_SIGNAL_INDUSTRY, U.SIX_SIGNAL_EMPLOYEE_RANGE, U.SP_SPENT_TIME},
 			LeftpaneProps: []string{U.UP_EMAIL, U.UP_COUNTRY, U.UP_PAGE_COUNT},
 		},
 		AccountConfig: model.AccountConfig{
-			TableProps:    []string{U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS},
+			TableProps:    []string{U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS, U.SIX_SIGNAL_DOMAIN, U.SIX_SIGNAL_INDUSTRY, U.SIX_SIGNAL_EMPLOYEE_RANGE},
 			LeftpaneProps: []string{U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES},
 			UserProp:      U.UP_USER_ID,
 		},
@@ -273,17 +274,18 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		logCtx.WithError(err).Error("Default Filter IPs Encode Failed.")
 	}
 	_, errCode := store.createProjectSetting(&model.ProjectSetting{
-		ProjectId:            projectID,
-		AutoTrack:            &defaultAutoTrackState,
-		AutoFormCapture:      &defaultAutoFormCapture,
-		AutoCaptureFormFills: &defaultAutoFormFillsCapture,
-		ExcludeBot:           &defaultExcludebotState,
-		IntDrift:             &defaultDriftIntegrationState,
-		IntClearBit:          &defaultClearBitIntegrationState,
-		IntegrationBits:      model.DEFAULT_STRING_WITH_ZEROES_32BIT,
-		AutoClickCapture:     &model.AutoClickCaptureDefault,
-		TimelinesConfig:      tlConfigEncoded,
-		FilterIps:            filtersIpsEncoded,
+		ProjectId:              projectID,
+		AutoTrack:              &defaultAutoTrackState,
+		AutoFormCapture:        &defaultAutoFormCapture,
+		AutoCaptureFormFills:   &defaultAutoFormFillsCapture,
+		ExcludeBot:             &defaultExcludebotState,
+		IntDrift:               &defaultDriftIntegrationState,
+		IntClearBit:            &defaultClearBitIntegrationState,
+		IntFactorsSixSignalKey: &deafultSixSignalIntegrationState,
+		IntegrationBits:        model.DEFAULT_STRING_WITH_ZEROES_32BIT,
+		AutoClickCapture:       &model.AutoClickCaptureDefault,
+		TimelinesConfig:        tlConfigEncoded,
+		FilterIps:              filtersIpsEncoded,
 	})
 	if errCode != http.StatusCreated {
 		logCtx.WithField("err_code", errCode).Error("Create project settings failed on create project dependencies.")
@@ -297,10 +299,10 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 			return errCode
 		}
 	}
-
-	status, err := store.CreateDefaultFeatureGatesConfigForProject(projectID)
+	// inserting project into free plan by default
+	status, err := store.CreateDefaultProjectPlanMapping(projectID, model.PLAN_ID_FREE)
 	if status != http.StatusCreated {
-		logCtx.Error("Create default feature gates failed on create project dependencies for project ID ", projectID)
+		logCtx.Error("Create default project plan mapping failed on create project dependencies for project ID ", projectID)
 		return errCode
 	}
 

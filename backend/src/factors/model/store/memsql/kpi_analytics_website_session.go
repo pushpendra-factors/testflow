@@ -40,6 +40,7 @@ func (store *MemSQL) getWebsiteRelatedContentGroupPropertiesForKPI(projectID int
 		currentKPIProperty["display_name"] = contentGroup.ContentGroupName
 		currentKPIProperty["data_type"] = U.PropertyTypeCategorical
 		currentKPIProperty["entity"] = model.EventEntity
+		currentKPIProperty["category"] = "Content Groups"
 		resultantKPIProperties = append(resultantKPIProperties, currentKPIProperty)
 	}
 	return resultantKPIProperties

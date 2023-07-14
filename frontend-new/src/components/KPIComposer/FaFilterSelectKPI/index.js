@@ -24,6 +24,7 @@ const FAFilterSelect = ({
   propOpts = [],
   operatorOpts = defaultOpProps,
   valueOpts = [],
+  valueOptsLoading,
   setValuesByProps,
   applyFilter,
   filter,
@@ -578,6 +579,7 @@ const FAFilterSelect = ({
             }}
             onClickOutside={() => setValuesSelectionOpen(false)}
             allowSearch={true}
+            loadingState={valueOptsLoading}
           />
         );
       } else {
@@ -591,6 +593,7 @@ const FAFilterSelect = ({
             onClickOutside={() => setValuesSelectionOpen(false)}
             allowSearch={true}
             maxAllowedSelection={maxAllowedSelection}
+            loadingState={valueOptsLoading}
           />
         );
       }

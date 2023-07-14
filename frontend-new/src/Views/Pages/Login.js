@@ -60,8 +60,7 @@ function Login(props) {
             .then(() => {
               setDataLoading(false);
               history.push({
-                pathname: '/',
-                state: { navigatedFromLoginPage: true }
+                pathname: '/'
               });
             })
             .catch((err) => {

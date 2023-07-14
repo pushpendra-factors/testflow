@@ -11,7 +11,7 @@ import {
   Tag,
   Space,
   message,
-  notification,
+  notification
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
@@ -24,7 +24,7 @@ function ContentGroups({
   fetchContentGroup,
   deleteContentGroup,
   activeProject,
-  contentGroup,
+  contentGroup
 }) {
   const [showSmartForm, setShowSmartForm] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
@@ -50,7 +50,7 @@ function ContentGroups({
         content_group_name: prop.content_group_name,
         content_group_description: prop.content_group_description,
         rule: prop.rule.length,
-        actions: prop,
+        actions: prop
       });
     });
     setTableData(dataColumn);
@@ -74,19 +74,19 @@ function ContentGroups({
       title: 'Title',
       dataIndex: 'content_group_name',
       key: 'content_group_name',
-      render: (text) => <span className={'font-medium'}>{text}</span>,
+      render: (text) => <span className={'font-medium'}>{text}</span>
     },
     {
       title: 'Description',
       dataIndex: 'content_group_description',
       key: 'content_group_description',
-      render: (text) => <span className={'text-gray-700'}>{text}</span>,
+      render: (text) => <span className={'text-gray-700'}>{text}</span>
     },
     {
       title: 'Values',
       dataIndex: 'rule',
       key: 'rule',
-      render: (text) => <span className={'ml-3 text-gray-700'}>{text}</span>,
+      render: (text) => <span className={'ml-3 text-gray-700'}>{text}</span>
     },
     {
       title: '',
@@ -105,8 +105,8 @@ function ContentGroups({
             }
           />
         </Dropdown>
-      ),
-    },
+      )
+    }
   ];
 
   const editProp = (obj) => {
@@ -121,14 +121,14 @@ function ContentGroups({
         notification.success({
           message: 'Success',
           description: 'Deleted content group successfully ',
-          duration: 5,
+          duration: 5
         });
       },
       (err) => {
         notification.error({
           message: 'Error',
           description: err.data,
-          duration: 5,
+          duration: 5
         });
       }
     );
@@ -187,7 +187,9 @@ function ContentGroups({
                         color={'grey-2'}
                         extraClass={'m-0'}
                       >
-                        A content group refers to a collection of logically related URLs that are a part of your overall website’s content. This could be a collection of blog articles written with a specific intent — say 'how tos'.
+                        Create logical collections of related URLs, such as blog
+                        articles or product pages, to analyze their impact on
+                        leads, revenue, and pipeline stages.
                       </Text>
                       <Text
                         type={'title'}
@@ -195,15 +197,12 @@ function ContentGroups({
                         color={'grey-2'}
                         extraClass={'m-0 mt-4'}
                       >
-                        By defining a content group to identify all such pages on your site, you can analyse common traits across this content group at one go. You can define <span className='font-bold'>upto 3</span> content groups. <a href='https://help.factors.ai/en/articles/6280971-content-groups' target={'_blank'}>Learn more</a>
-                      </Text>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        color={'grey-2'}
-                        extraClass={'m-0 mt-4'}
-                      >
-                        Currently, content groups can be used to drill down the factors default event <span className='font-bold'>'Website Session'</span>
+                        Compare the performance of different content groups,
+                        identify optimization opportunities, and enhance your
+                        content marketing efforts to drive better results.{' '}
+                        <a href='https://help.factors.ai/en/articles/7284125-content-groups'>
+                          Learn more
+                        </a>
                       </Text>
 
                       <Table
@@ -251,10 +250,10 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   contentGroup: state.global.contentGroup,
   agents: state.agent.agents,
-  currentAgent: state.agent.agent_details,
+  currentAgent: state.agent.agent_details
 });
 
 export default connect(mapStateToProps, {
   fetchContentGroup,
-  deleteContentGroup,
+  deleteContentGroup
 })(ContentGroups);

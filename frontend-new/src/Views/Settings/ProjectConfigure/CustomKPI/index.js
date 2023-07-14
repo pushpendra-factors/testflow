@@ -835,9 +835,9 @@ function CustomKPI({
                         color='grey-2'
                         extraClass='m-0'
                       >
-                        Have a specific KPI that you measure based on the values
-                        of a CRM object's fields? Say no more — it's easy to set
-                        this up, so you can measure them over time.
+                        Create personalized metrics tailored to your specific
+                        objectives, whether it's conversion rates, engagement
+                        metrics, or revenue targets.
                       </Text>
                       <Text
                         type='title'
@@ -845,9 +845,12 @@ function CustomKPI({
                         color='grey-2'
                         extraClass='m-0 mt-2'
                       >
-                        All it takes is filtering for the CRM objects, adding
-                        your custom conditions over it, and you should be good
-                        to go!
+                        Monitor progress, measure success, and gain actionable
+                        insights to drive continuous improvement and achieve
+                        your business milestones.{' '}
+                        <a href='https://help.factors.ai/en/articles/7284181-custom-kpis'>
+                          Learn more
+                        </a>
                       </Text>
 
                       <Table
@@ -1214,66 +1217,66 @@ function CustomKPI({
                         </Text>
                       </Col>
                     </Row>
-                    <div style={{minHeight: "500px"}}>
-                    <div className='mt-4 border rounded-lg'>
-                      <Row className='m-0 ml-4 my-2'>
-                        <Col span={18}>
-                          <Form.Item name='query_type' className='m-0'>
-                            {queryList()}
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                      <Row className='m-0'>
-                        <Col span={24}>
-                          <div className='border-top--thin-2 pt-3 mt-3' />
-                        </Col>
-                      </Row>
-                      <Row className='m-0 ml-4 my-3'>
-                        <Col>
-                          <Text
-                            type='title'
-                            level={7}
-                            color='grey-2'
-                            extraClass='m-0 pt-2 mr-3'
-                          >
-                            Formula:
-                          </Text>
-                        </Col>
-                        <Col span={14}>
-                          <Form.Item
-                            name='for'
-                            rules={[
-                              {
-                                required: true,
-                                message: 'Please enter formula'
-                              }
-                            ]}
-                          >
-                            <Input
-                              // disabled={loading}
-                              size='large'
-                              // className={'fa-input w-full'}
-                              placeholder='please type the formula. Eg A/B, A+B, A-B, A*B'
-                              bordered={false}
-                            />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                      <Row className='m-0 ml-4 -mt-2 mb-3'>
-                        <Col span={14}>
-                          <Form.Item name='showAspercentage'>
-                            <Checkbox
-                              defaultChecked={showAsPercentage}
-                              onChange={(e) =>
-                                setShowAsPercentage(e.target.checked)
-                              }
+                    <div style={{ minHeight: '500px' }}>
+                      <div className='mt-4 border rounded-lg'>
+                        <Row className='m-0 ml-4 my-2'>
+                          <Col span={18}>
+                            <Form.Item name='query_type' className='m-0'>
+                              {queryList()}
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                        <Row className='m-0'>
+                          <Col span={24}>
+                            <div className='border-top--thin-2 pt-3 mt-3' />
+                          </Col>
+                        </Row>
+                        <Row className='m-0 ml-4 my-3'>
+                          <Col>
+                            <Text
+                              type='title'
+                              level={7}
+                              color='grey-2'
+                              extraClass='m-0 pt-2 mr-3'
                             >
-                              Show as percentage
-                            </Checkbox>
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                    </div>
+                              Formula:
+                            </Text>
+                          </Col>
+                          <Col span={14}>
+                            <Form.Item
+                              name='for'
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please enter formula'
+                                }
+                              ]}
+                            >
+                              <Input
+                                // disabled={loading}
+                                size='large'
+                                // className={'fa-input w-full'}
+                                placeholder='please type the formula. Eg A/B, A+B, A-B, A*B'
+                                bordered={false}
+                              />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                        <Row className='m-0 ml-4 -mt-2 mb-3'>
+                          <Col span={14}>
+                            <Form.Item name='showAspercentage'>
+                              <Checkbox
+                                defaultChecked={showAsPercentage}
+                                onChange={(e) =>
+                                  setShowAsPercentage(e.target.checked)
+                                }
+                              >
+                                Show as percentage
+                              </Checkbox>
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                      </div>
                     </div>
                   </>
                 ) : (

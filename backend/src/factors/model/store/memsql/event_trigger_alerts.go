@@ -128,10 +128,20 @@ func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []mode
 				deliveryOption += "& Teams"
 			}
 		}
+
+		internalStatus := ""
+		if obj.InternalStatus == model.Active || obj.InternalStatus == model.Paused {
+			internalStatus = model.Active
+		} else if obj.InternalStatus == model.Disabled {
+			internalStatus = model.Paused
+		}
+
 		e := model.EventTriggerAlertInfo{
 			ID:                obj.ID,
 			Title:             obj.Title,
 			DeliveryOptions:   deliveryOption,
+			LastFailDetails:   obj.LastFailDetails,
+			Status:            internalStatus,
 			EventTriggerAlert: &alert,
 		}
 		res = append(res, e)
@@ -252,6 +262,11 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	return &alert, http.StatusCreated, ""
 }
 
+func isEmptyPostgresJsonb(json *postgres.Jsonb) bool {
+	j := string(json.RawMessage)
+	return j == "" || j == "null" || j == "[]"
+}
+
 func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID string, alert *model.EventTriggerAlertConfig) (bool, int, string) {
 
 	if alert.Title == "" {
@@ -259,6 +274,9 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 	}
 	if alert.Event == "" {
 		return false, http.StatusBadRequest, "event can not be empty"
+	}
+	if alert.DontRepeatAlerts && (alert.BreakdownProperties == nil || isEmptyPostgresJsonb(alert.BreakdownProperties)) {
+		return false, http.StatusBadRequest, "breakdown property not selected"
 	}
 	if !alert.Slack && !alert.Webhook && !alert.Teams {
 		return false, http.StatusBadRequest, "Choose atleast one delivery option"

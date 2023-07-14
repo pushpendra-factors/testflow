@@ -6,10 +6,13 @@ import _, { isEmpty } from 'lodash';
 import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useHistory } from 'react-router-dom';
-import { fetchSavedPathAnalysis, removeSavedQuery, fetchPathAnalysisInsights } from 'Reducers/pathAnalysis';
+import {
+  fetchSavedPathAnalysis,
+  removeSavedQuery,
+  fetchPathAnalysisInsights
+} from 'Reducers/pathAnalysis';
 import PathAnalysisReport from './PathAnalysisReport';
-import PathAnalysisLP from './landingPage'
-
+import PathAnalysisLP from './landingPage';
 
 const Factors = ({
   activeProject,
@@ -24,19 +27,15 @@ const Factors = ({
   const [durationObj, setDurationObj] = useState();
 
   useEffect(() => {
-    if (!currentProjectSettings?.is_path_analysis_enabled) {
-      history.push('/')
-    }
-
     fetchSavedPathAnalysis(activeProject?.id).then(() => {
       setLoading(false);
-    })
+    });
   }, [activeProject]);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center w-full h-64">
-        <Spin size="large" />
+      <div className='flex justify-center items-center w-full h-64'>
+        <Spin size='large' />
       </div>
     );
   }
@@ -56,12 +55,13 @@ const Factors = ({
       >
         {fetchingIngishts ? (
           <Spin size={'large'} className={'fa-page-loader'} />
-        ) : (<>
-          <PathAnalysisLP
-            SetfetchingIngishts={SetfetchingIngishts}
-            setShowReport={setShowReport}
-          />
-        </>
+        ) : (
+          <>
+            <PathAnalysisLP
+              SetfetchingIngishts={SetfetchingIngishts}
+              setShowReport={setShowReport}
+            />
+          </>
         )}
       </ErrorBoundary>
     </>

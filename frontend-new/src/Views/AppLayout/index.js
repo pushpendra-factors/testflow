@@ -44,7 +44,7 @@ import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import './index.css';
 import _ from 'lodash';
 import logger from 'Utils/logger';
-import { useHistory, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import GlobalSearchModal from './GlobalSearchModal';
 import { APP_LAYOUT_ROUTES } from '../../routes/constants';
 import AppSidebar from '../AppSidebar';
@@ -52,6 +52,7 @@ import styles from './index.module.scss';
 import { routesWithSidebar } from './appLayout.constants';
 import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
 import { fetchProjectAgents } from 'Reducers/agentActions';
+import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
 import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
 import { PathUrls } from '../../routes/pathUrls';
 
@@ -88,7 +89,6 @@ function AppLayout({
   const dispatch = useDispatch();
   const location = useLocation();
   const { pathname } = location;
-  const history = useHistory();
 
   const activeAgent = agentState?.agent_details?.email;
 
@@ -147,14 +147,14 @@ function AppLayout({
   const handleRedirection = async () => {
     try {
       if (active_project && active_project?.id && isAgentLoggedIn) {
-        const res = await fetchProjectSettings(active_project?.id);
-        if (
-          location?.state?.navigatedFromLoginPage &&
-          (res?.data?.int_factors_six_signal_key ||
-            res?.data?.int_client_six_signal_key)
-        ) {
-          history.push(APP_LAYOUT_ROUTES.VisitorIdentificationReport.path);
-        }
+        await fetchProjectSettings(active_project?.id);
+        // if (
+        //   location?.state?.navigatedFromLoginPage &&
+        //   (res?.data?.int_factors_six_signal_key ||
+        //     res?.data?.int_client_six_signal_key)
+        // ) {
+        //   history.push(APP_LAYOUT_ROUTES.VisitorIdentificationReport.path);
+        // }
       }
       setDataLoading(false);
     } catch (error) {
@@ -183,6 +183,7 @@ function AppLayout({
       dispatch(fetchEventDisplayNames({ projectId: active_project?.id }));
       dispatch(fetchAttributionQueries(active_project?.id));
       dispatch(fetchProjectAgents(active_project.id));
+      dispatch(fetchFeatureConfig(active_project?.id));
     }
   }, [dispatch, active_project]);
 

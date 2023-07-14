@@ -14,43 +14,44 @@ export ENV
 export CHANNEL_TOKEN
 
 build-api:
-	rm $(GOPATH)/bin/app; go build -o $(GOPATH)/bin/app $(GOPATH)/src/factors/app/app.go
+	cd ./factors; rm ./../../bin/app; go build -o ./../../bin/app  ./app/app.go
 
+# Failed
 serve-api:
-	$(GOPATH)/bin/app
+	./../bin/app
 
 serve-api-memsql:
-	$(GOPATH)/bin/app --primary_datastore=memsql
+	./../bin/app --primary_datastore=memsql
 
 build-ps:
-	go build -o $(GOPATH)/bin/pattern-app $(GOPATH)/src/factors/pattern_server/cmd/pattern-app.go
+	cd ./factors; go build -o ./../../bin/pattern-app ./pattern_server/cmd/pattern-app.go
 
 serve-ps:
-	$(GOPATH)/bin/pattern-app
+	./../bin/pattern-app
 
 build-ds:
-	rm $(GOPATH)/bin/data-service; go build -o $(GOPATH)/bin/data-service $(GOPATH)/src/factors/data_service/data-service.go
+	cd ./factors; rm ./../../bin/data-service; go build -o ./../../bin/data-service ./data_service/data-service.go
 
 serve-ds:
-	$(GOPATH)/bin/data-service
+	./../bin/data-service
 
 build-sdk:
-	rm $(GOPATH)/bin/sdk-service; go build -o $(GOPATH)/bin/sdk-service $(GOPATH)/src/factors/sdk/service/service.go
+	cd ./factors; rm ./../../bin/sdk-service; go build -o ./../../bin/sdk-service ./sdk/service/service.go
 
 serve-sdk:
-	$(GOPATH)/bin/sdk-service
+	./../bin/sdk-service
 
 serve-redis:
-	redis-server $(GOPATH)/src/redis.conf
+	redis-server ./../src/redis.conf
 
 serve-predis:
-	redis-server $(GOPATH)/src/persistent_redis.conf
+	redis-server ./../src/persistent_redis.conf
 
 serve-qredis:
-	redis-server $(GOPATH)/src/queue_redis.conf
+	redis-server ./../src/queue_redis.conf
 
 clean:
-	rm $(GOPATH)/bin/pattern-app $(GOPATH)/bin/app $(GOPATH)/bin/data-service
+	cd ./factors; rm ./../../bin/pattern-app ./../../bin/app ./../../bin/data-service
 
 pack-api:
 	docker build -t us.gcr.io/factors-$(ENV)/app-server:$(TAG) -f Dockerfile.appserver .
@@ -147,6 +148,14 @@ pack-acc-scoring:
 upload-acc-scoring: export IMAGE_NAME=acc-scoring
 upload-acc-scoring: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/acc-scoring:$(TAG)
+
+
+pack-custom-beam:
+	docker build -t us.gcr.io/factors-$(ENV)/custom-beam:$(TAG) -f Dockerfile.custom_beam .
+
+upload-custom-beam: export IMAGE_NAME=custom-beam
+upload-custom-beam: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/custom-beam:$(TAG)
 
 pack-add-session:
 	docker build -t us.gcr.io/factors-$(ENV)/add-session-job:$(TAG) -f Dockerfile.add_session_job .
@@ -507,16 +516,16 @@ upload-memsql-hubspot-sync-fields:
 	docker push us.gcr.io/factors-$(ENV)/fix-memsql-hubspot-sync-fields:$(TAG)
 
 notify-deployment:
-	TAG=$(TAG) $(GOPATH)/src/factors/scripts/notify_deployment.sh
+	TAG=$(TAG) ./factors/scripts/notify_deployment.sh
 
 build-api-doc:
-	cd $(GOPATH)/src/factors;../../bin/swag init -g app/app.go
+	cd ./factors; ../../bin/swag init -g app/app.go
 
 go-fmt:
-	cd $(GOPATH)/src/factors;gofmt -s -w -l model handler scripts tests util sdk pattern pattern_client pattern_server data_service config
+	cd ./factors; gofmt -s -w -l model handler scripts tests util sdk pattern pattern_client pattern_server data_service config
 
 test:
-	go test -failfast -v $(GOPATH)/src/factors/tests && go test -failfast -v $(GOPATH)/src/factors/pattern_server/store
+	cd ./factors; go test -failfast -v ./tests && go test -failfast -v ./pattern_server/store
 
 pack-weekly-insights:
 	docker build -t us.gcr.io/factors-$(ENV)/weekly-insights-job:$(TAG) -f Dockerfile.weekly_insights_job .
@@ -706,6 +715,16 @@ upload-create-linkedin-group-user: notify-deployment
 pack-g2-enrich-job:
 	docker build -t us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG) -f Dockerfile.g2_enrich_job .
 
+upload-g2-data-pull: export IMAGE_NAME=g2-enrich-job
+upload-g2-data-pull: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG)
+
+pack-plan-population:
+	docker build -t us.gcr.io/factors-$(ENV)/plan-population-job:$(TAG) -f Dockerfile.plan_population_job .
+
+upload-plan-population: export IMAGE_NAME=plan-population-job
+upload-plan-population: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/plan-population-job:$(TAG)
 upload-g2-enrich-job: export IMAGE_NAME=g2-enrich-job
 upload-g2-enrich-job: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG)

@@ -63,6 +63,7 @@ const (
 	PropertyEntityEvent      = "event"
 	PropertyEntityUserGlobal = "user_g"
 	PropertyEntityGroup      = "group"
+	PropertyEntityUserGroup  = "user_group"
 )
 
 const PropertyValueNone = "$none"
@@ -1025,6 +1026,8 @@ func GetPropertyEntityFieldForFilter(entityName string) string {
 		return "events.properties"
 	case PropertyEntityUserGlobal:
 		return "users.properties"
+	case PropertyEntityUserGroup:
+		return "user_global_user_properties"
 	}
 
 	return ""

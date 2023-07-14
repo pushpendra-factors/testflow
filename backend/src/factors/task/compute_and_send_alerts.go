@@ -5,10 +5,11 @@ import (
 	"errors"
 	C "factors/config"
 	H "factors/handler/helpers"
-	slack "factors/integration/slack"
 	teams "factors/integration/ms_teams"
+	slack "factors/integration/slack"
 	"factors/model/model"
 	"factors/model/store"
+	qc "factors/quickchart"
 	U "factors/util"
 	"fmt"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -19,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	qc "factors/quickchart"
 )
 
 type Message struct {
@@ -51,6 +51,14 @@ const (
 )
 
 func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
+	available, err := store.GetStore().GetFeatureStatusForProjectV2(projectID, model.FEATURE_KPI_ALERTS)
+	if err != nil {
+		log.WithError(err).Error("Failed to get feature status in compute and send alerts  job for project ID ", projectID)
+	}
+	if !available {
+		log.Error("Feature Not Available... Skipping account compute and send alerts job for project ID ", projectID)
+		return nil, false
+	}
 	allAlerts, errCode := store.GetStore().GetAllAlerts(projectID, true)
 	if errCode != http.StatusFound {
 		log.Fatalf("Failed to get all alerts for project_id: %v", projectID)
@@ -586,7 +594,7 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 	// added next line to support double quotes(") and backslash(\) in slack templates
 	// MUST NOT be done for slackBlocks variable
 	alertName := strings.ReplaceAll(strings.ReplaceAll(msg.AlertName, "\\", "\\\\"), "\"", "\\\"")
-	
+
 	slackMsg = fmt.Sprintf(`
 				[
 					{

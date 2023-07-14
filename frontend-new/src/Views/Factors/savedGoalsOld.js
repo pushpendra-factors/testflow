@@ -99,7 +99,7 @@ const SavedGoals = ({ goals, fetchGoalInsights, factors_models, agents, saveGoal
         if (goal.is_active) {
           agents.map((agent) => {
             if (agent.uuid === goal.created_by) {
-              createdUser = `${agent.first_name} ${agent.last_name}`;
+              createdUser = `${agent?.first_name} ${agent?.last_name}`;
             }
           });
           formattedArray.push({

@@ -4,6 +4,7 @@ import { Button } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import { ABOUT_ATTRIBUTION_LINK } from 'Attribution/utils/constants';
+import { PathUrls } from 'Routes/pathUrls';
 
 function AttributionSetupPending() {
   const history = useHistory();
@@ -31,15 +32,14 @@ function AttributionSetupPending() {
           color='grey'
           extraClass='m-0 text-justify'
         >
-          In order to set up conversion
-          goals for attribution and attribution window, click on the "Setup now"
-          button below.
+          In order to set up conversion goals for attribution and attribution
+          window, click on the "Setup now" button below.
         </Text>
         <div className='flex gap-8'>
           <Button
             type='primary'
             size='large'
-            onClick={() => history.push('/settings/attribution')}
+            onClick={() => history.push(PathUrls.ConfigureAttribution)}
           >
             Setup Now
           </Button>

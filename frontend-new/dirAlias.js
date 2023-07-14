@@ -16,7 +16,8 @@ module.exports = {
     Attribution: path.resolve(__dirname, './src/features/attribution'),
     Context: path.resolve(__dirname, './src/contexts'),
     Constants: path.resolve(__dirname, './src/constants'),
-    Routes: path.resolve(__dirname, './src/routes')
+    Routes: path.resolve(__dirname, './src/routes'),
+    HOC: path.resolve(__dirname, './src/HOC')
   },
   eslintDirAlias: {
     map: [
@@ -31,7 +32,8 @@ module.exports = {
       ['Attribution', './src/features/attribution'],
       ['Context', './src/contexts'],
       ['Constants', './src/constants'],
-      ['Routes', './src/routes']
+      ['Routes', './src/routes'],
+      ['HOC', './src/HOC']
     ],
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
   },
@@ -47,6 +49,7 @@ module.exports = {
     '^Attribution(.*)$': '<rootDir>/src/features/attribution$1',
     '^Context(.*)$': '<rootDir>/src/contexts$1',
     '^Constants(.*)$': '<rootDir>/src/Constants$1',
-    '^Routes(.*)$': '<rootDir>/src/routes$1'
+    '^Routes(.*)$': '<rootDir>/src/routes$1',
+    '^HOC(.*)$': '<rootDir>/src/HOC$1'
   }
 };

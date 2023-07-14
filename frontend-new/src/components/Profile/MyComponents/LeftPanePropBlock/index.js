@@ -15,7 +15,7 @@ function LeftPanePropBlock({ property, type, displayName, value, onDelete }) {
           charLimit={30}
           extraClass='m-0'
         >
-          {`${displayName}:`}
+          {`${displayName}`}
         </Text>
         <Text type='title' level={7} truncate charLimit={25} extraClass='m-0'>
           {value ? propValueFormat(property, value, type) : '-'}

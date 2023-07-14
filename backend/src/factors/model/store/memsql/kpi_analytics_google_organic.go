@@ -23,7 +23,7 @@ func (store *MemSQL) GetKPIConfigsForGoogleOrganic(projectID int64, reqID string
 	}
 	config := model.KpiGoogleOrganicConfig
 	organicObjectsAndProperties := store.buildObjectAndPropertiesForGoogleOrganic(model.ObjectsForGoogleOrganic)
-	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(organicObjectsAndProperties)
+	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(organicObjectsAndProperties, "Google Organic")
 
 	rMetrics := model.GetKPIMetricsForGoogleOrganic()
 	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.GoogleOrganicDisplayCategory, includeDerivedKPIs)...)

@@ -230,6 +230,7 @@ type Model interface {
 	RunSixSignalGroupQuery(queriesOriginal []model.SixSignalQuery, projectId int64) (model.SixSignalResultGroup, int)
 	RunSixSignalPageViewQuery(projectId int64, query model.SixSignalQuery) ([]string, int, string)
 	ExecuteSixSignalQuery(projectId int64, query model.SixSignalQuery) (*model.SixSignalQueryResult, int, string)
+	GetSixSignalInfoForProject(projectID int64) (model.SixSignalInfo, error)
 
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
@@ -853,10 +854,12 @@ type Model interface {
 	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)
 	GetAccountsAssociatedToDomain(projectID int64, id string, domainGroupId int) ([]model.User, int)
-	GetSourceStringForAccountsV2(projectID int64, source string) (string, int, int)
-	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (string, map[string]interface{}, int)
-	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, int)
+	GetSourceStringForAccountsV2(projectID int64, source string) (string, int, []interface{}, int)
+	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (map[string]interface{}, bool, int)
+	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
 	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
+	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, error)
+	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
@@ -930,6 +933,9 @@ type Model interface {
 	UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error)
 	GetFeatureStatusForProject(projectID int64, featureName string) (int, error)
 	CreateDefaultFeatureGatesConfigForProject(ProjectID int64) (int, error)
+	GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, error)
+	GetPlanDetailsAndAddonsForProject(projectID int64) (model.FeatureList, model.OverWrite, error)
+	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
 
 	// Property Mapping
 	CreatePropertyMapping(propertyMapping model.PropertyMapping) (*model.PropertyMapping, string, int)
@@ -942,8 +948,8 @@ type Model interface {
 
 	//account scoring
 	GetWeightsByProject(project_id int64) (*model.AccWeights, int)
-	UpdateUserEventsCount(ev []model.EventsCountScore) error
-	UpdateGroupEventsCount(ev []model.EventsCountScore) error
+	UpdateUserEventsCount(ev []model.EventsCountScore, lastev map[string]model.LatestScore) error
+	UpdateGroupEventsCount(ev []model.EventsCountScore, lastev map[string]model.LatestScore) error
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, *model.AccWeights, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
 	GetAllUserScore(project_id int64, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
@@ -951,6 +957,8 @@ type Model interface {
 	GetAllUserScoreLatest(project_id int64, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
 	GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 	GetAccountScoreOnIds(projectId int64, accountIds []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
+	GetPerAccountScore(projectId int64, timestamp string, userId string, num_days int, debug bool) (model.PerAccountScore, *model.AccWeights, error)
+	GetAllUserEvents(projectId int64, debug bool) (map[string]map[string]model.LatestScore, error)
 
 	// Slack
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
@@ -967,4 +975,21 @@ type Model interface {
 	GetCurrencyDetails(currency string, date int64) ([]model.Currency, error)
 	// UploadFile
 	UploadFilterFile(fileReference string, projectId int64)
+
+	//Billing plan and features
+	GetAllProjectIdsUsingPlanId(id int64) ([]int64, int, string, error)
+	GetPlanDetailsForProject(projectID int64) (model.PlanDetails, error)
+	GetProjectPlanMappingforProject(projectID int64) (model.ProjectPlanMapping, error)
+	UpdateProjectPlanMappingField(projectID int64, planType string) (int,
+		string, error)
+	PopulatePlanDetailsTable(planDetails model.PlanDetails) (int, error)
+	GetFeatureListForProject(projectID int64) (*model.DisplayPlanDetails, int,
+		string, error)
+	UpdatePlanDetailsTable(id int64, features []string, add bool) (int, error)
+	GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, planDetails model.PlanDetails) (
+		*model.DisplayPlanDetails, int, string, error)
+	UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatuers []string) (int, error)
+	UpdateAddonsForProject(projectID int64, addons model.OverWrite) (string, error)
+	CreateAddonsForCustomPlanForProject(projectID int64) error
+	CreateDefaultProjectPlanMapping(projectID int64, planID int) (int, error)
 }

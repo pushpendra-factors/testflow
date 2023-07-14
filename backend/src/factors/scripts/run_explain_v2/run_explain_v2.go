@@ -5,6 +5,7 @@ import (
 	C "factors/config"
 	"factors/filestore"
 	"factors/merge"
+	"factors/model/model"
 	"factors/model/store"
 	"factors/pattern"
 	serviceDisk "factors/services/disk"
@@ -14,13 +15,12 @@ import (
 	"factors/util"
 	"flag"
 	"fmt"
-	"net/http"
-	"reflect"
-	"strings"
-
 	"github.com/apache/beam/sdks/go/pkg/beam"
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"reflect"
+	"strings"
 )
 
 func registerStructs() {
@@ -303,6 +303,14 @@ func main() {
 	var result bool
 	finalStatus := make(map[string]interface{})
 	for _, projectId := range projectIdsArray {
+		available, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_EXPLAIN)
+		if err != nil {
+			log.WithError(err).Error("Failed to get feature status in explain v2  job for project ID ", projectId)
+		}
+		if !available {
+			log.Error("Feature Not Available... Skipping explain v2 job for project ID ", projectId)
+			return
+		}
 		status := make(map[string]interface{})
 		status, result := T.BuildSequentialV2(projectId, configs)
 		if result == false {

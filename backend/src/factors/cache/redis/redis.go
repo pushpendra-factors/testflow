@@ -661,6 +661,48 @@ func pfAdd(cacheKey *Key, value string, expiryInSeconds float64, persistent bool
 	return false, nil
 }
 
+// PFCountPersistent - Returns the cardinalilty of the data present in HyperlogLog redis data structure
+func PFCountPersistent(key *Key) (interface{}, error) {
+	return pfCount(key, true, false)
+}
+
+func pfCount(key *Key, persistent bool, queue bool) (interface{}, error) {
+	if key == nil {
+		return -1, ErrorInvalidKey
+	}
+
+	cKey, err := key.Key()
+	if err != nil {
+		return -1, err
+	}
+
+	var redisConn redis.Conn
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	ifExists, err := redisConn.Do("EXISTS", cKey)
+	if err != nil {
+		return 0, nil
+	}
+
+	if ifExists.(int64) != 1 {
+		return 0, nil
+	}
+
+	count, err := redisConn.Do("PFCOUNT", cKey)
+	if err != nil {
+		return -1, err
+	}
+
+	return count, nil
+}
+
 func Scan(pattern string, perScanCount int64, limit int64) ([]*Key, error) {
 	return scan(pattern, perScanCount, limit, false, false)
 }

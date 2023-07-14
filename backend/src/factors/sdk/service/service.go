@@ -46,6 +46,8 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
+	factorsSixsignalAPIKey := flag.String("factors_sixsignal_api_key", "dummy", "")
+
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
 	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
 	useQueueRedis := flag.Bool("use_queue_redis", false, "Use queue redis for caching.")
@@ -80,7 +82,7 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
-	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
+	sixsignalV1EnabledProjectIDs := flag.String("sixsignal_v1_enabled_projectIds", "", "To enable new sixsignal flow")
 	enableDebuggingForIP := flag.Bool("enable_debugging_for_ip", false, "Enables log for $ip and other properties added by $ip")
 
 	blockedIPProjectTokens := flag.String("blocked_ip_project_tokens",
@@ -111,6 +113,7 @@ func main() {
 		RedisPort:                        *redisPort,
 		QueueRedisHost:                   *queueRedisHost,
 		QueueRedisPort:                   *queueRedisPort,
+		FactorsSixSignalAPIKey:           *factorsSixsignalAPIKey,
 		UseQueueRedis:                    *useQueueRedis,
 		PrimaryDatastore:                 *primaryDatastore,
 		SDKRequestQueueProjectTokens:     C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
@@ -127,10 +130,10 @@ func main() {
 		SentryDSN:               *sentryDSN,
 		SentryRollupSyncInSecs:  *sentryRollupSyncInSecs,
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
-		ClearbitEnabled:        *clearbitEnabled,
-		SixSignalEnabled:       *sixSignalEnabled,
-		EnableDebuggingForIP:   *enableDebuggingForIP,
-		BlockedIPProjectTokens: *blockedIPProjectTokens,
+		ClearbitEnabled:              *clearbitEnabled,
+		SixSignalV1EnabledProjectIDs: *sixsignalV1EnabledProjectIDs,
+		EnableDebuggingForIP:         *enableDebuggingForIP,
+		BlockedIPProjectTokens:       *blockedIPProjectTokens,
 	}
 	C.InitConf(config)
 

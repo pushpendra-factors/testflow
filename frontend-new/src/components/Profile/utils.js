@@ -23,7 +23,7 @@ export const granularityOptions = [
   'Monthly'
 ];
 
-export const TIMELINE_VIEW_OPTIONS = ['timeline', 'birdview'];
+export const TIMELINE_VIEW_OPTIONS = ['timeline', 'birdview', 'overview'];
 
 export const groups = {
   Timestamp: (item) =>
@@ -88,13 +88,18 @@ export const displayFilterOpts = {
   $g2: 'G2 Engagements'
 };
 
-export const formatFiltersForPayload = (filters = [], returnArray) => {
+export const formatFiltersForPayload = (filters = [], source='users') => {
   const filterProps = [];
   filters.forEach((fil) => {
     if (Array.isArray(fil.values)) {
       fil.values.forEach((val, index) => {
         filterProps.push({
-          en: 'user_g',
+          en:
+            source === 'accounts'
+              ? fil.props[2] === 'user'
+                ? 'user_group'
+                : 'user_g'
+              : 'user_g',
           lop: !index ? 'AND' : 'OR',
           op: operatorMap[fil.operator],
           pr: fil.props[0],
@@ -104,7 +109,12 @@ export const formatFiltersForPayload = (filters = [], returnArray) => {
       });
     } else {
       filterProps.push({
-        en: 'user_g',
+        en:
+          source === 'account'
+            ? fil.props[2] === 'user'
+              ? 'user_group'
+              : 'user_g'
+            : 'user_g',
         lop: 'AND',
         op: operatorMap[fil.operator],
         pr: fil.props[0],
@@ -113,34 +123,7 @@ export const formatFiltersForPayload = (filters = [], returnArray) => {
       });
     }
   });
-
-  if (returnArray) {
-    return filterProps;
-  }
-
-  const filtersMap = {};
-  const filterPrefix = [
-    '$hubspot_company',
-    '$salesforce_account',
-    '$6signal',
-    '$g2',
-    '$li_'
-  ];
-
-  filterProps.forEach((filter) => {
-    let groupName =
-      filterPrefix.find((elem) => filter.pr.toLowerCase().includes(elem)) ||
-      'users';
-    groupName = groupName === '$li_' ? '$linkedin_company' : groupName;
-
-    if (!filtersMap[groupName]) {
-      filtersMap[groupName] = [];
-    }
-
-    filtersMap[groupName].push(filter);
-  });
-
-  return filtersMap;
+  return filterProps;
 };
 
 export const formatEventsFromSegment = (ewp) => {
@@ -525,7 +508,7 @@ export const getSegmentQuery = (queries, queryOptions, userType) => {
   query.to = period.to;
 
   query.ewp = getEventsWithProperties(queries);
-  query.gup = formatFiltersForPayload(queryOptions?.globalFilters, true);
+  query.gup = formatFiltersForPayload(queryOptions?.globalFilters);
 
   query.ec = EVENT_QUERY_USER_TYPE[userType];
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';

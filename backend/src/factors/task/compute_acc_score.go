@@ -52,7 +52,7 @@ type AggGroupPerProj struct {
 
 func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 	status := make(map[string]interface{})
-
+	var err error
 	modelCloudManager := configs["modelCloudManager"].(*filestore.FileManager)
 	archiveCloudManager := configs["archiveCloudManager"].(*filestore.FileManager)
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
@@ -69,9 +69,9 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 		status["err"] = "unable to get weights"
 		return status, false
 	}
+	salewindow := weights.SaleWindow
 
 	mweights, _ := CreateweightMap(weights)
-
 	for k, v := range mweights {
 		log.Infof("weight : %s, val :%v", k, v)
 	}
@@ -79,14 +79,19 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 	for tm.Unix() <= start_time.Unix() {
 		dateString := GetDateOnlyFromTimestamp(tm.Unix())
 		log.Infof("Pulling daily events for :%s", dateString)
-		err := AggDailyUsersOnDate(projectId, archiveCloudManager, modelCloudManager, diskManager, tm, db, mweights)
+		prevCountsOfUser, err := store.GetStore().GetAllUserEvents(projectId, false)
+		if err != nil {
+			status["err"] = "unable to prev counts"
+			return status, false
+		}
+		err = AggDailyUsersOnDate(projectId, archiveCloudManager, modelCloudManager, diskManager, tm, db, mweights, prevCountsOfUser, salewindow)
 		if err != nil {
 			log.WithError(err).Errorf("Error in aggregating users : %d time: %v ", tm)
 		}
 		tm = tm.AddDate(0, 0, 1)
 	}
 
-	err := db.Close()
+	err = db.Close()
 	if err != nil {
 		log.Errorf("unable to close db")
 		status["error"] = "unable to close db"
@@ -114,18 +119,20 @@ func CreateweightMap(w *M.AccWeights) (map[string][]M.AccEventWeight, int64) {
 
 // AggDailyUsersOnDate main entry function to aggregate users and group perday and write to file and DB
 func AggDailyUsersOnDate(projectId int64, archiveCloudManager, modelCloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, date time.Time, db *gorm.DB, weights map[string][]M.AccEventWeight) error {
+	diskManager *serviceDisk.DiskDriver, date time.Time, db *gorm.DB, weights map[string][]M.AccEventWeight,
+	prevcountsofuser map[string]map[string]M.LatestScore, salewindow int64) error {
 
 	day_ts := time.Unix(date.Unix(), 0)
 	log.Infof("Aggregating  users :%d for %v", projectId, day_ts)
 	var userGroupCount map[string]*AggEventsOnUserAndGroup = make(map[string]*AggEventsOnUserAndGroup)
 	// aggregate users
-	err := AggregateDailyEvents(projectId, archiveCloudManager, modelCloudManager, diskManager, date.Unix(), userGroupCount, weights)
+	err := AggregateDailyEvents(projectId, archiveCloudManager, modelCloudManager, diskManager, date.Unix(),
+		userGroupCount, weights)
 	if err != nil {
 		log.WithError(err).Errorf("Error in aggregating users : %d time: %v ", date)
 	}
 
-	err = WriteUserCountsToDB(projectId, date.Unix(), userGroupCount, weights)
+	err = WriteUserCountsToDB(projectId, date.Unix(), userGroupCount, weights, prevcountsofuser, salewindow)
 	if err != nil {
 		return err
 	}
@@ -363,7 +370,8 @@ func aggGroupCounts(event *P.CounterEventFormat, user_id string, userGroupCount 
 }
 
 func WriteUserCountsToDB(projectId int64, startTime int64,
-	userCounts map[string]*AggEventsOnUserAndGroup, weights map[string][]M.AccEventWeight) error {
+	userCounts map[string]*AggEventsOnUserAndGroup, weights map[string][]M.AccEventWeight,
+	prevcountsofuser map[string]map[string]M.LatestScore, salewindow int64) error {
 
 	evdata := make([]M.EventsCountScore, 0)
 	gpdata := make([]M.EventsCountScore, 0)
@@ -401,15 +409,26 @@ func WriteUserCountsToDB(projectId int64, startTime int64,
 		}
 	}
 
+	evDataLastEvent, err := UpdateLastEventsDay(prevcountsofuser, evdata, startTime, salewindow)
+	if err != nil {
+		e := fmt.Errorf("unable to update last event for users")
+		return e
+	}
+	gpDataLastEvent, err := UpdateLastEventsDay(prevcountsofuser, gpdata, startTime, salewindow)
+	if err != nil {
+		e := fmt.Errorf("unable to update last event for groups")
+		return e
+	}
+
 	if len(evdata) > 0 {
-		err := store.GetStore().UpdateUserEventsCount(evdata)
+		err := store.GetStore().UpdateUserEventsCount(evdata, evDataLastEvent)
 		if err != nil {
 			return err
 		}
 	}
 
 	if len(gpdata) > 0 {
-		err := store.GetStore().UpdateGroupEventsCount(gpdata)
+		err := store.GetStore().UpdateGroupEventsCount(gpdata, gpDataLastEvent)
 		if err != nil {
 			return err
 		}
@@ -418,4 +437,49 @@ func WriteUserCountsToDB(projectId int64, startTime int64,
 	log.Infof("Total number of users and groups: %d , %d", len(evdata), len(gpdata))
 
 	return nil
+}
+
+func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore, data []M.EventsCountScore, currentTS int64, saleWindow int64) (map[string]M.LatestScore, error) {
+
+	updatedLastScore := make(map[string]M.LatestScore, 0)
+	currentDate := GetDateOnlyFromTimestamp(currentTS)
+
+	for _, currentUser := range data {
+		var lastevent M.LatestScore
+		eventsCountWithDecay := make(map[string]float64)
+		if prevCountsOnday, ok := prevCountsOfUser[currentUser.UserId]; ok {
+			for dateOfCount, counts := range prevCountsOnday {
+				decayval := model.ComputeDecayValue(dateOfCount, int64(saleWindow))
+				for eventKey, eventVal := range counts.EventsCount {
+					if _, eok := eventsCountWithDecay[eventKey]; !eok {
+						eventsCountWithDecay[eventKey] = 0
+					}
+					eventsCountWithDecay[eventKey] += decayval * eventVal
+				}
+			}
+		}
+
+		for eventKey, eventCount := range currentUser.EventScore {
+			decayval := model.ComputeDecayValue(currentDate, int64(saleWindow))
+			if _, eok := eventsCountWithDecay[eventKey]; !eok {
+				eventsCountWithDecay[eventKey] = 0
+			}
+			eventsCountWithDecay[eventKey] += decayval * float64(eventCount)
+
+		}
+
+		currentDateTS := M.GetDateFromString(currentDate)
+		lastevent.Date = currentDateTS
+		lastevent.EventsCount = make(map[string]float64)
+		lastevent.EventsCount = eventsCountWithDecay
+		updatedLastScore[currentUser.UserId] = lastevent
+	}
+
+	if len(updatedLastScore) != len(data) {
+		e := fmt.Errorf("data not equal , unable to get last scores")
+		return nil, e
+	}
+
+	return updatedLastScore, nil
+
 }

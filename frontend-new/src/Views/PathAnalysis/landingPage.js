@@ -29,11 +29,26 @@ const PathAnalysisLP = ({ SetfetchingIngishts, setShowReport }) => {
                     <Text
                       type={'title'}
                       level={6}
-                      extraClass={'m-0 mt-2'}
+                      extraClass={'m-0 mt-2 mr-2'}
                       color={'grey'}
                     >
-                      See the paths that your users are taking through the
-                      buying journey
+                      Gain valuable insights into user journeys and optimize
+                      your conversion funnel. Understand the paths users take on
+                      your website, identify drop-off points, and make
+                      data-driven improvements.
+                    </Text>
+                    <Text
+                      type={'title'}
+                      level={6}
+                      extraClass={'m-0 mt-4 mr-2'}
+                      color={'grey'}
+                    >
+                      Uncover the most effective paths that lead to conversions,
+                      helping you maximize customer engagement and drive
+                      business growth.
+                      <a href='https://help.factors.ai/en/articles/7302103-path-analysis'>
+                        Learn more
+                      </a>
                     </Text>
                   </div>
                   <Button

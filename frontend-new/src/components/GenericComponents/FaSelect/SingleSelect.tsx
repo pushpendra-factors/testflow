@@ -240,6 +240,7 @@ export default function SingleSelect({
       rendOpts.push(
         <div
           key={'op' + index}
+          title={op.label}
           onClick={() => {
             handleOptionClick(op);
           }}

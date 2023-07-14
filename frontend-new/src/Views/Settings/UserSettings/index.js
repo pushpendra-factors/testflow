@@ -68,7 +68,7 @@ function UserSettings(props) {
           <Row gutter={[24, 24]} justify={'center'} className={'pt-4 pb-2 m-0 '}>
             <Col span={20}>
               <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>My Account Details</Text>
-              <Text type={'title'} level={6} weight={'regular'} extraClass={'m-0'} color={'grey'}>{agent ? `${agent.first_name} ${agent.last_name} (${agent.email})` : ''}</Text>
+              <Text type={'title'} level={6} weight={'regular'} extraClass={'m-0'} color={'grey'}>{agent ? `${agent?.first_name} ${agent?.last_name} (${agent.email})` : ''}</Text>
             </Col>
           </Row>
           <Row gutter={[24, 24]} justify={'center'}>

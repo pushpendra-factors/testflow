@@ -1,6 +1,5 @@
 import React, { useEffect, Suspense } from 'react';
 import { connect, useDispatch } from 'react-redux';
-import { useHistory } from 'react-router-dom';
 import PageSuspenseLoader from './components/SuspenseLoaders/PageSuspenseLoader';
 import * as Sentry from '@sentry/react';
 import LogRocket from 'logrocket';
@@ -24,7 +23,6 @@ function App({
   enableMarketoIntegration
 }) {
   const dispatch = useDispatch();
-  const history = useHistory();
 
   const ssoLogin = () => {
     if (window.location.href.indexOf('?error=') > -1) {
@@ -34,10 +32,6 @@ function App({
         let err = searchParams.get('error');
         if (mode == 'auth0' && err == '') {
           dispatch({ type: SSO_LOGIN_FULFILLED });
-          history.replace({
-            pathname: '/',
-            state: { navigatedFromLoginPage: true }
-          });
         }
       }
     }

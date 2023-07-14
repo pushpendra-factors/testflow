@@ -6,6 +6,7 @@ RUN go build -o $GOPATH/bin/queries_id_text_patch $GOPATH/src/factors/scripts/ru
 
 # Create stripped down version without go and source code
 FROM alpine:3.7
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 COPY --from=builder /go/bin/queries_id_text_patch /go/bin/queries_id_text_patch
 ENTRYPOINT ["/go/bin/queries_id_text_patch"]

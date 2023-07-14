@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"factors/model/model"
+	"factors/model/store"
 	"factors/util"
 	"io/ioutil"
 	"net/http"
@@ -148,8 +149,19 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 
 	if domain := result.Company.Domain; domain != "" {
 		if c, ok := (*properties)[util.SIX_SIGNAL_DOMAIN]; !ok || c == "" {
+
 			(*properties)[util.SIX_SIGNAL_DOMAIN] = domain
 			model.SetSixSignalAPICountCacheResult(projectId, util.TimeZoneStringIST)
+
+			timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
+			if statusCode != http.StatusFound {
+				timeZone = util.TimeZoneStringIST
+			}
+			err := model.SetSixSignalMonthlyUniqueEnrichmentCount(projectId, domain, timeZone)
+			if err != nil {
+				log.Error("SetSixSignalMonthlyUniqueEnrichmentCount Failed.")
+			}
+
 		}
 	}
 

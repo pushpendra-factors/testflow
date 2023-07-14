@@ -137,6 +137,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.NotNil(t, ps)
 	assert.True(t, *ps.AutoTrack)
 	assert.True(t, *ps.ExcludeBot)
+	assert.True(t, *ps.IntFactorsSixSignalKey)
 }
 
 func TestDBGetProjectByIDs(t *testing.T) {

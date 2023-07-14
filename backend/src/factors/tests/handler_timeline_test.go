@@ -1094,11 +1094,11 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 
 	// Properties Map
 	propertiesMap := []map[string]interface{}{
-		{"$salesforce_account_name": "Adapt.IO", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "adapt.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
-		{"$salesforce_account_name": "o9 Solutions", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "o9solutions.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
-		{"$salesforce_account_name": "GoLinks Reporting", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "golinks.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
-		{"$salesforce_account_name": "Cin7", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "cin7.com", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC", "$salesforce_city": "New Delhi"},
-		{"$salesforce_account_name": "Repair Desk", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "repairdesk.co", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "AdPushup", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "adpushup.com", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "Mad Street Den", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "madstreetden.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "Heyflow", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "heyflow.app", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "Clientjoy Ads", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "clientjoy.io", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC", "$salesforce_city": "New Delhi"},
+		{"$salesforce_account_name": "Adapt.IO", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "adapt.io", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US", "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Mad Street Den", "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC", "$hubspot_company_is_public": "true"},
@@ -1111,18 +1111,24 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		{U.SIX_SIGNAL_NAME: "Adapt.IO", U.SIX_SIGNAL_COUNTRY: "India", U.SIX_SIGNAL_DOMAIN: "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services", "$browser": "Chrome"},
 	}
 
+	userProps := []map[string]interface{}{
+		{"$browser": "Chrome", "$city": "London", "$country": "UK", "$device_type": "desktop", "$page_count": 100, "$session_spent_time": 2000, U.UP_COMPANY: "XYZ Company"},
+		{"$browser": "Chrome", "$city": "New York", "$country": "US", "$device_type": "desktop", "$page_count": 100, "$session_spent_time": 2500},
+		{"$browser": "Chrome", "$city": "Delhi", "$country": "India", "$device_type": "iPad", "$page_count": 105, "$session_spent_time": 3000},
+		{"$browser": "Edge", "$city": "London", "$country": "UK", "$device_type": "desktop", "$page_count": 120, "$session_spent_time": 2000},
+		{"$browser": "Brave", "$city": "London", "$country": "UK", "$device_type": "iPad", "$page_count": 110, "$session_spent_time": 2500},
+	}
 	// Creating domain Account and Group
 	domProperties := postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
 	source := model.GetRequestSourcePointer(model.UserSourceDomains)
 	groupUser := true
 	accounts := make([]model.User, 0)
 	domID, _ := store.GetStore().CreateUser(&model.User{
-		ProjectId:      project.ID,
-		Source:         source,
-		Group1ID:       "1",
-		CustomerUserId: "domainuser",
-		Properties:     domProperties,
-		IsGroupUser:    &groupUser,
+		ProjectId:   project.ID,
+		Source:      source,
+		Group1ID:    "clientjoy.io",
+		Properties:  domProperties,
+		IsGroupUser: &groupUser,
 	})
 	_, errCode = store.GetStore().GetUser(project.ID, domID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1161,6 +1167,23 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
 		accounts = append(accounts, *account)
+
+		// 5 users associated to the account
+		propertiesJSON, err = json.Marshal(userProps[i])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties = postgres.Jsonb{RawMessage: propertiesJSON}
+		createdUserID1, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         model.GetRequestSourcePointer(model.UserSourceSalesforce),
+			Properties:     properties,
+			Group3ID:       "3",
+			Group3UserID:   account.ID,
+			CustomerUserId: fmt.Sprintf("salesforce@%duser", (i%5)+1),
+		})
+		_, errCode = store.GetStore().GetUser(project.ID, createdUserID1)
+		assert.Equal(t, http.StatusFound, errCode)
 	}
 
 	// Create 5 Hubspot Companies
@@ -1185,7 +1208,50 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
 		accounts = append(accounts, *account)
+
+		// 5 users associated to the account
+		propertiesJSON, err = json.Marshal(userProps[i])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties = postgres.Jsonb{RawMessage: propertiesJSON}
+		createdUserID1, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
+			Properties:     properties,
+			Group2ID:       "2",
+			Group2UserID:   account.ID,
+			CustomerUserId: fmt.Sprintf("hubspot@%duser", (i%5)+1),
+		})
+		_, errCode = store.GetStore().GetUser(project.ID, createdUserID1)
+		assert.Equal(t, http.StatusFound, errCode)
 	}
+
+	// creating another domain account
+	domID2, _ := store.GetStore().CreateUser(&model.User{
+		ProjectId:   project.ID,
+		Source:      source,
+		Group1ID:    "1",
+		IsGroupUser: &groupUser,
+	})
+	_, errCode = store.GetStore().GetUser(project.ID, domID2)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	// creating a web user associated to domain
+	propertiesJSON, err := json.Marshal(userProps[0])
+	if err != nil {
+		log.WithError(err).Fatal("Marshal error.")
+	}
+	properties := postgres.Jsonb{RawMessage: propertiesJSON}
+	createdWebUser, _ := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
+		Properties:     properties,
+		Group1UserID:   domID2,
+		CustomerUserId: "webuser@ymail.com",
+	})
+	_, errCode = store.GetStore().GetUser(project.ID, createdWebUser)
+	assert.Equal(t, http.StatusFound, errCode)
 
 	// Create 5 Six Signal Domains
 	for i := 0; i < numUsers; i++ {
@@ -1207,28 +1273,63 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
 		accounts = append(accounts, *account)
+
+		// 5 users associated to the account
+		propertiesJSON, err = json.Marshal(userProps[i])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties = postgres.Jsonb{RawMessage: propertiesJSON}
+		createdUserID1, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         model.GetRequestSourcePointer(model.UserSourceSixSignal),
+			Properties:     properties,
+			Group4ID:       "4",
+			Group4UserID:   account.ID,
+			CustomerUserId: fmt.Sprintf("sixsignal@%duser", (i%5)+1),
+		})
+		_, errCode = store.GetStore().GetUser(project.ID, createdUserID1)
+		assert.Equal(t, http.StatusFound, errCode)
 	}
 	assert.Equal(t, len(accounts), 15)
 
-	// Test Cases :-
-
-	// Source: $hubspot_company, 2 group exists
+	//Source: $hubspot_company, 2 group exists
 	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group1)
 
+	// 2 more groups
+	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.NotNil(t, group2)
+	assert.Equal(t, http.StatusCreated, status)
+	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL, model.AllowedGroupNames)
+	assert.NotNil(t, group3)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Test Cases :-
+
 	payload.Source = "$hubspot_company"
+	payload.Filters = []model.QueryProperty{
+		{
+			Entity:    "user_group",
+			Type:      "categorical",
+			Property:  "$browser",
+			Operator:  "equals",
+			Value:     "Chrome",
+			LogicalOp: "AND",
+		},
+	}
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	resp := make([]model.Profile, 0)
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 5)
+	assert.Equal(t, len(resp), 3)
 	assert.Condition(t, func() bool {
 		for i, user := range resp {
-			assert.Equal(t, user.Name, propertiesMap[9-i][U.GP_HUBSPOT_COMPANY_NAME])
-			assert.Equal(t, user.HostName, propertiesMap[9-i][U.GP_HUBSPOT_COMPANY_DOMAIN])
+			assert.Equal(t, user.Name, propertiesMap[7-i][U.GP_HUBSPOT_COMPANY_NAME])
+			assert.Equal(t, user.HostName, propertiesMap[7-i][U.GP_HUBSPOT_COMPANY_DOMAIN])
 			assert.NotNil(t, user.LastActivity)
 			if i > 0 {
 				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
@@ -1240,19 +1341,29 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		return true
 	})
 
-	// 2 more groups
-	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
-	assert.NotNil(t, group2)
-	assert.Equal(t, http.StatusCreated, status)
-	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SIX_SIGNAL, model.AllowedGroupNames)
-	assert.NotNil(t, group3)
-	assert.Equal(t, http.StatusCreated, status)
-
-	// 1. Accounts from Different Sources (No filter, no segment applied)
-	sourceToUserCountMap := map[string]int{"All": 1, U.GROUP_NAME_HUBSPOT_COMPANY: 5, U.GROUP_NAME_SALESFORCE_ACCOUNT: 5, U.GROUP_NAME_SIX_SIGNAL: 5}
+	// 1. Accounts from Different Sources (1 user filter, no segment applied)
+	sourceToUserCountMap := map[string]int{"All": 2, U.GROUP_NAME_HUBSPOT_COMPANY: 3, U.GROUP_NAME_SALESFORCE_ACCOUNT: 3, U.GROUP_NAME_SIX_SIGNAL: 3}
 
 	for source, count := range sourceToUserCountMap {
 		payload.Source = source
+		payload.Filters = []model.QueryProperty{
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$browser",
+				Operator:  "equals",
+				Value:     "Chrome",
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    "user_group",
+				Type:      "categorical",
+				Property:  "$browser",
+				Operator:  "equals",
+				Value:     "Chrome",
+				LogicalOp: "AND",
+			},
+		}
 		w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
@@ -1285,7 +1396,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				assert.NotNil(t, user.TableProps[prop])
 			}
 		}
-
 	}
 
 	// 3. Segment with multiple $hubspot_company filters
@@ -1294,6 +1404,22 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		Description: "dummy info",
 		Query: model.Query{
 			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_group",
+					Type:      "categorical",
+					Property:  "$country",
+					Operator:  "equals",
+					Value:     "UK",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_group",
+					Type:      "categorical",
+					Property:  "$device_type",
+					Operator:  "equals",
+					Value:     "desktop",
+					LogicalOp: "OR",
+				},
 				{
 					Entity:    "user_g",
 					Type:      "categorical",
@@ -1482,7 +1608,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.Equal(t, resp[0].Identity, domID)
 	assert.NotNil(t, resp[0].LastActivity)
 	assert.Contains(t, filteredCompaniesNameHostNameMap, resp[0].Name)
-	assert.Equal(t, resp[0].HostName, filteredCompaniesNameHostNameMap[resp[0].Name])
+	assert.Equal(t, resp[0].HostName, "clientjoy.io")
 	assert.Equal(t, resp[0].TableProps["$salesforce_city"], "New Delhi")
 	assert.Equal(t, resp[0].TableProps["$hubspot_company_is_public"], "true")
 }
@@ -1559,11 +1685,10 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 	// create a domain
 	createdDomainUserID, _ := store.GetStore().CreateUser(&model.User{
-		ProjectId:      project.ID,
-		Source:         model.GetRequestSourcePointer(model.UserSourceDomains),
-		Group1ID:       "1",
-		CustomerUserId: customerEmail,
-		IsGroupUser:    &isGroupUser,
+		ProjectId:   project.ID,
+		Source:      model.GetRequestSourcePointer(model.UserSourceDomains),
+		Group1ID:    "1",
+		IsGroupUser: &isGroupUser,
 		Properties: postgres.Jsonb{
 			RawMessage: json.RawMessage(`{}`)},
 	})
@@ -1592,6 +1717,19 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	group2, status := store.GetStore().CreateGroup(projectID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group2)
+
+	// create another domain account
+	createdDomainUserID2, _ := store.GetStore().CreateUser(&model.User{
+		ProjectId:   project.ID,
+		Source:      model.GetRequestSourcePointer(model.UserSourceDomains),
+		Group1ID:    "chargebee.com",
+		IsGroupUser: &isGroupUser,
+		Properties: postgres.Jsonb{
+			RawMessage: json.RawMessage(`{}`)},
+	})
+	domainUser2, errCode := store.GetStore().GetUser(project.ID, createdDomainUserID2)
+	assert.Equal(t, createdDomainUserID2, domainUser2.ID)
+	assert.Equal(t, http.StatusFound, errCode)
 
 	// Hubspot Group Events
 	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
@@ -1671,7 +1809,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	// 10  Associated Users
-	m := map[string]string{"$name": "Some Name"}
+	m := map[string]interface{}{U.UP_NAME: "Some Name"}
 	userProps, err := json.Marshal(m)
 	if err != nil {
 		log.WithError(err).Fatal("Marshal error.")
@@ -1713,7 +1851,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	customerEmail = "@example.com"
 	isGroupUser = false
 	users := make([]model.User, 0)
-	numUsers := 10
+	numUsers := 13
 	for i := 1; i <= numUsers; i++ {
 
 		jobTitle := "Boss"
@@ -1722,6 +1860,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		}
 		userProps := map[string]interface{}{
 			"$hubspot_contact_jobtitle": jobTitle,
+			U.UP_TOTAL_SPENT_TIME:       100,
 		}
 		userPropsJSON, err := json.Marshal(userProps)
 		if err != nil {
@@ -1736,19 +1875,47 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			customerUserID = "user5" + customerEmail
 		}
 
-		associatedUserId, _ := store.GetStore().CreateUser(&model.User{
-			ProjectId:      projectID,
-			Properties:     userPropsEncoded,
-			IsGroupUser:    &isGroupUser,
-			Group2ID:       "2",
-			Group2UserID:   createdUserID1,
-			CustomerUserId: customerUserID,
-			Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
-		})
+		var associatedUserId string
 
-		user, errCode := store.GetStore().GetUser(project.ID, associatedUserId)
-		assert.Equal(t, http.StatusFound, errCode)
-		users = append(users, *user)
+		if i > 10 {
+			// users associated to domain2
+			customerEmail = "@domain2.com"
+			notGroupUser := false
+			userProps := map[string]interface{}{
+				"$page_count": i * 10, "$company": "ChargeBee", U.UP_TOTAL_SPENT_TIME: 100,
+			}
+			userPropsJSON, err := json.Marshal(userProps)
+			if err != nil {
+				log.WithError(err).Fatal("Marshal error.")
+			}
+			userPropsEncoded := postgres.Jsonb{RawMessage: userPropsJSON}
+			associatedUserId, _ = store.GetStore().CreateUser(&model.User{
+				ProjectId:      project.ID,
+				Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
+				Group1UserID:   domainUser2.ID,
+				IsGroupUser:    &notGroupUser,
+				Properties:     userPropsEncoded,
+				CustomerUserId: fmt.Sprintf("user%d", i) + customerEmail,
+			})
+			user, errCode = store.GetStore().GetUser(project.ID, associatedUserId)
+			assert.Equal(t, associatedUserId, user.ID)
+			assert.Equal(t, http.StatusFound, errCode)
+		} else {
+			associatedUserId, _ = store.GetStore().CreateUser(&model.User{
+				ProjectId:      projectID,
+				Properties:     userPropsEncoded,
+				IsGroupUser:    &isGroupUser,
+				Group2ID:       "2",
+				Group2UserID:   createdUserID1,
+				CustomerUserId: customerUserID,
+				Group1UserID:   domainUser.ID,
+				Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
+			})
+
+			user, errCode = store.GetStore().GetUser(project.ID, associatedUserId)
+			assert.Equal(t, http.StatusFound, errCode)
+			users = append(users, *user)
+		}
 
 		// Event 1 : Page View
 		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
@@ -1986,7 +2153,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 
 	}
-	assert.Equal(t, len(users), numUsers)
+	assert.Equal(t, len(users), 10)
 
 	t.Run("Success", func(t *testing.T) {
 		w := sendGetProfileAccountDetailsRequest(r, projectID, agent, domainUser.ID, "All")
@@ -1998,7 +2165,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
-		assert.Equal(t, len(resp.AccountTimeline), 10)
+		assert.Equal(t, len(resp.AccountTimeline), 11)
 		assert.NotNil(t, resp.LeftPaneProps)
 		for i, property := range resp.LeftPaneProps {
 			assert.Equal(t, props[i], property)
@@ -2015,6 +2182,28 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		}
 
 	})
+
+	t.Run("Success2", func(t *testing.T) {
+		w := sendGetProfileAccountDetailsRequest(r, projectID, agent, domainUser2.ID, "All")
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		resp := &model.AccountDetails{}
+		err := json.Unmarshal(jsonResponse, &resp)
+		assert.Nil(t, err)
+		assert.Contains(t, resp.Name, "ChargeBee")
+		assert.Equal(t, resp.HostName, "chargebee.com")
+		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
+		assert.Equal(t, len(resp.AccountTimeline), 4)
+		assert.Equal(t, resp.Overview.UsersCount, int64(len(resp.AccountTimeline)-1))
+		assert.Equal(t, resp.Overview.TimeActive, int64((len(resp.AccountTimeline)-1)*100))
+		for _, userTimeline := range resp.AccountTimeline {
+			if userTimeline.UserName != model.GROUP_ACTIVITY_USERNAME {
+				assert.Equal(t, userTimeline.IsAnonymous, false)
+				assert.Equal(t, len(userTimeline.UserActivities), 13)
+			}
+		}
+	})
+
 	t.Run("Success", func(t *testing.T) {
 		w := sendGetProfileAccountDetailsRequest(r, projectID, agent, createdUserID1, model.GROUP_NAME_HUBSPOT_COMPANY)
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -2025,6 +2214,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline), 10)
+		assert.Equal(t, resp.Overview.UsersCount, int64(len(resp.AccountTimeline)-1))
+		assert.Equal(t, resp.Overview.TimeActive, int64((len(resp.AccountTimeline)-1)*100))
 		assert.NotNil(t, resp.LeftPaneProps)
 		for i, property := range resp.LeftPaneProps {
 			assert.Equal(t, props[i], property)
@@ -3551,7 +3742,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	resp = make([]model.Profile, 0)
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 3)
+	assert.Equal(t, len(resp), 4)
 	for _, profile := range resp {
 		assert.NotNil(t, profile.TableProps[U.UP_COUNTRY])
 		assert.NotNil(t, profile.Identity)

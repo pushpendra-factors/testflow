@@ -14,7 +14,7 @@ function PrivateRoute({ component: Component, ...restOfProps }) {
   useEffect(() => {
     let pageName = '';
     if (location.pathname == '/') {
-      pageName = 'Dashboard';
+      pageName = 'Accounts';
     } else {
       let initialPaths = location.pathname.split('/');
       let n = initialPaths.length;

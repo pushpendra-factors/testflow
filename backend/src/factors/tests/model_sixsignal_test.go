@@ -87,3 +87,27 @@ func TestSixSignalVisitorIdentificationQuery(t *testing.T) {
 	})
 
 }
+
+func TestSixSignalMonthlyMetering(t *testing.T) {
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	monthYear := U.GetCurrentMonthYear(U.TimeZoneStringIST)
+
+	t.Run("TestingMeteringForValuesInDomainList", func(t *testing.T) {
+		domainList := []string{"abc.com", "xyz.com", "", "xyz1.com", "a1.com", "a2.com", "a1.com",
+			"a2.com", " ", "abc2.com", "abc.com"}
+		for _, v := range domainList {
+			if v != "" {
+				err := model.SetSixSignalMonthlyUniqueEnrichmentCount(project.ID, v, U.TimeZoneStringIST)
+				assert.Nil(t, err)
+			}
+		}
+		count, err := model.GetSixSignalMonthlyUniqueEnrichmentCount(project.ID, monthYear)
+		fmt.Println(count)
+		assert.Nil(t, err)
+		assert.NotNil(t, count)
+	})
+
+}

@@ -6,6 +6,7 @@ RUN go build -o $GOPATH/bin/run_fix_memsql_hubspot_sync_fields $GOPATH/src/facto
 
 # Create stripped down version without go and source code
 FROM alpine:3.7
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 COPY --from=builder /go/bin/run_fix_memsql_hubspot_sync_fields /go/bin/run_fix_memsql_hubspot_sync_fields
 ENTRYPOINT ["/go/bin/run_fix_memsql_hubspot_sync_fields"]

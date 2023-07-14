@@ -2295,18 +2295,15 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 			newUserProperties[U.UP_LATEST_CHANNEL] = sessionUserProperties.LatestChannel
 		}
 
-		existingPageCount, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_PAGE_COUNT])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
-		}
+		existingPageCount, existingTotalSpentTime := getPageCountAndTimeSpentFormUserPropertiesMap(*existingUserPropertiesMap, logCtx)
 
-		existingTotalSpentTime, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
-		}
+		realPageCount, realTotalSpentTime := getRealPageCountAndTimeSpentFormUserPropertiesMap(*existingUserPropertiesMap, logCtx)
 
 		newUserProperties[U.UP_TOTAL_SPENT_TIME] = existingTotalSpentTime + sessionUserProperties.TotalSpentTime
 		newUserProperties[U.UP_PAGE_COUNT] = existingPageCount + sessionUserProperties.PageCount
+
+		newUserProperties[U.UP_REAL_TOTAL_SPENT_TIME] = realTotalSpentTime + sessionUserProperties.TotalSpentTime
+		newUserProperties[U.UP_REAL_PAGE_COUNT] = realPageCount + sessionUserProperties.PageCount
 
 		userPropertiesJsonb, err := U.AddToPostgresJsonb(existingUserProperties, newUserProperties, true)
 		if err != nil {
@@ -2353,6 +2350,71 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 	}
 
 	return http.StatusAccepted
+}
+
+func getPageCountAndTimeSpentFormUserPropertiesMap(propertiesMap util.PropertiesMap, logCtx *log.Entry) (float64, float64) {
+
+	var existingPageCount float64
+	var existingTotalSpentTime float64
+	var err error
+
+	if _, exist := propertiesMap[U.UP_PAGE_COUNT]; exist {
+
+		existingPageCount, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_PAGE_COUNT])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
+		}
+
+	}
+
+	if _, exist := propertiesMap[U.UP_TOTAL_SPENT_TIME]; exist {
+		existingTotalSpentTime, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_TOTAL_SPENT_TIME])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
+		}
+
+	}
+
+	return existingPageCount, existingTotalSpentTime
+
+}
+
+func getRealPageCountAndTimeSpentFormUserPropertiesMap(propertiesMap util.PropertiesMap, logCtx *log.Entry) (float64, float64) {
+
+	var existingPageCount float64
+	var existingTotalSpentTime float64
+	var err error
+
+	if _, exist := propertiesMap[U.UP_REAL_PAGE_COUNT]; exist {
+
+		existingPageCount, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_REAL_PAGE_COUNT])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
+		}
+
+	} else {
+
+		existingPageCount, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_PAGE_COUNT])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
+		}
+	}
+
+	if _, exist := propertiesMap[U.UP_REAL_TOTAL_SPENT_TIME]; exist {
+
+		existingTotalSpentTime, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_TOTAL_SPENT_TIME])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
+		}
+	} else {
+		existingTotalSpentTime, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_TOTAL_SPENT_TIME])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
+		}
+	}
+
+	return existingPageCount, existingTotalSpentTime
+
 }
 
 func shouldAllowCustomerUserID(current, incoming string) bool {

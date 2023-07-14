@@ -73,8 +73,7 @@ const AttributionSettings = ({
     const opts = Object.assign({}, attrConfig);
     opts.query_type = val;
     setAttrConfig(opts);
-
-  }
+  };
 
   const renderEditActions = () => {
     return (
@@ -146,7 +145,10 @@ const AttributionSettings = ({
   };
 
   const selectQueryType = () => {
-    const queryTypes = [['Conversion Time', 'ConversionBased'], ['Interaction Time', 'EngagementBased']];
+    const queryTypes = [
+      ['Conversion Time', 'ConversionBased'],
+      ['Interaction Time', 'EngagementBased']
+    ];
     return (
       <Select
         value={attrConfig?.query_type}
@@ -158,16 +160,11 @@ const AttributionSettings = ({
         }}
       >
         {queryTypes.map((qType, index) => {
-          return (
-            <Option value={qType[1]}>
-              {qType[0]}
-            </Option>
-          );
+          return <Option value={qType[1]}>{qType[0]}</Option>;
         })}
       </Select>
     );
-
-  }
+  };
 
   const selectWindow = () => {
     const window = [1, 3, 7, 14, 20, 30, 60, 90, 180, 365];
@@ -183,7 +180,8 @@ const AttributionSettings = ({
         {window.map((days, index) => {
           return (
             <Option value={days}>
-              {Number.isInteger(days) && `${days} ${days === 1 ? 'day' : 'days'}`}
+              {Number.isInteger(days) &&
+                `${days} ${days === 1 ? 'day' : 'days'}`}
             </Option>
           );
         })}
@@ -237,7 +235,7 @@ const AttributionSettings = ({
         </Row>
       </div>
     );
-  }
+  };
 
   const renderAttributionContent = () => {
     return (
@@ -290,7 +288,6 @@ const AttributionSettings = ({
       return DealOrOppurtunity;
     return null;
   };
-  
 
   const selectGroupAttribution = () => {
     return (
@@ -350,7 +347,7 @@ const AttributionSettings = ({
                 weight={'bold'}
                 extraClass={'m-0 m-1'}
               >
-                Attributions Configuration
+                Attribution Configuration
               </Text>
             </Col>
             <Col span={12}>{renderEditActions()}</Col>

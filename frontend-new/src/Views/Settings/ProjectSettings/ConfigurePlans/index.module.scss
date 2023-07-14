@@ -1,0 +1,30 @@
+.customCheckbox {
+  display: flex;
+  flex-wrap: wrap;
+  :global(.ant-checkbox-wrapper) {
+    flex-basis: 100%; /* Three checkboxes in a row */
+    margin-bottom: 10px;
+  }
+}
+
+.filter {
+  display: flex;
+  position: relative;
+  word-wrap: break-word;
+
+  &__propContainer {
+    position: relative;
+  }
+
+  &__event_selector {
+    position: relative;
+
+    &__btn {
+      position: relative;
+    }
+
+    .ant-select-selector {
+      border-radius: 12px;
+    }
+  }
+}

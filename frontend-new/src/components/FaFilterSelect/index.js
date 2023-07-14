@@ -767,7 +767,7 @@ const FaFilterSelect = ({
                 valuesState && valuesState.length
                   ? valuesState
                       .map((vl) =>
-                        valueDisplayNames[vl] ? valueDisplayNames[vl] : vl
+                        valueDisplayNames[vl] ? valueDisplayNames[vl] : formatCsvUploadValue(vl)
                       )
                       .join(', ')
                   : null
@@ -791,7 +791,7 @@ const FaFilterSelect = ({
                 {valuesState && valuesState.length
                   ? valuesState
                       .map((vl) =>
-                        valueDisplayNames[vl] ? valueDisplayNames[vl] : vl
+                        valueDisplayNames[vl] ? valueDisplayNames[vl] : formatCsvUploadValue(vl)
                       )
                       .join(', ')
                   : 'Select Values'}

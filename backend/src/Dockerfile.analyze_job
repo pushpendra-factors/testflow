@@ -6,6 +6,7 @@ RUN go build -o $GOPATH/bin/analyze $GOPATH/src/factors/scripts/run_analyze/run_
 
 # Create stripped down version without go and source code
 FROM alpine:3.7
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 COPY --from=builder /go/bin/analyze /go/bin/analyze
 ENTRYPOINT ["/go/bin/analyze"]

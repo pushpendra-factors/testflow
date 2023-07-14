@@ -10,7 +10,6 @@ import { setGroupBy, delGroupBy } from 'Reducers/coreQuery/middleware';
 
 import EventFilterWrapper from 'Components/KPIComposer/EventFilterWrapper';
 
-import GroupSelect2 from 'Components/KPIComposer/GroupSelect2';
 import EventGroupBlock from 'Components/KPIComposer/EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from 'Utils/constants';
 
@@ -22,6 +21,7 @@ import { get } from 'lodash';
 import { compareFilters, groupFilters } from 'Utils/global';
 
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 function QueryBlock({
   index,
@@ -77,18 +77,21 @@ function QueryBlock({
     setPageUrlDD(false);
   };
 
-  const onChange = (value, group, category, type) => {
+  const onChange = (option, group) => {
+    const metric = option.value;
+    const metricType = option.extraProps?.valueType | '';
+    const category = group.extraProps?.category;
     let qt;
     for (let item of kpi?.config) {
       for (let it of item.metrics) {
-        if (it?.name === value[1]) qt = it?.kpi_query_type;
+        if (it?.name === metric) qt = it?.kpi_query_type;
       }
     }
     const newEvent = { alias: '', label: '', filters: [], group: '' };
-    newEvent.label = value[0];
-    newEvent.metric = value[1];
-    newEvent.metricType = get(value, '2', '');
-    newEvent.group = group;
+    newEvent.label = option.label;
+    newEvent.metric = metric;
+    newEvent.metricType = metricType;
+    newEvent.group = group.value;
     newEvent.qt = qt;
     if (category) {
       newEvent.category = category;
@@ -122,23 +125,43 @@ function QueryBlock({
     eventChange(event, index - 1, 'delete');
   };
 
-  const kpiEvents = kpi?.config?.map((item) => {
-    return getNormalizedKpi({ kpi: item });
-  });
+  const kpiEvents = kpi?.config
+    ?.map((item) => {
+      return getNormalizedKpi({ kpi: item });
+    })
+    ?.map((groupOpt) => {
+      return {
+        iconName: groupOpt?.icon,
+        label: _.startCase(groupOpt?.label),
+        value: groupOpt?.label,
+        extraProps: {
+          category: groupOpt?.category
+        },
+        values: groupOpt?.values?.map((op) => {
+          return {
+            value: op[1],
+            label: op[0],
+            extraProps: {
+              valueType: op[2]
+            }
+          };
+        })
+      };
+    });
 
   const selectEvents = () => {
     return (
       <>
         {isDDVisible ? (
           <div className={styles.query_block__event_selector}>
-            <GroupSelect2
-              groupedProperties={kpiEvents ? kpiEvents : []}
-              placeholder='Select Event'
-              optionClick={(group, val, category) =>
-                onChange(val, group, category)
-              }
+            <GroupSelect
+              searchPlaceHolder='Select Event'
+              options={kpiEvents ? kpiEvents : []}
+              optionClickCallback={onChange}
               onClickOutside={() => setDDVisible(false)}
-              allowEmpty={true}
+              allowSearch={true}
+              extraClass={styles.query_block__event_selector__select}
+              allowSearchTextSelection={false}
             />
           </div>
         ) : null}
@@ -536,7 +559,15 @@ function QueryBlock({
               color={TOOLTIP_CONSTANTS.DARK}
             >
               <Button
-                // icon={<SVG name='mouseevent' size={16} color={'purple'} />}
+                icon={
+                  <SVG
+                    name={
+                      kpiEvents?.find((group) => group.value === event.group)
+                        ?.iconName
+                    }
+                    size={18}
+                  />
+                }
                 className={`fa-button--truncate fa-button--truncate-lg btn-total-round`}
                 type='link'
                 onClick={triggerDropDown}

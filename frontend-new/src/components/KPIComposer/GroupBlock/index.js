@@ -5,12 +5,12 @@ import { SVG, Text } from 'factorsComponents';
 import { bindActionCreators } from 'redux';
 
 import { Button, Tooltip } from 'antd';
-import GroupSelect2 from '../GroupSelect2';
 
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import _ from 'lodash';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 function GroupBlock({
   groupByState,
@@ -30,26 +30,46 @@ function GroupBlock({
   const [filterOptions, setFilterOptions] = useState([
     {
       label: 'User Properties',
-      icon: 'user',
-      values: [],
-    },
+      iconName: 'user',
+      values: []
+    }
   ]);
 
   useEffect(() => {
     let commonProperties = [];
-    if(propertyMaps){
-      commonProperties = propertyMaps?.map((item)=>{
-        return [item?.display_name, item?.name, item?.data_type, "propMap"]
-      })
+    if (propertyMaps) {
+      commonProperties = propertyMaps?.map((item) => {
+        return [item?.display_name, item?.name, item?.data_type, 'propMap'];
+      });
     }
-    const filterOpts = [...filterOptions]; 
-    filterOpts[0].values = !isSameKPIGrp ? commonProperties : (KPIConfigProps ? KPIConfigProps : []);
-    setFilterOptions(filterOpts);
+    const filterOpts = [...filterOptions];
+    filterOpts[0].values = !isSameKPIGrp
+      ? commonProperties
+      : KPIConfigProps
+      ? KPIConfigProps
+      : [];
+    const modifiedFilterOpts = filterOpts?.map((opt) => {
+      return {
+        iconName: opt?.iconName,
+        label: opt?.label,
+        values: opt?.values?.map((op) => {
+          return {
+            value: op?.[1],
+            label: op?.[0],
+            extraProps: {
+              valueType: op?.[2],
+              category: op?.[3]
+            }
+          };
+        })
+      };
+    });
+    setFilterOptions(modifiedFilterOpts);
   }, [KPIConfigProps, propertyMaps]);
 
   const delOption = (index) => {
     delGroupBy('global', groupByState.global[index], index);
-  }; 
+  };
 
   const onGrpPropChange = (val, index) => {
     const newGroupByState = Object.assign({}, groupByState.global[index]);
@@ -65,19 +85,19 @@ function GroupBlock({
     setSelVis(ddVis);
   };
 
-  const onChange = (value, index, category) => { 
+  const onChange = (option, group, index) => {
     const newGroupByState = Object.assign({}, groupByState.global[index]);
-    newGroupByState.prop_category = value[1][3];
-    newGroupByState.eventName = value[1][2];
-    newGroupByState.property = value[1][1];
-    newGroupByState.prop_type = value[1][2];
-    newGroupByState.display_name = value[1][0];
+    newGroupByState.prop_category = option?.extraProps?.category;
+    newGroupByState.eventName = option?.extraProps?.valueType;
+    newGroupByState.property = option?.value;
+    newGroupByState.prop_type = option?.extraProps?.valueType;
+    newGroupByState.display_name = option?.label;
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = 'raw_values';
     }
     if (newGroupByState.prop_type === 'datetime') {
       newGroupByState.grn = 'day';
-    } 
+    }
     setGroupBy('global', newGroupByState, index);
     const ddVis = [...isDDVisible];
     ddVis[index] = false;
@@ -109,14 +129,17 @@ function GroupBlock({
           }
           {isDDVisible[index] ? (
             <div className={`${styles.group_block__event_selector}`}>
-              <GroupSelect2
-                groupedProperties={filterOptions}
-                placeholder='Select Property'
-                optionClick={(group, val) => onChange([group, val], index)}
+              <GroupSelect
+                options={filterOptions}
+                searchPlaceHolder='Select Property'
+                optionClickCallback={(option, group) =>
+                  onChange(option, group, index)
+                }
                 onClickOutside={() => triggerDropDown(index, true)}
-                hideTitle={true}
-                textStartCase
-              ></GroupSelect2>
+                allowSearch={true}
+                extraClass={styles.group_block__event_selector__select}
+                allowSearchTextSelection={false}
+              />
             </div>
           ) : null}
         </div>
@@ -130,14 +153,14 @@ function GroupBlock({
     const propOpts = {
       numerical: [
         ['original values', null, 'raw_values'],
-        ['bucketed values', null, 'with_buckets'],
+        ['bucketed values', null, 'with_buckets']
       ],
       datetime: [
         ['hour', null, 'hour'],
         ['date', null, 'day'],
         ['week', null, 'week'],
-        ['month', null, 'month'],
-      ],
+        ['month', null, 'month']
+      ]
     };
 
     const getProp = (opt) => {
@@ -183,15 +206,16 @@ function GroupBlock({
   };
 
   const matchEventName = (item) => {
-    let findItem =
-      eventPropNames?.[item] || userPropNames?.[item];
+    let findItem = eventPropNames?.[item] || userPropNames?.[item];
     return findItem ? findItem : item;
   };
 
   const renderGroupDisplayName = (opt, index) => {
-    let propertyName = ''; 
+    let propertyName = '';
     if (opt?.property) {
-      propertyName = opt?.display_name ? opt.display_name : matchEventName(opt.property);
+      propertyName = opt?.display_name
+        ? opt.display_name
+        : matchEventName(opt.property);
     }
     if (!opt.property) {
       propertyName = 'Select user property';
@@ -202,7 +226,6 @@ function GroupBlock({
           className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
           type='link'
           onClick={() => triggerDropDown(index)}
-          
         >
           {!opt.property && <SVG name='plus' extraClass={`mr-2`} />}
           {propertyName}
@@ -221,14 +244,17 @@ function GroupBlock({
               {renderGroupDisplayName(opt, index)}
               {isDDVisible[index] ? (
                 <div className={`${styles.group_block__event_selector}`}>
-                  <GroupSelect2
-                    groupedProperties={filterOptions}
-                    placeholder='Select Property'
-                    optionClick={(group, val) => onChange([group, val], index)}
+                  <GroupSelect
+                    options={filterOptions}
+                    searchPlaceHolder='Select Property'
+                    optionClickCallback={(option, group) =>
+                      onChange(option, group, index)
+                    }
                     onClickOutside={() => triggerDropDown(index, true)}
-                    hideTitle={true}
-                    textStartCase
-                  ></GroupSelect2>
+                    allowSearch={true}
+                    extraClass={styles.group_block__event_selector__select}
+                    allowSearchTextSelection={false}
+                  />
                 </div>
               ) : null}
             </div>
@@ -242,7 +268,6 @@ function GroupBlock({
             >
               <SVG name={'remove'} />
             </Button>
-
           </>
         }
       </div>
@@ -268,14 +293,14 @@ const mapStateToProps = (state) => ({
   eventProperties: state.coreQuery.eventProperties,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
-  groupByState: state.coreQuery.groupBy,
+  groupByState: state.coreQuery.groupBy
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setGroupBy,
-      delGroupBy,
+      delGroupBy
     },
     dispatch
   );

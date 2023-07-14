@@ -6,6 +6,7 @@ RUN go build -o $GOPATH/bin/pull_events $GOPATH/src/factors/scripts/memsql/pull_
 
 # Create stripped down version without go and source code
 FROM alpine:3.7
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 COPY --from=builder /go/bin/pull_events /go/bin/pull_events
 ENTRYPOINT ["/go/bin/pull_events"]

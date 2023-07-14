@@ -27,6 +27,7 @@ import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 // import FaSelect from 'Components/FaSelect';
 import styles from './index.module.scss';
 import AppModal from '../../../components/AppModal';
+import { PathUrls } from 'Routes/pathUrls';
 
 const { TabPane } = Tabs;
 
@@ -119,13 +120,11 @@ function AnalysisHeader({
       location.state?.navigatedFromDashboardExistingReports;
     if (navigatedFromDashboardExistingReports) {
       // Just moving back to / route
-      history.push({
-        pathname: '/'
-      });
+      history.push(PathUrls.Dashboard);
     } else {
       // Going Back to specefic Widget Where we came from
       history.push({
-        pathname: '/',
+        pathname: PathUrls.Dashboard,
         state: { dashboardWidgetId: navigatedFromDashboard.id }
       });
     }

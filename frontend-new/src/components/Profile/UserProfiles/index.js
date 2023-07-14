@@ -74,6 +74,10 @@ import {
   setSegmentModalStateAction
 } from 'Reducers/userProfilesView/actions';
 import { useHistory } from 'react-router-dom';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
+import UpgradeModal from '../UpgradeModal';
+import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { PathUrls } from '../../../routes/pathUrls';
 
 const userOptions = getUserOptions();
@@ -112,6 +116,7 @@ function UserProfiles({
   const showSegmentModal = useSelector((state) =>
     selectSegmentModalState(state)
   );
+  const { sixSignalInfo } = useSelector((state) => state.featureConfig);
 
   const [listSearchItems, setListSearchItems] = useState([]);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
@@ -126,9 +131,12 @@ function UserProfiles({
   const [showPopOver, setShowPopOver] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const [userValueOpts, setUserValueOpts] = useState({});
-
+  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
+  const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
+    FEATURES.FEATURE_ENGAGEMENT
+  );
 
   useEffect(() => {
     if (!timelinePayload.search_filter) {
@@ -293,7 +301,7 @@ function UserProfiles({
         item.engagement &&
         (item.engagement !== undefined || item.engagement !== '')
     );
-    if (engagementExists) {
+    if (engagementExists && !isEngagementLocked) {
       columns.push({
         title: <div className={headerClassStr}>Engagement</div>,
         width: 150,
@@ -425,8 +433,7 @@ function UserProfiles({
   const getUsers = (payload) => {
     if (payload.source && payload.source !== '') {
       const formatPayload = { ...payload };
-      formatPayload.filters =
-        formatFiltersForPayload(payload?.filters, true) || [];
+      formatPayload.filters = formatFiltersForPayload(payload?.filters) || [];
       getProfileUsers(activeProject.id, formatPayload, activeAgent);
     }
   };
@@ -650,6 +657,11 @@ function UserProfiles({
     setShowPopOver(false);
   };
 
+  const handleDisableOptionClick = () => {
+    setIsUpgradeModalVisible(true);
+    setShowPopOver(false);
+  };
+
   const popoverContent = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
@@ -666,6 +678,9 @@ function UserProfiles({
           onChange={handlePropChange}
           showApply
           onApply={applyTableProps}
+          showDisabledOption={isEngagementLocked}
+          disabledOptions={['Engagement', 'Engaged Channels']}
+          handleDisableOptionClick={handleDisableOptionClick}
         />
       </Tabs.TabPane>
     </Tabs>
@@ -753,7 +768,7 @@ function UserProfiles({
     };
     const payload = { ...timelinePayload };
     searchFilter.values.push(...val.map((vl) => JSON.parse(vl)[0]));
-    payload.search_filter = formatFiltersForPayload([searchFilter], true);
+    payload.search_filter = formatFiltersForPayload([searchFilter]);
     setListSearchItems(searchFilter.values);
     setTimelinePayload(payload);
     setActiveSegment(activeSegment);
@@ -847,8 +862,12 @@ function UserProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button size='large' type='text' className='search-btn relative'>
-        <SVG name='activity_filter' />
+      <Button
+        size='large'
+        icon={<SVG name='activity_filter' />}
+        className='relative'
+      >
+        Edit Columns
       </Button>
     </Popover>
   );
@@ -916,6 +935,13 @@ function UserProfiles({
   if (isIntegrationEnabled || activeProject.id === demoProjectId) {
     return (
       <ProfilesWrapper>
+        <div className='mb-4'>
+          <RangeNudge
+            title='Tracked users'
+            amountUsed={sixSignalInfo?.usage || 0}
+            totalLimit={sixSignalInfo?.limit || 0}
+          />
+        </div>
         <Text type='title' level={3} weight='bold' extraClass='mb-0'>
           User Profiles
         </Text>
@@ -938,6 +964,11 @@ function UserProfiles({
           onSave={handleSaveSegment}
           onCancel={() => setShowSegmentModal(false)}
           caller={'user_profiles'}
+        />
+        <UpgradeModal
+          visible={isUpgradeModalVisible}
+          variant='account'
+          onCancel={() => setIsUpgradeModalVisible(false)}
         />
       </ProfilesWrapper>
     );

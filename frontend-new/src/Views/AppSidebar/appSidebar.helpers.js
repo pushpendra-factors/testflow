@@ -3,13 +3,13 @@ import { PathUrls } from '../../routes/pathUrls';
 
 export const isSettingsUrl = (pathname) => {
   return (
-    pathname === PathUrls.SettingsAttribution ||
     pathname === PathUrls.SettingsGeneral ||
     pathname === PathUrls.SettingsInsights ||
     pathname === PathUrls.SettingsIntegration ||
     pathname === PathUrls.SettingsSdk ||
     pathname === PathUrls.SettingsSharing ||
-    pathname === PathUrls.SettingsUser
+    pathname === PathUrls.SettingsUser ||
+    pathname === PathUrls.SettingsPricing
   );
 };
 
@@ -22,7 +22,9 @@ export const isConfigurationUrl = (pathname) => {
     pathname === PathUrls.ConfigureEvents ||
     pathname === PathUrls.ConfigureProperties ||
     pathname === PathUrls.ConfigureTouchPoints ||
-    pathname === PathUrls.ConfigureEngagements
+    pathname === PathUrls.ConfigureEngagements ||
+    pathname === PathUrls.ConfigureAttribution ||
+    pathname === PathUrls.ConfigurePlans
   );
 };
 

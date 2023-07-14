@@ -125,10 +125,19 @@ func main() {
 
 // G2 etl and enrichment inside the following method
 func G2Enrichment(g2ProjectSettings []model.G2ProjectSettings) (map[string][]SP.Status, map[string][]SP.Status) {
+
 	syncStatusFailures := make([]SP.Status, 0)
 	syncStatusSuccesses := make([]SP.Status, 0)
 
 	for _, setting := range g2ProjectSettings {
+		available, err := store.GetStore().GetFeatureStatusForProjectV2(setting.ProjectID, model.FEATURE_G2)
+		if err != nil {
+			log.WithError(err).Error("Failed to get feature status in g2 etl job for project ID ", setting.ProjectID)
+		}
+		if !available {
+			log.Error("Feature Not Available... Skipping g2 etl job for project ID ", setting.ProjectID)
+			return nil, nil
+		}
 		errMsg := G2.PerformETLForProject(setting)
 		if errMsg != "" && errMsg != G2.NO_DATA_ERROR {
 			failure := SP.Status{

@@ -11,7 +11,7 @@ import {
   Dropdown,
   Menu,
   notification,
-  Tooltip,
+  Tooltip
 } from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
 
@@ -29,7 +29,6 @@ import PropetyValueModalDCG from './DCG/PropetyValueModalDCG';
 import ConfirmationModal from '../../../../components/ConfirmationModal';
 import SavedPropertyMapping from './PropertyMappingKPI/savedProperties';
 import PropertyMappingKPI from './PropertyMappingKPI';
-
 
 const { TabPane } = Tabs;
 
@@ -62,11 +61,10 @@ function Properties({
     'baliga@factors.ai',
     'solutions@factors.ai',
     'sonali@factors.ai',
-    'praveenr@factors.ai', 
+    'praveenr@factors.ai',
     'kartheek@factors.ai',
-    'raj@factors.ai',
+    'raj@factors.ai'
   ];
-
 
   useEffect(() => {
     setEnableEdit(false);
@@ -90,7 +88,7 @@ function Properties({
       });
       fetchPropertyMappings(activeProject.id).then(() => {
         setTableLoading(false);
-      }); 
+      });
     }
   }, [activeProject]);
 
@@ -101,7 +99,7 @@ function Properties({
       smrtProperties.push({
         name: prop.name,
         type: prop.type_alias,
-        actions: prop,
+        actions: prop
       });
     });
     setSmartPropData(smrtProperties);
@@ -112,15 +110,17 @@ function Properties({
       title: 'Diplay name',
       dataIndex: 'name',
       key: 'name',
-      render: (text) => <span className={'capitalize'}>{text}</span>,
+      render: (text) => <span className={'capitalize'}>{text}</span>
     },
     {
       title: 'Type',
       dataIndex: 'type',
       key: 'type',
       render: (text) => (
-        <span className={'capitalize'}>{text ? text.replace('_', ' ') : ""}</span>
-      ),
+        <span className={'capitalize'}>
+          {text ? text.replace('_', ' ') : ''}
+        </span>
+      )
     },
     {
       title: '',
@@ -132,8 +132,8 @@ function Properties({
             <Button size={'large'} type='text' icon={<MoreOutlined />} />
           </Dropdown>
         </div>
-      ),
-    },
+      )
+    }
   ];
 
   const menu = (obj) => {
@@ -161,14 +161,14 @@ function Properties({
         notification.success({
           message: 'Success',
           description: 'Deleted property successfully ',
-          duration: 5,
+          duration: 5
         });
       },
       (err) => {
         notification.error({
           message: 'Error',
           description: err.data.error,
-          duration: 5,
+          duration: 5
         });
       }
     );
@@ -215,7 +215,7 @@ function Properties({
               {tabNo == 3 && (
                 <Button
                   size={'large'}
-                  onClick={() => { 
+                  onClick={() => {
                     setShowForm(true);
                   }}
                 >
@@ -259,6 +259,31 @@ function Properties({
         <Row className={'mt-4'}>
           <Col span={24}>
             <div className={'mt-6'}>
+              <Text
+                type={'title'}
+                level={7}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Harness the full potential of your advertising data with Custom
+                Properties. By associating distinct attributes with your data,
+                you gain precise control over configuring and analyzing your ad
+                campaigns.
+              </Text>
+              <Text
+                type={'title'}
+                level={7}
+                color={'grey-2'}
+                extraClass={'m-0 mt-2'}
+              >
+                Customize and tailor your data to align perfectly with your
+                business objectives, ensuring optimal insights and enhanced
+                advertising optimization.
+                <a href='https://help.factors.ai/en/articles/7284109-custom-properties'>
+                  Learn more
+                </a>
+              </Text>
+
               <Tabs activeKey={`${tabNo}`} onChange={callback}>
                 <TabPane tab='Custom Dimensions' key='1'>
                   <Table
@@ -275,13 +300,15 @@ function Properties({
                     setShowModalVisible={setShowModalVisible}
                     enableEdit={enableEdit}
                   />
-                </TabPane>  
-
-                {whiteListedAccounts.includes(currentAgent?.email) && <>
-                <TabPane tab='Property Mapping' key='3'>
-                  <SavedPropertyMapping />
                 </TabPane>
-                </>}
+
+                {whiteListedAccounts.includes(currentAgent?.email) && (
+                  <>
+                    <TabPane tab='Property Mapping' key='3'>
+                      <SavedPropertyMapping />
+                    </TabPane>
+                  </>
+                )}
               </Tabs>
             </div>
           </Col>
@@ -333,16 +360,14 @@ function Properties({
             )}
             {tabNo == 3 && (
               <>
-              {!showForm && <>
-              {renderSmartPropertyTable()}
+                {!showForm && <>{renderSmartPropertyTable()}</>}
 
-              </>}
-              
-              {showForm && <PropertyMappingKPI 
-                setShowForm={setShowForm} 
-                setTabNo={setTabNo}
-               />}
-
+                {showForm && (
+                  <PropertyMappingKPI
+                    setShowForm={setShowForm}
+                    setTabNo={setTabNo}
+                  />
+                )}
               </>
             )}
             <ConfirmationModal
@@ -366,7 +391,7 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   smartProperties: state.settings.smartProperties,
   agents: state.agent.agents,
-  currentAgent: state.agent.agent_details,
+  currentAgent: state.agent.agent_details
 });
 
 export default connect(mapStateToProps, {
