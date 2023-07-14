@@ -332,9 +332,10 @@ const TouchpointView = ({
                 filter={filter}
                 propOpts={filterDropDownOptions.props}
                 operatorOpts={filterDropDownOptions.operator}
-                valueOpts={propertyValuesMap}
+                valueOpts={propertyValuesMap.data}
                 applyFilter={(filt) => applyFilter(filt, index)}
                 setValuesByProps={setValuesByProps}
+                valueOptsLoading={propertyValuesMap.loading}
               ></FaFilterSelect>
             </div>
             <Button
@@ -358,9 +359,10 @@ const TouchpointView = ({
               <FaFilterSelect
                 propOpts={filterDropDownOptions.props}
                 operatorOpts={filterDropDownOptions.operator}
-                valueOpts={propertyValuesMap}
+                valueOpts={propertyValuesMap.data}
                 applyFilter={(filt) => applyFilter(filt, -1)}
                 setValuesByProps={setValuesByProps}
+                valueOptsLoading={propertyValuesMap.loading}
               ></FaFilterSelect>
             </div>
             <Button
