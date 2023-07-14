@@ -18,8 +18,6 @@ import {
   // QUERY_TYPE_FUNNEL,
   // QUERY_TYPE_KPI
 } from 'Utils/constants';
-// import userflow from 'userflow.js';
-// import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import SaveQuery from '../../../components/SaveQuery';
 import { addShadowToHeader } from './analysisResultsPage.helpers';

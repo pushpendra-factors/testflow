@@ -79,8 +79,6 @@ import {
   enableSlackIntegration
 } from 'Reducers/global';
 import AppModal from '../../components/AppModal';
-import userflow from 'userflow.js';
-import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { useHistory } from 'react-router-dom';
 import moment from 'moment';
@@ -650,7 +648,24 @@ function CoreQuery({
         console.log(err);
       }
     },
-    [updateSavedQuerySettings, setQueryType, setClickedSavedReport, agent_details?.email, activeProject?.id, activeProject?.name, dispatch, updateEventFunnelsState, kpiConfig, updateKPIQueryState, attr_dimensions, content_groups, setQueryOptions, setAttributionMetrics, updateCoreQueryReducer, updateProfileQueryState]
+    [
+      updateSavedQuerySettings,
+      setQueryType,
+      setClickedSavedReport,
+      agent_details?.email,
+      activeProject?.id,
+      activeProject?.name,
+      dispatch,
+      updateEventFunnelsState,
+      kpiConfig,
+      updateKPIQueryState,
+      attr_dimensions,
+      content_groups,
+      setQueryOptions,
+      setAttributionMetrics,
+      updateCoreQueryReducer,
+      updateProfileQueryState
+    ]
   );
 
   const getMenu = (row) => {

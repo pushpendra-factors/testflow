@@ -30,7 +30,6 @@ import {
   fetchBingAdsIntegration
 } from '../../reducers/global';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
-import userflow from 'userflow.js';
 import ExplainBeforeIntegration from './ExplainBeforeIntegration';
 
 // const whiteListedAccounts = [
@@ -117,7 +116,7 @@ const Factors = ({
 
   const handleTour = () => {
     history.push('/');
-    userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
+    // userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
   };
 
   useEffect(() => {
@@ -174,17 +173,27 @@ const Factors = ({
       <Row gutter={[24, 24]}>
         <Col span={24}>
           <div className='flex items-center justify-between'>
-            <Text type={'title'} level={6} extraClass={'m-0 mt-2'} color={'grey'}>
-              Investigate the impact of various user segments and their behaviors
-              on your marketing efforts.
+            <Text
+              type={'title'}
+              level={6}
+              extraClass={'m-0 mt-2'}
+              color={'grey'}
+            >
+              Investigate the impact of various user segments and their
+              behaviors on your marketing efforts.
             </Text>
-            <Button type="primary" size='large' onClick={() => history.push('/explainV2/insights')}>Create New</Button>
+            <Button
+              type='primary'
+              size='large'
+              onClick={() => history.push('/explainV2/insights')}
+            >
+              Create New
+            </Button>
           </div>
         </Col>
       </Row>
-    )
-
-  }
+    );
+  };
   const ExplainCards = () => {
     return (
       <Row gutter={[24, 24]}>
@@ -202,18 +211,19 @@ const Factors = ({
                   onClick={
                     item.active
                       ? () => {
-                        if (tabID == 1) {
-                          history.push('/explain/insights');
-                        } else {
-                          history.push('/explainV2/insights');
+                          if (tabID == 1) {
+                            history.push('/explain/insights');
+                          } else {
+                            history.push('/explainV2/insights');
+                          }
                         }
-                      }
                       : null
                   }
-                  className={`relative inline-flex items-stretch justify-start border-radius--sm border--thin-2 cursor-pointer mr-6 ${item.active
-                    ? 'cursor-pointer'
-                    : 'fa-template--card cursor-not-allowed'
-                    }`}
+                  className={`relative inline-flex items-stretch justify-start border-radius--sm border--thin-2 cursor-pointer mr-6 ${
+                    item.active
+                      ? 'cursor-pointer'
+                      : 'fa-template--card cursor-not-allowed'
+                  }`}
                 >
                   <div className='px-6 py-4 flex flex-col items-center justify-center background-color--brand-color-1'>
                     <SVG
@@ -361,11 +371,6 @@ const Factors = ({
                 <Row gutter={[24, 24]} justify='center'>
                   <Col span={20}>
                     <Row gutter={[24, 24]}>
-
-
-
-
-
                       <Col span={24}>
                         {/* <Col span={24}>
                         <Alert description="🎉  Explain is faster and better now." type="warning" closable />
@@ -387,24 +392,23 @@ const Factors = ({
                               extraClass={'m-0 mt-2'}
                               color={'grey'}
                             >
-                              Investigate the impact of various user segments and their behaviors on your marketing efforts.
-
+                              Investigate the impact of various user segments
+                              and their behaviors on your marketing efforts.
                             </Text>
                           </div>
                           <Button
                             type='primary'
                             size='large'
                             onClick={() => history.push('/explainV2/insights')}
-                          > Create New
+                          >
+                            {' '}
+                            Create New
                           </Button>
                         </div>
-
                       </Col>
 
                       <Col span={24}>
-                      <SavedGoals
-                                  SetfetchingIngishts={SetfetchingIngishts}
-                                />
+                        <SavedGoals SetfetchingIngishts={SetfetchingIngishts} />
                       </Col>
                     </Row>
                   </Col>

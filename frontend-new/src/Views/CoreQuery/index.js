@@ -27,7 +27,6 @@ import {
   fetchMarketoIntegration,
   fetchBingAdsIntegration
 } from 'Reducers/global';
-import userflow from 'userflow.js';
 import QueryComposer from '../../components/QueryComposer';
 import AttrQueryComposer from '../../components/AttrQueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
@@ -297,7 +296,7 @@ function CoreQuery({
 
   const handleTour = () => {
     history.push('/');
-    userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
+    // userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
   };
 
   useEffect(() => {
