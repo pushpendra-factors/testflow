@@ -23,6 +23,11 @@ const (
 
 var BaseYears = []int{2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035}
 
+type TimestampRange struct {
+	Start int64
+	End   int64
+}
+
 // Returns date in YYYYMMDD format
 func GetDateOnlyFromTimestampZ(timestamp int64) string {
 	return time.Unix(timestamp, 0).UTC().Format(DATETIME_FORMAT_YYYYMMDD)
@@ -658,4 +663,60 @@ func SanitizeWeekStart(startTime int64, zoneString TimeZoneString) int64 {
 	}
 	weekStart := GetBeginningOfDayTimestampIn(unixTimeInGivenTimeZone.Unix(), zoneString)
 	return weekStart
+}
+
+// GenerateLast12MonthsTimestamps returns start-end of last 12 months in descending order (last month first) from now
+func GenerateLast12MonthsTimestamps(timezone string) []TimestampRange {
+	timestamps := make([]TimestampRange, 0)
+
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		fmt.Println("Invalid timezone:", timezone)
+		return timestamps
+	}
+
+	now := time.Now().In(loc)
+	year, month, _ := now.Date()
+
+	for i := 0; i < 12; i++ {
+		endOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, loc)
+		startOfMonth := endOfMonth.AddDate(0, -1, 0)
+
+		timestamps = append(timestamps, TimestampRange{
+			Start: startOfMonth.Unix(),
+			End:   endOfMonth.Unix() - 1,
+		})
+
+		year, month, _ = startOfMonth.Date()
+	}
+
+	return timestamps
+}
+
+func GenerateWeeksBetween(start, end int64) []TimestampRange {
+	weeks := make([]TimestampRange, 0)
+
+	// Start at the beginning of the first week
+	weekStart := start
+	weekEnd := weekStart + 7*86400 - 1
+
+	for weekEnd <= end {
+		weeks = append(weeks, TimestampRange{Start: weekStart, End: weekEnd})
+
+		// Move to the next week
+		weekStart = weekEnd + 1
+		weekEnd = weekEnd + 7*86400 - 1
+	}
+	return weeks
+}
+
+func GetAllMonthsInBetween(from, to int64, ranges []TimestampRange) []TimestampRange {
+	timestamps := make([]TimestampRange, 0)
+
+	for _, rng := range ranges {
+		if rng.Start >= from && rng.End <= to {
+			timestamps = append(timestamps, rng)
+		}
+	}
+	return timestamps
 }
