@@ -216,6 +216,28 @@ func (store *MemSQL) GetSixSignalQueryWithQueryId(projectID int64, queryID int64
 	return store.getQueryWithQueryID(projectID, queryID, model.QueryTypeSixSignalQuery)
 }
 
+func (store *MemSQL) GetQueryWithDashboardUnitIdString(projectID int64, dashboardUnitId int64) (*model.Queries, int) {
+	logFields := log.Fields{
+		"project_id":               projectID,
+		"dashboard_unit_id_string": dashboardUnitId,
+	}
+	dashboardUnit, errCode := store.GetDashboardUnitByUnitID(projectID, dashboardUnitId)
+	if errCode != http.StatusFound {
+		return &model.Queries{}, http.StatusNotFound
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	var query model.Queries
+	var err error
+	err = db.Table("queries").Where("project_id = ? AND id_text=? AND is_deleted = ?",
+		projectID, dashboardUnit.QueryId, false).Find(&query).Error
+	if err != nil {
+		return &model.Queries{}, http.StatusNotFound
+	}
+	return store.getQueryWithQueryID(projectID, query.ID, model.QueryTypeAllQueries)
+}
+
 func (store *MemSQL) GetQueryWithQueryIdString(projectID int64, queryIDString string) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id":      projectID,

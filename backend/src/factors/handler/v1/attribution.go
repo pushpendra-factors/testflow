@@ -143,7 +143,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		var resCode int
 		var resMsg interface{}
 
-		if C.GetAttributionDBCacheLookup() == 1 {
+		if C.IsAllowedAttributionDBCacheLookup(projectId) {
 			logCtx.Info("Hitting the DB cache lookup")
 			shouldReturn, resCode, resMsg = H.GetResponseFromDBCaching(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo, timezoneString)
 			logCtx.WithFields(log.Fields{

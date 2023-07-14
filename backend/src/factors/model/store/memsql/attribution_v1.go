@@ -13,6 +13,70 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// GetRawAttributionQueryParams returns kpiHeaders, kpiAggFunctionType, err which are used to merge reports
+func (store *MemSQL) GetRawAttributionQueryParams(projectID int64, queryOriginal *model.AttributionQueryV1,
+	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool) ([]string, []string, error) {
+
+	logFields := log.Fields{
+		"project_id":        projectID,
+		"query_from":        queryOriginal.From,
+		"query_to":          queryOriginal.To,
+		"attribution_query": true,
+	}
+
+	logCtx := log.WithFields(logFields)
+	if C.GetAttributionDebug() == 1 {
+		logCtx.Info("Hitting GetRawAttributionQueryParams")
+	}
+
+	var query *model.AttributionQueryV1
+	U.DeepCopy(queryOriginal, &query)
+
+	// pulling project setting to build attribution query
+	settings, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return nil, nil, nil
+	}
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"query": query}).Info("Run type attribution debug before enrichment")
+	}
+	// enrich RunType for attribution query
+	err := model.EnrichRequestUsingAttributionConfigV1(query, settings, logCtx)
+	if err != nil {
+		return nil, nil, nil
+	}
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"query": query}).Info("Run type attribution debug")
+	}
+
+	// supporting existing old/saved queries
+	//model.AddDefaultAnalyzeType(query)
+	model.AddDefaultKeyDimensionsToAttributionQueryV1(query)
+	model.AddDefaultMarketingEventTypeTacticOfferV1(query)
+
+	// LandingPage not allowed for tactic
+	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType == model.MarketingEventTypeTactic {
+		return nil, nil, errors.New("invalid parameters")
+	}
+
+	// AllPageView not allowed for tactic
+	if query.AttributionKey == model.AttributionKeyAllPageView && query.TacticOfferType == model.MarketingEventTypeTactic {
+		return nil, nil, errors.New("invalid parameters")
+	}
+
+	// for existing queries and backward support
+	if query.QueryType == "" {
+		query.QueryType = model.AttributionQueryTypeConversionBased
+	}
+
+	// coalUserIdConversionTimestamp, userInfo, kpiData, kpiHeaders, kpiAggFunctionType, usersIDsToAttribute, err3
+	_, _, _, kpiHeaders, kpiAggFunctionType, _, err1 := store.PullConvertedUsersV1(projectID, query, "",
+		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
+
+	return kpiHeaders, kpiAggFunctionType, err1
+
+}
+
 // ExecuteAttributionQueryV1 Todo Pre-compute's online version - add details once available to run
 // @Deprecated
 func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQueryV1,
