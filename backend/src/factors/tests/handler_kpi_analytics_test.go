@@ -212,7 +212,7 @@ func TestKpiAnalytics(t *testing.T) {
 			GlobalGroupBy: []model.KPIGroupBy{
 				{
 					ObjectType:       "s0",
-					PropertyName:     "user_id",
+					PropertyName:     "$user_id",
 					PropertyDataType: "categorical",
 					GroupByType:      "",
 					Granularity:      "",
@@ -223,14 +223,12 @@ func TestKpiAnalytics(t *testing.T) {
 
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, result[0].Headers, []string{"datetime", "user_id", "average_initial_page_load_time"})
-		assert.Equal(t, len(result[0].Rows), 1)
-		assert.Equal(t, result[0].Rows[0][1], "$none")
+		assert.Equal(t, result[0].Headers, []string{"datetime", "$user_id", "average_initial_page_load_time"})
+		assert.Equal(t, len(result[0].Rows), 2)
 		assert.Equal(t, result[0].Rows[0][2], float64(100))
 
-		assert.Equal(t, result[1].Headers, []string{"user_id", "average_initial_page_load_time"})
-		assert.Equal(t, len(result[1].Rows), 1)
-		assert.Equal(t, result[1].Rows[0][0], "$none")
+		assert.Equal(t, result[1].Headers, []string{"$user_id", "average_initial_page_load_time"})
+		assert.Equal(t, len(result[1].Rows), 2)
 		assert.Equal(t, result[1].Rows[0][1], float64(100))
 	})
 

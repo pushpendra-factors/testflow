@@ -454,7 +454,9 @@ func getNoneHandledGroupBySelectWithFirst(projectID int64, groupProp model.Query
 // How to use?
 // select user_properties.properties->>'age' as gk_1, events.properties->>'category' as gk_2 from events
 // group by gk_1, gk_2
-func buildGroupKeys(projectID int64, groupProps []model.QueryGroupByProperty, timezoneString string, useGroupProperties bool) (groupSelect string,
+// Issue 1: property $user_id should be computed using customer_user_id. considerUserIdGroupByCoalesce is used only in few cases.
+// Its used on global user properties and EventQuery.
+func buildGroupKeys(projectID int64, groupProps []model.QueryGroupByProperty, timezoneString string, useGroupProperties bool, considerUserIdGroupByCoalesce bool) (groupSelect string,
 	groupSelectParams []interface{}, groupKeys string) {
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -471,14 +473,21 @@ func buildGroupKeys(projectID int64, groupProps []model.QueryGroupByProperty, ti
 		if useGroupProperties {
 			groupProp.Entity = model.PropertyEntityGroup
 		}
-		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelect(projectID, groupProp, gKey, timezoneString)
-		groupSelect = groupSelect + noneHandledSelect
+
+		curGroupSelect := ""
+		curGroupSelectParams := make([]interface{}, 0)
+		if considerUserIdGroupByCoalesce && groupProp.Property == U.UP_USER_ID {
+			curGroupSelect = fmt.Sprintf(" COALESCE(users.customer_user_id, users.id) as %s ", gKey)
+		} else {
+			curGroupSelect, curGroupSelectParams = getNoneHandledGroupBySelect(projectID, groupProp, gKey, timezoneString)
+		}
+		groupSelect = groupSelect + curGroupSelect
 		groupKeys = groupKeys + gKey
 		if i < len(groupProps)-1 {
 			groupSelect = groupSelect + ", "
 			groupKeys = groupKeys + ", "
 		}
-		groupSelectParams = append(groupSelectParams, noneHandledSelectParams...)
+		groupSelectParams = append(groupSelectParams, curGroupSelectParams...)
 	}
 
 	return groupSelect, groupSelectParams, groupKeys
@@ -1281,7 +1290,7 @@ func addJoinLatestUserPropsQuery(projectID int64, groupProps []model.QueryGroupB
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	groupSelect, gSelectParams, gKeys := buildGroupKeys(projectID, groupProps, timeZone, useGroupProperties)
+	groupSelect, gSelectParams, gKeys := buildGroupKeys(projectID, groupProps, timeZone, useGroupProperties, false)
 
 	rStmnt := "SELECT " + joinWithComma(groupSelect, addSelect) + " from " + refStepName +
 		" " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
@@ -1345,7 +1354,7 @@ func appendOrderByAggrAndGroupKeys(projectID int64, qStmnt string, groupBys []mo
 		"time_zone":  timeZone,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	_, _, groupKeys := buildGroupKeys(projectID, groupBys, timeZone, useGroupProperties)
+	_, _, groupKeys := buildGroupKeys(projectID, groupBys, timeZone, useGroupProperties, false)
 	return joinWithComma(fmt.Sprintf("%s ORDER BY %s DESC", qStmnt, model.AliasAggr), groupKeys)
 }
 
@@ -1381,7 +1390,9 @@ func getSelectTimestampByType(timestampType, timezone string) string {
 	}
 
 	var selectStr string
-	if timestampType == model.GroupByTimestampHour {
+	if timestampType == model.GroupByTimestampSecond {
+		selectStr = fmt.Sprintf("date_trunc('second', CONVERT_TZ(FROM_UNIXTIME(timestamp), 'UTC', '%s'))", selectTz)
+	} else if timestampType == model.GroupByTimestampHour {
 		selectStr = fmt.Sprintf("date_trunc('hour', CONVERT_TZ(FROM_UNIXTIME(timestamp), 'UTC', '%s'))", selectTz)
 	} else if timestampType == model.GroupByTimestampWeek {
 		// default week is Monday to Sunday for memsql, updating it to Sunday to Saturday

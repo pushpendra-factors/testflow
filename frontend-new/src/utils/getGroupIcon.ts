@@ -17,6 +17,9 @@ type GroupName =
   | 'Quora'
   | 'Twitter'
   | 'event_based'
+  | 'salesforce_users'
+  | 'salesforce_accounts'
+  | 'salesforce_opportunities'
   | 'others';
 
 type GroupIcon =
@@ -37,6 +40,7 @@ type GroupIcon =
   | 'Twitter'
   | 'EventBased'
   | 'mouseevent'
+  | 'Salesforce_ads'
   | '';
 
 const getGroupIcon = (groupName: GroupName): GroupIcon => {
@@ -79,6 +83,12 @@ const getGroupIcon = (groupName: GroupName): GroupIcon => {
       return 'EventBased';
     case 'others':
       return 'mouseevent';
+    case 'salesforce_users':
+      return 'Salesforce_ads';
+    case 'salesforce_accounts':
+      return 'Salesforce_ads';
+    case 'salesforce_opportunities':
+      return 'Salesforce_ads';
     default:
       return '';
   }

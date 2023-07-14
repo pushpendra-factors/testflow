@@ -30,9 +30,7 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	logCtx := log.WithFields(logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
-
 	queryStartTime := time.Now().UTC().Unix()
-
 	if C.GetAttributionDebug() == 1 {
 		logCtx.Info("Hitting ExecuteAttributionQueryV1")
 	}
@@ -40,67 +38,127 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	var query *model.AttributionQueryV1
 	U.DeepCopy(queryOriginal, &query)
 
-	// pulling project setting to build attribution query
-	settings, errCode := store.GetProjectSetting(projectID)
-	if errCode != http.StatusFound {
-		return nil, errors.New("failed to get project settings during attribution call")
-	}
-	if C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"query": query}).Info("Run type attribution debug before enrichment")
-	}
-	// enrich RunType for attribution query
-	err := model.EnrichRequestUsingAttributionConfigV1(query, settings, logCtx)
+	// Enrich query parameters using project settings and default values
+	err := store.enrichAttributionQuery(projectID, query, logCtx)
 	if err != nil {
+		log.Error("Failed to enrichAttributionQuery -V1")
 		return nil, err
 	}
-	if C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"query": query}).Info("Run type attribution debug")
+
+	// Check validity of the query
+	err = isQueryValid(query)
+	if err != nil {
+		log.Error("Query is not valid -V1")
+		return nil, err
 	}
 
-	// supporting existing old/saved queries
-	//model.AddDefaultAnalyzeType(query)
-	model.AddDefaultKeyDimensionsToAttributionQueryV1(query)
-	model.AddDefaultMarketingEventTypeTacticOfferV1(query)
-
-	// LandingPage not allowed for tactic
-	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType == model.MarketingEventTypeTactic {
-		return nil, errors.New("can not get landing page level report for Tactic")
-	}
-
-	// AllPageView not allowed for tactic
-	if query.AttributionKey == model.AttributionKeyAllPageView && query.TacticOfferType == model.MarketingEventTypeTactic {
-		return nil, errors.New("can not get all page view level report for Tactic")
-	}
-
-	// for existing queries and backward support
-	if query.QueryType == "" {
-		query.QueryType = model.AttributionQueryTypeConversionBased
-	}
-	projectSetting, errCode := store.GetProjectSetting(projectID)
-	if errCode != http.StatusFound {
-		return nil, errors.New("failed to get project Settings")
-	}
-
-	marketingReports, err := store.FetchMarketingReportsV1(projectID, *query, *projectSetting)
+	// Fetch all related marketing data from (adwords, fb, linkedin, bing, etc)
+	marketingReports, err := store.FetchMarketingReportsV1(projectID, *query)
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Fetch marketing report took time")
 		queryStartTime = time.Now().UTC().Unix()
 	}
 
 	if err != nil {
+		log.Error("Failed to FetchMarketingReportsV1 -V1")
 		return nil, err
 	}
 
+	// Fetch all related custom dimension data for campaigns, ad-groups
 	err = store.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports, *logCtx)
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Custom dimension data took time")
 		queryStartTime = time.Now().UTC().Unix()
 	}
-
 	if err != nil {
+		log.Error("Failed to PullCustomDimensionData -V1")
 		return nil, err
 	}
 
+	var usersIDsToAttribute []string
+	var kpiData map[string]model.KPIInfo
+
+	coalUserIdConversionTimestamp, userInfo, kpiData, kpiHeaders, kpiAggFunctionType, usersIDsToAttribute, err := store.PullConvertedUsersV1(projectID,
+		query, debugQueryKey, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
+
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"KPIAttribution": "Debug",
+			"kpiData":                       kpiData,
+			"coalUserIdConversionTimestamp": coalUserIdConversionTimestamp,
+			"userInfo":                      userInfo,
+			"usersIDsToAttribute":           usersIDsToAttribute}).Warn("Attributable users list - ConvertedUsers")
+	}
+	if err != nil {
+		log.Error("Failed to PullConvertedUsersV1 -V1")
+		return nil, err
+	}
+
+	var userData map[string]map[string]model.UserSessionData
+	userData, err = store.GetUserSessions(projectID, query, logCtx, usersIDsToAttribute, marketingReports)
+	if err != nil {
+		log.Error("Failed to GetUserSessions -V1")
+		return nil, err
+	}
+
+	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
+	store.AppendOTPSessionsV1(projectID, query, &userData, *logCtx)
+
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
+		queryStartTime = time.Now().UTC().Unix()
+	}
+
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"Attribution": "Debug", "sessions": userData}).Info("Attribution sessions after AppendOTPSessions")
+	}
+
+	// Filter NoneKey For KeywordReport type
+	userData, _ = model.FilterNoneKeyForKeywordReport(userData, query.AttributionKey)
+	if C.GetAttributionDebug() == 1 && query.AttributionKey == model.AttributionKeyKeyword {
+		log.WithFields(log.Fields{"Attribution": "Debug",
+			"Method":   "ExecuteAttributionQueryV0",
+			"sessions": userData}).Info("Attribution sessions after FilterNoneKeyForKeywordReport")
+	}
+
+	// Run Attribution core logic
+	attributionData, isCompare, err2 := store.GetAttributionDataV1(projectID, query, userData, marketingReports, kpiData, kpiHeaders, kpiAggFunctionType, logCtx)
+	if err2 != nil {
+		log.Error("Failed to GetAttributionDataV1 -V1")
+		return nil, err2
+	}
+
+	// Filter out the key values from query (apply filter after performance enrichment)
+	model.ApplyFilterV1(attributionData, query)
+
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Metrics, Performance report, filter took time")
+		queryStartTime = time.Now().UTC().Unix()
+	}
+
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"attributionData": attributionData, "kpiData": kpiData, "userData": userData}).Info("log before ProcessAttributionDataToResultV1")
+	}
+
+	// Transform the attribution data in Result format (header and rows)
+	result := store.ProcessAttributionDataToResultV1(projectID, query, attributionData, isCompare, queryStartTime, marketingReports, kpiData, kpiHeaders, kpiAggFunctionType, logCtx)
+
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Total query took time")
+	}
+
+	model.SanitizeResult(result)
+	if query.AttributionKey == model.AttributionKeySource || query.AttributionKey == model.AttributionKeyChannel {
+		model.SanitizeResultForSourceAndChannel(result)
+	}
+	return result, nil
+}
+
+func (store *MemSQL) GetUserSessions(projectID int64, query *model.AttributionQueryV1, logCtx *log.Entry,
+	usersIDsToAttribute []string, marketingReports *model.MarketingReports) (map[string]map[string]model.UserSessionData, error) {
+
+	var userData map[string]map[string]model.UserSessionData
+
+	// Get $session name ID
 	sessionEventNameID, _, err := store.getEventInformationV1(projectID, query, *logCtx)
 	if err != nil {
 		return nil, err
@@ -117,93 +175,65 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 		}
 	}
 
-	var usersIDsToAttribute []string
-	var kpiData map[string]model.KPIInfo
-
-	coalUserIdConversionTimestamp, userInfo, kpiData, kpiHeaders, kpiAggFunctionType, usersIDsToAttribute, err3 := store.PullConvertedUsersV1(projectID, query, debugQueryKey,
-		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
-
-	if C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"KPIAttribution": "Debug",
-			"kpiData":                       kpiData,
-			"coalUserIdConversionTimestamp": coalUserIdConversionTimestamp,
-			"userInfo":                      userInfo,
-			"usersIDsToAttribute":           usersIDsToAttribute}).Warn("Attributable users list - ConvertedUsers")
-	}
-
-	if err3 != nil {
-		return nil, err3
-	}
-
-	var userData map[string]map[string]model.UserSessionData
-	var err4 error
+	var err1 error
 	if query.AttributionKey == model.AttributionKeyAllPageView {
-		userData, err4 = store.PullPagesOfConvertedUsersV1(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
+		userData, err1 = store.PullPagesOfConvertedUsersV1(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
 	} else {
-		userData, err4 = store.PullSessionsOfConvertedUsersV1(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
+		userData, err1 = store.PullSessionsOfConvertedUsersV1(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
 	}
 
 	if C.GetAttributionDebug() == 1 {
 		log.WithFields(log.Fields{"userData": userData}).Info("log after PullingSessions")
 	}
-	if err4 != nil {
-		return nil, err4
+
+	if err1 != nil {
+		return nil, err1
+	}
+	return userData, nil
+}
+
+func isQueryValid(query *model.AttributionQueryV1) error {
+	// LandingPage not allowed for tactic
+	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType == model.MarketingEventTypeTactic {
+		return errors.New("can not get landing page level report for Tactic")
 	}
 
-	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
-	store.AppendOTPSessionsV1(projectID, query, &userData, *logCtx)
+	// AllPageView not allowed for tactic
+	if query.AttributionKey == model.AttributionKeyAllPageView && query.TacticOfferType == model.MarketingEventTypeTactic {
+		return errors.New("can not get all page view level report for Tactic")
+	}
+	return nil
+}
 
+func (store *MemSQL) enrichAttributionQuery(projectID int64, query *model.AttributionQueryV1, logCtx *log.Entry) error {
+
+	// pulling project setting to build attribution query
+	settings, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return errors.New("failed to get project settings during attribution call")
+	}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
-		queryStartTime = time.Now().UTC().Unix()
+		log.WithFields(log.Fields{"query": query}).Info("Run type attribution debug before enrichment")
 	}
-
+	// enrich RunType for attribution query
+	err := model.EnrichRequestUsingAttributionConfigV1(query, settings, logCtx)
+	if err != nil {
+		return err
+	}
 	if C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"Attribution": "Debug", "sessions": userData}).Info("Attribution sessions after AppendOTPSessions")
+		log.WithFields(log.Fields{"query": query}).Info("Run type attribution debug")
 	}
 
-	userData, _ = model.FilterNoneKeyForKeywordReport(userData, query.AttributionKey)
-
-	if C.GetAttributionDebug() == 1 && query.AttributionKey == model.AttributionKeyKeyword {
-		log.WithFields(log.Fields{"Attribution": "Debug",
-			"Method":   "ExecuteAttributionQueryV0",
-			"sessions": userData}).Info("Attribution sessions after FilterNoneKeyForKeywordReport")
-
+	// for existing queries and backward support
+	if query.QueryType == "" {
+		query.QueryType = model.AttributionQueryTypeConversionBased
 	}
 
-	attributionData, isCompare, err2 := store.GetAttributionDataV1(projectID, query, userData, marketingReports, kpiData, kpiHeaders, kpiAggFunctionType, logCtx)
-
-	if err2 != nil {
-		return nil, err2
-	}
-
-	// Filter out the key values from query (apply filter after performance enrichment)
-	model.ApplyFilterV1(attributionData, query)
-
-	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Metrics, Performance report, filter took time")
-		queryStartTime = time.Now().UTC().Unix()
-	}
-
-	if C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"attributionData": attributionData, "kpiData": kpiData, "userData": userData}).Info("log before ProcessAttributionDataToResultV1")
-	}
-
-	result := ProcessAttributionDataToResultV1(query, attributionData, isCompare, queryStartTime, marketingReports, kpiData, kpiHeaders, kpiAggFunctionType, logCtx)
-	result.Meta.Currency = ""
-	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
-		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To, *logCtx)
-		result.Meta.Currency = currency
-	}
-
-	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Total query took time")
-	}
-	model.SanitizeResult(result)
-	if query.AttributionKey == model.AttributionKeySource || query.AttributionKey == model.AttributionKeyChannel {
-		model.SanitizeResultForSourceAndChannel(result)
-	}
-	return result, nil
+	// supporting existing old/saved queries
+	//model.AddDefaultAnalyzeType(query)
+	model.AddDefaultKeyDimensionsToAttributionQueryV1(query)
+	model.AddDefaultMarketingEventTypeTacticOfferV1(query)
+	return nil
 }
 
 func (store *MemSQL) PullPagesOfConvertedUsers(projectID int64, query *model.AttributionQuery, sessionEventNameID string, usersToBeAttributed []string,
@@ -1025,7 +1055,7 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 }
 
 // ProcessAttributionDataToResultV1 converts attributionData to result for different types of attribution queries
-func ProcessAttributionDataToResultV1(query *model.AttributionQueryV1,
+func (store *MemSQL) ProcessAttributionDataToResultV1(projectID int64, query *model.AttributionQueryV1,
 	attributionData *map[string]*model.AttributionData, isCompare bool, queryStartTime int64,
 	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, kpiHeaders []string, kpiAggFunctionType []string, logCtx *log.Entry) *model.QueryResult {
 
@@ -1058,6 +1088,16 @@ func ProcessAttributionDataToResultV1(query *model.AttributionQueryV1,
 
 	}
 
+	result.Meta.Currency = ""
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		logCtx.WithFields(log.Fields{"result": result}).Error("Failed to get the project setting")
+		return nil
+	}
+	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
+		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To, *logCtx)
+		result.Meta.Currency = currency
+	}
 	return result
 }
 

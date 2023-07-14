@@ -321,6 +321,7 @@ type Configuration struct {
 	EnableScoringByProjectID                           string
 	DeviceServiceURL                                   string
 	EnableDeviceServiceByProjectID                     string
+	DisableOpportunityContactRolesByProjectID          string
 }
 
 type Services struct {
@@ -2932,6 +2933,8 @@ func AllowHubspotDealsv3APIByProjectID(projectID int64) bool {
 	return allowedProjectIDs[projectID]
 }
 
+
+
 func AllowDeviceServiceByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDeviceServiceByProjectID, "")
 	if allProjects {
@@ -2939,5 +2942,13 @@ func AllowDeviceServiceByProjectID(projectID int64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
 
+func DisableOpportunityContactRolesEnrichmentByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().DisableOpportunityContactRolesByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }
