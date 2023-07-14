@@ -46,8 +46,8 @@ const SettingsSidebar = () => {
   return (
     <div className='flex flex-col row-gap-1 px-2'>
       {menuList.map((item) => {
-        if (item?.whitelisted && !WhiteListedAccounts.includes(activeAgent)) {
-          return null;
+        if(item?.whitelisted && !WhiteListedAccounts.includes(activeAgent)){
+          return null
         }
         return <SettingItem item={item} />;
       })}
