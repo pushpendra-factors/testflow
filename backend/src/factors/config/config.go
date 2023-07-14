@@ -204,7 +204,7 @@ type Configuration struct {
 	CloudManager                                       filestore.FileManager
 	SegmentExcludedCustomerIDByProject                 map[int64]string // map[project_id]customer_user_id
 	AttributionDebug                                   int
-	AttributionDBCacheLookup                           int
+	AttributionDBCacheLookup                           string
 	DisableDashboardQueryDBExecution                   bool
 	AllowedHubspotGroupsByProjectIDs                   string
 	EnableFilterOptimisation                           bool
@@ -321,6 +321,7 @@ type Configuration struct {
 	EnableScoringByProjectID                           string
 	DeviceServiceURL                                   string
 	EnableDeviceServiceByProjectID                     string
+	DisableOpportunityContactRolesByProjectID          string
 }
 
 type Services struct {
@@ -2053,8 +2054,24 @@ func GetAttributionDebug() int {
 	return configuration.AttributionDebug
 }
 
-func GetAttributionDBCacheLookup() int {
-	return configuration.AttributionDBCacheLookup
+func IsAllowedAttributionDBCacheLookup(projectID int64) bool {
+	if configuration.AttributionDBCacheLookup == "" {
+		return false
+	}
+
+	if configuration.AttributionDBCacheLookup == "*" {
+		return true
+	}
+
+	projectIDStr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AttributionDBCacheLookup, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDStr {
+			return true
+		}
+	}
+
+	return false
 }
 
 func GetClearbitEnabled() int {
@@ -2932,6 +2949,8 @@ func AllowHubspotDealsv3APIByProjectID(projectID int64) bool {
 	return allowedProjectIDs[projectID]
 }
 
+
+
 func AllowDeviceServiceByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDeviceServiceByProjectID, "")
 	if allProjects {
@@ -2939,5 +2958,13 @@ func AllowDeviceServiceByProjectID(projectID int64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
 
+func DisableOpportunityContactRolesEnrichmentByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().DisableOpportunityContactRolesByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }

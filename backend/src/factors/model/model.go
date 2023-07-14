@@ -56,6 +56,8 @@ type Model interface {
 	GetNextArchivalBatches(projectID int64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error)
 
 	// attribution
+	GetRawAttributionQueryParams(projectID int64, queryOriginal *model.AttributionQueryV1,
+		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool) ([]string, []string, error)
 	ExecuteAttributionQueryV0(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	ExecuteAttributionQueryV1(projectID int64, query *model.AttributionQueryV1, debugQueryKey string,

@@ -143,7 +143,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		var resCode int
 		var resMsg interface{}
 
-		if C.GetAttributionDBCacheLookup() == 1 {
+		if C.IsAllowedAttributionDBCacheLookup(projectId) {
 			logCtx.Info("Hitting the DB cache lookup")
 			shouldReturn, resCode, resMsg = H.GetResponseFromDBCaching(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo, timezoneString)
 			logCtx.WithFields(log.Fields{
@@ -207,8 +207,10 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		C.EnableOptimisedFilterOnEventUserQuery()
 
 	H.SleepIfHeaderSet(c)
+
 	QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
+
 	var result *model.QueryResult
 
 	result, err = store.GetStore().ExecuteAttributionQueryV1(projectId, requestPayload.Query, debugQueryKey,
@@ -247,6 +249,22 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 	}
 	result.Query = requestPayload.Query
 	return result, http.StatusOK, "", "", false
+}
+
+func AttributionCommonHandlerV1() {
+
+}
+
+func runAttributionQuery() {
+
+}
+
+func cacheAttributionResultInRedis() {
+
+}
+
+func persistAttributionResultInDB() {
+
 }
 
 func enrichRequestUsingAttributionConfig(c *gin.Context, projectID int64, requestPayload *AttributionRequestPayloadV1, logCtx *log.Entry) {

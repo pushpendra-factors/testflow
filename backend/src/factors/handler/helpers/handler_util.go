@@ -251,18 +251,37 @@ func GetResponseFromDBCaching(reqId string, projectID int64, dashboardID, unitID
 }
 
 // GetResponseIfCachedDashboardQuery Common function to fetch result from cache if present for dashboard query.
-func GetResponseIfCachedDashboardQuery(reqId string, projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
+func GetResponseIfCachedDashboardQuery(reqId string, projectID int64, dashboardID, unitID int64, from, to int64,
+	timezoneString U.TimeZoneString) (bool, int, interface{}) {
 	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitId(reqId, projectID, dashboardID, unitID, from, to, timezoneString)
 	if errCode == http.StatusFound && cacheResult != nil {
-		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString), CacheMeta: cacheResult.CacheMeta}
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true,
+			RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString), CacheMeta: cacheResult.CacheMeta}
 	}
 	return false, errCode, err
 }
 
-func GetResponseIfCachedDashboardQueryWithPreset(reqId string, projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
-	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitIdWithPreset(reqId, projectID, dashboardID, unitID, preset, from, to, timezoneString)
+func GetResponseIfCachedDashboardQueryWithPreset(reqId string, projectID int64, dashboardID, unitID int64, preset string,
+	from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
+	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitIdWithPreset(reqId, projectID, dashboardID,
+		unitID, preset, from, to, timezoneString)
 	if errCode == http.StatusFound && cacheResult != nil {
-		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString), CacheMeta: cacheResult.CacheMeta}
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true,
+			RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString), CacheMeta: cacheResult.CacheMeta}
 	}
 	return false, errCode, err
+}
+
+func GetResponseFromDBCachingObject(reqId string, projectID int64, dashboardID, unitID int64, from, to int64,
+	timezoneString U.TimeZoneString) (bool, int, DashboardQueryResponsePayload) {
+
+	errCode, cacheResult := store.GetStore().FetchCachedResultFromDataBase(reqId, projectID, dashboardID, unitID, from, to)
+
+	// since cacheResult.Result is []byte, need to marshall it
+	resultJson := &postgres.Jsonb{RawMessage: json.RawMessage(cacheResult.Result)}
+	if errCode == http.StatusFound && cacheResult.Result != nil {
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: resultJson, Cache: true,
+			RefreshedAt: cacheResult.ComputedAt, TimeZone: string(timezoneString), CacheMeta: nil}
+	}
+	return false, errCode, DashboardQueryResponsePayload{}
 }

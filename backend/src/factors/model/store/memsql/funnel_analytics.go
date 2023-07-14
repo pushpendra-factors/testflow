@@ -948,7 +948,7 @@ func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int,
 
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
 	userGroupProps = removeEventSpecificUserGroupBys(userGroupProps)
-	ugSelect, ugParams, _ := buildGroupKeys(projectId, userGroupProps, q.Timezone, false)
+	ugSelect, ugParams, _ := buildGroupKeys(projectId, userGroupProps, q.Timezone, false, false)
 
 	propertiesJoinStmnt := ""
 	if hasGroupEntity(q.GroupByProperties, model.PropertyEntityUser) {
@@ -1005,7 +1005,7 @@ func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int,
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
 		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
 	} else {
-		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties, q.Timezone, false)
+		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties, q.Timezone, false, false)
 		aggregateSelectKeys = groupKeys + ", "
 		aggregateFromName = stepFunnelName
 		aggregateGroupBys = groupKeys
@@ -1328,9 +1328,9 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
 	userGroupProps = removeEventSpecificUserGroupBys(userGroupProps)
 	if !isFunnelGroupQuery {
-		ugSelect, ugParams, _ = buildGroupKeys(projectId, userGroupProps, q.Timezone, false)
+		ugSelect, ugParams, _ = buildGroupKeys(projectId, userGroupProps, q.Timezone, false, false)
 	} else {
-		_, _, ugGroupKeys = buildGroupKeys(projectId, userGroupProps, q.Timezone, false)
+		_, _, ugGroupKeys = buildGroupKeys(projectId, userGroupProps, q.Timezone, false, false)
 	}
 
 	propertiesJoinStmnt := ""
@@ -1394,7 +1394,7 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
 		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
 	} else {
-		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties, q.Timezone, false)
+		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties, q.Timezone, false, false)
 		aggregateSelectKeys = groupKeys + ", "
 		aggregateFromName = stepFunnelName
 		aggregateGroupBys = groupKeys
@@ -1481,7 +1481,7 @@ func buildGroupKeyForStepForFunnel(projectID int64, eventWithProperties *model.Q
 	if ewpIndex == 1 {
 		groupSelect, groupSelectParams, groupKeys = buildGroupKeysWithFirst(projectID, groupPropsByStep, timezoneString)
 	} else {
-		groupSelect, groupSelectParams, groupKeys = buildGroupKeys(projectID, groupPropsByStep, timezoneString, false)
+		groupSelect, groupSelectParams, groupKeys = buildGroupKeys(projectID, groupPropsByStep, timezoneString, false, false)
 	}
 	return groupSelect, groupSelectParams, groupKeys, groupByUserProperties
 }

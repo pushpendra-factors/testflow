@@ -1281,7 +1281,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	var aggregateSelect string
 	var aggregateParams []interface{}
 
-	_, _, egKeys = buildGroupKeys(projectID, eventLevelGroupBys, query.Timezone, scopeGroupID > 0)
+	_, _, egKeys = buildGroupKeys(projectID, eventLevelGroupBys, query.Timezone, scopeGroupID > 0, false)
 	if query.EventsCondition == model.EventCondAllGivenEvent {
 		unionStepName = "all_users_intersect"
 	} else if query.EventsCondition == model.EventCondEachGivenEvent {
@@ -1292,7 +1292,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 
 	// select
 	userGroupProps := filterGroupPropsByType(otherGroupBys, model.PropertyEntityUser)
-	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, query.Timezone, scopeGroupID > 0)
+	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, query.Timezone, scopeGroupID > 0, true)
 
 	*qParams = append(*qParams, ugSelectParams...)
 	// order of group keys changes here if users and event
@@ -1347,7 +1347,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 
 	}
 
-	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties, query.Timezone, scopeGroupID > 0)
+	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties, query.Timezone, scopeGroupID > 0, false)
 
 	termStmnt = as(unionStepName, termStmnt)
 	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string
@@ -1485,7 +1485,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId int64,
 	var qParams []interface{}
 
 	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityEvent)
-	egSelect, egSelectParams, egKeys := buildGroupKeys(projectId, eventGroupProps, q.Timezone, false)
+	egSelect, egSelectParams, egKeys := buildGroupKeys(projectId, eventGroupProps, q.Timezone, false, false)
 	isGroupByTimestamp := q.GetGroupByTimestamp() != ""
 
 	var qSelect string
@@ -2189,7 +2189,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 	qParams := make([]interface{}, 0)
 
 	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityEvent)
-	egSelect, egParams, egKeys := buildGroupKeys(projectID, eventGroupProps, q.Timezone, false)
+	egSelect, egParams, egKeys := buildGroupKeys(projectID, eventGroupProps, q.Timezone, false, false)
 	isGroupByTimestamp := q.GetGroupByTimestamp() != ""
 
 	filterSelect := joinWithComma(model.SelectDefaultEventFilter, egSelect)
@@ -2236,8 +2236,8 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 
 	// count.
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
-	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, q.Timezone, false)
-	_, _, groupKeys := buildGroupKeys(projectID, q.GroupByProperties, q.Timezone, false)
+	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, q.Timezone, false, false)
+	_, _, groupKeys := buildGroupKeys(projectID, q.GroupByProperties, q.Timezone, false, false)
 	qParams = append(qParams, ugSelectParams...)
 
 	eventNameSelect := "event_name"
@@ -2691,12 +2691,12 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 	hash2, _ := query.GetQueryCacheHashString()
 	logDifferenceIfAny(hash1, hash2, *query, "Query change - 3-1")
 
-	_, _, egKeys = buildGroupKeys(projectID, eventLevelGroupBys, query.Timezone, false)
+	_, _, egKeys = buildGroupKeys(projectID, eventLevelGroupBys, query.Timezone, false, false)
 	unionStepName = "each_users_union"
 
 	// select
 	userGroupProps := filterGroupPropsByType(otherGroupBys, model.PropertyEntityUser)
-	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, query.Timezone, false)
+	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, query.Timezone, false, true)
 	*qParams = append(*qParams, ugSelectParams...)
 	termSelect := ""
 	termSelect = fmt.Sprintf(" %s.event_name, ", refStep)
@@ -2723,7 +2723,7 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 	}
 
 	hash1, _ = query.GetQueryCacheHashString()
-	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties, query.Timezone, false)
+	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties, query.Timezone, false, false)
 	hash2, _ = query.GetQueryCacheHashString()
 	logDifferenceIfAny(hash1, hash2, *query, "Query change - 3-2")
 
@@ -2815,6 +2815,6 @@ func buildGroupKeyForStep(projectID int64, eventWithProperties *model.QueryEvent
 		}
 
 	}
-	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectID, groupPropsByStep, timezoneString, isScopeGroupQuery)
+	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectID, groupPropsByStep, timezoneString, isScopeGroupQuery, false)
 	return groupSelect, groupSelectParams, groupKeys, groupByUserProperties
 }

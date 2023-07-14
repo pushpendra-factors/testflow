@@ -478,8 +478,14 @@ func getGroupByEventsForEventsAnalytics(groupBys []KPIGroupBy, objectType string
 		currentGroupByProperty.Type = kpiGroupBy.PropertyDataType
 		currentGroupByProperty.GroupByType = kpiGroupBy.GroupByType //Raw or bucketed
 		// currentGroupByProperty.Index = index
-		currentGroupByProperty.EventName = objectType
-		currentGroupByProperty.EventNameIndex = 1
+
+		if kpiGroupBy.PropertyName == U.UP_USER_ID {
+			currentGroupByProperty.EventName = UserPropertyGroupByPresent
+			currentGroupByProperty.EventNameIndex = 0
+		} else {
+			currentGroupByProperty.EventName = objectType
+			currentGroupByProperty.EventNameIndex = 1
+		}
 		currentGroupByProperty.Granularity = kpiGroupBy.Granularity
 		currentGroupByProperty.Entity = kpiGroupBy.Entity
 
@@ -614,7 +620,6 @@ func ConvertStaticKPIQueryToInternalEventQueriesAndTransformationOperations(proj
 	kpiMetric string, enableFilterOpt bool) ([]Query, []string) {
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	transformations := TransformationOfKPIMetricsToEventAnalyticsQuery[kpiQuery.DisplayCategory][kpiMetric]
-	// Kark this one.
 	currentQuery := BuildFiltersAndGroupByBasedOnKPIQuery(query, kpiQuery, kpiMetric)
 	currentQueries := SplitKPIQueryToInternalKPIQueries(currentQuery, kpiQuery, kpiMetric, transformations)
 	operations := make([]string, 0)
