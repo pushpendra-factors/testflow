@@ -98,21 +98,16 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 		}
 	}
 
-	if address := result.Company.Address; address != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_ADDRESS]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_ADDRESS] = address
+	empRange := result.Company.EmployeeRange
+	if empRange != "" {
+		if c, ok := (*properties)[util.SIX_SIGNAL_EMPLOYEE_RANGE]; !ok || c == "" {
+			(*properties)[util.SIX_SIGNAL_EMPLOYEE_RANGE] = empRange
 		}
 	}
 
 	if city := result.Company.City; city != "" {
 		if c, ok := (*properties)[util.SIX_SIGNAL_CITY]; !ok || c == "" {
 			(*properties)[util.SIX_SIGNAL_CITY] = city
-		}
-	}
-
-	if empRange := result.Company.EmployeeRange; empRange != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_EMPLOYEE_RANGE]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_EMPLOYEE_RANGE] = empRange
 		}
 	}
 
@@ -146,16 +141,30 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 		}
 	}
 
-	if domain := result.Company.Domain; domain != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_DOMAIN]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_DOMAIN] = domain
-			model.SetSixSignalAPICountCacheResult(projectId, util.TimeZoneStringIST)
-		}
-	}
+	//Keeping name,address and domain empty, if empRange is equals to "0 - 9"
+	if empRange == "0 - 9" {
+		(*properties)[util.SIX_SIGNAL_ADDRESS] = ""
+		(*properties)[util.SIX_SIGNAL_DOMAIN] = ""
+		(*properties)[util.SIX_SIGNAL_NAME] = ""
+	} else {
 
-	if name := result.Company.Name; name != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_NAME]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_NAME] = name
+		if address := result.Company.Address; address != "" {
+			if c, ok := (*properties)[util.SIX_SIGNAL_ADDRESS]; !ok || c == "" {
+				(*properties)[util.SIX_SIGNAL_ADDRESS] = address
+			}
+		}
+
+		if domain := result.Company.Domain; domain != "" {
+			if c, ok := (*properties)[util.SIX_SIGNAL_DOMAIN]; !ok || c == "" {
+				(*properties)[util.SIX_SIGNAL_DOMAIN] = domain
+				model.SetSixSignalAPICountCacheResult(projectId, util.TimeZoneStringIST)
+			}
+		}
+
+		if name := result.Company.Name; name != "" {
+			if c, ok := (*properties)[util.SIX_SIGNAL_NAME]; !ok || c == "" {
+				(*properties)[util.SIX_SIGNAL_NAME] = name
+			}
 		}
 	}
 
