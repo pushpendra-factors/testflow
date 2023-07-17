@@ -65,6 +65,7 @@ const BreakdownChartsComponent = forwardRef(
   ) => {
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [visibleSeriesData, setVisibleSeriesData] = useState([]);
+    const [dateWiseTotals, setDateWiseTotals] = useState([]);
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
@@ -104,7 +105,8 @@ const BreakdownChartsComponent = forwardRef(
       const {
         categories: cats,
         data: d,
-        compareCategories: compCategories
+        compareCategories: compCategories,
+        dateWiseTotals: dwt
       } = formatDataInSeriesFormat(
         responseData,
         aggData,
@@ -116,6 +118,7 @@ const BreakdownChartsComponent = forwardRef(
       setAggregateData(aggData);
       setCategories(cats);
       setCompareCategories(compCategories);
+      setDateWiseTotals(dwt);
       setData(d);
     }, [
       responseData,
@@ -247,6 +250,7 @@ const BreakdownChartsComponent = forwardRef(
             categories={categories}
             data={visibleSeriesDataWithoutComparisonData}
             showAllLegends
+            dateWiseTotals={dateWiseTotals}
           />
         </div>
       );

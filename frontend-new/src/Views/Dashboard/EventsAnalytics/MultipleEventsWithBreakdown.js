@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useContext,
-  useCallback
-} from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import cx from 'classnames';
 import {
   formatData,
@@ -33,7 +27,6 @@ import {
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
 import { useSelector } from 'react-redux';
-import { DashboardContext } from '../../../contexts/DashboardContext';
 import NoDataChart from '../../../components/NoDataChart';
 // import BreakdownType from '../BreakdownType';
 
@@ -54,7 +47,7 @@ function MultipleEventsWithBreakdown({
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [data, setData] = useState([]);
-  const { handleEditQuery } = useContext(DashboardContext);
+  const [dateWiseTotals, setDateWiseTotals] = useState([]);
   const { eventNames } = useSelector((state) => state.coreQuery);
 
   const handleSorting = useCallback((prop) => {
@@ -81,7 +74,11 @@ function MultipleEventsWithBreakdown({
       appliedColors,
       eventNames
     );
-    const { categories: cats, data: d } = isSeriesChart(chartType)
+    const {
+      categories: cats,
+      data: d,
+      dateWiseTotals: dwt
+    } = isSeriesChart(chartType)
       ? formatDataInStackedAreaFormat(
           resultState.data,
           aggData,
@@ -92,6 +89,7 @@ function MultipleEventsWithBreakdown({
     setAggregateData(aggData);
     setCategories(cats);
     setData(d);
+    setDateWiseTotals(dwt);
   }, [
     resultState.data,
     appliedQueries,
@@ -151,6 +149,7 @@ function MultipleEventsWithBreakdown({
         legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
+        dateWiseTotals={dateWiseTotals}
       />
     );
   } else if (

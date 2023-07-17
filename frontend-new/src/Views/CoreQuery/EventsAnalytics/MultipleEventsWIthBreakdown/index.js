@@ -71,6 +71,7 @@ const MultipleEventsWithBreakdown = forwardRef(
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);
     const [data, setData] = useState([]);
+    const [dateWiseTotals, setDateWiseTotals] = useState([]);
 
     const handleSorting = useCallback((prop) => {
       setSorter((currentSorter) => {
@@ -98,7 +99,7 @@ const MultipleEventsWithBreakdown = forwardRef(
         appliedColors,
         eventNames
       );
-      const { categories: cats, data: d } = formatDataInStackedAreaFormat(
+      const { categories: cats, data: d, dateWiseTotals:dwt } = formatDataInStackedAreaFormat(
         resultState.data,
         aggData,
         eventNames,
@@ -107,6 +108,7 @@ const MultipleEventsWithBreakdown = forwardRef(
       setAggregateData(aggData);
       setCategories(cats);
       setData(d);
+      setDateWiseTotals(dwt);
     }, [resultState.data, queries, eventNames, durationObj.frequency]);
 
     useEffect(() => {
@@ -176,6 +178,7 @@ const MultipleEventsWithBreakdown = forwardRef(
             categories={categories}
             data={visibleSeriesData}
             showAllLegends={true}
+            dateWiseTotals={dateWiseTotals}
           />
         </div>
       );

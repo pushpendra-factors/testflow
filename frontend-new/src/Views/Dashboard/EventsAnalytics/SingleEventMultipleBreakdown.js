@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import cx from 'classnames';
 import {
   formatData,
@@ -23,7 +23,6 @@ import {
 } from '../../../utils/constants';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
-import { DashboardContext } from '../../../contexts/DashboardContext';
 import NoDataChart from '../../../components/NoDataChart';
 import SingleEventMultipleBreakdownHorizontalBarChart from '../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/SingleEventMultipleBreakdownHorizontalBarChart';
 
@@ -43,8 +42,8 @@ function SingleEventMultipleBreakdown({
   const [dateSorter, setDateSorter] = useState(defaultSortProp({ breakdown }));
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [dateWiseTotals, setDateWiseTotals] = useState([]);
   const [data, setData] = useState([]);
-  const { handleEditQuery } = useContext(DashboardContext);
 
   const handleSorting = useCallback((prop) => {
     setSorter((currentSorter) => {
@@ -60,7 +59,11 @@ function SingleEventMultipleBreakdown({
 
   useEffect(() => {
     const aggData = formatData(resultState.data);
-    const { categories: cats, data: d } = isSeriesChart(chartType)
+    const {
+      categories: cats,
+      data: d,
+      dateWiseTotals: dwt
+    } = isSeriesChart(chartType)
       ? formatDataInStackedAreaFormat(
           resultState.data,
           aggData,
@@ -70,6 +73,7 @@ function SingleEventMultipleBreakdown({
     setAggregateData(aggData);
     setCategories(cats);
     setData(d);
+    setDateWiseTotals(dwt);
   }, [resultState.data, chartType, durationObj.frequency]);
 
   useEffect(() => {
@@ -150,6 +154,7 @@ function SingleEventMultipleBreakdown({
         legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
+        dateWiseTotals={dateWiseTotals}
       />
     );
   } else if (chartType === CHART_TYPE_LINECHART) {
