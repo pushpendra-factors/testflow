@@ -4,16 +4,19 @@ import {
   transformPayloadForWeightConfig,
   transformWeightConfigForQuery
 } from 'Components/Profile/utils';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { connect, useSelector } from 'react-redux';
 import EngagementModal from './EngagementModal';
 import _ from 'lodash';
 import { bindActionCreators } from 'redux';
 import { updateAccountScores } from 'Reducers/timelines';
 import { fetchProjectSettings } from 'Reducers/global';
+import SaleWindowModal from './SaleWindowModal';
 
 function EngagementConfig({ fetchProjectSettings }) {
   const [showModal, setShowModal] = useState(false);
+  const [saleWindowValue, setSaleWindowValue] = useState();
+  const [showSaleWindowModal, setShowSaleWindowModal] = useState(false);
   const [activeEvent, setActiveEvent] = useState({});
   const activeProject = useSelector((state) => state.global.active_project);
   const currentProjectSettings = useSelector(
@@ -35,6 +38,12 @@ function EngagementConfig({ fetchProjectSettings }) {
       key: 'weight'
     }
   ];
+
+  useEffect(() => {
+    const initialSaleWindow =
+      currentProjectSettings?.acc_score_weights?.salewindow;
+    setSaleWindowValue(initialSaleWindow);
+  }, [currentProjectSettings?.acc_score_weights?.salewindow]);
 
   const weightsConfig = useMemo(() => {
     return currentProjectSettings?.acc_score_weights?.WeightConfig || [];
@@ -97,7 +106,7 @@ function EngagementConfig({ fetchProjectSettings }) {
 
     updateAccountScores(activeProject.id, {
       WeightConfig: weightConf,
-      salewindow: 10
+      salewindow: parseInt(saleWindowValue)
     })
       .then(() => fetchProjectSettings(activeProject.id))
       .then(() =>
@@ -113,6 +122,16 @@ function EngagementConfig({ fetchProjectSettings }) {
         showErrorMessage(`Error ${editMode ? 'updating' : 'adding'} score.`);
       });
     setShowModal(false);
+  };
+
+  const handleSaleWindowOk = (value) => {
+    setSaleWindowValue(value);
+    setShowSaleWindowModal(false);
+    updateAccountScores(activeProject.id, {
+      WeightConfig: [...weightsConfig],
+      salewindow: parseInt(value)
+    }).then(() => fetchProjectSettings(activeProject.id));
+    return;
   };
 
   const showErrorMessage = (description) => {
@@ -151,7 +170,7 @@ function EngagementConfig({ fetchProjectSettings }) {
     updatedWeightConfig[index].is_deleted = true;
     updateAccountScores(activeProject.id, {
       WeightConfig: updatedWeightConfig,
-      salewindow: 10
+      salewindow: parseInt(saleWindowValue)
     })
       .then(() => fetchProjectSettings(activeProject.id))
       .then(() => showSuccessMessage(`Score removed successfully`))
@@ -163,6 +182,10 @@ function EngagementConfig({ fetchProjectSettings }) {
 
   const handleCancel = () => {
     setShowModal(false);
+  };
+
+  const handleCancelSaleWindow = () => {
+    setShowSaleWindowModal(false);
   };
 
   const setEdit = (event) => {
@@ -238,7 +261,34 @@ function EngagementConfig({ fetchProjectSettings }) {
               </div>
             </Col>
           </Row>
-          <Row className='my-32'>
+          <Row className='my-6'>
+            <Col span={24}>
+              <div className='flex items-center'>
+                <div className='mr-2'>How long is your average sales cycle</div>
+                {Number(saleWindowValue) <= 0 ||
+                saleWindowValue == undefined ||
+                saleWindowValue == null ? (
+                  <Button
+                    className={`fa-button--truncate filter-buttons-radius filter-buttons-margin mx-1`}
+                    type='link'
+                    onClick={() => setShowSaleWindowModal(true)}
+                  >
+                    Sale Window
+                  </Button>
+                ) : (
+                  <Button
+                    className={`dropdown-btn`}
+                    type='text'
+                    onClick={() => setShowSaleWindowModal(true)}
+                  >
+                    {saleWindowValue} Days
+                    <SVG size={16} name='edit' color={'black'} />
+                  </Button>
+                )}
+              </div>
+            </Col>
+          </Row>
+          <Row className='my-10'>
             <Col span={24}>
               {weightsConfig.filter((item) => !item?.is_deleted)?.length ? (
                 <Table columns={columns} dataSource={tableData} />
@@ -270,6 +320,11 @@ function EngagementConfig({ fetchProjectSettings }) {
         onOk={handleOk}
         onCancel={handleCancel}
         editMode={Object.entries(activeEvent).length}
+      />
+      <SaleWindowModal
+        visible={showSaleWindowModal}
+        onOk={handleSaleWindowOk}
+        onCancel={handleCancelSaleWindow}
       />
     </div>
   );
