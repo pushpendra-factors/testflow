@@ -743,6 +743,13 @@ var G2_EMPLOYEES_RANGE = "$g2_employees_range"
 var G2_EMPLOYEES = "$g2_employees"
 var G2_COMPANY_ID = "$g2_company_id"
 
+// account properties
+var IN_HUBSPOT = "$in_hubspot"
+var IN_G2 = "$in_g2"
+var VISITED_WEBSITE = "$visited_website"
+var IN_SALESFORCE = "$in_salesforce"
+var IN_LINKEDIN = "$in_linkedin"
+
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
@@ -1611,6 +1618,22 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_SIX_SIGNAL:             "6Signal Domains",
 	GROUP_NAME_LINKEDIN_COMPANY:       "Linkedin Company Engagements",
 	GROUP_NAME_G2:                     "G2 Enagagements",
+}
+
+var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
+	IN_LINKEDIN:     "In Linkedin",
+	IN_HUBSPOT:      "In Hubspot",
+	IN_G2:           "In G2",
+	VISITED_WEBSITE: "Visited Website",
+	IN_SALESFORCE:   "In Salesforce",
+}
+
+var ALL_ACCOUNT_DEFAULT_PROPERTIES = []string{
+	IN_LINKEDIN,
+	IN_HUBSPOT,
+	IN_G2,
+	VISITED_WEBSITE,
+	IN_SALESFORCE,
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{

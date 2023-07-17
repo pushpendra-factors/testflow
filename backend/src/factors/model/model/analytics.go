@@ -246,6 +246,53 @@ type Query struct {
 	AggregatePropertyType string `json:"agTy"`
 }
 
+var IN_PROPERTIES_DEFAULT_QUERY_MAP = map[string]QueryProperty{
+	U.IN_HUBSPOT: {
+		Entity:   "user_g",
+		Type:     U.PropertyTypeCategorical,
+		Property: HSCompanyIDProperty,
+		Operator: NotEqualOpStr,
+		Value:    "$none",
+	},
+
+	U.IN_G2: {
+		Entity:   "user_g",
+		Type:     U.PropertyTypeCategorical,
+		Property: U.G2_DOMAIN,
+		Operator: NotEqualOpStr,
+		Value:    "$none",
+	},
+
+	U.VISITED_WEBSITE: {
+		Entity:   "user_g",
+		Type:     U.PropertyTypeNumerical,
+		Property: U.SP_PAGE_COUNT,
+		Operator: GreaterThanOpStr,
+		Value:    "0",
+	},
+
+	U.IN_SALESFORCE: {
+		Entity:   "user_g",
+		Type:     U.PropertyTypeCategorical,
+		Property: SFAccountIDProperty,
+		Operator: NotEqualOpStr,
+		Value:    "$none",
+	},
+
+	U.IN_LINKEDIN: {
+		Entity:   "user_g",
+		Type:     U.PropertyTypeCategorical,
+		Property: U.LI_DOMAIN,
+		Operator: NotEqualOpStr,
+		Value:    "$none",
+	},
+}
+
+var OPPOSITE_OF_OPERATOR_MAP = map[string]string{
+	NotEqualOpStr:    EqualsOpStr,
+	GreaterThanOpStr: LesserThanOrEqualOpStr,
+}
+
 func (q *Query) GetClass() string {
 	return q.Class
 }

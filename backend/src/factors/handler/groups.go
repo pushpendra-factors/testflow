@@ -132,11 +132,32 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	}
 	groupName := string(decNameInBytes_2)
 
-	propertiesFromCache, status := store.GetStore().GetPropertiesByGroup(projectId, groupName, 2500,
-		C.GetLookbackWindowForEventUserCache())
-	if status == http.StatusInternalServerError {
-		c.AbortWithStatus(status)
+	var propertiesFromCache map[string][]string
+	var status int
+
+	if groupName == "All" || groupName == U.GROUP_NAME_DOMAINS {
+
+		propertiesFromCache["categorical"] = U.ALL_ACCOUNT_DEFAULT_PROPERTIES
+
+		response := gin.H{
+			"properties": map[string][]string{
+				"categorical": U.ALL_ACCOUNT_DEFAULT_PROPERTIES,
+			},
+			"display_names": U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES,
+		}
+
+		c.JSON(http.StatusOK, response)
 		return
+
+	} else {
+
+		propertiesFromCache, status = store.GetStore().GetPropertiesByGroup(projectId, groupName, 2500,
+			C.GetLookbackWindowForEventUserCache())
+		if status == http.StatusInternalServerError {
+			c.AbortWithStatus(status)
+			return
+		}
+
 	}
 
 	response := gin.H{"properties": propertiesFromCache}
@@ -160,6 +181,7 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 			}
 		}
 	}
+
 	dupCheck := make(map[string]bool)
 	for _, name := range displayNamesOp {
 		_, exists := dupCheck[name]
@@ -231,7 +253,22 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 	logCtx = logCtx.WithField("property_name", propertyName)
+	if groupName == "All" || groupName == U.GROUP_NAME_DOMAINS {
 
+		if U.ContainsStringInArray(U.ALL_ACCOUNT_DEFAULT_PROPERTIES, propertyName) {
+
+			label := c.Query("label")
+			if label == "true" {
+				propertyValueLabel := map[string]string{"false": "False", "true": "True"}
+				c.JSON(http.StatusOK, propertyValueLabel)
+				return
+			}
+			propertyValues := []string{"false", "true"}
+			c.JSON(http.StatusOK, propertyValues)
+			return
+		}
+
+	}
 	propertyValues, err := store.GetStore().GetPropertyValuesByGroupProperty(projectId, groupName,
 		propertyName, 2500, C.GetLookbackWindowForEventUserCache())
 	if err != nil {

@@ -484,6 +484,7 @@ func SelectFilterAndHavingStringsForAccounts(filtersMap map[string][]model.Query
 			continue
 		}
 		for _, filter := range filterArr {
+
 			if exists := propMap[filter.Property]; exists {
 				continue
 			}

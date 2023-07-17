@@ -144,6 +144,18 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 		var currentGroupStmnt, pStmnt string
 		for indexOfProperty, p := range currentGroupedProperties {
 
+			_logicalOp := p.LogicalOp
+			if _, exists := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exists {
+				if p.Value == "true" {
+					p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
+				} else if p.Value == "false" || p.Value == "$none" {
+					p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
+					p.Operator = model.OPPOSITE_OF_OPERATOR_MAP[p.Operator]
+				}
+			}
+
+			p.LogicalOp = _logicalOp
+
 			if p.LogicalOp == "" {
 				p.LogicalOp = "AND"
 			}
