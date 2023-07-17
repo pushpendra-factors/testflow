@@ -1445,7 +1445,7 @@ export const CopySVG = () => {
   );
 };
 
-function RemoveOutlinedSVG({ size = 16, className, color = '#8692A3' }) {
+export function RemoveOutlinedSVG({ size = 16, className, color = '#8692A3' }) {
   return (
     <svg
       className={className}

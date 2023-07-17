@@ -621,7 +621,18 @@ function CoreQuery({
         updateAppliedBreakdown();
       }
       if (queryType === QUERY_TYPE_KPI) {
-        setAppliedQueries(queriesA);
+        setAppliedQueries(
+          queriesA.map((q) => {
+            const category = KPI_config.find(
+              (elem) => elem.category === q.category
+            );
+            const metric = category?.metrics.find((m) => m.name === q.metric);
+            return {
+              ...q,
+              metricType: metric?.type != null ? metric.type : q.metricType
+            };
+          })
+        );
         updateAppliedBreakdown();
       }
       if (queryType === QUERY_TYPE_PROFILE) {
@@ -643,7 +654,8 @@ function CoreQuery({
       savedQueries,
       updateChartTypes,
       updateAppliedBreakdown,
-      profileQueries
+      profileQueries,
+      KPI_config
     ]
   );
 
