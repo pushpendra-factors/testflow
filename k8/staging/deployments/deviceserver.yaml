@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    layer: deviceserver
+    env: staging
+    project: factors-staging
+    nodePool: staging-containerd
+  name: deviceserver
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      layer: deviceserver
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      labels:
+        layer: deviceserver
+        nodePool: staging-containerd
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: staging-containerd
+      containers:
+      - name: deviceserver
+        image: us.gcr.io/factors-staging/device-server:0.1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        volumeMounts:
+        - name: workdir
+          mountPath: /usr/local/var/factors
+        resources:
+          requests:
+            memory: "100M"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        securityContext: {}
+        readinessProbe:
+          tcpSocket:
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        args:
+      volumes:
+      - name: workdir
+        emptyDir: {}
