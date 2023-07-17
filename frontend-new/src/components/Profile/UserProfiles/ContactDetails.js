@@ -142,10 +142,11 @@ function ContactDetails({
 
   useEffect(() => {
     hoverEvents.forEach((event) => {
-      if (!eventProperties[event] &&
+      if (
+        !eventProperties[event] &&
         userDetails?.data?.user_activities?.some(
-            (activity) => activity?.event_name === event
-          )
+          (activity) => activity?.event_name === event
+        )
       ) {
         getEventProperties(activeProject?.id, event);
       }
@@ -185,7 +186,7 @@ function ContactDetails({
     udpateProjectSettings(activeProject.id, {
       timelines_config: { ...timelinesConfig }
     });
-    setOpenPopover(false)
+    setOpenPopover(false);
   };
 
   const handleMilestonesChange = (option) => {
@@ -199,7 +200,7 @@ function ContactDetails({
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
       setCheckListMilestones(checkListProps);
-      setOpenPopover(false)
+      setOpenPopover(false);
     } else {
       notification.error({
         message: 'Error',
@@ -372,47 +373,52 @@ function ContactDetails({
 
   const renderLeftPane = () => (
     <div className='leftpane'>
-      <div className='user'>
-        {isAnonymous ? (
-          <SVG name={`TrackedUser${userID.match(/\d/g)?.[0] || 0}`} size={96} />
-        ) : (
-          <Avatar
-            size={96}
-            className='avatar'
-            style={{
-              backgroundColor: `${
-                iconColors[
-                  ALPHANUMSTR.indexOf(userID.charAt(0).toUpperCase()) % 8
-                ]
-              }`,
-              fontSize: '32px'
-            }}
-          >
-            {userID.charAt(0).toUpperCase()}
-          </Avatar>
-        )}
-        <div className='py-2'>
-          <Text type='title' level={6} extraClass='m-0' weight='bold'>
-            {userDetails.data.title}
-          </Text>
-          {isAnonymous ? null : (
-            <Text type='title' level={7} extraClass='m-0' color='grey'>
-              {userDetails.data.subtitle}
-            </Text>
+      <div className='header'>
+        <div className='user'>
+          {isAnonymous ? (
+            <SVG
+              name={`TrackedUser${userID.match(/\d/g)?.[0] || 0}`}
+              size={96}
+            />
+          ) : (
+            <Avatar
+              size={96}
+              className='avatar'
+              style={{
+                backgroundColor: `${
+                  iconColors[
+                    ALPHANUMSTR.indexOf(userID.charAt(0).toUpperCase()) % 8
+                  ]
+                }`,
+                fontSize: '32px'
+              }}
+            >
+              {userID.charAt(0).toUpperCase()}
+            </Avatar>
           )}
+          <div className='py-2'>
+            <Text type='title' level={6} extraClass='m-0' weight='bold'>
+              {userDetails.data.title}
+            </Text>
+            {isAnonymous ? null : (
+              <Text type='title' level={7} extraClass='m-0' color='grey'>
+                {userDetails.data.subtitle}
+              </Text>
+            )}
+          </div>
         </div>
-      </div>
-      <div className='account inline-flex gap--8'>
-        <div className='icon'>
-          <SVG name='globe' size={20} />
-        </div>
-        <div className='flex flex-col items-start'>
-          <Text type='title' level={8} color='grey' extraClass='m-0'>
-            Account:
-          </Text>
-          <Text type='title' level={7} extraClass='m-0'>
-            {userDetails.data.account || '-'}
-          </Text>
+        <div className='account inline-flex gap--8'>
+          <div className='icon'>
+            <SVG name='globe' size={20} />
+          </div>
+          <div className='flex flex-col items-start'>
+            <Text type='title' level={8} color='grey' extraClass='m-0'>
+              Account:
+            </Text>
+            <Text type='title' level={7} extraClass='m-0'>
+              {userDetails.data.account || '-'}
+            </Text>
+          </div>
         </div>
       </div>
       <div className='props'>
