@@ -82,8 +82,17 @@ func (store *MemSQL) ExecuteUserKPIForAttributionV1(projectID int64, query *mode
 	if err != nil {
 		return kpiData, kpiHeaders, kpiAggFunctionType, err
 	}
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
+			"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports 2")
+	}
+
+	err = store.AddUserIdInKPIDataWithoutCustomerUserId(&kpiData, logCtx)
+	if err != nil {
+		return kpiData, kpiHeaders, kpiAggFunctionType, err
+	}
 	logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
-		"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports 2")
+		"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports 3")
 
 	return kpiData, kpiHeaders, kpiAggFunctionType, nil
 }
