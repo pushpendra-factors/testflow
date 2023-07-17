@@ -7,6 +7,7 @@ import (
 	"factors/util"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -36,6 +37,7 @@ type response struct {
 }
 
 func ExecuteSixSignalEnrich(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int) {
+	defer close(statusChannel)
 	err := enrichUsingSixSignal(projectId, sixSignalKey, properties, clientIP)
 
 	if err != nil {
@@ -50,7 +52,9 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 
 	url := "https://epsilon.6sense.com/v1/company/details"
 	method := "GET"
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: util.TimeoutOneSecond + 100*time.Millisecond,
+	}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return err
