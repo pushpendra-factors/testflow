@@ -9,6 +9,7 @@ import (
 	webhooks "factors/webhooks"
 	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -16,6 +17,41 @@ import (
 
 type InternalStatus struct {
 	Status string `json:"status"`
+}
+
+func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+
+	if projectID == 0 {
+		return nil, http.StatusForbidden, "", "Get request failed. Invalid project ID.", true
+	}
+
+	triggers, errCode := store.GetStore().GetAllEventTriggerAlertsByProject(projectID)
+	if errCode != http.StatusFound {
+		return nil, errCode, "", "Get trigger alerts failed", true
+	}
+
+	excludeSavedQueriesFlag := true
+	// negation of flag to include/exlude returning saved queries i.e KPI/Events
+	includeSavedQueries := c.Query("saved_queries")
+	if includeSavedQueries == "true" {
+		excludeSavedQueriesFlag = false
+	}
+
+	kpis, errCode := store.GetStore().GetAlertByProjectId(projectID, excludeSavedQueriesFlag)
+	if errCode != http.StatusFound {
+		return nil, errCode, "", "Get kpi alerts failed", true
+	}
+
+	alerts := make([]model.AlertInfo, 0)
+	alerts = append(alerts, triggers...)
+	alerts = append(alerts, kpis...)
+
+	sort.Slice(alerts, func (p, q int) bool {
+		return alerts[p].CreatedAt.After(alerts[q].CreatedAt)
+	})
+
+	return alerts, http.StatusFound, "", "", false
 }
 
 func GetEventTriggerAlertsByProjectHandler(c *gin.Context) (interface{}, int, string, string, bool) {

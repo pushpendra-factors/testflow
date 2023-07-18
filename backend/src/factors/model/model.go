@@ -792,6 +792,7 @@ type Model interface {
 	UpdateAlertStatus(lastAlertSent bool) (int, string)
 	UpdateAlert(projectID int64, alertID string, alert model.Alert) (model.Alert, int, string)
 	GetAlertNamesByProjectIdTypeAndNameAndPropertyMappingName(projectID int64, reqID, nameOfPropertyMappings string) ([]string, int)
+	GetAlertByProjectId(projectId int64, excludeSavedQueries bool) ([]model.AlertInfo, int)
 
 	// sharable url
 	CreateShareableURL(sharableURLParams *model.ShareableURL) (*model.ShareableURL, int)

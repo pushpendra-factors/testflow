@@ -269,6 +269,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/alerts/:id", mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.GetAlertByIDHandler))
 	authRouteGroup.DELETE("/:project_id/v1/alerts/:id", mid.SkipDemoProjectWriteAccess(), mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.DeleteAlertHandler))
 	authRouteGroup.PUT("/:project_id/v1/alerts/:id", mid.SkipDemoProjectWriteAccess(), mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.EditAlertHandler))
+	authRouteGroup.GET("/:project_id/v1/all_alerts", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS, M.FEATURE_KPI_ALERTS}), responseWrapper(V1.GetAllAlertsInOneHandler))
 
 	// slack
 	authRouteGroup.POST("/:project_id/slack/auth", mid.SkipDemoProjectWriteAccess(), mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.SlackAuthRedirectHandler)
