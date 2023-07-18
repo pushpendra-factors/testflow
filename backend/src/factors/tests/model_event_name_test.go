@@ -2209,3 +2209,26 @@ func TestGroupEventNames(t *testing.T) {
 		assert.Empty(t, groupName)
 	}
 }
+
+func TestIsEventExistsByEventType(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	isExist, errCode := store.GetStore().IsEventExistsWithType(project.ID, model.TYPE_AUTO_TRACKED_EVENT_NAME)
+	assert.Equal(t, false, isExist)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	eventName := model.EventName{
+		ProjectId: project.ID,
+		ID:        U.GetUUID(),
+		Name:      "Event Name 1",
+		Type:      model.TYPE_AUTO_TRACKED_EVENT_NAME,
+	}
+
+	ename, status := store.GetStore().CreateOrGetEventName(&eventName)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, model.TYPE_AUTO_TRACKED_EVENT_NAME, ename.Type)
+
+	isExist, errCode = store.GetStore().IsEventExistsWithType(project.ID, model.TYPE_AUTO_TRACKED_EVENT_NAME)
+	assert.Equal(t, true, isExist)
+	assert.Equal(t, http.StatusFound, errCode)
+}

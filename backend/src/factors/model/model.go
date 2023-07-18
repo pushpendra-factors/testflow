@@ -275,6 +275,7 @@ type Model interface {
 	GetPropertiesForSalesforceOpportunities(projectID int64, reqID string) []map[string]string
 	GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
+	IsEventExistsWithType(projectId int64, eventType string) (bool, int)
 
 	// form_fill
 	CreateFormFillEventById(projectId int64, formFill *model.SDKFormFillPayload) (int, error)
