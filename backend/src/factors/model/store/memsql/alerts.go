@@ -16,6 +16,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	KPI = "kpi_alert"
+)
+
 func (store *MemSQL) GetAlertById(id string, projectID int64) (model.Alert, int) {
 	logFields := log.Fields{
 		"id":         id,
@@ -68,6 +72,73 @@ func (store *MemSQL) GetAllAlerts(projectID int64, excludeSavedQueries bool) ([]
 		return alerts[i].CreatedAt.After(alerts[j].CreatedAt)
 	})
 	return alerts, http.StatusFound
+}
+
+func (store *MemSQL) GetAlertByProjectId(projectId int64, excludeSavedQueries bool) ([]model.AlertInfo, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	
+	displayAlerts := make([]model.AlertInfo, 0)
+
+	alerts, errCode := store.GetAllAlerts(projectId, excludeSavedQueries) 
+	if errCode != http.StatusFound {
+		return displayAlerts, errCode
+	}
+	
+	alertArray := store.convertAlertToAlertInfo(alerts)
+	return alertArray, http.StatusFound
+}
+
+func (store *MemSQL) convertAlertToAlertInfo(list []model.Alert) []model.AlertInfo {
+
+	res := make([]model.AlertInfo, 0)
+
+	for _, obj := range list {
+		var alertConfig model.AlertConfiguration
+		err := U.DecodePostgresJsonbToStructType(obj.AlertConfiguration, &alertConfig)
+		if err != nil {
+			log.WithError(err).Error("Problem deserializing event_trigger_alerts query.")
+			return nil
+		}
+		deliveryOption := ""
+		if alertConfig.IsSlackEnabled {
+			deliveryOption += "Slack "
+		}
+		if alertConfig.IsEmailEnabled {
+			if deliveryOption == "" {
+				deliveryOption += "Email"
+			} else {
+				deliveryOption += "& Email"
+			}
+		}
+		if alertConfig.IsTeamsEnabled {
+			if deliveryOption == "" {
+				deliveryOption += "Teams"
+			} else {
+				deliveryOption += "& Teams"
+			}
+		}
+
+		alertJson, err := U.EncodeStructTypeToPostgresJsonb(&obj)
+		if err != nil {
+			return nil
+		}
+
+		e := model.AlertInfo{
+			ID:              obj.ID,
+			Title:           obj.AlertName,
+			DeliveryOptions: deliveryOption,
+			LastFailDetails: nil,
+			Status:          model.Active,
+			Alert:           alertJson,
+			Type:            KPI,
+			CreatedAt:       obj.CreatedAt,
+		}
+		res = append(res, e)
+	}
+	return res
 }
 
 // Note: Currently keeping the implementation specific to kpi.
