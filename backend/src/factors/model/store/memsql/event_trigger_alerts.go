@@ -22,6 +22,7 @@ import (
 )
 
 const (
+	ETA                = "event_based_alert"
 	ListLimit          = 1000
 	AlertCreationLimit = 100
 	SortedSetCacheKey  = "ETA:pid"
@@ -31,7 +32,7 @@ const (
 	DisableTime        = 2 * PoisonTime // Hours after which the alert will not be processed from sdk
 )
 
-func (store *MemSQL) GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int) {
+func (store *MemSQL) GetAllEventTriggerAlertsByProject(projectID int64) ([]model.AlertInfo, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -99,9 +100,9 @@ func (store *MemSQL) GetInternalStatusForEventTriggerAlert(projectID int64, id s
 	return alert.InternalStatus, http.StatusFound, nil
 }
 
-func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []model.EventTriggerAlert) []model.EventTriggerAlertInfo {
+func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []model.EventTriggerAlert) []model.AlertInfo {
 
-	res := make([]model.EventTriggerAlertInfo, 0)
+	res := make([]model.AlertInfo, 0)
 
 	for _, obj := range list {
 		var alert model.EventTriggerAlertConfig
@@ -136,13 +137,15 @@ func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []mode
 			internalStatus = model.Paused
 		}
 
-		e := model.EventTriggerAlertInfo{
-			ID:                obj.ID,
-			Title:             obj.Title,
-			DeliveryOptions:   deliveryOption,
-			LastFailDetails:   obj.LastFailDetails,
-			Status:            internalStatus,
-			EventTriggerAlert: &alert,
+		e := model.AlertInfo{
+			ID:              obj.ID,
+			Title:           obj.Title,
+			DeliveryOptions: deliveryOption,
+			LastFailDetails: obj.LastFailDetails,
+			Status:          internalStatus,
+			Alert:           obj.EventTriggerAlert,
+			Type:            ETA,
+			CreatedAt:       obj.CreatedAt,
 		}
 		res = append(res, e)
 	}

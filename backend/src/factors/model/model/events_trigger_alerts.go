@@ -72,13 +72,15 @@ type EventTriggerAlertConfig struct {
 	TeamsChannelsConfig *postgres.Jsonb `json:"teams_channels_config"`
 }
 
-type EventTriggerAlertInfo struct {
-	ID                string                   `json:"id"`
-	Title             string                   `json:"title"`
-	DeliveryOptions   string                   `json:"delivery_options"`
-	Status            string                   `json:"status"`
-	LastFailDetails   *postgres.Jsonb          `json:"last_fail_details"`
-	EventTriggerAlert *EventTriggerAlertConfig `json:"event_alert"`
+type AlertInfo struct {
+	ID              string          `json:"id"`
+	Title           string          `json:"title"`
+	DeliveryOptions string          `json:"delivery_options"`
+	Status          string          `json:"status"`
+	LastFailDetails *postgres.Jsonb `json:"last_fail_details"`
+	Alert           *postgres.Jsonb `json:"alert"`
+	Type            string          `json:"type"`
+	CreatedAt       time.Time       `json:"created_at"`
 }
 
 type CachedEventTriggerAlert struct {
