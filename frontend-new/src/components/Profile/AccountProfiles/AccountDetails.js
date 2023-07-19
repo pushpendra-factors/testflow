@@ -481,26 +481,31 @@ function AccountDetails({
 
   const renderLeftPane = () => (
     <div className='leftpane'>
-      <div className='user'>
-        <img
-          src={`https://logo.uplead.com/${getHost(accountDetails?.data?.host)}`}
-          onError={(e) => {
-            if (
-              e.target.src !==
-              'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
-            ) {
-              e.target.src =
-                'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
-            }
-          }}
-          alt=''
-          height={96}
-          width={96}
-        />
-        <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
-          {accountDetails?.data?.name}
-        </Text>
+      <div className='header'>
+        <div className='user'>
+          <img
+            src={`https://logo.uplead.com/${getHost(
+              accountDetails?.data?.host
+            )}`}
+            onError={(e) => {
+              if (
+                e.target.src !==
+                'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
+              ) {
+                e.target.src =
+                  'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
+              }
+            }}
+            alt=''
+            height={96}
+            width={96}
+          />
+          <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
+            {accountDetails?.data?.name}
+          </Text>
+        </div>
       </div>
+
       <div className='props'>
         {listLeftPaneProps(accountDetails.data.left_pane_props)}
         <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
