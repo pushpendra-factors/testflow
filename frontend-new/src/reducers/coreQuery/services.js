@@ -60,6 +60,13 @@ export function fetchEventProperties(projectId, eventName) {
   return get(null, url);
 }
 
+export function fetchEventPropertiesV2(projectId, eventName) {
+  const url = `${host}projects/${projectId}/event_names/${btoa(
+    btoa(eventName)
+  )}/properties?is_display_name_enabled=true&version=2`;
+  return get(null, url);
+}
+
 export function fetchEventPropertyValues(projectId, eventName, propertyName) {
   const url = `${host}projects/${projectId}/event_names/${btoa(
     btoa(eventName)

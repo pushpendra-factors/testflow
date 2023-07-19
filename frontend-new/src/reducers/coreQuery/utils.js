@@ -31,16 +31,36 @@ export const convertPropsToOptions = (props, display_names = []) => {
   return options;
 };
 
+export const convertEventsPropsToOptions = (props, display_names = []) => {
+  const options = {};
+  Object.keys(props).forEach((type) => {
+    const categoryOptions = props[type];
+    Object.keys(categoryOptions).forEach((group) => {
+      const groupOptions = categoryOptions[group];
+      const groupModifiedOptions = [];
+      groupOptions.forEach((val) => {
+        groupModifiedOptions.push([
+          display_names[val] ? display_names[val] : val,
+          val,
+          type
+        ]);
+      });
+      options[group] = groupModifiedOptions;
+    });
+  });
+  return options;
+};
+
 export const convertCustomEventCategoryToOptions = (data) => {
-  const mainItem = data.properties
+  const mainItem = data.properties;
   const keys = Object.keys(mainItem);
-  const finalArr = keys.map((type,index)=>{
-    let arr = mainItem[type].map(item=>{
-      return [_.startCase(item),item,type]
-    })
-    return arr
-  })
-  return _.flatten(finalArr)
+  const finalArr = keys.map((type, index) => {
+    let arr = mainItem[type].map((item) => {
+      return [_.startCase(item), item, type];
+    });
+    return arr;
+  });
+  return _.flatten(finalArr);
 };
 
 const convertToChannelOptions = (objects) => {

@@ -11,6 +11,7 @@ import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function FilterWrapper({
   viewMode,
@@ -55,11 +56,31 @@ function FilterWrapper({
 
   useEffect(() => {
     const filterDD = { ...filterDropDownOptions, props: [] };
-    Object.keys(filterProps).forEach((key) => {
-      const label = `${PropTextFormat(key)} Properties`;
-      const icon = ['user', 'event'].includes(key) ? key : 'group';
-      const values = filterProps[key];
-      filterDD.props.push({ label, icon, values });
+    Object.keys(filterProps)?.forEach((key) => {
+      if (!Array.isArray(filterProps[key])) {
+        const groups = filterProps[key];
+        Object.keys(groups)?.forEach((groupKey) => {
+          const label = groupKey;
+          const icon = getGroupIcon(groupKey);
+          const values = groups[groupKey];
+          filterDD.props.push({
+            label,
+            icon,
+            propertyType: key,
+            values
+          });
+        });
+      } else {
+        const label = `${PropTextFormat(key)} Properties`;
+        const icon = ['user', 'event'].includes(key) ? key : 'group';
+        const values = filterProps[key];
+        filterDD.props.push({
+          label,
+          icon,
+          propertyType: icon,
+          values
+        });
+      }
     });
     filterDD.operator = operatorsMap;
     setFiltDD(filterDD);
