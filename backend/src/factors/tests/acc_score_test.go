@@ -11,7 +11,7 @@ import (
 	M "factors/model/model"
 	mm "factors/model/store/memsql"
 	P "factors/pattern"
-	T "factors/task"
+	T "factors/task/account_scoring"
 
 	log "github.com/sirupsen/logrus"
 
@@ -296,50 +296,92 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	current_time = time.Now()
 	onlastsaleday := current_time.AddDate(0, 0, -1*int(finalWeights.SaleWindow))
 	dateString = T.GetDateOnlyFromTimestamp(onlastsaleday.Unix())
-	account_score, counts_map, decayValue, err = mm.ComputeAccountScore(cr, countsmap, dateString)
-	s = fmt.Sprintf("acc score : %f , decay_value : %f , counts map :%v", account_score, decayValue, counts_map)
+
+	countsmapf64 := make(map[string]float64)
+	for k, v := range countsmapf64 {
+		countsmapf64[k] = v
+	}
+	account_score_, err := mm.ComputeAccountScoreOnLastEvent(cr, countsmapf64)
+	s = fmt.Sprintf("acc score : %f  , counts map :%v", account_score, countsmapf64)
 	log.Debugf(s)
 	assert.Nil(t, err)
 	// expected counts map is all ones
 	//countsmap[id]count [1:1 2:1 3:2 4:1 7:2 8:3 9:1]
-	assert.Equal(t, account_score, float32(0), "score miscalculation")
-	assert.Equal(t, decayValue, float64(1), "decay value miscalculation")
+	assert.Equal(t, account_score_, float64(0), "score miscalculation")
 
 	// score should be 0 after the sale window has been exceeded
 	current_time = time.Now()
 	sale_day_exceed := current_time.AddDate(0, 0, -1*int(finalWeights.SaleWindow)-1)
 	dateString = T.GetDateOnlyFromTimestamp(sale_day_exceed.Unix())
-	account_score, counts_map, decayValue, err = mm.ComputeAccountScore(cr, countsmap, dateString)
-	s = fmt.Sprintf("acc score : %f , decay_value : %f , counts map :%v", account_score, decayValue, counts_map)
+
+	countsmapf64 = make(map[string]float64)
+	for k, v := range countsmapf64 {
+		countsmapf64[k] = v
+	}
+	account_score_, err = mm.ComputeAccountScoreOnLastEvent(cr, countsmapf64)
+	s = fmt.Sprintf("acc score : %f , counts map :%v", account_score_, counts_map)
 	log.Debugf(s)
 	assert.Nil(t, err)
 	// expected counts map is all ones
 	//countsmap[id]count [1:1 2:1 3:2 4:1 7:2 8:3 9:1]
-	assert.Equal(t, account_score, float32(0), "score miscalculation")
-	assert.Equal(t, decayValue, float64(1), "decay value miscalculation")
-
+	assert.Equal(t, account_score_, float64(0), "score miscalculation")
 }
 
 func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 
 	var prevCountsOfUser map[string]map[string]M.LatestScore = make(map[string]map[string]M.LatestScore)
-	var data []M.EventsCountScore = make([]M.EventsCountScore, 0)
+	users := make(map[string]*T.AggEventsOnUserAndGroup)
+	var finalWeights M.AccWeights
+
+	we0 := M.AccEventWeight{WeightId: "a", Weight_value: 1.0, Is_deleted: false, EventName: "a"}
+	we1 := M.AccEventWeight{WeightId: "b", Weight_value: 1.0, Is_deleted: false, EventName: "b"}
+	we2 := M.AccEventWeight{WeightId: "c", Weight_value: 1.0, Is_deleted: false, EventName: "c"}
+	we3 := M.AccEventWeight{WeightId: "d", Weight_value: 1.0, Is_deleted: false, EventName: "d"}
+	we4 := M.AccEventWeight{WeightId: "e", Weight_value: 1.0, Is_deleted: false, EventName: "e"}
+
+	finalWeights.WeightConfig = []M.AccEventWeight{we0, we1, we2, we3, we4}
+	finalWeights.SaleWindow = 10
+
+	mweights := make(map[string][]M.AccEventWeight, 0)
+	for _, v := range finalWeights.WeightConfig {
+
+		mweights[v.WeightId] = make([]M.AccEventWeight, 1)
+		mweights[v.WeightId] = append(mweights[v.WeightId], v)
+	}
+
+	e1 := M.EventAgg{EventName: "a", EventId: "a", EventCount: 1}
+	e2 := M.EventAgg{EventName: "b", EventId: "b", EventCount: 1}
+	e3 := M.EventAgg{EventName: "c", EventId: "c", EventCount: 1}
+	e4 := M.EventAgg{EventName: "d", EventId: "d", EventCount: 1}
+	e5 := M.EventAgg{EventName: "e", EventId: "e", EventCount: 1}
+
+	eventsCount := make(map[string]*M.EventAgg)
+
+	eventsCount["e1"] = &e1
+	eventsCount["e2"] = &e2
+	eventsCount["e3"] = &e3
+	eventsCount["e4"] = &e4
+	eventsCount["e5"] = &e5
+
+	propertiesmap := make(map[string]int64)
+	propertiesmap["p1"] = 2
+	propertiesmap["p2"] = 3
+	propertiesmap["p3"] = 4
+	propertiesmap["p4"] = 3
+	propertiesmap["p5"] = 14
+	propertiesmap["p6"] = 13
+	propertiesmap["p7"] = 12
+
+	p1 := T.PropAggregate{Name: "$channel", Properties: propertiesmap}
+	p1u1 := make(map[string]T.PropAggregate)
+	p1u1["$channel"] = p1
+
+	user1 := T.AggEventsOnUserAndGroup{User_id: "1", EventsCount: eventsCount, Is_group: false, Properties: p1u1}
+	users["1"] = &user1
 
 	prevCountsOfUser["1"] = make(map[string]M.LatestScore)
 	currentTimestamp := time.Now()
 	currentTS := currentTimestamp.Unix()
-	saleWindow := int64(10)
-	w4 := map[string]int64{}
-	w4["a"] = 3
-	w4["b"] = 3
-	w4["c"] = 3
-	w4["d"] = 3
-	w4["e"] = 3
-	w1_date_string := T.GetDateOnlyFromTimestamp(currentTS)
-
-	d1 := M.EventsCountScore{UserId: "1", ProjectId: 1, EventScore: w4, DateStamp: w1_date_string, IsGroup: false}
-	data = append(data, d1)
-
 	w3 := make(map[string]float64)
 	w3["a"] = 1.0
 	w3["b"] = 1.0
@@ -357,18 +399,43 @@ func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 
 	w2_date_string := T.GetDateOnlyFromTimestamp(w2_date_unix.Unix())
 	w3_date_string := T.GetDateOnlyFromTimestamp(w3_date_unix.Unix())
+	p1u2 := make(map[string]map[string]int64)
+	p1u3 := make(map[string]map[string]int64)
+	p1u2["$channel"] = make(map[string]int64)
+	p1u2["$channel"]["p1"] = 4
+	p1u2["$channel"]["p2"] = 1
+	p1u2["$channel"]["p4"] = 1
+	p1u2["$channel"]["p5"] = 1
 
-	prevCountsOfUser["1"][w3_date_string] = M.LatestScore{Date: w3_date_unix.Unix(), EventsCount: w3}
-	prevCountsOfUser["1"][w2_date_string] = M.LatestScore{Date: w2_date_unix.Unix(), EventsCount: w2}
+	p1u3["$channel"] = make(map[string]int64)
+	p1u3["$channel"]["p1"] = 4
+	p1u3["$channel"]["p3"] = 2
+	p1u3["$channel"]["p4"] = 1
+	p1u3["$channel"]["p5"] = 10
 
-	log.Debugf("input:%v", prevCountsOfUser)
-	log.Debugf("input:%v", data)
-	res, err := T.UpdateLastEventsDay(prevCountsOfUser, data, currentTS, saleWindow)
-	log.Debugf("result:%v", res)
-	assert.Equal(t, 4.5, res["1"].EventsCount["a"])
-	assert.Equal(t, 4.5, res["1"].EventsCount["b"])
-	assert.Equal(t, 4.5, res["1"].EventsCount["c"])
-	assert.Nil(t, err)
+	prevCountsOfUser["1"][w3_date_string] = M.LatestScore{Date: w3_date_unix.Unix(), EventsCount: w3, Properties: p1u2}
+	prevCountsOfUser["1"][w2_date_string] = M.LatestScore{Date: w2_date_unix.Unix(), EventsCount: w2, Properties: p1u3}
+
+	dbup := T.UpdateCountsWithDecayToUpdateDB(users, mweights, prevCountsOfUser, finalWeights.SaleWindow, currentTS)
+	log.Debugf("result:%v", dbup)
+	assert.Equal(t, dbup[0].CurrEventCount.EventsCount["a"], float64(1))
+	assert.Equal(t, dbup[0].CurrEventCount.EventsCount["b"], float64(1))
+	assert.Equal(t, dbup[0].CurrEventCount.EventsCount["c"], float64(1))
+	assert.Equal(t, dbup[0].CurrEventCount.EventsCount["d"], float64(1))
+	assert.Equal(t, dbup[0].CurrEventCount.EventsCount["e"], float64(1))
+
+	assert.Equal(t, dbup[0].Lastevent.EventsCount["a"], 2.5)
+	assert.Equal(t, dbup[0].Lastevent.EventsCount["b"], 2.5)
+	assert.Equal(t, dbup[0].Lastevent.EventsCount["c"], 2.5)
+	assert.Equal(t, dbup[0].Lastevent.EventsCount["d"], 2.5)
+	assert.Equal(t, dbup[0].Lastevent.EventsCount["e"], 2.5)
+	assert.Equal(t, int64(10), dbup[0].Lastevent.Properties["$channel"]["p1"])
+	assert.Equal(t, int64(4), dbup[0].Lastevent.Properties["$channel"]["p2"])
+	assert.Equal(t, int64(6), dbup[0].Lastevent.Properties["$channel"]["p3"])
+	assert.Equal(t, T.TAKETOPK, len(dbup[0].Lastevent.Properties["$channel"]), "Take Topk properties violated")
+
+	assert.Equal(t, 1, len(dbup))
+	// assert.Nil(t, err)
 }
 
 func TestAccScoreDecayValue(t *testing.T) {
