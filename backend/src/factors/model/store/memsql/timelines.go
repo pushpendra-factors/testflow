@@ -1009,7 +1009,9 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
         COALESCE(customer_user_id, id) AS user_id, 
         ISNULL(customer_user_id) AS is_anonymous 
     FROM users 
-    WHERE project_id = ? AND (%s) 
+    WHERE project_id = ?
+	  AND (is_group_user = 0 OR is_group_user IS NULL)
+	  AND (%s)
     GROUP BY user_id 
     ORDER BY updated_at DESC 
     LIMIT 26;`, U.UP_NAME, selectStrAdditionalProp, groupUserString)

@@ -35,10 +35,11 @@ import UpgradeModal from '../UpgradeModal';
 import { PLANS } from 'Constants/plans.constants';
 import {
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesOlder
 } from 'Reducers/coreQuery/middleware';
 import AccountOverview from './AccountOverview';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import { featureLock } from '../../../routes/feature';
 
 function AccountDetails({
   accounts,
@@ -55,7 +56,7 @@ function AccountDetails({
   groupProperties,
   eventNamesMap,
   eventProperties,
-  getEventProperties
+  getEventPropertiesOlder
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -70,7 +71,7 @@ function AccountDetails({
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
-  const [timelineViewMode, setTimelineViewMode] = useState('overview');
+  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
   const handleOpenPopoverChange = (value) => {
@@ -80,6 +81,14 @@ function AccountDetails({
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const { plan } = useSelector((state) => state.featureConfig);
   const isFreePlan = plan?.name === PLANS.PLAN_FREE;
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
+
+  useEffect(() => {
+    if (featureLock(activeAgent)) {
+      setTimelineViewMode('overview');
+    }
+  }, [activeAgent]);
 
   useEffect(() => {
     fetchGroups(activeProject?.id, true);
@@ -105,10 +114,10 @@ function AccountDetails({
     const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
     const group = params.group ? params.group : 'All';
-    const view = params.view ? params.view : 'birdview';
+    const view = params.view ? params.view : timelineViewMode;
     document.title = 'Accounts - FactorsAI';
     return [id, group, view];
-  }, [location]);
+  }, [location, timelineViewMode]);
 
   useEffect(() => {
     if (activeId && activeId !== '')
@@ -174,7 +183,7 @@ function AccountDetails({
           (activity) => activity?.event_name === event
         )
       ) {
-        getEventProperties(activeProject?.id, event);
+        getEventPropertiesOlder(activeProject?.id, event);
       }
     });
   }, [activeProject?.id, eventProperties, accountDetails.data?.account_events]);
@@ -244,7 +253,7 @@ function AccountDetails({
         )
       );
     }
-    setOpenPopover(false);
+    handleOpenPopoverChange(false);
   };
 
   const handleEventsChange = (option) => {
@@ -260,7 +269,7 @@ function AccountDetails({
     udpateProjectSettings(activeProject.id, {
       timelines_config: { ...timelinesConfig }
     });
-    setOpenPopover(false);
+    handleOpenPopoverChange(false);
   };
 
   const handleMilestonesChange = (option) => {
@@ -274,7 +283,6 @@ function AccountDetails({
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
       setCheckListMilestones(checkListProps);
-      setOpenPopover(false);
     } else {
       notification.error({
         message: 'Error',
@@ -299,6 +307,7 @@ function AccountDetails({
         currentProjectSettings?.timelines_config
       )
     );
+    handleOpenPopoverChange(false);
   };
 
   const controlsPopover = () => (
@@ -652,7 +661,7 @@ function AccountDetails({
     return (
       <div className='timeline-view'>
         <Tabs
-          defaultActiveKey='overview'
+          defaultActiveKey='birdview'
           size='small'
           activeKey={timelineViewMode}
           onChange={(val) => {
@@ -717,7 +726,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchGroups,
       getGroupProperties,
-      getEventProperties,
+      getEventPropertiesOlder,
       getProfileAccountDetails,
       fetchProjectSettings,
       udpateProjectSettings

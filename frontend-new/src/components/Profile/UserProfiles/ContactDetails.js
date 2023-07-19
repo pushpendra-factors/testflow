@@ -36,7 +36,7 @@ import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
-import { getEventProperties } from 'Reducers/coreQuery/middleware';
+import { getEventPropertiesOlder } from 'Reducers/coreQuery/middleware';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 function ContactDetails({
@@ -49,7 +49,7 @@ function ContactDetails({
   userProperties,
   eventNamesMap,
   eventProperties,
-  getEventProperties
+  getEventPropertiesOlder
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -165,7 +165,7 @@ function ContactDetails({
           (activity) => activity?.event_name === event
         )
       ) {
-        getEventProperties(activeProject?.id, event);
+        getEventPropertiesOlder(activeProject?.id, event);
       }
     });
   }, [activeProject?.id, eventProperties, userDetails?.data?.user_activities]);
@@ -570,7 +570,7 @@ const mapDispatchToProps = (dispatch) =>
       getProfileUserDetails,
       fetchProjectSettings,
       udpateProjectSettings,
-      getEventProperties
+      getEventPropertiesOlder
     },
     dispatch
   );
