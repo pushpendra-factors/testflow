@@ -36,7 +36,7 @@ import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
-import { getEventProperties } from 'Reducers/coreQuery/middleware';
+import { getEventPropertiesOlder } from 'Reducers/coreQuery/middleware';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 function ContactDetails({
@@ -49,7 +49,7 @@ function ContactDetails({
   userProperties,
   eventNamesMap,
   eventProperties,
-  getEventProperties
+  getEventPropertiesOlder
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -165,7 +165,7 @@ function ContactDetails({
           (activity) => activity?.event_name === event
         )
       ) {
-        getEventProperties(activeProject?.id, event);
+        getEventPropertiesOlder(activeProject?.id, event);
       }
     });
   }, [activeProject?.id, eventProperties, userDetails?.data?.user_activities]);
@@ -393,47 +393,52 @@ function ContactDetails({
 
   const renderLeftPane = () => (
     <div className='leftpane'>
-      <div className='user'>
-        {isAnonymous ? (
-          <SVG name={`TrackedUser${userID.match(/\d/g)?.[0] || 0}`} size={96} />
-        ) : (
-          <Avatar
-            size={96}
-            className='avatar'
-            style={{
-              backgroundColor: `${
-                iconColors[
-                  ALPHANUMSTR.indexOf(userID.charAt(0).toUpperCase()) % 8
-                ]
-              }`,
-              fontSize: '32px'
-            }}
-          >
-            {userID.charAt(0).toUpperCase()}
-          </Avatar>
-        )}
-        <div className='py-2'>
-          <Text type='title' level={6} extraClass='m-0' weight='bold'>
-            {userDetails.data.title}
-          </Text>
-          {isAnonymous ? null : (
-            <Text type='title' level={7} extraClass='m-0' color='grey'>
-              {userDetails.data.subtitle}
-            </Text>
+      <div className='header'>
+        <div className='user'>
+          {isAnonymous ? (
+            <SVG
+              name={`TrackedUser${userID.match(/\d/g)?.[0] || 0}`}
+              size={96}
+            />
+          ) : (
+            <Avatar
+              size={96}
+              className='avatar'
+              style={{
+                backgroundColor: `${
+                  iconColors[
+                    ALPHANUMSTR.indexOf(userID.charAt(0).toUpperCase()) % 8
+                  ]
+                }`,
+                fontSize: '32px'
+              }}
+            >
+              {userID.charAt(0).toUpperCase()}
+            </Avatar>
           )}
+          <div className='py-2'>
+            <Text type='title' level={6} extraClass='m-0' weight='bold'>
+              {userDetails.data.title}
+            </Text>
+            {isAnonymous ? null : (
+              <Text type='title' level={7} extraClass='m-0' color='grey'>
+                {userDetails.data.subtitle}
+              </Text>
+            )}
+          </div>
         </div>
-      </div>
-      <div className='account inline-flex gap--8'>
-        <div className='icon'>
-          <SVG name='globe' size={20} />
-        </div>
-        <div className='flex flex-col items-start'>
-          <Text type='title' level={8} color='grey' extraClass='m-0'>
-            Account:
-          </Text>
-          <Text type='title' level={7} extraClass='m-0'>
-            {userDetails.data.account || '-'}
-          </Text>
+        <div className='account inline-flex gap--8'>
+          <div className='icon'>
+            <SVG name='globe' size={20} />
+          </div>
+          <div className='flex flex-col items-start'>
+            <Text type='title' level={8} color='grey' extraClass='m-0'>
+              Account:
+            </Text>
+            <Text type='title' level={7} extraClass='m-0'>
+              {userDetails.data.account || '-'}
+            </Text>
+          </div>
         </div>
       </div>
       <div className='props'>
@@ -565,7 +570,7 @@ const mapDispatchToProps = (dispatch) =>
       getProfileUserDetails,
       fetchProjectSettings,
       udpateProjectSettings,
-      getEventProperties
+      getEventPropertiesOlder
     },
     dispatch
   );

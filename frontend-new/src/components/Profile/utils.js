@@ -88,7 +88,7 @@ export const displayFilterOpts = {
   $g2: 'G2 Engagements'
 };
 
-export const formatFiltersForPayload = (filters = [], source='users') => {
+export const formatFiltersForPayload = (filters = [], source = 'users') => {
   const filterProps = [];
   filters.forEach((fil) => {
     if (Array.isArray(fil.values)) {

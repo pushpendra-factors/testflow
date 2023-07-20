@@ -5,7 +5,7 @@ import { Text, SVG } from 'factorsComponents';
 import { Row, Col, Button, Radio, Input, Select, Tooltip } from 'antd';
 
 import {
-  getEventProperties,
+  getEventPropertiesOlder,
   getEventPropertyValues
 } from 'Reducers/coreQuery/middleware';
 
@@ -46,7 +46,7 @@ import { PropertySelect } from './PropertySelect';
 const TouchpointView = ({
   activeProject,
   tchType = '2',
-  getEventProperties,
+  getEventPropertiesOlder,
   eventProperties,
   eventUserProperties,
   rule,
@@ -148,7 +148,7 @@ const TouchpointView = ({
   };
   useEffect(() => {
     const eventToCall = getEventToCall();
-    getEventProperties(activeProject.id, eventToCall);
+    getEventPropertiesOlder(activeProject.id, eventToCall);
     if (!rule || !initialRender) reInitialise();
   }, [tchRuleType]);
   useEffect(() => {
@@ -940,7 +940,7 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      getEventProperties,
+      getEventPropertiesOlder,
       getEventPropertyValues
     },
     dispatch

@@ -1292,7 +1292,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 
 	// select
 	userGroupProps := filterGroupPropsByType(otherGroupBys, model.PropertyEntityUser)
-	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, query.Timezone, scopeGroupID > 0, false)
+	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, query.Timezone, scopeGroupID > 0, true)
 
 	*qParams = append(*qParams, ugSelectParams...)
 	// order of group keys changes here if users and event

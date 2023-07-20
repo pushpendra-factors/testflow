@@ -133,7 +133,7 @@ func main() {
 		"*", "List of projects customer enabled forLast Computed")
 	demoProjectIds := flag.String("demo_projects", "", "List of projectIds those are used for demo")
 	attributionDebug := flag.Int("attribution_debug", 0, "Enables debug logging for attribution queries")
-	attributionDBCacheLookup := flag.Int("attribution_db_cache_lookup", 0, "Lookup for cache results in DB for dashboard queries")
+	attributionDBCacheLookup := flag.String("attribution_db_cache_lookup", "", "For given projects, Lookup for cache results in DB for dashboard queries")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
 	enableDemoReadAccess := flag.Bool("enable_demo_read_access", false, "Enable Admin API restrictions.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")

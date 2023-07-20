@@ -506,13 +506,9 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
-		log.Warn("kark1")
-		log.Warn("result")
 		assert.Equal(t, http.StatusOK, errCode)
-		assert.Equal(t, "event_name", result.Headers[0])
-		assert.Equal(t, "aggregate", result.Headers[1])
-		assert.Equal(t, len(result.Rows), 2)
-
+		assert.Equal(t, "aggregate", result.Headers[0])
+		assert.Equal(t, len(result.Rows), 1)
 	})
 
 }

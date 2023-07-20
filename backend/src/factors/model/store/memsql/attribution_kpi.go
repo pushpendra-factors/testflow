@@ -779,6 +779,23 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID int64, kpiData *map[
 	return nil
 }
 
+// AddUserIdInKPIDataWithoutCustomerUserId adds KPI key as user_id for each KPI_id where customer_user_id is null.
+// If customer_user_id was present, at least one user_id would have been added in KpiUserIds
+func (store *MemSQL) AddUserIdInKPIDataWithoutCustomerUserId(kpiData *map[string]model.KPIInfo, logCtx log.Entry) error {
+	var keysWithNoCustomerUserId []string
+	for k, v := range *kpiData {
+		if v.KpiUserIds == nil || len(v.KpiUserIds) == 0 {
+			v.KpiUserIds = []string{k}
+			(*kpiData)[k] = v
+			keysWithNoCustomerUserId = append(keysWithNoCustomerUserId, k)
+		}
+	}
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"keysWithNoCustomerUserId": keysWithNoCustomerUserId}).Info("AddUserIdInKPIDataWithoutCustomerUserId")
+	}
+	return nil
+}
+
 func (store *MemSQL) FireAttributionForKPI(query *model.AttributionQuery,
 	sessions map[string]map[string]model.UserSessionData,
 	kpiData map[string]model.KPIInfo,

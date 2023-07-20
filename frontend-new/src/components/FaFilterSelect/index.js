@@ -193,7 +193,7 @@ const FaFilterSelect = ({
 
   const propSelect = (option, group) => {
     setPropState({
-      icon: group.iconName,
+      icon: group.extraProps?.propertyType || group.iconName,
       name: option.value,
       type: option.extraProps.valueType
     });
@@ -208,7 +208,7 @@ const FaFilterSelect = ({
       option.label,
       option.value,
       option.extraProps.valueType,
-      group.iconName
+      group.extraProps?.propertyType || group.iconName
     ]);
     setValuesSelectionOpen(true);
   };
@@ -349,6 +349,9 @@ const FaFilterSelect = ({
                 return {
                   iconName: groupOpt?.icon,
                   label: getGroupLabel(groupOpt?.label),
+                  extraProps: {
+                    propertyType: groupOpt?.propertyType
+                  },
                   values: groupOpt?.values?.map((valueOpt) => {
                     return {
                       label: valueOpt[0],
@@ -767,7 +770,9 @@ const FaFilterSelect = ({
                 valuesState && valuesState.length
                   ? valuesState
                       .map((vl) =>
-                        valueDisplayNames[vl] ? valueDisplayNames[vl] : formatCsvUploadValue(vl)
+                        valueDisplayNames[vl]
+                          ? valueDisplayNames[vl]
+                          : formatCsvUploadValue(vl)
                       )
                       .join(', ')
                   : null
@@ -791,7 +796,9 @@ const FaFilterSelect = ({
                 {valuesState && valuesState.length
                   ? valuesState
                       .map((vl) =>
-                        valueDisplayNames[vl] ? valueDisplayNames[vl] : formatCsvUploadValue(vl)
+                        valueDisplayNames[vl]
+                          ? valueDisplayNames[vl]
+                          : formatCsvUploadValue(vl)
                       )
                       .join(', ')
                   : 'Select Values'}
