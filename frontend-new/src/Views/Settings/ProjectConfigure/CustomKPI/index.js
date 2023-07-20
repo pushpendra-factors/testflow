@@ -49,6 +49,7 @@ import {
 } from '../../../../utils/constants';
 import EventFilter from 'Components/GlobalFilter';
 import useAutoFocus from 'hooks/useAutoFocus';
+import EventQueryBlock from './EventQueryBlock';
 
 const { Option } = Select;
 
@@ -346,7 +347,7 @@ function CustomKPI({
             ? getEventsWithPropertiesKPI(EventfilterValues?.globalFilters, '')
             : [],
           daFie: '',
-          evNm: data?.event,
+          evNm: selEventName,
           en: 'events_occurrence'
         }
       };
@@ -451,10 +452,6 @@ function CustomKPI({
     setKPICategory(value);
   };
 
-  const onEventNameChange = (value) => {
-    setEventName(value);
-  };
-
   const onKPITypeChange = (value) => {
     setKPIType(value);
   };
@@ -556,7 +553,7 @@ function CustomKPI({
 
   function renderEventBasedKPIForm() {
     return (
-      <div>
+      <div style={{ minHeight: '500px' }}>
         <Row className='mt-6'>
           <Col span={24}>
             <div className='border-top--thin-2 pt-3 mt-3' />
@@ -571,41 +568,8 @@ function CustomKPI({
             <Form.Item
               name='event'
               className='m-0'
-              rules={[
-                {
-                  required: true,
-                  message: 'Please select Event'
-                }
-              ]}
             >
-              <Select
-                className='fa-select w-full'
-                size='large'
-                onChange={(value) => onEventNameChange(value)}
-                placeholder='Select Event'
-                showSearch
-                filterOption={(input, option) =>
-                  option.children.toLowerCase().indexOf(input.toLowerCase()) >=
-                  0
-                }
-              >
-                {Object.entries(eventNames)
-                  .filter((entry) => {
-                    const key = entry[0];
-                    const value = entry[1];
-
-                    // Check if the key or value matches one of the values to be removed
-                    return (
-                      !excludeEventsFromList.includes(key) &&
-                      !excludeEventsFromList.includes(value)
-                    );
-                  })
-                  .map((item) => (
-                    <Option key={item[0]} value={item[0]}>
-                      {item[1]}
-                    </Option>
-                  ))}
-              </Select>
+              <EventQueryBlock selEventName={selEventName} setEventName={setEventName} />
             </Form.Item>
           </Col>
         </Row>
