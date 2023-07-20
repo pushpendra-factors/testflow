@@ -132,7 +132,7 @@ export const getUserProperties = (projectId, queryType = '') => {
   };
 };
 
-export const getEventProperties = (projectId, eventName) => {
+export const getEventPropertiesV2 = (projectId, eventName) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       fetchEventPropertiesV2(projectId, eventName)
@@ -155,7 +155,7 @@ export const getEventProperties = (projectId, eventName) => {
   };
 };
 
-export const getEventPropertiesOlder = (projectId, eventName) => {
+export const getEventProperties = (projectId, eventName) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       fetchEventProperties(projectId, eventName)

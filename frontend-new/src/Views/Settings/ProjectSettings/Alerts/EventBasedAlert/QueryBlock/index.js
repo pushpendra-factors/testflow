@@ -16,7 +16,7 @@ import AliasModal from 'Components/QueryComposer/AliasModal';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import { getQueryComposerGroupIcon } from 'Utils/getQueryComposerGroupIcons';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function QueryBlock({
   availableGroups,
@@ -472,7 +472,7 @@ function QueryBlock({
               <Button
                 icon={
                   <SVG
-                    name={getQueryComposerGroupIcon(
+                    name={getGroupIcon(
                       showGroups.find((group) => group.label === event.group)
                         ?.iconName
                     )}

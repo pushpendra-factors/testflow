@@ -6,6 +6,8 @@ import styles from './index.module.scss';
 import FaSelect from '../../FaSelect';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
+import startCase from 'lodash/startCase';
 
 function EventGroupBlock({
   eventGroup,
@@ -27,19 +29,16 @@ function EventGroupBlock({
 }) {
   const [filterOptions, setFilterOptions] = useState([
     {
-      label: 'Event Properties',
-      iconName: 'event',
-      values: []
-    },
-    {
       label: 'User Properties',
       iconName: 'user',
-      values: []
+      values: [],
+      propertyType: 'user'
     },
     {
       label: 'Group Properties',
       iconName: 'group',
-      values: []
+      values: [],
+      propertyType: 'group'
     }
   ]);
 
@@ -48,19 +47,30 @@ function EventGroupBlock({
 
   useEffect(() => {
     const filterOpts = [...filterOptions];
-    filterOpts[0].values = eventProperties[event.label];
+    const eventGroups = eventProperties[event?.label] || {};
+    Object.keys(eventGroups)?.forEach((groupkey) => {
+      filterOpts.push({
+        label: startCase(groupkey),
+        iconName: getGroupIcon(groupkey),
+        values: eventGroups?.[groupkey],
+        propertyType: 'event'
+      });
+    });
     if (eventGroup) {
-      filterOpts[2].label = `${PropTextFormat(eventGroup)} Properties`;
-      filterOpts[2].values = groupProperties[eventGroup];
-      filterOpts[1].values = [];
+      filterOpts[1].label = `${PropTextFormat(eventGroup)} Properties`;
+      filterOpts[1].values = groupProperties[eventGroup];
+      filterOpts[0].values = [];
     } else {
-      filterOpts[1].values = eventUserProperties;
-      filterOpts[2].values = [];
+      filterOpts[0].values = eventUserProperties;
+      filterOpts[1].values = [];
     }
     const modifiedFilterOpts = filterOpts?.map((opt) => {
       return {
         iconName: opt?.iconName,
         label: opt?.label,
+        extraProps: {
+          propertyType: opt?.propertyType
+        },
         values: opt?.values?.map((op) => {
           return {
             value: op[1],
@@ -77,13 +87,7 @@ function EventGroupBlock({
 
   const onChange = (option, group, ind) => {
     const newGroupByState = { ...groupByEvent };
-    if (group.label === 'User Properties') {
-      newGroupByState.prop_category = 'user';
-    } else if (group.label === 'Event Properties') {
-      newGroupByState.prop_category = 'event';
-    } else {
-      newGroupByState.prop_category = 'group';
-    }
+    newGroupByState.prop_category = group?.extraProps?.propertyType;
     newGroupByState.eventName = event.label;
     newGroupByState.property = option?.value;
     newGroupByState.prop_type = option?.extraProps?.valueType;

@@ -35,7 +35,7 @@ import UpgradeModal from '../UpgradeModal';
 import { PLANS } from 'Constants/plans.constants';
 import {
   getGroupProperties,
-  getEventPropertiesOlder
+  getEventProperties
 } from 'Reducers/coreQuery/middleware';
 import AccountOverview from './AccountOverview';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
@@ -56,7 +56,7 @@ function AccountDetails({
   groupProperties,
   eventNamesMap,
   eventProperties,
-  getEventPropertiesOlder
+  getEventProperties
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -183,7 +183,7 @@ function AccountDetails({
           (activity) => activity?.event_name === event
         )
       ) {
-        getEventPropertiesOlder(activeProject?.id, event);
+        getEventProperties(activeProject?.id, event);
       }
     });
   }, [activeProject?.id, eventProperties, accountDetails.data?.account_events]);
@@ -726,7 +726,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchGroups,
       getGroupProperties,
-      getEventPropertiesOlder,
+      getEventProperties,
       getProfileAccountDetails,
       fetchProjectSettings,
       udpateProjectSettings
