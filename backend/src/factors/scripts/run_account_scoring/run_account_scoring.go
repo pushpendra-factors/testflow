@@ -121,7 +121,7 @@ func main() {
 
 	// init DB, etcd
 	appName := "acc_score_job"
-	healthcheckPingID := C.HealthcheckPatternMinePingID
+	healthcheckPingID := C.HealthcheckAccScoringJobPingID
 	defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
 
 	config := &C.Configuration{
