@@ -90,7 +90,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 			smartEvents, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesSmartKeySortedSet)
 			log.WithField("Count", len(smartEvents)).Info("SmartEventCount")
 			pageViewEvents, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesPageViewSortedSet)
-			log.WithField("Count", len(smartEvents)).Info("SmartEventCount")
+			log.WithField("Count", len(pageViewEvents)).Info("PageViewEventsCount")
 			events, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesKeySortedSet)
 			log.WithField("Count", len(events)).Info("EventsCount")
 			properties, err := cacheRedis.ZrangeWithScoresPersistent(false, propertyCategoryKeySortedSet)
@@ -238,6 +238,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				if isCurrentDay == false {
 					err = cacheRedis.DelPersistent(
 						eventNamesSmartKeySortedSet,
+						eventNamesPageViewSortedSet,
 						eventNamesKeySortedSet,
 						propertyCategoryKeySortedSet,
 						valueKeySortedSet,
