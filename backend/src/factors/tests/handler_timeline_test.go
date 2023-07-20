@@ -145,7 +145,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	// 1. Users from Different Sources (No filter, no segment applied)
 	sourceToUserCountMap := map[string]int{"All": 15, model.UserSourceSalesforceString: 2, model.UserSourceHubspotString: 3}
 	for source, count := range sourceToUserCountMap {
-		payload.Source = source
+		payload.Query.Source = source
 		w := sendGetProfileUserRequest(r, project.ID, agent, payload)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
@@ -175,18 +175,20 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 
 	// 2. UserSourceWeb (1 filter, no segment applied)
 	payload = model.TimelinePayload{
-		Source: "web",
-		Filters: []model.QueryProperty{
-			{
-				Entity:    "user_g",
-				Type:      "categorical",
-				Property:  "$country",
-				Operator:  "equals",
-				Value:     "India",
-				LogicalOp: "AND",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$country",
+					Operator:  "equals",
+					Value:     "India",
+					LogicalOp: "AND",
+				},
 			},
+			Source: "web",
 		},
-		SegmentId: ""}
+	}
 	w := sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
@@ -206,8 +208,9 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 
 	// 2. UserSourceWeb (1 search filter applied)
 	payload = model.TimelinePayload{
-		Source: "web",
-		SearchFilter: []model.QueryProperty{
+		Query: model.Query{
+			Source: "web",
+		}, SearchFilter: []model.QueryProperty{
 			{
 				Entity:    "user_g",
 				Type:      "categorical",
@@ -217,7 +220,6 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 				LogicalOp: "AND",
 			},
 		},
-		SegmentId: "",
 	}
 	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -232,65 +234,12 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	}
 	assert.NotNil(t, resp[0].LastActivity)
 
-	// 3. UserSourceWeb (Segment Applied, no filters)
-	// creating a segment
-	segmentPayload := &model.SegmentPayload{
-		Name:        "Name1",
-		Description: "dummy info",
-		Query: model.Query{
-			GlobalUserProperties: []model.QueryProperty{
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$browser",
-					Operator:  "equals",
-					Value:     "Chrome",
-					LogicalOp: "AND",
-				},
-			},
-			TableProps: []string{"$country", "$page_count"},
-		},
-		Type: "web",
-	}
-	status, err := store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status := store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	// add segmentId to timeline payload
+	// // 3. UserSourceWeb (Query from Segment, no filters)
 	payload = model.TimelinePayload{
-		Source:    "web",
-		SegmentId: segments["web"][0].Id,
-	}
-	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
-	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	resp = make([]model.Profile, 0)
-	err = json.Unmarshal(jsonResponse, &resp)
-	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 4)
-	for i, user := range resp {
-		if i == 3 {
-			assert.Equal(t, user.IsAnonymous, true)
-		} else {
-			assert.Equal(t, user.IsAnonymous, false)
-		}
-		for _, prop := range timelinesConfig.UserConfig.TableProps {
-			assert.NotNil(t, user.TableProps[prop])
-		}
-		assert.NotNil(t, user.LastActivity)
-		if i > 0 {
-			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
-		}
-	}
-
-	// 4. UserSourceWeb (Segment with multiple filters applied, no filters)
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name1",
-		Description: "dummy info",
 		Query: model.Query{
+			Type:                 "unique_users",
+			EventsCondition:      "any_given_event",
+			EventsWithProperties: []model.QueryEventWithProperties{},
 			GlobalUserProperties: []model.QueryProperty{
 				{
 					Entity:    "user_g",
@@ -325,22 +274,12 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 					LogicalOp: "OR",
 				},
 			},
-			TableProps: []string{"$country", "$page_count"},
+			GroupAnalysis: "users",
+			Source:        "web",
+			TableProps:    []string{"$country", "$page_count"},
 		},
-		Type: "web",
 	}
 
-	err, status = store.GetStore().UpdateSegmentById(project.ID, segments["web"][0].Id, *segmentPayload)
-	assert.Equal(t, http.StatusOK, status)
-	assert.Nil(t, err)
-
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	payload = model.TimelinePayload{
-		Source:    "web",
-		SegmentId: segments["web"][0].Id,
-	}
 	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -363,83 +302,22 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		}
 	}
 
-	// 5. UserSourceWeb (Segment with multiple filters applied, 1 filter)
-	payload = model.TimelinePayload{
-		Source: "web",
-		Filters: []model.QueryProperty{
-			{
-				Entity:    "user_g",
-				Type:      "categorical",
-				Property:  "$country",
-				Operator:  "equals",
-				Value:     "India",
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    "user_g",
-				Type:      "categorical",
-				Property:  "$country",
-				Operator:  "equals",
-				Value:     "UAE",
-				LogicalOp: "OR",
-			},
-		},
-		SearchFilter: []model.QueryProperty{
-			{
-				Entity:    "user_g",
-				Type:      "numerical",
-				Property:  "$page_count",
-				Operator:  "equals",
-				Value:     "150",
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    "user_g",
-				Type:      "numerical",
-				Property:  "$page_count",
-				Operator:  "equals",
-				Value:     "100",
-				LogicalOp: "OR",
-			},
-		},
-		SegmentId: segments["web"][0].Id,
-	}
-	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
-	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	resp = make([]model.Profile, 0)
-	err = json.Unmarshal(jsonResponse, &resp)
-	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 2)
-	for i, user := range resp {
-		if i == 0 {
-			assert.Equal(t, user.IsAnonymous, false)
-		} else {
-			assert.Equal(t, user.IsAnonymous, true)
-		}
-		for _, prop := range timelinesConfig.UserConfig.TableProps {
-			assert.NotNil(t, user.TableProps[prop])
-		}
-		assert.NotNil(t, user.LastActivity)
-		if i > 0 {
-			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
-		}
-	}
-
 	year, month, day := time.Now().AddDate(0, 0, -1).Date()
 	jointest := time.Date(year, month, day, 0, 0, 0, 0, time.Now().Location()).UnixMilli()
 	// 6. (a) Test for dateTime type filters (since)
 	payload = model.TimelinePayload{
-		Source: "web",
-		Filters: []model.QueryProperty{
-			{
-				Entity:    "user_g",
-				Type:      "datetime",
-				Property:  "$hubspot_contact_rh_meeting_time",
-				Operator:  "since",
-				Value:     fmt.Sprintf("{\"fr\":%d}", jointest),
-				LogicalOp: "AND",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "datetime",
+					Property:  "$hubspot_contact_rh_meeting_time",
+					Operator:  "since",
+					Value:     fmt.Sprintf("{\"fr\":%d}", jointest),
+					LogicalOp: "AND",
+				},
 			},
+			Source: "web",
 		},
 	}
 
@@ -463,16 +341,18 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 
 	// 6. (b) Test for dateTime type filters (before)
 	payload = model.TimelinePayload{
-		Source: "web",
-		Filters: []model.QueryProperty{
-			{
-				Entity:    "user_g",
-				Type:      "datetime",
-				Property:  "$hubspot_contact_rh_meeting_time",
-				Operator:  "before",
-				Value:     fmt.Sprintf("{\"to\":%d}", jointest),
-				LogicalOp: "AND",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "datetime",
+					Property:  "$hubspot_contact_rh_meeting_time",
+					Operator:  "before",
+					Value:     fmt.Sprintf("{\"to\":%d}", jointest),
+					LogicalOp: "AND",
+				},
 			},
+			Source: "web",
 		},
 	}
 
@@ -496,16 +376,18 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 
 	// 6. (c) Test for dateTime type filters (inCurrent)
 	payload = model.TimelinePayload{
-		Source: "web",
-		Filters: []model.QueryProperty{
-			{
-				Entity:    "user_g",
-				Type:      "datetime",
-				Property:  "$hubspot_contact_rh_meeting_time",
-				Operator:  "inCurrent",
-				Value:     "{\"gran\":\"week\"}",
-				LogicalOp: "AND",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "datetime",
+					Property:  "$hubspot_contact_rh_meeting_time",
+					Operator:  "inCurrent",
+					Value:     "{\"gran\":\"week\"}",
+					LogicalOp: "AND",
+				},
 			},
+			Source: "web",
 		},
 	}
 
@@ -1136,7 +1018,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	var payload model.TimelinePayload
 
 	// Test :- No CRMs enabled
-	payload.Source = "$hubspot_company"
+	payload.Query.Source = "$hubspot_company"
 	w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
 	assert.Equal(t, w.Code, http.StatusBadRequest)
 
@@ -1307,17 +1189,21 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	// Test Cases :-
-
-	payload.Source = "$hubspot_company"
-	payload.Filters = []model.QueryProperty{
-		{
-			Entity:    "user_group",
-			Type:      "categorical",
-			Property:  "$browser",
-			Operator:  "equals",
-			Value:     "Chrome",
-			LogicalOp: "AND",
+	payload = model.TimelinePayload{
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{{
+				Entity:    "user_group",
+				Type:      "categorical",
+				Property:  "$browser",
+				Operator:  "equals",
+				Value:     "Chrome",
+				LogicalOp: "AND",
+			}},
+			GroupAnalysis: "$hubspot_company",
+			Source:        "$hubspot_company",
+			TableProps:    []string{},
 		},
+		SearchFilter: []model.QueryProperty{},
 	}
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -1345,25 +1231,33 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	sourceToUserCountMap := map[string]int{"All": 2, U.GROUP_NAME_HUBSPOT_COMPANY: 3, U.GROUP_NAME_SALESFORCE_ACCOUNT: 3, U.GROUP_NAME_SIX_SIGNAL: 3}
 
 	for source, count := range sourceToUserCountMap {
-		payload.Source = source
-		payload.Filters = []model.QueryProperty{
-			{
-				Entity:    "user_g",
-				Type:      "categorical",
-				Property:  "$browser",
-				Operator:  "equals",
-				Value:     "Chrome",
-				LogicalOp: "AND",
+		payload = model.TimelinePayload{
+			Query: model.Query{
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  "$browser",
+						Operator:  "equals",
+						Value:     "Chrome",
+						LogicalOp: "AND",
+					},
+					{
+						Entity:    "user_group",
+						Type:      "categorical",
+						Property:  "$browser",
+						Operator:  "equals",
+						Value:     "Chrome",
+						LogicalOp: "AND",
+					},
+				},
+				GroupAnalysis: source,
+				Source:        source,
+				TableProps:    []string{},
 			},
-			{
-				Entity:    "user_group",
-				Type:      "categorical",
-				Property:  "$browser",
-				Operator:  "equals",
-				Value:     "Chrome",
-				LogicalOp: "AND",
-			},
+			SearchFilter: []model.QueryProperty{},
 		}
+
 		w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
@@ -1399,9 +1293,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	}
 
 	// 3. Segment with multiple $hubspot_company filters
-	segmentPayload := &model.SegmentPayload{
-		Name:        "Name1",
-		Description: "dummy info",
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			GlobalUserProperties: []model.QueryProperty{
 				{
@@ -1453,20 +1345,8 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 					LogicalOp: "OR",
 				},
 			},
+			Source: "$hubspot_company",
 		},
-		Type: "$hubspot_company",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status := store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	// add segmentId to timeline payload
-	payload = model.TimelinePayload{
-		Source:    "$hubspot_company",
-		SegmentId: segments["$hubspot_company"][0].Id,
 	}
 
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
@@ -1491,32 +1371,34 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	// 5. Accounts from All Sources (filters applied)
 
 	payload = model.TimelinePayload{
-		Source: "All",
-		Filters: []model.QueryProperty{
-			{
-				Entity:    "user_g",
-				Type:      "categorical",
-				Property:  "$browser",
-				Operator:  "equals",
-				Value:     "Chrome",
-				LogicalOp: "AND",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$browser",
+					Operator:  "equals",
+					Value:     "Chrome",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$device_type",
+					Operator:  "equals",
+					Value:     "PC",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "India",
+					LogicalOp: "AND",
+				},
 			},
-			{
-				Entity:    "user_g",
-				Type:      "categorical",
-				Property:  "$device_type",
-				Operator:  "equals",
-				Value:     "PC",
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    "user_g",
-				Type:      "categorical",
-				Property:  "$hubspot_company_country",
-				Operator:  "equals",
-				Value:     "India",
-				LogicalOp: "AND",
-			},
+			Source: "All",
 		},
 	}
 
@@ -1544,55 +1426,57 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	// 6. Accounts from All Sources (filters applied)
 
 	payload = model.TimelinePayload{
-		Source: "All",
-		Filters: []model.QueryProperty{
-			{
-				Entity:    "user_g",
-				Type:      "categorical",
-				Property:  "$salesforce_account_name",
-				Operator:  "equals",
-				Value:     "Adapt.IO",
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    "user_g",
-				Type:      "categorical",
-				Property:  "$hubspot_company_country",
-				Operator:  "equals",
-				Value:     "India",
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    "user_g",
-				Type:      "categorical",
-				Property:  "$hubspot_company_country",
-				Operator:  "equals",
-				Value:     "Pakistan",
-				LogicalOp: "OR",
-			},
-			{
-				Entity:    "user_g",
-				Type:      "categorical",
-				Property:  "$hubspot_company_country",
-				Operator:  "equals",
-				Value:     "Germany",
-				LogicalOp: "OR",
-			},
-			{
-				Entity:    "user_g",
-				Type:      "numerical",
-				Property:  "$hubspot_company_num_associated_contacts",
-				Operator:  "equals",
-				Value:     "50",
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    "user_g",
-				Type:      "numerical",
-				Property:  "$hubspot_company_num_associated_contacts",
-				Operator:  "equals",
-				Value:     "150",
-				LogicalOp: "OR",
+		Query: model.Query{
+			Source: "All",
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$salesforce_account_name",
+					Operator:  "equals",
+					Value:     "Adapt.IO",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "India",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "Pakistan",
+					LogicalOp: "OR",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "Germany",
+					LogicalOp: "OR",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$hubspot_company_num_associated_contacts",
+					Operator:  "equals",
+					Value:     "50",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$hubspot_company_num_associated_contacts",
+					Operator:  "equals",
+					Value:     "150",
+					LogicalOp: "OR",
+				},
 			},
 		},
 	}
@@ -1809,12 +1693,12 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	// 10  Associated Users
-	m := map[string]interface{}{U.UP_NAME: "Some Name"}
-	userProps, err := json.Marshal(m)
-	if err != nil {
-		log.WithError(err).Fatal("Marshal error.")
-	}
-	properties = postgres.Jsonb{RawMessage: userProps}
+	// m := map[string]interface{}{U.UP_NAME: "Some Name"}
+	// userProps, err := json.Marshal(m)
+	// if err != nil {
+	// 	log.WithError(err).Fatal("Marshal error.")
+	// }
+	// properties = postgres.Jsonb{RawMessage: userProps}
 	// event properties map
 	eventProperties := map[string]interface{}{
 		U.EP_PAGE_COUNT:                              5,
@@ -2418,12 +2302,8 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 
 	var payload model.TimelinePayload
 
-	// creating a segment with only global properties
-
-	startTimestamp := U.UnixTimeBeforeDuration(24 * 28 * time.Hour)
-	segmentPayload := &model.SegmentPayload{
-		Name:        "Name0",
-		Description: "dummy info",
+	// query with only global properties
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			GlobalUserProperties: []model.QueryProperty{
 				{
@@ -2443,30 +2323,11 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 					Entity:    "user_g",
 				},
 			},
-			Class:           model.QueryClassProfiles,
-			Type:            model.QueryTypeUniqueUsers,
-			EventsCondition: model.EventCondEachGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "user_profiles",
-			Source:          "salesforce",
-			TableProps:      []string{"$country", "$page_count"},
+			Source:     "salesforce",
+			TableProps: []string{"$country", "$page_count"},
 		},
-		Type: "salesforce",
 	}
-	status, err := store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status := store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
 
-	// add segmentId to timeline payload
-	payload = model.TimelinePayload{
-		Source:    "salesforce",
-		SegmentId: segments["salesforce"][0].Id,
-	}
 	w := sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
@@ -2480,40 +2341,18 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.LastActivity)
 	}
 
-	// creating a segment
-
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name1",
-		Description: "dummy info",
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
 					Name: randomURLs[2],
 				},
 			},
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondEachGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "user_profiles",
 			Source:          "web",
 			TableProps:      []string{"$country", "$page_count"},
 		},
-		Type: "web",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	// add segmentId to timeline payload
-	payload = model.TimelinePayload{
-		Source:    "web",
-		SegmentId: segments["web"][0].Id,
 	}
 	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -2528,10 +2367,8 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.LastActivity)
 	}
 
-	// creating a segment with only ewp
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name2",
-		Description: "dummy info",
+	// with EWP
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
@@ -2551,37 +2388,13 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondEachGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "user_profiles",
 			Source:          "web",
 			TableProps:      []string{"$country", "$page_count"},
 		},
-		Type: "web",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	var id string
-	for _, segment := range segments["web"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
 	}
 
-	// add segmentId to timeline payload
-	payload = model.TimelinePayload{
-		Source:    "web",
-		SegmentId: id,
-	}
 	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -2595,11 +2408,8 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.LastActivity)
 	}
 
-	// creating a segment
-
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name3",
-		Description: "dummy info",
+	// EWP with GUP
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			GlobalUserProperties: []model.QueryProperty{
 				{
@@ -2645,34 +2455,12 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 					Name: randomURLs[6],
 				},
 			},
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondAnyGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "user_profiles",
-			Source:          "salesforce",
-			TableProps:      []string{"$country", "$page_count"},
-		},
-		Type: "salesforce",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
 
-	for _, segment := range segments["salesforce"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
-	}
-	// add segmentId to timeline payload
-	payload = model.TimelinePayload{
-		Source:    "salesforce",
-		SegmentId: id,
+			Source:     "salesforce",
+			TableProps: []string{"$country", "$page_count"},
+		},
 	}
 	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -2687,11 +2475,8 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.LastActivity)
 	}
 
-	// creating a segment
-
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name4",
-		Description: "dummy info",
+	// add segmentId to timeline payload
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			GlobalUserProperties: []model.QueryProperty{
 				{
@@ -2755,34 +2540,11 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 					Name: randomURLs[10],
 				},
 			},
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondAllGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "user_profiles",
 			Source:          "salesforce",
 			TableProps:      []string{"$country", "$page_count"},
 		},
-		Type: "salesforce",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	for _, segment := range segments["salesforce"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
-	}
-	// add segmentId to timeline payload
-	payload = model.TimelinePayload{
-		Source:    "salesforce",
-		SegmentId: id,
 	}
 	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -3010,9 +2772,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 
 	// Test Cases :-
 	//1. gpb and ewp
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name5",
-		Description: "dummy info",
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			GlobalUserProperties: []model.QueryProperty{
 				{
@@ -3076,34 +2836,11 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondEachGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "account_profiles",
 			Source:          "$hubspot_company",
 			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
 		},
-		Type: "$hubspot_company",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	for _, segment := range segments["$hubspot_company"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
-	}
-
-	payload = model.TimelinePayload{
-		Source:    "$hubspot_company",
-		SegmentId: id,
 	}
 
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
@@ -3119,9 +2856,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.LastActivity)
 	}
 
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name6",
-		Description: "dummy info",
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
@@ -3151,34 +2886,11 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondAllGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "account_profiles",
 			Source:          "$hubspot_company",
 			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
 		},
-		Type: "$hubspot_company",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	for _, segment := range segments["$hubspot_company"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
-	}
-
-	payload = model.TimelinePayload{
-		Source:    "$hubspot_company",
-		SegmentId: id,
 	}
 
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
@@ -3187,16 +2899,14 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 	resp = make([]model.Profile, 0)
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 2)
+	assert.Equal(t, len(resp), 0)
 	for _, profile := range resp {
 		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
 		assert.NotNil(t, profile.Identity)
 		assert.NotNil(t, profile.LastActivity)
 	}
 
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name7",
-		Description: "dummy info",
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			GlobalUserProperties: []model.QueryProperty{
 				{
@@ -3206,6 +2916,14 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 					Value:     "India",
 					LogicalOp: "AND",
 					Entity:    "user_g",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "datetime",
+					Property:  "$hubspot_contact_rh_meeting_time",
+					Operator:  "inLast",
+					Value:     "{\"num\":7,\"gran\":\"days\"}",
+					LogicalOp: "AND",
 				},
 			},
 			EventsWithProperties: []model.QueryEventWithProperties{
@@ -3223,42 +2941,10 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondEachGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "account_profiles",
 			Source:          "$hubspot_company",
 			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
-		},
-		Type: "$hubspot_company",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	for _, segment := range segments["$hubspot_company"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
-	}
-	payload = model.TimelinePayload{
-		Source:    "$hubspot_company",
-		SegmentId: id,
-		Filters: []model.QueryProperty{
-			{
-				Entity:    "user_g",
-				Type:      "datetime",
-				Property:  "$hubspot_contact_rh_meeting_time",
-				Operator:  "inLast",
-				Value:     "{\"num\":7,\"gran\":\"days\"}",
-				LogicalOp: "AND",
-			},
 		},
 	}
 
@@ -3275,9 +2961,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.LastActivity)
 	}
 
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name8",
-		Description: "dummy info",
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
@@ -3307,33 +2991,11 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondAllGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "account_profiles",
 			Source:          "$hubspot_company",
 			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
 		},
-		Type: "$hubspot_company",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	for _, segment := range segments["$hubspot_company"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
-	}
-	payload = model.TimelinePayload{
-		Source:    "$hubspot_company",
-		SegmentId: id,
 	}
 
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
@@ -3349,9 +3011,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.LastActivity)
 	}
 
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name9",
-		Description: "dummy info",
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
@@ -3359,35 +3019,12 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 				},
 			},
 
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondAnyGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "account_profiles",
 			Source:          "$hubspot_company",
 			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
 			GroupAnalysis:   "$hubspot_company",
 		},
-		Type: "$hubspot_company",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	for _, segment := range segments["$hubspot_company"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
-	}
-
-	payload = model.TimelinePayload{
-		Source:    "$hubspot_company",
-		SegmentId: id,
 	}
 
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
@@ -3604,13 +3241,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	assert.Equal(t, len(users), 20)
 
 	// user segments
-
-	// segment with only ewp (salesforce)
-	startTimestamp := U.UnixTimeBeforeDuration(24 * 28 * time.Hour)
-
-	segmentPayload := &model.SegmentPayload{
-		Name:        "Name0",
-		Description: "dummy info",
+	payload := model.TimelinePayload{
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
@@ -3627,32 +3258,14 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-
-			Class:           model.QueryClassProfiles,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondEachGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "user_profiles",
-			GroupAnalysis:   model.GROUP_NAME_SALESFORCE_OPPORTUNITY,
+			GroupAnalysis:   "users",
 			TableProps:      []string{"$country", "$page_count"},
 			Source:          "salesforce",
 		},
-		Type: "salesforce",
 	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status := store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
 
-	// add segmentId to timeline payload
-	payload := model.TimelinePayload{
-		Source:    "salesforce",
-		SegmentId: segments["salesforce"][0].Id,
-	}
 	w := sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
@@ -3667,9 +3280,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	}
 
 	// user segment with ewp and gup
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name1",
-		Description: "dummy info",
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
@@ -3693,7 +3304,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 					Property:  "$page_count",
 					Operator:  "equals",
 					Value:     "105",
-					LogicalOp: "OR",
+					LogicalOp: "AND",
 				},
 				{
 					Entity:    "user_g",
@@ -3704,39 +3315,15 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 					LogicalOp: "OR",
 				},
 			},
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondEachGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "user_profiles",
 			Source:          "salesforce",
-			GroupAnalysis:   "salesforce",
+			GroupAnalysis:   "users",
 			TableProps:      []string{"$country", "$hubspot_company_num_associated_contacts", "$hour_of_first_event"},
 		},
-		Type: "salesforce",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	var id string
-	for _, segment := range segments["salesforce"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
 	}
 
-	payload = model.TimelinePayload{
-		Source:    "salesforce",
-		SegmentId: id,
-	}
-
-	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	resp = make([]model.Profile, 0)
@@ -3750,10 +3337,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	}
 
 	// account segment with ewp and gup
-
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name2",
-		Description: "dummy info",
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
@@ -3783,7 +3367,6 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-
 			GlobalUserProperties: []model.QueryProperty{
 				{
 					Type:      "categorical",
@@ -3794,36 +3377,12 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 					Entity:    "user_g",
 				},
 			},
-
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondEachGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "account_profiles",
-			Source:          "$hubspot_company",
+			Source:          model.GROUP_NAME_HUBSPOT_COMPANY,
 			TableProps:      []string{"$hubspot_company_created", "$hour_of_first_event"},
 			GroupAnalysis:   model.GROUP_NAME_HUBSPOT_COMPANY,
 		},
-		Type: "$hubspot_company",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	for _, segment := range segments["$hubspot_company"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
-	}
-
-	payload = model.TimelinePayload{
-		Source:    "$hubspot_company",
-		SegmentId: id,
 	}
 
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
@@ -3841,9 +3400,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	}
 
 	// account segment with only ewp
-	segmentPayload = &model.SegmentPayload{
-		Name:        "Name3",
-		Description: "dummy info",
+	payload = model.TimelinePayload{
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
@@ -3873,34 +3430,12 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondAllGivenEvent,
-			Timezone:        "America/Vancouver",
-			From:            startTimestamp,
-			To:              time.Now().UTC().Unix(),
-			Caller:          "account_profiles",
-			Source:          "$hubspot_company",
+			Source:          model.GROUP_NAME_HUBSPOT_COMPANY,
 			TableProps:      []string{"$country", "$hubspot_company_created"},
 			GroupAnalysis:   model.GROUP_NAME_HUBSPOT_COMPANY,
 		},
-		Type: "$hubspot_company",
-	}
-	status, err = store.GetStore().CreateSegment(project.ID, segmentPayload)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Nil(t, err)
-	// fetch segments
-	segments, status = store.GetStore().GetAllSegments(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
-	for _, segment := range segments["$hubspot_company"] {
-		if segment.Name == segmentPayload.Name {
-			id = segment.Id
-		}
-	}
-	payload = model.TimelinePayload{
-		Source:    "$hubspot_company",
-		SegmentId: id,
 	}
 
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
@@ -3910,6 +3445,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
+
 	for _, profile := range resp {
 		assert.Equal(t, "FreshWorks", profile.TableProps["$hubspot_company_created"])
 		assert.NotNil(t, profile.Identity)
@@ -4095,15 +3631,17 @@ func TestAllAccountDefaultGroupProperties(t *testing.T) {
 
 	t.Run("TestForInHubspotProperties", func(t *testing.T) {
 		payload = model.TimelinePayload{
-			Source: "All",
-			Filters: []model.QueryProperty{
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$in_hubspot",
-					Operator:  "equals",
-					Value:     "true",
-					LogicalOp: "AND",
+			Query: model.Query{
+				Source: "All",
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  "$in_hubspot",
+						Operator:  "equals",
+						Value:     "true",
+						LogicalOp: "AND",
+					},
 				},
 			},
 		}
@@ -4120,15 +3658,17 @@ func TestAllAccountDefaultGroupProperties(t *testing.T) {
 	t.Run("TestForInSalesforceProperties", func(t *testing.T) {
 
 		payload = model.TimelinePayload{
-			Source: "All",
-			Filters: []model.QueryProperty{
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$in_salesforce",
-					Operator:  "equals",
-					Value:     "true",
-					LogicalOp: "AND",
+			Query: model.Query{
+				Source: "All",
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  "$in_salesforce",
+						Operator:  "equals",
+						Value:     "true",
+						LogicalOp: "AND",
+					},
 				},
 			},
 		}
@@ -4144,15 +3684,17 @@ func TestAllAccountDefaultGroupProperties(t *testing.T) {
 	t.Run("TestForInVisitedProperties", func(t *testing.T) {
 
 		payload = model.TimelinePayload{
-			Source: "All",
-			Filters: []model.QueryProperty{
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$visited_website",
-					Operator:  "equals",
-					Value:     "true",
-					LogicalOp: "AND",
+			Query: model.Query{
+				Source: "All",
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  "$visited_website",
+						Operator:  "equals",
+						Value:     "true",
+						LogicalOp: "AND",
+					},
 				},
 			},
 		}
@@ -4168,23 +3710,25 @@ func TestAllAccountDefaultGroupProperties(t *testing.T) {
 	t.Run("TestInPropertiesWithValueMultipleFilters", func(t *testing.T) {
 
 		payload = model.TimelinePayload{
-			Source: "All",
-			Filters: []model.QueryProperty{
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$in_salesforce",
-					Operator:  "equals",
-					Value:     "true",
-					LogicalOp: "AND",
-				},
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$visited_website",
-					Operator:  "equals",
-					Value:     "true",
-					LogicalOp: "AND",
+			Query: model.Query{
+				Source: "All",
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  "$in_salesforce",
+						Operator:  "equals",
+						Value:     "true",
+						LogicalOp: "AND",
+					},
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  "$visited_website",
+						Operator:  "equals",
+						Value:     "true",
+						LogicalOp: "AND",
+					},
 				},
 			},
 		}
@@ -4201,23 +3745,25 @@ func TestAllAccountDefaultGroupProperties(t *testing.T) {
 	t.Run("TestInPropertiesWithValueMultipleFiltersWithFalse", func(t *testing.T) {
 
 		payload = model.TimelinePayload{
-			Source: "All",
-			Filters: []model.QueryProperty{
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$in_salesforce",
-					Operator:  "equals",
-					Value:     "false",
-					LogicalOp: "AND",
-				},
-				{
-					Entity:    "user_g",
-					Type:      "categorical",
-					Property:  "$visited_website",
-					Operator:  "equals",
-					Value:     "true",
-					LogicalOp: "AND",
+			Query: model.Query{
+				Source: "All",
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  "$in_salesforce",
+						Operator:  "equals",
+						Value:     "false",
+						LogicalOp: "AND",
+					},
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  "$visited_website",
+						Operator:  "equals",
+						Value:     "true",
+						LogicalOp: "AND",
+					},
 				},
 			},
 		}

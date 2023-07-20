@@ -469,7 +469,7 @@ type Model interface {
 	GetAllExplainEnabledProjects() ([]int64, error)
 	GetAllPathAnalysisEnabledProjects() ([]int64, error)
 	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
-	GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error)
+	GetTimelinesConfig(projectID int64) (model.TimelinesConfig, error)
 	UpdateAccScoreWeights(projectId int64, weights model.AccWeights) error
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
@@ -854,15 +854,14 @@ type Model interface {
 	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int, string)
 	GetUserActivities(projectID int64, identity string, userId string) ([]model.UserActivity, error)
 	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int, string)
-	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
-	GetGroupNameIDMap(projectID int64) (map[string]int, int)
 	GetAccountsAssociatedToDomain(projectID int64, id string, domainGroupId int) ([]model.User, int)
-	GetSourceStringForAccountsV2(projectID int64, source string) (string, int, []interface{}, int)
-	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (map[string]interface{}, bool, int)
-	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
+	GetSourceStringForAccountsV2(projectID int64, source string) (string, int, int)
 	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
 	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, error)
+	GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error)
+	GetMinAndMaxUpdatedAt(profileType string, whereStmt string, limitVal int, minMaxQParams []interface{}) (*model.MinMaxUpdatedAt, int, string)
 	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int)
+	GetUserPropertiesForAccounts(projectID int64, source string) (string, interface{}, string)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)

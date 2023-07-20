@@ -19,6 +19,11 @@ type Profile struct {
 	Engagement   string                 `json:"engagement,omitempty"`
 }
 
+type MinMaxUpdatedAt struct {
+	MinUpdatedAt time.Time `json:"min_updated_at"`
+	MaxUpdatedAt time.Time `json:"max_updated_at"`
+}
+
 type ContactDetails struct {
 	UserId        string                 `json:"user_id"`
 	IsAnonymous   bool                   `json:"is_anonymous"`
@@ -47,9 +52,7 @@ type UserActivity struct {
 }
 
 type TimelinePayload struct {
-	Source       string          `json:"source"`
-	SegmentId    string          `json:"segment_id"`
-	Filters      []QueryProperty `json:"filters"`
+	Query        Query           `json:"query"`
 	SearchFilter []QueryProperty `json:"search_filter"`
 }
 
@@ -90,12 +93,6 @@ const (
 )
 const GROUP_ACTIVITY_USERNAME = "group_user"
 const FILTER_TYPE_USERS = "users"
-
-// Profile type for Segment Events
-const (
-	USER_PROFILE_CALLER    = "user_profiles"
-	ACCOUNT_PROFILE_CALLER = "account_profiles"
-)
 
 // Source number to source name map
 var SourceGroupUser = map[int]string{

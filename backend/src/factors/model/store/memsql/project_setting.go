@@ -1629,7 +1629,7 @@ func (store *MemSQL) GetFormFillEnabledProjectIDWithToken() (*map[int64]string, 
 	return &idWithTokenMap, http.StatusFound
 }
 
-func (store *MemSQL) GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error) {
+func (store *MemSQL) GetTimelinesConfig(projectID int64) (model.TimelinesConfig, error) {
 	db := C.GetServices().Db
 	var projectSettings model.ProjectSetting
 	err := db.Table("project_settings").Select("timelines_config").Where("project_id=?", projectID).Find(&projectSettings).Error
