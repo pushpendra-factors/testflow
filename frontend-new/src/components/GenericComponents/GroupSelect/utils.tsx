@@ -15,5 +15,11 @@ export const getIcon = (icon: string) => {
   if (checkIcon?.includes('group')) {
     return 'profile';
   }
+  if (checkIcon?.includes('linkedin')) {
+    return 'linkedin_ads';
+  }
+  if (checkIcon?.includes('g2')) {
+    return 'G2crowd';
+  }
   return icon;
 };

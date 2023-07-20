@@ -604,7 +604,8 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	// with limit.
 	getEventNames1, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
 	assert.Equal(t, nil, err)
-	assert.Len(t, getEventNames1[U.MostRecent], 4)
+	assert.Len(t, getEventNames1[U.PageViewEvent], 3)
+	assert.Len(t, getEventNames1[U.FrequentlySeen], 1)
 
 	rEventName = "event2"
 	w = ServePostRequestWithHeaders(r, uri,
@@ -636,9 +637,9 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	event_user_cache.DoRollUpSortedSet(configs)
 	getEventNames2, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30)
 	assert.Equal(t, nil, err)
-	assert.Len(t, getEventNames2[U.MostRecent], 2)
-	assert.Equal(t, "event2", getEventNames2[U.MostRecent][0])
-	assert.Equal(t, "event3", getEventNames2[U.MostRecent][1])
+	assert.Len(t, getEventNames2[U.PageViewEvent], 2)
+	assert.Equal(t, "event2", getEventNames2[U.PageViewEvent][0])
+	assert.Equal(t, "event3", getEventNames2[U.PageViewEvent][1])
 }
 
 func sendCreateSmartEventFilterReq(r *gin.Engine, projectId int64, agent *model.Agent, enPayload *map[string]interface{}) *httptest.ResponseRecorder {
@@ -2208,4 +2209,27 @@ func TestGroupEventNames(t *testing.T) {
 		assert.Equal(t, status, http.StatusNotFound)
 		assert.Empty(t, groupName)
 	}
+}
+
+func TestIsEventExistsByEventType(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	isExist, errCode := store.GetStore().IsEventExistsWithType(project.ID, model.TYPE_AUTO_TRACKED_EVENT_NAME)
+	assert.Equal(t, false, isExist)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	eventName := model.EventName{
+		ProjectId: project.ID,
+		ID:        U.GetUUID(),
+		Name:      "Event Name 1",
+		Type:      model.TYPE_AUTO_TRACKED_EVENT_NAME,
+	}
+
+	ename, status := store.GetStore().CreateOrGetEventName(&eventName)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, model.TYPE_AUTO_TRACKED_EVENT_NAME, ename.Type)
+
+	isExist, errCode = store.GetStore().IsEventExistsWithType(project.ID, model.TYPE_AUTO_TRACKED_EVENT_NAME)
+	assert.Equal(t, true, isExist)
+	assert.Equal(t, http.StatusFound, errCode)
 }

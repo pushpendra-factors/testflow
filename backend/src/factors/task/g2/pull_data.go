@@ -30,6 +30,7 @@ var tagEnum = map[string]string{
 	"categories.show":                             U.GROUP_EVENT_NAME_G2_CATEGORY,
 	"categories.learn":                            U.GROUP_EVENT_NAME_G2_CATEGORY,
 	"products.reviews":                            U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
+	"products.video_reviews":                      U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 	"products.features":                           U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 	"products.details":                            U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 	"products.pricing":                            U.GROUP_EVENT_NAME_G2_PRICING,

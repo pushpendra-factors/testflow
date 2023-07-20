@@ -2,21 +2,19 @@ import React, { memo, useContext, useEffect, useState } from 'react';
 import _ from 'lodash';
 import PropTypes from 'prop-types';
 import { SVG } from 'factorsComponents';
-import { Button, Dropdown, Menu,  Tooltip } from 'antd';
+import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { BUTTON_TYPES } from '../../constants/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import {
   // QUERY_TYPE_KPI,
-  QUERY_TYPE_PROFILE,
+  QUERY_TYPE_PROFILE
   // QUERY_TYPE_ATTRIBUTION,
   // QUERY_TYPE_FUNNEL
 } from '../../utils/constants';
 // import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
-// import userflow from 'userflow.js';
-// import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
 
 const QueryActionsComponent = ({
   queryType,

@@ -1,14 +1,16 @@
 package event_match
 
 import (
+	cacheRedis "factors/cache/redis"
+	M "factors/model/model"
 	U "factors/util"
 	"fmt"
-	"strings"
 	"strconv"
-	M "factors/model/model"
+	"strings"
+
 	log "github.com/sirupsen/logrus"
-	cacheRedis "factors/cache/redis"
 )
+
 type PropertiesMode string
 type BooleanOperator string
 
@@ -51,7 +53,7 @@ type EventsCriteria struct {
 	EventCriterionList []EventCriterion `json:"events"`
 }
 
-func EventMatchesCriterion(projectId int64, eventName string, userProperties, eventProperties  map[string]interface{}, eventCriterion EventCriterion) bool {
+func EventMatchesCriterion(projectId int64, eventName string, userProperties, eventProperties map[string]interface{}, eventCriterion EventCriterion) bool {
 	// TODO: Match event filters as well.
 	nameMatchFlag := eventCriterion.EqualityFlag == (eventName == eventCriterion.Name)
 	if !nameMatchFlag {
@@ -61,7 +63,7 @@ func EventMatchesCriterion(projectId int64, eventName string, userProperties, ev
 	return filterMatchFlag
 }
 
-func EventMatchesFilterCriterionList(projectId int64, userProperties, eventProperties  map[string]interface{},  filterCriterionList []EventFilterCriterion) bool {
+func EventMatchesFilterCriterionList(projectId int64, userProperties, eventProperties map[string]interface{}, filterCriterionList []EventFilterCriterion) bool {
 	for _, fc := range filterCriterionList {
 		// Today we dont support OR across filters. So retaining it this way. Its always a AND
 		if !eventMatchesFilterCriterion(projectId, userProperties, eventProperties, fc) { // "AND" logic: If even a single filter fails, return False.
@@ -71,7 +73,7 @@ func EventMatchesFilterCriterionList(projectId int64, userProperties, eventPrope
 	return true
 }
 
-func eventMatchesFilterCriterion(projectId int64, userProperties, eventProperties  map[string]interface{},  filterCriterion EventFilterCriterion) bool {
+func eventMatchesFilterCriterion(projectId int64, userProperties, eventProperties map[string]interface{}, filterCriterion EventFilterCriterion) bool {
 	// If catagorical property then there will be both AND and OR. Though AND doesnt makes sense there is a possiblity
 	// Will add log to check if there are any queries like that
 	// if numerical, it can never be OR it will always be AND
@@ -125,7 +127,7 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 		if value.LogicalOp == "OR" {
 			orCount++
 		}
-		if value.Operator == M.EqualsOpStr || value.Operator == M.NotEqualOpStr  {
+		if value.Operator == M.EqualsOpStr || value.Operator == M.NotEqualOpStr {
 			equalsCount++
 		}
 		if value.Operator == M.ContainsOpStr || value.Operator == M.NotContainsOpStr {
@@ -174,7 +176,7 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 		if value.Operator == M.NotContainsOpStr {
 			results[i] = !(strings.Contains(strings.ToLower(propertyValue), strings.ToLower(value.Value)))
 		}
-		if value.Operator == M.InList{
+		if value.Operator == M.InList {
 			cacheKeyList, err := M.GetListCacheKey(projectId, value.Value)
 			if err != nil {
 				results[i] = false
@@ -183,7 +185,7 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 				if err != nil {
 					results[i] = false
 				} else {
-					if(score == 1){
+					if score == 1 {
 						results[i] = true
 					} else {
 						results[i] = false
@@ -191,7 +193,7 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 				}
 			}
 		}
-		if value.Operator == M.NotInList{
+		if value.Operator == M.NotInList {
 			cacheKeyList, err := M.GetListCacheKey(projectId, value.Value)
 			if err != nil {
 				results[i] = false
@@ -200,7 +202,7 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 				if err != nil {
 					results[i] = true
 				} else {
-					if(score == 1){
+					if score == 1 {
 						results[i] = false
 					} else {
 						results[i] = true
@@ -229,10 +231,10 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 
 func handleNoneCase(eventPropValue string, isPresentEventPropValue bool, operator string) bool {
 	if operator == M.EqualsOpStr || operator == M.ContainsOpStr {
-		return !isPresentEventPropValue || eventPropValue == "$none"
+		return !isPresentEventPropValue || eventPropValue == "$none" || eventPropValue == ""
 	}
 	if operator == M.NotEqualOpStr || operator == M.NotContainsOpStr {
-		return isPresentEventPropValue && eventPropValue != "$none"
+		return isPresentEventPropValue && eventPropValue != "$none" && eventPropValue != ""
 	}
 	return false
 }
@@ -295,27 +297,27 @@ func matchFitlerValuesForNumerical(eventPropValue interface{}, isPresentEventPro
 
 func matchFitlerValuesForDatetime(eventPropValue interface{}, isPresentEventPropValue bool, filterValues []OperatorValueTuple) bool {
 	/*
-	BeforeStr               = "before"
-	SinceStr                = "since"
-	BetweenStr              = "between"
-	NotInBetweenStr         = "notInBetween"
-	InCurrent               = "inCurrent"
-	NotInCurrent            = "notInCurrent"
-	InLastStr               = "inLast"
-	NotInLastStr            = "notInLast"
+		BeforeStr               = "before"
+		SinceStr                = "since"
+		BetweenStr              = "between"
+		NotInBetweenStr         = "notInBetween"
+		InCurrent               = "inCurrent"
+		NotInCurrent            = "notInCurrent"
+		InLastStr               = "inLast"
+		NotInLastStr            = "notInLast"
 	*/
 	results := make(map[int]bool)
 	propertyValue := fmt.Sprintf("%v", eventPropValue)
 	eventPropertyValueFloat, err := strconv.ParseFloat(propertyValue, 64)
-	eventPropertyValue  := int64(eventPropertyValueFloat) * 1000
+	eventPropertyValue := int64(eventPropertyValueFloat) * 1000
 	if err != nil {
 		return false
 	}
 	for i, value := range filterValues {
 		dateTimeFilter, err := M.DecodeDateTimePropertyValue(value.Value)
-			if err != nil {
-				return false
-			}
+		if err != nil {
+			return false
+		}
 		if value.Operator == M.BeforeStr {
 			if eventPropertyValue <= dateTimeFilter.To {
 				results[i] = true
@@ -331,29 +333,29 @@ func matchFitlerValuesForDatetime(eventPropValue interface{}, isPresentEventProp
 			}
 		}
 		if value.Operator == M.BetweenStr {
-			if eventPropertyValue >= dateTimeFilter.From  && eventPropertyValue <= dateTimeFilter.To{
+			if eventPropertyValue >= dateTimeFilter.From && eventPropertyValue <= dateTimeFilter.To {
 				results[i] = true
 			} else {
 				results[i] = false
 			}
 		}
 		if value.Operator == M.NotInBetweenStr {
-			if eventPropertyValue <= dateTimeFilter.From  && eventPropertyValue >= dateTimeFilter.To{
+			if eventPropertyValue <= dateTimeFilter.From && eventPropertyValue >= dateTimeFilter.To {
 				results[i] = true
 			} else {
 				results[i] = false
 			}
 		}
 		if value.Operator == M.InLastStr || value.Operator == M.NotInLastStr {
-			from, to, _ := U.GetDynamicPreviousRanges(dateTimeFilter.Granularity, dateTimeFilter.Number,  U.TimeZoneStringUTC)
-			if(value.Operator == M.InLastStr){
-				if eventPropertyValue >= from && eventPropertyValue <= to{
+			from, to, _ := U.GetDynamicPreviousRanges(dateTimeFilter.Granularity, dateTimeFilter.Number, U.TimeZoneStringUTC)
+			if value.Operator == M.InLastStr {
+				if eventPropertyValue >= from && eventPropertyValue <= to {
 					results[i] = true
 				} else {
 					results[i] = false
 				}
 			}
-			if(value.Operator == M.NotInLastStr){
+			if value.Operator == M.NotInLastStr {
 				if eventPropertyValue <= from && eventPropertyValue >= to {
 					results[i] = true
 				} else {
@@ -362,15 +364,15 @@ func matchFitlerValuesForDatetime(eventPropValue interface{}, isPresentEventProp
 			}
 		}
 		if value.Operator == M.InCurrent || value.Operator == M.NotInCurrent {
-			from, to, _ := U.GetDynamicPreviousRanges(dateTimeFilter.Granularity, 0,  U.TimeZoneStringUTC)
-			if(value.Operator == M.InCurrent){
-				if eventPropertyValue >= from && eventPropertyValue <= to{
+			from, to, _ := U.GetDynamicPreviousRanges(dateTimeFilter.Granularity, 0, U.TimeZoneStringUTC)
+			if value.Operator == M.InCurrent {
+				if eventPropertyValue >= from && eventPropertyValue <= to {
 					results[i] = true
 				} else {
 					results[i] = false
 				}
 			}
-			if(value.Operator == M.NotInCurrent){
+			if value.Operator == M.NotInCurrent {
 				if eventPropertyValue <= from && eventPropertyValue >= to {
 					results[i] = true
 				} else {

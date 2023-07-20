@@ -467,19 +467,26 @@ func MergeAddTypeUserProperties(mergedProperties *map[string]interface{}, existi
 		}
 	}
 
-	// Loop over all records except last record.
-	for _, userPropertiesRecord := range existingProperties[:len(existingProperties)-1] {
+	//mergedProperties initialization with 0
+	for key, _ := range U.USER_PROPERTIES_MERGE_TYPE_ADD_MAP {
+		mergedValue, _ := (*mergedProperties)[key]
+		(*mergedProperties)[key] = addValuesForProperty(mergedValue, float64(0), false)
+	}
+
+	// Loop over all records.
+	for _, userPropertiesRecord := range existingProperties {
 		userProperties, err := U.DecodePostgresJsonb(&userPropertiesRecord)
 		if err != nil {
 			log.WithError(err).Error("Failed to decode user property")
 			return
 		}
 
-		_, isMergedBefore := (*userProperties)[U.UP_MERGE_TIMESTAMP]
-		for property, _ := range U.USER_PROPERTIES_MERGE_TYPE_ADD_MAP {
-
-			mergeAddTypeUserProperty(mergedProperties, userProperties, property, mergedValueAddedOnce, isMergedBefore)
-
+		for key, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD_MAP {
+			mergedValue, _ := (*mergedProperties)[key]
+			if userValue, userValueExists := (*userProperties)[property]; userValueExists {
+				userValueFloat, _ := U.GetPropertyValueAsFloat64(userValue)
+				(*mergedProperties)[key] = addValuesForProperty(mergedValue, userValueFloat, true)
+			}
 		}
 	}
 }

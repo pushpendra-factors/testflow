@@ -14,7 +14,6 @@ func DoCleanUpSortedSet(configs map[string]interface{}) (map[string]interface{},
 	// zcard for all the keys
 	// zremrange for [0 - (count - limit)]
 
-	eventsLimit := configs["eventsLimit"].(int)
 	propertiesLimit := configs["propertiesLimit"].(int)
 	valuesLimit := configs["valuesLimit"].(int)
 
@@ -36,48 +35,13 @@ func DoCleanUpSortedSet(configs map[string]interface{}) (map[string]interface{},
 		projectID := int64(projId)
 		log.WithField("ProjectId", projectID).Info("Starting CLEANUP")
 
-		// Event name cleanup.
-		eventNamesKeySortedSet, err := model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
-			currentTimeDatePart)
-		if err != nil {
-			log.WithError(err).Error("Failed to get cache key - smart events")
-			return nil, false
-		}
-		count, err := cacheRedis.ZcardPersistent(eventNamesKeySortedSet)
-		if err != nil {
-			log.WithError(err).Error("Failed to get count - events")
-			return nil, false
-		}
-		eventCount := int(count)
-
-		eventNamesSmartKeySortedSet, err := model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
-			currentTimeDatePart)
-		if err != nil {
-			log.WithError(err).Error("Failed to get cache key - events")
-			return nil, false
-		}
-		count, err = cacheRedis.ZcardPersistent(eventNamesSmartKeySortedSet)
-		if err != nil {
-			log.WithError(err).Error("Failed to get count - smart events")
-			return nil, false
-		}
-		smartEventsCount := int(count)
-		if eventCount+smartEventsCount > eventsLimit && eventCount > (eventsLimit-eventCount+smartEventsCount-1) {
-			log.WithField("ProjectId", projectID).WithField("Count", eventCount+smartEventsCount-1-eventsLimit).Info("Deleting events")
-			_, err := cacheRedis.ZRemRangePersistent(eventNamesKeySortedSet, 0, (eventCount + smartEventsCount - 1 - eventsLimit))
-			if err != nil {
-				log.WithError(err).Error("Failed to delete - events")
-				return nil, false
-			}
-		}
-
 		// Event property name cleanup.
 		propertyCategoryKeySortedSet, err := model.GetPropertiesByEventCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
 		if err != nil {
 			log.WithError(err).Error("Failed to get cache key - properties")
 			return nil, false
 		}
-		count, err = cacheRedis.ZcardPersistent(propertyCategoryKeySortedSet)
+		count, err := cacheRedis.ZcardPersistent(propertyCategoryKeySortedSet)
 		if err != nil {
 			log.WithError(err).Error("Failed to get count - properties")
 			return nil, false

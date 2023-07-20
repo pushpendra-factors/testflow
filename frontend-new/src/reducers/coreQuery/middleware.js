@@ -38,6 +38,7 @@ import {
 import {
   getEventNames,
   fetchEventProperties,
+  fetchEventPropertiesV2,
   fetchUserProperties,
   fetchGroupProperties,
   fetchCampaignConfig,
@@ -51,7 +52,8 @@ import {
   convertToEventOptions,
   convertPropsToOptions,
   convertCampaignConfig,
-  convertCustomEventCategoryToOptions
+  convertCustomEventCategoryToOptions,
+  convertEventsPropsToOptions
 } from './utils';
 
 export const fetchEventNames = (projectId) => {
@@ -122,6 +124,29 @@ export const getUserProperties = (projectId, queryType = '') => {
               )
             )
           );
+        })
+        .catch((err) => {
+          // resolve(dispatch(fetchEventPropertiesAction({})));
+        });
+    });
+  };
+};
+
+export const getEventPropertiesV2 = (projectId, eventName) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchEventPropertiesV2(projectId, eventName)
+        .then((response) => {
+          const options = convertEventsPropsToOptions(
+            response.data.properties,
+            response.data?.display_names
+          );
+          resolve(
+            dispatch(
+              setEventPropertiesNamesAction(response.data?.display_names)
+            )
+          );
+          resolve(dispatch(fetchEventPropertiesAction(options, eventName)));
         })
         .catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));

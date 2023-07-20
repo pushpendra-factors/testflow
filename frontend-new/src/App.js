@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense } from 'react';
+import React, { useEffect, Suspense, useState } from 'react';
 import { connect, useDispatch } from 'react-redux';
 import PageSuspenseLoader from './components/SuspenseLoaders/PageSuspenseLoader';
 import * as Sentry from '@sentry/react';
@@ -12,9 +12,10 @@ import {
 } from 'Reducers/global';
 import { SSO_LOGIN_FULFILLED } from './reducers/types';
 import { sendSlackNotification } from './utils/slack';
-import userflow from 'userflow.js';
 import AdBlockerDetector from './components/AdBlockerDetector';
 import { AppRoutes } from 'Routes';
+import { ProductFruits } from 'react-product-fruits';
+import { PRODUCTION_WORKSPACE_CODE } from 'Utils/productFruitsConfig';
 
 function App({
   agent_details,
@@ -23,6 +24,7 @@ function App({
   enableMarketoIntegration
 }) {
   const dispatch = useDispatch();
+  const [userInfo, setUserInfo] = useState(null);
 
   const ssoLogin = () => {
     if (window.location.href.indexOf('?error=') > -1) {
@@ -173,26 +175,34 @@ function App({
       }
     }
 
-    if (
-      window.location.href.indexOf('https://staging-app.factors.ai/') != -1 ||
-      window.location.href.indexOf('http://factors-dev.com:3000/') != -1
-    ) {
-      userflow.init('ct_ziy2e3t6sjdj7gh3pqfevszf3y');
-      userflow.identify(agent_details?.uuid, {
-        name: agent_details?.first_name,
-        email: agent_details?.email,
-        signed_up_at: agent_details?.signed_up_at
-      });
-    }
+    // if (
+    //   window.location.href.indexOf('https://staging-app.factors.ai/') != -1 ||
+    //   window.location.href.indexOf('http://factors-dev.com:3000/') != -1
+    // ) {
+    //   userflow.init('ct_ziy2e3t6sjdj7gh3pqfevszf3y');
+    //   userflow.identify(agent_details?.uuid, {
+    //     name: agent_details?.first_name,
+    //     email: agent_details?.email,
+    //     signed_up_at: agent_details?.signed_up_at
+    //   });
+    // }
 
-    if (window.location.href.indexOf('https://app.factors.ai/') != -1) {
-      userflow.init('ct_4iqdnn267zdr5ednpbgbyvubky');
-      userflow.identify(agent_details?.uuid, {
-        name: agent_details?.first_name,
-        email: agent_details?.email,
-        signed_up_at: agent_details?.signed_up_at
-      });
-    }
+    // if (window.location.href.indexOf('https://app.factors.ai/') != -1) {
+    //   userflow.init('ct_4iqdnn267zdr5ednpbgbyvubky');
+    //   userflow.identify(agent_details?.uuid, {
+    //     name: agent_details?.first_name,
+    //     email: agent_details?.email,
+    //     signed_up_at: agent_details?.signed_up_at
+    //   });
+    // }
+
+    const userInfoObj = {
+      username: agent_details?.email, // REQUIRED - any unique user identifier
+      email: agent_details?.email,
+      firstname: agent_details?.first_name,
+      signUpAt: agent_details?.signed_up_at
+    };
+    setUserInfo(userInfoObj);
   }, [agent_details]);
 
   useEffect(() => {
@@ -225,6 +235,14 @@ function App({
           onError={FaErrorLog}
         >
           <Suspense fallback={<PageSuspenseLoader />}>
+            {userInfo && (
+              <ProductFruits
+                workspaceCode={PRODUCTION_WORKSPACE_CODE}
+                language='en'
+                user={userInfo}
+                lifeCycle={'unmount'}
+              />
+            )}
             <AppRoutes />
           </Suspense>
         </ErrorBoundary>

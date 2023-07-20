@@ -6,7 +6,7 @@ import {
   fetchEventNames,
   getUserProperties,
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from '../../reducers/coreQuery/middleware';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
@@ -47,7 +47,7 @@ function QueryComposer({
   fetchEventNames,
   getUserProperties,
   getGroupProperties,
-  getEventProperties,
+  getEventPropertiesV2,
   activeProject,
   groupOpts,
   eventProperties,
@@ -97,10 +97,10 @@ function QueryComposer({
   useEffect(() => {
     queries.forEach((ev) => {
       if (!eventProperties[ev.label]) {
-        getEventProperties(activeProject.id, ev.label);
+        getEventPropertiesV2(activeProject.id, ev.label);
       }
     });
-  }, [activeProject?.id, eventProperties, getEventProperties, queries]);
+  }, [activeProject?.id, eventProperties, getEventPropertiesV2, queries]);
 
   const setEventsCondition = (condition) => {
     setQueryOptions((prevOptions) => ({
@@ -527,7 +527,7 @@ const mapDispatchToProps = (dispatch) =>
       setShowCriteria,
       fetchGroups,
       fetchEventNames,
-      getEventProperties,
+      getEventPropertiesV2,
       getUserProperties,
       getGroupProperties
     },

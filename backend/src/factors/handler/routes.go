@@ -369,12 +369,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/feature_gates", mid.SetLoggedInAgentInternalOnly(), V1.UpdateFeatureStatusHandler)
 
 	authCommonRouteGroup := r.Group(routePrefix + ROUTE_COMMON_ROOT)
-	authCommonRouteGroup.Use(mid.SetLoggedInAgent())
-	authCommonRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
-	authCommonRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
-	authCommonRouteGroup.GET("/dashboard_templates/:id/search", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), SearchTemplateHandler)
-	authCommonRouteGroup.GET("/dashboard_templates", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), GetDashboardTemplatesHandler)
-	authCommonRouteGroup.POST("/dashboard_template/create", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), mid.SkipDemoProjectWriteAccess(), CreateTemplateHandler)
+	//The dashboard endpoints doesn't have project_id params, hence feature middleware is not added here.
+	authCommonRouteGroup.GET("/dashboard_templates/:id/search", SearchTemplateHandler)
+	authCommonRouteGroup.GET("/dashboard_templates", GetDashboardTemplatesHandler)
+	authCommonRouteGroup.POST("/dashboard_template/create", mid.SkipDemoProjectWriteAccess(), CreateTemplateHandler)
 
 	// feature gate v2
 	authRouteGroup.GET("/:project_id/v1/features", responseWrapper(V1.GetPlanDetailsForProjectHandler))

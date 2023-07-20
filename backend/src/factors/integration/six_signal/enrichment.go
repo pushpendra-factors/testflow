@@ -8,6 +8,7 @@ import (
 	"factors/util"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -37,6 +38,7 @@ type response struct {
 }
 
 func ExecuteSixSignalEnrich(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int) {
+	defer close(statusChannel)
 	err := enrichUsingSixSignal(projectId, sixSignalKey, properties, clientIP)
 
 	if err != nil {
@@ -51,7 +53,9 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 
 	url := "https://epsilon.6sense.com/v1/company/details"
 	method := "GET"
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: util.TimeoutOneSecond + 100*time.Millisecond,
+	}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return err
@@ -99,21 +103,16 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 		}
 	}
 
-	if address := result.Company.Address; address != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_ADDRESS]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_ADDRESS] = address
+	empRange := result.Company.EmployeeRange
+	if empRange != "" {
+		if c, ok := (*properties)[util.SIX_SIGNAL_EMPLOYEE_RANGE]; !ok || c == "" {
+			(*properties)[util.SIX_SIGNAL_EMPLOYEE_RANGE] = empRange
 		}
 	}
 
 	if city := result.Company.City; city != "" {
 		if c, ok := (*properties)[util.SIX_SIGNAL_CITY]; !ok || c == "" {
 			(*properties)[util.SIX_SIGNAL_CITY] = city
-		}
-	}
-
-	if empRange := result.Company.EmployeeRange; empRange != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_EMPLOYEE_RANGE]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_EMPLOYEE_RANGE] = empRange
 		}
 	}
 
@@ -147,27 +146,40 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 		}
 	}
 
-	if domain := result.Company.Domain; domain != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_DOMAIN]; !ok || c == "" {
+	//Keeping name,address and domain empty, if empRange is equals to "0 - 9"
+	if empRange == "0 - 9" {
+		(*properties)[util.SIX_SIGNAL_ADDRESS] = ""
+		(*properties)[util.SIX_SIGNAL_DOMAIN] = ""
+		(*properties)[util.SIX_SIGNAL_NAME] = ""
+	} else {
 
-			(*properties)[util.SIX_SIGNAL_DOMAIN] = domain
-			model.SetSixSignalAPICountCacheResult(projectId, util.TimeZoneStringIST)
-
-			timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
-			if statusCode != http.StatusFound {
-				timeZone = util.TimeZoneStringIST
+		if address := result.Company.Address; address != "" {
+			if c, ok := (*properties)[util.SIX_SIGNAL_ADDRESS]; !ok || c == "" {
+				(*properties)[util.SIX_SIGNAL_ADDRESS] = address
 			}
-			err := model.SetSixSignalMonthlyUniqueEnrichmentCount(projectId, domain, timeZone)
-			if err != nil {
-				log.Error("SetSixSignalMonthlyUniqueEnrichmentCount Failed.")
-			}
-
 		}
-	}
 
-	if name := result.Company.Name; name != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_NAME]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_NAME] = name
+		if domain := result.Company.Domain; domain != "" {
+			if c, ok := (*properties)[util.SIX_SIGNAL_DOMAIN]; !ok || c == "" {
+
+				(*properties)[util.SIX_SIGNAL_DOMAIN] = domain
+				model.SetSixSignalAPICountCacheResult(projectId, util.TimeZoneStringIST)
+
+				timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
+				if statusCode != http.StatusFound {
+					timeZone = util.TimeZoneStringIST
+				}
+				err := model.SetSixSignalMonthlyUniqueEnrichmentCount(projectId, domain, timeZone)
+				if err != nil {
+					log.Error("SetSixSignalMonthlyUniqueEnrichmentCount Failed.")
+				}
+			}
+		}
+
+		if name := result.Company.Name; name != "" {
+			if c, ok := (*properties)[util.SIX_SIGNAL_NAME]; !ok || c == "" {
+				(*properties)[util.SIX_SIGNAL_NAME] = name
+			}
 		}
 	}
 
