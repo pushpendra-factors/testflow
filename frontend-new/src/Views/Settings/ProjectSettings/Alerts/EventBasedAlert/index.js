@@ -30,10 +30,10 @@ import {
   deleteGroupByForEvent,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   resetGroupBy,
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import { getEventsWithProperties, getStateFromFiltersEvent } from '../utils';
 import {
@@ -84,7 +84,7 @@ const EventBasedAlert = ({
   setAlertState,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   groupBy,
   resetGroupBy,
   eventProperties,
@@ -95,7 +95,7 @@ const EventBasedAlert = ({
   userPropNames,
   eventNames,
   getGroupProperties,
-  getEventProperties,
+  getEventPropertiesV2,
   fetchGroups,
   groupOpts,
   testWebhhookUrl,
@@ -226,7 +226,7 @@ const EventBasedAlert = ({
       );
     }
     if (viewAlertDetails?.event_alert?.event) {
-      getEventProperties(
+      getEventPropertiesV2(
         activeProject.id,
         viewAlertDetails?.event_alert?.event
       );
@@ -441,7 +441,7 @@ const EventBasedAlert = ({
   };
 
   useEffect(() => {
-    getUserProperties(activeProject.id, queryType);
+    getUserPropertiesV2(activeProject.id, queryType);
   }, [queries]);
 
   const addGroupBy = () => {
@@ -3644,10 +3644,10 @@ export default connect(mapStateToProps, {
   enableSlackIntegration,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   resetGroupBy,
   getGroupProperties,
-  getEventProperties,
+  getEventPropertiesV2,
   fetchGroups,
   testWebhhookUrl,
   enableTeamsIntegration,

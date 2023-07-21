@@ -4,7 +4,7 @@ import { bindActionCreators } from 'redux';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import {
   fetchEventNames,
-  getUserProperties,
+  getUserPropertiesV2,
   getGroupProperties,
   getEventPropertiesV2
 } from '../../reducers/coreQuery/middleware';
@@ -45,7 +45,7 @@ function QueryComposer({
   queryType,
   fetchGroups,
   fetchEventNames,
-  getUserProperties,
+  getUserPropertiesV2,
   getGroupProperties,
   getEventPropertiesV2,
   activeProject,
@@ -85,9 +85,9 @@ function QueryComposer({
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
-      getUserProperties(activeProject.id, queryType);
+      getUserPropertiesV2(activeProject.id, queryType);
     }
-  }, [activeProject, fetchEventNames, getUserProperties, queryType]);
+  }, [activeProject, fetchEventNames, getUserPropertiesV2, queryType]);
 
   useEffect(() => {
     if (queryOptions.group_analysis === 'users') return;
@@ -528,7 +528,7 @@ const mapDispatchToProps = (dispatch) =>
       fetchGroups,
       fetchEventNames,
       getEventPropertiesV2,
-      getUserProperties,
+      getUserPropertiesV2,
       getGroupProperties
     },
     dispatch

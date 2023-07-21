@@ -193,7 +193,7 @@ const FaFilterSelect = ({
 
   const propSelect = (option, group) => {
     setPropState({
-      icon: group.extraProps?.propertyType || group.iconName,
+      icon: option.extraProps?.propertyType || group.iconName,
       name: option.value,
       type: option.extraProps.valueType
     });
@@ -208,7 +208,7 @@ const FaFilterSelect = ({
       option.label,
       option.value,
       option.extraProps.valueType,
-      group.extraProps?.propertyType || group.iconName
+      option.extraProps?.propertyType || group.iconName
     ]);
     setValuesSelectionOpen(true);
   };
@@ -317,6 +317,42 @@ const FaFilterSelect = ({
     return grp;
   };
 
+  const convertOptionsToGroupSelectFormat = (options) => {
+    // To remove Duplicate Groups.(Groups With Same Names)
+    const optionsObj = {};
+
+    options?.forEach((groupOpt) => {
+      const label = getGroupLabel(groupOpt?.label);
+      if (!optionsObj[label]) {
+        optionsObj[label] = {
+          iconName: groupOpt?.icon,
+          label: label,
+          values: groupOpt?.values?.map((valueOpt) => {
+            return {
+              label: valueOpt[0],
+              value: valueOpt[1],
+              extraProps: {
+                valueType: valueOpt[2],
+                propertyType: groupOpt?.propertyType
+              }
+            };
+          })
+        };
+      } else {
+        groupOpt.values?.forEach((op) => {
+          optionsObj[label].values.push({
+            value: op?.[1],
+            label: op?.[0],
+            extraProps: {
+              valueType: op?.[2],
+              propertyType: groupOpt?.propertyType
+            }
+          });
+        });
+      }
+    });
+    return Object.values(optionsObj);
+  };
   const renderPropSelect = () => {
     return (
       <div
@@ -345,24 +381,7 @@ const FaFilterSelect = ({
         {propSelectOpen && (
           <div className={styles.filter__event_selector}>
             <GroupSelect
-              options={propOpts?.map((groupOpt) => {
-                return {
-                  iconName: groupOpt?.icon,
-                  label: getGroupLabel(groupOpt?.label),
-                  extraProps: {
-                    propertyType: groupOpt?.propertyType
-                  },
-                  values: groupOpt?.values?.map((valueOpt) => {
-                    return {
-                      label: valueOpt[0],
-                      value: valueOpt[1],
-                      extraProps: {
-                        valueType: valueOpt[2]
-                      }
-                    };
-                  })
-                };
-              })}
+              options={convertOptionsToGroupSelectFormat(propOpts)}
               placement={dropdownPlacement}
               onClickOutside={() => setPropSelectOpen(false)}
               placeholder='Select Property'

@@ -8,7 +8,7 @@ import {
   setGroupBy,
   delGroupBy,
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import EventGroupBlock from 'Components/QueryComposer/EventGroupBlock';
@@ -36,7 +36,7 @@ function QueryBlock({
   groupProperties,
   getGroupProperties,
   groupAnalysis,
-  getEventProperties
+  getEventPropertiesV2
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -123,7 +123,7 @@ function QueryBlock({
   useEffect(() => {
     queries.forEach((ev) => {
       if (!eventProperties[ev.label]) {
-        getEventProperties(activeProject.id, ev.label);
+        getEventPropertiesV2(activeProject.id, ev.label);
       }
     });
   }, [queries]);
@@ -516,7 +516,7 @@ const mapDispatchToProps = (dispatch) =>
       setGroupBy,
       delGroupBy,
       getGroupProperties,
-      getEventProperties
+      getEventPropertiesV2
     },
     dispatch
   );

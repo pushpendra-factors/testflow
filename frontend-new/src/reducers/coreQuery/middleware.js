@@ -46,14 +46,16 @@ import {
   fetchGroupPropertyValues,
   fetchUserPropertyValues,
   fetchButtonClicksPropertyValues,
-  fetchPageViewsPropertyValues
+  fetchPageViewsPropertyValues,
+  fetchUserPropertiesV2
 } from './services';
 import {
   convertToEventOptions,
   convertPropsToOptions,
   convertCampaignConfig,
   convertCustomEventCategoryToOptions,
-  convertEventsPropsToOptions
+  convertEventsPropsToOptions,
+  convertUserPropsToOptions
 } from './utils';
 
 export const fetchEventNames = (projectId) => {
@@ -99,6 +101,30 @@ export const getGroupProperties = (projectId, groupName) => {
   };
 };
 
+export const getUserPropertiesV2 = (projectId, queryType = '') => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchUserPropertiesV2(projectId, queryType)
+        .then((response) => {
+          const options = convertUserPropsToOptions(
+            response.data?.properties,
+            response.data?.display_names,
+            response.data?.disabled_event_user_properties
+          );
+          resolve(
+            dispatch(setUserPropertiesNamesAction(response.data?.display_names))
+          );
+          resolve(dispatch(fetchUserPropertiesAction(options.userOptions)));
+          resolve(
+            dispatch(fetchEventUserPropertiesAction(options.eventUserOptions))
+          );
+        })
+        .catch((err) => {
+          // resolve(dispatch(fetchEventPropertiesAction({})));
+        });
+    });
+  };
+};
 export const getUserProperties = (projectId, queryType = '') => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
