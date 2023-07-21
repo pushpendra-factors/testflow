@@ -40,6 +40,7 @@ import {
 import AccountOverview from './AccountOverview';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { featureLock } from '../../../routes/feature';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function AccountDetails({
   accounts,
@@ -210,7 +211,7 @@ function AccountDetails({
     }));
     groupProps = groupProps?.map((opt) => {
       return {
-        iconName: opt?.iconName,
+        iconName: getGroupIcon(opt?.iconName),
         label: opt?.label,
         values: opt?.values?.map((op) => {
           return {

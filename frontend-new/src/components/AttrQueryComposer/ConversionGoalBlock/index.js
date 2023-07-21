@@ -434,7 +434,7 @@ const ConversionGoalBlock = ({
     }
     groupOptions = groupOptions?.map((groupOpt) => {
       return {
-        iconName: groupOpt?.icon,
+        iconName: getGroupIcon(groupOpt?.icon),
         label: _.startCase(groupOpt?.label),
         value: groupOpt?.label,
         extraProps: {
