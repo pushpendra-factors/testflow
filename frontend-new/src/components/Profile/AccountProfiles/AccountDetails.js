@@ -555,7 +555,6 @@ function AccountDetails({
       milestones={accountDetails.data?.milestones}
       loading={accountDetails?.isLoading}
       eventNamesMap={eventNamesMap}
-      listProperties={[...listProperties, ...userProperties]}
     />
   );
 
@@ -652,7 +651,6 @@ function AccountDetails({
         granularity={granularity}
         loading={accountDetails?.isLoading}
         eventNamesMap={eventNamesMap}
-        listProperties={[...listProperties, ...userProperties]}
       />
     </div>
   );
@@ -670,12 +668,16 @@ function AccountDetails({
             setGranularity(granularity);
           }}
         >
-          <TabPane
-            tab={<span className='fa-activity-filter--tabname'>Overview</span>}
-            key='overview'
-          >
-            {renderOverview()}
-          </TabPane>
+          {formatOverview?.engagement && formatOverview?.engagement !== '' && (
+            <TabPane
+              tab={
+                <span className='fa-activity-filter--tabname'>Overview</span>
+              }
+              key='overview'
+            >
+              {renderOverview()}
+            </TabPane>
+          )}
           <TabPane
             tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
             key='timeline'
