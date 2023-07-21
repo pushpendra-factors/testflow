@@ -54,7 +54,7 @@ const FeatureLockedPathAnalysis = withFeatureLockHOC(PathAnalysis, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Path Analysis'}
-      description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
+      description='Gain valuable insights into customer journeys and optimize conversion paths. Understand how prospects navigate your website, attribute revenue to specific marketing efforts, optimize content and campaigns, and deliver personalized experiences for increased conversions and marketing success'
     />
   )
 });
@@ -66,7 +66,7 @@ const FeatureLockedPathAnalysisReport = withFeatureLockHOC(PathAnalysisReport, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Path Analysis'}
-      description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
+      description='Gain valuable insights into customer journeys and optimize conversion paths. Understand how prospects navigate your website, attribute revenue to specific marketing efforts, optimize content and campaigns, and deliver personalized experiences for increased conversions and marketing success'
     />
   )
 });
@@ -142,7 +142,12 @@ const FeatureLockConfigurationAttribution = withFeatureLockHOC(
   AttributionSettings,
   {
     featureName: FEATURES.CONF_ATTRUBUTION_SETTINGS,
-    LockedComponent: () => <CommonLockedComponent title='Attribution' />
+    LockedComponent: () => (
+      <CommonLockedComponent
+        title='Attribution'
+        description='Attribute revenue and conversions to the right marketing channels, campaigns, and touchpoints to gain a clear understanding of what drives success. Identify the most effective marketing strategies, optimize your budget allocation, and make data-driven decisions to maximize ROI and achieve your business goals.'
+      />
+    )
   }
 );
 
