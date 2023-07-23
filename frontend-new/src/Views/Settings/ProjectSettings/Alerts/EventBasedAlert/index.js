@@ -174,10 +174,9 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     let DDCategory = [];
-    for (const key of Object.keys(eventProperties)) {
-      if (key === queries[0]?.label) {
-        DDCategory = _.union(eventProperties[queries[0]?.label], DDCategory);
-      }
+    for (let property in eventProperties[queries[0]?.label]) {
+      let nestedArrays = eventProperties[queries[0]?.label][property];
+      DDCategory = _.union(nestedArrays, DDCategory);
     }
     if (groupOpts[queries[0]?.group]) {
       for (const key of Object.keys(groupProperties)) {
@@ -189,7 +188,10 @@ const EventBasedAlert = ({
         }
       }
     } else {
-      DDCategory = _.union(DDCategory, eventUserProperties);
+      for (let property in eventUserProperties) {
+        let nestedArrays = eventUserProperties[property];
+        DDCategory = _.union(DDCategory, nestedArrays);
+      }
     }
     setBreakdownOptions(DDCategory);
     if (
