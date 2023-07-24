@@ -39,6 +39,7 @@ var tagEnum = map[string]string{
 	"reports.show":                                U.GROUP_EVENT_NAME_G2_REPORT,
 	"reports.preview":                             U.GROUP_EVENT_NAME_G2_REPORT,
 	"reviewers.take_survey":                       U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
+	"product_reference_pages.show":                U.GROUP_EVENT_NAME_G2_REFERENCE,
 }
 
 type EventStreamResponseStruct struct {
