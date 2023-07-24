@@ -600,8 +600,6 @@ var UP_INITIAL_CHANNEL string = "$initial_channel"
 var UP_SESSION_COUNT string = "$session_count"
 var UP_PAGE_COUNT string = "$page_count"
 var UP_TOTAL_SPENT_TIME string = "$session_spent_time" // unit:seconds
-var UP_REAL_PAGE_COUNT string = "$real_page_count"
-var UP_REAL_TOTAL_SPENT_TIME string = "$real_session_spent_time" // unit:seconds
 var UP_META_OBJECT_IDENTIFIER_KEY = "$identifiers"
 
 var UP_LATEST_PAGE_URL string = "$latest_page_url"
@@ -1426,8 +1424,6 @@ var DISABLED_USER_PROPERTIES_UI = [...]string{
 	UP_BROWSER_WITH_VERSION,
 	UP_OS_WITH_VERSION,
 	UP_SESSION_COUNT,
-	UP_REAL_PAGE_COUNT,
-	UP_REAL_TOTAL_SPENT_TIME,
 }
 
 var DISABLED_EVENT_PROPERTIES_UI = [...]string{
@@ -2133,10 +2129,6 @@ var CHANNEL_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"$fbclid":                  "FBCLID",
 }
 
-var USER_PROPERTIES_MERGE_TYPE_ADD_MAP = map[string]string{
-	UP_PAGE_COUNT:       UP_REAL_PAGE_COUNT,
-	UP_TOTAL_SPENT_TIME: UP_REAL_TOTAL_SPENT_TIME,
-}
 var PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL = []string{
 	EP_CAMPAIGN,
 	EP_CAMPAIGN_ID,

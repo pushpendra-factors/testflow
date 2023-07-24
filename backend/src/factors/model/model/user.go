@@ -107,8 +107,6 @@ var UserPropertiesToSkipOnMergeByCustomerUserID = []string{
 	UserPropertyHubspotContactMerged,
 	UserPropertyHubspotContactPrimaryContact,
 	U.UP_SESSION_COUNT,
-	U.UP_REAL_TOTAL_SPENT_TIME,
-	U.UP_REAL_PAGE_COUNT,
 	UserPropertyLeadSquaredLeadDeleted,
 }
 
@@ -445,7 +443,7 @@ func MergeAddTypeUserProperties(mergedProperties *map[string]interface{}, existi
 
 	// Boolean map to indicate whether merged value is used at least once.
 	mergedValueAddedOnce := make(map[string]bool)
-	for property, _ := range U.USER_PROPERTIES_MERGE_TYPE_ADD_MAP {
+	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
 		mergedValueAddedOnce[property] = false
 	}
 
@@ -455,7 +453,7 @@ func MergeAddTypeUserProperties(mergedProperties *map[string]interface{}, existi
 	//    3. Already merged property with value less than latestProperty value? Do nothing.
 	//    4. Is not a merged property. Probably for a new user? Add full as is.
 	//    5. Does ordering matter while parsing non latest properties? No.
-	for property, _ := range U.USER_PROPERTIES_MERGE_TYPE_ADD_MAP {
+	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
 		if _, found := (*latestPropertiesMap)[property]; !found {
 			continue
 		}
@@ -467,50 +465,36 @@ func MergeAddTypeUserProperties(mergedProperties *map[string]interface{}, existi
 		}
 	}
 
-	//mergedProperties initialization with 0
-	for key, _ := range U.USER_PROPERTIES_MERGE_TYPE_ADD_MAP {
-		mergedValue, _ := (*mergedProperties)[key]
-		(*mergedProperties)[key] = addValuesForProperty(mergedValue, float64(0), false)
-	}
-
-	// Loop over all records.
-	for _, userPropertiesRecord := range existingProperties {
+	// Loop over all records except last record.
+	for _, userPropertiesRecord := range existingProperties[:len(existingProperties)-1] {
 		userProperties, err := U.DecodePostgresJsonb(&userPropertiesRecord)
 		if err != nil {
 			log.WithError(err).Error("Failed to decode user property")
 			return
 		}
 
-		for key, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD_MAP {
-			mergedValue, _ := (*mergedProperties)[key]
-			if userValue, userValueExists := (*userProperties)[property]; userValueExists {
-				userValueFloat, _ := U.GetPropertyValueAsFloat64(userValue)
-				(*mergedProperties)[key] = addValuesForProperty(mergedValue, userValueFloat, true)
+		_, isMergedBefore := (*userProperties)[U.UP_MERGE_TIMESTAMP]
+		for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
+			mergedValue, mergedExists := (*mergedProperties)[property]
+			userValue, userValueExists := (*userProperties)[property]
+			if isMergedBefore {
+				if !mergedValueAddedOnce[property] && userValueExists {
+					// Merged values must be added full at least once. Since not added already, add full here.
+					(*mergedProperties)[property] = addValuesForProperty(mergedValue, userValue.(float64), mergedExists)
+					mergedValueAddedOnce[property] = true
+				} else if mergedExists && userValueExists && userValue.(float64)-mergedValue.(float64) > 0 {
+					// Add the difference of values to mergedValues.
+					(*mergedProperties)[property] = addValuesForProperty(mergedValue, userValue.(float64)-mergedValue.(float64), true)
+				} else if userValueExists && !mergedExists && !mergedValueAddedOnce[property] {
+					// mergedValue does not exists. Which means this property was not present in the latest or has
+					// not been added so far. Add the values as is to initialize.
+					(*mergedProperties)[property] = addValuesForProperty(0, userValue.(float64), false)
+					mergedValueAddedOnce[property] = true
+				}
+			} else if userValueExists {
+				(*mergedProperties)[property] = addValuesForProperty(mergedValue, (*userProperties)[property].(float64), mergedExists)
 			}
 		}
-	}
-}
-
-func mergeAddTypeUserProperty(mergedProperties *map[string]interface{}, userProperties *map[string]interface{}, property string, mergedValueAddedOnce map[string]bool, isMergedBefore bool) {
-
-	mergedValue, mergedExists := (*mergedProperties)[property]
-	userValue, userValueExists := (*userProperties)[U.USER_PROPERTIES_MERGE_TYPE_ADD_MAP[property]]
-	if isMergedBefore {
-		if !mergedValueAddedOnce[property] && userValueExists {
-			// Merged values must be added full at least once. Since not added already, add full here.
-			(*mergedProperties)[property] = addValuesForProperty(mergedValue, userValue.(float64), mergedExists)
-			mergedValueAddedOnce[property] = true
-		} else if mergedExists && userValueExists && userValue.(float64)-mergedValue.(float64) > 0 {
-			// Add the difference of values to mergedValues.
-			(*mergedProperties)[property] = addValuesForProperty(mergedValue, userValue.(float64)-mergedValue.(float64), true)
-		} else if userValueExists && !mergedExists && !mergedValueAddedOnce[property] {
-			// mergedValue does not exists. Which means this property was not present in the latest or has
-			// not been added so far. Add the values as is to initialize.
-			(*mergedProperties)[property] = addValuesForProperty(0, userValue.(float64), false)
-			mergedValueAddedOnce[property] = true
-		}
-	} else if userValueExists {
-		(*mergedProperties)[property] = addValuesForProperty(mergedValue, (*userProperties)[property].(float64), mergedExists)
 	}
 }
 
@@ -795,7 +779,7 @@ func MergeUserPropertiesByCustomerUserID(projectID int64, users []User, customer
 
 		for property := range *userProperties {
 			mergedUserPropertiesValues[property] = append(mergedUserPropertiesValues[property], (*userProperties)[property])
-			if U.StringValueIn(property, U.GetKeysofStringMapAsArray(U.USER_PROPERTIES_MERGE_TYPE_ADD_MAP)) ||
+			if U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) ||
 				(IsEmptyPropertyValue((*userProperties)[property]) && !U.IsCRMPropertyKey(property)) {
 				continue
 			}
