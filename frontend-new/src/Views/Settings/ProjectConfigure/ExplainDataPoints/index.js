@@ -112,7 +112,7 @@ const ConfigureDP = (props) => {
       });
   };
 
-  const onChangeUserPropertiesDD = (grp, value) => {
+  const onChangeUserPropertiesDD = (option, group) => {
     setShowDropDown1(false);
     const UserPropertyData = {
       user_property_name: `${option.value ? option.value : option.label}`
