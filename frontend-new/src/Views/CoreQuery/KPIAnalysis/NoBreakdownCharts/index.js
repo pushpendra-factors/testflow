@@ -5,7 +5,8 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useContext,
-  memo
+  memo,
+  useMemo
 } from 'react';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import {
@@ -23,13 +24,15 @@ import {
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_LINECHART,
   CHART_TYPE_METRIC_CHART,
-  MAX_ALLOWED_VISIBLE_PROPERTIES
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
+  CHART_TYPE_BARCHART
 } from '../../../../utils/constants';
 import LineChart from '../../../../components/HCLineChart';
 import NoBreakdownTable from './NoBreakdownTable';
 import SparkChartWithCount from '../../../../components/SparkChartWithCount/SparkChartWithCount';
 import { getKpiLabel } from '../kpiAnalysis.helpers';
 import MetricChart from 'Components/MetricChart/MetricChart';
+import ColumnChart from 'Components/ColumnChart/ColumnChart';
 
 const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 const NoBreakdownChartsComponent = forwardRef(
@@ -42,12 +45,12 @@ const NoBreakdownChartsComponent = forwardRef(
       section,
       savedQuerySettings,
       comparisonData,
+      currentEventIndex = 0,
       secondAxisKpiIndices = []
     },
     ref
   ) => {
     const comparisonApplied = !!comparisonData.data;
-
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
@@ -88,6 +91,16 @@ const NoBreakdownChartsComponent = forwardRef(
       setCompareCategories(compareCats);
       setData(d);
     }, [responseData, kpis, comparisonData.data, secondAxisKpiIndices]);
+
+    const columnChartSeries = useMemo(() => {
+      return [
+        {
+          data: aggregateData[currentEventIndex]?.dataOverTime?.map(
+            (elem) => elem[kpis[currentEventIndex].label]
+          )
+        }
+      ];
+    }, [aggregateData, currentEventIndex, kpis]);
 
     if (!aggregateData.length) {
       return (
@@ -204,6 +217,15 @@ const NoBreakdownChartsComponent = forwardRef(
               );
             })}
         </div>
+      );
+    } else if (chartType === CHART_TYPE_BARCHART) {
+      chart = (
+        <ColumnChart
+          categories={categories}
+          xAxisType='date-time'
+          series={columnChartSeries}
+          frequency={durationObj.frequency}
+        />
       );
     }
 

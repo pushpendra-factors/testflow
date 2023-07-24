@@ -10,7 +10,7 @@ import {
   delGroupBy,
   getGroupProperties
 } from 'Reducers/coreQuery/middleware';
-import { getQueryComposerGroupIcon } from 'Utils/getQueryComposerGroupIcons';
+import getGroupIcon from 'Utils/getGroupIcon';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 function QueryBlock({
   availableGroups,
@@ -154,7 +154,7 @@ function QueryBlock({
               <Button
                 icon={
                   <SVG
-                    name={getQueryComposerGroupIcon(
+                    name={getGroupIcon(
                       showGroups.find((group) => group.label === event.group)
                         ?.iconName
                     )}
