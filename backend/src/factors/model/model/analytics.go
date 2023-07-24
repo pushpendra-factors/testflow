@@ -243,6 +243,7 @@ type Query struct {
 	AggregateProperty     string `json:"agPr"`
 	AggregateEntity       string `json:"agEn"`
 	AggregatePropertyType string `json:"agTy"`
+	IsLimitNotApplicable bool
 }
 
 func (q *Query) GetClass() string {

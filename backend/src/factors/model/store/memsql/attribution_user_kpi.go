@@ -154,6 +154,7 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 
 		// Making sure the internal KPI group queries have same from to as parent attribution query
 		for index := range duplicatedRequest.Queries {
+			duplicatedRequest.Queries[index].LimitNotApplicable = true
 			duplicatedRequest.Queries[index].From = from
 			duplicatedRequest.Queries[index].To = to
 		}

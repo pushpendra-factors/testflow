@@ -395,6 +395,7 @@ func GetDirectDerviableQueryPropsFromKPI(kpiQuery KPIQuery) Query {
 	query.Timezone = kpiQuery.Timezone
 	query.From = kpiQuery.From
 	query.To = kpiQuery.To
+	query.IsLimitNotApplicable = kpiQuery.LimitNotApplicable
 	return query
 }
 

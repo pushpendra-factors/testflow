@@ -195,6 +195,7 @@ func (store *MemSQL) buildInternalQueryGroupForDerivedKPIs(kpiQueryGroup model.K
 				internalKPIQueryGroup.Queries[internalIndex].To = query.To
 				internalKPIQueryGroup.Queries[internalIndex].Timezone = query.Timezone
 				internalKPIQueryGroup.Queries[internalIndex].GroupByTimestamp = query.GroupByTimestamp
+				internalKPIQueryGroup.Queries[internalIndex].LimitNotApplicable = query.LimitNotApplicable
 			}
 
 			hashCode, err := query.GetQueryCacheHashString()
