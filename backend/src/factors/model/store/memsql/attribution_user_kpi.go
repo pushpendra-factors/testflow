@@ -139,6 +139,7 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) (error, []string, []string, []string) {
 
 	var kpiQueryResult model.QueryResult
+	var kpiQueryResultWithTime model.QueryResult
 	if query.AnalyzeType == model.AnalyzeTypeUserKPI {
 
 		var duplicatedRequest model.KPIQueryGroup
@@ -169,16 +170,19 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 		for _, res := range resultGroup {
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
 			if res.Headers[0] == "datetime" {
+				kpiQueryResultWithTime = res
+				logCtx.WithFields(log.Fields{"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("UserKPI-Attribution result set")
+			} else {
 				kpiQueryResult = res
-				logCtx.WithFields(log.Fields{"KpiQueryResult": kpiQueryResult}).Info("UserKPI-Attribution result set")
-				break
+				logCtx.WithFields(log.Fields{"kpiQueryResult": kpiQueryResult}).Info("UserKPI-Attribution result set")
 			}
+
 		}
 		if kpiQueryResult.Headers == nil || len(kpiQueryResult.Headers) == 0 {
 			logCtx.Error("no-valid result for userKPI query")
 			return errors.New("no-valid result for userKPI query"), nil, nil, nil
 		}
-		kpiKeys, kpiHeaders, kpiAggFunctionType := store.GetDataFromUserKPIResultV1(kpiQueryResult, kpiData, from, to, logCtx)
+		kpiKeys, kpiHeaders, kpiAggFunctionType := store.GetDataFromUserKPIResultV1(kpiQueryResult, kpiQueryResultWithTime, kpiData, from, to, logCtx)
 		return nil, kpiKeys, kpiHeaders, kpiAggFunctionType
 	}
 	return errors.New("not a valid type of query for userKPI Attribution"), nil, nil, nil
@@ -213,11 +217,10 @@ func (store *MemSQL) GetDataFromUserKPIResult(kpiQueryResult model.QueryResult, 
 }
 
 // GetDataFromUserKPIResultV1 adds values in kpiData from kpiQueryResult
-func (store *MemSQL) GetDataFromUserKPIResultV1(kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, from int64, to int64, logCtx log.Entry) ([]string, []string, []string) {
+func (store *MemSQL) GetDataFromUserKPIResultV1(kpiQueryResult model.QueryResult, kpiQueryResultWithTime model.QueryResult, kpiData *map[string]model.KPIInfo, from int64, to int64, logCtx log.Entry) ([]string, []string, []string) {
 
-	datetimeIdx := 0
-	keyIdx := 1
-	valIdx := 2
+	keyIdx := 0
+	valIdx := 1
 
 	kpiValueHeaderLength := len(kpiQueryResult.Headers) - valIdx
 	kpiAggFunctionType := make([]string, kpiValueHeaderLength)
@@ -236,7 +239,7 @@ func (store *MemSQL) GetDataFromUserKPIResultV1(kpiQueryResult model.QueryResult
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
 	}
-	kpiKeys := model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, from, to, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
+	kpiKeys := model.AddUserKPIKeyDataInMap(kpiQueryResult, kpiQueryResultWithTime, logCtx, keyIdx, from, to, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
 	return kpiKeys, kpiValueHeaders, kpiAggFunctionType
 }
 

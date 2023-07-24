@@ -309,6 +309,10 @@ func (query *Query) GetGroupByTimestamp() string {
 		return ""
 	case string:
 		gbt := query.GroupByTimestamp.(string)
+		//we have gbt as second in attribution only
+		if gbt == GroupByTimestampSecond {
+			return GroupByTimestampSecond
+		}
 		if gbt != "" && windowInSecs < U.SECONDS_IN_A_DAY {
 			return GroupByTimestampHour
 		}
