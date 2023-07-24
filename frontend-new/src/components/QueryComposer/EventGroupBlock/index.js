@@ -40,16 +40,17 @@ function EventGroupBlock({
         filterOptsObj[groupkey] = {
           label: startCase(groupkey),
           iconName: getGroupIcon(groupkey),
-          values: eventGroups?.[groupkey]?.map((op) => {
-            return {
-              value: op?.[1],
-              label: op?.[0],
-              extraProps: {
-                valueType: op?.[2],
-                propertyType: 'event'
-              }
-            };
-          })
+          values:
+            eventGroups?.[groupkey]?.map((op) => {
+              return {
+                value: op?.[1],
+                label: op?.[0],
+                extraProps: {
+                  valueType: op?.[2],
+                  propertyType: 'event'
+                }
+              };
+            }) || []
         };
       } else {
         eventGroups?.[groupkey]?.forEach((op) =>
@@ -66,17 +67,23 @@ function EventGroupBlock({
     });
     if (eventGroup) {
       const groupLabel = `${PropTextFormat(eventGroup)} Properties`;
-      const groupValues = groupProperties[eventGroup]?.map((op) => {
-        return {
-          value: op?.[1],
-          label: op?.[0],
-          extraProps: {
-            valueType: op?.[2],
-            propertyType: 'group'
-          }
-        };
-      });
-      filterOptsObj[groupLabel] = groupValues;
+      const groupValues =
+        groupProperties[eventGroup]?.map((op) => {
+          return {
+            value: op?.[1],
+            label: op?.[0],
+            extraProps: {
+              valueType: op?.[2],
+              propertyType: 'group'
+            }
+          };
+        }) || [];
+      const groupPropIconName = getGroupIcon(groupLabel);
+      filterOptsObj[groupLabel] = {
+        iconName: groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
+        label: groupLabel,
+        values: groupValues
+      };
     } else {
       if (eventUserProperties) {
         Object.keys(eventUserProperties)?.forEach((groupkey) => {

@@ -38,16 +38,17 @@ function GroupBlock({
             filterOptsObj[groupkey] = {
               label: startCase(groupkey),
               iconName: getGroupIcon(groupkey),
-              values: userProperties?.[groupkey]?.map((op) => {
-                return {
-                  value: op?.[1],
-                  label: op?.[0],
-                  extraProps: {
-                    valueType: op?.[2],
-                    propertyType: 'user'
-                  }
-                };
-              })
+              values:
+                userProperties?.[groupkey]?.map((op) => {
+                  return {
+                    value: op?.[1],
+                    label: op?.[0],
+                    extraProps: {
+                      valueType: op?.[2],
+                      propertyType: 'user'
+                    }
+                  };
+                }) || []
             };
           } else {
             userProperties?.[groupkey]?.forEach((op) =>
@@ -65,17 +66,23 @@ function GroupBlock({
       }
     } else {
       const groupLabel = `${PropTextFormat(groupName)} Properties`;
-      const groupValues = groupProperties[groupName]?.map((op) => {
-        return {
-          value: op?.[1],
-          label: op?.[0],
-          extraProps: {
-            valueType: op?.[2],
-            propertyType: 'group'
-          }
-        };
-      });
-      filterOptsObj[groupLabel] = groupValues;
+      const groupValues =
+        groupProperties[groupName]?.map((op) => {
+          return {
+            value: op?.[1],
+            label: op?.[0],
+            extraProps: {
+              valueType: op?.[2],
+              propertyType: 'group'
+            }
+          };
+        }) || [];
+      const groupPropIconName = getGroupIcon(groupLabel);
+      filterOptsObj[groupLabel] = {
+        iconName: groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
+        label: groupLabel,
+        values: groupValues
+      };
     }
     setFilterOptions(Object.values(filterOptsObj));
   }, [userProperties, groupProperties, groupName]);
