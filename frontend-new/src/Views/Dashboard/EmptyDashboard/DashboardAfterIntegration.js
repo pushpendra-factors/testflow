@@ -22,15 +22,17 @@ function DashboardAfterIntegration({
   const history = useHistory();
 
   useEffect(() => {
-    let email = currentAgent.email;
-    getHubspotContact(email)
-      .then((res) => {
-        console.log('get hubspot contact success', res.data);
-      })
-      .catch((err) => {
-        console.log(err.data.error);
-      });
-  }, [currentAgent.email, getHubspotContact]);
+    if (currentAgent?.email != null) {
+      let email = currentAgent.email;
+      getHubspotContact(email)
+        .then((res) => {
+          console.log('get hubspot contact success', res.data);
+        })
+        .catch((err) => {
+          console.log(err.data.error);
+        });
+    }
+  }, [currentAgent?.email, getHubspotContact]);
 
   return (
     <>

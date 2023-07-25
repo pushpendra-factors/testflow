@@ -12,6 +12,7 @@ import { connect } from 'react-redux';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import getGroupIcon from 'Utils/getGroupIcon';
+import startCase from 'lodash/startCase';
 
 function FilterWrapper({
   viewMode,
@@ -59,17 +60,19 @@ function FilterWrapper({
     Object.keys(filterProps)?.forEach((key) => {
       if (!Array.isArray(filterProps[key])) {
         const groups = filterProps[key];
-        Object.keys(groups)?.forEach((groupKey) => {
-          const label = groupKey;
-          const icon = getGroupIcon(groupKey);
-          const values = groups[groupKey];
-          filterDD.props.push({
-            label,
-            icon,
-            propertyType: key,
-            values
+        if (groups) {
+          Object.keys(groups)?.forEach((groupKey) => {
+            const label = startCase(groupKey);
+            const icon = getGroupIcon(groupKey);
+            const values = groups?.[groupKey];
+            filterDD.props.push({
+              label,
+              icon,
+              propertyType: key,
+              values
+            });
           });
-        });
+        }
       } else {
         const label = `${PropTextFormat(key)} Properties`;
         const icon = ['user', 'event'].includes(key) ? key : 'group';

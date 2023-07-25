@@ -50,6 +50,7 @@ import {
 import usePrevious from 'hooks/usePrevious';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { FeatureConfigState } from 'Reducers/featureConfig/types';
+import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 
 const SixSignalReport = ({
   setShowAnalyticsResult
@@ -468,14 +469,19 @@ const SixSignalReport = ({
           showShareButton={showShareButton}
         />
       )}
-
-      <div className='mb-4'>
-        <RangeNudge
-          title='Tracked users'
-          amountUsed={sixSignalInfo?.usage || 0}
-          totalLimit={sixSignalInfo?.limit || 0}
-        />
-      </div>
+      {showUpgradeNudge(
+        sixSignalInfo?.usage || 0,
+        sixSignalInfo?.limit || 0,
+        true
+      ) && (
+        <div className='mb-4'>
+          <RangeNudge
+            title='Accounts Identified'
+            amountUsed={sixSignalInfo?.usage || 0}
+            totalLimit={sixSignalInfo?.limit || 0}
+          />
+        </div>
+      )}
 
       <div className={cx({ 'px-24 pt-16 mt-12': !isLoggedIn })}>
         <div className='flex justify-between align-middle'>

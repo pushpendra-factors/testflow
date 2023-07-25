@@ -20,7 +20,7 @@ const LockedStateComponent = ({
     <div className={style.container}>
       <div
         className='flex gap-10 items-center justify-start'
-        style={{ height: 315 }}
+        style={{ height: 320 }}
       >
         {/* iframe video */}
         <div

@@ -53,21 +53,28 @@ const UpgradeModal = ({ visible, onCancel, variant }: UpgradeModalProps) => {
           weight={'bold'}
           extraClass={'m-0 text-center'}
         >
-          Upgrade to explore our other features{' '}
+          Upgrade to access this feature{' '}
         </Text>
         <Text
           type={'paragraph'}
           extraClass={'m-0 mt-2 text-center'}
           color='grey'
         >
-          Upgrade to explore our other features Upgrade to explore our other
-          features Upgrade to explore our other features Upgrade to explore our
-          other features Upgrade to explore our other features
+          Looks like your current plan doesn't include{' '}
+          {variant === 'timeline' ? 'Account Activity' : 'Account scoring'}{' '}
+          <span role='img' aria-label='sad'>
+            😢
+          </span>
+          . Upgrade now or talk to your product admin if you wish to use this
+          feature.
         </Text>
-        <img
-          src={variant === 'account' ? AccountTableImage : TimelineTableImage}
-          alt='table'
-        />
+        <div style={{ marginTop: 36 }}>
+          <img
+            src={variant === 'account' ? AccountTableImage : TimelineTableImage}
+            alt='table'
+          />
+        </div>
+
         <div className='flex items-center justify-center mt-4'>
           <Button
             type='primary'

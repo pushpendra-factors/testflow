@@ -21,7 +21,7 @@ const FeatureLockedAttributionComponent = withFeatureLockHOC(Attribution, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Attribution'}
-      description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
+      description='Attribute revenue and conversions to the right marketing channels, campaigns, and touchpoints to gain a clear understanding of what drives success. Identify the most effective marketing strategies, optimize your budget allocation, and make data-driven decisions to maximize ROI and achieve your business goals.'
     />
   )
 });

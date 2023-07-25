@@ -316,7 +316,7 @@ const SavedQueriesTable = ({
     return (
       <Menu className={`${styles.antdActionMenu}`}>
         <Menu.Item key='0'>
-          <a onClick={handleRowClick.bind(this, row)} href='#!'>
+          <div onClick={handleRowClick.bind(this, row)}>
             <SVG
               name={'eye'}
               size={18}
@@ -324,7 +324,7 @@ const SavedQueriesTable = ({
               extraClass={'inline mr-2'}
             />
             View Report
-          </a>
+          </div>
         </Menu.Item>
         {getQueryType(row.query) === QUERY_TYPE_KPI ||
         getQueryType(row.query) === QUERY_TYPE_EVENT ? (

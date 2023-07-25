@@ -18,8 +18,8 @@ import ORButton from '../../ORButton';
 import { compareFilters, groupFilters } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
-import { getQueryComposerGroupIcon } from 'Utils/getQueryComposerGroupIcons';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
 function QueryBlock({
   availableGroups,
   index,
@@ -71,7 +71,7 @@ function QueryBlock({
     }
     showOpts = showOpts?.map((opt) => {
       return {
-        iconName: opt?.icon,
+        iconName: getGroupIcon(opt?.icon),
         label: opt?.label,
         values: opt?.values?.map((op) => {
           return { value: op[1], label: op[0] };
@@ -558,7 +558,7 @@ function QueryBlock({
               <Button
                 icon={
                   <SVG
-                    name={getQueryComposerGroupIcon(
+                    name={getGroupIcon(
                       showGroups.find((group) => group.label === event.group)
                         ?.iconName
                     )}

@@ -98,6 +98,10 @@ export function fetchUserProperties(projectId, queryType) {
   const url = `${host}projects/${projectId}/user_properties?is_display_name_enabled=true`;
   return get(null, url);
 }
+export function fetchUserPropertiesV2(projectId, queryType) {
+  const url = `${host}projects/${projectId}/user_properties?is_display_name_enabled=true&version=2`;
+  return get(null, url);
+}
 
 export function fetchUserPropertyValues(projectId, propertyName) {
   const url = `${host}projects/${projectId}/user_properties/${propertyName}/values?label=true`;

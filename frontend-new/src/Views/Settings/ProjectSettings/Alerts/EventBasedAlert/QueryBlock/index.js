@@ -8,7 +8,7 @@ import {
   setGroupBy,
   delGroupBy,
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import EventGroupBlock from 'Components/QueryComposer/EventGroupBlock';
@@ -16,7 +16,7 @@ import AliasModal from 'Components/QueryComposer/AliasModal';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import { getQueryComposerGroupIcon } from 'Utils/getQueryComposerGroupIcons';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function QueryBlock({
   availableGroups,
@@ -36,7 +36,7 @@ function QueryBlock({
   groupProperties,
   getGroupProperties,
   groupAnalysis,
-  getEventProperties
+  getEventPropertiesV2
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -73,7 +73,7 @@ function QueryBlock({
     }
     showOpts = showOpts?.map((opt) => {
       return {
-        iconName: opt?.icon,
+        iconName: getGroupIcon(opt?.icon),
         label: opt?.label,
         values: opt?.values?.map((op) => {
           return { value: op[1], label: op[0] };
@@ -123,7 +123,7 @@ function QueryBlock({
   useEffect(() => {
     queries.forEach((ev) => {
       if (!eventProperties[ev.label]) {
-        getEventProperties(activeProject.id, ev.label);
+        getEventPropertiesV2(activeProject.id, ev.label);
       }
     });
   }, [queries]);
@@ -472,7 +472,7 @@ function QueryBlock({
               <Button
                 icon={
                   <SVG
-                    name={getQueryComposerGroupIcon(
+                    name={getGroupIcon(
                       showGroups.find((group) => group.label === event.group)
                         ?.iconName
                     )}
@@ -516,7 +516,7 @@ const mapDispatchToProps = (dispatch) =>
       setGroupBy,
       delGroupBy,
       getGroupProperties,
-      getEventProperties
+      getEventPropertiesV2
     },
     dispatch
   );

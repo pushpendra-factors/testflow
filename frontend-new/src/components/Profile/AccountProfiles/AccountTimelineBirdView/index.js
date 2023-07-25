@@ -25,7 +25,6 @@ function AccountTimelineBirdView({
   setCollapseAll,
   loading = false,
   eventNamesMap,
-  listProperties
 }) {
   const [formattedData, setFormattedData] = useState({});
   const { groupPropNames } = useSelector((state) => state.coreQuery);

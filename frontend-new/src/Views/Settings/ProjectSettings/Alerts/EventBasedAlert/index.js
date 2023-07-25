@@ -30,10 +30,10 @@ import {
   deleteGroupByForEvent,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   resetGroupBy,
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import { getEventsWithProperties, getStateFromFiltersEvent } from '../utils';
 import {
@@ -84,7 +84,7 @@ const EventBasedAlert = ({
   setAlertState,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   groupBy,
   resetGroupBy,
   eventProperties,
@@ -95,7 +95,7 @@ const EventBasedAlert = ({
   userPropNames,
   eventNames,
   getGroupProperties,
-  getEventProperties,
+  getEventPropertiesV2,
   fetchGroups,
   groupOpts,
   testWebhhookUrl,
@@ -174,10 +174,9 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     let DDCategory = [];
-    for (const key of Object.keys(eventProperties)) {
-      if (key === queries[0]?.label) {
-        DDCategory = _.union(eventProperties[queries[0]?.label], DDCategory);
-      }
+    for (let property in eventProperties[queries[0]?.label]) {
+      let nestedArrays = eventProperties[queries[0]?.label][property];
+      DDCategory = _.union(nestedArrays, DDCategory);
     }
     if (groupOpts[queries[0]?.group]) {
       for (const key of Object.keys(groupProperties)) {
@@ -189,7 +188,10 @@ const EventBasedAlert = ({
         }
       }
     } else {
-      DDCategory = _.union(DDCategory, eventUserProperties);
+      for (let property in eventUserProperties) {
+        let nestedArrays = eventUserProperties[property];
+        DDCategory = _.union(DDCategory, nestedArrays);
+      }
     }
     setBreakdownOptions(DDCategory);
     if (
@@ -226,7 +228,7 @@ const EventBasedAlert = ({
       );
     }
     if (viewAlertDetails?.event_alert?.event) {
-      getEventProperties(
+      getEventPropertiesV2(
         activeProject.id,
         viewAlertDetails?.event_alert?.event
       );
@@ -441,7 +443,7 @@ const EventBasedAlert = ({
   };
 
   useEffect(() => {
-    getUserProperties(activeProject.id, queryType);
+    getUserPropertiesV2(activeProject.id, queryType);
   }, [queries]);
 
   const addGroupBy = () => {
@@ -3644,10 +3646,10 @@ export default connect(mapStateToProps, {
   enableSlackIntegration,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   resetGroupBy,
   getGroupProperties,
-  getEventProperties,
+  getEventPropertiesV2,
   fetchGroups,
   testWebhhookUrl,
   enableTeamsIntegration,

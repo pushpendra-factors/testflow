@@ -4,9 +4,9 @@ import { bindActionCreators } from 'redux';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import {
   fetchEventNames,
-  getUserProperties,
+  getUserPropertiesV2,
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from '../../reducers/coreQuery/middleware';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
@@ -45,9 +45,9 @@ function QueryComposer({
   queryType,
   fetchGroups,
   fetchEventNames,
-  getUserProperties,
+  getUserPropertiesV2,
   getGroupProperties,
-  getEventProperties,
+  getEventPropertiesV2,
   activeProject,
   groupOpts,
   eventProperties,
@@ -85,9 +85,9 @@ function QueryComposer({
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
-      getUserProperties(activeProject.id, queryType);
+      getUserPropertiesV2(activeProject.id, queryType);
     }
-  }, [activeProject, fetchEventNames, getUserProperties, queryType]);
+  }, [activeProject, fetchEventNames, getUserPropertiesV2, queryType]);
 
   useEffect(() => {
     if (queryOptions.group_analysis === 'users') return;
@@ -97,10 +97,10 @@ function QueryComposer({
   useEffect(() => {
     queries.forEach((ev) => {
       if (!eventProperties[ev.label]) {
-        getEventProperties(activeProject.id, ev.label);
+        getEventPropertiesV2(activeProject.id, ev.label);
       }
     });
-  }, [activeProject?.id, eventProperties, getEventProperties, queries]);
+  }, [activeProject?.id, eventProperties, getEventPropertiesV2, queries]);
 
   const setEventsCondition = (condition) => {
     setQueryOptions((prevOptions) => ({
@@ -527,8 +527,8 @@ const mapDispatchToProps = (dispatch) =>
       setShowCriteria,
       fetchGroups,
       fetchEventNames,
-      getEventProperties,
-      getUserProperties,
+      getEventPropertiesV2,
+      getUserPropertiesV2,
       getGroupProperties
     },
     dispatch

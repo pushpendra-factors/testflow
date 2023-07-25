@@ -72,6 +72,7 @@ import UpgradeModal from '../UpgradeModal';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { PathUrls } from '../../../routes/pathUrls';
 import _ from 'lodash';
+import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 
 function AccountProfiles({
   activeProject,
@@ -555,7 +556,7 @@ function AccountProfiles({
           showApply
           onApply={applyTableProps}
           showDisabledOption={isEngagementLocked}
-          disabledOptions={['Engagement', 'Engaged Channels']}
+          // disabledOptions={['Engagement', 'Engaged Channels']}
           handleDisableOptionClick={handleDisableOptionClick}
         />
       </Tabs.TabPane>
@@ -1039,13 +1040,20 @@ function AccountProfiles({
 
   return (
     <ProfilesWrapper>
-      <div className='mb-4'>
-        <RangeNudge
-          title='Tracked users'
-          amountUsed={sixSignalInfo?.usage || 0}
-          totalLimit={sixSignalInfo?.limit || 0}
-        />
-      </div>
+      {showUpgradeNudge(
+        sixSignalInfo?.usage || 0,
+        sixSignalInfo?.limit || 0,
+        true
+      ) && (
+        <div className='mb-4'>
+          <RangeNudge
+            title='Accounts Identified'
+            amountUsed={sixSignalInfo?.usage || 0}
+            totalLimit={sixSignalInfo?.limit || 0}
+          />
+        </div>
+      )}
+
       <Text type='title' level={3} weight='bold' extraClass='mb-0'>
         Account Profiles
       </Text>

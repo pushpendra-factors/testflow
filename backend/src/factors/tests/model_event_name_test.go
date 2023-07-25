@@ -604,7 +604,8 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	// with limit.
 	getEventNames1, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
 	assert.Equal(t, nil, err)
-	assert.Len(t, getEventNames1[U.MostRecent], 4)
+	assert.Len(t, getEventNames1[U.PageViewEvent], 3)
+	assert.Len(t, getEventNames1[U.FrequentlySeen], 1)
 
 	rEventName = "event2"
 	w = ServePostRequestWithHeaders(r, uri,
@@ -636,9 +637,9 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	event_user_cache.DoRollUpSortedSet(configs)
 	getEventNames2, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30)
 	assert.Equal(t, nil, err)
-	assert.Len(t, getEventNames2[U.MostRecent], 2)
-	assert.Equal(t, "event2", getEventNames2[U.MostRecent][0])
-	assert.Equal(t, "event3", getEventNames2[U.MostRecent][1])
+	assert.Len(t, getEventNames2[U.PageViewEvent], 2)
+	assert.Equal(t, "event2", getEventNames2[U.PageViewEvent][0])
+	assert.Equal(t, "event3", getEventNames2[U.PageViewEvent][1])
 }
 
 func sendCreateSmartEventFilterReq(r *gin.Engine, projectId int64, agent *model.Agent, enPayload *map[string]interface{}) *httptest.ResponseRecorder {

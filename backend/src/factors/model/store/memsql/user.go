@@ -320,34 +320,9 @@ func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]m
 	return users, http.StatusFound
 }
 
-// GetUsersByCustomerUserID Gets all the users indentified by given customer_user_id in increasing order of updated_at.
+// GetUsersByCustomerUserID Gets all the users dentified by given customer_user_id with a limit.
 func (store *MemSQL) GetUsersByCustomerUserID(projectID int64, customerUserID string) ([]model.User, int) {
-	logFields := log.Fields{
-		"project_id":       projectID,
-		"customer_user_id": customerUserID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	logCtx := log.WithFields(logFields)
-
-	var users []model.User
-	db := C.GetServices().Db
-	if err := db.Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).
-		Find(&users).Error; err != nil {
-
-		logCtx.WithError(err).Error("Failed to get users for customer_user_id")
-		return nil, http.StatusInternalServerError
-	}
-	if len(users) == 0 {
-		return nil, http.StatusNotFound
-	}
-
-	// Sort by created_at ASC
-	sort.Slice(users, func(i, j int) bool {
-		return users[i].CreatedAt.Before(users[j].CreatedAt)
-	})
-
-	return users, http.StatusFound
+	return store.GetSelectedUsersByCustomerUserID(projectID, customerUserID, 5000, 100)
 }
 
 // GetSelectedUsersByCustomerUserID gets selected (top 50 & bottom 50) users identified by given customer_user_id in increasing order of updated_at.
@@ -363,7 +338,8 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerU
 	logCtx := log.WithFields(logFields)
 
 	var ids []model.User
-	if err := db.Limit(limit).Order("created_at ASC").
+	// Fetches recently updated users to ensure relevance at present.
+	if err := db.Limit(limit).Order("updated_at DESC").
 		Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).
 		Select("id").Find(&ids).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to get selected users for customer_user_id")
@@ -398,7 +374,7 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerU
 		return nil, http.StatusInternalServerError
 	}
 
-	// sort by created_at ASC
+	// Sorted by ASC order intentionally to keep the order of creation.
 	sort.Slice(users, func(i, j int) bool {
 		return users[i].CreatedAt.Before(users[j].CreatedAt)
 	})
@@ -1418,9 +1394,7 @@ func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID int6
 	// For user_properties created at same unix time, older user order will help in
 	// ensuring the order while merging properties.
 	// users, errCode := store.GetUsersByCustomerUserID(projectID, customerUserID)
-	var limit uint64 = 10000
-	var numUsers uint64 = 100
-	users, errCode := store.GetSelectedUsersByCustomerUserID(projectID, customerUserID, limit, numUsers)
+	users, errCode := store.GetUsersByCustomerUserID(projectID, customerUserID)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusNotFound {
 		return users, errCode
 	}
@@ -2295,15 +2269,18 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 			newUserProperties[U.UP_LATEST_CHANNEL] = sessionUserProperties.LatestChannel
 		}
 
-		existingPageCount, existingTotalSpentTime := getPageCountAndTimeSpentFormUserPropertiesMap(*existingUserPropertiesMap, logCtx)
+		existingPageCount, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_PAGE_COUNT])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
+		}
 
-		realPageCount, realTotalSpentTime := getRealPageCountAndTimeSpentFormUserPropertiesMap(*existingUserPropertiesMap, logCtx)
+		existingTotalSpentTime, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
+		}
 
 		newUserProperties[U.UP_TOTAL_SPENT_TIME] = existingTotalSpentTime + sessionUserProperties.TotalSpentTime
 		newUserProperties[U.UP_PAGE_COUNT] = existingPageCount + sessionUserProperties.PageCount
-
-		newUserProperties[U.UP_REAL_TOTAL_SPENT_TIME] = realTotalSpentTime + sessionUserProperties.TotalSpentTime
-		newUserProperties[U.UP_REAL_PAGE_COUNT] = realPageCount + sessionUserProperties.PageCount
 
 		userPropertiesJsonb, err := U.AddToPostgresJsonb(existingUserProperties, newUserProperties, true)
 		if err != nil {
@@ -2350,71 +2327,6 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 	}
 
 	return http.StatusAccepted
-}
-
-func getPageCountAndTimeSpentFormUserPropertiesMap(propertiesMap util.PropertiesMap, logCtx *log.Entry) (float64, float64) {
-
-	var existingPageCount float64
-	var existingTotalSpentTime float64
-	var err error
-
-	if _, exist := propertiesMap[U.UP_PAGE_COUNT]; exist {
-
-		existingPageCount, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_PAGE_COUNT])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
-		}
-
-	}
-
-	if _, exist := propertiesMap[U.UP_TOTAL_SPENT_TIME]; exist {
-		existingTotalSpentTime, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_TOTAL_SPENT_TIME])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
-		}
-
-	}
-
-	return existingPageCount, existingTotalSpentTime
-
-}
-
-func getRealPageCountAndTimeSpentFormUserPropertiesMap(propertiesMap util.PropertiesMap, logCtx *log.Entry) (float64, float64) {
-
-	var existingPageCount float64
-	var existingTotalSpentTime float64
-	var err error
-
-	if _, exist := propertiesMap[U.UP_REAL_PAGE_COUNT]; exist {
-
-		existingPageCount, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_REAL_PAGE_COUNT])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
-		}
-
-	} else {
-
-		existingPageCount, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_PAGE_COUNT])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
-		}
-	}
-
-	if _, exist := propertiesMap[U.UP_REAL_TOTAL_SPENT_TIME]; exist {
-
-		existingTotalSpentTime, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_TOTAL_SPENT_TIME])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
-		}
-	} else {
-		existingTotalSpentTime, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_TOTAL_SPENT_TIME])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
-		}
-	}
-
-	return existingPageCount, existingTotalSpentTime
-
 }
 
 func shouldAllowCustomerUserID(current, incoming string) bool {

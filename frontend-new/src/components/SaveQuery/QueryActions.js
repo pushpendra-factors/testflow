@@ -8,7 +8,8 @@ import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import {
-  // QUERY_TYPE_KPI,
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE
   // QUERY_TYPE_ATTRIBUTION,
   // QUERY_TYPE_FUNNEL
@@ -139,20 +140,20 @@ const QueryActionsComponent = ({
       onClick={handleActionMenuClick}
       className={`${styles.antdActionMenu}`}
     >
-      <Menu.Item key='1' disabled={!savedQueryId}>
+      <Menu.Item key='1' disabled={!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)}>
         <SVG
           name={'envelope'}
           size={18}
-          color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
+          color={`${!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? 'LightGray' : 'grey'}`}
           extraClass={'inline mr-2'}
         />
         Email this report
       </Menu.Item>
-      <Menu.Item key='2' disabled={!savedQueryId}>
+      <Menu.Item key='2' disabled={!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)}>
         <SVG
           name={'SlackStroke'}
           size={18}
-          color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
+          color={`${!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? 'LightGray' : 'grey'}`}
           extraClass={'inline mr-2'}
         />
         Share to slack

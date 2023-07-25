@@ -21,7 +21,8 @@ function App({
   agent_details,
   active_project,
   enableBingAdsIntegration,
-  enableMarketoIntegration
+  enableMarketoIntegration,
+  plan
 }) {
   const dispatch = useDispatch();
   const [userInfo, setUserInfo] = useState(null);
@@ -195,14 +196,6 @@ function App({
     //     signed_up_at: agent_details?.signed_up_at
     //   });
     // }
-
-    const userInfoObj = {
-      username: agent_details?.email, // REQUIRED - any unique user identifier
-      email: agent_details?.email,
-      firstname: agent_details?.first_name,
-      signUpAt: agent_details?.signed_up_at
-    };
-    setUserInfo(userInfoObj);
   }, [agent_details]);
 
   useEffect(() => {
@@ -218,6 +211,21 @@ function App({
   useEffect(() => {
     ssoLogin();
   }, [agent_details]);
+
+  useEffect(() => {
+    if (agent_details && plan) {
+      const userInfoObj = {
+        username: agent_details?.email, // REQUIRED - any unique user identifier
+        email: agent_details?.email,
+        firstname: agent_details?.first_name,
+        signUpAt: agent_details?.signed_up_at,
+        props: {
+          plan: plan.name
+        }
+      };
+      setUserInfo(userInfoObj);
+    }
+  }, [agent_details, plan]);
 
   return (
     <AdBlockerDetector>
@@ -253,7 +261,8 @@ function App({
 
 const mapStateToProps = (state) => ({
   agent_details: state.agent.agent_details,
-  active_project: state.global.active_project
+  active_project: state.global.active_project,
+  plan: state.featureConfig.plan
 });
 
 export default connect(mapStateToProps, {

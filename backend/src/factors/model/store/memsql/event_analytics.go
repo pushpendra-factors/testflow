@@ -188,10 +188,12 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 
 	startComputeTime := time.Now()
 	groupPropsLen := len(query.GroupByProperties)
-	err = LimitQueryResult(projectId, result, groupPropsLen, query.GetGroupByTimestamp() != "")
-	if err != nil {
-		logCtx.WithError(err).Error("Failed processing query results for limiting.")
-		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+	if !query.IsLimitNotApplicable {
+		err = LimitQueryResult(projectId, result, groupPropsLen, query.GetGroupByTimestamp() != "")
+		if err != nil {
+			logCtx.WithError(err).Error("Failed processing query results for limiting.")
+			return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+		}
 	}
 
 	model.AddMissingEventNamesInResult(result, &query)
@@ -1430,7 +1432,10 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, last_activity, properties FROM %s GROUP BY identity ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
 		}
 	} else {
-		aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
+		// Limit is applicable only on the following. Because attribution calls this.
+		if !query.IsLimitNotApplicable {
+			aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
+		}
 	}
 	*qStmnt = appendStatement(*qStmnt, aggregateSelect)
 }
@@ -1501,7 +1506,9 @@ func buildEventsOccurrenceSingleEventQuery(projectId int64,
 
 	qStmnt = appendGroupByTimestampIfRequired(qStmnt, isGroupByTimestamp, egKeys)
 	qStmnt = appendOrderByAggr(qStmnt)
-	qStmnt = appendLimitByCondition(qStmnt, q.GroupByProperties, isGroupByTimestamp)
+	if !q.IsLimitNotApplicable {
+		qStmnt = appendLimitByCondition(qStmnt, q.GroupByProperties, isGroupByTimestamp)
+	}
 
 	return qStmnt, qParams, nil
 }
@@ -2283,7 +2290,9 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 	}
 
 	aggregateSelect = aggregateSelect + fmt.Sprintf(", %s DESC", model.AliasAggr)
-	aggregateSelect = appendLimitByCondition(aggregateSelect, q.GroupByProperties, isGroupByTimestamp)
+	if !q.IsLimitNotApplicable {
+		aggregateSelect = appendLimitByCondition(aggregateSelect, q.GroupByProperties, isGroupByTimestamp)
+	}
 
 	qStmnt = appendStatement(qStmnt, aggregateSelect)
 
@@ -2784,7 +2793,9 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 		aggregateSelect = appendOrderByAggr(aggregateSelect)
 	}
 	hash1, _ = query.GetQueryCacheHashString()
-	aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
+	if !query.IsLimitNotApplicable {
+		aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
+	}
 	hash2, _ = query.GetQueryCacheHashString()
 	logDifferenceIfAny(hash1, hash2, *query, "Query change - 3-4")
 
