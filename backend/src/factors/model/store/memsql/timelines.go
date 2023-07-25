@@ -410,14 +410,14 @@ func BuildQueryStringForDomains(filterString string, whereForUserQuery string, d
 	if filterString != "" {
 		whereForUserQuery = whereForUserQuery + " AND " + userTimeAndRecordsLimit
 	}
-	selectUserColumnsString := fmt.Sprintf("properties, group_%d_user_id", domainGroupId)
+	selectUserColumnsString := fmt.Sprintf("properties, updated_at, group_%d_user_id", domainGroupId)
 	userQueryString := fmt.Sprintf("(SELECT " + selectUserColumnsString + " FROM users " + whereForUserQuery + " ) AS users")
-	selectDomainGroupColString := "SELECT id, updated_at FROM users"
+	selectDomainGroupColString := "SELECT id FROM users"
 	domainGroupQueryString := "( " + selectDomainGroupColString + " " + whereForDomainGroupQuery +
 		" ) AS domain_groups"
 	onCondition := fmt.Sprintf("ON users.group_%d_user_id = domain_groups.id", domainGroupId)
 	groupByStr := "GROUP BY identity"
-	selectString := "domain_groups.id AS identity, users.properties as properties, domain_groups.updated_at AS last_activity"
+	selectString := "domain_groups.id AS identity, users.properties as properties, MAX(users.updated_at) AS last_activity"
 	var selectFilterString, havingString string
 	selectFilterString, havingString = SelectFilterAndHavingStringsForAccounts(filters)
 	if selectFilterString != "" {
