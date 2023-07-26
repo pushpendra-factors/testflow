@@ -167,8 +167,6 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     name: 'Factors Website De-anonymization',
     desc: 'Gain insight into who is visiting your website and where they are in the buying journey',
     icon: 'Brand',
-    kbLink:
-      'https://help.factors.ai/en/articles/7261968-6signal-by-6sense-integration',
     featureName: FEATURES.INT_FACTORS_DEANONYMISATION,
     Component: SixSignalFactors
   }
