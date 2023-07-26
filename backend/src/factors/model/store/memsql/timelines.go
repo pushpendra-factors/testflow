@@ -578,14 +578,15 @@ func BuildQueryStringForDomains(filterString string, whereForUserQuery string, d
 	whereForDomainGroupQuery := fmt.Sprintf(strings.Replace(whereForUserQuery, "users.source!=", "source=",
 		1) + " AND is_group_user = 1")
 	whereForUserQuery = whereForUserQuery + " AND " + userTimeAndRecordsLimit
-	selectUserColumnsString := fmt.Sprintf("properties, group_%d_user_id, id, customer_user_id, is_group_user, group_%d_id", domainGroupId, domainGroupId)
+	selectUserColumnsString := fmt.Sprintf("properties, updated_at, group_%d_user_id, id, customer_user_id, is_group_user, group_%d_id", domainGroupId, domainGroupId)
 	userQueryString := fmt.Sprintf("(SELECT " + selectUserColumnsString + " FROM users " + whereForUserQuery + " ) AS users")
-	selectDomainGroupColString := fmt.Sprintf("SELECT id, updated_at, group_%d_id FROM users", domainGroupId)
+	selectDomainGroupColString := fmt.Sprintf("SELECT id, group_%d_id FROM users", domainGroupId)
 	domainGroupQueryString := "( " + selectDomainGroupColString + " " + whereForDomainGroupQuery +
 		" ) AS domain_groups"
 	onCondition := fmt.Sprintf("ON users.group_%d_user_id = domain_groups.id", domainGroupId)
 	groupByStr := "GROUP BY identity"
-	selectString := fmt.Sprintf("domain_groups.id AS identity, users.properties as properties, domain_groups.updated_at AS last_activity, domain_groups.group_%d_id as host_name", domainGroupId)
+	selectString := fmt.Sprintf("domain_groups.id AS identity, users.properties as properties, MAX(users.updated_at) AS last_activity, domain_groups.group_%d_id as host_name", domainGroupId)
+
 	var selectFilterString, havingString string
 	selectFilterString, havingString = SelectFilterAndHavingStringsForAccounts(filters)
 	if selectFilterString != "" {
