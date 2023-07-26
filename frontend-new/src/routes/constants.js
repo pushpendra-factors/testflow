@@ -54,6 +54,7 @@ const FeatureLockedPathAnalysis = withFeatureLockHOC(PathAnalysis, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Path Analysis'}
+      embeddedLink='https://global-uploads.webflow.com/5f28f6242b5cee6e96d76336/6494fd2558d1eae5d36c4632_UJ%20In%20Feture%201.webp'
       description='Gain valuable insights into customer journeys and optimize conversion paths. Understand how prospects navigate your website, attribute revenue to specific marketing efforts, optimize content and campaigns, and deliver personalized experiences for increased conversions and marketing success'
     />
   )
@@ -66,6 +67,7 @@ const FeatureLockedPathAnalysisReport = withFeatureLockHOC(PathAnalysisReport, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Path Analysis'}
+      embeddedLink='https://global-uploads.webflow.com/5f28f6242b5cee6e96d76336/6494fd2558d1eae5d36c4632_UJ%20In%20Feture%201.webp'
       description='Gain valuable insights into customer journeys and optimize conversion paths. Understand how prospects navigate your website, attribute revenue to specific marketing efforts, optimize content and campaigns, and deliver personalized experiences for increased conversions and marketing success'
     />
   )
@@ -185,6 +187,7 @@ const FeatureLockedFactorsInsightsNew = withFeatureLockHOC(FactorsInsightsNew, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Explain'}
+      embeddedLink='https://global-uploads.webflow.com/5f28f6242b5cee6e96d76336/64a7bf2294bd5f104a0b33d0_Funnel%20Conversion%20Optimization%205.webp'
       description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
     />
   )
@@ -197,6 +200,7 @@ const FeatureLockedFactorsInsightsOld = withFeatureLockHOC(FactorsInsightsOld, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Explain'}
+      embeddedLink='https://global-uploads.webflow.com/5f28f6242b5cee6e96d76336/64a7bf2294bd5f104a0b33d0_Funnel%20Conversion%20Optimization%205.webp'
       description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
     />
   )
@@ -209,6 +213,7 @@ const FeatureLockedFactors = withFeatureLockHOC(Factors, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Explain'}
+      embeddedLink='https://global-uploads.webflow.com/5f28f6242b5cee6e96d76336/64a7bf2294bd5f104a0b33d0_Funnel%20Conversion%20Optimization%205.webp'
       description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
     />
   )

@@ -42,7 +42,6 @@ function EventsBlock({
   dropdownPlacement = 'top',
   propertiesScope = ['event']
 }) {
-  console.log('R1');
   const [isDDVisible, setDDVisible] = useState(true);
   useEffect(() => {
     if (viewMode) {

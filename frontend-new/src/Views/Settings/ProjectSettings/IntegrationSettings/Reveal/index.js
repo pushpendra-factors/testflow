@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useEffect } from 'react';
-import { connect } from 'react-redux';
+import { connect, useDispatch } from 'react-redux';
 import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import {
   Row,
@@ -17,6 +17,7 @@ import { Text, FaErrorComp, FaErrorLog, SVG } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
 import { sendSlackNotification } from '../../../../../utils/slack';
+import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
 
 const RevealIntegration = ({
   fetchProjectSettings,
@@ -31,6 +32,7 @@ const RevealIntegration = ({
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (currentProjectSettings?.int_clear_bit) {
@@ -59,6 +61,7 @@ const RevealIntegration = ({
         }, 500);
         setIsActive(true);
         sendSlackNotification(currentAgent.email, activeProject.name, 'Reveal');
+        dispatch(fetchFeatureConfig(activeProject.id));
       })
       .catch((err) => {
         setShowForm(false);
@@ -88,6 +91,7 @@ const RevealIntegration = ({
               message.success('Clearbit integration disconnected!');
             }, 500);
             setIsActive(false);
+            dispatch(fetchFeatureConfig(activeProject.id));
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

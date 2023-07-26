@@ -20,7 +20,8 @@ export const fetchFeatureConfig = (projectId: string) => {
             lastRenewedOn: response?.data?.last_renewed_on,
             plan: {
               id: response?.data?.plan?.id,
-              name: response?.data?.plan?.name
+              name: response?.data?.plan?.name,
+              display_name: response?.data?.display_name
             },
             sixSignalInfo: response?.data?.six_signal_info
           }

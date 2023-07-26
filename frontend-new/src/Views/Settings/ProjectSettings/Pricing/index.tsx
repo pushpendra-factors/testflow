@@ -65,7 +65,7 @@ const Pricing = () => {
                       color='character-primary'
                       extraClass={'m-0 '}
                     >
-                      {plan?.name}
+                      {plan?.display_name || plan?.name}
                     </Text>
 
                     {/* <Tag color='orange'>Monthly</Tag> */}

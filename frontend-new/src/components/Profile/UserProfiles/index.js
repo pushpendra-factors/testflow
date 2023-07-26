@@ -139,6 +139,13 @@ function UserProfiles({
     FEATURES.FEATURE_ENGAGEMENT
   );
 
+  const { isFeatureConnected: isClearBitConnected } = useFeatureLock(
+    FEATURES.INT_CLEARBIT
+  );
+  const { isFeatureConnected: isSixSenseConnected } = useFeatureLock(
+    FEATURES.INT_SIX_SIGNAL
+  );
+
   useEffect(() => {
     if (!timelinePayload.search_filter) {
       setListSearchItems([]);
@@ -939,7 +946,7 @@ function UserProfiles({
         {showUpgradeNudge(
           sixSignalInfo?.usage || 0,
           sixSignalInfo?.limit || 0,
-          true
+          !(isClearBitConnected || isSixSenseConnected)
         ) && (
           <div className='mb-4'>
             <RangeNudge

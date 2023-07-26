@@ -22,6 +22,7 @@ const FeatureLockedAttributionComponent = withFeatureLockHOC(Attribution, {
     <LockedStateComponent
       title={'Attribution'}
       description='Attribute revenue and conversions to the right marketing channels, campaigns, and touchpoints to gain a clear understanding of what drives success. Identify the most effective marketing strategies, optimize your budget allocation, and make data-driven decisions to maximize ROI and achieve your business goals.'
+      embeddedLink='https://global-uploads.webflow.com/5f28f6242b5cee6e96d76336/649505b5b4c5c322af5ec115_RA%20In%20Feture%202.webp'
     />
   )
 });

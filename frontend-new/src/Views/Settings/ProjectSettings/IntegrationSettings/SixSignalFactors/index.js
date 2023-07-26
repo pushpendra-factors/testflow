@@ -1,19 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useEffect } from 'react';
-import { connect, useDispatch } from 'react-redux';
+import { connect } from 'react-redux';
 import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
-import { Row, Col, Modal, Input, Form, Button, message, Avatar } from 'antd';
-import { Text, FaErrorComp, FaErrorLog, SVG } from 'factorsComponents';
+import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
-import factorsai from 'factorsai';
-import { sendSlackNotification } from '../../../../../utils/slack';
 import ConnectedScreen from './ConnectedScreen';
-import useAgentInfo from 'hooks/useAgentInfo';
-import { getDefaultTimelineConfigForSixSignal } from '../util';
-import { createDashboardFromTemplate } from 'Reducers/dashboard_templates/services';
-import { fetchDashboards } from 'Reducers/dashboard/services';
-import { fetchQueries } from 'Reducers/coreQuery/services';
-import logger from 'Utils/logger';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
 
 function SixSignalFactorsIntegration({
   fetchProjectSettings,
@@ -24,116 +17,13 @@ function SixSignalFactorsIntegration({
   kbLink = false,
   currentAgent
 }) {
-  const [form] = Form.useForm();
-  const [errorInfo, seterrorInfo] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const { email: userEmail } = useAgentInfo();
-  const dispatch = useDispatch();
-
+  const { isFeatureConnected: isFactorsDeanonymisationConnected } =
+    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
   useEffect(() => {
-    if (currentProjectSettings?.int_factors_six_signal_key) {
+    if (isFactorsDeanonymisationConnected) {
       setIsActive(true);
     }
-  }, [currentProjectSettings]);
-
-  //activating visitor identification template when 6 signal keys are added
-  const activateVisitorIdentificationTemplate = async () => {
-    try {
-      if (!activeProject?.id) return;
-      const res = await createDashboardFromTemplate(
-        activeProject.id,
-        // eslint-disable-next-line no-undef
-        BUILD_CONFIG.firstTimeDashboardTemplates?.websitevisitoridentification
-      );
-      if (res) {
-        dispatch(fetchDashboards(activeProject.id));
-        dispatch(fetchQueries(activeProject.id));
-      }
-    } catch (error) {
-      logger.error('Error in activating visitor identification', error);
-    }
-  };
-
-  const onFinish = (values) => {
-    setLoading(true);
-
-    // Factors INTEGRATION tracking
-    factorsai.track('INTEGRATION', {
-      name: '6Signal Factors',
-      activeProjectID: activeProject.id
-    });
-
-    udpateProjectSettings(activeProject.id, {
-      factors6_signal_key: values.api_key,
-      int_factors_six_signal_key: true,
-      //updating table user and account table config when six signal is activated
-      timelines_config: getDefaultTimelineConfigForSixSignal(
-        currentProjectSettings
-      )
-    })
-      .then(() => {
-        setLoading(false);
-        setShowForm(false);
-        activateVisitorIdentificationTemplate();
-        setTimeout(() => {
-          message.success('6Signal integration successful');
-        }, 500);
-        setIsActive(true);
-        sendSlackNotification(
-          currentAgent.email,
-          activeProject.name,
-          '6Signal Factors'
-        );
-      })
-      .catch((err) => {
-        setShowForm(false);
-        setLoading(false);
-        seterrorInfo(err?.error);
-        setIsActive(false);
-      });
-  };
-
-  const onDisconnect = () => {
-    Modal.confirm({
-      title: 'Are you sure you want to disable this?',
-      content:
-        'You are about to disable this integration. Factors will stop bringing in data from this source.',
-      okText: 'Disconnect',
-      cancelText: 'Cancel',
-      onOk: () => {
-        setLoading(true);
-        udpateProjectSettings(activeProject.id, {
-          factors6_signal_key: '',
-          int_factors_six_signal_key: false,
-          six_signal_config: {}
-        })
-          .then(() => {
-            setLoading(false);
-            setShowForm(false);
-            setTimeout(() => {
-              message.success('6Signal integration disconnected!');
-            }, 500);
-            setIsActive(false);
-          })
-          .catch((err) => {
-            message.error(`${err?.data?.error}`);
-            setShowForm(false);
-            setLoading(false);
-          });
-      },
-      onCancel: () => {}
-    });
-  };
-
-  const onReset = () => {
-    seterrorInfo(null);
-    setShowForm(false);
-    form.resetFields();
-  };
-  const onChange = () => {
-    seterrorInfo(null);
-  };
+  }, [isFactorsDeanonymisationConnected, setIsActive]);
 
   return (
     <ErrorBoundary
@@ -142,117 +32,9 @@ function SixSignalFactorsIntegration({
       }
       onError={FaErrorLog}
     >
-      <Modal
-        visible={showForm}
-        zIndex={1020}
-        onCancel={onReset}
-        afterClose={() => setShowForm(false)}
-        className='fa-modal--regular fa-modal--slideInDown'
-        centered
-        footer={null}
-        closable={false}
-        transitionName=''
-        maskTransitionName=''
-      >
-        <div className='p-4'>
-          <Form
-            form={form}
-            onFinish={onFinish}
-            className='w-full'
-            onChange={onChange}
-          >
-            <Row>
-              <Col span={24}>
-                <Avatar
-                  size={40}
-                  shape='square'
-                  icon={<SVG name='Brand' size={40} color='purple' />}
-                  style={{ backgroundColor: '#F5F6F8' }}
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Col span={24}>
-                <Text
-                  type='title'
-                  level={6}
-                  weight='bold'
-                  extraClass='m-0 mt-2'
-                >
-                  Integrate with 6Signal by 6Sense
-                </Text>
-                <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
-                  Add your Backend API key (i.e, 6Signal Secret Key) to connect
-                  with your 6Signal account.
-                </Text>
-              </Col>
-            </Row>
-            <Row className='mt-6'>
-              <Col span={24}>
-                <Form.Item
-                  name='api_key'
-                  rules={[
-                    {
-                      required: true,
-                      message: 'Please input your 6Signal API Key'
-                    }
-                  ]}
-                >
-                  <Input
-                    size='large'
-                    className='fa-input w-full'
-                    placeholder='6Signal API Key'
-                  />
-                </Form.Item>
-              </Col>
-              {errorInfo && (
-                <Col span={24}>
-                  <div className='flex flex-col justify-center items-center mt-1'>
-                    <Text type='title' color='red' size='7' className='m-0'>
-                      {errorInfo}
-                    </Text>
-                  </div>
-                </Col>
-              )}
-            </Row>
-            <Row className='mt-6'>
-              <Col span={24}>
-                <div className='flex justify-end'>
-                  {/* <Button disabled={loading} size={'large'} onClick={onReset} className={'mr-2'}> Cancel </Button>  */}
-                  <Button
-                    loading={loading}
-                    type='primary'
-                    size='large'
-                    htmlType='submit'
-                  >
-                    {' '}
-                    Connect Now
-                  </Button>
-                </div>
-              </Col>
-            </Row>
-          </Form>
-        </div>
-      </Modal>
-
-      {currentProjectSettings?.int_factors_six_signal_key && (
-        <ConnectedScreen apiKey={currentProjectSettings?.factors6_signal_key} />
-      )}
+      {isFactorsDeanonymisationConnected && <ConnectedScreen />}
 
       <div className='mt-4 flex' data-tour='step-11'>
-        {currentProjectSettings?.int_factors_six_signal_key ? (
-          <Button loading={loading} onClick={() => onDisconnect()}>
-            Disconnect
-          </Button>
-        ) : (
-          <Button
-            type='primary'
-            loading={loading}
-            onClick={() => setShowForm(!showForm)}
-          >
-            Connect Now
-          </Button>
-        )}
         {kbLink && (
           <a
             className='ant-btn ml-2 '
