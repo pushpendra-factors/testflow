@@ -30,10 +30,10 @@ import {
   deleteGroupByForEvent,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   resetGroupBy,
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import { getEventsWithProperties, getStateFromFiltersEvent } from '../utils';
 import {
@@ -42,7 +42,8 @@ import {
   enableSlackIntegration,
   enableTeamsIntegration,
   fetchTeamsWorkspace,
-  fetchTeamsChannels
+  fetchTeamsChannels,
+  updateEventAlertStatus
 } from 'Reducers/global';
 import SelectChannels from '../SelectChannels';
 import {
@@ -57,6 +58,9 @@ import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import _ from 'lodash';
 import { fetchGroups } from 'Reducers/coreQuery/services';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
+import UpgradeButton from 'Components/GenericComponents/UpgradeButton';
 
 const { Option } = Select;
 
@@ -80,7 +84,7 @@ const EventBasedAlert = ({
   setAlertState,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   groupBy,
   resetGroupBy,
   eventProperties,
@@ -91,11 +95,12 @@ const EventBasedAlert = ({
   userPropNames,
   eventNames,
   getGroupProperties,
-  getEventProperties,
+  getEventPropertiesV2,
   fetchGroups,
   groupOpts,
   testWebhhookUrl,
-  teams
+  teams,
+  updateEventAlertStatus
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -129,8 +134,13 @@ const EventBasedAlert = ({
   const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
   const inputComponentRef = useAutoFocus();
+  const [isAlertEnabled, setisAlertEnabled] = useState(false);
+  const [enableWidgetModal, showEnableWidgetModal] = useState(false);
 
   // Webhook support
+  const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
+    FEATURES.FEATURE_WEBHOOK
+  );
   const [webhookUrl, setWebhookUrl] = useState('');
   const [finalWebhookUrl, setFinalWebhookUrl] = useState('');
   const [confirmBtn, setConfirmBtn] = useState(true);
@@ -164,10 +174,9 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     let DDCategory = [];
-    for (const key of Object.keys(eventProperties)) {
-      if (key === queries[0]?.label) {
-        DDCategory = _.union(eventProperties[queries[0]?.label], DDCategory);
-      }
+    for (let property in eventProperties[queries[0]?.label]) {
+      let nestedArrays = eventProperties[queries[0]?.label][property];
+      DDCategory = _.union(nestedArrays, DDCategory);
     }
     if (groupOpts[queries[0]?.group]) {
       for (const key of Object.keys(groupProperties)) {
@@ -179,7 +188,10 @@ const EventBasedAlert = ({
         }
       }
     } else {
-      DDCategory = _.union(DDCategory, eventUserProperties);
+      for (let property in eventUserProperties) {
+        let nestedArrays = eventUserProperties[property];
+        DDCategory = _.union(DDCategory, nestedArrays);
+      }
     }
     setBreakdownOptions(DDCategory);
     if (
@@ -216,7 +228,7 @@ const EventBasedAlert = ({
       );
     }
     if (viewAlertDetails?.event_alert?.event) {
-      getEventProperties(
+      getEventPropertiesV2(
         activeProject.id,
         viewAlertDetails?.event_alert?.event
       );
@@ -255,6 +267,30 @@ const EventBasedAlert = ({
       console.log(err.response);
     }
   }, [deleteWidgetModal]);
+
+  const confirmPause = useCallback(async () => {
+    try {
+      setDeleteApiCalled(true);
+      const status = 'paused';
+      const id = viewAlertDetails?.id;
+      return updateEventAlertStatus(activeProject?.id, id, status)
+        .then((res) => {
+          setDeleteApiCalled(false);
+          showEnableWidgetModal(false);
+          setisAlertEnabled(false);
+          fetchEventAlerts(activeProject.id);
+          message.success('Successfully paused/disabled alerts.');
+        })
+        .catch((err) => {
+          setDeleteApiCalled(false);
+          console.log('Oops! something went wrong-->', err);
+          message.error('Oops! something went wrong. ' + err?.data?.error);
+        });
+    } catch (err) {
+      console.log(err);
+      console.log(err.response);
+    }
+  }, [enableWidgetModal]);
 
   useEffect(() => {
     if (viewAlertDetails?.event_alert?.filter) {
@@ -407,7 +443,7 @@ const EventBasedAlert = ({
   };
 
   useEffect(() => {
-    getUserProperties(activeProject.id, queryType);
+    getUserPropertiesV2(activeProject.id, queryType);
   }, [queries]);
 
   const addGroupBy = () => {
@@ -431,7 +467,6 @@ const EventBasedAlert = ({
         setGroupState={pushGroupBy}
         closeDropDown={() => setGroupByDDVisible(false)}
         hideText={true}
-        posTop={true}
       />
     ) : null;
 
@@ -458,7 +493,6 @@ const EventBasedAlert = ({
                 setGroupState={pushGroupBy}
                 closeDropDown={() => setGroupByDDVisible(false)}
                 hideText={true}
-                posTop={true}
               />
             </div>
           );
@@ -595,17 +629,13 @@ const EventBasedAlert = ({
       queries.length > 0 &&
       (EventPropertyDetails?.name || EventPropertyDetails?.[1])
     ) {
-      const category = eventProperties[queries[0]?.label].filter(
-        (prop) =>
-          prop[1] === (EventPropertyDetails?.name || EventPropertyDetails?.[1])
-      );
       breakDownProperties = [
         {
           eventName: queries?.[0].label,
           property: EventPropertyDetails?.name || EventPropertyDetails?.[1],
           prop_type:
             EventPropertyDetails?.data_type || EventPropertyDetails?.[2],
-          prop_category: category.length > 0 ? 'event' : 'user'
+          prop_category: 'event'
         }
       ];
     }
@@ -909,6 +939,31 @@ const EventBasedAlert = ({
     }
   }, [webhookUrl, finalWebhookUrl]);
 
+  useEffect(() => {
+    if (viewAlertDetails?.status === 'active') {
+      setisAlertEnabled(true);
+    }
+  }, [viewAlertDetails]);
+
+  const toggleAlertEnabled = (checked) => {
+    if (!checked) {
+      showEnableWidgetModal(true);
+    } else {
+      const status = 'active';
+      const id = viewAlertDetails?.id;
+      updateEventAlertStatus(activeProject?.id, id, status)
+        .then((res) => {
+          setisAlertEnabled(true);
+          fetchEventAlerts(activeProject.id);
+          message.success('Successfully enabled alerts.');
+        })
+        .catch((err) => {
+          console.log('Oops! something went wrong-->', err);
+          message.error('Oops! something went wrong. ' + err?.data?.error);
+        });
+    }
+  };
+
   const propOption = (item) => {
     return (
       <Tooltip title={item} placement={'right'}>
@@ -992,9 +1047,7 @@ const EventBasedAlert = ({
               <Form.Item
                 name='alert_name'
                 className={'m-0'}
-                rules={[
-                  { required: true, message: 'Please enter alert name' }
-                ]}
+                rules={[{ required: true, message: 'Please enter alert name' }]}
               >
                 <Input
                   className={'fa-input'}
@@ -1484,9 +1537,15 @@ const EventBasedAlert = ({
                         color='grey'
                         lineHeight='medium'
                       >
-                        <span className='font-bold'>Note:</span> Please add payload to enable this option.
+                        <span className='font-bold'>Note:</span> Please add
+                        payload to enable this option.
                       </Text>
                     </div>
+                    {isWebHookFeatureLocked && (
+                      <div className='p-2'>
+                        <UpgradeButton />
+                      </div>
+                    )}
                   </div>
                 </Col>
                 <Col className={'m-0 mt-4'}>
@@ -1510,7 +1569,7 @@ const EventBasedAlert = ({
                               groupBy.length &&
                               groupBy[0] &&
                               groupBy[0].property
-                            )
+                            ) || isWebHookFeatureLocked
                           }
                           onChange={(checked) => setWebhookEnabled(checked)}
                           checked={webhookEnabled}
@@ -1871,10 +1930,18 @@ const EventBasedAlert = ({
                 level={3}
                 weight={'bold'}
                 color={'grey-2'}
-                extraClass={'m-0'}
+                extraClass={'m-0 inline'}
               >
-                Edit alert
+                Triggers alerts from an event
               </Text>
+              <div className={'inline ml-3'}>
+                <Switch
+                  checkedChildren='On'
+                  unCheckedChildren='OFF'
+                  onChange={toggleAlertEnabled}
+                  checked={isAlertEnabled}
+                />
+              </div>
             </Col>
             <Col span={12}>
               <div className={'flex justify-end'}>
@@ -1919,9 +1986,7 @@ const EventBasedAlert = ({
                 name='alert_name'
                 className={'m-0'}
                 initialValue={viewAlertDetails?.title}
-                rules={[
-                  { required: true, message: 'Please enter alert name' }
-                ]}
+                rules={[{ required: true, message: 'Please enter alert name' }]}
               >
                 <Input
                   className={'fa-input'}
@@ -2415,9 +2480,15 @@ const EventBasedAlert = ({
                         color='grey'
                         lineHeight='medium'
                       >
-                        <span className='font-bold'>Note:</span> Please add payload to enable this option.
+                        <span className='font-bold'>Note:</span> Please add
+                        payload to enable this option.
                       </Text>
                     </div>
+                    {isWebHookFeatureLocked && (
+                      <div className='p-2'>
+                        <UpgradeButton />
+                      </div>
+                    )}
                   </div>
                 </Col>
                 <Col className={'m-0 mt-4'}>
@@ -3409,6 +3480,16 @@ const EventBasedAlert = ({
               cancelText='Cancel'
               confirmLoading={deleteApiCalled}
             />
+            <ConfirmationModal
+              visible={enableWidgetModal ? true : false}
+              confirmationText='Alerts and webhooks from this event will be paused. You can always turn this back on when needed.'
+              onOk={confirmPause}
+              onCancel={showEnableWidgetModal.bind(this, false)}
+              title='Pause Alert?'
+              okText='Yes'
+              cancelText='Cancel'
+              confirmLoading={deleteApiCalled}
+            />
           </div>
         </Col>
       </Row>
@@ -3561,13 +3642,14 @@ export default connect(mapStateToProps, {
   enableSlackIntegration,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   resetGroupBy,
   getGroupProperties,
-  getEventProperties,
+  getEventPropertiesV2,
   fetchGroups,
   testWebhhookUrl,
   enableTeamsIntegration,
   fetchTeamsWorkspace,
-  fetchTeamsChannels
+  fetchTeamsChannels,
+  updateEventAlertStatus
 })(EventBasedAlert);

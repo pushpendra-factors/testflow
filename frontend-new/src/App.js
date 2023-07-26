@@ -1,6 +1,5 @@
-import React, { useEffect, Suspense } from 'react';
+import React, { useEffect, Suspense, useState } from 'react';
 import { connect, useDispatch } from 'react-redux';
-import { useHistory } from 'react-router-dom';
 import PageSuspenseLoader from './components/SuspenseLoaders/PageSuspenseLoader';
 import * as Sentry from '@sentry/react';
 import LogRocket from 'logrocket';
@@ -13,18 +12,20 @@ import {
 } from 'Reducers/global';
 import { SSO_LOGIN_FULFILLED } from './reducers/types';
 import { sendSlackNotification } from './utils/slack';
-import userflow from 'userflow.js';
 import AdBlockerDetector from './components/AdBlockerDetector';
 import { AppRoutes } from 'Routes';
+import { ProductFruits } from 'react-product-fruits';
+import { PRODUCTION_WORKSPACE_CODE } from 'Utils/productFruitsConfig';
 
 function App({
   agent_details,
   active_project,
   enableBingAdsIntegration,
-  enableMarketoIntegration
+  enableMarketoIntegration,
+  plan
 }) {
   const dispatch = useDispatch();
-  const history = useHistory();
+  const [userInfo, setUserInfo] = useState(null);
 
   const ssoLogin = () => {
     if (window.location.href.indexOf('?error=') > -1) {
@@ -34,10 +35,6 @@ function App({
         let err = searchParams.get('error');
         if (mode == 'auth0' && err == '') {
           dispatch({ type: SSO_LOGIN_FULFILLED });
-          history.replace({
-            pathname: '/',
-            state: { navigatedFromLoginPage: true }
-          });
         }
       }
     }
@@ -179,26 +176,26 @@ function App({
       }
     }
 
-    if (
-      window.location.href.indexOf('https://staging-app.factors.ai/') != -1 ||
-      window.location.href.indexOf('http://factors-dev.com:3000/') != -1
-    ) {
-      userflow.init('ct_ziy2e3t6sjdj7gh3pqfevszf3y');
-      userflow.identify(agent_details?.uuid, {
-        name: agent_details?.first_name,
-        email: agent_details?.email,
-        signed_up_at: agent_details?.signed_up_at
-      });
-    }
+    // if (
+    //   window.location.href.indexOf('https://staging-app.factors.ai/') != -1 ||
+    //   window.location.href.indexOf('http://factors-dev.com:3000/') != -1
+    // ) {
+    //   userflow.init('ct_ziy2e3t6sjdj7gh3pqfevszf3y');
+    //   userflow.identify(agent_details?.uuid, {
+    //     name: agent_details?.first_name,
+    //     email: agent_details?.email,
+    //     signed_up_at: agent_details?.signed_up_at
+    //   });
+    // }
 
-    if (window.location.href.indexOf('https://app.factors.ai/') != -1) {
-      userflow.init('ct_4iqdnn267zdr5ednpbgbyvubky');
-      userflow.identify(agent_details?.uuid, {
-        name: agent_details?.first_name,
-        email: agent_details?.email,
-        signed_up_at: agent_details?.signed_up_at
-      });
-    }
+    // if (window.location.href.indexOf('https://app.factors.ai/') != -1) {
+    //   userflow.init('ct_4iqdnn267zdr5ednpbgbyvubky');
+    //   userflow.identify(agent_details?.uuid, {
+    //     name: agent_details?.first_name,
+    //     email: agent_details?.email,
+    //     signed_up_at: agent_details?.signed_up_at
+    //   });
+    // }
   }, [agent_details]);
 
   useEffect(() => {
@@ -214,6 +211,21 @@ function App({
   useEffect(() => {
     ssoLogin();
   }, [agent_details]);
+
+  useEffect(() => {
+    if (agent_details && plan) {
+      const userInfoObj = {
+        username: agent_details?.email, // REQUIRED - any unique user identifier
+        email: agent_details?.email,
+        firstname: agent_details?.first_name,
+        signUpAt: agent_details?.signed_up_at,
+        props: {
+          plan: plan.name
+        }
+      };
+      setUserInfo(userInfoObj);
+    }
+  }, [agent_details, plan]);
 
   return (
     <AdBlockerDetector>
@@ -231,6 +243,14 @@ function App({
           onError={FaErrorLog}
         >
           <Suspense fallback={<PageSuspenseLoader />}>
+            {userInfo && (
+              <ProductFruits
+                workspaceCode={PRODUCTION_WORKSPACE_CODE}
+                language='en'
+                user={userInfo}
+                lifeCycle={'unmount'}
+              />
+            )}
             <AppRoutes />
           </Suspense>
         </ErrorBoundary>
@@ -241,7 +261,8 @@ function App({
 
 const mapStateToProps = (state) => ({
   agent_details: state.agent.agent_details,
-  active_project: state.global.active_project
+  active_project: state.global.active_project,
+  plan: state.featureConfig.plan
 });
 
 export default connect(mapStateToProps, {

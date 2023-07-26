@@ -1,12 +1,12 @@
 import React, { useMemo } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import {
-  configureMenuItems,
-  settingsMenuItems
+  settingsMenuItems,
+  getConfigureMenuItems
 } from 'Components/FaHeader/FaHeader';
 import { isConfigurationUrl } from './appSidebar.helpers';
 import SidebarMenuItem from './SidebarMenuItem';
-import { WhiteListedAccounts } from 'Routes/constants'; 
+import { WhiteListedAccounts } from 'Routes/constants';
 import { useSelector } from 'react-redux';
 
 const SettingItem = ({ item }) => {
@@ -38,10 +38,10 @@ const SettingsSidebar = () => {
 
   const menuList = useMemo(() => {
     if (isConfigurationUrl(pathname)) {
-      return configureMenuItems;
+      return getConfigureMenuItems(activeAgent);
     }
     return settingsMenuItems;
-  }, [pathname]);
+  }, [pathname, activeAgent]);
 
   return (
     <div className='flex flex-col row-gap-1 px-2'>

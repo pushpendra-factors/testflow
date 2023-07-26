@@ -11,13 +11,14 @@ import {
   getEventProperties
 } from 'Reducers/coreQuery/middleware';
 import FaSelect from 'Components/FaSelect';
-import GroupSelect2 from '../GroupSelect2';
 import EventGroupBlock from '../EventGroupBlock';
 import AliasModal from '../AliasModal';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function QueryBlock({
   availableGroups = [],
@@ -75,10 +76,10 @@ function QueryBlock({
 
   const alphabetIndex = 'ABCDEF';
 
-  const onChange = (group, value) => {
+  const onChange = (option, group) => {
     const newEvent = { alias: '', label: '', filters: [], group: '' };
-    newEvent.label = value;
-    newEvent.group = group;
+    newEvent.label = option.value;
+    newEvent.group = group.label;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
   };
@@ -109,7 +110,13 @@ function QueryBlock({
     }
     assignFilterProps.event = eventProperties[event.label] || [];
     setFilterProperties(assignFilterProps);
-  }, [event, eventGroup, eventProperties, groupProperties, eventUserProperties]);
+  }, [
+    event,
+    eventGroup,
+    eventProperties,
+    groupProperties,
+    eventUserProperties
+  ]);
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -122,14 +129,21 @@ function QueryBlock({
   const selectEvents = () =>
     isDDVisible ? (
       <div className={styles.query_block__event_selector}>
-        <GroupSelect2
-          groupedProperties={eventOptions}
-          placeholder='Select Event'
-          optionClick={(group, val) =>
-            onChange(group, val[1] ? val[1] : val[0])
-          }
+        <GroupSelect
+          options={eventOptions?.map((opt) => {
+            return {
+              iconName: getGroupIcon(opt?.icon),
+              label: opt?.label,
+              values: opt?.values?.map((op) => {
+                return { value: op[1], label: op[0] };
+              })
+            };
+          })}
+          searchPlaceHolder='Select Event'
+          optionClickCallback={onChange}
+          allowSearch={true}
           onClickOutside={() => setDDVisible(false)}
-          allowEmpty
+          extraClass={`${styles.query_block__event_selector__select}`}
         />
       </div>
     ) : null;

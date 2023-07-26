@@ -16,7 +16,7 @@ func (store *MemSQL) GetKPIConfigsForCustomAds(projectID int64, reqID string, in
 	configs := store.GetKPIConfigsForCustomAdsFromDB(projectID, includeDerivedKPIs)
 	for _, config := range configs {
 		CustomadsObjectsAndProperties := store.buildObjectAndPropertiesForCustomAds(projectID, config["display_category"].(string), model.ObjectsForCustomAds)
-		properties := model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(CustomadsObjectsAndProperties)
+		properties := model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(CustomadsObjectsAndProperties, config["display_category"].(string))
 		config["properties"] = properties
 	}
 	return configs, http.StatusOK

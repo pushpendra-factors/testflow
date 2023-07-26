@@ -407,6 +407,30 @@ func (store *MemSQL) GetEventNames(projectId int64) ([]model.EventName, int) {
 	}
 	return eventNames, http.StatusFound
 }
+func (store *MemSQL) IsEventExistsWithType(projectId int64, eventType string) (bool, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if projectId == 0 {
+		log.Error("GetEventExists With Type Failed. Missing projectId")
+		return false, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var eventName model.EventName
+	if err := db.Order("created_at ASC").Where("project_id = ? AND type = ?", projectId, eventType).Limit(1).Find(&eventName).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return false, http.StatusNotFound
+		}
+		return false, http.StatusInternalServerError
+	}
+	if eventName.Type != eventType {
+		return false, http.StatusNotFound
+	}
+	return true, http.StatusFound
+}
 
 // GetOrderedEventNamesFromDb - Get 'limit' events from DB sort by occurence for a given time period
 func (store *MemSQL) GetOrderedEventNamesFromDb(
@@ -787,6 +811,10 @@ func aggregateEventsAcrossDate(events []model.CacheEventNamesWithTimestamp) []U.
 
 			if eventDetails.Type == model.EVENT_NAME_TYPE_SMART_EVENT {
 				eventsAggregatedInt.Type = U.SmartEvent
+			}
+
+			if eventDetails.Type == model.EVENT_NAME_TYPE_PAGE_VIEW_EVENT {
+				eventsAggregatedInt.Type = U.PageViewEvent
 			}
 
 			eventsAggregated[eventNameSuffixTrim] = eventsAggregatedInt

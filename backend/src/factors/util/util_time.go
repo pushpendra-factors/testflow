@@ -2,11 +2,13 @@ package util
 
 import (
 	"errors"
+
 	"fmt"
-	"github.com/jinzhu/now"
 	"math"
 	"strconv"
 	"time"
+
+	"github.com/jinzhu/now"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -83,6 +85,11 @@ func TimeNowUnix() int64 {
 	return TimeNowZ().Unix()
 }
 
+func GetCurrentMonthYear(timeZone TimeZoneString) string {
+
+	return TimeNowIn(timeZone).Format("January2006")
+
+}
 func GetCurrentDayTimestamp() int64 {
 	currentTime := time.Now()
 	return time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, currentTime.Location()).Unix()
@@ -647,7 +654,7 @@ func GetAllDaysAsTimestamp(fromUnix int64, toUnix int64, timezone string) ([]tim
 	return rTimestamps, rTimezoneOffsets
 }
 
-//SanitizeWeekStart Gives the start of the week for any timestamp in the week for given timeZone
+// SanitizeWeekStart Gives the start of the week for any timestamp in the week for given timeZone
 func SanitizeWeekStart(startTime int64, zoneString TimeZoneString) int64 {
 
 	unixTimeUTC := time.Unix(startTime, 0) // gives unix time stamp in UTC

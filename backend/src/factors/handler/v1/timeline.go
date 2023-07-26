@@ -7,7 +7,6 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -122,21 +121,29 @@ func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser ma
 }
 
 func GetEngagementLevels(scores []float64) map[float64]string {
-	sort.Float64s(scores)
 	result := make(map[float64]string)
-	top10PercentIdx := int(math.Round(float64(len(scores)) * 0.9))
-	top30PercentIdx := int(math.Round(float64(len(scores)) * 0.7))
-
-	for i, score := range scores {
-		if i >= top10PercentIdx {
-			result[score] = "Hot"
-		} else if i >= top30PercentIdx {
-			result[score] = "Warm"
-		} else {
-			result[score] = "Cool"
-		}
+	for _, score := range scores {
+		percentile := calculatePercentile(scores, score)
+		result[score] = getEngagement(percentile)
 	}
 	return result
+}
+
+func calculatePercentile(data []float64, value float64) float64 {
+	sort.Float64s(data)                                       // Sort the data in ascending order
+	index := sort.SearchFloat64s(data, value)                 // Find the index of the value
+	percentile := float64(index) / float64(len(data)-1) * 100 // Calculate the percentile based on the index
+	return percentile
+}
+
+func getEngagement(percentile float64) string {
+	if percentile > 90 {
+		return "Hot"
+	} else if percentile > 70 {
+		return "Warm"
+	} else {
+		return "Cool"
+	}
 }
 
 func GetProfileUserDetailsHandler(c *gin.Context) (interface{}, int, string, string, bool) {

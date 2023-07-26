@@ -40,6 +40,7 @@ func main() {
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "*", "")
 	removeDisabledEventUserPropertiesByProjectID := flag.String("remove_disabled_event_user_properties",
 		"", "List of projects to disable event user property population in events.")
+	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -72,6 +73,7 @@ func main() {
 		RedisHostPersistent:           *redisHostPersistent,
 		RedisPortPersistent:           *redisPortPersistent,
 		RemoveDisabledEventUserPropertiesByProjectID: *removeDisabledEventUserPropertiesByProjectID,
+		EnableFeatureGatesV2:                         *enableFeatureGatesV2,
 	}
 	defaultHealthcheckETLPingID := C.HeathCheckG2ETLPingID
 	healthcheckETLPingID := C.GetHealthcheckPingID(defaultHealthcheckETLPingID, *overrideHealthcheckETLPingID)
@@ -125,10 +127,29 @@ func main() {
 
 // G2 etl and enrichment inside the following method
 func G2Enrichment(g2ProjectSettings []model.G2ProjectSettings) (map[string][]SP.Status, map[string][]SP.Status) {
+
 	syncStatusFailures := make([]SP.Status, 0)
 	syncStatusSuccesses := make([]SP.Status, 0)
 
 	for _, setting := range g2ProjectSettings {
+		available := true
+		var err error
+		if C.IsEnabledFeatureGatesV2() {
+			available,_, err = store.GetStore().GetFeatureStatusForProjectV2(setting.ProjectID, model.FEATURE_G2)
+			if err != nil {
+				log.WithError(err).Error("Failed to get feature status in g2 etl job for project ID ", setting.ProjectID)
+				syncStatusFailures = append(syncStatusFailures, SP.Status{
+					ProjectID: setting.ProjectID,
+					ErrMsg:    "Failed to fetch feature status",
+				})
+				continue
+			}
+		}
+
+		if !available {
+			log.Error("Feature Not Available... Skipping g2 etl job for project ID ", setting.ProjectID)
+			return nil, nil
+		}
 		errMsg := G2.PerformETLForProject(setting)
 		if errMsg != "" && errMsg != G2.NO_DATA_ERROR {
 			failure := SP.Status{

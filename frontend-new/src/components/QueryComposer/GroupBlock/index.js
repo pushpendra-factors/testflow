@@ -5,12 +5,14 @@ import { SVG } from 'Components/factorsComponents';
 import { bindActionCreators } from 'redux';
 
 import { Button, Tooltip } from 'antd';
-import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import startCase from 'lodash/startCase';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function GroupBlock({
   groupByState,
@@ -25,30 +27,64 @@ function GroupBlock({
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
   const [propSelVis, setSelVis] = useState([false]);
-  const [filterOptions, setFilterOptions] = useState([
-    {
-      label: 'User Properties',
-      icon: 'user',
-      values: []
-    },
-    {
-      label: 'Group Properties',
-      icon: 'group',
-      values: []
-    }
-  ]);
+  const [filterOptions, setFilterOptions] = useState([]);
 
   useEffect(() => {
-    const filterOpts = [...filterOptions];
+    const filterOptsObj = {};
     if (groupName === 'users' || groupName === 'events') {
-      filterOpts[0].values = userProperties;
-      filterOpts[1].values = [];
+      if (userProperties) {
+        Object.keys(userProperties)?.forEach((groupkey) => {
+          if (!filterOptsObj[groupkey]) {
+            filterOptsObj[groupkey] = {
+              label: startCase(groupkey),
+              iconName: getGroupIcon(groupkey),
+              values:
+                userProperties?.[groupkey]?.map((op) => {
+                  return {
+                    value: op?.[1],
+                    label: op?.[0],
+                    extraProps: {
+                      valueType: op?.[2],
+                      propertyType: 'user'
+                    }
+                  };
+                }) || []
+            };
+          } else {
+            userProperties?.[groupkey]?.forEach((op) =>
+              filterOptsObj[groupkey].values.push({
+                value: op?.[1],
+                label: op?.[0],
+                extraProps: {
+                  valueType: op?.[2],
+                  propertyType: 'user'
+                }
+              })
+            );
+          }
+        });
+      }
     } else {
-      filterOpts[1].label = `${PropTextFormat(groupName)} Properties`;
-      filterOpts[1].values = groupProperties[groupName];
-      filterOpts[0].values = [];
+      const groupLabel = `${PropTextFormat(groupName)} Properties`;
+      const groupValues =
+        groupProperties[groupName]?.map((op) => {
+          return {
+            value: op?.[1],
+            label: op?.[0],
+            extraProps: {
+              valueType: op?.[2],
+              propertyType: 'group'
+            }
+          };
+        }) || [];
+      const groupPropIconName = getGroupIcon(groupLabel);
+      filterOptsObj[groupLabel] = {
+        iconName: groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
+        label: groupLabel,
+        values: groupValues
+      };
     }
-    setFilterOptions(filterOpts);
+    setFilterOptions(Object.values(filterOptsObj));
   }, [userProperties, groupProperties, groupName]);
 
   const delOption = (index) => {
@@ -69,12 +105,12 @@ function GroupBlock({
     setSelVis(ddVis);
   };
 
-  const onChange = (value, index) => {
+  const onChange = (option, group, index) => {
     const newGroupByState = Object.assign({}, groupByState.global[index]);
-    newGroupByState.prop_category = 'user';
+    newGroupByState.prop_category = option?.extraProps?.propertyType;
     newGroupByState.eventName = '$present';
-    newGroupByState.property = value[1][1];
-    newGroupByState.prop_type = value[1][2];
+    newGroupByState.property = option?.value;
+    newGroupByState.prop_type = option?.extraProps?.valueType;
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = 'raw_values';
     }
@@ -112,12 +148,17 @@ function GroupBlock({
           }
           {isDDVisible[index] ? (
             <div className={`${styles.group_block__event_selector}`}>
-              <GroupSelect2
-                groupedProperties={filterOptions}
-                placeholder='Select Property'
-                optionClick={(group, val) => onChange([group, val], index)}
+              <GroupSelect
+                options={filterOptions}
+                searchPlaceHolder='Select Property'
+                optionClickCallback={(option, group) =>
+                  onChange(option, group, index)
+                }
                 onClickOutside={() => triggerDropDown(index, true)}
-              ></GroupSelect2>
+                allowSearch={true}
+                extraClass={styles.group_block__event_selector__select}
+                allowSearchTextSelection={false}
+              />
             </div>
           ) : null}
         </div>
@@ -223,12 +264,17 @@ function GroupBlock({
               {renderGroupDisplayName(opt, index)}
               {isDDVisible[index] ? (
                 <div className={`${styles.group_block__event_selector}`}>
-                  <GroupSelect2
-                    groupedProperties={filterOptions}
-                    placeholder='Select Property'
-                    optionClick={(group, val) => onChange([group, val], index)}
+                  <GroupSelect
+                    options={filterOptions}
+                    searchPlaceHolder='Select Property'
+                    optionClickCallback={(option, group) =>
+                      onChange(option, group, index)
+                    }
                     onClickOutside={() => triggerDropDown(index, true)}
-                  ></GroupSelect2>
+                    allowSearch={true}
+                    extraClass={styles.group_block__event_selector__select}
+                    allowSearchTextSelection={false}
+                  />
                 </div>
               ) : null}
             </div>

@@ -1356,7 +1356,25 @@ CREATE TABLE IF NOT EXISTS dash_query_results (
     SHARD KEY (project_id),
     KEY (project_id, id) USING CLUSTERED COLUMNSTORE,
     PRIMARY KEY (project_id, query_id, id)
-    );
+);
+    
+CREATE TABLE IF NOT EXISTS plan_details (
+    id bigint auto_increment,
+    name text,
+    mtu_limit bigint,
+    feature_list json,
+    SHARD KEY (id)
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS project_plan_mappings (
+    project_id bigint,
+    plan_id bigint NOT NULL,
+    over_write json,
+    last_renewed_on timestamp(6),
+    PRIMARY KEY (project_id),
+    SHARD KEY (project_id)
+);
 
 CREATE TABLE IF NOT EXISTS g2_documents (
     id text NOT NULL,

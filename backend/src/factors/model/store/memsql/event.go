@@ -207,6 +207,9 @@ func (store *MemSQL) addEventDetailsToCache(projectID int64, event *model.Event,
 	if model.IsEventNameTypeSmartEvent(eventNameDetails.Type) {
 		eventNamesKeySortedSet, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 			currentTimeDatePart)
+	} else if _, exists := eventProperties["$is_page_view"]; exists && eventProperties["$is_page_view"].(bool) == true {
+		eventNamesKeySortedSet, err = model.GetPageViewEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
+			currentTimeDatePart)
 	} else {
 		eventNamesKeySortedSet, err = model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 			currentTimeDatePart)
@@ -903,12 +906,14 @@ func getPageCountAndTimeSpentFromEventsList(events []*model.Event, sessionEvent 
 	for _, event := range events {
 		if event.ID != sessionEvent.ID && event.SessionId == nil {
 			properties, _ := U.DecodePostgresJsonb(&event.Properties)
-			pageSpentTime, _ := U.GetPropertyValueAsFloat64((*properties)[U.EP_PAGE_SPENT_TIME])
-			timeSpent += pageSpentTime
-			pageCount += 1
+			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
+				pageSpentTime, _ := U.GetPropertyValueAsFloat64((*properties)[U.EP_PAGE_SPENT_TIME])
+				timeSpent += pageSpentTime
+				pageCount += 1
+			}
+
 		}
 	}
-
 	return pageCount, timeSpent
 }
 

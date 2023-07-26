@@ -66,8 +66,13 @@ import {
   updateAccountPayloadAction,
   setSegmentModalStateAction
 } from 'Reducers/accountProfilesView/actions';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
+import UpgradeModal from '../UpgradeModal';
+import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { PathUrls } from '../../../routes/pathUrls';
 import _ from 'lodash';
+import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 
 function AccountProfiles({
   activeProject,
@@ -108,6 +113,8 @@ function AccountProfiles({
     }
   });
 
+  const { sixSignalInfo } = useSelector((state) => state.featureConfig);
+
   const [currentPage, setCurrentPage] = useState(1);
 
   const showSegmentModal = useSelector((state) =>
@@ -127,6 +134,16 @@ function AccountProfiles({
 
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
+  const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
+    FEATURES.FEATURE_ENGAGEMENT
+  );
+  const { isFeatureConnected: isClearBitConnected } = useFeatureLock(
+    FEATURES.INT_CLEARBIT
+  );
+  const { isFeatureConnected: isSixSenseConnected } = useFeatureLock(
+    FEATURES.INT_SIX_SIGNAL
+  );
+  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
 
   const setShowSegmentModal = useCallback(
     (value) => {
@@ -235,7 +252,7 @@ function AccountProfiles({
     if (payload.source && payload.source !== '' && !shouldCache) {
       const formatPayload = { ...payload };
       formatPayload.filters =
-        formatFiltersForPayload(payload?.filters, true) || [];
+        formatFiltersForPayload(payload?.filters, 'accounts') || [];
       getProfileAccounts(activeProject.id, formatPayload, activeAgent);
     }
     if (shouldCache) {
@@ -351,7 +368,7 @@ function AccountProfiles({
         item.engagement &&
         (item.engagement !== undefined || item.engagement !== '')
     );
-    if (engagementExists) {
+    if (engagementExists && !isEngagementLocked) {
       columns.push({
         title: <div className={headerClassStr}>Engagement</div>,
         width: 150,
@@ -523,6 +540,11 @@ function AccountProfiles({
     setShowPopOver(false);
   };
 
+  const handleDisableOptionClick = () => {
+    setIsUpgradeModalVisible(true);
+    setShowPopOver(false);
+  };
+
   const popoverContent = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
@@ -539,6 +561,9 @@ function AccountProfiles({
           onChange={handlePropChange}
           showApply
           onApply={applyTableProps}
+          showDisabledOption={isEngagementLocked}
+          // disabledOptions={['Engagement', 'Engaged Channels']}
+          handleDisableOptionClick={handleDisableOptionClick}
         />
       </Tabs.TabPane>
     </Tabs>
@@ -826,7 +851,7 @@ function AccountProfiles({
 
     const updatedPayload = {
       ...accountPayload,
-      search_filter: formatFiltersForPayload(searchFilter, true)
+      search_filter: formatFiltersForPayload(searchFilter)
     };
     const search_filters = updatedPayload.search_filter.map((filter, index) => {
       const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
@@ -932,8 +957,12 @@ function AccountProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button size='large' type='text' className='search-btn relative'>
-        <SVG name='activity_filter' />
+      <Button
+        size='large'
+        icon={<SVG name='activity_filter' />}
+        className='relative'
+      >
+        Edit Columns
       </Button>
     </Popover>
   );
@@ -1017,6 +1046,20 @@ function AccountProfiles({
 
   return (
     <ProfilesWrapper>
+      {showUpgradeNudge(
+        sixSignalInfo?.usage || 0,
+        sixSignalInfo?.limit || 0,
+        !(isClearBitConnected || isSixSenseConnected)
+      ) && (
+        <div className='mb-4'>
+          <RangeNudge
+            title='Accounts Identified'
+            amountUsed={sixSignalInfo?.usage || 0}
+            totalLimit={sixSignalInfo?.limit || 0}
+          />
+        </div>
+      )}
+
       <Text type='title' level={3} weight='bold' extraClass='mb-0'>
         Account Profiles
       </Text>
@@ -1041,6 +1084,11 @@ function AccountProfiles({
         tableProps={
           currentProjectSettings.timelines_config?.account_config?.table_props
         }
+      />
+      <UpgradeModal
+        visible={isUpgradeModalVisible}
+        variant='account'
+        onCancel={() => setIsUpgradeModalVisible(false)}
       />
     </ProfilesWrapper>
   );

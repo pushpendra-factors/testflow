@@ -87,14 +87,14 @@ function QueryBlock({
     newEvent.label = option.label;
     newEvent.metric = metric;
     newEvent.metricType = metricType;
-    newEvent.group = group.value;
+    newEvent.group = group?.value;
     newEvent.qt = qt;
-    newEvent.icon = group.iconName;
+    newEvent.icon = group?.iconName;
     if (category) {
       newEvent.category = category;
     }
     setDDVisible(false);
-    if (group === 'page_views') {
+    if (group.value === 'page_views') {
       eventChange(newEvent, index - 1, 'add', 'select_url');
     } else {
       eventChange(newEvent, index - 1, 'add');

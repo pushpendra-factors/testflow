@@ -5,7 +5,6 @@ import { ErrorBoundary } from 'react-error-boundary';
 import FaSelect from 'Components/FaSelect';
 import factorsai from 'factorsai';
 import { fetchDemoProject, getHubspotContact } from 'Reducers/global';
-import userflow from 'userflow.js';
 import {
   fetchActiveDashboardUnits,
   DeleteUnitFromDashboard,
@@ -264,7 +263,7 @@ function ProjectDropdown({
   );
 
   const handleTour = () => {
-    userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
+    // userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
   };
 
   const generateDBList = () => {

@@ -132,6 +132,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	})
 
 	isExplain := c.Query("is_explain")
+	version := c.Query("version")
 	isDisplayNameEnabled := c.Query("is_display_name_enabled")
 	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
@@ -204,10 +205,13 @@ func GetUserPropertiesHandler(c *gin.Context) {
 			}
 			dupCheck[name] = true
 		}
-		c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp, "disabled_event_user_properties": U.DISABLED_EVENT_USER_PROPERTIES})
+		if(version != "2"){
+			c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp, "disabled_event_user_properties": U.DISABLED_EVENT_USER_PROPERTIES})
+		} else {
+			c.JSON(http.StatusOK, gin.H{"properties": model.CategorizeProperties(properties, "user"), "display_names": displayNamesOp, "disabled_event_user_properties": U.DISABLED_EVENT_USER_PROPERTIES})
+		}
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"properties": properties, "disabled_event_user_properties": U.DISABLED_EVENT_USER_PROPERTIES})
 }
 
 // GetUserPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/user_properties/$country

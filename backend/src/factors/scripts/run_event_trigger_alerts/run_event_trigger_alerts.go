@@ -75,6 +75,7 @@ func main() {
 	teamsAppClientID := flag.String("teams_app_client_id", "", "")
 	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
 	teamsApplicationID := flag.String("teams_application_id", "", "")
+	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 	// blacklistedAlerts := flag.String("blacklisted_alerts", "", "")
 
 	flag.Parse()
@@ -110,6 +111,7 @@ func main() {
 		TeamsAppClientID:     *teamsAppClientID,
 		TeamsAppClientSecret: *teamsAppClientSecret,
 		TeamsApplicationID:   *teamsApplicationID,
+		EnableFeatureGatesV2: *enableFeatureGatesV2,
 	}
 	defaultHealthcheckPingID := C.HealthcheckEventTriggerAlertPingID
 	highPriorityHealthCheckPingID := C.HealthcheckEventTriggerAlertForHighPriorityPingID
@@ -133,6 +135,19 @@ func main() {
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 
 	for _, projectID := range projectIDs {
+		available := true
+		if *enableFeatureGatesV2 {
+			available, _, err = store.GetStore().GetFeatureStatusForProjectV2(projectID, model.FEATURE_EVENT_BASED_ALERTS)
+			if err != nil {
+				log.WithError(err).Error("Failed to get feature status in event trigger alerts  job for project ID ", projectID)
+				finalStatus[fmt.Sprintf("Failure-Feature-Status %v", projectID)] = true
+			}
+		}
+
+		if !available {
+			log.Error("Feature Not Available... Skipping event trigger alerts job for project ID ", projectID)
+			return
+		}
 
 		blockedAlerts, errMsg, err := store.GetStore().UpdateInternalStatusAndGetAlertIDs(projectID)
 		if err != nil {

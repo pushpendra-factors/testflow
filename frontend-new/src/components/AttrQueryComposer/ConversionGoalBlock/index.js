@@ -13,7 +13,7 @@ import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import EventFilterWrapper from 'Components/KPIComposer/EventFilterWrapper';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import { getQueryComposerGroupIcon } from 'Utils/getQueryComposerGroupIcons';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 const ConversionGoalBlock = ({
   eventGoal,
@@ -434,7 +434,7 @@ const ConversionGoalBlock = ({
     }
     groupOptions = groupOptions?.map((groupOpt) => {
       return {
-        iconName: groupOpt?.icon,
+        iconName: getGroupIcon(groupOpt?.icon),
         label: _.startCase(groupOpt?.label),
         value: groupOpt?.label,
         extraProps: {
@@ -499,7 +499,7 @@ const ConversionGoalBlock = ({
               onClick={toggleEventSelect}
               icon={
                 <SVG
-                  name={getQueryComposerGroupIcon(
+                  name={getGroupIcon(
                     getGroupedProps()?.find(
                       (groupOpt) => groupOpt?.value === eventGoal.group
                     )?.iconName

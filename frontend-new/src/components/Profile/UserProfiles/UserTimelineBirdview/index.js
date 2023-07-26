@@ -22,7 +22,6 @@ function UserTimelineBirdview({
   setCollapse,
   loading,
   eventNamesMap,
-  listProperties
 }) {
   const [showAll, setShowAll] = useState([]);
   const { userPropNames } = useSelector((state) => state.coreQuery);

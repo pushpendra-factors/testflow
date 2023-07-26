@@ -206,6 +206,7 @@ func main() {
 	teamsApplicationID := flag.String("teams_application_id", "", "")
 	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 	allowEventAnalyticsGroupsByProjectID := flag.String("allow_event_analytics_groups_by_project_id", "", "")
+	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 	enableScoreByProjectID := flag.String("enable_score_by_project_id", "", "List of projectIds with scoring enabled.")
 
 	flag.Parse()
@@ -363,6 +364,7 @@ func main() {
 		TeamsApplicationID:                             *teamsApplicationID,
 		EnableSyncReferenceFieldsByProjectID:           *enableSyncReferenceFieldsByProjectID,
 		AllowEventAnalyticsGroupsByProjectID:           *allowEventAnalyticsGroupsByProjectID,
+		EnableFeatureGatesV2:                           *enableFeatureGatesV2,
 		EnableScoringByProjectID:                       *enableScoreByProjectID,
 	}
 	C.InitConf(config)

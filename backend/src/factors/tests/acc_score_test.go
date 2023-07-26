@@ -319,3 +319,76 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	assert.Equal(t, decayValue, float64(1), "decay value miscalculation")
 
 }
+
+func TestAccScoreUpdateLastEventsDay(t *testing.T) {
+
+	var prevCountsOfUser map[string]map[string]M.LatestScore = make(map[string]map[string]M.LatestScore)
+	var data []M.EventsCountScore = make([]M.EventsCountScore, 0)
+
+	prevCountsOfUser["1"] = make(map[string]M.LatestScore)
+	currentTimestamp := time.Now()
+	currentTS := currentTimestamp.Unix()
+	saleWindow := int64(10)
+	w4 := map[string]int64{}
+	w4["a"] = 3
+	w4["b"] = 3
+	w4["c"] = 3
+	w4["d"] = 3
+	w4["e"] = 3
+	w1_date_string := T.GetDateOnlyFromTimestamp(currentTS)
+
+	d1 := M.EventsCountScore{UserId: "1", ProjectId: 1, EventScore: w4, DateStamp: w1_date_string, IsGroup: false}
+	data = append(data, d1)
+
+	w3 := make(map[string]float64)
+	w3["a"] = 1.0
+	w3["b"] = 1.0
+	w3["c"] = 1.0
+	w3["d"] = 1.0
+	w3["e"] = 1.0
+	w2 := make(map[string]float64)
+	w2["a"] = 1
+	w2["b"] = 1
+	w2["c"] = 1
+	w2["d"] = 1
+	w2["e"] = 1
+	w2_date_unix := currentTimestamp.AddDate(0, 0, -1*2)
+	w3_date_unix := currentTimestamp.AddDate(0, 0, -1*3)
+
+	w2_date_string := T.GetDateOnlyFromTimestamp(w2_date_unix.Unix())
+	w3_date_string := T.GetDateOnlyFromTimestamp(w3_date_unix.Unix())
+
+	prevCountsOfUser["1"][w3_date_string] = M.LatestScore{Date: w3_date_unix.Unix(), EventsCount: w3}
+	prevCountsOfUser["1"][w2_date_string] = M.LatestScore{Date: w2_date_unix.Unix(), EventsCount: w2}
+
+	log.Debugf("input:%v", prevCountsOfUser)
+	log.Debugf("input:%v", data)
+	res, err := T.UpdateLastEventsDay(prevCountsOfUser, data, currentTS, saleWindow)
+	log.Debugf("result:%v", res)
+	assert.Equal(t, 4.5, res["1"].EventsCount["a"])
+	assert.Equal(t, 4.5, res["1"].EventsCount["b"])
+	assert.Equal(t, 4.5, res["1"].EventsCount["c"])
+	assert.Nil(t, err)
+}
+
+func TestAccScoreDecayValue(t *testing.T) {
+
+	salewindow := int64(200)
+
+	a1 := M.ComputeDecayValue("20230710", salewindow)
+	a2 := M.ComputeDecayValue("20230709", salewindow)
+	a3 := M.ComputeDecayValue("20230708", salewindow)
+	a4 := M.ComputeDecayValue("20230707", salewindow)
+	a5 := M.ComputeDecayValue("20230706", salewindow)
+	a6 := M.ComputeDecayValue("20230705", salewindow)
+	a7 := M.ComputeDecayValue("20230704", salewindow)
+	a8 := M.ComputeDecayValue("20230703", salewindow)
+	a9 := M.ComputeDecayValue("20230702", salewindow)
+	a10 := M.ComputeDecayValue("20230701", salewindow)
+	a11 := M.ComputeDecayValue("20230630", salewindow)
+	a12 := M.ComputeDecayValue("20221223", salewindow)
+	vals := []float64{a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12}
+	log.Debugf("%v", vals)
+	assert.Greater(t, a1, a2)
+	assert.Greater(t, a1, a12)
+}

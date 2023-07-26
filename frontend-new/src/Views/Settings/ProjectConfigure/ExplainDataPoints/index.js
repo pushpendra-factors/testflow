@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Modal, Button, Progress, message } from 'antd';
 import { Text, SVG } from 'factorsComponents';
+import styles from './index.module.scss';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
 import { connect } from 'react-redux';
-import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import {
   addEventToTracked,
   addUserPropertyToTracked,
   fetchFactorsTrackedEvents,
   fetchFactorsTrackedUserProperties,
   delEventTracked,
-  delUserPropertyTracked,
+  delUserPropertyTracked
 } from 'Reducers/factors';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
 const { confirm } = Modal;
 
 const ConfigureDP = (props) => {
@@ -27,7 +29,7 @@ const ConfigureDP = (props) => {
     fetchFactorsTrackedEvents,
     fetchFactorsTrackedUserProperties,
     delEventTracked,
-    delUserPropertyTracked,
+    delUserPropertyTracked
   } = props;
   const [activeEventsTracked, setActiveEventsTracked] = useState(0);
   const [InQueueEventsEvents, setInQueueEventsEvents] = useState(0);
@@ -89,14 +91,13 @@ const ConfigureDP = (props) => {
 
   useEffect(() => {
     fetchFactorsTrackedEvents(activeProject.id);
-    fetchFactorsTrackedUserProperties(activeProject.id); 
+    fetchFactorsTrackedUserProperties(activeProject.id);
   }, [activeProject]);
 
-  const onChangeEventDD = (grp, value) => {
-    // console.log('grp, value onChangeEventDD',grp, value);
+  const onChangeEventDD = (option, group) => {
     setShowDropDown(false);
     const EventData = {
-      event_name: `${value[1] ? value[1] : value[0]}`,
+      event_name: `${option.value ? option.value : option.label}`
     };
     addEventToTracked(activeProject.id, EventData)
       .then(() => {
@@ -111,11 +112,10 @@ const ConfigureDP = (props) => {
       });
   };
 
-  const onChangeUserPropertiesDD = (grp, value) => {
-    console.log('grp, value onChangeUserPropertiesDD', grp, value);
+  const onChangeUserPropertiesDD = (option, group) => {
     setShowDropDown1(false);
     const UserPropertyData = {
-      user_property_name: `${value[1] ? value[1] : value[0]}`,
+      user_property_name: `${option.value ? option.value : option.label}`
     };
     addUserPropertyToTracked(activeProject.id, UserPropertyData)
       .then(() => {
@@ -149,7 +149,7 @@ const ConfigureDP = (props) => {
               : `Oops! Something went wrong!`;
             message.error(ErrMsg);
           });
-      },
+      }
     });
   };
 
@@ -172,7 +172,7 @@ const ConfigureDP = (props) => {
               : `Oops! Something went wrong!`;
             message.error(ErrMsg);
           });
-      },
+      }
     });
   };
 
@@ -189,11 +189,25 @@ const ConfigureDP = (props) => {
                 type={'title'}
                 level={7}
                 color={'grey-2'}
-                extraClass={'m-0 mb-8'}
+                extraClass={'m-0 mt-2'}
               >
-                The events and properties under this list will be considered as
-                the top events and properties of the project and will be tracked
-                frequently.{' '}
+                Elevate the importance of key events and properties in your
+                project with our Top Events and Properties feature. By
+                designating specific events and properties as top priorities,
+                you can ensure they are closely monitored and tracked.
+              </Text>
+              <Text
+                type={'title'}
+                level={7}
+                color={'grey-2'}
+                extraClass={'m-0 mb-8 mt-2'}
+              >
+                These vital metrics will be prominently displayed in the Explain
+                section of Factors, providing you with instant visibility and
+                easy access to the most critical data points.{' '}
+                <a href='https://help.factors.ai/en/articles/6294993-top-events-and-properties'>
+                  Learn more
+                </a>
               </Text>
             </Col>
             {showInfo && (
@@ -277,7 +291,7 @@ const ConfigureDP = (props) => {
                           strokeColor={'#ACA4DE'}
                           success={{
                             percent: activeEventsTracked * 2,
-                            strokeColor: '#1E89FF',
+                            strokeColor: '#1E89FF'
                           }}
                           showInfo={false}
                         />
@@ -337,17 +351,35 @@ const ConfigureDP = (props) => {
                               </Button>
                             )}
                             {showDropDown && (
-                              <>
-                                <GroupSelect2
-                                  extraClass={'right-0'}
-                                  groupedProperties={events ? events : null}
-                                  placeholder='Select Events'
-                                  optionClick={(group, val) =>
-                                    onChangeEventDD(group, val)
+                              <div
+                                className={`${styles.explain_dataPoints__event_selector}`}
+                              >
+                                <GroupSelect
+                                  extraClass={
+                                    styles.explain_dataPoints__event_selector__select
                                   }
+                                  options={
+                                    events
+                                      ? events?.map((opt) => {
+                                          return {
+                                            iconName: getGroupIcon(opt?.icon),
+                                            label: opt?.label,
+                                            values: opt?.values?.map((op) => {
+                                              return {
+                                                value: op[1],
+                                                label: op[0]
+                                              };
+                                            })
+                                          };
+                                        })
+                                      : []
+                                  }
+                                  searchPlaceHolder='Select Events'
+                                  optionClickCallback={onChangeEventDD}
                                   onClickOutside={() => setShowDropDown(false)}
+                                  allowSearch={true}
                                 />
-                              </>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -427,7 +459,7 @@ const ConfigureDP = (props) => {
                           strokeColor={'#ACA4DE'}
                           success={{
                             percent: activeUserProperties * 2,
-                            strokeColor: '#1E89FF',
+                            strokeColor: '#1E89FF'
                           }}
                           showInfo={false}
                         />
@@ -487,27 +519,40 @@ const ConfigureDP = (props) => {
                               </Button>
                             )}
                             {showDropDown1 && (
-                              <>
-                                <GroupSelect2
-                                  extraClass={'right-0'}
-                                  groupedProperties={
+                              <div
+                                className={`${styles.explain_dataPoints__event_selector}`}
+                              >
+                                <GroupSelect
+                                  extraClass={
+                                    styles.explain_dataPoints__event_selector__select
+                                  }
+                                  options={
                                     userProperties
                                       ? [
                                           {
                                             label: 'User Properties',
-                                            icon: 'fav',
-                                            values: userProperties,
-                                          },
+                                            iconName: 'fav',
+                                            values: userProperties?.map(
+                                              (op) => {
+                                                return {
+                                                  value: op[1],
+                                                  label: op[0],
+                                                  extraProps: {
+                                                    valueType: op[2]
+                                                  }
+                                                };
+                                              }
+                                            )
+                                          }
                                         ]
-                                      : null
+                                      : []
                                   }
-                                  placeholder='Select User Properties'
-                                  optionClick={(group, val) =>
-                                    onChangeUserPropertiesDD(group, val)
-                                  }
+                                  searchPlaceHolder='Select User Properties'
+                                  optionClickCallback={onChangeUserPropertiesDD}
                                   onClickOutside={() => setShowDropDown1(false)}
+                                  allowSearch={true}
                                 />
-                              </>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -570,7 +615,7 @@ const mapStateToProps = (state) => {
     tracked_events: state.factors.tracked_events,
     tracked_user_property: state.factors.tracked_user_property,
     userProperties: state.coreQuery.userProperties,
-    events: state.coreQuery.eventOptions,
+    events: state.coreQuery.eventOptions
   };
 };
 
@@ -580,5 +625,5 @@ export default connect(mapStateToProps, {
   delUserPropertyTracked,
   addUserPropertyToTracked,
   fetchFactorsTrackedEvents,
-  fetchFactorsTrackedUserProperties,
+  fetchFactorsTrackedUserProperties
 })(ConfigureDP);

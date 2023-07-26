@@ -9,11 +9,11 @@ import {
   getUserProperties
 } from 'Reducers/coreQuery/middleware';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
-import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import { OPERATORS } from 'Utils/constants';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 const ENGAGEMENT_SUPPORTED_OPERATORS = [
   OPERATORS['equalTo'],
@@ -81,14 +81,33 @@ function EventsBlock({
       );
       showOpts = groupOpts.concat(userOpts);
     }
-
+    showOpts = showOpts?.map((opt) => {
+      return {
+        iconName: opt?.icon,
+        label: opt?.label,
+        values: opt?.values?.map((op) => {
+          return { value: op[1], label: op[0] };
+        })
+      };
+    });
+    // Moving MostRecent as first Option.
+    const mostRecentGroupindex = showOpts
+      ?.map((opt) => opt.label)
+      ?.indexOf('Most Recent');
+    if (mostRecentGroupindex > 0) {
+      showOpts = [
+        showOpts[mostRecentGroupindex],
+        ...showOpts.slice(0, mostRecentGroupindex),
+        ...showOpts.slice(mostRecentGroupindex + 1)
+      ];
+    }
     setShowGroups(showOpts);
   }, [eventOptions, groupAnalysis]);
 
-  const onChange = (group, value) => {
+  const onChange = (option, group) => {
     const newEvent = { label: '', filters: [], group: '' };
-    newEvent.label = value;
-    newEvent.group = group;
+    newEvent.label = option?.value;
+    newEvent.group = group?.label;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
     closeEvent();
@@ -135,20 +154,17 @@ function EventsBlock({
   const selectEvents = () =>
     isDDVisible && !disableEventEdit ? (
       <div className={styles.query_block__event_selector}>
-        <GroupSelect2
-          groupedProperties={showGroups}
-          placeholder='Select Event'
-          optionClick={(group, val) =>
-            onChange(group, val[1] ? val[1] : val[0])
-          }
+        <GroupSelect
+          options={showGroups}
+          searchPlaceHolder='Select Event'
+          optionClickCallback={onChange}
+          allowSearch={true}
+          placement={dropdownPlacement}
           onClickOutside={() => {
             setDDVisible(false);
             closeEvent();
           }}
-          placement={dropdownPlacement}
-          height={336}
-          allowEmpty
-          useCollapseView
+          extraClass={`${styles.query_block__event_selector__select}`}
         />
       </div>
     ) : null;

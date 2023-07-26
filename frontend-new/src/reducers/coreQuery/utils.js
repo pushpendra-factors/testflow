@@ -31,16 +31,72 @@ export const convertPropsToOptions = (props, display_names = []) => {
   return options;
 };
 
+export const convertEventsPropsToOptions = (props, display_names = []) => {
+  const options = {};
+  Object.keys(props).forEach((type) => {
+    const categoryOptions = props[type];
+    Object.keys(categoryOptions).forEach((group) => {
+      const groupOptions = categoryOptions[group];
+      if (!options[group]) {
+        options[group] = [];
+      }
+      groupOptions.forEach((val) => {
+        options[group].push([
+          display_names[val] ? display_names[val] : val,
+          val,
+          type
+        ]);
+      });
+    });
+  });
+  return options;
+};
+export const convertUserPropsToOptions = (
+  props,
+  display_names = [],
+  disabledEventValues = []
+) => {
+  const userOptions = {};
+  const eventUserOptions = {};
+  Object.keys(props).forEach((type) => {
+    const categoryOptions = props[type];
+    Object.keys(categoryOptions).forEach((group) => {
+      const groupOptions = categoryOptions[group];
+      if (!userOptions[group]) {
+        userOptions[group] = [];
+      }
+      if (!eventUserOptions[group]) {
+        eventUserOptions[group] = [];
+      }
+      groupOptions.forEach((val) => {
+        userOptions[group].push([
+          display_names[val] ? display_names[val] : val,
+          val,
+          type
+        ]);
+        if (!disabledEventValues.includes(val)) {
+          eventUserOptions[group].push([
+            display_names[val] ? display_names[val] : val,
+            val,
+            type
+          ]);
+        }
+      });
+    });
+  });
+  return { userOptions, eventUserOptions };
+};
+
 export const convertCustomEventCategoryToOptions = (data) => {
-  const mainItem = data.properties
+  const mainItem = data.properties;
   const keys = Object.keys(mainItem);
-  const finalArr = keys.map((type,index)=>{
-    let arr = mainItem[type].map(item=>{
-      return [_.startCase(item),item,type]
-    })
-    return arr
-  })
-  return _.flatten(finalArr)
+  const finalArr = keys.map((type, index) => {
+    let arr = mainItem[type].map((item) => {
+      return [_.startCase(item), item, type];
+    });
+    return arr;
+  });
+  return _.flatten(finalArr);
 };
 
 const convertToChannelOptions = (objects) => {

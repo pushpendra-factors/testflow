@@ -723,6 +723,19 @@ func TransformEventPropertiesToKPIConfigProperties(properties map[string][]strin
 func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string, propertiesToDisplayNames map[string]string, prefix string) []map[string]string {
 	var resultantKPIConfigProperties []map[string]string
 	var tempKPIConfigProperty map[string]string
+	category := "OTHERS"
+	if(prefix == "$hubspot"){
+		category = "Hubspot"
+	}
+	if(prefix == "$salesforce"){
+		category = "Salesforce"
+	}
+	if(prefix == "$leadsquared"){
+		category = "Leadsquared"
+	}
+	if(prefix == "$marketo"){
+		category = "Marketo"
+	}
 	for dataType, propertyNames := range properties {
 		for _, propertyName := range propertyNames {
 			if strings.HasPrefix(propertyName, prefix) {
@@ -736,6 +749,7 @@ func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string,
 					"display_name": strings.Title(displayName),
 					"data_type":    dataType,
 					"entity":       UserEntity,
+					"category": 	category,
 				}
 				resultantKPIConfigProperties = append(resultantKPIConfigProperties, tempKPIConfigProperty)
 			}

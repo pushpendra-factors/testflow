@@ -142,6 +142,7 @@ type Configuration struct {
 	EtcdEndpoints                                  []string
 	GeolocationFile                                string
 	DeviceDetectorPath                             string
+	FactorsSixSignalAPIKey                         string
 	APIDomain                                      string
 	APPDomain                                      string
 	APPOldDomain                                   string
@@ -262,7 +263,7 @@ type Configuration struct {
 	EnableDryRunAlerts                                 bool
 	DataAvailabilityExpiry                             int
 	ClearbitEnabled                                    int
-	SixSignalEnabled                                   int
+	SixSignalV1EnabledProjectIDs                       string
 	UseSalesforceV54APIByProjectID                     string
 	EnableOptimisedFilterOnProfileQuery                bool
 	HubspotAppID                                       string
@@ -314,9 +315,12 @@ type Configuration struct {
 	UseHubspotEngagementsV3APIByProjectID              string
 	AllowEventAnalyticsGroupsByProjectID               string
 	OtpKeyWithQueryCheckEnabled                        bool
+	EnableFeatureGatesV2                               bool
 	AllowEmailDomainsByProjectID                       string
 	UseHubspotDealsV3APIByProjectID                    string
 	EnableScoringByProjectID                           string
+	DeviceServiceURL                                   string
+	EnableDeviceServiceByProjectID                     string
 	DisableOpportunityContactRolesByProjectID          string
 }
 
@@ -1840,6 +1844,10 @@ func IsProduction() bool {
 	return (strings.Compare(configuration.Env, PRODUCTION) == 0)
 }
 
+func GetFactorsSixSignalAPIKey() string {
+	return configuration.FactorsSixSignalAPIKey
+}
+
 func GetAPPDomain() string {
 	return configuration.APPDomain
 }
@@ -2074,9 +2082,6 @@ func GetOtpKeyWithQueryCheckEnabled() bool {
 	return configuration.OtpKeyWithQueryCheckEnabled
 }
 
-func Get6SignalEnabled() int {
-	return configuration.SixSignalEnabled
-}
 func GetOnlyAttributionDashboardCaching() int {
 	return configuration.OnlyAttributionDashboardCaching
 }
@@ -2410,6 +2415,28 @@ func IsIngestionTimezoneEnabled(projectId int64) bool {
 		}
 	}
 	return false
+}
+
+func IsSixSignalV1Enabled(projectId int64) bool {
+
+	if configuration.SixSignalV1EnabledProjectIDs == "" {
+		return false
+	}
+
+	if configuration.SixSignalV1EnabledProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectId)
+	projectIDs := strings.Split(configuration.SixSignalV1EnabledProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+
 }
 
 func EnableMQLAPI() bool {
@@ -2778,6 +2805,10 @@ func IsEnabledFeatureGates() bool {
 	return configuration.EnableFeatureGates
 }
 
+func IsEnabledFeatureGatesV2() bool {
+	return configuration.EnableFeatureGatesV2
+}
+
 func EnableSixSignalGroupByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSixSignalGroupByProjectID, "")
 	if allProjects {
@@ -2911,6 +2942,17 @@ func AllowEmailDomainsByProjectID(projectID int64) bool {
 
 func AllowHubspotDealsv3APIByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotDealsV3APIByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+
+
+func AllowDeviceServiceByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDeviceServiceByProjectID, "")
 	if allProjects {
 		return true
 	}

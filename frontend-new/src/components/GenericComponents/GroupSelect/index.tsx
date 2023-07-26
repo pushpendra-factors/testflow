@@ -105,7 +105,7 @@ export default function GroupSelect({
           <SVG
             name={getIcon(selectedGroup?.iconName || '')}
             extraClass={'self-center'}
-            size={20}
+            size={18}
           ></SVG>
           <Text
             level={7}
@@ -137,40 +137,45 @@ export default function GroupSelect({
       let groupValueOptions: OptionType[] = [];
       //The Value is Modified, to extract the group information when Value-Labels are same.
       options.forEach((group) => {
-        group.values?.forEach((groupValue) => {
-          groupValueOptions.push({
-            value: groupValue?.value,
-            label: groupValue?.label,
-            labelNode: (
-              <div className='flex flex-row items-center'>
-                <div className='flex'>
-                  <SVG
-                    name={getIcon(group?.iconName || '')}
-                    extraClass={'self-center'}
-                    size={20}
-                  ></SVG>
+        if (group.label !== 'Most Recent') {
+          group.values?.forEach((groupValue) => {
+            groupValueOptions.push({
+              value: groupValue?.value,
+              label: groupValue?.label,
+              labelNode: (
+                <div
+                  className='flex flex-row items-center'
+                  title={groupValue?.label}
+                >
+                  <div className='flex'>
+                    <SVG
+                      name={getIcon(group?.iconName || '')}
+                      extraClass={'self-center'}
+                      size={18}
+                    ></SVG>
+                  </div>
+                  <div className='flex'>
+                    <Text
+                      level={7}
+                      type={'title'}
+                      extraClass={'m-0 ml-2'}
+                      weight={'medium'}
+                    >
+                      <HighlightSearchText
+                        text={groupValue?.label}
+                        highlight={searchTerm}
+                      />
+                    </Text>
+                  </div>
                 </div>
-                <div className='flex'>
-                  <Text
-                    level={7}
-                    type={'title'}
-                    extraClass={'m-0 ml-2'}
-                    weight={'thin'}
-                  >
-                    <HighlightSearchText
-                      text={groupValue?.label}
-                      highlight={searchTerm}
-                    />
-                  </Text>
-                </div>
-              </div>
-            ),
-            extraProps: {
-              groupLabel: group?.label,
-              ...groupValue.extraProps
-            }
+              ),
+              extraProps: {
+                groupLabel: group?.label,
+                ...groupValue.extraProps
+              }
+            });
           });
-        });
+        }
       });
 
       const searchOption: OptionType = {
@@ -200,13 +205,16 @@ export default function GroupSelect({
         value: group?.label,
         label: group?.label,
         labelNode: (
-          <div className='flex flex-row justify-between w-full items-center	'>
+          <div
+            className='flex flex-row justify-between w-full items-center	'
+            title={group?.label}
+          >
             <div className='flex flex-row items-center'>
               <div className='flex'>
                 <SVG
                   name={getIcon(group?.iconName || '')}
                   extraClass={'self-center'}
-                  size={20}
+                  size={18}
                 ></SVG>
               </div>
               <div className='flex justify-between items-center'>
@@ -214,7 +222,7 @@ export default function GroupSelect({
                   level={7}
                   type={'title'}
                   extraClass={'m-0 ml-2'}
-                  weight={'bold'}
+                  weight={'medium'}
                 >
                   {group?.label}
                 </Text>

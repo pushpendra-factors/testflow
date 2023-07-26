@@ -5,11 +5,11 @@ import { SVG, Text } from 'Components/factorsComponents';
 import { bindActionCreators } from 'redux';
 
 import { Button, Tooltip } from 'antd';
-import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 
 import { setGroupBy, delGroupBy } from 'Reducers/coreQuery/middleware';
 import FaSelect from 'Components/FaSelect';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
 
 function GroupBlock({
   groupByState,
@@ -19,25 +19,25 @@ function GroupBlock({
   groupProperties,
   userPropNames,
   groupPropNames,
-  groupName='users',
+  groupName = 'users',
   isDDVisible,
   setDDVisible,
   setEventLevelExpandBy,
   eventLevelExpandBy
-}) { 
+}) {
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
   const [propSelVis, setSelVis] = useState([false]);
   const [filterOptions, setFilterOptions] = useState([
     {
       label: 'User Properties',
-      icon: 'user',
-      values: [],
+      iconName: 'user',
+      values: []
     },
     {
       label: 'Group Properties',
-      icon: 'group',
-      values: [],
-    },
+      iconName: 'group',
+      values: []
+    }
   ]);
 
   useEffect(() => {
@@ -49,13 +49,28 @@ function GroupBlock({
       filterOpts[1].values = groupProperties[groupName];
       filterOpts[0].values = [];
     }
-    setFilterOptions(filterOpts);
+    const modifiedFilterOpts = filterOpts?.map((opt) => {
+      return {
+        iconName: opt?.iconName,
+        label: opt?.label,
+        values: opt?.values?.map((op) => {
+          return {
+            value: op[1],
+            label: op[0],
+            extraProps: {
+              valueType: op[2]
+            }
+          };
+        })
+      };
+    });
+    setFilterOptions(modifiedFilterOpts);
   }, [userProperties, groupProperties, groupName]);
 
   const delOption = (index) => {
     // delGroupBy('global', groupByState.global[index], index);
-    let newArr = eventLevelExpandBy?.filter((item,indx)=> indx!=index)
-    console.log('newArr', newArr)
+    let newArr = eventLevelExpandBy?.filter((item, indx) => indx != index);
+    console.log('newArr', newArr);
     setEventLevelExpandBy(newArr);
   };
 
@@ -67,33 +82,36 @@ function GroupBlock({
     if (newGroupByState.prop_type === 'datetime') {
       newGroupByState.grn = val;
     }
-    console.log('newGroupByState',newGroupByState,index)
+    console.log('newGroupByState', newGroupByState, index);
     setGroupBy('global', newGroupByState, index);
     const ddVis = [...propSelVis];
     ddVis[index] = false;
     setSelVis(ddVis);
   };
 
-  const onChange = (value, index) => {
+  const onChange = (option, group, index) => {
     const newGroupByState = Object.assign({}, eventLevelExpandBy[index]);
-    newGroupByState.prop_category = 'user';
+    if (group?.label === 'Group Properties') {
+      newGroupByState.prop_category = 'group';
+    } else {
+      newGroupByState.prop_category = 'user';
+    }
     newGroupByState.eventName = '$present';
-    newGroupByState.property = value[1][1];
-    newGroupByState.prop_type = value[1][2];
+    newGroupByState.property = option?.value;
+    newGroupByState.prop_type = option?.extraProps?.valueType;
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = 'raw_values';
     }
     if (newGroupByState.prop_type === 'datetime') {
       newGroupByState.grn = 'day';
-    } 
-    // setGroupBy('global', newGroupByState, index);
-    if(eventLevelExpandBy?.[index]){
-        let newArr = eventLevelExpandBy;
-        newArr[index] = newGroupByState; 
-        setEventLevelExpandBy(newArr); 
     }
-    else{
-        setEventLevelExpandBy([...eventLevelExpandBy, newGroupByState]); 
+    // setGroupBy('global', newGroupByState, index);
+    if (eventLevelExpandBy?.[index]) {
+      let newArr = eventLevelExpandBy;
+      newArr[index] = newGroupByState;
+      setEventLevelExpandBy(newArr);
+    } else {
+      setEventLevelExpandBy([...eventLevelExpandBy, newGroupByState]);
     }
     const ddVis = [...isDDVisible];
     ddVis[index] = false;
@@ -125,12 +143,16 @@ function GroupBlock({
           } */}
           {isDDVisible[index] ? (
             <div className={`${styles.group_block__event_selector}`}>
-              <GroupSelect2
-                groupedProperties={filterOptions}
-                placeholder='Select Property'
-                optionClick={(group, val) => onChange([group, val], index)}
+              <GroupSelect
+                options={filterOptions}
+                searchPlaceHolder={'Select Property'}
+                optionClickCallback={(option, group) =>
+                  onChange(option, group, index)
+                }
                 onClickOutside={() => triggerDropDown(index, true)}
-              ></GroupSelect2>
+                allowSearch={true}
+                extraClass={`${styles.group_block__event_selector__select}`}
+              />
             </div>
           ) : null}
         </div>
@@ -144,14 +166,14 @@ function GroupBlock({
     const propOpts = {
       numerical: [
         ['original values', null, 'raw_values'],
-        ['bucketed values', null, 'with_buckets'],
+        ['bucketed values', null, 'with_buckets']
       ],
       datetime: [
         ['hour', null, 'hour'],
         ['date', null, 'day'],
         ['week', null, 'week'],
-        ['month', null, 'month'],
-      ],
+        ['month', null, 'month']
+      ]
     };
 
     const getProp = (opt) => {
@@ -224,25 +246,31 @@ function GroupBlock({
         </Button>
       </Tooltip>
     );
-  }; 
-  
+  };
+
   const renderExistingBreakdowns = () => {
     if (eventLevelExpandBy < 1) return;
     return eventLevelExpandBy.map((opt, index) => (
       <div key={index} className={`flex relative items-center mt-2`}>
-        <Text type={'title'} level={8} extraClass={`m-0 mt-2 mr-4`}>Expand by</Text>
+        <Text type={'title'} level={8} extraClass={`m-0 mt-2 mr-4`}>
+          Expand by
+        </Text>
         {
           <>
             <div className={`flex relative`}>
               {renderGroupDisplayName(opt, index)}
               {isDDVisible[index] ? (
-                <div className={`${styles.group_block__event_selector}`}> 
-                  <GroupSelect2
-                    groupedProperties={filterOptions}
-                    placeholder='Select Property'
-                    optionClick={(group, val) => onChange([group, val], index)}
+                <div className={`${styles.group_block__event_selector}`}>
+                  <GroupSelect
+                    options={filterOptions}
+                    searchPlaceHolder={'Select Property'}
+                    optionClickCallback={(option, group) =>
+                      onChange(option, group, index)
+                    }
                     onClickOutside={() => triggerDropDown(index, true)}
-                  ></GroupSelect2>
+                    allowSearch={true}
+                    extraClass={`${styles.group_block__event_selector__select}`}
+                  />
                 </div>
               ) : null}
             </div>
@@ -263,7 +291,7 @@ function GroupBlock({
   };
 
   return (
-    <div className={'flex flex-col relative justify-start items-start ml-20'}> 
+    <div className={'flex flex-col relative justify-start items-start ml-20'}>
       {renderExistingBreakdowns()}
       {renderInitGroupSelect(eventLevelExpandBy?.length)}
     </div>
@@ -276,14 +304,14 @@ const mapStateToProps = (state) => ({
   groupProperties: state.coreQuery.groupProperties,
   userPropNames: state.coreQuery.userPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
-  groupByState: state.coreQuery.groupBy,
+  groupByState: state.coreQuery.groupBy
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setGroupBy,
-      delGroupBy,
+      delGroupBy
     },
     dispatch
   );

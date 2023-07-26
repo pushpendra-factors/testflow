@@ -240,6 +240,7 @@ export default function SingleSelect({
       rendOpts.push(
         <div
           key={'op' + index}
+          title={op.label}
           onClick={() => {
             handleOptionClick(op);
           }}
@@ -254,7 +255,9 @@ export default function SingleSelect({
           ) : searchTerm.length > 0 ? (
             <HighlightSearchText text={op.label} highlight={searchTerm} />
           ) : (
-            op.label
+            <Text level={7} type={'title'} weight={'regular'}>
+              {op.label}
+            </Text>
           )}
         </div>
       );

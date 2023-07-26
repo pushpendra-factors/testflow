@@ -12,6 +12,7 @@ import { createDashboardFromTemplate } from 'Reducers/dashboard_templates/servic
 import { fetchDashboards } from 'Reducers/dashboard/services';
 import { fetchQueries } from 'Reducers/coreQuery/services';
 import logger from 'Utils/logger';
+import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
 
 function SixSignalIntegration({
   fetchProjectSettings,
@@ -82,6 +83,7 @@ function SixSignalIntegration({
           activeProject.name,
           '6Signal'
         );
+        dispatch(fetchFeatureConfig(activeProject.id));
       })
       .catch((err) => {
         setShowForm(false);
@@ -111,6 +113,7 @@ function SixSignalIntegration({
               message.success('6Signal integration disconnected!');
             }, 500);
             setIsActive(false);
+            dispatch(fetchFeatureConfig(activeProject.id));
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

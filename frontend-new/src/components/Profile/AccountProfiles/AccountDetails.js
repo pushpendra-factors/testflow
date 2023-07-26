@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Dropdown, Menu, notification, Popover, Tabs } from 'antd';
+import styles from './index.module.scss';
 import { bindActionCreators } from 'redux';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { Text, SVG } from '../../factorsComponents';
@@ -24,19 +25,25 @@ import {
 } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
-import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import AccountTimelineSingleView from './AccountTimelineSingleView';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
 import { fetchGroups } from 'Reducers/coreQuery/services';
+import UpgradeModal from '../UpgradeModal';
+import { PLANS } from 'Constants/plans.constants';
 import {
   getGroupProperties,
   getEventProperties
 } from 'Reducers/coreQuery/middleware';
+import AccountOverview from './AccountOverview';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import { featureLock } from '../../../routes/feature';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function AccountDetails({
+  accounts,
   accountDetails,
   activeProject,
   fetchGroups,
@@ -66,13 +73,23 @@ function AccountDetails({
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
   const [timelineViewMode, setTimelineViewMode] = useState('birdview');
+  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
-
   const handleOpenPopoverChange = (value) => {
     setOpenPopover(value);
   };
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
+  const { plan } = useSelector((state) => state.featureConfig);
+  const isFreePlan = plan?.name === PLANS.PLAN_FREE;
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
+
+  useEffect(() => {
+    if (featureLock(activeAgent)) {
+      setTimelineViewMode('overview');
+    }
+  }, [activeAgent]);
 
   useEffect(() => {
     fetchGroups(activeProject?.id, true);
@@ -98,10 +115,10 @@ function AccountDetails({
     const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
     const group = params.group ? params.group : 'All';
-    const view = params.view ? params.view : 'birdview';
-    document.title = 'Accounts' + ' - FactorsAI';
+    const view = params.view ? params.view : timelineViewMode;
+    document.title = 'Accounts - FactorsAI';
     return [id, group, view];
-  }, [location]);
+  }, [location, timelineViewMode]);
 
   useEffect(() => {
     if (activeId && activeId !== '')
@@ -187,11 +204,26 @@ function AccountDetails({
       filterProps[group] = groupProperties?.[group];
     });
 
-    const groupProps = Object.entries(filterProps).map(([group, values]) => ({
+    let groupProps = Object.entries(filterProps).map(([group, values]) => ({
       label: `${PropTextFormat(group)} Properties`,
-      icon: group,
+      iconName: group,
       values
     }));
+    groupProps = groupProps?.map((opt) => {
+      return {
+        iconName: getGroupIcon(opt?.iconName),
+        label: opt?.label,
+        values: opt?.values?.map((op) => {
+          return {
+            value: op?.[1],
+            label: op?.[0],
+            extraProps: {
+              valueType: op?.[2]
+            }
+          };
+        })
+      };
+    });
     setListProperties(mergedProps);
     setFilterProperties(groupProps);
   }, [groupProperties, groupOpts]);
@@ -222,7 +254,7 @@ function AccountDetails({
         )
       );
     }
-    setOpenPopover(false);
+    handleOpenPopoverChange(false);
   };
 
   const handleEventsChange = (option) => {
@@ -238,7 +270,7 @@ function AccountDetails({
     udpateProjectSettings(activeProject.id, {
       timelines_config: { ...timelinesConfig }
     });
-    setOpenPopover(false);
+    handleOpenPopoverChange(false);
   };
 
   const handleMilestonesChange = (option) => {
@@ -252,7 +284,6 @@ function AccountDetails({
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
       setCheckListMilestones(checkListProps);
-      setOpenPopover(false);
     } else {
       notification.error({
         message: 'Error',
@@ -277,6 +308,7 @@ function AccountDetails({
         currentProjectSettings?.timelines_config
       )
     );
+    handleOpenPopoverChange(false);
   };
 
   const controlsPopover = () => (
@@ -334,10 +366,12 @@ function AccountDetails({
     </Menu>
   );
 
-  const handleOptionClick = (group, value) => {
+  const handleOptionClick = (option, group) => {
     const timelinesConfig = { ...tlConfig };
-    if (!timelinesConfig.account_config.leftpane_props.includes(value[1])) {
-      timelinesConfig.account_config.leftpane_props.push(value[1]);
+    if (
+      !timelinesConfig.account_config.leftpane_props.includes(option?.value)
+    ) {
+      timelinesConfig.account_config.leftpane_props.push(option?.value);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...timelinesConfig }
       }).then(() =>
@@ -426,12 +460,15 @@ function AccountDetails({
 
   const selectProps = () =>
     propSelectOpen && (
-      <div className='relative'>
-        <GroupSelect2
-          groupedProperties={filterProperties}
-          placeholder='Select Property'
-          optionClick={handleOptionClick}
+      <div className={styles.account_profiles__event_selector}>
+        <GroupSelect
+          options={filterProperties}
+          searchPlaceHolder='Select Property'
+          optionClickCallback={handleOptionClick}
           onClickOutside={() => setPropSelectOpen(false)}
+          allowSearchTextSelection={false}
+          extraClass={styles.account_profiles__event_selector__select}
+          allowSearch={true}
         />
       </div>
     );
@@ -495,6 +532,21 @@ function AccountDetails({
     </div>
   );
 
+  // temp hack for engagement
+  const formatOverview = useMemo(() => {
+    const account = accounts?.data?.find((item) => item?.identity === activeId);
+    const { data: { overview } = {} } = accountDetails;
+    const formattedOverview = { ...overview, engagement: account?.engagement };
+    return formattedOverview;
+  }, [accounts, accountDetails, activeId]);
+
+  const renderOverview = () => (
+    <AccountOverview
+      overview={formatOverview || {}}
+      loading={accountDetails?.isLoading}
+    />
+  );
+
   const renderSingleTimelineView = () => (
     <AccountTimelineSingleView
       timelineEvents={
@@ -504,13 +556,47 @@ function AccountDetails({
       milestones={accountDetails.data?.milestones}
       loading={accountDetails?.isLoading}
       eventNamesMap={eventNamesMap}
-      listProperties={[...listProperties, ...userProperties]}
     />
   );
 
+  const getTimelineUsers = () => {
+    const timelineUsers = accountDetails.data?.account_users || [];
+    if (isFreePlan) {
+      return timelineUsers.filter(
+        (userConfig) => userConfig?.title !== 'group_user'
+      );
+    }
+    return timelineUsers;
+  };
+
   const renderBirdviewWithActions = () => (
     <div className='flex flex-col'>
-      <div className='timeline-actions flex-row-reverse'>
+      <div
+        className={`timeline-actions ${
+          isFreePlan ? 'justify-between' : 'flex-row-reverse'
+        } `}
+      >
+        {isFreePlan && (
+          <div className='flex items-baseline flex-wrap'>
+            <Text
+              type={'paragraph'}
+              mini
+              color='character-primary'
+              extraClass='inline-block'
+            >
+              LinkedIn ads engagement and G2 intent data is not available in
+              free plan. To unlock,
+              <span
+                className='inline-block cursor-pointer ml-1'
+                onClick={() => setIsUpgradeModalVisible(true)}
+              >
+                <Text type={'paragraph'} mini color='brand-color-6'>
+                  {'  '} Upgrade plan
+                </Text>
+              </span>
+            </Text>
+          </div>
+        )}
         <div className='timeline-actions__group'>
           <div className='timeline-actions__group__collapse'>
             <Button
@@ -560,13 +646,12 @@ function AccountDetails({
         timelineEvents={
           activities?.filter((activity) => activity.enabled === true) || []
         }
-        timelineUsers={accountDetails.data?.account_users || []}
+        timelineUsers={getTimelineUsers()}
         collapseAll={collapseAll}
         setCollapseAll={setCollapseAll}
         granularity={granularity}
         loading={accountDetails?.isLoading}
         eventNamesMap={eventNamesMap}
-        listProperties={[...listProperties, ...userProperties]}
       />
     </div>
   );
@@ -584,6 +669,16 @@ function AccountDetails({
             setGranularity(granularity);
           }}
         >
+          {formatOverview?.engagement && formatOverview?.engagement !== '' && (
+            <TabPane
+              tab={
+                <span className='fa-activity-filter--tabname'>Overview</span>
+              }
+              key='overview'
+            >
+              {renderOverview()}
+            </TabPane>
+          )}
           <TabPane
             tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
             key='timeline'
@@ -608,6 +703,11 @@ function AccountDetails({
         {renderLeftPane()}
         {renderTimelineView()}
       </div>
+      <UpgradeModal
+        visible={isUpgradeModalVisible}
+        variant='timeline'
+        onCancel={() => setIsUpgradeModalVisible(false)}
+      />
     </div>
   );
 }
@@ -616,6 +716,7 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
   groupOpts: state.groups.data,
+  accounts: state.timelines.accounts,
   accountDetails: state.timelines.accountDetails,
   userProperties: state.coreQuery.userProperties,
   eventProperties: state.coreQuery.eventProperties,

@@ -25,7 +25,7 @@ const (
 	Paused              = "paused"   //Internal status if the difference between failure is greater than success of the alert by 72 hours
 	Active              = "active"   //Default internal status
 	Disabled            = "disabled" //Internal status if the failures from the poison queue are not resolved for 72 more hours
-	
+
 	// cachekey structure = ETA:pid:<project_id>:<alert_id>:<UnixTime>
 	// cacheCounterKey structure = ETA:Counter:pid:<project_id>:<alert_id>:<YYYYMMDD>
 	// sortedset key structure = ETA:pid:<project_id>
@@ -76,6 +76,8 @@ type EventTriggerAlertInfo struct {
 	ID                string                   `json:"id"`
 	Title             string                   `json:"title"`
 	DeliveryOptions   string                   `json:"delivery_options"`
+	Status            string                   `json:"status"`
+	LastFailDetails   *postgres.Jsonb          `json:"last_fail_details"`
 	EventTriggerAlert *EventTriggerAlertConfig `json:"event_alert"`
 }
 
@@ -106,8 +108,8 @@ type MessagePropMapStruct struct {
 
 type LastFailDetails struct {
 	FailTime time.Time `json:"fail_time"`
-	FailedAt []string    `json:"failed_at"`
-	Details  []string    `json:"details"`
+	FailedAt []string  `json:"failed_at"`
+	Details  []string  `json:"details"`
 }
 
 func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTriggerAlert) error {

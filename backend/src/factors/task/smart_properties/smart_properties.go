@@ -155,7 +155,7 @@ func checkState(smartPropertyRule model.SmartPropertyRules) string {
 	}
 }
 
-//to do: If we intend to parallelise this at per project level, It might be better to evaluate in chunks. Can check later.
+// to do: If we intend to parallelise this at per project level, It might be better to evaluate in chunks. Can check later.
 func getUpdatedAndNonExistingInSmartPropertiesChannelDocuments(projectID int64, campaigns []model.ChannelDocumentsWithFields,
 	adGroups []model.ChannelDocumentsWithFields, source string) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	smartPropertyCampaigns, errCode := store.GetStore().GetSmartPropertyByProjectIDAndSourceAndObjectType(projectID, source, 1)

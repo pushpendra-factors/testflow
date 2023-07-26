@@ -860,3 +860,47 @@
     background: var(--bg-color);
     border-radius: 16px;
 }
+
+.overview {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0;
+    gap: 24px;
+
+    .top-metrics {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            height: 96px;
+            border: 1px solid #F0F0F0;
+            border-radius: 8px;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+
+    .trend {
+        border: 1px solid #F0F0F0;
+        border-radius: 8px;
+
+        .heading {
+            display: flex;
+            padding: 16px;
+            align-items: center;
+            height: 56px;
+            width: 100%;
+            border-bottom: 1px solid #F0F0F0;
+        }
+
+        .chart {
+            padding: 16px 24px 8px 8px;
+        }
+
+    }
+}

@@ -95,7 +95,11 @@ const EnrichFeature = ({
     six_signal_config?.pages_include
   ]);
   return (
-    <div className='flex flex-col border-bottom--thin py-4'>
+    <div
+      className={`flex flex-col ${
+        type === 'page' ? 'border-bottom--thin' : ''
+      } py-4`}
+    >
       <div
         className={`flex items-center ${
           mode === 'view' ? 'justify-between' : 'justify-start'

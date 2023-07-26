@@ -527,16 +527,17 @@ func getProjectSettingDefault() *model.ProjectSetting {
 	enabled := true
 	disabled := false
 	return &model.ProjectSetting{
-		AutoTrack:            &enabled,
-		AutoFormCapture:      &enabled,
-		AutoCaptureFormFills: &disabled,
-		AutoTrackSPAPageView: &disabled,
-		ExcludeBot:           &enabled,
-		IntSegment:           &enabled,
-		IntRudderstack:       &disabled,
-		IntDrift:             &disabled,
-		IntClearBit:          &disabled,
-		AutoClickCapture:     &model.AutoClickCaptureDefault,
+		AutoTrack:              &enabled,
+		AutoFormCapture:        &enabled,
+		AutoCaptureFormFills:   &disabled,
+		AutoTrackSPAPageView:   &disabled,
+		ExcludeBot:             &enabled,
+		IntSegment:             &enabled,
+		IntRudderstack:         &disabled,
+		IntDrift:               &disabled,
+		IntClearBit:            &disabled,
+		IntFactorsSixSignalKey: &enabled,
+		AutoClickCapture:       &model.AutoClickCaptureDefault,
 	}
 }
 
@@ -656,7 +657,6 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 	if errCode := store.satisfiesProjectSettingForeignConstraints(*settings); errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
 	}
-
 	if settings.IntHubspotApiKey != "" || settings.IntHubspotRefreshToken != "" {
 		existingSettings, status := store.GetProjectSetting(projectId)
 		if status != http.StatusFound {
@@ -714,12 +714,42 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 			err).Error("Failed updating ProjectSettings.")
 		return nil, http.StatusInternalServerError
 	}
-
+	err := store.UpdateAllFeatureStatusForProject(projectId, updatedProjectSetting)
+	if err != nil {
+		log.WithError(err).Error("Failed to update integration status in feature flags")
+		return nil, http.StatusInternalServerError
+	}
 	store.delAllProjectSettingsCacheForProject(projectId)
 
 	return &updatedProjectSetting, http.StatusAccepted
 }
-
+func (store *MemSQL) UpdateAllFeatureStatusForProject(ProjectID int64, updatedSettings model.ProjectSetting) error {
+	latestProjectSettings, status := store.GetProjectSetting(ProjectID)
+	if status != http.StatusFound {
+		return errors.New("Failed to get project settings")
+	}
+	clearbit := model.FeatureDetails{
+		Name:             model.INT_CLEARBIT,
+		IsEnabledFeature: true,
+		IsConnected:      *latestProjectSettings.IntClearBit,
+	}
+	msg, err := store.UpdateFeatureStatusForProject(ProjectID, clearbit)
+	if err != nil {
+		log.WithError(err).Error(msg)
+		return err
+	}
+	clientSixSignal := model.FeatureDetails{
+		Name:             model.INT_SIX_SIGNAL,
+		IsEnabledFeature: true,
+		IsConnected:      *latestProjectSettings.IntClientSixSignalKey,
+	}
+	msg, err = store.UpdateFeatureStatusForProject(ProjectID, clientSixSignal)
+	if err != nil {
+		log.WithError(err).Error(msg)
+		return err
+	}
+	return nil
+}
 func IsValidIP(filterIps model.FilterIps) bool {
 	for _, ip := range filterIps.BlockIps {
 		ip = strings.TrimSpace(ip)

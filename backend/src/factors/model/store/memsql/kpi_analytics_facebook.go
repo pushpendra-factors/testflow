@@ -23,7 +23,7 @@ func (store *MemSQL) GetKPIConfigsForFacebook(projectID int64, reqID string, inc
 	}
 	config := model.KpiFacebookConfig
 	facebookObjectsAndProperties := store.buildObjectAndPropertiesForFacebook(projectID, model.ObjectsForFacebook)
-	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(facebookObjectsAndProperties)
+	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(facebookObjectsAndProperties, "Facebook")
 
 	rMetrics := model.GetKPIMetricsForFacebook()
 	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.FacebookDisplayCategory, includeDerivedKPIs)...)

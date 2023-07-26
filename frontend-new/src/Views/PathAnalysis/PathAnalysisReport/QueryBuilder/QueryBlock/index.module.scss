@@ -4,7 +4,7 @@
   }
 
   &__event {
-    position: relative; 
+    position: relative;
     &:hover {
       .query_block__additional_actions {
         visibility: visible;
@@ -36,7 +36,7 @@
 
   &__event_selector {
     position: absolute;
-    top: 32px;
+    top: 0;
 
     &__btn {
       position: relative;
@@ -44,6 +44,13 @@
 
     .ant-select-selector {
       border-radius: 12px;
+    }
+
+    &__select {
+      width: 380px;
+      max-height: 480px;
+      min-height: 240px;
+      position: absolute;
     }
   }
 

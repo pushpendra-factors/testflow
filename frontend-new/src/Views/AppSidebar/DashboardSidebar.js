@@ -30,7 +30,8 @@ const DashboardItem = ({ dashboard }) => {
     dispatch(changeActiveDashboard(selectedDashboard));
   }, [dashboard, dashboards, dispatch]);
 
-  const isActive = activeDashboard.id === dashboard.id && areDraftsSelected === false;
+  const isActive =
+    activeDashboard?.id === dashboard?.id && areDraftsSelected === false;
 
   return (
     <SidebarMenuItem
@@ -70,7 +71,12 @@ const DashboardSidebar = () => {
           )}
         >
           <SVG name='drafts' />
-          <Text color='character-primary' type='title' level={7} extraClass='mb-0'>
+          <Text
+            color='character-primary'
+            type='title'
+            level={7}
+            extraClass='mb-0'
+          >
             Drafts
           </Text>
           <Text

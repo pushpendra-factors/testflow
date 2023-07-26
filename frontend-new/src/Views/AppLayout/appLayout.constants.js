@@ -4,7 +4,6 @@ export const routesWithSidebar = [
   PathUrls.Dashboard,
   PathUrls.ProfileAccounts,
   PathUrls.ProfilePeople,
-  PathUrls.SettingsAttribution,
   PathUrls.SettingsGeneral,
   PathUrls.SettingsInsights,
   PathUrls.SettingsIntegration,
@@ -18,5 +17,8 @@ export const routesWithSidebar = [
   PathUrls.ConfigureProperties,
   PathUrls.ConfigureTouchPoints,
   PathUrls.ConfigureAlerts,
-  PathUrls.ConfigureEngagements
+  PathUrls.SettingsPricing,
+  PathUrls.ConfigureEngagements,
+  PathUrls.ConfigurePlans,
+  PathUrls.ConfigureAttribution
 ];

@@ -253,3 +253,56 @@ func GetSixSignalAPICountCacheResult(projectID int64, date uint64) int {
 	return cacheResult
 
 }
+
+func GetSixSignalMonthlyUniqueEnrichmentKey(projectId int64, monthYear string) (*cacheRedis.Key, error) {
+	prefix := "unique:enrichment:monthly:sixsignal"
+	suffix := monthYear
+	return cacheRedis.NewKey(projectId, prefix, suffix) //Sample Key: "unique:enrichment:monthly:sixsignal:pid:399:May2023"
+}
+
+func GetSixSignalMonthlyUniqueEnrichmentCount(projectId int64, monthYear string) (int64, error) {
+	key, err := GetSixSignalMonthlyUniqueEnrichmentKey(projectId, monthYear)
+	if err != nil {
+		return -1, err
+	}
+
+	count, err := cacheRedis.PFCountPersistent(key)
+	if err != nil {
+		return -1, err
+	}
+
+	intCount := convertInterfaceByType(count)
+
+	//Decreasing 1% of the count to handle the 0.81% error rate of redis hyperloop PFCOUNT.
+	finalCount := int64(0.99 * float64(intCount))
+
+	return finalCount, nil
+}
+
+func SetSixSignalMonthlyUniqueEnrichmentCount(projectId int64, value string, timeZone U.TimeZoneString) error {
+
+	monthYear := U.GetCurrentMonthYear(timeZone)
+	key, err := GetSixSignalMonthlyUniqueEnrichmentKey(projectId, monthYear)
+	if err != nil {
+		return err
+	}
+
+	_, err = cacheRedis.PFAddPersistent(key, value, 0)
+	return err
+}
+
+func convertInterfaceByType(obj interface{}) int64 {
+
+	var intCount int64
+	switch intCount := obj.(type) {
+
+	case int64:
+		intCount = obj.(int64)
+		return intCount
+	case int:
+		intCount = obj.(int)
+		return int64(intCount)
+	}
+
+	return intCount
+}

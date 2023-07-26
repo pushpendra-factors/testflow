@@ -45,8 +45,8 @@
 
     &__select {
       width: 380px;
-      height: 480px;
       max-height: 480px;
+      min-height: 240px;
       position: absolute;
     }
   }

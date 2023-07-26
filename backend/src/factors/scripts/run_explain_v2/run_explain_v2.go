@@ -5,6 +5,7 @@ import (
 	C "factors/config"
 	"factors/filestore"
 	"factors/merge"
+	"factors/model/model"
 	"factors/model/store"
 	"factors/pattern"
 	serviceDisk "factors/services/disk"
@@ -14,13 +15,12 @@ import (
 	"factors/util"
 	"flag"
 	"fmt"
-	"net/http"
-	"reflect"
-	"strings"
-
 	"github.com/apache/beam/sdks/go/pkg/beam"
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"reflect"
+	"strings"
 )
 
 func registerStructs() {
@@ -101,6 +101,7 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	createMetadata := flag.Bool("create_metadata", false, "")
+	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 	flag.Parse()
 
 	defer util.NotifyOnPanic("Task#PatternMine", *envFlag)
@@ -153,12 +154,13 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		SentryDSN:           *sentryDSN,
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
+		SentryDSN:            *sentryDSN,
+		PrimaryDatastore:     *primaryDatastore,
+		RedisHost:            *redisHost,
+		RedisPort:            *redisPort,
+		RedisHostPersistent:  *redisHostPersistent,
+		RedisPortPersistent:  *redisPortPersistent,
+		EnableFeatureGatesV2: *enableFeatureGatesV2,
 	}
 
 	C.InitConf(config)
@@ -303,6 +305,19 @@ func main() {
 	var result bool
 	finalStatus := make(map[string]interface{})
 	for _, projectId := range projectIdsArray {
+		available := true
+		if *enableFeatureGatesV2 {
+			available, _, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_EXPLAIN)
+			if err != nil {
+				log.WithError(err).Error("Failed to get feature status in explain v2  job for project ID ", projectId)
+				finalStatus[fmt.Sprintf("Failure-Feature-Status %v", projectId)] = true
+			}
+		}
+
+		if !available {
+			log.Error("Feature Not Available... Skipping explain v2 job for project ID ", projectId)
+			return
+		}
 		status := make(map[string]interface{})
 		status, result := T.BuildSequentialV2(projectId, configs)
 		if result == false {

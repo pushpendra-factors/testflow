@@ -113,6 +113,12 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 		EventEntity: {"name": U.UP_CITY, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_CITY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
 }
 
+func MapOfKPIPropertyNameToDataWithCategory(property string, entity string) map[string]string {
+	properties := MapOfKPIPropertyNameToData[property][entity]
+	properties["category"] = CategorizeProperty(property, entity)
+	return properties
+}
+
 // 1 Represents agggregation equivalent to aggregateFunc(1) in sql. For eg - select count(1)
 var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]TransformQueryi{
 	WebsiteSessionDisplayCategory: {

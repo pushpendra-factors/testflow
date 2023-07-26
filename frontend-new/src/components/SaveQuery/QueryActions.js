@@ -2,21 +2,20 @@ import React, { memo, useContext, useEffect, useState } from 'react';
 import _ from 'lodash';
 import PropTypes from 'prop-types';
 import { SVG } from 'factorsComponents';
-import { Button, Dropdown, Menu,  Tooltip } from 'antd';
+import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { BUTTON_TYPES } from '../../constants/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import {
-  // QUERY_TYPE_KPI,
-  QUERY_TYPE_PROFILE,
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_KPI,
+  QUERY_TYPE_PROFILE
   // QUERY_TYPE_ATTRIBUTION,
   // QUERY_TYPE_FUNNEL
 } from '../../utils/constants';
 // import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
-// import userflow from 'userflow.js';
-// import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
 
 const QueryActionsComponent = ({
   queryType,
@@ -141,20 +140,20 @@ const QueryActionsComponent = ({
       onClick={handleActionMenuClick}
       className={`${styles.antdActionMenu}`}
     >
-      <Menu.Item key='1' disabled={!savedQueryId}>
+      <Menu.Item key='1' disabled={!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)}>
         <SVG
           name={'envelope'}
           size={18}
-          color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
+          color={`${!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? 'LightGray' : 'grey'}`}
           extraClass={'inline mr-2'}
         />
         Email this report
       </Menu.Item>
-      <Menu.Item key='2' disabled={!savedQueryId}>
+      <Menu.Item key='2' disabled={!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)}>
         <SVG
           name={'SlackStroke'}
           size={18}
-          color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
+          color={`${!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? 'LightGray' : 'grey'}`}
           extraClass={'inline mr-2'}
         />
         Share to slack

@@ -504,8 +504,9 @@ const Touchpoints = ({
                 color={'grey-2'}
                 extraClass={'m-0'}
               >
-                Touchpoints helps you map the UTMs and other parameters you use
-                across your marketing to a standardised set.
+                Effortlessly map and standardize your marketing parameters.
+                Connect and align UTMs and other parameters used across your
+                marketing efforts to a standardized set.
               </Text>
               <Text
                 type={'title'}
@@ -513,8 +514,8 @@ const Touchpoints = ({
                 color={'grey-2'}
                 extraClass={'m-0 mt-2'}
               >
-                This lets you query and filter by the different parameter values
-                recorded across your systems inside Factors. It's super easy!
+                Query and filter by different parameter values within Factors,
+                enabling seamless tracking and analysis of customer touchpoints
               </Text>
               <div className={'mt-6'}>{renderTouchPointContent()}</div>
             </Col>

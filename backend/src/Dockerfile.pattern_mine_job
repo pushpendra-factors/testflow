@@ -1,11 +1,11 @@
-FROM golang:1.14-buster
+FROM golang:1.20-buster
 WORKDIR /go/src/factors
 ADD /factors .
 
 # Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
 ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 
-ENV GOPATH /go
+ENV GOPATH=/go GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 RUN apt-get update -y && apt-get install -y ca-certificates && go build -o /go/bin/patternmine /go/src/factors/scripts/run_pattern_mine/run_pattern_mine.go
 
 ENTRYPOINT ["/go/bin/patternmine"]

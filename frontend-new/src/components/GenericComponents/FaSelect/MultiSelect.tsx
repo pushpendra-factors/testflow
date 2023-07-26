@@ -179,6 +179,7 @@ export default function MultiSelect({
       rendOpts.push(
         <div
           key={option.value}
+          title={option.label}
           onClick={() => {
             handleMultipleOptionClick(option);
           }}

@@ -27,7 +27,6 @@ import {
   fetchMarketoIntegration,
   fetchBingAdsIntegration
 } from 'Reducers/global';
-import userflow from 'userflow.js';
 import QueryComposer from '../../components/QueryComposer';
 import AttrQueryComposer from '../../components/AttrQueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
@@ -297,7 +296,7 @@ function CoreQuery({
 
   const handleTour = () => {
     history.push('/');
-    userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
+    // userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
   };
 
   useEffect(() => {
@@ -621,7 +620,18 @@ function CoreQuery({
         updateAppliedBreakdown();
       }
       if (queryType === QUERY_TYPE_KPI) {
-        setAppliedQueries(queriesA);
+        setAppliedQueries(
+          queriesA.map((q) => {
+            const category = KPI_config.find(
+              (elem) => elem.category === q.category
+            );
+            const metric = category?.metrics.find((m) => m.name === q.metric);
+            return {
+              ...q,
+              metricType: metric?.type != null ? metric.type : q.metricType
+            };
+          })
+        );
         updateAppliedBreakdown();
       }
       if (queryType === QUERY_TYPE_PROFILE) {
@@ -643,7 +653,8 @@ function CoreQuery({
       savedQueries,
       updateChartTypes,
       updateAppliedBreakdown,
-      profileQueries
+      profileQueries,
+      KPI_config
     ]
   );
 

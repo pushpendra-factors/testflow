@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Input } from 'antd';
-import { SVG } from '../factorsComponents';
+import { SVG, Text } from '../factorsComponents';
 import { getUniqueItemsByKeyAndSearchTerm } from '../Profile/utils';
 import CustomCheckbox from './CustomCheckbox';
 import { PropTextFormat } from 'Utils/dataFormatter';
@@ -14,7 +14,10 @@ export default function SearchCheckList({
   onChange,
   emptyListText,
   showApply = false,
-  onApply
+  onApply,
+  showDisabledOption = false,
+  disabledOptions = null,
+  handleDisableOptionClick
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const handleSearch = (e) => {
@@ -35,6 +38,32 @@ export default function SearchCheckList({
       />
       <div className='fa-custom--popover-content'>
         <div className={`${showApply ? 'apply_active' : ''}`}>
+          {showDisabledOption && (
+            <>
+              {disabledOptions &&
+                disabledOptions?.length > 0 &&
+                disabledOptions?.map((option) => (
+                  <div
+                    className='flex justify-between items-center py-2 px-3 cursor-not-allowed'
+                    onClick={(option) =>
+                      handleDisableOptionClick &&
+                      handleDisableOptionClick(option)
+                    }
+                  >
+                    <Text
+                      type='title'
+                      level={7}
+                      extraClass='mb-0 truncate'
+                      truncate
+                      charLimit={25}
+                    >
+                      {option}
+                    </Text>
+                    <SVG size={16} name='Lock' />
+                  </div>
+                ))}
+            </>
+          )}
           {mapArray?.length ? (
             getUniqueItemsByKeyAndSearchTerm(mapArray, searchTerm).map(
               (option) => (

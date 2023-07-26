@@ -8,14 +8,15 @@ import {
   setGroupBy,
   delGroupBy,
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
-import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import EventGroupBlock from 'Components/QueryComposer/EventGroupBlock';
 import AliasModal from 'Components/QueryComposer/AliasModal';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function QueryBlock({
   availableGroups,
@@ -35,7 +36,7 @@ function QueryBlock({
   groupProperties,
   getGroupProperties,
   groupAnalysis,
-  getEventProperties
+  getEventPropertiesV2
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -70,6 +71,15 @@ function QueryBlock({
       );
       showOpts = groupOpts.concat(userOpts);
     }
+    showOpts = showOpts?.map((opt) => {
+      return {
+        iconName: getGroupIcon(opt?.icon),
+        label: opt?.label,
+        values: opt?.values?.map((op) => {
+          return { value: op[1], label: op[0] };
+        })
+      };
+    });
     setShowGroups(showOpts);
   }, [eventOptions, groupAnalysis]);
 
@@ -93,10 +103,10 @@ function QueryBlock({
 
   const alphabetIndex = 'ABCDEF';
 
-  const onChange = (group, value) => {
+  const onChange = (option, group) => {
     const newEvent = { alias: '', label: '', filters: [], group: '' };
-    newEvent.label = value;
-    newEvent.group = group;
+    newEvent.label = option.value;
+    newEvent.group = group.label;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
   };
@@ -113,7 +123,7 @@ function QueryBlock({
   useEffect(() => {
     queries.forEach((ev) => {
       if (!eventProperties[ev.label]) {
-        getEventProperties(activeProject.id, ev.label);
+        getEventPropertiesV2(activeProject.id, ev.label);
       }
     });
   }, [queries]);
@@ -145,14 +155,12 @@ function QueryBlock({
   const selectEvents = () =>
     isDDVisible ? (
       <div className={styles.query_block__event_selector}>
-        <GroupSelect2
-          groupedProperties={showGroups}
-          placeholder='Select Event'
-          optionClick={(group, val) =>
-            onChange(group, val[1] ? val[1] : val[0])
-          }
+        <GroupSelect
+          options={showGroups}
+          optionClickCallback={onChange}
+          allowSearch={true}
           onClickOutside={() => setDDVisible(false)}
-          allowEmpty
+          extraClass={`${styles.query_block__event_selector__select}`}
         />
       </div>
     ) : null;
@@ -462,7 +470,15 @@ function QueryBlock({
               }
             >
               <Button
-                // icon={<SVG name='mouseevent' size={16} color='purple' />}
+                icon={
+                  <SVG
+                    name={getGroupIcon(
+                      showGroups.find((group) => group.label === event.group)
+                        ?.iconName
+                    )}
+                    size={18}
+                  />
+                }
                 className='fa-button--truncate fa-button--truncate-lg'
                 type='link'
                 onClick={triggerDropDown}
@@ -500,7 +516,7 @@ const mapDispatchToProps = (dispatch) =>
       setGroupBy,
       delGroupBy,
       getGroupProperties,
-      getEventProperties
+      getEventPropertiesV2
     },
     dispatch
   );

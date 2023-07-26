@@ -322,14 +322,22 @@ func UpdateEventTriggerAlertInternalStatusHandler(c *gin.Context) (interface{}, 
 	}
 
 	// Check if the status received is one of the known values
-	if is.Status != model.Active && is.Status != model.Paused && is.Status != model.Disabled {
+	if is.Status != model.Active && is.Status != model.Paused {
 		errMsg := "Internal status update failed. Unkown value received for status"
 		log.WithFields(log.Fields{"project_id": projectID, "alert_id": id}).Error(errMsg)
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 
+	updatedInternalStatus := ""
+
+	if is.Status == model.Active {
+		updatedInternalStatus = model.Active
+	} else if is.Status == model.Paused {
+		updatedInternalStatus = model.Disabled
+	}
+
 	field := map[string]interface{}{
-		"internal_status": is.Status,
+		"internal_status": updatedInternalStatus,
 	}
 
 	errCode, err := store.GetStore().UpdateEventTriggerAlertField(projectID, id, field)
