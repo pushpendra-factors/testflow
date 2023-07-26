@@ -168,6 +168,7 @@ func GetFeaturesDetailsList(planType string) []M.FeatureDetails {
 			Name:             feature,
 			Limit:            PlanFreeLimitMap[feature],
 			IsEnabledFeature: true,
+			IsConnected:      true,
 			Expiry:           FreePlanExpiry,
 		}
 		featureDetailsList = append(featureDetailsList, featureDetail)
@@ -220,6 +221,7 @@ func GetFreePlanFeatures() []string {
 		M.FEATURE_KPI_ALERTS,
 		M.FEATURE_EVENT_BASED_ALERTS,
 		M.CONF_ALERTS,
+		M.FEATURE_REPORT_SHARING,
 
 		// Slack
 		M.FEATURE_SLACK,
