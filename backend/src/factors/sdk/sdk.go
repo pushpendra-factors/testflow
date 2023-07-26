@@ -896,7 +896,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 		if sixSignalExists {
 			// logCtx.Info("6Signal cache hit")
 		} else {
-			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel, false)
 			select {
 			case ok := <-execute6SignalStatusChannel:
 				if ok == 1 {
@@ -916,7 +916,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			// logCtx.Info("6Signal cache hit")
 		} else {
 			// logCtx.Info("6Signal cache miss")
-			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel, true)
 
 			select {
 			case ok := <-execute6SignalStatusChannel:
@@ -939,9 +939,9 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 		If clientIp is “”{
 			Return
 		}
-		if clientKey is present and client integration is enabled :
+		if clientKey is present and sixsignal client feature flag is enabled :
 			enrich using them
-		else if factors sixsignal is enabled:
+		else if factors deanonymisation feature flag is enabled and clearbit client feature flag is disabled:
 		 	check sixsignal quota is not exhausted (TODO)
 		 	fetch factors API KEY from configs
 		 	fetch sixsignal configs–page url & country filter
@@ -959,7 +959,21 @@ func FillSixSignalUserPropertiesV1(projectId int64, projectSettings *model.Proje
 		return
 	}
 
-	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) {
+	//Fetching integration status feature flags for factors deanonymisation, sixsignal and clearbit
+	_, intFactorsDeanonymisation, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_FACTORS_DEANONYMISATION)
+	if err != nil {
+		logCtx.Error("Failed to fetch factors deanonymisation feature flag")
+	}
+	_, intSixSignal, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_SIX_SIGNAL)
+	if err != nil {
+		logCtx.Error("Failed to fetch sixsignal client feature flag")
+	}
+	_, intClearbit, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_CLEARBIT)
+	if err != nil {
+		logCtx.Error("Failed to fetch clearbit client feature flag")
+	}
+
+	if projectSettings.Client6SignalKey != "" && intSixSignal {
 
 		execute6SignalStatusChannel := make(chan int)
 		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
@@ -967,7 +981,7 @@ func FillSixSignalUserPropertiesV1(projectId int64, projectSettings *model.Proje
 			// logCtx.Info("6Signal cache hit")
 		} else {
 
-			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel, false)
 
 			select {
 			case ok := <-execute6SignalStatusChannel:
@@ -982,9 +996,13 @@ func FillSixSignalUserPropertiesV1(projectId int64, projectSettings *model.Proje
 
 			}
 		}
-	} else if *(projectSettings.IntFactorsSixSignalKey) {
+	} else if intFactorsDeanonymisation && !intClearbit {
 
-		//Todo: @Roshan check sixsignal quota is not exhausted
+		//check if factors deanonymisation quota is not exhausted
+		isSixsignalQuotaAvailable, _ := CheckingSixSignalQuotaLimit(projectId)
+		if !isSixsignalQuotaAvailable {
+			return
+		}
 
 		//Fetching sixsignal API Key
 		factors6SignalKey := C.GetFactorsSixSignalAPIKey()
@@ -1009,7 +1027,7 @@ func FillSixSignalUserPropertiesV1(projectId int64, projectSettings *model.Proje
 			// logCtx.Info("6Signal cache hit")
 		} else {
 			// logCtx.Info("6Signal cache miss")
-			go six_signal.ExecuteSixSignalEnrich(projectId, factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+			go six_signal.ExecuteSixSignalEnrich(projectId, factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel, true)
 
 			select {
 			case ok := <-execute6SignalStatusChannel:
@@ -1149,11 +1167,43 @@ func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, p
 	return false, nil
 }
 
+func CheckingSixSignalQuotaLimit(projectId int64) (bool, error) {
+
+	logCtx := log.WithField("project_id", projectId)
+	limit, err := store.GetStore().GetFeatureLimitForProject(projectId, model.FEATURE_FACTORS_DEANONYMISATION)
+	if err != nil {
+		return false, err
+	}
+
+	timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
+	if statusCode != http.StatusFound {
+		timeZone = util.TimeZoneStringIST
+	}
+	monthYear := util.GetCurrentMonthYear(timeZone)
+	count, err := model.GetSixSignalMonthlyUniqueEnrichmentCount(projectId, monthYear)
+	if err != nil {
+		logCtx.Error("Error while fetching sixsignal count")
+		return false, err
+	}
+
+	if count >= limit {
+		logCtx.Error("SixSignal Limit Exhausted")
+		return false, errors.New("SixSignal Limit Exhausted")
+	}
+	return true, nil
+}
+
 func FillClearbitUserProperties(projectId int64, projectSettings *model.ProjectSetting,
 	userProperties *U.PropertiesMap, UserId string, clientIP string) {
 
 	logCtx := log.WithField("project_id", projectId)
-	if projectSettings.ClearbitKey != "" {
+
+	_, intClearbit, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_CLEARBIT)
+	if err != nil {
+		logCtx.Error("Failed to fetch clearbit client feature flag")
+	}
+
+	if projectSettings.ClearbitKey != "" && intClearbit {
 		executeClearBitStatusChannel := make(chan int)
 		clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, UserId, clientIP)
 		if clearBitExists {
