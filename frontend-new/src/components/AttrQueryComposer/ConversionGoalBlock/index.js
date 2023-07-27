@@ -14,6 +14,7 @@ import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import EventFilterWrapper from 'Components/KPIComposer/EventFilterWrapper';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 const ConversionGoalBlock = ({
   eventGoal,
@@ -435,7 +436,7 @@ const ConversionGoalBlock = ({
     groupOptions = groupOptions?.map((groupOpt) => {
       return {
         iconName: getGroupIcon(groupOpt?.icon),
-        label: _.startCase(groupOpt?.label),
+        label: PropTextFormat(groupOpt?.label),
         value: groupOpt?.label,
         extraProps: {
           category: groupOpt?.category

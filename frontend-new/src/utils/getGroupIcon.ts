@@ -26,6 +26,7 @@ type GroupIcon =
   | 'profile'
   | 'LaptopMobile'
   | 'PeopleRoof'
+  | 'FaceBook'
   | 'NoImage';
 
 const getGroupIcon = (groupName: any): GroupIcon => {
@@ -111,6 +112,9 @@ const getGroupIcon = (groupName: any): GroupIcon => {
   }
   if (checkIcon?.includes('page')) {
     return 'PageViews';
+  }
+  if (checkIcon?.includes('facebook')) {
+    return 'FaceBook';
   }
   return 'NoImage';
 };
