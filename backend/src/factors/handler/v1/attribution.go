@@ -100,6 +100,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		var requestPayloadUnit model.AttributionQueryUnitV1
 		U.DecodePostgresJsonbToStructType(&query.Query, &requestPayloadUnit)
 		requestPayload.Query = requestPayloadUnit.Query
+
 	}
 
 	if requestPayload.Query == nil || requestPayload.Query.KPIQueries == nil || len(requestPayload.Query.KPIQueries) == 0 ||
@@ -129,6 +130,22 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
 		if preset == "" && C.IsLastComputedWhitelisted(projectId) {
 			preset = U.GetPresetNameByFromAndTo(requestPayload.Query.From, requestPayload.Query.To, timezoneString)
+		}
+	}
+
+	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
+		C.EnableOptimisedFilterOnProfileQuery()
+
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+
+	// If refresh is passed, refresh only is Query.From is of today's beginning.
+	if !hardRefresh && isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
+
+		// if common flow and merge is enabled for the project
+		if C.IsAllowedAttributionCommonFlow(projectId) {
+			logCtx.Info("Running the common DB cache flow")
+			return runTheCommonDBFlow(reqId, projectId, dashboardId, unitId, requestPayload, timezoneString, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
 		}
 	}
 
@@ -200,12 +217,6 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
 	model.SetQueryCachePlaceholder(projectId, &attributionQueryUnitPayload)
 
-	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
-		C.EnableOptimisedFilterOnProfileQuery()
-
-	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
-		C.EnableOptimisedFilterOnEventUserQuery()
-
 	H.SleepIfHeaderSet(c)
 
 	QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
@@ -249,6 +260,61 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 	}
 	result.Query = requestPayload.Query
 	return result, http.StatusOK, "", "", false
+}
+
+func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId int64, requestPayload AttributionRequestPayloadV1,
+	timezoneString U.TimeZoneString, enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
+	logCtx *log.Entry) (interface{}, int, string, string, bool) {
+
+	errCode, cacheResult := store.GetStore().FetchCachedResultFromDataBase(reqId, projectId, dashboardId, unitId,
+		requestPayload.Query.From, requestPayload.Query.To)
+
+	if errCode == http.StatusFound {
+		return H.DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.ComputedAt,
+			CacheMeta: cacheResult.CreatedAt}, http.StatusOK, "", "", false
+	}
+
+	// Reached here, it means that the exact date range is not there in the DB result storage
+	// Check for monthly range query, we assume that the range has continuous date range inputs
+	isMonthsQuery, last12Months := IsAMonthlyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
+	if isMonthsQuery {
+
+		logCtx.Info("Figured it a Month range query")
+		monthsToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last12Months)
+		hasFailed, mergedResult := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
+			timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
+			monthsToRun, logCtx)
+		if hasFailed {
+			logCtx.Error("Month range query failed to run")
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Month range query failed to run", true
+		}
+
+		return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+			CacheMeta: mergedResult.CacheMeta}, http.StatusOK, "", "", false
+	}
+
+	// Check for weekly range query, we assume that the range has continuous date range inputs
+	isWeeksQuery, last48Weeks := IsAWeeklyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
+	if isWeeksQuery {
+
+		logCtx.Info("Figured it a Week range query")
+		weeksToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last48Weeks)
+		hasFailed, mergedResult := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
+			timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
+			weeksToRun, logCtx)
+
+		if hasFailed {
+			logCtx.Error("Week range query failed to run")
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Week range query failed to run", true
+		}
+
+		return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+			CacheMeta: mergedResult.CacheMeta}, http.StatusOK, "", "", false
+	}
+
+	// Nothing worked, fail the query finally
+	logCtx.Error("Query failed. The query range is not a standard range, aborting ")
+	return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. The query range is not a standard range, aborting ", true
 }
 
 func AttributionCommonHandlerV1() {
