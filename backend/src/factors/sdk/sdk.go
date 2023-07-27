@@ -1187,7 +1187,6 @@ func CheckingSixSignalQuotaLimit(projectId int64) (bool, error) {
 	}
 
 	if count >= limit {
-		logCtx.Error("SixSignal Limit Exhausted")
 		return false, errors.New("SixSignal Limit Exhausted")
 	}
 	return true, nil

@@ -67,7 +67,7 @@ type Overview struct {
 	Temperature float32            `json:"temperature"` // Normalised Score for base 100
 	Engagement  string             `json:"engagement"`  // Hot, Warm, Cold
 	UsersCount  int64              `json:"users_count"` // Number of Associated Users
-	TimeActive  int64              `json:"time_active"` // in seconds
+	TimeActive  float64            `json:"time_active"` // in seconds
 	ScoresList  map[string]float32 `json:"scores_list"` // Score trends list
 }
 

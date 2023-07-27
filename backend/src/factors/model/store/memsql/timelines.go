@@ -1135,11 +1135,13 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		accountDetails.AccountTimeline = append(accountDetails.AccountTimeline, intentTimeline)
 	}
 
-	overview, err := store.GetAccountOverview(projectID, id, groupName)
-	if err != nil {
-		log.WithFields(logFields).WithError(err)
-	} else {
-		accountDetails.Overview = overview
+	if C.IsScoringEnabled(projectID) {
+		overview, err := store.GetAccountOverview(projectID, id, groupName)
+		if err != nil {
+			log.WithFields(logFields).WithError(err)
+		} else {
+			accountDetails.Overview = overview
+		}
 	}
 
 	return &accountDetails, http.StatusFound, ""
