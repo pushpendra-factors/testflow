@@ -1430,7 +1430,7 @@ export function updateEventAlertStatus(projectId, id, status) {
     return new Promise((resolve, reject) => {
       put(
         dispatch,
-        host + 'projects/' + projectId + '/v1/eventtriggeralert/' + id + '/' + status
+        host + 'projects/' + projectId + '/v1/eventtriggeralert/' + id + '/status', {'status': status}
       )
         .then((r) => {
           resolve(r);

@@ -18,6 +18,7 @@ import { compareFilters, groupFilters } from 'Utils/global';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function QueryBlock({
   availableGroups = [],
@@ -131,7 +132,7 @@ function QueryBlock({
         <GroupSelect
           options={eventOptions?.map((opt) => {
             return {
-              iconName: opt?.icon,
+              iconName: getGroupIcon(opt?.icon),
               label: opt?.label,
               values: opt?.values?.map((op) => {
                 return { value: op[1], label: op[0] };

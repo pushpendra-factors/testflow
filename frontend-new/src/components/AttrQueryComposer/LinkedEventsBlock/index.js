@@ -8,6 +8,7 @@ import { SVG } from 'factorsComponents';
 import { isArray } from 'lodash';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 const LinkedEventsBlock = ({
   linkEvent,
@@ -204,7 +205,7 @@ const LinkedEventsBlock = ({
   const selectEvents = () => {
     let orderedEventOptions = eventNameOptions.map((groupOpt) => {
       return {
-        iconName: groupOpt?.icon,
+        iconName: getGroupIcon(groupOpt?.icon),
         label: groupOpt?.label,
         value: groupOpt?.label,
         values: groupOpt?.values?.map((op) => {

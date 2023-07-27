@@ -4,7 +4,7 @@ import { bindActionCreators } from 'redux';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import {
   fetchEventNames,
-  getUserProperties,
+  getUserPropertiesV2,
   getGroupProperties,
   getEventPropertiesV2
 } from '../../reducers/coreQuery/middleware';
@@ -45,12 +45,12 @@ function QueryComposer({
   queryType,
   fetchGroups,
   fetchEventNames,
-  getUserProperties,
+  getUserPropertiesV2,
   getGroupProperties,
   getEventPropertiesV2,
   activeProject,
   groupOpts,
-  eventProperties,
+  eventPropertiesV2,
   queryOptions,
   setQueryOptions,
   runFunnelQuery,
@@ -85,9 +85,9 @@ function QueryComposer({
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
-      getUserProperties(activeProject.id, queryType);
+      getUserPropertiesV2(activeProject.id, queryType);
     }
-  }, [activeProject, fetchEventNames, getUserProperties, queryType]);
+  }, [activeProject, fetchEventNames, getUserPropertiesV2, queryType]);
 
   useEffect(() => {
     if (queryOptions.group_analysis === 'users') return;
@@ -96,11 +96,11 @@ function QueryComposer({
 
   useEffect(() => {
     queries.forEach((ev) => {
-      if (!eventProperties[ev.label]) {
+      if (!eventPropertiesV2[ev.label]) {
         getEventPropertiesV2(activeProject.id, ev.label);
       }
     });
-  }, [activeProject?.id, eventProperties, getEventPropertiesV2, queries]);
+  }, [activeProject?.id, eventPropertiesV2, getEventPropertiesV2, queries]);
 
   const setEventsCondition = (condition) => {
     setQueryOptions((prevOptions) => ({
@@ -306,6 +306,7 @@ function QueryComposer({
               filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
               groupName={queryOptions.group_analysis}
+              isNewVersion={true}
             />
           </div>
         </ComposerBlock>
@@ -518,7 +519,7 @@ function QueryComposer({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   groupOpts: state.groups.data,
-  eventProperties: state.coreQuery.eventProperties
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -528,7 +529,7 @@ const mapDispatchToProps = (dispatch) =>
       fetchGroups,
       fetchEventNames,
       getEventPropertiesV2,
-      getUserProperties,
+      getUserPropertiesV2,
       getGroupProperties
     },
     dispatch

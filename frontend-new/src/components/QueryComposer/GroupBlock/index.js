@@ -11,12 +11,14 @@ import FaSelect from '../../FaSelect';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import startCase from 'lodash/startCase';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function GroupBlock({
   groupByState,
   setGroupBy,
   delGroupBy,
-  userProperties,
+  userPropertiesV2,
   groupProperties,
   userPropNames,
   groupPropNames,
@@ -25,46 +27,65 @@ function GroupBlock({
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
   const [propSelVis, setSelVis] = useState([false]);
-  const [filterOptions, setFilterOptions] = useState([
-    {
-      label: 'User Properties',
-      iconName: 'user',
-      values: []
-    },
-    {
-      label: 'Group Properties',
-      iconName: 'group',
-      values: []
-    }
-  ]);
+  const [filterOptions, setFilterOptions] = useState([]);
 
   useEffect(() => {
-    const filterOpts = [...filterOptions];
+    const filterOptsObj = {};
     if (groupName === 'users' || groupName === 'events') {
-      filterOpts[0].values = userProperties;
-      filterOpts[1].values = [];
+      if (userPropertiesV2) {
+        Object.keys(userPropertiesV2)?.forEach((groupkey) => {
+          if (!filterOptsObj[groupkey]) {
+            filterOptsObj[groupkey] = {
+              label: startCase(groupkey),
+              iconName: getGroupIcon(groupkey),
+              values:
+                userPropertiesV2?.[groupkey]?.map((op) => {
+                  return {
+                    value: op?.[1],
+                    label: op?.[0],
+                    extraProps: {
+                      valueType: op?.[2],
+                      propertyType: 'user'
+                    }
+                  };
+                }) || []
+            };
+          } else {
+            userPropertiesV2?.[groupkey]?.forEach((op) =>
+              filterOptsObj[groupkey].values.push({
+                value: op?.[1],
+                label: op?.[0],
+                extraProps: {
+                  valueType: op?.[2],
+                  propertyType: 'user'
+                }
+              })
+            );
+          }
+        });
+      }
     } else {
-      filterOpts[1].label = `${PropTextFormat(groupName)} Properties`;
-      filterOpts[1].values = groupProperties[groupName];
-      filterOpts[0].values = [];
-    }
-    const modifiedFilterOpts = filterOpts?.map((opt) => {
-      return {
-        iconName: opt?.iconName,
-        label: opt?.label,
-        values: opt?.values?.map((op) => {
+      const groupLabel = `${PropTextFormat(groupName)} Properties`;
+      const groupValues =
+        groupProperties[groupName]?.map((op) => {
           return {
             value: op?.[1],
             label: op?.[0],
             extraProps: {
-              valueType: op?.[2]
+              valueType: op?.[2],
+              propertyType: 'group'
             }
           };
-        })
+        }) || [];
+      const groupPropIconName = getGroupIcon(groupLabel);
+      filterOptsObj[groupLabel] = {
+        iconName: groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
+        label: groupLabel,
+        values: groupValues
       };
-    });
-    setFilterOptions(modifiedFilterOpts);
-  }, [userProperties, groupProperties, groupName]);
+    }
+    setFilterOptions(Object.values(filterOptsObj));
+  }, [userPropertiesV2, groupProperties, groupName]);
 
   const delOption = (index) => {
     delGroupBy('global', groupByState.global[index], index);
@@ -86,11 +107,7 @@ function GroupBlock({
 
   const onChange = (option, group, index) => {
     const newGroupByState = Object.assign({}, groupByState.global[index]);
-    if (group?.label === 'Group Properties') {
-      newGroupByState.prop_category = 'group';
-    } else {
-      newGroupByState.prop_category = 'user';
-    }
+    newGroupByState.prop_category = option?.extraProps?.propertyType;
     newGroupByState.eventName = '$present';
     newGroupByState.property = option?.value;
     newGroupByState.prop_type = option?.extraProps?.valueType;
@@ -287,7 +304,7 @@ function GroupBlock({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
   userPropNames: state.coreQuery.userPropNames,
   groupPropNames: state.coreQuery.groupPropNames,

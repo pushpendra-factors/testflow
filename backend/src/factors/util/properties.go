@@ -173,6 +173,7 @@ const GROUP_EVENT_NAME_G2_PRICING = "$g2_pricing"
 const GROUP_EVENT_NAME_G2_CATEGORY = "$g2_category"
 const GROUP_EVENT_NAME_G2_COMPARISON = "$g2_comparison"
 const GROUP_EVENT_NAME_G2_REPORT = "$g2_report"
+const GROUP_EVENT_NAME_G2_REFERENCE = "$g2_reference"
 
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
@@ -327,6 +328,7 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	GROUP_EVENT_NAME_G2_CATEGORY,
 	GROUP_EVENT_NAME_G2_COMPARISON,
 	GROUP_EVENT_NAME_G2_REPORT,
+	GROUP_EVENT_NAME_G2_REFERENCE,
 }
 
 const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
@@ -355,6 +357,7 @@ var GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING = map[string]string{
 	GROUP_EVENT_NAME_G2_CATEGORY:                    GROUP_NAME_G2,
 	GROUP_EVENT_NAME_G2_COMPARISON:                  GROUP_NAME_G2,
 	GROUP_EVENT_NAME_G2_REPORT:                      GROUP_NAME_G2,
+	GROUP_EVENT_NAME_G2_REFERENCE:                   GROUP_NAME_G2,
 	GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD:             GROUP_NAME_LINKEDIN_COMPANY,
 	GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD:            GROUP_NAME_LINKEDIN_COMPANY,
 }
@@ -600,8 +603,6 @@ var UP_INITIAL_CHANNEL string = "$initial_channel"
 var UP_SESSION_COUNT string = "$session_count"
 var UP_PAGE_COUNT string = "$page_count"
 var UP_TOTAL_SPENT_TIME string = "$session_spent_time" // unit:seconds
-var UP_REAL_PAGE_COUNT string = "$real_page_count"
-var UP_REAL_TOTAL_SPENT_TIME string = "$real_session_spent_time" // unit:seconds
 var UP_META_OBJECT_IDENTIFIER_KEY = "$identifiers"
 
 var UP_LATEST_PAGE_URL string = "$latest_page_url"
@@ -1433,8 +1434,6 @@ var DISABLED_USER_PROPERTIES_UI = [...]string{
 	UP_BROWSER_WITH_VERSION,
 	UP_OS_WITH_VERSION,
 	UP_SESSION_COUNT,
-	UP_REAL_PAGE_COUNT,
-	UP_REAL_TOTAL_SPENT_TIME,
 }
 
 var DISABLED_EVENT_PROPERTIES_UI = [...]string{
@@ -1608,6 +1607,7 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	GROUP_EVENT_NAME_G2_CATEGORY:        "G2 Category",
 	GROUP_EVENT_NAME_G2_COMPARISON:      "G2 Comparison",
 	GROUP_EVENT_NAME_G2_REPORT:          "G2 Report",
+	GROUP_EVENT_NAME_G2_REFERENCE:       "G2 Reference",
 }
 
 var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
@@ -2156,10 +2156,6 @@ var CHANNEL_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"$fbclid":                  "FBCLID",
 }
 
-var USER_PROPERTIES_MERGE_TYPE_ADD_MAP = map[string]string{
-	UP_PAGE_COUNT:       UP_REAL_PAGE_COUNT,
-	UP_TOTAL_SPENT_TIME: UP_REAL_TOTAL_SPENT_TIME,
-}
 var PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL = []string{
 	EP_CAMPAIGN,
 	EP_CAMPAIGN_ID,
@@ -3763,7 +3759,7 @@ func GetPropertyTypeByKeyORValue(projectID int64, eventName string, propertyKey 
 	}
 
 	switch propertyValue.(type) {
-	case int, float64:
+	case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64:
 		return PropertyTypeNumerical, false
 	case string:
 		return PropertyTypeCategorical, false

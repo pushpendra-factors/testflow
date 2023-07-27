@@ -83,6 +83,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	// transforming datetime filters
 	groupedFilters := GroupFiltersByPrefix(payload.Query.GlobalUserProperties)
+	isAllUserProperties := profileType == model.PROFILE_TYPE_ACCOUNT && payload.Query.Source == "All" && (len(groupedFilters[model.FILTER_TYPE_USERS]) == len(payload.Query.GlobalUserProperties))
 	groupedFilters[model.FILTER_TYPE_USERS] = append(groupedFilters[model.FILTER_TYPE_USERS], payload.SearchFilter...)
 
 	for group, filterArray := range groupedFilters {
@@ -145,6 +146,10 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	// Get merged properties for all accounts
 	if profileType == model.PROFILE_TYPE_ACCOUNT && C.IsDomainEnabled(projectID) && payload.Query.Source == "All" {
+		if isAllUserProperties {
+			userDomains, _ := store.GetUsersAssociatedToDomain(projectID, minMax, groupedFilters)
+			profiles = appendProfiles(profiles, userDomains)
+		}
 		profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles)
 		if statusCode != http.StatusOK {
 			return nil, statusCode, "Query Transformation Failed."
@@ -448,6 +453,23 @@ func (store *MemSQL) GetTablePropsFromConfig(projectID int64, profileType string
 	return nil
 }
 
+func appendProfiles(profiles, userDomainProfiles []model.Profile) []model.Profile {
+	for _, userProfile := range userDomainProfiles {
+		exists := false
+
+		for _, profile := range profiles {
+			if profile.Identity == userProfile.Identity {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			profiles = append(profiles, userProfile)
+		}
+	}
+	return profiles
+}
+
 // GetUserPropertiesForAccounts generates the additional join statement required for the case when account filters has user level properties
 func (store *MemSQL) GetUserPropertiesForAccounts(projectID int64, source string) (string, interface{}, string) {
 	groupIdsMap, errCode := store.GetGroupNameIDMap(projectID)
@@ -464,16 +486,8 @@ func (store *MemSQL) GetUserPropertiesForAccounts(projectID int64, source string
 	}
 
 	var selectCol, whereString, onString string
-
-	if source == "All" {
-		selectCol = fmt.Sprintf("CASE WHEN (users.customer_user_id IS NOT NULL AND users.group_%d_user_id IS NOT NULL)"+
-			" THEN users.properties ELSE properties END AS user_global_user_properties, is_group_user, ", groupIdsMap[model.GROUP_NAME_DOMAINS])
-		onString = fmt.Sprintf("CASE WHEN (users.group_%d_id IS NOT NULL AND users.is_group_user = 1) then (", groupIdsMap[model.GROUP_NAME_DOMAINS])
-	} else {
-		selectCol = "properties as user_global_user_properties, is_group_user, "
-		onString = "("
-	}
-
+	selectCol = "properties as user_global_user_properties, is_group_user, "
+	onString = "("
 	whereString = "project_id = ? AND ("
 	param := projectID
 
@@ -492,13 +506,68 @@ func (store *MemSQL) GetUserPropertiesForAccounts(projectID int64, source string
 	whereString = whereString + ")"
 	onString = onString + ") AND (user_user_g.is_group_user = 0 OR user_user_g.is_group_user IS NULL)"
 
-	if source == "All" {
-		onString = onString + "ELSE 1=1 END"
-	}
-
 	joinStmnt := fmt.Sprintf("JOIN ( SELECT %s FROM users WHERE %s) AS user_user_g ON %s", selectCol, whereString, onString)
 
 	return joinStmnt, param, ""
+}
+
+func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, minMax *model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	var userProfiles []model.Profile
+
+	filterString, filterParams, err := buildFilterStringAndParams(projectID, groupedFilters)
+	if err != nil || filterString == "" {
+		return nil, http.StatusOK
+	}
+
+	timeAndRecordsLimit := "users.updated_at BETWEEN ? AND ? LIMIT 100000000"
+	params := []interface{}{FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt)}
+
+	groupIdsMap, status := store.GetGroupNameIDMap(projectID)
+	if status != http.StatusFound {
+		logCtx.Error("Domain group not found.")
+		return nil, status
+	}
+
+	var selectColArr []string
+	for groupName, id := range groupIdsMap {
+		if model.IsAllowedAccountGroupNames(groupName) {
+			selectColArr = append(selectColArr, fmt.Sprintf("group_%d_user_id IS NULL", id))
+		}
+	}
+
+	colStr := strings.Join(selectColArr, " AND ")
+	if _, ok := groupIdsMap[model.GROUP_NAME_DOMAINS]; !ok {
+		return userProfiles, http.StatusBadRequest
+	}
+
+	domainID := groupIdsMap[model.GROUP_NAME_DOMAINS]
+	query := fmt.Sprintf(`SELECT domain_groups.id AS identity, user_global_user_properties as properties, 
+		domain_groups.updated_at AS last_activity, domain_groups.group_%d_id as host_name FROM (
+		SELECT properties as user_global_user_properties, group_%d_user_id, id FROM users 
+		WHERE project_id = ? AND customer_user_id IS NOT NULL AND group_%d_user_id IS NOT NULL 
+		AND %s AND %s) AS users JOIN (SELECT updated_at, id, group_%d_id FROM 
+		users WHERE project_id = ? AND source = ? AND is_group_user = 1) AS 
+		domain_groups ON users.group_%d_user_id = domain_groups.id WHERE %s 
+		GROUP BY identity ORDER BY last_activity DESC LIMIT 1000;`, domainID, domainID, domainID, colStr, timeAndRecordsLimit, domainID, domainID, filterString)
+
+	queryParams := []interface{}{projectID}
+	queryParams = append(queryParams, params...)
+	queryParams = append(queryParams, projectID, model.UserSourceDomains)
+	queryParams = append(queryParams, filterParams...)
+	db := C.GetServices().Db
+	err = db.Raw(query, queryParams...).Scan(&userProfiles).Error
+	if err != nil {
+		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to get profile users.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return userProfiles, http.StatusOK
 }
 
 func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int) {
@@ -1197,7 +1266,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 			SELECT LAST(id, updated_at) AS id, properties 
 			FROM users 
 			WHERE project_id = ?
-			  AND is_group_user=0
+			  AND (is_group_user=0 OR is_group_user IS NULL)
 			  AND (%s)
 			  AND customer_user_id IS NOT NULL 
 			GROUP BY customer_user_id
@@ -1205,7 +1274,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 			SELECT id, properties 
 			FROM users 
 		  	WHERE project_id = ?
-			  AND is_group_user=0
+			  AND (is_group_user=0 OR is_group_user IS NULL)
 			  AND (%s) 
 			  AND customer_user_id IS NULL
 		);`,

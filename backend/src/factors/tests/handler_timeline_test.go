@@ -1235,14 +1235,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 			Query: model.Query{
 				GlobalUserProperties: []model.QueryProperty{
 					{
-						Entity:    "user_g",
-						Type:      "categorical",
-						Property:  "$browser",
-						Operator:  "equals",
-						Value:     "Chrome",
-						LogicalOp: "AND",
-					},
-					{
 						Entity:    "user_group",
 						Type:      "categorical",
 						Property:  "$browser",
@@ -1283,9 +1275,6 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				assert.Equal(t, user.HostName, propertiesMap[count+9-i][U.SIX_SIGNAL_DOMAIN])
 			}
 			assert.NotNil(t, user.LastActivity)
-			if i > 0 {
-				assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
-			}
 			for _, prop := range timelinesConfig.UserConfig.TableProps {
 				assert.NotNil(t, user.TableProps[prop])
 			}

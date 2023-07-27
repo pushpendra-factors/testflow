@@ -37,18 +37,54 @@ export const convertEventsPropsToOptions = (props, display_names = []) => {
     const categoryOptions = props[type];
     Object.keys(categoryOptions).forEach((group) => {
       const groupOptions = categoryOptions[group];
-      const groupModifiedOptions = [];
+      if (!options[group]) {
+        options[group] = [];
+      }
       groupOptions.forEach((val) => {
-        groupModifiedOptions.push([
+        options[group].push([
           display_names[val] ? display_names[val] : val,
           val,
           type
         ]);
       });
-      options[group] = groupModifiedOptions;
     });
   });
   return options;
+};
+export const convertUserPropsToOptions = (
+  props,
+  display_names = [],
+  disabledEventValues = []
+) => {
+  const userOptions = {};
+  const eventUserOptions = {};
+  Object.keys(props).forEach((type) => {
+    const categoryOptions = props[type];
+    Object.keys(categoryOptions).forEach((group) => {
+      const groupOptions = categoryOptions[group];
+      if (!userOptions[group]) {
+        userOptions[group] = [];
+      }
+      if (!eventUserOptions[group]) {
+        eventUserOptions[group] = [];
+      }
+      groupOptions.forEach((val) => {
+        userOptions[group].push([
+          display_names[val] ? display_names[val] : val,
+          val,
+          type
+        ]);
+        if (!disabledEventValues.includes(val)) {
+          eventUserOptions[group].push([
+            display_names[val] ? display_names[val] : val,
+            val,
+            type
+          ]);
+        }
+      });
+    });
+  });
+  return { userOptions, eventUserOptions };
 };
 
 export const convertCustomEventCategoryToOptions = (data) => {

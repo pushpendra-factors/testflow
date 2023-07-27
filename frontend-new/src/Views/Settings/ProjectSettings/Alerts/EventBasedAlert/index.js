@@ -30,10 +30,10 @@ import {
   deleteGroupByForEvent,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   resetGroupBy,
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import { getEventsWithProperties, getStateFromFiltersEvent } from '../utils';
 import {
@@ -84,18 +84,18 @@ const EventBasedAlert = ({
   setAlertState,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   groupBy,
   resetGroupBy,
-  eventProperties,
+  eventPropertiesV2,
   eventPropNames,
   groupProperties,
   groupPropNames,
-  eventUserProperties,
+  eventUserPropertiesV2,
   userPropNames,
   eventNames,
   getGroupProperties,
-  getEventProperties,
+  getEventPropertiesV2,
   fetchGroups,
   groupOpts,
   testWebhhookUrl,
@@ -174,10 +174,9 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     let DDCategory = [];
-    for (const key of Object.keys(eventProperties)) {
-      if (key === queries[0]?.label) {
-        DDCategory = _.union(eventProperties[queries[0]?.label], DDCategory);
-      }
+    for (let property in eventPropertiesV2[queries[0]?.label]) {
+      let nestedArrays = eventPropertiesV2[queries[0]?.label][property];
+      DDCategory = _.union(nestedArrays, DDCategory);
     }
     if (groupOpts[queries[0]?.group]) {
       for (const key of Object.keys(groupProperties)) {
@@ -189,7 +188,10 @@ const EventBasedAlert = ({
         }
       }
     } else {
-      DDCategory = _.union(DDCategory, eventUserProperties);
+      for (let property in eventUserPropertiesV2) {
+        let nestedArrays = eventUserPropertiesV2[property];
+        DDCategory = _.union(DDCategory, nestedArrays);
+      }
     }
     setBreakdownOptions(DDCategory);
     if (
@@ -205,9 +207,9 @@ const EventBasedAlert = ({
     }
   }, [
     queries,
-    eventProperties,
+    eventPropertiesV2,
     groupProperties,
-    eventUserProperties,
+    eventUserPropertiesV2,
     viewAlertDetails,
     alertState
   ]);
@@ -226,7 +228,7 @@ const EventBasedAlert = ({
       );
     }
     if (viewAlertDetails?.event_alert?.event) {
-      getEventProperties(
+      getEventPropertiesV2(
         activeProject.id,
         viewAlertDetails?.event_alert?.event
       );
@@ -441,7 +443,7 @@ const EventBasedAlert = ({
   };
 
   useEffect(() => {
-    getUserProperties(activeProject.id, queryType);
+    getUserPropertiesV2(activeProject.id, queryType);
   }, [queries]);
 
   const addGroupBy = () => {
@@ -627,17 +629,13 @@ const EventBasedAlert = ({
       queries.length > 0 &&
       (EventPropertyDetails?.name || EventPropertyDetails?.[1])
     ) {
-      const category = eventProperties[queries[0]?.label].filter(
-        (prop) =>
-          prop[1] === (EventPropertyDetails?.name || EventPropertyDetails?.[1])
-      );
       breakDownProperties = [
         {
           eventName: queries?.[0].label,
           property: EventPropertyDetails?.name || EventPropertyDetails?.[1],
           prop_type:
             EventPropertyDetails?.data_type || EventPropertyDetails?.[2],
-          prop_category: category.length > 0 ? 'event' : 'user'
+          prop_category: 'event'
         }
       ];
     }
@@ -3625,10 +3623,10 @@ const mapStateToProps = (state) => ({
   groupBy: state.coreQuery.groupBy.event,
   groupByMagic: state.coreQuery.groupBy,
   groupProperties: state.coreQuery.groupProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
-  eventUserProperties: state.coreQuery.eventUserProperties,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
   eventNames: state.coreQuery.eventNames,
   groupOpts: state.groups.data
@@ -3644,10 +3642,10 @@ export default connect(mapStateToProps, {
   enableSlackIntegration,
   setGroupBy,
   delGroupBy,
-  getUserProperties,
+  getUserPropertiesV2,
   resetGroupBy,
   getGroupProperties,
-  getEventProperties,
+  getEventPropertiesV2,
   fetchGroups,
   testWebhhookUrl,
   enableTeamsIntegration,

@@ -1,22 +1,38 @@
 import React from 'react';
-import { Input } from 'antd';
 import EnrichFeature from './EnrichFeature';
-import { Text } from 'Components/factorsComponents';
+import { SVG, Text } from 'Components/factorsComponents';
+import ProgressBar from 'Components/GenericComponents/Progress';
+import { useSelector } from 'react-redux';
+import { FeatureConfigState } from 'Reducers/featureConfig/types';
 
-const ConnectedScreen = ({ apiKey }: ConnectScreenProps) => {
+const ConnectedScreen = () => {
+  const { sixSignalInfo } = useSelector(
+    (state: any) => state.featureConfig
+  ) as FeatureConfigState;
+  const sixSignalLimit = sixSignalInfo?.limit || 0;
+  const sixSignalUsage = sixSignalInfo?.usage || 0;
   return (
     <div className='mt-4 flex flex-col border-top--thin  py-4 w-full'>
       <div>
-        <Text type='title' level={7} color='grey' extraClass='mb-2'>
-          API Key
-        </Text>
-        <Input
-          size='large'
-          disabled
-          placeholder='API Key'
-          value={apiKey}
-          style={{ width: '400px', borderRadius: 6 }}
-        />
+        <div className='flex justify-between items-center'>
+          <div>
+            <Text type={'paragraph'} mini>
+              Default Monthly Quota
+            </Text>
+            {/* <div>
+            <SVG name='ArrowUpRightSquare' color='#40A9FF' />
+
+              <Text type={'paragraph'} mini color='brand-color'>
+                Buy add on
+              </Text>
+            </div> */}
+          </div>
+
+          <Text type={'paragraph'} mini>
+            {`${sixSignalUsage} / ${sixSignalLimit}`}
+          </Text>
+        </div>
+        <ProgressBar percentage={(sixSignalUsage / sixSignalLimit) * 100} />
       </div>
       <div className='mt-4'>
         <EnrichFeature
@@ -34,10 +50,6 @@ const ConnectedScreen = ({ apiKey }: ConnectScreenProps) => {
       </div>
     </div>
   );
-};
-
-type ConnectScreenProps = {
-  apiKey: string;
 };
 
 export default ConnectedScreen;

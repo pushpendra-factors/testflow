@@ -79,6 +79,7 @@ import { FEATURES } from 'Constants/plans.constants';
 import UpgradeModal from '../UpgradeModal';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { PathUrls } from '../../../routes/pathUrls';
+import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 
 const userOptions = getUserOptions();
 // const userOptionsForDropdown = getUserOptionsForDropdown();
@@ -136,6 +137,13 @@ function UserProfiles({
   const activeAgent = agentState?.agent_details?.email;
   const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
     FEATURES.FEATURE_ENGAGEMENT
+  );
+
+  const { isFeatureConnected: isClearBitConnected } = useFeatureLock(
+    FEATURES.INT_CLEARBIT
+  );
+  const { isFeatureConnected: isSixSenseConnected } = useFeatureLock(
+    FEATURES.INT_SIX_SIGNAL
   );
 
   useEffect(() => {
@@ -679,7 +687,7 @@ function UserProfiles({
           showApply
           onApply={applyTableProps}
           showDisabledOption={isEngagementLocked}
-          disabledOptions={['Engagement', 'Engaged Channels']}
+          // disabledOptions={['Engagement', 'Engaged Channels']}
           handleDisableOptionClick={handleDisableOptionClick}
         />
       </Tabs.TabPane>
@@ -935,13 +943,20 @@ function UserProfiles({
   if (isIntegrationEnabled || activeProject.id === demoProjectId) {
     return (
       <ProfilesWrapper>
-        <div className='mb-4'>
-          <RangeNudge
-            title='Tracked users'
-            amountUsed={sixSignalInfo?.usage || 0}
-            totalLimit={sixSignalInfo?.limit || 0}
-          />
-        </div>
+        {showUpgradeNudge(
+          sixSignalInfo?.usage || 0,
+          sixSignalInfo?.limit || 0,
+          !(isClearBitConnected || isSixSenseConnected)
+        ) && (
+          <div className='mb-4'>
+            <RangeNudge
+              title='Accounts Identified'
+              amountUsed={sixSignalInfo?.usage || 0}
+              totalLimit={sixSignalInfo?.limit || 0}
+            />
+          </div>
+        )}
+
         <Text type='title' level={3} weight='bold' extraClass='mb-0'>
           User Profiles
         </Text>

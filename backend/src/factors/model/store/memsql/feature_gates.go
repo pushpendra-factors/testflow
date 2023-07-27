@@ -40,16 +40,34 @@ func (store *MemSQL) GetFeatureStatusForProject(projectID int64, featureName str
 	}
 	return status, nil
 }
-func (store *MemSQL) GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, error) {
-	if C.IsEnabledFeatureGatesV2() {
-		featureList, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
-		if err != nil {
-			log.WithError(err).Error("Failed to get feature status for Project ID ", projectID)
-		}
-		status := isFeatureAvailableForProject(featureList, addOns, featureName)
-		return status, nil
+
+// isEnabled, isConnected, error
+func (store *MemSQL) GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, bool, error) {
+	featureList, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to get feature status for Project ID ", projectID)
 	}
-	return true, nil
+	status := isFeatureAvailableForProject(featureList, addOns, featureName)
+	isConnected := isFeatureConnectedForProject(featureList, addOns, featureName)
+	return status, isConnected, nil
+}
+func (store *MemSQL) UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error) {
+	_, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to update feature status for Project ID ", projectID)
+		return "Failed to get Plan Details ", err
+	}
+	for idx, addOn := range addOns {
+		if addOn.Name == feature.Name {
+			addOns[idx] = feature
+		}
+	}
+	errMsg, err := store.UpdateAddonsForProject(projectID, addOns)
+	if err != nil {
+		log.WithError(err).Error("Failed to update feature status for Project ID ", projectID)
+		return errMsg, err
+	}
+	return "", nil
 }
 
 func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName string) (int64, error) {
@@ -95,6 +113,21 @@ func isFeatureAvailableForProject(featureList model.FeatureList, addOns model.Ov
 	for _, feature := range addOns {
 		if featureName == feature.Name {
 			return feature.IsEnabledFeature
+		}
+	}
+
+	return false
+}
+func isFeatureConnectedForProject(featureList model.FeatureList, addOns model.OverWrite, featureName string) bool {
+	for _, feature := range featureList {
+		if featureName == feature.Name {
+			return feature.IsConnected
+		}
+	}
+
+	for _, feature := range addOns {
+		if featureName == feature.Name {
+			return feature.IsConnected
 		}
 	}
 

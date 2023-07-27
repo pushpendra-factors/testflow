@@ -13,25 +13,27 @@ const LockedStateComponent = ({
   upgradeText = 'To use this feature, you should upgrade from your current plan to Professional',
   upgradeButtonText = 'Upgrade plan',
   upgradeLink = PathUrls.SettingsPricing,
-  embeddedLink = 'https://www.youtube.com/embed/-mh9GtYEm08'
+  embeddedLink = 'https://global-uploads.webflow.com/5f28f6242b5cee6e96d76336/649505b5b4c5c322af5ec115_RA%20In%20Feture%202.webp'
 }: LockedStateComponentProps) => {
   const history = useHistory();
   return (
     <div className={style.container}>
       <div
         className='flex gap-10 items-center justify-start'
-        style={{ height: 315 }}
+        style={{ height: 320 }}
       >
         {/* iframe video */}
         <div
           className='w-1/2 h-full'
           style={{ borderRadius: 15, background: '#f5f5f5' }}
         >
-          <YouTubePlayer
+          {/* Todo: uncommnet below player once videos are available */}
+          {/* <YouTubePlayer
             embeddedLink={embeddedLink}
             title={title}
             extraClass={style.videoPlayer}
-          />
+          /> */}
+          <img src={embeddedLink} alt='feature' />
         </div>
         {/* description */}
         <div className='w-1/2 h-full'>

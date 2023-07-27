@@ -60,6 +60,7 @@ func main() {
 		0, "Enables filter optimisation logic for profiles query.")
 	enableOptimisedFilterOnEventUserQuery := flag.Int("enable_optimised_filter_on_event_user_query",
 		0, "Enables filter optimisation logic for events and users query.")
+	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -94,6 +95,7 @@ func main() {
 		AllowProfilesGroupSupport:             *allowProfilesGroupSupport,
 		EnableOptimisedFilterOnProfileQuery:   *enableOptimisedFilterOnProfileQuery != 0,
 		EnableOptimisedFilterOnEventUserQuery: *enableOptimisedFilterOnEventUserQuery != 0,
+		EnableFeatureGatesV2:                  *enableFeatureGatesV2,
 	}
 	defaultHealthcheckPingID := C.HealthcheckComputeAndSendAlertsPingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)

@@ -16,9 +16,9 @@ function EventGroupBlock({
   grpIndex,
   groupByEvent,
   event,
-  eventUserProperties,
+  eventUserPropertiesV2,
   userPropNames,
-  eventProperties,
+  eventPropertiesV2,
   eventPropNames,
   groupProperties,
   groupPropNames,
@@ -27,67 +27,102 @@ function EventGroupBlock({
   closeDropDown,
   hideText = false // added to hide the text from UI (Used in event based alerts)
 }) {
-  const [filterOptions, setFilterOptions] = useState([
-    {
-      label: 'User Properties',
-      iconName: 'user',
-      values: [],
-      propertyType: 'user'
-    },
-    {
-      label: 'Group Properties',
-      iconName: 'group',
-      values: [],
-      propertyType: 'group'
-    }
-  ]);
+  const [filterOptions, setFilterOptions] = useState([]);
 
   const [propSelVis, setSelVis] = useState(false);
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
   useEffect(() => {
-    const filterOpts = [...filterOptions];
-    const eventGroups = eventProperties[event?.label] || {};
+    const filterOptsObj = {};
+    const eventGroups = eventPropertiesV2[event?.label] || {};
     Object.keys(eventGroups)?.forEach((groupkey) => {
-      filterOpts.push({
-        label: startCase(groupkey),
-        iconName: getGroupIcon(groupkey),
-        values: eventGroups?.[groupkey],
-        propertyType: 'event'
-      });
+      if (!filterOptsObj[groupkey]) {
+        filterOptsObj[groupkey] = {
+          label: startCase(groupkey),
+          iconName: getGroupIcon(groupkey),
+          values:
+            eventGroups?.[groupkey]?.map((op) => {
+              return {
+                value: op?.[1],
+                label: op?.[0],
+                extraProps: {
+                  valueType: op?.[2],
+                  propertyType: 'event'
+                }
+              };
+            }) || []
+        };
+      } else {
+        eventGroups?.[groupkey]?.forEach((op) =>
+          filterOptsObj[groupkey].values.push({
+            value: op?.[1],
+            label: op?.[0],
+            extraProps: {
+              valueType: op?.[2],
+              propertyType: 'event'
+            }
+          })
+        );
+      }
     });
     if (eventGroup) {
-      filterOpts[1].label = `${PropTextFormat(eventGroup)} Properties`;
-      filterOpts[1].values = groupProperties[eventGroup];
-      filterOpts[0].values = [];
-    } else {
-      filterOpts[0].values = eventUserProperties;
-      filterOpts[1].values = [];
-    }
-    const modifiedFilterOpts = filterOpts?.map((opt) => {
-      return {
-        iconName: opt?.iconName,
-        label: opt?.label,
-        extraProps: {
-          propertyType: opt?.propertyType
-        },
-        values: opt?.values?.map((op) => {
+      const groupLabel = `${PropTextFormat(eventGroup)} Properties`;
+      const groupValues =
+        groupProperties[eventGroup]?.map((op) => {
           return {
-            value: op[1],
-            label: op[0],
+            value: op?.[1],
+            label: op?.[0],
             extraProps: {
-              valueType: op[2]
+              valueType: op?.[2],
+              propertyType: 'group'
             }
           };
-        })
+        }) || [];
+      const groupPropIconName = getGroupIcon(groupLabel);
+      filterOptsObj[groupLabel] = {
+        iconName: groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
+        label: groupLabel,
+        values: groupValues
       };
-    });
-    setFilterOptions(modifiedFilterOpts);
-  }, [eventUserProperties, eventProperties, groupProperties]);
+    } else {
+      if (eventUserPropertiesV2) {
+        Object.keys(eventUserPropertiesV2)?.forEach((groupkey) => {
+          if (!filterOptsObj[groupkey]) {
+            filterOptsObj[groupkey] = {
+              label: startCase(groupkey),
+              iconName: getGroupIcon(groupkey),
+              values: eventUserPropertiesV2?.[groupkey]?.map((op) => {
+                return {
+                  value: op?.[1],
+                  label: op?.[0],
+                  extraProps: {
+                    valueType: op?.[2],
+                    propertyType: 'user'
+                  }
+                };
+              })
+            };
+          } else {
+            eventUserPropertiesV2?.[groupkey]?.forEach((op) =>
+              filterOptsObj[groupkey].values.push({
+                value: op?.[1],
+                label: op?.[0],
+                extraProps: {
+                  valueType: op?.[2],
+                  propertyType: 'user'
+                }
+              })
+            );
+          }
+        });
+      }
+    }
+    setFilterOptions(Object.values(filterOptsObj));
+  }, [eventUserPropertiesV2, eventPropertiesV2, groupProperties]);
 
   const onChange = (option, group, ind) => {
     const newGroupByState = { ...groupByEvent };
-    newGroupByState.prop_category = group?.extraProps?.propertyType;
+    newGroupByState.prop_category = option?.extraProps?.propertyType;
     newGroupByState.eventName = event.label;
     newGroupByState.property = option?.value;
     newGroupByState.prop_type = option?.extraProps?.valueType;
@@ -292,8 +327,8 @@ function EventGroupBlock({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   groupProperties: state.coreQuery.groupProperties,
-  eventUserProperties: state.coreQuery.eventUserProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames
