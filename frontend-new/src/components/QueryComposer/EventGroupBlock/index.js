@@ -16,9 +16,9 @@ function EventGroupBlock({
   grpIndex,
   groupByEvent,
   event,
-  eventUserProperties,
+  eventUserPropertiesV2,
   userPropNames,
-  eventProperties,
+  eventPropertiesV2,
   eventPropNames,
   groupProperties,
   groupPropNames,
@@ -34,7 +34,7 @@ function EventGroupBlock({
 
   useEffect(() => {
     const filterOptsObj = {};
-    const eventGroups = eventProperties[event?.label] || {};
+    const eventGroups = eventPropertiesV2[event?.label] || {};
     Object.keys(eventGroups)?.forEach((groupkey) => {
       if (!filterOptsObj[groupkey]) {
         filterOptsObj[groupkey] = {
@@ -85,13 +85,13 @@ function EventGroupBlock({
         values: groupValues
       };
     } else {
-      if (eventUserProperties) {
-        Object.keys(eventUserProperties)?.forEach((groupkey) => {
+      if (eventUserPropertiesV2) {
+        Object.keys(eventUserPropertiesV2)?.forEach((groupkey) => {
           if (!filterOptsObj[groupkey]) {
             filterOptsObj[groupkey] = {
               label: startCase(groupkey),
               iconName: getGroupIcon(groupkey),
-              values: eventUserProperties?.[groupkey]?.map((op) => {
+              values: eventUserPropertiesV2?.[groupkey]?.map((op) => {
                 return {
                   value: op?.[1],
                   label: op?.[0],
@@ -103,7 +103,7 @@ function EventGroupBlock({
               })
             };
           } else {
-            eventUserProperties?.[groupkey]?.forEach((op) =>
+            eventUserPropertiesV2?.[groupkey]?.forEach((op) =>
               filterOptsObj[groupkey].values.push({
                 value: op?.[1],
                 label: op?.[0],
@@ -118,7 +118,7 @@ function EventGroupBlock({
       }
     }
     setFilterOptions(Object.values(filterOptsObj));
-  }, [eventUserProperties, eventProperties, groupProperties]);
+  }, [eventUserPropertiesV2, eventPropertiesV2, groupProperties]);
 
   const onChange = (option, group, ind) => {
     const newGroupByState = { ...groupByEvent };
@@ -327,8 +327,8 @@ function EventGroupBlock({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   groupProperties: state.coreQuery.groupProperties,
-  eventUserProperties: state.coreQuery.eventUserProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames
