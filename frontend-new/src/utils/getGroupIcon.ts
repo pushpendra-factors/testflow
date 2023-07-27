@@ -24,7 +24,9 @@ type GroupIcon =
   | 'marketo'
   | 'leadSquared'
   | 'profile'
-  | '';
+  | 'LaptopMobile'
+  | 'PeopleRoof'
+  | 'NoImage';
 
 const getGroupIcon = (groupName: any): GroupIcon => {
   const checkIcon = groupName?.toLowerCase().split(' ').join('_');
@@ -79,6 +81,10 @@ const getGroupIcon = (groupName: any): GroupIcon => {
       return 'mouseevent';
     case 'user_identification':
       return 'UserMagnify';
+    case 'company_identification':
+      return 'PeopleRoof';
+    case 'platform/device':
+      return 'LaptopMobile';
   }
 
   //Mapping Icons With Similar Name.
@@ -103,7 +109,10 @@ const getGroupIcon = (groupName: any): GroupIcon => {
   if (checkIcon?.includes('g2')) {
     return 'G2crowd';
   }
-  return '';
+  if (checkIcon?.includes('page')) {
+    return 'PageViews';
+  }
+  return 'NoImage';
 };
 
 export default getGroupIcon;

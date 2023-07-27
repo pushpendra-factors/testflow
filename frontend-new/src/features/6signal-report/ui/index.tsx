@@ -50,6 +50,9 @@ import {
 import usePrevious from 'hooks/usePrevious';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { FeatureConfigState } from 'Reducers/featureConfig/types';
+import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
 
 const SixSignalReport = ({
   setShowAnalyticsResult
@@ -70,6 +73,12 @@ const SixSignalReport = ({
   const { sixSignalInfo } = useSelector(
     (state: any) => state.featureConfig
   ) as FeatureConfigState;
+  const { isFeatureConnected: isClearBitConnected } = useFeatureLock(
+    FEATURES.INT_CLEARBIT
+  );
+  const { isFeatureConnected: isSixSenseConnected } = useFeatureLock(
+    FEATURES.INT_SIX_SIGNAL
+  );
 
   const routerQuery = useQuery();
   const history = useHistory();
@@ -468,14 +477,19 @@ const SixSignalReport = ({
           showShareButton={showShareButton}
         />
       )}
-
-      <div className='mb-4'>
-        <RangeNudge
-          title='Tracked users'
-          amountUsed={sixSignalInfo?.usage || 0}
-          totalLimit={sixSignalInfo?.limit || 0}
-        />
-      </div>
+      {showUpgradeNudge(
+        sixSignalInfo?.usage || 0,
+        sixSignalInfo?.limit || 0,
+        !(isClearBitConnected || isSixSenseConnected)
+      ) && (
+        <div className='mb-4'>
+          <RangeNudge
+            title='Accounts Identified'
+            amountUsed={sixSignalInfo?.usage || 0}
+            totalLimit={sixSignalInfo?.limit || 0}
+          />
+        </div>
+      )}
 
       <div className={cx({ 'px-24 pt-16 mt-12': !isLoggedIn })}>
         <div className='flex justify-between align-middle'>

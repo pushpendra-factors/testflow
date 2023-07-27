@@ -84,6 +84,7 @@ func main() {
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	flag.Parse()
@@ -138,12 +139,13 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		SentryDSN:           *sentryDSN,
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
+		SentryDSN:            *sentryDSN,
+		PrimaryDatastore:     *primaryDatastore,
+		RedisHost:            *redisHost,
+		RedisPort:            *redisPort,
+		RedisHostPersistent:  *redisHostPersistent,
+		RedisPortPersistent:  *redisPortPersistent,
+		EnableFeatureGatesV2: *enableFeatureGatesV2,
 	}
 
 	C.InitConf(config)
@@ -271,10 +273,15 @@ func main() {
 
 	// status := taskWrapper.TaskFuncWithProjectId("AccScoreJob", *lookback, projectIdsArray, T.BuildAccScoringDaily, configs)
 	for _, projectId := range projectIdsArray {
-		available, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_ACCOUNT_SCORING)
-		if err != nil {
-			log.WithError(err).Error("Failed to get feature status in account scoring job for project ID ", projectId)
+		available := true
+		if *enableFeatureGatesV2 {
+			available, _, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_ACCOUNT_SCORING)
+			if err != nil {
+				log.WithError(err).Error("Failed to get feature status in account scoring job for project ID ", projectId)
+				continue
+			}
 		}
+
 		if available {
 
 			status, _ := AS.BuildAccScoringDaily(projectId, configs)

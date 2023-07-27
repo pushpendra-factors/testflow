@@ -36,8 +36,6 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"$initial_campaign": "campaign1",
 			"$page_count": 10,
 			"$session_spent_time": 2.2,
-			"$real_page_count": 10,
-			"$real_session_spent_time": 2.2,
 			"$latest_medium": "google",
 			"$hubspot_contact_lead_guid": "lead-guid1"}`,
 		))},
@@ -58,8 +56,6 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"$page_count": 15,
 			"$session_spent_time": 4.4,
 			"$user_agent": "browser user agent",
-			"$real_session_spent_time" : 4.4,
-			"$real_page_count": 15,
 			"$latest_medium": "",
 			"$hubspot_contact_lead_guid": "lead-guid2"}`, // Empty. Should not overwrite.
 		))},
@@ -152,14 +148,12 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 	// If addable properties is updated, only difference should get added.
 	previousPageCount := (*user1PropertiesDB)["$page_count"].(float64)
 	previousSessionSpentTime := (*user1PropertiesDB)["$session_spent_time"].(float64)
-	previousRealPageCount := (*user1PropertiesDB)["$real_page_count"].(float64)
-	previousRealSessionSpentTime := (*user1PropertiesDB)["$real_session_spent_time"].(float64)
 	for i := 0; i < 5; i++ {
 		// Old values for user1: $page_count = 10, $session_spent_time = 2.2. Sum: 25.
 		// Old values for user2: $page_count = 15, $session_spent_time = 4.4. Sum: 6.6.
 		propertiesUpdate := postgres.Jsonb{RawMessage: json.RawMessage(
-			[]byte(fmt.Sprintf(`{"$page_count": %f, "$session_spent_time": %f , "$real_page_count": %f, "$real_session_spent_time": %f}`,
-				previousPageCount+float64(i+1), previousSessionSpentTime+float64(i)+0.5, previousRealPageCount+float64(i+1), previousRealSessionSpentTime+float64(i)+0.5)))}
+			[]byte(fmt.Sprintf(`{"$page_count": %f, "$session_spent_time": %f}`,
+				previousPageCount+float64(i+1), previousSessionSpentTime+float64(i)+0.5)))}
 		timestamp = timestamp + 1
 		_, errCode := store.GetStore().UpdateUserProperties(project.ID, createUserID1, &propertiesUpdate, timestamp)
 		assert.Equal(t, http.StatusAccepted, errCode)
@@ -185,9 +179,7 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 		CustomerUserId: customerUserID,
 		Properties: postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{
 			"$page_count": 15,
-			"$session_spent_time": 4.5,
-			"$real_page_count": 15,
-			"$real_session_spent_time": 4.5}`,
+			"$session_spent_time": 4.5}`,
 		))},
 		JoinTimestamp: timestamp,
 		Source:        model.GetRequestSourcePointer(model.UserSourceWeb),
@@ -200,7 +192,7 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			U.RandomNumericString(4), U.RandomNumericString(4))))}, timestamp)
 	user1DB, _ = store.GetStore().GetUser(project.ID, createUserID1)
 	user1PropertiesDB, _ = U.DecodePostgresJsonb(&user1DB.Properties)
-	user2DB, _ = store.GetStore().GetUser(project.ID, createUserID2)
+	user2DB, _ = store.GetStore().GetUser(project.ID, createUserID1)
 	user2PropertiesDB, _ = U.DecodePostgresJsonb(&user2DB.Properties)
 	user3DB, _ := store.GetStore().GetUser(project.ID, createUserID3)
 	user3PropertiesDB, _ := U.DecodePostgresJsonb(&user3DB.Properties)

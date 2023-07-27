@@ -35,7 +35,10 @@ import {
   FETCH_EVENTS_MAP,
   FETCH_PROPERTY_VALUES_LOADING,
   FETCH_PROPERTY_VALUES_LOADED,
-  FETCH_EVENT_USER_PROPERTIES
+  FETCH_EVENT_USER_PROPERTIES,
+  FETCH_USER_PROPERTIES_V2,
+  FETCH_EVENT_USER_PROPERTIES_V2,
+  FETCH_EVENT_PROPERTIES_V2
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -55,8 +58,11 @@ const defaultState = {
   eventOptions: [],
   eventNamesMap: {},
   eventProperties: {},
+  eventPropertiesV2: {},
   userProperties: [],
   eventUserProperties: [],
+  userPropertiesV2: {},
+  eventUserPropertiesV2: {},
   groupProperties: {},
   propertyValuesMap: {
     loading: false,
@@ -138,12 +144,20 @@ export default function (state = defaultState, action) {
       return { ...state, groupProperties: groupPropState };
     case FETCH_USER_PROPERTIES:
       return { ...state, userProperties: action.payload };
+    case FETCH_USER_PROPERTIES_V2:
+      return { ...state, userPropertiesV2: action.payload };
     case FETCH_EVENT_USER_PROPERTIES:
       return { ...state, eventUserProperties: action.payload };
+    case FETCH_EVENT_USER_PROPERTIES_V2:
+      return { ...state, eventUserPropertiesV2: action.payload };
     case FETCH_EVENT_PROPERTIES:
       const eventPropState = Object.assign({}, state.eventProperties);
       eventPropState[action.eventName] = action.payload;
       return { ...state, eventProperties: eventPropState };
+    case FETCH_EVENT_PROPERTIES_V2:
+      const eventPropStateV2 = Object.assign({}, state.eventPropertiesV2);
+      eventPropStateV2[action.eventName] = action.payload;
+      return { ...state, eventPropertiesV2: eventPropStateV2 };
     case FETCH_PROPERTY_VALUES_LOADING:
       return {
         ...state,

@@ -454,7 +454,6 @@ function ContactDetails({
       milestones={userDetails.data?.milestones || {}}
       loading={userDetails.isLoading}
       eventNamesMap={eventNamesMap}
-      listProperties={userProperties}
     />
   );
 
@@ -514,7 +513,6 @@ function ContactDetails({
         collapse={collapse}
         setCollapse={setCollapse}
         eventNamesMap={eventNamesMap}
-        listProperties={userProperties}
       />
     </div>
   );

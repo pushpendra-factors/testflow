@@ -1,22 +1,41 @@
 import ProgressBar from 'Components/GenericComponents/Progress';
 import { SVG, Text } from 'Components/factorsComponents';
+import { PLANS } from 'Constants/plans.constants';
 import { FeatureConfigState } from 'Reducers/featureConfig/types';
 import { PathUrls } from 'Routes/pathUrls';
-import { Alert, Breadcrumb, Button, Divider, Tabs, Tag, Tooltip } from 'antd';
+import { Alert, Breadcrumb, Button, Divider, Tabs, Tooltip } from 'antd';
 import useAgentInfo from 'hooks/useAgentInfo';
+import moment from 'moment';
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 
 const Pricing = () => {
   const history = useHistory();
-  const { email } = useAgentInfo();
+  const { email, isAdmin } = useAgentInfo();
   const { plan, sixSignalInfo } = useSelector(
     (state: any) => state.featureConfig
   ) as FeatureConfigState;
   const sixSignalLimit = sixSignalInfo?.limit || 0;
   const sixSignalUsage = sixSignalInfo?.usage || 0;
-  const isAdmin = email === 'solutions@factors.ai';
+  const isSolutionsAdmin = email === 'solutions@factors.ai';
+  const isFreePlan = plan?.name === PLANS.PLAN_FREE;
+
+  const handleUpgradePlan = () => {
+    if (isSolutionsAdmin) {
+      history.push(PathUrls.ConfigurePlans);
+      return;
+    }
+    if (isAdmin) {
+      window.open(
+        `https://calendly.com/srikrishna-s/30-min-demo-call?month=${moment().format(
+          'yyyy-MM'
+        )}`,
+        '_blank'
+      );
+      return;
+    }
+  };
   return (
     <div>
       <div className='flex gap-3 items-center'>
@@ -41,39 +60,40 @@ const Pricing = () => {
                     <SVG name='Userplus' size='28' color='#1890FF' />
                     <Text
                       type={'title'}
-                      level={2}
+                      level={3}
                       weight={'bold'}
                       color='character-primary'
                       extraClass={'m-0 '}
                     >
-                      {plan?.name}
+                      {plan?.display_name || plan?.name}
                     </Text>
 
                     {/* <Tag color='orange'>Monthly</Tag> */}
                   </div>
-                  {/* <div className='mt-2'>
-                    <Text
-                      type={'paragraph'}
-                      extraClass='m-0'
-                      color='character-primary'
-                    >
-                      $0.0 USD / month
-                    </Text>
-                  </div> */}
+                  {isFreePlan && (
+                    <div className='mt-2'>
+                      <Text
+                        type={'paragraph'}
+                        extraClass='m-0'
+                        color='character-primary'
+                      >
+                        $0.0 USD / month
+                      </Text>
+                    </div>
+                  )}
+
                   <div className='mt-5'>
                     <Tooltip
                       title={`${
-                        isAdmin
+                        isSolutionsAdmin
                           ? 'Configure Plans'
                           : 'Talk to our Sales team to upgrade'
                       }`}
                     >
                       <Button
                         type='primary'
-                        disabled={!isAdmin}
-                        onClick={() => {
-                          history.push(PathUrls.ConfigurePlans);
-                        }}
+                        disabled={!isSolutionsAdmin && !isAdmin}
+                        onClick={handleUpgradePlan}
                       >
                         Upgrade Plan
                       </Button>
@@ -142,7 +162,7 @@ const Pricing = () => {
                   )}
                   <Tooltip
                     title={`${
-                      isAdmin
+                      isSolutionsAdmin
                         ? 'Configure Plans'
                         : 'Talk to our Sales team to upgrade'
                     }`}
@@ -150,10 +170,8 @@ const Pricing = () => {
                     <Button
                       type='link'
                       style={{ marginTop: 20 }}
-                      onClick={() => {
-                        history.push(PathUrls.ConfigurePlans);
-                      }}
-                      disabled={!isAdmin}
+                      onClick={handleUpgradePlan}
+                      disabled={!isSolutionsAdmin && !isAdmin}
                     >
                       Buy Add on
                     </Button>

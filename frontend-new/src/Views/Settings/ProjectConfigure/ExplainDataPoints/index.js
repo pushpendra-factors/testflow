@@ -14,6 +14,7 @@ import {
 } from 'Reducers/factors';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
 const { confirm } = Modal;
 
 const ConfigureDP = (props) => {
@@ -111,7 +112,7 @@ const ConfigureDP = (props) => {
       });
   };
 
-  const onChangeUserPropertiesDD = (grp, value) => {
+  const onChangeUserPropertiesDD = (option, group) => {
     setShowDropDown1(false);
     const UserPropertyData = {
       user_property_name: `${option.value ? option.value : option.label}`
@@ -361,7 +362,7 @@ const ConfigureDP = (props) => {
                                     events
                                       ? events?.map((opt) => {
                                           return {
-                                            iconName: opt?.icon,
+                                            iconName: getGroupIcon(opt?.icon),
                                             label: opt?.label,
                                             values: opt?.values?.map((op) => {
                                               return {

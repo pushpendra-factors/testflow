@@ -244,6 +244,7 @@ type Query struct {
 	AggregateProperty     string `json:"agPr"`
 	AggregateEntity       string `json:"agEn"`
 	AggregatePropertyType string `json:"agTy"`
+	IsLimitNotApplicable bool
 }
 
 var IN_PROPERTIES_DEFAULT_QUERY_MAP = map[string]QueryProperty{
@@ -357,6 +358,10 @@ func (query *Query) GetGroupByTimestamp() string {
 		return ""
 	case string:
 		gbt := query.GroupByTimestamp.(string)
+		//we have gbt as second in attribution only
+		if gbt == GroupByTimestampSecond {
+			return GroupByTimestampSecond
+		}
 		if gbt != "" && windowInSecs < U.SECONDS_IN_A_DAY {
 			return GroupByTimestampHour
 		}

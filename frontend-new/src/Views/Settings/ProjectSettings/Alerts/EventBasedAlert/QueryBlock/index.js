@@ -8,7 +8,7 @@ import {
   setGroupBy,
   delGroupBy,
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import EventGroupBlock from 'Components/QueryComposer/EventGroupBlock';
@@ -31,12 +31,12 @@ function QueryBlock({
   groupBy,
   setGroupBy,
   delGroupBy,
-  eventUserProperties,
-  eventProperties,
+  eventUserPropertiesV2,
+  eventPropertiesV2,
   groupProperties,
   getGroupProperties,
   groupAnalysis,
-  getEventProperties
+  getEventPropertiesV2
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -58,22 +58,25 @@ function QueryBlock({
   useEffect(() => {
     let showOpts = [];
     if (groupAnalysis === 'users') {
-      showOpts = [...eventOptions];
+      const groupNamesList = availableGroups?.map((item) => item[0]);
+      showOpts = [
+        ...eventOptions?.filter((item) => !groupNamesList.includes(item?.label))
+      ];
     } else {
       const groupOpts = eventOptions?.filter((item) => {
         const [groupDisplayName] =
-          availableGroups.find((group) => group[1] === groupAnalysis) || [];
+          availableGroups?.find((group) => group[1] === groupAnalysis) || [];
         return item.label === groupDisplayName;
       });
-      const groupNamesList = availableGroups.map((item) => item[0]);
+      const groupNamesList = availableGroups?.map((item) => item[0]);
       const userOpts = eventOptions?.filter(
-        (item) => !groupNamesList.includes(item?.label)
+        (item) => !groupNamesList?.includes(item?.label)
       );
       showOpts = groupOpts.concat(userOpts);
     }
     showOpts = showOpts?.map((opt) => {
       return {
-        iconName: opt?.icon,
+        iconName: getGroupIcon(opt?.icon),
         label: opt?.label,
         values: opt?.values?.map((op) => {
           return { value: op[1], label: op[0] };
@@ -122,8 +125,8 @@ function QueryBlock({
 
   useEffect(() => {
     queries.forEach((ev) => {
-      if (!eventProperties[ev.label]) {
-        getEventProperties(activeProject.id, ev.label);
+      if (!eventPropertiesV2[ev.label]) {
+        getEventPropertiesV2(activeProject.id, ev.label);
       }
     });
   }, [queries]);
@@ -137,12 +140,12 @@ function QueryBlock({
       assignFilterProps.group = groupProperties[eventGroup];
       assignFilterProps.user = [];
     } else {
-      assignFilterProps.user = eventUserProperties;
+      assignFilterProps.user = eventUserPropertiesV2;
       assignFilterProps.group = [];
     }
-    assignFilterProps.event = eventProperties[event.label] || [];
+    assignFilterProps.event = eventPropertiesV2[event.label] || [];
     setFilterProperties(assignFilterProps);
-  }, [eventProperties, groupProperties, eventUserProperties]);
+  }, [eventPropertiesV2, groupProperties, eventUserPropertiesV2]);
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -502,9 +505,9 @@ function QueryBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  eventUserProperties: state.coreQuery.eventUserProperties,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupBy: state.coreQuery.groupBy.event,
   groupByMagic: state.coreQuery.groupBy,
   eventNames: state.coreQuery.eventNames
@@ -516,7 +519,7 @@ const mapDispatchToProps = (dispatch) =>
       setGroupBy,
       delGroupBy,
       getGroupProperties,
-      getEventProperties
+      getEventPropertiesV2
     },
     dispatch
   );

@@ -1367,10 +1367,10 @@ CREATE TABLE IF NOT EXISTS plan_details (
     PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS project_plan_mapping (
+CREATE TABLE IF NOT EXISTS project_plan_mappings (
     project_id bigint,
     plan_id bigint NOT NULL,
-    add_ons json,
+    over_write json,
     last_renewed_on timestamp(6),
     PRIMARY KEY (project_id),
     SHARD KEY (project_id)

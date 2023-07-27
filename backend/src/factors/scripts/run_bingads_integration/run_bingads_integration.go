@@ -29,6 +29,7 @@ func main() {
 	bigqueryProjectId := flag.String("bigquery_project_id", "", "")
 	bigqueryCredential := flag.String("bigquery_credential_json", "", "")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 	flag.Parse()
 
 	appName := "load_bingads_integration_data"
@@ -48,7 +49,8 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
+		PrimaryDatastore:     *primaryDatastore,
+		EnableFeatureGatesV2: *enableFeatureGatesV2,
 	}
 	C.InitConf(config)
 

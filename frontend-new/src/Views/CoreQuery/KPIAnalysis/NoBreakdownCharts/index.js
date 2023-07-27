@@ -213,6 +213,11 @@ const NoBreakdownChartsComponent = forwardRef(
                   iconColor={colors[eachIndex]}
                   compareValue={eachAggregateData.compareTotal}
                   showComparison={comparisonData.data != null}
+                  valueType={
+                    eachAggregateData.metricType === 'percentage_type'
+                      ? 'percentage'
+                      : 'numerical'
+                  }
                 />
               );
             })}

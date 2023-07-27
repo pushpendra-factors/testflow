@@ -159,7 +159,7 @@ export default function GroupSelect({
                       level={7}
                       type={'title'}
                       extraClass={'m-0 ml-2'}
-                      weight={'thin'}
+                      weight={'medium'}
                     >
                       <HighlightSearchText
                         text={groupValue?.label}
@@ -222,7 +222,7 @@ export default function GroupSelect({
                   level={7}
                   type={'title'}
                   extraClass={'m-0 ml-2'}
-                  weight={'bold'}
+                  weight={'medium'}
                 >
                   {group?.label}
                 </Text>

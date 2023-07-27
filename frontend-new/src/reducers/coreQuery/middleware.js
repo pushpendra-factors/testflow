@@ -33,7 +33,10 @@ import {
   setButtonClicksPropertiesNamesAction,
   setPageViewsPropertiesNamesAction,
   FETCH_PROPERTY_VALUES_LOADING,
-  FETCH_PROPERTY_VALUES_LOADED
+  FETCH_PROPERTY_VALUES_LOADED,
+  fetchUserPropertiesActionV2,
+  fetchEventUserPropertiesActionV2,
+  fetchEventPropertiesActionV2
 } from './actions';
 import {
   getEventNames,
@@ -46,14 +49,16 @@ import {
   fetchGroupPropertyValues,
   fetchUserPropertyValues,
   fetchButtonClicksPropertyValues,
-  fetchPageViewsPropertyValues
+  fetchPageViewsPropertyValues,
+  fetchUserPropertiesV2
 } from './services';
 import {
   convertToEventOptions,
   convertPropsToOptions,
   convertCampaignConfig,
   convertCustomEventCategoryToOptions,
-  convertEventsPropsToOptions
+  convertEventsPropsToOptions,
+  convertUserPropsToOptions
 } from './utils';
 
 export const fetchEventNames = (projectId) => {
@@ -99,6 +104,30 @@ export const getGroupProperties = (projectId, groupName) => {
   };
 };
 
+export const getUserPropertiesV2 = (projectId, queryType = '') => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchUserPropertiesV2(projectId, queryType)
+        .then((response) => {
+          const options = convertUserPropsToOptions(
+            response.data?.properties,
+            response.data?.display_names,
+            response.data?.disabled_event_user_properties
+          );
+          resolve(
+            dispatch(setUserPropertiesNamesAction(response.data?.display_names))
+          );
+          resolve(dispatch(fetchUserPropertiesActionV2(options.userOptions)));
+          resolve(
+            dispatch(fetchEventUserPropertiesActionV2(options.eventUserOptions))
+          );
+        })
+        .catch((err) => {
+          // resolve(dispatch(fetchEventPropertiesAction({})));
+        });
+    });
+  };
+};
 export const getUserProperties = (projectId, queryType = '') => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
@@ -146,7 +175,7 @@ export const getEventPropertiesV2 = (projectId, eventName) => {
               setEventPropertiesNamesAction(response.data?.display_names)
             )
           );
-          resolve(dispatch(fetchEventPropertiesAction(options, eventName)));
+          resolve(dispatch(fetchEventPropertiesActionV2(options, eventName)));
         })
         .catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));

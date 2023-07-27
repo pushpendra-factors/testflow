@@ -72,6 +72,7 @@ import UpgradeModal from '../UpgradeModal';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { PathUrls } from '../../../routes/pathUrls';
 import _ from 'lodash';
+import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 
 function AccountProfiles({
   activeProject,
@@ -135,6 +136,12 @@ function AccountProfiles({
   const activeAgent = agentState?.agent_details?.email;
   const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
     FEATURES.FEATURE_ENGAGEMENT
+  );
+  const { isFeatureConnected: isClearBitConnected } = useFeatureLock(
+    FEATURES.INT_CLEARBIT
+  );
+  const { isFeatureConnected: isSixSenseConnected } = useFeatureLock(
+    FEATURES.INT_SIX_SIGNAL
   );
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
 
@@ -211,7 +218,7 @@ function AccountProfiles({
       const source = groupsList?.[0]?.[1] || '';
       updateAccountPayload({ source });
     }
-  }, [groupsList]);
+  }, [activeProject?.id, groupsList]);
 
   useEffect(() => {
     if (!currentProjectSettings?.timelines_config) return;
@@ -555,7 +562,7 @@ function AccountProfiles({
           showApply
           onApply={applyTableProps}
           showDisabledOption={isEngagementLocked}
-          disabledOptions={['Engagement', 'Engaged Channels']}
+          // disabledOptions={['Engagement', 'Engaged Channels']}
           handleDisableOptionClick={handleDisableOptionClick}
         />
       </Tabs.TabPane>
@@ -1039,13 +1046,20 @@ function AccountProfiles({
 
   return (
     <ProfilesWrapper>
-      <div className='mb-4'>
-        <RangeNudge
-          title='Tracked users'
-          amountUsed={sixSignalInfo?.usage || 0}
-          totalLimit={sixSignalInfo?.limit || 0}
-        />
-      </div>
+      {showUpgradeNudge(
+        sixSignalInfo?.usage || 0,
+        sixSignalInfo?.limit || 0,
+        !(isClearBitConnected || isSixSenseConnected)
+      ) && (
+        <div className='mb-4'>
+          <RangeNudge
+            title='Accounts Identified'
+            amountUsed={sixSignalInfo?.usage || 0}
+            totalLimit={sixSignalInfo?.limit || 0}
+          />
+        </div>
+      )}
+
       <Text type='title' level={3} weight='bold' extraClass='mb-0'>
         Account Profiles
       </Text>

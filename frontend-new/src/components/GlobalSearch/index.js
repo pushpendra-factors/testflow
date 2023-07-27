@@ -5,7 +5,7 @@ import {
 } from '@ant-design/icons';
 import { Button, Input } from 'antd';
 import styles from './index.module.scss';
-import React, { useEffect,  useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SVG, Text } from 'Components/factorsComponents';
 import { useDispatch, useSelector } from 'react-redux';
 import VirtualList from 'rc-virtual-list';
@@ -20,6 +20,7 @@ import {
   QUERY_TYPE_PROFILE
 } from 'Utils/constants';
 import useAutoFocus from 'hooks/useAutoFocus';
+import { PathUrls } from 'Routes/pathUrls';
 
 const itemHeight = 47;
 const ContainerHeight = 443;
@@ -460,7 +461,7 @@ const SearchResults = ({ searchString, openSavedReports }) => {
 
     setFilteredQueries(filtered);
   }, [searchString, searchResults, queries]);
-  
+
   useEffect(() => {
     let filteredResults =
       allRoutes &&
@@ -483,7 +484,7 @@ const SearchResults = ({ searchString, openSavedReports }) => {
     setFinalResults(filteredResults);
     setSearchResults(Array.from(new Set(filteredResults)));
   }, [allRoutes]);
-  
+
   const getSearchType = (route) => {
     let arr = route.split('/');
     let type = arr[1];
@@ -739,8 +740,7 @@ const GlobalSearch = () => {
               color={'blue'}
             />
           ),
-          path: '/reports/6_signal',
-          disabled: true
+          path: PathUrls.VisitorIdentificationReport
         }
       ]
     },
@@ -799,7 +799,7 @@ const GlobalSearch = () => {
   const moveToStep2 = (value) => {
     setSearchType(value);
   };
-  
+
   useEffect(() => {
     if (step === 2) {
     } else {
