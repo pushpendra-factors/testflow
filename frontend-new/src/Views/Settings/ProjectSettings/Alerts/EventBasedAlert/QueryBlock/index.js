@@ -60,7 +60,9 @@ function QueryBlock({
     if (groupAnalysis === 'users') {
       const groupNamesList = availableGroups?.map((item) => item[0]);
       showOpts = [
-        ...eventOptions?.filter((item) => !groupNamesList.includes(item?.label))
+        ...eventOptions?.filter(
+          (item) => !groupNamesList?.includes(item?.label)
+        )
       ];
     } else {
       const groupOpts = eventOptions?.filter((item) => {
