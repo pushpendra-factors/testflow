@@ -526,12 +526,16 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, minMax *model.M
 	}
 
 	timeAndRecordsLimit := "users.updated_at BETWEEN ? AND ? LIMIT 100000000"
-	params := []interface{}{FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt)}
+	limitParams := []interface{}{FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt)}
 
 	groupIdsMap, status := store.GetGroupNameIDMap(projectID)
 	if status != http.StatusFound {
-		logCtx.Error("Domain group not found.")
+		logCtx.Error("Failed to get groups info.")
 		return nil, status
+	}
+	if _, ok := groupIdsMap[model.GROUP_NAME_DOMAINS]; !ok {
+		logCtx.Error("Domain group not found.")
+		return userProfiles, http.StatusBadRequest
 	}
 
 	var selectColArr []string
@@ -540,24 +544,38 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, minMax *model.M
 			selectColArr = append(selectColArr, fmt.Sprintf("group_%d_user_id IS NULL", id))
 		}
 	}
-
 	colStr := strings.Join(selectColArr, " AND ")
-	if _, ok := groupIdsMap[model.GROUP_NAME_DOMAINS]; !ok {
-		return userProfiles, http.StatusBadRequest
-	}
 
 	domainID := groupIdsMap[model.GROUP_NAME_DOMAINS]
-	query := fmt.Sprintf(`SELECT domain_groups.id AS identity, user_global_user_properties as properties, 
-		domain_groups.updated_at AS last_activity, domain_groups.group_%d_id as host_name FROM (
-		SELECT properties as user_global_user_properties, group_%d_user_id, id FROM users 
-		WHERE project_id = ? AND customer_user_id IS NOT NULL AND group_%d_user_id IS NOT NULL 
-		AND %s AND %s) AS users JOIN (SELECT updated_at, id, group_%d_id FROM 
-		users WHERE project_id = ? AND source = ? AND is_group_user = 1) AS 
-		domain_groups ON users.group_%d_user_id = domain_groups.id WHERE %s 
-		GROUP BY identity ORDER BY last_activity DESC LIMIT 1000;`, domainID, domainID, domainID, colStr, timeAndRecordsLimit, domainID, domainID, filterString)
+	query := fmt.Sprintf(`SELECT domain_groups.id AS identity, 
+	  user_global_user_properties as properties, 
+	  domain_groups.updated_at AS last_activity, 
+	  domain_groups.group_%d_id as host_name 
+	FROM (
+		SELECT properties as user_global_user_properties, 
+		  group_%d_user_id, id 
+		FROM users 
+		WHERE project_id = ? 
+		  AND customer_user_id IS NOT NULL 
+		AND group_%d_user_id IS NOT NULL 
+		AND %s 
+		AND %s
+	  ) AS users 
+	JOIN (
+		SELECT updated_at, id, group_%d_id 
+		FROM users 
+		WHERE project_id = ? 
+		  AND source = ? 
+		  AND is_group_user = 1
+	  ) AS domain_groups 
+	ON users.group_%d_user_id = domain_groups.id
+	WHERE %s 
+	GROUP BY identity 
+	ORDER BY last_activity DESC 
+	LIMIT 1000;`, domainID, domainID, domainID, colStr, timeAndRecordsLimit, domainID, domainID, filterString)
 
 	queryParams := []interface{}{projectID}
-	queryParams = append(queryParams, params...)
+	queryParams = append(queryParams, limitParams...)
 	queryParams = append(queryParams, projectID, model.UserSourceDomains)
 	queryParams = append(queryParams, filterParams...)
 	db := C.GetServices().Db

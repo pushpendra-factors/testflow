@@ -864,7 +864,7 @@ type Model interface {
 	GetMinAndMaxUpdatedAt(profileType string, whereStmt string, limitVal int, minMaxQParams []interface{}) (*model.MinMaxUpdatedAt, int, string)
 	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int)
 	GetUserPropertiesForAccounts(projectID int64, source string) (string, interface{}, string)
-	GetUsersAssociatedToDomain(projectID int64, timeAndRecordsLimit string, filterString string, userParams []interface{}) ([]model.Profile, int)
+	GetUsersAssociatedToDomain(projectID int64, minMax *model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
