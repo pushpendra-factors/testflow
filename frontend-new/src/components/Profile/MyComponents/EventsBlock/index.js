@@ -70,14 +70,15 @@ function EventsBlock({
     let showOpts = [];
 
     if (groupAnalysis === 'users') {
-      showOpts = [...eventOptions];
+      const groupNamesList = availableGroups?.map((item) => item[0]);
+      showOpts = [...eventOptions?.filter((item) => !groupNamesList?.includes(item?.label))];
     } else {
       const [label] =
-        availableGroups.find((group) => group[1] === groupAnalysis) || [];
-      const groupOpts = eventOptions?.filter((item) => item.label === label);
+        availableGroups?.find((group) => group[1] === groupAnalysis) || [];
+      const groupOpts = eventOptions?.filter((item) => item?.label === label);
       const userOpts = eventOptions?.filter(
         (item) =>
-          !availableGroups.map((group) => group[0]).includes(item?.label)
+          !availableGroups?.map((group) => group[0]).includes(item?.label)
       );
       showOpts = groupOpts.concat(userOpts);
     }

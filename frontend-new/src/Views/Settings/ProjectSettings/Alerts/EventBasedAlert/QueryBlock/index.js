@@ -58,16 +58,19 @@ function QueryBlock({
   useEffect(() => {
     let showOpts = [];
     if (groupAnalysis === 'users') {
-      showOpts = [...eventOptions];
+      const groupNamesList = availableGroups?.map((item) => item[0]);
+      showOpts = [
+        ...eventOptions?.filter((item) => !groupNamesList.includes(item?.label))
+      ];
     } else {
       const groupOpts = eventOptions?.filter((item) => {
         const [groupDisplayName] =
-          availableGroups.find((group) => group[1] === groupAnalysis) || [];
+          availableGroups?.find((group) => group[1] === groupAnalysis) || [];
         return item.label === groupDisplayName;
       });
-      const groupNamesList = availableGroups.map((item) => item[0]);
+      const groupNamesList = availableGroups?.map((item) => item[0]);
       const userOpts = eventOptions?.filter(
-        (item) => !groupNamesList.includes(item?.label)
+        (item) => !groupNamesList?.includes(item?.label)
       );
       showOpts = groupOpts.concat(userOpts);
     }
