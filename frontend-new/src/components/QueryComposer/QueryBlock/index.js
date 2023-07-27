@@ -33,8 +33,8 @@ function QueryBlock({
   groupBy,
   setGroupBy,
   delGroupBy,
-  eventUserProperties,
-  eventProperties,
+  eventUserPropertiesV2,
+  eventPropertiesV2,
   groupProperties,
   getGroupProperties,
   groupAnalysis
@@ -53,63 +53,63 @@ function QueryBlock({
     return group[1];
   }, [availableGroups, event]);
 
-  const showGroups = useMemo(() => {
-    let showOpts = [];
-    if (['users', 'events'].includes(groupAnalysis)) {
-      showOpts = [...eventOptions];
+  const getGroupOpts = (eventOpts, availableGroups, activeGroup) => {
+    if (activeGroup === 'events') {
+      return [...eventOpts];
+    } else if (activeGroup === 'users') {
+      const groupNamesList = availableGroups?.map((item) => item[0]);
+      return eventOpts?.filter((item) => !groupNamesList?.includes(item?.label));
     } else {
-      const groupOpts = eventOptions?.filter((item) => {
-        const [groupDisplayName] =
-          availableGroups?.find((group) => group[1] === groupAnalysis) || [];
-        return item.label === groupDisplayName;
-      });
-      const groupNamesList = availableGroups.map((item) => item[0]);
-      const userOpts = eventOptions?.filter(
-        (item) => !groupNamesList.includes(item?.label)
-      );
-      showOpts = groupOpts.concat(userOpts);
+      const groupDisplayName = availableGroups?.find((group) => group[1] === activeGroup)?.[0];
+      const groupOpts = eventOpts?.filter((item) => item.label === groupDisplayName);
+      const groupNamesList = availableGroups?.map((item) => item[0]);
+      const userOpts = eventOpts?.filter((item) => !groupNamesList?.includes(item?.label));
+      return groupOpts.concat(userOpts);
     }
-    showOpts = showOpts?.map((opt) => {
-      return {
-        iconName: getGroupIcon(opt?.icon),
-        label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return { value: op[1], label: op[0] };
-        })
-      };
-    });
-    // Moving MostRecent as first Option.
-    const mostRecentGroupindex = showOpts
-      ?.map((opt) => opt.label)
-      ?.indexOf('Most Recent');
+  };
+  
+  const mapOptionsToGroupSelectItem = (opts) => {
+    return opts?.map((opt) => ({
+      iconName: getGroupIcon(opt?.icon),
+      label: opt.label,
+      values: opt.values.map((op) => ({ value: op[1], label: op[0] })),
+    }));
+  };
+  
+  const moveMostRecentToTop = (opts) => {
+    const mostRecentGroupindex = opts.findIndex((opt) => opt.label === 'Most Recent');
     if (mostRecentGroupindex > 0) {
-      showOpts = [
-        showOpts[mostRecentGroupindex],
-        ...showOpts.slice(0, mostRecentGroupindex),
-        ...showOpts.slice(mostRecentGroupindex + 1)
-      ];
+      const mostRecentGroup = opts[mostRecentGroupindex];
+      opts.splice(mostRecentGroupindex, 1);
+      opts.unshift(mostRecentGroup);
     }
-    return showOpts;
+  };
+  
+  const showGroups = useMemo(() => {
+    const groupOpts = getGroupOpts(eventOptions, availableGroups, groupAnalysis);
+    const mappedOptions = mapOptionsToGroupSelectItem(groupOpts);
+    moveMostRecentToTop(mappedOptions);
+    return mappedOptions;
   }, [eventOptions, groupAnalysis, availableGroups]);
 
   const filterProperties = useMemo(() => {
     if (!event) return {};
 
     const props = {
-      event: eventProperties[event.label] || []
+      event: eventPropertiesV2[event.label] || []
     };
     if (eventGroup) {
       props[eventGroup] = groupProperties[eventGroup];
     } else {
-      props.user = eventUserProperties;
+      props.user = eventUserPropertiesV2;
     }
     return props;
   }, [
     event,
     eventGroup,
-    eventProperties,
+    eventPropertiesV2,
     groupProperties,
-    eventUserProperties
+    eventUserPropertiesV2
   ]);
 
   useEffect(() => {
@@ -607,9 +607,9 @@ function QueryBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  eventUserProperties: state.coreQuery.eventUserProperties,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupBy: state.coreQuery.groupBy.event,
   groupByMagic: state.coreQuery.groupBy,
   eventNames: state.coreQuery.eventNames

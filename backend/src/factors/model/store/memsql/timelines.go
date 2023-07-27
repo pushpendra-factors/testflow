@@ -1169,7 +1169,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 
 	var errGetCount error
 	if errGetGroup != http.StatusFound {
-		errGetCount = fmt.Errorf("Error retrieving parameters")
+		errGetCount = fmt.Errorf("error retrieving parameters")
 		log.WithFields(logFields).Error("Error retrieving parameters")
 	} else {
 		overviewQuery := fmt.Sprintf(`
@@ -1179,7 +1179,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 			SELECT LAST(id, updated_at) AS id, properties 
 			FROM users 
 			WHERE project_id = ?
-			  AND is_group_user=0
+			  AND (is_group_user=0 OR is_group_user IS NULL)
 			  AND (%s)
 			  AND customer_user_id IS NOT NULL 
 			GROUP BY customer_user_id
@@ -1187,7 +1187,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 			SELECT id, properties 
 			FROM users 
 		  	WHERE project_id = ?
-			  AND is_group_user=0
+			  AND (is_group_user=0 OR is_group_user IS NULL)
 			  AND (%s) 
 			  AND customer_user_id IS NULL
 		);`,

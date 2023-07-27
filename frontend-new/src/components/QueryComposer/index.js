@@ -50,7 +50,7 @@ function QueryComposer({
   getEventPropertiesV2,
   activeProject,
   groupOpts,
-  eventProperties,
+  eventPropertiesV2,
   queryOptions,
   setQueryOptions,
   runFunnelQuery,
@@ -96,11 +96,11 @@ function QueryComposer({
 
   useEffect(() => {
     queries.forEach((ev) => {
-      if (!eventProperties[ev.label]) {
+      if (!eventPropertiesV2[ev.label]) {
         getEventPropertiesV2(activeProject.id, ev.label);
       }
     });
-  }, [activeProject?.id, eventProperties, getEventPropertiesV2, queries]);
+  }, [activeProject?.id, eventPropertiesV2, getEventPropertiesV2, queries]);
 
   const setEventsCondition = (condition) => {
     setQueryOptions((prevOptions) => ({
@@ -306,6 +306,7 @@ function QueryComposer({
               filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
               groupName={queryOptions.group_analysis}
+              isNewVersion={true}
             />
           </div>
         </ComposerBlock>
@@ -518,7 +519,7 @@ function QueryComposer({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   groupOpts: state.groups.data,
-  eventProperties: state.coreQuery.eventProperties
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2
 });
 
 const mapDispatchToProps = (dispatch) =>

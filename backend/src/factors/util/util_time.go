@@ -717,7 +717,7 @@ func GenerateWeeksBetween(start, end int64) []TimestampRange {
 	return weeks
 }
 
-func GetAllMonthsInBetween(from, to int64, ranges []TimestampRange) []TimestampRange {
+func GetAllValidRangesInBetween(from, to int64, ranges []TimestampRange) []TimestampRange {
 	timestamps := make([]TimestampRange, 0)
 
 	for _, rng := range ranges {

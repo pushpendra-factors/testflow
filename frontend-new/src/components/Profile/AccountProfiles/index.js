@@ -218,7 +218,7 @@ function AccountProfiles({
       const source = groupsList?.[0]?.[1] || '';
       updateAccountPayload({ source });
     }
-  }, [groupsList]);
+  }, [activeProject?.id, groupsList]);
 
   useEffect(() => {
     if (!currentProjectSettings?.timelines_config) return;

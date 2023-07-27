@@ -92,13 +92,6 @@ function IntegrationSettings({
                       ) {
                         defaultOpen = true;
                       }
-                      // Flag for 6Signal Factors key
-                      if (
-                        item.name === 'Factors Website De-anonymization' &&
-                        !featureLock(currentAgent.email)
-                      ) {
-                        return null;
-                      }
 
                       return (
                         <IntegrationCard

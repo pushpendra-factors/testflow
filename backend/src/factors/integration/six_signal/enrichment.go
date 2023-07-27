@@ -39,14 +39,18 @@ type response struct {
 
 func ExecuteSixSignalEnrich(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int, meter bool) {
 	defer close(statusChannel)
+	logCtx := log.WithField("project_id", projectId)
 	err := enrichUsingSixSignal(projectId, sixSignalKey, properties, clientIP, meter)
 
 	if err != nil {
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalKey}).Info("enrich --factors debug")
 		statusChannel <- 0
 	}
 	statusChannel <- 1
 }
 func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, meter bool) error {
+	logCtx := log.WithField("project_id", projectId)
+
 	if clientIP == "" {
 		return errors.New("invalid IP, failed adding user properties")
 	}
@@ -58,6 +62,7 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 	}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalKey}).Info("creating new request --factors debug")
 		return err
 	}
 	sixSignalKey = "Token " + sixSignalKey
@@ -66,6 +71,7 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 
 	res, err := client.Do(req)
 	if err != nil {
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalKey}).Info("client call --factors debug")
 		return err
 	}
 	defer res.Body.Close()
@@ -74,6 +80,7 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 	var result response
 	if err := json.Unmarshal(body, &result); err != nil {
 		log.WithFields(log.Fields{"Error": err}).Warn("Cannot unmarshal JSON")
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalKey, "response": result}).Info("client call --factors debug")
 		return err
 	}
 
