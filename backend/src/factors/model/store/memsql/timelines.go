@@ -1242,7 +1242,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	}
 
 	// Get Account Engagement Score and Trends
-	accountScore, _, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, true)
+	accountScore, _, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, false)
 	if errGetScore != nil {
 		log.WithFields(logFields).WithError(errGetScore).Error("Error retrieving account score")
 	} else {

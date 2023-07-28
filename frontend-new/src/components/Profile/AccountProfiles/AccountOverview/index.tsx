@@ -1,8 +1,8 @@
 import { Spin } from 'antd';
 import { Text } from 'Components/factorsComponents';
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { formatDurationIntoString } from 'Utils/dataFormatter';
-import SparklineChart from './TrendsChart';
+import TrendsChart from './TrendsChart';
 import { EngagementTag } from './utils';
 
 export interface DataMap {
@@ -129,7 +129,7 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
           </Text>
         </div>
         <div className='chart'>
-          <SparklineChart data={overview.scores_list} />
+          <TrendsChart data={overview.scores_list} />
         </div>
       </div>
     </div>

@@ -669,7 +669,7 @@ function AccountDetails({
             setGranularity(granularity);
           }}
         >
-          {formatOverview?.engagement && formatOverview?.engagement !== '' && (
+          {featureLock(activeAgent) && (
             <TabPane
               tab={
                 <span className='fa-activity-filter--tabname'>Overview</span>
