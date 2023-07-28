@@ -187,7 +187,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 
 	var rt string
 	var result model.PerAccountScore
-	countsMapDays := map[string]map[string]int64{}
+	countsMapDays := make(map[string]model.LatestScore)
 	scoreOnDays := make(map[string]float32)
 	resultmap := make(map[string]model.PerAccountScore)
 
@@ -216,11 +216,15 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	}
 
 	for day, countsPerday := range countsMapDays {
-		accountScore, _, decay, err := ComputeAccountScore(*weights, countsPerday, day)
+		countsInInt := make(map[string]int64)
+		for eventKey, eventCount := range countsPerday.EventsCount {
+			countsInInt[eventKey] = int64(eventCount)
+		}
+
+		accountScore, _, decay, err := ComputeAccountScore(*weights, countsInInt, day)
 		if err != nil {
 			return model.PerAccountScore{}, nil, err
 		}
-
 		if day != model.LAST_EVENT {
 			var t model.PerAccountScore
 			t.Score = float32(accountScore)
@@ -231,7 +235,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 				if debug {
 					t.Debug = make(map[string]interface{})
 					t.Debug["counts"] = make(map[string]int64, 0)
-					t.Debug["counts"] = countsPerday
+					t.Debug["counts"] = countsInInt
 					t.Debug["date"] = day
 					t.Debug["score"] = accountScore
 					t.Debug["decay"] = decay
@@ -375,6 +379,8 @@ func ComputeAccountScore(weights model.AccWeights, eventsCount map[string]int64,
 	var eventsCountMap map[string]int64 = make(map[string]int64)
 	weightValue := weights.WeightConfig
 	saleWindow := weights.SaleWindow
+	decay_value := model.ComputeDecayValue(ts, saleWindow)
+
 	for _, w := range weightValue {
 		if ew, ok := eventsCount[w.WeightId]; ok {
 			accountScore += float32(ew) * w.Weight_value
@@ -382,8 +388,7 @@ func ComputeAccountScore(weights model.AccWeights, eventsCount map[string]int64,
 		}
 	}
 
-	decay_value := model.ComputeDecayValue(ts, saleWindow)
-	account_score_after_decay := (accountScore - accountScore*float32(decay_value))
+	account_score_after_decay := accountScore * float32(decay_value)
 	return account_score_after_decay, eventsCountMap, decay_value, nil
 }
 

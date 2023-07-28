@@ -25,7 +25,11 @@ export const convertPropsToOptions = (props, display_names = []) => {
   const options = [];
   Object.keys(props).forEach((type) => {
     props[type].forEach((val) => {
-      options.push([display_names[val] ? display_names[val] : val, val, type]);
+      options.push([
+        display_names[val] ? display_names[val] : val,
+        val,
+        type === 'unknown' ? 'categorical' : type
+      ]);
     });
   });
   return options;
@@ -44,7 +48,7 @@ export const convertEventsPropsToOptions = (props, display_names = []) => {
         options[group].push([
           display_names[val] ? display_names[val] : val,
           val,
-          type
+          type === 'unknown' ? 'categorical' : type
         ]);
       });
     });

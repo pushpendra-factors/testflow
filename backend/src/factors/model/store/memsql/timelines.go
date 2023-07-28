@@ -124,8 +124,13 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	// transforming datetime filters
 	groupedFilters := GroupFiltersByPrefix(payload.Filters)
-	isAllUserProperties := profileType == model.PROFILE_TYPE_ACCOUNT && payload.Source == "All" && (len(groupedFilters[model.FILTER_TYPE_USERS]) == len(payload.Filters))
 	groupedFilters[model.FILTER_TYPE_USERS] = append(groupedFilters[model.FILTER_TYPE_USERS], payload.SearchFilter...)
+
+	// to check whether the filter in account profiles is of user properties
+	isUserProperty := hasUserProperty(profileType, payload.Filters)
+
+	// to check whether the all filters in account profiles is of user properties
+	isAllUserProperties := hasAllUserProperties(payload.Filters, profileType)
 
 	for group, filterArray := range groupedFilters {
 		for index := range filterArray {
@@ -145,7 +150,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		isGroupUserString = "AND users.is_group_user=1"
 		selectString = "id AS identity, properties, updated_at AS last_activity"
 		if C.IsDomainEnabled(projectID) {
-			sourceString, domainGroupId, params, status = store.GetSourceStringForAccountsV2(projectID, payload.Source)
+			sourceString, domainGroupId, params, status = store.GetSourceStringForAccountsV2(projectID, payload.Source, isAllUserProperties)
 		} else {
 			// Check for Enabled Groups
 			groupNameIDMap, errCode := store.GetGroupNameIDMap(projectID)
@@ -210,17 +215,6 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			filterString = "(" + userTypeFilters + ")"
 		}
 		filterParams = append(filterParams, userTypeFiltersParams...)
-	}
-
-	// to check whether the filter in account profiles is of user properties
-	isUserProperty := false
-	if profileType == model.PROFILE_TYPE_ACCOUNT {
-		for _, filter := range payload.Filters {
-			if filter.Entity == model.PropertyEntityUserGroup {
-				isUserProperty = true
-				break
-			}
-		}
 	}
 
 	if payload.Source == "All" {
@@ -322,6 +316,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	// Get merged properties for all accounts
 	if profileType == model.PROFILE_TYPE_ACCOUNT && isDomainGroup {
+		tablePropsHasUserProp := tablePropsHasUserProperty(tableProps)
 		if isAllUserProperties {
 			userParams := []interface{}{projectID, FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt),
 				projectID, model.UserSourceDomains}
@@ -329,7 +324,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			userDomains, _ := store.GetUsersAssociatedToDomain(projectID, timeAndRecordsLimit, filterString, userParams)
 			profiles = appendProfiles(profiles, userDomains)
 		}
-		profiles, status = store.AccountPropertiesForDomainsEnabled(projectID, profiles)
+		profiles, status = store.AccountPropertiesForDomainsEnabled(projectID, profiles, tablePropsHasUserProp)
 		if status != http.StatusOK {
 			return nil, status, "Query Transformation Failed."
 		}
@@ -341,6 +336,37 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusInternalServerError, "Query formatting failed."
 	}
 	return returnData, http.StatusFound, ""
+}
+
+// hasUserProperty checks for user properties in filters.
+func hasUserProperty(profileType string, properties []model.QueryProperty) bool {
+	isUserProperty := false
+
+	if profileType == model.PROFILE_TYPE_ACCOUNT {
+		for _, filter := range properties {
+			if filter.Entity == model.PropertyEntityUserGroup {
+				isUserProperty = true
+				break
+			}
+		}
+	}
+
+	return isUserProperty
+}
+
+// hasAllUserProperties checks for all user properties in filters.
+func hasAllUserProperties(filters []model.QueryProperty, profileType string) bool {
+	isAllUserProperties := true
+
+	if profileType == model.PROFILE_TYPE_ACCOUNT {
+		for _, filter := range filters {
+			if filter.Entity != model.PropertyEntityUserGroup {
+				isAllUserProperties = false
+				break
+			}
+		}
+	}
+	return isAllUserProperties
 }
 
 // Function to merge unique profiles
@@ -446,7 +472,7 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, timeAndRecordsL
 	return userProfiles, http.StatusOK
 }
 
-func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int) {
+func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, hasUserProp bool) ([]model.Profile, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -469,13 +495,18 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 		domainIDs[i] = profile.Identity
 	}
 
+	isGroupUserString := "is_group_user=1 AND"
+	if hasUserProp {
+		isGroupUserString = ""
+	}
+
 	// Fetching accounts associated to the domain
 	// SELECT group_6_user_id as identity, properties FROM `users`  WHERE (project_id='15000001' AND source!='9' AND
 	// is_group_user=1 AND group_6_user_id IN ('4f88f40d-c571-4bee-b456-298c533d7ef9', 'ed68f40d-c571-4bee-b456-298c533d7ef9'));
 	var accountGroupDetails []model.Profile
 	db := C.GetServices().Db
 	err := db.Table("users").Select(fmt.Sprintf("group_%d_user_id as identity, properties", domainGroup.ID)).
-		Where("project_id=? AND source!=? AND "+fmt.Sprintf("group_%d_user_id", domainGroup.ID)+" IN (?)",
+		Where(fmt.Sprintf("project_id=? AND source!=? AND %s group_%d_user_id", isGroupUserString, domainGroup.ID)+" IN (?)",
 			projectID, model.UserSourceDomains, domainIDs).Find(&accountGroupDetails).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get accounts associated to domains.")
@@ -508,7 +539,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	}
 	return profiles, http.StatusOK
 }
-func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string) (string, int, []interface{}, int) {
+func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, []interface{}, int) {
 	var sourceString string
 	var domainGroupId int
 	var params []interface{}
@@ -520,7 +551,12 @@ func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string
 			return sourceString, domainGroupId, nil, http.StatusBadRequest
 		}
 		domainGroupId = group.ID
-		sourceString = fmt.Sprintf("AND users.source!=? AND (users.group_%d_id IS NOT NULL OR (users.customer_user_id IS NOT NULL AND users.group_%d_user_id IS NOT NULL))", domainGroupId, domainGroupId)
+		sourceString = "AND users.source!=?"
+		if isAllUserProperties {
+			sourceString = sourceString + " " + fmt.Sprintf("AND (users.group_%d_id IS NOT NULL OR (users.customer_user_id IS NOT NULL AND users.group_%d_user_id IS NOT NULL))", domainGroupId, domainGroupId)
+		} else {
+			sourceString = sourceString + " " + fmt.Sprintf("AND users.group_%d_id IS NOT NULL", domainGroupId)
+		}
 		params = append(params, model.UserSourceDomains)
 	} else {
 		group, errCode := store.GetGroup(projectID, source)
@@ -1581,17 +1617,10 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, segment *model
 
 func GroupFiltersByPrefix(filters []model.QueryProperty) map[string][]model.QueryProperty {
 	filtersMap := make(map[string][]model.QueryProperty)
-	filterPrefixList := []string{
-		U.GROUP_NAME_HUBSPOT_COMPANY,
-		U.GROUP_NAME_SALESFORCE_ACCOUNT,
-		U.GROUP_NAME_SIX_SIGNAL,
-		U.LI_PROPERTIES_PREFIX,
-		U.GROUP_NAME_G2,
-	}
 
 	for _, filter := range filters {
 		var groupName string
-		for _, prefix := range filterPrefixList {
+		for _, prefix := range model.GroupPropertyPrefixList {
 			if strings.Contains(strings.ToLower(filter.Property), prefix) {
 				groupName = prefix
 				break
@@ -1608,4 +1637,23 @@ func GroupFiltersByPrefix(filters []model.QueryProperty) map[string][]model.Quer
 	}
 
 	return filtersMap
+}
+
+func tablePropsHasUserProperty(props []string) bool {
+	for _, prop := range props {
+		if !hasPrefixFromList(prop, model.GroupPropertyPrefixList) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasPrefixFromList(s string, prefixes []string) bool {
+	lowerS := strings.ToLower(s)
+	for _, prefix := range prefixes {
+		if strings.Contains(lowerS, prefix) {
+			return true
+		}
+	}
+	return false
 }
