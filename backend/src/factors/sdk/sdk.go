@@ -960,20 +960,21 @@ func FillSixSignalUserPropertiesV1(projectId int64, projectSettings *model.Proje
 	}
 
 	//Fetching integration status feature flags for factors deanonymisation, sixsignal and clearbit
-	_, intFactorsDeanonymisation, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_FACTORS_DEANONYMISATION)
-	if err != nil {
-		logCtx.Error("Failed to fetch factors deanonymisation feature flag")
-	}
-	_, intSixSignal, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_SIX_SIGNAL)
-	if err != nil {
-		logCtx.Error("Failed to fetch sixsignal client feature flag")
-	}
-	_, intClearbit, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_CLEARBIT)
-	if err != nil {
-		logCtx.Error("Failed to fetch clearbit client feature flag")
-	}
+	/*
+		_, intFactorsDeanonymisation, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_FACTORS_DEANONYMISATION)
+		if err != nil {
+			logCtx.Error("Failed to fetch factors deanonymisation feature flag")
+		}
+		_, intSixSignal, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_SIX_SIGNAL)
+		if err != nil {
+			logCtx.Error("Failed to fetch sixsignal client feature flag")
+		}
+		_, intClearbit, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_CLEARBIT)
+		if err != nil {
+			logCtx.Error("Failed to fetch clearbit client feature flag")
+		}*/
 
-	if projectSettings.Client6SignalKey != "" && intSixSignal {
+	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true {
 
 		execute6SignalStatusChannel := make(chan int)
 		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
@@ -996,7 +997,7 @@ func FillSixSignalUserPropertiesV1(projectId int64, projectSettings *model.Proje
 
 			}
 		}
-	} else if intFactorsDeanonymisation && !intClearbit {
+	} else if *(projectSettings.IntFactorsSixSignalKey) == true && *(projectSettings.IntClearBit) == false {
 
 		//check if factors deanonymisation quota is not exhausted
 		isSixsignalQuotaAvailable, _ := CheckingSixSignalQuotaLimit(projectId)
@@ -1196,13 +1197,13 @@ func FillClearbitUserProperties(projectId int64, projectSettings *model.ProjectS
 	userProperties *U.PropertiesMap, UserId string, clientIP string) {
 
 	logCtx := log.WithField("project_id", projectId)
+	/*
+		_, intClearbit, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_CLEARBIT)
+		if err != nil {
+			logCtx.Error("Failed to fetch clearbit client feature flag")
+		}*/
 
-	_, intClearbit, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_CLEARBIT)
-	if err != nil {
-		logCtx.Error("Failed to fetch clearbit client feature flag")
-	}
-
-	if projectSettings.ClearbitKey != "" && intClearbit {
+	if projectSettings.ClearbitKey != "" && *(projectSettings.IntClearBit) == true {
 		executeClearBitStatusChannel := make(chan int)
 		clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, UserId, clientIP)
 		if clearBitExists {
