@@ -124,8 +124,13 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	// transforming datetime filters
 	groupedFilters := GroupFiltersByPrefix(payload.Filters)
-	isAllUserProperties := profileType == model.PROFILE_TYPE_ACCOUNT && payload.Source == "All" && (len(groupedFilters[model.FILTER_TYPE_USERS]) == len(payload.Filters))
 	groupedFilters[model.FILTER_TYPE_USERS] = append(groupedFilters[model.FILTER_TYPE_USERS], payload.SearchFilter...)
+
+	// to check whether the filter in account profiles is of user properties
+	isUserProperty := hasUserProperty(profileType, payload.Filters)
+
+	// to check whether the all filters in account profiles is of user properties
+	isAllUserProperties := hasAllUserProperties(payload.Filters, profileType)
 
 	for group, filterArray := range groupedFilters {
 		for index := range filterArray {
@@ -145,7 +150,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		isGroupUserString = "AND users.is_group_user=1"
 		selectString = "id AS identity, properties, updated_at AS last_activity"
 		if C.IsDomainEnabled(projectID) {
-			sourceString, domainGroupId, params, status = store.GetSourceStringForAccountsV2(projectID, payload.Source)
+			sourceString, domainGroupId, params, status = store.GetSourceStringForAccountsV2(projectID, payload.Source, isAllUserProperties)
 		} else {
 			// Check for Enabled Groups
 			groupNameIDMap, errCode := store.GetGroupNameIDMap(projectID)
@@ -210,17 +215,6 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			filterString = "(" + userTypeFilters + ")"
 		}
 		filterParams = append(filterParams, userTypeFiltersParams...)
-	}
-
-	// to check whether the filter in account profiles is of user properties
-	isUserProperty := false
-	if profileType == model.PROFILE_TYPE_ACCOUNT {
-		for _, filter := range payload.Filters {
-			if filter.Entity == model.PropertyEntityUserGroup {
-				isUserProperty = true
-				break
-			}
-		}
 	}
 
 	if payload.Source == "All" {
@@ -342,6 +336,37 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusInternalServerError, "Query formatting failed."
 	}
 	return returnData, http.StatusFound, ""
+}
+
+// hasUserProperty checks for user properties in filters.
+func hasUserProperty(profileType string, properties []model.QueryProperty) bool {
+	isUserProperty := false
+
+	if profileType == model.PROFILE_TYPE_ACCOUNT {
+		for _, filter := range properties {
+			if filter.Entity == model.PropertyEntityUserGroup {
+				isUserProperty = true
+				break
+			}
+		}
+	}
+
+	return isUserProperty
+}
+
+// hasAllUserProperties checks for all user properties in filters.
+func hasAllUserProperties(filters []model.QueryProperty, profileType string) bool {
+	isAllUserProperties := true
+
+	if profileType == model.PROFILE_TYPE_ACCOUNT {
+		for _, filter := range filters {
+			if filter.Entity != model.PropertyEntityUserGroup {
+				isAllUserProperties = false
+				break
+			}
+		}
+	}
+	return isAllUserProperties
 }
 
 // Function to merge unique profiles
@@ -514,7 +539,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	}
 	return profiles, http.StatusOK
 }
-func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string) (string, int, []interface{}, int) {
+func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, []interface{}, int) {
 	var sourceString string
 	var domainGroupId int
 	var params []interface{}
@@ -526,7 +551,12 @@ func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string
 			return sourceString, domainGroupId, nil, http.StatusBadRequest
 		}
 		domainGroupId = group.ID
-		sourceString = fmt.Sprintf("AND users.source!=? AND (users.group_%d_id IS NOT NULL OR (users.customer_user_id IS NOT NULL AND users.group_%d_user_id IS NOT NULL))", domainGroupId, domainGroupId)
+		sourceString = "AND users.source!=?"
+		if isAllUserProperties {
+			sourceString = sourceString + " " + fmt.Sprintf("AND (users.group_%d_id IS NOT NULL OR (users.customer_user_id IS NOT NULL AND users.group_%d_user_id IS NOT NULL))", domainGroupId, domainGroupId)
+		} else {
+			sourceString = sourceString + " " + fmt.Sprintf("AND users.group_%d_id IS NOT NULL", domainGroupId)
+		}
 		params = append(params, model.UserSourceDomains)
 	} else {
 		group, errCode := store.GetGroup(projectID, source)
