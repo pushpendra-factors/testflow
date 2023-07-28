@@ -361,6 +361,94 @@ func getFilterSQLStmtForLatestUserProperties(projectID int64,
 	return wStmt, wParams, nil
 }
 
+// returns SQL query condition to address conditions for group_users.properties for $domains
+func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
+	properties []model.QueryProperty, fromTimestamp int64) (
+	string, []interface{}, []string, []string, error) {
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"properties":      properties,
+		"from_time_stamp": fromTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var filteredProperty []model.QueryProperty
+	for _, p := range properties {
+		if p.Entity == model.PropertyEntityUserGlobal {
+			filteredProperty = append(filteredProperty, p)
+		}
+	}
+
+	groupedPoperties, isOnlyOR, isOnlyAND := model.GetPropertiesGroupedByGroupName(filteredProperty)
+	if isOnlyOR {
+		// no need to break into groups
+		wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty, fromTimestamp)
+		if err != nil {
+			return "", nil, nil, nil, err
+		}
+		return wStmt, wParams, nil, nil, nil
+	}
+
+	/*
+		select max(group_x_id) as max_group_x_id,max(group_y_id) as max_group_y_id from users
+		where group_x.properties->'aa' OR group_y.properties->'aa'
+		having max_group_x_id is not null and max_group_y_id is not null
+	*/
+
+	if isOnlyAND {
+		havingColumnConditions := []string{}
+		selectColumns := []string{}
+		wStmt := ""
+		wParams := []interface{}{}
+		// use OR in where condition and AND in Having condition
+		// (groupA.A AND groupA.B) OR (groupB.A AND groupB.B) HAVING groupA AND groupB
+		for _, filterProperties := range groupedPoperties {
+			if wStmt != "" {
+				wStmt = wStmt + " OR "
+			}
+
+			groupWStmt, groupWParams, err := buildWhereFromProperties(projectID, filterProperties, fromTimestamp)
+			if err != nil {
+				return "", nil, nil, nil, err
+			}
+
+			wStmt = wStmt + fmt.Sprintf("( %s )", groupWStmt)
+			wParams = append(wParams, groupWParams...)
+			selectColumns = append(selectColumns, fmt.Sprintf("group_%d_id", filterProperties[0].GroupNameID))
+			havingColumnConditions = append(havingColumnConditions, fmt.Sprintf("group_%d_id IS NOT NULL", filterProperties[0].GroupNameID))
+		}
+
+		return wStmt, wParams, selectColumns, havingColumnConditions, nil
+	}
+
+	// any other combination, group same group properties with OR and across groups with AND
+	// (groupA.A or groupB.A) AND (groupA.B) - >(groupA.A or groupA.B) AND (groupB.A)
+	havingColumnConditions := []string{}
+	selectColumns := []string{}
+	wStmt := ""
+	wParams := []interface{}{}
+	for _, filterProperties := range groupedPoperties {
+		if wStmt != "" {
+			wStmt = wStmt + " OR "
+		}
+
+		for i := range filterProperties {
+			filterProperties[i].LogicalOp = "OR"
+		}
+
+		groupWStmt, groupWParams, err := buildWhereFromProperties(projectID, filterProperties, fromTimestamp)
+		if err != nil {
+			return "", nil, nil, nil, err
+		}
+		wStmt = wStmt + groupWStmt
+		wParams = append(wParams, groupWParams...)
+		selectColumns = append(selectColumns, fmt.Sprintf("group_%d_id", filterProperties[0].GroupNameID))
+		havingColumnConditions = append(havingColumnConditions, fmt.Sprintf("group_%d_id IS NOT NULL", filterProperties[0].GroupNameID))
+	}
+
+	return wStmt, wParams, selectColumns, havingColumnConditions, nil
+}
+
 // Alias for group by properties gk_1, gk_2.
 func groupKeyByIndex(i int) string {
 	logFields := log.Fields{
@@ -436,6 +524,78 @@ func getNoneHandledGroupBySelect(projectID int64, groupProp model.QueryGroupByPr
 	}
 	return groupSelect, groupSelectParams
 }
+
+/*
+CASE
+
+	WHEN FIRST_VALUE(
+	    JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')
+	) OVER (
+	    PARTITION BY step_0.coal_group_user_id
+	    ORDER BY
+	        CASE
+	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then 1000000000000
+	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then 1000000000000
+	            ELSE group_users.join_timestamp
+	        END
+	) is NULL THEN '$none'
+	WHEN FIRST_VALUE(
+	    JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')
+	) OVER (
+	    PARTITION BY step_0.coal_group_user_id
+	    ORDER BY
+	        CASE
+	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then 1000000000000
+	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then 1000000000000
+	            ELSE group_users.join_timestamp
+	        END
+	) = '' THEN '$none'
+	ELSE FIRST_VALUE(
+	    JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')
+	) OVER (
+	    PARTITION BY step_0.coal_group_user_id
+	    ORDER BY
+	        CASE
+	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then 1000000000000
+	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then 1000000000000
+	            ELSE group_users.join_timestamp
+	        END
+	)
+
+END AS _group_key_0
+*/
+func getNoneHandledGroupBySelectForDomains(projectID int64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string, refStep string) (string, []interface{}) {
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"group_prop":      groupProp,
+		"group_key":       groupKey,
+		"timezone_string": timezoneString,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	entityField := getPropertyEntityField(projectID, groupProp)
+	var groupSelect string
+	groupSelectParams := make([]interface{}, 0)
+	firstValueSelect := fmt.Sprintf("FIRST_VALUE(JSON_EXTRACT_STRING(%s, ?)) OVER (PARTITION BY %s.coal_group_user_id ORDER BY CASE WHEN "+
+		"JSON_EXTRACT_STRING(%s, ?) IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(%s, ?) = '' THEN 1000000000000 ELSE "+
+		"group_users.join_timestamp END)", entityField, refStep, entityField, entityField)
+	firstValueSelectParams := []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
+
+	if groupProp.Type != U.PropertyTypeDateTime {
+		groupSelect = fmt.Sprintf("CASE WHEN %s IS NULL THEN '%s' WHEN %s = '' THEN '%s' ELSE %s END AS %s",
+			firstValueSelect, model.PropertyValueNone, firstValueSelect, model.PropertyValueNone, firstValueSelect, groupKey)
+		groupSelectParams = append(firstValueSelectParams, firstValueSelectParams...)
+		groupSelectParams = append(groupSelectParams, firstValueSelectParams...)
+	} else {
+		timestampStr := getSelectTimestampByTypeAndPropertyName(groupProp.Granularity, firstValueSelect, timezoneString)
+		groupSelect = fmt.Sprintf("CASE WHEN %s IS NULL THEN '%s' WHEN %s = '' THEN '%s' ELSE %s END AS %s",
+			firstValueSelect, model.PropertyValueNone, firstValueSelect, model.PropertyValueNone, timestampStr, groupKey)
+		groupSelectParams = append(firstValueSelectParams, firstValueSelectParams...)
+		groupSelectParams = append(groupSelectParams, firstValueSelectParams...)
+	}
+	return groupSelect, groupSelectParams
+}
+
 func getNoneHandledGroupBySelectWithFirst(projectID int64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -504,7 +664,43 @@ func buildGroupKeys(projectID int64, groupProps []model.QueryGroupByProperty, ti
 
 	return groupSelect, groupSelectParams, groupKeys
 }
-func buildGroupKeysWithFirst(projectID int64, groupProps []model.QueryGroupByProperty, timezoneString string) (groupSelect string,
+
+// groupBySelect: group_users.properties->>'age' as gk_1, group_users.properties>>'category' as gk_2
+// groupByKeys: gk_1, gk_2
+// How to use?
+// select group_users.properties->>'age' as gk_1, group_users.properties->>'category' as gk_2 from group_users
+// group by gk_1, gk_2
+func buildGroupKeysForDomains(projectID int64, groupProps []model.QueryGroupByProperty, timezoneString string, refStep string) (groupSelect string,
+	groupSelectParams []interface{}, groupKeys string) {
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"group_props":     groupProps,
+		"timezone_string": timezoneString,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	groupSelectParams = make([]interface{}, 0)
+
+	for i, groupProp := range groupProps {
+		// Order of group is preserved as received.
+		gKey := groupKeyByIndex(groupProp.Index)
+		groupProp.Entity = model.PropertyEntityGroup
+
+		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelectForDomains(projectID, groupProp, gKey, timezoneString, refStep)
+
+		groupSelect = groupSelect + noneHandledSelect
+		groupKeys = groupKeys + gKey
+		if i < len(groupProps)-1 {
+			groupSelect = groupSelect + ", "
+			groupKeys = groupKeys + ", "
+		}
+		groupSelectParams = append(groupSelectParams, noneHandledSelectParams...)
+	}
+
+	return groupSelect, groupSelectParams, groupKeys
+}
+
+func buildGroupKeysWithFirst(projectID int64, groupProps []model.QueryGroupByProperty, timezoneString string, userGroupProperties bool) (groupSelect string,
 	groupSelectParams []interface{}, groupKeys string) {
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -518,6 +714,9 @@ func buildGroupKeysWithFirst(projectID int64, groupProps []model.QueryGroupByPro
 	for i, v := range groupProps {
 		// Order of group is preserved as received.
 		gKey := groupKeyByIndex(v.Index)
+		if userGroupProperties {
+			v.Entity = model.PropertyEntityGroup
+		}
 		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelectWithFirst(projectID, v, gKey, timezoneString)
 		groupSelect = groupSelect + noneHandledSelect
 		groupKeys = groupKeys + gKey
@@ -677,7 +876,7 @@ func replaceTableWithViewForEventsAndUsers(stmnt, viewName string) string {
 func addFilterEventsWithPropsQuery(projectId int64, qStmnt *string, qParams *[]interface{},
 	qep model.QueryEventWithProperties, from int64, to int64, fromStr string,
 	stepName string, addSelecStmnt string, addSelectParams []interface{},
-	addJoinStmnt string, groupBy string, orderBy string, globalUserFilter []model.QueryProperty) error {
+	addJoinStmnt string, groupBy string, orderBy string, globalUserFilter []model.QueryProperty, isScopeDomains bool) error {
 
 	logFields := log.Fields{
 		"project_id":         projectId,
@@ -820,7 +1019,7 @@ func addFilterEventsWithPropsQuery(projectId int64, qStmnt *string, qParams *[]i
 func addFilterEventsWithPropsQueryV2(projectId int64, qStmnt *string, qParams *[]interface{},
 	qep model.QueryEventWithProperties, from int64, to int64, fromStr string,
 	stepName string, addSelecStmnt string, addSelectParams []interface{},
-	addJoinStmnt string, groupBy string, orderBy string, globalUserFilter []model.QueryProperty) error {
+	addJoinStmnt string, groupBy string, orderBy string, globalUserFilter []model.QueryProperty, isScopeDomains bool) error {
 
 	logFields := log.Fields{
 		"project_id":         projectId,
@@ -1006,7 +1205,7 @@ func addFilterEventsWithPropsQueryV2(projectId int64, qStmnt *string, qParams *[
 func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[]interface{},
 	qep model.QueryEventWithProperties, from int64, to int64, fromStr string,
 	stepName string, addSelecStmnt string, addSelectParams []interface{},
-	addJoinStmnt string, groupBy string, orderBy string, globalUserFilter []model.QueryProperty) error {
+	addJoinStmnt string, groupBy string, orderBy string, globalUserFilter []model.QueryProperty, isScopeDomains bool) error {
 
 	logFields := log.Fields{
 		"project_id":         projectId,
@@ -1051,17 +1250,30 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 				eventsWrapSelect = joinWithComma(eventsWrapSelect, "users.id as users_user_id")
 			}
 		} else {
-			if strings.Contains(addJoinStmnt, "user_groups") {
-				userGroupColumn = model.GetQueryGroupUserID(addSelecStmnt)
-				eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("%s as group_user_id", userGroupColumn))
-				usersUserGroupColumn = model.GetQueryUserGroupUserID(addSelecStmnt)
+			usersUserGroupColumn = model.GetQueryUserGroupUserID(addSelecStmnt)
+			if usersUserGroupColumn != "" {
 				eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("%s as user_group_user_id", usersUserGroupColumn))
+			}
+
+			userGroupColumn = model.GetQueryGroupUserID(addSelecStmnt)
+			if userGroupColumn != "" {
+				eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("%s as group_user_id", userGroupColumn))
 			}
 
 			if strings.Contains(addJoinStmnt, "group_users") {
 				eventsWrapSelect = joinWithComma(eventsWrapSelect, "group_users.properties as group_properties")
 			}
 		}
+	}
+
+	if isScopeDomains {
+		// add select columns for using HAVING condition when filter statement has multple groups using AND
+		_, _, selectColumns, _, _ := getFilterSQLStmtForScopeDomainsLatestGroupProperties(
+			projectId, globalUserFilter, from)
+		for i := range selectColumns {
+			eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("group_users.%s as %s", selectColumns[i], selectColumns[i]))
+		}
+
 	}
 
 	eventsWrapStmnt := "SELECT " + eventsWrapSelect + " FROM events" + " " + addJoinStmnt
@@ -1075,8 +1287,20 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	// Non-JSON where conditions except event_names.
 	eventsWrapWhereCondition := fmt.Sprintf("WHERE events.project_id=? AND timestamp>=%s AND timestamp<=?", fromTimestamp)
 
+	groupUserCondition := ""
 	if userGroupColumn != "" {
-		eventsWrapWhereCondition = eventsWrapWhereCondition + " AND " + " ( group_user_id IS NOT NULL OR user_group_user_id IS NOT NULL )"
+		groupUserCondition = "group_user_id IS NOT NULL"
+	}
+
+	if usersUserGroupColumn != "" {
+		if groupUserCondition != "" {
+			groupUserCondition += " OR "
+		}
+		groupUserCondition += "user_group_user_id IS NOT NULL"
+	}
+
+	if groupUserCondition != "" {
+		eventsWrapWhereCondition = eventsWrapWhereCondition + " AND " + " ( " + groupUserCondition + "  )"
 	}
 
 	// Building event_names condition and appending.
@@ -1109,6 +1333,8 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 
 	if userGroupColumn != "" {
 		addSelecStmnt = strings.ReplaceAll(addSelecStmnt, userGroupColumn, eventsWrapViewName+".group_user_id")
+	}
+	if usersUserGroupColumn != "" {
 		addSelecStmnt = strings.ReplaceAll(addSelecStmnt, usersUserGroupColumn, eventsWrapViewName+".user_group_user_id")
 	}
 
@@ -1119,6 +1345,17 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "group_users.properties", eventsWrapViewName+".group_properties")
 	// Use view instead of events and users table.
 	addSelecStmnt = replaceTableWithViewForEventsAndUsers(addSelecStmnt, eventsWrapViewName)
+
+	// select max(group_x_id) to check if a group exist for a account
+	if isScopeDomains {
+		// add select columns for using HAVING condition when filter statement has multple groups using AND
+		_, _, selectColumns, _, _ := getFilterSQLStmtForScopeDomainsLatestGroupProperties(
+			projectId, globalUserFilter, from)
+
+		for i := range selectColumns {
+			addSelecStmnt = joinWithComma(addSelecStmnt, fmt.Sprintf("MAX(%s) as max_%s", selectColumns[i], selectColumns[i]))
+		}
+	}
 
 	rStmnt := "SELECT " + addSelecStmnt + " FROM " + " " + eventsWrapView
 
@@ -1160,8 +1397,14 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 
 		} else {
 			// add group properties filter
-			latestUserPropFilterStmnt, latestUserPropFilterParam, err = getFilterSQLStmtForLatestUserProperties(
-				projectId, globalUserFilter, from)
+			if isScopeDomains {
+				latestUserPropFilterStmnt, latestUserPropFilterParam, _, _, err = getFilterSQLStmtForScopeDomainsLatestGroupProperties(
+					projectId, globalUserFilter, from)
+			} else {
+				latestUserPropFilterStmnt, latestUserPropFilterParam, err = getFilterSQLStmtForLatestUserProperties(
+					projectId, globalUserFilter, from)
+			}
+
 			if err != nil {
 				return errors.New("invalid group properties for global filter")
 			}
@@ -1196,6 +1439,24 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	if groupBy != "" {
 		groupBy = replaceTableWithViewForEventsAndUsers(groupBy, eventsWrapViewName)
 		rStmnt = fmt.Sprintf("%s GROUP BY %s", rStmnt, groupBy)
+	}
+
+	if isScopeDomains {
+		havingStmnt := ""
+
+		_, _, _, havingColumnConditions, _ := getFilterSQLStmtForScopeDomainsLatestGroupProperties(
+			projectId, globalUserFilter, from)
+
+		for i := range havingColumnConditions {
+			if havingStmnt != "" {
+				havingStmnt = havingStmnt + " AND "
+			}
+			havingStmnt = havingStmnt + fmt.Sprintf("max_%s", havingColumnConditions[i])
+		}
+
+		if havingStmnt != "" {
+			rStmnt = fmt.Sprintf("%s HAVING %s", rStmnt, havingStmnt)
+		}
 	}
 
 	if orderBy != "" {
@@ -2011,7 +2272,7 @@ func (store *MemSQL) IsValidAnalyticsGroupQuery(projectID int64, query *model.Qu
 			continue
 		}
 
-		if groupIds[i] != scopeGroup.ID {
+		if !model.IsQueryGroupNameAllAccounts(query.GroupAnalysis) && groupIds[i] != scopeGroup.ID {
 			log.WithFields(log.Fields{"query": query}).Error("Invalid analytics group query. Different groups selected.")
 			return 0, false
 		}

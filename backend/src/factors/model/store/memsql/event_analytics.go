@@ -122,6 +122,57 @@ func (store *MemSQL) fillEventNameIDs(projectID int64, query *model.Query) {
 
 }
 
+func (store *MemSQL) fillGroupNameIDs(projectID int64, query *model.Query) (int, error) {
+	logFields := log.Fields{
+		"query":      query,
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	allGroupIDs := make(map[string]int)
+	groups, status := store.GetGroups(projectID)
+	if status != http.StatusFound {
+		if status != http.StatusNotFound {
+			logCtx.Error("Failed to get groups on query generation.")
+			return http.StatusInternalServerError, errors.New("error getting groups")
+		}
+
+		logCtx.Error("No groups available in project for query generation.")
+		return http.StatusBadRequest, errors.New("no groups available in project")
+	}
+
+	for i := range groups {
+		allGroupIDs[groups[i].Name] = groups[i].ID
+	}
+
+	for i := range query.GlobalUserProperties {
+		if allGroupIDs[query.GlobalUserProperties[i].GroupName] == 0 {
+			logCtx.WithFields(log.Fields{"group_name": query.GlobalUserProperties[i].GroupName, "all_group_ids": allGroupIDs}).
+				Error("Invalid group name in property filter.")
+			return http.StatusBadRequest, errors.New("invalid global property filter")
+		}
+		query.GlobalUserProperties[i].GroupNameID = allGroupIDs[query.GlobalUserProperties[i].GroupName]
+	}
+
+	for i := range query.GroupByProperties {
+		// skip group name id for event specific property
+		if query.GroupByProperties[i].Entity != model.PropertyEntityUser || isEventLevelGroupBy(query.GroupByProperties[i]) {
+			continue
+		}
+
+		if allGroupIDs[query.GroupByProperties[i].GroupName] == 0 {
+			logCtx.WithFields(log.Fields{"group_name": query.GroupByProperties[i].GroupName, "all_group_ids": allGroupIDs}).
+				Error("Invalid group name in breakdown property filter.")
+			return http.StatusBadRequest, errors.New("invalid global group by property")
+		}
+
+		query.GroupByProperties[i].GroupNameID = allGroupIDs[query.GroupByProperties[i].GroupName]
+	}
+
+	return http.StatusOK, nil
+}
+
 func logDifferenceIfAny(hash1, hash2 string, query model.Query, logMessage string) {
 	if hash1 != hash2 {
 		log.WithField("query", query).Warn(logMessage)
@@ -1108,7 +1159,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		}
 
 		addFilterFunc(projectID, qStmnt, qParams, ewp, q.From, q.To,
-			"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy, q.GlobalUserProperties)
+			"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy, q.GlobalUserProperties, false)
 
 		// adding source check for segments
 		if IsCallerProfiles(q.Caller) && scopeGroupID == 0 {
@@ -1502,7 +1553,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId int64,
 		addFilterFunc = addFilterEventsWithPropsQueryV2
 	}
 	addFilterFunc(projectId, &qStmnt, &qParams, q.EventsWithProperties[0], q.From, q.To,
-		"", "", qSelect, egSelectParams, "", "", "", q.GlobalUserProperties)
+		"", "", qSelect, egSelectParams, "", "", "", q.GlobalUserProperties, false)
 
 	qStmnt = appendGroupByTimestampIfRequired(qStmnt, isGroupByTimestamp, egKeys)
 	qStmnt = appendOrderByAggr(qStmnt)
@@ -2215,7 +2266,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 			addFilterFunc = addFilterEventsWithPropsQueryV2
 		}
 		addFilterFunc(projectID, &qStmnt, &qParams, ewp, q.From, q.To, "",
-			refStepName, filterSelect, egParams, "", "", "", q.GlobalUserProperties)
+			refStepName, filterSelect, egParams, "", "", "", q.GlobalUserProperties, false)
 		if len(q.EventsWithProperties) > 1 {
 			qStmnt = qStmnt + ", "
 		}
@@ -2631,7 +2682,7 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 			addFilterFunc = addFilterEventsWithPropsQueryV2
 		}
 		err := addFilterFunc(projectID, qStmnt, qParams, ewp, q.From, q.To,
-			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy, q.GlobalUserProperties)
+			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy, q.GlobalUserProperties, false)
 		if err != nil {
 			return steps, stepsToKeysMap, err
 		}
