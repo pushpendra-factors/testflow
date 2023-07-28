@@ -112,7 +112,7 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
             Active Time
           </Text>
           <Text type='title' level={3} extraClass='m-0' weight='bold'>
-            {formatDurationIntoString(overview?.time_active || 0)}
+            {formatDurationIntoString((overview?.time_active || 0).toFixed())}
           </Text>
         </div>
       </div>
