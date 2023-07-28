@@ -186,6 +186,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	logCtx := log.WithFields(logFields)
 
 	var rt string
+	var fscore float32
 	var result model.PerAccountScore
 	countsMapDays := make(map[string]model.LatestScore)
 	scoreOnDays := make(map[string]float32)
@@ -215,6 +216,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 		logCtx.WithError(err).Error("Failed to unmarshall json counts for users per day")
 	}
 
+	fscore = 0
 	for day, countsPerday := range countsMapDays {
 		countsInInt := make(map[string]int64)
 		for eventKey, eventCount := range countsPerday.EventsCount {
@@ -227,7 +229,8 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 		}
 		if day != model.LAST_EVENT {
 			var t model.PerAccountScore
-			t.Score = float32(accountScore)
+			fscore += float32(accountScore)
+			t.Score = fscore
 			t.Timestamp = day
 			unixDay := model.GetDateFromString(day)
 			if unixDay >= prevDateTotrend {
@@ -252,7 +255,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	result.Id = userId
 	result.Trend = make(map[string]float32)
 	result.Trend = scoreOnDays
-	result.Score = scoreOnDays[timestamp]
+	result.Score = fscore
 	result.Timestamp = timestamp
 	return result, weights, nil
 
