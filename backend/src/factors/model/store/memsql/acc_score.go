@@ -234,7 +234,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 			t.Timestamp = day
 			unixDay := model.GetDateFromString(day)
 			if unixDay >= prevDateTotrend {
-				scoreOnDays[day] = accountScore
+				scoreOnDays[day] = fscore
 				if debug {
 					t.Debug = make(map[string]interface{})
 					t.Debug["counts"] = make(map[string]int64, 0)
