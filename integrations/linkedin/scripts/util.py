@@ -239,7 +239,7 @@ class Util:
         url = ORG_LOOKUP_URL.format(ids)
         headers = {'Authorization': 'Bearer ' + access_token, 
                     'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
-        return requests.get(url, headers=headers)
+        return Util.request_with_retries_and_sleep(url, headers)
 
     def get_failed_ids(ids, map_id_to_org_data):
         ids_list = ids.split(",")
@@ -249,4 +249,17 @@ class Util:
         failed_ids = ",".join(set_ids-set_keys)
         return failed_ids
 
+    @staticmethod
+    def request_with_retries_and_sleep(url, headers):
+        count = 0
+        response = {}
+        while count<= 3:
+            count += 1
+            response = requests.get(url, headers=headers)
+            if response.ok:
+                break
+            else:
+                time.sleep(30)
 
+        return response, count
+    

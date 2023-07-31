@@ -47,7 +47,7 @@ class DataService:
         return response.json(), ''
 
     
-    def get_last_sync_info(self, linkedin_setting, start_timestamp=None):
+    def get_last_sync_info(self, linkedin_setting, start_timestamp=None, end_timestamp=None):
         uri = '/data_service/linkedin/documents/last_sync_info'
         url = self.data_service_host + uri
 
@@ -58,7 +58,7 @@ class DataService:
         response = requests.get(url,json=payload)
         if not response.ok:
             log.error('Failed to get linkedin last sync info from data services')
-            return [], 'failed'
+            return [], 'Failed to get linkedin last sync info from data services'
         all_info = response.json()
         sync_info_with_type = {}
         for info in all_info:
@@ -68,7 +68,9 @@ class DataService:
             sync_info_with_type[info['type_alias']]= date.strftime('%Y-%m-%d')
             if info['type_alias'] == 'member_company_insights':
                 sync_info_with_type['last_backfill_timestamp'] = info['last_backfill_timestamp'] 
-
+        timestamp_exceed = DataService.is_custom_timerange_exceeding_lookback(start_timestamp, end_timestamp)
+        if timestamp_exceed:
+            return [], "Given custom timerange exceeds max lookback" 
         return sync_info_with_type, ''
 
 
@@ -201,3 +203,26 @@ class DataService:
                 project_id, doc_type, int(timestamp), response.status_code)
         
         return response
+    
+    @staticmethod
+    def is_custom_timerange_exceeding_lookback(input_from, input_to):
+        #if no custom range given directly return false
+        if input_from is None and input_to is None:
+            return False
+        
+        date_start, date_end = "", ""
+        if input_from != None:
+            date_start = datetime.strptime(str(input_from), '%Y%m%d').date()
+        else:
+            date_start = (datetime.now() - timedelta(days=MAX_LOOKBACK)).date()
+
+        if input_to != None:
+            date_end = datetime.strptime(str(input_to), '%Y%m%d').date()
+        else:
+            date_end = (datetime.now() - timedelta(days=1)).date()
+
+        num_of_days = (date_end-date_start).days + 1
+        if num_of_days > MAX_LOOKBACK:
+            return True
+        
+        return False
