@@ -95,9 +95,13 @@ function EngagementConfig({ fetchProjectSettings }) {
       }
     }
 
+    const saleWindow = currentProjectSettings?.acc_score_weights?.salewindow
+      ? currentProjectSettings?.acc_score_weights?.salewindow
+      : 10;
+
     updateAccountScores(activeProject.id, {
       WeightConfig: weightConf,
-      salewindow: 10
+      salewindow: saleWindow
     })
       .then(() => fetchProjectSettings(activeProject.id))
       .then(() =>
@@ -149,9 +153,14 @@ function EngagementConfig({ fetchProjectSettings }) {
     const updatedWeightConfig = [...weightsConfig];
 
     updatedWeightConfig[index].is_deleted = true;
+
+    const saleWindow = currentProjectSettings?.acc_score_weights?.salewindow
+      ? currentProjectSettings?.acc_score_weights?.salewindow
+      : 10;
+    
     updateAccountScores(activeProject.id, {
       WeightConfig: updatedWeightConfig,
-      salewindow: 10
+      salewindow: saleWindow
     })
       .then(() => fetchProjectSettings(activeProject.id))
       .then(() => showSuccessMessage(`Score removed successfully`))

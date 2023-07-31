@@ -1,8 +1,8 @@
 import { Spin } from 'antd';
 import { Text } from 'Components/factorsComponents';
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { formatDurationIntoString } from 'Utils/dataFormatter';
-import SparklineChart from './TrendsChart';
+import TrendsChart from './TrendsChart';
 import { EngagementTag } from './utils';
 
 export interface DataMap {
@@ -10,7 +10,7 @@ export interface DataMap {
 }
 
 export type Overview = {
-  temperature: string;
+  temperature: number;
   engagement: string;
   users_count: number;
   time_active: number;
@@ -86,7 +86,9 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
             color='red'
             weight='bold'
           >
-            {overview?.temperature || 'NA'}
+            {overview?.temperature
+              ? parseInt(overview?.temperature?.toFixed())
+              : 'NA'}
           </Text>
         </div>
         <div className='metric'>
@@ -112,7 +114,9 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
             Active Time
           </Text>
           <Text type='title' level={3} extraClass='m-0' weight='bold'>
-            {formatDurationIntoString(overview?.time_active || 0)}
+            {formatDurationIntoString(
+              parseInt((overview?.time_active || 0).toFixed())
+            )}
           </Text>
         </div>
       </div>
@@ -129,7 +133,7 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
           </Text>
         </div>
         <div className='chart'>
-          <SparklineChart data={overview.scores_list} />
+          <TrendsChart data={overview.scores_list} />
         </div>
       </div>
     </div>
