@@ -204,6 +204,7 @@ type Configuration struct {
 	CloudManager                                       filestore.FileManager
 	SegmentExcludedCustomerIDByProject                 map[int64]string // map[project_id]customer_user_id
 	AttributionDebug                                   int
+	AttributionCommonFlow                              string
 	AttributionDBCacheLookup                           string
 	DisableDashboardQueryDBExecution                   bool
 	AllowedHubspotGroupsByProjectIDs                   string
@@ -2052,6 +2053,26 @@ func GetTokensFromStringListAsString(stringList string) []string {
 
 func GetAttributionDebug() int {
 	return configuration.AttributionDebug
+}
+
+func IsAllowedAttributionCommonFlow(projectID int64) bool {
+	if configuration.AttributionCommonFlow == "" {
+		return false
+	}
+
+	if configuration.AttributionCommonFlow == "*" {
+		return true
+	}
+
+	projectIDStr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AttributionCommonFlow, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDStr {
+			return true
+		}
+	}
+
+	return false
 }
 
 func IsAllowedAttributionDBCacheLookup(projectID int64) bool {

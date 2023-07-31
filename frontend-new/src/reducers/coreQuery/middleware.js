@@ -33,7 +33,10 @@ import {
   setButtonClicksPropertiesNamesAction,
   setPageViewsPropertiesNamesAction,
   FETCH_PROPERTY_VALUES_LOADING,
-  FETCH_PROPERTY_VALUES_LOADED
+  FETCH_PROPERTY_VALUES_LOADED,
+  fetchUserPropertiesActionV2,
+  fetchEventUserPropertiesActionV2,
+  fetchEventPropertiesActionV2
 } from './actions';
 import {
   getEventNames,
@@ -114,9 +117,9 @@ export const getUserPropertiesV2 = (projectId, queryType = '') => {
           resolve(
             dispatch(setUserPropertiesNamesAction(response.data?.display_names))
           );
-          resolve(dispatch(fetchUserPropertiesAction(options.userOptions)));
+          resolve(dispatch(fetchUserPropertiesActionV2(options.userOptions)));
           resolve(
-            dispatch(fetchEventUserPropertiesAction(options.eventUserOptions))
+            dispatch(fetchEventUserPropertiesActionV2(options.eventUserOptions))
           );
         })
         .catch((err) => {
@@ -172,7 +175,7 @@ export const getEventPropertiesV2 = (projectId, eventName) => {
               setEventPropertiesNamesAction(response.data?.display_names)
             )
           );
-          resolve(dispatch(fetchEventPropertiesAction(options, eventName)));
+          resolve(dispatch(fetchEventPropertiesActionV2(options, eventName)));
         })
         .catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));

@@ -18,7 +18,7 @@ function GroupBlock({
   groupByState,
   setGroupBy,
   delGroupBy,
-  userProperties,
+  userPropertiesV2,
   groupProperties,
   userPropNames,
   groupPropNames,
@@ -32,14 +32,14 @@ function GroupBlock({
   useEffect(() => {
     const filterOptsObj = {};
     if (groupName === 'users' || groupName === 'events') {
-      if (userProperties) {
-        Object.keys(userProperties)?.forEach((groupkey) => {
+      if (userPropertiesV2) {
+        Object.keys(userPropertiesV2)?.forEach((groupkey) => {
           if (!filterOptsObj[groupkey]) {
             filterOptsObj[groupkey] = {
               label: startCase(groupkey),
               iconName: getGroupIcon(groupkey),
               values:
-                userProperties?.[groupkey]?.map((op) => {
+                userPropertiesV2?.[groupkey]?.map((op) => {
                   return {
                     value: op?.[1],
                     label: op?.[0],
@@ -51,7 +51,7 @@ function GroupBlock({
                 }) || []
             };
           } else {
-            userProperties?.[groupkey]?.forEach((op) =>
+            userPropertiesV2?.[groupkey]?.forEach((op) =>
               filterOptsObj[groupkey].values.push({
                 value: op?.[1],
                 label: op?.[0],
@@ -85,7 +85,7 @@ function GroupBlock({
       };
     }
     setFilterOptions(Object.values(filterOptsObj));
-  }, [userProperties, groupProperties, groupName]);
+  }, [userPropertiesV2, groupProperties, groupName]);
 
   const delOption = (index) => {
     delGroupBy('global', groupByState.global[index], index);
@@ -304,7 +304,7 @@ function GroupBlock({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
   userPropNames: state.coreQuery.userPropNames,
   groupPropNames: state.coreQuery.groupPropNames,

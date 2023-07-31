@@ -134,6 +134,8 @@ func main() {
 	demoProjectIds := flag.String("demo_projects", "", "List of projectIds those are used for demo")
 	attributionDebug := flag.Int("attribution_debug", 0, "Enables debug logging for attribution queries")
 	attributionDBCacheLookup := flag.String("attribution_db_cache_lookup", "", "For given projects, Lookup for cache results in DB for dashboard queries")
+	attributionCommonFlow := flag.String("attribution_common_flow", "", "For given projects, run attribution queries with common flow for "+
+		"dashboard and normal query. Both flow will check DB, cache based on week, months and so on..")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
 	enableDemoReadAccess := flag.Bool("enable_demo_read_access", false, "Enable Admin API restrictions.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -305,6 +307,7 @@ func main() {
 		DisableDBWrites:                         disableDBWrites,
 		DisableQueryCache:                       disableQueryCache,
 		AttributionDebug:                        *attributionDebug,
+		AttributionCommonFlow:                   *attributionCommonFlow,
 		AttributionDBCacheLookup:                *attributionDBCacheLookup,
 		DisableDashboardQueryDBExecution:        *disableDashboardQueryDBExecution,
 		EnableFilterOptimisation:                *enableFilterOptimisation,

@@ -28,6 +28,8 @@ import {
   CaretUpOutlined,
   LoadingOutlined
 } from '@ant-design/icons';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
 
 const HorizontalCard = ({
   isDropdown,
@@ -188,8 +190,9 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
   const currentAgent = useSelector((state) => state?.agent?.agent_details);
   const history = useHistory();
   const dispatch = useDispatch();
+  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
+    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
   const {
-    int_factors_six_signal_key,
     int_client_six_signal_key,
     int_clear_bit,
     clearbit_key,
@@ -384,7 +387,7 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
           icon={<SVG size={32} name='Brand' />}
           type={1}
           onSuccess={() => {
-            if (int_factors_six_signal_key) {
+            if (isFactorsDeanonymizationConnected) {
               message.success('Already Activated!');
               return;
             }
@@ -396,7 +399,7 @@ const OnBoard2 = ({ isStep2Done, setIsStep2Done, udpateProjectSettings }) => {
           }}
           api_key={factors6_signal_key}
           isActivated={is_deanonymization_requested}
-          isFactors6SignalActivated={int_factors_six_signal_key}
+          isFactors6SignalActivated={isFactorsDeanonymizationConnected}
         />
         <Divider />
 

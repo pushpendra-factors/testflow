@@ -8,6 +8,7 @@ import (
 	"factors/model/model"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -186,8 +187,9 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	logCtx := log.WithFields(logFields)
 
 	var rt string
+	var fscore float32
 	var result model.PerAccountScore
-	countsMapDays := map[string]map[string]int64{}
+	countsMapDays := make(map[string]model.LatestScore)
 	scoreOnDays := make(map[string]float32)
 	resultmap := make(map[string]model.PerAccountScore)
 
@@ -215,23 +217,32 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 		logCtx.WithError(err).Error("Failed to unmarshall json counts for users per day")
 	}
 
-	for day, countsPerday := range countsMapDays {
-		accountScore, _, decay, err := ComputeAccountScore(*weights, countsPerday, day)
+	orderedDayString := OrderCountDays(countsMapDays)
+	fscore = 0
+	for _, dayString := range orderedDayString {
+		day := dayString
+		countsPerday := countsMapDays[dayString]
+		countsInInt := make(map[string]int64)
+		for eventKey, eventCount := range countsPerday.EventsCount {
+			countsInInt[eventKey] = int64(eventCount)
+		}
+
+		accountScore, _, decay, err := ComputeAccountScore(*weights, countsInInt, day)
 		if err != nil {
 			return model.PerAccountScore{}, nil, err
 		}
-
 		if day != model.LAST_EVENT {
 			var t model.PerAccountScore
-			t.Score = float32(accountScore)
+			fscore += float32(accountScore)
+			t.Score = fscore
 			t.Timestamp = day
 			unixDay := model.GetDateFromString(day)
 			if unixDay >= prevDateTotrend {
-				scoreOnDays[day] = accountScore
+				scoreOnDays[day] = fscore
 				if debug {
 					t.Debug = make(map[string]interface{})
 					t.Debug["counts"] = make(map[string]int64, 0)
-					t.Debug["counts"] = countsPerday
+					t.Debug["counts"] = countsInInt
 					t.Debug["date"] = day
 					t.Debug["score"] = accountScore
 					t.Debug["decay"] = decay
@@ -248,9 +259,31 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	result.Id = userId
 	result.Trend = make(map[string]float32)
 	result.Trend = scoreOnDays
-	result.Score = scoreOnDays[timestamp]
+	result.Score = fscore
 	result.Timestamp = timestamp
 	return result, weights, nil
+
+}
+
+func OrderCountDays(countDays map[string]model.LatestScore) []string {
+
+	var orderedDays []string = make([]string, len(countDays))
+	dayUnix := make([]int64, len(countDays))
+	daymap := make(map[int64]string, 0)
+
+	idx := 0
+	for dayString, _ := range countDays {
+		d := model.GetDateFromString(dayString)
+		dayUnix[idx] = d
+		idx += 1
+		daymap[d] = dayString
+	}
+	sort.Slice(dayUnix, func(i, j int) bool { return dayUnix[i] < dayUnix[j] })
+	for idx, ts := range dayUnix {
+		orderedDays[idx] = daymap[ts]
+	}
+
+	return orderedDays
 
 }
 
@@ -375,6 +408,8 @@ func ComputeAccountScore(weights model.AccWeights, eventsCount map[string]int64,
 	var eventsCountMap map[string]int64 = make(map[string]int64)
 	weightValue := weights.WeightConfig
 	saleWindow := weights.SaleWindow
+	decay_value := model.ComputeDecayValue(ts, saleWindow)
+
 	for _, w := range weightValue {
 		if ew, ok := eventsCount[w.WeightId]; ok {
 			accountScore += float32(ew) * w.Weight_value
@@ -382,8 +417,7 @@ func ComputeAccountScore(weights model.AccWeights, eventsCount map[string]int64,
 		}
 	}
 
-	decay_value := model.ComputeDecayValue(ts, saleWindow)
-	account_score_after_decay := (accountScore - accountScore*float32(decay_value))
+	account_score_after_decay := accountScore * float32(decay_value)
 	return account_score_after_decay, eventsCountMap, decay_value, nil
 }
 

@@ -67,7 +67,7 @@ type Overview struct {
 	Temperature float32            `json:"temperature"` // Normalised Score for base 100
 	Engagement  string             `json:"engagement"`  // Hot, Warm, Cold
 	UsersCount  int64              `json:"users_count"` // Number of Associated Users
-	TimeActive  int64              `json:"time_active"` // in seconds
+	TimeActive  float64            `json:"time_active"` // in seconds
 	ScoresList  map[string]float32 `json:"scores_list"` // Score trends list
 }
 
@@ -164,4 +164,12 @@ var GROUP_TO_COMPANY_NAME_MAP = map[string]string{
 	U.GROUP_NAME_SIX_SIGNAL:         U.SIX_SIGNAL_DOMAIN,
 	U.GROUP_NAME_LINKEDIN_COMPANY:   U.LI_LOCALIZED_NAME,
 	U.GROUP_NAME_G2:                 U.G2_NAME,
+}
+
+var GroupPropertyPrefixList = []string{
+	U.GROUP_NAME_HUBSPOT_COMPANY,
+	U.GROUP_NAME_SALESFORCE_ACCOUNT,
+	U.GROUP_NAME_SIX_SIGNAL,
+	U.LI_PROPERTIES_PREFIX,
+	U.GROUP_NAME_G2,
 }

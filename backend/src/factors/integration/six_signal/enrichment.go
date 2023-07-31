@@ -47,6 +47,7 @@ func ExecuteSixSignalEnrich(projectId int64, sixSignalKey string, properties *ut
 	statusChannel <- 1
 }
 func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, meter bool) error {
+
 	if clientIP == "" {
 		return errors.New("invalid IP, failed adding user properties")
 	}
@@ -76,8 +77,6 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 		log.WithFields(log.Fields{"Error": err}).Warn("Cannot unmarshal JSON")
 		return err
 	}
-
-	//log.WithFields(log.Fields{"clientIP": clientIP, "response": result}).Info("Six Signal Data Logs")
 
 	if zip := result.Company.Zip; zip != "" {
 		if c, ok := (*properties)[util.SIX_SIGNAL_ZIP]; !ok || c == "" {

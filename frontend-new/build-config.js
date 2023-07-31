@@ -47,7 +47,7 @@ const CONFIG = {
     firstTimeDashboardTemplates: {
       webanalytics: '6d966a20-07a6-46db-b2d4-1b1d4d7fb8ec',
       websitevisitoridentification: 'bf721a15-a5c4-4db9-9435-924f4c544850',
-      allpaidmarketing: 'f8785bee-6d7d-4a03-8744-a2d31ce4dd9e'
+      allpaidmarketing: '39562070-e824-455d-b112-62b16b496d6f'
     }
   }
 };

@@ -707,8 +707,78 @@ func ProcessQueryKPIPageUrlV1(query *AttributionQueryV1, attributionData *map[st
 
 }
 
+// MergeTwoAttributionReportsIntoOne merges two attribution reports generated from same query into one result
+func MergeTwoAttributionReportsIntoOne(result1, result2 *QueryResult, keyIndex int, attributionKey string,
+	conversionFunTypes []string, logCtx log.Entry) *QueryResult {
+
+	rows1 := result1.Rows
+	rows2 := result2.Rows
+
+	mergedRows := MergeTwoAttributionReportRows(rows1, rows2, keyIndex, attributionKey, conversionFunTypes, logCtx)
+
+	result1.Rows = mergedRows
+	return result1
+}
+
+// MergeTwoAttributionReportRows merges two attribution rows to generated common merged row
+func MergeTwoAttributionReportRows(rows1, rows2 [][]interface{}, keyIndex int, attributionKey string,
+	conversionFunTypes []string, logCtx log.Entry) [][]interface{} {
+
+	rowsOfResult2InMap := make(map[string][]interface{})
+	for _, row := range rows2 {
+		// creating a key for using added keys and index
+		key := ""
+		for j := 0; j <= keyIndex; j++ {
+			val, ok := row[j].(string)
+			// Ignore row if key is not proper
+			if !ok {
+				continue
+			}
+			key = key + val
+		}
+		rowsOfResult2InMap[key] = row
+	}
+
+	mergedRowKeyMap := make(map[string][]interface{})
+	maxRowSize := 0
+	for _, rowResult1 := range rows1 {
+		maxRowSize = U.MaxInt(len(rowResult1), maxRowSize)
+		if len(rowResult1) == 0 || len(rowResult1) != maxRowSize {
+			continue
+		}
+
+		// creating a key for using added keys and index
+		key := ""
+		for j := 0; j <= keyIndex; j++ {
+			val, ok := rowResult1[j].(string)
+			// Ignore row if key is not proper
+			if !ok {
+				continue
+			}
+			key = key + val
+		}
+
+		// Fetch the same key row from Result2
+		rowResult2 := rowsOfResult2InMap[key]
+		if rowResult2 == nil {
+			continue
+		}
+		if _, exists := mergedRowKeyMap[key]; exists {
+			mergedRowKeyMap[key] = MergeTwoDataRowsV1(rowResult1, rowResult2, keyIndex, attributionKey, conversionFunTypes)
+		} else {
+			mergedRowKeyMap[key] = rowResult1
+		}
+	}
+	mergedResultRows := make([][]interface{}, 0)
+	for _, mapRow := range mergedRowKeyMap {
+		mergedResultRows = append(mergedResultRows, mapRow)
+	}
+	return mergedResultRows
+}
+
 // MergeDataRowsHavingSameKeyV1 merges rows having same key by adding each column value
-func MergeDataRowsHavingSameKeyV1(rows [][]interface{}, keyIndex int, attributionKey string, conversionFunTypes []string, logCtx log.Entry) [][]interface{} {
+func MergeDataRowsHavingSameKeyV1(rows [][]interface{}, keyIndex int, attributionKey string,
+	conversionFunTypes []string, logCtx log.Entry) [][]interface{} {
 
 	rowKeyMap := make(map[string][]interface{})
 	maxRowSize := 0

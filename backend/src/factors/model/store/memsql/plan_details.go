@@ -146,8 +146,8 @@ func (store *MemSQL) GetSixSignalInfoForProject(projectID int64) (model.SixSigna
 	// metering logic here
 	timeZoneString, statusCode := store.GetTimezoneForProject(projectID)
 	if statusCode != http.StatusFound {
-		logCtx.Error(" Failed to get Timezone for six signal count")
-		return model.SixSignalInfo{}, errors.New("Failed to get Timezone")
+		logCtx.Warn(" Failed to get Timezone for six signal count")
+		timeZoneString = U.TimeZoneStringIST
 	}
 	monthYearString := U.GetCurrentMonthYear(timeZoneString)
 	sixSignalCount, err := model.GetSixSignalMonthlyUniqueEnrichmentCount(projectID, monthYearString)

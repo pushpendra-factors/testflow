@@ -3736,7 +3736,7 @@ func GetPropertyTypeByKeyORValue(projectID int64, eventName string, propertyKey 
 	}
 
 	switch propertyValue.(type) {
-	case int, float64:
+	case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64:
 		return PropertyTypeNumerical, false
 	case string:
 		return PropertyTypeCategorical, false

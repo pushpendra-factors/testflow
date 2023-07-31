@@ -124,6 +124,8 @@ import AnalyseBeforeIntegration from './AnalyseBeforeIntegration';
 import SaveQuery from 'Components/SaveQuery';
 import _ from 'lodash';
 import { fetchKPIConfig } from 'Reducers/kpi';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
 
 function CoreQuery({
   activeProject,
@@ -241,6 +243,9 @@ function CoreQuery({
     useSelector((state) => state.analyticsQuery);
   const { dashboards } = useSelector((state) => state.dashboard);
 
+  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
+    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
+
   const dateRange = queryOptions.date_range;
   const { session_analytics_seq } = queryOptions;
   const { globalFilters } = queryOptions;
@@ -352,7 +357,7 @@ function CoreQuery({
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
     integration?.int_client_six_signal_key ||
-    integration?.int_factors_six_signal_key ||
+    isFactorsDeanonymizationConnected ||
     integration?.int_rudderstack;
 
   const getQueryFromHashId = () =>
