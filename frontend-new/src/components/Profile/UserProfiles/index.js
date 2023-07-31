@@ -3,19 +3,15 @@ import {
   Table,
   Button,
   Spin,
-  // Divider,
   notification,
   Popover,
   Tabs,
   Avatar,
   Input
 } from 'antd';
-import Modal from 'antd/lib/modal/Modal';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from '../../factorsComponents';
-import ContactDetails from './ContactDetails';
-// import { ReverseProfileMapper } from '../../../utils/constants';
 import FaSelect from '../../FaSelect';
 import { getUserProperties } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from '../MyComponents/PropertyFilter';
@@ -33,14 +29,13 @@ import {
   ALPHANUMSTR,
   DEFAULT_TIMELINE_CONFIG,
   EngagementTag,
-  // formatEventsFromSegment,
   formatFiltersForPayload,
-  // formatPayloadForFilters,
   getPropType,
   iconColors,
   propValueFormat,
   sortStringColumn,
-  sortNumericalColumn
+  sortNumericalColumn,
+  formatReqPayload
 } from '../utils';
 import {
   getProfileUsers,
@@ -50,19 +45,13 @@ import {
   updateSegmentForId
 } from '../../../reducers/timelines/middleware';
 import _ from 'lodash';
-// import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from './SegmentModal';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
-// import EventsBlock from '../MyComponents/EventsBlock';
 import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 import ProfilesWrapper from '../ProfilesWrapper';
-import {
-  // generateSegmentsList,
-  getUserOptions
-  // getUserOptionsForDropdown
-} from './userProfiles.helpers';
+import { getUserOptions } from './userProfiles.helpers';
 import {
   selectActiveSegment,
   selectSegmentModalState,
@@ -78,11 +67,9 @@ import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
 import UpgradeModal from '../UpgradeModal';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
-import { PathUrls } from '../../../routes/pathUrls';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 
 const userOptions = getUserOptions();
-// const userOptionsForDropdown = getUserOptionsForDropdown();
 
 function UserProfiles({
   activeProject,
@@ -122,12 +109,8 @@ function UserProfiles({
   const [listSearchItems, setListSearchItems] = useState([]);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [searchDDOpen, setSearchDDOpen] = useState(false);
-  // const [isUserDDVisible, setUserDDVisible] = useState(false);
-  // const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
-  // const [isModalVisible, setIsModalVisible] = useState(false);
   const [demoProjectId, setDemoProjectId] = useState(null);
   const [loading, setLoading] = useState(true);
-  // const [activeUser, setActiveUser] = useState({});
   const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
@@ -407,24 +390,6 @@ function UserProfiles({
     }));
   };
 
-  // const showModal = () => {
-  //   setIsModalVisible(true);
-  // };
-
-  // const handleCancel = () => {
-  //   setIsModalVisible(false);
-  // };
-
-  // const onChange = (val) => {
-  //   if (val[1] !== timelinePayload.source) {
-  //     const opts = { ...timelinePayload };
-  //     opts.source = val[1];
-  //     opts.segment_id = '';
-  //     setTimelinePayload(opts);
-  //   }
-  //   setUserDDVisible(false);
-  // };
-
   const setFilters = (filters) => {
     const opts = { ...timelinePayload };
     opts.filters = filters;
@@ -445,7 +410,8 @@ function UserProfiles({
     if (payload.source && payload.source !== '') {
       const formatPayload = { ...payload };
       formatPayload.filters = formatFiltersForPayload(payload?.filters) || [];
-      getProfileUsers(activeProject.id, formatPayload, activeAgent);
+      const reqPayload = formatReqPayload(formatPayload, activeSegment);
+      getProfileUsers(activeProject.id, reqPayload, activeAgent);
     }
   };
 
@@ -476,153 +442,6 @@ function UserProfiles({
         });
       });
   };
-
-  // const selectUsers = () => (
-  //   <div className='absolute top-0'>
-  //     {isUserDDVisible ? (
-  //       <FaSelect
-  //         options={userOptionsForDropdown}
-  //         onClickOutside={() => setUserDDVisible(false)}
-  //         optionClick={(val) => onChange(val)}
-  //       />
-  //     ) : null}
-  //   </div>
-  // );
-
-  // const onOptionClick = (_, data) => {
-  //   const opts = { ...timelinePayload };
-  //   opts.segment_id = data[1];
-  //   setActiveSegment(data[2], opts);
-  //   setSegmentDDVisible(false);
-  // };
-
-  // const clearSegment = () => {
-  //   const opts = { ...timelinePayload };
-  //   opts.segment_id = '';
-  //   setActiveSegment({}, opts);
-  //   setSegmentDDVisible(false);
-  // };
-
-  // const renderAdditionalActionsInSegment = () => (
-  //   <div className='mb-2'>
-  //     <Divider className='divider-margin' />
-  //     <div className='flex items-center flex-col'>
-  //       {timelinePayload.segment_id && (
-  //         <Button
-  //           size='large'
-  //           type='text'
-  //           className='w-full mb-2'
-  //           onClick={clearSegment}
-  //           icon={<SVG name='remove' />}
-  //         >
-  //           Clear Segment
-  //         </Button>
-  //       )}
-  //       <Button
-  //         type='link'
-  //         size='large'
-  //         className='w-full'
-  //         icon={<SVG name='plus' color='purple' />}
-  //         onClick={() => setShowSegmentModal(true)}
-  //       >
-  //         Add New Segment
-  //       </Button>
-  //     </div>
-  //   </div>
-  // );
-
-  // const selectSegment = () => (
-  //   <div className='absolute top-8'>
-  //     {isSegmentDDVisible ? (
-  //       <GroupSelect2
-  //         groupedProperties={generateSegmentsList({
-  //           timelinePayload,
-  //           segments
-  //         })}
-  //         placeholder='Search Segments'
-  //         optionClick={onOptionClick}
-  //         onClickOutside={() => setSegmentDDVisible(false)}
-  //         additionalActions={renderAdditionalActionsInSegment()}
-  //       />
-  //     ) : null}
-  //   </div>
-  // );
-
-  // const eventsList = (listEvents) => {
-  //   const blockList = [];
-  //   listEvents.forEach((event, index) => {
-  //     blockList.push(
-  //       <div key={index} className='m-0 mr-2 mb-2'>
-  //         <EventsBlock
-  //           index={index + 1}
-  //           event={event}
-  //           queries={listEvents}
-  //           groupAnalysis={activeSegment?.query?.grpa}
-  //           viewMode
-  //         />
-  //       </div>
-  //     );
-  //   });
-
-  //   return (
-  //     <div className='segment-query_block'>
-  //       {blockList.length ? (
-  //         <h2
-  //           className={`title ${
-  //             activeSegment?.query?.gup?.length ? '' : 'width-unset'
-  //           }`}
-  //         >
-  //           Performed Events
-  //         </h2>
-  //       ) : null}
-  //       <div className='content'>{blockList}</div>
-  //     </div>
-  //   );
-  // };
-
-  // const filtersList = (filters) => {
-  //   return (
-  //     <div className='segment-query_block'>
-  //       <h2
-  //         className={`title ${
-  //           activeSegment?.query?.ewp?.length ? '' : 'width-unset'
-  //         }`}
-  //       >
-  //         With Properties
-  //       </h2>
-  //       <div className='content'>
-  //         <PropertyFilter
-  //           filtersLimit={10}
-  //           profileType='user'
-  //           source={timelinePayload.source}
-  //           filters={filters}
-  //           viewMode
-  //         ></PropertyFilter>
-  //       </div>
-  //     </div>
-  //   );
-  // };
-
-  // const segmentInfo = () => {
-  //   if (!activeSegment.query) return null;
-  //   return (
-  //     <div className='p-3'>
-  //       {activeSegment.query.ewp && activeSegment.query.ewp.length
-  //         ? eventsList(formatEventsFromSegment(activeSegment.query.ewp))
-  //         : null}
-  //       {activeSegment.query.gup && activeSegment.query.gup.length
-  //         ? filtersList(formatPayloadForFilters(activeSegment.query.gup))
-  //         : null}
-  //       {activeSegment.query.ewp && activeSegment.query.ewp.length ? (
-  //         <h2 className='whitespace-no-wrap italic line-height-8 m-0 mr-2'>
-  //           {`*Shows ${
-  //             ReverseProfileMapper[activeSegment.type]?.users
-  //           } from last 28 days.`}
-  //         </h2>
-  //       ) : null}
-  //     </div>
-  //   );
-  // };
 
   const handlePropChange = (option) => {
     if (
@@ -696,47 +515,6 @@ function UserProfiles({
       </Tabs.TabPane>
     </Tabs>
   );
-
-  // const renderUserSelectDD = () => (
-  //   <div className='relative mr-2'>
-  //     <Button
-  //       className='dropdown-btn'
-  //       type='text'
-  //       icon={<SVG name='user_friends' size={16} />}
-  //       onClick={() => setUserDDVisible(!isUserDDVisible)}
-  //     >
-  //       {userOptions?.find(
-  //         (item) => item[1] === timelinePayload?.source
-  //       )?.[0] || 'All Users'}
-  //       <SVG name='caretDown' size={16} />
-  //     </Button>
-  //     {selectUsers()}
-  //   </div>
-  // );
-
-  // const renderSegmentSelect = () => (
-  //   <div className='relative mr-2'>
-  //     <Popover
-  //       overlayClassName='fa-custom-popover'
-  //       placement='bottomLeft'
-  //       trigger={activeSegment.query ? 'hover' : ''}
-  //       content={segmentInfo}
-  //       mouseEnterDelay={0.5}
-  //     >
-  //       <Button
-  //         className='dropdown-btn'
-  //         type='text'
-  //         onClick={() => setSegmentDDVisible(!isSegmentDDVisible)}
-  //       >
-  //         {Object.keys(activeSegment).length
-  //           ? activeSegment.name
-  //           : 'Select Segment'}
-  //         <SVG name='caretDown' size={16} />
-  //       </Button>
-  //     </Popover>
-  //     {selectSegment()}
-  //   </div>
-  // );
 
   const renderPropertyFilter = () => (
     <div key={0} className='max-w-3xl'>
@@ -883,28 +661,13 @@ function UserProfiles({
     </Popover>
   );
 
-  // const renderConfiguration = () => (
-  //   <Button
-  //     size='large'
-  //     icon={<SVG name='configure' size={20} />}
-  //     onClick={() => history.push(PathUrls.ConfigureEngagements)}
-  //   >
-  //     Engagements
-  //   </Button>
-  // );
-
   const renderActions = () => (
     <div className='flex justify-between items-start my-4'>
-      <div className='flex justify-between'>
-        {/* {renderUserSelectDD()}
-        {renderSegmentSelect()} */}
-        {renderPropertyFilter()}
-      </div>
+      <div className='flex justify-between'>{renderPropertyFilter()}</div>
       <div className='inline-flex gap--6'>
         {timelinePayload.filters.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}
-        {/* {renderConfiguration()} */}
       </div>
     </div>
   );
