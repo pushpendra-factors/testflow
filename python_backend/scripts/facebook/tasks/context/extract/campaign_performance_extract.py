@@ -24,7 +24,7 @@ class CampaignPerformanceReportExtract(BaseExtractContext):
     METRICS_2 = ["video_p50_watched_actions", "video_p25_watched_actions", "video_30_sec_watched_actions",
                "video_p100_watched_actions", "video_p75_watched_actions", "actions", "action_values"]
     LEVEL_BREAKDOWN = "campaign"
-    UNFORMATTED_URL = 'https://graph.facebook.com/v15.0/{}/insights?' \
+    UNFORMATTED_URL = 'https://graph.facebook.com/v17.0/{}/insights?' \
                     'time_range={}&&fields={}&&access_token={}&&level={' \
                     '}&&filtering=[{{\'field\':\'impressions\',\'operator\':\'GREATER_THAN\',\'value\':0}}]&&limit=1000'
 
