@@ -38,3 +38,4 @@ PRODUCTION = "production"
 
 ENABLED = "ENABLED"
 PAUSED = "PAUSED"
+EMPTY_RESPONSE_GSC = "search_console: response:"

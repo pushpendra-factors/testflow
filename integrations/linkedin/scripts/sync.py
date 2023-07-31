@@ -221,10 +221,10 @@ if __name__ == '__main__':
         for setting in split_linkedin_settings:
             sync_info_with_type = {}
             sync_info_with_type, err = data_service.get_last_sync_info(
-                setting, start_timestamp)
+                                    setting, start_timestamp, end_timestamp)
             if err != '':
                 response['status'] = 'failed'
-                response['errMsg'] = 'Failed to get last sync info'
+                response['errMsg'] = err
             else:
                 response = get_collections(options, setting, sync_info_with_type, end_timestamp, options.backfill_project_ids)
 
