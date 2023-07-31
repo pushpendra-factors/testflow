@@ -180,6 +180,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	logCtx := log.WithFields(logFields)
 
 	var rt string
+	var fscore float32
 	var result model.PerAccountScore
 	countsMapDays := make(map[string]model.LatestScore)
 	scoreOnDays := make(map[string]float32)
@@ -209,25 +210,32 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 		logCtx.WithError(err).Error("Failed to unmarshall json counts for users per day")
 	}
 
+	fscore = 0
 	for day, countsPerday := range countsMapDays {
-		accountScore, err := ComputeAccountScoreOnLastEvent(*weights, countsPerday.EventsCount)
+		countsInInt := make(map[string]int64)
+		for eventKey, eventCount := range countsPerday.EventsCount {
+			countsInInt[eventKey] = int64(eventCount)
+		}
+
+		accountScore, _, decay, err := ComputeAccountScore(*weights, countsInInt, day)
 		if err != nil {
 			return model.PerAccountScore{}, nil, err
 		}
-
 		if day != model.LAST_EVENT {
 			var t model.PerAccountScore
-			t.Score = float32(accountScore)
+			fscore += float32(accountScore)
+			t.Score = fscore
 			t.Timestamp = day
 			unixDay := model.GetDateFromString(day)
 			if unixDay >= prevDateTotrend {
-				scoreOnDays[day] = float32(accountScore)
+				scoreOnDays[day] = fscore
 				if debug {
 					t.Debug = make(map[string]interface{})
 					t.Debug["counts"] = make(map[string]int64, 0)
-					t.Debug["counts"] = countsPerday
+					t.Debug["counts"] = countsInInt
 					t.Debug["date"] = day
 					t.Debug["score"] = accountScore
+					t.Debug["decay"] = decay
 				}
 			}
 			resultmap[day] = t
@@ -241,7 +249,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	result.Id = userId
 	result.Trend = make(map[string]float32)
 	result.Trend = scoreOnDays
-	result.Score = scoreOnDays[timestamp]
+	result.Score = fscore
 	result.Timestamp = timestamp
 	return result, weights, nil
 
@@ -368,6 +376,8 @@ func ComputeAccountScore(weights model.AccWeights, eventsCount map[string]int64,
 	var eventsCountMap map[string]int64 = make(map[string]int64)
 	weightValue := weights.WeightConfig
 	saleWindow := weights.SaleWindow
+	decay_value := model.ComputeDecayValue(ts, saleWindow)
+
 	for _, w := range weightValue {
 		if ew, ok := eventsCount[w.WeightId]; ok {
 			accountScore += float32(ew) * w.Weight_value
@@ -375,8 +385,7 @@ func ComputeAccountScore(weights model.AccWeights, eventsCount map[string]int64,
 		}
 	}
 
-	decay_value := model.ComputeDecayValue(ts, saleWindow)
-	account_score_after_decay := (accountScore - accountScore*float32(decay_value))
+	account_score_after_decay := accountScore * float32(decay_value)
 	return account_score_after_decay, eventsCountMap, decay_value, nil
 }
 

@@ -294,8 +294,8 @@ func IsBetterPhone(str string, str1 string) bool {
 	return len(str1) > len(str)
 }
 
-func IsPersonalEmail(str string) bool {
-	str = strings.ToLower(str)
+func IsPersonalEmail(email string) bool {
+	email = strings.ToLower(email)
 	personalDomains := []string{
 		"gmail.com",
 		"yahoo.com",
@@ -315,8 +315,20 @@ func IsPersonalEmail(str string) bool {
 		"msn.com",
 		"ymail.com",
 	}
-	for _, domain := range personalDomains {
-		if strings.Contains(str, domain) {
+
+	// Get domain from email. Todo: Move to util.
+	emailSplit := strings.Split(email, "@")
+	if len(emailSplit) < 2 {
+		return false
+	}
+	emailDomain := emailSplit[1]
+	if emailDomain == "" {
+		return false
+	}
+	emailDomain = strings.TrimSpace(emailDomain)
+
+	for _, personalDomain := range personalDomains {
+		if emailDomain == personalDomain {
 			return true
 		}
 	}

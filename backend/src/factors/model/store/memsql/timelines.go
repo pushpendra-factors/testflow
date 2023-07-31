@@ -83,8 +83,13 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	// transforming datetime filters
 	groupedFilters := GroupFiltersByPrefix(payload.Query.GlobalUserProperties)
-	isAllUserProperties := profileType == model.PROFILE_TYPE_ACCOUNT && payload.Query.Source == "All" && (len(groupedFilters[model.FILTER_TYPE_USERS]) == len(payload.Query.GlobalUserProperties))
 	groupedFilters[model.FILTER_TYPE_USERS] = append(groupedFilters[model.FILTER_TYPE_USERS], payload.SearchFilter...)
+
+	// to check whether the filter in account profiles is of user properties
+	isUserProperty := hasUserProperty(profileType, payload.Query.GlobalUserProperties)
+
+	// to check whether the all filters in account profiles is of user properties
+	isAllUserProperties := hasAllUserProperties(payload.Query.GlobalUserProperties, profileType)
 
 	for group, filterArray := range groupedFilters {
 		for index := range filterArray {
@@ -100,7 +105,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	params = append(params, projectID)
 
 	isGroupUserStmt := getGroupUserStatement(profileType, payload.Query.Source)
-	sourceStmt, sourceID, err := store.GetSourceStmtWithParams(projectID, profileType, payload.Query.Source)
+	sourceStmt, sourceID, err := store.GetSourceStmtWithParams(projectID, profileType, payload.Query.Source, isAllUserProperties)
 	if err != nil {
 		return nil, http.StatusBadRequest, err.Error()
 	}
@@ -108,9 +113,6 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		params = append(params, sourceID)
 	}
 	minMaxQParams = append(minMaxQParams, params...)
-
-	// to check whether the filter in account profiles is of user properties
-	isUserProperty := hasUserProperty(profileType, payload.Query.GlobalUserProperties)
 
 	var whereStmt string
 	if isUserProperty {
@@ -146,11 +148,12 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	// Get merged properties for all accounts
 	if profileType == model.PROFILE_TYPE_ACCOUNT && C.IsDomainEnabled(projectID) && payload.Query.Source == "All" {
+		tablePropsHasUserProp := tablePropsHasUserProperty(payload.Query.TableProps)
 		if isAllUserProperties {
 			userDomains, _ := store.GetUsersAssociatedToDomain(projectID, minMax, groupedFilters)
 			profiles = appendProfiles(profiles, userDomains)
 		}
-		profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles)
+		profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles, tablePropsHasUserProp)
 		if statusCode != http.StatusOK {
 			return nil, statusCode, "Query Transformation Failed."
 		}
@@ -196,13 +199,13 @@ func getGroupUserStatement(profileType, source string) string {
 }
 
 // getGroupUserStatement generates a where statement for source of the user/account. returns a statement with source value.
-func (store *MemSQL) GetSourceStmtWithParams(projectID int64, profileType, source string) (string, int, error) {
+func (store *MemSQL) GetSourceStmtWithParams(projectID int64, profileType, source string, hasAllUserProperties bool) (string, int, error) {
 	sourceStmt := ""
 	sourceID := 0
 	status := http.StatusOK
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
 		if C.IsDomainEnabled(projectID) {
-			sourceStmt, sourceID, status = store.GetSourceStringForAccountsV2(projectID, source)
+			sourceStmt, sourceID, status = store.GetSourceStringForAccountsV2(projectID, source, hasAllUserProperties)
 		} else {
 			sourceStmt, status = store.GetSourceStringForAccountsV1(projectID, source)
 		}
@@ -453,6 +456,23 @@ func (store *MemSQL) GetTablePropsFromConfig(projectID int64, profileType string
 	return nil
 }
 
+// hasAllUserProperties checks for all user properties in filters.
+func hasAllUserProperties(filters []model.QueryProperty, profileType string) bool {
+	isAllUserProperties := true
+
+	if profileType == model.PROFILE_TYPE_ACCOUNT {
+		for _, filter := range filters {
+			if filter.Entity != model.PropertyEntityUserGroup {
+				isAllUserProperties = false
+				break
+			}
+		}
+	}
+	return isAllUserProperties
+}
+
+// Function to merge unique profiles
+
 func appendProfiles(profiles, userDomainProfiles []model.Profile) []model.Profile {
 	for _, userProfile := range userDomainProfiles {
 		exists := false
@@ -588,7 +608,7 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, minMax *model.M
 	return userProfiles, http.StatusOK
 }
 
-func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int) {
+func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, hasUserProp bool) ([]model.Profile, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -611,13 +631,18 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 		domainIDs[i] = profile.Identity
 	}
 
+	isGroupUserString := "is_group_user=1 AND"
+	if hasUserProp {
+		isGroupUserString = ""
+	}
+
 	// Fetching accounts associated to the domain
 	// SELECT group_6_user_id as identity, properties FROM `users`  WHERE (project_id='15000001' AND source!='9' AND
 	// is_group_user=1 AND group_6_user_id IN ('4f88f40d-c571-4bee-b456-298c533d7ef9', 'ed68f40d-c571-4bee-b456-298c533d7ef9'));
 	var accountGroupDetails []model.Profile
 	db := C.GetServices().Db
 	err := db.Table("users").Select(fmt.Sprintf("group_%d_user_id as identity, properties", domainGroup.ID)).
-		Where("project_id=? AND source!=? AND "+fmt.Sprintf("group_%d_user_id", domainGroup.ID)+" IN (?)",
+		Where(fmt.Sprintf("project_id=? AND source!=? AND %s group_%d_user_id", isGroupUserString, domainGroup.ID)+" IN (?)",
 			projectID, model.UserSourceDomains, domainIDs).Find(&accountGroupDetails).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get accounts associated to domains.")
@@ -650,9 +675,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	}
 	return profiles, http.StatusOK
 }
-
-// GetSourceStringForAccountsV2 generates source string for Accounts with domain enabled flow
-func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string) (string, int, int) {
+func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, int) {
 	var sourceString string
 	groupName := source
 	if source == "All" {
@@ -665,7 +688,12 @@ func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string
 	}
 
 	if source == "All" {
-		sourceString = fmt.Sprintf("AND users.source!=? AND (users.group_%d_id IS NOT NULL OR (users.customer_user_id IS NOT NULL AND users.group_%d_user_id IS NOT NULL))", group.ID, group.ID)
+		sourceString = "AND users.source!=?"
+		if isAllUserProperties {
+			sourceString = sourceString + " " + fmt.Sprintf("AND (users.group_%d_id IS NOT NULL OR (users.customer_user_id IS NOT NULL AND users.group_%d_user_id IS NOT NULL))", group.ID, group.ID)
+		} else {
+			sourceString = sourceString + " " + fmt.Sprintf("AND users.group_%d_id IS NOT NULL", group.ID)
+		}
 	} else {
 		if model.IsAllowedAccountGroupNames(source) && source == group.Name {
 			sourceString = fmt.Sprintf("AND users.source!=? AND users.group_%d_id IS NOT NULL", group.ID)
@@ -1240,11 +1268,13 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		accountDetails.AccountTimeline = append(accountDetails.AccountTimeline, intentTimeline)
 	}
 
-	overview, err := store.GetAccountOverview(projectID, id, groupName)
-	if err != nil {
-		log.WithFields(logFields).WithError(err)
-	} else {
-		accountDetails.Overview = overview
+	if C.IsScoringEnabled(projectID) {
+		overview, err := store.GetAccountOverview(projectID, id, groupName)
+		if err != nil {
+			log.WithFields(logFields).WithError(err)
+		} else {
+			accountDetails.Overview = overview
+		}
 	}
 
 	return &accountDetails, http.StatusFound, ""
@@ -1309,7 +1339,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	}
 
 	// Get Account Engagement Score and Trends
-	accountScore, _, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, true)
+	accountScore, _, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, false)
 	if errGetScore != nil {
 		log.WithFields(logFields).WithError(errGetScore).Error("Error retrieving account score")
 	} else {
@@ -1685,17 +1715,10 @@ func FormatAnalyzeResultForProfiles(result *model.QueryResult, profileType strin
 
 func GroupFiltersByPrefix(filters []model.QueryProperty) map[string][]model.QueryProperty {
 	filtersMap := make(map[string][]model.QueryProperty)
-	filterPrefixList := []string{
-		U.GROUP_NAME_HUBSPOT_COMPANY,
-		U.GROUP_NAME_SALESFORCE_ACCOUNT,
-		U.GROUP_NAME_SIX_SIGNAL,
-		U.LI_PROPERTIES_PREFIX,
-		U.GROUP_NAME_G2,
-	}
 
 	for _, filter := range filters {
 		var groupName string
-		for _, prefix := range filterPrefixList {
+		for _, prefix := range model.GroupPropertyPrefixList {
 			if strings.Contains(strings.ToLower(filter.Property), prefix) {
 				groupName = prefix
 				break
@@ -1712,4 +1735,23 @@ func GroupFiltersByPrefix(filters []model.QueryProperty) map[string][]model.Quer
 	}
 
 	return filtersMap
+}
+
+func tablePropsHasUserProperty(props []string) bool {
+	for _, prop := range props {
+		if !hasPrefixFromList(prop, model.GroupPropertyPrefixList) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasPrefixFromList(s string, prefixes []string) bool {
+	lowerS := strings.ToLower(s)
+	for _, prefix := range prefixes {
+		if strings.Contains(lowerS, prefix) {
+			return true
+		}
+	}
+	return false
 }

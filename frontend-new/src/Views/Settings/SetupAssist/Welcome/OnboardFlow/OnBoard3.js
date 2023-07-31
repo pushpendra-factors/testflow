@@ -17,6 +17,8 @@ import {
 import styles from './index.module.scss';
 import factorsai from 'factorsai';
 import { sendSlackNotification } from 'Utils/slack';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
 
 const HorizontalCard = ({
   title,
@@ -85,9 +87,10 @@ const OnBoard3 = ({
     (state) => state?.global?.currentProjectSettings
   );
   const history = useHistory();
+  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
+    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
   const {
     int_client_six_signal_key,
-    int_factors_six_signal_key,
     int_clear_bit,
     is_deanonymization_requested
   } = useSelector((state) => state?.global?.currentProjectSettings);
@@ -108,7 +111,7 @@ const OnBoard3 = ({
         int_client_six_signal_key ||
         is_deanonymization_requested ||
         int_clear_bit ||
-        int_factors_six_signal_key
+        isFactorsDeanonymizationConnected
       );
     }
     return false;

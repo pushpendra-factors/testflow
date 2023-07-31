@@ -79,6 +79,8 @@ const SixSignalReport = ({
   const { isFeatureConnected: isSixSenseConnected } = useFeatureLock(
     FEATURES.INT_SIX_SIGNAL
   );
+  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
+    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
 
   const routerQuery = useQuery();
   const history = useHistory();
@@ -89,13 +91,11 @@ const SixSignalReport = ({
     ? state.reportData.data?.is_shareable && isLoggedIn
     : false;
 
-  const isSixSignalActivated = currentProjectSettings
-    ? !currentProjectSettings?.int_factors_six_signal_key &&
-      !currentProjectSettings?.int_client_six_signal_key
-      ? false
-      : true
-    : true;
-
+  const isSixSignalActivated =
+    isFactorsDeanonymizationConnected ||
+    currentProjectSettings?.int_client_six_signal_key
+      ? true
+      : false;
   const showDrawer = () => {
     localDispatch({
       type: VisitorReportActions.SET_DRAWER_VISIBILITY,
