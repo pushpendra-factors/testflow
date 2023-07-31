@@ -168,6 +168,7 @@ function EngagementConfig({ fetchProjectSettings }) {
     const updatedWeightConfig = [...weightsConfig];
 
     updatedWeightConfig[index].is_deleted = true;
+    
     updateAccountScores(activeProject.id, {
       WeightConfig: updatedWeightConfig,
       salewindow: parseInt(saleWindowValue)

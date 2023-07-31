@@ -26,7 +26,13 @@ export class Integration_Checks {
   segment = undefined;
 
   // Integration = current prokect Settings Object
-  constructor(sdk, integration, bingAds, marketo) {
+  constructor(
+    sdk,
+    integration,
+    bingAds,
+    marketo,
+    isFactorsDeanonymizationConnected
+  ) {
     this.website_sdk = sdk;
     // Now Checking Other Integrations
     this.adwords = !!integration.int_adwords_enabled_agent_uuid;
@@ -40,7 +46,7 @@ export class Integration_Checks {
     this.marketo = marketo.status;
     this['6signal'] =
       integration?.int_client_six_signal_key ||
-      integration?.int_factors_six_signal_key;
+      isFactorsDeanonymizationConnected;
     // Other Integrations
     this.segment = integration.int_segment;
   }

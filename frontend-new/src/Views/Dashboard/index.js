@@ -25,6 +25,8 @@ import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 import DashboardBeforeIntegration from './DashboardBeforeIntegration';
 import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
 import Drafts from './Drafts';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -56,7 +58,7 @@ function Dashboard({
   const areDraftsSelected = useSelector((state) =>
     selectAreDraftsSelected(state)
   );
-  
+
   const integration = useSelector(
     (state) => state.global.currentProjectSettings
   );
@@ -65,6 +67,9 @@ function Dashboard({
   const activeProject = useSelector((state) => state.global.active_project);
   const { bingAds, marketo } = useSelector((state) => state.global);
   const dispatch = useDispatch();
+
+  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
+    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject?.id)
@@ -99,7 +104,7 @@ function Dashboard({
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
     integration?.int_client_six_signal_key ||
-    integration?.int_factors_six_signal_key ||
+    isFactorsDeanonymizationConnected ||
     integration?.int_rudderstack;
 
   const handleEditClick = useCallback((dashboard) => {

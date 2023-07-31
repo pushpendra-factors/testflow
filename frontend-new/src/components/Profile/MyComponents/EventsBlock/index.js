@@ -14,6 +14,7 @@ import { compareFilters, groupFilters } from 'Utils/global';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import { OPERATORS } from 'Utils/constants';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 const ENGAGEMENT_SUPPORTED_OPERATORS = [
   OPERATORS['equalTo'],
@@ -71,7 +72,11 @@ function EventsBlock({
 
     if (groupAnalysis === 'users') {
       const groupNamesList = availableGroups?.map((item) => item[0]);
-      showOpts = [...eventOptions?.filter((item) => !groupNamesList?.includes(item?.label))];
+      showOpts = [
+        ...eventOptions?.filter(
+          (item) => !groupNamesList?.includes(item?.label)
+        )
+      ];
     } else {
       const [label] =
         availableGroups?.find((group) => group[1] === groupAnalysis) || [];
@@ -84,7 +89,7 @@ function EventsBlock({
     }
     showOpts = showOpts?.map((opt) => {
       return {
-        iconName: opt?.icon,
+        iconName: getGroupIcon(opt?.icon),
         label: opt?.label,
         values: opt?.values?.map((op) => {
           return { value: op[1], label: op[0] };

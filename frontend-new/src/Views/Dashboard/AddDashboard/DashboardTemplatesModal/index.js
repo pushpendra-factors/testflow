@@ -55,6 +55,8 @@ import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
 import { DASHBOARD_KEYS } from './../../../../constants/localStorage.constants';
 import TemplateThumbnailImage from './TemplateThumbnailImage';
 import { PathUrls } from 'Routes/pathUrls';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
 
 const CATEGORY_SELECTED_STYLES = {
   background: '#f5f6f8',
@@ -322,13 +324,16 @@ let Step2DashboardTemplateModal = ({
       }, 500);
     }
   }, [copiedState]);
+  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
+    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
   // Below useEffect gets called everytime template in Step 2 gets changed
   useEffect(() => {
     integrationChecks = new Integration_Checks(
       sdkCheck,
       integration,
       bingAds,
-      marketo
+      marketo,
+      isFactorsDeanonymizationConnected
     );
     // let keyname = template.title.toLowerCase().replace(/\s/g, '');
     let integrationResults = integrationChecks.checkRequirements(

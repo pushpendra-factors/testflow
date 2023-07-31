@@ -8,6 +8,8 @@ import OnBoard1 from './OnBoard1';
 import OnBoard2 from './OnBoard2';
 import OnBoard3 from './OnBoard3';
 import OnBoardHeader from './OnBoardHeader';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
 
 const OnBoard = () => {
   const location = useLocation();
@@ -16,7 +18,6 @@ const OnBoard = () => {
   const { step } = useParams();
   const {
     int_client_six_signal_key,
-    int_factors_six_signal_key,
     int_clear_bit,
     is_deanonymization_requested
   } = useSelector((state) => state?.global?.currentProjectSettings);
@@ -25,6 +26,8 @@ const OnBoard = () => {
   );
   const { isWebsiteVisitorIdentificationVisible, currentStep, steps } =
     useSelector((state) => state.onBoardFlow);
+  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
+    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
   const checkIsValid = (step) => {
     if (step == 1) {
       return int_completed;
@@ -33,7 +36,7 @@ const OnBoard = () => {
         int_client_six_signal_key ||
         is_deanonymization_requested ||
         int_clear_bit ||
-        int_factors_six_signal_key
+        isFactorsDeanonymizationConnected
       );
     } else if (step == 3) {
       return steps.step3;
