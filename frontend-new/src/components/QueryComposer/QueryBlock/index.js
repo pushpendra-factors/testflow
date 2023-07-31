@@ -58,35 +58,49 @@ function QueryBlock({
       return [...eventOpts];
     } else if (activeGroup === 'users') {
       const groupNamesList = availableGroups?.map((item) => item[0]);
-      return eventOpts?.filter((item) => !groupNamesList?.includes(item?.label));
+      return eventOpts?.filter(
+        (item) => !groupNamesList?.includes(item?.label)
+      );
     } else {
-      const groupDisplayName = availableGroups?.find((group) => group[1] === activeGroup)?.[0];
-      const groupOpts = eventOpts?.filter((item) => item.label === groupDisplayName);
+      const groupDisplayName = availableGroups?.find(
+        (group) => group[1] === activeGroup
+      )?.[0];
+      const groupOpts = eventOpts?.filter(
+        (item) => item.label === groupDisplayName
+      );
       const groupNamesList = availableGroups?.map((item) => item[0]);
-      const userOpts = eventOpts?.filter((item) => !groupNamesList?.includes(item?.label));
+      const userOpts = eventOpts?.filter(
+        (item) => !groupNamesList?.includes(item?.label)
+      );
       return groupOpts.concat(userOpts);
     }
   };
-  
+
   const mapOptionsToGroupSelectItem = (opts) => {
     return opts?.map((opt) => ({
       iconName: getGroupIcon(opt?.icon),
       label: opt.label,
-      values: opt.values.map((op) => ({ value: op[1], label: op[0] })),
+      values: opt.values.map((op) => ({ value: op[1], label: op[0] }))
     }));
   };
-  
+
   const moveMostRecentToTop = (opts) => {
-    const mostRecentGroupindex = opts.findIndex((opt) => opt.label === 'Most Recent');
+    const mostRecentGroupindex = opts.findIndex(
+      (opt) => opt.label === 'Most Recent'
+    );
     if (mostRecentGroupindex > 0) {
       const mostRecentGroup = opts[mostRecentGroupindex];
       opts.splice(mostRecentGroupindex, 1);
       opts.unshift(mostRecentGroup);
     }
   };
-  
+
   const showGroups = useMemo(() => {
-    const groupOpts = getGroupOpts(eventOptions, availableGroups, groupAnalysis);
+    const groupOpts = getGroupOpts(
+      eventOptions,
+      availableGroups,
+      groupAnalysis
+    );
     const mappedOptions = mapOptionsToGroupSelectItem(groupOpts);
     moveMostRecentToTop(mappedOptions);
     return mappedOptions;
@@ -558,10 +572,10 @@ function QueryBlock({
               <Button
                 icon={
                   <SVG
-                    name={getGroupIcon(
+                    name={
                       showGroups.find((group) => group.label === event.group)
                         ?.iconName
-                    )}
+                    }
                     size={20}
                   />
                 }
