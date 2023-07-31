@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"factors/model/model"
 	M "factors/model/model"
 	mm "factors/model/store/memsql"
 	P "factors/pattern"
@@ -391,4 +392,23 @@ func TestAccScoreDecayValue(t *testing.T) {
 	log.Debugf("%v", vals)
 	assert.Greater(t, a1, a2)
 	assert.Greater(t, a1, a12)
+}
+
+func TestOrderingOfDays(t *testing.T) {
+
+	countDays := make(map[string]model.LatestScore)
+	currentTimestamp := time.Now()
+	for i := 10; i > 0; i-- {
+		cts := T.GetDateOnlyFromTimestamp(currentTimestamp.AddDate(0, 0, -1*i).Unix())
+		log.Debugf("cts : %s", cts)
+		countDays[cts] = model.LatestScore{}
+	}
+
+	orderedDays := mm.OrderCountDays(countDays)
+	dd := make([]int64, 0)
+	for _, d := range orderedDays {
+		dd = append(dd, model.GetDateFromString(d))
+	}
+	assert.IsIncreasing(t, dd)
+
 }
