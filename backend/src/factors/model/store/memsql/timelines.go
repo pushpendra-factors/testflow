@@ -590,7 +590,11 @@ func SelectFilterAndHavingStringsForAccounts(filtersMap map[string][]model.Query
 			}
 			filterStr := fmt.Sprintf("MAX(JSON_EXTRACT_STRING(properties, '%s')) as filter_key_%d", filter.Property, index)
 			filterArray = append(filterArray, filterStr)
-			havingArray = append(havingArray, fmt.Sprintf("filter_key_%d IS NOT NULL", index))
+			if filter.Value == model.PropertyValueNone {
+				havingArray = append(havingArray, fmt.Sprintf("(filter_key_%d IS NULL OR filter_key_%d='')", index, index))
+			} else {
+				havingArray = append(havingArray, fmt.Sprintf("filter_key_%d IS NOT NULL", index))
+			}
 			index += 1
 			propMap[filter.Property] = true
 		}
