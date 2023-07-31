@@ -8,6 +8,7 @@ import (
 	"factors/model/model"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -216,8 +217,11 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 		logCtx.WithError(err).Error("Failed to unmarshall json counts for users per day")
 	}
 
+	orderedDayString := OrderCountDays(countsMapDays)
 	fscore = 0
-	for day, countsPerday := range countsMapDays {
+	for _, dayString := range orderedDayString {
+		day := dayString
+		countsPerday := countsMapDays[dayString]
 		countsInInt := make(map[string]int64)
 		for eventKey, eventCount := range countsPerday.EventsCount {
 			countsInInt[eventKey] = int64(eventCount)
@@ -258,6 +262,28 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	result.Score = fscore
 	result.Timestamp = timestamp
 	return result, weights, nil
+
+}
+
+func OrderCountDays(countDays map[string]model.LatestScore) []string {
+
+	var orderedDays []string = make([]string, len(countDays))
+	dayUnix := make([]int64, len(countDays))
+	daymap := make(map[int64]string, 0)
+
+	idx := 0
+	for dayString, _ := range countDays {
+		d := model.GetDateFromString(dayString)
+		dayUnix[idx] = d
+		idx += 1
+		daymap[d] = dayString
+	}
+	sort.Slice(dayUnix, func(i, j int) bool { return dayUnix[i] < dayUnix[j] })
+	for idx, ts := range dayUnix {
+		orderedDays[idx] = daymap[ts]
+	}
+
+	return orderedDays
 
 }
 
