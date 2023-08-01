@@ -51,8 +51,6 @@ import usePrevious from 'hooks/usePrevious';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { FeatureConfigState } from 'Reducers/featureConfig/types';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
-import useFeatureLock from 'hooks/useFeatureLock';
-import { FEATURES } from 'Constants/plans.constants';
 
 const SixSignalReport = ({
   setShowAnalyticsResult
@@ -73,14 +71,6 @@ const SixSignalReport = ({
   const { sixSignalInfo } = useSelector(
     (state: any) => state.featureConfig
   ) as FeatureConfigState;
-  const { isFeatureConnected: isClearBitConnected } = useFeatureLock(
-    FEATURES.INT_CLEARBIT
-  );
-  const { isFeatureConnected: isSixSenseConnected } = useFeatureLock(
-    FEATURES.INT_SIX_SIGNAL
-  );
-  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
-    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
 
   const routerQuery = useQuery();
   const history = useHistory();
@@ -91,11 +81,13 @@ const SixSignalReport = ({
     ? state.reportData.data?.is_shareable && isLoggedIn
     : false;
 
-  const isSixSignalActivated =
-    isFactorsDeanonymizationConnected ||
-    currentProjectSettings?.int_client_six_signal_key
-      ? true
-      : false;
+  const isSixSignalActivated = currentProjectSettings
+    ? !currentProjectSettings?.int_factors_six_signal_key &&
+      !currentProjectSettings?.int_client_six_signal_key
+      ? false
+      : true
+    : true;
+
   const showDrawer = () => {
     localDispatch({
       type: VisitorReportActions.SET_DRAWER_VISIBILITY,
@@ -480,7 +472,7 @@ const SixSignalReport = ({
       {showUpgradeNudge(
         sixSignalInfo?.usage || 0,
         sixSignalInfo?.limit || 0,
-        !(isClearBitConnected || isSixSenseConnected)
+        currentProjectSettings
       ) && (
         <div className='mb-4'>
           <RangeNudge

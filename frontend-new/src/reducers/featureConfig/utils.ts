@@ -5,19 +5,17 @@ export const getFeatureStatusInfo = (
   featureName: typeof FEATURES[keyof typeof FEATURES],
   planFeatures?: FeatureConfig[],
   addons?: FeatureConfig[]
-): { isFeatureLocked: boolean; isFeatureConnected: boolean } => {
+): { isFeatureLocked: boolean } => {
   const activeFeatures = getAllActiveFeatures(planFeatures, addons);
   const feature = activeFeatures.find(
     (feature) => feature.name === featureName
   );
   if (!feature) {
     return {
-      isFeatureLocked: true,
-      isFeatureConnected: false
+      isFeatureLocked: true
     };
   }
   return {
-    isFeatureConnected: feature?.is_connected ? true : false,
     isFeatureLocked: feature?.is_enabled_feature ? false : true
   };
 };

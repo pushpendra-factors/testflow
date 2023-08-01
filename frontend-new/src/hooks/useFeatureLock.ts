@@ -8,7 +8,6 @@ const useFeatureLock = (
 ): {
   isFeatureLocked: boolean;
   isLoading: boolean;
-  isFeatureConnected: boolean;
 } => {
   const featureConfig = useSelector(
     //@ts-ignore
@@ -17,8 +16,7 @@ const useFeatureLock = (
   if (featureConfig.loading) {
     return {
       isLoading: true,
-      isFeatureLocked: false,
-      isFeatureConnected: false
+      isFeatureLocked: false
     };
   }
   const featureStatus = getFeatureStatusInfo(
@@ -29,8 +27,7 @@ const useFeatureLock = (
 
   return {
     isLoading: false,
-    isFeatureLocked: featureStatus.isFeatureLocked,
-    isFeatureConnected: featureStatus.isFeatureConnected
+    isFeatureLocked: featureStatus.isFeatureLocked
   };
 };
 

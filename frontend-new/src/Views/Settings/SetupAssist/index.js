@@ -18,8 +18,6 @@ import setupAssistData from '../../../assets/lottie/Final Jan 3 Setupassist.json
 import styles from './index.module.scss';
 import { meetLink } from '../../../utils/hubspot';
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import useFeatureLock from 'hooks/useFeatureLock';
-import { FEATURES } from 'Constants/plans.constants';
 
 function SetupAssist({
   currentAgent,
@@ -40,8 +38,6 @@ function SetupAssist({
   const history = useHistory();
   const location = useLocation();
   const [isBackBtn, setIsBackButton] = useState(false);
-  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
-    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
   useEffect(() => {
     let searchParams = new URLSearchParams(location.search, {
       get: (searchParams, prop) => searchParams.get(prop)
@@ -94,7 +90,7 @@ function SetupAssist({
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
     integration?.int_client_six_signal_key ||
-    isFactorsDeanonymizationConnected ||
+    integration?.int_factors_six_signal_key ||
     integration?.int_rudderstack;
 
   return (

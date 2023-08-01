@@ -16,8 +16,6 @@ import {
 import logger from 'Utils/logger';
 import styles from './index.module.scss';
 import { udpateProjectSettings } from 'Reducers/global';
-import useFeatureLock from 'hooks/useFeatureLock';
-import { FEATURES } from 'Constants/plans.constants';
 const RenderLogo = () => (
   <Button size='large' type='text' icon={<SVG size={32} name='Brand' />} />
 );
@@ -82,11 +80,10 @@ const AdditionalMenu = ({
   }, []);
   const {
     int_client_six_signal_key,
+    int_factors_six_signal_key,
     int_clear_bit,
     is_deanonymization_requested
   } = useSelector((state) => state?.global?.currentProjectSettings);
-  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
-    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
 
   const activeProject = useSelector((state) => state?.global?.active_project);
   const { steps, currentStep } = useSelector((state) => state?.onBoardFlow);
@@ -97,7 +94,7 @@ const AdditionalMenu = ({
       return (
         int_client_six_signal_key ||
         is_deanonymization_requested ||
-        isFactorsDeanonymizationConnected ||
+        int_factors_six_signal_key ||
         int_clear_bit
       );
     } else if (currentStep === 3) {
