@@ -97,8 +97,8 @@ class DataFetch:
             # retry in case of failed ids
             failed_ids_for_batch = U.get_failed_ids(ids, map_id_to_org_data)
             if failed_ids_for_batch != "":
-                response = U.org_lookup(access_token, failed_ids_for_batch)
-                request_counter += 1
+                response, req_count = U.org_lookup(access_token, failed_ids_for_batch)
+                request_counter += req_count
                 if 'results' in response.json() and len(response.json()['results']) > 0:
                     map_id_to_org_data.update(response.json()['results'])
 
