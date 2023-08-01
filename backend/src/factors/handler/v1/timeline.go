@@ -42,15 +42,18 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 	}
 
 	var payload model.TimelinePayload
+
+	decoder := json.NewDecoder(req.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&payload)
+
 	logCtx = log.WithFields(log.Fields{
 		"projectId": projectId,
 		"payload":   payload,
 	})
-	decoder := json.NewDecoder(req.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&payload); err != nil {
+	if err != nil {
 		logCtx.Error("Json decode failed.")
-		message := fmt.Sprintf("Query failed. Invalid user source provided : %s", payload.Source)
+		message := "Query failed. Invalid payload"
 		return nil, http.StatusBadRequest, "", message, true
 	}
 

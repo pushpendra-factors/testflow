@@ -5,13 +5,11 @@ import isArray from 'lodash/isArray';
 
 import {
   QUERY_TYPE_EVENT,
-  QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
-  QUERY_TYPE_KPI,
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
-  CHART_TYPE_BARCHART,
+  CHART_TYPE_BARCHART
 } from 'Utils/constants';
 import { getChartTypeMenuItems } from 'Utils/chart.helpers';
 import { Text, SVG } from 'Components/factorsComponents';
@@ -51,7 +49,6 @@ function ReportContent({
   let content = null;
   let queryDetail = null;
   let durationObj = {};
-  let groupAnalysis = 'all';
   let metricsDropdown = <div className='mr-0' />;
 
   const [attributionTableFilters, setAttributionTableFilters] = useState([]);
@@ -61,8 +58,6 @@ function ReportContent({
   } = useContext(CoreQueryContext);
 
   const { attrQueries } = useSelector((state) => state.coreQuery);
-
-  
 
   const chartType = useMemo(
     () =>
@@ -151,7 +146,7 @@ function ReportContent({
     if (
       attributionsState.models.length === 1 &&
       isArray(attrQueries) &&
-      attrQueries.length > 1 
+      attrQueries.length > 1
     ) {
       metricsDropdown = (
         <CampaignMetricsDropdown
@@ -163,27 +158,22 @@ function ReportContent({
     }
   }
 
-  
-
   if (resultState.data) {
-   
-    
-      content = (
-        <AttributionsResult
-          resultState={resultState}
-          durationObj={durationObj}
-          attributionsState={attributionsState}
-          section={section}
-          currMetricsValue={currMetricsValue}
-          renderedCompRef={renderedCompRef}
-          chartType={chartType}
-          queryOptions={queryOptions}
-          appliedFilters={attributionTableFilters}
-          setAttributionTableFilters={setAttributionTableFilters}
-          v1={true}
-        />
-      );
-
+    content = (
+      <AttributionsResult
+        resultState={resultState}
+        durationObj={durationObj}
+        attributionsState={attributionsState}
+        section={section}
+        currMetricsValue={currMetricsValue}
+        renderedCompRef={renderedCompRef}
+        chartType={chartType}
+        queryOptions={queryOptions}
+        appliedFilters={attributionTableFilters}
+        setAttributionTableFilters={setAttributionTableFilters}
+        v1={true}
+      />
+    );
   }
 
   return (

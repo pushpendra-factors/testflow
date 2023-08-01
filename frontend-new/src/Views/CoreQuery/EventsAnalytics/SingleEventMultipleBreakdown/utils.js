@@ -297,6 +297,7 @@ export const formatDataInStackedAreaFormat = (
     differentDates.add(row[dateIndex]);
   });
   differentDates = Array.from(differentDates);
+  const dateWiseTotals = Array(differentDates.length).fill(0);
   const initializedDatesData = differentDates.map(() => 0);
   const labelsMapper = {};
   const resultantData = aggregateData.map((d, index) => {
@@ -331,11 +332,13 @@ export const formatDataInStackedAreaFormat = (
         addQforQuarter(frequency) + moment(category).format(format)
       ] = row[countIndex];
       resultantData[bIdx].data[idx] = row[countIndex];
+      dateWiseTotals[idx] += row[countIndex];
     }
   });
   return {
     categories: differentDates,
-    data: resultantData
+    data: resultantData,
+    dateWiseTotals
   };
 };
 

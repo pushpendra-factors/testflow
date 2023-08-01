@@ -397,6 +397,7 @@ const (
 	HealthcheckLinkedinGroupUserPingID                = "a8b221cd-6f14-4c9c-8ae7-cd26f585868b"
 	HeathCheckG2ETLPingID                             = "4ccbf168-5175-4e08-84e6-7a6ce58bcb08"
 	HeathCheckG2EnrichmentPingID                      = "3b240e93-e130-4ea6-b698-5d5d0ea0a83f"
+	HealthcheckAccScoringJobPingID                    = "3f93c58e-708c-413e-abc4-0e112ae07260"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
@@ -2969,8 +2970,6 @@ func AllowHubspotDealsv3APIByProjectID(projectID int64) bool {
 
 	return allowedProjectIDs[projectID]
 }
-
-
 
 func AllowDeviceServiceByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDeviceServiceByProjectID, "")

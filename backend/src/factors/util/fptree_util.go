@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func RemoveByindex(s []string, i int) []string {
@@ -92,7 +90,6 @@ func RankByWordFreq(wordFrequencies map[string]int) ([]string, map[string]int) {
 
 	wl := make([]string, len(pl))
 	wlMap := make(map[string]int)
-	log.Infof("pl :%d", len(pl))
 	for _, v := range pl {
 		wl = append(wl, v.Key)
 		wlMap[v.Key] = v.Value
