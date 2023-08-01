@@ -148,6 +148,13 @@ function AppLayout({
     try {
       if (active_project && active_project?.id && isAgentLoggedIn) {
         await fetchProjectSettings(active_project?.id);
+        // if (
+        //   location?.state?.navigatedFromLoginPage &&
+        //   (res?.data?.int_factors_six_signal_key ||
+        //     res?.data?.int_client_six_signal_key)
+        // ) {
+        //   history.push(APP_LAYOUT_ROUTES.VisitorIdentificationReport.path);
+        // }
       }
       setDataLoading(false);
     } catch (error) {

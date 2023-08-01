@@ -702,14 +702,33 @@ func Track(projectId int64, request *TrackPayload,
 	_, countryName := model.FillLocationUserProperties(userProperties, clientIP)
 	pageURLProp := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
-	if C.GetClearbitEnabled() == 1 {
-		FillClearbitUserProperties(projectId, projectSettings, userProperties, request.UserId, clientIP)
+	//Fetching feature flags to check of feature is enabled on the plan.
+	factorsDeanonymisationEnabled, _, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION)
+	if err != nil {
+		logCtx.Error("Failed to fetch factors deanonymisation feature flag")
 	}
-	if C.IsSixSignalV1Enabled(projectId) {
-		FillSixSignalUserPropertiesV1(projectId, projectSettings, userProperties, request.UserId, clientIP, countryName, pageURLProp)
-	} else {
-		FillSixSignalUserProperties(projectId, projectSettings, userProperties, request.UserId, clientIP, countryName, pageURLProp)
+	sixsignalEnabled, _, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_SIX_SIGNAL)
+	if err != nil {
+		logCtx.Error("Failed to fetch client sixsignal feature flag")
 	}
+	clearbitEnabled, _, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_CLEARBIT)
+	if err != nil {
+		logCtx.Warn("Failed to fetch clearbit feature flag")
+	}
+
+	if clearbitEnabled && projectSettings.ClearbitKey != "" && *(projectSettings.IntClearBit) {
+		FillClearbitUserProperties(projectId, projectSettings.ClearbitKey, userProperties, request.UserId, clientIP)
+		logCtx.Info("Enrichment using clearbit")
+	} else if sixsignalEnabled && projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) {
+		FillSixSignalUserProperties(projectId, projectSettings.Client6SignalKey, userProperties, request.UserId, clientIP)
+		logCtx.Info("Enrichment using client sixsignal")
+	} else if factorsDeanonymisationEnabled && *(projectSettings.IntFactorsSixSignalKey) {
+		if isSixsignalQuotaAvailable, _ := CheckingSixSignalQuotaLimit(projectId); isSixsignalQuotaAvailable {
+			FillSixSignalUserPropertiesViaFactors(projectId, projectSettings, userProperties, request.UserId, clientIP, countryName, pageURLProp)
+			logCtx.Info("Enrichment using factors deanonymisation")
+		}
+	}
+
 	if C.EnableSixSignalGroupByProjectID(projectId) {
 		groupProperties := U.FilterPropertiesByKeysByPrefix(userProperties, U.SIX_SIGNAL_PROPERTIES_PREFIX)
 		if groupProperties != nil && len(*groupProperties) > 0 {
@@ -853,200 +872,60 @@ func Track(projectId int64, request *TrackPayload,
 	return http.StatusOK, response
 }
 
-// To be deprecated after new flow is tested.
-func FillSixSignalUserProperties(projectId int64, projectSettings *model.ProjectSetting,
-	userProperties *U.PropertiesMap, UserId, clientIP, countryName, pageURLProp string) {
+func FillSixSignalUserProperties(projectId int64, apiKey string, userProperties *U.PropertiesMap,
+	UserId, clientIP string) {
 
 	logCtx := log.WithField("project_id", projectId)
+	execute6SignalStatusChannel := make(chan int)
+	sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
+	if sixSignalExists {
+		logCtx.Info("6Signal cache hit")
+	} else {
+		go six_signal.ExecuteSixSignalEnrich(projectId, apiKey, userProperties, clientIP, execute6SignalStatusChannel)
+		select {
+		case ok := <-execute6SignalStatusChannel:
+			if ok == 1 {
+				model.SetSixSignalCacheResult(projectId, UserId, clientIP)
+				logCtx.Info("ExecuteSixSignal suceeded in track call")
 
-	// Existing if keys are not present
-	if !((projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true) ||
-		(projectSettings.Factors6SignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true)) {
-		return
-	}
-
-	sixSignalConfig := model.SixSignalConfig{}
-	if projectSettings.SixSignalConfig != nil {
-		err := json.Unmarshal(projectSettings.SixSignalConfig.RawMessage, &sixSignalConfig)
-		if err != nil {
-			logCtx.WithField("six_signal_config", projectSettings.SixSignalConfig).
-				WithError(err).Error("Failed to decode six signal property")
-		}
-		// Todo (Anil): extract api limit and use it
-	}
-
-	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, countryName, pageURLProp)
-
-	if shouldEnrichUsingSixSignal == false {
-
-		if projectId == 2251799844000008 {
-			logCtx.WithFields(log.Fields{"six_signal_config": sixSignalConfig, "countryName": countryName, "page": pageURLProp}).Info("sixsignal filter returns false - debug Upflow")
-		}
-		return
-	}
-
-	if projectId == 2251799844000008 && !strings.Contains(pageURLProp, "/demo") && !strings.Contains(pageURLProp, "/pricing") {
-		logCtx.WithFields(log.Fields{"pageUrl": pageURLProp, "Pages Include": sixSignalConfig.PagesInclude, "EnrichSixSignal": shouldEnrichUsingSixSignal}).Info("Hitting factors sixsignal enrichment -debug for Upflow.")
-	}
-
-	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true {
-
-		execute6SignalStatusChannel := make(chan int)
-		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
-		if sixSignalExists {
-			// logCtx.Info("6Signal cache hit")
-		} else {
-			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel, false)
-			select {
-			case ok := <-execute6SignalStatusChannel:
-				if ok == 1 {
-					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
-				} else {
-					logCtx.Warn("ExecuteSixSignal failed in track call")
-				}
-			case <-time.After(U.TimeoutOneSecond):
-				logCtx.Warn("six_Signal enrichment timed out in Track call")
-
-			}
-		}
-	} else if projectSettings.Factors6SignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true {
-		execute6SignalStatusChannel := make(chan int)
-		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
-		if sixSignalExists {
-			// logCtx.Info("6Signal cache hit")
-		} else {
-			// logCtx.Info("6Signal cache miss")
-			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel, true)
-
-			select {
-			case ok := <-execute6SignalStatusChannel:
-				if ok == 1 {
-					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
-					// Total hit counts
+				if apiKey == C.GetFactorsSixSignalAPIKey() {
 					model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
-				} else {
-					logCtx.Warn("ExecuteSixSignal failed in track call")
 				}
-			case <-time.After(U.TimeoutOneSecond):
-				logCtx.Warn("Six_Signal enrichment timed out in Track call")
+
+			} else {
+				logCtx.Warn("ExecuteSixSignal failed in track call")
 			}
+		case <-time.After(U.TimeoutOneSecond):
+			logCtx.Warn("six_Signal enrichment timed out in Track call")
+
 		}
 	}
 }
 
-/*
-	FillSixSignalUserProperties{
-		If clientIp is “”{
-			Return
-		}
-		if clientKey is present and sixsignal client feature flag is enabled :
-			enrich using them
-		else if factors deanonymisation feature flag is enabled and clearbit client feature flag is disabled:
-		 	check sixsignal quota is not exhausted (TODO)
-		 	fetch factors API KEY from configs
-		 	fetch sixsignal configs–page url & country filter
-		 	check whether sixisignal config is satisfied
-		 	then enrich
-		Else : return
-	}
-*/
-func FillSixSignalUserPropertiesV1(projectId int64, projectSettings *model.ProjectSetting,
+func FillSixSignalUserPropertiesViaFactors(projectId int64, projectSettings *model.ProjectSetting,
 	userProperties *U.PropertiesMap, UserId, clientIP, countryName, pageURLProp string) {
 
 	logCtx := log.WithField("project_id", projectId)
-	if clientIP == "" {
-		logCtx.Warn("Client IP is blank")
+
+	//Fetching sixsignal API Key
+	factors6SignalKey := C.GetFactorsSixSignalAPIKey()
+
+	//Fetching sixsignal configs
+	sixSignalConfig := model.SixSignalConfig{}
+	if projectSettings.SixSignalConfig != nil {
+		err := json.Unmarshal(projectSettings.SixSignalConfig.RawMessage, &sixSignalConfig)
+		if err != nil {
+			logCtx.WithField("six_signal_config", projectSettings.SixSignalConfig).WithError(err).Error("Failed to decode six signal property")
+		}
+	}
+
+	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, countryName, pageURLProp)
+	if !shouldEnrichUsingSixSignal {
+		logCtx.Warn("SixSignal configs not matched.")
 		return
 	}
 
-	//Fetching integration status feature flags for factors deanonymisation, sixsignal and clearbit
-	/*
-		_, intFactorsDeanonymisation, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_FACTORS_DEANONYMISATION)
-		if err != nil {
-			logCtx.Error("Failed to fetch factors deanonymisation feature flag")
-		}
-		_, intSixSignal, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_SIX_SIGNAL)
-		if err != nil {
-			logCtx.Error("Failed to fetch sixsignal client feature flag")
-		}
-		_, intClearbit, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_CLEARBIT)
-		if err != nil {
-			logCtx.Error("Failed to fetch clearbit client feature flag")
-		}*/
-
-	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true {
-
-		execute6SignalStatusChannel := make(chan int)
-		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
-		if sixSignalExists {
-			// logCtx.Info("6Signal cache hit")
-		} else {
-
-			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel, false)
-
-			select {
-			case ok := <-execute6SignalStatusChannel:
-				if ok == 1 {
-					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
-
-				} else {
-					logCtx.Warn("ExecuteSixSignal failed in track call")
-				}
-			case <-time.After(U.TimeoutOneSecond):
-				logCtx.Warn("six_Signal enrichment timed out in Track call")
-
-			}
-		}
-	} else if *(projectSettings.IntFactorsSixSignalKey) == true && *(projectSettings.IntClearBit) == false {
-
-		//check if factors deanonymisation quota is not exhausted
-		isSixsignalQuotaAvailable, _ := CheckingSixSignalQuotaLimit(projectId)
-		if !isSixsignalQuotaAvailable {
-			return
-		}
-
-		//Fetching sixsignal API Key
-		factors6SignalKey := C.GetFactorsSixSignalAPIKey()
-
-		//Fetching sixsignal configs
-		sixSignalConfig := model.SixSignalConfig{}
-		if projectSettings.SixSignalConfig != nil {
-			err := json.Unmarshal(projectSettings.SixSignalConfig.RawMessage, &sixSignalConfig)
-			if err != nil {
-				logCtx.WithField("six_signal_config", projectSettings.SixSignalConfig).WithError(err).Error("Failed to decode six signal property")
-			}
-		}
-
-		shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, countryName, pageURLProp)
-		if !shouldEnrichUsingSixSignal {
-			return
-		}
-
-		execute6SignalStatusChannel := make(chan int)
-		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
-		if sixSignalExists {
-			// logCtx.Info("6Signal cache hit")
-		} else {
-			// logCtx.Info("6Signal cache miss")
-			go six_signal.ExecuteSixSignalEnrich(projectId, factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel, true)
-
-			select {
-			case ok := <-execute6SignalStatusChannel:
-				if ok == 1 {
-					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
-					// Total hit counts
-					model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
-
-				} else {
-					logCtx.Warn("ExecuteSixSignal failed in track call")
-				}
-			case <-time.After(U.TimeoutOneSecond):
-				logCtx.Warn("Six_Signal enrichment timed out in Track call")
-			}
-		}
-	} else {
-		return
-	}
+	FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, UserId, clientIP)
 }
 
 func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, pageUrl string) (bool, error) {
@@ -1173,6 +1052,7 @@ func CheckingSixSignalQuotaLimit(projectId int64) (bool, error) {
 	logCtx := log.WithField("project_id", projectId)
 	limit, err := store.GetStore().GetFeatureLimitForProject(projectId, model.FEATURE_FACTORS_DEANONYMISATION)
 	if err != nil {
+		logCtx.Error("Failed fetching sixsignal quota limit with error ", err)
 		return false, err
 	}
 
@@ -1188,40 +1068,34 @@ func CheckingSixSignalQuotaLimit(projectId int64) (bool, error) {
 	}
 
 	if count >= limit {
+		logCtx.Error("SixSignal Limit Exhausted")
 		return false, errors.New("SixSignal Limit Exhausted")
 	}
 	return true, nil
 }
 
-func FillClearbitUserProperties(projectId int64, projectSettings *model.ProjectSetting,
+func FillClearbitUserProperties(projectId int64, clearbitKey string,
 	userProperties *U.PropertiesMap, UserId string, clientIP string) {
 
 	logCtx := log.WithField("project_id", projectId)
-	/*
-		_, intClearbit, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.INT_CLEARBIT)
-		if err != nil {
-			logCtx.Error("Failed to fetch clearbit client feature flag")
-		}*/
 
-	if projectSettings.ClearbitKey != "" && *(projectSettings.IntClearBit) == true {
-		executeClearBitStatusChannel := make(chan int)
-		clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, UserId, clientIP)
-		if clearBitExists {
-			// logCtx.Info("clearbit cache hit")
-		} else {
-			// logCtx.Info("clearbit cache miss")
-			go clear_bit.ExecuteClearBitEnrich(projectSettings.ClearbitKey, userProperties, clientIP, executeClearBitStatusChannel)
+	executeClearBitStatusChannel := make(chan int)
+	clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, UserId, clientIP)
+	if clearBitExists {
+		// logCtx.Info("clearbit cache hit")
+	} else {
+		// logCtx.Info("clearbit cache miss")
+		go clear_bit.ExecuteClearBitEnrich(clearbitKey, userProperties, clientIP, executeClearBitStatusChannel)
 
-			select {
-			case ok := <-executeClearBitStatusChannel:
-				if ok == 1 {
-					clear_bit.SetClearBitCacheResult(projectId, UserId, clientIP)
-				} else {
-					logCtx.Warn("ExecuteClearbit failed in Track call")
-				}
-			case <-time.After(U.TimeoutOneSecond):
-				logCtx.Warn("clear_bit enrichment timed out in Track call")
+		select {
+		case ok := <-executeClearBitStatusChannel:
+			if ok == 1 {
+				clear_bit.SetClearBitCacheResult(projectId, UserId, clientIP)
+			} else {
+				logCtx.Warn("ExecuteClearbit failed in Track call")
 			}
+		case <-time.After(U.TimeoutOneSecond):
+			logCtx.Warn("clear_bit enrichment timed out in Track call")
 		}
 	}
 
@@ -1705,32 +1579,12 @@ func AddUserProperties(projectId int64,
 	// Validate properties.
 	validProperties := U.GetValidatedUserProperties(&request.Properties)
 
-	if C.GetClearbitEnabled() == 1 {
-		clearbitKey, errCode := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
-		if errCode != http.StatusFound {
-			logCtx.Info("Get clear_bit key from project_settings failed.")
-		}
-		if clearbitKey != "" {
-
-			statusChannel := make(chan int)
-			clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, request.UserId, request.ClientIP)
-
-			if !clearBitExists {
-				go clear_bit.ExecuteClearBitEnrich(clearbitKey, validProperties, request.ClientIP, statusChannel)
-
-				select {
-				case ok := <-statusChannel:
-					if ok == 1 {
-						clear_bit.SetClearBitCacheResult(projectId, request.UserId, request.ClientIP)
-					} else {
-						logCtx.Info("ExecuteClearbit failed in AddUserProperties")
-					}
-				case <-time.After(U.TimeoutOneSecond):
-					logCtx.Info("clear_bit enrichment timed out in AddUserProperties")
-				}
-			}
-		}
-
+	clearbitKey, err1 := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
+	if err1 != http.StatusFound {
+		logCtx.Info("Get clear_bit key from project_settings failed.")
+	}
+	if clearbitKey != "" {
+		FillClearbitUserProperties(projectId, clearbitKey, validProperties, request.UserId, request.ClientIP)
 	}
 
 	_, _ = model.FillLocationUserProperties(validProperties, request.ClientIP)

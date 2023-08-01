@@ -70,7 +70,7 @@ class JobScheduler:
             else:
                 status = STATUS_FAILED
                 message = "Invalid document type " + str(doc_type)
-                metrics_controller.update_job_stats(project_id, url_prefix, status, message)
+                metrics_controller.update_gsc_job_stats(project_id, url_prefix, doc_type, status, message)
 
         except Exception as e:
             traceback.print_tb(e.__traceback__)
@@ -84,12 +84,12 @@ class JobScheduler:
                 message = "Download failed for manager account with exception: " + str_exception
 
             elif "quotaExceeded" in str_exception:
-                metrics_controller.update_job_stats(project_id, url_prefix, doc_type, STATUS_FAILED, message)
-                metrics_controller.publish()
+                metrics_controller.update_gsc_job_stats(project_id, url_prefix, doc_type, STATUS_FAILED, message)
+                metrics_controller.publish_gsc()
                 sys.exit(0)
 
             else:
                 message = "Failed with exception: " + str_exception
-            metrics_controller.update_job_stats(project_id, url_prefix, doc_type, STATUS_FAILED, message)
+            metrics_controller.update_gsc_job_stats(project_id, url_prefix, doc_type, STATUS_FAILED, message)
 
             return ("Failed with exception: %d %s %s", project_id, url_prefix, str_exception)
