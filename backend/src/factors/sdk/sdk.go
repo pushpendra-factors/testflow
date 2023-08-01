@@ -2450,6 +2450,7 @@ func PostDeviceServiceAPI(apiUrl string, userAgent string, c chan DeviceApiResul
 		msg = "empty response from api"
 		res.err = errors.New(msg)
 		res.message = msg
+		c <- *res
 		log.WithError(err).Error(msg)
 		return
 	}
@@ -2472,6 +2473,7 @@ func PostDeviceServiceAPI(apiUrl string, userAgent string, c chan DeviceApiResul
 		msg = "Error reading the response body"
 		res.err = err
 		res.message = msg
+		c <- *res
 		log.WithError(err).Error(msg)
 		return
 	}
@@ -2482,14 +2484,16 @@ func PostDeviceServiceAPI(apiUrl string, userAgent string, c chan DeviceApiResul
 		res.message = msg
 		res.err = err
 		c <- *res
+		log.WithError(err).Error(msg)
 		return
 	}
 
 	// check for time elapsed in the post request to device service
 	elapsed := time.Since(start).Milliseconds()
 	if elapsed > 100 {
-		log.Error(" PostDeviceServiceAPI call took more than 100 ms")
+		log.WithFields(log.Fields{"total_time": elapsed, "user_agent": userAgent}).Error("PostDeviceServiceAPI call took more than 100 ms")
 	}
+
 	res.message = msg
 	res.err = nil
 	c <- *res

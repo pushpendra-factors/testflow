@@ -1,5 +1,9 @@
 FROM php
 RUN apt-get update && apt upgrade -y
+RUN pecl install apcu && docker-php-ext-enable apcu
+RUN echo "extension=apcu.so" >> /usr/local/etc/php/php.ini
+RUN echo "apc.enable_cli=1" >> /usr/local/etc/php/php.ini
+RUN echo "apc.enable=1" >> /usr/local/etc/php/php.ini
 COPY . /usr/src/device_service
 WORKDIR /usr/src/device_service
 EXPOSE 3000
