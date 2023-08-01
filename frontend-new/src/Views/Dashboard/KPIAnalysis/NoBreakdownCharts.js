@@ -19,7 +19,9 @@ import {
   CHART_TYPE_TABLE,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
   CHART_TYPE_BARCHART,
-  DASHBOARD_WIDGET_BAR_CHART_HEIGHT
+  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  CHART_TYPE_METRIC_CHART,
+  MAX_ALLOWED_VISIBLE_PROPERTIES
 } from '../../../utils/constants';
 import ChartHeader from '../../../components/SparkLineChart/ChartHeader';
 import SparkChart from '../../../components/SparkLineChart/Chart';
@@ -27,6 +29,9 @@ import LineChart from '../../../components/HCLineChart';
 import NoBreakdownTable from '../../CoreQuery/KPIAnalysis/NoBreakdownCharts/NoBreakdownTable';
 import { getKpiLabel } from '../../CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 import ColumnChart from 'Components/ColumnChart/ColumnChart';
+import MetricChart from 'Components/MetricChart/MetricChart';
+
+const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 
 function NoBreakdownCharts({
   kpis,
@@ -246,6 +251,27 @@ function NoBreakdownCharts({
         chartId={`kpi${unit.id}`}
         cardSize={unit.cardSize}
       />
+    );
+  } else if (chartType === CHART_TYPE_METRIC_CHART) {
+    chartContent = (
+      <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12 h-full'>
+        {aggregateData &&
+          aggregateData.slice(0, 3).map((eachAggregateData, eachIndex) => {
+            return (
+              <MetricChart
+                key={eachAggregateData.name}
+                headerTitle={eachAggregateData.name}
+                value={eachAggregateData.total}
+                iconColor={colors[eachIndex]}
+                valueType={
+                  eachAggregateData.metricType === 'percentage_type'
+                    ? 'percentage'
+                    : 'numerical'
+                }
+              />
+            );
+          })}
+      </div>
     );
   }
 
