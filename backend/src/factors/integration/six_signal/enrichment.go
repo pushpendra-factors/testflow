@@ -3,6 +3,7 @@ package six_signal
 import (
 	"encoding/json"
 	"errors"
+	"factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	"factors/util"
@@ -37,16 +38,25 @@ type response struct {
 	} `json:"company"`
 }
 
-func ExecuteSixSignalEnrich(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int, meter bool) {
+func ExecuteSixSignalEnrich(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int) {
 	defer close(statusChannel)
+	logCtx := log.WithField("project_id", projectId)
+
+	meter := false
+	if sixSignalKey == config.GetFactorsSixSignalAPIKey() {
+		meter = true
+	}
 	err := enrichUsingSixSignal(projectId, sixSignalKey, properties, clientIP, meter)
 
 	if err != nil {
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalKey}).Info("enrich --factors debug")
 		statusChannel <- 0
 	}
 	statusChannel <- 1
 }
 func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, meter bool) error {
+
+	logCtx := log.WithField("project_id", projectId)
 
 	if clientIP == "" {
 		return errors.New("invalid IP, failed adding user properties")
@@ -59,6 +69,7 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 	}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalKey}).Info("creating new request --factors debug")
 		return err
 	}
 	sixSignalKey = "Token " + sixSignalKey
@@ -67,6 +78,7 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 
 	res, err := client.Do(req)
 	if err != nil {
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalKey}).Info("client call --factors debug")
 		return err
 	}
 	defer res.Body.Close()
