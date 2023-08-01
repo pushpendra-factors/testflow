@@ -70,7 +70,7 @@ class JobScheduler:
             else:
                 status = STATUS_FAILED
                 message = "Invalid document type " + str(doc_type)
-                metrics_controller.update_gsc_job_stats(project_id, url_prefix, status, message)
+                metrics_controller.update_gsc_job_stats(project_id, url_prefix, doc_type, status, message)
 
         except Exception as e:
             traceback.print_tb(e.__traceback__)
