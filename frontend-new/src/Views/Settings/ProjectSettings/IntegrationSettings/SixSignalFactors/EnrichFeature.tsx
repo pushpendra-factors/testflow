@@ -12,7 +12,8 @@ const EnrichFeature = ({
   title,
   type,
   subtitle,
-  udpateProjectSettings
+  udpateProjectSettings,
+  actionButtonText = 'Configure rules'
 }: EnrichFeatureProps) => {
   const [mode, setMode] = useState<FeatureModes>('configure');
   //   @ts-ignore
@@ -95,22 +96,28 @@ const EnrichFeature = ({
     six_signal_config?.pages_include
   ]);
   return (
-    <div
-      className={`flex flex-col ${
-        type === 'page' ? 'border-bottom--thin' : ''
-      } py-4`}
-    >
+    <div className={`flex flex-col py-4`}>
       <div
         className={`flex items-center ${
           mode === 'view' ? 'justify-between' : 'justify-start'
         }`}
       >
         <div>
-          <Text type='title' level={6} weight='bold' extraClass='m-0 mb-1.5'>
+          <Text
+            type='title'
+            level={6}
+            color='character-primary'
+            extraClass='m-0 mb-1.5'
+          >
             {title}
           </Text>
           {subtitle && (
-            <Text type='title' level={8} color='grey' extraClass='m-0 mb-3'>
+            <Text
+              type='title'
+              level={8}
+              color='character-secondary'
+              extraClass='m-0 mb-3'
+            >
               {subtitle}
             </Text>
           )}
@@ -135,9 +142,7 @@ const EnrichFeature = ({
 
       {mode === 'configure' && (
         <div>
-          <Button type='link' onClick={() => setMode('edit')}>
-            Configure rules
-          </Button>
+          <Button onClick={() => setMode('edit')}>{actionButtonText}</Button>
         </div>
       )}
       {/* Rendering page enrich component  */}
@@ -175,6 +180,7 @@ type EnrichFeatureType = {
   type: 'country' | 'page';
   title: string;
   subtitle?: string;
+  actionButtonText?: string;
 };
 
 type EnrichFeatureProps = EnrichFeatureType & ReduxProps;
