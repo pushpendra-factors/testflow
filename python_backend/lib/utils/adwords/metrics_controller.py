@@ -100,8 +100,9 @@ class MetricsController:
         if status is None:
             cls.etl_stats["failures"].append("Sync status is missing on response")
         elif status == STATUS_FAILED:
+            log.warning("Ashhar %s", message)
             if ("invalid_grant" in message.lower() or "PERMISSION_DENIED".lower() in message.lower() 
-                or "invalid params" in message.lower() or "access token" in message.lower() 
+                or "invalid params" in message.lower() or "access_token" in message.lower() 
                 or "refresh_token" in message.lower()):
                 
                 cls.etl_stats["token_failures"].setdefault(message, {})
@@ -110,7 +111,8 @@ class MetricsController:
             
             elif EMPTY_RESPONSE_GSC in message.lower():
                 cls.etl_stats["warning"].setdefault(message, set())
-                cls.etl_stats["warning"][message].add(project_id)
+                cls.etl_stats["warning"][message].setdefault(project_id, set())
+                cls.etl_stats["warning"][project_id].add(url)
             else:
                 cls.etl_stats["failures"].setdefault(message, {})
                 cls.etl_stats["failures"][message].setdefault(project_id, set())
@@ -167,6 +169,7 @@ class MetricsController:
 
     @classmethod
     def publish_gsc_job_stats(cls):
+        log.warning("Ashhar etl stats %s", json.dumps(cls.etl_stats, default=JsonUtil.serialize_sets))
         if cls.type_of_run == scripts.adwords.EXTRACT_AND_LOAD:
             cls.etl_stats["task_stats"] = cls.compare_load_and_extract()
 
