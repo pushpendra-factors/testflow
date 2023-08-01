@@ -93,14 +93,22 @@ const NoBreakdownChartsComponent = forwardRef(
     }, [responseData, kpis, comparisonData.data, secondAxisKpiIndices]);
 
     const columnChartSeries = useMemo(() => {
-      return [
+      const series = [
         {
           data: aggregateData[currentEventIndex]?.dataOverTime?.map(
             (elem) => elem[kpis[currentEventIndex].label]
           )
         }
       ];
-    }, [aggregateData, currentEventIndex, kpis]);
+      if (comparisonApplied) {
+        series.unshift({
+          data: aggregateData[currentEventIndex]?.dataOverTime?.map(
+            (elem) => elem.compareValue
+          )
+        });
+      }
+      return series;
+    }, [aggregateData, currentEventIndex, kpis, comparisonApplied]);
 
     if (!aggregateData.length) {
       return (
@@ -230,6 +238,7 @@ const NoBreakdownChartsComponent = forwardRef(
           xAxisType='date-time'
           series={columnChartSeries}
           frequency={durationObj.frequency}
+          comparisonApplied={comparisonApplied}
         />
       );
     }
