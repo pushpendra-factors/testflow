@@ -263,8 +263,6 @@ type Configuration struct {
 	SlackAppClientSecret                               string
 	EnableDryRunAlerts                                 bool
 	DataAvailabilityExpiry                             int
-	ClearbitEnabled                                    int
-	SixSignalV1EnabledProjectIDs                       string
 	UseSalesforceV54APIByProjectID                     string
 	EnableOptimisedFilterOnProfileQuery                bool
 	HubspotAppID                                       string
@@ -2096,10 +2094,6 @@ func IsAllowedAttributionDBCacheLookup(projectID int64) bool {
 	return false
 }
 
-func GetClearbitEnabled() int {
-	return configuration.ClearbitEnabled
-}
-
 func GetOtpKeyWithQueryCheckEnabled() bool {
 	return configuration.OtpKeyWithQueryCheckEnabled
 }
@@ -2437,28 +2431,6 @@ func IsIngestionTimezoneEnabled(projectId int64) bool {
 		}
 	}
 	return false
-}
-
-func IsSixSignalV1Enabled(projectId int64) bool {
-
-	if configuration.SixSignalV1EnabledProjectIDs == "" {
-		return false
-	}
-
-	if configuration.SixSignalV1EnabledProjectIDs == "*" {
-		return true
-	}
-
-	projectIDstr := fmt.Sprintf("%d", projectId)
-	projectIDs := strings.Split(configuration.SixSignalV1EnabledProjectIDs, ",")
-	for i := range projectIDs {
-		if projectIDs[i] == projectIDstr {
-			return true
-		}
-	}
-
-	return false
-
 }
 
 func EnableMQLAPI() bool {

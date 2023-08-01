@@ -18,6 +18,7 @@ class MetricsController:
         "task_stats": None,
         "failures": {},
         "token_failures": {},
+        "warnings": {},
         "success": {}
     }
     ADWORDS_SYNC_PING_ID = "188cbf7c-0ea1-414b-bf5c-eee47c12a0c8"
@@ -93,28 +94,32 @@ class MetricsController:
             cls.etl_stats["success"][project_id].add(customer_acc_id)
 
     @classmethod
-    def update_gsc_job_stats(cls, project_id, url, status, message=""):
+    def update_gsc_job_stats(cls, project_id, url, doc_type, status, message=""):
         if status == STATUS_FAILED:
             cls.etl_stats["status"] = FAILURE_MESSAGE
 
         if status is None:
             cls.etl_stats["failures"].append("Sync status is missing on response")
         elif status == STATUS_FAILED:
+            log.warning("Ashhar %s", message)
             if ("invalid_grant" in message.lower() or "PERMISSION_DENIED".lower() in message.lower() 
-                or "invalid params" in message.lower() or "access token" in message.lower() 
+                or "invalid params" in message.lower() or "access_token" in message.lower() 
                 or "refresh_token" in message.lower()):
                 
                 cls.etl_stats["token_failures"].setdefault(message, {})
                 cls.etl_stats["token_failures"][message].setdefault(project_id, set())
-                cls.etl_stats["token_failures"][project_id].add(url)
+                cls.etl_stats["token_failures"][message][project_id].add(url)
             
             elif EMPTY_RESPONSE_GSC in message.lower():
-                cls.etl_stats["warning"].setdefault(message, set())
-                cls.etl_stats["warning"][message].add(project_id)
+                cls.etl_stats["warnings"].setdefault(message, {})
+                cls.etl_stats["warnings"][message].setdefault(project_id, {})
+                cls.etl_stats["warnings"][message][project_id].setdefault(doc_type, set())
+                cls.etl_stats["warnings"][message][project_id][doc_type].add(url)
             else:
                 cls.etl_stats["failures"].setdefault(message, {})
-                cls.etl_stats["failures"][message].setdefault(project_id, set())
-                cls.etl_stats["failures"][project_id].add(url)
+                cls.etl_stats["failures"][message].setdefault(project_id, {})
+                cls.etl_stats["failures"][message][project_id].setdefault(doc_type, set())
+                cls.etl_stats["failures"][message][project_id][doc_type].add(url)
         else:
             cls.etl_stats["success"].setdefault(project_id, set())
             cls.etl_stats["success"][project_id].add(url)
@@ -167,14 +172,15 @@ class MetricsController:
 
     @classmethod
     def publish_gsc_job_stats(cls):
+        log.warning("Ashhar etl stats %s", json.dumps(cls.etl_stats, default=JsonUtil.serialize_sets))
         if cls.type_of_run == scripts.adwords.EXTRACT_AND_LOAD:
             cls.etl_stats["task_stats"] = cls.compare_load_and_extract()
 
         if cls.etl_stats["status"] == SUCCESS_MESSAGE:
-            stats_to_ping = {"success": cls.etl_stats["success"], "warning": cls.etl_stats["warning"]}
+            stats_to_ping = {"success": cls.etl_stats["success"], "warnings": cls.etl_stats["warnings"]}
             HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, stats_to_ping, cls.GSC_SYNC_PING_ID)
         else:
-            stats_to_ping = {"failures": cls.etl_stats["failures"], "warning": cls.etl_stats["warning"]}
+            stats_to_ping = {"failures": cls.etl_stats["failures"], "warnings": cls.etl_stats["warnings"]}
             HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, stats_to_ping, cls.GSC_SYNC_PING_ID, endpoint="/fail")
             log.warning("Job has errors. Failed synced Projects and customer accounts are: %s", json.dumps(stats_to_ping, default=JsonUtil.serialize_sets))
 

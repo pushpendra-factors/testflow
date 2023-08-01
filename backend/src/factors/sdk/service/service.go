@@ -81,8 +81,6 @@ func main() {
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
-	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
-	sixsignalV1EnabledProjectIDs := flag.String("sixsignal_v1_enabled_projectIds", "", "To enable new sixsignal flow")
 	enableDebuggingForIP := flag.Bool("enable_debugging_for_ip", false, "Enables log for $ip and other properties added by $ip")
 
 	blockedIPProjectTokens := flag.String("blocked_ip_project_tokens",
@@ -130,10 +128,8 @@ func main() {
 		SentryDSN:               *sentryDSN,
 		SentryRollupSyncInSecs:  *sentryRollupSyncInSecs,
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
-		ClearbitEnabled:              *clearbitEnabled,
-		SixSignalV1EnabledProjectIDs: *sixsignalV1EnabledProjectIDs,
-		EnableDebuggingForIP:         *enableDebuggingForIP,
-		BlockedIPProjectTokens:       *blockedIPProjectTokens,
+		EnableDebuggingForIP:                        *enableDebuggingForIP,
+		BlockedIPProjectTokens:                      *blockedIPProjectTokens,
 	}
 	C.InitConf(config)
 
