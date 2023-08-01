@@ -86,7 +86,7 @@ jobs:
           elif [[ "$binary" == "python-server" || "$binary" == "adwords-etl" || "$binary" == "adwords-etl-debug" || "$binary" == "facebook-etl" || "$binary" == "google-search-console-etl" ]]; then
               path="./python_backend"
 
-          elif [[ "$binary" == "device-service" ]]; then
+          elif [[ "$binary" == "device-server" ]]; then
               path="./device_service"
 
           else
