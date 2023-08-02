@@ -724,16 +724,16 @@ func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string,
 	var resultantKPIConfigProperties []map[string]string
 	var tempKPIConfigProperty map[string]string
 	category := "OTHERS"
-	if(prefix == "$hubspot"){
+	if prefix == "$hubspot" {
 		category = "Hubspot"
 	}
-	if(prefix == "$salesforce"){
+	if prefix == "$salesforce" {
 		category = "Salesforce"
 	}
-	if(prefix == "$leadsquared"){
+	if prefix == "$leadsquared" {
 		category = "Leadsquared"
 	}
-	if(prefix == "$marketo"){
+	if prefix == "$marketo" {
 		category = "Marketo"
 	}
 	for dataType, propertyNames := range properties {
@@ -749,7 +749,7 @@ func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string,
 					"display_name": strings.Title(displayName),
 					"data_type":    dataType,
 					"entity":       UserEntity,
-					"category": 	category,
+					"category":     category,
 				}
 				resultantKPIConfigProperties = append(resultantKPIConfigProperties, tempKPIConfigProperty)
 			}
@@ -1181,6 +1181,13 @@ func SplitQueryResultsIntoGBTAndNonGBT(queryResults []QueryResult, kpiQueryGroup
 	}
 	defer LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	if len(queryResults) < len(kpiQueryGroup.Queries) {
+		log.WithFields(log.Fields{"KPIAttribution": "Debug",
+			"queryResults": queryResults,
+			"Queries":      kpiQueryGroup.Queries,
+		}).Info("KPI Attribution debug SplitQueryResultsIntoGBTAndNonGBT")
+		return []QueryResult{{}}, []QueryResult{{}}, gbtRelatedQueries, nonGbtRelatedQueries
+	}
 	for index, kpiQuery := range kpiQueryGroup.Queries {
 		if kpiQuery.GroupByTimestamp != "" {
 			gbtRelatedQueryResults = append(gbtRelatedQueryResults, queryResults[index])
@@ -1191,10 +1198,10 @@ func SplitQueryResultsIntoGBTAndNonGBT(queryResults []QueryResult, kpiQueryGroup
 		}
 	}
 	if len(nonGbtRelatedQueries) == 0 {
-		nonGbtRelatedQueryResults = nil
+		nonGbtRelatedQueryResults = []QueryResult{{}}
 	}
 	if len(gbtRelatedQueries) == 0 {
-		gbtRelatedQueryResults = nil
+		gbtRelatedQueryResults = []QueryResult{{}}
 	}
 	return gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries
 }
