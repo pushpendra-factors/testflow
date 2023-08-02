@@ -189,7 +189,6 @@ func AggregateDailyEvents(projectId int64, archiveCloudManager,
 // AggEventsOnUsers  agg count of each event performed by each user along with users group id.
 func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOnUserAndGroup, mweights map[string][]M.AccEventWeight, configs map[string]interface{}) error {
 	log.Infof("Aggregating users from file")
-	var domainGroup string
 	scanner := bufio.NewScanner(file)
 	const maxCapacity = 30 * 1024 * 1024
 	buf := make([]byte, maxCapacity)
@@ -200,11 +199,11 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 	groupCounts := 0
 	lineCount := 0
 
-	if domainVal, ok := configs["domain_group"].(string); ok {
-		domainGroup = domainVal
-	} else {
-		domainGroup = ""
-	}
+	// if domainVal, ok := configs["domain_group"].(string); ok {
+	// 	domainGroup = domainVal
+	// } else {
+	// 	domainGroup = ""
+	// }
 
 	for scanner.Scan() {
 		var event *P.CounterEventFormat
@@ -255,48 +254,49 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 			}
 
 			if !event.IsGroupUser {
-				if event.Group1UserId != "" && domainGroup != "1" {
+				if event.Group1UserId != "" {
 					groupCounts += 1
 					aggGroupCounts(event, event.Group1UserId, userGroupCount, ruleIds)
 				}
-				if event.Group2UserId != "" && domainGroup != "2" {
+				if event.Group2UserId != "" {
 					groupCounts += 1
 					aggGroupCounts(event, event.Group2UserId, userGroupCount, ruleIds)
 				}
-				if event.Group3UserId != "" && domainGroup != "3" {
+				if event.Group3UserId != "" {
 					groupCounts += 1
 					aggGroupCounts(event, event.Group3UserId, userGroupCount, ruleIds)
 				}
-				if event.Group4UserId != "" && domainGroup != "4" {
+				if event.Group4UserId != "" {
 					groupCounts += 1
 					aggGroupCounts(event, event.Group4UserId, userGroupCount, ruleIds)
 				}
 
-				if event.Group5UserId != "" && domainGroup != "5" {
+				if event.Group5UserId != "" {
 					groupCounts += 1
 					aggGroupCounts(event, event.Group5UserId, userGroupCount, ruleIds)
 				}
-				if event.Group6UserId != "" && domainGroup != "6" {
+				if event.Group6UserId != "" {
 					groupCounts += 1
 					aggGroupCounts(event, event.Group6UserId, userGroupCount, ruleIds)
 				}
-				if event.Group7UserId != "" && domainGroup != "7" {
+				if event.Group7UserId != "" {
 					groupCounts += 1
 					aggGroupCounts(event, event.Group7UserId, userGroupCount, ruleIds)
 				}
-				if event.Group8UserId != "" && domainGroup != "8" {
+				if event.Group8UserId != "" {
 					groupCounts += 1
 					aggGroupCounts(event, event.Group8UserId, userGroupCount, ruleIds)
 				}
-			} else if event.IsGroupUser {
-
-				// get domain group user id
-				if domainGroup != "" {
-					id := getDomainGroupUserId(event, domainGroup)
-					aggGroupCounts(event, id, userGroupCount, ruleIds)
-				}
-
 			}
+			// else if event.IsGroupUser {
+
+			// 	// get domain group user id
+			// 	if domainGroup != "" {
+			// 		id := getDomainGroupUserId(event, domainGroup)
+			// 		aggGroupCounts(event, id, userGroupCount, ruleIds)
+			// 	}
+
+			// }
 		}
 
 	}

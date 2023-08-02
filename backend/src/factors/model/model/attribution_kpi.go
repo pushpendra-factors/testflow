@@ -310,9 +310,10 @@ func AddUserKPIKeyDataInMap(kpiQueryResult QueryResult, kpiQueryResultWithTime Q
 	from int64, to int64, valIdx int, kpiValueHeaders []string,
 	kpiAggFunctionType []string, kpiData *map[string]KPIInfo) []string {
 	var kpiKeys []string
-
-	logCtx.WithFields(log.Fields{"kpiQueryResult": kpiQueryResult,
-		"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("UserKPI-AddUserKPIKeyDataInMap")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiQueryResult": kpiQueryResult,
+			"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("UserKPI-AddUserKPIKeyDataInMap")
+	}
 	for _, row := range kpiQueryResult.Rows {
 
 		if C.GetAttributionDebug() == 1 {
@@ -371,8 +372,10 @@ func AddTimestampforUserKPI(kpiData *map[string]KPIInfo, kpiQueryResultWithTime 
 	keyIdx := 1
 	valIdx := 2
 
-	logCtx.WithFields(log.Fields{"kpiData": kpiData,
-		"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("UserKPI-AddTimestampforUserKPI 1")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiData": kpiData,
+			"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("UserKPI-AddTimestampforUserKPI 1")
+	}
 	for _, row := range kpiQueryResultWithTime.Rows {
 
 		// get ID
@@ -429,12 +432,15 @@ func AddTimestampforUserKPI(kpiData *map[string]KPIInfo, kpiQueryResultWithTime 
 		(*kpiData)[kpiID] = kpiDetail
 
 	}
-	logCtx.WithFields(log.Fields{"kpiData": kpiData,
-		"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("before SanitizeKpiDataForZeroConversionTime")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiData": kpiData,
+			"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("before SanitizeKpiDataForZeroConversionTime")
+	}
 	SanitizeKpiDataForZeroConversionTime(kpiData)
-	logCtx.WithFields(log.Fields{"kpiData": kpiData,
-		"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("after SanitizeKpiDataForZeroConversionTime")
-
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiData": kpiData,
+			"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("after SanitizeKpiDataForZeroConversionTime")
+	}
 }
 
 // SanitizeKpiDataForZeroConversionTime removes kpiRowValue having invalid conversion time

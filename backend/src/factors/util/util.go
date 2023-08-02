@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"net"
 	"reflect"
 	"regexp"
 	"sort"
@@ -1673,5 +1674,35 @@ func IsTimestampInRange(timetamp int64, start int64, end int64, isTimeInProjectT
 	if isTimeInProjectTimezone && (timetamp < start || timetamp > end) {
 		return false
 	}
+	return true
+}
+
+// IsIPV4AddressInCIDRRange checks if ip address is in CIDR range
+func IsIPV4AddressInCIDRRange(cidr string, ipv4 string) bool {
+	if cidr == "" || ipv4 == "" {
+		return false
+	}
+
+	ipv4Addr := net.ParseIP(ipv4)
+
+	// check if valid ipv4 address, it will return nil if not valid
+	if ip4 := ipv4Addr.To4(); ip4 == nil {
+		return false
+	}
+
+	_, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		log.WithFields(log.Fields{"cidr_range": cidr, "ip_v4": ipv4}).WithError(err).Error("Failed to parse ipv4 CIDR range.")
+		return false
+	}
+
+	if ip4 := ipNet.IP.To4(); ip4 == nil {
+		return false
+	}
+
+	if !ipNet.Contains(ipv4Addr) {
+		return false
+	}
+
 	return true
 }

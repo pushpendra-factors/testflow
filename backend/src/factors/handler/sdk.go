@@ -383,6 +383,7 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 
 	request.UserAgent = c.Request.UserAgent()
 	request.RequestSource = model.UserSourceWeb
+	request.ClientIP = c.ClientIP()
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	status, response := SDK.UpdateEventPropertiesWithQueue(projectToken, &request,
@@ -600,6 +601,7 @@ func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
 		Timestamp:     time.Now().Unix(), // request timestamp.
 		UserAgent:     c.Request.UserAgent(),
 		RequestSource: model.UserSourceWeb,
+		ClientIP: c.ClientIP(),
 	}
 
 	status, response := SDK.AMPUpdateEventPropertiesWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens())

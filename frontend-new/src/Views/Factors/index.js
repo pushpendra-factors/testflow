@@ -31,8 +31,6 @@ import {
 } from '../../reducers/global';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import ExplainBeforeIntegration from './ExplainBeforeIntegration';
-import useFeatureLock from 'hooks/useFeatureLock';
-import { FEATURES } from 'Constants/plans.constants';
 
 // const whiteListedAccounts = [
 //   'baliga@factors.ai',
@@ -99,8 +97,6 @@ const Factors = ({
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const { bingAds, marketo } = useSelector((state) => state.global);
   const { dashboards } = useSelector((state) => state.dashboard);
-  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
-    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
 
   useEffect(() => {
     fetchDemoProject()
@@ -148,7 +144,7 @@ const Factors = ({
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
     integration?.int_client_six_signal_key ||
-    isFactorsDeanonymizationConnected ||
+    integration?.int_factors_six_signal_key ||
     integration?.int_rudderstack;
 
   useEffect(() => {

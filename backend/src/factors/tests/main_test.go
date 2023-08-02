@@ -109,7 +109,6 @@ func TestMain(m *testing.M) {
 		SalesforceBatchInsertBatchSize:                     10,
 		AllowHubspotEngagementsByProjectID:                 "*",
 		HubspotPropertyLookBackLimit:                       1000,
-		ClearbitEnabled:                                    1,
 		EnableOptimisedFilterOnProfileQuery:                true,
 		EnableOptimisedFilterOnEventUserQuery:              true,
 		AllowIdentificationOverwriteUsingSourceByProjectID: "*",

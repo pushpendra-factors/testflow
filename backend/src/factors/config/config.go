@@ -263,8 +263,6 @@ type Configuration struct {
 	SlackAppClientSecret                               string
 	EnableDryRunAlerts                                 bool
 	DataAvailabilityExpiry                             int
-	ClearbitEnabled                                    int
-	SixSignalV1EnabledProjectIDs                       string
 	UseSalesforceV54APIByProjectID                     string
 	EnableOptimisedFilterOnProfileQuery                bool
 	HubspotAppID                                       string
@@ -323,6 +321,7 @@ type Configuration struct {
 	DeviceServiceURL                                   string
 	EnableDeviceServiceByProjectID                     string
 	DisableOpportunityContactRolesByProjectID          string
+	ExcludeBotIPV4AddressByRange                       string
 }
 
 type Services struct {
@@ -2096,10 +2095,6 @@ func IsAllowedAttributionDBCacheLookup(projectID int64) bool {
 	return false
 }
 
-func GetClearbitEnabled() int {
-	return configuration.ClearbitEnabled
-}
-
 func GetOtpKeyWithQueryCheckEnabled() bool {
 	return configuration.OtpKeyWithQueryCheckEnabled
 }
@@ -2437,28 +2432,6 @@ func IsIngestionTimezoneEnabled(projectId int64) bool {
 		}
 	}
 	return false
-}
-
-func IsSixSignalV1Enabled(projectId int64) bool {
-
-	if configuration.SixSignalV1EnabledProjectIDs == "" {
-		return false
-	}
-
-	if configuration.SixSignalV1EnabledProjectIDs == "*" {
-		return true
-	}
-
-	projectIDstr := fmt.Sprintf("%d", projectId)
-	projectIDs := strings.Split(configuration.SixSignalV1EnabledProjectIDs, ",")
-	for i := range projectIDs {
-		if projectIDs[i] == projectIDstr {
-			return true
-		}
-	}
-
-	return false
-
 }
 
 func EnableMQLAPI() bool {
@@ -2987,4 +2960,23 @@ func DisableOpportunityContactRolesEnrichmentByProjectID(projectID int64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+// IsExcludeBotIPV4AddressByRange exclude ipv4 address by CIDR range
+func IsExcludeBotIPV4AddressByRange(ip string) bool {
+	if GetConfig().ExcludeBotIPV4AddressByRange == "" {
+		return false
+	}
+
+	ipRanges := strings.TrimSpace(GetConfig().ExcludeBotIPV4AddressByRange)
+
+	cidrRanges := GetTokensFromStringListAsString(ipRanges)
+
+	for i := range cidrRanges {
+		if U.IsIPV4AddressInCIDRRange(cidrRanges[i], ip) {
+			return true
+		}
+	}
+
+	return false
 }

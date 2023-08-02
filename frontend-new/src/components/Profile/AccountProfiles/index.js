@@ -126,12 +126,7 @@ function AccountProfiles({
   const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
     FEATURES.FEATURE_ENGAGEMENT
   );
-  const { isFeatureConnected: isClearBitConnected } = useFeatureLock(
-    FEATURES.INT_CLEARBIT
-  );
-  const { isFeatureConnected: isSixSenseConnected } = useFeatureLock(
-    FEATURES.INT_SIX_SIGNAL
-  );
+
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
 
   const setShowSegmentModal = useCallback(
@@ -818,7 +813,7 @@ function AccountProfiles({
       {showUpgradeNudge(
         sixSignalInfo?.usage || 0,
         sixSignalInfo?.limit || 0,
-        !(isClearBitConnected || isSixSenseConnected)
+        currentProjectSettings
       ) && (
         <div className='mb-4'>
           <RangeNudge
